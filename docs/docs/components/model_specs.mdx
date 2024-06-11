@@ -1,4 +1,4 @@
-import Admonition from '@theme/Admonition';
+import Admonition from "@theme/Admonition";
 
 # Large Language Models (LLMs)
 
@@ -31,7 +31,9 @@ This is a wrapper for Anthropic's large language model designed for chat-based i
 `CTransformers` provides access to Transformer models implemented in C/C++ using the [GGML](https://github.com/ggerganov/ggml) library.
 
 <Admonition type="info">
-Ensure the `ctransformers` Python package is installed. Discover more about installation, supported models, and usage [here](https://github.com/marella/ctransformers).
+  Ensure the `ctransformers` Python package is installed. Discover more about
+  installation, supported models, and usage
+  [here](https://github.com/marella/ctransformers).
 </Admonition>
 
 - **config:** This configuration is for the Transformer models. Check the default settings and possible configurations at [config](https://github.com/marella/ctransformers#config).
@@ -122,7 +124,8 @@ This component integrates with [Google Vertex AI](https://cloud.google.com/verte
 
 - **credentials**: Custom
 
- credentials used for API interactions.
+credentials used for API interactions.
+
 - **location**: The default location for API calls, defaulting to `us-central1`.
 - **max_output_tokens**: Limits the output tokens per prompt, defaulting to `128`.
 - **model_name**: The name of the Vertex AI model in use, defaulting to `text-bison`.

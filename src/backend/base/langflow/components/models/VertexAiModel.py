@@ -1,6 +1,5 @@
 from typing import Optional
 
-
 from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import Text
@@ -74,7 +73,7 @@ class ChatVertexAIComponent(LCModelComponent):
                 "value": False,
                 "advanced": True,
             },
-            "input_value": {"display_name": "Input"},
+            "input_value": {"display_name": "Input", "input_types": ["Text", "Record", "Prompt"]},
             "stream": {
                 "display_name": "Stream",
                 "info": STREAM_INFO_TEXT,

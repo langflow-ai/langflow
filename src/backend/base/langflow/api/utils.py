@@ -86,6 +86,10 @@ def update_frontend_node_with_template_values(frontend_node, raw_frontend_node):
 
     update_template_values(frontend_node["template"], raw_frontend_node["template"])
 
+    old_code = raw_frontend_node["template"]["code"]["value"]
+    new_code = frontend_node["template"]["code"]["value"]
+    frontend_node["edited"] = old_code != new_code
+
     return frontend_node
 
 
@@ -204,16 +208,18 @@ def format_elapsed_time(elapsed_time: float) -> str:
         return f"{minutes} {minutes_unit}, {seconds} {seconds_unit}"
 
 
-async def build_and_cache_graph_from_db(
-    flow_id: str,
-    session: Session,
-    chat_service: "ChatService",
-):
+async def build_and_cache_graph_from_db(flow_id: str, session: Session, chat_service: "ChatService"):
     """Build and cache the graph."""
     flow: Optional[Flow] = session.get(Flow, flow_id)
     if not flow or not flow.data:
         raise ValueError("Invalid flow ID")
     graph = Graph.from_payload(flow.data, flow_id)
+    for vertex_id in graph._has_session_id_vertices:
+        vertex = graph.get_vertex(vertex_id)
+        if vertex is None:
+            raise ValueError(f"Vertex {vertex_id} not found")
+        if not vertex._raw_params.get("session_id"):
+            vertex.update_raw_params({"session_id": flow_id}, overwrite=True)
     await chat_service.set_cache(flow_id, graph)
     return graph
 
@@ -316,4 +322,5 @@ def parse_exception(exc):
     """Parse the exception message."""
     if hasattr(exc, "body"):
         return exc.body["message"]
+    return str(exc)
     return str(exc)

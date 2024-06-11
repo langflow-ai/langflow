@@ -7,7 +7,7 @@ from supabase.client import Client, create_client
 
 from langflow.custom import CustomComponent
 from langflow.field_typing import Embeddings
-from langflow.schema.schema import Record
+from langflow.schema import Record
 
 
 class SupabaseComponent(CustomComponent):

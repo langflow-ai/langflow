@@ -6,7 +6,7 @@ from langchain_core.retrievers import BaseRetriever
 from langchain_core.vectorstores import VectorStore
 
 from langflow.custom import CustomComponent
-from langflow.schema.schema import Record
+from langflow.schema import Record
 
 
 class PGVectorComponent(CustomComponent):

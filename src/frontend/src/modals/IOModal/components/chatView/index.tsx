@@ -9,15 +9,12 @@ import { deleteFlowPool } from "../../../../controllers/API";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
-import { sendAllProps } from "../../../../types/api";
-import {
-  ChatMessageType,
-  ChatOutputType,
-  FlowPoolObjectType,
-} from "../../../../types/chat";
-import { chatViewProps } from "../../../../types/components";
+import { VertexBuildTypeAPI, sendAllProps } from "../../../../types/api";
+import { ChatMessageType } from "../../../../types/chat";
+import { FilePreviewType, chatViewProps } from "../../../../types/components";
 import { classNames } from "../../../../utils/utils";
 import ChatInput from "./chatInput";
+import useDragAndDrop from "./chatInput/hooks/use-drag-and-drop";
 import ChatMessage from "./chatMessage";
 
 export default function ChatView({
@@ -28,7 +25,7 @@ export default function ChatView({
   setLockChat,
 }: chatViewProps): JSX.Element {
   const { flowPool, outputs, inputs, CleanFlowPool } = useFlowStore();
-  const { setNoticeData } = useAlertStore();
+  const { setErrorData } = useAlertStore();
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const messagesRef = useRef<HTMLDivElement | null>(null);
   const [chatHistory, setChatHistory] = useState<ChatMessageType[]>([]);
@@ -47,7 +44,7 @@ export default function ChatView({
 
   //build chat history
   useEffect(() => {
-    const chatOutputResponses: FlowPoolObjectType[] = [];
+    const chatOutputResponses: VertexBuildTypeAPI[] = [];
     outputIds.forEach((outputId) => {
       if (outputId.includes("ChatOutput")) {
         if (flowPool[outputId] && flowPool[outputId].length > 0) {
@@ -65,19 +62,23 @@ export default function ChatView({
     const chatMessages: ChatMessageType[] = chatOutputResponses
       .sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp))
       //
-      .filter((output) => output.data.artifacts?.message !== null)
+      .filter((output) => output.data.message)
       .map((output, index) => {
         try {
-          const { sender, message, sender_name, stream_url } = output.data
-            .artifacts as ChatOutputType;
-
-          const is_ai = sender === "Machine" || sender === null;
+          console.log("output:", output);
+          const { sender, message, sender_name, stream_url, files } =
+            output.data.message;
+          console.log("output.data.message:", output.data.message);
+          console.log("output.data.message.files:", output.data.message.files);
+          const is_ai =
+            sender === "Machine" || sender === null || sender === undefined;
           return {
             isSend: !is_ai,
             message: message,
             sender_name,
             componentId: output.id,
             stream_url: stream_url,
+            files,
           };
         } catch (e) {
           console.error(e);
@@ -133,7 +134,7 @@ export default function ChatView({
   function updateChat(
     chat: ChatMessageType,
     message: string,
-    stream_url?: string,
+    stream_url?: string
   ) {
     // if (message === "") return;
     chat.message = message;
@@ -156,9 +157,24 @@ export default function ChatView({
     // return newChatHistory;
     // });
   }
+  const [files, setFiles] = useState<FilePreviewType[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const { dragOver, dragEnter, dragLeave, onDrop } = useDragAndDrop(
+    setIsDragging,
+    setFiles,
+    currentFlowId,
+    setErrorData
+  );
 
   return (
-    <div className="eraser-column-arrangement">
+    <div
+      className="eraser-column-arrangement"
+      onDragOver={dragOver}
+      onDragEnter={dragEnter}
+      onDragLeave={dragLeave}
+      onDrop={onDrop}
+    >
       <div className="eraser-size">
         <div className="eraser-position">
           <Button
@@ -253,11 +269,16 @@ export default function ChatView({
               chatValue={chatValue}
               noInput={!inputTypes.includes("ChatInput")}
               lockChat={lockChat}
-              sendMessage={(count) => sendMessage(count)}
+              sendMessage={({ repeat, files }) =>
+                sendMessage({ repeat, files })
+              }
               setChatValue={(value) => {
                 setChatValue(value);
               }}
               inputRef={ref}
+              files={files}
+              setFiles={setFiles}
+              isDragging={isDragging}
             />
           </div>
         </div>

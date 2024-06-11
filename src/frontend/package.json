@@ -55,6 +55,7 @@
     "react-dom": "^18.2.21",
     "react-error-boundary": "^4.0.11",
     "react-hook-form": "^7.51.4",
+    "react-hotkeys-hook": "^4.5.0",
     "react-icons": "^5.0.1",
     "react-laag": "^2.0.5",
     "react-markdown": "^8.0.7",
@@ -81,7 +82,7 @@
     "start": "vite",
     "build": "vite build",
     "serve": "vite preview",
-    "format": "npx prettier --write \"{docs,src}/**/*.{js,jsx,ts,tsx,json,md}\" --ignore-path .prettierignore",
+    "format": "npx prettier --write \"{tests,src}/**/*.{js,jsx,ts,tsx,json,md}\" --ignore-path .prettierignore",
     "type-check": "tsc --noEmit --pretty --project tsconfig.json && vite"
   },
   "simple-git-hooks": {

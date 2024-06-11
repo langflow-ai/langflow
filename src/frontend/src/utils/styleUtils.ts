@@ -1,5 +1,6 @@
 import {
   AlertCircle,
+  AlertTriangle,
   ArrowBigUp,
   ArrowLeft,
   ArrowUpToLine,
@@ -93,6 +94,7 @@ import {
   Package2,
   Palette,
   Paperclip,
+  PaperclipIcon,
   Pencil,
   PencilLine,
   Pin,
@@ -107,6 +109,7 @@ import {
   RotateCcw,
   Save,
   SaveAll,
+  ScanEye,
   Scissors,
   ScreenShare,
   ScrollText,
@@ -143,6 +146,7 @@ import {
   Variable,
   Wand2,
   Workflow,
+  Wrench,
   X,
   XCircle,
   Zap,
@@ -173,6 +177,7 @@ import {
 import { GroqIcon } from "../icons/Groq";
 import { HuggingFaceIcon } from "../icons/HuggingFace";
 import { IFixIcon } from "../icons/IFixIt";
+import { LangChainIcon } from "../icons/LangChain";
 import { MetaIcon } from "../icons/Meta";
 import { MidjourneyIcon } from "../icons/Midjorney";
 import { MongoDBIcon } from "../icons/MongoDB";
@@ -321,6 +326,7 @@ export const nodeIconsLucide: iconsType = {
   ChatOllamaModel: OllamaIcon,
   Faiss: MetaIcon,
   FaissSearch: MetaIcon,
+  LangChain: LangChainIcon,
   AzureOpenAiModel: AzureIcon,
   Redis: RedisIcon,
   RedisSearch: RedisIcon,
@@ -403,6 +409,7 @@ export const nodeIconsLucide: iconsType = {
   textsplitters: Scissors,
   wrappers: Gift,
   helpers: Wand2,
+  ScanEye,
   experimental: FlaskConical,
   langchain_utilities: PocketKnife,
   WolframAlphaAPIWrapper: SvgWolfram,
@@ -431,6 +438,7 @@ export const nodeIconsLucide: iconsType = {
   SunIcon,
   MoonIcon,
   Bell,
+  AlertTriangle,
   ChevronLeft,
   SlidersHorizontal,
   Palette,
@@ -530,10 +538,12 @@ export const nodeIconsLucide: iconsType = {
   Command,
   ArrowBigUp,
   Dot,
+  RotateCcw,
+  Wrench,
   FolderPlusIcon,
   FolderIcon,
   Discord: FaDiscord,
-  RotateCcw,
+  PaperclipIcon,
   Settings,
   Streamlit,
 };

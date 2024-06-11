@@ -1,6 +1,14 @@
 import { CustomCellRendererProps } from "ag-grid-react";
 import { cloneDeep } from "lodash";
 import { useState } from "react";
+import useFlowStore from "../../../../stores/flowStore";
+import {
+  convertObjToArray,
+  convertValuesToNumbers,
+  hasDuplicateKeys,
+  scapedJSONStringfy,
+} from "../../../../utils/reactflowUtils";
+import { classNames } from "../../../../utils/utils";
 import CodeAreaComponent from "../../../codeAreaComponent";
 import DictComponent from "../../../dictComponent";
 import Dropdown from "../../../dropdownComponent";
@@ -13,14 +21,6 @@ import KeypairListComponent from "../../../keypairListComponent";
 import PromptAreaComponent from "../../../promptComponent";
 import TextAreaComponent from "../../../textAreaComponent";
 import ToggleShadComponent from "../../../toggleShadComponent";
-import useFlowStore from "../../../../stores/flowStore";
-import {
-  convertObjToArray,
-  convertValuesToNumbers,
-  hasDuplicateKeys,
-  scapedJSONStringfy,
-} from "../../../../utils/reactflowUtils";
-import { classNames } from "../../../../utils/utils";
 
 export default function TableNodeCellRender({
   node: { data },
@@ -28,7 +28,7 @@ export default function TableNodeCellRender({
     value,
     nodeClass,
     handleOnNewValue: handleOnNewValueNode,
-    handleOnChangeDb,
+    handleOnChangeDb: handleOnChangeDbNode,
   },
 }: CustomCellRendererProps) {
   const handleOnNewValue = (newValue: any, name: string) => {
@@ -39,6 +39,15 @@ export default function TableNodeCellRender({
       return newData;
     });
     setTemplateValue(newValue);
+  };
+
+  const handleOnChangeDb = (newValue: boolean, name: string) => {
+    handleOnChangeDbNode(newValue, name);
+    setTemplateData((old) => {
+      let newData = cloneDeep(old);
+      newData.load_from_db = newValue;
+      return newData;
+    });
   };
 
   const [templateValue, setTemplateValue] = useState(value);
@@ -259,7 +268,7 @@ export default function TableNodeCellRender({
   }
 
   return (
-    <div className="group flex h-full w-[300px] items-center justify-center py-2.5">
+    <div className="group mx-auto flex h-full w-[300px] items-center justify-center py-2.5">
       {getCellType()}
     </div>
   );

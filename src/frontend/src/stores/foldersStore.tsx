@@ -7,7 +7,6 @@ import {
 } from "../pages/MainPage/services";
 import { FoldersStoreType } from "../types/zustand/folders";
 import useFlowsManagerStore from "./flowsManagerStore";
-import { uploadFlowsToDatabase } from "../controllers/API";
 
 export const useFolderStore = create<FoldersStoreType>((set, get) => ({
   folders: [],

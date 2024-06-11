@@ -7,7 +7,8 @@ import orjson
 from loguru import logger
 
 from langflow.custom.eval import eval_custom_component_code
-from langflow.schema.schema import Record
+from langflow.graph.utils import get_artifact_type, post_process_raw
+from langflow.schema import Record
 
 if TYPE_CHECKING:
     from langflow.custom import CustomComponent
@@ -70,7 +71,7 @@ def update_params_with_load_from_db_fields(
             try:
                 key = None
                 try:
-                    key = custom_component.variables(params[field])
+                    key = custom_component.variables(params[field], field)
                 except ValueError as e:
                     # check if "User id is not set" is in the error message
                     if "User id is not set" in str(e) and not fallback_to_env_vars:
@@ -84,7 +85,11 @@ def update_params_with_load_from_db_fields(
                     logger.info(f"Using environment variable {params[field]} for {field}")
                 if key is None:
                     logger.warning(f"Could not get value for {field}. Setting it to None.")
+
                 params[field] = key
+
+            except TypeError as exc:
+                raise exc
 
             except Exception as exc:
                 logger.error(f"Failed to get value for {field} from custom component. Setting it to None. Error: {exc}")
@@ -124,4 +129,14 @@ async def instantiate_custom_component(params, user_id, vertex, fallback_to_env_
         custom_repr = build_result
     if not isinstance(custom_repr, str):
         custom_repr = str(custom_repr)
-    return custom_component, build_result, {"repr": custom_repr}
+    raw = custom_component.repr_value
+    if hasattr(raw, "data") and raw is not None:
+        raw = raw.data
+
+    elif hasattr(raw, "model_dump") and raw is not None:
+        raw = raw.model_dump()
+
+    artifact_type = get_artifact_type(custom_component, build_result)
+    raw = post_process_raw(raw, artifact_type)
+    artifact = {"repr": custom_repr, "raw": raw, "type": artifact_type}
+    return custom_component, build_result, artifact

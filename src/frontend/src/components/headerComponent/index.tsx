@@ -3,7 +3,10 @@ import { FaDiscord, FaGithub } from "react-icons/fa";
 import { RiTwitterXFill } from "react-icons/ri";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import AlertDropdown from "../../alerts/alertDropDown";
+import profileCircle from "../../assets/profile-circle.png";
 import {
+  BACKEND_URL,
+  BASE_URL_API,
   LOCATIONS_TO_RETURN,
   USER_PROJECTS_HEADER,
 } from "../../constants/constants";
@@ -15,7 +18,6 @@ import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { useLocationStore } from "../../stores/locationStore";
 import { useStoreStore } from "../../stores/storeStore";
-import { gradients } from "../../utils/styleUtils";
 import IconComponent from "../genericIconComponent";
 import { Button } from "../ui/button";
 import {
@@ -66,8 +68,8 @@ export default function Header(): JSX.Element {
   };
 
   const visitedFlowPathBefore = () => {
-    const lastThreeVisitedPaths = routeHistory.slice(-3);
-    return lastThreeVisitedPaths.some((path) => path.includes("/flow/"));
+    const last100VisitedPaths = routeHistory.slice(-99);
+    return last100VisitedPaths.some((path) => path.includes("/flow/"));
   };
 
   const showArrowReturnIcon =
@@ -76,7 +78,7 @@ export default function Header(): JSX.Element {
 
   return (
     <div className="header-arrangement">
-      <div className="header-start-display lg:w-[30%]">
+      <div className="header-start-display lg:w-[407px]">
         <Link to="/all" className="cursor-pointer" onClick={checkForChanges}>
           <span className="ml-4 text-2xl">⛓️</span>
         </Link>
@@ -129,7 +131,7 @@ export default function Header(): JSX.Element {
           </Link>
         )}
       </div>
-      <div className="header-end-division lg:w-[30%]">
+      <div className="header-end-division lg:w-[407px]">
         <div className="header-end-display">
           <a
             href="https://github.com/langflow-ai/langflow"
@@ -192,34 +194,38 @@ export default function Header(): JSX.Element {
                   variant="none"
                   size="none"
                   data-testid="user-profile-settings"
-                  className={
-                    "h-7 w-7 rounded-full focus-visible:outline-0 " +
-                    (userData?.profile_image ??
-                      (userData?.id
-                        ? gradients[
-                            parseInt(userData?.id ?? "", 30) % gradients.length
-                          ]
-                        : "bg-gray-500"))
-                  }
-                />
+                  className="shrink-0"
+                >
+                  <img
+                    src={
+                      `${BACKEND_URL.slice(
+                        0,
+                        BACKEND_URL.length - 1,
+                      )}${BASE_URL_API}files/profile_pictures/${
+                        userData?.profile_image ?? "Space/046-rocket.png"
+                      }` ?? profileCircle
+                    }
+                    className="h-7 w-7 shrink-0 focus-visible:outline-0"
+                  />
+                </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent>
                 {!autoLogin && (
                   <>
                     <DropdownMenuLabel>
                       <div className="flex items-center gap-3">
-                        <div
-                          className={
-                            "h-5 w-5 rounded-full focus-visible:outline-0 " +
-                            (userData?.profile_image ??
-                              (userData?.id
-                                ? gradients[
-                                    parseInt(userData?.id ?? "", 30) %
-                                      gradients.length
-                                  ]
-                                : "bg-gray-500"))
+                        <img
+                          src={
+                            `${BACKEND_URL.slice(
+                              0,
+                              BACKEND_URL.length - 1,
+                            )}${BASE_URL_API}files/profile_pictures/${
+                              userData?.profile_image
+                            }` ?? profileCircle
                           }
+                          className="h-5 w-5 focus-visible:outline-0 "
                         />
+
                         {userData?.username ?? "User"}
                       </div>
                     </DropdownMenuLabel>

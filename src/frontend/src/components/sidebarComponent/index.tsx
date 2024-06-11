@@ -44,10 +44,8 @@ export default function SidebarNav({
           folders?.length > 0 &&
           isFolderPath && (
             <SideBarFoldersButtonsComponent
-              folders={folders}
               pathname={pathname}
               handleChangeFolder={handleChangeFolder}
-              handleEditFolder={handleEditFolder}
               handleDeleteFolder={handleDeleteFolder}
             />
           )

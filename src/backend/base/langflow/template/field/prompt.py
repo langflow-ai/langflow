@@ -10,5 +10,5 @@ class DefaultPromptField(TemplateField):
 
     advanced: bool = False
     multiline: bool = True
-    input_types: list[str] = ["Document", "Record", "Text"]
+    input_types: list[str] = ["Document", "Message", "Record", "Text"]
     value: str = ""  # Set the value to empty string

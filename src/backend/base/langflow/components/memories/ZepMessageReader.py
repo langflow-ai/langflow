@@ -4,7 +4,7 @@ from langchain_community.chat_message_histories.zep import SearchScope, SearchTy
 
 from langflow.base.memory.memory import BaseMemoryComponent
 from langflow.field_typing import Text
-from langflow.schema.schema import Record
+from langflow.schema import Record
 
 
 class ZepMessageReaderComponent(BaseMemoryComponent):

@@ -7,7 +7,7 @@ from langchain_core.runnables import Runnable
 from langflow.base.agents.utils import get_agents_list, records_to_messages
 from langflow.custom import CustomComponent
 from langflow.field_typing import Text, Tool
-from langflow.schema.schema import Record
+from langflow.schema import Record
 
 
 class LCAgentComponent(CustomComponent):

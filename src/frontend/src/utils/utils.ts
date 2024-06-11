@@ -2,6 +2,7 @@ import { ColDef, ColGroupDef } from "ag-grid-community";
 import clsx, { ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import TableAutoCellRender from "../components/tableComponent/components/tableAutoCellRender";
+import { MODAL_CLASSES } from "../constants/constants";
 import { APIDataType, TemplateVariableType } from "../types/api";
 import {
   groupedObjType,
@@ -55,7 +56,7 @@ export function normalCaseToSnakeCase(str: string): string {
 
 export function toTitleCase(
   str: string | undefined,
-  isNodeField?: boolean
+  isNodeField?: boolean,
 ): string {
   if (!str) return "";
   let result = str
@@ -64,7 +65,7 @@ export function toTitleCase(
       if (isNodeField) return word;
       if (index === 0) {
         return checkUpperWords(
-          word[0].toUpperCase() + word.slice(1).toLowerCase()
+          word[0].toUpperCase() + word.slice(1).toLowerCase(),
         );
       }
       return checkUpperWords(word.toLowerCase());
@@ -77,7 +78,7 @@ export function toTitleCase(
       if (isNodeField) return word;
       if (index === 0) {
         return checkUpperWords(
-          word[0].toUpperCase() + word.slice(1).toLowerCase()
+          word[0].toUpperCase() + word.slice(1).toLowerCase(),
         );
       }
       return checkUpperWords(word.toLowerCase());
@@ -181,7 +182,7 @@ export function checkLocalStorageKey(key: string): boolean {
 
 export function IncrementObjectKey(
   object: object,
-  key: string
+  key: string,
 ): { newKey: string; increment: number } {
   let count = 1;
   const type = removeCountFromString(key);
@@ -216,7 +217,7 @@ export function groupByFamily(
   data: APIDataType,
   baseClasses: string,
   left: boolean,
-  flow?: NodeType[]
+  flow?: NodeType[],
 ): groupedObjType[] {
   const baseClassesSet = new Set(baseClasses.split("\n"));
   let arrOfPossibleInputs: Array<{
@@ -242,7 +243,7 @@ export function groupByFamily(
         baseClassesSet.has(template.type)) ||
         (template.input_types &&
           template.input_types.some((inputType) =>
-            baseClassesSet.has(inputType)
+            baseClassesSet.has(inputType),
           )))
     );
   };
@@ -262,7 +263,7 @@ export function groupByFamily(
         hasBaseClassInBaseClasses:
           foundNode?.hasBaseClassInBaseClasses ||
           nodeData.node!.base_classes.some((baseClass) =>
-            baseClassesSet.has(baseClass)
+            baseClassesSet.has(baseClass),
           ), //seta como anterior ou verifica se o node tem base class
         displayName: nodeData.node?.display_name,
       });
@@ -279,10 +280,10 @@ export function groupByFamily(
       if (!foundNode) {
         foundNode = {
           hasBaseClassInTemplate: Object.values(node!.template).some(
-            checkBaseClass
+            checkBaseClass,
           ),
           hasBaseClassInBaseClasses: node!.base_classes.some((baseClass) =>
-            baseClassesSet.has(baseClass)
+            baseClassesSet.has(baseClass),
           ),
           displayName: node?.display_name,
         };
@@ -354,7 +355,7 @@ export function isTimeStampString(str: string): boolean {
 export function extractColumnsFromRows(
   rows: object[],
   mode: "intersection" | "union",
-  excludeColumns?: Array<string>
+  excludeColumns?: Array<string>,
 ): (ColDef<any> | ColGroupDef<any>)[] {
   let columnsKeys: { [key: string]: ColDef<any> | ColGroupDef<any> } = {};
   if (rows.length === 0) {
@@ -363,11 +364,10 @@ export function extractColumnsFromRows(
   function intersection() {
     for (const key in rows[0]) {
       columnsKeys[key] = {
-        headerName: key,
+        headerName: toTitleCase(key),
         field: key,
         cellRenderer: TableAutoCellRender,
         filter: true,
-        autoHeight: true,
       };
     }
     for (const row of rows) {
@@ -382,14 +382,17 @@ export function extractColumnsFromRows(
     for (const row of rows) {
       for (const key in row) {
         columnsKeys[key] = {
-          headerName: key,
+          headerName: toTitleCase(key),
           field: key,
           filter: true,
           cellRenderer: TableAutoCellRender,
+          suppressAutoSize: true,
+          tooltipField: key,
         };
       }
     }
   }
+
   if (mode === "intersection") {
     intersection();
   } else {
@@ -403,4 +406,9 @@ export function extractColumnsFromRows(
   }
 
   return Object.values(columnsKeys);
+}
+
+export function isThereModal(): boolean {
+  const modal = document.body.getElementsByClassName(MODAL_CLASSES);
+  return modal.length > 0;
 }

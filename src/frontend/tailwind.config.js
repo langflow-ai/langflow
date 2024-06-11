@@ -53,7 +53,6 @@ module.exports = {
         connection: "var(--connection)",
         "almost-dark-gray": "var(--almost-dark-gray)",
         "almost-light-blue": "var(--almost-light-blue)",
-        "almost-medium-blue": "var(--almost-medium-blue)",
         "almost-medium-gray": "var(--almost-medium-gray)",
         "almost-medium-green": "var(--almost-medium-green)",
         "almost-medium-red": "var(--almost-medium-red)",
@@ -143,6 +142,7 @@ module.exports = {
       },
       boxShadow: {
         "frozen-ring": "0 0 10px 2px rgba(128, 190, 230, 0.5)",
+        node: "0 0px 15px -3px rgb(0 0 0 / 0.1), 0 0px 6px -4px rgb(0 0 0 / 0.1);",
         "frosted-ring": "0 0 10px 2px rgba(128, 190, 230, 0.7)",
       },
       backdropBlur: {
@@ -212,14 +212,14 @@ module.exports = {
             height: "8px",
           },
           "&::-webkit-scrollbar-track": {
-            backgroundColor: "#f1f1f1",
+            backgroundColor: "hsl(var(--muted))",
           },
           "&::-webkit-scrollbar-thumb": {
-            backgroundColor: "#ccc",
+            backgroundColor: "hsl(var(--border))",
             borderRadius: "999px",
           },
           "&::-webkit-scrollbar-thumb:hover": {
-            backgroundColor: "#bbb",
+            backgroundColor: "hsl(var(--ring))",
           },
           cursor: "auto",
         },
@@ -235,6 +235,10 @@ module.exports = {
         },
         ".text-align-last-right": {
           "text-align-last": "right",
+        },
+        ":focus-visible": {
+          outline: "none  !important",
+          outlineOffset: "0px !important",
         },
       });
     }),

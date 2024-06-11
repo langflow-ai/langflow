@@ -86,7 +86,7 @@ youtube-transcript-api = "^0.6.2"
 markdown = "^3.6"
 langchain-chroma = "^0.1.1"
 upstash-vector = "^0.4.0"
-cassio = "^0.1.7"
+cassio = { extras = ["cassio"], version = "^0.1.7", optional = true }
 unstructured = {extras = ["docx", "md", "pptx"], version = "^0.14.4"}
 
 
@@ -117,10 +117,12 @@ pytest-asyncio = "^0.23.0"
 pytest-profiling = "^1.7.0"
 pre-commit = "^3.7.0"
 vulture = "^2.11"
+dictdiffer = "^0.9.0"
 
 [tool.poetry.extras]
 deploy = ["celery", "redis", "flower"]
 couchbase = ["couchbase"]
+cassio = ["cassio"]
 local = ["llama-cpp-python", "sentence-transformers", "ctransformers"]
 
 
