@@ -20,7 +20,7 @@ class URLComponent(CustomComponent):
         self,
         urls: list[str],
     ) -> list[Record]:
-        loader = WebBaseLoader(web_paths=urls)
+        loader = WebBaseLoader(web_paths=[url for url in urls if url])
         docs = loader.load()
         records = self.to_records(docs)
         self.status = records

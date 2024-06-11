@@ -12,8 +12,8 @@ const useIconNodeRender = (
   checkNodeIconFragment: (
     iconColor: string,
     iconName: string,
-    iconClassName: string
-  ) => JSX.Element
+    iconClassName: string,
+  ) => JSX.Element,
 ) => {
   const iconNodeRender = useCallback(() => {
     const iconElement = data?.node?.icon;

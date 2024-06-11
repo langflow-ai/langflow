@@ -71,32 +71,37 @@ test("FloatComponent", async ({ page }) => {
 
   await page.getByTestId("showmirostat").click();
   expect(
-    await page.locator('//*[@id="showmirostat"]').isChecked()
+    await page.locator('//*[@id="showmirostat"]').isChecked(),
   ).toBeTruthy();
 
   await page.getByTestId("showmirostat_eta").click();
   expect(
-    await page.locator('//*[@id="showmirostat"]').isChecked()
+    await page.locator('//*[@id="showmirostat"]').isChecked(),
   ).toBeTruthy();
 
   await page.getByTestId("showmirostat_eta").click();
   expect(
-    await page.locator('//*[@id="showmirostat_eta"]').isChecked()
+    await page.locator('//*[@id="showmirostat"]').isChecked(),
   ).toBeTruthy();
 
   await page.getByTestId("showmirostat_eta").click();
   expect(
-    await page.locator('//*[@id="showmirostat_eta"]').isChecked()
+    await page.locator('//*[@id="showmirostat_eta"]').isChecked(),
+  ).toBeTruthy();
+
+  await page.getByTestId("showmirostat_eta").click();
+  expect(
+    await page.locator('//*[@id="showmirostat_eta"]').isChecked(),
   ).toBeFalsy();
 
   await page.getByTestId("showmirostat_tau").click();
   expect(
-    await page.locator('//*[@id="showmirostat_tau"]').isChecked()
+    await page.locator('//*[@id="showmirostat_tau"]').isChecked(),
   ).toBeTruthy();
 
   await page.getByTestId("showmirostat_tau").click();
   expect(
-    await page.locator('//*[@id="showmirostat_tau"]').isChecked()
+    await page.locator('//*[@id="showmirostat_tau"]').isChecked(),
   ).toBeFalsy();
 
   await page.getByTestId("showmodel").click();
@@ -119,22 +124,22 @@ test("FloatComponent", async ({ page }) => {
 
   await page.getByTestId("shownum_thread").click();
   expect(
-    await page.locator('//*[@id="shownum_thread"]').isChecked()
+    await page.locator('//*[@id="shownum_thread"]').isChecked(),
   ).toBeTruthy();
 
   await page.getByTestId("shownum_thread").click();
   expect(
-    await page.locator('//*[@id="shownum_thread"]').isChecked()
+    await page.locator('//*[@id="shownum_thread"]').isChecked(),
   ).toBeFalsy();
 
   await page.getByTestId("showrepeat_last_n").click();
   expect(
-    await page.locator('//*[@id="showrepeat_last_n"]').isChecked()
+    await page.locator('//*[@id="showrepeat_last_n"]').isChecked(),
   ).toBeTruthy();
 
   await page.getByTestId("showrepeat_last_n").click();
   expect(
-    await page.locator('//*[@id="showrepeat_last_n"]').isChecked()
+    await page.locator('//*[@id="showrepeat_last_n"]').isChecked(),
   ).toBeFalsy();
 
   await page.getByText("Save Changes", { exact: true }).click();
@@ -150,7 +155,7 @@ test("FloatComponent", async ({ page }) => {
     // showtemperature
     await page.locator('//*[@id="showtemperature"]').click();
     expect(
-      await page.locator('//*[@id="showtemperature"]').isChecked()
+      await page.locator('//*[@id="showtemperature"]').isChecked(),
     ).toBeTruthy();
 
     await page.getByText("Save Changes", { exact: true }).click();

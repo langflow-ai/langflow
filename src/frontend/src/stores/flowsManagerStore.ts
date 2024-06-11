@@ -87,12 +87,12 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
           if (dbData) {
             const { data, flows } = processFlows(dbData);
             const examples = flows.filter(
-              (flow) => flow.folder_id === starterFolderId
+              (flow) => flow.folder_id === starterFolderId,
             );
             get().setExamples(examples);
 
             const flowsWithoutStarterFolder = flows.filter(
-              (flow) => flow.folder_id !== starterFolderId
+              (flow) => flow.folder_id !== starterFolderId,
             );
 
             get().setFlows(flowsWithoutStarterFolder);
@@ -120,7 +120,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
     if (get().currentFlow) {
       get().saveFlow(
         { ...get().currentFlow!, data: { nodes, edges, viewport } },
-        true
+        true,
       );
     }
   },
@@ -146,7 +146,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
                   return updatedFlow;
                 }
                 return flow;
-              })
+              }),
             );
             //update tabs state
 
@@ -197,7 +197,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
     flow?: FlowType,
     override?: boolean,
     position?: XYPosition,
-    fromDragAndDrop?: boolean
+    fromDragAndDrop?: boolean,
   ): Promise<string | undefined> => {
     let flowData = flow
       ? processDataFromFlow(flow)
@@ -212,7 +212,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
         const newFlow = createNewFlow(
           flowData!,
           flow!,
-          folder_id || my_collection_id!
+          folder_id || my_collection_id!,
         );
         const { id } = await saveFlowToDatabase(newFlow);
         newFlow.id = id;
@@ -236,7 +236,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
       const newFlow = createNewFlow(
         flowData!,
         flow!,
-        folder_id || my_collection_id!
+        folder_id || my_collection_id!,
       );
 
       const newName = addVersionToDuplicates(newFlow, get().flows);
@@ -272,7 +272,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
         .getState()
         .paste(
           { nodes: flow!.data!.nodes, edges: flow!.data!.edges },
-          position ?? { x: 10, y: 10 }
+          position ?? { x: 10, y: 10 },
         );
     }
   },
@@ -282,7 +282,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
         multipleDeleteFlowsComponents(id)
           .then(() => {
             const { data, flows } = processFlows(
-              get().flows.filter((flow) => !id.includes(flow.id))
+              get().flows.filter((flow) => !id.includes(flow.id)),
             );
             get().setFlows(flows);
             set({ isLoading: false });
@@ -302,7 +302,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
           deleteFlowFromDatabase(id)
             .then(() => {
               const { data, flows } = processFlows(
-                get().flows.filter((flow) => flow.id !== id)
+                get().flows.filter((flow) => flow.id !== id),
               );
               get().setFlows(flows);
               set({ isLoading: false });
@@ -324,7 +324,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
     return new Promise<void>((resolve) => {
       let componentFlow = get().flows.find(
         (componentFlow) =>
-          componentFlow.is_component && componentFlow.name === key
+          componentFlow.is_component && componentFlow.name === key,
       );
 
       if (componentFlow) {
@@ -372,7 +372,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
               fileData,
               undefined,
               position,
-              true
+              true,
             );
             resolve(id);
           }
@@ -413,7 +413,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
     return get().addFlow(
       true,
       createFlowComponent(component, useDarkStore.getState().version),
-      override
+      override,
     );
   },
   takeSnapshot: () => {
@@ -434,7 +434,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
     if (pastLength > 0) {
       past[currentFlowId] = past[currentFlowId].slice(
         pastLength - defaultOptions.maxHistorySize + 1,
-        pastLength
+        pastLength,
       );
 
       past[currentFlowId].push(newState);

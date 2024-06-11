@@ -7,7 +7,7 @@ export const useLocationStore = create<LocationStoreType>((set, get) => ({
     let routeHistoryArray = get().routeHistory;
     routeHistoryArray.push(location);
 
-    if (routeHistoryArray?.length > 9) {
+    if (routeHistoryArray?.length > 100) {
       routeHistoryArray.shift();
       set({
         routeHistory: routeHistoryArray,

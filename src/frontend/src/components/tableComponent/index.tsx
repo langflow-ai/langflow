@@ -14,6 +14,7 @@ import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import ResetColumns from "./components/ResetColumns";
 import TableOptions from "./components/TableOptions";
 import resetGrid from "./utils/reset-grid-columns";
+import Loading from "../ui/loading";
 
 interface TableComponentProps extends AgGridReactProps {
   columnDefs: NonNullable<AgGridReactProps["columnDefs"]>;
@@ -21,6 +22,7 @@ interface TableComponentProps extends AgGridReactProps {
   alertTitle?: string;
   alertDescription?: string;
   editable?: boolean | string[];
+  pagination?: boolean;
   onDelete?: () => void;
   onDuplicate?: () => void;
 }
@@ -35,7 +37,7 @@ const TableComponent = forwardRef<
       alertDescription = DEFAULT_TABLE_ALERT_MSG,
       ...props
     },
-    ref
+    ref,
   ) => {
     let colDef = props.columnDefs.map((col, index) => {
       let newCol = {
@@ -76,7 +78,7 @@ const TableComponent = forwardRef<
     const dark = useDarkStore((state) => state.dark);
     const initialColumnDefs = useRef(colDef);
     const [columnStateChange, setColumnStateChange] = useState(false);
-
+    const storeReference = props.columnDefs.map((e) => e.headerName).join("_");
     const makeLastColumnNonResizable = (columnDefs) => {
       columnDefs.forEach((colDef, index) => {
         colDef.resizable = index !== columnDefs.length - 1;
@@ -89,21 +91,33 @@ const TableComponent = forwardRef<
       realRef.current = params;
       const updatedColumnDefs = makeLastColumnNonResizable([...colDef]);
       params.api.setGridOption("columnDefs", updatedColumnDefs);
+      const customInit = localStorage.getItem(storeReference);
       initialColumnDefs.current = params.api.getColumnDefs();
-      if (props.onGridReady) props.onGridReady(params);
+      if (customInit && realRef.current) {
+        realRef.current.api.applyColumnState({
+          state: JSON.parse(customInit),
+          applyOrder: true,
+        });
+      }
       setTimeout(() => {
-        setColumnStateChange(false);
+        if (customInit && realRef.current) {
+          setColumnStateChange(true);
+        } else {
+          setColumnStateChange(false);
+        }
       }, 50);
+      setTimeout(() => {
+        realRef.current.api.hideOverlay();
+      }, 1000);
+      if (props.onGridReady) props.onGridReady(params);
     };
-
     const onColumnMoved = (params) => {
       const updatedColumnDefs = makeLastColumnNonResizable(
-        params.columnApi.getAllGridColumns().map((col) => col.getColDef())
+        params.columnApi.getAllGridColumns().map((col) => col.getColDef()),
       );
       params.api.setGridOption("columnDefs", updatedColumnDefs);
       if (props.onColumnMoved) props.onColumnMoved(params);
     };
-
     if (props.rowData.length === 0) {
       return (
         <div className="flex h-full w-full items-center justify-center rounded-md border">
@@ -123,59 +137,47 @@ const TableComponent = forwardRef<
         className={cn(
           dark ? "ag-theme-quartz-dark" : "ag-theme-quartz",
           "ag-theme-shadcn flex h-full flex-col",
-          "relative"
+          "relative",
         )} // applying the grid theme
       >
         <AgGridReact
           {...props}
-          animateRows={false}
-          className={cn(props.className, "cusm-scroll")}
           defaultColDef={{
             minWidth: 100,
             autoHeight: true,
           }}
           columnDefs={colDef}
           ref={realRef}
-          pagination={true}
           onGridReady={onGridReady}
           onColumnMoved={onColumnMoved}
           onStateUpdated={(e) => {
-            console.log(e);
             if (e.sources.some((source) => source.includes("column"))) {
+              localStorage.setItem(
+                storeReference,
+                JSON.stringify(realRef.current?.api?.getColumnState()),
+              );
               setColumnStateChange(true);
             }
           }}
         />
-        <TableOptions
-          stateChange={columnStateChange}
-          hasSelection={realRef.current?.api?.getSelectedRows().length > 0}
-          duplicateRow={props.onDuplicate ? props.onDuplicate : undefined}
-          deleteRow={props.onDelete ? props.onDelete : undefined}
-          resetGrid={() => {
-            console.log("teste");
-            resetGrid(realRef, initialColumnDefs);
-            setTimeout(() => {
-              setColumnStateChange(false);
-            }, 100);
-          }}
-        />
-        <TableOptions
-          stateChange={columnStateChange}
-          hasSelection={realRef.current?.api?.getSelectedRows().length > 0}
-          duplicateRow={props.onDuplicate ? props.onDuplicate : undefined}
-          deleteRow={props.onDelete ? props.onDelete : undefined}
-          resetGrid={() => {
-            console.log("teste");
-            resetGrid(realRef, initialColumnDefs);
-            setTimeout(() => {
-              setColumnStateChange(false);
-            }, 100);
-          }}
-        />
-        <ResetColumns resetGrid={() => resetGrid(realRef, initialColumnDefs)} />
+        {props.pagination && (
+          <TableOptions
+            stateChange={columnStateChange}
+            hasSelection={realRef.current?.api?.getSelectedRows().length > 0}
+            duplicateRow={props.onDuplicate ? props.onDuplicate : undefined}
+            deleteRow={props.onDelete ? props.onDelete : undefined}
+            resetGrid={() => {
+              resetGrid(realRef, initialColumnDefs);
+              setTimeout(() => {
+                setColumnStateChange(false);
+                localStorage.removeItem(storeReference);
+              }, 100);
+            }}
+          />
+        )}
       </div>
     );
-  }
+  },
 );
 
 export default TableComponent;

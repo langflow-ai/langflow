@@ -16,13 +16,13 @@ export default function AlertDropdown({
 }: AlertDropdownType): JSX.Element {
   const notificationList = useAlertStore((state) => state.notificationList);
   const clearNotificationList = useAlertStore(
-    (state) => state.clearNotificationList
+    (state) => state.clearNotificationList,
   );
   const removeFromNotificationList = useAlertStore(
-    (state) => state.removeFromNotificationList
+    (state) => state.removeFromNotificationList,
   );
   const setNotificationCenter = useAlertStore(
-    (state) => state.setNotificationCenter
+    (state) => state.setNotificationCenter,
   );
 
   const [open, setOpen] = useState(false);

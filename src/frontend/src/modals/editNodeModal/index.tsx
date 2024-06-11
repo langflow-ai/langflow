@@ -9,6 +9,7 @@ import { NodeDataType } from "../../types/flow";
 import BaseModal from "../baseModal";
 import useColumnDefs from "./hooks/use-column-defs";
 import useRowData from "./hooks/use-row-data";
+import { cloneDeep } from "lodash";
 
 const EditNodeModal = forwardRef(
   (
@@ -25,9 +26,9 @@ const EditNodeModal = forwardRef(
       //      setOpenWDoubleClick: (open: boolean) => void;
       data: NodeDataType;
     },
-    ref
+    ref,
   ) => {
-    const myData = useRef(data);
+    const myData = useRef(cloneDeep(data));
 
     const isDark = useDarkStore((state) => state.dark);
 
@@ -38,8 +39,12 @@ const EditNodeModal = forwardRef(
         !myData.current.node!.template[n]?.advanced;
     }
 
-    const handleOnNewValue = (newValue: any, name) => {
-      myData.current.node!.template[name].value = newValue;
+    const handleOnNewValue = (newValue: any, key: string) => {
+      myData.current.node!.template[key].value = newValue;
+    };
+
+    const handleOnChangeDb = (newValue: boolean, key: string) => {
+      myData.current.node!.template[key].load_from_db = newValue;
     };
 
     const rowData = useRowData(data, open);
@@ -47,15 +52,16 @@ const EditNodeModal = forwardRef(
     const columnDefs: ColDef[] = useColumnDefs(
       data,
       handleOnNewValue,
+      handleOnChangeDb,
       changeAdvanced,
-      open
+      open,
     );
 
     const [gridApi, setGridApi] = useState<GridApi | null>(null);
 
     useEffect(() => {
       if (gridApi && open) {
-        myData.current = data;
+        myData.current = cloneDeep(data);
         gridApi.refreshCells();
       }
     }, [gridApi, open]);
@@ -67,22 +73,7 @@ const EditNodeModal = forwardRef(
     //    }, []);
 
     return (
-      <BaseModal
-        key={data.id}
-        size="medium-tall"
-        open={open}
-        setOpen={setOpen}
-        onSubmit={() => {
-          setNode(data.id, (old) => ({
-            ...old,
-            data: {
-              ...old.data,
-              node: myData.current.node,
-            },
-          }));
-          setOpen(false);
-        }}
-      >
+      <BaseModal key={data.id} open={open} setOpen={setOpen}>
         <BaseModal.Trigger>
           <></>
         </BaseModal.Trigger>
@@ -94,14 +85,6 @@ const EditNodeModal = forwardRef(
         </BaseModal.Header>
         <BaseModal.Content>
           <div className="flex h-full flex-col">
-            <div className="flex pb-2">
-              <IconComponent
-                name="Variable"
-                className="edit-node-modal-variable "
-              />
-              <span className="edit-node-modal-span">Parameters</span>
-            </div>
-
             <div className="h-full">
               {nodeLength > 0 && (
                 <TableComponent
@@ -118,10 +101,24 @@ const EditNodeModal = forwardRef(
           </div>
         </BaseModal.Content>
 
-        <BaseModal.Footer submit={{ label: "Save Changes" }} />
+        <BaseModal.Footer
+          submit={{
+            label: "Save Changes",
+            onClick: () => {
+              setNode(data.id, (old) => ({
+                ...old,
+                data: {
+                  ...old.data,
+                  node: myData.current.node,
+                },
+              }));
+              setOpen(false);
+            },
+          }}
+        />
       </BaseModal>
     );
-  }
+  },
 );
 
 export default EditNodeModal;

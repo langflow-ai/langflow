@@ -18,7 +18,7 @@ const TextAreaWrapper = ({
 }) => {
   const getPlaceholderText = (
     isDragging: boolean,
-    noInput: boolean
+    noInput: boolean,
   ): string => {
     if (isDragging) {
       return "Drop here";
@@ -33,8 +33,8 @@ const TextAreaWrapper = ({
     lockChat || saveLoading
       ? "form-modal-lock-true bg-input"
       : noInput
-      ? "form-modal-no-input bg-input"
-      : "form-modal-lock-false bg-background";
+        ? "form-modal-no-input bg-input"
+        : "form-modal-lock-false bg-background";
 
   const fileClass =
     files.length > 0

@@ -24,7 +24,7 @@ test("chat_io_teste", async ({ page }) => {
 
   const jsonContent = readFileSync(
     "src/frontend/tests/end-to-end/assets/ChatTest.json",
-    "utf-8"
+    "utf-8",
   );
 
   await page.getByTestId("blank-flow").click();
@@ -47,7 +47,7 @@ test("chat_io_teste", async ({ page }) => {
     "drop",
     {
       dataTransfer,
-    }
+    },
   );
   await page.getByLabel("fit view").click();
   await page.getByText("Playground", { exact: true }).click();
