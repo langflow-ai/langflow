@@ -122,10 +122,9 @@ async def build_component(
     # Now set the params as attributes of the custom_component
     custom_component.set_attributes(params)
 
-    build_results = await custom_component.build_results(vertex)
-    custom_repr = custom_component.custom_repr()
+    build_results, artifacts = await custom_component.build_results(vertex)
 
-    return custom_component, build_results, {"repr": custom_repr}
+    return custom_component, build_results, artifacts
 
 
 async def build_custom_component(params: dict, custom_component: "CustomComponent"):

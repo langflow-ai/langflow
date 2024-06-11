@@ -180,14 +180,21 @@ async def build_vertex(
                 inputs_dict=inputs.model_dump() if inputs else {},
                 files=files,
             )
-            log_obj = Log(message=vertex.artifacts_raw, type=vertex.artifacts_type)
+            if isinstance(vertex.artifacts_raw, dict):
+                logs = {}
+                for key in vertex.artifacts_raw:
+                    log_obj = Log(message=vertex.artifacts_raw[key], type=vertex.artifacts_type[key])
+                    logs[key] = log_obj
+            else:
+                logs = [Log(message=vertex.artifacts_raw, type=vertex.artifacts_type)]
+
             result_data_response = ResultDataResponse(**result_dict.model_dump())
 
         except Exception as exc:
             logger.exception(f"Error building vertex: {exc}")
             params = format_exception_message(exc)
             valid = False
-            log_obj = Log(message=params, type="error")
+            logs = [Log(message=params, type="error")]
             result_data_response = ResultDataResponse(results={})
             artifacts = {}
             # If there's an error building the vertex
@@ -195,7 +202,7 @@ async def build_vertex(
             await chat_service.clear_cache(flow_id_str)
 
         result_data_response.message = artifacts
-        result_data_response.logs.append(log_obj)
+        result_data_response.logs = logs
 
         # Log the vertex build
         if not vertex.will_stream:

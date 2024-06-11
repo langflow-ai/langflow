@@ -64,8 +64,8 @@ class Vertex:
         self._built_result = None
         self._built = False
         self.artifacts: Dict[str, Any] = {}
-        self.artifacts_raw: Any = None
-        self.artifacts_type: Optional[str] = None
+        self.artifacts_raw: Dict[str, Any] = {}
+        self.artifacts_type: Dict[str, str] = {}
         self.steps: List[Callable] = [self._build]
         self.steps_ran: List[Callable] = []
         self.task_id: Optional[str] = None
@@ -555,11 +555,11 @@ class Vertex:
         """
         flow_id = self.graph.flow_id
         if not self._built:
-            log_transaction(flow_id, vertex=self, target=requester, status="error")
+            log_transaction(flow_id, source=self, target=requester, status="error")
             raise ValueError(f"Component {self.display_name} has not been built yet")
 
         result = self._built_result if self.use_result else self._built_object
-        log_transaction(flow_id, vertex=self, target=requester, status="success")
+        log_transaction(flow_id, source=self, target=requester, status="success")
         return result
 
     async def _build_vertex_and_update_params(self, key, vertex: "Vertex"):

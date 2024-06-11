@@ -17,6 +17,7 @@ import yaml
 from loguru import logger
 from pydantic import BaseModel
 
+from langflow.schema.artifact import get_artifact_type, post_process_raw
 from langflow.schema.record import Record
 from langflow.template.field.base import UNDEFINED, Input, Output
 
@@ -51,12 +52,15 @@ class Component(CustomComponent):
     inputs: Optional[List[Input]] = None
     outputs: Optional[List[Output]] = None
     code_class_base_inheritance: ClassVar[str] = "Component"
+    _results: dict = {}
+    _arguments: dict = {}
 
     def set_attributes(self, params: dict):
         for key, value in params.items():
             if key in self.__dict__:
                 raise ValueError(f"Key {key} already exists in {self.__class__.__name__}")
             setattr(self, key, value)
+        self._arguments = params
 
     def _set_outputs(self, outputs: List[dict]):
         self.outputs = [Output(**output) for output in outputs]
@@ -65,7 +69,7 @@ class Component(CustomComponent):
 
     async def build_results(self, vertex: "Vertex"):
         _results = {}
-
+        _artifacts = {}
         if hasattr(self, "outputs"):
             self._set_outputs(vertex.outputs)
             for output in self.outputs:
@@ -73,7 +77,7 @@ class Component(CustomComponent):
                 # or if it's not connected to any vertex
                 if not vertex.outgoing_edges or output.name in vertex.edges_source_names:
                     method: Callable | Awaitable = getattr(self, output.method)
-                    if output.cache and not isinstance(output.value, UNDEFINED):
+                    if output.cache and output.value != UNDEFINED:
                         _results[output.name] = output.value
                     else:
                         result = method()
@@ -82,8 +86,24 @@ class Component(CustomComponent):
                             result = await result
                         _results[output.name] = result
                         output.value = result
+                        custom_repr = self.custom_repr()
+                        if custom_repr is None and isinstance(result, (dict, Record, str)):
+                            custom_repr = result
+                        if not isinstance(custom_repr, str):
+                            custom_repr = str(custom_repr)
+                        raw = self.status
+                        if hasattr(raw, "data") and raw is not None:
+                            raw = raw.data
 
-        return _results
+                        elif hasattr(raw, "model_dump") and raw is not None:
+                            raw = raw.model_dump()
+                        artifact_type = get_artifact_type(self.status, result)
+                        raw = post_process_raw(raw, artifact_type)
+                        artifact = {"repr": custom_repr, "raw": raw, "type": artifact_type}
+                        _artifacts[output.name] = artifact
+        self._artifacts = _artifacts
+        self._results = _results
+        return _results, _artifacts
 
     def custom_repr(self):
         # ! Temporary REPR

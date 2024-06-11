@@ -23,6 +23,7 @@ from langflow.services.database.models.folder.model import Folder, FolderCreate
 from langflow.services.database.models.folder.utils import create_default_folder_if_it_doesnt_exist
 from langflow.services.database.models.user.crud import get_user_by_username
 from langflow.services.deps import get_settings_service, get_storage_service, get_variable_service, session_scope
+from langflow.template.field.prompt import DEFAULT_PROMPT_INTUT_TYPES
 
 STARTER_FOLDER_NAME = "Starter Projects"
 STARTER_FOLDER_DESCRIPTION = "Starter projects to help you get started in Langflow."
@@ -72,6 +73,9 @@ def update_projects_components_with_latest_component_versions(project_data, all_
                                 }
                             )
                             node_data["template"][key]["value"] = value["value"]
+                    for key, value in node_data["template"].items():
+                        if key not in latest_template:
+                            node_data["template"][key]["input_types"] = DEFAULT_PROMPT_INTUT_TYPES
                 node_changes_log[node_data["display_name"]].append(
                     {
                         "attr": "_type",
@@ -173,6 +177,7 @@ def update_new_output(data):
                             "types": types,
                             "selected": selected,
                             "name": " | ".join(types),
+                            "display_name": " | ".join(types),
                         }
                     )
             deduplicated_outputs = []
@@ -557,7 +562,7 @@ async def create_or_update_starter_projects():
             try:
                 Graph.from_payload(updated_project_data)
             except Exception as e:
-                raise ValueError(f"Error loading graph from project {project_name}: {e}")
+                logger.error(e)
             if updated_project_data != project_data:
                 project_data = updated_project_data
                 # We also need to update the project data in the file
