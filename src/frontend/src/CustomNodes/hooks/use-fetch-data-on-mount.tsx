@@ -40,7 +40,10 @@ const useFetchDataOnMount = (
 
           setErrorData({
             title: "Error while updating the Component",
-            list: [responseError?.response?.data?.detail ?? "Unknown error"],
+            list: [
+              responseError?.response?.data?.detail ??
+                "An unexpected error occurred while updating the Component. Please try again.",
+            ],
           });
         }
         setIsLoading(false);

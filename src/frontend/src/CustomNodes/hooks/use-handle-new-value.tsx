@@ -45,7 +45,8 @@ const useHandleOnNewValue = (
         setErrorData({
           title: "Error while updating the Component",
           list: [
-            responseError?.response?.data?.detail.error ?? "Unknown error",
+            responseError?.response?.data?.detail.error ??
+              "An unexpected error occurred while updating the Component. Please try again.",
           ],
         });
       }
