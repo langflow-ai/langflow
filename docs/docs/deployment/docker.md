@@ -7,7 +7,7 @@ This guide will help you get LangFlow up and running using Docker and Docker Com
 - Docker
 - Docker Compose
 
-## Steps
+## Clone repo and build Docker container
 
 1. Clone the LangFlow repository:
 
@@ -29,11 +29,11 @@ This guide will help you get LangFlow up and running using Docker and Docker Com
 
 LangFlow will now be accessible at [http://localhost:7860/](http://localhost:7860/).
 
-## Docker Compose Configuration
+## Docker Compose configuration
 
 The Docker Compose configuration spins up two services: `langflow` and `postgres`.
 
-### LangFlow Service
+### LangFlow service
 
 The `langflow` service uses the `langflowai/langflow:latest` Docker image and exposes port 7860. It depends on the `postgres` service.
 
@@ -46,7 +46,7 @@ Volumes:
 
 - `langflow-data`: This volume is mapped to `/var/lib/langflow` in the container.
 
-### PostgreSQL Service
+### PostgreSQL service
 
 The `postgres` service uses the `postgres:16` Docker image and exposes port 5432.
 
@@ -60,6 +60,6 @@ Volumes:
 
 - `langflow-postgres`: This volume is mapped to `/var/lib/postgresql/data` in the container.
 
-## Switching to a Specific LangFlow Version
+## Switch to a specific LangFlow version
 
 If you want to use a specific version of LangFlow, you can modify the `image` field under the `langflow` service in the Docker Compose file. For example, to use version 1.0-alpha, change `langflowai/langflow:latest` to `langflowai/langflow:1.0-alpha`.
