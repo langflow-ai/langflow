@@ -17,7 +17,7 @@ export default function SessionView({ rows }: { rows: Array<any> }) {
     setSelectedRows,
     setSuccessData,
     setErrorData,
-    selectedRows
+    selectedRows,
   );
 
   const { handleUpdate } = useUpdateMessage(setSuccessData, setErrorData);

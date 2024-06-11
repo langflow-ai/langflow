@@ -26,7 +26,7 @@ export default function MessagesPage() {
     setSelectedRows,
     setSuccessData,
     setErrorData,
-    selectedRows
+    selectedRows,
   );
 
   const { handleUpdate } = useUpdateMessage(setSuccessData, setErrorData);
@@ -63,7 +63,7 @@ export default function MessagesPage() {
           overlayNoRowsTemplate="No data available"
           onSelectionChanged={(event: SelectionChangedEvent) => {
             setSelectedRows(
-              event.api.getSelectedRows().map((row) => row.index)
+              event.api.getSelectedRows().map((row) => row.index),
             );
           }}
           rowSelection="multiple"

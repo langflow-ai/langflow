@@ -548,6 +548,7 @@ export type nodeToolbarPropsType = {
   onCloseAdvancedModal?: (close: boolean) => void;
   selected: boolean;
   setShowState: (show: boolean | SetStateAction<boolean>) => void;
+  updateNode: () => void;
 };
 
 export type parsedDataType = {

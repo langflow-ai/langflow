@@ -5,7 +5,7 @@ export const useMessagesStore = create<MessagesStoreType>((set, get) => ({
   deleteSession: (id) => {
     set((state) => {
       const updatedMessages = state.messages.filter(
-        (msg) => msg.session_id !== id
+        (msg) => msg.session_id !== id,
       );
       return { messages: updatedMessages };
     });
@@ -29,7 +29,7 @@ export const useMessagesStore = create<MessagesStoreType>((set, get) => ({
   updateMessage: (message) => {
     set(() => ({
       messages: get().messages.map((msg) =>
-        msg.index === message.index ? message : msg
+        msg.index === message.index ? message : msg,
       ),
     }));
   },
@@ -41,7 +41,7 @@ export const useMessagesStore = create<MessagesStoreType>((set, get) => ({
       try {
         set((state) => {
           const updatedMessages = state.messages.filter(
-            (msg) => !ids.includes(msg.index)
+            (msg) => !ids.includes(msg.index),
           );
           get().setMessages(updatedMessages);
           resolve(updatedMessages);

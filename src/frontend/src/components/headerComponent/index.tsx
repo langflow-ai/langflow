@@ -58,7 +58,7 @@ export default function Header(): JSX.Element {
     const lastFlowVisitedIndex = routeHistory
       .reverse()
       .findIndex(
-        (path) => path.includes("/flow/") && path !== location.pathname
+        (path) => path.includes("/flow/") && path !== location.pathname,
       );
 
     const lastFlowVisited = routeHistory[lastFlowVisitedIndex];
@@ -68,8 +68,8 @@ export default function Header(): JSX.Element {
   };
 
   const visitedFlowPathBefore = () => {
-    const lastThreeVisitedPaths = routeHistory.slice(-3);
-    return lastThreeVisitedPaths.some((path) => path.includes("/flow/"));
+    const last100VisitedPaths = routeHistory.slice(-99);
+    return last100VisitedPaths.some((path) => path.includes("/flow/"));
   };
 
   const showArrowReturnIcon =
@@ -78,7 +78,7 @@ export default function Header(): JSX.Element {
 
   return (
     <div className="header-arrangement">
-      <div className="header-start-display lg:w-[30%]">
+      <div className="header-start-display lg:w-[407px]">
         <Link to="/all" className="cursor-pointer" onClick={checkForChanges}>
           <span className="ml-4 text-2xl">⛓️</span>
         </Link>
@@ -131,7 +131,7 @@ export default function Header(): JSX.Element {
           </Link>
         )}
       </div>
-      <div className="header-end-division lg:w-[30%]">
+      <div className="header-end-division lg:w-[407px]">
         <div className="header-end-display">
           <a
             href="https://github.com/langflow-ai/langflow"
@@ -194,17 +194,18 @@ export default function Header(): JSX.Element {
                   variant="none"
                   size="none"
                   data-testid="user-profile-settings"
+                  className="shrink-0"
                 >
                   <img
                     src={
                       `${BACKEND_URL.slice(
                         0,
-                        BACKEND_URL.length - 1
+                        BACKEND_URL.length - 1,
                       )}${BASE_URL_API}files/profile_pictures/${
                         userData?.profile_image ?? "Space/046-rocket.png"
                       }` ?? profileCircle
                     }
-                    className="h-7 w-7 focus-visible:outline-0 "
+                    className="h-7 w-7 shrink-0 focus-visible:outline-0"
                   />
                 </Button>
               </DropdownMenuTrigger>
@@ -217,7 +218,7 @@ export default function Header(): JSX.Element {
                           src={
                             `${BACKEND_URL.slice(
                               0,
-                              BACKEND_URL.length - 1
+                              BACKEND_URL.length - 1,
                             )}${BASE_URL_API}files/profile_pictures/${
                               userData?.profile_image
                             }` ?? profileCircle

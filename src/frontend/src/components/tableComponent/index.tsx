@@ -21,6 +21,7 @@ interface TableComponentProps extends AgGridReactProps {
   alertTitle?: string;
   alertDescription?: string;
   editable?: boolean | string[];
+  pagination?: boolean;
   onDelete?: () => void;
   onDuplicate?: () => void;
 }
@@ -140,15 +141,12 @@ const TableComponent = forwardRef<
       >
         <AgGridReact
           {...props}
-          animateRows={false}
-          className={cn(props.className, "cusm-scroll")}
           defaultColDef={{
             minWidth: 100,
             autoHeight: true,
           }}
           columnDefs={colDef}
           ref={realRef}
-          pagination={true}
           onGridReady={onGridReady}
           onColumnMoved={onColumnMoved}
           onStateUpdated={(e) => {
@@ -161,19 +159,21 @@ const TableComponent = forwardRef<
             }
           }}
         />
-        <TableOptions
-          stateChange={columnStateChange}
-          hasSelection={realRef.current?.api?.getSelectedRows().length > 0}
-          duplicateRow={props.onDuplicate ? props.onDuplicate : undefined}
-          deleteRow={props.onDelete ? props.onDelete : undefined}
-          resetGrid={() => {
-            resetGrid(realRef, initialColumnDefs);
-            setTimeout(() => {
-              setColumnStateChange(false);
-              localStorage.removeItem(storeReference);
-            }, 100);
-          }}
-        />
+        {props.pagination && (
+          <TableOptions
+            stateChange={columnStateChange}
+            hasSelection={realRef.current?.api?.getSelectedRows().length > 0}
+            duplicateRow={props.onDuplicate ? props.onDuplicate : undefined}
+            deleteRow={props.onDelete ? props.onDelete : undefined}
+            resetGrid={() => {
+              resetGrid(realRef, initialColumnDefs);
+              setTimeout(() => {
+                setColumnStateChange(false);
+                localStorage.removeItem(storeReference);
+              }, 100);
+            }}
+          />
+        )}
       </div>
     );
   },

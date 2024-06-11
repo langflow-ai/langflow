@@ -48,9 +48,9 @@ import useFetchDataOnMount from "../../../hooks/use-fetch-data-on-mount";
 import useHandleOnNewValue from "../../../hooks/use-handle-new-value";
 import useHandleNodeClass from "../../../hooks/use-handle-node-class";
 import useHandleRefreshButtonPress from "../../../hooks/use-handle-refresh-buttons";
-import OutputModal from "../outputModal";
 import TooltipRenderComponent from "../tooltipRenderComponent";
 import { TEXT_FIELD_TYPES } from "./constants";
+import OutputModal from "../outputModal";
 import { useShortcutsStore } from "../../../../stores/shortcuts";
 import { useHotkeys } from "react-hotkeys-hook";
 
@@ -89,7 +89,9 @@ export default function ParameterComponent({
   const [openOutputModal, setOpenOutputModal] = useState(false);
   const flowPool = useFlowStore((state) => state.flowPool);
 
-  const displayOutputPreview = !!flowPool[data.id];
+  const displayOutputPreview =
+    !!flowPool[data.id] &&
+    flowPool[data.id][flowPool[data.id].length - 1]?.valid;
 
   const unknownOutput = !!(
     flowPool[data.id] &&
