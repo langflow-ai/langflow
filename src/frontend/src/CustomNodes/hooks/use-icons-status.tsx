@@ -23,7 +23,7 @@ const useIconStatus = (
       return (
         <div
           className={cn(
-            "h-4 w-4 shrink-0 rounded-full",
+            "h-4 w-4 shrink-0 cursor-pointer rounded-full",
             conditionSuccess
               ? "bg-status-green"
               : conditionInactive
