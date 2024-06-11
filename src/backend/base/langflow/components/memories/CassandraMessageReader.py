@@ -3,7 +3,7 @@ from typing import Optional, cast
 from langchain_community.chat_message_histories import CassandraChatMessageHistory
 
 from langflow.base.memory.memory import BaseMemoryComponent
-from langflow.schema.schema import Record
+from langflow.schema.record import Record
 
 
 class CassandraMessageReaderComponent(BaseMemoryComponent):
