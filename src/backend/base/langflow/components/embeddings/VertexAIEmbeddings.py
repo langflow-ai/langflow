@@ -1,8 +1,7 @@
 from typing import List, Optional
 
-from langchain_google_vertexai import VertexAIEmbeddings
-
 from langflow.custom import CustomComponent
+from langflow.field_typing import Embeddings
 
 
 class VertexAIEmbeddingsComponent(CustomComponent):
@@ -71,7 +70,14 @@ class VertexAIEmbeddingsComponent(CustomComponent):
         temperature: float = 0.0,
         top_k: int = 40,
         top_p: float = 0.95,
-    ) -> VertexAIEmbeddings:
+    ) -> Embeddings:
+        try:
+            from langchain_google_vertexai import VertexAIEmbeddings
+        except ImportError:
+            raise ImportError(
+                "Please install the langchain-google-vertexai package to use the VertexAIEmbeddings component."
+            )
+
         return VertexAIEmbeddings(
             instance=instance,
             credentials=credentials,
