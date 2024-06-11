@@ -1,12 +1,9 @@
 from typing import Optional
 
-from langchain_astradb import AstraDBChatMessageHistory
 from langchain_core.messages import BaseMessage
 
 from langflow.base.memory.memory import BaseMemoryComponent
-from langflow.schema.schema import Record
-
-from langchain_core.messages import BaseMessage
+from langflow.schema.record import Record
 
 
 class AstraDBMessageWriterComponent(BaseMemoryComponent):

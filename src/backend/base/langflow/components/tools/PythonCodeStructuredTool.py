@@ -91,4 +91,4 @@ class PythonCodeStructuredTool(CustomComponent):
         tool = StructuredTool.from_function(
             func=func, args_schema=_class, name=name, description=description, return_direct=return_direct
         )
-        return tool
+        return tool  # type: ignore
