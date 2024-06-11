@@ -3,6 +3,8 @@ import xml.etree.ElementTree as ET
 from concurrent import futures
 from pathlib import Path
 from typing import Callable, List, Optional, Text
+
+
 import chardet
 import yaml
 
@@ -93,6 +95,9 @@ def read_text_file(file_path: str) -> str:
         raw_data = f.read()
         result = chardet.detect(raw_data)
         encoding = result["encoding"]
+
+        if encoding in ["Windows-1252", "Windows-1254"]:
+            encoding = "utf-8"
 
     with open(file_path, "r", encoding=encoding) as f:
         return f.read()
