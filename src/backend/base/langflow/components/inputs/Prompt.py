@@ -1,6 +1,7 @@
 from langflow.custom import Component
 from langflow.field_typing import Input, Output
 from langflow.field_typing.prompt import Prompt
+from langflow.schema.record import Record
 
 
 class PromptComponent(Component):
@@ -14,7 +15,7 @@ class PromptComponent(Component):
         }
 
     inputs = [
-        Input(name="template", type=Prompt, display_name="Template"),
+        Input(name="template", field_type=Prompt, display_name="Template"),
     ]
 
     outputs = [
@@ -33,5 +34,5 @@ class PromptComponent(Component):
     ) -> Prompt:
         kwargs = {k: v for k, v in self._arguments.items() if k != "template"}
         prompt = await Prompt.from_template_and_variables(self.template, kwargs)
-        self.status = prompt.format_text()
+        self.status = [Record.from_lc_message(message) for message in prompt.messages]
         return prompt
