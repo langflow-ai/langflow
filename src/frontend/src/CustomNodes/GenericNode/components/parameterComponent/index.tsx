@@ -625,6 +625,7 @@ export default function ParameterComponent({
             open={openOutputModal}
             nodeId={data.id}
             setOpen={setOpenOutputModal}
+            outputName={outputName}
           />
         )}
       </>
