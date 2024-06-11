@@ -241,8 +241,18 @@ export default function GenericNode({
     }
   }
 
+  function handlePlayWShortcut() {
+    if (buildStatus === BuildStatus.BUILDING || isBuilding || !selected) return;
+    setValidationStatus(null);
+    console.log(data.node?.display_name);
+    buildFlow({ stopNodeId: data.id });
+  }
+
   const update = useShortcutsStore((state) => state.update);
+  const play = useShortcutsStore((state) => state.play);
+
   useHotkeys(update, handleUpdateCodeWShortcut, { preventDefault });
+  useHotkeys(play, handlePlayWShortcut, { preventDefault });
 
   const shortcuts = useShortcutsStore((state) => state.shortcuts);
 
@@ -388,6 +398,7 @@ export default function GenericNode({
                         data.node!.template[templateField].show &&
                         !data.node!.template[templateField].advanced && (
                           <ParameterComponent
+                            selected={selected}
                             index={idx.toString()}
                             key={scapedJSONStringfy({
                               inputTypes:
@@ -461,6 +472,7 @@ export default function GenericNode({
                         ),
                     )}
                   <ParameterComponent
+                    selected={selected}
                     key={scapedJSONStringfy({
                       baseClasses: data.node!.base_classes,
                       id: data.id,
@@ -644,6 +656,7 @@ export default function GenericNode({
                     {data.node!.template[templateField].show &&
                     !data.node!.template[templateField].advanced ? (
                       <ParameterComponent
+                        selected={selected}
                         index={idx.toString()}
                         key={scapedJSONStringfy({
                           inputTypes:
@@ -723,6 +736,7 @@ export default function GenericNode({
               </div>
               {data.node!.base_classes.length > 0 && (
                 <ParameterComponent
+                  selected={selected}
                   key={scapedJSONStringfy({
                     baseClasses: data.node!.base_classes,
                     id: data.id,

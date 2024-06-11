@@ -21,6 +21,8 @@ export type StoreComponentResponse = {
 
 export type shortcutsStoreType = {
   updateUniqueShortcut: (name: string, combination: string) => void;
+  output: string;
+  play: string;
   flow: string;
   group: string;
   cut: string;

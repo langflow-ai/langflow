@@ -7,6 +7,8 @@ export const useShortcutsStore = create<shortcutsStoreType>((set, get) => ({
   setShortcuts: (newShortcuts) => {
     set({ shortcuts: newShortcuts });
   },
+  output: "o",
+  play: "p",
   flow: "mod+b",
   undo: "mod+z",
   redo: "mod+y",
