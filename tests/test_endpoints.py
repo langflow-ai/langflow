@@ -4,7 +4,6 @@ from uuid import UUID, uuid4
 import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
-
 from langflow.custom.directory_reader.directory_reader import DirectoryReader
 from langflow.services.deps import get_settings_service
 
@@ -448,9 +447,9 @@ def test_successful_run_no_payload(client, starter_project, created_api_key):
     assert all(["ChatOutput" in _id for _id in ids])
     display_names = [output.get("component_display_name") for output in outputs_dict.get("outputs")]
     assert all([name in display_names for name in ["Chat Output"]])
-    inner_results = [output.get("results").get("text") for output in outputs_dict.get("outputs")]
+    inner_results = [output.get("results").get("result") for output in outputs_dict.get("outputs")]
 
-    assert all([result is not None for result in inner_results]), inner_results
+    assert all([result is not None for result in inner_results]), outputs_dict.get("outputs")
 
 
 def test_successful_run_with_output_type_text(client, starter_project, created_api_key):
@@ -478,7 +477,7 @@ def test_successful_run_with_output_type_text(client, starter_project, created_a
     assert all(["ChatOutput" in _id for _id in ids]), ids
     display_names = [output.get("component_display_name") for output in outputs_dict.get("outputs")]
     assert all([name in display_names for name in ["Chat Output"]]), display_names
-    inner_results = [output.get("results").get("text") for output in outputs_dict.get("outputs")]
+    inner_results = [output.get("results").get("result") for output in outputs_dict.get("outputs")]
     expected_result = ""
     assert all([expected_result in result for result in inner_results]), inner_results
 
@@ -509,7 +508,7 @@ def test_successful_run_with_output_type_any(client, starter_project, created_ap
     assert all(["ChatOutput" in _id or "TextOutput" in _id for _id in ids]), ids
     display_names = [output.get("component_display_name") for output in outputs_dict.get("outputs")]
     assert all([name in display_names for name in ["Chat Output"]]), display_names
-    inner_results = [output.get("results").get("text") for output in outputs_dict.get("outputs")]
+    inner_results = [output.get("results").get("result") for output in outputs_dict.get("outputs")]
     expected_result = ""
     assert all([expected_result in result for result in inner_results]), inner_results
 
@@ -567,7 +566,7 @@ def test_successful_run_with_input_type_text(client, starter_project, created_ap
     text_input_outputs = [output for output in outputs_dict.get("outputs") if "TextInput" in output.get("component_id")]
     assert len(text_input_outputs) == 0
     # Now we check if the input_value is correct
-    assert all([output.get("results").get("text") == "value1" for output in text_input_outputs]), text_input_outputs
+    assert all([output.get("results").get("result") == "value1" for output in text_input_outputs]), text_input_outputs
 
 
 # Now do the same for "chat" input type
@@ -598,7 +597,7 @@ def test_successful_run_with_input_type_chat(client, starter_project, created_ap
     chat_input_outputs = [output for output in outputs_dict.get("outputs") if "ChatInput" in output.get("component_id")]
     assert len(chat_input_outputs) == 1
     # Now we check if the input_value is correct
-    assert all([output.get("results").get("text") == "value1" for output in chat_input_outputs]), chat_input_outputs
+    assert all([output.get("results").get("result") == "value1" for output in chat_input_outputs]), chat_input_outputs
 
 
 def test_successful_run_with_input_type_any(client, starter_project, created_api_key):
@@ -632,7 +631,7 @@ def test_successful_run_with_input_type_any(client, starter_project, created_api
     ]
     assert len(any_input_outputs) == 1
     # Now we check if the input_value is correct
-    assert all([output.get("results").get("text") == "value1" for output in any_input_outputs]), any_input_outputs
+    assert all([output.get("results").get("result") == "value1" for output in any_input_outputs]), any_input_outputs
 
 
 @pytest.mark.api_key_required

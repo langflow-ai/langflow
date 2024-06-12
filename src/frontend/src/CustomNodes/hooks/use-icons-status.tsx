@@ -1,4 +1,7 @@
+import ForwardedIconComponent from "../../components/genericIconComponent";
+import Checkmark from "../../components/ui/checkmark";
 import Loading from "../../components/ui/loading";
+import Xmark from "../../components/ui/xmark";
 import { BuildStatus } from "../../constants/enums";
 import { VertexBuildTypeAPI } from "../../types/api";
 import { cn } from "../../utils/utils";
@@ -8,31 +11,30 @@ const useIconStatus = (
   validationStatus: VertexBuildTypeAPI | null,
 ) => {
   const conditionSuccess = validationStatus && validationStatus.valid;
-  const conditionInactive =
-    validationStatus &&
-    !validationStatus.valid &&
-    buildStatus === BuildStatus.INACTIVE;
   const conditionError =
     buildStatus === BuildStatus.ERROR ||
     (validationStatus && !validationStatus.valid);
 
   const renderIconStatus = () => {
     if (buildStatus === BuildStatus.BUILDING) {
-      return <Loading className="text-medium-indigo" />;
+      return <Loading className="mr-1 text-medium-indigo" size={20} />;
     } else {
       return (
-        <div
-          className={cn(
-            "h-4 w-4 shrink-0 cursor-pointer rounded-full",
-            conditionSuccess
-              ? "bg-status-green"
-              : conditionInactive
-                ? "bg-status-gray"
-                : conditionError
-                  ? "bg-status-red"
-                  : "bg-muted-foreground/40",
+        <>
+          {conditionSuccess ? (
+            <Checkmark
+              className="h-6 w-6 stroke-2 text-status-green transition-all"
+              isVisible={true}
+            />
+          ) : conditionError ? (
+            <Xmark
+              isVisible={true}
+              className="h-6 w-6 fill-current stroke-2 text-status-red"
+            />
+          ) : (
+            <></>
           )}
-        />
+        </>
       );
     }
   };
