@@ -8,11 +8,6 @@ class PromptComponent(Component):
     description: str = "Create a prompt template with dynamic variables."
     icon = "prompts"
 
-    def build_config(self):
-        return {
-            "template": Input(display_name="Template"),
-        }
-
     inputs = [
         Input(name="template", type=Prompt, display_name="Template"),
     ]
