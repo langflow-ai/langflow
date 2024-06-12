@@ -8,19 +8,12 @@
             "dataType": "MemoryComponent",
             "id": "MemoryComponent-cdA1J",
             "name": "text",
-            "output_types": [
-              "Text"
-            ]
+            "output_types": ["Text"]
           },
           "targetHandle": {
             "fieldName": "context",
             "id": "Prompt-ODkUx",
-            "inputTypes": [
-              "Document",
-              "Message",
-              "Record",
-              "Text"
-            ],
+            "inputTypes": ["Document", "Message", "Record", "Text"],
             "type": "str"
           }
         },
@@ -41,19 +34,12 @@
             "dataType": "ChatInput",
             "id": "ChatInput-t7F8v",
             "name": "message",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "user_message",
             "id": "Prompt-ODkUx",
-            "inputTypes": [
-              "Document",
-              "Message",
-              "Record",
-              "Text"
-            ],
+            "inputTypes": ["Document", "Message", "Record", "Text"],
             "type": "str"
           }
         },
@@ -74,18 +60,12 @@
             "dataType": "Prompt",
             "id": "Prompt-ODkUx",
             "name": "prompt",
-            "output_types": [
-              "Prompt"
-            ]
+            "output_types": ["Prompt"]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "OpenAIModel-9RykF",
-            "inputTypes": [
-              "Text",
-              "Data",
-              "Prompt"
-            ],
+            "inputTypes": ["Text", "Data", "Prompt"],
             "type": "str"
           }
         },
@@ -105,17 +85,12 @@
             "dataType": "OpenAIModel",
             "id": "OpenAIModel-9RykF",
             "name": "text_output",
-            "output_types": [
-              "Text"
-            ]
+            "output_types": ["Text"]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "ChatOutput-P1jEe",
-            "inputTypes": [
-              "Text",
-              "Message"
-            ],
+            "inputTypes": ["Text", "Message"],
             "type": "str"
           }
         },
@@ -135,17 +110,12 @@
             "dataType": "MemoryComponent",
             "id": "MemoryComponent-cdA1J",
             "name": "text",
-            "output_types": [
-              "Text"
-            ]
+            "output_types": ["Text"]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "TextOutput-vrs6T",
-            "inputTypes": [
-              "Record",
-              "Text"
-            ],
+            "inputTypes": ["Record", "Text"],
             "type": "str"
           }
         },
@@ -164,12 +134,7 @@
         "data": {
           "id": "ChatInput-t7F8v",
           "node": {
-            "base_classes": [
-              "Text",
-              "object",
-              "Record",
-              "str"
-            ],
+            "base_classes": ["Text", "object", "Record", "str"],
             "beta": false,
             "custom_fields": {
               "input_value": null,
@@ -193,9 +158,7 @@
                 "method": "message_response",
                 "name": "message",
                 "selected": "Message",
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -217,7 +180,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langflow.base.io.chat import ChatComponent\nfrom langflow.inputs import DropdownInput, StrInput\nfrom langflow.schema.message import Message\nfrom langflow.template import Output\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    icon = \"ChatInput\"\n\n    inputs = [\n        StrInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            multiline=True,\n            input_types=[],\n            info=\"Message to be passed as input.\",\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[\"Machine\", \"User\"],\n            value=\"User\",\n            info=\"Type of sender.\",\n            advanced=True,\n        ),\n        StrInput(\n            name=\"sender_name\",\n            type=str,\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=\"User\",\n            advanced=True,\n        ),\n        StrInput(\n            name=\"session_id\", type=str, display_name=\"Session ID\", info=\"Session ID for the message.\", advanced=True\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    def message_response(self) -> Message:\n        message = Message(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n        )\n        if self.session_id and isinstance(message, (Message, str)):\n            self.store_message(message)\n        self.status = message\n        return message\n"
+                "value": "from langflow.base.io.chat import ChatComponent\nfrom langflow.inputs import DropdownInput, StrInput\nfrom langflow.schema.message import Message\nfrom langflow.template import Output\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    icon = \"ChatInput\"\n\n    inputs = [\n        StrInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            multiline=True,\n            input_types=[],\n            value=\"\",\n            info=\"Message to be passed as input.\",\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[\"Machine\", \"User\"],\n            value=\"User\",\n            info=\"Type of sender.\",\n            advanced=True,\n        ),\n        StrInput(\n            name=\"sender_name\",\n            type=str,\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=\"User\",\n            advanced=True,\n        ),\n        StrInput(\n            name=\"session_id\", type=str, display_name=\"Session ID\", info=\"Session ID for the message.\", advanced=True\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    def message_response(self) -> Message:\n        message = Message(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n        )\n        if self.session_id and isinstance(message, (Message, str)):\n            self.store_message(message)\n        self.status = message\n        return message\n"
               },
               "input_value": {
                 "advanced": false,
@@ -246,17 +209,12 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Type of sender.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
+                "options": ["Machine", "User"],
                 "password": false,
                 "placeholder": "",
                 "required": false,
@@ -272,9 +230,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Name of the sender.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -294,9 +250,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Session ID for the message.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -332,12 +286,7 @@
         "data": {
           "id": "ChatOutput-P1jEe",
           "node": {
-            "base_classes": [
-              "Text",
-              "object",
-              "Record",
-              "str"
-            ],
+            "base_classes": ["Text", "object", "Record", "str"],
             "beta": false,
             "custom_fields": {
               "input_value": null,
@@ -361,9 +310,7 @@
                 "method": "text_response",
                 "name": "text",
                 "selected": "Text",
-                "types": [
-                  "Text"
-                ],
+                "types": ["Text"],
                 "value": "__UNDEFINED__"
               },
               {
@@ -372,9 +319,7 @@
                 "method": "message_response",
                 "name": "message",
                 "selected": "Message",
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -405,10 +350,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Message to be passed as output.",
-                "input_types": [
-                  "Text",
-                  "Message"
-                ],
+                "input_types": ["Text", "Message"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -428,17 +370,12 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Type of sender.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
+                "options": ["Machine", "User"],
                 "password": false,
                 "placeholder": "",
                 "required": false,
@@ -454,9 +391,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Name of the sender.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -476,9 +411,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Session ID for the message.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -516,11 +449,7 @@
           "display_name": "Chat Memory",
           "id": "MemoryComponent-cdA1J",
           "node": {
-            "base_classes": [
-              "str",
-              "Text",
-              "object"
-            ],
+            "base_classes": ["str", "Text", "object"],
             "beta": true,
             "custom_fields": {
               "n_messages": null,
@@ -537,19 +466,16 @@
             "field_order": [],
             "frozen": false,
             "icon": "history",
-            "output_types": [
-              "Text"
-            ],
+            "output_types": ["Text"],
             "outputs": [
               {
                 "cache": true,
                 "display_name": "Text",
+                "hide": null,
                 "method": null,
                 "name": "text",
                 "selected": "Text",
-                "types": [
-                  "Text"
-                ],
+                "types": ["Text"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -599,17 +525,12 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Order of the messages.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
                 "name": "order",
-                "options": [
-                  "Ascending",
-                  "Descending"
-                ],
+                "options": ["Ascending", "Descending"],
                 "password": false,
                 "placeholder": "",
                 "required": false,
@@ -625,18 +546,12 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User",
-                  "Machine and User"
-                ],
+                "options": ["Machine", "User", "Machine and User"],
                 "password": false,
                 "placeholder": "",
                 "required": false,
@@ -652,9 +567,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -673,9 +586,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Session ID of the chat history.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -713,17 +624,10 @@
           "display_name": "Prompt",
           "id": "Prompt-ODkUx",
           "node": {
-            "base_classes": [
-              "Text",
-              "str",
-              "object"
-            ],
+            "base_classes": ["Text", "str", "object"],
             "beta": false,
             "custom_fields": {
-              "template": [
-                "context",
-                "user_message"
-              ]
+              "template": ["context", "user_message"]
             },
             "description": "Create a prompt template with dynamic variables.",
             "display_name": "Prompt",
@@ -746,9 +650,7 @@
                 "method": "build_prompt",
                 "name": "prompt",
                 "selected": "Prompt",
-                "types": [
-                  "Prompt"
-                ],
+                "types": ["Prompt"],
                 "value": "__UNDEFINED__"
               },
               {
@@ -757,9 +659,7 @@
                 "method": "format_prompt",
                 "name": "text",
                 "selected": "Text",
-                "types": [
-                  "Text"
-                ],
+                "types": ["Text"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -791,12 +691,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Document",
-                  "Message",
-                  "Record",
-                  "Text"
-                ],
+                "input_types": ["Document", "Message", "Record", "Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -816,9 +711,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -839,12 +732,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Document",
-                  "Message",
-                  "Record",
-                  "Text"
-                ],
+                "input_types": ["Document", "Message", "Record", "Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -880,11 +768,7 @@
         "data": {
           "id": "OpenAIModel-9RykF",
           "node": {
-            "base_classes": [
-              "str",
-              "object",
-              "Text"
-            ],
+            "base_classes": ["str", "object", "Text"],
             "beta": false,
             "custom_fields": {
               "input_value": null,
@@ -922,9 +806,7 @@
                 "method": "text_response",
                 "name": "text_output",
                 "selected": "Text",
-                "types": [
-                  "Text"
-                ],
+                "types": ["Text"],
                 "value": "__UNDEFINED__"
               },
               {
@@ -933,9 +815,7 @@
                 "method": "build_model",
                 "name": "model_output",
                 "selected": "BaseLanguageModel",
-                "types": [
-                  "BaseLanguageModel"
-                ],
+                "types": ["BaseLanguageModel"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -966,11 +846,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text",
-                  "Data",
-                  "Prompt"
-                ],
+                "input_types": ["Text", "Data", "Prompt"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -990,9 +866,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -1012,9 +886,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -1034,9 +906,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
@@ -1063,9 +933,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "The base URL of the OpenAI API. Defaults to https://api.openai.com/v1.\n\nYou can change this to use other APIs like JinaChat, LocalAI and Prem.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -1085,9 +953,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "The OpenAI API Key to use for the OpenAI model.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -1107,9 +973,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Stream the response from the model. Streaming works only in Chat.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -1129,9 +993,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "System message to pass to the model.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -1151,9 +1013,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -1189,11 +1049,7 @@
         "data": {
           "id": "TextOutput-vrs6T",
           "node": {
-            "base_classes": [
-              "str",
-              "object",
-              "Text"
-            ],
+            "base_classes": ["str", "object", "Text"],
             "beta": false,
             "custom_fields": {
               "input_value": null,
@@ -1206,9 +1062,7 @@
             "field_order": [],
             "frozen": false,
             "icon": "type",
-            "output_types": [
-              "Text"
-            ],
+            "output_types": ["Text"],
             "template": {
               "_type": "CustomComponent",
               "code": {
@@ -1236,10 +1090,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Text or Record to be passed as output.",
-                "input_types": [
-                  "Record",
-                  "Text"
-                ],
+                "input_types": ["Record", "Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -1259,9 +1110,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Template to convert Record to Text. If left empty, it will be dynamically set to the Record's text key.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
