@@ -862,7 +862,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "gpt-4-1106-preview"
+                "value": "gpt-3.5-turbo"
               },
               "openai_api_base": {
                 "advanced": true,
