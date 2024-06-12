@@ -137,8 +137,6 @@ test("TextInputOutputComponent", async ({ page }) => {
 
   await page.keyboard.press("Escape");
 
-  await page.getByText("Close", { exact: true }).last().click();
-
   await page
     .getByTestId("popover-anchor-input-input_value")
     .nth(0)
