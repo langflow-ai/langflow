@@ -47,7 +47,6 @@ const ProfilePictureFormComponent = ({
               }
               return prev;
             });
-            setLoading(false);
           });
         }
       })
