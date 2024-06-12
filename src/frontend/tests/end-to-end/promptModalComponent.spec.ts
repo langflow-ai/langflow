@@ -72,6 +72,8 @@ test("PromptTemplateComponent", async ({ page }) => {
     expect(false).toBeTruthy();
   }
 
+  await page.getByTestId("more-options-modal").click();
+
   await page.getByTestId("save-button-modal").click();
 
   const replace = await page.getByTestId("replace-button").isVisible();
