@@ -60,6 +60,10 @@ class Component(CustomComponent):
             if key in self.__dict__:
                 raise ValueError(f"Key {key} already exists in {self.__class__.__name__}")
             setattr(self, key, value)
+        for input_ in self.inputs:
+            if input_.name not in params:
+                setattr(self, input_.name, None)
+                logger.warning(f"Input {input_.name} not found in arguments")
         self._arguments = params
 
     def _set_outputs(self, outputs: List[dict]):
@@ -141,5 +145,8 @@ class Component(CustomComponent):
         return build_config
 
     def _get_field_order(self):
-        inputs = self.template_config["inputs"]
-        return [field.name for field in inputs]
+        try:
+            inputs = self.template_config["inputs"]
+            return [field.name for field in inputs]
+        except KeyError:
+            return []
