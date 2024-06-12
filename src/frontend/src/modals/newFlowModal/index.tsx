@@ -3,12 +3,14 @@ import { newFlowModalPropsType } from "../../types/components";
 import BaseModal from "../baseModal";
 import NewFlowCardComponent from "./components/NewFlowCardComponent";
 import UndrawCardComponent from "./components/undrawCards";
+import { useTranslation } from "react-i18next";
 
 export default function NewFlowModal({
   open,
   setOpen,
 }: newFlowModalPropsType): JSX.Element {
   const examples = useFlowsManagerStore((state) => state.examples);
+  const { t } = useTranslation();
 
   examples?.forEach((example) => {
     if (example.name === "Blog Writter") {
@@ -18,9 +20,9 @@ export default function NewFlowModal({
 
   return (
     <BaseModal size="three-cards" open={open} setOpen={setOpen}>
-      <BaseModal.Header description={"Select a template below"}>
+      <BaseModal.Header description={t("mainPage.NEW_FLOW_MODAL.TIP")}>
         <span className="pr-2" data-testid="modal-title">
-          Get Started
+          {t("mainPage.NEW_FLOW_MODAL.GET_STARTED")}
         </span>
       </BaseModal.Header>
       <BaseModal.Content>

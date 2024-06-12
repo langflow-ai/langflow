@@ -30,6 +30,7 @@ import {
 } from "../ui/dropdown-menu";
 import { Separator } from "../ui/separator";
 import MenuBar from "./components/menuBar";
+import { useTranslation } from "react-i18next";
 
 export default function Header(): JSX.Element {
   const notificationCenter = useAlertStore((state) => state.notificationCenter);
@@ -76,6 +77,8 @@ export default function Header(): JSX.Element {
     LOCATIONS_TO_RETURN.some((path) => location.pathname.includes(path)) &&
     visitedFlowPathBefore();
 
+  const { t } = useTranslation();
+
   return (
     <div className="header-arrangement">
       <div className="header-start-display lg:w-[407px]">
@@ -112,7 +115,9 @@ export default function Header(): JSX.Element {
             onClick={checkForChanges}
           >
             <IconComponent name="Home" className="h-4 w-4" />
-            <div className="hidden flex-1 md:block">{USER_PROJECTS_HEADER}</div>
+            <div className="hidden flex-1 md:block">
+              {t("header.USER_PROJECTS_HEADER")}
+            </div>
           </Button>
         </Link>
 
@@ -126,7 +131,7 @@ export default function Header(): JSX.Element {
               data-testid="button-store"
             >
               <IconComponent name="Store" className="h-4 w-4" />
-              <div className="flex-1">Store</div>
+              <div className="flex-1">{t("header.STORE")}</div>
             </Button>
           </Link>
         )}

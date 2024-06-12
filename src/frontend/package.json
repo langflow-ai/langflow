@@ -75,7 +75,9 @@
     "vite-plugin-svgr": "^3.2.0",
     "web-vitals": "^2.1.4",
     "zod": "^3.23.7",
-    "zustand": "^4.4.7"
+    "zustand": "^4.4.7",
+    "i18next": "^23.11.5",
+    "react-i18next": "^14.1.1"
   },
   "scripts": {
     "dev:docker": "vite --host 0.0.0.0",

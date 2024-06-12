@@ -2,6 +2,7 @@ import { ChangeEvent, KeyboardEvent } from "react";
 import ForwardedIconComponent from "../../../../../../components/genericIconComponent";
 import { Input } from "../../../../../../components/ui/input";
 import useFlowsManagerStore from "../../../../../../stores/flowsManagerStore";
+import { useTranslation } from "react-i18next";
 
 type InputSearchComponentProps = {
   loading: boolean;
@@ -31,13 +32,15 @@ const InputSearchComponent = ({
     !allFlows ||
     (allFlows?.length === 0 && searchFlowsComponents === "");
 
+  const { t } = useTranslation();
+
   const getSearchPlaceholder = () => {
     if (pagePath.includes("flows")) {
-      return "Search Flows";
+      return t("mainPage.SEARCH_FLOWS");
     } else if (pagePath.includes("components")) {
-      return "Search Components";
+      return t("mainPage.SEARCH_COMPONENTS");
     } else {
-      return "Search Flows and Components";
+      return t("mainPage.SEARCH_FLOWS_AND_COMPONENTS");
     }
   };
 

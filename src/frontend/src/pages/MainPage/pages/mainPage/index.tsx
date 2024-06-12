@@ -12,6 +12,7 @@ import { useFolderStore } from "../../../../stores/foldersStore";
 import ModalsComponent from "../../components/modalsComponent";
 import useDeleteFolder from "../../hooks/use-delete-folder";
 import useDropdownOptions from "../../hooks/use-dropdown-options";
+import { useTranslation } from "react-i18next";
 
 export default function HomePage(): JSX.Element {
   const uploadFlow = useFlowsManagerStore((state) => state.uploadFlow);
@@ -47,15 +48,17 @@ export default function HomePage(): JSX.Element {
 
   const { handleDeleteFolder } = useDeleteFolder({ navigate, getFoldersApi });
 
+  const { t } = useTranslation();
+
   return (
     <>
       <PageLayout
-        title={USER_PROJECTS_HEADER}
-        description={MY_COLLECTION_DESC}
+        title={t("header.USER_PROJECTS_HEADER")}
+        description={t("mainPage.MY_COLLECTION_DESC")}
         button={
           <div className="flex gap-2">
             <DropdownButton
-              firstButtonName="New Project"
+              firstButtonName={t("mainPage.NEW_PROJECT")}
               onFirstBtnClick={() => setOpenModal(true)}
               options={dropdownOptions}
               plusButton={true}
