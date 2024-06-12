@@ -36,12 +36,6 @@ export default function ChatView({
   const outputTypes = outputs.map((obj) => obj.type);
   const updateFlowPool = useFlowStore((state) => state.updateFlowPool);
 
-  // useEffect(() => {
-  //   if (!outputTypes.includes("ChatOutput")) {
-  //     setNoticeData({ title: NOCHATOUTPUT_NOTICE_ALERT });
-  //   }
-  // }, []);
-
   //build chat history
   useEffect(() => {
     const chatOutputResponses: VertexBuildTypeAPI[] = [];
@@ -69,13 +63,17 @@ export default function ChatView({
       .map((output, index) => {
         try {
           console.log("output:", output);
+
+          const messageOutput = output.data.message;
+          const hasMessageValue =
+            messageOutput?.message ||
+            messageOutput?.message === "" ||
+            (messageOutput?.files ?? []).length > 0 ||
+            messageOutput?.stream_url;
+
           const { sender, message, sender_name, stream_url, files } =
-            output.data.message?.message ||
-            (output.data.message?.files ?? []).length > 0 ||
-            output.data.message?.stream_url
-              ? output.data.message
-              : output.artifacts;
-          console.log(output);
+            hasMessageValue ? output.data.message : output.artifacts;
+
           const is_ai =
             sender === "Machine" || sender === null || sender === undefined;
           return {
@@ -88,6 +86,7 @@ export default function ChatView({
           };
         } catch (e) {
           console.error(e);
+          debugger;
           return {
             isSend: false,
             message: "Error parsing message",
@@ -142,26 +141,12 @@ export default function ChatView({
     message: string,
     stream_url?: string,
   ) {
-    // if (message === "") return;
     chat.message = message;
-    // chat is one of the chatHistory
     updateFlowPool(chat.componentId, {
       message,
       sender_name: chat.sender_name ?? "Bot",
       sender: chat.isSend ? "User" : "Machine",
     });
-    // setChatHistory((oldChatHistory) => {
-    // const index = oldChatHistory.findIndex((ch) => ch.id === chat.id);
-    // if (index === -1) return oldChatHistory;
-    // let newChatHistory = _.cloneDeep(oldChatHistory);
-    // newChatHistory = [
-    //   ...newChatHistory.slice(0, index),
-    //   chat,
-    //   ...newChatHistory.slice(index + 1),
-    // ];
-    // console.log("newChatHistory:", newChatHistory);
-    // return newChatHistory;
-    // });
   }
   const [files, setFiles] = useState<FilePreviewType[]>([]);
   const [isDragging, setIsDragging] = useState(false);
@@ -196,44 +181,6 @@ export default function ChatView({
               aria-hidden="true"
             />
           </Button>
-          {/* <Select
-            onValueChange={handleSelectChange}
-            value=""
-            disabled={lockChat}
-          >
-            <SelectTrigger className="">
-              <button className="flex gap-1">
-                <IconComponent
-                  name="Eraser"
-                  className={classNames(
-                    "h-5 w-5 transition-all duration-100",
-                    lockChat ? "animate-pulse text-primary" : "text-primary",
-                  )}
-                  aria-hidden="true"
-                />
-              </button>
-            </SelectTrigger>
-            <SelectContent className="right-[9.5em]">
-              <SelectItem value="builds" className="cursor-pointer">
-                <div className="flex">
-                  <IconComponent
-                    name={"Trash2"}
-                    className={`relative top-0.5 mr-2 h-4 w-4`}
-                  />
-                  <span className="">Clear Builds</span>
-                </div>
-              </SelectItem>
-              <SelectItem value="buildsNSession" className="cursor-pointer">
-                <div className="flex">
-                  <IconComponent
-                    name={"Trash2"}
-                    className={`relative top-0.5 mr-2 h-4 w-4`}
-                  />
-                  <span className="">Clear Builds & Session</span>
-                </div>
-              </SelectItem>
-            </SelectContent>
-          </Select> */}
         </div>
         <div ref={messagesRef} className="chat-message-div">
           {chatHistory?.length > 0 ? (
