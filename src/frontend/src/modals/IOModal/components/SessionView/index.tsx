@@ -41,7 +41,7 @@ export default function SessionView({ rows }: { rows: Array<any> }) {
       onCellEditRequest={(event) => {
         handleUpdateMessage(event);
       }}
-      editable={["Sender Name", "Message"]}
+      editable={["Sender Name", "Message", "Text"]}
       overlayNoRowsTemplate="No data available"
       onSelectionChanged={(event: SelectionChangedEvent) => {
         setSelectedRows(event.api.getSelectedRows().map((row) => row.index));
