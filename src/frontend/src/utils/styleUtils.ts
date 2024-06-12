@@ -242,7 +242,7 @@ export const gradients = [
 export const nodeColors: { [char: string]: string } = {
   inputs: "#10B981",
   outputs: "#AA2411",
-  data: "#4367BF",
+  data: "#198BF6",
   prompts: "#4367BF",
   models: "#6344BE",
   model_specs: "#6344BE",
@@ -267,13 +267,14 @@ export const nodeColors: { [char: string]: string } = {
   experimental: "#E6277A",
   langchain_utilities: "#31A3CC",
   output_parsers: "#E6A627",
-  str: "#31a3cc",
-  Text: "#31a3cc",
+  str: "#4367BF",
+  Text: "#4367BF",
   retrievers: "#e6b25a",
   unknown: "#9CA3AF",
   custom_components: "#ab11ab",
   Records: "#31a3cc",
   Record: "#31a3cc",
+  Message: "#4367BF",
 };
 
 export const nodeNames: { [char: string]: string } = {
