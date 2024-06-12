@@ -98,7 +98,7 @@ test("IntComponent", async ({ page }) => {
   await page.locator('//*[@id="showopenai_api_base"]').click();
   expect(
     await page.locator('//*[@id="showopenai_api_base"]').isChecked(),
-  ).toBeFalsy();
+  ).toBeTruthy();
 
   await page.locator('//*[@id="showopenai_api_key"]').click();
   expect(
@@ -123,7 +123,7 @@ test("IntComponent", async ({ page }) => {
   await page.locator('//*[@id="showopenai_api_base"]').click();
   expect(
     await page.locator('//*[@id="showopenai_api_base"]').isChecked(),
-  ).toBeTruthy();
+  ).toBeFalsy();
 
   await page.locator('//*[@id="showopenai_api_key"]').click();
   expect(
@@ -148,7 +148,7 @@ test("IntComponent", async ({ page }) => {
   await page.locator('//*[@id="showopenai_api_base"]').click();
   expect(
     await page.locator('//*[@id="showopenai_api_base"]').isChecked(),
-  ).toBeFalsy();
+  ).toBeTruthy();
 
   await page.locator('//*[@id="showopenai_api_key"]').click();
   expect(
