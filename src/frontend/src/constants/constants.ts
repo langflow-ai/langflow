@@ -71,6 +71,16 @@ export const programmingLanguages: languageMap = {
  */
 export const MAX_LENGTH_TO_SCROLL_TOOLTIP = 200;
 
+export const MESSAGES_TABLE_ORDER = [
+  "timestamp",
+  "message",
+  "text",
+  "sender",
+  "sender_name",
+  "session_id",
+  "files",
+];
+
 /**
  * Number maximum of components to scroll on tooltips
  * @constant
