@@ -4,10 +4,10 @@ from langchain_core.prompts import BaseChatPromptTemplate, ChatPromptTemplate, P
 
 from langflow.base.prompts.utils import dict_values_to_string
 from langflow.schema.message import Message
-from langflow.schema.record import Record
+from langflow.schema.data import Data
 
 
-class Prompt(Record):
+class Prompt(Data):
     def load_lc_prompt(self):
         if "prompt" not in self:
             raise ValueError("Prompt is required.")

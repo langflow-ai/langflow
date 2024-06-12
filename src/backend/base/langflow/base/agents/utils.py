@@ -13,7 +13,7 @@ from langchain_core.prompts import BasePromptTemplate, ChatPromptTemplate
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel
 
-from langflow.schema import Record
+from langflow.schema import Data
 
 from .default_prompts import XML_AGENT_PROMPT
 
@@ -34,17 +34,17 @@ class AgentSpec(BaseModel):
     hub_repo: Optional[str] = None
 
 
-def records_to_messages(records: List[Record]) -> List[BaseMessage]:
+def data_to_messages(data: List[Data]) -> List[BaseMessage]:
     """
-    Convert a list of records to a list of messages.
+    Convert a list of data to a list of messages.
 
     Args:
-        records (List[Record]): The records to convert.
+        data (List[Data]): The data to convert.
 
     Returns:
-        List[Message]: The records as messages.
+        List[Message]: The data as messages.
     """
-    return [record.to_lc_message() for record in records]
+    return [value.to_lc_message() for value in data]
 
 
 def validate_and_create_xml_agent(

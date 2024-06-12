@@ -6,7 +6,7 @@ from langchain_core.vectorstores import VectorStore
 
 from langflow.custom import CustomComponent
 from langflow.field_typing import Embeddings
-from langflow.schema import Record
+from langflow.schema import Data
 
 
 class FAISSComponent(CustomComponent):
@@ -16,7 +16,7 @@ class FAISSComponent(CustomComponent):
 
     def build_config(self):
         return {
-            "inputs": {"display_name": "Input", "input_types": ["Document", "Record"]},
+            "inputs": {"display_name": "Input", "input_types": ["Document", "Data"]},
             "embedding": {"display_name": "Embedding"},
             "folder_path": {
                 "display_name": "Folder Path",
@@ -28,13 +28,13 @@ class FAISSComponent(CustomComponent):
     def build(
         self,
         embedding: Embeddings,
-        inputs: List[Record],
+        inputs: List[Data],
         folder_path: str,
         index_name: str = "langflow_index",
     ) -> Union[VectorStore, FAISS, BaseRetriever]:
         documents = []
         for _input in inputs or []:
-            if isinstance(_input, Record):
+            if isinstance(_input, Data):
                 documents.append(_input.to_lc_document())
             else:
                 documents.append(_input)

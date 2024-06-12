@@ -4,6 +4,7 @@ from uuid import UUID, uuid4
 import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
+
 from langflow.custom.directory_reader.directory_reader import DirectoryReader
 from langflow.services.deps import get_settings_service
 
@@ -479,7 +480,7 @@ def test_successful_run_with_output_type_text(client, starter_project, created_a
     display_names = [output.get("component_display_name") for output in outputs_dict.get("outputs")]
     assert all([name in display_names for name in ["Chat Output"]]), display_names
     inner_results = [output.get("results") for output in outputs_dict.get("outputs")]
-    expected_keys = ["Record", "Message"]
+    expected_keys = ["Data", "Message"]
     assert all([key in result for result in inner_results for key in expected_keys]), outputs_dict
 
 
@@ -510,7 +511,7 @@ def test_successful_run_with_output_type_any(client, starter_project, created_ap
     display_names = [output.get("component_display_name") for output in outputs_dict.get("outputs")]
     assert all([name in display_names for name in ["Chat Output"]]), display_names
     inner_results = [output.get("results") for output in outputs_dict.get("outputs")]
-    expected_keys = ["Record", "Message"]
+    expected_keys = ["Data", "Message"]
     assert all([key in result for result in inner_results for key in expected_keys]), outputs_dict
 
 

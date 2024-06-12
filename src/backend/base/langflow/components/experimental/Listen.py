@@ -1,5 +1,5 @@
 from langflow.custom import CustomComponent
-from langflow.schema import Record
+from langflow.schema import Data
 
 
 class ListenComponent(CustomComponent):
@@ -15,7 +15,7 @@ class ListenComponent(CustomComponent):
             },
         }
 
-    def build(self, name: str) -> Record:
+    def build(self, name: str) -> Data:
         state = self.get_state(name)
         self.status = state
         return state

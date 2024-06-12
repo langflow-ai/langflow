@@ -8,7 +8,7 @@ from loguru import logger
 from langflow.graph.schema import CHAT_COMPONENTS, RECORDS_COMPONENTS, InterfaceComponentTypes, ResultData
 from langflow.graph.utils import UnbuiltObject, serialize_field
 from langflow.graph.vertex.base import Vertex
-from langflow.schema import Record
+from langflow.schema import Data
 from langflow.schema.artifact import ArtifactType
 from langflow.schema.schema import INPUT_FIELD_NAME, build_logs_from_artifacts
 from langflow.services.monitor.utils import log_transaction, log_vertex_build
@@ -167,8 +167,8 @@ class InterfaceVertex(ComponentVertex):
             # dump as a yaml string
             if isinstance(self.artifacts, dict):
                 _artifacts = [self.artifacts]
-            elif hasattr(self.artifacts, "records"):
-                _artifacts = self.artifacts.records
+            elif hasattr(self.artifacts, "data"):
+                _artifacts = self.artifacts.data
             else:
                 _artifacts = self.artifacts
             artifacts = []
@@ -191,7 +191,7 @@ class InterfaceVertex(ComponentVertex):
         object using the `from_message` method. If `_built_object` is not an instance of
         `UnbuiltObject`, it checks the type of `_built_object` and performs specific
         operations accordingly. If `_built_object` is a dictionary, it converts it into a
-        code block. If `_built_object` is an instance of `Record`, it assigns the `text`
+        code block. If `_built_object` is an instance of `Data`, it assigns the `text`
         attribute to the `message` variable. If `message` is an instance of `AsyncIterator`
         or `Iterator`, it builds a stream URL and sets `message` to an empty string. If
         `_built_object` is not a string, it converts it to a string. If `message` is a
@@ -229,7 +229,7 @@ class InterfaceVertex(ComponentVertex):
                 # Turn the dict into a pleasing to
                 # read JSON inside a code block
                 message = dict_to_codeblock(text_output)
-            elif isinstance(text_output, Record):
+            elif isinstance(text_output, Data):
                 message = text_output.text
             elif isinstance(message, (AsyncIterator, Iterator)):
                 stream_url = self.build_stream_url()
@@ -263,11 +263,11 @@ class InterfaceVertex(ComponentVertex):
         """
         Process the record component of the vertex.
 
-        If the built object is an instance of `Record`, it calls the `model_dump` method
+        If the built object is an instance of `Data`, it calls the `model_dump` method
         and assigns the result to the `artifacts` attribute.
 
         If the built object is a list, it iterates over each element and checks if it is
-        an instance of `Record`. If it is, it calls the `model_dump` method and appends
+        an instance of `Data`. If it is, it calls the `model_dump` method and appends
         the result to the `artifacts` list. If it is not, it raises a `ValueError` if the
         `ignore_errors` parameter is set to `False`, or logs an error message if it is set
         to `True`.
@@ -276,22 +276,22 @@ class InterfaceVertex(ComponentVertex):
             The built object.
 
         Raises:
-            ValueError: If an element in the list is not an instance of `Record` and
+            ValueError: If an element in the list is not an instance of `Data` and
                 `ignore_errors` is set to `False`.
         """
-        if isinstance(self._built_object, Record):
+        if isinstance(self._built_object, Data):
             artifacts = [self._built_object.data]
         elif isinstance(self._built_object, list):
             artifacts = []
             ignore_errors = self.params.get("ignore_errors", False)
-            for record in self._built_object:
-                if isinstance(record, Record):
-                    artifacts.append(record.data)
+            for value in self._built_object:
+                if isinstance(value, Data):
+                    artifacts.append(value.data)
                 elif ignore_errors:
-                    logger.error(f"Record expected, but got {record} of type {type(record)}")
+                    logger.error(f"Data expected, but got {value} of type {type(value)}")
                 else:
-                    raise ValueError(f"Record expected, but got {record} of type {type(record)}")
-        self.artifacts = RecordOutputResponse(records=artifacts)
+                    raise ValueError(f"Data expected, but got {value} of type {type(value)}")
+        self.artifacts = RecordOutputResponse(data=artifacts)
         return self._built_object
 
     async def _run(self, *args, **kwargs):
@@ -302,7 +302,7 @@ class InterfaceVertex(ComponentVertex):
                 message = self._process_record_component()
             if isinstance(self._built_object, (AsyncIterator, Iterator)):
                 if self.params.get("return_record", False):
-                    self._built_object = Record(text=message, data=self.artifacts)
+                    self._built_object = Data(text=message, data=self.artifacts)
                 else:
                     self._built_object = message
             self._built_result = self._built_object
@@ -336,7 +336,7 @@ class InterfaceVertex(ComponentVertex):
             type=ArtifactType.OBJECT.value,
         ).model_dump()
         self.params[INPUT_FIELD_NAME] = complete_message
-        self._built_object = Record(text=complete_message, data=self.artifacts)
+        self._built_object = Data(text=complete_message, data=self.artifacts)
         self._built_result = complete_message
         # Update artifacts with the message
         # and remove the stream_url

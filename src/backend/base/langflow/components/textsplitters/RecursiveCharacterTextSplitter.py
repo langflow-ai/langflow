@@ -4,8 +4,8 @@ from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from langflow.custom import CustomComponent
-from langflow.schema import Record
-from langflow.utils.util import build_loader_repr_from_records, unescape_string
+from langflow.schema import Data
+from langflow.utils.util import build_loader_repr_from_data, unescape_string
 
 
 class RecursiveCharacterTextSplitterComponent(CustomComponent):
@@ -18,7 +18,7 @@ class RecursiveCharacterTextSplitterComponent(CustomComponent):
             "inputs": {
                 "display_name": "Input",
                 "info": "The texts to split.",
-                "input_types": ["Document", "Record"],
+                "input_types": ["Document", "Data"],
             },
             "separators": {
                 "display_name": "Separators",
@@ -46,7 +46,7 @@ class RecursiveCharacterTextSplitterComponent(CustomComponent):
         separators: Optional[list[str]] = None,
         chunk_size: Optional[int] = 1000,
         chunk_overlap: Optional[int] = 200,
-    ) -> list[Record]:
+    ) -> list[Data]:
         """
         Split text into chunks of a specified length.
 
@@ -79,11 +79,11 @@ class RecursiveCharacterTextSplitterComponent(CustomComponent):
         )
         documents = []
         for _input in inputs:
-            if isinstance(_input, Record):
+            if isinstance(_input, Data):
                 documents.append(_input.to_lc_document())
             else:
                 documents.append(_input)
         docs = splitter.split_documents(documents)
-        records = self.to_records(docs)
-        self.repr_value = build_loader_repr_from_records(records)
-        return records
+        data = self.to_data(docs)
+        self.repr_value = build_loader_repr_from_data(data)
+        return data

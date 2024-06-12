@@ -2,14 +2,14 @@ from typing import Any
 
 from langflow.custom import CustomComponent
 from langflow.field_typing.range_spec import RangeSpec
-from langflow.schema import Record
+from langflow.schema import Data
 from langflow.schema.dotdict import dotdict
 from langflow.template.field.base import Input
 
 
 class CreateRecordComponent(CustomComponent):
-    display_name = "Create Record"
-    description = "Dynamically create a Record with a specified number of fields."
+    display_name = "Create Data"
+    description = "Dynamically create a Data with a specified number of fields."
     field_order = ["number_of_fields", "text_key"]
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
@@ -40,7 +40,7 @@ class CreateRecordComponent(CustomComponent):
                         name=key,
                         info=f"Key for field {i}.",
                         field_type="dict",
-                        input_types=["Text", "Record"],
+                        input_types=["Text", "Data"],
                     )
                     build_config[field.name] = field.to_dict()
 
@@ -67,15 +67,15 @@ class CreateRecordComponent(CustomComponent):
         number_of_fields: int = 0,
         text_key: str = "text",
         **kwargs,
-    ) -> Record:
+    ) -> Data:
         data = {}
         for value_dict in kwargs.values():
             if isinstance(value_dict, dict):
-                # Check if the value of the value_dict is a Record
+                # Check if the value of the value_dict is a Data
                 value_dict = {
-                    key: value.get_text() if isinstance(value, Record) else value for key, value in value_dict.items()
+                    key: value.get_text() if isinstance(value, Data) else value for key, value in value_dict.items()
                 }
                 data.update(value_dict)
-        return_record = Record(data=data, text_key=text_key)
+        return_record = Data(data=data, text_key=text_key)
         self.status = return_record
         return return_record

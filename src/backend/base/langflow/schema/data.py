@@ -9,7 +9,7 @@ from langchain_core.prompts.image import ImagePromptTemplate
 from pydantic import BaseModel, model_serializer, model_validator
 
 
-class Record(BaseModel):
+class Data(BaseModel):
     """
     Represents a record with text and optional data.
 
@@ -49,44 +49,44 @@ class Record(BaseModel):
         return self.data.get(self.text_key, self.default_value)
 
     @classmethod
-    def from_document(cls, document: Document) -> "Record":
+    def from_document(cls, document: Document) -> "Data":
         """
-        Converts a Document to a Record.
+        Converts a Document to a Data.
 
         Args:
             document (Document): The Document to convert.
 
         Returns:
-            Record: The converted Record.
+            Data: The converted Data.
         """
         data = document.metadata
         data["text"] = document.page_content
         return cls(data=data, text_key="text")
 
     @classmethod
-    def from_lc_message(cls, message: BaseMessage) -> "Record":
+    def from_lc_message(cls, message: BaseMessage) -> "Data":
         """
-        Converts a BaseMessage to a Record.
+        Converts a BaseMessage to a Data.
 
         Args:
             message (BaseMessage): The BaseMessage to convert.
 
         Returns:
-            Record: The converted Record.
+            Data: The converted Data.
         """
         data: dict = {"text": message.content}
         data["metadata"] = cast(dict, message.to_json())
         return cls(data=data, text_key="text")
 
-    def __add__(self, other: "Record") -> "Record":
+    def __add__(self, other: "Data") -> "Data":
         """
-        Combines the data of two records by attempting to add values for overlapping keys
+        Combines the data of two data by attempting to add values for overlapping keys
         for all types that support the addition operation. Falls back to the value from 'other'
         record when addition is not supported.
         """
         combined_data = self.data.copy()
         for key, value in other.data.items():
-            # If the key exists in both records and both values support the addition operation
+            # If the key exists in both data and both values support the addition operation
             if key in combined_data:
                 try:
                     combined_data[key] += value
@@ -97,11 +97,11 @@ class Record(BaseModel):
                 # If the key is not in the first record, simply add it
                 combined_data[key] = value
 
-        return Record(data=combined_data)
+        return Data(data=combined_data)
 
     def to_lc_document(self) -> Document:
         """
-        Converts the Record to a Document.
+        Converts the Data to a Document.
 
         Returns:
             Document: The converted Document.
@@ -113,18 +113,18 @@ class Record(BaseModel):
         self,
     ) -> HumanMessage | SystemMessage:
         """
-        Converts the Record to a BaseMessage.
+        Converts the Data to a BaseMessage.
 
         Returns:
             BaseMessage: The converted BaseMessage.
         """
-        # The idea of this function is to be a helper to convert a Record to a BaseMessage
+        # The idea of this function is to be a helper to convert a Data to a BaseMessage
         # It will use the "sender" key to determine if the message is Human or AI
         # If the key is not present, it will default to AI
         # But first we check if all required keys are present in the data dictionary
         # they are: "text", "sender"
         if not all(key in self.data for key in ["text", "sender"]):
-            raise ValueError(f"Missing required keys ('text', 'sender') in Record: {self.data}")
+            raise ValueError(f"Missing required keys ('text', 'sender') in Data: {self.data}")
         sender = self.data.get("sender", "Machine")
         text = self.data.get("text", "")
         files = self.data.get("files", [])
@@ -181,17 +181,17 @@ class Record(BaseModel):
 
     def __deepcopy__(self, memo):
         """
-        Custom deepcopy implementation to handle copying of the Record object.
+        Custom deepcopy implementation to handle copying of the Data object.
         """
-        # Create a new Record object with a deep copy of the data dictionary
-        return Record(data=copy.deepcopy(self.data, memo), text_key=self.text_key, default_value=self.default_value)
+        # Create a new Data object with a deep copy of the data dictionary
+        return Data(data=copy.deepcopy(self.data, memo), text_key=self.text_key, default_value=self.default_value)
 
-    # check which attributes the Record has by checking the keys in the data dictionary
+    # check which attributes the Data has by checking the keys in the data dictionary
     def __dir__(self):
         return super().__dir__() + list(self.data.keys())
 
     def __str__(self) -> str:
-        # return a JSON string representation of the Record atributes
+        # return a JSON string representation of the Data atributes
         try:
             data = {k: v.to_json() if hasattr(v, "to_json") else v for k, v in self.data.items()}
             return json.dumps(data, indent=4)
@@ -202,4 +202,4 @@ class Record(BaseModel):
         return key in self.data
 
     def __eq__(self, other):
-        return isinstance(other, Record) and self.data == other.data
+        return isinstance(other, Data) and self.data == other.data

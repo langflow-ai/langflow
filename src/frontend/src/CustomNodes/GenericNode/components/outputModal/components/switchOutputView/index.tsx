@@ -1,5 +1,5 @@
+import RecordsOutputComponent from "../../../../../../components/dataOutputComponent";
 import ForwardedIconComponent from "../../../../../../components/genericIconComponent";
-import RecordsOutputComponent from "../../../../../../components/recordsOutputComponent";
 import {
   Alert,
   AlertDescription,

@@ -13,7 +13,7 @@ from pydantic import field_serializer, field_validator
 from sqlalchemy import UniqueConstraint
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
-from langflow.schema import Record
+from langflow.schema import Data
 
 if TYPE_CHECKING:
     from langflow.services.database.models.folder import Folder
@@ -151,7 +151,7 @@ class Flow(FlowBase, table=True):
             "description": serialized.pop("description"),
             "updated_at": serialized.pop("updated_at"),
         }
-        record = Record(data=data)
+        record = Data(data=data)
         return record
 
     __table_args__ = (

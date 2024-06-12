@@ -1,8 +1,8 @@
 from typing import Any, Dict, List, Optional
 
-from langflow.base.data.utils import parallel_load_records, parse_text_file_to_record, retrieve_file_paths
+from langflow.base.data.utils import parallel_load_data, parse_text_file_to_record, retrieve_file_paths
 from langflow.custom import CustomComponent
-from langflow.schema import Record
+from langflow.schema import Data
 
 
 class DirectoryComponent(CustomComponent):
@@ -49,15 +49,15 @@ class DirectoryComponent(CustomComponent):
         recursive: bool = True,
         silent_errors: bool = False,
         use_multithreading: bool = True,
-    ) -> List[Optional[Record]]:
+    ) -> List[Optional[Data]]:
         resolved_path = self.resolve_path(path)
         file_paths = retrieve_file_paths(resolved_path, load_hidden, recursive, depth)
-        loaded_records = []
+        loaded_data = []
 
         if use_multithreading:
-            loaded_records = parallel_load_records(file_paths, silent_errors, max_concurrency)
+            loaded_data = parallel_load_data(file_paths, silent_errors, max_concurrency)
         else:
-            loaded_records = [parse_text_file_to_record(file_path, silent_errors) for file_path in file_paths]
-        loaded_records = list(filter(None, loaded_records))
-        self.status = loaded_records
-        return loaded_records
+            loaded_data = [parse_text_file_to_record(file_path, silent_errors) for file_path in file_paths]
+        loaded_data = list(filter(None, loaded_data))
+        self.status = loaded_data
+        return loaded_data

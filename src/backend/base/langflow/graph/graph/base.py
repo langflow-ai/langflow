@@ -15,7 +15,7 @@ from langflow.graph.graph.utils import process_flow
 from langflow.graph.schema import InterfaceComponentTypes, RunOutputs
 from langflow.graph.vertex.base import Vertex
 from langflow.graph.vertex.types import InterfaceVertex, StateVertex
-from langflow.schema import Record
+from langflow.schema import Data
 from langflow.schema.schema import INPUT_FIELD_NAME, InputType
 from langflow.services.cache.utils import CacheMiss
 from langflow.services.chat.service import ChatService
@@ -81,7 +81,7 @@ class Graph:
         self.define_vertices_lists()
         self.state_manager = GraphStateManager()
 
-    def get_state(self, name: str) -> Optional[Record]:
+    def get_state(self, name: str) -> Optional[Data]:
         """
         Returns the state of the graph with the given name.
 
@@ -89,17 +89,17 @@ class Graph:
             name (str): The name of the state.
 
         Returns:
-            Optional[Record]: The state record, or None if the state does not exist.
+            Optional[Data]: The state record, or None if the state does not exist.
         """
         return self.state_manager.get_state(name, run_id=self._run_id)
 
-    def update_state(self, name: str, record: Union[str, Record], caller: Optional[str] = None) -> None:
+    def update_state(self, name: str, record: Union[str, Data], caller: Optional[str] = None) -> None:
         """
         Updates the state of the graph with the given name.
 
         Args:
             name (str): The name of the state.
-            record (Union[str, Record]): The new state record.
+            record (Union[str, Data]): The new state record.
             caller (Optional[str], optional): The ID of the vertex that is updating the state. Defaults to None.
         """
         if caller:
@@ -154,13 +154,13 @@ class Graph:
         """
         self.activated_vertices = []
 
-    def append_state(self, name: str, record: Union[str, Record], caller: Optional[str] = None) -> None:
+    def append_state(self, name: str, record: Union[str, Data], caller: Optional[str] = None) -> None:
         """
         Appends the state of the graph with the given name.
 
         Args:
             name (str): The name of the state.
-            record (Union[str, Record]): The state record to append.
+            record (Union[str, Data]): The state record to append.
             caller (Optional[str], optional): The ID of the vertex that is updating the state. Defaults to None.
         """
         if caller:

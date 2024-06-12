@@ -6,7 +6,7 @@ from langchain_core.retrievers import BaseRetriever
 from langchain_core.vectorstores import VectorStore
 
 from langflow.custom import CustomComponent
-from langflow.schema import Record
+from langflow.schema import Data
 
 
 class RedisComponent(CustomComponent):
@@ -28,7 +28,7 @@ class RedisComponent(CustomComponent):
         return {
             "index_name": {"display_name": "Index Name", "value": "your_index"},
             "code": {"show": False, "display_name": "Code"},
-            "inputs": {"display_name": "Input", "input_types": ["Document", "Record"]},
+            "inputs": {"display_name": "Input", "input_types": ["Document", "Data"]},
             "embedding": {"display_name": "Embedding"},
             "schema": {"display_name": "Schema", "file_types": [".yaml"]},
             "redis_server_url": {
@@ -44,7 +44,7 @@ class RedisComponent(CustomComponent):
         redis_server_url: str,
         redis_index_name: str,
         schema: Optional[str] = None,
-        inputs: Optional[Record] = None,
+        inputs: Optional[Data] = None,
     ) -> Union[VectorStore, BaseRetriever]:
         """
         Builds the Vector Store or BaseRetriever object.
@@ -60,7 +60,7 @@ class RedisComponent(CustomComponent):
         """
         documents = []
         for _input in inputs or []:
-            if isinstance(_input, Record):
+            if isinstance(_input, Data):
                 documents.append(_input.to_lc_document())
             else:
                 documents.append(_input)

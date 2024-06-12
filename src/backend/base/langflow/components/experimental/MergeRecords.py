@@ -1,36 +1,36 @@
 from langflow.custom import CustomComponent
-from langflow.schema import Record
+from langflow.schema import Data
 
 
 class MergeRecordsComponent(CustomComponent):
     display_name = "Merge Records"
-    description = "Merges records."
+    description = "Merges data."
     beta: bool = True
 
     field_config = {
-        "records": {"display_name": "Records"},
+        "data": {"display_name": "Records"},
     }
 
-    def build(self, records: list[Record]) -> Record:
-        if not records:
-            return Record()
-        if len(records) == 1:
-            return records[0]
-        merged_record = Record()
-        for record in records:
+    def build(self, data: list[Data]) -> Data:
+        if not data:
+            return Data()
+        if len(data) == 1:
+            return data[0]
+        merged_record = Data()
+        for value in data:
             if merged_record is None:
-                merged_record = record
+                merged_record = value
             else:
-                merged_record += record
+                merged_record += value
         self.status = merged_record
         return merged_record
 
 
 if __name__ == "__main__":
-    records = [
-        Record(data={"key1": "value1"}),
-        Record(data={"key2": "value2"}),
+    data = [
+        Data(data={"key1": "value1"}),
+        Data(data={"key2": "value2"}),
     ]
     component = MergeRecordsComponent()
-    result = component.build(records)
+    result = component.build(data)
     print(result)

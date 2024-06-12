@@ -6,7 +6,7 @@ from langchain_core.vectorstores import VectorStore
 
 from langflow.custom import CustomComponent
 from langflow.field_typing import Embeddings
-from langflow.schema import Record
+from langflow.schema import Data
 
 
 class QdrantComponent(CustomComponent):
@@ -16,7 +16,7 @@ class QdrantComponent(CustomComponent):
 
     def build_config(self):
         return {
-            "inputs": {"display_name": "Input", "input_types": ["Document", "Record"]},
+            "inputs": {"display_name": "Input", "input_types": ["Document", "Data"]},
             "embedding": {"display_name": "Embedding"},
             "api_key": {"display_name": "API Key", "password": True, "advanced": True},
             "collection_name": {"display_name": "Collection Name"},
@@ -45,7 +45,7 @@ class QdrantComponent(CustomComponent):
         self,
         embedding: Embeddings,
         collection_name: str,
-        inputs: Optional[Record] = None,
+        inputs: Optional[Data] = None,
         api_key: Optional[str] = None,
         content_payload_key: str = "page_content",
         distance_func: str = "Cosine",
@@ -63,7 +63,7 @@ class QdrantComponent(CustomComponent):
     ) -> Union[VectorStore, Qdrant, BaseRetriever]:
         documents = []
         for _input in inputs or []:
-            if isinstance(_input, Record):
+            if isinstance(_input, Data):
                 documents.append(_input.to_lc_document())
             else:
                 documents.append(_input)

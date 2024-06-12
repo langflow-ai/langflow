@@ -7,7 +7,6 @@ import pytest
 import respx
 from dictdiffer import diff
 from httpx import Response
-
 from langflow.components import data
 
 
@@ -109,11 +108,11 @@ async def test_build_with_multiple_urls(api_request):
     assert len(results) == len(urls)
 
 
-@patch("langflow.components.data.Directory.parallel_load_records")
+@patch("langflow.components.data.Directory.parallel_load_data")
 @patch("langflow.components.data.Directory.retrieve_file_paths")
 @patch("langflow.components.data.DirectoryComponent.resolve_path")
 def test_directory_component_build_with_multithreading(
-    mock_resolve_path, mock_retrieve_file_paths, mock_parallel_load_records
+    mock_resolve_path, mock_retrieve_file_paths, mock_parallel_load_data
 ):
     # Arrange
     directory_component = data.DirectoryComponent()
@@ -129,7 +128,7 @@ def test_directory_component_build_with_multithreading(
     mock_retrieve_file_paths.return_value = [
         os.path.join(path, file) for file in os.listdir(path) if file.endswith(".py")
     ]
-    mock_parallel_load_records.return_value = [Mock()]
+    mock_parallel_load_data.return_value = [Mock()]
 
     # Act
     directory_component.build(
@@ -145,7 +144,7 @@ def test_directory_component_build_with_multithreading(
     # Assert
     mock_resolve_path.assert_called_once_with(path)
     mock_retrieve_file_paths.assert_called_once_with(path, load_hidden, recursive, depth)
-    mock_parallel_load_records.assert_called_once_with(
+    mock_parallel_load_data.assert_called_once_with(
         mock_retrieve_file_paths.return_value, silent_errors, max_concurrency
     )
 
@@ -163,7 +162,7 @@ def test_directory_without_mocks():
     setup_path = Path(setup.__file__).parent / "starter_projects"
     results = directory_component.build(str(setup_path), use_multithreading=False)
     assert len(results) == len(projects)
-    # each result is a Record that contains the content attribute
+    # each result is a Data that contains the content attribute
     # each are dict that are exactly the same as one of the projects
     for i, result in enumerate(results):
         assert result.text in projects, list(diff(result.text, projects[i]))
@@ -180,7 +179,7 @@ def test_directory_without_mocks():
 def test_url_component():
     url_component = data.URLComponent()
     # the url component can be used to load the contents of a website
-    records = url_component.build(["https://langflow.org"])
-    assert all(record.data for record in records)
-    assert all(record.text for record in records)
-    assert all(record.source for record in records)
+    _data = url_component.build(["https://langflow.org"])
+    assert all(value.data for value in _data)
+    assert all(value.text for value in _data)
+    assert all(value.source for value in _data)

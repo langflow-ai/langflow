@@ -18,7 +18,7 @@ from loguru import logger
 from pydantic import BaseModel
 
 from langflow.schema.artifact import get_artifact_type, post_process_raw
-from langflow.schema.record import Record
+from langflow.schema.data import Data
 from langflow.template.field.base import UNDEFINED, Input, Output
 
 from .custom_component import CustomComponent
@@ -91,7 +91,7 @@ class Component(CustomComponent):
                         _results[output.name] = result
                         output.value = result
                         custom_repr = self.custom_repr()
-                        if custom_repr is None and isinstance(result, (dict, Record, str)):
+                        if custom_repr is None and isinstance(result, (dict, Data, str)):
                             custom_repr = result
                         if not isinstance(custom_repr, str):
                             custom_repr = str(custom_repr)
@@ -120,7 +120,7 @@ class Component(CustomComponent):
                 logger.error(f"Error while dumping build_result: {e}")
                 custom_repr = str(self._results)
 
-        if custom_repr is None and isinstance(self._results, (dict, Record, str)):
+        if custom_repr is None and isinstance(self._results, (dict, Data, str)):
             custom_repr = self._results
         if not isinstance(custom_repr, str):
             custom_repr = str(custom_repr)

@@ -36,9 +36,9 @@ class MemoryComponent(BaseMemoryComponent):
                 "advanced": True,
             },
             "record_template": {
-                "display_name": "Record Template",
+                "display_name": "Data Template",
                 "multiline": True,
-                "info": "Template to convert Record to Text. If left empty, it will be dynamically set to the Record's text key.",
+                "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
                 "advanced": True,
             },
         }

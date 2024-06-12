@@ -30,10 +30,10 @@ class ChatOutput(ChatComponent):
         StrInput(name="session_id", display_name="Session ID", info="Session ID for the message.", advanced=True),
         BoolInput(
             name="record_template",
-            display_name="Record Template",
+            display_name="Data Template",
             value="{text}",
             advanced=True,
-            info="Template to convert Record to Text. If left empty, it will be dynamically set to the Record's text key.",
+            info="Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
         ),
     ]
     outputs = [

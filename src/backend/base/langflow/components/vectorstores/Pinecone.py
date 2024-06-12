@@ -8,7 +8,7 @@ from langchain_pinecone.vectorstores import PineconeVectorStore
 
 from langflow.custom import CustomComponent
 from langflow.field_typing import Embeddings
-from langflow.schema import Record
+from langflow.schema import Data
 
 
 class PineconeComponent(CustomComponent):
@@ -21,7 +21,7 @@ class PineconeComponent(CustomComponent):
         distance_options = [e.value.title().replace("_", " ") for e in DistanceStrategy]
         distance_value = distance_options[0]
         return {
-            "inputs": {"display_name": "Input", "input_types": ["Document", "Record"]},
+            "inputs": {"display_name": "Input", "input_types": ["Document", "Data"]},
             "embedding": {"display_name": "Embedding"},
             "index_name": {"display_name": "Index Name"},
             "namespace": {"display_name": "Namespace"},
@@ -110,7 +110,7 @@ class PineconeComponent(CustomComponent):
         self,
         embedding: Embeddings,
         distance_strategy: str,
-        inputs: Optional[List[Record]] = None,
+        inputs: Optional[List[Data]] = None,
         text_key: str = "text",
         pool_threads: int = 4,
         index_name: Optional[str] = None,
@@ -124,7 +124,7 @@ class PineconeComponent(CustomComponent):
             raise ValueError("Index Name is required.")
         documents = []
         for _input in inputs or []:
-            if isinstance(_input, Record):
+            if isinstance(_input, Data):
                 documents.append(_input.to_lc_document())
             else:
                 documents.append(_input)

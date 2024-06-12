@@ -5,7 +5,7 @@ from langchain_core.embeddings import Embeddings
 from langflow.components.vectorstores.base.model import LCVectorStoreComponent
 from langflow.components.vectorstores.pgvector import PGVectorComponent
 from langflow.field_typing import Text
-from langflow.schema import Record
+from langflow.schema import Data
 
 
 class PGVectorSearchComponent(PGVectorComponent, LCVectorStoreComponent):
@@ -48,7 +48,7 @@ class PGVectorSearchComponent(PGVectorComponent, LCVectorStoreComponent):
         pg_server_url: str,
         collection_name: str,
         number_of_results: int = 4,
-    ) -> List[Record]:
+    ) -> List[Data]:
         """
         Builds the Vector Store or BaseRetriever object.
 

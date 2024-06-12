@@ -273,7 +273,7 @@ export const nodeColors: { [char: string]: string } = {
   unknown: "#9CA3AF",
   custom_components: "#ab11ab",
   Records: "#31a3cc",
-  Record: "#31a3cc",
+  Data: "#31a3cc",
   Message: "#4367BF",
 };
 

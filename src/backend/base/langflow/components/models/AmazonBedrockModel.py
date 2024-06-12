@@ -58,7 +58,7 @@ class AmazonBedrockComponent(LCModelComponent):
                 "advanced": True,
             },
             "cache": {"display_name": "Cache"},
-            "input_value": {"display_name": "Input", "input_types": ["Text", "Record", "Prompt"]},
+            "input_value": {"display_name": "Input", "input_types": ["Text", "Data", "Prompt"]},
             "system_message": {
                 "display_name": "System Message",
                 "info": "System message to pass to the model.",

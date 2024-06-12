@@ -36,7 +36,7 @@ import requests
 from typing import Dict, Any
 
 from langflow import CustomComponent
-from langflow.schema import Record
+from langflow.schema import Data
 
 
 class NotionPageContent(CustomComponent):
@@ -64,7 +64,7 @@ class NotionPageContent(CustomComponent):
         self,
         page_id: str,
         notion_secret: str,
-    ) -> Record:
+    ) -> Data:
         blocks_url = f"https://api.notion.com/v1/blocks/{page_id}/children?page_size=100"
         headers = {
             "Authorization": f"Bearer {notion_secret}",
@@ -80,7 +80,7 @@ class NotionPageContent(CustomComponent):
         content = self.parse_blocks(blocks_data["results"])
 
         self.status = content
-        return Record(data={"content": content}, text=content)
+        return Data(data={"content": content}, text=content)
 
     def parse_blocks(self, blocks: list) -> str:
         content = ""

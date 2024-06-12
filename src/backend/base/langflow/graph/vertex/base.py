@@ -592,7 +592,7 @@ class Vertex:
         for vertex in vertices:
             result = await vertex.get_result(self)
             # Weird check to see if the params[key] is a list
-            # because sometimes it is a Record and breaks the code
+            # because sometimes it is a Data and breaks the code
             if not isinstance(self.params[key], list):
                 self.params[key] = [self.params[key]]
 

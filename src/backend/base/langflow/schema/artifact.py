@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import Generator
 
-from langflow.schema import Record
+from langflow.schema import Data
 from langflow.schema.message import Message
 
 
@@ -18,7 +18,7 @@ class ArtifactType(str, Enum):
 def get_artifact_type(value, build_result=None) -> str:
     result = ArtifactType.UNKNOWN
     match value:
-        case Record():
+        case Data():
             result = ArtifactType.RECORD
 
         case str():

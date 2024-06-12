@@ -8,9 +8,9 @@ from langchain_core.embeddings import Embeddings
 from langchain_core.retrievers import BaseRetriever
 from langchain_core.vectorstores import VectorStore
 
-from langflow.base.vectorstores.utils import chroma_collection_to_records
+from langflow.base.vectorstores.utils import chroma_collection_to_data
 from langflow.custom import CustomComponent
-from langflow.schema import Record
+from langflow.schema import Data
 
 
 class ChromaComponent(CustomComponent):
@@ -34,7 +34,7 @@ class ChromaComponent(CustomComponent):
             "collection_name": {"display_name": "Collection Name", "value": "langflow"},
             "index_directory": {"display_name": "Persist Directory"},
             "code": {"advanced": True, "display_name": "Code"},
-            "inputs": {"display_name": "Input", "input_types": ["Document", "Record"]},
+            "inputs": {"display_name": "Input", "input_types": ["Document", "Data"]},
             "embedding": {"display_name": "Embedding"},
             "chroma_server_cors_allow_origins": {
                 "display_name": "Server CORS Allow Origins",
@@ -63,7 +63,7 @@ class ChromaComponent(CustomComponent):
         embedding: Embeddings,
         chroma_server_ssl_enabled: bool,
         index_directory: Optional[str] = None,
-        inputs: Optional[List[Record]] = None,
+        inputs: Optional[List[Data]] = None,
         chroma_server_cors_allow_origins: List[str] = [],
         chroma_server_host: Optional[str] = None,
         chroma_server_http_port: Optional[int] = None,
@@ -78,7 +78,7 @@ class ChromaComponent(CustomComponent):
         - embedding (Embeddings): The embeddings to use for the Vector Store.
         - chroma_server_ssl_enabled (bool): Whether to enable SSL for the Chroma server.
         - index_directory (Optional[str]): The directory to persist the Vector Store to.
-        - inputs (Optional[List[Record]]): The input records to use for the Vector Store.
+        - inputs (Optional[List[Data]]): The input data to use for the Vector Store.
         - chroma_server_cors_allow_origins (List[str]): The CORS allow origins for the Chroma server.
         - chroma_server_host (Optional[str]): The host for the Chroma server.
         - chroma_server_http_port (Optional[int]): The HTTP port for the Chroma server.
@@ -113,23 +113,23 @@ class ChromaComponent(CustomComponent):
             collection_name=collection_name,
         )
         if allow_duplicates:
-            stored_records = []
+            stored_data = []
         else:
-            stored_records = chroma_collection_to_records(chroma.get())
+            stored_data = chroma_collection_to_data(chroma.get())
             _stored_documents_without_id = []
-            for record in deepcopy(stored_records):
-                del record.id
-                _stored_documents_without_id.append(record)
+            for value in deepcopy(stored_data):
+                del value.id
+                _stored_documents_without_id.append(value)
         documents = []
         for _input in inputs or []:
-            if isinstance(_input, Record):
+            if isinstance(_input, Data):
                 if _input not in _stored_documents_without_id:
                     documents.append(_input.to_lc_document())
             else:
-                raise ValueError("Inputs must be a Record objects.")
+                raise ValueError("Inputs must be a Data objects.")
 
         if documents and embedding is not None:
             chroma.add_documents(documents)
 
-        self.status = stored_records
+        self.status = stored_data
         return chroma

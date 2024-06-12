@@ -3,7 +3,7 @@ from typing import Optional, cast
 from langchain_community.chat_message_histories import CassandraChatMessageHistory
 
 from langflow.base.memory.memory import BaseMemoryComponent
-from langflow.schema.record import Record
+from langflow.schema.data import Data
 
 
 class CassandraMessageReaderComponent(BaseMemoryComponent):
@@ -38,7 +38,7 @@ class CassandraMessageReaderComponent(BaseMemoryComponent):
             },
         }
 
-    def get_messages(self, **kwargs) -> list[Record]:
+    def get_messages(self, **kwargs) -> list[Data]:
         """
         Retrieves messages from the CassandraChatMessageHistory memory.
 
@@ -46,7 +46,7 @@ class CassandraMessageReaderComponent(BaseMemoryComponent):
             memory (CassandraChatMessageHistory): The CassandraChatMessageHistory instance to retrieve messages from.
 
         Returns:
-            list[Record]: A list of Record objects representing the search results.
+            list[Data]: A list of Data objects representing the search results.
         """
         memory: CassandraChatMessageHistory = cast(CassandraChatMessageHistory, kwargs.get("memory"))
         if not memory:
@@ -54,7 +54,7 @@ class CassandraMessageReaderComponent(BaseMemoryComponent):
 
         # Get messages from the memory
         messages = memory.messages
-        results = [Record.from_lc_message(message) for message in messages]
+        results = [Data.from_lc_message(message) for message in messages]
 
         return list(results)
 
@@ -65,7 +65,7 @@ class CassandraMessageReaderComponent(BaseMemoryComponent):
         token: str,
         database_id: str,
         keyspace: Optional[str] = None,
-    ) -> list[Record]:
+    ) -> list[Data]:
         try:
             import cassio
         except ImportError:
@@ -80,7 +80,7 @@ class CassandraMessageReaderComponent(BaseMemoryComponent):
             keyspace=keyspace,
         )
 
-        records = self.get_messages(memory=memory)
-        self.status = records
+        data = self.get_messages(memory=memory)
+        self.status = data
 
-        return records
+        return data

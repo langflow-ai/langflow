@@ -5,7 +5,7 @@ from langchain_core.retrievers import BaseRetriever
 
 from langflow.custom import CustomComponent
 from langflow.field_typing import Embeddings, VectorStore
-from langflow.schema import Record
+from langflow.schema import Data
 
 
 class CouchbaseComponent(CustomComponent):
@@ -25,7 +25,7 @@ class CouchbaseComponent(CustomComponent):
 
     def build_config(self):
         return {
-            "inputs": {"display_name": "Input", "input_types": ["Document", "Record"]},
+            "inputs": {"display_name": "Input", "input_types": ["Document", "Data"]},
             "embedding": {"display_name": "Embedding"},
             "couchbase_connection_string": {"display_name": "Couchbase Cluster connection string", "required": True},
             "couchbase_username": {"display_name": "Couchbase username", "required": True},
@@ -39,7 +39,7 @@ class CouchbaseComponent(CustomComponent):
     def build(
         self,
         embedding: Embeddings,
-        inputs: Optional[List[Record]] = None,
+        inputs: Optional[List[Data]] = None,
         bucket_name: str = "",
         scope_name: str = "",
         collection_name: str = "",
@@ -68,7 +68,7 @@ class CouchbaseComponent(CustomComponent):
             raise ValueError(f"Failed to connect to Couchbase: {e}")
         documents = []
         for _input in inputs or []:
-            if isinstance(_input, Record):
+            if isinstance(_input, Data):
                 documents.append(_input.to_lc_document())
             else:
                 documents.append(_input)
