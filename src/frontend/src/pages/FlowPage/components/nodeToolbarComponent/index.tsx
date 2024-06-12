@@ -625,7 +625,7 @@ export default function NodeToolbarComponent({
                   />
                 </SelectItem>
               )}
-              {(!hasStore || !hasApiKey || !validApiKey) && (
+              {/* {(!hasStore || !hasApiKey || !validApiKey) && (
                 <SelectItem value={"Download"}>
                   <ToolbarSelectItem
                     shortcut={
@@ -637,7 +637,7 @@ export default function NodeToolbarComponent({
                     dataTestId="Download-button-modal"
                   />
                 </SelectItem>
-              )}
+              )} */}
               <SelectItem
                 value={"documentation"}
                 disabled={data.node?.documentation === ""}
@@ -687,16 +687,19 @@ export default function NodeToolbarComponent({
                   style={`${frozen ? " text-ice" : ""} transition-all`}
                 />
               </SelectItem>
-              <SelectItem value="Download">
-                <ToolbarSelectItem
-                  shortcut={
-                    shortcuts.find((obj) => obj.name === "Download")?.shortcut!
-                  }
-                  value={"Download"}
-                  icon={"Download"}
-                  dataTestId="download-button-modal"
-                />
-              </SelectItem>
+              {(!hasStore || !hasApiKey || !validApiKey) && (
+                <SelectItem value="Download">
+                  <ToolbarSelectItem
+                    shortcut={
+                      shortcuts.find((obj) => obj.name === "Download")
+                        ?.shortcut!
+                    }
+                    value={"Download"}
+                    icon={"Download"}
+                    dataTestId="download-button-modal"
+                  />
+                </SelectItem>
+              )}
               <SelectItem
                 value={"delete"}
                 className="focus:bg-red-400/[.20]"
