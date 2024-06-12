@@ -8,7 +8,9 @@
 ################################
 
 # force platform to the current architecture to increase build speed time on multi-platform builds
-FROM --platform=$BUILDPLATFORM python:3.12-slim as builder-base
+
+# use python:3.12.3-slim as the base image until https://github.com/pydantic/pydantic-core/issues/1292 gets resolved
+FROM --platform=$BUILDPLATFORM python:3.12.3-slim as builder-base
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     \
