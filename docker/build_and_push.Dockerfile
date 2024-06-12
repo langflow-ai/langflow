@@ -57,12 +57,15 @@ RUN python -m pip install requests --user && cd ./scripts && python update_depen
 # 2. Do not install dev dependencies
 # 3. Install all the extras to ensure all optionals are installed as well
 # 4. --sync to ensure nothing else is in the environment
+# 5. Build the wheel and install "langflow" package (mainly for version)
 
 # Note: moving to build and installing the wheel will make the docker images not reproducible.
 RUN $POETRY_HOME/bin/poetry lock --no-update \
       # install current lock file with fixed dependencies versions \
       # do not install dev dependencies \
-      && $POETRY_HOME/bin/poetry install --without dev --sync -E deploy -E couchbase -E cassio
+      && $POETRY_HOME/bin/poetry install --without dev --sync -E deploy -E couchbase -E cassio \
+      && $POETRY_HOME/bin/poetry build -f wheel \
+      && $POETRY_HOME/bin/poetry run pip install dist/*.whl
 
 ################################
 # RUNTIME
