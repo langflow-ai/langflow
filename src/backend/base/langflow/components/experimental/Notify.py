@@ -13,29 +13,29 @@ class NotifyComponent(CustomComponent):
     def build_config(self):
         return {
             "name": {"display_name": "Name", "info": "The name of the notification."},
-            "record": {"display_name": "Data", "info": "The record to store."},
+            "data": {"display_name": "Data", "info": "The data to store."},
             "append": {
                 "display_name": "Append",
                 "info": "If True, the record will be appended to the notification.",
             },
         }
 
-    def build(self, name: str, record: Optional[Data] = None, append: bool = False) -> Data:
-        if record and not isinstance(record, Data):
-            if isinstance(record, str):
-                record = Data(text=record)
-            elif isinstance(record, dict):
-                record = Data(data=record)
+    def build(self, name: str, data: Optional[Data] = None, append: bool = False) -> Data:
+        if data and not isinstance(data, Data):
+            if isinstance(data, str):
+                data = Data(text=data)
+            elif isinstance(data, dict):
+                data = Data(data=data)
             else:
-                record = Data(text=str(record))
-        elif not record:
-            record = Data(text="")
-        if record:
+                data = Data(text=str(data))
+        elif not data:
+            data = Data(text="")
+        if data:
             if append:
-                self.append_state(name, record)
+                self.append_state(name, data)
             else:
-                self.update_state(name, record)
+                self.update_state(name, data)
         else:
             self.status = "No record provided."
-        self.status = record
-        return record
+        self.status = data
+        return data

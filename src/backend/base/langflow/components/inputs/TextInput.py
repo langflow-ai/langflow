@@ -17,7 +17,7 @@ class TextInput(TextComponent):
             input_types=["Data", "Text"],
         ),
         Input(
-            name="record_template",
+            name="data_template",
             type=str,
             display_name="Data Template",
             multiline=True,
@@ -30,4 +30,4 @@ class TextInput(TextComponent):
     ]
 
     def text_response(self) -> Text:
-        return self.build(input_value=self.input_value, record_template=self.record_template)
+        return self.build(input_value=self.input_value, data_template=self.data_template)

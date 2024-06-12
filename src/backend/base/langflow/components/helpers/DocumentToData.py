@@ -6,9 +6,9 @@ from langflow.custom import CustomComponent
 from langflow.schema import Data
 
 
-class DocumentToRecordComponent(CustomComponent):
-    display_name = "Documents To Records"
-    description = "Convert LangChain Documents into Records."
+class DocumentToDataComponent(CustomComponent):
+    display_name = "Documents To Data"
+    description = "Convert LangChain Documents into Data."
 
     field_config = {
         "documents": {"display_name": "Documents"},

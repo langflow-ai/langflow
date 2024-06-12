@@ -2,13 +2,13 @@ from langflow.custom import CustomComponent
 from langflow.schema import Data
 
 
-class MergeRecordsComponent(CustomComponent):
-    display_name = "Merge Records"
+class MergeDataComponent(CustomComponent):
+    display_name = "Merge Data"
     description = "Merges data."
     beta: bool = True
 
     field_config = {
-        "data": {"display_name": "Records"},
+        "data": {"display_name": "Data"},
     }
 
     def build(self, data: list[Data]) -> Data:
@@ -16,14 +16,14 @@ class MergeRecordsComponent(CustomComponent):
             return Data()
         if len(data) == 1:
             return data[0]
-        merged_record = Data()
+        merged_data = Data()
         for value in data:
-            if merged_record is None:
-                merged_record = value
+            if merged_data is None:
+                merged_data = value
             else:
-                merged_record += value
-        self.status = merged_record
-        return merged_record
+                merged_data += value
+        self.status = merged_data
+        return merged_data
 
 
 if __name__ == "__main__":
@@ -31,6 +31,6 @@ if __name__ == "__main__":
         Data(data={"key1": "value1"}),
         Data(data={"key2": "value2"}),
     ]
-    component = MergeRecordsComponent()
+    component = MergeDataComponent()
     result = component.build(data)
     print(result)

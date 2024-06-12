@@ -82,7 +82,7 @@ def retrieve_file_paths(
 
 # ! Removing unstructured dependency until
 # ! 3.12 is supported
-# def partition_file_to_record(file_path: str, silent_errors: bool) -> Optional[Data]:
+# def partition_file_to_data(file_path: str, silent_errors: bool) -> Optional[Data]:
 #     # Use the partition function to load the file
 #     from unstructured.partition.auto import partition  # type: ignore
 
@@ -129,7 +129,7 @@ def parse_pdf_to_text(file_path: str) -> str:
         return "\n\n".join([page.extract_text() for page in reader.pages])
 
 
-def parse_text_file_to_record(file_path: str, silent_errors: bool) -> Optional[Data]:
+def parse_text_file_to_data(file_path: str, silent_errors: bool) -> Optional[Data]:
     try:
         if file_path.endswith(".pdf"):
             text = parse_pdf_to_text(file_path)
@@ -171,7 +171,7 @@ def parse_text_file_to_record(file_path: str, silent_errors: bool) -> Optional[D
 #     if use_multithreading:
 #         data = parallel_load_data(file_paths, silent_errors, max_concurrency)
 #     else:
-#         data = [partition_file_to_record(file_path, silent_errors) for file_path in file_paths]
+#         data = [partition_file_to_data(file_path, silent_errors) for file_path in file_paths]
 #     data = list(filter(None, data))
 #     return data
 
@@ -180,7 +180,7 @@ def parallel_load_data(
     file_paths: List[str],
     silent_errors: bool,
     max_concurrency: int,
-    load_function: Callable = parse_text_file_to_record,
+    load_function: Callable = parse_text_file_to_data,
 ) -> List[Optional[Data]]:
     with futures.ThreadPoolExecutor(max_workers=max_concurrency) as executor:
         loaded_files = executor.map(

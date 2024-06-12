@@ -2,7 +2,7 @@ import { cloneDeep } from "lodash";
 import { useState } from "react";
 import ImageViewer from "../../../../components/ImageViewer";
 import CsvOutputComponent from "../../../../components/csvOutputComponent";
-import RecordsOutputComponent from "../../../../components/dataOutputComponent";
+import DataOutputComponent from "../../../../components/dataOutputComponent";
 import InputListComponent from "../../../../components/inputListComponent";
 import PdfViewer from "../../../../components/pdfViewer";
 import { Textarea } from "../../../../components/ui/textarea";
@@ -245,10 +245,10 @@ export default function IOFieldView({
                 />
               </>
             );
-          case "RecordsOutput":
+          case "DataOutput":
             return (
               <div className={left ? "h-56" : "h-full"}>
-                <RecordsOutputComponent
+                <DataOutputComponent
                   pagination={!left}
                   rows={
                     Array.isArray(flowPoolNode?.data?.artifacts)

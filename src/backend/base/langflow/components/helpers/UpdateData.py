@@ -2,13 +2,13 @@ from langflow.custom import CustomComponent
 from langflow.schema import Data
 
 
-class UpdateRecordComponent(CustomComponent):
+class UpdateDataComponent(CustomComponent):
     display_name = "Update Data"
     description = "Update Data with text-based key/value pairs, similar to updating a Python dictionary."
 
     def build_config(self):
         return {
-            "record": {
+            "data": {
                 "display_name": "Data",
                 "info": "The record to update.",
             },
@@ -21,7 +21,7 @@ class UpdateRecordComponent(CustomComponent):
 
     def build(
         self,
-        record: Data,
+        data: Data,
         new_data: dict,
     ) -> Data:
         """
@@ -34,6 +34,6 @@ class UpdateRecordComponent(CustomComponent):
         Returns:
             Data: The updated record.
         """
-        record.data.update(new_data)
-        self.status = record
-        return record
+        data.data.update(new_data)
+        self.status = data
+        return data

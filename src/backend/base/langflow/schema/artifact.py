@@ -7,7 +7,7 @@ from langflow.schema.message import Message
 
 class ArtifactType(str, Enum):
     TEXT = "text"
-    RECORD = "record"
+    DATA = "data"
     OBJECT = "object"
     ARRAY = "array"
     STREAM = "stream"
@@ -19,7 +19,7 @@ def get_artifact_type(value, build_result=None) -> str:
     result = ArtifactType.UNKNOWN
     match value:
         case Data():
-            result = ArtifactType.RECORD
+            result = ArtifactType.DATA
 
         case str():
             result = ArtifactType.TEXT

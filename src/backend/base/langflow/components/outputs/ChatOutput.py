@@ -29,7 +29,7 @@ class ChatOutput(ChatComponent):
         StrInput(name="sender_name", display_name="Sender Name", info="Name of the sender.", value="AI", advanced=True),
         StrInput(name="session_id", display_name="Session ID", info="Session ID for the message.", advanced=True),
         BoolInput(
-            name="record_template",
+            name="data_template",
             display_name="Data Template",
             value="{text}",
             advanced=True,
