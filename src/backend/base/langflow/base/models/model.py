@@ -5,11 +5,11 @@ from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.language_models.llms import LLM
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
-from langflow.custom import CustomComponent
+from langflow.custom import Component
 from langflow.field_typing.prompt import Prompt
 
 
-class LCModelComponent(CustomComponent):
+class LCModelComponent(Component):
     display_name: str = "Model Name"
     description: str = "Model Description"
 
