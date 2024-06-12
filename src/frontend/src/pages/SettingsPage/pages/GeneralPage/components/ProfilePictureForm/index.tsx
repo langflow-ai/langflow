@@ -45,6 +45,7 @@ const ProfilePictureFormComponent = ({
               } else {
                 prev[folder] = [path];
               }
+              setLoading(false);
               return prev;
             });
           });
