@@ -9,7 +9,7 @@ class PromptComponent(Component):
     icon = "prompts"
 
     inputs = [
-        Input(name="template", type=Prompt, display_name="Template"),
+        Input(name="template", field_type=Prompt, display_name="Template"),
     ]
 
     outputs = [
