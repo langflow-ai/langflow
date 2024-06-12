@@ -13,7 +13,7 @@ from langflow.graph.utils import UnbuiltObject, UnbuiltResult
 from langflow.interface.initialize import loading
 from langflow.interface.listing import lazy_load_dict
 from langflow.schema.artifact import ArtifactType
-from langflow.schema.schema import INPUT_FIELD_NAME
+from langflow.schema.schema import INPUT_FIELD_NAME, Log, build_log_from_raw_and_type
 from langflow.services.deps import get_storage_service
 from langflow.services.monitor.utils import log_transaction
 from langflow.utils.constants import DIRECT_TYPES
@@ -77,6 +77,7 @@ class Vertex:
         self.layer = None
         self.result: Optional[ResultData] = None
         self.results: Dict[str, Any] = {}
+        self.logs: Dict[str, List[Log]] = {}
         try:
             self.is_interface_component = self.vertex_type in InterfaceComponentTypes
         except ValueError:
@@ -481,6 +482,7 @@ class Vertex:
         result_dict = ResultData(
             results=result_dict,
             artifacts=artifacts,
+            logs=self.logs,
             messages=messages,
             component_display_name=self.display_name,
             component_id=self.id,
@@ -660,6 +662,10 @@ class Vertex:
                 self._custom_component, self._built_object, self.artifacts = result
                 self.artifacts_raw = self.artifacts.get("raw", None)
                 self.artifacts_type = self.artifacts.get("type", None) or ArtifactType.UNKNOWN.value
+                self.logs[self.outputs[0]["name"]] = build_log_from_raw_and_type(
+                    self.artifacts_raw, self.artifacts_type
+                )
+
         else:
             self._built_object = result
 
