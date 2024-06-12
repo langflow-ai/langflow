@@ -1,6 +1,7 @@
 from langflow.custom import Component
-from langflow.field_typing import Input, Output
 from langflow.field_typing.prompt import Prompt
+from langflow.inputs import PromptInput
+from langflow.template import Output
 
 
 class PromptComponent(Component):
@@ -9,7 +10,7 @@ class PromptComponent(Component):
     icon = "prompts"
 
     inputs = [
-        Input(name="template", field_type=Prompt, display_name="Template"),
+        PromptInput(name="template", display_name="Template"),
     ]
 
     outputs = [
