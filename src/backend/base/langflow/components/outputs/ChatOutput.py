@@ -1,7 +1,8 @@
 from langflow.base.io.chat import ChatComponent
 from langflow.field_typing import Text
+from langflow.inputs import BoolInput, DropdownInput, StrInput
 from langflow.schema.message import Message
-from langflow.template import Input, Output
+from langflow.template import Output
 
 
 class ChatOutput(ChatComponent):
@@ -10,25 +11,25 @@ class ChatOutput(ChatComponent):
     icon = "ChatOutput"
 
     inputs = [
-        Input(
-            name="input_value", type=str, display_name="Text", multiline=True, info="Message to be passed as output."
+        StrInput(
+            name="input_value",
+            display_name="Text",
+            multiline=True,
+            info="Message to be passed as output.",
+            input_types=["Text", "Message"],
         ),
-        Input(
+        DropdownInput(
             name="sender",
-            type=str,
             display_name="Sender Type",
             options=["Machine", "User"],
             value="Machine",
             advanced=True,
             info="Type of sender.",
         ),
-        Input(name="sender_name", type=str, display_name="Sender Name", info="Name of the sender.", value="AI"),
-        Input(
-            name="session_id", type=str, display_name="Session ID", info="Session ID for the message.", advanced=True
-        ),
-        Input(
+        StrInput(name="sender_name", display_name="Sender Name", info="Name of the sender.", value="AI"),
+        StrInput(name="session_id", display_name="Session ID", info="Session ID for the message.", advanced=True),
+        BoolInput(
             name="record_template",
-            type=str,
             display_name="Record Template",
             value="{text}",
             advanced=True,
@@ -56,5 +57,7 @@ class ChatOutput(ChatComponent):
         )
         if self.session_id and isinstance(message, Message) and isinstance(message.text, str):
             self.store_message(message)
+            self.message.value = message
+
         self.status = message
         return message
