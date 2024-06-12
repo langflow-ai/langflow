@@ -62,7 +62,7 @@ class Component(CustomComponent):
             setattr(self, key, value)
         for input_ in self.inputs:
             if input_.name not in params:
-                setattr(self, input_.name, None)
+                setattr(self, input_.name, input_.value)
                 logger.warning(f"Input {input_.name} not found in arguments")
         self._arguments = params
 
