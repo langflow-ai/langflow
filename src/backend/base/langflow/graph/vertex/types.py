@@ -1,5 +1,5 @@
 import json
-from typing import AsyncIterator, Dict, Iterator, List
+from typing import AsyncIterator, Dict, Iterator, List, Generator
 
 import yaml
 from langchain_core.messages import AIMessage, AIMessageChunk
@@ -99,11 +99,12 @@ class InterfaceVertex(Vertex):
                 # Turn the dict into a pleasing to
                 # read JSON inside a code block
                 message = dict_to_codeblock(self._built_object)
-            elif isinstance(self._built_object, Message):
-                if isinstance(message, (AsyncIterator, Iterator)):
+            elif isinstance(self._built_object, (Message, Generator)):
+                if isinstance(message, (AsyncIterator, Iterator, Generator)):
                     stream_url = self.build_stream_url()
                     message = ""
-                    self._built_object.text = message
+                    if hasattr(self._built_object, "text"):
+                        self._built_object.text = message
                 else:
                     message = self._built_object.text
             elif not isinstance(self._built_object, str):
