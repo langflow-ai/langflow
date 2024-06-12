@@ -34,7 +34,7 @@ huggingface-hub = { version = "^0.20.0", extras = ["inference"] }
 llama-cpp-python = { version = "~0.2.0", optional = true }
 networkx = "^3.1"
 fake-useragent = "^1.5.0"
-psycopg2-binary = { extras = ["psycopg"], version = "^2.9.6", optional = true}
+psycopg2-binary = "^2.9.6"
 pyarrow = "^14.0.0"
 wikipedia = "^1.4.0"
 qdrant-client = "^1.9.0"
@@ -48,8 +48,8 @@ pinecone-client = "^3.0.3"
 pymongo = { extras = ["pymongo"], version = "^4.6.0", optional = true }
 supabase = "^2.3.0"
 certifi = "^2023.11.17"
-psycopg = { extras = ["psycopg"], version = "^3.1.9", optional = true}
-psycopg-binary = { extras = ["psycopg"], version = "^3.1.9", optional = true }
+psycopg = "^3.1.9"
+psycopg-binary = "^3.1.9"
 fastavro = "^1.8.0"
 celery = { extras = ["redis"], version = "^5.3.6", optional = true }
 redis = { version = "^5.0.1", optional = true }
@@ -120,7 +120,6 @@ vulture = "^2.11"
 dictdiffer = "^0.9.0"
 
 [tool.poetry.extras]
-psycopg = ["psycopg", "psycopg-binary", "psycopg2-binary"]
 deploy = ["celery", "redis", "flower"]
 couchbase = ["couchbase"]
 cassio = ["cassio"]
