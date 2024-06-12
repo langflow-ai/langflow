@@ -4377,7 +4377,7 @@ six = "*"
 
 [[package]]
 name = "langflow-base"
-version = "0.0.62"
+version = "0.0.63"
 description = "A Python package with a built-in web application"
 optional = false
 python-versions = ">=3.10,<3.13"
@@ -4434,13 +4434,13 @@ url = "src/backend/base"
 
 [[package]]
 name = "langfuse"
-version = "2.36.0"
+version = "2.36.1"
 description = "A client library for accessing langfuse"
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
-    {file = "langfuse-2.36.0-py3-none-any.whl", hash = "sha256:6991895aa52d4702ab5ee9eb8fd5ebe129862e103db4ba8cd2b34c352e07abc5"},
-    {file = "langfuse-2.36.0.tar.gz", hash = "sha256:51fad5bb20947342d0e49d2c4847221b3d2630b590cf701bcfb07a09918ddc0d"},
+    {file = "langfuse-2.36.1-py3-none-any.whl", hash = "sha256:2cba244024bdf63aa3295bffada6b257497f9d18a3ca09026595470f46e09e5b"},
+    {file = "langfuse-2.36.1.tar.gz", hash = "sha256:5117038d35d4629cfa37e8d89986132c926c52c05631cdfef4f9d54bc05591d8"},
 ]
 
 [package.dependencies]

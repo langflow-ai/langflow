@@ -21,9 +21,9 @@ test("python_api_generation", async ({ page, context }) => {
   await page.waitForTimeout(2000);
   await page.getByText("API", { exact: true }).click();
   await page.getByRole("tab", { name: "Python API" }).click();
-  await page.getByRole("button", { name: "Copy Code" }).click();
+  await page.getByTestId("icon-Copy").click();
   const handle = await page.evaluateHandle(() =>
-    navigator.clipboard.readText(),
+    navigator.clipboard.readText()
   );
   const clipboardContent = await handle.jsonValue();
   expect(clipboardContent.length).toBeGreaterThan(0);
