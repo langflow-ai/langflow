@@ -379,6 +379,11 @@ class Vertex:
                         params[field_name] = [unescape_string(v) for v in val]
                     elif isinstance(val, str):
                         params[field_name] = unescape_string(val)
+                elif field.get("type") == "bool" and val is not None:
+                    if isinstance(val, bool):
+                        params[field_name] = val
+                    elif isinstance(val, str):
+                        params[field_name] = val != ""
                 elif val is not None and val != "":
                     params[field_name] = val
 

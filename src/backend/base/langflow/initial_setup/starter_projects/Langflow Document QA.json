@@ -102,7 +102,7 @@
           "sourceHandle": {
             "dataType": "OpenAIModel",
             "id": "OpenAIModel-Bt067",
-            "name": "text",
+            "name": "text_output",
             "output_types": [
               "Text"
             ]
@@ -118,7 +118,7 @@
         },
         "id": "reactflow__edge-OpenAIModel-Bt067{œbaseClassesœ:[œobjectœ,œstrœ,œTextœ],œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-Bt067œ}-ChatOutput-F5Awj{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-F5Awjœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
         "source": "OpenAIModel-Bt067",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-Bt067œ, œoutput_typesœ: [œTextœ], œnameœ: œtextœ}",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-Bt067œ, œoutput_typesœ: [œTextœ], œnameœ: œtext_outputœ}",
         "style": {
           "stroke": "#555"
         },
@@ -253,7 +253,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langflow.custom import Component\nfrom langflow.field_typing import Input, Output\nfrom langflow.field_typing.prompt import Prompt\n\n\nclass PromptComponent(Component):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"prompts\"\n\n    def build_config(self):\n        return {\n            \"template\": Input(display_name=\"Template\"),\n        }\n\n    inputs = [\n        Input(name=\"template\", type=Prompt, display_name=\"Template\"),\n    ]\n\n    outputs = [\n        Output(display_name=\"Prompt\", name=\"prompt\", method=\"build_prompt\"),\n        Output(display_name=\"Text\", name=\"text\", method=\"format_prompt\"),\n    ]\n\n    async def format_prompt(self) -> str:\n        prompt = await self.build_prompt()\n        formatted_text = prompt.format_text()\n        self.status = formatted_text\n        return formatted_text\n\n    async def build_prompt(\n        self,\n    ) -> Prompt:\n        kwargs = {k: v for k, v in self._arguments.items() if k != \"template\"}\n        prompt = await Prompt.from_template_and_variables(self.template, kwargs)\n        self.status = prompt.format_text()\n        return prompt\n"
+                "value": "from langflow.custom import Component\nfrom langflow.field_typing import Input, Output\nfrom langflow.field_typing.prompt import Prompt\n\n\nclass PromptComponent(Component):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"prompts\"\n\n    inputs = [\n        Input(name=\"template\", type=Prompt, display_name=\"Template\"),\n    ]\n\n    outputs = [\n        Output(display_name=\"Prompt\", name=\"prompt\", method=\"build_prompt\"),\n        Output(display_name=\"Text\", name=\"text\", method=\"format_prompt\"),\n    ]\n\n    async def format_prompt(self) -> str:\n        prompt = await self.build_prompt()\n        formatted_text = prompt.format_text()\n        self.status = formatted_text\n        return formatted_text\n\n    async def build_prompt(\n        self,\n    ) -> Prompt:\n        kwargs = {k: v for k, v in self._arguments.items() if k != \"template\"}\n        prompt = await Prompt.from_template_and_variables(self.template, kwargs)\n        self.status = prompt.format_text()\n        return prompt\n"
               },
               "template": {
                 "advanced": false,
@@ -835,24 +835,33 @@
             ],
             "frozen": false,
             "icon": "OpenAI",
-            "output_types": [
-              "Text"
-            ],
+            "output_types": [],
             "outputs": [
               {
                 "cache": true,
                 "display_name": "Text",
-                "method": null,
-                "name": "text",
+                "method": "text_response",
+                "name": "text_output",
                 "selected": "Text",
                 "types": [
                   "Text"
                 ],
                 "value": "__UNDEFINED__"
+              },
+              {
+                "cache": true,
+                "display_name": "Language Model",
+                "method": "model_response",
+                "name": "model_output",
+                "selected": "BaseLanguageModel",
+                "types": [
+                  "BaseLanguageModel"
+                ],
+                "value": "__UNDEFINED__"
               }
             ],
             "template": {
-              "_type": "CustomComponent",
+              "_type": "Component",
               "code": {
                 "advanced": true,
                 "dynamic": true,
@@ -869,7 +878,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from typing import Optional\n\nfrom langchain_openai import ChatOpenAI\nfrom pydantic.v1 import SecretStr\n\nfrom langflow.base.constants import STREAM_INFO_TEXT\nfrom langflow.base.models.model import LCModelComponent\nfrom langflow.base.models.openai_constants import MODEL_NAMES\nfrom langflow.field_typing import NestedDict, Text\n\n\nclass OpenAIModelComponent(LCModelComponent):\n    display_name = \"OpenAI\"\n    description = \"Generates text using OpenAI LLMs.\"\n    icon = \"OpenAI\"\n\n    field_order = [\n        \"max_tokens\",\n        \"model_kwargs\",\n        \"model_name\",\n        \"openai_api_base\",\n        \"openai_api_key\",\n        \"temperature\",\n        \"input_value\",\n        \"system_message\",\n        \"stream\",\n    ]\n\n    def build_config(self):\n        return {\n            \"input_value\": {\"display_name\": \"Input\", \"input_types\": [\"Text\", \"Record\", \"Prompt\"]},\n            \"max_tokens\": {\n                \"display_name\": \"Max Tokens\",\n                \"advanced\": True,\n                \"info\": \"The maximum number of tokens to generate. Set to 0 for unlimited tokens.\",\n            },\n            \"model_kwargs\": {\n                \"display_name\": \"Model Kwargs\",\n                \"advanced\": True,\n            },\n            \"model_name\": {\n                \"display_name\": \"Model Name\",\n                \"advanced\": False,\n                \"options\": MODEL_NAMES,\n            },\n            \"openai_api_base\": {\n                \"display_name\": \"OpenAI API Base\",\n                \"advanced\": True,\n                \"info\": (\n                    \"The base URL of the OpenAI API. Defaults to https://api.openai.com/v1.\\n\\n\"\n                    \"You can change this to use other APIs like JinaChat, LocalAI and Prem.\"\n                ),\n            },\n            \"openai_api_key\": {\n                \"display_name\": \"OpenAI API Key\",\n                \"info\": \"The OpenAI API Key to use for the OpenAI model.\",\n                \"advanced\": False,\n                \"password\": True,\n            },\n            \"temperature\": {\n                \"display_name\": \"Temperature\",\n                \"advanced\": False,\n                \"value\": 0.1,\n            },\n            \"stream\": {\n                \"display_name\": \"Stream\",\n                \"info\": STREAM_INFO_TEXT,\n                \"advanced\": True,\n            },\n            \"system_message\": {\n                \"display_name\": \"System Message\",\n                \"info\": \"System message to pass to the model.\",\n                \"advanced\": True,\n            },\n        }\n\n    def build(\n        self,\n        input_value: Text,\n        openai_api_key: str,\n        temperature: float = 0.1,\n        model_name: str = \"gpt-3.5-turbo\",\n        max_tokens: Optional[int] = 256,\n        model_kwargs: NestedDict = {},\n        openai_api_base: Optional[str] = None,\n        stream: bool = False,\n        system_message: Optional[str] = None,\n    ) -> Text:\n        if not openai_api_base:\n            openai_api_base = \"https://api.openai.com/v1\"\n        if openai_api_key:\n            api_key = SecretStr(openai_api_key)\n        else:\n            api_key = None\n\n        output = ChatOpenAI(\n            max_tokens=max_tokens or None,\n            model_kwargs=model_kwargs,\n            model=model_name,\n            base_url=openai_api_base,\n            api_key=api_key,\n            temperature=temperature,\n        )\n\n        return self.get_chat_result(output, stream, input_value, system_message)\n"
+                "value": "from typing import Optional\n\nfrom langchain_openai import ChatOpenAI\nfrom pydantic.v1 import SecretStr\n\nfrom langflow.base.constants import STREAM_INFO_TEXT\nfrom langflow.base.models.model import LCModelComponent\nfrom langflow.base.models.openai_constants import MODEL_NAMES\nfrom langflow.field_typing import BaseLanguageModel, Text\nfrom langflow.template import Input, Output\n\n\nclass OpenAIModelComponent(LCModelComponent):\n    display_name = \"OpenAI\"\n    description = \"Generates text using OpenAI LLMs.\"\n    icon = \"OpenAI\"\n\n    inputs = [\n        Input(name=\"input_value\", type=str, display_name=\"Input\", input_types=[\"Text\", \"Record\", \"Prompt\"]),\n        Input(\n            name=\"max_tokens\",\n            type=Optional[int],\n            display_name=\"Max Tokens\",\n            advanced=True,\n            info=\"The maximum number of tokens to generate. Set to 0 for unlimited tokens.\",\n        ),\n        Input(name=\"model_kwargs\", type=dict, display_name=\"Model Kwargs\", advanced=True),\n        Input(name=\"model_name\", type=str, display_name=\"Model Name\", advanced=False, options=MODEL_NAMES),\n        Input(\n            name=\"openai_api_base\",\n            type=Optional[str],\n            display_name=\"OpenAI API Base\",\n            advanced=True,\n            info=\"The base URL of the OpenAI API. Defaults to https://api.openai.com/v1.\\n\\nYou can change this to use other APIs like JinaChat, LocalAI and Prem.\",\n        ),\n        Input(\n            name=\"openai_api_key\",\n            type=str,\n            display_name=\"OpenAI API Key\",\n            info=\"The OpenAI API Key to use for the OpenAI model.\",\n            advanced=False,\n            password=True,\n        ),\n        Input(name=\"temperature\", type=float, display_name=\"Temperature\", advanced=False, default=0.1),\n        Input(name=\"stream\", type=bool, display_name=\"Stream\", info=STREAM_INFO_TEXT, advanced=True),\n        Input(\n            name=\"system_message\",\n            type=Optional[str],\n            display_name=\"System Message\",\n            info=\"System message to pass to the model.\",\n            advanced=True,\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Text\", name=\"text_output\", method=\"text_response\"),\n        Output(display_name=\"Language Model\", name=\"model_output\", method=\"model_response\"),\n    ]\n\n    def text_response(self) -> Text:\n        input_value = self.input_value\n        stream = self.stream\n        system_message = self.system_message\n        output = self.model_response()\n        result = self.get_chat_result(output, stream, input_value, system_message)\n        self.status = result\n        return result\n\n    def model_response(self) -> BaseLanguageModel:\n        openai_api_key = self.openai_api_key\n        temperature = self.temperature\n        model_name = self.model_name\n        max_tokens = self.max_tokens\n        model_kwargs = self.model_kwargs\n        openai_api_base = self.openai_api_base or \"https://api.openai.com/v1\"\n\n        if openai_api_key:\n            api_key = SecretStr(openai_api_key)\n        else:\n            api_key = None\n\n        output = ChatOpenAI(\n            max_tokens=max_tokens or None,\n            model_kwargs=model_kwargs,\n            model=model_name,\n            base_url=openai_api_base,\n            api_key=api_key,\n            temperature=temperature,\n        )\n        return output\n"
               },
               "input_value": {
                 "advanced": false,
@@ -889,10 +898,11 @@
                 "name": "input_value",
                 "password": false,
                 "placeholder": "",
-                "required": true,
+                "required": false,
                 "show": true,
                 "title_case": false,
-                "type": "str"
+                "type": "str",
+                "value": ""
               },
               "max_tokens": {
                 "advanced": true,
@@ -901,6 +911,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -910,8 +923,8 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
-                "type": "int",
-                "value": 256
+                "type": "str",
+                "value": ""
               },
               "model_kwargs": {
                 "advanced": true,
@@ -920,6 +933,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -929,8 +945,8 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
-                "type": "NestedDict",
-                "value": {}
+                "type": "str",
+                "value": ""
               },
               "model_name": {
                 "advanced": false,
@@ -959,7 +975,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "gpt-4-turbo-preview"
+                "value": ""
               },
               "openai_api_base": {
                 "advanced": true,
@@ -980,7 +996,8 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
-                "type": "str"
+                "type": "str",
+                "value": ""
               },
               "openai_api_key": {
                 "advanced": false,
@@ -998,11 +1015,11 @@
                 "name": "openai_api_key",
                 "password": true,
                 "placeholder": "",
-                "required": true,
+                "required": false,
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "OPENAI_API_KEY"
+                "value": ""
               },
               "stream": {
                 "advanced": true,
@@ -1011,6 +1028,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Stream the response from the model. Streaming works only in Chat.",
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -1020,8 +1040,8 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
-                "type": "bool",
-                "value": true
+                "type": "str",
+                "value": ""
               },
               "system_message": {
                 "advanced": true,
@@ -1042,7 +1062,8 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
-                "type": "str"
+                "type": "str",
+                "value": ""
               },
               "temperature": {
                 "advanced": false,
@@ -1051,23 +1072,20 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
                 "name": "temperature",
                 "password": false,
                 "placeholder": "",
-                "rangeSpec": {
-                  "max": 1,
-                  "min": -1,
-                  "step": 0.1,
-                  "step_type": "float"
-                },
                 "required": false,
                 "show": true,
                 "title_case": false,
-                "type": "float",
-                "value": 0.1
+                "type": "str",
+                "value": ""
               }
             }
           },
