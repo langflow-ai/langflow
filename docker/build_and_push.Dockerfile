@@ -52,9 +52,10 @@ COPY pyproject.toml poetry.lock README.md ./
 COPY src/ ./src
 COPY scripts/ ./scripts
 RUN python -m pip install requests --user && cd ./scripts && python update_dependencies.py
+
 RUN $POETRY_HOME/bin/poetry lock --no-update \
-      && $POETRY_HOME/bin/poetry build -f wheel \
-      && $POETRY_HOME/bin/poetry run pip install dist/*.whl --force-reinstall
+      # install current lock file with fixed dependencies versions
+      && $POETRY_HOME/bin/poetry install --without dev --sync -E deploy,couchbase,cassio
 
 ################################
 # RUNTIME
