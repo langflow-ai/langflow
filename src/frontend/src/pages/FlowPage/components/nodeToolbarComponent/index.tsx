@@ -458,7 +458,7 @@ export default function NodeToolbarComponent({
                 onClick={() => {
                   setShowModalAdvanced(true);
                 }}
-                data-testid="code-button-modal"
+                data-testid="advanced-button-modal"
               >
                 <IconComponent name="Settings2" className="h-4 w-4" />
               </button>
@@ -710,7 +710,9 @@ export default function NodeToolbarComponent({
                   />{" "}
                   <span className="">Delete</span>{" "}
                   <span
-                    className={` absolute right-2 top-2 flex items-center justify-center rounded-sm px-1 py-[0.2] ${deleteIsFocus ? " " : "bg-muted"}`}
+                    className={` absolute right-2 top-2 flex items-center justify-center rounded-sm px-1 py-[0.2] ${
+                      deleteIsFocus ? " " : "bg-muted"
+                    }`}
                   >
                     <IconComponent
                       name="Delete"
