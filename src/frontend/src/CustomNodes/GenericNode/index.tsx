@@ -3,7 +3,9 @@ import { useEffect, useMemo, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import Markdown from "react-markdown";
 import { NodeToolbar, useUpdateNodeInternals } from "reactflow";
-import IconComponent from "../../components/genericIconComponent";
+import IconComponent, {
+  ForwardedIconComponent,
+} from "../../components/genericIconComponent";
 import InputComponent from "../../components/inputComponent";
 import ShadTooltip from "../../components/shadTooltipComponent";
 import { Button } from "../../components/ui/button";
@@ -210,6 +212,8 @@ export default function GenericNode({
 
   const [loadingUpdate, setLoadingUpdate] = useState(false);
 
+  const [showHiddenOutputs, setShowHiddenOutputs] = useState(false);
+
   const handleUpdateCode = () => {
     setLoadingUpdate(true);
     takeSnapshot();
@@ -241,6 +245,12 @@ export default function GenericNode({
     }
   }
 
+  const shownOutputs =
+    data.node!.outputs?.filter((output) => !output.hide) ?? [];
+
+  const hiddenOutputs =
+    data.node!.outputs?.filter((output) => output.hide) ?? [];
+
   function handlePlayWShortcut() {
     if (buildStatus === BuildStatus.BUILDING || isBuilding || !selected) return;
     setValidationStatus(null);
@@ -255,6 +265,42 @@ export default function GenericNode({
   useHotkeys(play, handlePlayWShortcut, { preventDefault });
 
   const shortcuts = useShortcutsStore((state) => state.shortcuts);
+
+  const renderOutputParameter = (output, idx) => {
+    return (
+      <ParameterComponent
+        index={idx}
+        key={
+          scapedJSONStringfy({
+            output_types: output.types,
+            name: output.name,
+            id: data.id,
+            dataType: data.type,
+          }) + idx
+        }
+        data={data}
+        color={
+          nodeColors[output.selected ?? output.types[0]] ??
+          nodeColors[types[output.selected ?? output.types[0]]] ??
+          nodeColors[types[data.type]] ??
+          nodeColors.unknown
+        }
+        outputProxy={output.proxy}
+        title={output.display_name ?? output.name}
+        tooltipTitle={output.selected ?? output.types[0]}
+        id={{
+          output_types: [output.selected ?? output.types[0]],
+          id: data.id,
+          dataType: data.type,
+          name: output.name,
+        }}
+        type={output.types.join("|")}
+        left={false}
+        showNode={showNode}
+        outputName={output.name}
+      />
+    );
+  };
 
   const memoizedNodeToolbarComponent = useMemo(() => {
     return (
@@ -582,13 +628,14 @@ export default function GenericNode({
 
         {showNode && (
           <div
-            className={
+            className={cn(
               showNode
                 ? data.node?.description === "" && !nameEditable
-                  ? "pb-5"
-                  : "py-5"
-                : ""
-            }
+                  ? "pb-8"
+                  : "pb-8 pt-5"
+                : "",
+              "relative",
+            )}
           >
             {/* increase height!! */}
             <div className="generic-node-desc">
@@ -751,39 +798,58 @@ export default function GenericNode({
               >
                 {" "}
               </div>
-              {data.node!.outputs &&
-                data.node!.outputs.length > 0 &&
-                data.node!.outputs.map((output, idx) => (
-                  <ParameterComponent
-                    index={idx}
-                    key={scapedJSONStringfy({
-                      output_types: output.types,
-                      name: output.name,
-                      id: data.id,
-                      dataType: data.type,
-                    })}
-                    data={data}
-                    color={
-                      nodeColors[output.selected ?? output.types[0]] ??
-                      nodeColors[types[output.selected ?? output.types[0]]] ??
-                      nodeColors[types[data.type]] ??
-                      nodeColors.unknown
-                    }
-                    outputProxy={output.proxy}
-                    title={output.display_name ?? output.name}
-                    tooltipTitle={output.selected ?? output.types[0]}
-                    id={{
-                      output_types: [output.selected ?? output.types[0]],
-                      id: data.id,
-                      dataType: data.type,
-                      name: output.name,
-                    }}
-                    type={output.types.join("|")}
-                    left={false}
-                    showNode={showNode}
-                    outputName={output.name}
-                  />
-                ))}
+              {!showHiddenOutputs &&
+                shownOutputs &&
+                shownOutputs.map((output, idx) =>
+                  renderOutputParameter(
+                    output,
+                    data.node!.outputs?.findIndex(
+                      (out) => out.name === output.name,
+                    ) ?? idx,
+                  ),
+                )}
+              <div
+                className={cn(showHiddenOutputs ? "" : "h-0 overflow-hidden")}
+              >
+                <div className="block">
+                  {data.node!.outputs &&
+                    data.node!.outputs.map((output, idx) =>
+                      renderOutputParameter(
+                        output,
+                        data.node!.outputs?.findIndex(
+                          (out) => out.name === output.name,
+                        ) ?? idx,
+                      ),
+                    )}
+                </div>
+              </div>
+              {hiddenOutputs && hiddenOutputs.length > 0 && (
+                <div
+                  className={cn(
+                    "absolute left-0 right-0 flex justify-center",
+                    (shownOutputs && shownOutputs.length > 0) ||
+                      showHiddenOutputs
+                      ? "bottom-5"
+                      : "bottom-1.5",
+                  )}
+                >
+                  <Button
+                    variant="none"
+                    size="none"
+                    className="left-0 right-0 rounded-full border bg-background"
+                    onClick={() => setShowHiddenOutputs(!showHiddenOutputs)}
+                  >
+                    <ForwardedIconComponent
+                      name={"ChevronDown"}
+                      strokeWidth={1.5}
+                      className={cn(
+                        "h-5 w-5 pt-px text-muted-foreground transition-all group-hover:text-medium-indigo group-hover/node:opacity-100",
+                        showHiddenOutputs ? "rotate-180 transform" : "",
+                      )}
+                    />
+                  </Button>
+                </div>
+              )}
             </>
           </div>
         )}
