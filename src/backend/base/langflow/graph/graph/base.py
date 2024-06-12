@@ -4,6 +4,7 @@ from collections import defaultdict, deque
 from functools import partial
 from itertools import chain
 from typing import TYPE_CHECKING, Callable, Coroutine, Dict, Generator, List, Optional, Tuple, Type, Union
+
 from loguru import logger
 
 from langflow.graph.edge.base import ContractEdge

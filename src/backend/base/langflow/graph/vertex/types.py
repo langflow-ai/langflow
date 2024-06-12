@@ -10,7 +10,7 @@ from langflow.graph.utils import UnbuiltObject, serialize_field
 from langflow.graph.vertex.base import Vertex
 from langflow.schema import Record
 from langflow.schema.artifact import ArtifactType
-from langflow.schema.schema import INPUT_FIELD_NAME, Log, build_logs_from_artifacts
+from langflow.schema.schema import INPUT_FIELD_NAME, build_logs_from_artifacts
 from langflow.services.monitor.utils import log_transaction, log_vertex_build
 from langflow.utils.schemas import ChatOutputResponse, RecordOutputResponse
 from langflow.utils.util import unescape_string
@@ -22,7 +22,6 @@ if TYPE_CHECKING:
 class CustomComponentVertex(Vertex):
     def __init__(self, data: Dict, graph):
         super().__init__(data, graph=graph, base_type="custom_components")
-        self.logs: Dict[str, Log] = {}
 
     def _built_object_repr(self):
         if self.artifacts and "repr" in self.artifacts:
