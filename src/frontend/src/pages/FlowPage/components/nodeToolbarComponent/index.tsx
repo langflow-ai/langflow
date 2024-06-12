@@ -57,17 +57,17 @@ export default function NodeToolbarComponent({
   const nodeLength = Object.keys(data.node!.template).filter(
     (templateField) =>
       templateField.charAt(0) !== "_" &&
-      data.node?.template[templateField].show &&
-      (data.node.template[templateField].type === "str" ||
-        data.node.template[templateField].type === "bool" ||
-        data.node.template[templateField].type === "float" ||
-        data.node.template[templateField].type === "code" ||
-        data.node.template[templateField].type === "prompt" ||
-        data.node.template[templateField].type === "file" ||
-        data.node.template[templateField].type === "Any" ||
-        data.node.template[templateField].type === "int" ||
-        data.node.template[templateField].type === "dict" ||
-        data.node.template[templateField].type === "NestedDict")
+      data.node?.template[templateField]?.show &&
+      (data.node.template[templateField]?.type === "str" ||
+        data.node.template[templateField]?.type === "bool" ||
+        data.node.template[templateField]?.type === "float" ||
+        data.node.template[templateField]?.type === "code" ||
+        data.node.template[templateField]?.type === "prompt" ||
+        data.node.template[templateField]?.type === "file" ||
+        data.node.template[templateField]?.type === "Any" ||
+        data.node.template[templateField]?.type === "int" ||
+        data.node.template[templateField]?.type === "dict" ||
+        data.node.template[templateField]?.type === "NestedDict")
   ).length;
 
   const hasStore = useStoreStore((state) => state.hasStore);

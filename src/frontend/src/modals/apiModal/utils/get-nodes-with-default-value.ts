@@ -11,10 +11,10 @@ export const getNodesWithDefaultValue = (flow) => {
       .filter(
         (templateField) =>
           templateField.charAt(0) !== "_" &&
-          node.data.node.template[templateField].show &&
+          node.data.node.template[templateField]?.show &&
           LANGFLOW_SUPPORTED_TYPES.has(
-            node.data.node.template[templateField].type,
-          ),
+            node.data.node.template[templateField]?.type
+          )
       )
       .map((n, i) => {
         arrNodesWithValues.push(node["id"]);
