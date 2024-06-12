@@ -30,8 +30,6 @@ test("should able to see and interact with logs", async ({ page }) => {
   await page.getByText("No Data Available", { exact: true }).isVisible();
   await page.keyboard.press("Escape");
 
-  await page.getByText("Close").last().click();
-
   await page
     .getByTestId("popover-anchor-input-openai_api_key")
     .fill(process.env.OPENAI_API_KEY ?? "");
