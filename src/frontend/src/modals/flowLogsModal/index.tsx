@@ -37,7 +37,7 @@ export default function FlowLogsModal({
           const { columns, rows } = data;
           setColumns(columns.map((col) => ({ ...col, editable: true })));
           setRows(rows);
-        },
+        }
       );
     }
 
@@ -47,7 +47,7 @@ export default function FlowLogsModal({
         .some((template) => template["stream"] && template["stream"].value);
       console.log(
         haStream,
-        nodes.map((nodes) => (nodes.data as NodeDataType).node!.template),
+        nodes.map((nodes) => (nodes.data as NodeDataType).node!.template)
       );
       if (haStream) {
         setNoticeData({

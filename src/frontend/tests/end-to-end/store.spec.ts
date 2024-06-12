@@ -262,7 +262,7 @@ test("should share component with share button", async ({ page }) => {
   await page.getByText("Set workflow status to public").isVisible();
   await page
     .getByText(
-      "Attention: API keys in specified fields are automatically removed upon sharing.",
+      "Attention: API keys in specified fields are automatically removed upon sharing."
     )
     .isVisible();
   await page.getByText("Export").first().isVisible();
