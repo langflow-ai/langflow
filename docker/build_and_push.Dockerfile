@@ -53,14 +53,22 @@ COPY src/ ./src
 COPY scripts/ ./scripts
 RUN python -m pip install requests --user && cd ./scripts && python update_dependencies.py
 
+# 1. Install the dependencies using the current poetry.lock file to create reproducible builds
+# 2. Do not install dev dependencies
+# 3. Install all the extras to ensure all optionals are installed as well
+# 4. --sync to ensure nothing else is in the environment
+
+# Note: moving to build and installing the wheel will make the docker images not reproducible.
 RUN $POETRY_HOME/bin/poetry lock --no-update \
-      # install current lock file with fixed dependencies versions
-      && $POETRY_HOME/bin/poetry install --without dev --sync -E deploy,couchbase,cassio
+      # install current lock file with fixed dependencies versions \
+      # do not install dev dependencies \
+      && $POETRY_HOME/bin/poetry install --without dev --sync -E deploy -E couchbase -E cassio
 
 ################################
 # RUNTIME
 # Setup user, utilities and copy the virtual environment only
 ################################
+# 1. use python:3.12.3-slim as the base image until https://github.com/pydantic/pydantic-core/issues/1292 gets resolved
 FROM python:3.12.3-slim as runtime
 
 RUN apt-get -y update \
