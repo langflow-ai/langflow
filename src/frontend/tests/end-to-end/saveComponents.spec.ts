@@ -84,6 +84,8 @@ test.describe("save component tests", () => {
     }
 
     await page.getByTestId("title-Group").click();
+    await page.getByTestId("more-options-modal").click();
+
     await page.getByTestId("icon-SaveAll").click();
 
     const replaceButton = await page.getByTestId("replace-button").isVisible();
