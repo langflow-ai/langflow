@@ -11,7 +11,6 @@ from loguru import logger
 from pydantic import BaseModel
 
 from langflow.custom import CustomComponent
-from langflow.custom.code_parser.utils import extract_inner_type
 from langflow.custom.custom_component.component import Component
 from langflow.custom.directory_reader.utils import (
     abuild_custom_component_list_from_path,
@@ -26,6 +25,7 @@ from langflow.helpers.custom import format_type
 from langflow.schema import dotdict
 from langflow.template.field.base import Input
 from langflow.template.frontend_node.custom_components import ComponentFrontendNode, CustomComponentFrontendNode
+from langflow.type_extraction.type_extraction import extract_inner_type
 from langflow.utils import validate
 from langflow.utils.util import get_base_classes
 
