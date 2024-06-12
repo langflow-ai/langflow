@@ -107,7 +107,7 @@ class NotionListPages(CustomComponent):
             response.raise_for_status()
 
             results = response.json()
-            records = []
+            data = []
             combined_text = f"Pages found: {len(results['results'])}\n\n"
             for page in results['results']:
                 page_data = {
@@ -127,10 +127,10 @@ class NotionListPages(CustomComponent):
                 )
 
                 combined_text += text
-                records.append(Data(text=text, data=page_data))
+                data.append(Data(text=text, data=page_data))
 
             self.status = combined_text.strip()
-            return records
+            return data
 
         except Exception as e:
             self.status = f"An error occurred: {str(e)}"

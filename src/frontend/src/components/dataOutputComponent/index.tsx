@@ -4,7 +4,7 @@ import "ag-grid-community/styles/ag-theme-balham.css"; // Optional Theme applied
 import { extractColumnsFromRows } from "../../utils/utils";
 import TableComponent from "../tableComponent";
 
-function RecordsOutputComponent({
+function DataOutputComponent({
   pagination,
   rows,
   columnMode = "union",
@@ -35,4 +35,4 @@ function RecordsOutputComponent({
   );
 }
 
-export default RecordsOutputComponent;
+export default DataOutputComponent;

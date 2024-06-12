@@ -34,7 +34,7 @@ class ChatComponent(Component):
                 "info": "Return the message as a Message containing the sender, sender_name, and session_id.",
                 "advanced": True,
             },
-            "record_template": {
+            "data_template": {
                 "display_name": "Data Template",
                 "multiline": True,
                 "info": "In case of Message being a Data, this template will be used to convert it to text.",
@@ -61,7 +61,7 @@ class ChatComponent(Component):
         self.status = messages
         return messages
 
-    def build_with_record(
+    def build_with_data(
         self,
         sender: Optional[str] = "User",
         sender_name: Optional[str] = "User",
@@ -74,7 +74,7 @@ class ChatComponent(Component):
 
         if isinstance(input_value, Data):
             # Update the data of the record
-            message = Message.from_record(input_value)
+            message = Message.from_data(input_value)
         else:
             message = Message(
                 text=input_value, sender=sender, sender_name=sender_name, files=files, session_id=session_id

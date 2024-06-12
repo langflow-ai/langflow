@@ -1,17 +1,17 @@
-from .CreateRecord import CreateRecordComponent
+from .CreateData import CreateDataComponent
 from .CustomComponent import Component
-from .DocumentToRecord import DocumentToRecordComponent
+from .DataToText import DataToTextComponent
+from .DocumentToData import DocumentToDataComponent
 from .IDGenerator import UUIDGeneratorComponent
 from .MessageHistory import MessageHistoryComponent
-from .UpdateRecord import UpdateRecordComponent
-from .RecordsToText import RecordsToTextComponent
+from .UpdateData import UpdateDataComponent
 
 __all__ = [
     "Component",
-    "UpdateRecordComponent",
-    "DocumentToRecordComponent",
+    "UpdateDataComponent",
+    "DocumentToDataComponent",
     "UUIDGeneratorComponent",
-    "RecordsToTextComponent",
-    "CreateRecordComponent",
+    "DataToTextComponent",
+    "CreateDataComponent",
     "MessageHistoryComponent",
 ]

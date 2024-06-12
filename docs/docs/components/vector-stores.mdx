@@ -4,11 +4,11 @@ import Admonition from "@theme/Admonition";
 
 ### Astra DB
 
-The `Astra DB` initializes a vector store using Astra DB from records. It creates Astra DB-based vector indexes to efficiently store and retrieve documents.
+The `Astra DB` initializes a vector store using Astra DB from Data. It creates Astra DB-based vector indexes to efficiently store and retrieve documents.
 
 **Parameters:**
 
-- **Input:** Documents or records for input.
+- **Input:** Documents or Data for input.
 - **Embedding:** Embedding model Astra DB uses.
 - **Collection Name:** Name of the Astra DB collection.
 - **Token:** Authentication token for Astra DB.
@@ -99,12 +99,12 @@ For detailed documentation and integration guides, please refer to the [Chroma C
 
 ### Couchbase
 
-`Couchbase` builds a Couchbase vector store from records, streamlining the storage and retrieval of documents.
+`Couchbase` builds a Couchbase vector store from Data, streamlining the storage and retrieval of documents.
 
 **Parameters:**
 
 - **Embedding:** Model used by Couchbase.
-- **Input:** Documents or records.
+- **Input:** Documents or Data.
 - **Couchbase Cluster Connection String:** Cluster Connection string.
 - **Couchbase Cluster Username:** Cluster Username.
 - **Couchbase Cluster Password:** Cluster Password.
@@ -165,12 +165,12 @@ For more details, see the [FAISS Component Documentation](https://faiss.ai/index
 
 ### MongoDB Atlas
 
-`MongoDBAtlas` builds a MongoDB Atlas-based vector store from records, streamlining the storage and retrieval of documents.
+`MongoDBAtlas` builds a MongoDB Atlas-based vector store from Data, streamlining the storage and retrieval of documents.
 
 **Parameters:**
 
 - **Embedding:** Model used by MongoDB Atlas.
-- **Input:** Documents or records.
+- **Input:** Documents or Data.
 - **Collection Name:** Collection identifier in MongoDB Atlas.
 - **Database Name:** Database identifier.
 - **Index Name:** Index identifier.
@@ -235,11 +235,11 @@ For more details, see the [PGVector Component Documentation](https://python.lang
 
 ### Pinecone
 
-`Pinecone` constructs a Pinecone wrapper from records, setting up Pinecone-based vector indexes for document storage and retrieval.
+`Pinecone` constructs a Pinecone wrapper from Data, setting up Pinecone-based vector indexes for document storage and retrieval.
 
 **Parameters:**
 
-- **Input:** Documents or records.
+- **Input:** Documents or Data.
 - **Embedding:** Model used.
 - **Index Name:** Index identifier.
 - **Namespace:** Namespace used.
@@ -278,7 +278,7 @@ For more details, see the [PGVector Component Documentation](https://python.lang
 
 **Parameters:**
 
-- **Input:** Documents or records.
+- **Input:** Documents or Data.
 - **Embedding:** Model used.
 - **API Key:** Qdrant API key.
 - **Collection Name:** Collection identifier.
@@ -345,7 +345,7 @@ For detailed documentation, refer to the [Redis Documentation](https://python.la
 
 **Parameters:**
 
-- **Input:** Documents or records.
+- **Input:** Documents or data.
 - **Embedding:** Model used.
 - **Query Name:** Optional query name.
 - **Search Kwargs:** Advanced search parameters.

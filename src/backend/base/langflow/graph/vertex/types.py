@@ -12,7 +12,7 @@ from langflow.schema import Data
 from langflow.schema.artifact import ArtifactType
 from langflow.schema.schema import INPUT_FIELD_NAME, build_logs_from_artifacts
 from langflow.services.monitor.utils import log_transaction, log_vertex_build
-from langflow.utils.schemas import ChatOutputResponse, RecordOutputResponse
+from langflow.utils.schemas import ChatOutputResponse, DataOutputResponse
 from langflow.utils.util import unescape_string
 
 if TYPE_CHECKING:
@@ -259,7 +259,7 @@ class InterfaceVertex(ComponentVertex):
 
         return message
 
-    def _process_record_component(self):
+    def _process_data_component(self):
         """
         Process the record component of the vertex.
 
@@ -291,7 +291,7 @@ class InterfaceVertex(ComponentVertex):
                     logger.error(f"Data expected, but got {value} of type {type(value)}")
                 else:
                     raise ValueError(f"Data expected, but got {value} of type {type(value)}")
-        self.artifacts = RecordOutputResponse(data=artifacts)
+        self.artifacts = DataOutputResponse(data=artifacts)
         return self._built_object
 
     async def _run(self, *args, **kwargs):
@@ -299,9 +299,9 @@ class InterfaceVertex(ComponentVertex):
             if self.vertex_type in CHAT_COMPONENTS:
                 message = self._process_chat_component()
             elif self.vertex_type in RECORDS_COMPONENTS:
-                message = self._process_record_component()
+                message = self._process_data_component()
             if isinstance(self._built_object, (AsyncIterator, Iterator)):
-                if self.params.get("return_record", False):
+                if self.params.get("return_data", False):
                     self._built_object = Data(text=message, data=self.artifacts)
                 else:
                     self._built_object = message

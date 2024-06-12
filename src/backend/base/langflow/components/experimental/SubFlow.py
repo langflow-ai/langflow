@@ -23,13 +23,13 @@ class SubFlowComponent(CustomComponent):
 
     def get_flow_names(self) -> List[str]:
         flow_data = self.list_flows()
-        return [flow_record.data["name"] for flow_record in flow_data]
+        return [flow_data.data["name"] for flow_data in flow_data]
 
     def get_flow(self, flow_name: str) -> Optional[Data]:
         flow_data = self.list_flows()
-        for flow_record in flow_data:
-            if flow_record.data["name"] == flow_name:
-                return flow_record
+        for flow_data in flow_data:
+            if flow_data.data["name"] == flow_name:
+                return flow_data
         return None
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
@@ -42,10 +42,10 @@ class SubFlowComponent(CustomComponent):
                 del build_config[key]
         if field_value is not None and field_name == "flow_name":
             try:
-                flow_record = self.get_flow(field_value)
-                if not flow_record:
+                flow_data = self.get_flow(field_value)
+                if not flow_data:
                     raise ValueError(f"Flow {field_value} not found.")
-                graph = Graph.from_payload(flow_record.data["data"])
+                graph = Graph.from_payload(flow_data.data["data"])
                 # Get all inputs from the graph
                 inputs = get_flow_inputs(graph)
                 # Add inputs to the build config

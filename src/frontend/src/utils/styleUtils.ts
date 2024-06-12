@@ -272,7 +272,7 @@ export const nodeColors: { [char: string]: string } = {
   retrievers: "#e6b25a",
   unknown: "#9CA3AF",
   custom_components: "#ab11ab",
-  Records: "#31a3cc",
+  Data: "#31a3cc",
   Data: "#31a3cc",
   Message: "#4367BF",
 };
