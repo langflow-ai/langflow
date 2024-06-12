@@ -1,4 +1,4 @@
-import RecordsOutputComponent from "../../../../../../components/dataOutputComponent";
+import DataOutputComponent from "../../../../../../components/dataOutputComponent";
 import ForwardedIconComponent from "../../../../../../components/genericIconComponent";
 import {
   Alert,
@@ -29,7 +29,7 @@ const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
   const results = flowPoolNode?.data?.logs[outputName] ?? "";
   const resultType = results?.type;
   let resultMessage = results?.message;
-  const RECORD_TYPES = ["record", "object", "array", "message"];
+  const RECORD_TYPES = ["data", "object", "array", "message"];
   if (resultMessage?.raw) {
     resultMessage = resultMessage.raw;
   }
@@ -47,7 +47,7 @@ const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
       </Case>
 
       <Case condition={RECORD_TYPES.includes(resultType)}>
-        <RecordsOutputComponent
+        <DataOutputComponent
           rows={
             Array.isArray(resultMessage)
               ? (resultMessage as Array<any>).every((item) => item.data)

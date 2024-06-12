@@ -1,17 +1,17 @@
 from langflow.custom import CustomComponent
 from langflow.field_typing import Text
-from langflow.helpers.record import data_to_text
+from langflow.helpers.data import data_to_text
 from langflow.schema import Data
 
 
-class RecordsToTextComponent(CustomComponent):
-    display_name = "Records To Text"
-    description = "Convert Records into plain text following a specified template."
+class DataToTextComponent(CustomComponent):
+    display_name = "Data To Text"
+    description = "Convert Data into plain text following a specified template."
 
     def build_config(self):
         return {
             "data": {
-                "display_name": "Records",
+                "display_name": "Data",
                 "info": "The data to convert to text.",
             },
             "template": {

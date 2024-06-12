@@ -8,23 +8,23 @@ from langflow.schema.message import Message
 
 def docs_to_data(documents: list[Document]) -> list[Data]:
     """
-    Converts a list of Documents to a list of Records.
+    Converts a list of Documents to a list of Data.
 
     Args:
         documents (list[Document]): The list of Documents to convert.
 
     Returns:
-        list[Data]: The converted list of Records.
+        list[Data]: The converted list of Data.
     """
     return [Data.from_document(document) for document in documents]
 
 
 def data_to_text(template: str, data: Union[Data, list[Data]]) -> str:
     """
-    Converts a list of Records to a list of texts.
+    Converts a list of Data to a list of texts.
 
     Args:
-        data (list[Data]): The list of Records to convert.
+        data (list[Data]): The list of Data to convert.
 
     Returns:
         list[str]: The converted list of texts.

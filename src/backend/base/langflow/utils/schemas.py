@@ -97,7 +97,7 @@ class ChatOutputResponse(BaseModel):
         return self
 
 
-class RecordOutputResponse(BaseModel):
+class DataOutputResponse(BaseModel):
     """Data output response schema."""
 
     data: List[Optional[Dict]]

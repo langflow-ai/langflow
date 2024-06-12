@@ -1,6 +1,6 @@
 from typing import Any, Dict, List, Optional
 
-from langflow.base.data.utils import parallel_load_data, parse_text_file_to_record, retrieve_file_paths
+from langflow.base.data.utils import parallel_load_data, parse_text_file_to_data, retrieve_file_paths
 from langflow.custom import CustomComponent
 from langflow.schema import Data
 
@@ -57,7 +57,7 @@ class DirectoryComponent(CustomComponent):
         if use_multithreading:
             loaded_data = parallel_load_data(file_paths, silent_errors, max_concurrency)
         else:
-            loaded_data = [parse_text_file_to_record(file_path, silent_errors) for file_path in file_paths]
+            loaded_data = [parse_text_file_to_data(file_path, silent_errors) for file_path in file_paths]
         loaded_data = list(filter(None, loaded_data))
         self.status = loaded_data
         return loaded_data

@@ -6,8 +6,8 @@ from langchain_core.prompt_values import ImagePromptValue
 from langchain_core.prompts.image import ImagePromptTemplate
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, field_serializer
 
-from langflow.schema.image import Image, get_file_paths, is_image_file
 from langflow.schema.data import Data
+from langflow.schema.image import Image, get_file_paths, is_image_file
 
 
 def _timestamp_to_str(timestamp: datetime) -> str:
@@ -68,7 +68,7 @@ class Message(BaseModel):
         return AIMessage(content=self.text)
 
     @classmethod
-    def from_record(cls, record: Data) -> "Message":
+    def from_data(cls, record: Data) -> "Message":
         """
         Converts a BaseMessage to a Data.
 

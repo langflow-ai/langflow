@@ -7,7 +7,7 @@ from langflow.schema.dotdict import dotdict
 from langflow.template.field.base import Input
 
 
-class CreateRecordComponent(CustomComponent):
+class CreateDataComponent(CustomComponent):
     display_name = "Create Data"
     description = "Dynamically create a Data with a specified number of fields."
     field_order = ["number_of_fields", "text_key"]
@@ -22,7 +22,7 @@ class CreateRecordComponent(CustomComponent):
             existing_fields = {}
             if field_value_int > 15:
                 build_config["number_of_fields"]["value"] = 15
-                raise ValueError("Number of fields cannot exceed 15. Try using a Component to combine two Records.")
+                raise ValueError("Number of fields cannot exceed 15. Try using a Component to combine two Data.")
             if len(build_config) > len(default_keys) + field_value_int:
                 # back up the existing template fields
                 for key in build_config.copy():
@@ -76,6 +76,6 @@ class CreateRecordComponent(CustomComponent):
                     key: value.get_text() if isinstance(value, Data) else value for key, value in value_dict.items()
                 }
                 data.update(value_dict)
-        return_record = Data(data=data, text_key=text_key)
-        self.status = return_record
-        return return_record
+        return_data = Data(data=data, text_key=text_key)
+        self.status = return_data
+        return return_data

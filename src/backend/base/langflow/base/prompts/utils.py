@@ -6,7 +6,7 @@ from langflow.schema import Data
 from langflow.schema.message import Message
 
 
-def record_to_string(record: Data) -> str:
+def data_to_string(record: Data) -> str:
     """
     Convert a record to a string.
 
@@ -38,13 +38,13 @@ def dict_values_to_string(d: dict) -> dict:
                 if isinstance(item, Message):
                     d_copy[key][i] = item.text
                 elif isinstance(item, Data):
-                    d_copy[key][i] = record_to_string(item)
+                    d_copy[key][i] = data_to_string(item)
                 elif isinstance(item, Document):
                     d_copy[key][i] = document_to_string(item)
         elif isinstance(value, Message):
             d_copy[key] = value.text
         elif isinstance(value, Data):
-            d_copy[key] = record_to_string(value)
+            d_copy[key] = data_to_string(value)
         elif isinstance(value, Document):
             d_copy[key] = document_to_string(value)
     return d_copy

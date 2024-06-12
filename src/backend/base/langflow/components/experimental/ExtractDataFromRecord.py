@@ -2,16 +2,16 @@ from langflow.custom import CustomComponent
 from langflow.schema import Data
 
 
-class ExtractKeyFromRecordComponent(CustomComponent):
+class ExtractKeyFromdataComponent(CustomComponent):
     display_name = "Extract Key From Data"
-    description = "Extracts a key from a record."
+    description = "Extracts a key from a data."
     beta: bool = True
 
     field_config = {
-        "record": {"display_name": "Data"},
+        "data": {"display_name": "Data"},
         "keys": {
             "display_name": "Keys",
-            "info": "The keys to extract from the record.",
+            "info": "The keys to extract from the data.",
             "input_types": [],
         },
         "silent_error": {
@@ -21,13 +21,13 @@ class ExtractKeyFromRecordComponent(CustomComponent):
         },
     }
 
-    def build(self, record: Data, keys: list[str], silent_error: bool = True) -> Data:
+    def build(self, data: Data, keys: list[str], silent_error: bool = True) -> Data:
         """
-        Extracts the keys from a record.
+        Extracts the keys from a data.
 
         Args:
-            record (Data): The record from which to extract the keys.
-            keys (list[str]): The keys to extract from the record.
+            data (Data): The data from which to extract the keys.
+            keys (list[str]): The keys to extract from the data.
             silent_error (bool): If True, errors will not be raised.
 
         Returns:
@@ -36,10 +36,10 @@ class ExtractKeyFromRecordComponent(CustomComponent):
         extracted_keys = {}
         for key in keys:
             try:
-                extracted_keys[key] = getattr(record, key)
+                extracted_keys[key] = getattr(data, key)
             except AttributeError:
                 if not silent_error:
-                    raise KeyError(f"The key '{key}' does not exist in the record.")
-        return_record = Data(data=extracted_keys)
-        self.status = return_record
-        return return_record
+                    raise KeyError(f"The key '{key}' does not exist in the data.")
+        return_data = Data(data=extracted_keys)
+        self.status = return_data
+        return return_data
