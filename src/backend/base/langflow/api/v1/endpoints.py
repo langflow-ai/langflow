@@ -20,7 +20,6 @@ from langflow.api.v1.schemas import (
     UpdateCustomComponentRequest,
     UploadFileResponse,
 )
-from langflow.custom import CustomComponent
 from langflow.custom.custom_component.component import Component
 from langflow.custom.utils import build_custom_component_template
 from langflow.graph.graph.base import Graph
@@ -513,7 +512,7 @@ async def custom_component_update(
 
     """
     try:
-        component = CustomComponent(code=code_request.code)
+        component = Component(code=code_request.code)
 
         component_node, cc_instance = build_custom_component_template(
             component,
