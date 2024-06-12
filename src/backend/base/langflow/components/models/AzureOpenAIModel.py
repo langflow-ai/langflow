@@ -5,7 +5,8 @@ from pydantic.v1 import SecretStr
 
 from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
-from langflow.field_typing import Text
+from langflow.field_typing import Text, BaseLanguageModel
+from langflow.template import Input, Output
 
 
 class AzureChatOpenAIComponent(LCModelComponent):
@@ -14,19 +15,6 @@ class AzureChatOpenAIComponent(LCModelComponent):
     documentation: str = "https://python.langchain.com/docs/integrations/llms/azure_openai"
     beta = False
     icon = "Azure"
-
-    field_order = [
-        "model",
-        "azure_endpoint",
-        "azure_deployment",
-        "api_version",
-        "api_key",
-        "temperature",
-        "max_tokens",
-        "input_value",
-        "system_message",
-        "stream",
-    ]
 
     AZURE_OPENAI_MODELS = [
         "gpt-35-turbo",
@@ -47,67 +35,73 @@ class AzureChatOpenAIComponent(LCModelComponent):
         "2023-12-01-preview",
     ]
 
-    def build_config(self):
-        return {
-            "model": {
-                "display_name": "Model Name",
-                "value": self.AZURE_OPENAI_MODELS[0],
-                "options": self.AZURE_OPENAI_MODELS,
-            },
-            "azure_endpoint": {
-                "display_name": "Azure Endpoint",
-                "info": "Your Azure endpoint, including the resource.. Example: `https://example-resource.azure.openai.com/`",
-            },
-            "azure_deployment": {
-                "display_name": "Deployment Name",
-            },
-            "api_version": {
-                "display_name": "API Version",
-                "options": self.AZURE_OPENAI_API_VERSIONS,
-                "value": self.AZURE_OPENAI_API_VERSIONS[-1],
-                "advanced": True,
-            },
-            "api_key": {"display_name": "API Key", "password": True},
-            "temperature": {
-                "display_name": "Temperature",
-                "value": 0.7,
-            },
-            "max_tokens": {
-                "display_name": "Max Tokens",
-                "advanced": True,
-                "info": "The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
-            },
-            "code": {"show": False},
-            "input_value": {"display_name": "Input", "input_types": ["Text", "Record", "Prompt"]},
-            "stream": {
-                "display_name": "Stream",
-                "info": STREAM_INFO_TEXT,
-                "advanced": True,
-            },
-            "system_message": {
-                "display_name": "System Message",
-                "info": "System message to pass to the model.",
-                "advanced": True,
-            },
-        }
+    inputs = [
+        Input(
+            name="model", type=str, display_name="Model Name", options=AZURE_OPENAI_MODELS, value=AZURE_OPENAI_MODELS[0]
+        ),
+        Input(
+            name="azure_endpoint",
+            type=str,
+            display_name="Azure Endpoint",
+            info="Your Azure endpoint, including the resource.. Example: `https://example-resource.azure.openai.com/`",
+        ),
+        Input(name="azure_deployment", type=str, display_name="Deployment Name"),
+        Input(
+            name="api_version",
+            type=str,
+            display_name="API Version",
+            options=AZURE_OPENAI_API_VERSIONS,
+            value=AZURE_OPENAI_API_VERSIONS[-1],
+            advanced=True,
+        ),
+        Input(name="api_key", type=str, display_name="API Key", password=True),
+        Input(name="temperature", type=float, display_name="Temperature", default=0.7),
+        Input(
+            name="max_tokens",
+            type=Optional[int],
+            display_name="Max Tokens",
+            advanced=True,
+            info="The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
+        ),
+        Input(name="input_value", type=str, display_name="Input", input_types=["Text", "Record", "Prompt"]),
+        Input(name="stream", type=bool, display_name="Stream", info=STREAM_INFO_TEXT, advanced=True),
+        Input(
+            name="system_message",
+            type=Optional[str],
+            display_name="System Message",
+            advanced=True,
+            info="System message to pass to the model.",
+        ),
+    ]
+    outputs = [
+        Output(display_name="Text", name="text_output", method="text_response"),
+        Output(display_name="Language Model", name="model_output", method="model_response"),
+    ]
 
-    def build(
-        self,
-        model: str,
-        azure_endpoint: str,
-        input_value: Text,
-        azure_deployment: str,
-        api_version: str,
-        api_key: str,
-        temperature: float,
-        system_message: Optional[str] = None,
-        max_tokens: Optional[int] = 1000,
-        stream: bool = False,
-    ) -> Text:
+    def text_response(self) -> Text:
+        input_value = self.input_value
+        stream = self.stream
+        system_message = self.system_message
+        output = self.model_response()
+        result = self.get_chat_result(output, stream, input_value, system_message)
+        self.status = result
+        return result
+
+    def model_response(self) -> BaseLanguageModel:
+        model = self.model
+        azure_endpoint = self.azure_endpoint
+        azure_deployment = self.azure_deployment
+        api_version = self.api_version
+        api_key = self.api_key
+        temperature = self.temperature
+        max_tokens = self.max_tokens
+        stream = self.stream
+
         if api_key:
             secret_api_key = SecretStr(api_key)
         else:
             secret_api_key = None
+
         try:
             output = AzureChatOpenAI(
                 model=model,
@@ -117,8 +111,9 @@ class AzureChatOpenAIComponent(LCModelComponent):
                 api_key=secret_api_key,
                 temperature=temperature,
                 max_tokens=max_tokens or None,
+                streaming=stream,
             )
         except Exception as e:
             raise ValueError("Could not connect to AzureOpenAI API.") from e
 
-        return self.get_chat_result(output, stream, input_value, system_message)
+        return output
