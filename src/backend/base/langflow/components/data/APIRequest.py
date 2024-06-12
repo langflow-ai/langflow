@@ -8,14 +8,14 @@ from loguru import logger
 from langflow.base.curl.parse import parse_context
 from langflow.custom import CustomComponent
 from langflow.field_typing import NestedDict
-from langflow.schema import Record
+from langflow.schema import Data
 from langflow.schema.dotdict import dotdict
 
 
 class APIRequest(CustomComponent):
     display_name: str = "API Request"
     description: str = "Make HTTP requests given one or more URLs."
-    output_types: list[str] = ["Record"]
+    output_types: list[str] = ["Data"]
     documentation: str = "https://docs.langflow.org/components/utilities#api-request"
     icon = "Globe"
 
@@ -36,12 +36,12 @@ class APIRequest(CustomComponent):
         "headers": {
             "display_name": "Headers",
             "info": "The headers to send with the request.",
-            "input_types": ["Record"],
+            "input_types": ["Data"],
         },
         "body": {
             "display_name": "Body",
             "info": "The body to send with the request (for POST, PATCH, PUT).",
-            "input_types": ["Record"],
+            "input_types": ["Data"],
         },
         "timeout": {
             "display_name": "Timeout",
@@ -80,7 +80,7 @@ class APIRequest(CustomComponent):
         headers: Optional[dict] = None,
         body: Optional[dict] = None,
         timeout: int = 5,
-    ) -> Record:
+    ) -> Data:
         method = method.upper()
         if method not in ["GET", "POST", "PATCH", "PUT", "DELETE"]:
             raise ValueError(f"Unsupported method: {method}")
@@ -93,7 +93,7 @@ class APIRequest(CustomComponent):
                 result = response.json()
             except Exception:
                 result = response.text
-            return Record(
+            return Data(
                 data={
                     "source": url,
                     "headers": headers,
@@ -102,7 +102,7 @@ class APIRequest(CustomComponent):
                 },
             )
         except httpx.TimeoutException:
-            return Record(
+            return Data(
                 data={
                     "source": url,
                     "headers": headers,
@@ -111,7 +111,7 @@ class APIRequest(CustomComponent):
                 },
             )
         except Exception as exc:
-            return Record(
+            return Data(
                 data={
                     "source": url,
                     "headers": headers,
@@ -128,10 +128,10 @@ class APIRequest(CustomComponent):
         headers: Optional[NestedDict] = {},
         body: Optional[NestedDict] = {},
         timeout: int = 5,
-    ) -> List[Record]:
+    ) -> List[Data]:
         if headers is None:
             headers_dict = {}
-        elif isinstance(headers, Record):
+        elif isinstance(headers, Data):
             headers_dict = headers.data
         else:
             headers_dict = headers
@@ -142,7 +142,7 @@ class APIRequest(CustomComponent):
                 bodies = [body]
             else:
                 bodies = body
-            bodies = [b.data if isinstance(b, Record) else b for b in bodies]  # type: ignore
+            bodies = [b.data if isinstance(b, Data) else b for b in bodies]  # type: ignore
 
         if len(urls) != len(bodies):
             # add bodies with None

@@ -8,7 +8,7 @@ from langchain_core.retrievers import BaseRetriever
 from langchain_core.vectorstores import VectorStore
 
 from langflow.custom import CustomComponent
-from langflow.schema import Record
+from langflow.schema import Data
 
 
 class WeaviateVectorStoreComponent(CustomComponent):
@@ -32,7 +32,7 @@ class WeaviateVectorStoreComponent(CustomComponent):
             "advanced": True,
             "value": "text",
         },
-        "inputs": {"display_name": "Input", "input_types": ["Document", "Record"]},
+        "inputs": {"display_name": "Input", "input_types": ["Document", "Data"]},
         "embedding": {"display_name": "Embedding"},
         "attributes": {
             "display_name": "Attributes",
@@ -57,7 +57,7 @@ class WeaviateVectorStoreComponent(CustomComponent):
         api_key: Optional[str] = None,
         text_key: str = "text",
         embedding: Optional[Embeddings] = None,
-        inputs: Optional[Record] = None,
+        inputs: Optional[Data] = None,
         attributes: Optional[list] = None,
     ) -> Union[VectorStore, BaseRetriever]:
         if api_key:
@@ -84,7 +84,7 @@ class WeaviateVectorStoreComponent(CustomComponent):
             raise ValueError("Index name is required")
         documents: list[Document] = []
         for _input in inputs or []:
-            if isinstance(_input, Record):
+            if isinstance(_input, Data):
                 documents.append(_input.to_lc_document())
             elif isinstance(_input, Document):
                 documents.append(_input)

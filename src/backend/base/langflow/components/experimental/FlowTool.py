@@ -7,7 +7,7 @@ from langflow.custom import CustomComponent
 from langflow.field_typing import Tool
 from langflow.graph.graph.base import Graph
 from langflow.helpers.flow import get_flow_inputs
-from langflow.schema import Record
+from langflow.schema import Data
 from langflow.schema.dotdict import dotdict
 
 
@@ -17,10 +17,10 @@ class FlowToolComponent(CustomComponent):
     field_order = ["flow_name", "name", "description", "return_direct"]
 
     def get_flow_names(self) -> List[str]:
-        flow_records = self.list_flows()
-        return [flow_record.data["name"] for flow_record in flow_records]
+        flow_data = self.list_flows()
+        return [flow_record.data["name"] for flow_record in flow_data]
 
-    def get_flow(self, flow_name: str) -> Optional[Record]:
+    def get_flow(self, flow_name: str) -> Optional[Data]:
         """
         Retrieves a flow by its name.
 
@@ -30,8 +30,8 @@ class FlowToolComponent(CustomComponent):
         Returns:
             Optional[Text]: The flow record if found, None otherwise.
         """
-        flow_records = self.list_flows()
-        for flow_record in flow_records:
+        flow_data = self.list_flows()
+        for flow_record in flow_data:
             if flow_record.data["name"] == flow_name:
                 return flow_record
         return None

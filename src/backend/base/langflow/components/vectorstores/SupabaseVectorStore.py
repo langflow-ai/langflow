@@ -7,7 +7,7 @@ from supabase.client import Client, create_client
 
 from langflow.custom import CustomComponent
 from langflow.field_typing import Embeddings
-from langflow.schema import Record
+from langflow.schema import Data
 
 
 class SupabaseComponent(CustomComponent):
@@ -16,7 +16,7 @@ class SupabaseComponent(CustomComponent):
 
     def build_config(self):
         return {
-            "inputs": {"display_name": "Input", "input_types": ["Document", "Record"]},
+            "inputs": {"display_name": "Input", "input_types": ["Document", "Data"]},
             "embedding": {"display_name": "Embedding"},
             "query_name": {"display_name": "Query Name"},
             "supabase_service_key": {"display_name": "Supabase Service Key"},
@@ -27,7 +27,7 @@ class SupabaseComponent(CustomComponent):
     def build(
         self,
         embedding: Embeddings,
-        inputs: Optional[List[Record]] = None,
+        inputs: Optional[List[Data]] = None,
         query_name: str = "",
         supabase_service_key: str = "",
         supabase_url: str = "",
@@ -36,7 +36,7 @@ class SupabaseComponent(CustomComponent):
         supabase: Client = create_client(supabase_url, supabase_key=supabase_service_key)
         documents = []
         for _input in inputs or []:
-            if isinstance(_input, Record):
+            if isinstance(_input, Data):
                 documents.append(_input.to_lc_document())
             else:
                 documents.append(_input)

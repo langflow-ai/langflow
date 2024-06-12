@@ -6,7 +6,7 @@ from langflow.components.vectorstores.base.model import LCVectorStoreComponent
 from langflow.components.vectorstores.Pinecone import PineconeComponent
 from langflow.field_typing import Embeddings, Text
 from langflow.field_typing.constants import NestedDict
-from langflow.schema import Record
+from langflow.schema import Data
 
 
 class PineconeSearchComponent(PineconeComponent, LCVectorStoreComponent):
@@ -70,7 +70,7 @@ class PineconeSearchComponent(PineconeComponent, LCVectorStoreComponent):
         namespace: Optional[str] = "default",
         search_type: str = "similarity",
         search_kwargs: Optional[NestedDict] = None,
-    ) -> List[Record]:  # type: ignore[override]
+    ) -> List[Data]:  # type: ignore[override]
         vector_store = super().build(
             embedding=embedding,
             distance_strategy=distance_strategy,

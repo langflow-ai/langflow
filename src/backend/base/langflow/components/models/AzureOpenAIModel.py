@@ -5,7 +5,7 @@ from pydantic.v1 import SecretStr
 
 from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
-from langflow.field_typing import Text, BaseLanguageModel
+from langflow.field_typing import BaseLanguageModel, Text
 from langflow.template import Input, Output
 
 
@@ -63,7 +63,7 @@ class AzureChatOpenAIComponent(LCModelComponent):
             advanced=True,
             info="The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
         ),
-        Input(name="input_value", type=str, display_name="Input", input_types=["Text", "Record", "Prompt"]),
+        Input(name="input_value", type=str, display_name="Input", input_types=["Text", "Data", "Prompt"]),
         Input(name="stream", type=bool, display_name="Stream", info=STREAM_INFO_TEXT, advanced=True),
         Input(
             name="system_message",

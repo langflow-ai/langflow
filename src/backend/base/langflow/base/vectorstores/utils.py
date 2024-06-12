@@ -1,17 +1,17 @@
-from langflow.schema import Record
+from langflow.schema import Data
 
 
-def chroma_collection_to_records(collection_dict: dict):
+def chroma_collection_to_data(collection_dict: dict):
     """
-    Converts a collection of chroma vectors into a list of records.
+    Converts a collection of chroma vectors into a list of data.
 
     Args:
         collection_dict (dict): A dictionary containing the collection of chroma vectors.
 
     Returns:
-        list: A list of records, where each record represents a document in the collection.
+        list: A list of data, where each record represents a document in the collection.
     """
-    records = []
+    data = []
     for i, doc in enumerate(collection_dict["documents"]):
         record_dict = {
             "id": collection_dict["ids"][i],
@@ -20,5 +20,5 @@ def chroma_collection_to_records(collection_dict: dict):
         if "metadatas" in collection_dict:
             for key, value in collection_dict["metadatas"][i].items():
                 record_dict[key] = value
-        records.append(Record(**record_dict))
-    return records
+        data.append(Data(**record_dict))
+    return data

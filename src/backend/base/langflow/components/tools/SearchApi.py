@@ -3,7 +3,7 @@ from typing import Optional
 from langchain_community.utilities.searchapi import SearchApiAPIWrapper
 
 from langflow.custom import CustomComponent
-from langflow.schema import Record
+from langflow.schema import Data
 from langflow.services.database.models.base import orjson_dumps
 
 
@@ -37,7 +37,7 @@ class SearchApi(CustomComponent):
         engine: str,
         api_key: str,
         params: Optional[dict] = None,
-    ) -> Record:
+    ) -> Data:
         if params is None:
             params = {}
 
@@ -48,6 +48,6 @@ class SearchApi(CustomComponent):
 
         result = orjson_dumps(results, indent_2=False)
 
-        record = Record(data=result)
+        record = Data(data=result)
         self.status = record
         return record

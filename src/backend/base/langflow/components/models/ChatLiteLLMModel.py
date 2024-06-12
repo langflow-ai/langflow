@@ -111,7 +111,7 @@ class ChatLiteLLMModelComponent(LCModelComponent):
                 "required": False,
                 "default": False,
             },
-            "input_value": {"display_name": "Input", "input_types": ["Text", "Record", "Prompt"]},
+            "input_value": {"display_name": "Input", "input_types": ["Text", "Data", "Prompt"]},
             "stream": {
                 "display_name": "Stream",
                 "info": STREAM_INFO_TEXT,

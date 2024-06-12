@@ -4,7 +4,7 @@ from langchain_community.chat_message_histories.zep import SearchScope, SearchTy
 
 from langflow.base.memory.memory import BaseMemoryComponent
 from langflow.field_typing import Text
-from langflow.schema import Record
+from langflow.schema import Data
 
 
 class ZepMessageReaderComponent(BaseMemoryComponent):
@@ -60,7 +60,7 @@ class ZepMessageReaderComponent(BaseMemoryComponent):
             },
         }
 
-    def get_messages(self, **kwargs) -> list[Record]:
+    def get_messages(self, **kwargs) -> list[Data]:
         """
         Retrieves messages from the ZepChatMessageHistory memory.
 
@@ -75,7 +75,7 @@ class ZepMessageReaderComponent(BaseMemoryComponent):
             limit (int, optional): The maximum number of search results to return. Defaults to None.
 
         Returns:
-            list[Record]: A list of Record objects representing the search results.
+            list[Data]: A list of Data objects representing the search results.
         """
         memory: ZepChatMessageHistory = cast(ZepChatMessageHistory, kwargs.get("memory"))
         if not memory:
@@ -103,10 +103,10 @@ class ZepMessageReaderComponent(BaseMemoryComponent):
                 result_dict["metadata"] = result.metadata
                 result_dict["score"] = result.score
                 result_dicts.append(result_dict)
-            results = [Record(data=result_dict) for result_dict in result_dicts]
+            results = [Data(data=result_dict) for result_dict in result_dicts]
         else:
             messages = memory.messages
-            results = [Record.from_lc_message(message) for message in messages]
+            results = [Data.from_lc_message(message) for message in messages]
         return results
 
     def build(
@@ -119,7 +119,7 @@ class ZepMessageReaderComponent(BaseMemoryComponent):
         search_scope: str = SearchScope.messages,
         search_type: str = SearchType.similarity,
         limit: Optional[int] = None,
-    ) -> list[Record]:
+    ) -> list[Data]:
         try:
             # Monkeypatch API_BASE_PATH to
             # avoid 404
@@ -139,12 +139,12 @@ class ZepMessageReaderComponent(BaseMemoryComponent):
 
         zep_client = ZepClient(api_url=url, api_key=api_key)
         memory = ZepChatMessageHistory(session_id=session_id, zep_client=zep_client)
-        records = self.get_messages(
+        data = self.get_messages(
             memory=memory,
             query=query,
             search_scope=search_scope,
             search_type=search_type,
             limit=limit,
         )
-        self.status = records
-        return records
+        self.status = data
+        return data

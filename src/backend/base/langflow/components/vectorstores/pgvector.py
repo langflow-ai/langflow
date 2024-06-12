@@ -6,7 +6,7 @@ from langchain_core.retrievers import BaseRetriever
 from langchain_core.vectorstores import VectorStore
 
 from langflow.custom import CustomComponent
-from langflow.schema import Record
+from langflow.schema import Data
 
 
 class PGVectorComponent(CustomComponent):
@@ -27,7 +27,7 @@ class PGVectorComponent(CustomComponent):
         """
         return {
             "code": {"show": False},
-            "inputs": {"display_name": "Input", "input_types": ["Document", "Record"]},
+            "inputs": {"display_name": "Input", "input_types": ["Document", "Data"]},
             "embedding": {"display_name": "Embedding"},
             "pg_server_url": {
                 "display_name": "PostgreSQL Server Connection String",
@@ -41,7 +41,7 @@ class PGVectorComponent(CustomComponent):
         embedding: Embeddings,
         pg_server_url: str,
         collection_name: str,
-        inputs: Optional[Record] = None,
+        inputs: Optional[Data] = None,
     ) -> Union[VectorStore, BaseRetriever]:
         """
         Builds the Vector Store or BaseRetriever object.
@@ -58,7 +58,7 @@ class PGVectorComponent(CustomComponent):
 
         documents = []
         for _input in inputs or []:
-            if isinstance(_input, Record):
+            if isinstance(_input, Data):
                 documents.append(_input.to_lc_document())
             else:
                 documents.append(_input)

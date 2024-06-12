@@ -6,8 +6,8 @@ from langchain_core.vectorstores import VectorStore
 
 from langflow.custom import CustomComponent
 from langflow.field_typing import Text
-from langflow.helpers.record import docs_to_records
-from langflow.schema import Record
+from langflow.helpers.record import docs_to_data
+from langflow.schema import Data
 
 
 class LCVectorStoreComponent(CustomComponent):
@@ -21,9 +21,9 @@ class LCVectorStoreComponent(CustomComponent):
         vector_store: Union[VectorStore, BaseRetriever],
         k=10,
         **kwargs,
-    ) -> List[Record]:
+    ) -> List[Data]:
         """
-        Search for records in the vector store based on the input value and search type.
+        Search for data in the vector store based on the input value and search type.
 
         Args:
             input_value (Text): The input value to search for.
@@ -31,7 +31,7 @@ class LCVectorStoreComponent(CustomComponent):
             vector_store (VectorStore): The vector store to search in.
 
         Returns:
-            List[Record]: A list of records matching the search criteria.
+            List[Data]: A list of data matching the search criteria.
 
         Raises:
             ValueError: If invalid inputs are provided.
@@ -42,6 +42,6 @@ class LCVectorStoreComponent(CustomComponent):
             docs = vector_store.search(query=input_value, search_type=search_type.lower(), k=k, **kwargs)
         else:
             raise ValueError("Invalid inputs provided.")
-        records = docs_to_records(docs)
-        self.status = records
-        return records
+        data = docs_to_data(docs)
+        self.status = data
+        return data

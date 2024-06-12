@@ -2,7 +2,7 @@ from typing import Union
 
 from langflow.custom import Component
 from langflow.field_typing import Text
-from langflow.schema import Record
+from langflow.schema import Data
 from langflow.template import Input, Output
 
 
@@ -29,17 +29,17 @@ class TextOperatorComponent(Component):
         ),
         Input(
             name="true_output",
-            type=Union[str, Record],
+            type=Union[str, Data],
             display_name="True Output",
             info="The output to return or display when the comparison is true.",
-            input_types=["Text", "Record"],
+            input_types=["Text", "Data"],
         ),
         Input(
             name="false_output",
-            type=Union[str, Record],
+            type=Union[str, Data],
             display_name="False Output",
             info="The output to return or display when the comparison is false.",
-            input_types=["Text", "Record"],
+            input_types=["Text", "Data"],
         ),
     ]
     outputs = [
@@ -47,15 +47,15 @@ class TextOperatorComponent(Component):
         Output(display_name="False Result", name="false_result", method="result_response"),
     ]
 
-    def true_response(self) -> Union[Text, Record]:
+    def true_response(self) -> Union[Text, Data]:
         self.stop("False Result")
         return self.true_output if self.true_output else self.input_text
 
-    def false_response(self) -> Union[Text, Record]:
+    def false_response(self) -> Union[Text, Data]:
         self.stop("True Result")
         return self.false_output if self.false_output else self.input_text
 
-    def result_response(self) -> Union[Text, Record]:
+    def result_response(self) -> Union[Text, Data]:
         input_text = self.input_text
         match_text = self.match_text
         operator = self.operator

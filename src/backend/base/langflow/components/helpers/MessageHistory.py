@@ -2,7 +2,7 @@ from typing import List, Optional
 
 from langflow.custom import CustomComponent
 from langflow.memory import get_messages
-from langflow.schema import Record
+from langflow.schema import Data
 
 
 class MessageHistoryComponent(CustomComponent):
@@ -43,7 +43,7 @@ class MessageHistoryComponent(CustomComponent):
         session_id: Optional[str] = None,
         n_messages: int = 100,
         order: Optional[str] = "Descending",
-    ) -> List[Record]:
+    ) -> List[Data]:
         order = "DESC" if order == "Descending" else "ASC"
         if sender == "Machine and User":
             sender = None

@@ -6,7 +6,7 @@ from langchain_core.retrievers import BaseRetriever
 from langchain_core.vectorstores import VectorStore
 
 from langflow.custom import CustomComponent
-from langflow.schema import Record
+from langflow.schema import Data
 
 
 class UpstashVectorStoreComponent(CustomComponent):
@@ -25,7 +25,7 @@ class UpstashVectorStoreComponent(CustomComponent):
         - dict: A dictionary containing the configuration options for the component.
         """
         return {
-            "inputs": {"display_name": "Input", "input_types": ["Document", "Record"]},
+            "inputs": {"display_name": "Input", "input_types": ["Document", "Data"]},
             "embedding": {
                 "display_name": "Embedding",
                 "input_types": ["Embeddings"],
@@ -48,7 +48,7 @@ class UpstashVectorStoreComponent(CustomComponent):
 
     def build(
         self,
-        inputs: Optional[List[Record]] = None,
+        inputs: Optional[List[Data]] = None,
         text_key: str = "text",
         index_url: Optional[str] = None,
         index_token: Optional[str] = None,
@@ -56,7 +56,7 @@ class UpstashVectorStoreComponent(CustomComponent):
     ) -> Union[VectorStore, BaseRetriever]:
         documents = []
         for _input in inputs or []:
-            if isinstance(_input, Record):
+            if isinstance(_input, Data):
                 documents.append(_input.to_lc_document())
             else:
                 documents.append(_input)

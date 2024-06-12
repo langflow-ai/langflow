@@ -6,7 +6,7 @@ from langchain_core.prompts.chat import HumanMessagePromptTemplate, SystemMessag
 from langflow.base.agents.agent import LCAgentComponent
 from langflow.base.agents.utils import AGENTS, AgentSpec, get_agents_list
 from langflow.field_typing import BaseLanguageModel, Text, Tool
-from langflow.schema import Record
+from langflow.schema import Data
 from langflow.schema.dotdict import dotdict
 
 
@@ -149,7 +149,7 @@ class AgentComponent(LCAgentComponent):
         tools: List[Tool],
         system_message: str = "You are a helpful assistant. Help the user answer any questions.",
         user_prompt: str = "{input}",
-        message_history: Optional[List[Record]] = None,
+        message_history: Optional[List[Data]] = None,
         tool_template: str = "{name}: {description}",
         handle_parsing_errors: bool = True,
     ) -> Text:

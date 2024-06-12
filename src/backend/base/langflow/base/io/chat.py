@@ -3,7 +3,7 @@ from typing import Optional, Union
 from langflow.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES
 from langflow.custom import Component
 from langflow.memory import store_message
-from langflow.schema import Record
+from langflow.schema import Data
 from langflow.schema.message import Message
 
 
@@ -35,9 +35,9 @@ class ChatComponent(Component):
                 "advanced": True,
             },
             "record_template": {
-                "display_name": "Record Template",
+                "display_name": "Data Template",
                 "multiline": True,
-                "info": "In case of Message being a Record, this template will be used to convert it to text.",
+                "info": "In case of Message being a Data, this template will be used to convert it to text.",
                 "advanced": True,
             },
             "files": {
@@ -65,14 +65,14 @@ class ChatComponent(Component):
         self,
         sender: Optional[str] = "User",
         sender_name: Optional[str] = "User",
-        input_value: Optional[Union[str, Record, Message]] = None,
+        input_value: Optional[Union[str, Data, Message]] = None,
         files: Optional[list[str]] = None,
         session_id: Optional[str] = None,
         return_message: Optional[bool] = False,
     ) -> Message:
         message: Message | None = None
 
-        if isinstance(input_value, Record):
+        if isinstance(input_value, Data):
             # Update the data of the record
             message = Message.from_record(input_value)
         else:

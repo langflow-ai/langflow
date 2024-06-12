@@ -1,8 +1,7 @@
 from langchain_core.documents import Document
-
 from langflow.components import helpers
 from langflow.custom.utils import build_custom_component_template
-from langflow.schema import Record
+from langflow.schema import Data
 
 
 def test_update_record_component():
@@ -11,7 +10,7 @@ def test_update_record_component():
 
     # Act
     new_data = {"new_key": "new_value"}
-    existing_record = Record(data={"existing_key": "existing_value"})
+    existing_record = Data(data={"existing_key": "existing_value"})
     result = update_record_component.build(existing_record, new_data)
     assert result.data == {"existing_key": "existing_value", "new_key": "new_value"}
     assert result.existing_key == "existing_value"
@@ -29,7 +28,7 @@ def test_document_to_record_component():
 
     # Assert
     # Replace with your actual expected result
-    assert result == [Record(data={"text": "key: value", "url": "https://example.com"})]
+    assert result == [Data(data={"text": "key: value", "url": "https://example.com"})]
 
 
 def test_uuid_generator_component():
@@ -52,15 +51,15 @@ def test_uuid_generator_component():
     assert len(result) == 36
 
 
-def test_records_as_text_component():
+def test_data_as_text_component():
     # Arrange
-    records_as_text_component = helpers.RecordsToTextComponent()
+    data_as_text_component = helpers.RecordsToTextComponent()
 
     # Act
     # Replace with your actual test data
-    records = [Record(data={"key": "value", "bacon": "eggs"})]
+    data = [Data(data={"key": "value", "bacon": "eggs"})]
     template = "Data:{data} -- Bacon:{bacon}"
-    result = records_as_text_component.build(records, template=template)
+    result = data_as_text_component.build(data, template=template)
 
     # Assert
     # Replace with your actual expected result
@@ -78,4 +77,4 @@ def test_text_to_record_component():
 
     # Assert
     # Replace with your actual expected result
-    assert result == Record(data={"key": "value"})
+    assert result == Data(data={"key": "value"})

@@ -9,7 +9,7 @@ from pydantic import BaseModel
 
 from langflow.custom.custom_component.base_component import BaseComponent
 from langflow.helpers.flow import list_flows, load_flow, run_flow
-from langflow.schema import Record
+from langflow.schema import Data
 from langflow.schema.artifact import get_artifact_type
 from langflow.schema.dotdict import dotdict
 from langflow.schema.message import Message
@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from langflow.services.storage.service import StorageService
 
 
-LoggableType = Union[str, dict, list, int, float, bool, None, Record, Message]
+LoggableType = Union[str, dict, list, int, float, bool, None, Data, Message]
 
 
 class CustomComponent(BaseComponent):
@@ -80,7 +80,7 @@ class CustomComponent(BaseComponent):
     user_id: Optional[Union[UUID, str]] = None
     status: Optional[Any] = None
     """The status of the component. This is displayed on the frontend. Defaults to None."""
-    _flows_records: Optional[List[Record]] = None
+    _flows_data: Optional[List[Data]] = None
     _logs: Optional[List[Log]] = []
 
     def update_state(self, name: str, value: Any):
@@ -166,7 +166,7 @@ class CustomComponent(BaseComponent):
             return yaml.dump(self.repr_value)
         if isinstance(self.repr_value, str):
             return self.repr_value
-        if isinstance(self.repr_value, BaseModel) and not isinstance(self.repr_value, Record):
+        if isinstance(self.repr_value, BaseModel) and not isinstance(self.repr_value, Data):
             return str(self.repr_value)
         return self.repr_value
 
@@ -198,9 +198,9 @@ class CustomComponent(BaseComponent):
         """
         return self.get_code_tree(self.code or "")
 
-    def to_records(self, data: Any, keys: Optional[List[str]] = None, silent_errors: bool = False) -> List[Record]:
+    def to_data(self, data: Any, keys: Optional[List[str]] = None, silent_errors: bool = False) -> List[Data]:
         """
-        Converts input data into a list of Record objects.
+        Converts input data into a list of Data objects.
 
         Args:
             data (Any): The input data to be converted. It can be a single item or a sequence of items.
@@ -211,7 +211,7 @@ class CustomComponent(BaseComponent):
                 Defaults to None, in which case the default keys "text" and "data" are used.
 
         Returns:
-            List[Record]: A list of Record objects.
+            List[Data]: A list of Data objects.
 
         Raises:
             ValueError: If the input data is not of a valid type or if the specified keys are not found in the data.
@@ -219,7 +219,7 @@ class CustomComponent(BaseComponent):
         """
         if not keys:
             keys = []
-        records = []
+        data = []
         if not isinstance(data, Sequence):
             data = [data]
         for item in data:
@@ -245,28 +245,28 @@ class CustomComponent(BaseComponent):
             else:
                 raise ValueError(f"Invalid data type: {type(item)}")
 
-            records.append(Record(data=data_dict))
+            data.append(Data(data=data_dict))
 
-        return records
+        return data
 
-    def create_references_from_records(self, records: List[Record], include_data: bool = False) -> str:
+    def create_references_from_data(self, data: List[Data], include_data: bool = False) -> str:
         """
-        Create references from a list of records.
+        Create references from a list of data.
 
         Args:
-            records (List[dict]): A list of records, where each record is a dictionary.
+            data (List[dict]): A list of data, where each record is a dictionary.
             include_data (bool, optional): Whether to include data in the references. Defaults to False.
 
         Returns:
             str: A string containing the references in markdown format.
         """
-        if not records:
+        if not data:
             return ""
         markdown_string = "---\n"
-        for record in records:
-            markdown_string += f"- Text: {record.get_text()}"
+        for value in data:
+            markdown_string += f"- Text: {value.get_text()}"
             if include_data:
-                markdown_string += f" Data: {record.data}"
+                markdown_string += f" Data: {value.data}"
             markdown_string += "\n"
         return markdown_string
 
@@ -454,7 +454,7 @@ class CustomComponent(BaseComponent):
     ) -> Any:
         return await run_flow(inputs=inputs, flow_id=flow_id, flow_name=flow_name, tweaks=tweaks, user_id=self._user_id)
 
-    def list_flows(self) -> List[Record]:
+    def list_flows(self) -> List[Data]:
         if not self._user_id:
             raise ValueError("Session is invalid")
         try:

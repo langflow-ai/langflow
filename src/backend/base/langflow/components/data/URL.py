@@ -3,7 +3,7 @@ from typing import Any, Dict
 from langchain_community.document_loaders.web_base import WebBaseLoader
 
 from langflow.custom import CustomComponent
-from langflow.schema import Record
+from langflow.schema import Data
 
 
 class URLComponent(CustomComponent):
@@ -19,9 +19,9 @@ class URLComponent(CustomComponent):
     def build(
         self,
         urls: list[str],
-    ) -> list[Record]:
+    ) -> list[Data]:
         loader = WebBaseLoader(web_paths=[url for url in urls if url])
         docs = loader.load()
-        records = self.to_records(docs)
-        self.status = records
-        return records
+        data = self.to_data(docs)
+        self.status = data
+        return data

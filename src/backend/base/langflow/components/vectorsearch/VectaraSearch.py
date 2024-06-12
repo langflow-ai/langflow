@@ -5,7 +5,7 @@ from langchain_community.vectorstores.vectara import Vectara
 from langflow.components.vectorstores.base.model import LCVectorStoreComponent
 from langflow.components.vectorstores.Vectara import VectaraComponent
 from langflow.field_typing import Text
-from langflow.schema import Record
+from langflow.schema import Data
 
 
 class VectaraSearchComponent(VectaraComponent, LCVectorStoreComponent):
@@ -49,7 +49,7 @@ class VectaraSearchComponent(VectaraComponent, LCVectorStoreComponent):
         vectara_corpus_id: str,
         vectara_api_key: str,
         number_of_results: int = 4,
-    ) -> List[Record]:
+    ) -> List[Data]:
         source = "Langflow"
         vector_store = Vectara(
             vectara_customer_id=vectara_customer_id,

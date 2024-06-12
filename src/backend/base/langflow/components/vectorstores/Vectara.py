@@ -9,7 +9,7 @@ from langchain_core.vectorstores import VectorStore
 
 from langflow.custom import CustomComponent
 from langflow.field_typing import BaseRetriever
-from langflow.schema import Record
+from langflow.schema import Data
 
 
 class VectaraComponent(CustomComponent):
@@ -30,7 +30,7 @@ class VectaraComponent(CustomComponent):
         },
         "inputs": {
             "display_name": "Input",
-            "input_types": ["Document", "Record"],
+            "input_types": ["Document", "Data"],
             "info": "If provided, will be upserted to corpus (optional)",
         },
         "files_url": {
@@ -45,13 +45,13 @@ class VectaraComponent(CustomComponent):
         vectara_corpus_id: str,
         vectara_api_key: str,
         files_url: Optional[List[str]] = None,
-        inputs: Optional[Record] = None,
+        inputs: Optional[Data] = None,
     ) -> Union[VectorStore, BaseRetriever]:
         source = "Langflow"
 
         documents = []
         for _input in inputs or []:
-            if isinstance(_input, Record):
+            if isinstance(_input, Data):
                 documents.append(_input.to_lc_document())
             else:
                 documents.append(_input)

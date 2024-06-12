@@ -7,7 +7,7 @@ from langchain_core.prompts.image import ImagePromptTemplate
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, field_serializer
 
 from langflow.schema.image import Image, get_file_paths, is_image_file
-from langflow.schema.record import Record
+from langflow.schema.data import Data
 
 
 def _timestamp_to_str(timestamp: datetime) -> str:
@@ -40,12 +40,12 @@ class Message(BaseModel):
         self,
     ) -> BaseMessage:
         """
-        Converts the Record to a BaseMessage.
+        Converts the Data to a BaseMessage.
 
         Returns:
             BaseMessage: The converted BaseMessage.
         """
-        # The idea of this function is to be a helper to convert a Record to a BaseMessage
+        # The idea of this function is to be a helper to convert a Data to a BaseMessage
         # It will use the "sender" key to determine if the message is Human or AI
         # If the key is not present, it will default to AI
         # But first we check if all required keys are present in the data dictionary
@@ -68,15 +68,15 @@ class Message(BaseModel):
         return AIMessage(content=self.text)
 
     @classmethod
-    def from_record(cls, record: Record) -> "Message":
+    def from_record(cls, record: Data) -> "Message":
         """
-        Converts a BaseMessage to a Record.
+        Converts a BaseMessage to a Data.
 
         Args:
             record (BaseMessage): The BaseMessage to convert.
 
         Returns:
-            Record: The converted Record.
+            Data: The converted Data.
         """
 
         return cls(

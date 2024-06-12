@@ -4,7 +4,7 @@ from langchain_community.vectorstores.mongodb_atlas import MongoDBAtlasVectorSea
 
 from langflow.custom import CustomComponent
 from langflow.field_typing import Embeddings
-from langflow.schema import Record
+from langflow.schema import Data
 
 
 class MongoDBAtlasComponent(CustomComponent):
@@ -14,7 +14,7 @@ class MongoDBAtlasComponent(CustomComponent):
 
     def build_config(self):
         return {
-            "inputs": {"display_name": "Input", "input_types": ["Document", "Record"]},
+            "inputs": {"display_name": "Input", "input_types": ["Document", "Data"]},
             "embedding": {"display_name": "Embedding"},
             "collection_name": {"display_name": "Collection Name"},
             "db_name": {"display_name": "Database Name"},
@@ -25,7 +25,7 @@ class MongoDBAtlasComponent(CustomComponent):
     def build(
         self,
         embedding: Embeddings,
-        inputs: Optional[List[Record]] = None,
+        inputs: Optional[List[Data]] = None,
         collection_name: str = "",
         db_name: str = "",
         index_name: str = "",
@@ -42,7 +42,7 @@ class MongoDBAtlasComponent(CustomComponent):
             raise ValueError(f"Failed to connect to MongoDB Atlas: {e}")
         documents = []
         for _input in inputs or []:
-            if isinstance(_input, Record):
+            if isinstance(_input, Data):
                 documents.append(_input.to_lc_document())
             else:
                 documents.append(_input)

@@ -1,7 +1,7 @@
 from langflow.custom import CustomComponent
 from langflow.field_typing import Text
-from langflow.helpers.record import records_to_text
-from langflow.schema import Record
+from langflow.helpers.record import data_to_text
+from langflow.schema import Data
 
 
 class RecordsToTextComponent(CustomComponent):
@@ -10,27 +10,27 @@ class RecordsToTextComponent(CustomComponent):
 
     def build_config(self):
         return {
-            "records": {
+            "data": {
                 "display_name": "Records",
-                "info": "The records to convert to text.",
+                "info": "The data to convert to text.",
             },
             "template": {
                 "display_name": "Template",
-                "info": "The template to use for formatting the records. It can contain the keys {text}, {data} or any other key in the Record.",
+                "info": "The template to use for formatting the data. It can contain the keys {text}, {data} or any other key in the Data.",
                 "multiline": True,
             },
         }
 
     def build(
         self,
-        records: list[Record],
+        data: list[Data],
         template: str = "Text: {text}\nData: {data}",
     ) -> Text:
-        if not records:
+        if not data:
             return ""
-        if isinstance(records, Record):
-            records = [records]
+        if isinstance(data, Data):
+            data = [data]
 
-        result_string = records_to_text(template, records)
+        result_string = data_to_text(template, data)
         self.status = result_string
         return result_string

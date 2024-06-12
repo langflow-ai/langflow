@@ -2,7 +2,7 @@ from typing import Union
 
 from langflow.custom import CustomComponent
 from langflow.field_typing import Text
-from langflow.schema import Record
+from langflow.schema import Data
 
 
 class PassComponent(CustomComponent):
@@ -15,16 +15,16 @@ class PassComponent(CustomComponent):
             "ignored_input": {
                 "display_name": "Ignored Input",
                 "info": "This input is ignored. It's used to control the flow in the graph.",
-                "input_types": ["Text", "Record"],
+                "input_types": ["Text", "Data"],
             },
             "forwarded_input": {
                 "display_name": "Input",
                 "info": "This input is forwarded by the component.",
-                "input_types": ["Text", "Record"],
+                "input_types": ["Text", "Data"],
             },
         }
 
-    def build(self, ignored_input: Text, forwarded_input: Text) -> Union[Text, Record]:
+    def build(self, ignored_input: Text, forwarded_input: Text) -> Union[Text, Data]:
         # The ignored_input is not used in the logic, it's just there for graph flow control
         self.status = forwarded_input
         return forwarded_input

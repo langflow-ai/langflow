@@ -3,7 +3,7 @@ from typing import Any, Dict
 
 from langflow.base.data.utils import TEXT_FILE_TYPES, parse_text_file_to_record
 from langflow.custom import CustomComponent
-from langflow.schema import Record
+from langflow.schema import Data
 
 
 class FileComponent(CustomComponent):
@@ -26,7 +26,7 @@ class FileComponent(CustomComponent):
             },
         }
 
-    def load_file(self, path: str, silent_errors: bool = False) -> Record:
+    def load_file(self, path: str, silent_errors: bool = False) -> Data:
         resolved_path = self.resolve_path(path)
         path_obj = Path(resolved_path)
         extension = path_obj.suffix[1:].lower()
@@ -36,13 +36,13 @@ class FileComponent(CustomComponent):
             raise ValueError(f"Unsupported file type: {extension}")
         record = parse_text_file_to_record(resolved_path, silent_errors)
         self.status = record if record else "No data"
-        return record or Record()
+        return record or Data()
 
     def build(
         self,
         path: str,
         silent_errors: bool = False,
-    ) -> Record:
+    ) -> Data:
         record = self.load_file(path, silent_errors)
         self.status = record
         return record

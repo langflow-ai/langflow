@@ -16,7 +16,7 @@ class OpenAIModelComponent(LCModelComponent):
     icon = "OpenAI"
 
     inputs = [
-        StrInput(name="input_value", display_name="Input", input_types=["Text", "Record", "Prompt"]),
+        StrInput(name="input_value", display_name="Input", input_types=["Text", "Data", "Prompt"]),
         IntInput(
             name="max_tokens",
             display_name="Max Tokens",

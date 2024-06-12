@@ -1,10 +1,11 @@
 from typing import Any, List, Optional, Tuple
-from langchain_community.vectorstores import Cassandra
+
 from langchain_community.utilities.cassandra import SetupMode
+from langchain_community.vectorstores import Cassandra
 
 from langflow.custom import CustomComponent
 from langflow.field_typing import Embeddings, VectorStore
-from langflow.schema import Record
+from langflow.schema import Data
 
 
 class CassandraVectorStoreComponent(CustomComponent):
@@ -17,7 +18,7 @@ class CassandraVectorStoreComponent(CustomComponent):
         return {
             "inputs": {
                 "display_name": "Inputs",
-                "info": "Optional list of records to be processed and stored in the vector store.",
+                "info": "Optional list of data to be processed and stored in the vector store.",
             },
             "embedding": {"display_name": "Embedding", "info": "Embedding to use"},
             "token": {
@@ -45,7 +46,7 @@ class CassandraVectorStoreComponent(CustomComponent):
             },
             "batch_size": {
                 "display_name": "Batch Size",
-                "info": "Optional number of records to process in a single batch.",
+                "info": "Optional number of data to process in a single batch.",
                 "advanced": True,
             },
             "body_index_options": {
@@ -66,7 +67,7 @@ class CassandraVectorStoreComponent(CustomComponent):
         embedding: Embeddings,
         token: str,
         database_id: str,
-        inputs: Optional[List[Record]] = None,
+        inputs: Optional[List[Data]] = None,
         keyspace: Optional[str] = None,
         table_name: str = "",
         ttl_seconds: Optional[int] = None,

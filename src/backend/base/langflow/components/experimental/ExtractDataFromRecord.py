@@ -1,14 +1,14 @@
 from langflow.custom import CustomComponent
-from langflow.schema import Record
+from langflow.schema import Data
 
 
 class ExtractKeyFromRecordComponent(CustomComponent):
-    display_name = "Extract Key From Record"
+    display_name = "Extract Key From Data"
     description = "Extracts a key from a record."
     beta: bool = True
 
     field_config = {
-        "record": {"display_name": "Record"},
+        "record": {"display_name": "Data"},
         "keys": {
             "display_name": "Keys",
             "info": "The keys to extract from the record.",
@@ -21,12 +21,12 @@ class ExtractKeyFromRecordComponent(CustomComponent):
         },
     }
 
-    def build(self, record: Record, keys: list[str], silent_error: bool = True) -> Record:
+    def build(self, record: Data, keys: list[str], silent_error: bool = True) -> Data:
         """
         Extracts the keys from a record.
 
         Args:
-            record (Record): The record from which to extract the keys.
+            record (Data): The record from which to extract the keys.
             keys (list[str]): The keys to extract from the record.
             silent_error (bool): If True, errors will not be raised.
 
@@ -40,6 +40,6 @@ class ExtractKeyFromRecordComponent(CustomComponent):
             except AttributeError:
                 if not silent_error:
                     raise KeyError(f"The key '{key}' does not exist in the record.")
-        return_record = Record(data=extracted_keys)
+        return_record = Data(data=extracted_keys)
         self.status = return_record
         return return_record

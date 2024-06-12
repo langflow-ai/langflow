@@ -2,16 +2,16 @@ from copy import deepcopy
 
 from langchain_core.documents import Document
 
-from langflow.schema import Record
+from langflow.schema import Data
 from langflow.schema.message import Message
 
 
-def record_to_string(record: Record) -> str:
+def record_to_string(record: Data) -> str:
     """
     Convert a record to a string.
 
     Args:
-        record (Record): The record to convert.
+        record (Data): The record to convert.
 
     Returns:
         str: The record as a string.
@@ -32,18 +32,18 @@ def dict_values_to_string(d: dict) -> dict:
     # Do something similar to the above
     d_copy = deepcopy(d)
     for key, value in d_copy.items():
-        # it could be a list of records or documents or strings
+        # it could be a list of data or documents or strings
         if isinstance(value, list):
             for i, item in enumerate(value):
                 if isinstance(item, Message):
                     d_copy[key][i] = item.text
-                elif isinstance(item, Record):
+                elif isinstance(item, Data):
                     d_copy[key][i] = record_to_string(item)
                 elif isinstance(item, Document):
                     d_copy[key][i] = document_to_string(item)
         elif isinstance(value, Message):
             d_copy[key] = value.text
-        elif isinstance(value, Record):
+        elif isinstance(value, Data):
             d_copy[key] = record_to_string(value)
         elif isinstance(value, Document):
             d_copy[key] = document_to_string(value)

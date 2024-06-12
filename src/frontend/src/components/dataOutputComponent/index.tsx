@@ -25,7 +25,7 @@ function RecordsOutputComponent({
 
   return (
     <TableComponent
-      key={"recordsOutputComponent"}
+      key={"dataOutputComponent"}
       overlayNoRowsTemplate="No data available"
       suppressRowClickSelection={true}
       pagination={pagination}

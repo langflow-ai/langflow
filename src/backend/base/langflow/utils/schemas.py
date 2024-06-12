@@ -98,9 +98,9 @@ class ChatOutputResponse(BaseModel):
 
 
 class RecordOutputResponse(BaseModel):
-    """Record output response schema."""
+    """Data output response schema."""
 
-    records: List[Optional[Dict]]
+    data: List[Optional[Dict]]
 
 
 class ContainsEnumMeta(enum.EnumMeta):

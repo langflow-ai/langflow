@@ -1,9 +1,10 @@
 from typing import List, Optional, Union
 
+from langchain_core.retrievers import BaseRetriever
+
 from langflow.custom import CustomComponent
 from langflow.field_typing import Embeddings, VectorStore
-from langflow.schema import Record
-from langchain_core.retrievers import BaseRetriever
+from langflow.schema import Data
 
 
 class AstraDBVectorStoreComponent(CustomComponent):
@@ -16,7 +17,7 @@ class AstraDBVectorStoreComponent(CustomComponent):
         return {
             "inputs": {
                 "display_name": "Inputs",
-                "info": "Optional list of records to be processed and stored in the vector store.",
+                "info": "Optional list of data to be processed and stored in the vector store.",
             },
             "embedding": {"display_name": "Embedding", "info": "Embedding to use"},
             "collection_name": {
@@ -44,7 +45,7 @@ class AstraDBVectorStoreComponent(CustomComponent):
             },
             "batch_size": {
                 "display_name": "Batch Size",
-                "info": "Optional number of records to process in a single batch.",
+                "info": "Optional number of data to process in a single batch.",
                 "advanced": True,
             },
             "bulk_insert_batch_concurrency": {
@@ -54,7 +55,7 @@ class AstraDBVectorStoreComponent(CustomComponent):
             },
             "bulk_insert_overwrite_concurrency": {
                 "display_name": "Bulk Insert Overwrite Concurrency",
-                "info": "Optional concurrency level for bulk insert operations that overwrite existing records.",
+                "info": "Optional concurrency level for bulk insert operations that overwrite existing data.",
                 "advanced": True,
             },
             "bulk_delete_concurrency": {
@@ -96,7 +97,7 @@ class AstraDBVectorStoreComponent(CustomComponent):
         token: str,
         api_endpoint: str,
         collection_name: str,
-        inputs: Optional[List[Record]] = None,
+        inputs: Optional[List[Data]] = None,
         namespace: Optional[str] = None,
         metric: Optional[str] = None,
         batch_size: Optional[int] = None,

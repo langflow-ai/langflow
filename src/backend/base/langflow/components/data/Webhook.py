@@ -3,7 +3,7 @@ import uuid
 from typing import Any, Optional
 
 from langflow.custom import CustomComponent
-from langflow.schema import Record
+from langflow.schema import Data
 from langflow.schema.dotdict import dotdict
 
 
@@ -25,14 +25,14 @@ class WebhookComponent(CustomComponent):
             }
         }
 
-    def build(self, data: Optional[str] = "") -> Record:
+    def build(self, data: Optional[str] = "") -> Data:
         message = ""
         try:
             body = json.loads(data or "{}")
         except json.JSONDecodeError:
             body = {"payload": data}
             message = f"Invalid JSON payload. Please check the format.\n\n{data}"
-        record = Record(data=body)
+        record = Data(data=body)
         if not message:
             message = json.dumps(body, indent=2)
         self.status = message

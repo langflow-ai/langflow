@@ -57,7 +57,7 @@ class GroqModelComponent(LCModelComponent):
             info="The name of the model to use. Supported examples: gemini-pro",
             options=MODEL_NAMES,
         ),
-        Input(name="input_value", field_type=str, display_name="Input", input_types=["Text", "Record", "Prompt"]),
+        Input(name="input_value", field_type=str, display_name="Input", input_types=["Text", "Data", "Prompt"]),
         Input(name="stream", field_type=bool, display_name="Stream", advanced=True, info=STREAM_INFO_TEXT),
         Input(
             name="system_message",

@@ -2,30 +2,32 @@ from typing import Any, List, Optional
 
 from loguru import logger
 
-from langflow.base.flow_processing.utils import build_records_from_result_data
+from langflow.base.flow_processing.utils import build_data_from_result_data
 from langflow.custom import CustomComponent
 from langflow.graph.graph.base import Graph
 from langflow.graph.schema import RunOutputs
 from langflow.graph.vertex.base import Vertex
 from langflow.helpers.flow import get_flow_inputs
-from langflow.schema import Record
+from langflow.schema import Data
 from langflow.schema.dotdict import dotdict
 from langflow.template.field.base import Input
 
 
 class SubFlowComponent(CustomComponent):
     display_name = "Sub Flow"
-    description = "Dynamically Generates a Component from a Flow. The output is a list of records with keys 'result' and 'message'."
+    description = (
+        "Dynamically Generates a Component from a Flow. The output is a list of data with keys 'result' and 'message'."
+    )
     beta: bool = True
     field_order = ["flow_name"]
 
     def get_flow_names(self) -> List[str]:
-        flow_records = self.list_flows()
-        return [flow_record.data["name"] for flow_record in flow_records]
+        flow_data = self.list_flows()
+        return [flow_record.data["name"] for flow_record in flow_data]
 
-    def get_flow(self, flow_name: str) -> Optional[Record]:
-        flow_records = self.list_flows()
-        for flow_record in flow_records:
+    def get_flow(self, flow_name: str) -> Optional[Data]:
+        flow_data = self.list_flows()
+        for flow_record in flow_data:
             if flow_record.data["name"] == flow_name:
                 return flow_record
         return None
@@ -93,7 +95,7 @@ class SubFlowComponent(CustomComponent):
             },
         }
 
-    async def build(self, flow_name: str, get_final_results_only: bool = True, **kwargs) -> List[Record]:
+    async def build(self, flow_name: str, get_final_results_only: bool = True, **kwargs) -> List[Data]:
         tweaks = {key: {"input_value": value} for key, value in kwargs.items()}
         run_outputs: List[Optional[RunOutputs]] = await self.run_flow(
             tweaks=tweaks,
@@ -103,12 +105,12 @@ class SubFlowComponent(CustomComponent):
             return []
         run_output = run_outputs[0]
 
-        records = []
+        data = []
         if run_output is not None:
             for output in run_output.outputs:
                 if output:
-                    records.extend(build_records_from_result_data(output, get_final_results_only))
+                    data.extend(build_data_from_result_data(output, get_final_results_only))
 
-        self.status = records
-        logger.debug(records)
-        return records
+        self.status = data
+        logger.debug(data)
+        return data

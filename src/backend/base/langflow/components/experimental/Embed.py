@@ -1,6 +1,6 @@
 from langflow.custom import CustomComponent
-from langflow.schema import Record
 from langflow.field_typing import Embeddings
+from langflow.schema import Data
 
 
 class EmbedComponent(CustomComponent):
@@ -10,6 +10,6 @@ class EmbedComponent(CustomComponent):
         return {"texts": {"display_name": "Texts"}, "embbedings": {"display_name": "Embeddings"}}
 
     def build(self, texts: list[str], embbedings: Embeddings) -> Embeddings:
-        vectors = Record(vector=embbedings.embed_documents(texts))
+        vectors = Data(vector=embbedings.embed_documents(texts))
         self.status = vectors
         return vectors

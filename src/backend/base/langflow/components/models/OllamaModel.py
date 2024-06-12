@@ -120,7 +120,7 @@ class ChatOllamaComponent(LCModelComponent):
             info="Controls the creativity of model responses.",
             value=0.8,
         ),
-        Input(name="input_value", type=str, display_name="Input", input_types=["Text", "Record", "Prompt"]),
+        Input(name="input_value", type=str, display_name="Input", input_types=["Text", "Data", "Prompt"]),
         Input(name="stream", type=bool, display_name="Stream", info=STREAM_INFO_TEXT, value=False),
         Input(
             name="system_message",
