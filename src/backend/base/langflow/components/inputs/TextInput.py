@@ -1,7 +1,7 @@
 from langflow.base.io.text import TextComponent
 from langflow.field_typing import Text
-from langflow.inputs import StrInput, Input
-from langflow.template import Output
+from langflow.inputs import StrInput
+from langflow.template import Input, Output
 
 
 class TextInput(TextComponent):
