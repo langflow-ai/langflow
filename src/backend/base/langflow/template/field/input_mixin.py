@@ -1,7 +1,7 @@
 from enum import Enum
-from typing import Any, Optional
+from typing import Annotated, Any, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, PlainSerializer, field_validator
 
 from langflow.field_typing.range_spec import RangeSpec
 
@@ -18,11 +18,14 @@ class FieldTypes(str, Enum):
     PROMPT = "Prompt"
 
 
+SerializableFieldTypes = Annotated[FieldTypes, PlainSerializer(lambda v: v.value, return_type=str)]
+
+
 # Base mixin for common input field attributes and methods
 class BaseInputMixin(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    field_type: Optional[FieldTypes] = Field(default=FieldTypes.TEXT)
+    field_type: Optional[SerializableFieldTypes] = Field(default=FieldTypes.TEXT)
 
     required: bool = False
     """Specifies if the field is required. Defaults to False."""
