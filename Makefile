@@ -9,16 +9,20 @@ open_browser ?= true
 path = src/backend/base/langflow/frontend
 workers ?= 1
 
+
 codespell:
 	@poetry install --with spelling
 	poetry run codespell --toml pyproject.toml
+
 
 fix_codespell:
 	@poetry install --with spelling
 	poetry run codespell --toml pyproject.toml --write
 
+
 setup_poetry:
 	pipx install poetry
+
 
 add:
 	@echo 'Adding dependencies'
@@ -34,11 +38,13 @@ ifdef base
 	cd src/backend/base && poetry add $(base)
 endif
 
+
 init:
 	@echo 'Installing backend dependencies'
 	make install_backend
 	@echo 'Installing frontend dependencies'
 	make install_frontend
+
 
 coverage: ## run the tests and generate a coverage report
 	poetry run pytest --cov \
@@ -46,6 +52,7 @@ coverage: ## run the tests and generate a coverage report
 		--cov-report xml \
 		--cov-report term-missing:skip-covered \
 		--cov-report lcov:coverage/lcov-pytest.info
+
 
 # allow passing arguments to pytest
 tests: ## run the tests
@@ -57,14 +64,18 @@ format: ## run code formatters
 	poetry run ruff format .
 	cd src/frontend && npm run format
 
+
 lint: ## run linters
 	poetry run mypy --namespace-packages -p "langflow"
+
 
 install_frontend: ## install the frontend dependencies
 	cd src/frontend && npm install
 
+
 install_frontendci:
 	cd src/frontend && npm ci
+
 
 install_frontendc:
 	cd src/frontend && rm -rf node_modules package-lock.json && npm install
@@ -74,12 +85,14 @@ run_frontend:
 	@-kill -9 `lsof -t -i:3000`
 	cd src/frontend && npm start
 
+
 tests_frontend:
 ifeq ($(UI), true)
 		cd src/frontend && npx playwright test --ui --project=chromium
 else
 		cd src/frontend && npx playwright test --project=chromium
 endif
+
 
 run_cli:
 	@echo 'Running the CLI'
@@ -94,6 +107,7 @@ else
 	@make start host=$(host) port=$(port) log_level=$(log_level)
 endif
 
+
 run_cli_debug:
 	@echo 'Running the CLI in debug mode'
 	@make install_frontend > /dev/null
@@ -107,6 +121,7 @@ else
 	@make start host=$(host) port=$(port) log_level=debug
 endif
 
+
 start:
 	@echo 'Running the CLI'
 
@@ -117,28 +132,32 @@ else
 endif
 
 
-
 setup_devcontainer:
 	make init
 	make build_frontend
 	poetry run langflow --path src/frontend/build
 
+
 setup_env:
 	@sh ./scripts/setup/update_poetry.sh 1.8.2
 	@sh ./scripts/setup/setup_env.sh
+
 
 frontend: ## run the frontend in development mode
 	make install_frontend
 	make run_frontend
 
+
 frontendc:
 	make install_frontendc
 	make run_frontend
+
 
 install_backend:
 	@echo 'Installing backend dependencies'
 	@poetry install
 	@poetry run pre-commit install
+
 
 backend: ## run the backend in development mode
 	@echo 'Setting up the environment'
@@ -176,6 +195,7 @@ build_frontend: ## build the frontend static files
 	rm -rf src/backend/base/langflow/frontend
 	cp -r src/frontend/build src/backend/base/langflow/frontend
 
+
 build: ## build the frontend static files and package the project
 	@echo 'Building the project'
 	@make setup_env
@@ -189,12 +209,15 @@ ifdef main
 	make build_langflow
 endif
 
+
 build_langflow_base:
 	cd src/backend/base && poetry build
 	rm -rf src/backend/base/langflow/frontend
 
+
 build_langflow_backup:
 	poetry lock && poetry build
+
 
 build_langflow:
 	cd ./scripts && poetry run python update_dependencies.py
@@ -204,6 +227,7 @@ ifdef restore
 	mv pyproject.toml.bak pyproject.toml
 	mv poetry.lock.bak poetry.lock
 endif
+
 
 dev: ## run the project in development mode with docker compose
 	make install_frontend
@@ -215,11 +239,13 @@ else
 		docker compose $(if $(debug),-f docker-compose.debug.yml) up
 endif
 
+
 lock_base:
 	cd src/backend/base && poetry lock
 
 lock_langflow:
 	poetry lock
+
 
 lock:
 # Run both in parallel
@@ -227,8 +253,10 @@ lock:
 	cd src/backend/base && poetry lock
 	poetry lock
 
+
 publish_base:
 	cd src/backend/base && poetry publish
+
 
 publish_langflow:
 	poetry publish
