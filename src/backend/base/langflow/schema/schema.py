@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Literal
+from typing import Any, Literal
 
 from typing_extensions import TypedDict
 
@@ -14,7 +14,7 @@ class StreamURL(TypedDict):
 
 
 class Log(TypedDict):
-    message: str | dict | StreamURL
+    message: str | dict | StreamURL | list
     type: str
 
 
@@ -33,5 +33,8 @@ def build_logs_from_artifacts(artifacts: dict) -> dict:
             log = Log(message=message, type=message["type"])
 
         logs[key].append(log)
-
     return logs
+
+
+def build_log_from_raw_and_type(raw: Any, log_type: str) -> Log:
+    return Log(message=raw, type=log_type)
