@@ -1,11 +1,15 @@
 # syntax=docker/dockerfile:1
 # Keep this syntax directive! It's used to enable Docker BuildKit
 
+
 ################################
 # BUILDER-BASE
 # Used to build deps + create our virtual environment
 ################################
-FROM python:3.12-slim as builder-base
+
+# 1. use python:3.12.3-slim as the base image until https://github.com/pydantic/pydantic-core/issues/1292 gets resolved
+# 2. do not add --platform=$BUILDPLATFORM because the pydantic binaries must be resolved for the final architecture
+FROM python:3.12.3-slim as builder-base
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     \
@@ -47,10 +51,19 @@ WORKDIR /app
 COPY pyproject.toml poetry.lock README.md ./
 COPY src/ ./src
 COPY scripts/ ./scripts
-
 RUN python -m pip install requests --user && cd ./scripts && python update_dependencies.py
+
+# 1. Install the dependencies using the current poetry.lock file to create reproducible builds
+# 2. Do not install dev dependencies
+# 3. Install all the extras to ensure all optionals are installed as well
+# 4. --sync to ensure nothing else is in the environment
+# 5. Build the wheel and install "langflow" package (mainly for version)
+
+# Note: moving to build and installing the wheel will make the docker images not reproducible.
 RUN $POETRY_HOME/bin/poetry lock --no-update \
-      && $POETRY_HOME/bin/poetry install --no-interaction --no-ansi -E deploy \
+      # install current lock file with fixed dependencies versions \
+      # do not install dev dependencies \
+      && $POETRY_HOME/bin/poetry install --without dev --sync -E deploy -E couchbase -E cassio \
       && $POETRY_HOME/bin/poetry build -f wheel \
       && $POETRY_HOME/bin/poetry run pip install dist/*.whl
 
@@ -58,7 +71,14 @@ RUN $POETRY_HOME/bin/poetry lock --no-update \
 # RUNTIME
 # Setup user, utilities and copy the virtual environment only
 ################################
-FROM python:3.12-slim as runtime
+# 1. use python:3.12.3-slim as the base image until https://github.com/pydantic/pydantic-core/issues/1292 gets resolved
+FROM python:3.12.3-slim as runtime
+
+RUN apt-get -y update \
+    && apt-get install --no-install-recommends -y \
+    curl \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 LABEL org.opencontainers.image.title=langflow
 LABEL org.opencontainers.image.authors=['Langflow']

@@ -40,6 +40,7 @@ export default function FlowSettingsModal({
           list: [err?.response?.data.detail ?? ""],
         });
         console.error(err);
+        setIsSaving(false);
       });
   }
 

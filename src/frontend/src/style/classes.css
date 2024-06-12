@@ -15,10 +15,6 @@ pre {
   font-family: inherit;
 }
 
-.ag-paging-page-size {
-  display: none;
-}
-
 .react-flow__pane {
   cursor: default;
 }
@@ -60,16 +56,16 @@ select:-webkit-autofill:focus {
 }
 
 .ace_scrollbar::-webkit-scrollbar-track {
-  background-color: #f1f1f1;
+  background-color: hsl(var(--muted));
 }
 
 .ace_scrollbar::-webkit-scrollbar-thumb {
-  background-color: #ccc;
+  background-color: hsl(var(--border));
   border-radius: 999px;
 }
 
 .ace_scrollbar::-webkit-scrollbar-thumb:hover {
-  background-color: #bbb;
+  background-color: hsl(var(--ring));
   border-radius: 999px;
 }
 
@@ -99,4 +95,12 @@ select:-webkit-autofill:focus {
 
 .json-view-dark {
   background-color: #141924 !important;
+}
+
+.grabbing {
+  cursor: grabbing;
+}
+
+.react-flow__node {
+  cursor: grab;
 }

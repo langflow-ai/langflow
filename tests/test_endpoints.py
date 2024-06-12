@@ -4,7 +4,6 @@ from uuid import UUID, uuid4
 import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
-
 from langflow.custom.directory_reader.directory_reader import DirectoryReader
 from langflow.services.deps import get_settings_service
 
@@ -270,7 +269,9 @@ def test_get_all(client: TestClient, logged_in_headers):
     all_names = [component_name for _, components in response.json().items() for component_name in components]
     json_response = response.json()
     # We need to test the custom nodes
-    assert len(all_names) == len(files)
+    assert len(all_names) <= len(
+        files
+    )  # Less or equal because we might have some files that don't have the dependencies installed
     assert "ChatInput" in json_response["inputs"]
     assert "Prompt" in json_response["inputs"]
     assert "ChatOutput" in json_response["outputs"]
@@ -448,7 +449,7 @@ def test_successful_run_no_payload(client, starter_project, created_api_key):
     assert all([name in display_names for name in ["Chat Output"]])
     inner_results = [output.get("results").get("result") for output in outputs_dict.get("outputs")]
 
-    assert all([result is not None for result in inner_results]), inner_results
+    assert all([result is not None for result in inner_results]), outputs_dict.get("outputs")
 
 
 def test_successful_run_with_output_type_text(client, starter_project, created_api_key):

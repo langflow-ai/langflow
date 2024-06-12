@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import {
   CONSOLE_ERROR_MSG,
-  CONSOLE_SUCCESS_MSG,
   INVALID_FILE_ALERT,
 } from "../../constants/alerts_constants";
 import { uploadFile } from "../../controllers/API";
@@ -49,12 +48,12 @@ export default function InputFileComponent({
   const handleButtonClick = (): void => {
     // Create a file input element
     const input = document.createElement("input");
+    document.body.appendChild(input);
     input.type = "file";
     input.accept = fileTypes?.join(",");
     input.style.display = "none"; // Hidden from view
     input.multiple = false; // Allow only one file selection
-
-    input.onchange = (event: Event): void => {
+    const onChangeFile = (event: Event): void => {
       setLoading(true);
 
       // Get the selected file
@@ -90,6 +89,8 @@ export default function InputFileComponent({
         setLoading(false);
       }
     };
+
+    input.addEventListener("change", onChangeFile);
 
     // Trigger the file selection dialog
     input.click();

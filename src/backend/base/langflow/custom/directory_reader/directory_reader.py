@@ -78,7 +78,8 @@ class DirectoryReader:
                         component_tuple = (*build_component(component), component)
                         components.append(component_tuple)
                 except Exception as e:
-                    logger.error(f"Error while loading component { component['name']}: {e}")
+                    logger.debug(f"Error while loading component { component['name']}")
+                    logger.debug(e)
                     continue
             items.append({"name": menu["name"], "path": menu["path"], "components": components})
         filtered = [menu for menu in items if menu["components"]]
@@ -266,8 +267,7 @@ class DirectoryReader:
             if validation_result:
                 try:
                     output_types = self.get_output_types_from_code(result_content)
-                except Exception as exc:
-                    logger.exception(f"Error while getting output types from code: {str(exc)}")
+                except Exception:
                     output_types = [component_name_camelcase]
             else:
                 output_types = [component_name_camelcase]

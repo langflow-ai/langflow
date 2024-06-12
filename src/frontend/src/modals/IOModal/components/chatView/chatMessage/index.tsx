@@ -13,7 +13,7 @@ import useAlertStore from "../../../../../stores/alertStore";
 import useFlowStore from "../../../../../stores/flowStore";
 import { chatMessagePropsType } from "../../../../../types/components";
 import { classNames, cn } from "../../../../../utils/utils";
-import FileCard from "../fileComponent";
+import FileCardWrapper from "./components/fileCardWrapper";
 
 export default function ChatMessage({
   chat,
@@ -22,6 +22,7 @@ export default function ChatMessage({
   updateChat,
   setLockChat,
 }: chatMessagePropsType): JSX.Element {
+  const [showFile, setShowFile] = useState<boolean>(true);
   const convert = new Convert({ newline: true });
   const [hidden, setHidden] = useState(true);
   const template = chat.template;
@@ -251,21 +252,6 @@ dark:prose-invert"
                       [chat.message, chatMessage],
                     )}
                   </div>
-                  {chat.files && (
-                    <div className="my-2 w-full">
-                      {chat.files.map((file, index) => {
-                        return (
-                          <div key={index} className="my-2 w-full">
-                            <FileCard
-                              fileName={"Generated File"}
-                              fileType={file.data_type}
-                              content={file.data}
-                            />
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
                 </div>
               </div>
             </div>
@@ -323,14 +309,30 @@ dark:prose-invert"
                 </span>
               </>
             ) : (
-              <span
-                className="prose text-primary word-break-break-word dark:prose-invert"
-                data-testid={
-                  "chat-message-" + chat.sender_name + "-" + chatMessage
-                }
-              >
-                {chatMessage}
-              </span>
+              <div className="flex flex-col">
+                <span
+                  className="prose text-primary word-break-break-word dark:prose-invert"
+                  data-testid={
+                    "chat-message-" + chat.sender_name + "-" + chatMessage
+                  }
+                >
+                  {chatMessage}
+                </span>
+                {chat.files && (
+                  <div className="my-2 flex  flex-col gap-5">
+                    {chat.files.map((file, index) => {
+                      return (
+                        <FileCardWrapper
+                          index={index}
+                          name={file.name}
+                          type={file.type}
+                          path={file.path}
+                        />
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             )}
           </div>
         )}

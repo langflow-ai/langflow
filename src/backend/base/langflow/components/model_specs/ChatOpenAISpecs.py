@@ -28,7 +28,7 @@ class ChatOpenAIComponent(CustomComponent):
             "model_name": {"display_name": "Model Name", "advanced": False, "options": MODEL_NAMES},
             "openai_api_base": {
                 "display_name": "OpenAI API Base",
-                "advanced": False,
+                "advanced": True,
                 "required": False,
                 "info": (
                     "The base URL of the OpenAI API. Defaults to https://api.openai.com/v1.\n\n"
@@ -53,7 +53,7 @@ class ChatOpenAIComponent(CustomComponent):
         self,
         max_tokens: Optional[int] = 0,
         model_kwargs: NestedDict = {},
-        model_name: str = "gpt-4o",
+        model_name: str = "gpt-3.5-turbo",
         openai_api_base: Optional[str] = None,
         openai_api_key: Optional[str] = None,
         temperature: float = 0.7,

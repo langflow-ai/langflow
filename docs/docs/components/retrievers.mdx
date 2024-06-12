@@ -1,18 +1,12 @@
-import Admonition from '@theme/Admonition';
+import Admonition from "@theme/Admonition";
 
 # Retrievers
-
-<Admonition type="caution" icon="🚧" title="ZONE UNDER CONSTRUCTION">
-    <p>
-        We appreciate your patience as we enhance our documentation. It may have some imperfections. Please share your feedback or report issues to help us improve. 🛠️📝
-    </p>
-</Admonition>
 
 A retriever is an interface that returns documents in response to an unstructured query. It's broader than a vector store because it doesn't need to store documents; it only needs to retrieve them.
 
 ---
 
-### MultiQueryRetriever
+## MultiQueryRetriever
 
 The `MultiQueryRetriever` automates generating multiple queries, retrieves relevant documents for each query, and aggregates the results. This method improves retrieval effectiveness and addresses the limitations of traditional distance-based methods.
 

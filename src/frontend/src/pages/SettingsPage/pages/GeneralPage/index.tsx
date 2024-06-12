@@ -9,13 +9,14 @@ import {
   inputHandlerEventType,
   patchUserInputStateType,
 } from "../../../../types/components";
-import usePatchGradient from "../hooks/use-patch-gradient";
 import usePatchPassword from "../hooks/use-patch-password";
+import usePatchProfilePicture from "../hooks/use-patch-profile-picture";
 import useSaveKey from "../hooks/use-save-key";
 import useScrollToElement from "../hooks/use-scroll-to-element";
 import GeneralPageHeaderComponent from "./components/GeneralPageHeader";
 import PasswordFormComponent from "./components/PasswordForm";
-import ProfileGradientFormComponent from "./components/ProfileGradientForm";
+import ProfilePictureFormComponent from "./components/ProfilePictureForm";
+import useGetProfilePictures from "./components/ProfilePictureForm/components/profilePictureChooserComponent/hooks/use-get-profile-pictures";
 import StoreApiKeyFormComponent from "./components/StoreApiKeyForm";
 
 export default function GeneralPage() {
@@ -42,7 +43,7 @@ export default function GeneralPage() {
   const loadingApiKey = useStoreStore((state) => state.loadingApiKey);
   const setValidApiKey = useStoreStore((state) => state.updateValidApiKey);
   const setLoadingApiKey = useStoreStore((state) => state.updateLoadingApiKey);
-  const { password, cnfPassword, gradient, apikey } = inputState;
+  const { password, cnfPassword, profilePicture, apikey } = inputState;
 
   const { handlePatchPassword } = usePatchPassword(
     userData,
@@ -50,7 +51,9 @@ export default function GeneralPage() {
     setErrorData,
   );
 
-  const { handlePatchGradient } = usePatchGradient(
+  const { handleGetProfilePictures } = useGetProfilePictures(setErrorData);
+
+  const { handlePatchProfilePicture } = usePatchProfilePicture(
     setSuccessData,
     setErrorData,
     userData,
@@ -78,10 +81,11 @@ export default function GeneralPage() {
       <GeneralPageHeaderComponent />
 
       <div className="grid gap-6">
-        <ProfileGradientFormComponent
-          gradient={gradient}
+        <ProfilePictureFormComponent
+          profilePicture={profilePicture}
           handleInput={handleInput}
-          handlePatchGradient={handlePatchGradient}
+          handlePatchProfilePicture={handlePatchProfilePicture}
+          handleGetProfilePictures={handleGetProfilePictures}
           userData={userData}
         />
 

@@ -1,5 +1,6 @@
 import {
   AlertCircle,
+  AlertTriangle,
   ArrowBigUp,
   ArrowLeft,
   ArrowUpToLine,
@@ -39,6 +40,7 @@ import {
   Download,
   DownloadCloud,
   Edit,
+  Ellipsis,
   Eraser,
   ExternalLink,
   Eye,
@@ -56,6 +58,7 @@ import {
   FolderIcon,
   FolderPlus,
   FolderPlusIcon,
+  FolderUp,
   FormInput,
   Forward,
   Gift,
@@ -92,6 +95,7 @@ import {
   Package2,
   Palette,
   Paperclip,
+  PaperclipIcon,
   Pencil,
   PencilLine,
   Pin,
@@ -103,12 +107,15 @@ import {
   Redo,
   RefreshCcw,
   Repeat,
+  RotateCcw,
   Save,
   SaveAll,
+  ScanEye,
   Scissors,
   ScreenShare,
   ScrollText,
   Search,
+  Settings,
   Settings2,
   Share,
   Share2,
@@ -140,11 +147,10 @@ import {
   Variable,
   Wand2,
   Workflow,
+  Wrench,
   X,
   XCircle,
   Zap,
-  RotateCcw,
-  Settings,
 } from "lucide-react";
 import { FaApple, FaDiscord, FaGithub } from "react-icons/fa";
 import { AWSIcon } from "../icons/AWS";
@@ -154,9 +160,10 @@ import { AstraDBIcon } from "../icons/AstraDB";
 import { AzureIcon } from "../icons/Azure";
 import { BingIcon } from "../icons/Bing";
 import { BotMessageSquareIcon } from "../icons/BotMessageSquare";
+import { CassandraIcon } from "../icons/Cassandra";
 import { ChromaIcon } from "../icons/ChromaIcon";
-import { CouchbaseIcon } from "../icons/Couchbase";
 import { CohereIcon } from "../icons/Cohere";
+import { CouchbaseIcon } from "../icons/Couchbase";
 import { ElasticsearchIcon } from "../icons/ElasticsearchStore";
 import { EvernoteIcon } from "../icons/Evernote";
 import { FBIcon } from "../icons/FacebookMessenger";
@@ -171,6 +178,7 @@ import {
 import { GroqIcon } from "../icons/Groq";
 import { HuggingFaceIcon } from "../icons/HuggingFace";
 import { IFixIcon } from "../icons/IFixIt";
+import { LangChainIcon } from "../icons/LangChain";
 import { MetaIcon } from "../icons/Meta";
 import { MidjourneyIcon } from "../icons/Midjorney";
 import { MongoDBIcon } from "../icons/MongoDB";
@@ -187,6 +195,7 @@ import { SearxIcon } from "../icons/Searx";
 import { ShareIcon } from "../icons/Share";
 import { Share2Icon } from "../icons/Share2";
 import SvgSlackIcon from "../icons/Slack/SlackIcon";
+import { Streamlit } from "../icons/Streamlit";
 import { VectaraIcon } from "../icons/VectaraIcon";
 import { VertexAIIcon } from "../icons/VertexAI";
 import { WeaviateIcon } from "../icons/Weaviate";
@@ -195,7 +204,6 @@ import SvgWolfram from "../icons/Wolfram/Wolfram";
 import { HackerNewsIcon } from "../icons/hackerNews";
 import { SupabaseIcon } from "../icons/supabase";
 import { iconsType } from "../types/components";
-import { Streamlit } from "../icons/Streamlit";
 
 export const gradients = [
   "bg-gradient-to-br from-gray-800 via-rose-700 to-violet-900",
@@ -319,6 +327,7 @@ export const nodeIconsLucide: iconsType = {
   ChatOllamaModel: OllamaIcon,
   Faiss: MetaIcon,
   FaissSearch: MetaIcon,
+  LangChain: LangChainIcon,
   AzureOpenAiModel: AzureIcon,
   Redis: RedisIcon,
   RedisSearch: RedisIcon,
@@ -327,6 +336,7 @@ export const nodeIconsLucide: iconsType = {
   Play,
   Vectara: VectaraIcon,
   ArrowUpToLine: ArrowUpToLine,
+  Cassandra: CassandraIcon,
   Chroma: ChromaIcon,
   Couchbase: CouchbaseIcon,
   AirbyteJSONLoader: AirbyteIcon,
@@ -400,6 +410,7 @@ export const nodeIconsLucide: iconsType = {
   textsplitters: Scissors,
   wrappers: Gift,
   helpers: Wand2,
+  ScanEye,
   experimental: FlaskConical,
   langchain_utilities: PocketKnife,
   WolframAlphaAPIWrapper: SvgWolfram,
@@ -428,9 +439,11 @@ export const nodeIconsLucide: iconsType = {
   SunIcon,
   MoonIcon,
   Bell,
+  AlertTriangle,
   ChevronLeft,
   SlidersHorizontal,
   Palette,
+  FolderUp,
   Blocks,
   ChevronDown,
   ArrowLeft,
@@ -518,6 +531,7 @@ export const nodeIconsLucide: iconsType = {
   ScreenShare,
   Code,
   Type,
+  Ellipsis,
   Braces,
   FlaskConical,
   AlertCircle,
@@ -526,10 +540,12 @@ export const nodeIconsLucide: iconsType = {
   Command,
   ArrowBigUp,
   Dot,
+  RotateCcw,
+  Wrench,
   FolderPlusIcon,
   FolderIcon,
   Discord: FaDiscord,
-  RotateCcw,
+  PaperclipIcon,
   Settings,
   Streamlit,
 };

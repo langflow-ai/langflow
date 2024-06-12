@@ -30,8 +30,6 @@ test("should able to see and interact with logs", async ({ page }) => {
   await page.getByText("No Data Available", { exact: true }).isVisible();
   await page.keyboard.press("Escape");
 
-  await page.getByText("Close").last().click();
-
   await page
     .getByTestId("popover-anchor-input-openai_api_key")
     .fill(process.env.OPENAI_API_KEY ?? "");
@@ -52,11 +50,13 @@ test("should able to see and interact with logs", async ({ page }) => {
   await page.getByRole("gridcell").first().isVisible();
 
   await page.getByText("Messages", { exact: true }).click();
-  await page.getByText("timestamp").isVisible();
-  await page.getByText("sender", { exact: true }).isVisible();
-  await page.getByText("sender_name").isVisible();
-  await page.getByText("session_id", { exact: true }).isVisible();
-  await page.getByText("message", { exact: true }).isVisible();
-  await page.getByText("artifacts", { exact: true }).isVisible();
+  await page.getByText("Index").isVisible();
+  await page.getByText("Timestamp").isVisible();
+  await page.getByText("Flow Id", { exact: true }).isVisible();
+  await page.getByText("Source").isVisible();
+  await page.getByText("Target", { exact: true }).isVisible();
+  await page.getByText("Target Args", { exact: true }).isVisible();
+  await page.getByText("Status", { exact: true }).isVisible();
+  await page.getByText("Error", { exact: true }).isVisible();
   await page.getByRole("gridcell").first().isVisible();
 });

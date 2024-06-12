@@ -1,6 +1,4 @@
 from typing import List, Optional, Union
-from langchain_astradb import AstraDBVectorStore
-from langchain_astradb.utils.astradb import SetupMode
 
 from langflow.custom import CustomComponent
 from langflow.field_typing import Embeddings, VectorStore
@@ -26,7 +24,7 @@ class AstraDBVectorStoreComponent(CustomComponent):
                 "info": "The name of the collection within Astra DB where the vectors will be stored.",
             },
             "token": {
-                "display_name": "Token",
+                "display_name": "Astra DB Application Token",
                 "info": "Authentication token for accessing Astra DB.",
                 "password": True,
             },
@@ -112,6 +110,15 @@ class AstraDBVectorStoreComponent(CustomComponent):
         collection_indexing_policy: Optional[dict] = None,
     ) -> Union[VectorStore, BaseRetriever]:
         try:
+            from langchain_astradb import AstraDBVectorStore
+            from langchain_astradb.utils.astradb import SetupMode
+        except ImportError:
+            raise ImportError(
+                "Could not import langchain Astra DB integration package. "
+                "Please install it with `pip install langchain-astradb`."
+            )
+
+        try:
             setup_mode_value = SetupMode[setup_mode.upper()]
         except KeyError:
             raise ValueError(f"Invalid setup mode: {setup_mode}")
@@ -155,4 +162,5 @@ class AstraDBVectorStoreComponent(CustomComponent):
                 collection_indexing_policy=collection_indexing_policy,
             )
 
+        return vector_store
         return vector_store

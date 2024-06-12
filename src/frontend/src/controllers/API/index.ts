@@ -8,6 +8,7 @@ import {
   APITemplateType,
   Component,
   LoginType,
+  ProfilePicturesTypeAPI,
   Users,
   VertexBuildTypeAPI,
   VerticesOrderTypeAPI,
@@ -17,6 +18,7 @@ import {
 } from "../../types/api/index";
 import { UserInputType } from "../../types/components";
 import { FlowStyleType, FlowType } from "../../types/flow";
+import { Message } from "../../types/messages";
 import { StoreComponentResponse } from "../../types/store";
 import { FlowPoolType } from "../../types/zustand/flow";
 import { extractColumnsFromRows } from "../../utils/utils";
@@ -28,7 +30,6 @@ import {
   UploadFileTypeAPI,
   errorsTypeAPI,
 } from "./../../types/api/index";
-import { Message } from "../../types/messages";
 
 /**
  * Fetches all objects from the API endpoint.
@@ -362,6 +363,19 @@ export async function uploadFile(
   const formData = new FormData();
   formData.append("file", file);
   return await api.post(`${BASE_URL_API}files/upload/${id}`, formData);
+}
+
+export async function getProfilePictures(): Promise<ProfilePicturesTypeAPI | null> {
+  try {
+    const res = await api.get(`${BASE_URL_API}files/profile_pictures/list`);
+
+    if (res.status === 200) {
+      return res.data;
+    }
+  } catch (error) {
+    throw error;
+  }
+  return null;
 }
 
 export async function postCustomComponent(
@@ -965,11 +979,19 @@ export async function postBuildVertex(
   flowId: string,
   vertexId: string,
   input_value: string,
+  files?: string[],
 ): Promise<AxiosResponse<VertexBuildTypeAPI>> {
   // input_value is optional and is a query parameter
+  let data = {};
+  if (typeof input_value !== "undefined") {
+    data["inputs"] = { input_value: input_value };
+  }
+  if (data && files) {
+    data["files"] = files;
+  }
   return await api.post(
     `${BASE_URL_API}build/${flowId}/vertices/${vertexId}`,
-    input_value ? { inputs: { input_value: input_value } } : undefined,
+    data,
   );
 }
 
@@ -1066,21 +1088,17 @@ export async function getMessagesTable(
     config["params"] = { ...config["params"], ...params };
   }
   const rows = await api.get(`${BASE_URL_API}monitor/messages`, config);
-  const columns = extractColumnsFromRows(rows.data, mode, excludedFields);
-  return { rows: rows.data, columns };
-}
 
-export async function getSessions(id?: string): Promise<Array<string>> {
-  const config = {};
-  if (id) {
-    config["params"] = { flow_id: id };
-  }
-  const rows = await api.get(`${BASE_URL_API}monitor/messages`, config);
+  const rowsOrganized = rows.data;
+
+  console.log(rowsOrganized);
+
+  const columns = extractColumnsFromRows(rowsOrganized, mode, excludedFields);
   const sessions = new Set<string>();
-  rows.data.forEach((row) => {
+  rowsOrganized.forEach((row) => {
     sessions.add(row.session_id);
   });
-  return Array.from(sessions);
+  return { rows: rowsOrganized, columns };
 }
 
 export async function deleteMessagesFn(ids: number[]) {

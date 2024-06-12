@@ -710,6 +710,7 @@ class Graph:
         chat_service: ChatService,
         vertex_id: str,
         inputs_dict: Optional[Dict[str, str]] = None,
+        files: Optional[list[str]] = None,
         user_id: Optional[str] = None,
         fallback_to_env_vars: bool = False,
     ):
@@ -737,7 +738,9 @@ class Graph:
                 # Check the cache for the vertex
                 cached_result = await chat_service.get_cache(key=vertex.id)
                 if isinstance(cached_result, CacheMiss):
-                    await vertex.build(user_id=user_id, inputs=inputs_dict, fallback_to_env_vars=fallback_to_env_vars)
+                    await vertex.build(
+                        user_id=user_id, inputs=inputs_dict, fallback_to_env_vars=fallback_to_env_vars, files=files
+                    )
                     await chat_service.set_cache(key=vertex.id, data=vertex)
                 else:
                     cached_vertex = cached_result["result"]
@@ -751,7 +754,10 @@ class Graph:
                         vertex.result.used_frozen_result = True
 
             else:
-                await vertex.build(user_id=user_id, inputs=inputs_dict, fallback_to_env_vars=fallback_to_env_vars)
+                await vertex.build(
+                    user_id=user_id, inputs=inputs_dict, fallback_to_env_vars=fallback_to_env_vars, files=files
+                )
+                await chat_service.set_cache(key=vertex.id, data=vertex)
 
             if vertex.result is not None:
                 params = f"{vertex._built_object_repr()}{params}"
@@ -764,11 +770,13 @@ class Graph:
             next_runnable_vertices, top_level_vertices = await self.get_next_and_top_level_vertices(
                 lock, set_cache_coro, vertex
             )
-            log_transaction(vertex, status="success")
+            flow_id = self.flow_id
+            log_transaction(flow_id, vertex, status="success")
             return next_runnable_vertices, top_level_vertices, result_dict, params, valid, artifacts, vertex
         except Exception as exc:
             logger.exception(f"Error building Component: {exc}")
-            log_transaction(vertex, status="failure", error=str(exc))
+            flow_id = self.flow_id
+            log_transaction(flow_id, vertex, status="failure", error=str(exc))
             raise exc
 
     async def get_next_and_top_level_vertices(

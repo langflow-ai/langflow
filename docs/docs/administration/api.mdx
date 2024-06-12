@@ -10,14 +10,15 @@ Langflow provides an API key functionality that allows users to access their ind
   The default user and password are set using the LANGFLOW_SUPERUSER and
   LANGFLOW_SUPERUSER_PASSWORD environment variables.
 
-The default values are
-langflow and langflow, respectively.
+The default values are `langflow` and `langflow`, respectively.
 
 </Admonition>
 
-## Generating an API Key
+## Generate an API key
 
-### Through Langflow UI
+Generate a user-specific token to use with Langflow.
+
+### Generate an API key with the Langflow UI
 
 <ZoomableImage
   alt="Docusaurus themed image"
@@ -34,9 +35,29 @@ langflow and langflow, respectively.
 4. Click on "Create secret key".
 5. Copy the API key and store it in a secure location.
 
-## Using the API Key
+### Generate an API key with the Langflow CLI
 
-### Using the `x-api-key` Header
+```bash
+langflow api-key
+# or
+python -m langflow api-key
+╭─────────────────────────────────────────────────────────────────────╮
+│ API Key Created Successfully:                                       │
+│                                                                     │
+│ sk-O0elzoWID1izAH8RUKrnnvyyMwIzHi2Wk-uXWoNJ2Ro                      │
+│                                                                     │
+│ This is the only time the API key will be displayed.                │
+│ Make sure to store it in a secure location.                         │
+│                                                                     │
+│ The API key has been copied to your clipboard. Cmd + V to paste it. │
+╰──────────────────────────────
+```
+
+## Use the Langflow API key
+
+Include your API key in API requests to authenticate requests to Langflow.
+
+### Use the `x-api-key` header
 
 Include the `x-api-key` in the HTTP header when making API requests:
 
@@ -91,7 +112,7 @@ api_key = "<your api key>"
 print(run_flow(inputs, flow_id=FLOW_ID, tweaks=TWEAKS, apiKey=api_key))
 ```
 
-### Using the Query Parameter
+### Use the query parameter
 
 Include the API key as a query parameter in the URL:
 
@@ -102,7 +123,7 @@ curl -X POST \
   -d '{"inputs": {"text":""}, "tweaks": {}}'
 ```
 
-Or with Python:
+With Python using `requests`:
 
 ```python
 import requests
@@ -149,6 +170,6 @@ print(run_flow(inputs, flow_id=FLOW_ID, tweaks=TWEAKS, apiKey=api_key))
 - **Visibility**: For security reasons, the API key cannot be retrieved again through the UI.
 - **Scope**: The key allows access only to the flows and components of the specific user to whom it was issued.
 
-## Revoking an API Key
+## Revoke an API Key
 
 To revoke an API key, delete it from the UI. This action immediately invalidates the key and prevents it from being used again.

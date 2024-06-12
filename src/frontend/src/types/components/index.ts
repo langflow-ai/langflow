@@ -38,7 +38,7 @@ export type InputComponentType = {
 export type ToggleComponentType = {
   enabled: boolean;
   setEnabled: (state: boolean) => void;
-  disabled: boolean | undefined;
+  disabled?: boolean | undefined;
   size: "small" | "medium" | "large";
   id?: string;
   editNode?: boolean;
@@ -54,6 +54,7 @@ export type DropDownComponentType = {
   children?: ReactNode;
 };
 export type ParameterComponentType = {
+  selected: boolean;
   data: NodeDataType;
   title: string;
   id: sourceHandleType | targetHandleType;
@@ -76,6 +77,16 @@ export type InputListComponentType = {
   disabled: boolean;
   editNode?: boolean;
   componentName?: string;
+  playgroundDisabled?: boolean;
+};
+
+export type InputGlobalComponentType = {
+  disabled: boolean;
+  onChange: (value: string, snapshot?: boolean) => void;
+  setDb: (value: boolean) => void;
+  name: string;
+  data: TemplateVariableType;
+  editNode?: boolean;
   playgroundDisabled?: boolean;
 };
 
@@ -186,6 +197,14 @@ export type FloatComponentType = {
   rangeSpec: RangeSpecType;
   editNode?: boolean;
   id?: string;
+};
+
+export type FilePreviewType = {
+  loading: boolean;
+  file: File;
+  error: boolean;
+  id: string;
+  path?: string;
 };
 
 export type TooltipComponentType = {
@@ -378,7 +397,7 @@ export type loginInputStateType = {
 export type patchUserInputStateType = {
   password: string;
   cnfPassword: string;
-  gradient: string;
+  profilePicture: string;
   apikey: string;
 };
 
@@ -393,11 +412,7 @@ export type UserInputType = {
 };
 
 export type ApiKeyType = {
-  title: string;
-  cancelText: string;
-  confirmationText: string;
   children: ReactElement;
-  icon: string;
   data?: any;
   onCloseModal: () => void;
 };
@@ -473,14 +488,25 @@ export type headerFlowsType = {
   style?: FlowStyleType;
 };
 
-export type chatInputType = {
+export type ChatInputType = {
+  isDragging: boolean;
+  files: FilePreviewType[];
+  setFiles: (
+    files: FilePreviewType[] | ((prev: FilePreviewType[]) => FilePreviewType[]),
+  ) => void;
   chatValue: string;
   inputRef: {
     current: any;
   };
   lockChat: boolean;
   noInput: boolean;
-  sendMessage: (count?: number) => void;
+  sendMessage: ({
+    repeat,
+    files,
+  }: {
+    repeat: number;
+    files?: string[];
+  }) => void;
   setChatValue: (value: string) => void;
 };
 
@@ -506,9 +532,12 @@ export type fileCardPropsType = {
   fileName: string;
   content: string;
   fileType: string;
+  showFile?: boolean;
 };
 
 export type nodeToolbarPropsType = {
+  //  openWDoubleClick: boolean;
+  //  setOpenWDoubleClick: (open: boolean) => void;
   data: NodeDataType;
   deleteNode: (idx: string) => void;
   setShowNode: (boolean: any) => void;
@@ -518,13 +547,8 @@ export type nodeToolbarPropsType = {
   openAdvancedModal?: boolean;
   onCloseAdvancedModal?: (close: boolean) => void;
   selected: boolean;
-  updateNodeCode?: (
-    newNodeClass: APIClassType,
-    code: string,
-    name: string,
-  ) => void;
   setShowState: (show: boolean | SetStateAction<boolean>) => void;
-  isOutdated?: boolean;
+  updateNode: () => void;
 };
 
 export type parsedDataType = {
@@ -547,7 +571,7 @@ export type iconsType = {
 
 export type modalHeaderType = {
   children: ReactNode;
-  description: string | null;
+  description: string | JSX.Element | null;
 };
 
 export type codeAreaModalPropsType = {
@@ -684,10 +708,14 @@ export type crashComponentPropsType = {
   resetErrorBoundary: (args) => void;
 };
 
+export type Log = {
+  message: string;
+};
+
 export type validationStatusType = {
   id: string;
   data: object | any;
-  params: string;
+  logs: Log[];
   progress?: number;
   valid: boolean;
   duration?: string;
@@ -727,7 +755,13 @@ export type IOFieldViewProps = {
 export type UndrawCardComponentProps = { flow: FlowType };
 
 export type chatViewProps = {
-  sendMessage: (count?: number) => void;
+  sendMessage: ({
+    repeat,
+    files,
+  }: {
+    repeat: number;
+    files?: string[];
+  }) => void;
   chatValue: string;
   setChatValue: (value: string) => void;
   lockChat: boolean;
@@ -740,21 +774,12 @@ export type IOFileInputProps = {
 };
 
 export type toolbarSelectItemProps = {
-  isMac: boolean;
-  shift: boolean;
-  keyboardKey: string;
   value: string;
   icon: string;
-  styleObj?: {
-    iconClasses?: string;
-    commandClasses?: string;
-    shiftClasses?: string;
-    ctrlClasses?: string;
-    keyClasses?: string;
-    valueClasses?: string;
-  };
+  style?: string;
   dataTestId: string;
   ping?: boolean;
+  shortcut: string;
 };
 
 export type clearChatPropsType = {

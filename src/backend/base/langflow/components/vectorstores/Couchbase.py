@@ -1,17 +1,11 @@
+from datetime import timedelta
 from typing import List, Optional, Union
 
-from langchain_community.vectorstores import CouchbaseVectorStore
+from langchain_core.retrievers import BaseRetriever
 
 from langflow.custom import CustomComponent
 from langflow.field_typing import Embeddings, VectorStore
 from langflow.schema import Record
-
-from datetime import timedelta
-
-from couchbase.auth import PasswordAuthenticator  # type: ignore
-from couchbase.cluster import Cluster  # type: ignore
-from couchbase.options import ClusterOptions  # type: ignore
-from langchain_core.retrievers import BaseRetriever
 
 
 class CouchbaseComponent(CustomComponent):
@@ -54,6 +48,16 @@ class CouchbaseComponent(CustomComponent):
         couchbase_username: str = "",
         couchbase_password: str = "",
     ) -> Union[VectorStore, BaseRetriever]:
+        try:
+            from couchbase.auth import PasswordAuthenticator  # type: ignore
+            from couchbase.cluster import Cluster  # type: ignore
+            from couchbase.options import ClusterOptions  # type: ignore
+            from langchain_community.vectorstores import CouchbaseVectorStore
+        except ImportError as e:
+            raise ImportError(
+                "Failed to import Couchbase dependencies. Install it using `pip install langflow[couchbase] --pre`"
+            ) from e
+
         try:
             auth = PasswordAuthenticator(couchbase_username, couchbase_password)
             options = ClusterOptions(auth)

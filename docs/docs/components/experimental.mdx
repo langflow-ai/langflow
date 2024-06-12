@@ -1,10 +1,12 @@
-import Admonition from '@theme/Admonition';
+import Admonition from "@theme/Admonition";
 
 # Experimental
 
 Components in the experimental phase are currently in beta. They have been initially developed and tested but haven't yet achieved a stable or fully supported status. We encourage users to explore these components, provide feedback, and report any issues encountered.
 
-### Clear Message History Component
+---
+
+## Clear Message History Component
 
 This component clears the message history for a specified session ID.
 
@@ -22,17 +24,19 @@ Provide the session ID to clear its message history.
 
 ---
 
-### Extract Key From Record
+## Extract Key From Record
 
 This component extracts specified keys from a record.
 
 **Parameters**
 
 - **Record:**
+
   - **Display Name:** Record
   - **Info:** The record from which to extract keys.
 
 - **Keys:**
+
   - **Display Name:** Keys
   - **Info:** The keys to be extracted.
 
@@ -47,13 +51,14 @@ Provide the record and specify the keys you want to extract. Optionally, enable 
 
 ---
 
-### Flow as Tool
+## Flow as Tool
 
 This component turns a function running a flow into a Tool.
 
 **Parameters**
 
 - **Flow Name:**
+
   - **Display Name:** Flow Name
   - **Info:** Select the flow to run.
   - **Options:** List of available flows.
@@ -61,10 +66,12 @@ This component turns a function running a flow into a Tool.
   - **Refresh Button:** True
 
 - **Name:**
+
   - **Display Name:** Name
   - **Description:** The tool's name.
 
 - **Description:**
+
   - **Display Name:** Description
   - **Description:** Describes the tool.
 
@@ -79,7 +86,7 @@ Select a flow, name and describe the tool, and decide if you want to return the 
 
 ---
 
-### Listen
+## Listen
 
 This component listens for a specified notification.
 
@@ -95,7 +102,7 @@ Specify the notification to listen for.
 
 ---
 
-### List Flows
+## List Flows
 
 This component lists all available flows.
 
@@ -105,7 +112,7 @@ Call this component without parameters to list all flows.
 
 ---
 
-### Merge Records
+## Merge Records
 
 This component merges a list of records.
 
@@ -120,17 +127,19 @@ Provide the records you want to merge.
 
 ---
 
-### Notify
+## Notify
 
 This component generates a notification.
 
 **Parameters**
 
 - **Name:**
+
   - **Display Name:** Name
   - **Info:** The notification's name.
 
 - **Record:**
+
   - **Display Name:** Record
   - **Info:** Optionally, a record to store in the notification.
 
@@ -144,17 +153,19 @@ Specify the notification name, provide a record if necessary, and indicate wheth
 
 ---
 
-### Run Flow
+## Run Flow
 
 This component runs a specified flow.
 
 **Parameters**
 
 - **Input Value:**
+
   - **Display Name:** Input Value
   - **Multiline:** True
 
 - **Flow Name:**
+
   - **Display Name:** Flow Name
   - **Info:** Select the flow to run.
   - **Options:** List of available flows.
@@ -170,21 +181,24 @@ Provide the input value, select the flow, and apply any tweaks.
 
 ---
 
-### Runnable Executor
+## Runnable Executor
 
 This component executes a specified runnable.
 
 **Parameters**
 
 - **Input Key:**
+
   - **Display Name:** Input Key
   - **Info:** The input key.
 
 - **Inputs:**
+
   - **Display Name:** Inputs
   - **Info:** Inputs for the runnable.
 
 - **Runnable:**
+
   - **Display Name:** Runnable
   - **Info:** The runnable to execute.
 
@@ -198,21 +212,24 @@ Specify the input key, provide inputs, select the runnable, and optionally defin
 
 ---
 
-### SQL Executor
+## SQL Executor
 
 This component executes an SQL query.
 
 **Parameters**
 
 - **Database URL:**
+
   - **Display Name:** Database URL
   - **Info:** The database's URL.
 
 - **Include Columns:**
+
   - **Display Name:** Include Columns
   - **Info:** Whether to include columns in the result.
 
 - **Passthrough:**
+
   - **Display Name:** Passthrough
   - **Info:** Returns the query instead of raising an exception if an error occurs.
 
@@ -226,17 +243,19 @@ Provide the SQL query, specify the database URL, and configure settings for colu
 
 ---
 
-### SubFlow
+## SubFlow
 
 This component dynamically generates a tool from a flow.
 
 **Parameters**
 
 - **Input Value:**
+
   - **Display Name:** Input Value
   - **Multiline:** True
 
 - **Flow Name:**
+
   - **Display Name:** Flow Name
   - **Info:** Select the flow to run.
   - **Options:** List of available flows.

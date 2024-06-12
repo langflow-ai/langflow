@@ -1,7 +1,8 @@
 import { ColDef, ColGroupDef } from "ag-grid-community";
 import clsx, { ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import TableAutoCellRender from "../components/tableAutoCellRender";
+import TableAutoCellRender from "../components/tableComponent/components/tableAutoCellRender";
+import { MODAL_CLASSES } from "../constants/constants";
 import { APIDataType, TemplateVariableType } from "../types/api";
 import {
   groupedObjType,
@@ -236,12 +237,12 @@ export function groupByFamily(
 
   const checkBaseClass = (template: TemplateVariableType) => {
     return (
-      template.type &&
-      template.show &&
+      template?.type &&
+      template?.show &&
       ((!excludeTypes.has(template.type) &&
         baseClassesSet.has(template.type)) ||
-        (template.input_types &&
-          template.input_types.some((inputType) =>
+        (template?.input_types &&
+          template?.input_types.some((inputType) =>
             baseClassesSet.has(inputType),
           )))
     );
@@ -345,8 +346,10 @@ export function freezeObject(obj: any) {
   return JSON.parse(JSON.stringify(obj));
 }
 export function isTimeStampString(str: string): boolean {
-  const timestampRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3}Z)?$/;
-  return timestampRegex.test(str);
+  const timestampRegexA = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3}Z)?$/;
+  const timestampRegexB = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{6})?$/;
+
+  return timestampRegexA.test(str) || timestampRegexB.test(str);
 }
 
 export function extractColumnsFromRows(
@@ -361,11 +364,10 @@ export function extractColumnsFromRows(
   function intersection() {
     for (const key in rows[0]) {
       columnsKeys[key] = {
-        headerName: key,
+        headerName: toTitleCase(key),
         field: key,
         cellRenderer: TableAutoCellRender,
         filter: true,
-        autoHeight: true,
       };
     }
     for (const row of rows) {
@@ -380,14 +382,17 @@ export function extractColumnsFromRows(
     for (const row of rows) {
       for (const key in row) {
         columnsKeys[key] = {
-          headerName: key,
+          headerName: toTitleCase(key),
           field: key,
           filter: true,
           cellRenderer: TableAutoCellRender,
+          suppressAutoSize: true,
+          tooltipField: key,
         };
       }
     }
   }
+
   if (mode === "intersection") {
     intersection();
   } else {
@@ -401,4 +406,9 @@ export function extractColumnsFromRows(
   }
 
   return Object.values(columnsKeys);
+}
+
+export function isThereModal(): boolean {
+  const modal = document.body.getElementsByClassName(MODAL_CLASSES);
+  return modal.length > 0;
 }

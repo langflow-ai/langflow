@@ -2,7 +2,7 @@ from typing import Optional, Union
 
 from langflow.base.io.chat import ChatComponent
 from langflow.field_typing import Text
-from langflow.schema import Record
+from langflow.schema.message import Message
 
 
 class ChatOutput(ChatComponent):
@@ -16,14 +16,14 @@ class ChatOutput(ChatComponent):
         sender_name: Optional[str] = "AI",
         input_value: Optional[str] = None,
         session_id: Optional[str] = None,
-        return_record: Optional[bool] = False,
-        record_template: Optional[str] = "{text}",
-    ) -> Union[Text, Record]:
+        files: Optional[list[str]] = None,
+        return_message: Optional[bool] = False,
+    ) -> Union[Message, Text]:
         return super().build_with_record(
             sender=sender,
             sender_name=sender_name,
             input_value=input_value,
             session_id=session_id,
-            return_record=return_record,
-            record_template=record_template or "",
+            files=files,
+            return_message=return_message,
         )

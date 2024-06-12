@@ -21,7 +21,7 @@ test("PromptTemplateComponent", async ({ page }) => {
   }
 
   await page.getByTestId("blank-flow").click();
-  await page.waitForTimeout(1000);
+  await page.waitForTimeout(3000);
   await page.getByTestId("extended-disclosure").click();
   await page.getByPlaceholder("Search").click();
   await page.getByPlaceholder("Search").fill("prompt");
@@ -71,6 +71,8 @@ test("PromptTemplateComponent", async ({ page }) => {
   if (value != "prompt_value_!@#!@#") {
     expect(false).toBeTruthy();
   }
+
+  await page.getByTestId("more-options-modal").click();
 
   await page.getByTestId("save-button-modal").click();
 
@@ -138,7 +140,7 @@ test("PromptTemplateComponent", async ({ page }) => {
 
   await page.locator('//*[@id="showtemplate"]').click();
   expect(
-    await page.locator('//*[@id="showtemplate"]').isChecked(),
+    await page.locator('//*[@id="showtemplate"]').isChecked()
   ).toBeTruthy();
 
   await page.locator('//*[@id="showprompt"]').click();
@@ -158,7 +160,7 @@ test("PromptTemplateComponent", async ({ page }) => {
 
   await page.locator('//*[@id="showtemplate"]').click();
   expect(
-    await page.locator('//*[@id="showtemplate"]').isChecked(),
+    await page.locator('//*[@id="showtemplate"]').isChecked()
   ).toBeTruthy();
 
   await page.locator('//*[@id="showprompt"]').click();

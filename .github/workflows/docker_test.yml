@@ -8,6 +8,7 @@ on:
       - "poetry.lock"
       - "pyproject.toml"
       - "src/backend/**"
+      - ".github/workflows/docker_test.yml"
   pull_request:
     branches: [dev]
     paths:
@@ -15,13 +16,15 @@ on:
       - "poetry.lock"
       - "pyproject.toml"
       - "src/**"
+      - ".github/workflows/docker_test.yml"
 
 env:
   POETRY_VERSION: "1.8.2"
 
 jobs:
-  build:
+  test-docker:
     runs-on: ubuntu-latest
+    name: Test docker images
     steps:
       - uses: actions/checkout@v4
       - name: Build image

@@ -30,7 +30,7 @@ test("TextInputOutputComponent", async ({ page }) => {
   await page.waitForTimeout(1000);
 
   await page.getByTestId("blank-flow").click();
-  await page.waitForTimeout(1000);
+  await page.waitForTimeout(3000);
   await page.getByTestId("extended-disclosure").click();
   await page.getByPlaceholder("Search").click();
   await page.getByPlaceholder("Search").fill("text input");
@@ -60,7 +60,7 @@ test("TextInputOutputComponent", async ({ page }) => {
   // Click and hold on the first element
   await page
     .locator(
-      '//*[@id="react-flow-id"]/div/div[1]/div[1]/div/div[2]/div[1]/div/div[2]/div[6]/button/div/div',
+      '//*[@id="react-flow-id"]/div/div[1]/div[1]/div/div[2]/div[1]/div/div[2]/div[6]/button/div/div'
     )
     .hover();
   await page.mouse.down();
@@ -68,7 +68,7 @@ test("TextInputOutputComponent", async ({ page }) => {
   // Move to the second element
   await page
     .locator(
-      '//*[@id="react-flow-id"]/div/div[1]/div[1]/div/div[2]/div[2]/div/div[2]/div[9]/div/button/div/div',
+      '//*[@id="react-flow-id"]/div/div[1]/div[1]/div/div[2]/div[2]/div/div[2]/div[9]/div/button/div/div'
     )
     .hover();
 
@@ -92,7 +92,7 @@ test("TextInputOutputComponent", async ({ page }) => {
   // Click and hold on the first element
   await page
     .locator(
-      '//*[@id="react-flow-id"]/div/div[1]/div[1]/div/div[2]/div[2]/div/div[2]/div[13]/button/div/div',
+      '//*[@id="react-flow-id"]/div/div[1]/div[1]/div/div[2]/div[2]/div/div[2]/div[13]/button/div/div'
     )
     .hover();
   await page.mouse.down();
@@ -100,7 +100,7 @@ test("TextInputOutputComponent", async ({ page }) => {
   // Move to the second element
   await page
     .locator(
-      '//*[@id="react-flow-id"]/div/div[1]/div[1]/div/div[2]/div[3]/div/div[2]/div[3]/div/button/div/div',
+      '//*[@id="react-flow-id"]/div/div[1]/div[1]/div/div[2]/div[3]/div/div[2]/div[3]/div/button/div/div'
     )
     .hover();
 
@@ -136,8 +136,6 @@ test("TextInputOutputComponent", async ({ page }) => {
   expect(contentOutput).not.toBe(null);
 
   await page.keyboard.press("Escape");
-
-  await page.getByText("Close", { exact: true }).last().click();
 
   await page
     .getByTestId("popover-anchor-input-input_value")
