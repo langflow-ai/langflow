@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import Annotated, Any, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, PlainSerializer, field_validator
+from pydantic import BaseModel, ConfigDict, Field, PlainSerializer, field_validator, model_serializer
 
 from langflow.field_typing.range_spec import RangeSpec
 
@@ -9,13 +9,13 @@ from langflow.field_typing.range_spec import RangeSpec
 class FieldTypes(str, Enum):
     TEXT = "str"
     INTEGER = "int"
-    PASSWORD = "SecretStr"
+    PASSWORD = "str"
     FLOAT = "float"
     BOOLEAN = "bool"
     DICT = "dict"
     NESTED_DICT = "NestedDict"
     FILE = "file"
-    PROMPT = "Prompt"
+    PROMPT = "prompt"
 
 
 SerializableFieldTypes = Annotated[FieldTypes, PlainSerializer(lambda v: v.value, return_type=str)]
@@ -69,7 +69,7 @@ class BaseInputMixin(BaseModel):
     """Specifies if the field should be displayed in title case. Defaults to True."""
 
     def to_dict(self):
-        return self.model_dump(exclude_none=True)
+        return self.model_dump(exclude_none=True, by_alias=True)
 
     @field_validator("field_type", mode="before")
     @classmethod
@@ -78,15 +78,22 @@ class BaseInputMixin(BaseModel):
             raise ValueError(f"field_type must be one of {FieldTypes}")
         return FieldTypes(v)
 
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        dump = handler(self)
+        if "field_type" in dump:
+            dump["type"] = dump.pop("field_type")
+        return dump
+
 
 # Mixin for input fields that can be listable
 class ListableInputMixin(BaseModel):
-    is_list: bool = Field(default=False)
+    is_list: bool = Field(default=False, serialization_alias="list")
 
 
 # Specific mixin for fields needing database interaction
 class DatabaseLoadMixin(BaseModel):
-    load_from_db: bool = Field(default=False)
+    load_from_db: bool = Field(default=True)
 
 
 # Specific mixin for fields needing file interaction
