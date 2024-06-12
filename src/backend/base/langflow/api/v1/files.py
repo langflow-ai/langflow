@@ -14,6 +14,8 @@ from langflow.services.deps import get_session, get_storage_service
 from langflow.services.storage.service import StorageService
 from langflow.services.storage.utils import build_content_type_from_extension
 
+from loguru import logger
+
 router = APIRouter(tags=["Files"], prefix="/files")
 
 
@@ -31,7 +33,9 @@ def get_flow_id(
     if not flow:
         raise HTTPException(status_code=404, detail="Flow not found")
     if flow.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="You don't have access to this flow")
+        raise HTTPException(
+            status_code=403, detail="You don't have access to this flow"
+        )
     return flow_id_str
 
 
@@ -46,54 +50,87 @@ async def upload_file(
         file_content = await file.read()
         file_name = file.filename or hashlib.sha256(file_content).hexdigest()
         folder = flow_id_str
-        await storage_service.save_file(flow_id=folder, file_name=file_name, data=file_content)
+        logger.debug(
+            f"Uploading file {file_name} to {folder} for flow {flow_id_str}..."
+        )
+        logger.debug(f"File content: {file_content}")
+
+        await storage_service.save_file(
+            flow_id=folder, file_name=file_name, data=file_content
+        )
         return UploadFileResponse(flowId=flow_id_str, file_path=f"{folder}/{file_name}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/download/{flow_id}/{file_name}")
-async def download_file(file_name: str, flow_id: UUID, storage_service: StorageService = Depends(get_storage_service)):
+async def download_file(
+    file_name: str,
+    flow_id: UUID,
+    storage_service: StorageService = Depends(get_storage_service),
+):
     try:
         flow_id_str = str(flow_id)
         extension = file_name.split(".")[-1]
 
         if not extension:
-            raise HTTPException(status_code=500, detail=f"Extension not found for file {file_name}")
+            raise HTTPException(
+                status_code=500, detail=f"Extension not found for file {file_name}"
+            )
 
         content_type = build_content_type_from_extension(extension)
 
         if not content_type:
-            raise HTTPException(status_code=500, detail=f"Content type not found for extension {extension}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Content type not found for extension {extension}",
+            )
 
-        file_content = await storage_service.get_file(flow_id=flow_id_str, file_name=file_name)
+        file_content = await storage_service.get_file(
+            flow_id=flow_id_str, file_name=file_name
+        )
         headers = {
             "Content-Disposition": f"attachment; filename={file_name} filename*=UTF-8''{file_name}",
             "Content-Type": "application/octet-stream",
             "Content-Length": str(len(file_content)),
         }
-        return StreamingResponse(BytesIO(file_content), media_type=content_type, headers=headers)
+        return StreamingResponse(
+            BytesIO(file_content), media_type=content_type, headers=headers
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/images/{flow_id}/{file_name}")
-async def download_image(file_name: str, flow_id: UUID, storage_service: StorageService = Depends(get_storage_service)):
+async def download_image(
+    file_name: str,
+    flow_id: UUID,
+    storage_service: StorageService = Depends(get_storage_service),
+):
     try:
         extension = file_name.split(".")[-1]
         flow_id_str = str(flow_id)
 
         if not extension:
-            raise HTTPException(status_code=500, detail=f"Extension not found for file {file_name}")
+            raise HTTPException(
+                status_code=500, detail=f"Extension not found for file {file_name}"
+            )
 
         content_type = build_content_type_from_extension(extension)
 
         if not content_type:
-            raise HTTPException(status_code=500, detail=f"Content type not found for extension {extension}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Content type not found for extension {extension}",
+            )
         elif not content_type.startswith("image"):
-            raise HTTPException(status_code=500, detail=f"Content type {content_type} is not an image")
+            raise HTTPException(
+                status_code=500, detail=f"Content type {content_type} is not an image"
+            )
 
-        file_content = await storage_service.get_file(flow_id=flow_id_str, file_name=file_name)
+        file_content = await storage_service.get_file(
+            flow_id=flow_id_str, file_name=file_name
+        )
         return StreamingResponse(BytesIO(file_content), media_type=content_type)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -101,7 +138,8 @@ async def download_image(file_name: str, flow_id: UUID, storage_service: Storage
 
 @router.get("/list/{flow_id}")
 async def list_files(
-    flow_id: UUID = Depends(get_flow_id), storage_service: StorageService = Depends(get_storage_service)
+    flow_id: UUID = Depends(get_flow_id),
+    storage_service: StorageService = Depends(get_storage_service),
 ):
     try:
         flow_id_str = str(flow_id)
@@ -113,7 +151,9 @@ async def list_files(
 
 @router.delete("/delete/{flow_id}/{file_name}")
 async def delete_file(
-    file_name: str, flow_id: UUID = Depends(get_flow_id), storage_service: StorageService = Depends(get_storage_service)
+    file_name: str,
+    flow_id: UUID = Depends(get_flow_id),
+    storage_service: StorageService = Depends(get_storage_service),
 ):
     try:
         flow_id_str = str(flow_id)
