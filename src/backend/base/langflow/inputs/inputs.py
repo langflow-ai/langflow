@@ -2,6 +2,8 @@ from typing import Callable, Optional, Union
 
 from pydantic import Field
 
+from langflow.inputs.validators import StrictBoolean
+
 from .input_mixin import (
     BaseInputMixin,
     DatabaseLoadMixin,
@@ -19,15 +21,17 @@ class PromptInput(BaseInputMixin, ListableInputMixin):
 
 
 # Applying mixins to a specific input type
-class StrInput(BaseInputMixin, ListableInputMixin):  # noqa: F821
+class StrInput(BaseInputMixin, ListableInputMixin, DatabaseLoadMixin):  # noqa: F821
     field_type: Optional[SerializableFieldTypes] = FieldTypes.TEXT
-    multiline: bool = Field(default=False)
+    multiline: StrictBoolean = False
+    load_from_db: StrictBoolean = False
     """Defines if the field will allow the user to open a text editor. Default is False."""
 
 
 class SecretStrInput(BaseInputMixin, DatabaseLoadMixin):
     field_type: Optional[SerializableFieldTypes] = FieldTypes.PASSWORD
-    password: bool = Field(default=True)
+    password: StrictBoolean = Field(default=True)
+    input_types: list[str] = ["Text"]
 
 
 class IntInput(BaseInputMixin, ListableInputMixin, RangeMixin):
@@ -40,6 +44,7 @@ class FloatInput(BaseInputMixin, ListableInputMixin, RangeMixin):
 
 class BoolInput(BaseInputMixin, ListableInputMixin):
     field_type: Optional[SerializableFieldTypes] = FieldTypes.BOOLEAN
+    value: StrictBoolean = False
 
 
 class NestedDictInput(BaseInputMixin, ListableInputMixin):
@@ -58,3 +63,17 @@ class DropdownInput(BaseInputMixin, DropDownMixin):
 
 class FileInput(BaseInputMixin, ListableInputMixin, FileMixin):
     field_type: Optional[SerializableFieldTypes] = FieldTypes.FILE
+
+
+InputTypes = Union[
+    StrInput,
+    SecretStrInput,
+    IntInput,
+    FloatInput,
+    BoolInput,
+    NestedDictInput,
+    DictInput,
+    DropdownInput,
+    FileInput,
+    PromptInput,
+]
