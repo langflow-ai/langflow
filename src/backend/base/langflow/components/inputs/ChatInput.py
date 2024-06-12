@@ -1,5 +1,4 @@
 from langflow.base.io.chat import ChatComponent
-from langflow.field_typing import Text
 from langflow.inputs import DropdownInput, StrInput
 from langflow.schema.message import Message
 from langflow.template import Output
@@ -26,22 +25,21 @@ class ChatInput(ChatComponent):
             info="Type of sender.",
             advanced=True,
         ),
-        StrInput(name="sender_name", type=str, display_name="Sender Name", info="Name of the sender.", value="User"),
+        StrInput(
+            name="sender_name",
+            type=str,
+            display_name="Sender Name",
+            info="Name of the sender.",
+            value="User",
+            advanced=True,
+        ),
         StrInput(
             name="session_id", type=str, display_name="Session ID", info="Session ID for the message.", advanced=True
         ),
     ]
     outputs = [
-        Output(display_name="Text", name="text", method="text_response"),
         Output(display_name="Message", name="message", method="message_response"),
     ]
-
-    def text_response(self) -> Text:
-        result = self.input_value
-        if self.session_id:
-            self.message_response()
-        self.status = result
-        return result
 
     def message_response(self) -> Message:
         message = Message(
