@@ -8,7 +8,7 @@ if [ -z "$FRONTEND_PORT" ]; then
   FRONTEND_PORT="$2"
 fi
 if [ -z "$FRONTEND_PORT" ]; then
-  FRONTEND_PORT="80"
+  FRONTEND_PORT="8080"
 fi
 if [ -z "$BACKEND_URL" ]; then
   echo "BACKEND_URL must be set as an environment variable or as first parameter. (e.g. http://localhost:7860)"
