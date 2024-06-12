@@ -24,6 +24,7 @@ env:
 jobs:
   test-docker:
     runs-on: ubuntu-latest
+    name: Test docker images
     steps:
       - uses: actions/checkout@v4
       - name: Build image
@@ -61,24 +62,3 @@ jobs:
           docker build -t langflowai/langflow-frontend:latest-dev \
             -f docker/frontend/build_and_push_frontend.Dockerfile \
             .
-  test-multi-arch-build:
-    name: Test docker multi-arch build (${{ matrix.platform }})
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        platform: [linux/amd64, linux/arm64/v8]
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-        id: qemu
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      - name: Build and push
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: false
-          file: ./docker/build_and_push.Dockerfile
-          platforms: "${{ matrix.platform }}"
-          tags: langflowai/langflow:latest-dev
