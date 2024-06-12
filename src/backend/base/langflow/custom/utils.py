@@ -266,6 +266,35 @@ def run_build_inputs(
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
+def get_component_instance(custom_component: CustomComponent, user_id: Optional[Union[str, UUID]] = None):
+    try:
+        if custom_component.code is None:
+            raise ValueError("Code is None")
+        elif isinstance(custom_component.code, str):
+            custom_class = eval_custom_component_code(custom_component.code)
+        else:
+            raise ValueError("Invalid code type")
+    except Exception as exc:
+        logger.error(f"Error while evaluating custom component code: {str(exc)}")
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": ("Invalid type convertion. Please check your code and try again."),
+                "traceback": traceback.format_exc(),
+            },
+        ) from exc
+
+    try:
+        custom_instance = custom_class(user_id=user_id)
+        return custom_instance
+    except Exception as exc:
+        logger.error(f"Error while instantiating custom component: {str(exc)}")
+        if hasattr(exc, "detail") and "traceback" in exc.detail:
+            logger.error(exc.detail["traceback"])
+
+        raise exc
+
+
 def run_build_config(
     custom_component: CustomComponent,
     user_id: Optional[Union[str, UUID]] = None,
@@ -353,7 +382,8 @@ def build_custom_component_template_from_inputs(
     # ! This should be removed when we have a better way to handle this
     frontend_node.get_base_classes_from_outputs()
     reorder_fields(frontend_node, custom_component._get_field_order())
-    return frontend_node.to_dict(add_name=False), custom_component
+    cc_instance = get_component_instance(custom_component, user_id=user_id)
+    return frontend_node.to_dict(add_name=False), cc_instance
 
 
 def build_custom_component_template(
