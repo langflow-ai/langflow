@@ -159,6 +159,7 @@ export type VertexBuildTypeAPI = {
   timestamp: string;
   params: any;
   messages: ChatOutputType[] | ChatInputType[];
+  artifacts: any | ChatOutputType | ChatInputType;
 };
 
 // data is the object received by the API
