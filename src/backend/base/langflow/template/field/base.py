@@ -1,6 +1,6 @@
 from enum import Enum
 from types import GenericAlias
-from typing import Any, Callable, Optional, Union
+from typing import Any, Callable, Optional, Union, _GenericAlias, _UnionGenericAlias, get_args, get_origin
 
 from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator, model_serializer, model_validator
 
@@ -36,7 +36,7 @@ class Input(BaseModel):
     multiline: bool = False
     """Defines if the field will allow the user to open a text editor. Default is False."""
 
-    value: Any = ""
+    value: Any = None
     """The value of the field. Default is None."""
 
     file_types: list[str] = Field(default=[], serialization_alias="fileTypes")
@@ -117,11 +117,22 @@ class Input(BaseModel):
         # If the user passes CustomComponent as a type insteado of "CustomComponent" we need to convert it to a string
         # this should be done for all types
         # How to check if v is a type?
-        if isinstance(v, (type, GenericAlias)):
+        if isinstance(v, (type, _GenericAlias, GenericAlias, _UnionGenericAlias)):
             if isinstance(v, type):
                 v = v.__name__
             else:
-                v = str(v)
+                origin = get_origin(v)
+                args = get_args(v)
+                if origin and args:
+                    v = f"{origin.__name__}[{', '.join(arg.__name__ if isinstance(arg, type) else str(arg) for arg in args)}]"
+                    # if v is union with None (e.g Union[someType, NoneType]) we need to remove NoneType
+                    # we can return Optional[someType] instead of Union[someType, NoneType]
+                    if "NoneType" in v:
+                        v = v.replace(", NoneType", "")
+                        v = v.replace("Union[", "Optional[")
+
+                else:
+                    v = str(v)
         elif not isinstance(v, str):
             raise ValueError(f"type must be a string or a type, not {type(v)}")
         return v
