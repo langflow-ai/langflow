@@ -70,14 +70,14 @@ class ChatOllamaComponent(LCModelComponent):
     inputs = [
         Input(
             name="base_url",
-            type=Optional[str],
+            field_type=Optional[str],
             display_name="Base URL",
             info="Endpoint of the Ollama API. Defaults to 'http://localhost:11434' if not specified.",
             value="http://localhost:11434",
         ),
         Input(
             name="model",
-            type=str,
+            field_type=str,
             display_name="Model Name",
             options=[],  # This should be dynamically loaded if possible
             info="Refer to https://ollama.ai/library for more models.",
@@ -86,7 +86,7 @@ class ChatOllamaComponent(LCModelComponent):
         ),
         Input(
             name="mirostat",
-            type=str,
+            field_type=str,
             display_name="Mirostat",
             options=["Disabled", "Mirostat", "Mirostat 2.0"],
             info="Enable/disable Mirostat sampling for controlling perplexity.",
@@ -97,7 +97,7 @@ class ChatOllamaComponent(LCModelComponent):
         ),
         Input(
             name="mirostat_eta",
-            type=Optional[float],
+            field_type=Optional[float],
             display_name="Mirostat Eta",
             info="Learning rate for Mirostat algorithm.",
             advanced=True,
@@ -106,7 +106,7 @@ class ChatOllamaComponent(LCModelComponent):
         ),
         Input(
             name="mirostat_tau",
-            type=Optional[float],
+            field_type=Optional[float],
             display_name="Mirostat Tau",
             info="Controls the balance between coherence and diversity of the output.",
             advanced=True,
@@ -115,7 +115,7 @@ class ChatOllamaComponent(LCModelComponent):
         ),
         Input(
             name="temperature",
-            type=float,
+            field_type=float,
             display_name="Temperature",
             info="Controls the creativity of model responses.",
             value=0.8,
@@ -124,7 +124,7 @@ class ChatOllamaComponent(LCModelComponent):
         Input(name="stream", type=bool, display_name="Stream", info=STREAM_INFO_TEXT, value=False),
         Input(
             name="system_message",
-            type=Optional[str],
+            field_type=Optional[str],
             display_name="System Message",
             info="System message to pass to the model.",
             advanced=True,
@@ -132,14 +132,14 @@ class ChatOllamaComponent(LCModelComponent):
         ),
         Input(
             name="headers",
-            type=dict,
+            field_type=dict,
             display_name="Headers",
             info="Additional headers to send with the request.",
             advanced=True,
         ),
         Input(
             name="keep_alive_flag",
-            type=str,
+            field_type=str,
             display_params=["Keep", "Immediately", "Minute", "Hour", "sec"],
             display_name="Unload interval",
             info="Controls how the model unload interval is managed.",
@@ -148,7 +148,7 @@ class ChatOllamaComponent(LCModelComponent):
         ),
         Input(
             name="keep_alive",
-            type=int,
+            field_type=int,
             display_name="Interval",
             info="How long the model will stay loaded into memory.",
             value=None,
