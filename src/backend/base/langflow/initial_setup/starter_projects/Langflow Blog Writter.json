@@ -723,7 +723,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "gpt-3.5-turbo-0125"
+                "value": "gpt-3.5-turbo"
               },
               "openai_api_base": {
                 "advanced": true,
