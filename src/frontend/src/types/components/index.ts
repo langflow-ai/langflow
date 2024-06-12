@@ -59,10 +59,11 @@ export type DropDownComponentType = {
   children?: ReactNode;
 };
 export type ParameterComponentType = {
-  selected: boolean;
+  selected?: boolean;
   data: NodeDataType;
   title: string;
   conditionPath?: string | null;
+  key: string;
   id: sourceHandleType | targetHandleType;
   color: string;
   left: boolean;

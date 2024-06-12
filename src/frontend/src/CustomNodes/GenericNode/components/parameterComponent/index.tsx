@@ -135,6 +135,12 @@ export default function ParameterComponent({
         edge.targetHandle === scapedJSONStringfy(proxy ? { ...id, proxy } : id)
     ) ?? false;
 
+  let disabledOutput =
+    edges.some(
+      (edge) =>
+        edge.sourceHandle === scapedJSONStringfy(proxy ? { ...id, proxy } : id),
+    ) ?? false;
+
   const handleRefreshButtonPress = async (name, data) => {
     handleRefreshButtonPressHook(name, data);
   };
@@ -189,6 +195,32 @@ export default function ParameterComponent({
   if (optionalHandle && optionalHandle.length === 0) {
     optionalHandle = null;
   }
+
+  const handleUpdateOutputHide = (value?: boolean) => {
+    setNode(data.id, (oldNode) => {
+      let newNode = cloneDeep(oldNode);
+      newNode.data = {
+        ...newNode.data,
+        node: {
+          ...newNode.data.node,
+          outputs: newNode.data.node.outputs?.map((output, i) => {
+            if (i === index) {
+              output.hide = value ?? !output.hide;
+            }
+            return output;
+          }),
+        },
+      };
+      return newNode;
+    });
+    updateNodeInternals(data.id);
+  };
+
+  useEffect(() => {
+    if (disabledOutput) {
+      handleUpdateOutputHide(false);
+    }
+  }, [disabledOutput]);
 
   return !showNode ? (
     left && LANGFLOW_SUPPORTED_TYPES.has(type ?? "") && !optionalHandle ? (
@@ -262,6 +294,23 @@ export default function ParameterComponent({
             (left ? "" : " justify-end")
           }
         >
+          {!left && (
+            <div className="flex-1">
+              <Button
+                disabled={disabledOutput}
+                variant="none"
+                size="none"
+                onClick={() => handleUpdateOutputHide()}
+                data-testid={`output-inspection-${title.toLowerCase()}`}
+              >
+                <IconComponent
+                  className="h-4 w-4"
+                  strokeWidth={1.5}
+                  name={data.node?.outputs![index].hide ? "EyeOff" : "Eye"}
+                />
+              </Button>
+            </div>
+          )}
           <Case condition={left && data.node?.frozen}>
             <div className="pr-1">
               <IconComponent className="h-5 w-5 text-ice" name={"Snowflake"} />
@@ -325,6 +374,7 @@ export default function ParameterComponent({
             )}
           </div>
         </div>
+
         {left && LANGFLOW_SUPPORTED_TYPES.has(type ?? "") && !optionalHandle ? (
           <></>
         ) : (
