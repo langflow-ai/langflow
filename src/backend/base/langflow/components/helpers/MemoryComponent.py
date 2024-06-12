@@ -2,7 +2,7 @@ from typing import Optional
 
 from langflow.base.memory.memory import BaseMemoryComponent
 from langflow.field_typing import Text
-from langflow.helpers.record import messages_to_text
+from langflow.helpers.data import messages_to_text
 from langflow.memory import get_messages
 from langflow.schema.message import Message
 
@@ -35,7 +35,7 @@ class MemoryComponent(BaseMemoryComponent):
                 "info": "Order of the messages.",
                 "advanced": True,
             },
-            "record_template": {
+            "data_template": {
                 "display_name": "Data Template",
                 "multiline": True,
                 "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
@@ -68,7 +68,7 @@ class MemoryComponent(BaseMemoryComponent):
         session_id: Optional[str] = None,
         n_messages: int = 5,
         order: Optional[str] = "Descending",
-        record_template: Optional[str] = "{sender_name}: {text}",
+        data_template: Optional[str] = "{sender_name}: {text}",
     ) -> Text:
         messages = self.get_messages(
             sender=sender,
@@ -77,6 +77,6 @@ class MemoryComponent(BaseMemoryComponent):
             limit=n_messages,
             order=order,
         )
-        messages_str = messages_to_text(template=record_template or "", messages=messages)
+        messages_str = messages_to_text(template=data_template or "", messages=messages)
         self.status = messages_str
         return messages_str

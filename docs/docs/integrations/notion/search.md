@@ -113,7 +113,7 @@ class NotionSearch(CustomComponent):
             response.raise_for_status()
 
             results = response.json()
-            records = []
+            data = []
             combined_text = f"Results found: {len(results['results'])}\n\n"
             for result in results['results']:
                 result_data = {
@@ -135,10 +135,10 @@ class NotionSearch(CustomComponent):
 
                 text += f"type: {result['object']}\nlast_edited_time: {result['last_edited_time']}\n\n"
                 combined_text += text
-                records.append(Data(text=text, data=result_data))
+                data.append(Data(text=text, data=result_data))
 
             self.status = combined_text
-            return records
+            return data
 
         except Exception as e:
             self.status = f"An error occurred: {str(e)}"

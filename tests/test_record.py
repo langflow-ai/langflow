@@ -1,8 +1,9 @@
 from langchain_core.documents import Document
+
 from langflow.schema import Data
 
 
-def test_record_initialization():
+def test_data_initialization():
     record = Data(text_key="msg", data={"msg": "Hello, World!", "extra": "value"})
     assert record.msg == "Hello, World!"
     assert record.extra == "value"

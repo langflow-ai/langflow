@@ -142,7 +142,7 @@ class Flow(FlowBase, table=True):
     folder_id: Optional[UUID] = Field(default=None, foreign_key="folder.id", nullable=True, index=True)
     folder: Optional["Folder"] = Relationship(back_populates="flows")
 
-    def to_record(self):
+    def to_data(self):
         serialized = self.model_dump()
         data = {
             "id": serialized.pop("id"),

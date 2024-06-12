@@ -415,7 +415,7 @@ def build_loader_repr_from_data(data: List[Data]) -> str:
         avg_length = sum(len(doc.text) for doc in data) / len(data)
         return f"""{len(data)} data
         \nAvg. Data Length (characters): {int(avg_length)}
-        Records: {data[:3]}..."""
+        Data: {data[:3]}..."""
     return "0 data"
 
 

@@ -31,7 +31,7 @@ def list_flows(*, user_id: Optional[str] = None) -> List[Data]:
                 select(Flow).where(Flow.user_id == user_id).where(Flow.is_component == False)  # noqa
             ).all()
 
-            flows_data = [flow.to_record() for flow in flows]
+            flows_data = [flow.to_data() for flow in flows]
             return flows_data
     except Exception as e:
         raise ValueError(f"Error listing flows: {e}")
@@ -170,22 +170,22 @@ async def flow_function({func_args}):
 
 
 def build_function_and_schema(
-    flow_record: Data, graph: "Graph", user_id: str | UUID | None
+    flow_data: Data, graph: "Graph", user_id: str | UUID | None
 ) -> Tuple[Callable[..., Awaitable[Any]], Type[BaseModel]]:
     """
     Builds a dynamic function and schema for a given flow.
 
     Args:
-        flow_record (Data): The flow record containing information about the flow.
+        flow_data (Data): The flow record containing information about the flow.
         graph (Graph): The graph representing the flow.
 
     Returns:
         Tuple[Callable, BaseModel]: A tuple containing the dynamic function and the schema.
     """
-    flow_id = flow_record.id
+    flow_id = flow_data.id
     inputs = get_flow_inputs(graph)
     dynamic_flow_function = generate_function_for_flow(inputs, flow_id, user_id=user_id)
-    schema = build_schema_from_inputs(flow_record.name, inputs)
+    schema = build_schema_from_inputs(flow_data.name, inputs)
     return dynamic_flow_function, schema
 
 

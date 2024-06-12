@@ -13,12 +13,12 @@ def chroma_collection_to_data(collection_dict: dict):
     """
     data = []
     for i, doc in enumerate(collection_dict["documents"]):
-        record_dict = {
+        data_dict = {
             "id": collection_dict["ids"][i],
             "text": doc,
         }
         if "metadatas" in collection_dict:
             for key, value in collection_dict["metadatas"][i].items():
-                record_dict[key] = value
-        data.append(Data(**record_dict))
+                data_dict[key] = value
+        data.append(Data(**data_dict))
     return data

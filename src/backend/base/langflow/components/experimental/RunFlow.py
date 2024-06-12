@@ -14,7 +14,7 @@ class RunFlowComponent(CustomComponent):
 
     def get_flow_names(self) -> List[str]:
         flow_data = self.list_flows()
-        return [flow_record.data["name"] for flow_record in flow_data]
+        return [flow_data.data["name"] for flow_data in flow_data]
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
         if field_name == "flow_name":

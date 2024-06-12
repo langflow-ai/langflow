@@ -32,7 +32,7 @@ class BaseMemoryComponent(CustomComponent):
                 "info": "Order of the messages.",
                 "advanced": True,
             },
-            "record_template": {
+            "data_template": {
                 "display_name": "Data Template",
                 "multiline": True,
                 "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
