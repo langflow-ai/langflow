@@ -62,7 +62,11 @@ jobs:
             -f docker/frontend/build_and_push_frontend.Dockerfile \
             .
   test-multi-arch-build:
+    name: Test docker multi-arch build (${{ matrix.platform }})
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        platform: [linux/amd64, linux/arm64/v8]
     steps:
       - uses: actions/checkout@v4
       - name: Set up QEMU
@@ -76,5 +80,5 @@ jobs:
           context: .
           push: false
           file: ./docker/build_and_push.Dockerfile
-          platforms: "linux/amd64,linux/arm64/v8"
+          platforms: "${{ matrix.platform }}"
           tags: langflowai/langflow:latest-dev

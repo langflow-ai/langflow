@@ -7,10 +7,9 @@
 # Used to build deps + create our virtual environment
 ################################
 
-# force platform to the current architecture to increase build speed time on multi-platform builds
-
-# use python:3.12.3-slim as the base image until https://github.com/pydantic/pydantic-core/issues/1292 gets resolved
-FROM --platform=$BUILDPLATFORM python:3.12.3-slim as builder-base
+# 1. use python:3.12.3-slim as the base image until https://github.com/pydantic/pydantic-core/issues/1292 gets resolved
+# 2. do not add --platform=$BUILDPLATFORM because the pydantic binaries must be resolved for the final architecture
+FROM python:3.12.3-slim as builder-base
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     \
@@ -61,7 +60,7 @@ RUN $POETRY_HOME/bin/poetry lock --no-update \
 # RUNTIME
 # Setup user, utilities and copy the virtual environment only
 ################################
-FROM python:3.12-slim as runtime
+FROM python:3.12.3-slim as runtime
 
 RUN apt-get -y update \
     && apt-get install --no-install-recommends -y \
