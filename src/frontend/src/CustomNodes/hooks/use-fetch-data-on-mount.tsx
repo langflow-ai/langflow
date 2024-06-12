@@ -1,5 +1,9 @@
 import { cloneDeep } from "lodash";
 import { useEffect } from "react";
+import {
+  ERROR_UPDATING_COMPONENT,
+  TITLE_ERROR_UPDATING_COMPONENT,
+} from "../../constants/constants";
 import useAlertStore from "../../stores/alertStore";
 import { ResponseErrorDetailAPI } from "../../types/api";
 
@@ -39,8 +43,10 @@ const useFetchDataOnMount = (
           let responseError = error as ResponseErrorDetailAPI;
 
           setErrorData({
-            title: "Error while updating the Component",
-            list: [responseError?.response?.data?.detail ?? "Unknown error"],
+            title: TITLE_ERROR_UPDATING_COMPONENT,
+            list: [
+              responseError?.response?.data?.detail ?? ERROR_UPDATING_COMPONENT,
+            ],
           });
         }
         setIsLoading(false);
