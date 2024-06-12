@@ -320,7 +320,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "gpt-4o"
+                "value": "gpt-3.5-turbo"
               },
               "openai_api_base": {
                 "advanced": true,
