@@ -279,10 +279,10 @@ export function groupByFamily(
 
       if (!foundNode) {
         foundNode = {
-          hasBaseClassInTemplate: Object.values(node!.template).some(
+          hasBaseClassInTemplate: Object.values(node!.template)?.some(
             checkBaseClass,
           ),
-          hasBaseClassInBaseClasses: node!.base_classes.some((baseClass) =>
+          hasBaseClassInBaseClasses: node!.base_classes?.some((baseClass) =>
             baseClassesSet.has(baseClass),
           ),
           displayName: node?.display_name,
