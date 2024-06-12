@@ -15,6 +15,7 @@ class ChatInput(ChatComponent):
             display_name="Text",
             multiline=True,
             input_types=[],
+            value="",
             info="Message to be passed as input.",
         ),
         DropdownInput(
