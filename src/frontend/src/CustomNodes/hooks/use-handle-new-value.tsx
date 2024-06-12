@@ -1,4 +1,8 @@
 import { cloneDeep } from "lodash";
+import {
+  ERROR_UPDATING_COMPONENT,
+  TITLE_ERROR_UPDATING_COMPONENT,
+} from "../../constants/constants";
 import useAlertStore from "../../stores/alertStore";
 import { ResponseErrorTypeAPI } from "../../types/api";
 
@@ -43,10 +47,10 @@ const useHandleOnNewValue = (
       } catch (error) {
         let responseError = error as ResponseErrorTypeAPI;
         setErrorData({
-          title: "Error while updating the Component",
+          title: TITLE_ERROR_UPDATING_COMPONENT,
           list: [
             responseError?.response?.data?.detail.error ??
-              "An unexpected error occurred while updating the Component. Please try again.",
+              ERROR_UPDATING_COMPONENT,
           ],
         });
       }

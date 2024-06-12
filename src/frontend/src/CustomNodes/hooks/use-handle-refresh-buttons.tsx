@@ -1,4 +1,8 @@
 import { cloneDeep } from "lodash";
+import {
+  ERROR_UPDATING_COMPONENT,
+  TITLE_ERROR_UPDATING_COMPONENT,
+} from "../../constants/constants";
 import useAlertStore from "../../stores/alertStore";
 import { ResponseErrorDetailAPI } from "../../types/api";
 import { handleUpdateValues } from "../../utils/parameterUtils";
@@ -25,10 +29,9 @@ const useHandleRefreshButtonPress = (setIsLoading, setNode, renderTooltips) => {
       let responseError = error as ResponseErrorDetailAPI;
 
       setErrorData({
-        title: "Error while updating the Component",
+        title: TITLE_ERROR_UPDATING_COMPONENT,
         list: [
-          responseError?.response?.data?.detail ??
-            "An unexpected error occurred while updating the Component. Please try again.",
+          responseError?.response?.data?.detail ?? ERROR_UPDATING_COMPONENT,
         ],
       });
     }
