@@ -1,15 +1,15 @@
 from typing import Callable, Union
 
-from pydantic import BaseModel, model_serializer
+from pydantic import BaseModel, Field, model_serializer
 
-from langflow.inputs.input_mixin import BaseInputMixin
+from langflow.inputs.inputs import InputTypes
 from langflow.template.field.base import Input
 from langflow.utils.constants import DIRECT_TYPES
 
 
 class Template(BaseModel):
-    type_name: str
-    fields: list[Input | BaseInputMixin]
+    type_name: str = Field(serialization_alias="_type")
+    fields: list[Input | InputTypes]
 
     def process_fields(
         self,
@@ -30,7 +30,7 @@ class Template(BaseModel):
         result = handler(self)
         for field in self.fields:
             result[field.name] = field.model_dump(by_alias=True, exclude_none=True)
-        result["_type"] = result.pop("type_name")
+
         return result
 
     # For backwards compatibility
