@@ -1,11 +1,13 @@
 from enum import Enum
-from types import GenericAlias
-from typing import Any, Callable, Optional, Union, _GenericAlias, _UnionGenericAlias, get_args, get_origin
+from typing import Any, Callable, GenericAlias, Optional, Union, _GenericAlias, _UnionGenericAlias
+
 
 from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator, model_serializer, model_validator
 
 from langflow.field_typing import Text
 from langflow.field_typing.range_spec import RangeSpec
+from langflow.helpers.custom import format_type
+from langflow.type_extraction.type_extraction import post_process_type
 
 
 class UndefinedType(Enum):
@@ -118,21 +120,8 @@ class Input(BaseModel):
         # this should be done for all types
         # How to check if v is a type?
         if isinstance(v, (type, _GenericAlias, GenericAlias, _UnionGenericAlias)):
-            if isinstance(v, type):
-                v = v.__name__
-            else:
-                origin = get_origin(v)
-                args = get_args(v)
-                if origin and args:
-                    v = f"{origin.__name__}[{', '.join(arg.__name__ if isinstance(arg, type) else str(arg) for arg in args)}]"
-                    # if v is union with None (e.g Union[someType, NoneType]) we need to remove NoneType
-                    # we can return Optional[someType] instead of Union[someType, NoneType]
-                    if "NoneType" in v:
-                        v = v.replace(", NoneType", "")
-                        v = v.replace("Union[", "Optional[")
-
-                else:
-                    v = str(v)
+            v = post_process_type(v)[0]
+            v = format_type(v)
         elif not isinstance(v, str):
             raise ValueError(f"type must be a string or a type, not {type(v)}")
         return v
@@ -196,15 +185,6 @@ class Output(BaseModel):
         if not self.selected:
             self.selected = self.types[0]
 
-    @field_validator("display_name", mode="before")
-    def validate_display_name(cls, v, info):
-        if not v:
-            if info.data.get("name"):
-                return info.data["name"]
-            else:
-                raise ValueError("If display_name is not set, name must be set")
-        return v
-
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         result = handler(self)
@@ -217,4 +197,8 @@ class Output(BaseModel):
     def validate_model(self):
         if self.value == UNDEFINED.value:
             self.value = UNDEFINED
+        if self.name is None:
+            raise ValueError("name must be set")
+        if self.display_name is None:
+            self.display_name = self.name
         return self
