@@ -99,7 +99,7 @@ class MessageModel(DefaultModel):
     @classmethod
     def from_message(cls, message: Message, flow_id: Optional[str] = None):
         # first check if the record has all the required fields
-        if not message.text or not message.sender or not message.sender_name:
+        if message.text is None or not message.sender or not message.sender_name:
             raise ValueError("The message does not have the required fields 'sender' and 'sender_name' in the data.")
         return cls(
             sender=message.sender,
