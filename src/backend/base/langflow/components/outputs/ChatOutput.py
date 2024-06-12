@@ -43,8 +43,7 @@ class ChatOutput(ChatComponent):
     def text_response(self) -> Text:
         result = self.input_value
         if self.session_id:
-            message = self.message_response()
-            self.store_message(message)
+            self.message_response()
         self.status = result
         return result
 
@@ -55,7 +54,7 @@ class ChatOutput(ChatComponent):
             sender_name=self.sender_name,
             session_id=self.session_id,
         )
-        if self.session_id and isinstance(message, (Message, str)):
+        if self.session_id and isinstance(message, Message) and isinstance(message.text, str):
             self.store_message(message)
         self.status = message
         return message
