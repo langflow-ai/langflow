@@ -2,13 +2,14 @@ from typing import Callable, Union
 
 from pydantic import BaseModel, model_serializer
 
+from langflow.inputs.input_mixin import BaseInputMixin
 from langflow.template.field.base import Input
 from langflow.utils.constants import DIRECT_TYPES
 
 
 class Template(BaseModel):
     type_name: str
-    fields: list[Input]
+    fields: list[Input | BaseInputMixin]
 
     def process_fields(
         self,
