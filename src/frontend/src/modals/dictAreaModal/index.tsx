@@ -4,6 +4,7 @@ import "ace-builds/src-noconflict/mode-python";
 import "ace-builds/src-noconflict/theme-github";
 import "ace-builds/src-noconflict/theme-twilight";
 // import "ace-builds/webpack-resolver";
+import { cloneDeep } from "lodash";
 import { useEffect, useState } from "react";
 import JsonView from "react18-json-view";
 import "react18-json-view/src/dark.css";
@@ -12,7 +13,6 @@ import IconComponent from "../../components/genericIconComponent";
 import { CODE_DICT_DIALOG_SUBTITLE } from "../../constants/constants";
 import { useDarkStore } from "../../stores/darkStore";
 import BaseModal from "../baseModal";
-import { cloneDeep } from "lodash";
 
 export default function DictAreaModal({
   children,

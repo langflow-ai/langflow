@@ -134,7 +134,7 @@ export default function ChatView({
   function updateChat(
     chat: ChatMessageType,
     message: string,
-    stream_url?: string,
+    stream_url?: string
   ) {
     // if (message === "") return;
     chat.message = message;
@@ -164,7 +164,7 @@ export default function ChatView({
     setIsDragging,
     setFiles,
     currentFlowId,
-    setErrorData,
+    setErrorData
   );
 
   return (

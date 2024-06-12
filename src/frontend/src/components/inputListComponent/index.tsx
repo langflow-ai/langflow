@@ -31,7 +31,7 @@ export default function InputListComponent({
     <div
       className={classNames(
         value.length > 1 && editNode ? "my-1" : "",
-        "flex flex-col gap-3",
+        "flex flex-col gap-3"
       )}
     >
       {value.map((singleValue, idx) => {

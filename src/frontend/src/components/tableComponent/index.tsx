@@ -11,10 +11,8 @@ import "../../style/ag-theme-shadcn.css"; // Custom CSS applied to the grid
 import { cn, toTitleCase } from "../../utils/utils";
 import ForwardedIconComponent from "../genericIconComponent";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
-import ResetColumns from "./components/ResetColumns";
 import TableOptions from "./components/TableOptions";
 import resetGrid from "./utils/reset-grid-columns";
-import Loading from "../ui/loading";
 
 interface TableComponentProps extends AgGridReactProps {
   columnDefs: NonNullable<AgGridReactProps["columnDefs"]>;
@@ -37,7 +35,7 @@ const TableComponent = forwardRef<
       alertDescription = DEFAULT_TABLE_ALERT_MSG,
       ...props
     },
-    ref,
+    ref
   ) => {
     let colDef = props.columnDefs.map((col, index) => {
       let newCol = {
@@ -113,7 +111,7 @@ const TableComponent = forwardRef<
     };
     const onColumnMoved = (params) => {
       const updatedColumnDefs = makeLastColumnNonResizable(
-        params.columnApi.getAllGridColumns().map((col) => col.getColDef()),
+        params.columnApi.getAllGridColumns().map((col) => col.getColDef())
       );
       params.api.setGridOption("columnDefs", updatedColumnDefs);
       if (props.onColumnMoved) props.onColumnMoved(params);
@@ -137,7 +135,7 @@ const TableComponent = forwardRef<
         className={cn(
           dark ? "ag-theme-quartz-dark" : "ag-theme-quartz",
           "ag-theme-shadcn flex h-full flex-col",
-          "relative",
+          "relative"
         )} // applying the grid theme
       >
         <AgGridReact
@@ -154,7 +152,7 @@ const TableComponent = forwardRef<
             if (e.sources.some((source) => source.includes("column"))) {
               localStorage.setItem(
                 storeReference,
-                JSON.stringify(realRef.current?.api?.getColumnState()),
+                JSON.stringify(realRef.current?.api?.getColumnState())
               );
               setColumnStateChange(true);
             }
@@ -177,7 +175,7 @@ const TableComponent = forwardRef<
         )}
       </div>
     );
-  },
+  }
 );
 
 export default TableComponent;
