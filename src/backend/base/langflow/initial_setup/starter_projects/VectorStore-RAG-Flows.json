@@ -5,23 +5,14 @@
         "className": "stroke-gray-900 stroke-connection",
         "data": {
           "sourceHandle": {
-            "baseClasses": [
-              "object",
-              "Text",
-              "str"
-            ],
+            "baseClasses": ["object", "Text", "str"],
             "dataType": "TextOutput",
             "id": "TextOutput-BDknO"
           },
           "targetHandle": {
             "fieldName": "context",
             "id": "Prompt-xeI6K",
-            "inputTypes": [
-              "Document",
-              "BaseOutputParser",
-              "Record",
-              "Text"
-            ],
+            "inputTypes": ["Document", "BaseOutputParser", "Record", "Text"],
             "type": "str"
           }
         },
@@ -39,24 +30,14 @@
         "className": "stroke-gray-900 stroke-connection",
         "data": {
           "sourceHandle": {
-            "baseClasses": [
-              "Text",
-              "str",
-              "object",
-              "Record"
-            ],
+            "baseClasses": ["Text", "str", "object", "Record"],
             "dataType": "ChatInput",
             "id": "ChatInput-yxMKE"
           },
           "targetHandle": {
             "fieldName": "question",
             "id": "Prompt-xeI6K",
-            "inputTypes": [
-              "Document",
-              "BaseOutputParser",
-              "Record",
-              "Text"
-            ],
+            "inputTypes": ["Document", "BaseOutputParser", "Record", "Text"],
             "type": "str"
           }
         },
@@ -74,22 +55,14 @@
         "className": "stroke-gray-900 stroke-connection",
         "data": {
           "sourceHandle": {
-            "baseClasses": [
-              "object",
-              "Text",
-              "str"
-            ],
+            "baseClasses": ["object", "Text", "str"],
             "dataType": "Prompt",
             "id": "Prompt-xeI6K"
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "OpenAIModel-EjXlN",
-            "inputTypes": [
-              "Text",
-              "Record",
-              "Prompt"
-            ],
+            "inputTypes": ["Text", "Record", "Prompt"],
             "type": "str"
           }
         },
@@ -107,20 +80,14 @@
         "className": "stroke-gray-900 stroke-connection",
         "data": {
           "sourceHandle": {
-            "baseClasses": [
-              "object",
-              "Text",
-              "str"
-            ],
+            "baseClasses": ["object", "Text", "str"],
             "dataType": "OpenAIModel",
             "id": "OpenAIModel-EjXlN"
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "ChatOutput-Q39I8",
-            "inputTypes": [
-              "Text"
-            ],
+            "inputTypes": ["Text"],
             "type": "str"
           }
         },
@@ -138,19 +105,14 @@
         "className": "stroke-gray-900 stroke-connection",
         "data": {
           "sourceHandle": {
-            "baseClasses": [
-              "Record"
-            ],
+            "baseClasses": ["Record"],
             "dataType": "File",
             "id": "File-t0a6a"
           },
           "targetHandle": {
             "fieldName": "inputs",
             "id": "RecursiveCharacterTextSplitter-tR9QM",
-            "inputTypes": [
-              "Document",
-              "Record"
-            ],
+            "inputTypes": ["Document", "Record"],
             "type": "Document"
           }
         },
@@ -168,9 +130,7 @@
         "className": "stroke-gray-900 stroke-connection",
         "data": {
           "sourceHandle": {
-            "baseClasses": [
-              "Embeddings"
-            ],
+            "baseClasses": ["Embeddings"],
             "dataType": "OpenAIEmbeddings",
             "id": "OpenAIEmbeddings-ZlOk1"
           },
@@ -194,21 +154,14 @@
         "className": "stroke-gray-900 stroke-connection",
         "data": {
           "sourceHandle": {
-            "baseClasses": [
-              "Text",
-              "str",
-              "object",
-              "Record"
-            ],
+            "baseClasses": ["Text", "str", "object", "Record"],
             "dataType": "ChatInput",
             "id": "ChatInput-yxMKE"
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "AstraDBSearch-41nRz",
-            "inputTypes": [
-              "Text"
-            ],
+            "inputTypes": ["Text"],
             "type": "str"
           }
         },
@@ -225,9 +178,7 @@
         "className": "stroke-gray-900 stroke-connection",
         "data": {
           "sourceHandle": {
-            "baseClasses": [
-              "Record"
-            ],
+            "baseClasses": ["Record"],
             "dataType": "RecursiveCharacterTextSplitter",
             "id": "RecursiveCharacterTextSplitter-tR9QM"
           },
@@ -252,9 +203,7 @@
         "className": "stroke-gray-900 stroke-connection",
         "data": {
           "sourceHandle": {
-            "baseClasses": [
-              "Embeddings"
-            ],
+            "baseClasses": ["Embeddings"],
             "dataType": "OpenAIEmbeddings",
             "id": "OpenAIEmbeddings-9TPjc"
           },
@@ -279,19 +228,14 @@
         "className": "stroke-gray-900 stroke-connection",
         "data": {
           "sourceHandle": {
-            "baseClasses": [
-              "Record"
-            ],
+            "baseClasses": ["Record"],
             "dataType": "AstraDBSearch",
             "id": "AstraDBSearch-41nRz"
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "TextOutput-BDknO",
-            "inputTypes": [
-              "Record",
-              "Text"
-            ],
+            "inputTypes": ["Record", "Text"],
             "type": "str"
           }
         },
@@ -310,12 +254,7 @@
         "data": {
           "id": "ChatInput-yxMKE",
           "node": {
-            "base_classes": [
-              "Text",
-              "str",
-              "object",
-              "Record"
-            ],
+            "base_classes": ["Text", "str", "object", "Record"],
             "beta": false,
             "custom_fields": {
               "input_value": null,
@@ -331,10 +270,7 @@
             "field_order": [],
             "frozen": false,
             "icon": "ChatInput",
-            "output_types": [
-              "Message",
-              "Text"
-            ],
+            "output_types": ["Message", "Text"],
             "template": {
               "_type": "CustomComponent",
               "code": {
@@ -382,17 +318,12 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
+                "options": ["Machine", "User"],
                 "password": false,
                 "placeholder": "",
                 "required": false,
@@ -408,9 +339,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -430,9 +359,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "If provided, the message will be stored in the memory.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -462,11 +389,7 @@
         "data": {
           "id": "TextOutput-BDknO",
           "node": {
-            "base_classes": [
-              "object",
-              "Text",
-              "str"
-            ],
+            "base_classes": ["object", "Text", "str"],
             "beta": false,
             "custom_fields": {
               "input_value": null,
@@ -479,9 +402,7 @@
             "field_order": [],
             "frozen": false,
             "icon": "type",
-            "output_types": [
-              "Text"
-            ],
+            "output_types": ["Text"],
             "template": {
               "_type": "CustomComponent",
               "code": {
@@ -509,10 +430,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Text or Record to be passed as output.",
-                "input_types": [
-                  "Record",
-                  "Text"
-                ],
+                "input_types": ["Record", "Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -532,9 +450,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Template to convert Record to Text. If left empty, it will be dynamically set to the Record's text key.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -570,9 +486,7 @@
         "data": {
           "id": "OpenAIEmbeddings-ZlOk1",
           "node": {
-            "base_classes": [
-              "Embeddings"
-            ],
+            "base_classes": ["Embeddings"],
             "beta": false,
             "custom_fields": {
               "allowed_special": null,
@@ -604,9 +518,7 @@
             "field_formatters": {},
             "field_order": [],
             "frozen": false,
-            "output_types": [
-              "Embeddings"
-            ],
+            "output_types": ["Embeddings"],
             "template": {
               "_type": "CustomComponent",
               "allowed_special": {
@@ -616,9 +528,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -712,9 +622,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -734,9 +642,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -747,9 +653,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": [
-                  "all"
-                ]
+                "value": ["all"]
               },
               "embedding_ctx_length": {
                 "advanced": true,
@@ -796,9 +700,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
@@ -842,9 +744,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -863,9 +763,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": true,
                 "multiline": false,
@@ -885,9 +783,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -906,9 +802,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -927,9 +821,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -948,9 +840,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -1050,9 +940,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -1083,11 +971,7 @@
         "data": {
           "id": "OpenAIModel-EjXlN",
           "node": {
-            "base_classes": [
-              "object",
-              "Text",
-              "str"
-            ],
+            "base_classes": ["object", "Text", "str"],
             "beta": false,
             "custom_fields": {
               "input_value": null,
@@ -1117,9 +1001,7 @@
             ],
             "frozen": false,
             "icon": "OpenAI",
-            "output_types": [
-              "Text"
-            ],
+            "output_types": ["Text"],
             "template": {
               "_type": "CustomComponent",
               "code": {
@@ -1147,11 +1029,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text",
-                  "Record",
-                  "Prompt"
-                ],
+                "input_types": ["Text", "Record", "Prompt"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -1208,9 +1086,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
@@ -1237,9 +1113,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "The base URL of the OpenAI API. Defaults to https://api.openai.com/v1.\n\nYou can change this to use other APIs like JinaChat, LocalAI and Prem.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -1258,9 +1132,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "The OpenAI API Key to use for the OpenAI model.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": true,
                 "multiline": false,
@@ -1299,9 +1171,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "System message to pass to the model.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -1363,17 +1233,10 @@
           "display_name": "Prompt",
           "id": "Prompt-xeI6K",
           "node": {
-            "base_classes": [
-              "object",
-              "Text",
-              "str"
-            ],
+            "base_classes": ["object", "Text", "str"],
             "beta": false,
             "custom_fields": {
-              "template": [
-                "context",
-                "question"
-              ]
+              "template": ["context", "question"]
             },
             "description": "Create a prompt template with dynamic variables.",
             "display_name": "Prompt",
@@ -1388,9 +1251,7 @@
             "is_input": null,
             "is_output": null,
             "name": "",
-            "output_types": [
-              "Prompt"
-            ],
+            "output_types": ["Prompt"],
             "template": {
               "_type": "CustomComponent",
               "code": {
@@ -1470,9 +1331,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -1508,12 +1367,7 @@
         "data": {
           "id": "ChatOutput-Q39I8",
           "node": {
-            "base_classes": [
-              "object",
-              "Text",
-              "Record",
-              "str"
-            ],
+            "base_classes": ["object", "Text", "Record", "str"],
             "beta": false,
             "custom_fields": {
               "input_value": null,
@@ -1530,10 +1384,7 @@
             "field_order": [],
             "frozen": false,
             "icon": "ChatOutput",
-            "output_types": [
-              "Message",
-              "Text"
-            ],
+            "output_types": ["Message", "Text"],
             "template": {
               "_type": "CustomComponent",
               "code": {
@@ -1561,9 +1412,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -1582,17 +1431,12 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
+                "options": ["Machine", "User"],
                 "password": false,
                 "placeholder": "",
                 "required": false,
@@ -1608,9 +1452,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -1630,9 +1472,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "If provided, the message will be stored in the memory.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -1667,9 +1507,7 @@
         "data": {
           "id": "File-t0a6a",
           "node": {
-            "base_classes": [
-              "Record"
-            ],
+            "base_classes": ["Record"],
             "beta": false,
             "custom_fields": {
               "path": null,
@@ -1682,9 +1520,7 @@
             "field_order": [],
             "frozen": false,
             "icon": "file-text",
-            "output_types": [
-              "Record"
-            ],
+            "output_types": ["Record"],
             "template": {
               "_type": "CustomComponent",
               "code": {
@@ -1785,9 +1621,7 @@
         "data": {
           "id": "RecursiveCharacterTextSplitter-tR9QM",
           "node": {
-            "base_classes": [
-              "Record"
-            ],
+            "base_classes": ["Record"],
             "beta": false,
             "custom_fields": {
               "chunk_overlap": null,
@@ -1801,9 +1635,7 @@
             "field_formatters": {},
             "field_order": [],
             "frozen": false,
-            "output_types": [
-              "Record"
-            ],
+            "output_types": ["Record"],
             "template": {
               "_type": "CustomComponent",
               "chunk_overlap": {
@@ -1869,10 +1701,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "The texts to split.",
-                "input_types": [
-                  "Document",
-                  "Record"
-                ],
+                "input_types": ["Document", "Record"],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
@@ -1891,9 +1720,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "The characters to split on.\nIf left empty defaults to [\"\\n\\n\", \"\\n\", \" \", \"\"].",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
@@ -1904,9 +1731,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": [
-                  ""
-                ]
+                "value": [""]
               }
             }
           },
@@ -1931,9 +1756,7 @@
         "data": {
           "id": "AstraDBSearch-41nRz",
           "node": {
-            "base_classes": [
-              "Record"
-            ],
+            "base_classes": ["Record"],
             "beta": false,
             "custom_fields": {
               "api_endpoint": null,
@@ -1968,9 +1791,7 @@
             ],
             "frozen": false,
             "icon": "AstraDB",
-            "output_types": [
-              "Record"
-            ],
+            "output_types": ["Record"],
             "template": {
               "_type": "CustomComponent",
               "api_endpoint": {
@@ -1980,9 +1801,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "API endpoint URL for the Astra DB service.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": true,
                 "multiline": false,
@@ -2110,9 +1929,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "The name of the collection within Astra DB where the vectors will be stored.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -2150,9 +1967,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Input value to search",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -2171,9 +1986,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Optional list of metadata fields to exclude from the indexing.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
@@ -2192,9 +2005,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Optional list of metadata fields to include in the indexing.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
@@ -2213,9 +2024,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Optional distance metric for vector comparisons in the vector store.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -2234,9 +2043,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Optional namespace within Astra DB to use for the collection.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -2293,17 +2100,12 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
                 "name": "search_type",
-                "options": [
-                  "Similarity",
-                  "MMR"
-                ],
+                "options": ["Similarity", "MMR"],
                 "password": false,
                 "placeholder": "",
                 "required": false,
@@ -2319,18 +2121,12 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Configuration mode for setting up the vector store, with options like “Sync”, “Async”, or “Off”.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
                 "name": "setup_mode",
-                "options": [
-                  "Sync",
-                  "Async",
-                  "Off"
-                ],
+                "options": ["Sync", "Async", "Off"],
                 "password": false,
                 "placeholder": "",
                 "required": false,
@@ -2346,9 +2142,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Authentication token for accessing Astra DB.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": true,
                 "multiline": false,
@@ -2384,9 +2178,7 @@
         "data": {
           "id": "AstraDB-eUCSS",
           "node": {
-            "base_classes": [
-              "VectorStore"
-            ],
+            "base_classes": ["VectorStore"],
             "beta": false,
             "custom_fields": {
               "api_endpoint": null,
@@ -2419,10 +2211,7 @@
             ],
             "frozen": false,
             "icon": "AstraDB",
-            "output_types": [
-              "VectorStore",
-              "BaseRetriever"
-            ],
+            "output_types": ["VectorStore", "BaseRetriever"],
             "template": {
               "_type": "CustomComponent",
               "api_endpoint": {
@@ -2432,9 +2221,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "API endpoint URL for the Astra DB service.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": true,
                 "multiline": false,
@@ -2562,9 +2349,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "The name of the collection within Astra DB where the vectors will be stored.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -2620,9 +2405,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Optional list of metadata fields to exclude from the indexing.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
@@ -2641,9 +2424,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Optional list of metadata fields to include in the indexing.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
@@ -2662,9 +2443,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Optional distance metric for vector comparisons in the vector store.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -2683,9 +2462,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Optional namespace within Astra DB to use for the collection.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -2723,18 +2500,12 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Configuration mode for setting up the vector store, with options like “Sync”, “Async”, or “Off”.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
                 "name": "setup_mode",
-                "options": [
-                  "Sync",
-                  "Async",
-                  "Off"
-                ],
+                "options": ["Sync", "Async", "Off"],
                 "password": false,
                 "placeholder": "",
                 "required": false,
@@ -2750,9 +2521,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Authentication token for accessing Astra DB.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": true,
                 "multiline": false,
@@ -2788,9 +2557,7 @@
         "data": {
           "id": "OpenAIEmbeddings-9TPjc",
           "node": {
-            "base_classes": [
-              "Embeddings"
-            ],
+            "base_classes": ["Embeddings"],
             "beta": false,
             "custom_fields": {
               "allowed_special": null,
@@ -2822,9 +2589,7 @@
             "field_formatters": {},
             "field_order": [],
             "frozen": false,
-            "output_types": [
-              "Embeddings"
-            ],
+            "output_types": ["Embeddings"],
             "template": {
               "_type": "CustomComponent",
               "allowed_special": {
@@ -2834,9 +2599,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -2930,9 +2693,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -2952,9 +2713,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -2965,9 +2724,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": [
-                  "all"
-                ]
+                "value": ["all"]
               },
               "embedding_ctx_length": {
                 "advanced": true,
@@ -3014,9 +2771,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
@@ -3060,9 +2815,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -3081,9 +2834,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": true,
                 "multiline": false,
@@ -3103,9 +2854,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -3124,9 +2873,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -3145,9 +2892,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -3166,9 +2911,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -3268,9 +3011,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,

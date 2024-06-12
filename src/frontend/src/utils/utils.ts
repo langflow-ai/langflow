@@ -237,12 +237,12 @@ export function groupByFamily(
 
   const checkBaseClass = (template: TemplateVariableType) => {
     return (
-      template.type &&
-      template.show &&
+      template?.type &&
+      template?.show &&
       ((!excludeTypes.has(template.type) &&
         baseClassesSet.has(template.type)) ||
-        (template.input_types &&
-          template.input_types.some((inputType) =>
+        (template?.input_types &&
+          template?.input_types.some((inputType) =>
             baseClassesSet.has(inputType),
           )))
     );
@@ -279,10 +279,10 @@ export function groupByFamily(
 
       if (!foundNode) {
         foundNode = {
-          hasBaseClassInTemplate: Object.values(node!.template)?.some(
+          hasBaseClassInTemplate: Object.values(node!.template).some(
             checkBaseClass,
           ),
-          hasBaseClassInBaseClasses: node!.base_classes?.some((baseClass) =>
+          hasBaseClassInBaseClasses: node!.base_classes.some((baseClass) =>
             baseClassesSet.has(baseClass),
           ),
           displayName: node?.display_name,
