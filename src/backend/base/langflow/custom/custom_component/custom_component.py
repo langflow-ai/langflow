@@ -7,10 +7,6 @@ from cachetools import TTLCache
 from langchain_core.documents import Document
 from pydantic import BaseModel
 
-from langflow.custom.code_parser.utils import (
-    extract_inner_type_from_generic_alias,
-    extract_union_types_from_generic_alias,
-)
 from langflow.custom.custom_component.base_component import BaseComponent
 from langflow.helpers.flow import list_flows, load_flow, run_flow
 from langflow.schema import Record
@@ -20,6 +16,10 @@ from langflow.schema.message import Message
 from langflow.schema.schema import Log
 from langflow.services.deps import get_storage_service, get_variable_service, session_scope
 from langflow.services.storage.service import StorageService
+from langflow.type_extraction.type_extraction import (
+    extract_inner_type_from_generic_alias,
+    extract_union_types_from_generic_alias,
+)
 from langflow.utils import validate
 
 if TYPE_CHECKING:
@@ -327,7 +327,6 @@ class CustomComponent(BaseComponent):
             return []
         return_type = build_method["return_type"]
 
-        # If list or List is in the return type, then we remove it and return the inner type
         if hasattr(return_type, "__origin__") and return_type.__origin__ in [
             list,
             List,
