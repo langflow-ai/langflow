@@ -81,4 +81,5 @@ InputTypes = Union[
     DropdownInput,
     FileInput,
     PromptInput,
+    MultilineInput,
 ]
