@@ -16,7 +16,7 @@ const useSelectAll = (flowsFromFolder, getValues, setValue) => {
         setValue(key, false);
       });
     },
-    [flowsFromFolder, getValues, setValue],
+    [flowsFromFolder, getValues, setValue]
   );
 
   return { handleSelectAll };

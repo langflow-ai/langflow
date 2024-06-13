@@ -115,7 +115,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
                       title: UPLOAD_ERROR_ALERT,
                       list: [error],
                     });
-                  },
+                  }
                 );
               }}
             >
@@ -201,7 +201,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
               name={isBuilding || saveLoading ? "Loader2" : "CheckCircle2"}
               className={cn(
                 "h-4 w-4",
-                isBuilding || saveLoading ? "animate-spin" : "animate-wiggle",
+                isBuilding || saveLoading ? "animate-spin" : "animate-wiggle"
               )}
             />
             {printByBuildStatus()}

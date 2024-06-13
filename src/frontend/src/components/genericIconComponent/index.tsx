@@ -18,7 +18,7 @@ export const ForwardedIconComponent = memo(
         strokeWidth,
         id = "",
       }: IconComponentProps,
-      ref,
+      ref
     ) => {
       const [showFallback, setShowFallback] = useState(false);
 
@@ -65,8 +65,8 @@ export const ForwardedIconComponent = memo(
           />
         </Suspense>
       );
-    },
-  ),
+    }
+  )
 );
 
 export default ForwardedIconComponent;
