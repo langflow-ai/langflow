@@ -131,7 +131,9 @@ export default function TableNodeCellRender({
           <DictComponent
             disabled={disabled}
             editNode={true}
-            value={templateValue.toString() === "{}" ? {} : templateValue}
+            value={
+              (templateValue || "").toString() === "{}" ? {} : templateValue
+            }
             onChange={(newValue) => {
               handleOnNewValue(newValue, templateData.key);
             }}
