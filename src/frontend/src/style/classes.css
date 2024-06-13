@@ -97,10 +97,6 @@ select:-webkit-autofill:focus {
   background-color: #141924 !important;
 }
 
-.grabbing {
-  cursor: grabbing;
-}
-
-.react-flow__node {
-  cursor: grab;
+.react-flow__node.dragging * {
+  cursor: grabbing !important;
 }
