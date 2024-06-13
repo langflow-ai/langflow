@@ -25,6 +25,7 @@ class TextOperatorComponent(Component):
             display_name="Operator",
             options=["equals", "not equals", "contains", "starts with", "ends with"],
             info="The operator to apply for comparing the texts.",
+            value="equals",
         ),
         BoolInput(
             name="case_sensitive",
@@ -36,13 +37,13 @@ class TextOperatorComponent(Component):
         StrInput(
             name="true_output",
             display_name="True Output",
-            info="The output to return or display when the comparison is true.",
+            info="The output to return or display when the comparison is true. If not passed, defaults to Input Text.",
             advanced=True,
         ),
         StrInput(
             name="false_output",
             display_name="False Output",
-            info="The output to return or display when the comparison is false.",
+            info="The output to return or display when the comparison is false. If not passed, defaults to Input Text.",
             advanced=True,
         ),
     ]
@@ -54,11 +55,11 @@ class TextOperatorComponent(Component):
 
     def true_response(self) -> Text:
         self.stop("false_result")
-        return self.true_output or self.input_text
+        return self.true_output
 
     def false_response(self) -> Text:
         self.stop("true_result")
-        return self.false_output or self.input_text
+        return self.false_output
 
     def run(self) -> Text:
         input_text = self.input_text
