@@ -1,8 +1,9 @@
+from langchain_community.document_loaders.web_base import WebBaseLoader
+
 from langflow.custom import Component
 from langflow.inputs import StrInput
-from langflow.template import Output
 from langflow.schema import Data
-from langchain_community.document_loaders.web_base import WebBaseLoader
+from langflow.template import Output
 
 
 class URLComponent(Component):
@@ -28,6 +29,6 @@ class URLComponent(Component):
         urls = [url.strip() for url in self.urls if url.strip()]
         loader = WebBaseLoader(web_paths=urls)
         docs = loader.load()
-        data = [Data(content=doc.page_content) for doc in docs]
+        data = [Data(content=doc.page_content, **doc.metadata) for doc in docs]
         self.status = data
         return data
