@@ -12,6 +12,7 @@ import HeaderMessagesComponent from "./components/headerMessages";
 import useMessagesTable from "./hooks/use-messages-table";
 import useRemoveMessages from "./hooks/use-remove-messages";
 import useUpdateMessage from "./hooks/use-updateMessage";
+import { messagesSorter } from "../../../../utils/utils";
 
 export default function MessagesPage() {
   const [columns, setColumns] = useState<Array<ColDef | ColGroupDef>>([]);
@@ -26,7 +27,7 @@ export default function MessagesPage() {
     setSelectedRows,
     setSuccessData,
     setErrorData,
-    selectedRows
+    selectedRows,
   );
 
   const { handleUpdate } = useUpdateMessage(setSuccessData, setErrorData);
@@ -60,13 +61,13 @@ export default function MessagesPage() {
           overlayNoRowsTemplate="No data available"
           onSelectionChanged={(event: SelectionChangedEvent) => {
             setSelectedRows(
-              event.api.getSelectedRows().map((row) => row.index)
+              event.api.getSelectedRows().map((row) => row.index),
             );
           }}
           rowSelection="multiple"
           suppressRowClickSelection={true}
           pagination={true}
-          columnDefs={columns}
+          columnDefs={columns.sort(messagesSorter)}
           rowData={messages}
         />
       </div>
