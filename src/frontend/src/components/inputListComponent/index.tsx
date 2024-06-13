@@ -31,7 +31,7 @@ export default function InputListComponent({
     <div
       className={classNames(
         value.length > 1 && editNode ? "my-1" : "",
-        "flex flex-col gap-3"
+        "flex flex-col gap-3",
       )}
     >
       {value.map((singleValue, idx) => {
@@ -53,7 +53,7 @@ export default function InputListComponent({
                 idx
               }
             />
-            {idx === value.length - 1 ? (
+            {idx === 0 ? (
               <button
                 onClick={(e) => {
                   let newInputList = _.cloneDeep(value);
