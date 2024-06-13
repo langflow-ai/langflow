@@ -2,100 +2,72 @@
   "data": {
     "edges": [
       {
-        "className": "stroke-gray-900 stroke-connection",
+        "className": "",
         "data": {
           "sourceHandle": {
-            "baseClasses": [
-              "object",
-              "Text",
-              "str"
-            ],
+            "baseClasses": ["object", "Text", "str"],
             "dataType": "OpenAIModel",
-            "id": "OpenAIModel-k39HS"
+            "id": "OpenAIModel-NDBjF"
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-njtka",
-            "inputTypes": [
-              "Text"
-            ],
+            "id": "ChatOutput-JkVmc",
+            "inputTypes": ["Text"],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-OpenAIModel-k39HS{œbaseClassesœ:[œobjectœ,œTextœ,œstrœ],œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-k39HSœ}-ChatOutput-njtka{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-njtkaœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
-        "source": "OpenAIModel-k39HS",
-        "sourceHandle": "{œbaseClassesœ: [œobjectœ, œTextœ, œstrœ], œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-k39HSœ}",
+        "id": "reactflow__edge-OpenAIModel-NDBjF{œbaseClassesœ:[œobjectœ,œTextœ,œstrœ],œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-NDBjFœ}-ChatOutput-JkVmc{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-JkVmcœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
+        "source": "OpenAIModel-NDBjF",
+        "sourceHandle": "{œbaseClassesœ: [œobjectœ, œTextœ, œstrœ], œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-NDBjFœ}",
         "style": {
           "stroke": "#555"
         },
-        "target": "ChatOutput-njtka",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-njtkaœ, œinputTypesœ: [œTextœ], œtypeœ: œstrœ}"
+        "target": "ChatOutput-JkVmc",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-JkVmcœ, œinputTypesœ: [œTextœ], œtypeœ: œstrœ}"
       },
       {
-        "className": "stroke-gray-900 stroke-connection",
+        "className": "",
         "data": {
           "sourceHandle": {
-            "baseClasses": [
-              "object",
-              "str",
-              "Text"
-            ],
+            "baseClasses": ["object", "str", "Text"],
             "dataType": "Prompt",
-            "id": "Prompt-uxBqP"
+            "id": "Prompt-WSII4"
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "OpenAIModel-k39HS",
-            "inputTypes": [
-              "Text",
-              "Record",
-              "Prompt"
-            ],
+            "id": "OpenAIModel-NDBjF",
+            "inputTypes": ["Text", "Record", "Prompt"],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-uxBqP{œbaseClassesœ:[œobjectœ,œstrœ,œTextœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-uxBqPœ}-OpenAIModel-k39HS{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-k39HSœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
-        "source": "Prompt-uxBqP",
-        "sourceHandle": "{œbaseClassesœ: [œobjectœ, œstrœ, œTextœ], œdataTypeœ: œPromptœ, œidœ: œPrompt-uxBqPœ}",
+        "id": "reactflow__edge-Prompt-WSII4{œbaseClassesœ:[œobjectœ,œstrœ,œTextœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-WSII4œ}-OpenAIModel-NDBjF{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-NDBjFœ,œinputTypesœ:[œTextœ,œRecordœ,œPromptœ],œtypeœ:œstrœ}",
+        "source": "Prompt-WSII4",
+        "sourceHandle": "{œbaseClassesœ: [œobjectœ, œstrœ, œTextœ], œdataTypeœ: œPromptœ, œidœ: œPrompt-WSII4œ}",
         "style": {
           "stroke": "#555"
         },
-        "target": "OpenAIModel-k39HS",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-k39HSœ, œinputTypesœ: [œTextœ, œRecordœ, œPromptœ], œtypeœ: œstrœ}"
+        "target": "OpenAIModel-NDBjF",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-NDBjFœ, œinputTypesœ: [œTextœ, œRecordœ, œPromptœ], œtypeœ: œstrœ}"
       },
       {
-        "className": "stroke-gray-900 stroke-connection",
         "data": {
           "sourceHandle": {
-            "baseClasses": [
-              "object",
-              "Record",
-              "str",
-              "Text"
-            ],
+            "baseClasses": ["Message", "object", "str", "Text"],
             "dataType": "ChatInput",
-            "id": "ChatInput-P3fgL"
+            "id": "ChatInput-kltLA"
           },
           "targetHandle": {
             "fieldName": "user_input",
-            "id": "Prompt-uxBqP",
-            "inputTypes": [
-              "Document",
-              "BaseOutputParser",
-              "Record",
-              "Text"
-            ],
+            "id": "Prompt-WSII4",
+            "inputTypes": ["Document", "BaseOutputParser", "Record", "Text"],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-P3fgL{œbaseClassesœ:[œobjectœ,œRecordœ,œstrœ,œTextœ],œdataTypeœ:œChatInputœ,œidœ:œChatInput-P3fgLœ}-Prompt-uxBqP{œfieldNameœ:œuser_inputœ,œidœ:œPrompt-uxBqPœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "ChatInput-P3fgL",
-        "sourceHandle": "{œbaseClassesœ: [œobjectœ, œRecordœ, œstrœ, œTextœ], œdataTypeœ: œChatInputœ, œidœ: œChatInput-P3fgLœ}",
-        "style": {
-          "stroke": "#555"
-        },
-        "target": "Prompt-uxBqP",
-        "targetHandle": "{œfieldNameœ: œuser_inputœ, œidœ: œPrompt-uxBqPœ, œinputTypesœ: [œDocumentœ, œBaseOutputParserœ, œRecordœ, œTextœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-ChatInput-kltLA{œbaseClassesœ:[œMessageœ,œobjectœ,œstrœ,œTextœ],œdataTypeœ:œChatInputœ,œidœ:œChatInput-kltLAœ}-Prompt-WSII4{œfieldNameœ:œuser_inputœ,œidœ:œPrompt-WSII4œ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "ChatInput-kltLA",
+        "sourceHandle": "{œbaseClassesœ: [œMessageœ, œobjectœ, œstrœ, œTextœ], œdataTypeœ: œChatInputœ, œidœ: œChatInput-kltLAœ}",
+        "target": "Prompt-WSII4",
+        "targetHandle": "{œfieldNameœ: œuser_inputœ, œidœ: œPrompt-WSII4œ, œinputTypesœ: [œDocumentœ, œBaseOutputParserœ, œRecordœ, œTextœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
@@ -103,18 +75,12 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-uxBqP",
+          "id": "Prompt-WSII4",
           "node": {
-            "base_classes": [
-              "object",
-              "str",
-              "Text"
-            ],
+            "base_classes": ["object", "str", "Text"],
             "beta": false,
             "custom_fields": {
-              "template": [
-                "user_input"
-              ]
+              "template": ["user_input"]
             },
             "description": "Create a prompt template with dynamic variables.",
             "display_name": "Prompt",
@@ -129,9 +95,7 @@
             "is_input": null,
             "is_output": null,
             "name": "",
-            "output_types": [
-              "Prompt"
-            ],
+            "output_types": ["Prompt"],
             "template": {
               "_type": "CustomComponent",
               "code": {
@@ -159,9 +123,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -205,17 +167,17 @@
           "type": "Prompt"
         },
         "dragging": false,
-        "height": 383,
-        "id": "Prompt-uxBqP",
+        "height": 419,
+        "id": "Prompt-WSII4",
         "position": {
-          "x": 53.588791333410654,
-          "y": -107.07318910019967
+          "x": 18.562420355453696,
+          "y": -284.15095348876025
         },
         "positionAbsolute": {
-          "x": 53.588791333410654,
-          "y": -107.07318910019967
+          "x": 18.562420355453696,
+          "y": -284.15095348876025
         },
-        "selected": true,
+        "selected": false,
         "type": "genericNode",
         "width": 384
       },
@@ -223,13 +185,9 @@
         "data": {
           "description": "Generates text using OpenAI LLMs.",
           "display_name": "OpenAI",
-          "id": "OpenAIModel-k39HS",
+          "id": "OpenAIModel-NDBjF",
           "node": {
-            "base_classes": [
-              "object",
-              "Text",
-              "str"
-            ],
+            "base_classes": ["object", "Text", "str"],
             "beta": false,
             "custom_fields": {
               "input_value": null,
@@ -259,9 +217,7 @@
             ],
             "frozen": false,
             "icon": "OpenAI",
-            "output_types": [
-              "Text"
-            ],
+            "output_types": ["Text"],
             "template": {
               "_type": "CustomComponent",
               "code": {
@@ -289,11 +245,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text",
-                  "Record",
-                  "Prompt"
-                ],
+                "input_types": ["Text", "Record", "Prompt"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -350,9 +302,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
@@ -379,9 +329,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "The base URL of the OpenAI API. Defaults to https://api.openai.com/v1.\n\nYou can change this to use other APIs like JinaChat, LocalAI and Prem.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -400,11 +348,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "The OpenAI API Key to use for the OpenAI model.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
-                "load_from_db": true,
+                "load_from_db": false,
                 "multiline": false,
                 "name": "openai_api_key",
                 "password": true,
@@ -413,7 +359,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "OPENAI_API_KEY"
+                "value": ""
               },
               "stream": {
                 "advanced": true,
@@ -432,7 +378,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "bool",
-                "value": true
+                "value": false
               },
               "system_message": {
                 "advanced": true,
@@ -441,9 +387,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "System message to pass to the model.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -485,8 +429,8 @@
           "type": "OpenAIModel"
         },
         "dragging": false,
-        "height": 563,
-        "id": "OpenAIModel-k39HS",
+        "height": 571,
+        "id": "OpenAIModel-NDBjF",
         "position": {
           "x": 634.8148772766217,
           "y": 27.035057029045305
@@ -501,14 +445,9 @@
       },
       {
         "data": {
-          "id": "ChatOutput-njtka",
+          "id": "ChatOutput-JkVmc",
           "node": {
-            "base_classes": [
-              "Record",
-              "Text",
-              "str",
-              "object"
-            ],
+            "base_classes": ["Record", "Text", "str", "object"],
             "beta": false,
             "custom_fields": {
               "input_value": null,
@@ -525,10 +464,7 @@
             "field_order": [],
             "frozen": false,
             "icon": "ChatOutput",
-            "output_types": [
-              "Message",
-              "Text"
-            ],
+            "output_types": ["Message", "Text"],
             "template": {
               "_type": "CustomComponent",
               "code": {
@@ -556,9 +492,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -577,17 +511,12 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
+                "options": ["Machine", "User"],
                 "password": false,
                 "placeholder": "",
                 "required": false,
@@ -603,9 +532,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -625,9 +552,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "If provided, the message will be stored in the memory.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -644,15 +569,15 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "height": 383,
-        "id": "ChatOutput-njtka",
+        "height": 391,
+        "id": "ChatOutput-JkVmc",
         "position": {
-          "x": 1193.250417197867,
-          "y": 71.88476890163852
+          "x": 1183.52086970399,
+          "y": -21.518887039580306
         },
         "positionAbsolute": {
-          "x": 1193.250417197867,
-          "y": 71.88476890163852
+          "x": 1183.52086970399,
+          "y": -21.518887039580306
         },
         "selected": false,
         "type": "genericNode",
@@ -660,18 +585,14 @@
       },
       {
         "data": {
-          "id": "ChatInput-P3fgL",
+          "id": "ChatInput-kltLA",
           "node": {
-            "base_classes": [
-              "object",
-              "Record",
-              "str",
-              "Text"
-            ],
+            "base_classes": ["Message", "object", "str", "Text"],
             "beta": false,
             "custom_fields": {
+              "files": null,
               "input_value": null,
-              "return_record": null,
+              "return_message": null,
               "sender": null,
               "sender_name": null,
               "session_id": null
@@ -683,10 +604,7 @@
             "field_order": [],
             "frozen": false,
             "icon": "ChatInput",
-            "output_types": [
-              "Message",
-              "Text"
-            ],
+            "output_types": ["Message", "Text"],
             "template": {
               "_type": "CustomComponent",
               "code": {
@@ -705,7 +623,49 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from typing import Optional\n\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.schema.message import Message\nfrom langflow.field_typing import Text\nfrom typing import Union\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    icon = \"ChatInput\"\n\n    def build_config(self):\n        build_config = super().build_config()\n        build_config[\"input_value\"] = {\n            \"input_types\": [],\n            \"display_name\": \"Text\",\n            \"multiline\": True,\n        }\n\n        return build_config\n\n    def build(\n        self,\n        sender: Optional[str] = \"User\",\n        sender_name: Optional[str] = \"User\",\n        input_value: Optional[str] = None,\n        files: Optional[list[str]] = None,\n        session_id: Optional[str] = None,\n        return_message: Optional[bool] = False,\n    ) -> Union[Message, Text]:\n        return super().build_with_record(\n            sender=sender,\n            sender_name=sender_name,\n            input_value=input_value,\n            files=files,\n            session_id=session_id,\n            return_message=return_message,\n        )\n"
+                "value": "from typing import Optional\n\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.schema.message import Message\nfrom langflow.field_typing import Text\nfrom typing import Union\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    icon = \"ChatInput\"\n\n    def build_config(self):\n        build_config = super().build_config()\n        build_config[\"input_value\"] = {\n            \"input_types\": [],\n            \"display_name\": \"Text\",\n            \"multiline\": True,\n        }\n        build_config[\"return_message\"] = {\n            \"display_name\": \"Return Record\",\n            \"advanced\": True,\n        }\n\n        return build_config\n\n    def build(\n        self,\n        sender: Optional[str] = \"User\",\n        sender_name: Optional[str] = \"User\",\n        input_value: Optional[str] = None,\n        files: Optional[list[str]] = None,\n        session_id: Optional[str] = None,\n        return_message: Optional[bool] = True,\n    ) -> Union[Message, Text]:\n        return super().build_with_record(\n            sender=sender,\n            sender_name=sender_name,\n            input_value=input_value,\n            files=files,\n            session_id=session_id,\n            return_message=return_message,\n        )\n"
+              },
+              "files": {
+                "advanced": true,
+                "display_name": "Files",
+                "dynamic": false,
+                "fileTypes": [
+                  ".txt",
+                  ".md",
+                  ".mdx",
+                  ".csv",
+                  ".json",
+                  ".yaml",
+                  ".yml",
+                  ".xml",
+                  ".html",
+                  ".htm",
+                  ".pdf",
+                  ".docx",
+                  ".py",
+                  ".sh",
+                  ".sql",
+                  ".js",
+                  ".ts",
+                  ".tsx",
+                  ".jpg",
+                  ".jpeg",
+                  ".png",
+                  ".bmp"
+                ],
+                "file_path": "",
+                "info": "Files to be sent with the message.",
+                "list": false,
+                "load_from_db": false,
+                "multiline": false,
+                "name": "files",
+                "password": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "file",
+                "value": ""
               },
               "input_value": {
                 "advanced": false,
@@ -725,7 +685,26 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "hi"
+                "value": "what do you see?"
+              },
+              "return_message": {
+                "advanced": true,
+                "display_name": "Return Record",
+                "dynamic": false,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": false,
+                "name": "return_message",
+                "password": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "bool",
+                "value": true
               },
               "sender": {
                 "advanced": true,
@@ -734,17 +713,12 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
+                "options": ["Machine", "User"],
                 "password": false,
                 "placeholder": "",
                 "required": false,
@@ -754,15 +728,13 @@
                 "value": "User"
               },
               "sender_name": {
-                "advanced": false,
+                "advanced": true,
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -782,9 +754,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "If provided, the message will be stored in the memory.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -801,30 +771,30 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "height": 375,
-        "id": "ChatInput-P3fgL",
+        "height": 289,
+        "id": "ChatInput-kltLA",
         "position": {
-          "x": -495.2223093083827,
-          "y": -232.56998443685862
+          "x": -560.3246254009209,
+          "y": -435.0506368105706
         },
         "positionAbsolute": {
-          "x": -495.2223093083827,
-          "y": -232.56998443685862
+          "x": -560.3246254009209,
+          "y": -435.0506368105706
         },
-        "selected": false,
+        "selected": true,
         "type": "genericNode",
         "width": 384
       }
     ],
     "viewport": {
-      "x": 260.58251815500563,
-      "y": 318.2261172111936,
-      "zoom": 0.43514115784696294
+      "x": 223.38563623650703,
+      "y": 271.96191180648566,
+      "zoom": 0.5138985141032123
     }
   },
   "description": "This flow will get you experimenting with the basics of the UI, the Chat and the Prompt component. \n\nTry changing the Template in it to see how the model behaves. \nYou can change it to this and a Text Input into the `type_of_person` variable : \"Answer the user as if you were a pirate.\n\nUser: {user_input}\n\nAnswer: \" ",
-  "id": "c091a57f-43a7-4a5e-b352-035ae8d8379c",
+  "id": "ad43b14f-6ec7-496f-9564-aad928603084",
   "is_component": false,
-  "last_tested_version": "1.0.0a4",
+  "last_tested_version": "1.0.0a52",
   "name": "Basic Prompting (Hello, World)"
 }

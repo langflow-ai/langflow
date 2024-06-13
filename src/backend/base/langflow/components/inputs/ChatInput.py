@@ -18,6 +18,10 @@ class ChatInput(ChatComponent):
             "display_name": "Text",
             "multiline": True,
         }
+        build_config["return_message"] = {
+            "display_name": "Return Record",
+            "advanced": True,
+        }
 
         return build_config
 
@@ -28,7 +32,7 @@ class ChatInput(ChatComponent):
         input_value: Optional[str] = None,
         files: Optional[list[str]] = None,
         session_id: Optional[str] = None,
-        return_message: Optional[bool] = False,
+        return_message: Optional[bool] = True,
     ) -> Union[Message, Text]:
         return super().build_with_record(
             sender=sender,

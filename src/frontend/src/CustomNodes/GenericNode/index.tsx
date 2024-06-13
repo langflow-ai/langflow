@@ -1,5 +1,6 @@
 import emojiRegex from "emoji-regex";
 import { useEffect, useMemo, useState } from "react";
+import { useHotkeys } from "react-hotkeys-hook";
 import Markdown from "react-markdown";
 import { NodeToolbar, useUpdateNodeInternals } from "reactflow";
 import IconComponent from "../../components/genericIconComponent";
@@ -38,7 +39,6 @@ import useValidationStatusString from "../hooks/use-validation-status-string";
 import getFieldTitle from "../utils/get-field-title";
 import sortFields from "../utils/sort-fields";
 import ParameterComponent from "./components/parameterComponent";
-import { useHotkeys } from "react-hotkeys-hook";
 
 export default function GenericNode({
   data,
@@ -411,8 +411,8 @@ export default function GenericNode({
                     .filter((templateField) => templateField.charAt(0) !== "_")
                     .map(
                       (templateField: string, idx) =>
-                        data.node!.template[templateField].show &&
-                        !data.node!.template[templateField].advanced && (
+                        data.node!.template[templateField]?.show &&
+                        !data.node!.template[templateField]?.advanced && (
                           <ParameterComponent
                             selected={selected}
                             index={idx.toString()}
@@ -670,8 +670,8 @@ export default function GenericNode({
                 .sort((a, b) => sortFields(a, b, data.node?.field_order ?? []))
                 .map((templateField: string, idx) => (
                   <div key={idx}>
-                    {data.node!.template[templateField].show &&
-                    !data.node!.template[templateField].advanced ? (
+                    {data.node!.template[templateField]?.show &&
+                    !data.node!.template[templateField]?.advanced ? (
                       <ParameterComponent
                         selected={selected}
                         index={idx.toString()}

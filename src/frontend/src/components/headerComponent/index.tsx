@@ -37,6 +37,7 @@ export default function Header(): JSX.Element {
   const location = useLocation();
 
   const { logout, autoLogin, isAdmin, userData } = useContext(AuthContext);
+
   const navigate = useNavigate();
   const removeFlow = useFlowsManagerStore((store) => store.removeFlow);
   const hasStore = useStoreStore((state) => state.hasStore);
@@ -207,7 +208,7 @@ export default function Header(): JSX.Element {
                         0,
                         BACKEND_URL.length - 1,
                       )}${BASE_URL_API}files/profile_pictures/${
-                        userData?.profile_image ?? "Space/046-rocket.png"
+                        userData?.profile_image ?? "Space/046-rocket.svg"
                       }` ?? profileCircle
                     }
                     className="h-7 w-7 shrink-0 focus-visible:outline-0"
@@ -225,7 +226,7 @@ export default function Header(): JSX.Element {
                               0,
                               BACKEND_URL.length - 1,
                             )}${BASE_URL_API}files/profile_pictures/${
-                              userData?.profile_image
+                              userData?.profile_image ?? "Space/046-rocket.svg"
                             }` ?? profileCircle
                           }
                           className="h-5 w-5 focus-visible:outline-0 "
