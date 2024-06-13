@@ -1,6 +1,6 @@
 from typing import Callable, Optional, Union
 
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from langflow.inputs.validators import StrictBoolean
 
@@ -14,6 +14,17 @@ from .input_mixin import (
     RangeMixin,
     SerializableFieldTypes,
 )
+
+
+class HandleInput(BaseInputMixin):
+    input_types: list[str] = Field(default_factory=list)
+    field_type: Optional[str] = ""
+
+    @model_validator(mode="after")
+    def validate_model_type(self):
+        # FieldType should be a string
+        self.field_type = " | ".join(self.input_types)
+        return self
 
 
 class PromptInput(BaseInputMixin, ListableInputMixin):
@@ -83,4 +94,5 @@ InputTypes = Union[
     FileInput,
     PromptInput,
     MultilineInput,
+    HandleInput,
 ]
