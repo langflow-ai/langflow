@@ -98,10 +98,15 @@ class Component(CustomComponent):
                         raw = self.status
                         if hasattr(raw, "data") and raw is not None:
                             raw = raw.data
+                        if raw is None:
+                            raw = custom_repr
 
                         elif hasattr(raw, "model_dump") and raw is not None:
                             raw = raw.model_dump()
-                        artifact_type = get_artifact_type(self.status, result)
+                        if raw is None and isinstance(result, (dict, Data, str)):
+                            raw = result.data if isinstance(result, Data) else result
+
+                        artifact_type = get_artifact_type(self.repr_value or raw, result)
                         raw = post_process_raw(raw, artifact_type)
                         artifact = {"repr": custom_repr, "raw": raw, "type": artifact_type}
                         _artifacts[output.name] = artifact
@@ -110,21 +115,15 @@ class Component(CustomComponent):
         return _results, _artifacts
 
     def custom_repr(self):
-        # ! Temporary REPR
-        # Since all are dict, yaml.dump them
-        if isinstance(self._results, dict):
-            _build_results = recursive_serialize_or_str(self._results)
-            try:
-                custom_repr = yaml.dump(_build_results)
-            except Exception as e:
-                logger.error(f"Error while dumping build_result: {e}")
-                custom_repr = str(self._results)
-
-        if custom_repr is None and isinstance(self._results, (dict, Data, str)):
-            custom_repr = self._results
-        if not isinstance(custom_repr, str):
-            custom_repr = str(custom_repr)
-        return custom_repr
+        if self.repr_value == "":
+            self.repr_value = self.status
+        if isinstance(self.repr_value, dict):
+            return yaml.dump(self.repr_value)
+        if isinstance(self.repr_value, str):
+            return self.repr_value
+        if isinstance(self.repr_value, BaseModel) and not isinstance(self.repr_value, Data):
+            return str(self.repr_value)
+        return self.repr_value
 
     def build_inputs(self, user_id: Optional[Union[str, UUID]] = None):
         """
