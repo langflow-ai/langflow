@@ -241,7 +241,7 @@ class Vertex:
 
             if "type" in value_dict:
                 list_to_append.append(value_dict["type"])
-            elif "input_types" in value_dict:
+            if "input_types" in value_dict:
                 list_to_append.extend(value_dict["input_types"])
 
         template_dict = self.data["node"]["template"]
