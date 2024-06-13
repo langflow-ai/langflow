@@ -1,20 +1,28 @@
 from typing import List
 
 from langflow.custom import Component
-from langflow.inputs import StrInput
+from langflow.inputs import StrInput, HandleInput
 from langflow.schema import Data
-from langflow.template import Input, Output
+from langflow.template import Output
 
 
 class FilterDataComponent(Component):
-    display_name = "Filter Message"
-    description = "Filters a Message object based on a list of strings."
+    display_name = "Filter Data"
+    description = "Filters a Data object based on a list of keys."
     icon = "filter"
 
     inputs = [
-        Input(name="message", display_name="Message", info="Message object to filter.", input_types=["Message"]),
+        HandleInput(
+            name="data",
+            display_name="Data",
+            info="Data object to filter.",
+            input_types=["Message", "Data"],
+        ),
         StrInput(
-            name="filter_criteria", display_name="Filter Criteria", info="List of strings to filter by.", is_list=True
+            name="filter_criteria",
+            display_name="Filter Criteria",
+            info="List of keys to filter by.",
+            is_list=True,
         ),
     ]
 
@@ -24,10 +32,12 @@ class FilterDataComponent(Component):
 
     def filter_data(self) -> Data:
         filter_criteria: List[str] = self.filter_criteria
+        data = self.data.data if isinstance(self.data, Data) else {}
 
         # Filter the data
-        filtered = {key: value for key, value in self.message.data.items() if key == filter_criteria}
+        filtered = {key: value for key, value in data.items() if key in filter_criteria}
 
         # Create a new Data object with the filtered data
-        self.status = filtered
-        return filtered
+        filtered_data = Data(data=filtered)
+        self.status = filtered_data
+        return filtered_data
