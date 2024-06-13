@@ -1,7 +1,5 @@
 import json
 
-from cachetools import TTLCache, cached
-
 from langflow.custom.utils import abuild_custom_components, build_custom_components
 
 
@@ -23,7 +21,6 @@ def key_func(*args, **kwargs):
     return json.dumps(args) + json.dumps(kwargs)
 
 
-@cached(cache=TTLCache(maxsize=1, ttl=15), key=key_func)
 async def aget_all_components(components_paths, as_dict=False):
     """Get all components names combining native and custom components."""
     all_types_dict = await aget_all_types_dict(components_paths)
