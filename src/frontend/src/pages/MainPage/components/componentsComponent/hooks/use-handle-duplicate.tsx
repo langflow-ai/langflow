@@ -12,16 +12,16 @@ const useDuplicateFlows = (
   setSuccessData,
   setSelectedFlowsComponentsCards,
   handleSelectAll,
-  cardTypes,
+  cardTypes
 ) => {
   const handleDuplicate = useCallback(() => {
     Promise.all(
       selectedFlowsComponentsCards.map((selectedFlow) =>
         addFlow(
           true,
-          allFlows.find((flow) => flow.id === selectedFlow),
-        ),
-      ),
+          allFlows.find((flow) => flow.id === selectedFlow)
+        )
+      )
     ).then(() => {
       resetFilter();
       getFoldersApi(true);

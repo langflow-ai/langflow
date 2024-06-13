@@ -9,7 +9,7 @@ const snErrorTxt = "png, jpg, jpeg";
 export const useHandleFileChange = (setFiles, currentFlowId) => {
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const handleFileChange = async (
-    event: React.ChangeEvent<HTMLInputElement>,
+    event: React.ChangeEvent<HTMLInputElement>
   ) => {
     const fileInput = event.target;
     const file = fileInput.files?.[0];

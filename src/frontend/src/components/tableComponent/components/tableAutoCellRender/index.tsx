@@ -30,7 +30,7 @@ export default function TableAutoCellRender({
               variant="outline"
               size="sq"
               className={cn(
-                "min-w-min bg-success-background text-success-foreground hover:bg-success-background",
+                "min-w-min bg-success-background text-success-foreground hover:bg-success-background"
               )}
             >
               {value}
