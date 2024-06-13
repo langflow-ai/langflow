@@ -220,10 +220,11 @@ export default function ParameterComponent({
     );
   }
 
-  // If optionalHandle is an empty list, then it is not an optional handle
-  if (optionalHandle && optionalHandle.length === 0) {
-    optionalHandle = null;
-  }
+  useEffect(() => {
+    if (optionalHandle && optionalHandle.length === 0) {
+      optionalHandle = null;
+    }
+  }, [optionalHandle]);
 
   const handleUpdateOutputHide = (value?: boolean) => {
     setNode(data.id, (oldNode) => {
