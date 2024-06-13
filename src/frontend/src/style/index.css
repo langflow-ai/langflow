@@ -32,6 +32,7 @@
 
     --error-background: #fef2f2;
     --error-foreground: #991b1b;
+    --error: #991b1b;
 
     --success-background: #f0fdf4;
     --success-foreground: #14532d;
@@ -111,6 +112,7 @@
 
     --error-foreground: #fef2f2;
     --error-background: #450a0a;
+    --error: #991b1b;
 
     --info-foreground: #eff6ff;
     --info-background: #172554;
