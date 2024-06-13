@@ -69,14 +69,14 @@ export default function GenericNode({
   const [nodeName, setNodeName] = useState(data.node!.display_name);
   const [inputDescription, setInputDescription] = useState(false);
   const [nodeDescription, setNodeDescription] = useState(
-    data.node?.description!
+    data.node?.description!,
   );
   const [isOutdated, setIsOutdated] = useState(false);
   const buildStatus = useFlowStore(
-    (state) => state.flowBuildStatus[data.id]?.status
+    (state) => state.flowBuildStatus[data.id]?.status,
   );
   const lastRunTime = useFlowStore(
-    (state) => state.flowBuildStatus[data.id]?.timestamp
+    (state) => state.flowBuildStatus[data.id]?.timestamp,
   );
   const [validationStatus, setValidationStatus] =
     useState<VertexBuildTypeAPI | null>(null);
@@ -93,7 +93,7 @@ export default function GenericNode({
     data.node!,
     setNode,
     setIsOutdated,
-    updateNodeInternals
+    updateNodeInternals,
   );
 
   const name = nodeIconsLucide[data.type] ? data.type : types[data.type];
@@ -120,12 +120,12 @@ export default function GenericNode({
     selected: boolean,
     showNode: boolean,
     buildStatus: BuildStatus | undefined,
-    validationStatus: VertexBuildTypeAPI | null
+    validationStatus: VertexBuildTypeAPI | null,
   ) => {
     const specificClassFromBuildStatus = getSpecificClassFromBuildStatus(
       buildStatus,
       validationStatus,
-      isDark
+      isDark,
     );
 
     const baseBorderClass = getBaseBorderClass(selected);
@@ -134,7 +134,7 @@ export default function GenericNode({
       baseBorderClass,
       nodeSizeClass,
       "generic-node-div group/node",
-      specificClassFromBuildStatus
+      specificClassFromBuildStatus,
     );
     return names;
   };
@@ -179,7 +179,7 @@ export default function GenericNode({
     showNode,
     isEmoji,
     nodeIconFragment,
-    checkNodeIconFragment
+    checkNodeIconFragment,
   );
 
   function countHandles(): void {
@@ -356,7 +356,7 @@ export default function GenericNode({
           selected,
           showNode,
           buildStatus,
-          validationStatus
+          validationStatus,
         )}
       >
         {data.node?.beta && showNode && (
@@ -503,7 +503,7 @@ export default function GenericNode({
                             }
                             title={getFieldTitle(
                               data.node?.template!,
-                              templateField
+                              templateField,
                             )}
                             info={data.node?.template[templateField].info}
                             name={templateField}
@@ -531,7 +531,7 @@ export default function GenericNode({
                             proxy={data.node?.template[templateField].proxy}
                             showNode={showNode}
                           />
-                        )
+                        ),
                     )}
                   {/* <ParameterComponent
                     index={0}
@@ -634,7 +634,7 @@ export default function GenericNode({
                   ? "pb-8"
                   : "pb-8 pt-5"
                 : "",
-              "relative"
+              "relative",
             )}
           >
             {/* increase height!! */}
@@ -691,7 +691,7 @@ export default function GenericNode({
                       !data.node?.description) &&
                       nameEditable
                       ? "font-light italic"
-                      : ""
+                      : "",
                   )}
                   onDoubleClick={(e) => {
                     setInputDescription(true);
@@ -760,13 +760,13 @@ export default function GenericNode({
                         }
                         title={getFieldTitle(
                           data.node?.template!,
-                          templateField
+                          templateField,
                         )}
                         info={data.node?.template[templateField].info}
                         name={templateField}
                         tooltipTitle={
                           data.node?.template[templateField].input_types?.join(
-                            "\n"
+                            "\n",
                           ) ?? data.node?.template[templateField].type
                         }
                         required={data.node!.template[templateField].required}
@@ -793,7 +793,7 @@ export default function GenericNode({
               <div
                 className={classNames(
                   Object.keys(data.node!.template).length < 1 ? "hidden" : "",
-                  "flex-max-width justify-center"
+                  "flex-max-width justify-center",
                 )}
               >
                 {" "}
@@ -804,9 +804,9 @@ export default function GenericNode({
                   renderOutputParameter(
                     output,
                     data.node!.outputs?.findIndex(
-                      (out) => out.name === output.name
-                    ) ?? idx
-                  )
+                      (out) => out.name === output.name,
+                    ) ?? idx,
+                  ),
                 )}
               <div
                 className={cn(showHiddenOutputs ? "" : "h-0 overflow-hidden")}
@@ -817,9 +817,9 @@ export default function GenericNode({
                       renderOutputParameter(
                         output,
                         data.node!.outputs?.findIndex(
-                          (out) => out.name === output.name
-                        ) ?? idx
-                      )
+                          (out) => out.name === output.name,
+                        ) ?? idx,
+                      ),
                     )}
                 </div>
               </div>
@@ -830,7 +830,7 @@ export default function GenericNode({
                     (shownOutputs && shownOutputs.length > 0) ||
                       showHiddenOutputs
                       ? "bottom-5"
-                      : "bottom-1.5"
+                      : "bottom-1.5",
                   )}
                 >
                   <Button
@@ -843,8 +843,8 @@ export default function GenericNode({
                       name={"ChevronDown"}
                       strokeWidth={1.5}
                       className={cn(
-                        "h-5 w-5 pt-px text-muted-foreground transition-all group-hover:text-medium-indigo group-hover/node:opacity-100",
-                        showHiddenOutputs ? "rotate-180 transform" : ""
+                        "h-5 w-5 pt-px text-muted-foreground group-hover:text-medium-indigo group-hover/node:opacity-100",
+                        showHiddenOutputs ? "rotate-180 transform" : "",
                       )}
                     />
                   </Button>
