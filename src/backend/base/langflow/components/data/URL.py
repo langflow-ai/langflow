@@ -1,27 +1,33 @@
-from typing import Any, Dict
-
+from langflow.custom import Component
+from langflow.inputs import StrInput
+from langflow.template import Output
+from langflow.schema import Data
 from langchain_community.document_loaders.web_base import WebBaseLoader
 
-from langflow.custom import CustomComponent
-from langflow.schema import Data
 
-
-class URLComponent(CustomComponent):
+class URLComponent(Component):
     display_name = "URL"
     description = "Fetch content from one or more URLs."
     icon = "layout-template"
 
-    def build_config(self) -> Dict[str, Any]:
-        return {
-            "urls": {"display_name": "URL"},
-        }
+    inputs = [
+        StrInput(
+            name="urls",
+            display_name="URLs",
+            info="Enter one or more URLs, separated by commas.",
+            value="",
+            is_list=True,
+        ),
+    ]
 
-    def build(
-        self,
-        urls: list[str],
-    ) -> list[Data]:
-        loader = WebBaseLoader(web_paths=[url for url in urls if url])
+    outputs = [
+        Output(display_name="Data", name="data", method="fetch_content"),
+    ]
+
+    def fetch_content(self) -> Data:
+        urls = [url.strip() for url in self.urls if url.strip()]
+        loader = WebBaseLoader(web_paths=urls)
         docs = loader.load()
-        data = self.to_data(docs)
+        data = [Data(content=doc.page_content) for doc in docs]
         self.status = data
         return data

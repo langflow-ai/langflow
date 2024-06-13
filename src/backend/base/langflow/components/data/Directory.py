@@ -1,55 +1,80 @@
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 
 from langflow.base.data.utils import parallel_load_data, parse_text_file_to_data, retrieve_file_paths
-from langflow.custom import CustomComponent
+from langflow.custom import Component
+from langflow.inputs import StrInput, IntInput, BoolInput
+from langflow.template import Output
 from langflow.schema import Data
 
 
-class DirectoryComponent(CustomComponent):
+class DirectoryComponent(Component):
     display_name = "Directory"
     description = "Recursively load files from a directory."
     icon = "folder"
 
-    def build_config(self) -> Dict[str, Any]:
-        return {
-            "path": {"display_name": "Path"},
-            "types": {
-                "display_name": "Types",
-                "info": "File types to load. Leave empty to load all types.",
-            },
-            "depth": {"display_name": "Depth", "info": "Depth to search for files."},
-            "max_concurrency": {"display_name": "Max Concurrency", "advanced": True},
-            "load_hidden": {
-                "display_name": "Load Hidden",
-                "advanced": True,
-                "info": "If true, hidden files will be loaded.",
-            },
-            "recursive": {
-                "display_name": "Recursive",
-                "advanced": True,
-                "info": "If true, the search will be recursive.",
-            },
-            "silent_errors": {
-                "display_name": "Silent Errors",
-                "advanced": True,
-                "info": "If true, errors will not raise an exception.",
-            },
-            "use_multithreading": {
-                "display_name": "Use Multithreading",
-                "advanced": True,
-            },
-        }
+    inputs = [
+        StrInput(
+            name="path",
+            display_name="Path",
+            info="Path to the directory to load files from.",
+        ),
+        StrInput(
+            name="types",
+            display_name="Types",
+            info="File types to load. Leave empty to load all types.",
+        ),
+        IntInput(
+            name="depth",
+            display_name="Depth",
+            info="Depth to search for files.",
+            value=0,
+        ),
+        IntInput(
+            name="max_concurrency",
+            display_name="Max Concurrency",
+            advanced=True,
+            info="Maximum concurrency for loading files.",
+            value=2,
+        ),
+        BoolInput(
+            name="load_hidden",
+            display_name="Load Hidden",
+            advanced=True,
+            info="If true, hidden files will be loaded.",
+        ),
+        BoolInput(
+            name="recursive",
+            display_name="Recursive",
+            advanced=True,
+            info="If true, the search will be recursive.",
+        ),
+        BoolInput(
+            name="silent_errors",
+            display_name="Silent Errors",
+            advanced=True,
+            info="If true, errors will not raise an exception.",
+        ),
+        BoolInput(
+            name="use_multithreading",
+            display_name="Use Multithreading",
+            advanced=True,
+            info="If true, multithreading will be used.",
+        ),
+    ]
 
-    def build(
-        self,
-        path: str,
-        depth: int = 0,
-        max_concurrency: int = 2,
-        load_hidden: bool = False,
-        recursive: bool = True,
-        silent_errors: bool = False,
-        use_multithreading: bool = True,
-    ) -> List[Optional[Data]]:
+    outputs = [
+        Output(display_name="Data", name="data", method="load_directory"),
+    ]
+
+    def load_directory(self) -> List[Optional[Data]]:
+        path = self.path
+        depth = self.depth
+        max_concurrency = self.max_concurrency
+        load_hidden = self.load_hidden
+        recursive = self.recursive
+        silent_errors = self.silent_errors
+        use_multithreading = self.use_multithreading
+
         resolved_path = self.resolve_path(path)
         file_paths = retrieve_file_paths(resolved_path, load_hidden, recursive, depth)
         loaded_data = []

@@ -1,56 +1,66 @@
 import asyncio
 import json
-from typing import Any, List, Optional
+from typing import List, Optional
 
 import httpx
 from loguru import logger
 
 from langflow.base.curl.parse import parse_context
-from langflow.custom import CustomComponent
-from langflow.field_typing import NestedDict
+from langflow.custom import Component
+from langflow.inputs import StrInput, DropdownInput, NestedDictInput, IntInput
 from langflow.schema import Data
-from langflow.schema.dotdict import dotdict
+from langflow.template import Output
 
 
-class APIRequest(CustomComponent):
-    display_name: str = "API Request"
-    description: str = "Make HTTP requests given one or more URLs."
-    output_types: list[str] = ["Data"]
-    documentation: str = "https://docs.langflow.org/components/utilities#api-request"
+class APIRequestComponent(Component):
+    display_name = "API Request"
+    description = "Make HTTP requests given one or more URLs."
     icon = "Globe"
 
-    field_config = {
-        "urls": {"display_name": "URLs", "info": "URLs to make requests to."},
-        "curl": {
-            "display_name": "Curl",
-            "info": "Paste a curl command to populate the fields.",
-            "refresh_button": True,
-            "refresh_button_text": "",
-        },
-        "method": {
-            "display_name": "Method",
-            "info": "The HTTP method to use.",
-            "options": ["GET", "POST", "PATCH", "PUT"],
-            "value": "GET",
-        },
-        "headers": {
-            "display_name": "Headers",
-            "info": "The headers to send with the request.",
-            "input_types": ["Data"],
-        },
-        "body": {
-            "display_name": "Body",
-            "info": "The body to send with the request (for POST, PATCH, PUT).",
-            "input_types": ["Data"],
-        },
-        "timeout": {
-            "display_name": "Timeout",
-            "info": "The timeout to use for the request.",
-            "value": 5,
-        },
-    }
+    inputs = [
+        StrInput(
+            name="urls",
+            display_name="URLs",
+            multiline=True,
+            info="Enter one or more URLs, separated by commas.",
+        ),
+        StrInput(
+            name="curl",
+            display_name="Curl",
+            info="Paste a curl command to populate the fields.",
+            advanced=True,
+        ),
+        DropdownInput(
+            name="method",
+            display_name="Method",
+            options=["GET", "POST", "PATCH", "PUT"],
+            value="GET",
+            info="The HTTP method to use.",
+        ),
+        NestedDictInput(
+            name="headers",
+            display_name="Headers",
+            info="The headers to send with the request.",
+        ),
+        NestedDictInput(
+            name="body",
+            display_name="Body",
+            info="The body to send with the request (for POST, PATCH, PUT).",
+        ),
+        IntInput(
+            name="timeout",
+            display_name="Timeout",
+            value=5,
+            info="The timeout to use for the request.",
+        ),
+    ]
 
-    def parse_curl(self, curl: str, build_config: dotdict) -> dotdict:
+    outputs = [
+        Output(display_name="Data", name="data", method="make_requests"),
+    ]
+
+    def parse_curl(self, curl: str):
+        build_config = self._build_config()
         try:
             parsed = parse_context(curl)
             build_config["urls"]["value"] = [parsed.url]
@@ -61,15 +71,10 @@ class APIRequest(CustomComponent):
                 json_data = json.loads(parsed.data)
                 build_config["body"]["value"] = json_data
             except json.JSONDecodeError as e:
-                print(e)
+                logger.error(e)
         except Exception as exc:
             logger.error(f"Error parsing curl: {exc}")
             raise ValueError(f"Error parsing curl: {exc}")
-        return build_config
-
-    def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
-        if field_name == "curl" and field_value is not None:
-            build_config = self.parse_curl(field_value, build_config)
         return build_config
 
     async def make_request(
@@ -120,18 +125,18 @@ class APIRequest(CustomComponent):
                 },
             )
 
-    async def build(
-        self,
-        method: str,
-        urls: List[str],
-        curl: Optional[str] = None,
-        headers: Optional[NestedDict] = {},
-        body: Optional[NestedDict] = {},
-        timeout: int = 5,
-    ) -> List[Data]:
-        if headers is None:
-            headers_dict = {}
-        elif isinstance(headers, Data):
+    async def make_requests(self) -> List[Data]:
+        method = self.method
+        urls = [url.strip() for url in self.urls.split(",") if url.strip()]
+        curl = self.curl
+        headers = self.headers or {}
+        body = self.body or {}
+        timeout = self.timeout
+
+        if curl:
+            self._build_config = self.parse_curl(curl)
+
+        if isinstance(headers, Data):
             headers_dict = headers.data
         else:
             headers_dict = headers
@@ -142,11 +147,11 @@ class APIRequest(CustomComponent):
                 bodies = [body]
             else:
                 bodies = body
-            bodies = [b.data if isinstance(b, Data) else b for b in bodies]  # type: ignore
+            bodies = [b.data if isinstance(b, Data) else b for b in bodies]
 
         if len(urls) != len(bodies):
-            # add bodies with None
-            bodies += [None] * (len(urls) - len(bodies))  # type: ignore
+            bodies += [None] * (len(urls) - len(bodies))
+
         async with httpx.AsyncClient() as client:
             results = await asyncio.gather(
                 *[self.make_request(client, method, u, headers_dict, rec, timeout) for u, rec in zip(urls, bodies)]

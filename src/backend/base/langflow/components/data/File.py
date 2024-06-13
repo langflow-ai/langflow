@@ -1,48 +1,46 @@
 from pathlib import Path
-from typing import Any, Dict
-
-from langflow.base.data.utils import TEXT_FILE_TYPES, parse_text_file_to_data
-from langflow.custom import CustomComponent
+from langflow.custom import Component
+from langflow.inputs import FileInput, BoolInput
+from langflow.template import Output
 from langflow.schema import Data
+from langflow.base.data.utils import TEXT_FILE_TYPES, parse_text_file_to_data
 
 
-class FileComponent(CustomComponent):
+class FileComponent(Component):
     display_name = "File"
     description = "A generic file loader."
     icon = "file-text"
 
-    def build_config(self) -> Dict[str, Any]:
-        return {
-            "path": {
-                "display_name": "Path",
-                "field_type": "file",
-                "file_types": TEXT_FILE_TYPES,
-                "info": f"Supported file types: {', '.join(TEXT_FILE_TYPES)}",
-            },
-            "silent_errors": {
-                "display_name": "Silent Errors",
-                "advanced": True,
-                "info": "If true, errors will not raise an exception.",
-            },
-        }
+    inputs = [
+        FileInput(
+            name="path",
+            display_name="Path",
+            info=f"Supported file types: {', '.join(TEXT_FILE_TYPES)}",
+        ),
+        BoolInput(
+            name="silent_errors",
+            display_name="Silent Errors",
+            advanced=True,
+            info="If true, errors will not raise an exception.",
+        ),
+    ]
 
-    def load_file(self, path: str, silent_errors: bool = False) -> Data:
-        resolved_path = self.resolve_path(path)
-        path_obj = Path(resolved_path)
-        extension = path_obj.suffix[1:].lower()
+    outputs = [
+        Output(display_name="Data", name="data", method="load_file"),
+    ]
+
+    def load_file(self) -> Data:
+        path = self.path
+        silent_errors = self.silent_errors
+
+        resolved_path = Path(path).resolve()
+        extension = resolved_path.suffix[1:].lower()
+
         if extension == "doc":
             raise ValueError("doc files are not supported. Please save as .docx")
         if extension not in TEXT_FILE_TYPES:
             raise ValueError(f"Unsupported file type: {extension}")
-        record = parse_text_file_to_data(resolved_path, silent_errors)
-        self.status = record if record else "No data"
-        return record or Data()
 
-    def build(
-        self,
-        path: str,
-        silent_errors: bool = False,
-    ) -> Data:
-        record = self.load_file(path, silent_errors)
-        self.status = record
-        return record
+        data = parse_text_file_to_data(resolved_path, silent_errors)
+        self.status = data if data else "No data"
+        return data or Data()
