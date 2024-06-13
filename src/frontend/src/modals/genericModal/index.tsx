@@ -98,8 +98,14 @@ export default function GenericModal({
   useEffect(() => {
     setInputValue(value);
   }, [value, modalOpen]);
-  const coloredContent = (inputValue || "")
-    ?.toString()
+  let coloredContent = inputValue || "";
+  // Check if coloredContent is a string
+  // calling toString on undefined will throw an error
+  // so we need to check if it is a string first
+  if (typeof coloredContent !== "string") {
+    coloredContent = "";
+  }
+  coloredContent
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(regexHighlight, (match, p1, p2) => {
