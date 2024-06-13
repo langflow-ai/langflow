@@ -58,6 +58,7 @@ jobs:
           tags: ${{ needs.setup.outputs.base_tags }}
 
   build_components:
+    if: ${{ inputs.release_type == 'main' }}
     runs-on: ubuntu-latest
     needs: build_base
     strategy:
