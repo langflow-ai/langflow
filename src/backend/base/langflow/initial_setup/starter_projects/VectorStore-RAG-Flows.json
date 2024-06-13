@@ -5,14 +5,23 @@
         "className": "stroke-gray-900 stroke-connection",
         "data": {
           "sourceHandle": {
-            "baseClasses": ["object", "Text", "str"],
+            "baseClasses": [
+              "object",
+              "Text",
+              "str"
+            ],
             "dataType": "TextOutput",
             "id": "TextOutput-BDknO"
           },
           "targetHandle": {
             "fieldName": "context",
             "id": "Prompt-xeI6K",
-            "inputTypes": ["Document", "BaseOutputParser", "Record", "Text"],
+            "inputTypes": [
+              "Document",
+              "BaseOutputParser",
+              "Record",
+              "Text"
+            ],
             "type": "str"
           }
         },
@@ -30,14 +39,24 @@
         "className": "stroke-gray-900 stroke-connection",
         "data": {
           "sourceHandle": {
-            "baseClasses": ["Text", "str", "object", "Record"],
+            "baseClasses": [
+              "Text",
+              "str",
+              "object",
+              "Record"
+            ],
             "dataType": "ChatInput",
             "id": "ChatInput-yxMKE"
           },
           "targetHandle": {
             "fieldName": "question",
             "id": "Prompt-xeI6K",
-            "inputTypes": ["Document", "BaseOutputParser", "Record", "Text"],
+            "inputTypes": [
+              "Document",
+              "BaseOutputParser",
+              "Record",
+              "Text"
+            ],
             "type": "str"
           }
         },
@@ -55,14 +74,22 @@
         "className": "stroke-gray-900 stroke-connection",
         "data": {
           "sourceHandle": {
-            "baseClasses": ["object", "Text", "str"],
+            "baseClasses": [
+              "object",
+              "Text",
+              "str"
+            ],
             "dataType": "Prompt",
             "id": "Prompt-xeI6K"
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "OpenAIModel-EjXlN",
-            "inputTypes": ["Text", "Record", "Prompt"],
+            "inputTypes": [
+              "Text",
+              "Record",
+              "Prompt"
+            ],
             "type": "str"
           }
         },
@@ -80,14 +107,20 @@
         "className": "stroke-gray-900 stroke-connection",
         "data": {
           "sourceHandle": {
-            "baseClasses": ["object", "Text", "str"],
+            "baseClasses": [
+              "object",
+              "Text",
+              "str"
+            ],
             "dataType": "OpenAIModel",
             "id": "OpenAIModel-EjXlN"
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "ChatOutput-Q39I8",
-            "inputTypes": ["Text"],
+            "inputTypes": [
+              "Text"
+            ],
             "type": "str"
           }
         },
@@ -105,14 +138,19 @@
         "className": "stroke-gray-900 stroke-connection",
         "data": {
           "sourceHandle": {
-            "baseClasses": ["Record"],
+            "baseClasses": [
+              "Record"
+            ],
             "dataType": "File",
             "id": "File-t0a6a"
           },
           "targetHandle": {
             "fieldName": "inputs",
             "id": "RecursiveCharacterTextSplitter-tR9QM",
-            "inputTypes": ["Document", "Record"],
+            "inputTypes": [
+              "Document",
+              "Record"
+            ],
             "type": "Document"
           }
         },
@@ -130,7 +168,9 @@
         "className": "stroke-gray-900 stroke-connection",
         "data": {
           "sourceHandle": {
-            "baseClasses": ["Embeddings"],
+            "baseClasses": [
+              "Embeddings"
+            ],
             "dataType": "OpenAIEmbeddings",
             "id": "OpenAIEmbeddings-ZlOk1"
           },
@@ -154,14 +194,21 @@
         "className": "stroke-gray-900 stroke-connection",
         "data": {
           "sourceHandle": {
-            "baseClasses": ["Text", "str", "object", "Record"],
+            "baseClasses": [
+              "Text",
+              "str",
+              "object",
+              "Record"
+            ],
             "dataType": "ChatInput",
             "id": "ChatInput-yxMKE"
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "AstraDBSearch-41nRz",
-            "inputTypes": ["Text"],
+            "inputTypes": [
+              "Text"
+            ],
             "type": "str"
           }
         },
@@ -178,7 +225,9 @@
         "className": "stroke-gray-900 stroke-connection",
         "data": {
           "sourceHandle": {
-            "baseClasses": ["Record"],
+            "baseClasses": [
+              "Record"
+            ],
             "dataType": "RecursiveCharacterTextSplitter",
             "id": "RecursiveCharacterTextSplitter-tR9QM"
           },
@@ -203,7 +252,9 @@
         "className": "stroke-gray-900 stroke-connection",
         "data": {
           "sourceHandle": {
-            "baseClasses": ["Embeddings"],
+            "baseClasses": [
+              "Embeddings"
+            ],
             "dataType": "OpenAIEmbeddings",
             "id": "OpenAIEmbeddings-9TPjc"
           },
@@ -228,14 +279,19 @@
         "className": "stroke-gray-900 stroke-connection",
         "data": {
           "sourceHandle": {
-            "baseClasses": ["Record"],
+            "baseClasses": [
+              "Record"
+            ],
             "dataType": "AstraDBSearch",
             "id": "AstraDBSearch-41nRz"
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "TextOutput-BDknO",
-            "inputTypes": ["Record", "Text"],
+            "inputTypes": [
+              "Record",
+              "Text"
+            ],
             "type": "str"
           }
         },
@@ -254,7 +310,12 @@
         "data": {
           "id": "ChatInput-yxMKE",
           "node": {
-            "base_classes": ["Text", "str", "object", "Record"],
+            "base_classes": [
+              "Text",
+              "str",
+              "object",
+              "Record"
+            ],
             "beta": false,
             "custom_fields": {
               "input_value": null,
@@ -270,7 +331,10 @@
             "field_order": [],
             "frozen": false,
             "icon": "ChatInput",
-            "output_types": ["Message", "Text"],
+            "output_types": [
+              "Message",
+              "Text"
+            ],
             "template": {
               "_type": "CustomComponent",
               "code": {
@@ -289,7 +353,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from typing import Optional\n\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.schema.message import Message\nfrom langflow.field_typing import Text\nfrom typing import Union\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    icon = \"ChatInput\"\n\n    def build_config(self):\n        build_config = super().build_config()\n        build_config[\"input_value\"] = {\n            \"input_types\": [],\n            \"display_name\": \"Text\",\n            \"multiline\": True,\n        }\n\n        return build_config\n\n    def build(\n        self,\n        sender: Optional[str] = \"User\",\n        sender_name: Optional[str] = \"User\",\n        input_value: Optional[str] = None,\n        files: Optional[list[str]] = None,\n        session_id: Optional[str] = None,\n        return_message: Optional[bool] = False,\n    ) -> Union[Message, Text]:\n        return super().build_with_record(\n            sender=sender,\n            sender_name=sender_name,\n            input_value=input_value,\n            files=files,\n            session_id=session_id,\n            return_message=return_message,\n        )\n"
+                "value": "from typing import Optional\n\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.schema.message import Message\nfrom langflow.field_typing import Text\nfrom typing import Union\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    icon = \"ChatInput\"\n\n    def build_config(self):\n        build_config = super().build_config()\n        build_config[\"input_value\"] = {\n            \"input_types\": [],\n            \"display_name\": \"Text\",\n            \"multiline\": True,\n        }\n        build_config[\"return_message\"] = {\n            \"display_name\": \"Return Record\",\n            \"advanced\": True,\n        }\n\n        return build_config\n\n    def build(\n        self,\n        sender: Optional[str] = \"User\",\n        sender_name: Optional[str] = \"User\",\n        input_value: Optional[str] = None,\n        files: Optional[list[str]] = None,\n        session_id: Optional[str] = None,\n        return_message: Optional[bool] = True,\n    ) -> Union[Message, Text]:\n        return super().build_with_record(\n            sender=sender,\n            sender_name=sender_name,\n            input_value=input_value,\n            files=files,\n            session_id=session_id,\n            return_message=return_message,\n        )\n"
               },
               "input_value": {
                 "advanced": false,
@@ -318,12 +382,17 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
                 "name": "sender",
-                "options": ["Machine", "User"],
+                "options": [
+                  "Machine",
+                  "User"
+                ],
                 "password": false,
                 "placeholder": "",
                 "required": false,
@@ -339,7 +408,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -359,7 +430,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "If provided, the message will be stored in the memory.",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -389,7 +462,11 @@
         "data": {
           "id": "TextOutput-BDknO",
           "node": {
-            "base_classes": ["object", "Text", "str"],
+            "base_classes": [
+              "object",
+              "Text",
+              "str"
+            ],
             "beta": false,
             "custom_fields": {
               "input_value": null,
@@ -402,7 +479,9 @@
             "field_order": [],
             "frozen": false,
             "icon": "type",
-            "output_types": ["Text"],
+            "output_types": [
+              "Text"
+            ],
             "template": {
               "_type": "CustomComponent",
               "code": {
@@ -430,7 +509,10 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Text or Record to be passed as output.",
-                "input_types": ["Record", "Text"],
+                "input_types": [
+                  "Record",
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -450,7 +532,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Template to convert Record to Text. If left empty, it will be dynamically set to the Record's text key.",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -486,7 +570,9 @@
         "data": {
           "id": "OpenAIEmbeddings-ZlOk1",
           "node": {
-            "base_classes": ["Embeddings"],
+            "base_classes": [
+              "Embeddings"
+            ],
             "beta": false,
             "custom_fields": {
               "allowed_special": null,
@@ -518,7 +604,9 @@
             "field_formatters": {},
             "field_order": [],
             "frozen": false,
-            "output_types": ["Embeddings"],
+            "output_types": [
+              "Embeddings"
+            ],
             "template": {
               "_type": "CustomComponent",
               "allowed_special": {
@@ -528,7 +616,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -576,7 +666,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from typing import Dict, List, Optional\n\nfrom langchain_openai.embeddings.base import OpenAIEmbeddings\nfrom pydantic.v1 import SecretStr\n\nfrom langflow.custom import CustomComponent\nfrom langflow.field_typing import Embeddings, NestedDict\n\n\nclass OpenAIEmbeddingsComponent(CustomComponent):\n    display_name = \"OpenAI Embeddings\"\n    description = \"Generate embeddings using OpenAI models.\"\n\n    def build_config(self):\n        return {\n            \"allowed_special\": {\n                \"display_name\": \"Allowed Special\",\n                \"advanced\": True,\n                \"field_type\": \"str\",\n                \"is_list\": True,\n            },\n            \"default_headers\": {\n                \"display_name\": \"Default Headers\",\n                \"advanced\": True,\n                \"field_type\": \"dict\",\n            },\n            \"default_query\": {\n                \"display_name\": \"Default Query\",\n                \"advanced\": True,\n                \"field_type\": \"NestedDict\",\n            },\n            \"disallowed_special\": {\n                \"display_name\": \"Disallowed Special\",\n                \"advanced\": True,\n                \"field_type\": \"str\",\n                \"is_list\": True,\n            },\n            \"chunk_size\": {\"display_name\": \"Chunk Size\", \"advanced\": True},\n            \"client\": {\"display_name\": \"Client\", \"advanced\": True},\n            \"deployment\": {\"display_name\": \"Deployment\", \"advanced\": True},\n            \"embedding_ctx_length\": {\n                \"display_name\": \"Embedding Context Length\",\n                \"advanced\": True,\n            },\n            \"max_retries\": {\"display_name\": \"Max Retries\", \"advanced\": True},\n            \"model\": {\n                \"display_name\": \"Model\",\n                \"advanced\": False,\n                \"options\": [\n                    \"text-embedding-3-small\",\n                    \"text-embedding-3-large\",\n                    \"text-embedding-ada-002\",\n                ],\n            },\n            \"model_kwargs\": {\"display_name\": \"Model Kwargs\", \"advanced\": True},\n            \"openai_api_base\": {\n                \"display_name\": \"OpenAI API Base\",\n                \"password\": True,\n                \"advanced\": True,\n            },\n            \"openai_api_key\": {\"display_name\": \"OpenAI API Key\", \"password\": True},\n            \"openai_api_type\": {\n                \"display_name\": \"OpenAI API Type\",\n                \"advanced\": True,\n                \"password\": True,\n            },\n            \"openai_api_version\": {\n                \"display_name\": \"OpenAI API Version\",\n                \"advanced\": True,\n            },\n            \"openai_organization\": {\n                \"display_name\": \"OpenAI Organization\",\n                \"advanced\": True,\n            },\n            \"openai_proxy\": {\"display_name\": \"OpenAI Proxy\", \"advanced\": True},\n            \"request_timeout\": {\"display_name\": \"Request Timeout\", \"advanced\": True},\n            \"show_progress_bar\": {\n                \"display_name\": \"Show Progress Bar\",\n                \"advanced\": True,\n            },\n            \"skip_empty\": {\"display_name\": \"Skip Empty\", \"advanced\": True},\n            \"tiktoken_model_name\": {\n                \"display_name\": \"TikToken Model Name\",\n                \"advanced\": True,\n            },\n            \"tiktoken_enable\": {\"display_name\": \"TikToken Enable\", \"advanced\": True},\n        }\n\n    def build(\n        self,\n        openai_api_key: str,\n        default_headers: Optional[Dict[str, str]] = None,\n        default_query: Optional[NestedDict] = {},\n        allowed_special: List[str] = [],\n        disallowed_special: List[str] = [\"all\"],\n        chunk_size: int = 1000,\n        deployment: str = \"text-embedding-ada-002\",\n        embedding_ctx_length: int = 8191,\n        max_retries: int = 6,\n        model: str = \"text-embedding-ada-002\",\n        model_kwargs: NestedDict = {},\n        openai_api_base: Optional[str] = None,\n        openai_api_type: Optional[str] = None,\n        openai_api_version: Optional[str] = None,\n        openai_organization: Optional[str] = None,\n        openai_proxy: Optional[str] = None,\n        request_timeout: Optional[float] = None,\n        show_progress_bar: bool = False,\n        skip_empty: bool = False,\n        tiktoken_enable: bool = True,\n        tiktoken_model_name: Optional[str] = None,\n    ) -> Embeddings:\n        # This is to avoid errors with Vector Stores (e.g Chroma)\n        if disallowed_special == [\"all\"]:\n            disallowed_special = \"all\"  # type: ignore\n        if openai_api_key:\n            api_key = SecretStr(openai_api_key)\n        else:\n            api_key = None\n\n        return OpenAIEmbeddings(\n            tiktoken_enabled=tiktoken_enable,\n            default_headers=default_headers,\n            default_query=default_query,\n            allowed_special=set(allowed_special),\n            disallowed_special=\"all\",\n            chunk_size=chunk_size,\n            deployment=deployment,\n            embedding_ctx_length=embedding_ctx_length,\n            max_retries=max_retries,\n            model=model,\n            model_kwargs=model_kwargs,\n            base_url=openai_api_base,\n            api_key=api_key,\n            openai_api_type=openai_api_type,\n            api_version=openai_api_version,\n            organization=openai_organization,\n            openai_proxy=openai_proxy,\n            timeout=request_timeout,\n            show_progress_bar=show_progress_bar,\n            skip_empty=skip_empty,\n            tiktoken_model_name=tiktoken_model_name,\n        )\n"
+                "value": "from typing import Dict, List, Optional\n\nfrom langchain_openai.embeddings.base import OpenAIEmbeddings\nfrom pydantic.v1 import SecretStr\n\nfrom langflow.custom import CustomComponent\nfrom langflow.field_typing import Embeddings, NestedDict\n\n\nclass OpenAIEmbeddingsComponent(CustomComponent):\n    display_name = \"OpenAI Embeddings\"\n    description = \"Generate embeddings using OpenAI models.\"\n\n    def build_config(self):\n        return {\n            \"allowed_special\": {\n                \"display_name\": \"Allowed Special\",\n                \"advanced\": True,\n                \"field_type\": \"str\",\n                \"is_list\": True,\n            },\n            \"default_headers\": {\n                \"display_name\": \"Default Headers\",\n                \"advanced\": True,\n                \"field_type\": \"dict\",\n            },\n            \"default_query\": {\n                \"display_name\": \"Default Query\",\n                \"advanced\": True,\n                \"field_type\": \"NestedDict\",\n            },\n            \"disallowed_special\": {\n                \"display_name\": \"Disallowed Special\",\n                \"advanced\": True,\n                \"field_type\": \"str\",\n                \"is_list\": True,\n            },\n            \"chunk_size\": {\"display_name\": \"Chunk Size\", \"advanced\": True},\n            \"client\": {\"display_name\": \"Client\", \"advanced\": True},\n            \"deployment\": {\"display_name\": \"Deployment\", \"advanced\": True},\n            \"embedding_ctx_length\": {\n                \"display_name\": \"Embedding Context Length\",\n                \"advanced\": True,\n            },\n            \"max_retries\": {\"display_name\": \"Max Retries\", \"advanced\": True},\n            \"model\": {\n                \"display_name\": \"Model\",\n                \"advanced\": False,\n                \"options\": [\n                    \"text-embedding-3-small\",\n                    \"text-embedding-3-large\",\n                    \"text-embedding-ada-002\",\n                ],\n            },\n            \"model_kwargs\": {\"display_name\": \"Model Kwargs\", \"advanced\": True},\n            \"openai_api_base\": {\n                \"display_name\": \"OpenAI API Base\",\n                \"password\": True,\n                \"advanced\": True,\n            },\n            \"openai_api_key\": {\"display_name\": \"OpenAI API Key\", \"password\": True},\n            \"openai_api_type\": {\n                \"display_name\": \"OpenAI API Type\",\n                \"advanced\": True,\n                \"password\": True,\n            },\n            \"openai_api_version\": {\n                \"display_name\": \"OpenAI API Version\",\n                \"advanced\": True,\n            },\n            \"openai_organization\": {\n                \"display_name\": \"OpenAI Organization\",\n                \"advanced\": True,\n            },\n            \"openai_proxy\": {\"display_name\": \"OpenAI Proxy\", \"advanced\": True},\n            \"request_timeout\": {\"display_name\": \"Request Timeout\", \"advanced\": True},\n            \"show_progress_bar\": {\n                \"display_name\": \"Show Progress Bar\",\n                \"advanced\": True,\n            },\n            \"skip_empty\": {\"display_name\": \"Skip Empty\", \"advanced\": True},\n            \"tiktoken_model_name\": {\n                \"display_name\": \"TikToken Model Name\",\n                \"advanced\": True,\n            },\n            \"tiktoken_enable\": {\"display_name\": \"TikToken Enable\", \"advanced\": True},\n            \"dimensions\": {\n                \"display_name\": \"Dimensions\",\n                \"info\": \"The number of dimensions the resulting output embeddings should have. Only supported by certain models.\",\n                \"advanced\": True,\n            },\n        }\n\n    def build(\n        self,\n        openai_api_key: str,\n        default_headers: Optional[Dict[str, str]] = None,\n        default_query: Optional[NestedDict] = {},\n        allowed_special: List[str] = [],\n        disallowed_special: List[str] = [\"all\"],\n        chunk_size: int = 1000,\n        deployment: str = \"text-embedding-ada-002\",\n        embedding_ctx_length: int = 8191,\n        max_retries: int = 6,\n        model: str = \"text-embedding-ada-002\",\n        model_kwargs: NestedDict = {},\n        openai_api_base: Optional[str] = None,\n        openai_api_type: Optional[str] = None,\n        openai_api_version: Optional[str] = None,\n        openai_organization: Optional[str] = None,\n        openai_proxy: Optional[str] = None,\n        request_timeout: Optional[float] = None,\n        show_progress_bar: bool = False,\n        skip_empty: bool = False,\n        tiktoken_enable: bool = True,\n        tiktoken_model_name: Optional[str] = None,\n        dimensions: Optional[int] = None,\n    ) -> Embeddings:\n        # This is to avoid errors with Vector Stores (e.g Chroma)\n        if disallowed_special == [\"all\"]:\n            disallowed_special = \"all\"  # type: ignore\n        if openai_api_key:\n            api_key = SecretStr(openai_api_key)\n        else:\n            api_key = None\n\n        return OpenAIEmbeddings(\n            tiktoken_enabled=tiktoken_enable,\n            default_headers=default_headers,\n            default_query=default_query,\n            allowed_special=set(allowed_special),\n            disallowed_special=\"all\",\n            chunk_size=chunk_size,\n            deployment=deployment,\n            embedding_ctx_length=embedding_ctx_length,\n            max_retries=max_retries,\n            model=model,\n            model_kwargs=model_kwargs,\n            base_url=openai_api_base,\n            api_key=api_key,\n            openai_api_type=openai_api_type,\n            api_version=openai_api_version,\n            organization=openai_organization,\n            openai_proxy=openai_proxy,\n            timeout=request_timeout,\n            show_progress_bar=show_progress_bar,\n            skip_empty=skip_empty,\n            tiktoken_model_name=tiktoken_model_name,\n            dimensions=dimensions,\n        )\n"
               },
               "default_headers": {
                 "advanced": true,
@@ -622,7 +712,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -642,7 +734,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -653,7 +747,9 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ["all"]
+                "value": [
+                  "all"
+                ]
               },
               "embedding_ctx_length": {
                 "advanced": true,
@@ -700,7 +796,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
@@ -744,7 +842,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -763,7 +863,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": true,
                 "multiline": false,
@@ -783,7 +885,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -802,7 +906,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -821,7 +927,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -840,7 +948,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -940,7 +1050,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -971,7 +1083,11 @@
         "data": {
           "id": "OpenAIModel-EjXlN",
           "node": {
-            "base_classes": ["object", "Text", "str"],
+            "base_classes": [
+              "object",
+              "Text",
+              "str"
+            ],
             "beta": false,
             "custom_fields": {
               "input_value": null,
@@ -1001,7 +1117,9 @@
             ],
             "frozen": false,
             "icon": "OpenAI",
-            "output_types": ["Text"],
+            "output_types": [
+              "Text"
+            ],
             "template": {
               "_type": "CustomComponent",
               "code": {
@@ -1029,7 +1147,11 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Text", "Record", "Prompt"],
+                "input_types": [
+                  "Text",
+                  "Record",
+                  "Prompt"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -1086,7 +1208,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
@@ -1113,7 +1237,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "The base URL of the OpenAI API. Defaults to https://api.openai.com/v1.\n\nYou can change this to use other APIs like JinaChat, LocalAI and Prem.",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -1132,7 +1258,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "The OpenAI API Key to use for the OpenAI model.",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": true,
                 "multiline": false,
@@ -1171,7 +1299,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "System message to pass to the model.",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -1233,10 +1363,17 @@
           "display_name": "Prompt",
           "id": "Prompt-xeI6K",
           "node": {
-            "base_classes": ["object", "Text", "str"],
+            "base_classes": [
+              "object",
+              "Text",
+              "str"
+            ],
             "beta": false,
             "custom_fields": {
-              "template": ["context", "question"]
+              "template": [
+                "context",
+                "question"
+              ]
             },
             "description": "Create a prompt template with dynamic variables.",
             "display_name": "Prompt",
@@ -1251,7 +1388,9 @@
             "is_input": null,
             "is_output": null,
             "name": "",
-            "output_types": ["Prompt"],
+            "output_types": [
+              "Prompt"
+            ],
             "template": {
               "_type": "CustomComponent",
               "code": {
@@ -1331,7 +1470,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -1367,7 +1508,12 @@
         "data": {
           "id": "ChatOutput-Q39I8",
           "node": {
-            "base_classes": ["object", "Text", "Record", "str"],
+            "base_classes": [
+              "object",
+              "Text",
+              "Record",
+              "str"
+            ],
             "beta": false,
             "custom_fields": {
               "input_value": null,
@@ -1384,7 +1530,10 @@
             "field_order": [],
             "frozen": false,
             "icon": "ChatOutput",
-            "output_types": ["Message", "Text"],
+            "output_types": [
+              "Message",
+              "Text"
+            ],
             "template": {
               "_type": "CustomComponent",
               "code": {
@@ -1412,7 +1561,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -1431,12 +1582,17 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
                 "name": "sender",
-                "options": ["Machine", "User"],
+                "options": [
+                  "Machine",
+                  "User"
+                ],
                 "password": false,
                 "placeholder": "",
                 "required": false,
@@ -1452,7 +1608,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -1472,7 +1630,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "If provided, the message will be stored in the memory.",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -1507,7 +1667,9 @@
         "data": {
           "id": "File-t0a6a",
           "node": {
-            "base_classes": ["Record"],
+            "base_classes": [
+              "Record"
+            ],
             "beta": false,
             "custom_fields": {
               "path": null,
@@ -1520,7 +1682,9 @@
             "field_order": [],
             "frozen": false,
             "icon": "file-text",
-            "output_types": ["Record"],
+            "output_types": [
+              "Record"
+            ],
             "template": {
               "_type": "CustomComponent",
               "code": {
@@ -1621,7 +1785,9 @@
         "data": {
           "id": "RecursiveCharacterTextSplitter-tR9QM",
           "node": {
-            "base_classes": ["Record"],
+            "base_classes": [
+              "Record"
+            ],
             "beta": false,
             "custom_fields": {
               "chunk_overlap": null,
@@ -1635,7 +1801,9 @@
             "field_formatters": {},
             "field_order": [],
             "frozen": false,
-            "output_types": ["Record"],
+            "output_types": [
+              "Record"
+            ],
             "template": {
               "_type": "CustomComponent",
               "chunk_overlap": {
@@ -1701,7 +1869,10 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "The texts to split.",
-                "input_types": ["Document", "Record"],
+                "input_types": [
+                  "Document",
+                  "Record"
+                ],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
@@ -1720,7 +1891,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "The characters to split on.\nIf left empty defaults to [\"\\n\\n\", \"\\n\", \" \", \"\"].",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
@@ -1731,7 +1904,9 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": [""]
+                "value": [
+                  ""
+                ]
               }
             }
           },
@@ -1756,7 +1931,9 @@
         "data": {
           "id": "AstraDBSearch-41nRz",
           "node": {
-            "base_classes": ["Record"],
+            "base_classes": [
+              "Record"
+            ],
             "beta": false,
             "custom_fields": {
               "api_endpoint": null,
@@ -1791,7 +1968,9 @@
             ],
             "frozen": false,
             "icon": "AstraDB",
-            "output_types": ["Record"],
+            "output_types": [
+              "Record"
+            ],
             "template": {
               "_type": "CustomComponent",
               "api_endpoint": {
@@ -1801,7 +1980,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "API endpoint URL for the Astra DB service.",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": true,
                 "multiline": false,
@@ -1929,7 +2110,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "The name of the collection within Astra DB where the vectors will be stored.",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -1967,7 +2150,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Input value to search",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -1986,7 +2171,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Optional list of metadata fields to exclude from the indexing.",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
@@ -2005,7 +2192,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Optional list of metadata fields to include in the indexing.",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
@@ -2024,7 +2213,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Optional distance metric for vector comparisons in the vector store.",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -2043,7 +2234,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Optional namespace within Astra DB to use for the collection.",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -2100,12 +2293,17 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
                 "name": "search_type",
-                "options": ["Similarity", "MMR"],
+                "options": [
+                  "Similarity",
+                  "MMR"
+                ],
                 "password": false,
                 "placeholder": "",
                 "required": false,
@@ -2121,12 +2319,18 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Configuration mode for setting up the vector store, with options like “Sync”, “Async”, or “Off”.",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
                 "name": "setup_mode",
-                "options": ["Sync", "Async", "Off"],
+                "options": [
+                  "Sync",
+                  "Async",
+                  "Off"
+                ],
                 "password": false,
                 "placeholder": "",
                 "required": false,
@@ -2142,7 +2346,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Authentication token for accessing Astra DB.",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": true,
                 "multiline": false,
@@ -2178,7 +2384,9 @@
         "data": {
           "id": "AstraDB-eUCSS",
           "node": {
-            "base_classes": ["VectorStore"],
+            "base_classes": [
+              "VectorStore"
+            ],
             "beta": false,
             "custom_fields": {
               "api_endpoint": null,
@@ -2211,7 +2419,10 @@
             ],
             "frozen": false,
             "icon": "AstraDB",
-            "output_types": ["VectorStore", "BaseRetriever"],
+            "output_types": [
+              "VectorStore",
+              "BaseRetriever"
+            ],
             "template": {
               "_type": "CustomComponent",
               "api_endpoint": {
@@ -2221,7 +2432,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "API endpoint URL for the Astra DB service.",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": true,
                 "multiline": false,
@@ -2349,7 +2562,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "The name of the collection within Astra DB where the vectors will be stored.",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -2405,7 +2620,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Optional list of metadata fields to exclude from the indexing.",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
@@ -2424,7 +2641,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Optional list of metadata fields to include in the indexing.",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
@@ -2443,7 +2662,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Optional distance metric for vector comparisons in the vector store.",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -2462,7 +2683,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Optional namespace within Astra DB to use for the collection.",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -2500,12 +2723,18 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Configuration mode for setting up the vector store, with options like “Sync”, “Async”, or “Off”.",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
                 "name": "setup_mode",
-                "options": ["Sync", "Async", "Off"],
+                "options": [
+                  "Sync",
+                  "Async",
+                  "Off"
+                ],
                 "password": false,
                 "placeholder": "",
                 "required": false,
@@ -2521,7 +2750,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Authentication token for accessing Astra DB.",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": true,
                 "multiline": false,
@@ -2557,7 +2788,9 @@
         "data": {
           "id": "OpenAIEmbeddings-9TPjc",
           "node": {
-            "base_classes": ["Embeddings"],
+            "base_classes": [
+              "Embeddings"
+            ],
             "beta": false,
             "custom_fields": {
               "allowed_special": null,
@@ -2589,7 +2822,9 @@
             "field_formatters": {},
             "field_order": [],
             "frozen": false,
-            "output_types": ["Embeddings"],
+            "output_types": [
+              "Embeddings"
+            ],
             "template": {
               "_type": "CustomComponent",
               "allowed_special": {
@@ -2599,7 +2834,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -2647,7 +2884,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from typing import Dict, List, Optional\n\nfrom langchain_openai.embeddings.base import OpenAIEmbeddings\nfrom pydantic.v1 import SecretStr\n\nfrom langflow.custom import CustomComponent\nfrom langflow.field_typing import Embeddings, NestedDict\n\n\nclass OpenAIEmbeddingsComponent(CustomComponent):\n    display_name = \"OpenAI Embeddings\"\n    description = \"Generate embeddings using OpenAI models.\"\n\n    def build_config(self):\n        return {\n            \"allowed_special\": {\n                \"display_name\": \"Allowed Special\",\n                \"advanced\": True,\n                \"field_type\": \"str\",\n                \"is_list\": True,\n            },\n            \"default_headers\": {\n                \"display_name\": \"Default Headers\",\n                \"advanced\": True,\n                \"field_type\": \"dict\",\n            },\n            \"default_query\": {\n                \"display_name\": \"Default Query\",\n                \"advanced\": True,\n                \"field_type\": \"NestedDict\",\n            },\n            \"disallowed_special\": {\n                \"display_name\": \"Disallowed Special\",\n                \"advanced\": True,\n                \"field_type\": \"str\",\n                \"is_list\": True,\n            },\n            \"chunk_size\": {\"display_name\": \"Chunk Size\", \"advanced\": True},\n            \"client\": {\"display_name\": \"Client\", \"advanced\": True},\n            \"deployment\": {\"display_name\": \"Deployment\", \"advanced\": True},\n            \"embedding_ctx_length\": {\n                \"display_name\": \"Embedding Context Length\",\n                \"advanced\": True,\n            },\n            \"max_retries\": {\"display_name\": \"Max Retries\", \"advanced\": True},\n            \"model\": {\n                \"display_name\": \"Model\",\n                \"advanced\": False,\n                \"options\": [\n                    \"text-embedding-3-small\",\n                    \"text-embedding-3-large\",\n                    \"text-embedding-ada-002\",\n                ],\n            },\n            \"model_kwargs\": {\"display_name\": \"Model Kwargs\", \"advanced\": True},\n            \"openai_api_base\": {\n                \"display_name\": \"OpenAI API Base\",\n                \"password\": True,\n                \"advanced\": True,\n            },\n            \"openai_api_key\": {\"display_name\": \"OpenAI API Key\", \"password\": True},\n            \"openai_api_type\": {\n                \"display_name\": \"OpenAI API Type\",\n                \"advanced\": True,\n                \"password\": True,\n            },\n            \"openai_api_version\": {\n                \"display_name\": \"OpenAI API Version\",\n                \"advanced\": True,\n            },\n            \"openai_organization\": {\n                \"display_name\": \"OpenAI Organization\",\n                \"advanced\": True,\n            },\n            \"openai_proxy\": {\"display_name\": \"OpenAI Proxy\", \"advanced\": True},\n            \"request_timeout\": {\"display_name\": \"Request Timeout\", \"advanced\": True},\n            \"show_progress_bar\": {\n                \"display_name\": \"Show Progress Bar\",\n                \"advanced\": True,\n            },\n            \"skip_empty\": {\"display_name\": \"Skip Empty\", \"advanced\": True},\n            \"tiktoken_model_name\": {\n                \"display_name\": \"TikToken Model Name\",\n                \"advanced\": True,\n            },\n            \"tiktoken_enable\": {\"display_name\": \"TikToken Enable\", \"advanced\": True},\n        }\n\n    def build(\n        self,\n        openai_api_key: str,\n        default_headers: Optional[Dict[str, str]] = None,\n        default_query: Optional[NestedDict] = {},\n        allowed_special: List[str] = [],\n        disallowed_special: List[str] = [\"all\"],\n        chunk_size: int = 1000,\n        deployment: str = \"text-embedding-ada-002\",\n        embedding_ctx_length: int = 8191,\n        max_retries: int = 6,\n        model: str = \"text-embedding-ada-002\",\n        model_kwargs: NestedDict = {},\n        openai_api_base: Optional[str] = None,\n        openai_api_type: Optional[str] = None,\n        openai_api_version: Optional[str] = None,\n        openai_organization: Optional[str] = None,\n        openai_proxy: Optional[str] = None,\n        request_timeout: Optional[float] = None,\n        show_progress_bar: bool = False,\n        skip_empty: bool = False,\n        tiktoken_enable: bool = True,\n        tiktoken_model_name: Optional[str] = None,\n    ) -> Embeddings:\n        # This is to avoid errors with Vector Stores (e.g Chroma)\n        if disallowed_special == [\"all\"]:\n            disallowed_special = \"all\"  # type: ignore\n        if openai_api_key:\n            api_key = SecretStr(openai_api_key)\n        else:\n            api_key = None\n\n        return OpenAIEmbeddings(\n            tiktoken_enabled=tiktoken_enable,\n            default_headers=default_headers,\n            default_query=default_query,\n            allowed_special=set(allowed_special),\n            disallowed_special=\"all\",\n            chunk_size=chunk_size,\n            deployment=deployment,\n            embedding_ctx_length=embedding_ctx_length,\n            max_retries=max_retries,\n            model=model,\n            model_kwargs=model_kwargs,\n            base_url=openai_api_base,\n            api_key=api_key,\n            openai_api_type=openai_api_type,\n            api_version=openai_api_version,\n            organization=openai_organization,\n            openai_proxy=openai_proxy,\n            timeout=request_timeout,\n            show_progress_bar=show_progress_bar,\n            skip_empty=skip_empty,\n            tiktoken_model_name=tiktoken_model_name,\n        )\n"
+                "value": "from typing import Dict, List, Optional\n\nfrom langchain_openai.embeddings.base import OpenAIEmbeddings\nfrom pydantic.v1 import SecretStr\n\nfrom langflow.custom import CustomComponent\nfrom langflow.field_typing import Embeddings, NestedDict\n\n\nclass OpenAIEmbeddingsComponent(CustomComponent):\n    display_name = \"OpenAI Embeddings\"\n    description = \"Generate embeddings using OpenAI models.\"\n\n    def build_config(self):\n        return {\n            \"allowed_special\": {\n                \"display_name\": \"Allowed Special\",\n                \"advanced\": True,\n                \"field_type\": \"str\",\n                \"is_list\": True,\n            },\n            \"default_headers\": {\n                \"display_name\": \"Default Headers\",\n                \"advanced\": True,\n                \"field_type\": \"dict\",\n            },\n            \"default_query\": {\n                \"display_name\": \"Default Query\",\n                \"advanced\": True,\n                \"field_type\": \"NestedDict\",\n            },\n            \"disallowed_special\": {\n                \"display_name\": \"Disallowed Special\",\n                \"advanced\": True,\n                \"field_type\": \"str\",\n                \"is_list\": True,\n            },\n            \"chunk_size\": {\"display_name\": \"Chunk Size\", \"advanced\": True},\n            \"client\": {\"display_name\": \"Client\", \"advanced\": True},\n            \"deployment\": {\"display_name\": \"Deployment\", \"advanced\": True},\n            \"embedding_ctx_length\": {\n                \"display_name\": \"Embedding Context Length\",\n                \"advanced\": True,\n            },\n            \"max_retries\": {\"display_name\": \"Max Retries\", \"advanced\": True},\n            \"model\": {\n                \"display_name\": \"Model\",\n                \"advanced\": False,\n                \"options\": [\n                    \"text-embedding-3-small\",\n                    \"text-embedding-3-large\",\n                    \"text-embedding-ada-002\",\n                ],\n            },\n            \"model_kwargs\": {\"display_name\": \"Model Kwargs\", \"advanced\": True},\n            \"openai_api_base\": {\n                \"display_name\": \"OpenAI API Base\",\n                \"password\": True,\n                \"advanced\": True,\n            },\n            \"openai_api_key\": {\"display_name\": \"OpenAI API Key\", \"password\": True},\n            \"openai_api_type\": {\n                \"display_name\": \"OpenAI API Type\",\n                \"advanced\": True,\n                \"password\": True,\n            },\n            \"openai_api_version\": {\n                \"display_name\": \"OpenAI API Version\",\n                \"advanced\": True,\n            },\n            \"openai_organization\": {\n                \"display_name\": \"OpenAI Organization\",\n                \"advanced\": True,\n            },\n            \"openai_proxy\": {\"display_name\": \"OpenAI Proxy\", \"advanced\": True},\n            \"request_timeout\": {\"display_name\": \"Request Timeout\", \"advanced\": True},\n            \"show_progress_bar\": {\n                \"display_name\": \"Show Progress Bar\",\n                \"advanced\": True,\n            },\n            \"skip_empty\": {\"display_name\": \"Skip Empty\", \"advanced\": True},\n            \"tiktoken_model_name\": {\n                \"display_name\": \"TikToken Model Name\",\n                \"advanced\": True,\n            },\n            \"tiktoken_enable\": {\"display_name\": \"TikToken Enable\", \"advanced\": True},\n            \"dimensions\": {\n                \"display_name\": \"Dimensions\",\n                \"info\": \"The number of dimensions the resulting output embeddings should have. Only supported by certain models.\",\n                \"advanced\": True,\n            },\n        }\n\n    def build(\n        self,\n        openai_api_key: str,\n        default_headers: Optional[Dict[str, str]] = None,\n        default_query: Optional[NestedDict] = {},\n        allowed_special: List[str] = [],\n        disallowed_special: List[str] = [\"all\"],\n        chunk_size: int = 1000,\n        deployment: str = \"text-embedding-ada-002\",\n        embedding_ctx_length: int = 8191,\n        max_retries: int = 6,\n        model: str = \"text-embedding-ada-002\",\n        model_kwargs: NestedDict = {},\n        openai_api_base: Optional[str] = None,\n        openai_api_type: Optional[str] = None,\n        openai_api_version: Optional[str] = None,\n        openai_organization: Optional[str] = None,\n        openai_proxy: Optional[str] = None,\n        request_timeout: Optional[float] = None,\n        show_progress_bar: bool = False,\n        skip_empty: bool = False,\n        tiktoken_enable: bool = True,\n        tiktoken_model_name: Optional[str] = None,\n        dimensions: Optional[int] = None,\n    ) -> Embeddings:\n        # This is to avoid errors with Vector Stores (e.g Chroma)\n        if disallowed_special == [\"all\"]:\n            disallowed_special = \"all\"  # type: ignore\n        if openai_api_key:\n            api_key = SecretStr(openai_api_key)\n        else:\n            api_key = None\n\n        return OpenAIEmbeddings(\n            tiktoken_enabled=tiktoken_enable,\n            default_headers=default_headers,\n            default_query=default_query,\n            allowed_special=set(allowed_special),\n            disallowed_special=\"all\",\n            chunk_size=chunk_size,\n            deployment=deployment,\n            embedding_ctx_length=embedding_ctx_length,\n            max_retries=max_retries,\n            model=model,\n            model_kwargs=model_kwargs,\n            base_url=openai_api_base,\n            api_key=api_key,\n            openai_api_type=openai_api_type,\n            api_version=openai_api_version,\n            organization=openai_organization,\n            openai_proxy=openai_proxy,\n            timeout=request_timeout,\n            show_progress_bar=show_progress_bar,\n            skip_empty=skip_empty,\n            tiktoken_model_name=tiktoken_model_name,\n            dimensions=dimensions,\n        )\n"
               },
               "default_headers": {
                 "advanced": true,
@@ -2693,7 +2930,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -2713,7 +2952,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -2724,7 +2965,9 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ["all"]
+                "value": [
+                  "all"
+                ]
               },
               "embedding_ctx_length": {
                 "advanced": true,
@@ -2771,7 +3014,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
@@ -2815,7 +3060,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -2834,7 +3081,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": true,
                 "multiline": false,
@@ -2854,7 +3103,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -2873,7 +3124,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -2892,7 +3145,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -2911,7 +3166,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -3011,7 +3268,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
