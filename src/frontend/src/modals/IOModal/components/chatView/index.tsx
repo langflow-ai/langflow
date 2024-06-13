@@ -58,7 +58,7 @@ export default function ChatView({
       //
       .filter(
         (output) =>
-          output.data.message || (!output.data.message && output.artifacts)
+          output.data.message || (!output.data.message && output.artifacts),
       )
       .map((output, index) => {
         try {
@@ -138,7 +138,7 @@ export default function ChatView({
   function updateChat(
     chat: ChatMessageType,
     message: string,
-    stream_url?: string
+    stream_url?: string,
   ) {
     chat.message = message;
     updateFlowPool(chat.componentId, {
@@ -154,7 +154,7 @@ export default function ChatView({
     setIsDragging,
     setFiles,
     currentFlowId,
-    setErrorData
+    setErrorData,
   );
 
   return (
@@ -204,7 +204,7 @@ export default function ChatView({
                   {CHAT_FIRST_INITIAL_TEXT}{" "}
                   <span>
                     <IconComponent
-                      name="MessageSquare"
+                      name="MessageSquareMore"
                       className="mx-1 inline h-5 w-5 animate-bounce "
                     />
                   </span>{" "}
