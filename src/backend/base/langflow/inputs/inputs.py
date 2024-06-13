@@ -23,9 +23,13 @@ class PromptInput(BaseInputMixin, ListableInputMixin):
 # Applying mixins to a specific input type
 class StrInput(BaseInputMixin, ListableInputMixin, DatabaseLoadMixin):  # noqa: F821
     field_type: Optional[SerializableFieldTypes] = FieldTypes.TEXT
-    multiline: StrictBoolean = False
     load_from_db: StrictBoolean = False
     """Defines if the field will allow the user to open a text editor. Default is False."""
+
+
+class MultilineInput(BaseInputMixin):
+    field_type: Optional[SerializableFieldTypes] = FieldTypes.TEXT
+    multiline: StrictBoolean = True
 
 
 class SecretStrInput(BaseInputMixin, DatabaseLoadMixin):
