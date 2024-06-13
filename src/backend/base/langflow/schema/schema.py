@@ -23,9 +23,6 @@ def build_logs_from_artifacts(artifacts: dict) -> dict:
         message = artifacts[key]["raw"]
         _type = artifacts[key]["type"]
 
-        if not isinstance(message, dict):
-            message = {"message": message}
-
         if "stream_url" in message and "type" in message:
             stream_url = StreamURL(location=message["stream_url"])
             log = Log(message=stream_url, type=_type)
