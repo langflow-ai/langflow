@@ -99,6 +99,7 @@ export default function GenericModal({
     setInputValue(value);
   }, [value, modalOpen]);
   const coloredContent = (inputValue || "")
+    ?.toString()
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(regexHighlight, (match, p1, p2) => {
