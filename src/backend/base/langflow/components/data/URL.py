@@ -5,6 +5,8 @@ from langflow.inputs import StrInput
 from langflow.schema import Data
 from langflow.template import Output
 
+import re
+
 
 class URLComponent(Component):
     display_name = "URL"
@@ -25,8 +27,39 @@ class URLComponent(Component):
         Output(display_name="Data", name="data", method="fetch_content"),
     ]
 
+    def ensure_url(self, string: str) -> str:
+        """
+        Ensures the given string is a URL by adding 'http://' if it doesn't start with 'http://' or 'https://'.
+        Raises an error if the string is not a valid URL.
+
+        Parameters:
+            string (str): The string to be checked and possibly modified.
+
+        Returns:
+            str: The modified string that is ensured to be a URL.
+
+        Raises:
+            ValueError: If the string is not a valid URL.
+        """
+        if not string.startswith(("http://", "https://")):
+            string = "http://" + string
+
+        # Basic URL validation regex
+        url_regex = re.compile(
+            r"^(http://|https://)?"  # http:// or https://
+            r"(([a-zA-Z0-9\.-]+)"  # domain
+            r"(\.[a-zA-Z]{2,}))"  # top-level domain
+            r"(:[0-9]{1,5})?"  # optional port
+            r"(\/.*)?$"  # optional path
+        )
+
+        if not re.match(url_regex, string):
+            raise ValueError(f"Invalid URL: {string}")
+
+        return string
+
     def fetch_content(self) -> Data:
-        urls = [url.strip() for url in self.urls if url.strip()]
+        urls = [self.ensure_url(url.strip()) for url in self.urls if url.strip()]
         loader = WebBaseLoader(web_paths=urls)
         docs = loader.load()
         data = [Data(content=doc.page_content, **doc.metadata) for doc in docs]

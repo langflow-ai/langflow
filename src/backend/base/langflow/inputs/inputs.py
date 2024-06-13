@@ -35,6 +35,7 @@ class PromptInput(BaseInputMixin, ListableInputMixin):
 class StrInput(BaseInputMixin, ListableInputMixin, DatabaseLoadMixin):  # noqa: F821
     field_type: Optional[SerializableFieldTypes] = FieldTypes.TEXT
     load_from_db: StrictBoolean = False
+    input_types: list[str] = ["Text"]
     """Defines if the field will allow the user to open a text editor. Default is False."""
 
 
