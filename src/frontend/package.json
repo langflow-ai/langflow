@@ -85,9 +85,6 @@
     "format": "npx prettier --write \"{tests,src}/**/*.{js,jsx,ts,tsx,json,md}\" --ignore-path .prettierignore",
     "type-check": "tsc --noEmit --pretty --project tsconfig.json && vite"
   },
-  "simple-git-hooks": {
-    "pre-commit": "npx pretty-quick --staged"
-  },
   "eslintConfig": {
     "extends": [
       "react-app",
