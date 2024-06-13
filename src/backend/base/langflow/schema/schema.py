@@ -1,4 +1,3 @@
-from collections import defaultdict
 from typing import Any, Literal
 
 from typing_extensions import TypedDict
@@ -19,7 +18,7 @@ class Log(TypedDict):
 
 
 def build_logs_from_artifacts(artifacts: dict) -> dict:
-    logs = defaultdict(list)
+    logs = {}
     for key in artifacts:
         message = artifacts[key]["raw"]
         _type = artifacts[key]["type"]
@@ -33,7 +32,7 @@ def build_logs_from_artifacts(artifacts: dict) -> dict:
         elif _type:
             log = Log(message=message, type=_type)
 
-        logs[key].append(log)
+        logs[key] = log
     return logs
 
 
