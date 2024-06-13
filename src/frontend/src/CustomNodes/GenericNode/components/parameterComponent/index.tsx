@@ -138,7 +138,7 @@ export default function ParameterComponent({
   let disabledOutput =
     edges.some(
       (edge) =>
-        edge.sourceHandle === scapedJSONStringfy(proxy ? { ...id, proxy } : id),
+        edge.sourceHandle === scapedJSONStringfy(proxy ? { ...id, proxy } : id)
     ) ?? false;
 
   const handleRefreshButtonPress = async (name, data) => {
@@ -205,7 +205,7 @@ export default function ParameterComponent({
           ...newNode.data.node,
           outputs: newNode.data.node.outputs?.map((output, i) => {
             if (i === index) {
-              output.hide = value ?? !output.hide;
+              output.hidden = value ?? !output.hidden;
             }
             return output;
           }),
@@ -306,7 +306,7 @@ export default function ParameterComponent({
                 <IconComponent
                   className="h-4 w-4"
                   strokeWidth={1.5}
-                  name={data.node?.outputs![index].hide ? "EyeOff" : "Eye"}
+                  name={data.node?.outputs![index].hidden ? "EyeOff" : "Eye"}
                 />
               </Button>
             </div>
