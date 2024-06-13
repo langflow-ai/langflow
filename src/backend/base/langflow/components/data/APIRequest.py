@@ -1,14 +1,15 @@
 import asyncio
 import json
-from typing import List, Optional
+from typing import Any, List, Optional
 
 import httpx
 from loguru import logger
 
 from langflow.base.curl.parse import parse_context
 from langflow.custom import Component
-from langflow.inputs import StrInput, DropdownInput, NestedDictInput, IntInput
+from langflow.inputs import DropdownInput, IntInput, NestedDictInput, StrInput
 from langflow.schema import Data
+from langflow.schema.dotdict import dotdict
 from langflow.template import Output
 
 
@@ -21,14 +22,15 @@ class APIRequestComponent(Component):
         StrInput(
             name="urls",
             display_name="URLs",
-            multiline=True,
+            is_list=True,
             info="Enter one or more URLs, separated by commas.",
         ),
         StrInput(
             name="curl",
             display_name="Curl",
             info="Paste a curl command to populate the fields.",
-            advanced=True,
+            advanced=False,
+            refresh_button=True,
         ),
         DropdownInput(
             name="method",
@@ -59,8 +61,7 @@ class APIRequestComponent(Component):
         Output(display_name="Data", name="data", method="make_requests"),
     ]
 
-    def parse_curl(self, curl: str):
-        build_config = self._build_config()
+    def parse_curl(self, curl: str, build_config: dotdict) -> dotdict:
         try:
             parsed = parse_context(curl)
             build_config["urls"]["value"] = [parsed.url]
@@ -71,10 +72,15 @@ class APIRequestComponent(Component):
                 json_data = json.loads(parsed.data)
                 build_config["body"]["value"] = json_data
             except json.JSONDecodeError as e:
-                logger.error(e)
+                print(e)
         except Exception as exc:
             logger.error(f"Error parsing curl: {exc}")
             raise ValueError(f"Error parsing curl: {exc}")
+        return build_config
+
+    def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
+        if field_name == "curl" and field_value is not None:
+            build_config = self.parse_curl(field_value, build_config)
         return build_config
 
     async def make_request(
@@ -127,7 +133,7 @@ class APIRequestComponent(Component):
 
     async def make_requests(self) -> List[Data]:
         method = self.method
-        urls = [url.strip() for url in self.urls.split(",") if url.strip()]
+        urls = [url.strip() for url in self.urls if url.strip()]
         curl = self.curl
         headers = self.headers or {}
         body = self.body or {}
