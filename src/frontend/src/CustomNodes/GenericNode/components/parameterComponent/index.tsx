@@ -91,7 +91,8 @@ export default function ParameterComponent({
 
   const displayOutputPreview =
     !!flowPool[data.id] &&
-    flowPool[data.id][flowPool[data.id].length - 1]?.valid;
+    flowPool[data.id][flowPool[data.id].length - 1]?.valid &&
+    flowPool[data.id][flowPool[data.id].length - 1]?.data?.logs[0]?.message;
 
   const unknownOutput = !!(
     flowPool[data.id] &&
