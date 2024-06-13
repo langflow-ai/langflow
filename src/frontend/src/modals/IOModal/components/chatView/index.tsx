@@ -86,7 +86,6 @@ export default function ChatView({
           };
         } catch (e) {
           console.error(e);
-          debugger;
           return {
             isSend: false,
             message: "Error parsing message",
