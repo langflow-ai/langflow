@@ -4,7 +4,7 @@ from typing import Annotated, Any, AsyncIterator, Iterator, Optional
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_core.prompt_values import ImagePromptValue
 from langchain_core.prompts.image import ImagePromptTemplate
-from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, field_serializer
+from pydantic import BeforeValidator, ConfigDict, Field, field_serializer
 
 from langflow.schema.data import Data
 from langflow.schema.image import Image, get_file_paths, is_image_file
@@ -14,7 +14,7 @@ def _timestamp_to_str(timestamp: datetime) -> str:
     return timestamp.strftime("%Y-%m-%d %H:%M:%S")
 
 
-class Message(BaseModel):
+class Message(Data):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     # Helper class to deal with image data
     text: Optional[str | AsyncIterator | Iterator] = Field(default="")
