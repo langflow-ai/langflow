@@ -1,9 +1,10 @@
 from pathlib import Path
-from langflow.custom import Component
-from langflow.inputs import FileInput, BoolInput
-from langflow.template import Output
-from langflow.schema import Data
+
 from langflow.base.data.utils import TEXT_FILE_TYPES, parse_text_file_to_data
+from langflow.custom import Component
+from langflow.inputs import BoolInput, FileInput
+from langflow.schema import Data
+from langflow.template import Output
 
 
 class FileComponent(Component):
@@ -15,6 +16,7 @@ class FileComponent(Component):
         FileInput(
             name="path",
             display_name="Path",
+            file_types=TEXT_FILE_TYPES,
             info=f"Supported file types: {', '.join(TEXT_FILE_TYPES)}",
         ),
         BoolInput(
@@ -30,11 +32,12 @@ class FileComponent(Component):
     ]
 
     def load_file(self) -> Data:
-        path = self.path
+        if not self.path:
+            raise ValueError("Please, upload a file to use this component.")
+        resolved_path = self.resolve_path(self.path)
         silent_errors = self.silent_errors
 
-        resolved_path = Path(path).resolve()
-        extension = resolved_path.suffix[1:].lower()
+        extension = Path(resolved_path).suffix[1:].lower()
 
         if extension == "doc":
             raise ValueError("doc files are not supported. Please save as .docx")
