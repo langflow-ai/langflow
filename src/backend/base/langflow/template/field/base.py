@@ -164,7 +164,7 @@ class Output(BaseModel):
     name: str = Field(default=None)
     """The name of the field."""
 
-    hide: Optional[bool] = Field(default=None)
+    hidden: Optional[bool] = Field(default=None)
     """Dictates if the field is hidden."""
 
     display_name: Optional[str] = Field(default=None)

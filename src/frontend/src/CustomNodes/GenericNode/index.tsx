@@ -246,10 +246,10 @@ export default function GenericNode({
   }
 
   const shownOutputs =
-    data.node!.outputs?.filter((output) => !output.hide) ?? [];
+    data.node!.outputs?.filter((output) => !output.hidden) ?? [];
 
   const hiddenOutputs =
-    data.node!.outputs?.filter((output) => output.hide) ?? [];
+    data.node!.outputs?.filter((output) => output.hidden) ?? [];
 
   function handlePlayWShortcut() {
     if (buildStatus === BuildStatus.BUILDING || isBuilding || !selected) return;
@@ -634,7 +634,7 @@ export default function GenericNode({
                   ? "pb-8"
                   : "pb-8 pt-5"
                 : "",
-              "relative",
+              "relative"
             )}
           >
             {/* increase height!! */}
@@ -804,9 +804,9 @@ export default function GenericNode({
                   renderOutputParameter(
                     output,
                     data.node!.outputs?.findIndex(
-                      (out) => out.name === output.name,
-                    ) ?? idx,
-                  ),
+                      (out) => out.name === output.name
+                    ) ?? idx
+                  )
                 )}
               <div
                 className={cn(showHiddenOutputs ? "" : "h-0 overflow-hidden")}
@@ -817,9 +817,9 @@ export default function GenericNode({
                       renderOutputParameter(
                         output,
                         data.node!.outputs?.findIndex(
-                          (out) => out.name === output.name,
-                        ) ?? idx,
-                      ),
+                          (out) => out.name === output.name
+                        ) ?? idx
+                      )
                     )}
                 </div>
               </div>
@@ -830,7 +830,7 @@ export default function GenericNode({
                     (shownOutputs && shownOutputs.length > 0) ||
                       showHiddenOutputs
                       ? "bottom-5"
-                      : "bottom-1.5",
+                      : "bottom-1.5"
                   )}
                 >
                   <Button
@@ -844,7 +844,7 @@ export default function GenericNode({
                       strokeWidth={1.5}
                       className={cn(
                         "h-5 w-5 pt-px text-muted-foreground transition-all group-hover:text-medium-indigo group-hover/node:opacity-100",
-                        showHiddenOutputs ? "rotate-180 transform" : "",
+                        showHiddenOutputs ? "rotate-180 transform" : ""
                       )}
                     />
                   </Button>

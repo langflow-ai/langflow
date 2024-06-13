@@ -76,7 +76,7 @@ export type OutputFieldType = {
   selected?: string;
   name: string;
   display_name: string;
-  hide?: boolean;
+  hidden?: boolean;
   proxy?: OutputFieldProxyType;
 };
 export type sendAllProps = {
