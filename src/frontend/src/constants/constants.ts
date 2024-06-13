@@ -669,12 +669,12 @@ export const OUTPUT_TYPES = new Set([
 ]);
 
 export const CHAT_FIRST_INITIAL_TEXT =
-  "Start a conversation and click the agent's thoughts";
+  "Start a conversation and click the agent's memories";
 
 export const TOOLTIP_OUTDATED_NODE =
   "Your component is outdated. Click to update (data may be lost)";
 
-export const CHAT_SECOND_INITIAL_TEXT = "to inspect the chaining process.";
+export const CHAT_SECOND_INITIAL_TEXT = "to inspect previous messages.";
 
 export const ZERO_NOTIFICATIONS = "No new notifications";
 
