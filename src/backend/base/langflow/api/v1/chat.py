@@ -181,13 +181,6 @@ async def build_vertex(
                 inputs_dict=inputs.model_dump() if inputs else {},
                 files=files,
             )
-            # logs = {}
-            # if isinstance(vertex.artifacts_raw, dict):
-            #     for key in vertex.artifacts_raw:
-            #         log_obj = Log(message=vertex.artifacts_raw[key], type=vertex.artifacts_type[key])
-            #         logs[key] = log_obj
-            # else:
-            #     logs = [Log(message=vertex.artifacts_raw, type=vertex.artifacts_type)]
 
             result_data_response = ResultDataResponse.model_validate(result_dict, from_attributes=True)
         except Exception as exc:
