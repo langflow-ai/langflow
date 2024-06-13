@@ -1,10 +1,11 @@
 from typing import Union
 
 import pytest
+from pydantic import ValidationError
+
 from langflow.template import Input, Output
 from langflow.template.field.base import UNDEFINED
 from langflow.type_extraction.type_extraction import post_process_type
-from pydantic import ValidationError
 
 
 @pytest.fixture(name="client", autouse=True)
@@ -56,6 +57,10 @@ class TestInput:
             "password": False,
             "advanced": False,
             "title_case": False,
+            "dynamic": False,
+            "info": "",
+            "input_types": ["Text"],
+            "load_from_db": False,
         }
 
 

@@ -274,7 +274,7 @@ def test_get_all(client: TestClient, logged_in_headers):
         files
     )  # Less or equal because we might have some files that don't have the dependencies installed
     assert "ChatInput" in json_response["inputs"]
-    assert "Prompt" in json_response["inputs"]
+    assert "Prompt" in json_response["prompts"]
     assert "ChatOutput" in json_response["outputs"]
 
 
@@ -480,7 +480,7 @@ def test_successful_run_with_output_type_text(client, starter_project, created_a
     display_names = [output.get("component_display_name") for output in outputs_dict.get("outputs")]
     assert all([name in display_names for name in ["Chat Output"]]), display_names
     inner_results = [output.get("results") for output in outputs_dict.get("outputs")]
-    expected_keys = ["Data", "Message"]
+    expected_keys = ["message"]
     assert all([key in result for result in inner_results for key in expected_keys]), outputs_dict
 
 
@@ -511,7 +511,7 @@ def test_successful_run_with_output_type_any(client, starter_project, created_ap
     display_names = [output.get("component_display_name") for output in outputs_dict.get("outputs")]
     assert all([name in display_names for name in ["Chat Output"]]), display_names
     inner_results = [output.get("results") for output in outputs_dict.get("outputs")]
-    expected_keys = ["Data", "Message"]
+    expected_keys = ["message"]
     assert all([key in result for result in inner_results for key in expected_keys]), outputs_dict
 
 
@@ -600,7 +600,7 @@ def test_successful_run_with_input_type_chat(client, starter_project, created_ap
     assert len(chat_input_outputs) == 1
     # Now we check if the input_value is correct
     assert all(
-        [output.get("results").get("Message").get("result") == "value1" for output in chat_input_outputs]
+        [output.get("results").get("message").get("text") == "value1" for output in chat_input_outputs]
     ), chat_input_outputs
 
 
@@ -636,7 +636,7 @@ def test_successful_run_with_input_type_any(client, starter_project, created_api
     assert len(any_input_outputs) == 1
     # Now we check if the input_value is correct
     assert all(
-        [output.get("results").get("Message").get("result") == "value1" for output in any_input_outputs]
+        [output.get("results").get("message").get("text") == "value1" for output in any_input_outputs]
     ), any_input_outputs
 
 
