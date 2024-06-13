@@ -302,7 +302,7 @@ class Vertex:
             # We check this to make sure params with the same name but different target_id
             # don't get overwritten
             if param_key in template_dict and edge.target_id == self.id:
-                if template_dict[param_key]["list"]:
+                if template_dict[param_key].get("list"):
                     if param_key not in params:
                         params[param_key] = []
                     params[param_key].append(self.graph.get_vertex(edge.source_id))
