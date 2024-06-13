@@ -13,9 +13,9 @@ class TextInput(TextComponent):
         StrInput(
             name="input_value",
             type=str,
-            display_name="Value",
-            info="Text or Data to be passed as input.",
-            input_types=["Data", "Text"],
+            display_name="Text",
+            info="Text to be passed as input.",
+            input_types=["Text", "Message"],
         ),
         StrInput(
             name="data_template",
