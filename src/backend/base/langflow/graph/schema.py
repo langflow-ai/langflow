@@ -35,8 +35,8 @@ class ResultData(BaseModel):
                 message = values["artifacts"][key]
 
                 # ! Temporary fix
-                if not isinstance(message, dict):
-                    message = {"message": message}
+                if message is None:
+                    continue
 
                 if "stream_url" in message and "type" in message:
                     stream_url = StreamURL(location=message["stream_url"])
