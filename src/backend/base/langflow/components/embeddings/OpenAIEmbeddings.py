@@ -84,6 +84,11 @@ class OpenAIEmbeddingsComponent(CustomComponent):
                 "advanced": True,
             },
             "tiktoken_enable": {"display_name": "TikToken Enable", "advanced": True},
+            "dimensions": {
+                "display_name": "Dimensions",
+                "info": "The number of dimensions the resulting output embeddings should have. Only supported by certain models.",
+                "advanced": True,
+            },
         }
 
     def build(
@@ -109,6 +114,7 @@ class OpenAIEmbeddingsComponent(CustomComponent):
         skip_empty: bool = False,
         tiktoken_enable: bool = True,
         tiktoken_model_name: Optional[str] = None,
+        dimensions: Optional[int] = None,
     ) -> Embeddings:
         # This is to avoid errors with Vector Stores (e.g Chroma)
         if disallowed_special == ["all"]:
@@ -140,4 +146,5 @@ class OpenAIEmbeddingsComponent(CustomComponent):
             show_progress_bar=show_progress_bar,
             skip_empty=skip_empty,
             tiktoken_model_name=tiktoken_model_name,
+            dimensions=dimensions,
         )

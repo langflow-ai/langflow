@@ -5,10 +5,11 @@
         "className": "stroke-gray-900 stroke-connection",
         "data": {
           "sourceHandle": {
+            "baseClasses": [
+              "Record"
+            ],
             "dataType": "URL",
-            "id": "URL-HYPkR",
-            "name": "record",
-            "output_types": []
+            "id": "URL-HYPkR"
           },
           "targetHandle": {
             "fieldName": "reference_2",
@@ -25,7 +26,7 @@
         "id": "reactflow__edge-URL-HYPkR{œbaseClassesœ:[œRecordœ],œdataTypeœ:œURLœ,œidœ:œURL-HYPkRœ}-Prompt-Rse03{œfieldNameœ:œreference_2œ,œidœ:œPrompt-Rse03œ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "URL-HYPkR",
-        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-HYPkRœ, œoutput_typesœ: [], œnameœ: œrecordœ}",
+        "sourceHandle": "{œbaseClassesœ: [œRecordœ], œdataTypeœ: œURLœ, œidœ: œURL-HYPkRœ}",
         "style": {
           "stroke": "#555"
         },
@@ -36,40 +37,41 @@
         "className": "stroke-gray-900 stroke-connection",
         "data": {
           "sourceHandle": {
+            "baseClasses": [
+              "str",
+              "Text",
+              "object"
+            ],
             "dataType": "OpenAIModel",
-            "id": "OpenAIModel-gi29P",
-            "name": "text_output",
-            "output_types": [
-              "Text"
-            ]
+            "id": "OpenAIModel-gi29P"
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "ChatOutput-JPlxl",
             "inputTypes": [
-              "Text",
-              "Message"
+              "Text"
             ],
             "type": "str"
           }
         },
         "id": "reactflow__edge-OpenAIModel-gi29P{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-gi29Pœ}-ChatOutput-JPlxl{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-JPlxlœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
         "source": "OpenAIModel-gi29P",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-gi29Pœ, œoutput_typesœ: [œTextœ], œnameœ: œtext_outputœ}",
+        "sourceHandle": "{œbaseClassesœ: [œstrœ, œTextœ, œobjectœ], œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-gi29Pœ}",
         "style": {
           "stroke": "#555"
         },
         "target": "ChatOutput-JPlxl",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-JPlxlœ, œinputTypesœ: [œTextœ, œMessageœ], œtypeœ: œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-JPlxlœ, œinputTypesœ: [œTextœ], œtypeœ: œstrœ}"
       },
       {
         "className": "stroke-gray-900 stroke-connection",
         "data": {
           "sourceHandle": {
+            "baseClasses": [
+              "Record"
+            ],
             "dataType": "URL",
-            "id": "URL-2cX90",
-            "name": "record",
-            "output_types": []
+            "id": "URL-2cX90"
           },
           "targetHandle": {
             "fieldName": "reference_1",
@@ -85,7 +87,7 @@
         },
         "id": "reactflow__edge-URL-2cX90{œbaseClassesœ:[œRecordœ],œdataTypeœ:œURLœ,œidœ:œURL-2cX90œ}-Prompt-Rse03{œfieldNameœ:œreference_1œ,œidœ:œPrompt-Rse03œ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
         "source": "URL-2cX90",
-        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-2cX90œ, œoutput_typesœ: [], œnameœ: œrecordœ}",
+        "sourceHandle": "{œbaseClassesœ: [œRecordœ], œdataTypeœ: œURLœ, œidœ: œURL-2cX90œ}",
         "style": {
           "stroke": "#555"
         },
@@ -96,12 +98,13 @@
         "className": "stroke-gray-900 stroke-connection",
         "data": {
           "sourceHandle": {
+            "baseClasses": [
+              "object",
+              "Text",
+              "str"
+            ],
             "dataType": "TextInput",
-            "id": "TextInput-og8Or",
-            "name": "Text",
-            "output_types": [
-              "Text"
-            ]
+            "id": "TextInput-og8Or"
           },
           "targetHandle": {
             "fieldName": "instructions",
@@ -117,7 +120,7 @@
         },
         "id": "reactflow__edge-TextInput-og8Or{œbaseClassesœ:[œobjectœ,œTextœ,œstrœ],œdataTypeœ:œTextInputœ,œidœ:œTextInput-og8Orœ}-Prompt-Rse03{œfieldNameœ:œinstructionsœ,œidœ:œPrompt-Rse03œ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
         "source": "TextInput-og8Or",
-        "sourceHandle": "{œdataTypeœ: œTextInputœ, œidœ: œTextInput-og8Orœ, œoutput_typesœ: [œTextœ], œnameœ: œTextœ}",
+        "sourceHandle": "{œbaseClassesœ: [œobjectœ, œTextœ, œstrœ], œdataTypeœ: œTextInputœ, œidœ: œTextInput-og8Orœ}",
         "style": {
           "stroke": "#555"
         },
@@ -128,19 +131,20 @@
         "className": "stroke-gray-900 stroke-connection",
         "data": {
           "sourceHandle": {
+            "baseClasses": [
+              "object",
+              "Text",
+              "str"
+            ],
             "dataType": "Prompt",
-            "id": "Prompt-Rse03",
-            "name": "prompt",
-            "output_types": [
-              "Prompt"
-            ]
+            "id": "Prompt-Rse03"
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "OpenAIModel-gi29P",
             "inputTypes": [
               "Text",
-              "Data",
+              "Record",
               "Prompt"
             ],
             "type": "str"
@@ -149,12 +153,12 @@
         "id": "reactflow__edge-Prompt-Rse03{œbaseClassesœ:[œobjectœ,œTextœ,œstrœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-Rse03œ}-OpenAIModel-gi29P{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-gi29Pœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Prompt-Rse03",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-Rse03œ, œoutput_typesœ: [œPromptœ], œnameœ: œpromptœ}",
+        "sourceHandle": "{œbaseClassesœ: [œobjectœ, œTextœ, œstrœ], œdataTypeœ: œPromptœ, œidœ: œPrompt-Rse03œ}",
         "style": {
           "stroke": "#555"
         },
         "target": "OpenAIModel-gi29P",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-gi29Pœ, œinputTypesœ: [œTextœ, œDataœ, œPromptœ], œtypeœ: œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-gi29Pœ, œinputTypesœ: [œTextœ, œRecordœ, œPromptœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
@@ -190,33 +194,11 @@
             "is_input": null,
             "is_output": null,
             "name": "",
-            "output_types": [],
-            "outputs": [
-              {
-                "cache": true,
-                "display_name": "Prompt",
-                "method": "build_prompt",
-                "name": "prompt",
-                "selected": "Prompt",
-                "types": [
-                  "Prompt"
-                ],
-                "value": "__UNDEFINED__"
-              },
-              {
-                "cache": true,
-                "display_name": "Text",
-                "method": "format_prompt",
-                "name": "text",
-                "selected": "Text",
-                "types": [
-                  "Text"
-                ],
-                "value": "__UNDEFINED__"
-              }
+            "output_types": [
+              "Prompt"
             ],
             "template": {
-              "_type": "Component",
+              "_type": "CustomComponent",
               "code": {
                 "advanced": true,
                 "dynamic": true,
@@ -233,7 +215,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langflow.custom import Component\nfrom langflow.field_typing.prompt import Prompt\nfrom langflow.inputs import PromptInput\nfrom langflow.template import Output\n\n\nclass PromptComponent(Component):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"prompts\"\n\n    inputs = [\n        PromptInput(name=\"template\", display_name=\"Template\"),\n    ]\n\n    outputs = [\n        Output(display_name=\"Prompt\", name=\"prompt\", method=\"build_prompt\"),\n        Output(display_name=\"Text\", name=\"text\", method=\"format_prompt\"),\n    ]\n\n    async def format_prompt(self) -> str:\n        prompt = await self.build_prompt()\n        formatted_text = prompt.format_text()\n        self.status = formatted_text\n        return formatted_text\n\n    async def build_prompt(\n        self,\n    ) -> Prompt:\n        kwargs = {k: v for k, v in self._arguments.items() if k != \"template\"}\n        prompt = await Prompt.from_template_and_variables(self.template, kwargs)\n        self.status = prompt.format_text()\n        return prompt\n"
+                "value": "from langflow.custom import CustomComponent\nfrom langflow.field_typing import TemplateField\nfrom langflow.field_typing.prompt import Prompt\n\n\nclass PromptComponent(CustomComponent):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"prompts\"\n\n    def build_config(self):\n        return {\n            \"template\": TemplateField(display_name=\"Template\"),\n            \"code\": TemplateField(advanced=True),\n        }\n\n    async def build(\n        self,\n        template: Prompt,\n        **kwargs,\n    ) -> Prompt:\n        prompt = await Prompt.from_template_and_variables(template, kwargs)\n        self.status = prompt.format_text()\n        return prompt\n"
               },
               "instructions": {
                 "advanced": false,
@@ -372,22 +354,11 @@
             "field_order": [],
             "frozen": false,
             "icon": "layout-template",
-            "output_types": [],
-            "outputs": [
-              {
-                "cache": true,
-                "display_name": "Data",
-                "method": "fetch_content",
-                "name": "data",
-                "selected": "Data",
-                "types": [
-                  "Data"
-                ],
-                "value": "__UNDEFINED__"
-              }
+            "output_types": [
+              "Record"
             ],
             "template": {
-              "_type": "Component",
+              "_type": "CustomComponent",
               "code": {
                 "advanced": true,
                 "dynamic": true,
@@ -404,22 +375,31 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langchain_community.document_loaders.web_base import WebBaseLoader\n\nfrom langflow.custom import Component\nfrom langflow.inputs import StrInput\nfrom langflow.schema import Data\nfrom langflow.template import Output\n\n\nclass URLComponent(Component):\n    display_name = \"URL\"\n    description = \"Fetch content from one or more URLs.\"\n    icon = \"layout-template\"\n\n    inputs = [\n        StrInput(\n            name=\"urls\",\n            display_name=\"URLs\",\n            info=\"Enter one or more URLs, separated by commas.\",\n            value=\"\",\n            is_list=True,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Data\", name=\"data\", method=\"fetch_content\"),\n    ]\n\n    def fetch_content(self) -> Data:\n        urls = [url.strip() for url in self.urls if url.strip()]\n        loader = WebBaseLoader(web_paths=urls)\n        docs = loader.load()\n        data = [Data(content=doc.page_content, **doc.metadata) for doc in docs]\n        self.status = data\n        return data\n"
+                "value": "from typing import Any, Dict\n\nfrom langchain_community.document_loaders.web_base import WebBaseLoader\n\nfrom langflow.custom import CustomComponent\nfrom langflow.schema import Record\n\n\nclass URLComponent(CustomComponent):\n    display_name = \"URL\"\n    description = \"Fetch content from one or more URLs.\"\n    icon = \"layout-template\"\n\n    def build_config(self) -> Dict[str, Any]:\n        return {\n            \"urls\": {\"display_name\": \"URL\"},\n        }\n\n    def build(\n        self,\n        urls: list[str],\n    ) -> list[Record]:\n        loader = WebBaseLoader(web_paths=[url for url in urls if url])\n        docs = loader.load()\n        records = self.to_records(docs)\n        self.status = records\n        return records\n"
               },
               "urls": {
                 "advanced": false,
-                "display_name": "URLs",
+                "display_name": "URL",
                 "dynamic": false,
-                "info": "Enter one or more URLs, separated by commas.",
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "input_types": [
+                  "Text"
+                ],
                 "list": true,
                 "load_from_db": false,
+                "multiline": false,
                 "name": "urls",
+                "password": false,
                 "placeholder": "",
-                "required": false,
+                "required": true,
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": [
+                  "https://www.promptingguide.ai/techniques/prompt_chaining"
+                ]
               }
             }
           },
@@ -466,22 +446,12 @@
             "field_order": [],
             "frozen": false,
             "icon": "ChatOutput",
-            "output_types": [],
-            "outputs": [
-              {
-                "cache": true,
-                "display_name": "Message",
-                "method": "message_response",
-                "name": "message",
-                "selected": "Message",
-                "types": [
-                  "Message"
-                ],
-                "value": "__UNDEFINED__"
-              }
+            "output_types": [
+              "Message",
+              "Text"
             ],
             "template": {
-              "_type": "Component",
+              "_type": "CustomComponent",
               "code": {
                 "advanced": true,
                 "dynamic": true,
@@ -498,7 +468,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langflow.base.io.chat import ChatComponent\nfrom langflow.inputs import BoolInput, DropdownInput, MultilineInput, StrInput\nfrom langflow.schema.message import Message\nfrom langflow.template import Output\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    icon = \"ChatOutput\"\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            info=\"Message to be passed as output.\",\n            input_types=[\"Text\", \"Message\"],\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[\"Machine\", \"User\"],\n            value=\"Machine\",\n            advanced=True,\n            info=\"Type of sender.\",\n        ),\n        StrInput(name=\"sender_name\", display_name=\"Sender Name\", info=\"Name of the sender.\", value=\"AI\", advanced=True),\n        StrInput(name=\"session_id\", display_name=\"Session ID\", info=\"Session ID for the message.\", advanced=True),\n        BoolInput(\n            name=\"data_template\",\n            display_name=\"Data Template\",\n            value=\"{text}\",\n            advanced=True,\n            info=\"Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.\",\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    def message_response(self) -> Message:\n        if isinstance(self.input_value, Message):\n            message = self.input_value\n        else:\n            message = Message(\n                text=self.input_value,\n                sender=self.sender,\n                sender_name=self.sender_name,\n                session_id=self.session_id,\n            )\n        if self.session_id and isinstance(message, Message) and isinstance(message.text, str):\n            self.store_message(message)\n        self.status = message\n        return message\n"
+                "value": "from typing import Optional, Union\n\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.field_typing import Text\nfrom langflow.schema.message import Message\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    icon = \"ChatOutput\"\n\n    def build(\n        self,\n        sender: Optional[str] = \"Machine\",\n        sender_name: Optional[str] = \"AI\",\n        input_value: Optional[str] = None,\n        session_id: Optional[str] = None,\n        files: Optional[list[str]] = None,\n        return_message: Optional[bool] = False,\n    ) -> Union[Message, Text]:\n        return super().build_with_record(\n            sender=sender,\n            sender_name=sender_name,\n            input_value=input_value,\n            session_id=session_id,\n            files=files,\n            return_message=return_message,\n        )\n"
               },
               "input_value": {
                 "advanced": false,
@@ -506,10 +476,9 @@
                 "dynamic": false,
                 "fileTypes": [],
                 "file_path": "",
-                "info": "Message to be passed as output.",
+                "info": "",
                 "input_types": [
-                  "Text",
-                  "Message"
+                  "Text"
                 ],
                 "list": false,
                 "load_from_db": false,
@@ -520,8 +489,7 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
-                "type": "str",
-                "value": ""
+                "type": "str"
               },
               "sender": {
                 "advanced": true,
@@ -529,7 +497,7 @@
                 "dynamic": false,
                 "fileTypes": [],
                 "file_path": "",
-                "info": "Type of sender.",
+                "info": "",
                 "input_types": [
                   "Text"
                 ],
@@ -550,12 +518,12 @@
                 "value": "Machine"
               },
               "sender_name": {
-                "advanced": true,
+                "advanced": false,
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "fileTypes": [],
                 "file_path": "",
-                "info": "Name of the sender.",
+                "info": "",
                 "input_types": [
                   "Text"
                 ],
@@ -577,7 +545,7 @@
                 "dynamic": false,
                 "fileTypes": [],
                 "file_path": "",
-                "info": "Session ID for the message.",
+                "info": "If provided, the message will be stored in the memory.",
                 "input_types": [
                   "Text"
                 ],
@@ -590,8 +558,7 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
-                "type": "str",
-                "value": ""
+                "type": "str"
               }
             }
           },
@@ -645,33 +612,11 @@
             ],
             "frozen": false,
             "icon": "OpenAI",
-            "output_types": [],
-            "outputs": [
-              {
-                "cache": true,
-                "display_name": "Text",
-                "method": "text_response",
-                "name": "text_output",
-                "selected": "Text",
-                "types": [
-                  "Text"
-                ],
-                "value": "__UNDEFINED__"
-              },
-              {
-                "cache": true,
-                "display_name": "Language Model",
-                "method": "build_model",
-                "name": "model_output",
-                "selected": "BaseLanguageModel",
-                "types": [
-                  "BaseLanguageModel"
-                ],
-                "value": "__UNDEFINED__"
-              }
+            "output_types": [
+              "Text"
             ],
             "template": {
-              "_type": "Component",
+              "_type": "CustomComponent",
               "code": {
                 "advanced": true,
                 "dynamic": true,
@@ -688,7 +633,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langchain_openai import ChatOpenAI\nfrom pydantic.v1 import SecretStr\n\nfrom langflow.base.constants import STREAM_INFO_TEXT\nfrom langflow.base.models.model import LCModelComponent\nfrom langflow.base.models.openai_constants import MODEL_NAMES\nfrom langflow.field_typing import BaseLanguageModel, Text\nfrom langflow.inputs import BoolInput, DictInput, DropdownInput, FloatInput, SecretStrInput, StrInput\nfrom langflow.inputs.inputs import IntInput\nfrom langflow.template import Output\n\n\nclass OpenAIModelComponent(LCModelComponent):\n    display_name = \"OpenAI\"\n    description = \"Generates text using OpenAI LLMs.\"\n    icon = \"OpenAI\"\n\n    inputs = [\n        StrInput(name=\"input_value\", display_name=\"Input\", input_types=[\"Text\", \"Data\", \"Prompt\"]),\n        IntInput(\n            name=\"max_tokens\",\n            display_name=\"Max Tokens\",\n            advanced=True,\n            info=\"The maximum number of tokens to generate. Set to 0 for unlimited tokens.\",\n        ),\n        DictInput(name=\"model_kwargs\", display_name=\"Model Kwargs\", advanced=True),\n        DropdownInput(\n            name=\"model_name\", display_name=\"Model Name\", advanced=False, options=MODEL_NAMES, value=MODEL_NAMES[0]\n        ),\n        StrInput(\n            name=\"openai_api_base\",\n            display_name=\"OpenAI API Base\",\n            advanced=True,\n            info=\"The base URL of the OpenAI API. Defaults to https://api.openai.com/v1.\\n\\nYou can change this to use other APIs like JinaChat, LocalAI and Prem.\",\n        ),\n        SecretStrInput(\n            name=\"openai_api_key\",\n            display_name=\"OpenAI API Key\",\n            info=\"The OpenAI API Key to use for the OpenAI model.\",\n            advanced=False,\n            value=\"OPENAI_API_KEY\",\n        ),\n        FloatInput(name=\"temperature\", display_name=\"Temperature\", value=0.1),\n        BoolInput(name=\"stream\", display_name=\"Stream\", info=STREAM_INFO_TEXT, advanced=True),\n        StrInput(\n            name=\"system_message\",\n            display_name=\"System Message\",\n            info=\"System message to pass to the model.\",\n            advanced=True,\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Text\", name=\"text_output\", method=\"text_response\"),\n        Output(display_name=\"Language Model\", name=\"model_output\", method=\"build_model\"),\n    ]\n\n    def text_response(self) -> Text:\n        input_value = self.input_value\n        stream = self.stream\n        system_message = self.system_message\n        output = self.build_model()\n        result = self.get_chat_result(output, stream, input_value, system_message)\n        self.status = result\n        return result\n\n    def build_model(self) -> BaseLanguageModel:\n        openai_api_key = self.openai_api_key\n        temperature = self.temperature\n        model_name = self.model_name\n        max_tokens = self.max_tokens\n        model_kwargs = self.model_kwargs\n        openai_api_base = self.openai_api_base or \"https://api.openai.com/v1\"\n\n        if openai_api_key:\n            api_key = SecretStr(openai_api_key)\n        else:\n            api_key = None\n\n        output = ChatOpenAI(\n            max_tokens=max_tokens or None,\n            model_kwargs=model_kwargs or {},\n            model=model_name or None,\n            base_url=openai_api_base,\n            api_key=api_key,\n            temperature=temperature or 0.1,\n        )\n        return output\n"
+                "value": "from typing import Optional\n\nfrom langchain_openai import ChatOpenAI\nfrom pydantic.v1 import SecretStr\n\nfrom langflow.base.constants import STREAM_INFO_TEXT\nfrom langflow.base.models.model import LCModelComponent\nfrom langflow.base.models.openai_constants import MODEL_NAMES\nfrom langflow.field_typing import NestedDict, Text\n\n\nclass OpenAIModelComponent(LCModelComponent):\n    display_name = \"OpenAI\"\n    description = \"Generates text using OpenAI LLMs.\"\n    icon = \"OpenAI\"\n\n    field_order = [\n        \"max_tokens\",\n        \"model_kwargs\",\n        \"model_name\",\n        \"openai_api_base\",\n        \"openai_api_key\",\n        \"temperature\",\n        \"input_value\",\n        \"system_message\",\n        \"stream\",\n    ]\n\n    def build_config(self):\n        return {\n            \"input_value\": {\"display_name\": \"Input\", \"input_types\": [\"Text\", \"Record\", \"Prompt\"]},\n            \"max_tokens\": {\n                \"display_name\": \"Max Tokens\",\n                \"advanced\": True,\n                \"info\": \"The maximum number of tokens to generate. Set to 0 for unlimited tokens.\",\n            },\n            \"model_kwargs\": {\n                \"display_name\": \"Model Kwargs\",\n                \"advanced\": True,\n            },\n            \"model_name\": {\n                \"display_name\": \"Model Name\",\n                \"advanced\": False,\n                \"options\": MODEL_NAMES,\n            },\n            \"openai_api_base\": {\n                \"display_name\": \"OpenAI API Base\",\n                \"advanced\": True,\n                \"info\": (\n                    \"The base URL of the OpenAI API. Defaults to https://api.openai.com/v1.\\n\\n\"\n                    \"You can change this to use other APIs like JinaChat, LocalAI and Prem.\"\n                ),\n            },\n            \"openai_api_key\": {\n                \"display_name\": \"OpenAI API Key\",\n                \"info\": \"The OpenAI API Key to use for the OpenAI model.\",\n                \"advanced\": False,\n                \"password\": True,\n            },\n            \"temperature\": {\n                \"display_name\": \"Temperature\",\n                \"advanced\": False,\n                \"value\": 0.1,\n            },\n            \"stream\": {\n                \"display_name\": \"Stream\",\n                \"info\": STREAM_INFO_TEXT,\n                \"advanced\": True,\n            },\n            \"system_message\": {\n                \"display_name\": \"System Message\",\n                \"info\": \"System message to pass to the model.\",\n                \"advanced\": True,\n            },\n        }\n\n    def build(\n        self,\n        input_value: Text,\n        openai_api_key: str,\n        temperature: float = 0.1,\n        model_name: str = \"gpt-3.5-turbo\",\n        max_tokens: Optional[int] = 256,\n        model_kwargs: NestedDict = {},\n        openai_api_base: Optional[str] = None,\n        stream: bool = False,\n        system_message: Optional[str] = None,\n    ) -> Text:\n        if not openai_api_base:\n            openai_api_base = \"https://api.openai.com/v1\"\n        if openai_api_key:\n            api_key = SecretStr(openai_api_key)\n        else:\n            api_key = None\n\n        output = ChatOpenAI(\n            max_tokens=max_tokens or None,\n            model_kwargs=model_kwargs,\n            model=model_name,\n            base_url=openai_api_base,\n            api_key=api_key,\n            temperature=temperature,\n        )\n\n        return self.get_chat_result(output, stream, input_value, system_message)\n"
               },
               "input_value": {
                 "advanced": false,
@@ -699,7 +644,7 @@
                 "info": "",
                 "input_types": [
                   "Text",
-                  "Data",
+                  "Record",
                   "Prompt"
                 ],
                 "list": false,
@@ -708,11 +653,10 @@
                 "name": "input_value",
                 "password": false,
                 "placeholder": "",
-                "required": false,
+                "required": true,
                 "show": true,
                 "title_case": false,
-                "type": "str",
-                "value": ""
+                "type": "str"
               },
               "max_tokens": {
                 "advanced": true,
@@ -721,9 +665,6 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
-                "input_types": [
-                  "Text"
-                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -733,8 +674,8 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
-                "type": "str",
-                "value": ""
+                "type": "int",
+                "value": "1024"
               },
               "model_kwargs": {
                 "advanced": true,
@@ -743,9 +684,6 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -755,8 +693,8 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
-                "type": "str",
-                "value": ""
+                "type": "NestedDict",
+                "value": {}
               },
               "model_name": {
                 "advanced": false,
@@ -785,7 +723,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "gpt-4o"
+                "value": "gpt-3.5-turbo"
               },
               "openai_api_base": {
                 "advanced": true,
@@ -806,8 +744,7 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
-                "type": "str",
-                "value": ""
+                "type": "str"
               },
               "openai_api_key": {
                 "advanced": false,
@@ -825,7 +762,7 @@
                 "name": "openai_api_key",
                 "password": true,
                 "placeholder": "",
-                "required": false,
+                "required": true,
                 "show": true,
                 "title_case": false,
                 "type": "str",
@@ -838,9 +775,6 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Stream the response from the model. Streaming works only in Chat.",
-                "input_types": [
-                  "Text"
-                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -850,8 +784,8 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
-                "type": "str",
-                "value": false
+                "type": "bool",
+                "value": true
               },
               "system_message": {
                 "advanced": true,
@@ -872,8 +806,7 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
-                "type": "str",
-                "value": ""
+                "type": "str"
               },
               "temperature": {
                 "advanced": false,
@@ -882,20 +815,23 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
                 "name": "temperature",
                 "password": false,
                 "placeholder": "",
+                "rangeSpec": {
+                  "max": 1,
+                  "min": -1,
+                  "step": 0.1,
+                  "step_type": "float"
+                },
                 "required": false,
                 "show": true,
                 "title_case": false,
-                "type": "str",
-                "value": 0.1
+                "type": "float",
+                "value": "0.1"
               }
             }
           },
@@ -934,22 +870,11 @@
             "field_order": [],
             "frozen": false,
             "icon": "layout-template",
-            "output_types": [],
-            "outputs": [
-              {
-                "cache": true,
-                "display_name": "Data",
-                "method": "fetch_content",
-                "name": "data",
-                "selected": "Data",
-                "types": [
-                  "Data"
-                ],
-                "value": "__UNDEFINED__"
-              }
+            "output_types": [
+              "Record"
             ],
             "template": {
-              "_type": "Component",
+              "_type": "CustomComponent",
               "code": {
                 "advanced": true,
                 "dynamic": true,
@@ -966,22 +891,31 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langchain_community.document_loaders.web_base import WebBaseLoader\n\nfrom langflow.custom import Component\nfrom langflow.inputs import StrInput\nfrom langflow.schema import Data\nfrom langflow.template import Output\n\n\nclass URLComponent(Component):\n    display_name = \"URL\"\n    description = \"Fetch content from one or more URLs.\"\n    icon = \"layout-template\"\n\n    inputs = [\n        StrInput(\n            name=\"urls\",\n            display_name=\"URLs\",\n            info=\"Enter one or more URLs, separated by commas.\",\n            value=\"\",\n            is_list=True,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Data\", name=\"data\", method=\"fetch_content\"),\n    ]\n\n    def fetch_content(self) -> Data:\n        urls = [url.strip() for url in self.urls if url.strip()]\n        loader = WebBaseLoader(web_paths=urls)\n        docs = loader.load()\n        data = [Data(content=doc.page_content, **doc.metadata) for doc in docs]\n        self.status = data\n        return data\n"
+                "value": "from typing import Any, Dict\n\nfrom langchain_community.document_loaders.web_base import WebBaseLoader\n\nfrom langflow.custom import CustomComponent\nfrom langflow.schema import Record\n\n\nclass URLComponent(CustomComponent):\n    display_name = \"URL\"\n    description = \"Fetch content from one or more URLs.\"\n    icon = \"layout-template\"\n\n    def build_config(self) -> Dict[str, Any]:\n        return {\n            \"urls\": {\"display_name\": \"URL\"},\n        }\n\n    def build(\n        self,\n        urls: list[str],\n    ) -> list[Record]:\n        loader = WebBaseLoader(web_paths=[url for url in urls if url])\n        docs = loader.load()\n        records = self.to_records(docs)\n        self.status = records\n        return records\n"
               },
               "urls": {
                 "advanced": false,
-                "display_name": "URLs",
+                "display_name": "URL",
                 "dynamic": false,
-                "info": "Enter one or more URLs, separated by commas.",
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "input_types": [
+                  "Text"
+                ],
                 "list": true,
                 "load_from_db": false,
+                "multiline": false,
                 "name": "urls",
+                "password": false,
                 "placeholder": "",
-                "required": false,
+                "required": true,
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": [
+                  "https://www.promptingguide.ai/introduction/basics"
+                ]
               }
             }
           },
@@ -1025,15 +959,6 @@
             "icon": "type",
             "output_types": [
               "Text"
-            ],
-            "outputs": [
-              {
-                "name": "Text",
-                "selected": "Text",
-                "types": [
-                  "Text"
-                ]
-              }
             ],
             "template": {
               "_type": "CustomComponent",

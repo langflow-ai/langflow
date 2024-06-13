@@ -57,17 +57,17 @@ export default function NodeToolbarComponent({
   const nodeLength = Object.keys(data.node!.template).filter(
     (templateField) =>
       templateField.charAt(0) !== "_" &&
-      data.node?.template[templateField].show &&
-      (data.node.template[templateField].type === "str" ||
-        data.node.template[templateField].type === "bool" ||
-        data.node.template[templateField].type === "float" ||
-        data.node.template[templateField].type === "code" ||
-        data.node.template[templateField].type === "prompt" ||
-        data.node.template[templateField].type === "file" ||
-        data.node.template[templateField].type === "Any" ||
-        data.node.template[templateField].type === "int" ||
-        data.node.template[templateField].type === "dict" ||
-        data.node.template[templateField].type === "NestedDict")
+      data.node?.template[templateField]?.show &&
+      (data.node.template[templateField]?.type === "str" ||
+        data.node.template[templateField]?.type === "bool" ||
+        data.node.template[templateField]?.type === "float" ||
+        data.node.template[templateField]?.type === "code" ||
+        data.node.template[templateField]?.type === "prompt" ||
+        data.node.template[templateField]?.type === "file" ||
+        data.node.template[templateField]?.type === "Any" ||
+        data.node.template[templateField]?.type === "int" ||
+        data.node.template[templateField]?.type === "dict" ||
+        data.node.template[templateField]?.type === "NestedDict")
   ).length;
 
   const hasStore = useStoreStore((state) => state.hasStore);
@@ -626,7 +626,7 @@ export default function NodeToolbarComponent({
                   />
                 </SelectItem>
               )}
-              {(!hasStore || !hasApiKey || !validApiKey) && (
+              {/* {(!hasStore || !hasApiKey || !validApiKey) && (
                 <SelectItem value={"Download"}>
                   <ToolbarSelectItem
                     shortcut={
@@ -638,7 +638,7 @@ export default function NodeToolbarComponent({
                     dataTestId="Download-button-modal"
                   />
                 </SelectItem>
-              )}
+              )} */}
               <SelectItem
                 value={"documentation"}
                 disabled={data.node?.documentation === ""}
@@ -688,16 +688,19 @@ export default function NodeToolbarComponent({
                   style={`${frozen ? " text-ice" : ""} transition-all`}
                 />
               </SelectItem>
-              <SelectItem value="Download">
-                <ToolbarSelectItem
-                  shortcut={
-                    shortcuts.find((obj) => obj.name === "Download")?.shortcut!
-                  }
-                  value={"Download"}
-                  icon={"Download"}
-                  dataTestId="download-button-modal"
-                />
-              </SelectItem>
+              {(!hasStore || !hasApiKey || !validApiKey) && (
+                <SelectItem value="Download">
+                  <ToolbarSelectItem
+                    shortcut={
+                      shortcuts.find((obj) => obj.name === "Download")
+                        ?.shortcut!
+                    }
+                    value={"Download"}
+                    icon={"Download"}
+                    dataTestId="download-button-modal"
+                  />
+                </SelectItem>
+              )}
               <SelectItem
                 value={"delete"}
                 className="focus:bg-red-400/[.20]"

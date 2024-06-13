@@ -160,7 +160,7 @@ async def build_custom_component(params: dict, custom_component: "CustomComponen
     if raw is None and isinstance(build_result, (dict, Data, str)):
         raw = build_result.data if isinstance(build_result, Data) else build_result
 
-    artifact_type = get_artifact_type(custom_component.repr_value or raw, build_result)
+    artifact_type = get_artifact_type(custom_component or raw, build_result)
     raw = post_process_raw(raw, artifact_type)
     artifact = {"repr": custom_repr, "raw": raw, "type": artifact_type}
     return custom_component, build_result, artifact

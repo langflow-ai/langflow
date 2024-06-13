@@ -5,7 +5,7 @@
 # BUILDER-BASE
 ################################
 
-# force platform to the current architecture to increase build speed time on multi-platform builds
+# 1. force platform to the current architecture to increase build speed time on multi-platform builds
 FROM --platform=$BUILDPLATFORM node:lts-bookworm-slim as builder-base
 COPY src/frontend /frontend
 
