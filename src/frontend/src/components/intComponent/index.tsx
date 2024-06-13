@@ -19,7 +19,7 @@ export default function IntComponent({
   // Clear component state
   useEffect(() => {
     if (disabled && value !== "") {
-      onChange("", true);
+      onChange(null, true);
     }
   }, [disabled, onChange]);
 
@@ -45,7 +45,9 @@ export default function IntComponent({
         disabled={disabled}
         placeholder={editNode ? "Integer number" : "Type an integer number"}
         onChange={(event) => {
-          onChange(event.target.value);
+          const newValue =
+            event.target.value === "" ? null : event.target.value;
+          onChange(newValue);
         }}
         data-testid={id}
       />

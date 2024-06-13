@@ -156,8 +156,8 @@ export default function ParameterComponent({
   );
 
   const handleOnNewValue = async (
-    newValue: string | string[] | boolean | Object[],
-    skipSnapshot: boolean | undefined = false
+    newValue: string | string[] | boolean | Object[] | null,
+    skipSnapshot: boolean | undefined = false,
   ): Promise<void> => {
     handleOnNewValueHook(newValue, skipSnapshot);
   };

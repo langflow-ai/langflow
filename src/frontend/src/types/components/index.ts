@@ -184,8 +184,8 @@ export type RangeSpecType = {
 export type IntComponentType = {
   value: string;
   disabled?: boolean;
-  rangeSpec: RangeSpecType;
-  onChange: (value: string, skipSnapshot?: boolean) => void;
+  rangeSpec?: RangeSpecType;
+  onChange: (value: string | null, skipSnapshot?: boolean) => void;
   editNode?: boolean;
   id?: string;
 };
@@ -691,8 +691,8 @@ export type codeTabsPropsType = {
     ) => string;
     buildTweakObject?: (
       tw: string,
-      changes: string | string[] | boolean | number | Object[] | Object,
-      template: TemplateVariableType
+      changes: string | string[] | boolean | number | Object[] | Object | null,
+      template: TemplateVariableType,
     ) => Promise<string | void>;
   };
   activeTweaks?: boolean;
