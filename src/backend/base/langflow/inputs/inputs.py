@@ -25,7 +25,6 @@ class StrInput(BaseInputMixin, ListableInputMixin, DatabaseLoadMixin):  # noqa: 
     field_type: Optional[SerializableFieldTypes] = FieldTypes.TEXT
     load_from_db: StrictBoolean = False
     """Defines if the field will allow the user to open a text editor. Default is False."""
-    value: Optional[str] = ""
 
 
 class MultilineInput(BaseInputMixin):
@@ -54,10 +53,12 @@ class BoolInput(BaseInputMixin, ListableInputMixin):
 
 class NestedDictInput(BaseInputMixin, ListableInputMixin):
     field_type: Optional[SerializableFieldTypes] = FieldTypes.NESTED_DICT
+    value: Optional[dict] = {}
 
 
 class DictInput(BaseInputMixin, ListableInputMixin):
     field_type: Optional[SerializableFieldTypes] = FieldTypes.DICT
+    value: Optional[dict] = {}
 
 
 class DropdownInput(BaseInputMixin, DropDownMixin):
