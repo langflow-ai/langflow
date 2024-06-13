@@ -36,8 +36,8 @@ class BaseInputMixin(BaseModel):
     show: bool = True
     """Should the field be shown. Defaults to True."""
 
-    value: Any = None
-    """The value of the field. Default is None."""
+    value: Any = ""
+    """The value of the field. Default is an empty string."""
 
     name: Optional[str] = None
     """Name of the field. Default is an empty string."""
