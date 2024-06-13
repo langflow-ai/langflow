@@ -3,7 +3,7 @@ import { convertArrayToObj } from "../../../utils/reactflowUtils";
 
 export const getChangesType = (
   changes: string | string[] | boolean | number | Object[] | Object,
-  template: TemplateVariableType,
+  template: TemplateVariableType
 ) => {
   if (typeof changes === "string" && template.type === "float") {
     changes = parseFloat(changes);

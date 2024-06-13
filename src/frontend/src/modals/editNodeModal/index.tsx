@@ -1,6 +1,6 @@
 import { ColDef, GridApi } from "ag-grid-community";
+import { cloneDeep } from "lodash";
 import { forwardRef, useEffect, useRef, useState } from "react";
-import IconComponent from "../../components/genericIconComponent";
 import TableComponent from "../../components/tableComponent";
 import { Badge } from "../../components/ui/badge";
 import { useDarkStore } from "../../stores/darkStore";
@@ -9,7 +9,6 @@ import { NodeDataType } from "../../types/flow";
 import BaseModal from "../baseModal";
 import useColumnDefs from "./hooks/use-column-defs";
 import useRowData from "./hooks/use-row-data";
-import { cloneDeep } from "lodash";
 
 const EditNodeModal = forwardRef(
   (
@@ -26,7 +25,7 @@ const EditNodeModal = forwardRef(
       //      setOpenWDoubleClick: (open: boolean) => void;
       data: NodeDataType;
     },
-    ref,
+    ref
   ) => {
     const myData = useRef(cloneDeep(data));
 
@@ -54,7 +53,7 @@ const EditNodeModal = forwardRef(
       handleOnNewValue,
       handleOnChangeDb,
       changeAdvanced,
-      open,
+      open
     );
 
     const [gridApi, setGridApi] = useState<GridApi | null>(null);
@@ -118,7 +117,7 @@ const EditNodeModal = forwardRef(
         />
       </BaseModal>
     );
-  },
+  }
 );
 
 export default EditNodeModal;
