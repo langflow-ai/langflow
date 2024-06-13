@@ -13,7 +13,7 @@ from langflow.components import data
 @pytest.fixture
 def api_request():
     # This fixture provides an instance of APIRequest for each test case
-    return data.APIRequest()
+    return data.APIRequestComponent()
 
 
 @pytest.mark.asyncio
@@ -102,7 +102,13 @@ async def test_build_with_multiple_urls(api_request):
     #
 
     # Execute the build method
-    results = await api_request.build(method=method, urls=urls)
+    api_request.set_attributes(
+        {
+            "method": method,
+            "urls": urls,
+        }
+    )
+    results = await api_request.make_requests()
 
     # Assertions
     assert len(results) == len(urls)
@@ -131,15 +137,18 @@ def test_directory_component_build_with_multithreading(
     mock_parallel_load_data.return_value = [Mock()]
 
     # Act
-    directory_component.build(
-        path,
-        depth,
-        max_concurrency,
-        load_hidden,
-        recursive,
-        silent_errors,
-        use_multithreading,
+    directory_component.set_attributes(
+        {
+            "path": path,
+            "depth": depth,
+            "max_concurrency": max_concurrency,
+            "load_hidden": load_hidden,
+            "recursive": recursive,
+            "silent_errors": silent_errors,
+            "use_multithreading": use_multithreading,
+        }
     )
+    directory_component.load_directory()
 
     # Assert
     mock_resolve_path.assert_called_once_with(path)
@@ -160,7 +169,8 @@ def test_directory_without_mocks():
     # the directory component can be used to load the projects
     # and we can validate if the contents are the same as the projects variable
     setup_path = Path(setup.__file__).parent / "starter_projects"
-    results = directory_component.build(str(setup_path), use_multithreading=False)
+    directory_component.set_attributes({"path": str(setup_path), "use_multithreading": False})
+    results = directory_component.load_directory()
     assert len(results) == len(projects)
     # each result is a Data that contains the content attribute
     # each are dict that are exactly the same as one of the projects
@@ -170,16 +180,19 @@ def test_directory_without_mocks():
     # in ../docs/docs/components there are many mdx files
     # check if the directory component can load them
     # just check if the number of results is the same as the number of files
+    directory_component = data.DirectoryComponent()
     docs_path = Path(__file__).parent.parent / "docs" / "docs" / "components"
-    results = directory_component.build(str(docs_path), use_multithreading=False)
+    directory_component.set_attributes({"path": str(docs_path), "use_multithreading": False})
+    results = directory_component.load_directory()
     docs_files = list(docs_path.glob("*.mdx"))
     assert len(results) == len(docs_files)
 
 
 def test_url_component():
     url_component = data.URLComponent()
+    url_component.set_attributes({"urls": ["https://langflow.org"]})
     # the url component can be used to load the contents of a website
-    _data = url_component.build(["https://langflow.org"])
+    _data = url_component.fetch_content()
     assert all(value.data for value in _data)
-    assert all(value.text for value in _data)
+    assert all(value.content for value in _data)
     assert all(value.source for value in _data)

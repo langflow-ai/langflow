@@ -3,7 +3,6 @@ from .CustomComponent import Component
 from .DataToText import DataToTextComponent
 from .DocumentToData import DocumentToDataComponent
 from .IDGenerator import UUIDGeneratorComponent
-from .MessageHistory import MessageHistoryComponent
 from .UpdateData import UpdateDataComponent
 
 __all__ = [
@@ -13,5 +12,4 @@ __all__ = [
     "UUIDGeneratorComponent",
     "DataToTextComponent",
     "CreateDataComponent",
-    "MessageHistoryComponent",
 ]
