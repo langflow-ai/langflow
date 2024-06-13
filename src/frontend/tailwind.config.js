@@ -64,8 +64,11 @@ module.exports = {
         "dark-blue": "var(--dark-blue)",
         "dark-gray": "var(--dark-gray)",
         "dark-red": "var(--dark-red)",
-        "error-background": "var(--error-background)",
-        "error-foreground": "var(--error-foreground)",
+        error: {
+          DEFAULT: "var(--error)",
+          background: "var(--error-background)",
+          foreground: "var(--error-foreground)",
+        },
         "high-dark-gray": "var(--high-dark-gray)",
         "high-indigo": "var(--high-indigo)",
         "high-light-gray": "var(--high-light-gray)",
