@@ -266,9 +266,18 @@ async function buildVertex({
     const buildData: VertexBuildTypeAPI = buildRes.data;
     if (onBuildUpdate) {
       if (!buildData.valid) {
+        // lots is a dictionary with the key the output field name and the value the log object
+        // logs: { [key: string]: { message: any; type: string }[] };
+        const errorMessages = Object.keys(buildData.data.logs).map((key) => {
+          const logs = buildData.data.logs[key];
+          if (Array.isArray(logs)) {
+            return logs.map((log) => log.message);
+          }
+          return [logs.message];
+        });
         onBuildError!(
           "Error Building Component",
-          buildData.data.logs.map((log) => log.message),
+          errorMessages,
           verticesIds.map((id) => ({ id }))
         );
         stopBuild();

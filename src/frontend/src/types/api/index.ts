@@ -179,11 +179,16 @@ export type VertexBuildTypeAPI = {
   messages: ChatOutputType[] | ChatInputType[];
 };
 
+export type LogType = {
+  message: any;
+  type: string;
+};
+
 // data is the object received by the API
 // it has results, artifacts, timedelta, duration
 export type VertexDataTypeAPI = {
   results: { [key: string]: string };
-  logs: { message: any; type: string }[];
+  logs: { [key: string]: LogType | LogType[] };
   messages: ChatOutputType[] | ChatInputType[];
   inactive?: boolean;
   timedelta?: number;
