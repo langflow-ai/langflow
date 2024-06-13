@@ -14,4 +14,5 @@ __all__ = [
     "tools",
     "vectorsearch",
     "vectorstores",
+    "vectorize",
 ]

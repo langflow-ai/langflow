@@ -18,7 +18,7 @@ class AstraDBVectorStoreComponent(CustomComponent):
                 "display_name": "Inputs",
                 "info": "Optional list of records to be processed and stored in the vector store.",
             },
-            "embedding": {"display_name": "Embedding", "info": "Embedding to use"},
+            "embedding": {"display_name": "Embedding", "info": "Embedding to use. Only one of `embedding` or `vectorize` can be provided."},
             "collection_name": {
                 "display_name": "Collection Name",
                 "info": "The name of the collection within Astra DB where the vectors will be stored.",
@@ -88,6 +88,11 @@ class AstraDBVectorStoreComponent(CustomComponent):
                 "info": "Optional dictionary defining the indexing policy for the collection.",
                 "advanced": True,
             },
+            "collection_vector_service_options": {
+                "display_name": "Vectorize",
+                "info": "Specifies the use of server-side embeddings within Astra DB. Only one of `embedding` or `vectorize` can be provided.",
+                "advanced": True
+            }
         }
 
     def build(
@@ -108,6 +113,7 @@ class AstraDBVectorStoreComponent(CustomComponent):
         metadata_indexing_include: Optional[List[str]] = None,
         metadata_indexing_exclude: Optional[List[str]] = None,
         collection_indexing_policy: Optional[dict] = None,
+        collection_vector_service_options: Optional[dict] = None,
     ) -> Union[VectorStore, BaseRetriever]:
         try:
             from langchain_astradb import AstraDBVectorStore
@@ -142,6 +148,7 @@ class AstraDBVectorStoreComponent(CustomComponent):
                 metadata_indexing_include=metadata_indexing_include,
                 metadata_indexing_exclude=metadata_indexing_exclude,
                 collection_indexing_policy=collection_indexing_policy,
+                collection_vector_service_options=collection_vector_service_options,
             )
         else:
             vector_store = AstraDBVectorStore(
@@ -160,7 +167,9 @@ class AstraDBVectorStoreComponent(CustomComponent):
                 metadata_indexing_include=metadata_indexing_include,
                 metadata_indexing_exclude=metadata_indexing_exclude,
                 collection_indexing_policy=collection_indexing_policy,
+                collection_vector_service_options=collection_vector_service_options,
             )
 
         return vector_store
-        return vector_store
+
+                
