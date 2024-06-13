@@ -58,7 +58,6 @@ export default function Page({
   flow: FlowType;
   view?: boolean;
 }): JSX.Element {
-  const preventDefault = true;
   const uploadFlow = useFlowsManagerStore((state) => state.uploadFlow);
   const autoSaveCurrentFlow = useFlowsManagerStore(
     (state) => state.autoSaveCurrentFlow
@@ -178,17 +177,17 @@ export default function Page({
   }, []);
 
   function handleUndo(e: KeyboardEvent) {
-    e.preventDefault();
-    (e as unknown as Event).stopImmediatePropagation();
     if (!isWrappedWithClass(e, "noundo")) {
+      e.preventDefault();
+      (e as unknown as Event).stopImmediatePropagation();
       undo();
     }
   }
 
   function handleRedo(e: KeyboardEvent) {
-    e.preventDefault();
-    (e as unknown as Event).stopImmediatePropagation();
     if (!isWrappedWithClass(e, "noundo")) {
+      e.preventDefault();
+      (e as unknown as Event).stopImmediatePropagation();
       redo();
     }
   }
@@ -218,49 +217,46 @@ export default function Page({
   }
 
   function handleCopy(e: KeyboardEvent) {
-    e.preventDefault();
-    (e as unknown as Event).stopImmediatePropagation();
-    if (
-      !isWrappedWithClass(e, "nocopy") &&
-      window.getSelection()?.toString().length === 0 &&
-      lastSelection
-    ) {
-      setLastCopiedSelection(_.cloneDeep(lastSelection));
+    if (!isWrappedWithClass(e, "nocopy")) {
+      e.preventDefault();
+      (e as unknown as Event).stopImmediatePropagation();
+      if (window.getSelection()?.toString().length === 0 && lastSelection) {
+        setLastCopiedSelection(_.cloneDeep(lastSelection));
+      }
     }
   }
 
   function handleCut(e: KeyboardEvent) {
-    e.preventDefault();
-    (e as unknown as Event).stopImmediatePropagation();
-    if (
-      !isWrappedWithClass(e, "nocopy") &&
-      window.getSelection()?.toString().length === 0 &&
-      lastSelection
-    ) {
-      setLastCopiedSelection(_.cloneDeep(lastSelection), true);
+    if (!isWrappedWithClass(e, "nocopy")) {
+      e.preventDefault();
+      (e as unknown as Event).stopImmediatePropagation();
+      if (window.getSelection()?.toString().length === 0 && lastSelection) {
+        setLastCopiedSelection(_.cloneDeep(lastSelection), true);
+      }
     }
   }
 
   function handlePaste(e: KeyboardEvent) {
-    e.preventDefault();
-    (e as unknown as Event).stopImmediatePropagation();
-    if (
-      !isWrappedWithClass(e, "nocopy") &&
-      window.getSelection()?.toString().length === 0 &&
-      lastCopiedSelection
-    ) {
-      takeSnapshot();
-      paste(lastCopiedSelection, {
-        x: position.current.x,
-        y: position.current.y,
-      });
+    if (!isWrappedWithClass(e, "nocopy")) {
+      e.preventDefault();
+      (e as unknown as Event).stopImmediatePropagation();
+      if (
+        window.getSelection()?.toString().length === 0 &&
+        lastCopiedSelection
+      ) {
+        takeSnapshot();
+        paste(lastCopiedSelection, {
+          x: position.current.x,
+          y: position.current.y,
+        });
+      }
     }
   }
 
   function handleDelete(e: KeyboardEvent) {
-    e.preventDefault();
-    (e as unknown as Event).stopImmediatePropagation();
     if (!isWrappedWithClass(e, "nodelete") && lastSelection) {
+      e.preventDefault();
+      (e as unknown as Event).stopImmediatePropagation();
       takeSnapshot();
       deleteNode(lastSelection.nodes.map((node) => node.id));
       deleteEdge(lastSelection.edges.map((edge) => edge.id));
@@ -276,23 +272,23 @@ export default function Page({
   const cutAction = useShortcutsStore((state) => state.cut);
   const pasteAction = useShortcutsStore((state) => state.paste);
   //@ts-ignore
-  useHotkeys(undoAction, handleUndo, { preventDefault });
+  useHotkeys(undoAction, handleUndo);
   //@ts-ignore
-  useHotkeys(redoAction, handleRedo, { preventDefault });
+  useHotkeys(redoAction, handleRedo);
   //@ts-ignore
-  useHotkeys(groupAction, handleGroup, { preventDefault });
+  useHotkeys(groupAction, handleGroup);
   //@ts-ignore
-  useHotkeys(duplicate, handleDuplicate, { preventDefault });
+  useHotkeys(duplicate, handleDuplicate);
   //@ts-ignore
-  useHotkeys(copyAction, handleCopy, { preventDefault });
+  useHotkeys(copyAction, handleCopy);
   //@ts-ignore
-  useHotkeys(cutAction, handleCut, { preventDefault });
+  useHotkeys(cutAction, handleCut);
   //@ts-ignore
-  useHotkeys(pasteAction, handlePaste, { preventDefault });
+  useHotkeys(pasteAction, handlePaste);
   //@ts-ignore
-  useHotkeys(deleteAction, handleDelete, { preventDefault });
+  useHotkeys(deleteAction, handleDelete);
   //@ts-ignore
-  useHotkeys("delete", handleDelete, { preventDefault });
+  useHotkeys("delete", handleDelete);
 
   useEffect(() => {
     setSHowCanvas(
