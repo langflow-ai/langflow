@@ -91,9 +91,17 @@ class MessageModel(DefaultModel):
     files: list[str] = []
 
     @field_validator("files", mode="before")
+    @classmethod
     def validate_files(cls, v):
         if isinstance(v, str):
-            return json.loads(v)
+            v = json.loads(v)
+        return v
+
+    @field_serializer("files")
+    @classmethod
+    def serialize_files(cls, v):
+        if isinstance(v, list):
+            return json.dumps(v)
         return v
 
     @classmethod
