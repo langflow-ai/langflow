@@ -302,6 +302,12 @@ export default function GenericNode({
     );
   };
 
+  useEffect(() => {
+    if (hiddenOutputs && hiddenOutputs.length == 0) {
+      setShowHiddenOutputs(false);
+    }
+  }, [hiddenOutputs]);
+
   const memoizedNodeToolbarComponent = useMemo(() => {
     return (
       <NodeToolbar>
