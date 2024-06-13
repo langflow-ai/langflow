@@ -2,10 +2,13 @@ import { FolderType } from "../../../pages/MainPage/entities";
 
 export type FoldersStoreType = {
   folders: FolderType[];
-  getFoldersApi: (refetch?: boolean) => Promise<void>;
+  getFoldersApi: (
+    refetch?: boolean,
+    startupApplication?: boolean,
+  ) => Promise<void>;
   setFolders: (folders: FolderType[]) => void;
-  loading: boolean;
-  setLoading: (loading: boolean) => void;
+  isLoadingFolders: boolean;
+  setIsLoadingFolders: (isLoadingFolders: boolean) => void;
   selectedFolder: FolderType | null;
   getFolderById: (id: string) => void;
   getMyCollectionFolder: () => void;
@@ -23,4 +26,5 @@ export type FoldersStoreType = {
   setFolderIdDragging: (id: string) => void;
   starterProjectId: string;
   setStarterProjectId: (id: string) => void;
+  refreshFolders: () => void;
 };
