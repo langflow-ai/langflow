@@ -42,6 +42,7 @@ export function AuthProvider({ children }): React.ReactElement {
   const [apiKey, setApiKey] = useState<string | null>(
     cookies.get("apikey_tkn_lflw")
   );
+  // const getFoldersApi = useFolderStore((state) => state.getFoldersApi);
 
   useEffect(() => {
     const storedAccessToken = cookies.get("access_token_lf");
@@ -59,11 +60,11 @@ export function AuthProvider({ children }): React.ReactElement {
 
   function getUser() {
     getLoggedUser()
-      .then((user) => {
+      .then(async (user) => {
         setUserData(user);
-        setLoading(false);
         const isSuperUser = user!.is_superuser;
         setIsAdmin(isSuperUser);
+        // await getFoldersApi(true);
       })
       .catch((error) => {
         setLoading(false);

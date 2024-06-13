@@ -853,3 +853,8 @@ export const ALLOWED_IMAGE_INPUT_EXTENSIONS = ["png", "jpg", "jpeg"];
 export const FS_ERROR_TEXT =
   "Please ensure your file has one of the following extensions:";
 export const SN_ERROR_TEXT = ALLOWED_IMAGE_INPUT_EXTENSIONS.join(", ");
+
+export const ERROR_UPDATING_COMPONENT =
+  "An unexpected error occurred while updating the Component. Please try again.";
+export const TITLE_ERROR_UPDATING_COMPONENT =
+  "Error while updating the Component";

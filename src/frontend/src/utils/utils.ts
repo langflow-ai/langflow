@@ -237,13 +237,13 @@ export function groupByFamily(
 
   const checkBaseClass = (template: InputFieldType) => {
     return (
-      template.type &&
-      template.show &&
+      template?.type &&
+      template?.show &&
       ((!excludeTypes.has(template.type) &&
         baseClassesSet.has(template.type)) ||
-        (template.input_types &&
-          template.input_types.some((inputType) =>
-            baseClassesSet.has(inputType),
+        (template?.input_types &&
+          template?.input_types.some((inputType) =>
+            baseClassesSet.has(inputType)
           )))
     );
   };

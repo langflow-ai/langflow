@@ -58,8 +58,13 @@ test("user must interact with chat with Input/Output", async ({ page }) => {
     .fill(
       "testtesttesttesttesttestte;.;.,;,.;,.;.,;,..,;;;;;;;;;;;;;;;;;;;;;,;.;,.;,.,;.,;.;.,~~çççççççççççççççççççççççççççççççççççççççisdajfdasiopjfaodisjhvoicxjiovjcxizopjviopasjioasfhjaiohf23432432432423423sttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttestççççççççççççççççççççççççççççççççç,.,.,.,.,.,.,.,.,.,.,.,.,.,.,.,.,!"
     );
+  await page.getByText("Playground", { exact: true }).last().click();
   await page.getByTestId("icon-LucideSend").click();
   await page.getByText("Close", { exact: true }).click();
+  await page.getByText("Chat Input", { exact: true }).click();
+  await page.getByTestId("advanced-button-modal").click();
+  await page.getByTestId("showsender_name").click();
+  await page.getByText("Save Changes", { exact: true }).click();
 
   await page
     .getByTestId("popover-anchor-input-sender_name")

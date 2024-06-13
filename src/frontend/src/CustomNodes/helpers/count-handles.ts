@@ -5,9 +5,9 @@ export function countHandlesFn(data: NodeDataType): number {
     .filter((templateField) => templateField.charAt(0) !== "_")
     .map((templateCamp) => {
       const { template } = data.node!;
-      if (template[templateCamp].input_types) return true;
-      if (!template[templateCamp].show) return false;
-      switch (template[templateCamp].type) {
+      if (template[templateCamp]?.input_types) return true;
+      if (!template[templateCamp]?.show) return false;
+      switch (template[templateCamp]?.type) {
         case "str":
         case "bool":
         case "float":

@@ -80,7 +80,6 @@ export default function App() {
           login(user["access_token"]);
           setUserData(user);
           setAutoLogin(true);
-          setLoading(false);
           fetchAllData();
         }
       })

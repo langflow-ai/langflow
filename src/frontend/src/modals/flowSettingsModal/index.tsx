@@ -18,7 +18,7 @@ export default function FlowSettingsModal({
   useEffect(() => {
     setName(currentFlow!.name);
     setDescription(currentFlow!.description);
-  }, [currentFlow!.name, currentFlow!.description, open]);
+  }, [currentFlow?.name, currentFlow?.description, open]);
 
   const [name, setName] = useState(currentFlow!.name);
   const [description, setDescription] = useState(currentFlow!.description);
@@ -40,6 +40,7 @@ export default function FlowSettingsModal({
           list: [err?.response?.data.detail ?? ""],
         });
         console.error(err);
+        setIsSaving(false);
       });
   }
 
