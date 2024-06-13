@@ -864,7 +864,7 @@
                                 "show": true,
                                 "title_case": false,
                                 "type": "str",
-                                "value": ""
+                                "value": "OPENAI_API_KEY"
                             },
                             "stream": {
                                 "advanced": true,
@@ -1039,7 +1039,8 @@
                         "id": "ChatInput-Z9Rn6"
                     }
                 },
-                "id": "reactflow__edge-ChatInput-Z9Rn6{œbaseClassesœ:[œTextœ,œobjectœ,œRecordœ,œstrœ],œdataTypeœ:œChatInputœ,œidœ:œChatInput-Z9Rn6œ}-Prompt-kykM2{œfieldNameœ:œUserMessageœ,œidœ:œPrompt-kykM2œ,œinputTypesœ:[œDocumentœ,œMessageœ,œRecordœ,œTextœ],œtypeœ:œstrœ}"
+                "id": "reactflow__edge-ChatInput-Z9Rn6{œbaseClassesœ:[œTextœ,œobjectœ,œRecordœ,œstrœ],œdataTypeœ:œChatInputœ,œidœ:œChatInput-Z9Rn6œ}-Prompt-kykM2{œfieldNameœ:œUserMessageœ,œidœ:œPrompt-kykM2œ,œinputTypesœ:[œDocumentœ,œMessageœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
+                "className": ""
             },
             {
                 "source": "MemoryComponent-u6m5G",
@@ -1068,12 +1069,13 @@
                         "id": "MemoryComponent-u6m5G"
                     }
                 },
-                "id": "reactflow__edge-MemoryComponent-u6m5G{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œMemoryComponentœ,œidœ:œMemoryComponent-u6m5Gœ}-Prompt-kykM2{œfieldNameœ:œContextœ,œidœ:œPrompt-kykM2œ,œinputTypesœ:[œDocumentœ,œMessageœ,œRecordœ,œTextœ],œtypeœ:œstrœ}"
+                "id": "reactflow__edge-MemoryComponent-u6m5G{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œMemoryComponentœ,œidœ:œMemoryComponent-u6m5Gœ}-Prompt-kykM2{œfieldNameœ:œContextœ,œidœ:œPrompt-kykM2œ,œinputTypesœ:[œDocumentœ,œMessageœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
+                "className": ""
             }
         ],
         "viewport": {
             "x": -511.79726701119625,
-            "y": 48.514712353620894,
+            "y": 49.514712353620894,
             "zoom": 0.4612356948928673
         }
     },
