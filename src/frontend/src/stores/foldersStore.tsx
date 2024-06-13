@@ -7,15 +7,16 @@ import {
 } from "../pages/MainPage/services";
 import { FoldersStoreType } from "../types/zustand/folders";
 import useFlowsManagerStore from "./flowsManagerStore";
+import { useTypesStore } from "./typesStore";
 
 export const useFolderStore = create<FoldersStoreType>((set, get) => ({
   folders: [],
-  getFoldersApi: (refetch = false) => {
+  getFoldersApi: (refetch = false, startupApplication: boolean = false) => {
     return new Promise<void>((resolve, reject) => {
       if (get()?.folders.length === 0 || refetch === true) {
-        get().setLoading(true);
+        get().setIsLoadingFolders(true);
         getFolders().then(
-          (res) => {
+          async (res) => {
             const foldersWithoutStarterProjects = res?.filter(
               (folder) => folder.name !== STARTER_FOLDER_NAME,
             );
@@ -33,38 +34,73 @@ export const useFolderStore = create<FoldersStoreType>((set, get) => ({
 
             set({ myCollectionId });
 
-            if (refetch === true) {
-              useFlowsManagerStore.getState().refreshFlows();
-              useFlowsManagerStore.getState().setAllFlows;
-            }
+            const { refreshFlows } = useFlowsManagerStore.getState();
+            const { getTypes } = useTypesStore.getState();
+            const { setIsLoadingFolders } = get();
 
-            get().setLoading(false);
+            if (refetch) {
+              if (startupApplication) {
+                await refreshFlows();
+                await getTypes();
+              } else {
+                refreshFlows();
+                getTypes();
+              }
+            }
+            setIsLoadingFolders(false);
+
             resolve();
           },
           (error) => {
             set({ folders: [] });
-            get().setLoading(false);
+            get().setIsLoadingFolders(false);
             reject(error);
           },
         );
       }
     });
   },
-  setFolders: (folders) => set(() => ({ folders: folders })),
-  loading: false,
-  setLoading: (loading) => set(() => ({ loading: loading })),
-  getFolderById: (id) => {
-    if (id) {
-      getFolderById(id).then(
-        (res) => {
-          const setAllFlows = useFlowsManagerStore.getState().setAllFlows;
-          setAllFlows(res.flows);
-          set({ selectedFolder: res });
+  refreshFolders: () => {
+    return new Promise<void>((resolve, reject) => {
+      getFolders().then(
+        async (res) => {
+          const foldersWithoutStarterProjects = res?.filter(
+            (folder) => folder.name !== STARTER_FOLDER_NAME,
+          );
+
+          const starterProjects = res?.find(
+            (folder) => folder.name === STARTER_FOLDER_NAME,
+          );
+
+          set({ starterProjectId: starterProjects!.id ?? "" });
+          set({ folders: foldersWithoutStarterProjects });
+
+          const myCollectionId = res?.find(
+            (f) => f.name === DEFAULT_FOLDER,
+          )?.id;
+
+          set({ myCollectionId });
+
+          resolve();
         },
-        () => {
-          get().getFoldersApi(true);
+        (error) => {
+          set({ folders: [] });
+          get().setIsLoadingFolders(false);
+          reject(error);
         },
       );
+    });
+  },
+  setFolders: (folders) => set(() => ({ folders: folders })),
+  isLoadingFolders: false,
+  setIsLoadingFolders: (isLoadingFolders) => set(() => ({ isLoadingFolders })),
+  getFolderById: (id) => {
+    if (id) {
+      getFolderById(id).then((res) => {
+        const setAllFlows = useFlowsManagerStore.getState().setAllFlows;
+        setAllFlows(res.flows);
+        set({ selectedFolder: res });
+      });
     }
   },
   selectedFolder: null,
