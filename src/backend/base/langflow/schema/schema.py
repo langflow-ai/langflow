@@ -21,16 +21,17 @@ class Log(TypedDict):
 def build_logs_from_artifacts(artifacts: dict) -> dict:
     logs = defaultdict(list)
     for key in artifacts:
-        message = artifacts[key]
+        message = artifacts[key]["raw"]
+        _type = artifacts[key]["type"]
 
         if not isinstance(message, dict):
             message = {"message": message}
 
         if "stream_url" in message and "type" in message:
             stream_url = StreamURL(location=message["stream_url"])
-            log = Log(message=stream_url, type=message["type"])
-        elif "type" in message:
-            log = Log(message=message, type=message["type"])
+            log = Log(message=stream_url, type=_type)
+        elif _type:
+            log = Log(message=message, type=_type)
 
         logs[key].append(log)
     return logs
