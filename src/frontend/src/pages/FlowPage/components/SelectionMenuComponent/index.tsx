@@ -13,7 +13,7 @@ export default function SelectionMenu({
   const [disable, setDisable] = useState<boolean>(
     lastSelection && edges.length > 0
       ? validateSelection(lastSelection!, edges).length > 0
-      : false,
+      : false
   );
   const [isOpen, setIsOpen] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);

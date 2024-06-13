@@ -2,7 +2,7 @@ import { useEffect } from "react";
 
 const useSelectedFlows = (
   entireFormValues,
-  setSelectedFlowsComponentsCards,
+  setSelectedFlowsComponentsCards
 ) => {
   useEffect(() => {
     if (!entireFormValues || Object.keys(entireFormValues).length === 0) return;

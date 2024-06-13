@@ -3,7 +3,6 @@ from typing import List, Optional
 import chromadb
 from chromadb.config import Settings
 from langchain_chroma import Chroma
-
 from langflow.components.vectorstores.base.model import LCVectorStoreComponent
 from langflow.field_typing import Embeddings, Text
 from langflow.schema import Record
@@ -104,10 +103,11 @@ class ChromaSearchComponent(LCVectorStoreComponent):
             client = chromadb.HttpClient(settings=chroma_settings)
         if index_directory:
             index_directory = self.resolve_path(index_directory)
+
         vector_store = Chroma(
             embedding_function=embedding,
             collection_name=collection_name,
-            persist_directory=index_directory,
+            persist_directory=index_directory or None,
             client=client,
         )
 

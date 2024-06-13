@@ -597,7 +597,7 @@ def test_successful_run_with_input_type_chat(client, starter_project, created_ap
     chat_input_outputs = [output for output in outputs_dict.get("outputs") if "ChatInput" in output.get("component_id")]
     assert len(chat_input_outputs) == 1
     # Now we check if the input_value is correct
-    assert all([output.get("results").get("result") == "value1" for output in chat_input_outputs]), chat_input_outputs
+    assert all([output.get("results").get("text") == "value1" for output in chat_input_outputs]), chat_input_outputs
 
 
 def test_successful_run_with_input_type_any(client, starter_project, created_api_key):
@@ -631,7 +631,7 @@ def test_successful_run_with_input_type_any(client, starter_project, created_api
     ]
     assert len(any_input_outputs) == 1
     # Now we check if the input_value is correct
-    assert all([output.get("results").get("result") == "value1" for output in any_input_outputs]), any_input_outputs
+    assert all([output.get("results").get("text") == "value1" for output in any_input_outputs]), any_input_outputs
 
 
 @pytest.mark.api_key_required

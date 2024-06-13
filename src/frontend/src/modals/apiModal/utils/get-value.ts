@@ -5,7 +5,7 @@ export const getValue = (
   value: string,
   node: NodeType,
   template: TemplateVariableType,
-  tweak: Object[],
+  tweak: Object[]
 ) => {
   let returnValue = value ?? "";
 

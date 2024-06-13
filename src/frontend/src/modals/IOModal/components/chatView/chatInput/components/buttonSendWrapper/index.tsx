@@ -28,8 +28,8 @@ const ButtonSendWrapper = ({
         noInput
           ? "bg-high-indigo text-background"
           : chatValue === ""
-            ? "text-primary"
-            : "bg-chat-send text-background",
+          ? "text-primary"
+          : "bg-chat-send text-background"
       )}
       disabled={lockChat || saveLoading}
       onClick={(): void => send()}
