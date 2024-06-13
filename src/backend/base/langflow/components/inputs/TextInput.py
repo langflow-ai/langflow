@@ -1,7 +1,7 @@
 from langflow.base.io.text import TextComponent
 from langflow.field_typing import Text
 from langflow.inputs import StrInput
-from langflow.template import Input, Output
+from langflow.template import Output
 
 
 class TextInput(TextComponent):
@@ -17,13 +17,13 @@ class TextInput(TextComponent):
             info="Text or Data to be passed as input.",
             input_types=["Data", "Text"],
         ),
-        Input(
+        StrInput(
             name="data_template",
-            type=str,
             display_name="Data Template",
             multiline=True,
             info="Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
             advanced=True,
+            value="{text}",
         ),
     ]
     outputs = [
