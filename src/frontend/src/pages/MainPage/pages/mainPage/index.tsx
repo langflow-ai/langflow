@@ -16,7 +16,7 @@ import useDropdownOptions from "../../hooks/use-dropdown-options";
 export default function HomePage(): JSX.Element {
   const uploadFlow = useFlowsManagerStore((state) => state.uploadFlow);
   const setCurrentFlowId = useFlowsManagerStore(
-    (state) => state.setCurrentFlowId
+    (state) => state.setCurrentFlowId,
   );
 
   const location = useLocation();
@@ -25,15 +25,8 @@ export default function HomePage(): JSX.Element {
   const [openFolderModal, setOpenFolderModal] = useState(false);
   const [openDeleteFolderModal, setOpenDeleteFolderModal] = useState(false);
   const is_component = pathname === "/components";
-  const getFoldersApi = useFolderStore((state) => state.getFoldersApi);
   const setFolderToEdit = useFolderStore((state) => state.setFolderToEdit);
   const navigate = useNavigate();
-
-  useEffect(() => {
-    setTimeout(() => {
-      getFoldersApi();
-    }, 300);
-  }, []);
 
   useEffect(() => {
     setCurrentFlowId("");
@@ -45,7 +38,7 @@ export default function HomePage(): JSX.Element {
     is_component,
   });
 
-  const { handleDeleteFolder } = useDeleteFolder({ navigate, getFoldersApi });
+  const { handleDeleteFolder } = useDeleteFolder({ navigate });
 
   return (
     <>
