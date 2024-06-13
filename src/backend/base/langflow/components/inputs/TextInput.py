@@ -2,6 +2,7 @@ from langflow.base.io.text import TextComponent
 from langflow.field_typing import Text
 from langflow.inputs import StrInput
 from langflow.template import Output
+from langflow.schema.message import Message
 
 
 class TextInput(TextComponent):
@@ -31,4 +32,9 @@ class TextInput(TextComponent):
     ]
 
     def text_response(self) -> Text:
-        return self.build(input_value=self.input_value, data_template=self.data_template)
+        if isinstance(self.input_value, Message):
+            text = self.input_value.text
+        else:
+            text = self.input_value
+
+        return self.build(input_value=text, data_template=self.data_template)
