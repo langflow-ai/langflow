@@ -79,9 +79,9 @@ class OpenAIModelComponent(LCModelComponent):
         output = ChatOpenAI(
             max_tokens=max_tokens or None,
             model_kwargs=model_kwargs or {},
-            model=model_name,
+            model=model_name or None,
             base_url=openai_api_base,
             api_key=api_key,
-            temperature=temperature,
+            temperature=temperature or 0.1,
         )
         return output
