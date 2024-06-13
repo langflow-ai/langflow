@@ -68,7 +68,7 @@ class Message(BaseModel):
         return AIMessage(content=self.text)
 
     @classmethod
-    def from_data(cls, record: Data) -> "Message":
+    def from_data(cls, data: Data) -> "Message":
         """
         Converts a BaseMessage to a Data.
 
@@ -80,13 +80,13 @@ class Message(BaseModel):
         """
 
         return cls(
-            text=record.text,
-            sender=record.sender,
-            sender_name=record.sender_name,
-            files=record.files,
-            session_id=record.session_id,
-            timestamp=record.timestamp,
-            flow_id=record.flow_id,
+            text=data.text,
+            sender=data.sender,
+            sender_name=data.sender_name,
+            files=data.files,
+            session_id=data.session_id,
+            timestamp=data.timestamp,
+            flow_id=data.flow_id,
         )
 
     @field_serializer("text", mode="plain")
