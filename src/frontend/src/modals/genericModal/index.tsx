@@ -47,7 +47,7 @@ export default function GenericModal({
   const [myModalType] = useState(type);
   const [inputValue, setInputValue] = useState(value);
   const [isEdit, setIsEdit] = useState(true);
-  const [wordsHighlight, setWordsHighlight] = useState<string[]>([]);
+  const [wordsHighlight, setWordsHighlight] = useState<Set<string>>(new Set());
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setNoticeData = useAlertStore((state) => state.setNoticeData);
@@ -82,8 +82,8 @@ export default function GenericModal({
       }
     }
 
-    const filteredWordsHighlight = matches.filter(
-      (word) => !invalid_chars.includes(word)
+    const filteredWordsHighlight = new Set(
+      matches.filter((word) => !invalid_chars.includes(word)),
     );
 
     setWordsHighlight(filteredWordsHighlight);
@@ -134,7 +134,7 @@ export default function GenericModal({
         // to the first key of the custom_fields object
         if (field_name === "") {
           field_name = Array.isArray(
-            apiReturn.data?.frontend_node?.custom_fields?.[""]
+            apiReturn.data?.frontend_node?.custom_fields?.[""],
           )
             ? apiReturn.data?.frontend_node?.custom_fields?.[""][0] ?? ""
             : apiReturn.data?.frontend_node?.custom_fields?.[""] ?? "";
@@ -209,7 +209,7 @@ export default function GenericModal({
           <div
             className={classNames(
               !isEdit ? "rounded-lg border" : "",
-              "flex h-full max-h-[85%] w-full"
+              "flex h-full max-h-[85%] w-full",
             )}
           >
             {type === TypeModal.PROMPT && isEdit && !readonly ? (
@@ -279,7 +279,7 @@ export default function GenericModal({
                         Prompt Variables:
                       </span>
 
-                      {wordsHighlight.map((word, index) => (
+                      {Array.from(wordsHighlight).map((word, index) => (
                         <ShadTooltip
                           key={index}
                           content={word.replace(/[{}]/g, "")}
