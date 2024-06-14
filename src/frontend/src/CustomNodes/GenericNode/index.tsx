@@ -468,7 +468,7 @@ export default function GenericNode({
                         !data.node!.template[templateField]?.advanced && (
                           <ParameterComponent
                             selected={selected}
-                            index={idx.toString()}
+                            index={idx}
                             key={scapedJSONStringfy({
                               inputTypes:
                                 data.node!.template[templateField].input_types,
@@ -729,7 +729,7 @@ export default function GenericNode({
                     !data.node!.template[templateField]?.advanced ? (
                       <ParameterComponent
                         selected={selected}
-                        index={idx.toString()}
+                        index={idx}
                         key={scapedJSONStringfy({
                           inputTypes:
                             data.node!.template[templateField].input_types,

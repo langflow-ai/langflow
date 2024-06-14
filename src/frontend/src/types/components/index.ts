@@ -75,7 +75,7 @@ export type ParameterComponentType = {
   info?: string;
   proxy?: { field: string; id: string };
   showNode?: boolean;
-  index?: string;
+  index: number;
   onCloseModal?: (close: boolean) => void;
   outputName?: string;
   outputProxy?: OutputFieldProxyType;
