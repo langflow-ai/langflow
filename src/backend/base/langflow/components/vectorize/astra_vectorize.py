@@ -20,7 +20,7 @@ class AstraVectorize(CustomComponent):
             },
             "authentication": {
                 "display_name": "Authentication",
-                "info": "auth"# TODO
+                "info": "Authentication Token for Selected Provider"# TODO
             },
             "parameters": {
                 "display_name": "Parameters",

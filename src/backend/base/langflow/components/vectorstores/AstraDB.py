@@ -169,7 +169,7 @@ class AstraDBVectorStoreComponent(CustomComponent):
                 collection_indexing_policy=collection_indexing_policy,
                 collection_vector_service_options=collection_vector_service_options,
             )
-
+        
         return vector_store
 
                 
