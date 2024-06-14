@@ -109,12 +109,23 @@ export default function ParameterComponent({
     }
   };
 
+  const logTypeIsError = (data: any) => {
+    if (!outputName) return;
+    const logs = (data?.logs[outputName] ?? [])[0];
+    if (Array.isArray(logs) && logs.length > 1) {
+      return logs.some(
+        (log) => log.type === "error" || log.type === "ValueError",
+      );
+    } else {
+      return logs?.type === "error" || logs?.type === "ValueError";
+    }
+  };
+
   const flowPoolNode = (flowPool[data.id] ?? [])[
     (flowPool[data.id]?.length ?? 1) - 1
   ];
   const displayOutputPreview =
     !!flowPool[data.id] &&
-    flowPool[data.id][flowPool[data.id].length - 1]?.valid &&
     logHasMessage(flowPool[data.id][flowPool[data.id].length - 1]?.data);
 
   let hasOutputs;
@@ -123,6 +134,7 @@ export default function ParameterComponent({
   }
 
   const unknownOutput = logTypeIsUnknown(flowPoolNode?.data);
+  const errorOutput = logTypeIsError(flowPoolNode?.data);
 
   const preventDefault = true;
 
@@ -374,15 +386,24 @@ export default function ParameterComponent({
                     onClick={() => setOpenOutputModal(true)}
                     data-testid={`output-inspection-${title.toLowerCase()}`}
                   >
-                    <IconComponent
-                      className={classNames(
-                        "h-5 w-5 rounded-md",
-                        displayOutputPreview && !unknownOutput
-                          ? " hover:text-medium-indigo"
-                          : " cursor-not-allowed text-muted-foreground",
-                      )}
-                      name={"ScanEye"}
-                    />
+                    {errorOutput ? (
+                      <IconComponent
+                        className={classNames(
+                          "h-5 w-5 rounded-md text-status-red",
+                        )}
+                        name={"X"}
+                      />
+                    ) : (
+                      <IconComponent
+                        className={classNames(
+                          "h-5 w-5 rounded-md",
+                          displayOutputPreview && !unknownOutput
+                            ? " hover:text-medium-indigo"
+                            : " cursor-not-allowed text-muted-foreground",
+                        )}
+                        name={"ScanEye"}
+                      />
+                    )}
                   </Button>
                 </ShadTooltip>
               )}
