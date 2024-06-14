@@ -204,138 +204,136 @@ export default function GenericModal({
           aria-hidden="true"
         />
       </BaseModal.Header>
-      <BaseModal.Content>
-        <div className="flex h-full flex-col">
-          <div
-            className={classNames(
-              !isEdit ? "rounded-lg border" : "",
-              "flex h-full max-h-[85%] w-full",
-            )}
-          >
-            {type === TypeModal.PROMPT && isEdit && !readonly ? (
-              <Textarea
-                id={"modal-" + id}
-                data-testid={"modal-" + id}
-                ref={divRefPrompt}
-                className="form-input h-full w-full rounded-lg custom-scroll focus-visible:ring-1"
-                value={inputValue}
-                onBlur={() => {
-                  setIsEdit(false);
-                }}
-                autoFocus
-                onChange={(event) => {
-                  setInputValue(event.target.value);
-                  checkVariables(event.target.value);
-                }}
-                placeholder={EDIT_TEXT_PLACEHOLDER}
-                onKeyDown={(e) => {
-                  handleKeyDown(e, inputValue, "");
-                }}
-              />
-            ) : type === TypeModal.PROMPT && (!isEdit || readonly) ? (
-              <SanitizedHTMLWrapper
-                className={getClassByNumberLength()}
-                content={coloredContent}
-                onClick={() => {
-                  setIsEdit(true);
-                }}
-                suppressWarning={true}
-              />
-            ) : type !== TypeModal.PROMPT ? (
-              <Textarea
-                ref={textRef}
-                className="form-input h-full w-full overflow-auto rounded-lg focus-visible:ring-1"
-                value={inputValue}
-                onChange={(event) => {
-                  setInputValue(event.target.value);
-                }}
-                placeholder={EDIT_TEXT_PLACEHOLDER}
-                onKeyDown={(e) => {
-                  handleKeyDown(e, value, "");
-                }}
-                readOnly={readonly}
-                id={"text-area-modal"}
-                data-testid={"text-area-modal"}
-              />
-            ) : (
-              <></>
-            )}
-          </div>
-
-          <div className="mt-6 flex h-fit w-full items-end justify-between">
-            <div className="mb-auto flex-1">
-              {type === TypeModal.PROMPT && (
-                <div className=" mr-2">
-                  <div
-                    ref={divRef}
-                    className="max-h-20 overflow-y-auto custom-scroll"
-                  >
-                    <div className="flex flex-wrap items-center">
-                      <IconComponent
-                        name="Braces"
-                        className=" -ml-px mr-1 flex h-4 w-4 text-primary"
-                      />
-                      <span className="text-md font-semibold text-primary">
-                        Prompt Variables:
-                      </span>
-
-                      {Array.from(wordsHighlight).map((word, index) => (
-                        <ShadTooltip
-                          key={index}
-                          content={word.replace(/[{}]/g, "")}
-                          asChild={false}
-                        >
-                          <Badge
-                            key={index}
-                            variant="gray"
-                            size="md"
-                            className="m-1 max-w-[40vw] cursor-default truncate p-2.5 text-sm"
-                          >
-                            <div className="relative bottom-[1px]">
-                              <span id={"badge" + index.toString()}>
-                                {word.replace(/[{}]/g, "").length > 59
-                                  ? word.replace(/[{}]/g, "").slice(0, 56) +
-                                    "..."
-                                  : word.replace(/[{}]/g, "")}
-                              </span>
-                            </div>
-                          </Badge>
-                        </ShadTooltip>
-                      ))}
-                    </div>
-                  </div>
-                  <span className="mt-2 text-xs text-muted-foreground">
-                    Prompt variables can be created with any chosen name inside
-                    curly brackets, e.g. {"{variable_name}"}
-                  </span>
-                </div>
-              )}
-            </div>
-            <Button
-              data-testid="genericModalBtnSave"
-              id="genericModalBtnSave"
-              disabled={readonly}
-              onClick={() => {
-                switch (myModalType) {
-                  case TypeModal.TEXT:
-                    setValue(inputValue);
-                    setModalOpen(false);
-                    break;
-                  case TypeModal.PROMPT:
-                    validatePrompt(false);
-                    break;
-
-                  default:
-                    break;
-                }
+      <BaseModal.Content overflowHidden>
+        <div
+          className={classNames(
+            !isEdit ? "rounded-lg border" : "",
+            "flex h-full w-full",
+          )}
+        >
+          {type === TypeModal.PROMPT && isEdit && !readonly ? (
+            <Textarea
+              id={"modal-" + id}
+              data-testid={"modal-" + id}
+              ref={divRefPrompt}
+              className="form-input h-full w-full resize-none rounded-lg custom-scroll focus-visible:ring-1"
+              value={inputValue}
+              onBlur={() => {
+                setIsEdit(false);
               }}
-              type="submit"
-            >
-              {myButtonText}
-            </Button>
-          </div>
+              autoFocus
+              onChange={(event) => {
+                setInputValue(event.target.value);
+                checkVariables(event.target.value);
+              }}
+              placeholder={EDIT_TEXT_PLACEHOLDER}
+              onKeyDown={(e) => {
+                handleKeyDown(e, inputValue, "");
+              }}
+            />
+          ) : type === TypeModal.PROMPT && (!isEdit || readonly) ? (
+            <SanitizedHTMLWrapper
+              className={getClassByNumberLength()}
+              content={coloredContent}
+              onClick={() => {
+                setIsEdit(true);
+              }}
+              suppressWarning={true}
+            />
+          ) : type !== TypeModal.PROMPT ? (
+            <Textarea
+              ref={textRef}
+              className="form-input h-full w-full resize-none overflow-auto rounded-lg focus-visible:ring-1"
+              value={inputValue}
+              onChange={(event) => {
+                setInputValue(event.target.value);
+              }}
+              placeholder={EDIT_TEXT_PLACEHOLDER}
+              onKeyDown={(e) => {
+                handleKeyDown(e, value, "");
+              }}
+              readOnly={readonly}
+              id={"text-area-modal"}
+              data-testid={"text-area-modal"}
+            />
+          ) : (
+            <></>
+          )}
         </div>
       </BaseModal.Content>
+      <BaseModal.Footer>
+        <div className="flex w-full shrink-0 items-end justify-between">
+          <div className="mb-auto flex-1">
+            {type === TypeModal.PROMPT && (
+              <div className=" mr-2">
+                <div
+                  ref={divRef}
+                  className="max-h-20 overflow-y-auto custom-scroll"
+                >
+                  <div className="flex flex-wrap items-center">
+                    <IconComponent
+                      name="Braces"
+                      className=" -ml-px mr-1 flex h-4 w-4 text-primary"
+                    />
+                    <span className="text-md font-semibold text-primary">
+                      Prompt Variables:
+                    </span>
+
+                    {Array.from(wordsHighlight).map((word, index) => (
+                      <ShadTooltip
+                        key={index}
+                        content={word.replace(/[{}]/g, "")}
+                        asChild={false}
+                      >
+                        <Badge
+                          key={index}
+                          variant="gray"
+                          size="md"
+                          className="m-1 max-w-[40vw] cursor-default truncate p-2.5 text-sm"
+                        >
+                          <div className="relative bottom-[1px]">
+                            <span id={"badge" + index.toString()}>
+                              {word.replace(/[{}]/g, "").length > 59
+                                ? word.replace(/[{}]/g, "").slice(0, 56) + "..."
+                                : word.replace(/[{}]/g, "")}
+                            </span>
+                          </div>
+                        </Badge>
+                      </ShadTooltip>
+                    ))}
+                  </div>
+                </div>
+                <span className="mt-2 text-xs text-muted-foreground">
+                  Prompt variables can be created with any chosen name inside
+                  curly brackets, e.g. {"{variable_name}"}
+                </span>
+              </div>
+            )}
+          </div>
+          <Button
+            data-testid="genericModalBtnSave"
+            id="genericModalBtnSave"
+            disabled={readonly}
+            onClick={() => {
+              switch (myModalType) {
+                case TypeModal.TEXT:
+                  setValue(inputValue);
+                  setModalOpen(false);
+                  break;
+                case TypeModal.PROMPT:
+                  validatePrompt(false);
+                  break;
+
+                default:
+                  break;
+              }
+            }}
+            type="submit"
+          >
+            {myButtonText}
+          </Button>
+        </div>
+      </BaseModal.Footer>
     </BaseModal>
   );
 }
