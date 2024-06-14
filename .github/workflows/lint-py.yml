@@ -1,17 +1,12 @@
-name: lint
+name: Lint Python
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "poetry.lock"
-      - "pyproject.toml"
-      - "src/backend/**"
   pull_request:
     paths:
       - "poetry.lock"
       - "pyproject.toml"
       - "src/backend/**"
+      - "tests/**"
 
 env:
   POETRY_VERSION: "1.8.2"
@@ -45,6 +40,12 @@ jobs:
           path: |
             ./.mypy_cache
           key: ${{ runner.os }}-mypy-${{ hashFiles('**/pyproject.toml') }}
-      - name: Lint check
-        run: |
-          make lint
+      - name: Run linters
+        uses: wearerequired/lint-action@v1
+        with:
+          github_token: ${{ secrets.github_token }}
+          # Enable linters
+          git_email: "gabriel@langflow.org"
+          mypy: true
+          mypy_args: '--namespace-packages -p "langflow"'
+
