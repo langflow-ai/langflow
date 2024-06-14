@@ -5,174 +5,140 @@
         "className": "stroke-gray-900 stroke-connection",
         "data": {
           "sourceHandle": {
-            "baseClasses": [
-              "object",
-              "Text",
-              "str"
-            ],
             "dataType": "TextOutput",
-            "id": "TextOutput-BDknO"
+            "id": "TextOutput-BDknO",
+            "name": "Text",
+            "output_types": ["Text"]
           },
           "targetHandle": {
             "fieldName": "context",
             "id": "Prompt-xeI6K",
-            "inputTypes": [
-              "Document",
-              "BaseOutputParser",
-              "Record",
-              "Text"
-            ],
+            "inputTypes": ["Document", "Message", "Record", "Text"],
             "type": "str"
           }
         },
         "id": "reactflow__edge-TextOutput-BDknO{œbaseClassesœ:[œobjectœ,œTextœ,œstrœ],œdataTypeœ:œTextOutputœ,œidœ:œTextOutput-BDknOœ}-Prompt-xeI6K{œfieldNameœ:œcontextœ,œidœ:œPrompt-xeI6Kœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "TextOutput-BDknO",
-        "sourceHandle": "{œbaseClassesœ: [œobjectœ, œTextœ, œstrœ], œdataTypeœ: œTextOutputœ, œidœ: œTextOutput-BDknOœ}",
+        "sourceHandle": "{œdataTypeœ: œTextOutputœ, œidœ: œTextOutput-BDknOœ, œoutput_typesœ: [œTextœ], œnameœ: œTextœ}",
         "style": {
           "stroke": "#555"
         },
         "target": "Prompt-xeI6K",
-        "targetHandle": "{œfieldNameœ: œcontextœ, œidœ: œPrompt-xeI6Kœ, œinputTypesœ: [œDocumentœ, œBaseOutputParserœ, œRecordœ, œTextœ], œtypeœ: œstrœ}"
+        "targetHandle": "{œfieldNameœ: œcontextœ, œidœ: œPrompt-xeI6Kœ, œinputTypesœ: [œDocumentœ, œMessageœ, œRecordœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "className": "stroke-gray-900 stroke-connection",
         "data": {
           "sourceHandle": {
-            "baseClasses": [
-              "Text",
-              "str",
-              "object",
-              "Record"
-            ],
             "dataType": "ChatInput",
-            "id": "ChatInput-yxMKE"
+            "id": "ChatInput-yxMKE",
+            "name": "message",
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "question",
             "id": "Prompt-xeI6K",
-            "inputTypes": [
-              "Document",
-              "BaseOutputParser",
-              "Record",
-              "Text"
-            ],
+            "inputTypes": ["Document", "Message", "Record", "Text"],
             "type": "str"
           }
         },
         "id": "reactflow__edge-ChatInput-yxMKE{œbaseClassesœ:[œTextœ,œstrœ,œobjectœ,œRecordœ],œdataTypeœ:œChatInputœ,œidœ:œChatInput-yxMKEœ}-Prompt-xeI6K{œfieldNameœ:œquestionœ,œidœ:œPrompt-xeI6Kœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-yxMKE",
-        "sourceHandle": "{œbaseClassesœ: [œTextœ, œstrœ, œobjectœ, œRecordœ], œdataTypeœ: œChatInputœ, œidœ: œChatInput-yxMKEœ}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-yxMKEœ, œoutput_typesœ: [œMessageœ], œnameœ: œmessageœ}",
         "style": {
           "stroke": "#555"
         },
         "target": "Prompt-xeI6K",
-        "targetHandle": "{œfieldNameœ: œquestionœ, œidœ: œPrompt-xeI6Kœ, œinputTypesœ: [œDocumentœ, œBaseOutputParserœ, œRecordœ, œTextœ], œtypeœ: œstrœ}"
+        "targetHandle": "{œfieldNameœ: œquestionœ, œidœ: œPrompt-xeI6Kœ, œinputTypesœ: [œDocumentœ, œMessageœ, œRecordœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "className": "stroke-gray-900 stroke-connection",
         "data": {
           "sourceHandle": {
-            "baseClasses": [
-              "object",
-              "Text",
-              "str"
-            ],
             "dataType": "Prompt",
-            "id": "Prompt-xeI6K"
+            "id": "Prompt-xeI6K",
+            "name": "prompt",
+            "output_types": ["Prompt"]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "OpenAIModel-EjXlN",
-            "inputTypes": [
-              "Text",
-              "Record",
-              "Prompt"
-            ],
+            "inputTypes": ["Text", "Data", "Prompt"],
             "type": "str"
           }
         },
         "id": "reactflow__edge-Prompt-xeI6K{œbaseClassesœ:[œobjectœ,œTextœ,œstrœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-xeI6Kœ}-OpenAIModel-EjXlN{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-EjXlNœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Prompt-xeI6K",
-        "sourceHandle": "{œbaseClassesœ: [œobjectœ, œTextœ, œstrœ], œdataTypeœ: œPromptœ, œidœ: œPrompt-xeI6Kœ}",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-xeI6Kœ, œoutput_typesœ: [œPromptœ], œnameœ: œpromptœ}",
         "style": {
           "stroke": "#555"
         },
         "target": "OpenAIModel-EjXlN",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-EjXlNœ, œinputTypesœ: [œTextœ, œRecordœ, œPromptœ], œtypeœ: œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-EjXlNœ, œinputTypesœ: [œTextœ, œDataœ, œPromptœ], œtypeœ: œstrœ}"
       },
       {
         "className": "stroke-gray-900 stroke-connection",
         "data": {
           "sourceHandle": {
-            "baseClasses": [
-              "object",
-              "Text",
-              "str"
-            ],
             "dataType": "OpenAIModel",
-            "id": "OpenAIModel-EjXlN"
+            "id": "OpenAIModel-EjXlN",
+            "name": "text_output",
+            "output_types": ["Text"]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "ChatOutput-Q39I8",
-            "inputTypes": [
-              "Text"
-            ],
+            "inputTypes": ["Text", "Message"],
             "type": "str"
           }
         },
         "id": "reactflow__edge-OpenAIModel-EjXlN{œbaseClassesœ:[œobjectœ,œTextœ,œstrœ],œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-EjXlNœ}-ChatOutput-Q39I8{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-Q39I8œ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "OpenAIModel-EjXlN",
-        "sourceHandle": "{œbaseClassesœ: [œobjectœ, œTextœ, œstrœ], œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-EjXlNœ}",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-EjXlNœ, œoutput_typesœ: [œTextœ], œnameœ: œtext_outputœ}",
         "style": {
           "stroke": "#555"
         },
         "target": "ChatOutput-Q39I8",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-Q39I8œ, œinputTypesœ: [œTextœ], œtypeœ: œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-Q39I8œ, œinputTypesœ: [œTextœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "className": "stroke-gray-900 stroke-connection",
         "data": {
           "sourceHandle": {
-            "baseClasses": [
-              "Record"
-            ],
             "dataType": "File",
-            "id": "File-t0a6a"
+            "id": "File-t0a6a",
+            "name": "record",
+            "output_types": []
           },
           "targetHandle": {
             "fieldName": "inputs",
             "id": "RecursiveCharacterTextSplitter-tR9QM",
-            "inputTypes": [
-              "Document",
-              "Record"
-            ],
+            "inputTypes": ["Document", "Data"],
             "type": "Document"
           }
         },
         "id": "reactflow__edge-File-t0a6a{œbaseClassesœ:[œRecordœ],œdataTypeœ:œFileœ,œidœ:œFile-t0a6aœ}-RecursiveCharacterTextSplitter-tR9QM{œfieldNameœ:œinputsœ,œidœ:œRecursiveCharacterTextSplitter-tR9QMœ,œinputTypesœ:[œDocumentœ,œRecordœ],œtypeœ:œDocumentœ}",
         "selected": false,
         "source": "File-t0a6a",
-        "sourceHandle": "{œbaseClassesœ: [œRecordœ], œdataTypeœ: œFileœ, œidœ: œFile-t0a6aœ}",
+        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-t0a6aœ, œoutput_typesœ: [], œnameœ: œrecordœ}",
         "style": {
           "stroke": "#555"
         },
         "target": "RecursiveCharacterTextSplitter-tR9QM",
-        "targetHandle": "{œfieldNameœ: œinputsœ, œidœ: œRecursiveCharacterTextSplitter-tR9QMœ, œinputTypesœ: [œDocumentœ, œRecordœ], œtypeœ: œDocumentœ}"
+        "targetHandle": "{œfieldNameœ: œinputsœ, œidœ: œRecursiveCharacterTextSplitter-tR9QMœ, œinputTypesœ: [œDocumentœ, œDataœ], œtypeœ: œDocumentœ}"
       },
       {
         "className": "stroke-gray-900 stroke-connection",
         "data": {
           "sourceHandle": {
-            "baseClasses": [
-              "Embeddings"
-            ],
             "dataType": "OpenAIEmbeddings",
-            "id": "OpenAIEmbeddings-ZlOk1"
+            "id": "OpenAIEmbeddings-ZlOk1",
+            "name": "embeddings",
+            "output_types": ["Embeddings"]
           },
           "targetHandle": {
             "fieldName": "embedding",
@@ -183,7 +149,7 @@
         },
         "id": "reactflow__edge-OpenAIEmbeddings-ZlOk1{œbaseClassesœ:[œEmbeddingsœ],œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-ZlOk1œ}-AstraDBSearch-41nRz{œfieldNameœ:œembeddingœ,œidœ:œAstraDBSearch-41nRzœ,œinputTypesœ:null,œtypeœ:œEmbeddingsœ}",
         "source": "OpenAIEmbeddings-ZlOk1",
-        "sourceHandle": "{œbaseClassesœ: [œEmbeddingsœ], œdataTypeœ: œOpenAIEmbeddingsœ, œidœ: œOpenAIEmbeddings-ZlOk1œ}",
+        "sourceHandle": "{œdataTypeœ: œOpenAIEmbeddingsœ, œidœ: œOpenAIEmbeddings-ZlOk1œ, œoutput_typesœ: [œEmbeddingsœ], œnameœ: œembeddingsœ}",
         "style": {
           "stroke": "#555"
         },
@@ -194,27 +160,21 @@
         "className": "stroke-gray-900 stroke-connection",
         "data": {
           "sourceHandle": {
-            "baseClasses": [
-              "Text",
-              "str",
-              "object",
-              "Record"
-            ],
             "dataType": "ChatInput",
-            "id": "ChatInput-yxMKE"
+            "id": "ChatInput-yxMKE",
+            "name": "message",
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "AstraDBSearch-41nRz",
-            "inputTypes": [
-              "Text"
-            ],
+            "inputTypes": ["Text"],
             "type": "str"
           }
         },
         "id": "reactflow__edge-ChatInput-yxMKE{œbaseClassesœ:[œTextœ,œstrœ,œobjectœ,œRecordœ],œdataTypeœ:œChatInputœ,œidœ:œChatInput-yxMKEœ}-AstraDBSearch-41nRz{œfieldNameœ:œinput_valueœ,œidœ:œAstraDBSearch-41nRzœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
         "source": "ChatInput-yxMKE",
-        "sourceHandle": "{œbaseClassesœ: [œTextœ, œstrœ, œobjectœ, œRecordœ], œdataTypeœ: œChatInputœ, œidœ: œChatInput-yxMKEœ}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-yxMKEœ, œoutput_typesœ: [œMessageœ], œnameœ: œmessageœ}",
         "style": {
           "stroke": "#555"
         },
@@ -225,11 +185,10 @@
         "className": "stroke-gray-900 stroke-connection",
         "data": {
           "sourceHandle": {
-            "baseClasses": [
-              "Record"
-            ],
             "dataType": "RecursiveCharacterTextSplitter",
-            "id": "RecursiveCharacterTextSplitter-tR9QM"
+            "id": "RecursiveCharacterTextSplitter-tR9QM",
+            "name": "record",
+            "output_types": []
           },
           "targetHandle": {
             "fieldName": "inputs",
@@ -241,7 +200,7 @@
         "id": "reactflow__edge-RecursiveCharacterTextSplitter-tR9QM{œbaseClassesœ:[œRecordœ],œdataTypeœ:œRecursiveCharacterTextSplitterœ,œidœ:œRecursiveCharacterTextSplitter-tR9QMœ}-AstraDB-eUCSS{œfieldNameœ:œinputsœ,œidœ:œAstraDB-eUCSSœ,œinputTypesœ:null,œtypeœ:œRecordœ}",
         "selected": false,
         "source": "RecursiveCharacterTextSplitter-tR9QM",
-        "sourceHandle": "{œbaseClassesœ: [œRecordœ], œdataTypeœ: œRecursiveCharacterTextSplitterœ, œidœ: œRecursiveCharacterTextSplitter-tR9QMœ}",
+        "sourceHandle": "{œdataTypeœ: œRecursiveCharacterTextSplitterœ, œidœ: œRecursiveCharacterTextSplitter-tR9QMœ, œoutput_typesœ: [], œnameœ: œrecordœ}",
         "style": {
           "stroke": "#555"
         },
@@ -252,11 +211,10 @@
         "className": "stroke-gray-900 stroke-connection",
         "data": {
           "sourceHandle": {
-            "baseClasses": [
-              "Embeddings"
-            ],
             "dataType": "OpenAIEmbeddings",
-            "id": "OpenAIEmbeddings-9TPjc"
+            "id": "OpenAIEmbeddings-9TPjc",
+            "name": "embeddings",
+            "output_types": ["Embeddings"]
           },
           "targetHandle": {
             "fieldName": "embedding",
@@ -268,7 +226,7 @@
         "id": "reactflow__edge-OpenAIEmbeddings-9TPjc{œbaseClassesœ:[œEmbeddingsœ],œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-9TPjcœ}-AstraDB-eUCSS{œfieldNameœ:œembeddingœ,œidœ:œAstraDB-eUCSSœ,œinputTypesœ:null,œtypeœ:œEmbeddingsœ}",
         "selected": false,
         "source": "OpenAIEmbeddings-9TPjc",
-        "sourceHandle": "{œbaseClassesœ: [œEmbeddingsœ], œdataTypeœ: œOpenAIEmbeddingsœ, œidœ: œOpenAIEmbeddings-9TPjcœ}",
+        "sourceHandle": "{œdataTypeœ: œOpenAIEmbeddingsœ, œidœ: œOpenAIEmbeddings-9TPjcœ, œoutput_typesœ: [œEmbeddingsœ], œnameœ: œembeddingsœ}",
         "style": {
           "stroke": "#555"
         },
@@ -279,25 +237,21 @@
         "className": "stroke-gray-900 stroke-connection",
         "data": {
           "sourceHandle": {
-            "baseClasses": [
-              "Record"
-            ],
             "dataType": "AstraDBSearch",
-            "id": "AstraDBSearch-41nRz"
+            "id": "AstraDBSearch-41nRz",
+            "name": "record",
+            "output_types": []
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "TextOutput-BDknO",
-            "inputTypes": [
-              "Record",
-              "Text"
-            ],
+            "inputTypes": ["Record", "Text"],
             "type": "str"
           }
         },
         "id": "reactflow__edge-AstraDBSearch-41nRz{œbaseClassesœ:[œRecordœ],œdataTypeœ:œAstraDBSearchœ,œidœ:œAstraDBSearch-41nRzœ}-TextOutput-BDknO{œfieldNameœ:œinput_valueœ,œidœ:œTextOutput-BDknOœ,œinputTypesœ:[œRecordœ,œTextœ],œtypeœ:œstrœ}",
         "source": "AstraDBSearch-41nRz",
-        "sourceHandle": "{œbaseClassesœ: [œRecordœ], œdataTypeœ: œAstraDBSearchœ, œidœ: œAstraDBSearch-41nRzœ}",
+        "sourceHandle": "{œdataTypeœ: œAstraDBSearchœ, œidœ: œAstraDBSearch-41nRzœ, œoutput_typesœ: [], œnameœ: œrecordœ}",
         "style": {
           "stroke": "#555"
         },
@@ -310,12 +264,7 @@
         "data": {
           "id": "ChatInput-yxMKE",
           "node": {
-            "base_classes": [
-              "Text",
-              "str",
-              "object",
-              "Record"
-            ],
+            "base_classes": ["Text", "str", "object", "Record"],
             "beta": false,
             "custom_fields": {
               "input_value": null,
@@ -331,12 +280,20 @@
             "field_order": [],
             "frozen": false,
             "icon": "ChatInput",
-            "output_types": [
-              "Message",
-              "Text"
+            "output_types": [],
+            "outputs": [
+              {
+                "cache": true,
+                "display_name": "Message",
+                "method": "message_response",
+                "name": "message",
+                "selected": "Message",
+                "types": ["Message"],
+                "value": "__UNDEFINED__"
+              }
             ],
             "template": {
-              "_type": "CustomComponent",
+              "_type": "Component",
               "code": {
                 "advanced": true,
                 "dynamic": true,
@@ -353,7 +310,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from typing import Optional\n\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.schema.message import Message\nfrom langflow.field_typing import Text\nfrom typing import Union\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    icon = \"ChatInput\"\n\n    def build_config(self):\n        build_config = super().build_config()\n        build_config[\"input_value\"] = {\n            \"input_types\": [],\n            \"display_name\": \"Text\",\n            \"multiline\": True,\n        }\n        build_config[\"return_message\"] = {\n            \"display_name\": \"Return Record\",\n            \"advanced\": True,\n        }\n\n        return build_config\n\n    def build(\n        self,\n        sender: Optional[str] = \"User\",\n        sender_name: Optional[str] = \"User\",\n        input_value: Optional[str] = None,\n        files: Optional[list[str]] = None,\n        session_id: Optional[str] = None,\n        return_message: Optional[bool] = True,\n    ) -> Union[Message, Text]:\n        return super().build_with_record(\n            sender=sender,\n            sender_name=sender_name,\n            input_value=input_value,\n            files=files,\n            session_id=session_id,\n            return_message=return_message,\n        )\n"
+                "value": "from langflow.base.io.chat import ChatComponent\nfrom langflow.inputs import DropdownInput, StrInput\nfrom langflow.schema.message import Message\nfrom langflow.template import Output\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    icon = \"ChatInput\"\n\n    inputs = [\n        StrInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            multiline=True,\n            input_types=[],\n            value=\"\",\n            info=\"Message to be passed as input.\",\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[\"Machine\", \"User\"],\n            value=\"User\",\n            info=\"Type of sender.\",\n            advanced=True,\n        ),\n        StrInput(\n            name=\"sender_name\",\n            type=str,\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=\"User\",\n            advanced=True,\n        ),\n        StrInput(\n            name=\"session_id\", type=str, display_name=\"Session ID\", info=\"Session ID for the message.\", advanced=True\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    def message_response(self) -> Message:\n        message = Message(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n        )\n        if self.session_id and isinstance(message, (Message, str)) and isinstance(message.text, str):\n            self.store_message(message)\n        self.status = message\n        return message\n"
               },
               "input_value": {
                 "advanced": false,
@@ -361,7 +318,7 @@
                 "dynamic": false,
                 "fileTypes": [],
                 "file_path": "",
-                "info": "",
+                "info": "Message to be passed as input.",
                 "input_types": [],
                 "list": false,
                 "load_from_db": false,
@@ -373,7 +330,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "what is a line"
+                "value": ""
               },
               "sender": {
                 "advanced": true,
@@ -381,18 +338,13 @@
                 "dynamic": false,
                 "fileTypes": [],
                 "file_path": "",
-                "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "info": "Type of sender.",
+                "input_types": ["Text"],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
+                "options": ["Machine", "User"],
                 "password": false,
                 "placeholder": "",
                 "required": false,
@@ -402,15 +354,13 @@
                 "value": "User"
               },
               "sender_name": {
-                "advanced": false,
+                "advanced": true,
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "fileTypes": [],
                 "file_path": "",
-                "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "info": "Name of the sender.",
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -429,10 +379,8 @@
                 "dynamic": false,
                 "fileTypes": [],
                 "file_path": "",
-                "info": "If provided, the message will be stored in the memory.",
-                "input_types": [
-                  "Text"
-                ],
+                "info": "Session ID for the message.",
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -442,7 +390,8 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
-                "type": "str"
+                "type": "str",
+                "value": ""
               }
             }
           },
@@ -462,11 +411,7 @@
         "data": {
           "id": "TextOutput-BDknO",
           "node": {
-            "base_classes": [
-              "object",
-              "Text",
-              "str"
-            ],
+            "base_classes": ["object", "Text", "str"],
             "beta": false,
             "custom_fields": {
               "input_value": null,
@@ -479,8 +424,13 @@
             "field_order": [],
             "frozen": false,
             "icon": "type",
-            "output_types": [
-              "Text"
+            "output_types": ["Text"],
+            "outputs": [
+              {
+                "name": "Text",
+                "selected": "Text",
+                "types": ["Text"]
+              }
             ],
             "template": {
               "_type": "CustomComponent",
@@ -509,10 +459,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Text or Record to be passed as output.",
-                "input_types": [
-                  "Record",
-                  "Text"
-                ],
+                "input_types": ["Record", "Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -532,9 +479,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Template to convert Record to Text. If left empty, it will be dynamically set to the Record's text key.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -570,9 +515,7 @@
         "data": {
           "id": "OpenAIEmbeddings-ZlOk1",
           "node": {
-            "base_classes": [
-              "Embeddings"
-            ],
+            "base_classes": ["Embeddings"],
             "beta": false,
             "custom_fields": {
               "allowed_special": null,
@@ -604,8 +547,18 @@
             "field_formatters": {},
             "field_order": [],
             "frozen": false,
-            "output_types": [
-              "Embeddings"
+            "output_types": ["Embeddings"],
+            "outputs": [
+              {
+                "cache": true,
+                "display_name": "Embeddings",
+                "hidden": null,
+                "method": null,
+                "name": "embeddings",
+                "selected": "Embeddings",
+                "types": ["Embeddings"],
+                "value": "__UNDEFINED__"
+              }
             ],
             "template": {
               "_type": "CustomComponent",
@@ -616,10 +569,8 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
-                "list": false,
+                "input_types": ["Text"],
+                "list": true,
                 "load_from_db": false,
                 "multiline": false,
                 "name": "allowed_special",
@@ -712,9 +663,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -734,10 +683,8 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
-                "list": false,
+                "input_types": ["Text"],
+                "list": true,
                 "load_from_db": false,
                 "multiline": false,
                 "name": "disallowed_special",
@@ -747,9 +694,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": [
-                  "all"
-                ]
+                "value": ["all"]
               },
               "embedding_ctx_length": {
                 "advanced": true,
@@ -796,9 +741,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
@@ -842,9 +785,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -863,11 +804,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
-                "load_from_db": true,
+                "load_from_db": false,
                 "multiline": false,
                 "name": "openai_api_key",
                 "password": true,
@@ -885,9 +824,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -906,9 +843,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -927,9 +862,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -948,9 +881,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -1050,9 +981,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -1083,11 +1012,7 @@
         "data": {
           "id": "OpenAIModel-EjXlN",
           "node": {
-            "base_classes": [
-              "object",
-              "Text",
-              "str"
-            ],
+            "base_classes": ["object", "Text", "str"],
             "beta": false,
             "custom_fields": {
               "input_value": null,
@@ -1117,11 +1042,29 @@
             ],
             "frozen": false,
             "icon": "OpenAI",
-            "output_types": [
-              "Text"
+            "output_types": [],
+            "outputs": [
+              {
+                "cache": true,
+                "display_name": "Text",
+                "method": "text_response",
+                "name": "text_output",
+                "selected": "Text",
+                "types": ["Text"],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "cache": true,
+                "display_name": "Language Model",
+                "method": "build_model",
+                "name": "model_output",
+                "selected": "BaseLanguageModel",
+                "types": ["BaseLanguageModel"],
+                "value": "__UNDEFINED__"
+              }
             ],
             "template": {
-              "_type": "CustomComponent",
+              "_type": "Component",
               "code": {
                 "advanced": true,
                 "dynamic": true,
@@ -1138,7 +1081,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from typing import Optional\n\nfrom langchain_openai import ChatOpenAI\nfrom pydantic.v1 import SecretStr\n\nfrom langflow.base.constants import STREAM_INFO_TEXT\nfrom langflow.base.models.model import LCModelComponent\nfrom langflow.base.models.openai_constants import MODEL_NAMES\nfrom langflow.field_typing import NestedDict, Text\n\n\nclass OpenAIModelComponent(LCModelComponent):\n    display_name = \"OpenAI\"\n    description = \"Generates text using OpenAI LLMs.\"\n    icon = \"OpenAI\"\n\n    field_order = [\n        \"max_tokens\",\n        \"model_kwargs\",\n        \"model_name\",\n        \"openai_api_base\",\n        \"openai_api_key\",\n        \"temperature\",\n        \"input_value\",\n        \"system_message\",\n        \"stream\",\n    ]\n\n    def build_config(self):\n        return {\n            \"input_value\": {\"display_name\": \"Input\", \"input_types\": [\"Text\", \"Record\", \"Prompt\"]},\n            \"max_tokens\": {\n                \"display_name\": \"Max Tokens\",\n                \"advanced\": True,\n                \"info\": \"The maximum number of tokens to generate. Set to 0 for unlimited tokens.\",\n            },\n            \"model_kwargs\": {\n                \"display_name\": \"Model Kwargs\",\n                \"advanced\": True,\n            },\n            \"model_name\": {\n                \"display_name\": \"Model Name\",\n                \"advanced\": False,\n                \"options\": MODEL_NAMES,\n            },\n            \"openai_api_base\": {\n                \"display_name\": \"OpenAI API Base\",\n                \"advanced\": True,\n                \"info\": (\n                    \"The base URL of the OpenAI API. Defaults to https://api.openai.com/v1.\\n\\n\"\n                    \"You can change this to use other APIs like JinaChat, LocalAI and Prem.\"\n                ),\n            },\n            \"openai_api_key\": {\n                \"display_name\": \"OpenAI API Key\",\n                \"info\": \"The OpenAI API Key to use for the OpenAI model.\",\n                \"advanced\": False,\n                \"password\": True,\n            },\n            \"temperature\": {\n                \"display_name\": \"Temperature\",\n                \"advanced\": False,\n                \"value\": 0.1,\n            },\n            \"stream\": {\n                \"display_name\": \"Stream\",\n                \"info\": STREAM_INFO_TEXT,\n                \"advanced\": True,\n            },\n            \"system_message\": {\n                \"display_name\": \"System Message\",\n                \"info\": \"System message to pass to the model.\",\n                \"advanced\": True,\n            },\n        }\n\n    def build(\n        self,\n        input_value: Text,\n        openai_api_key: str,\n        temperature: float = 0.1,\n        model_name: str = \"gpt-3.5-turbo\",\n        max_tokens: Optional[int] = 256,\n        model_kwargs: NestedDict = {},\n        openai_api_base: Optional[str] = None,\n        stream: bool = False,\n        system_message: Optional[str] = None,\n    ) -> Text:\n        if not openai_api_base:\n            openai_api_base = \"https://api.openai.com/v1\"\n        if openai_api_key:\n            api_key = SecretStr(openai_api_key)\n        else:\n            api_key = None\n\n        output = ChatOpenAI(\n            max_tokens=max_tokens or None,\n            model_kwargs=model_kwargs,\n            model=model_name,\n            base_url=openai_api_base,\n            api_key=api_key,\n            temperature=temperature,\n        )\n\n        return self.get_chat_result(output, stream, input_value, system_message)\n"
+                "value": "from langchain_openai import ChatOpenAI\nfrom pydantic.v1 import SecretStr\n\nfrom langflow.base.constants import STREAM_INFO_TEXT\nfrom langflow.base.models.model import LCModelComponent\nfrom langflow.base.models.openai_constants import MODEL_NAMES\nfrom langflow.field_typing import BaseLanguageModel, Text\nfrom langflow.inputs import BoolInput, DictInput, DropdownInput, FloatInput, SecretStrInput, StrInput\nfrom langflow.inputs.inputs import IntInput\nfrom langflow.template import Output\n\n\nclass OpenAIModelComponent(LCModelComponent):\n    display_name = \"OpenAI\"\n    description = \"Generates text using OpenAI LLMs.\"\n    icon = \"OpenAI\"\n\n    inputs = [\n        StrInput(name=\"input_value\", display_name=\"Input\", input_types=[\"Text\", \"Data\", \"Prompt\"]),\n        IntInput(\n            name=\"max_tokens\",\n            display_name=\"Max Tokens\",\n            advanced=True,\n            info=\"The maximum number of tokens to generate. Set to 0 for unlimited tokens.\",\n        ),\n        DictInput(name=\"model_kwargs\", display_name=\"Model Kwargs\", advanced=True),\n        DropdownInput(\n            name=\"model_name\", display_name=\"Model Name\", advanced=False, options=MODEL_NAMES, value=MODEL_NAMES[0]\n        ),\n        StrInput(\n            name=\"openai_api_base\",\n            display_name=\"OpenAI API Base\",\n            advanced=True,\n            info=\"The base URL of the OpenAI API. Defaults to https://api.openai.com/v1.\\n\\nYou can change this to use other APIs like JinaChat, LocalAI and Prem.\",\n        ),\n        SecretStrInput(\n            name=\"openai_api_key\",\n            display_name=\"OpenAI API Key\",\n            info=\"The OpenAI API Key to use for the OpenAI model.\",\n            advanced=False,\n            value=\"OPENAI_API_KEY\",\n        ),\n        FloatInput(name=\"temperature\", display_name=\"Temperature\", value=0.1),\n        BoolInput(name=\"stream\", display_name=\"Stream\", info=STREAM_INFO_TEXT, advanced=True),\n        StrInput(\n            name=\"system_message\",\n            display_name=\"System Message\",\n            info=\"System message to pass to the model.\",\n            advanced=True,\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Text\", name=\"text_output\", method=\"text_response\"),\n        Output(display_name=\"Language Model\", name=\"model_output\", method=\"build_model\"),\n    ]\n\n    def text_response(self) -> Text:\n        input_value = self.input_value\n        stream = self.stream\n        system_message = self.system_message\n        output = self.build_model()\n        result = self.get_chat_result(output, stream, input_value, system_message)\n        self.status = result\n        return result\n\n    def build_model(self) -> BaseLanguageModel:\n        openai_api_key = self.openai_api_key\n        temperature = self.temperature\n        model_name = self.model_name\n        max_tokens = self.max_tokens\n        model_kwargs = self.model_kwargs\n        openai_api_base = self.openai_api_base or \"https://api.openai.com/v1\"\n\n        if openai_api_key:\n            api_key = SecretStr(openai_api_key)\n        else:\n            api_key = None\n\n        output = ChatOpenAI(\n            max_tokens=max_tokens or None,\n            model_kwargs=model_kwargs or {},\n            model=model_name or None,\n            base_url=openai_api_base,\n            api_key=api_key,\n            temperature=temperature or 0.1,\n        )\n        return output\n"
               },
               "input_value": {
                 "advanced": false,
@@ -1147,21 +1090,18 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text",
-                  "Record",
-                  "Prompt"
-                ],
+                "input_types": ["Text", "Data", "Prompt"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
                 "name": "input_value",
                 "password": false,
                 "placeholder": "",
-                "required": true,
+                "required": false,
                 "show": true,
                 "title_case": false,
-                "type": "str"
+                "type": "str",
+                "value": ""
               },
               "max_tokens": {
                 "advanced": true,
@@ -1170,6 +1110,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -1179,8 +1120,8 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
-                "type": "int",
-                "value": 256
+                "type": "str",
+                "value": ""
               },
               "model_kwargs": {
                 "advanced": true,
@@ -1189,6 +1130,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -1198,8 +1140,8 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
-                "type": "NestedDict",
-                "value": {}
+                "type": "str",
+                "value": ""
               },
               "model_name": {
                 "advanced": false,
@@ -1208,9 +1150,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
@@ -1237,9 +1177,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "The base URL of the OpenAI API. Defaults to https://api.openai.com/v1.\n\nYou can change this to use other APIs like JinaChat, LocalAI and Prem.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -1249,7 +1187,8 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
-                "type": "str"
+                "type": "str",
+                "value": ""
               },
               "openai_api_key": {
                 "advanced": false,
@@ -1258,16 +1197,14 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "The OpenAI API Key to use for the OpenAI model.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": true,
                 "multiline": false,
                 "name": "openai_api_key",
                 "password": true,
                 "placeholder": "",
-                "required": true,
+                "required": false,
                 "show": true,
                 "title_case": false,
                 "type": "str",
@@ -1280,6 +1217,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Stream the response from the model. Streaming works only in Chat.",
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -1289,7 +1227,7 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
-                "type": "bool",
+                "type": "str",
                 "value": false
               },
               "system_message": {
@@ -1299,9 +1237,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "System message to pass to the model.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -1311,7 +1247,8 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
-                "type": "str"
+                "type": "str",
+                "value": ""
               },
               "temperature": {
                 "advanced": false,
@@ -1320,22 +1257,17 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
                 "name": "temperature",
                 "password": false,
                 "placeholder": "",
-                "rangeSpec": {
-                  "max": 1,
-                  "min": -1,
-                  "step": 0.1,
-                  "step_type": "float"
-                },
                 "required": false,
                 "show": true,
                 "title_case": false,
-                "type": "float",
+                "type": "str",
                 "value": 0.1
               }
             }
@@ -1363,17 +1295,10 @@
           "display_name": "Prompt",
           "id": "Prompt-xeI6K",
           "node": {
-            "base_classes": [
-              "object",
-              "Text",
-              "str"
-            ],
+            "base_classes": ["object", "Text", "str"],
             "beta": false,
             "custom_fields": {
-              "template": [
-                "context",
-                "question"
-              ]
+              "template": ["context", "question"]
             },
             "description": "Create a prompt template with dynamic variables.",
             "display_name": "Prompt",
@@ -1388,11 +1313,29 @@
             "is_input": null,
             "is_output": null,
             "name": "",
-            "output_types": [
-              "Prompt"
+            "output_types": [],
+            "outputs": [
+              {
+                "cache": true,
+                "display_name": "Prompt",
+                "method": "build_prompt",
+                "name": "prompt",
+                "selected": "Prompt",
+                "types": ["Prompt"],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "cache": true,
+                "display_name": "Text",
+                "method": "format_prompt",
+                "name": "text",
+                "selected": "Text",
+                "types": ["Text"],
+                "value": "__UNDEFINED__"
+              }
             ],
             "template": {
-              "_type": "CustomComponent",
+              "_type": "Component",
               "code": {
                 "advanced": true,
                 "dynamic": true,
@@ -1409,7 +1352,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langflow.custom import CustomComponent\nfrom langflow.field_typing import TemplateField\nfrom langflow.field_typing.prompt import Prompt\n\n\nclass PromptComponent(CustomComponent):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"prompts\"\n\n    def build_config(self):\n        return {\n            \"template\": TemplateField(display_name=\"Template\"),\n            \"code\": TemplateField(advanced=True),\n        }\n\n    async def build(\n        self,\n        template: Prompt,\n        **kwargs,\n    ) -> Prompt:\n        prompt = await Prompt.from_template_and_variables(template, kwargs)\n        self.status = prompt.format_text()\n        return prompt\n"
+                "value": "from langflow.custom import Component\nfrom langflow.field_typing.prompt import Prompt\nfrom langflow.inputs import PromptInput\nfrom langflow.template import Output\n\n\nclass PromptComponent(Component):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"prompts\"\n\n    inputs = [\n        PromptInput(name=\"template\", display_name=\"Template\"),\n    ]\n\n    outputs = [\n        Output(display_name=\"Prompt\", name=\"prompt\", method=\"build_prompt\"),\n        Output(display_name=\"Text\", name=\"text\", method=\"format_prompt\"),\n    ]\n\n    async def format_prompt(self) -> str:\n        prompt = await self.build_prompt()\n        formatted_text = prompt.format_text()\n        self.status = formatted_text\n        return formatted_text\n\n    async def build_prompt(\n        self,\n    ) -> Prompt:\n        kwargs = {k: v for k, v in self._arguments.items() if k != \"template\"}\n        prompt = await Prompt.from_template_and_variables(self.template, kwargs)\n        self.status = prompt.format_text()\n        return prompt\n"
               },
               "context": {
                 "advanced": false,
@@ -1419,12 +1362,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Document",
-                  "BaseOutputParser",
-                  "Record",
-                  "Text"
-                ],
+                "input_types": ["Document", "Message", "Record", "Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -1445,12 +1383,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Document",
-                  "BaseOutputParser",
-                  "Record",
-                  "Text"
-                ],
+                "input_types": ["Document", "Message", "Record", "Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -1470,9 +1403,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -1508,12 +1439,7 @@
         "data": {
           "id": "ChatOutput-Q39I8",
           "node": {
-            "base_classes": [
-              "object",
-              "Text",
-              "Record",
-              "str"
-            ],
+            "base_classes": ["object", "Text", "Record", "str"],
             "beta": false,
             "custom_fields": {
               "input_value": null,
@@ -1530,12 +1456,20 @@
             "field_order": [],
             "frozen": false,
             "icon": "ChatOutput",
-            "output_types": [
-              "Message",
-              "Text"
+            "output_types": [],
+            "outputs": [
+              {
+                "cache": true,
+                "display_name": "Message",
+                "method": "message_response",
+                "name": "message",
+                "selected": "Message",
+                "types": ["Message"],
+                "value": "__UNDEFINED__"
+              }
             ],
             "template": {
-              "_type": "CustomComponent",
+              "_type": "Component",
               "code": {
                 "advanced": true,
                 "dynamic": true,
@@ -1552,7 +1486,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from typing import Optional, Union\n\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.field_typing import Text\nfrom langflow.schema.message import Message\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    icon = \"ChatOutput\"\n\n    def build(\n        self,\n        sender: Optional[str] = \"Machine\",\n        sender_name: Optional[str] = \"AI\",\n        input_value: Optional[str] = None,\n        session_id: Optional[str] = None,\n        files: Optional[list[str]] = None,\n        return_message: Optional[bool] = False,\n    ) -> Union[Message, Text]:\n        return super().build_with_record(\n            sender=sender,\n            sender_name=sender_name,\n            input_value=input_value,\n            session_id=session_id,\n            files=files,\n            return_message=return_message,\n        )\n"
+                "value": "from langflow.base.io.chat import ChatComponent\nfrom langflow.inputs import BoolInput, DropdownInput, MultilineInput, StrInput\nfrom langflow.schema.message import Message\nfrom langflow.template import Output\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    icon = \"ChatOutput\"\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            info=\"Message to be passed as output.\",\n            input_types=[\"Text\", \"Message\"],\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[\"Machine\", \"User\"],\n            value=\"Machine\",\n            advanced=True,\n            info=\"Type of sender.\",\n        ),\n        StrInput(name=\"sender_name\", display_name=\"Sender Name\", info=\"Name of the sender.\", value=\"AI\", advanced=True),\n        StrInput(name=\"session_id\", display_name=\"Session ID\", info=\"Session ID for the message.\", advanced=True),\n        BoolInput(\n            name=\"data_template\",\n            display_name=\"Data Template\",\n            value=\"{text}\",\n            advanced=True,\n            info=\"Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.\",\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    def message_response(self) -> Message:\n        if isinstance(self.input_value, Message):\n            message = self.input_value\n        else:\n            message = Message(\n                text=self.input_value,\n                sender=self.sender,\n                sender_name=self.sender_name,\n                session_id=self.session_id,\n            )\n        if self.session_id and isinstance(message, Message) and isinstance(message.text, str):\n            self.store_message(message)\n        self.status = message\n        return message\n"
               },
               "input_value": {
                 "advanced": false,
@@ -1560,10 +1494,8 @@
                 "dynamic": false,
                 "fileTypes": [],
                 "file_path": "",
-                "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "info": "Message to be passed as output.",
+                "input_types": ["Text", "Message"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -1573,7 +1505,8 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
-                "type": "str"
+                "type": "str",
+                "value": ""
               },
               "sender": {
                 "advanced": true,
@@ -1581,18 +1514,13 @@
                 "dynamic": false,
                 "fileTypes": [],
                 "file_path": "",
-                "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "info": "Type of sender.",
+                "input_types": ["Text"],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
+                "options": ["Machine", "User"],
                 "password": false,
                 "placeholder": "",
                 "required": false,
@@ -1602,15 +1530,13 @@
                 "value": "Machine"
               },
               "sender_name": {
-                "advanced": false,
+                "advanced": true,
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "fileTypes": [],
                 "file_path": "",
-                "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "info": "Name of the sender.",
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -1629,10 +1555,8 @@
                 "dynamic": false,
                 "fileTypes": [],
                 "file_path": "",
-                "info": "If provided, the message will be stored in the memory.",
-                "input_types": [
-                  "Text"
-                ],
+                "info": "Session ID for the message.",
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -1642,7 +1566,8 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
-                "type": "str"
+                "type": "str",
+                "value": ""
               }
             }
           },
@@ -1667,9 +1592,7 @@
         "data": {
           "id": "File-t0a6a",
           "node": {
-            "base_classes": [
-              "Record"
-            ],
+            "base_classes": ["Record"],
             "beta": false,
             "custom_fields": {
               "path": null,
@@ -1682,11 +1605,20 @@
             "field_order": [],
             "frozen": false,
             "icon": "file-text",
-            "output_types": [
-              "Record"
+            "output_types": [],
+            "outputs": [
+              {
+                "cache": true,
+                "display_name": "Data",
+                "method": "load_file",
+                "name": "data",
+                "selected": "Data",
+                "types": ["Data"],
+                "value": "__UNDEFINED__"
+              }
             ],
             "template": {
-              "_type": "CustomComponent",
+              "_type": "Component",
               "code": {
                 "advanced": true,
                 "dynamic": true,
@@ -1703,58 +1635,49 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from pathlib import Path\nfrom typing import Any, Dict\n\nfrom langflow.base.data.utils import TEXT_FILE_TYPES, parse_text_file_to_record\nfrom langflow.custom import CustomComponent\nfrom langflow.schema import Record\n\n\nclass FileComponent(CustomComponent):\n    display_name = \"File\"\n    description = \"A generic file loader.\"\n    icon = \"file-text\"\n\n    def build_config(self) -> Dict[str, Any]:\n        return {\n            \"path\": {\n                \"display_name\": \"Path\",\n                \"field_type\": \"file\",\n                \"file_types\": TEXT_FILE_TYPES,\n                \"info\": f\"Supported file types: {', '.join(TEXT_FILE_TYPES)}\",\n            },\n            \"silent_errors\": {\n                \"display_name\": \"Silent Errors\",\n                \"advanced\": True,\n                \"info\": \"If true, errors will not raise an exception.\",\n            },\n        }\n\n    def load_file(self, path: str, silent_errors: bool = False) -> Record:\n        resolved_path = self.resolve_path(path)\n        path_obj = Path(resolved_path)\n        extension = path_obj.suffix[1:].lower()\n        if extension == \"doc\":\n            raise ValueError(\"doc files are not supported. Please save as .docx\")\n        if extension not in TEXT_FILE_TYPES:\n            raise ValueError(f\"Unsupported file type: {extension}\")\n        record = parse_text_file_to_record(resolved_path, silent_errors)\n        self.status = record if record else \"No data\"\n        return record or Record()\n\n    def build(\n        self,\n        path: str,\n        silent_errors: bool = False,\n    ) -> Record:\n        record = self.load_file(path, silent_errors)\n        self.status = record\n        return record\n"
+                "value": "from pathlib import Path\n\nfrom langflow.base.data.utils import TEXT_FILE_TYPES, parse_text_file_to_data\nfrom langflow.custom import Component\nfrom langflow.inputs import BoolInput, FileInput\nfrom langflow.schema import Data\nfrom langflow.template import Output\n\n\nclass FileComponent(Component):\n    display_name = \"File\"\n    description = \"A generic file loader.\"\n    icon = \"file-text\"\n\n    inputs = [\n        FileInput(\n            name=\"path\",\n            display_name=\"Path\",\n            file_types=TEXT_FILE_TYPES,\n            info=f\"Supported file types: {', '.join(TEXT_FILE_TYPES)}\",\n        ),\n        BoolInput(\n            name=\"silent_errors\",\n            display_name=\"Silent Errors\",\n            advanced=True,\n            info=\"If true, errors will not raise an exception.\",\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Data\", name=\"data\", method=\"load_file\"),\n    ]\n\n    def load_file(self) -> Data:\n        if not self.path:\n            raise ValueError(\"Please, upload a file to use this component.\")\n        resolved_path = self.resolve_path(self.path)\n        silent_errors = self.silent_errors\n\n        extension = Path(resolved_path).suffix[1:].lower()\n\n        if extension == \"doc\":\n            raise ValueError(\"doc files are not supported. Please save as .docx\")\n        if extension not in TEXT_FILE_TYPES:\n            raise ValueError(f\"Unsupported file type: {extension}\")\n\n        data = parse_text_file_to_data(resolved_path, silent_errors)\n        self.status = data if data else \"No data\"\n        return data or Data()\n"
               },
               "path": {
                 "advanced": false,
                 "display_name": "Path",
                 "dynamic": false,
                 "fileTypes": [
-                  ".txt",
-                  ".md",
-                  ".mdx",
-                  ".csv",
-                  ".json",
-                  ".yaml",
-                  ".yml",
-                  ".xml",
-                  ".html",
-                  ".htm",
-                  ".pdf",
-                  ".docx",
-                  ".py",
-                  ".sh",
-                  ".sql",
-                  ".js",
-                  ".ts",
-                  ".tsx"
+                  "txt",
+                  "md",
+                  "mdx",
+                  "csv",
+                  "json",
+                  "yaml",
+                  "yml",
+                  "xml",
+                  "html",
+                  "htm",
+                  "pdf",
+                  "docx",
+                  "py",
+                  "sh",
+                  "sql",
+                  "js",
+                  "ts",
+                  "tsx"
                 ],
-                "file_path": "51e2b78a-199b-4054-9f32-e288eef6924c/Langflow conversation.pdf",
+                "file_path": "",
                 "info": "Supported file types: txt, md, mdx, csv, json, yaml, yml, xml, html, htm, pdf, docx, py, sh, sql, js, ts, tsx",
                 "list": false,
-                "load_from_db": false,
-                "multiline": false,
                 "name": "path",
-                "password": false,
                 "placeholder": "",
-                "required": true,
+                "required": false,
                 "show": true,
                 "title_case": false,
-                "type": "file",
-                "value": ""
+                "type": "file"
               },
               "silent_errors": {
                 "advanced": true,
                 "display_name": "Silent Errors",
                 "dynamic": false,
-                "fileTypes": [],
-                "file_path": "",
                 "info": "If true, errors will not raise an exception.",
                 "list": false,
-                "load_from_db": false,
-                "multiline": false,
                 "name": "silent_errors",
-                "password": false,
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -1785,9 +1708,7 @@
         "data": {
           "id": "RecursiveCharacterTextSplitter-tR9QM",
           "node": {
-            "base_classes": [
-              "Record"
-            ],
+            "base_classes": ["Record"],
             "beta": false,
             "custom_fields": {
               "chunk_overlap": null,
@@ -1801,8 +1722,18 @@
             "field_formatters": {},
             "field_order": [],
             "frozen": false,
-            "output_types": [
-              "Record"
+            "output_types": ["Data"],
+            "outputs": [
+              {
+                "cache": true,
+                "display_name": "Data",
+                "hidden": null,
+                "method": null,
+                "name": "data",
+                "selected": "Data",
+                "types": ["Data"],
+                "value": "__UNDEFINED__"
+              }
             ],
             "template": {
               "_type": "CustomComponent",
@@ -1860,7 +1791,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from typing import Optional\n\nfrom langchain_core.documents import Document\nfrom langchain_text_splitters import RecursiveCharacterTextSplitter\n\nfrom langflow.custom import CustomComponent\nfrom langflow.schema import Record\nfrom langflow.utils.util import build_loader_repr_from_records, unescape_string\n\n\nclass RecursiveCharacterTextSplitterComponent(CustomComponent):\n    display_name: str = \"Recursive Character Text Splitter\"\n    description: str = \"Split text into chunks of a specified length.\"\n    documentation: str = \"https://docs.langflow.org/components/text-splitters#recursivecharactertextsplitter\"\n\n    def build_config(self):\n        return {\n            \"inputs\": {\n                \"display_name\": \"Input\",\n                \"info\": \"The texts to split.\",\n                \"input_types\": [\"Document\", \"Record\"],\n            },\n            \"separators\": {\n                \"display_name\": \"Separators\",\n                \"info\": 'The characters to split on.\\nIf left empty defaults to [\"\\\\n\\\\n\", \"\\\\n\", \" \", \"\"].',\n                \"is_list\": True,\n            },\n            \"chunk_size\": {\n                \"display_name\": \"Chunk Size\",\n                \"info\": \"The maximum length of each chunk.\",\n                \"field_type\": \"int\",\n                \"value\": 1000,\n            },\n            \"chunk_overlap\": {\n                \"display_name\": \"Chunk Overlap\",\n                \"info\": \"The amount of overlap between chunks.\",\n                \"field_type\": \"int\",\n                \"value\": 200,\n            },\n            \"code\": {\"show\": False},\n        }\n\n    def build(\n        self,\n        inputs: list[Document],\n        separators: Optional[list[str]] = None,\n        chunk_size: Optional[int] = 1000,\n        chunk_overlap: Optional[int] = 200,\n    ) -> list[Record]:\n        \"\"\"\n        Split text into chunks of a specified length.\n\n        Args:\n            separators (list[str]): The characters to split on.\n            chunk_size (int): The maximum length of each chunk.\n            chunk_overlap (int): The amount of overlap between chunks.\n            length_function (function): The function to use to calculate the length of the text.\n\n        Returns:\n            list[str]: The chunks of text.\n        \"\"\"\n\n        if separators == \"\":\n            separators = None\n        elif separators:\n            # check if the separators list has escaped characters\n            # if there are escaped characters, unescape them\n            separators = [unescape_string(x) for x in separators]\n\n        # Make sure chunk_size and chunk_overlap are ints\n        if isinstance(chunk_size, str):\n            chunk_size = int(chunk_size)\n        if isinstance(chunk_overlap, str):\n            chunk_overlap = int(chunk_overlap)\n        splitter = RecursiveCharacterTextSplitter(\n            separators=separators,\n            chunk_size=chunk_size,\n            chunk_overlap=chunk_overlap,\n        )\n        documents = []\n        for _input in inputs:\n            if isinstance(_input, Record):\n                documents.append(_input.to_lc_document())\n            else:\n                documents.append(_input)\n        docs = splitter.split_documents(documents)\n        records = self.to_records(docs)\n        self.repr_value = build_loader_repr_from_records(records)\n        return records\n"
+                "value": "from typing import Optional\n\nfrom langchain_core.documents import Document\nfrom langchain_text_splitters import RecursiveCharacterTextSplitter\n\nfrom langflow.custom import CustomComponent\nfrom langflow.schema import Data\nfrom langflow.utils.util import build_loader_repr_from_data, unescape_string\n\n\nclass RecursiveCharacterTextSplitterComponent(CustomComponent):\n    display_name: str = \"Recursive Character Text Splitter\"\n    description: str = \"Split text into chunks of a specified length.\"\n    documentation: str = \"https://docs.langflow.org/components/text-splitters#recursivecharactertextsplitter\"\n\n    def build_config(self):\n        return {\n            \"inputs\": {\n                \"display_name\": \"Input\",\n                \"info\": \"The texts to split.\",\n                \"input_types\": [\"Document\", \"Data\"],\n            },\n            \"separators\": {\n                \"display_name\": \"Separators\",\n                \"info\": 'The characters to split on.\\nIf left empty defaults to [\"\\\\n\\\\n\", \"\\\\n\", \" \", \"\"].',\n                \"is_list\": True,\n            },\n            \"chunk_size\": {\n                \"display_name\": \"Chunk Size\",\n                \"info\": \"The maximum length of each chunk.\",\n                \"field_type\": \"int\",\n                \"value\": 1000,\n            },\n            \"chunk_overlap\": {\n                \"display_name\": \"Chunk Overlap\",\n                \"info\": \"The amount of overlap between chunks.\",\n                \"field_type\": \"int\",\n                \"value\": 200,\n            },\n            \"code\": {\"show\": False},\n        }\n\n    def build(\n        self,\n        inputs: list[Document],\n        separators: Optional[list[str]] = None,\n        chunk_size: Optional[int] = 1000,\n        chunk_overlap: Optional[int] = 200,\n    ) -> list[Data]:\n        \"\"\"\n        Split text into chunks of a specified length.\n\n        Args:\n            separators (list[str]): The characters to split on.\n            chunk_size (int): The maximum length of each chunk.\n            chunk_overlap (int): The amount of overlap between chunks.\n            length_function (function): The function to use to calculate the length of the text.\n\n        Returns:\n            list[str]: The chunks of text.\n        \"\"\"\n\n        if separators == \"\":\n            separators = None\n        elif separators:\n            # check if the separators list has escaped characters\n            # if there are escaped characters, unescape them\n            separators = [unescape_string(x) for x in separators]\n\n        # Make sure chunk_size and chunk_overlap are ints\n        if isinstance(chunk_size, str):\n            chunk_size = int(chunk_size)\n        if isinstance(chunk_overlap, str):\n            chunk_overlap = int(chunk_overlap)\n        splitter = RecursiveCharacterTextSplitter(\n            separators=separators,\n            chunk_size=chunk_size,\n            chunk_overlap=chunk_overlap,\n        )\n        documents = []\n        for _input in inputs:\n            if isinstance(_input, Data):\n                documents.append(_input.to_lc_document())\n            else:\n                documents.append(_input)\n        docs = splitter.split_documents(documents)\n        data = self.to_data(docs)\n        self.repr_value = build_loader_repr_from_data(data)\n        return data\n"
               },
               "inputs": {
                 "advanced": false,
@@ -1869,10 +1800,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "The texts to split.",
-                "input_types": [
-                  "Document",
-                  "Record"
-                ],
+                "input_types": ["Document", "Data"],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
@@ -1891,9 +1819,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "The characters to split on.\nIf left empty defaults to [\"\\n\\n\", \"\\n\", \" \", \"\"].",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
@@ -1904,9 +1830,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": [
-                  ""
-                ]
+                "value": [""]
               }
             }
           },
@@ -1931,9 +1855,7 @@
         "data": {
           "id": "AstraDBSearch-41nRz",
           "node": {
-            "base_classes": [
-              "Record"
-            ],
+            "base_classes": ["Record"],
             "beta": false,
             "custom_fields": {
               "api_endpoint": null,
@@ -1968,8 +1890,18 @@
             ],
             "frozen": false,
             "icon": "AstraDB",
-            "output_types": [
-              "Record"
+            "output_types": ["Data"],
+            "outputs": [
+              {
+                "cache": true,
+                "display_name": "Data",
+                "hidden": null,
+                "method": null,
+                "name": "data",
+                "selected": "Data",
+                "types": ["Data"],
+                "value": "__UNDEFINED__"
+              }
             ],
             "template": {
               "_type": "CustomComponent",
@@ -1980,11 +1912,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "API endpoint URL for the Astra DB service.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
-                "load_from_db": true,
+                "load_from_db": false,
                 "multiline": false,
                 "name": "api_endpoint",
                 "password": false,
@@ -2001,7 +1931,7 @@
                 "dynamic": false,
                 "fileTypes": [],
                 "file_path": "",
-                "info": "Optional number of records to process in a single batch.",
+                "info": "Optional number of data to process in a single batch.",
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -2055,7 +1985,7 @@
                 "dynamic": false,
                 "fileTypes": [],
                 "file_path": "",
-                "info": "Optional concurrency level for bulk insert operations that overwrite existing records.",
+                "info": "Optional concurrency level for bulk insert operations that overwrite existing data.",
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -2083,7 +2013,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from typing import List, Optional\n\nfrom langflow.components.vectorstores.AstraDB import AstraDBVectorStoreComponent\nfrom langflow.components.vectorstores.base.model import LCVectorStoreComponent\nfrom langflow.field_typing import Embeddings, Text\nfrom langflow.schema import Record\n\n\nclass AstraDBSearchComponent(LCVectorStoreComponent):\n    display_name = \"Astra DB Search\"\n    description = \"Searches an existing Astra DB Vector Store.\"\n    icon = \"AstraDB\"\n    field_order = [\"token\", \"api_endpoint\", \"collection_name\", \"input_value\", \"embedding\"]\n\n    def build_config(self):\n        return {\n            \"search_type\": {\n                \"display_name\": \"Search Type\",\n                \"options\": [\"Similarity\", \"MMR\"],\n            },\n            \"input_value\": {\n                \"display_name\": \"Input Value\",\n                \"info\": \"Input value to search\",\n            },\n            \"embedding\": {\"display_name\": \"Embedding\", \"info\": \"Embedding to use\"},\n            \"collection_name\": {\n                \"display_name\": \"Collection Name\",\n                \"info\": \"The name of the collection within Astra DB where the vectors will be stored.\",\n            },\n            \"token\": {\n                \"display_name\": \"Astra DB Application Token\",\n                \"info\": \"Authentication token for accessing Astra DB.\",\n                \"password\": True,\n            },\n            \"api_endpoint\": {\n                \"display_name\": \"API Endpoint\",\n                \"info\": \"API endpoint URL for the Astra DB service.\",\n            },\n            \"namespace\": {\n                \"display_name\": \"Namespace\",\n                \"info\": \"Optional namespace within Astra DB to use for the collection.\",\n                \"advanced\": True,\n            },\n            \"metric\": {\n                \"display_name\": \"Metric\",\n                \"info\": \"Optional distance metric for vector comparisons in the vector store.\",\n                \"advanced\": True,\n            },\n            \"batch_size\": {\n                \"display_name\": \"Batch Size\",\n                \"info\": \"Optional number of records to process in a single batch.\",\n                \"advanced\": True,\n            },\n            \"bulk_insert_batch_concurrency\": {\n                \"display_name\": \"Bulk Insert Batch Concurrency\",\n                \"info\": \"Optional concurrency level for bulk insert operations.\",\n                \"advanced\": True,\n            },\n            \"bulk_insert_overwrite_concurrency\": {\n                \"display_name\": \"Bulk Insert Overwrite Concurrency\",\n                \"info\": \"Optional concurrency level for bulk insert operations that overwrite existing records.\",\n                \"advanced\": True,\n            },\n            \"bulk_delete_concurrency\": {\n                \"display_name\": \"Bulk Delete Concurrency\",\n                \"info\": \"Optional concurrency level for bulk delete operations.\",\n                \"advanced\": True,\n            },\n            \"setup_mode\": {\n                \"display_name\": \"Setup Mode\",\n                \"info\": \"Configuration mode for setting up the vector store, with options like “Sync”, “Async”, or “Off”.\",\n                \"options\": [\"Sync\", \"Async\", \"Off\"],\n                \"advanced\": True,\n            },\n            \"pre_delete_collection\": {\n                \"display_name\": \"Pre Delete Collection\",\n                \"info\": \"Boolean flag to determine whether to delete the collection before creating a new one.\",\n                \"advanced\": True,\n            },\n            \"metadata_indexing_include\": {\n                \"display_name\": \"Metadata Indexing Include\",\n                \"info\": \"Optional list of metadata fields to include in the indexing.\",\n                \"advanced\": True,\n            },\n            \"metadata_indexing_exclude\": {\n                \"display_name\": \"Metadata Indexing Exclude\",\n                \"info\": \"Optional list of metadata fields to exclude from the indexing.\",\n                \"advanced\": True,\n            },\n            \"collection_indexing_policy\": {\n                \"display_name\": \"Collection Indexing Policy\",\n                \"info\": \"Optional dictionary defining the indexing policy for the collection.\",\n                \"advanced\": True,\n            },\n            \"number_of_results\": {\n                \"display_name\": \"Number of Results\",\n                \"info\": \"Number of results to return.\",\n                \"advanced\": True,\n            },\n        }\n\n    def build(\n        self,\n        embedding: Embeddings,\n        collection_name: str,\n        input_value: Text,\n        token: str,\n        api_endpoint: str,\n        search_type: str = \"Similarity\",\n        number_of_results: int = 4,\n        namespace: Optional[str] = None,\n        metric: Optional[str] = None,\n        batch_size: Optional[int] = None,\n        bulk_insert_batch_concurrency: Optional[int] = None,\n        bulk_insert_overwrite_concurrency: Optional[int] = None,\n        bulk_delete_concurrency: Optional[int] = None,\n        setup_mode: str = \"Sync\",\n        pre_delete_collection: bool = False,\n        metadata_indexing_include: Optional[List[str]] = None,\n        metadata_indexing_exclude: Optional[List[str]] = None,\n        collection_indexing_policy: Optional[dict] = None,\n    ) -> List[Record]:\n        vector_store = AstraDBVectorStoreComponent().build(\n            embedding=embedding,\n            collection_name=collection_name,\n            token=token,\n            api_endpoint=api_endpoint,\n            namespace=namespace,\n            metric=metric,\n            batch_size=batch_size,\n            bulk_insert_batch_concurrency=bulk_insert_batch_concurrency,\n            bulk_insert_overwrite_concurrency=bulk_insert_overwrite_concurrency,\n            bulk_delete_concurrency=bulk_delete_concurrency,\n            setup_mode=setup_mode,\n            pre_delete_collection=pre_delete_collection,\n            metadata_indexing_include=metadata_indexing_include,\n            metadata_indexing_exclude=metadata_indexing_exclude,\n            collection_indexing_policy=collection_indexing_policy,\n        )\n        try:\n            return self.search_with_vector_store(input_value, search_type, vector_store, k=number_of_results)\n        except KeyError as e:\n            if \"content\" in str(e):\n                raise ValueError(\n                    \"You should ingest data through Langflow (or LangChain) to query it in Langflow. Your collection does not contain a field name 'content'.\"\n                )\n            else:\n                raise e\n"
+                "value": "from typing import List, Optional\n\nfrom langflow.components.vectorstores.AstraDB import AstraDBVectorStoreComponent\nfrom langflow.components.vectorstores.base.model import LCVectorStoreComponent\nfrom langflow.field_typing import Embeddings, Text\nfrom langflow.schema import Data\n\n\nclass AstraDBSearchComponent(LCVectorStoreComponent):\n    display_name = \"Astra DB Search\"\n    description = \"Searches an existing Astra DB Vector Store.\"\n    icon = \"AstraDB\"\n    field_order = [\"token\", \"api_endpoint\", \"collection_name\", \"input_value\", \"embedding\"]\n\n    def build_config(self):\n        return {\n            \"search_type\": {\n                \"display_name\": \"Search Type\",\n                \"options\": [\"Similarity\", \"MMR\"],\n            },\n            \"input_value\": {\n                \"display_name\": \"Input Value\",\n                \"info\": \"Input value to search\",\n            },\n            \"embedding\": {\"display_name\": \"Embedding\", \"info\": \"Embedding to use\"},\n            \"collection_name\": {\n                \"display_name\": \"Collection Name\",\n                \"info\": \"The name of the collection within Astra DB where the vectors will be stored.\",\n            },\n            \"token\": {\n                \"display_name\": \"Astra DB Application Token\",\n                \"info\": \"Authentication token for accessing Astra DB.\",\n                \"password\": True,\n            },\n            \"api_endpoint\": {\n                \"display_name\": \"API Endpoint\",\n                \"info\": \"API endpoint URL for the Astra DB service.\",\n            },\n            \"namespace\": {\n                \"display_name\": \"Namespace\",\n                \"info\": \"Optional namespace within Astra DB to use for the collection.\",\n                \"advanced\": True,\n            },\n            \"metric\": {\n                \"display_name\": \"Metric\",\n                \"info\": \"Optional distance metric for vector comparisons in the vector store.\",\n                \"advanced\": True,\n            },\n            \"batch_size\": {\n                \"display_name\": \"Batch Size\",\n                \"info\": \"Optional number of data to process in a single batch.\",\n                \"advanced\": True,\n            },\n            \"bulk_insert_batch_concurrency\": {\n                \"display_name\": \"Bulk Insert Batch Concurrency\",\n                \"info\": \"Optional concurrency level for bulk insert operations.\",\n                \"advanced\": True,\n            },\n            \"bulk_insert_overwrite_concurrency\": {\n                \"display_name\": \"Bulk Insert Overwrite Concurrency\",\n                \"info\": \"Optional concurrency level for bulk insert operations that overwrite existing data.\",\n                \"advanced\": True,\n            },\n            \"bulk_delete_concurrency\": {\n                \"display_name\": \"Bulk Delete Concurrency\",\n                \"info\": \"Optional concurrency level for bulk delete operations.\",\n                \"advanced\": True,\n            },\n            \"setup_mode\": {\n                \"display_name\": \"Setup Mode\",\n                \"info\": \"Configuration mode for setting up the vector store, with options like “Sync”, “Async”, or “Off”.\",\n                \"options\": [\"Sync\", \"Async\", \"Off\"],\n                \"advanced\": True,\n            },\n            \"pre_delete_collection\": {\n                \"display_name\": \"Pre Delete Collection\",\n                \"info\": \"Boolean flag to determine whether to delete the collection before creating a new one.\",\n                \"advanced\": True,\n            },\n            \"metadata_indexing_include\": {\n                \"display_name\": \"Metadata Indexing Include\",\n                \"info\": \"Optional list of metadata fields to include in the indexing.\",\n                \"advanced\": True,\n            },\n            \"metadata_indexing_exclude\": {\n                \"display_name\": \"Metadata Indexing Exclude\",\n                \"info\": \"Optional list of metadata fields to exclude from the indexing.\",\n                \"advanced\": True,\n            },\n            \"collection_indexing_policy\": {\n                \"display_name\": \"Collection Indexing Policy\",\n                \"info\": \"Optional dictionary defining the indexing policy for the collection.\",\n                \"advanced\": True,\n            },\n            \"number_of_results\": {\n                \"display_name\": \"Number of Results\",\n                \"info\": \"Number of results to return.\",\n                \"advanced\": True,\n            },\n        }\n\n    def build(\n        self,\n        embedding: Embeddings,\n        collection_name: str,\n        input_value: Text,\n        token: str,\n        api_endpoint: str,\n        search_type: str = \"Similarity\",\n        number_of_results: int = 4,\n        namespace: Optional[str] = None,\n        metric: Optional[str] = None,\n        batch_size: Optional[int] = None,\n        bulk_insert_batch_concurrency: Optional[int] = None,\n        bulk_insert_overwrite_concurrency: Optional[int] = None,\n        bulk_delete_concurrency: Optional[int] = None,\n        setup_mode: str = \"Sync\",\n        pre_delete_collection: bool = False,\n        metadata_indexing_include: Optional[List[str]] = None,\n        metadata_indexing_exclude: Optional[List[str]] = None,\n        collection_indexing_policy: Optional[dict] = None,\n    ) -> List[Data]:\n        vector_store = AstraDBVectorStoreComponent().build(\n            embedding=embedding,\n            collection_name=collection_name,\n            token=token,\n            api_endpoint=api_endpoint,\n            namespace=namespace,\n            metric=metric,\n            batch_size=batch_size,\n            bulk_insert_batch_concurrency=bulk_insert_batch_concurrency,\n            bulk_insert_overwrite_concurrency=bulk_insert_overwrite_concurrency,\n            bulk_delete_concurrency=bulk_delete_concurrency,\n            setup_mode=setup_mode,\n            pre_delete_collection=pre_delete_collection,\n            metadata_indexing_include=metadata_indexing_include,\n            metadata_indexing_exclude=metadata_indexing_exclude,\n            collection_indexing_policy=collection_indexing_policy,\n        )\n        try:\n            return self.search_with_vector_store(input_value, search_type, vector_store, k=number_of_results)\n        except KeyError as e:\n            if \"content\" in str(e):\n                raise ValueError(\n                    \"You should ingest data through Langflow (or LangChain) to query it in Langflow. Your collection does not contain a field name 'content'.\"\n                )\n            else:\n                raise e\n"
               },
               "collection_indexing_policy": {
                 "advanced": true,
@@ -2110,9 +2040,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "The name of the collection within Astra DB where the vectors will be stored.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -2150,9 +2078,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Input value to search",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -2171,9 +2097,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Optional list of metadata fields to exclude from the indexing.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
@@ -2192,9 +2116,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Optional list of metadata fields to include in the indexing.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
@@ -2213,9 +2135,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Optional distance metric for vector comparisons in the vector store.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -2234,9 +2154,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Optional namespace within Astra DB to use for the collection.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -2293,17 +2211,12 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
                 "name": "search_type",
-                "options": [
-                  "Similarity",
-                  "MMR"
-                ],
+                "options": ["Similarity", "MMR"],
                 "password": false,
                 "placeholder": "",
                 "required": false,
@@ -2319,18 +2232,12 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Configuration mode for setting up the vector store, with options like “Sync”, “Async”, or “Off”.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
                 "name": "setup_mode",
-                "options": [
-                  "Sync",
-                  "Async",
-                  "Off"
-                ],
+                "options": ["Sync", "Async", "Off"],
                 "password": false,
                 "placeholder": "",
                 "required": false,
@@ -2346,11 +2253,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Authentication token for accessing Astra DB.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
-                "load_from_db": true,
+                "load_from_db": false,
                 "multiline": false,
                 "name": "token",
                 "password": true,
@@ -2384,9 +2289,7 @@
         "data": {
           "id": "AstraDB-eUCSS",
           "node": {
-            "base_classes": [
-              "VectorStore"
-            ],
+            "base_classes": ["VectorStore"],
             "beta": false,
             "custom_fields": {
               "api_endpoint": null,
@@ -2419,9 +2322,28 @@
             ],
             "frozen": false,
             "icon": "AstraDB",
-            "output_types": [
-              "VectorStore",
-              "BaseRetriever"
+            "output_types": ["VectorStore", "BaseRetriever"],
+            "outputs": [
+              {
+                "cache": true,
+                "display_name": "VectorStore",
+                "hidden": null,
+                "method": null,
+                "name": "vectorstore",
+                "selected": "VectorStore",
+                "types": ["VectorStore"],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "cache": true,
+                "display_name": "BaseRetriever",
+                "hidden": null,
+                "method": null,
+                "name": "baseretriever",
+                "selected": "BaseRetriever",
+                "types": ["BaseRetriever"],
+                "value": "__UNDEFINED__"
+              }
             ],
             "template": {
               "_type": "CustomComponent",
@@ -2432,11 +2354,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "API endpoint URL for the Astra DB service.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
-                "load_from_db": true,
+                "load_from_db": false,
                 "multiline": false,
                 "name": "api_endpoint",
                 "password": false,
@@ -2453,7 +2373,7 @@
                 "dynamic": false,
                 "fileTypes": [],
                 "file_path": "",
-                "info": "Optional number of records to process in a single batch.",
+                "info": "Optional number of data to process in a single batch.",
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -2507,7 +2427,7 @@
                 "dynamic": false,
                 "fileTypes": [],
                 "file_path": "",
-                "info": "Optional concurrency level for bulk insert operations that overwrite existing records.",
+                "info": "Optional concurrency level for bulk insert operations that overwrite existing data.",
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -2535,7 +2455,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from typing import List, Optional, Union\n\nfrom langflow.custom import CustomComponent\nfrom langflow.field_typing import Embeddings, VectorStore\nfrom langflow.schema import Record\nfrom langchain_core.retrievers import BaseRetriever\n\n\nclass AstraDBVectorStoreComponent(CustomComponent):\n    display_name = \"Astra DB\"\n    description = \"Builds or loads an Astra DB Vector Store.\"\n    icon = \"AstraDB\"\n    field_order = [\"token\", \"api_endpoint\", \"collection_name\", \"inputs\", \"embedding\"]\n\n    def build_config(self):\n        return {\n            \"inputs\": {\n                \"display_name\": \"Inputs\",\n                \"info\": \"Optional list of records to be processed and stored in the vector store.\",\n            },\n            \"embedding\": {\"display_name\": \"Embedding\", \"info\": \"Embedding to use\"},\n            \"collection_name\": {\n                \"display_name\": \"Collection Name\",\n                \"info\": \"The name of the collection within Astra DB where the vectors will be stored.\",\n            },\n            \"token\": {\n                \"display_name\": \"Astra DB Application Token\",\n                \"info\": \"Authentication token for accessing Astra DB.\",\n                \"password\": True,\n            },\n            \"api_endpoint\": {\n                \"display_name\": \"API Endpoint\",\n                \"info\": \"API endpoint URL for the Astra DB service.\",\n            },\n            \"namespace\": {\n                \"display_name\": \"Namespace\",\n                \"info\": \"Optional namespace within Astra DB to use for the collection.\",\n                \"advanced\": True,\n            },\n            \"metric\": {\n                \"display_name\": \"Metric\",\n                \"info\": \"Optional distance metric for vector comparisons in the vector store.\",\n                \"advanced\": True,\n            },\n            \"batch_size\": {\n                \"display_name\": \"Batch Size\",\n                \"info\": \"Optional number of records to process in a single batch.\",\n                \"advanced\": True,\n            },\n            \"bulk_insert_batch_concurrency\": {\n                \"display_name\": \"Bulk Insert Batch Concurrency\",\n                \"info\": \"Optional concurrency level for bulk insert operations.\",\n                \"advanced\": True,\n            },\n            \"bulk_insert_overwrite_concurrency\": {\n                \"display_name\": \"Bulk Insert Overwrite Concurrency\",\n                \"info\": \"Optional concurrency level for bulk insert operations that overwrite existing records.\",\n                \"advanced\": True,\n            },\n            \"bulk_delete_concurrency\": {\n                \"display_name\": \"Bulk Delete Concurrency\",\n                \"info\": \"Optional concurrency level for bulk delete operations.\",\n                \"advanced\": True,\n            },\n            \"setup_mode\": {\n                \"display_name\": \"Setup Mode\",\n                \"info\": \"Configuration mode for setting up the vector store, with options like “Sync”, “Async”, or “Off”.\",\n                \"options\": [\"Sync\", \"Async\", \"Off\"],\n                \"advanced\": True,\n            },\n            \"pre_delete_collection\": {\n                \"display_name\": \"Pre Delete Collection\",\n                \"info\": \"Boolean flag to determine whether to delete the collection before creating a new one.\",\n                \"advanced\": True,\n            },\n            \"metadata_indexing_include\": {\n                \"display_name\": \"Metadata Indexing Include\",\n                \"info\": \"Optional list of metadata fields to include in the indexing.\",\n                \"advanced\": True,\n            },\n            \"metadata_indexing_exclude\": {\n                \"display_name\": \"Metadata Indexing Exclude\",\n                \"info\": \"Optional list of metadata fields to exclude from the indexing.\",\n                \"advanced\": True,\n            },\n            \"collection_indexing_policy\": {\n                \"display_name\": \"Collection Indexing Policy\",\n                \"info\": \"Optional dictionary defining the indexing policy for the collection.\",\n                \"advanced\": True,\n            },\n        }\n\n    def build(\n        self,\n        embedding: Embeddings,\n        token: str,\n        api_endpoint: str,\n        collection_name: str,\n        inputs: Optional[List[Record]] = None,\n        namespace: Optional[str] = None,\n        metric: Optional[str] = None,\n        batch_size: Optional[int] = None,\n        bulk_insert_batch_concurrency: Optional[int] = None,\n        bulk_insert_overwrite_concurrency: Optional[int] = None,\n        bulk_delete_concurrency: Optional[int] = None,\n        setup_mode: str = \"Sync\",\n        pre_delete_collection: bool = False,\n        metadata_indexing_include: Optional[List[str]] = None,\n        metadata_indexing_exclude: Optional[List[str]] = None,\n        collection_indexing_policy: Optional[dict] = None,\n    ) -> Union[VectorStore, BaseRetriever]:\n        try:\n            from langchain_astradb import AstraDBVectorStore\n            from langchain_astradb.utils.astradb import SetupMode\n        except ImportError:\n            raise ImportError(\n                \"Could not import langchain Astra DB integration package. \"\n                \"Please install it with `pip install langchain-astradb`.\"\n            )\n\n        try:\n            setup_mode_value = SetupMode[setup_mode.upper()]\n        except KeyError:\n            raise ValueError(f\"Invalid setup mode: {setup_mode}\")\n        if inputs:\n            documents = [_input.to_lc_document() for _input in inputs]\n\n            vector_store = AstraDBVectorStore.from_documents(\n                documents=documents,\n                embedding=embedding,\n                collection_name=collection_name,\n                token=token,\n                api_endpoint=api_endpoint,\n                namespace=namespace,\n                metric=metric,\n                batch_size=batch_size,\n                bulk_insert_batch_concurrency=bulk_insert_batch_concurrency,\n                bulk_insert_overwrite_concurrency=bulk_insert_overwrite_concurrency,\n                bulk_delete_concurrency=bulk_delete_concurrency,\n                setup_mode=setup_mode_value,\n                pre_delete_collection=pre_delete_collection,\n                metadata_indexing_include=metadata_indexing_include,\n                metadata_indexing_exclude=metadata_indexing_exclude,\n                collection_indexing_policy=collection_indexing_policy,\n            )\n        else:\n            vector_store = AstraDBVectorStore(\n                embedding=embedding,\n                collection_name=collection_name,\n                token=token,\n                api_endpoint=api_endpoint,\n                namespace=namespace,\n                metric=metric,\n                batch_size=batch_size,\n                bulk_insert_batch_concurrency=bulk_insert_batch_concurrency,\n                bulk_insert_overwrite_concurrency=bulk_insert_overwrite_concurrency,\n                bulk_delete_concurrency=bulk_delete_concurrency,\n                setup_mode=setup_mode_value,\n                pre_delete_collection=pre_delete_collection,\n                metadata_indexing_include=metadata_indexing_include,\n                metadata_indexing_exclude=metadata_indexing_exclude,\n                collection_indexing_policy=collection_indexing_policy,\n            )\n\n        return vector_store\n        return vector_store\n"
+                "value": "from typing import List, Optional, Union\n\nfrom langchain_core.retrievers import BaseRetriever\n\nfrom langflow.custom import CustomComponent\nfrom langflow.field_typing import Embeddings, VectorStore\nfrom langflow.schema import Data\n\n\nclass AstraDBVectorStoreComponent(CustomComponent):\n    display_name = \"Astra DB\"\n    description = \"Builds or loads an Astra DB Vector Store.\"\n    icon = \"AstraDB\"\n    field_order = [\"token\", \"api_endpoint\", \"collection_name\", \"inputs\", \"embedding\"]\n\n    def build_config(self):\n        return {\n            \"inputs\": {\n                \"display_name\": \"Inputs\",\n                \"info\": \"Optional list of data to be processed and stored in the vector store.\",\n            },\n            \"embedding\": {\"display_name\": \"Embedding\", \"info\": \"Embedding to use\"},\n            \"collection_name\": {\n                \"display_name\": \"Collection Name\",\n                \"info\": \"The name of the collection within Astra DB where the vectors will be stored.\",\n            },\n            \"token\": {\n                \"display_name\": \"Astra DB Application Token\",\n                \"info\": \"Authentication token for accessing Astra DB.\",\n                \"password\": True,\n            },\n            \"api_endpoint\": {\n                \"display_name\": \"API Endpoint\",\n                \"info\": \"API endpoint URL for the Astra DB service.\",\n            },\n            \"namespace\": {\n                \"display_name\": \"Namespace\",\n                \"info\": \"Optional namespace within Astra DB to use for the collection.\",\n                \"advanced\": True,\n            },\n            \"metric\": {\n                \"display_name\": \"Metric\",\n                \"info\": \"Optional distance metric for vector comparisons in the vector store.\",\n                \"advanced\": True,\n            },\n            \"batch_size\": {\n                \"display_name\": \"Batch Size\",\n                \"info\": \"Optional number of data to process in a single batch.\",\n                \"advanced\": True,\n            },\n            \"bulk_insert_batch_concurrency\": {\n                \"display_name\": \"Bulk Insert Batch Concurrency\",\n                \"info\": \"Optional concurrency level for bulk insert operations.\",\n                \"advanced\": True,\n            },\n            \"bulk_insert_overwrite_concurrency\": {\n                \"display_name\": \"Bulk Insert Overwrite Concurrency\",\n                \"info\": \"Optional concurrency level for bulk insert operations that overwrite existing data.\",\n                \"advanced\": True,\n            },\n            \"bulk_delete_concurrency\": {\n                \"display_name\": \"Bulk Delete Concurrency\",\n                \"info\": \"Optional concurrency level for bulk delete operations.\",\n                \"advanced\": True,\n            },\n            \"setup_mode\": {\n                \"display_name\": \"Setup Mode\",\n                \"info\": \"Configuration mode for setting up the vector store, with options like “Sync”, “Async”, or “Off”.\",\n                \"options\": [\"Sync\", \"Async\", \"Off\"],\n                \"advanced\": True,\n            },\n            \"pre_delete_collection\": {\n                \"display_name\": \"Pre Delete Collection\",\n                \"info\": \"Boolean flag to determine whether to delete the collection before creating a new one.\",\n                \"advanced\": True,\n            },\n            \"metadata_indexing_include\": {\n                \"display_name\": \"Metadata Indexing Include\",\n                \"info\": \"Optional list of metadata fields to include in the indexing.\",\n                \"advanced\": True,\n            },\n            \"metadata_indexing_exclude\": {\n                \"display_name\": \"Metadata Indexing Exclude\",\n                \"info\": \"Optional list of metadata fields to exclude from the indexing.\",\n                \"advanced\": True,\n            },\n            \"collection_indexing_policy\": {\n                \"display_name\": \"Collection Indexing Policy\",\n                \"info\": \"Optional dictionary defining the indexing policy for the collection.\",\n                \"advanced\": True,\n            },\n        }\n\n    def build(\n        self,\n        embedding: Embeddings,\n        token: str,\n        api_endpoint: str,\n        collection_name: str,\n        inputs: Optional[List[Data]] = None,\n        namespace: Optional[str] = None,\n        metric: Optional[str] = None,\n        batch_size: Optional[int] = None,\n        bulk_insert_batch_concurrency: Optional[int] = None,\n        bulk_insert_overwrite_concurrency: Optional[int] = None,\n        bulk_delete_concurrency: Optional[int] = None,\n        setup_mode: str = \"Sync\",\n        pre_delete_collection: bool = False,\n        metadata_indexing_include: Optional[List[str]] = None,\n        metadata_indexing_exclude: Optional[List[str]] = None,\n        collection_indexing_policy: Optional[dict] = None,\n    ) -> Union[VectorStore, BaseRetriever]:\n        try:\n            from langchain_astradb import AstraDBVectorStore\n            from langchain_astradb.utils.astradb import SetupMode\n        except ImportError:\n            raise ImportError(\n                \"Could not import langchain Astra DB integration package. \"\n                \"Please install it with `pip install langchain-astradb`.\"\n            )\n\n        try:\n            setup_mode_value = SetupMode[setup_mode.upper()]\n        except KeyError:\n            raise ValueError(f\"Invalid setup mode: {setup_mode}\")\n        if inputs:\n            documents = [_input.to_lc_document() for _input in inputs]\n\n            vector_store = AstraDBVectorStore.from_documents(\n                documents=documents,\n                embedding=embedding,\n                collection_name=collection_name,\n                token=token,\n                api_endpoint=api_endpoint,\n                namespace=namespace,\n                metric=metric,\n                batch_size=batch_size,\n                bulk_insert_batch_concurrency=bulk_insert_batch_concurrency,\n                bulk_insert_overwrite_concurrency=bulk_insert_overwrite_concurrency,\n                bulk_delete_concurrency=bulk_delete_concurrency,\n                setup_mode=setup_mode_value,\n                pre_delete_collection=pre_delete_collection,\n                metadata_indexing_include=metadata_indexing_include,\n                metadata_indexing_exclude=metadata_indexing_exclude,\n                collection_indexing_policy=collection_indexing_policy,\n            )\n        else:\n            vector_store = AstraDBVectorStore(\n                embedding=embedding,\n                collection_name=collection_name,\n                token=token,\n                api_endpoint=api_endpoint,\n                namespace=namespace,\n                metric=metric,\n                batch_size=batch_size,\n                bulk_insert_batch_concurrency=bulk_insert_batch_concurrency,\n                bulk_insert_overwrite_concurrency=bulk_insert_overwrite_concurrency,\n                bulk_delete_concurrency=bulk_delete_concurrency,\n                setup_mode=setup_mode_value,\n                pre_delete_collection=pre_delete_collection,\n                metadata_indexing_include=metadata_indexing_include,\n                metadata_indexing_exclude=metadata_indexing_exclude,\n                collection_indexing_policy=collection_indexing_policy,\n            )\n\n        return vector_store\n        return vector_store\n"
               },
               "collection_indexing_policy": {
                 "advanced": true,
@@ -2562,9 +2482,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "The name of the collection within Astra DB where the vectors will be stored.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -2601,7 +2519,7 @@
                 "dynamic": false,
                 "fileTypes": [],
                 "file_path": "",
-                "info": "Optional list of records to be processed and stored in the vector store.",
+                "info": "Optional list of data to be processed and stored in the vector store.",
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
@@ -2620,9 +2538,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Optional list of metadata fields to exclude from the indexing.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
@@ -2641,9 +2557,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Optional list of metadata fields to include in the indexing.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
@@ -2662,9 +2576,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Optional distance metric for vector comparisons in the vector store.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -2683,9 +2595,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Optional namespace within Astra DB to use for the collection.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -2723,18 +2633,12 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Configuration mode for setting up the vector store, with options like “Sync”, “Async”, or “Off”.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
                 "name": "setup_mode",
-                "options": [
-                  "Sync",
-                  "Async",
-                  "Off"
-                ],
+                "options": ["Sync", "Async", "Off"],
                 "password": false,
                 "placeholder": "",
                 "required": false,
@@ -2750,11 +2654,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Authentication token for accessing Astra DB.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
-                "load_from_db": true,
+                "load_from_db": false,
                 "multiline": false,
                 "name": "token",
                 "password": true,
@@ -2788,9 +2690,7 @@
         "data": {
           "id": "OpenAIEmbeddings-9TPjc",
           "node": {
-            "base_classes": [
-              "Embeddings"
-            ],
+            "base_classes": ["Embeddings"],
             "beta": false,
             "custom_fields": {
               "allowed_special": null,
@@ -2822,8 +2722,18 @@
             "field_formatters": {},
             "field_order": [],
             "frozen": false,
-            "output_types": [
-              "Embeddings"
+            "output_types": ["Embeddings"],
+            "outputs": [
+              {
+                "cache": true,
+                "display_name": "Embeddings",
+                "hidden": null,
+                "method": null,
+                "name": "embeddings",
+                "selected": "Embeddings",
+                "types": ["Embeddings"],
+                "value": "__UNDEFINED__"
+              }
             ],
             "template": {
               "_type": "CustomComponent",
@@ -2834,10 +2744,8 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
-                "list": false,
+                "input_types": ["Text"],
+                "list": true,
                 "load_from_db": false,
                 "multiline": false,
                 "name": "allowed_special",
@@ -2930,9 +2838,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -2952,10 +2858,8 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
-                "list": false,
+                "input_types": ["Text"],
+                "list": true,
                 "load_from_db": false,
                 "multiline": false,
                 "name": "disallowed_special",
@@ -2965,9 +2869,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": [
-                  "all"
-                ]
+                "value": ["all"]
               },
               "embedding_ctx_length": {
                 "advanced": true,
@@ -3014,9 +2916,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
@@ -3060,9 +2960,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -3081,11 +2979,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
-                "load_from_db": true,
+                "load_from_db": false,
                 "multiline": false,
                 "name": "openai_api_key",
                 "password": true,
@@ -3103,9 +2999,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -3124,9 +3018,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -3145,9 +3037,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -3166,9 +3056,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -3268,9 +3156,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
