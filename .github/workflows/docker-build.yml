@@ -33,9 +33,8 @@ jobs:
       - name: Set Dockerfile and Tags
         id: set-vars
         run: |
-          echo "::set-output name=base_tags::langflowai/langflow:base-${{ inputs.version }}"
-          echo "::set-output name=main_tags::langflowai/langflow:${{ inputs.version }},langflowai/langflow:1.0-alpha"
-
+          echo "base_tags=langflowai/langflow:base-${{ inputs.version }}" >> $GITHUB_OUTPUT
+          echo "main_tags=langflowai/langflow:${{ inputs.version }},langflowai/langflow:1.0-alpha" >> $GITHUB_OUTPUT
   build_base:
     runs-on: ubuntu-latest
     needs: setup
