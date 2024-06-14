@@ -40,6 +40,7 @@ test("CodeAreaModalComponent", async ({ page }) => {
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
   await page.getByTestId("div-generic-node").click();
+
   await page.getByTestId("code-button-modal").click();
 
   const wCode =

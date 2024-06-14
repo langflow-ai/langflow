@@ -177,6 +177,7 @@ export type VertexBuildTypeAPI = {
   timestamp: string;
   params: any;
   messages: ChatOutputType[] | ChatInputType[];
+  artifacts: any | ChatOutputType | ChatInputType;
 };
 
 export type LogType = {

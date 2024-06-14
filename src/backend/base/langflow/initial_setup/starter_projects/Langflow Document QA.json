@@ -7,19 +7,12 @@
             "dataType": "File",
             "id": "File-BzIs2",
             "name": "data",
-            "output_types": [
-              "Data"
-            ]
+            "output_types": ["Data"]
           },
           "targetHandle": {
             "fieldName": "Document",
             "id": "Prompt-9DNZG",
-            "inputTypes": [
-              "Document",
-              "Message",
-              "Data",
-              "Text"
-            ],
+            "inputTypes": ["Document", "Message", "Data", "Text"],
             "type": "str"
           }
         },
@@ -35,19 +28,12 @@
             "dataType": "ChatInput",
             "id": "ChatInput-27Usy",
             "name": "message",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "Question",
             "id": "Prompt-9DNZG",
-            "inputTypes": [
-              "Document",
-              "Message",
-              "Data",
-              "Text"
-            ],
+            "inputTypes": ["Document", "Message", "Data", "Text"],
             "type": "str"
           }
         },
@@ -63,18 +49,12 @@
             "dataType": "Prompt",
             "id": "Prompt-9DNZG",
             "name": "prompt",
-            "output_types": [
-              "Prompt"
-            ]
+            "output_types": ["Prompt"]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "OpenAIModel-8b6nG",
-            "inputTypes": [
-              "Text",
-              "Data",
-              "Prompt"
-            ],
+            "inputTypes": ["Text", "Data", "Prompt"],
             "type": "str"
           }
         },
@@ -90,17 +70,12 @@
             "dataType": "OpenAIModel",
             "id": "OpenAIModel-8b6nG",
             "name": "text_output",
-            "output_types": [
-              "Text"
-            ]
+            "output_types": ["Text"]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "ChatOutput-y4SCS",
-            "inputTypes": [
-              "Text",
-              "Message"
-            ],
+            "inputTypes": ["Text", "Message"],
             "type": "str"
           }
         },
@@ -118,18 +93,11 @@
           "display_name": "Prompt",
           "id": "Prompt-9DNZG",
           "node": {
-            "base_classes": [
-              "object",
-              "str",
-              "Text"
-            ],
+            "base_classes": ["object", "str", "Text"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {
-              "template": [
-                "Document",
-                "Question"
-              ]
+              "template": ["Document", "Question"]
             },
             "description": "Create a prompt template with dynamic variables.",
             "display_name": "Prompt",
@@ -151,9 +119,7 @@
                 "method": "build_prompt",
                 "name": "prompt",
                 "selected": "Prompt",
-                "types": [
-                  "Prompt"
-                ],
+                "types": ["Prompt"],
                 "value": "__UNDEFINED__"
               },
               {
@@ -162,9 +128,7 @@
                 "method": "format_prompt",
                 "name": "text",
                 "selected": "Text",
-                "types": [
-                  "Text"
-                ],
+                "types": ["Text"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -178,12 +142,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Document",
-                  "Message",
-                  "Data",
-                  "Text"
-                ],
+                "input_types": ["Document", "Message", "Data", "Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -204,12 +163,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Document",
-                  "Message",
-                  "Data",
-                  "Text"
-                ],
+                "input_types": ["Document", "Message", "Data", "Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -248,9 +202,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -286,12 +238,7 @@
         "data": {
           "id": "ChatInput-27Usy",
           "node": {
-            "base_classes": [
-              "str",
-              "Record",
-              "Text",
-              "object"
-            ],
+            "base_classes": ["str", "Record", "Text", "object"],
             "beta": false,
             "custom_fields": {
               "input_value": null,
@@ -315,9 +262,7 @@
                 "method": "message_response",
                 "name": "message",
                 "selected": "Message",
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -368,17 +313,12 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Type of sender.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
+                "options": ["Machine", "User"],
                 "password": false,
                 "placeholder": "",
                 "required": false,
@@ -394,9 +334,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Name of the sender.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -416,9 +354,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Session ID for the message.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -454,12 +390,7 @@
         "data": {
           "id": "ChatOutput-y4SCS",
           "node": {
-            "base_classes": [
-              "str",
-              "Record",
-              "Text",
-              "object"
-            ],
+            "base_classes": ["str", "Record", "Text", "object"],
             "beta": false,
             "custom_fields": {
               "input_value": null,
@@ -483,9 +414,7 @@
                 "method": "message_response",
                 "name": "message",
                 "selected": "Message",
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -516,10 +445,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Message to be passed as output.",
-                "input_types": [
-                  "Text",
-                  "Message"
-                ],
+                "input_types": ["Text", "Message"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -539,17 +465,12 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Type of sender.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
+                "options": ["Machine", "User"],
                 "password": false,
                 "placeholder": "",
                 "required": false,
@@ -565,9 +486,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Name of the sender.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -587,9 +506,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Session ID for the message.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -627,9 +544,7 @@
           "display_name": "File",
           "id": "File-BzIs2",
           "node": {
-            "base_classes": [
-              "Data"
-            ],
+            "base_classes": ["Data"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -637,10 +552,7 @@
             "display_name": "File",
             "documentation": "",
             "edited": true,
-            "field_order": [
-              "path",
-              "silent_errors"
-            ],
+            "field_order": ["path", "silent_errors"],
             "frozen": false,
             "icon": "file-text",
             "output_types": [],
@@ -651,9 +563,7 @@
                 "method": "load_file",
                 "name": "data",
                 "selected": "Data",
-                "types": [
-                  "Data"
-                ],
+                "types": ["Data"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -750,10 +660,7 @@
         "data": {
           "id": "OpenAIModel-8b6nG",
           "node": {
-            "base_classes": [
-              "BaseLanguageModel",
-              "Text"
-            ],
+            "base_classes": ["BaseLanguageModel", "Text"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -781,9 +688,7 @@
                 "method": "text_response",
                 "name": "text_output",
                 "selected": "Text",
-                "types": [
-                  "Text"
-                ],
+                "types": ["Text"],
                 "value": "__UNDEFINED__"
               },
               {
@@ -792,9 +697,7 @@
                 "method": "build_model",
                 "name": "model_output",
                 "selected": "BaseLanguageModel",
-                "types": [
-                  "BaseLanguageModel"
-                ],
+                "types": ["BaseLanguageModel"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -824,11 +727,7 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "Text",
-                  "Data",
-                  "Prompt"
-                ],
+                "input_types": ["Text", "Data", "Prompt"],
                 "list": false,
                 "load_from_db": false,
                 "name": "input_value",
@@ -883,7 +782,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "gpt-4o"
+                "value": "gpt-3.5-turbo"
               },
               "openai_api_base": {
                 "advanced": true,
@@ -905,9 +804,7 @@
                 "display_name": "OpenAI API Key",
                 "dynamic": false,
                 "info": "The OpenAI API Key to use for the OpenAI model.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "load_from_db": true,
                 "name": "openai_api_key",
                 "password": true,
