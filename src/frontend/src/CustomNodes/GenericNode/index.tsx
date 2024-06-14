@@ -464,10 +464,11 @@ export default function GenericNode({
                     .filter((templateField) => templateField.charAt(0) !== "_")
                     .map(
                       (templateField: string, idx) =>
-                        data.node!.template[templateField].show &&
-                        !data.node!.template[templateField].advanced && (
+                        data.node!.template[templateField]?.show &&
+                        !data.node!.template[templateField]?.advanced && (
                           <ParameterComponent
-                            index={idx}
+                            selected={selected}
+                            index={idx.toString()}
                             key={scapedJSONStringfy({
                               inputTypes:
                                 data.node!.template[templateField].input_types,
@@ -551,7 +552,7 @@ export default function GenericNode({
                     title={
                       data.node?.output_types &&
                       data.node.output_types.length > 0
-                        ? data.node.output_types.join("|")
+                        ? data.node.output_types.join(" | ")
                         : data.type
                     }
                     tooltipTitle={data.node?.base_classes.join("\n")}
@@ -724,10 +725,11 @@ export default function GenericNode({
                 .sort((a, b) => sortFields(a, b, data.node?.field_order ?? []))
                 .map((templateField: string, idx) => (
                   <div key={idx}>
-                    {data.node!.template[templateField].show &&
-                    !data.node!.template[templateField].advanced ? (
+                    {data.node!.template[templateField]?.show &&
+                    !data.node!.template[templateField]?.advanced ? (
                       <ParameterComponent
-                        index={idx}
+                        selected={selected}
+                        index={idx.toString()}
                         key={scapedJSONStringfy({
                           inputTypes:
                             data.node!.template[templateField].input_types,

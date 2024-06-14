@@ -181,6 +181,9 @@ def update_new_output(data):
                         }
                     )
             deduplicated_outputs = []
+            if source_node is None:
+                source_node = {"data": {"node": {"outputs": []}}}
+
             for output in source_node["data"]["node"]["outputs"]:
                 if output["name"] not in [d["name"] for d in deduplicated_outputs]:
                     deduplicated_outputs.append(output)

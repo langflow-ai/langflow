@@ -3,12 +3,11 @@ from pathlib import Path
 from typing import TYPE_CHECKING, List, Optional, Union
 
 import duckdb
-from loguru import logger
-from platformdirs import user_cache_dir
-
 from langflow.services.base import Service
 from langflow.services.monitor.schema import MessageModel, TransactionModel, VertexBuildModel
 from langflow.services.monitor.utils import add_row_to_table, drop_and_create_table_if_schema_mismatch
+from loguru import logger
+from platformdirs import user_cache_dir
 
 if TYPE_CHECKING:
     from langflow.services.settings.manager import SettingsService
@@ -141,7 +140,7 @@ class MonitorService(Service):
         order: Optional[str] = "DESC",
         limit: Optional[int] = None,
     ):
-        query = "SELECT index, flow_id, sender_name, sender, session_id, text, timestamp FROM messages"
+        query = "SELECT index, flow_id, sender_name, sender, session_id, text, files, timestamp FROM messages"
         conditions = []
         if sender:
             conditions.append(f"sender = '{sender}'")

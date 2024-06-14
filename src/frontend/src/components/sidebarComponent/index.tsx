@@ -28,7 +28,7 @@ export default function SidebarNav({
 }: SidebarNavProps) {
   const location = useLocation();
   const pathname = location.pathname;
-  const loadingFolders = useFolderStore((state) => state.loading);
+  const loadingFolders = useFolderStore((state) => state.isLoadingFolders);
   const folders = useFolderStore((state) => state.folders);
 
   const pathValues = ["folder", "components", "flows", "all"];

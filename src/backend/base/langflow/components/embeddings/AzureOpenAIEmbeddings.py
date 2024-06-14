@@ -1,3 +1,4 @@
+from typing import Optional
 from langchain_core.embeddings import Embeddings
 from langchain_openai import AzureOpenAIEmbeddings
 from pydantic.v1 import SecretStr
@@ -44,6 +45,11 @@ class AzureOpenAIEmbeddingsComponent(CustomComponent):
                 "password": True,
             },
             "code": {"show": False},
+            "dimensions": {
+                "display_name": "Dimensions",
+                "info": "The number of dimensions the resulting output embeddings should have. Only supported by certain models.",
+                "advanced": True,
+            },
         }
 
     def build(
@@ -52,6 +58,7 @@ class AzureOpenAIEmbeddingsComponent(CustomComponent):
         azure_deployment: str,
         api_version: str,
         api_key: str,
+        dimensions: Optional[int] = None,
     ) -> Embeddings:
         if api_key:
             azure_api_key = SecretStr(api_key)
@@ -63,6 +70,7 @@ class AzureOpenAIEmbeddingsComponent(CustomComponent):
                 azure_deployment=azure_deployment,
                 api_version=api_version,
                 api_key=azure_api_key,
+                dimensions=dimensions,
             )
 
         except Exception as e:

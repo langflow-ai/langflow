@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Cookies from "universal-cookie";
 import { getLoggedUser, requestLogout } from "../controllers/API";
 import useAlertStore from "../stores/alertStore";
+import { useFolderStore } from "../stores/foldersStore";
 import { Users } from "../types/api";
 import { AuthContextType } from "../types/contexts/auth";
 
@@ -43,6 +44,8 @@ export function AuthProvider({ children }): React.ReactElement {
     cookies.get("apikey_tkn_lflw")
   );
 
+  const getFoldersApi = useFolderStore((state) => state.getFoldersApi);
+
   useEffect(() => {
     const storedAccessToken = cookies.get("access_token_lf");
     if (storedAccessToken) {
@@ -59,11 +62,12 @@ export function AuthProvider({ children }): React.ReactElement {
 
   function getUser() {
     getLoggedUser()
-      .then((user) => {
+      .then(async (user) => {
         setUserData(user);
-        setLoading(false);
         const isSuperUser = user!.is_superuser;
         setIsAdmin(isSuperUser);
+
+        getFoldersApi(true, true);
       })
       .catch((error) => {
         setLoading(false);
