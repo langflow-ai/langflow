@@ -1,6 +1,7 @@
 from datetime import datetime
 
 import pytest
+
 from langflow.services.auth.utils import create_super_user, get_password_hash
 from langflow.services.database.models.user import UserUpdate
 from langflow.services.database.models.user.model import User
@@ -95,7 +96,7 @@ def test_data_consistency_after_update(client, active_user, logged_in_headers, s
     # Fetch the updated user from the database
     response = client.get("/api/v1/users/whoami", headers=logged_in_headers)
     assert response.status_code == 401, response.json()
-    assert response.json()["detail"] == "Could not validate credentials"
+    assert response.json()["detail"] == "User not found or is inactive."
 
 
 def test_data_consistency_after_delete(client, test_user, super_user_headers):
