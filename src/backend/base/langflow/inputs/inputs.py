@@ -20,7 +20,7 @@ from .input_mixin import (
 
 class HandleInput(BaseInputMixin, ListableInputMixin):
     input_types: list[str] = Field(default_factory=list)
-    field_type: Optional[str] = ""
+    field_type: Optional[SerializableFieldTypes] = FieldTypes.OTHER
 
     @model_validator(mode="after")
     def validate_model_type(self):

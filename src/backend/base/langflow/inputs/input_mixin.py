@@ -16,6 +16,7 @@ class FieldTypes(str, Enum):
     NESTED_DICT = "NestedDict"
     FILE = "file"
     PROMPT = "prompt"
+    OTHER = "other"
 
 
 SerializableFieldTypes = Annotated[FieldTypes, PlainSerializer(lambda v: v.value, return_type=str)]
