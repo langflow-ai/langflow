@@ -29,7 +29,7 @@ test("TextAreaModalComponent", async ({ page }) => {
   await page.waitForTimeout(1000);
 
   await page
-    .locator('//*[@id="inputsPrompt"]')
+    .locator('//*[@id="promptsPrompt"]')
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.mouse.up();
   await page.mouse.down();
@@ -51,7 +51,7 @@ test("TextAreaModalComponent", async ({ page }) => {
   await page
     .getByTestId("textarea-text")
     .fill(
-      "test test test test test test test test test test test !@#%*)( 123456789101010101010101111111111 !!!!!!!!!!"
+      "test test test test test test test test test test test !@#%*)( 123456789101010101010101111111111 !!!!!!!!!!",
     );
 
   await page.getByTestId("textarea-text-ExternalLink").click();
