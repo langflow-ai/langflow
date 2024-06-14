@@ -3,7 +3,7 @@ from langflow.field_typing import Text
 from langflow.template import Input, Output
 
 
-class TextOutput(TextComponent):
+class TextOutputComponent(TextComponent):
     display_name = "Text Output"
     description = "Display a text output in the Playground."
     icon = "type"
