@@ -5,6 +5,7 @@ from langchain_core.documents import Document
 from pydantic import BaseModel
 
 from langflow.interface.utils import extract_input_variables_from_prompt
+from langflow.schema.data import Data
 from langflow.schema.message import Message
 
 
@@ -67,7 +68,7 @@ def serialize_field(value):
 def get_artifact_type(value, build_result) -> str:
     result = ArtifactType.UNKNOWN
     match value:
-        case Record():
+        case Data():
             result = ArtifactType.RECORD
 
         case str():
