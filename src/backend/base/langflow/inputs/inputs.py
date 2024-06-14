@@ -1,8 +1,10 @@
-from typing import Callable, Optional, Union
+from typing import Any, Callable, Optional, Union
 
-from pydantic import Field, model_validator
+from pydantic import Field, field_validator, model_validator
 
 from langflow.inputs.validators import StrictBoolean
+from langflow.schema.data import Data
+from langflow.schema.message import Message
 
 from .input_mixin import (
     BaseInputMixin,
@@ -37,6 +39,30 @@ class StrInput(BaseInputMixin, ListableInputMixin, DatabaseLoadMixin):  # noqa: 
     load_from_db: StrictBoolean = False
     input_types: list[str] = ["Text"]
     """Defines if the field will allow the user to open a text editor. Default is False."""
+
+
+class TextInput(StrInput):
+    input_types: list[str] = ["Data", "Message", "Text"]
+
+    @field_validator("value")
+    @classmethod
+    def validate_value(cls, v: Any, _info):
+        if isinstance(v, str):
+            return v
+        elif isinstance(v, Message):
+            return v.text
+        elif isinstance(v, Data):
+            if v.text_key in v.data:
+                return v.data[v.text_key]
+            else:
+                keys = ", ".join(v.data.keys())
+                input_name = _info.data["name"]
+                raise ValueError(
+                    f"The input to '{input_name}' must contain the key '{v.text_key}'."
+                    f"You can set `text_key` to one of the following keys: {keys} or set the value using another Component."
+                )
+        else:
+            raise ValueError(f"Invalid input type {type(v)}")
 
 
 class MultilineInput(BaseInputMixin):

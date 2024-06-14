@@ -17,6 +17,7 @@ def _timestamp_to_str(timestamp: datetime) -> str:
 class Message(Data):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     # Helper class to deal with image data
+    text_key: str = "text"
     text: Optional[str | AsyncIterator | Iterator] = Field(default="")
     sender: str
     sender_name: str

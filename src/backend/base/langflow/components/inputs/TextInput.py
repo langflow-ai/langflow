@@ -4,7 +4,7 @@ from langflow.inputs import MultilineInput, StrInput
 from langflow.template import Output
 
 
-class TextInput(TextComponent):
+class TextInputComponent(TextComponent):
     display_name = "Text Input"
     description = "Get text inputs from the Playground."
     icon = "type"
