@@ -5,11 +5,12 @@ from .inputs import (
     FileInput,
     FloatInput,
     IntInput,
+    MultilineInput,
     NestedDictInput,
     PromptInput,
     SecretStrInput,
     StrInput,
-    MultilineInput,
+    HandleInput,
 )
 
 __all__ = [
@@ -24,4 +25,5 @@ __all__ = [
     "FileInput",
     "PromptInput",
     "MultilineInput",
+    "HandleInput",
 ]

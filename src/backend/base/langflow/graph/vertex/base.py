@@ -234,16 +234,15 @@ class Vertex:
 
         self.has_session_id = "session_id" in template_dicts
 
-        self.required_inputs = [
-            template_dicts[key]["type"] for key, value in template_dicts.items() if value["required"]
-        ]
-        self.optional_inputs = [
-            template_dicts[key]["type"] for key, value in template_dicts.items() if not value["required"]
-        ]
-        # Add the template_dicts[key]["input_types"] to the optional_inputs
-        self.optional_inputs.extend(
-            [input_type for value in template_dicts.values() for input_type in value.get("input_types", [])]
-        )
+        self.required_inputs = []
+        self.optional_inputs = []
+        for value_dict in template_dicts.values():
+            list_to_append = self.required_inputs if value_dict.get("required") else self.optional_inputs
+
+            if "type" in value_dict:
+                list_to_append.append(value_dict["type"])
+            if "input_types" in value_dict:
+                list_to_append.extend(value_dict["input_types"])
 
         template_dict = self.data["node"]["template"]
         self.vertex_type = (

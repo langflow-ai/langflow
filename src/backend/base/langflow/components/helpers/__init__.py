@@ -1,15 +1,15 @@
 from .CreateData import CreateDataComponent
 from .CustomComponent import Component
-from .DataToText import DataToTextComponent
-from .DocumentToData import DocumentToDataComponent
+from .ParseData import ParseDataComponent
+from .DocumentToData import DocumentsToDataComponent
 from .IDGenerator import UUIDGeneratorComponent
 from .UpdateData import UpdateDataComponent
 
 __all__ = [
     "Component",
     "UpdateDataComponent",
-    "DocumentToDataComponent",
+    "DocumentsToDataComponent",
     "UUIDGeneratorComponent",
-    "DataToTextComponent",
+    "ParseDataComponent",
     "CreateDataComponent",
 ]
