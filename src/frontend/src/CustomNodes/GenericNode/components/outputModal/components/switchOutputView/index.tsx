@@ -41,7 +41,7 @@ const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
       <Case condition={!resultType || resultType === "unknown"}>
         <div>NO OUTPUT</div>
       </Case>
-      <Case condition={resultType === "ValueError"}>
+      <Case condition={resultType === "error" || resultType === "ValueError"}>
         <ErrorOutput value={resultMessage}></ErrorOutput>
       </Case>
 
