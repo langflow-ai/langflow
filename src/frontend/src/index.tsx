@@ -13,11 +13,11 @@ import "./style/classes.css";
 import "./lang/i18n";
 
 const root = ReactDOM.createRoot(
-  document.getElementById("root") as HTMLElement,
+  document.getElementById("root") as HTMLElement
 );
 root.render(
   <ContextWrapper>
     <App />
-  </ContextWrapper>,
+  </ContextWrapper>
 );
 reportWebVitals();

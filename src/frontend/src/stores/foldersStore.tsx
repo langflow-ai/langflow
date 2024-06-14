@@ -16,11 +16,11 @@ export const useFolderStore = create<FoldersStoreType>((set, get) => ({
         get().setLoading(true);
         getFolders().then(
           (res) => {
-            const foldersWithoutStarterProjects = res.filter(
+            const foldersWithoutStarterProjects = res?.filter(
               (folder) => folder.name !== STARTER_FOLDER_NAME,
             );
 
-            const starterProjects = res.find(
+            const starterProjects = res?.find(
               (folder) => folder.name === STARTER_FOLDER_NAME,
             );
 
@@ -54,24 +54,21 @@ export const useFolderStore = create<FoldersStoreType>((set, get) => ({
   loading: false,
   setLoading: (loading) => set(() => ({ loading: loading })),
   getFolderById: (id) => {
-    get().setLoadingById(true);
     if (id) {
       getFolderById(id).then(
         (res) => {
           const setAllFlows = useFlowsManagerStore.getState().setAllFlows;
           setAllFlows(res.flows);
           set({ selectedFolder: res });
-          get().setLoadingById(false);
         },
         () => {
-          get().setLoadingById(false);
+          get().getFoldersApi(true);
         },
       );
     }
   },
   selectedFolder: null,
   loadingById: false,
-  setLoadingById: (loading) => set(() => ({ loadingById: loading })),
   getMyCollectionFolder: () => {
     const folders = get().folders;
     const myCollectionId = folders?.find((f) => f.name === DEFAULT_FOLDER)?.id;

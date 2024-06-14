@@ -1,14 +1,12 @@
-import ForwardedIconComponent from "../../components/genericIconComponent";
 import Checkmark from "../../components/ui/checkmark";
 import Loading from "../../components/ui/loading";
 import Xmark from "../../components/ui/xmark";
 import { BuildStatus } from "../../constants/enums";
 import { VertexBuildTypeAPI } from "../../types/api";
-import { cn } from "../../utils/utils";
 
 const useIconStatus = (
   buildStatus: BuildStatus | undefined,
-  validationStatus: VertexBuildTypeAPI | null,
+  validationStatus: VertexBuildTypeAPI | null
 ) => {
   const conditionSuccess = validationStatus && validationStatus.valid;
   const conditionError =

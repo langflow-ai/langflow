@@ -21,7 +21,7 @@ const HeaderTabsSearchComponent = ({}: HeaderTabsSearchComponentProps) => {
   const [inputValue, setInputValue] = useState("");
 
   const setSearchFlowsComponents = useFlowsManagerStore(
-    (state) => state.setSearchFlowsComponents,
+    (state) => state.setSearchFlowsComponents
   );
 
   const { t } = useTranslation();

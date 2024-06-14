@@ -58,7 +58,7 @@ export default function ChatView({
       //
       .filter(
         (output) =>
-          output.data.message || (!output.data.message && output.artifacts),
+          output.data.message || (!output.data.message && output.artifacts)
       )
       .map((output, index) => {
         try {
@@ -86,7 +86,6 @@ export default function ChatView({
           };
         } catch (e) {
           console.error(e);
-          debugger;
           return {
             isSend: false,
             message: "Error parsing message",
@@ -139,7 +138,7 @@ export default function ChatView({
   function updateChat(
     chat: ChatMessageType,
     message: string,
-    stream_url?: string,
+    stream_url?: string
   ) {
     chat.message = message;
     updateFlowPool(chat.componentId, {
@@ -155,7 +154,7 @@ export default function ChatView({
     setIsDragging,
     setFiles,
     currentFlowId,
-    setErrorData,
+    setErrorData
   );
 
   return (

@@ -7,7 +7,6 @@ from langchain_chroma import Chroma
 from langchain_core.embeddings import Embeddings
 from langchain_core.retrievers import BaseRetriever
 from langchain_core.vectorstores import VectorStore
-
 from langflow.base.vectorstores.utils import chroma_collection_to_records
 from langflow.custom import CustomComponent
 from langflow.schema import Record
@@ -107,7 +106,7 @@ class ChromaComponent(CustomComponent):
             index_directory = self.resolve_path(index_directory)
 
         chroma = Chroma(
-            persist_directory=index_directory,
+            persist_directory=index_directory or None,
             client=client,
             embedding_function=embedding,
             collection_name=collection_name,

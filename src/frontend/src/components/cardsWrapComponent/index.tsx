@@ -65,7 +65,7 @@ export default function CardsWrapComponent({
         "h-full w-full",
         isDragging
           ? "mb-36 flex flex-col items-center justify-center gap-4 text-2xl font-light"
-          : "",
+          : ""
       )}
     >
       {isDragging ? (

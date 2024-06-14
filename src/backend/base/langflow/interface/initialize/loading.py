@@ -132,11 +132,12 @@ async def instantiate_custom_component(params, user_id, vertex, fallback_to_env_
     raw = custom_component.repr_value
     if hasattr(raw, "data") and raw is not None:
         raw = raw.data
-
     elif hasattr(raw, "model_dump") and raw is not None:
         raw = raw.model_dump()
+    if raw is None and isinstance(build_result, (dict, Record, str)):
+        raw = build_result.data if isinstance(build_result, Record) else build_result
 
-    artifact_type = get_artifact_type(custom_component, build_result)
+    artifact_type = get_artifact_type(custom_component.repr_value or raw, build_result)
     raw = post_process_raw(raw, artifact_type)
     artifact = {"repr": custom_repr, "raw": raw, "type": artifact_type}
     return custom_component, build_result, artifact

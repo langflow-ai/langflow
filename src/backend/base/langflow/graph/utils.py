@@ -65,9 +65,8 @@ def serialize_field(value):
     return value
 
 
-def get_artifact_type(custom_component, build_result) -> str:
+def get_artifact_type(value, build_result) -> str:
     result = ArtifactType.UNKNOWN
-    value = custom_component.repr_value
     match value:
         case Record():
             result = ArtifactType.RECORD
