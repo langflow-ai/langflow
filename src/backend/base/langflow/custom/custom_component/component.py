@@ -60,7 +60,7 @@ class Component(CustomComponent):
         # Params keys are the `name` attribute of the Input objects
         for key, value in params.items():
             if key not in self._inputs:
-                raise ValueError(f"Input {key} not found in arguments")
+                continue
             input_ = self._inputs[key]
             # BaseInputMixin has a `validate_assignment=True`
             input_.value = value
