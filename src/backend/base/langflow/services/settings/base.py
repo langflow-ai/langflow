@@ -85,6 +85,11 @@ class Settings(BaseSettings):
     redis_url: Optional[str] = None
     redis_cache_expire: int = 3600
 
+    # Sentry
+    sentry_dsn: Optional[str] = None
+    sentry_traces_sample_rate: Optional[float] = 1.0
+    sentry_profiles_sample_rate: Optional[float] = 1.0
+
     # PLUGIN_DIR: Optional[str] = None
 
     langfuse_secret_key: Optional[str] = None
