@@ -85,6 +85,8 @@ jobs:
           context: .
           push: true
           platforms: "linux/amd64,linux/arm64/v8"
+          build-args: |
+            LANGFLOW_IMAGE=langflowai/langflow:${{ inputs.version }}
           file: ${{ matrix.dockerfile }}
           tags: ${{ matrix.tags }}
 
