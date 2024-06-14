@@ -22,7 +22,7 @@ SerializableFieldTypes = Annotated[FieldTypes, PlainSerializer(lambda v: v.value
 
 
 # Base mixin for common input field attributes and methods
-class BaseInputMixin(BaseModel):
+class BaseInputMixin(BaseModel, validate_assignment=True):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     field_type: Optional[SerializableFieldTypes | str] = Field(default=FieldTypes.TEXT)
