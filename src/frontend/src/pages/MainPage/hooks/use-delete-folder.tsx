@@ -7,7 +7,6 @@ const useDeleteFolder = ({ navigate }) => {
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const folderToEdit = useFolderStore((state) => state.folderToEdit);
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
-  const refreshFolders = useFolderStore((state) => state.refreshFolders);
   const getFoldersApi = useFolderStore((state) => state.getFoldersApi);
 
   const handleDeleteFolder = () => {
