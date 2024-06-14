@@ -5,7 +5,6 @@ import CsvOutputComponent from "../../../../components/csvOutputComponent";
 import DataOutputComponent from "../../../../components/dataOutputComponent";
 import InputListComponent from "../../../../components/inputListComponent";
 import PdfViewer from "../../../../components/pdfViewer";
-import RecordsOutputComponent from "../../../../components/recordsOutputComponent";
 import { Textarea } from "../../../../components/ui/textarea";
 import { PDFViewConstant } from "../../../../constants/constants";
 import { InputOutput } from "../../../../constants/enums";
@@ -254,7 +253,7 @@ export default function IOFieldView({
                   rows={
                     Array.isArray(flowPoolNode?.data?.artifacts)
                       ? flowPoolNode?.data?.artifacts?.map(
-                          (artifact) => artifact.data,
+                          (artifact) => artifact.data
                         ) ?? []
                       : [flowPoolNode?.data?.artifacts]
                   }

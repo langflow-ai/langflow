@@ -38,7 +38,6 @@ import {
   generateNodeFromFlow,
   getNodeId,
   isValidConnection,
-  reconnectEdges,
   scapeJSONParse,
   updateIds,
   validateSelection,
@@ -62,19 +61,19 @@ export default function Page({
   const preventDefault = true;
   const uploadFlow = useFlowsManagerStore((state) => state.uploadFlow);
   const autoSaveCurrentFlow = useFlowsManagerStore(
-    (state) => state.autoSaveCurrentFlow,
+    (state) => state.autoSaveCurrentFlow
   );
   const types = useTypesStore((state) => state.types);
   const templates = useTypesStore((state) => state.templates);
   const setFilterEdge = useFlowStore((state) => state.setFilterEdge);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const [showCanvas, setSHowCanvas] = useState(
-    Object.keys(templates).length > 0 && Object.keys(types).length > 0,
+    Object.keys(templates).length > 0 && Object.keys(types).length > 0
   );
 
   const reactFlowInstance = useFlowStore((state) => state.reactFlowInstance);
   const setReactFlowInstance = useFlowStore(
-    (state) => state.setReactFlowInstance,
+    (state) => state.setReactFlowInstance
   );
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
@@ -91,10 +90,10 @@ export default function Page({
   const paste = useFlowStore((state) => state.paste);
   const resetFlow = useFlowStore((state) => state.resetFlow);
   const lastCopiedSelection = useFlowStore(
-    (state) => state.lastCopiedSelection,
+    (state) => state.lastCopiedSelection
   );
   const setLastCopiedSelection = useFlowStore(
-    (state) => state.setLastCopiedSelection,
+    (state) => state.setLastCopiedSelection
   );
   const onConnect = useFlowStore((state) => state.onConnect);
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
@@ -117,7 +116,7 @@ export default function Page({
         clonedSelection!,
         clonedNodes,
         clonedEdges,
-        getRandomName(),
+        getRandomName()
       );
       const newGroupNode = generateNodeFromFlow(newFlow, getNodeId);
       // const newEdges = reconnectEdges(newGroupNode, removedEdges);
@@ -125,8 +124,8 @@ export default function Page({
         ...clonedNodes.filter(
           (oldNodes) =>
             !clonedSelection?.nodes.some(
-              (selectionNode) => selectionNode.id === oldNodes.id,
-            ),
+              (selectionNode) => selectionNode.id === oldNodes.id
+            )
         ),
         newGroupNode,
       ]);
@@ -213,7 +212,7 @@ export default function Page({
         {
           x: position.current.x,
           y: position.current.y,
-        },
+        }
       );
     }
   }
@@ -297,7 +296,7 @@ export default function Page({
 
   useEffect(() => {
     setSHowCanvas(
-      Object.keys(templates).length > 0 && Object.keys(types).length > 0,
+      Object.keys(templates).length > 0 && Object.keys(types).length > 0
     );
   }, [templates, types]);
 
@@ -306,7 +305,7 @@ export default function Page({
       takeSnapshot();
       onConnect(params);
     },
-    [takeSnapshot, onConnect],
+    [takeSnapshot, onConnect]
   );
 
   const onNodeDragStart: NodeDragHandler = useCallback(() => {
@@ -347,7 +346,7 @@ export default function Page({
 
         // Extract the data from the drag event and parse it as a JSON object
         const data: { type: string; node?: APIClassType } = JSON.parse(
-          event.dataTransfer.getData("nodedata"),
+          event.dataTransfer.getData("nodedata")
         );
 
         const newId = getNodeId(data.type);
@@ -363,7 +362,7 @@ export default function Page({
         };
         paste(
           { nodes: [newNode], edges: [] },
-          { x: event.clientX, y: event.clientY },
+          { x: event.clientX, y: event.clientY }
         );
       } else if (event.dataTransfer.types.some((types) => types === "Files")) {
         takeSnapshot();
@@ -392,7 +391,7 @@ export default function Page({
       }
     },
     // Specify dependencies for useCallback
-    [getNodeId, setNodes, takeSnapshot, paste],
+    [getNodeId, setNodes, takeSnapshot, paste]
   );
 
   const onEdgeUpdateStart = useCallback(() => {
@@ -408,7 +407,7 @@ export default function Page({
         setEdges((els) => updateEdge(oldEdge, newConnection, els));
       }
     },
-    [setEdges],
+    [setEdges]
   );
 
   const onEdgeUpdateEnd = useCallback((_, edge: Edge): void => {
@@ -441,7 +440,7 @@ export default function Page({
     (flow: OnSelectionChangeParams): void => {
       setLastSelection(flow);
     },
-    [],
+    []
   );
 
   const onPaneClick = useCallback((flow) => {
