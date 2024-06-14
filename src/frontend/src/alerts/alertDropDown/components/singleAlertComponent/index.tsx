@@ -13,7 +13,7 @@ export default function SingleAlert({
 
   return (
     <Transition
-      className="relative"
+      className="nocopy nowheel nopan nodelete nodrag noundo relative"
       show={show}
       appear={true}
       enter="transition-transform duration-500 ease-out"

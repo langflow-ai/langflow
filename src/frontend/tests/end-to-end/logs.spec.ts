@@ -50,13 +50,16 @@ test("should able to see and interact with logs", async ({ page }) => {
   await page.getByRole("gridcell").first().isVisible();
 
   await page.getByText("Messages", { exact: true }).click();
-  await page.getByText("Index").isVisible();
-  await page.getByText("Timestamp").isVisible();
-  await page.getByText("Flow Id", { exact: true }).isVisible();
-  await page.getByText("Source").isVisible();
-  await page.getByText("Target", { exact: true }).isVisible();
-  await page.getByText("Target Args", { exact: true }).isVisible();
-  await page.getByText("Status", { exact: true }).isVisible();
-  await page.getByText("Error", { exact: true }).isVisible();
+  await page.getByText("index", { exact: true }).last().isVisible();
+  await page.getByText("timestamp", { exact: true }).isVisible();
+  await page.getByText("flow_id", { exact: true }).isVisible();
+  await page.getByText("source", { exact: true }).isVisible();
+  await page.getByText("target", { exact: true }).isVisible();
+  await page.getByText("vertex_id", { exact: true }).isVisible();
+  await page.getByText("status", { exact: true }).isVisible();
+  await page.getByText("error", { exact: true }).isVisible();
+  await page.getByText("outputs", { exact: true }).isVisible();
+  await page.getByText("inputs", { exact: true }).isVisible();
+
   await page.getByRole("gridcell").first().isVisible();
 });
