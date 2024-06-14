@@ -141,7 +141,6 @@ const TableComponent = forwardRef<
           {...props}
           defaultColDef={{
             minWidth: 100,
-            autoHeight: true,
           }}
           animateRows={false}
           columnDefs={colDef}
