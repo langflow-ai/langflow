@@ -244,7 +244,7 @@ export const nodeColors: { [char: string]: string } = {
   outputs: "#AA2411",
   data: "#198BF6",
   prompts: "#4367BF",
-  models: "#6344BE",
+  models: "#ab11ab",
   model_specs: "#6344BE",
   chains: "#FE7500",
   Document: "#7AAE42",
@@ -271,10 +271,10 @@ export const nodeColors: { [char: string]: string } = {
   Text: "#4367BF",
   retrievers: "#e6b25a",
   unknown: "#9CA3AF",
-  custom_components: "#ab11ab",
-  Data: "#31a3cc",
-  Data: "#31a3cc",
+  // custom_components: "#ab11ab",
+  Data: "#9CA3AF",
   Message: "#4367BF",
+  BaseLanguageModel: "#ab11ab",
 };
 
 export const nodeNames: { [char: string]: string } = {

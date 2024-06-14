@@ -25,7 +25,6 @@ class TextOperatorComponent(Component):
             display_name="Operator",
             options=["equals", "not equals", "contains", "starts with", "ends with"],
             info="The operator to apply for comparing the texts.",
-            value="equals",
         ),
         BoolInput(
             name="case_sensitive",
@@ -37,13 +36,13 @@ class TextOperatorComponent(Component):
         StrInput(
             name="true_output",
             display_name="True Output",
-            info="The output to return or display when the comparison is true. If not passed, defaults to Input Text.",
+            info="The output to return or display when the comparison is true.",
             advanced=True,
         ),
         StrInput(
             name="false_output",
             display_name="False Output",
-            info="The output to return or display when the comparison is false. If not passed, defaults to Input Text.",
+            info="The output to return or display when the comparison is false.",
             advanced=True,
         ),
     ]
@@ -53,41 +52,41 @@ class TextOperatorComponent(Component):
         Output(display_name="False Result", name="false_result", method="false_response"),
     ]
 
-    def true_response(self) -> Text:
-        self.stop("false_result")
-        return self.true_output
-
-    def false_response(self) -> Text:
-        self.stop("true_result")
-        return self.false_output
-
-    def run(self) -> Text:
-        input_text = self.input_text
-        match_text = self.match_text
-        operator = self.operator
-        case_sensitive = self.case_sensitive
-
+    def evaluate_condition(self, input_text: str, match_text: str, operator: str, case_sensitive: bool) -> bool:
         if not case_sensitive:
             input_text = input_text.lower()
             match_text = match_text.lower()
 
-        result = False
         if operator == "equals":
-            result = input_text == match_text
+            return input_text == match_text
         elif operator == "not equals":
-            result = input_text != match_text
+            return input_text != match_text
         elif operator == "contains":
-            result = match_text in input_text
+            return match_text in input_text
         elif operator == "starts with":
-            result = input_text.startswith(match_text)
+            return input_text.startswith(match_text)
         elif operator == "ends with":
-            result = input_text.endswith(match_text)
+            return input_text.endswith(match_text)
+        return False
 
+    def true_response(self) -> Text:
+        result = self.evaluate_condition(self.input_text, self.match_text, self.operator, self.case_sensitive)
         if result:
-            response = self.true_response()
+            self.stop("false_result")
+            response = self.true_output if self.true_output else self.input_text
             self.status = response
             return response
         else:
-            response = self.false_response()
+            self.stop("true_result")
+            return ""
+
+    def false_response(self) -> Text:
+        result = self.evaluate_condition(self.input_text, self.match_text, self.operator, self.case_sensitive)
+        if not result:
+            self.stop("true_result")
+            response = self.false_output if self.false_output else self.input_text
             self.status = response
             return response
+        else:
+            self.stop("false_result")
+            return ""
