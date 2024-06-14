@@ -44,6 +44,7 @@ def pytest_configure(config):
     pytest.GROUPED_CHAT_EXAMPLE_PATH = data_path / "grouped_chat.json"
     pytest.ONE_GROUPED_CHAT_EXAMPLE_PATH = data_path / "one_group_chat.json"
     pytest.VECTOR_STORE_GROUPED_EXAMPLE_PATH = data_path / "vector_store_grouped.json"
+    pytest.WEBHOOK_TEST = data_path / "WebhookTest.json"
 
     pytest.BASIC_CHAT_WITH_PROMPT_AND_HISTORY = data_path / "BasicChatwithPromptandHistory.json"
     pytest.CHAT_INPUT = data_path / "ChatInputTest.json"
@@ -221,6 +222,12 @@ def json_vector_store():
         return f.read()
 
 
+@pytest.fixture
+def json_webhook_test():
+    with open(pytest.WEBHOOK_TEST, "r") as f:
+        return f.read()
+
+
 @pytest.fixture(name="client", autouse=True)
 def client_fixture(session: Session, monkeypatch, request, load_flows_dir):
     # Set the database url to a test database
@@ -274,7 +281,7 @@ def test_user(client):
         username="testuser",
         password="testpassword",
     )
-    response = client.post("/api/v1/users", json=user_data.dict())
+    response = client.post("/api/v1/users", json=user_data.model_dump())
     assert response.status_code == 201
     return response.json()
 
@@ -341,7 +348,7 @@ def added_flow_with_prompt_and_history(client, json_flow_with_prompt_and_history
     flow = orjson.loads(json_flow_with_prompt_and_history)
     data = flow["data"]
     flow = FlowCreate(name="Basic Chat", description="description", data=data)
-    response = client.post("api/v1/flows/", json=flow.dict(), headers=logged_in_headers)
+    response = client.post("api/v1/flows/", json=flow.model_dump(), headers=logged_in_headers)
     assert response.status_code == 201
     assert response.json()["name"] == flow.name
     assert response.json()["data"] == flow.data
@@ -353,7 +360,7 @@ def added_flow_chat_input(client, json_chat_input, logged_in_headers):
     flow = orjson.loads(json_chat_input)
     data = flow["data"]
     flow = FlowCreate(name="Chat Input", description="description", data=data)
-    response = client.post("api/v1/flows/", json=flow.dict(), headers=logged_in_headers)
+    response = client.post("api/v1/flows/", json=flow.model_dump(), headers=logged_in_headers)
     assert response.status_code == 201
     assert response.json()["name"] == flow.name
     assert response.json()["data"] == flow.data
@@ -365,7 +372,7 @@ def added_flow_two_outputs(client, json_two_outputs, logged_in_headers):
     flow = orjson.loads(json_two_outputs)
     data = flow["data"]
     flow = FlowCreate(name="Two Outputs", description="description", data=data)
-    response = client.post("api/v1/flows/", json=flow.dict(), headers=logged_in_headers)
+    response = client.post("api/v1/flows/", json=flow.model_dump(), headers=logged_in_headers)
     assert response.status_code == 201
     assert response.json()["name"] == flow.name
     assert response.json()["data"] == flow.data
@@ -377,10 +384,22 @@ def added_vector_store(client, json_vector_store, logged_in_headers):
     vector_store = orjson.loads(json_vector_store)
     data = vector_store["data"]
     vector_store = FlowCreate(name="Vector Store", description="description", data=data)
-    response = client.post("api/v1/flows/", json=vector_store.dict(), headers=logged_in_headers)
+    response = client.post("api/v1/flows/", json=vector_store.model_dump(), headers=logged_in_headers)
     assert response.status_code == 201
     assert response.json()["name"] == vector_store.name
     assert response.json()["data"] == vector_store.data
+    return response.json()
+
+
+@pytest.fixture
+def added_webhook_test(client, json_webhook_test, logged_in_headers):
+    webhook_test = orjson.loads(json_webhook_test)
+    data = webhook_test["data"]
+    webhook_test = FlowCreate(name="Webhook Test", description="description", data=data)
+    response = client.post("api/v1/flows/", json=webhook_test.model_dump(), headers=logged_in_headers)
+    assert response.status_code == 201
+    assert response.json()["name"] == webhook_test.name
+    assert response.json()["data"] == webhook_test.data
     return response.json()
 
 
