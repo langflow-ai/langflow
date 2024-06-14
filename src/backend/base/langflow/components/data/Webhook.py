@@ -34,6 +34,6 @@ class WebhookComponent(CustomComponent):
             message = f"Invalid JSON payload. Please check the format.\n\n{data}"
         record = Data(data=body)
         if not message:
-            message = json.dumps(body, indent=2)
+            message = record
         self.status = message
         return record
