@@ -89,6 +89,11 @@ test("search components", async ({ page }) => {
   }
   await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
+  await page.getByTitle("fit view").click();
+  await page.getByTitle("zoom out").click();
+  await page.getByTitle("zoom out").click();
+  await page.getByTitle("zoom out").click();
+
   await page.getByText("Chat Input").first().click();
   await page.getByTestId("more-options-modal").click();
 
@@ -152,6 +157,11 @@ test("user should be able to download a flow or a component", async ({
   }
 
   await page.getByRole("heading", { name: "Basic Prompting" }).click();
+  await page.getByTitle("fit view").click();
+  await page.getByTitle("zoom out").click();
+  await page.getByTitle("zoom out").click();
+  await page.getByTitle("zoom out").click();
+
   await page.getByText("Chat Input", { exact: true }).click();
   await page.getByTestId("more-options-modal").click();
 
@@ -224,6 +234,12 @@ test("user should be able to duplicate a flow or a component", async ({
   }
 
   await page.getByRole("heading", { name: "Basic Prompting" }).click();
+
+  await page.getByTitle("fit view").click();
+  await page.getByTitle("zoom out").click();
+  await page.getByTitle("zoom out").click();
+  await page.getByTitle("zoom out").click();
+
   await page.getByText("Chat Input", { exact: true }).click();
   await page.getByTestId("more-options-modal").click();
 

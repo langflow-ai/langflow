@@ -1,4 +1,6 @@
 import { expect, test } from "@playwright/test";
+import * as dotenv from "dotenv";
+import path from "path";
 
 test("should interact with api request", async ({ page }) => {
   await page.goto("/");
