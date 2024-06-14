@@ -41,7 +41,7 @@ jobs:
             ./.mypy_cache
           key: ${{ runner.os }}-mypy-${{ hashFiles('**/pyproject.toml') }}
       - name: Run linters
-        uses: wearerequired/lint-action@v1
+        uses: wearerequired/lint-action@v2
         with:
           github_token: ${{ secrets.github_token }}
           # Enable linters
