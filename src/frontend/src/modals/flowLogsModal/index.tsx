@@ -1,5 +1,5 @@
 import { ColDef, ColGroupDef } from "ag-grid-community";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import IconComponent from "../../components/genericIconComponent";
 import TableComponent from "../../components/tableComponent";
 import { Tabs, TabsList, TabsTrigger } from "../../components/ui/tabs";
@@ -61,6 +61,21 @@ export default function FlowLogsModal({
     }
   }, [open, activeTab]);
 
+  const tableComponentRender = useMemo(() => {
+    return (
+      <TableComponent
+        key={activeTab}
+        readOnlyEdit
+        className="h-max-full h-full w-full"
+        pagination={rows.length === 0 ? false : true}
+        columnDefs={columns}
+        autoSizeStrategy={{ type: "fitGridWidth" }}
+        rowData={rows}
+        headerHeight={rows.length === 0 ? 0 : undefined}
+      />
+    );
+  }, [activeTab]);
+
   return (
     <BaseModal open={open} setOpen={setOpen} size="large">
       <BaseModal.Header description="Inspect component executions and monitor sent messages in the playground.">
@@ -85,16 +100,7 @@ export default function FlowLogsModal({
             <TabsTrigger value={"Messages"}>Messages</TabsTrigger>
           </TabsList>
         </Tabs>
-        <TableComponent
-          key={activeTab}
-          readOnlyEdit
-          className="h-max-full h-full w-full"
-          pagination={rows.length === 0 ? false : true}
-          columnDefs={columns}
-          autoSizeStrategy={{ type: "fitGridWidth" }}
-          rowData={rows}
-          headerHeight={rows.length === 0 ? 0 : undefined}
-        ></TableComponent>
+        {tableComponentRender}
       </BaseModal.Content>
     </BaseModal>
   );
