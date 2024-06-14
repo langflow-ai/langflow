@@ -802,7 +802,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Text to be passed as input.",
-                "input_types": ["Data", "Text"],
+                "input_types": ["Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
