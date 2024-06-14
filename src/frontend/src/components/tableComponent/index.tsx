@@ -8,7 +8,7 @@ import {
 } from "../../constants/constants";
 import { useDarkStore } from "../../stores/darkStore";
 import "../../style/ag-theme-shadcn.css"; // Custom CSS applied to the grid
-import { cn, toTitleCase } from "../../utils/utils";
+import { cn } from "../../utils/utils";
 import ForwardedIconComponent from "../genericIconComponent";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import TableOptions from "./components/TableOptions";
@@ -40,6 +40,7 @@ const TableComponent = forwardRef<
     let colDef = props.columnDefs.map((col, index) => {
       let newCol = {
         ...col,
+        headerName: col.headerName,
       };
       if (index === props.columnDefs.length - 1) {
         newCol = {
@@ -141,7 +142,6 @@ const TableComponent = forwardRef<
           {...props}
           defaultColDef={{
             minWidth: 100,
-            autoHeight: true,
           }}
           animateRows={false}
           columnDefs={colDef}
