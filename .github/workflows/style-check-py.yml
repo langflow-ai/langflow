@@ -1,17 +1,12 @@
-name: lint
+name: Ruff Style Check
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "poetry.lock"
-      - "pyproject.toml"
-      - "src/backend/**"
   pull_request:
     paths:
       - "poetry.lock"
       - "pyproject.toml"
       - "src/backend/**"
+      - "tests/**"
 
 env:
   POETRY_VERSION: "1.8.2"
@@ -23,8 +18,6 @@ jobs:
       matrix:
         python-version:
           - "3.12"
-          - "3.11"
-          - "3.10"
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python ${{ matrix.python-version }} + Poetry ${{ env.POETRY_VERSION }}
@@ -37,14 +30,10 @@ jobs:
         run: |
           poetry env use ${{ matrix.python-version }}
           poetry install
-      - name: Get .mypy_cache to speed up mypy
-        uses: actions/cache@v4
-        env:
-          SEGMENT_DOWNLOAD_TIMEOUT_MIN: "2"
-        with:
-          path: |
-            ./.mypy_cache
-          key: ${{ runner.os }}-mypy-${{ hashFiles('**/pyproject.toml') }}
-      - name: Lint check
-        run: |
-          make lint
+      - name: Register problem matcher
+        run: echo "::add-matcher::.github/workflows/matchers/ruff.json"
+      - name: Run Ruff
+        run: poetry run ruff check --output-format=github .
+      - name: Run Ruff format
+        run: poetry run ruff format --check .
+
