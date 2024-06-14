@@ -22,6 +22,7 @@ const useExportFlows = (
             description: selectedFlow.description,
             name: selectedFlow.name,
             last_tested_version: version,
+            endpoint_name: selectedFlow.endpoint_name,
             is_component: false,
           }),
           selectedFlow.name,
