@@ -113,7 +113,7 @@ async def get_current_user_by_jwt(
         if expires := payload.get("exp", None):
             expires_datetime = datetime.fromtimestamp(expires, timezone.utc)
             if datetime.now(timezone.utc) > expires_datetime:
-                logger.info("Token expired for user ID: %s", user_id)
+                logger.info("Token expired for user")
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Token has expired.",
@@ -121,14 +121,14 @@ async def get_current_user_by_jwt(
                 )
 
         if user_id is None or token_type:
-            logger.info("Invalid token payload: %s", payload)
+            logger.info(f"Invalid token payload. Token type: {token_type}")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid token details.",
                 headers={"WWW-Authenticate": "Bearer"},
             )
     except JWTError as e:
-        logger.error("JWT decoding error: %s", str(e))
+        logger.error(f"JWT decoding error: {e}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",
@@ -137,7 +137,7 @@ async def get_current_user_by_jwt(
 
     user = get_user_by_id(db, user_id)
     if user is None or not user.is_active:
-        logger.info("User not found or inactive: %s", user_id)
+        logger.info("User not found or inactive.")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not found or is inactive.",
