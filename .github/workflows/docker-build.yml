@@ -40,6 +40,10 @@ jobs:
   build_base:
     runs-on: ubuntu-latest
     needs: setup
+    strategy:
+      matrix:
+        platform: [linux/amd64, linux/arm64/v8]
+        file: [./docker/build_and_push.Dockerfile, ./docker/build_and_push_base.Dockerfile]
     steps:
       - uses: actions/checkout@v4
       - name: Set up Docker Buildx
@@ -54,12 +58,9 @@ jobs:
         with:
           context: .
           push: true
-          platforms: "linux/amd64,linux/arm64/v8"
-          file: ./docker/build_and_push_base.Dockerfile
-          # base_rags if release_type is base, main_tags if release_type is main
+          platforms: ${{ matrix.platform }}
+          file: ${{ matrix.file }}
           tags: ${{ needs.setup.outputs.tags }}
-      - name: Wait for Docker Hub to propagate
-        run: sleep 30
 
   build_components:
     if: ${{ inputs.release_type == 'main' }}
