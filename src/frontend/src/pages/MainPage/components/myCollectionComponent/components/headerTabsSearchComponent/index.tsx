@@ -6,6 +6,7 @@ import { useFolderStore } from "../../../../../../stores/foldersStore";
 import { handleDownloadFolderFn } from "../../../../utils/handle-download-folder";
 import InputSearchComponent from "../inputSearchComponent";
 import TabsSearchComponent from "../tabsComponent";
+import { useTranslation } from "react-i18next";
 
 type HeaderTabsSearchComponentProps = {};
 
@@ -23,10 +24,12 @@ const HeaderTabsSearchComponent = ({}: HeaderTabsSearchComponentProps) => {
     (state) => state.setSearchFlowsComponents
   );
 
+  const { t } = useTranslation();
+
   const handleDownloadFolder = () => {
     if (allFlows.length === 0) {
       setErrorData({
-        title: "Folder is empty",
+        title: t("mainPage.EMPTY_FOLDER"),
         list: [],
       });
       return;
@@ -51,7 +54,11 @@ const HeaderTabsSearchComponent = ({}: HeaderTabsSearchComponentProps) => {
           }}
         />
         <TabsSearchComponent
-          tabsOptions={["All", "Flows", "Components"]}
+          tabsOptions={[
+            t("header.ALL"),
+            t("header.FLOWS"),
+            t("header.COMPONENTS"),
+          ]}
           setActiveTab={setTabActive}
           loading={isLoading}
           tabActive={tabActive}

@@ -10,6 +10,8 @@ import "./style/applies.css";
 // @ts-ignore
 import "./style/classes.css";
 
+import "./lang/i18n";
+
 const root = ReactDOM.createRoot(
   document.getElementById("root") as HTMLElement
 );
