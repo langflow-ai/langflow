@@ -11,7 +11,6 @@ from langflow.inputs.inputs import InputTypes
 from langflow.schema.artifact import get_artifact_type, post_process_raw
 from langflow.schema.data import Data
 from langflow.template.field.base import UNDEFINED, Input, Output
-from langflow.utils.util import is_class_method
 
 from .custom_component import CustomComponent
 
@@ -63,9 +62,8 @@ class Component(CustomComponent):
             if key not in self._inputs:
                 raise ValueError(f"Input {key} not found in arguments")
             input_ = self._inputs[key]
-            # validate_inputs must be a classmethod
-            if hasattr(input_, "validate_value") and is_class_method(func=input_.validate_value, cls=input_):
-                input_.validate_value(value)
+            # BaseInputMixin has a `validate_assignment=True`
+            input_.value = value
 
     def set_attributes(self, params: dict):
         self._validate_inputs(params)
