@@ -162,4 +162,3 @@ class Component(CustomComponent):
             return [field.name for field in inputs]
         except KeyError:
             return []
-            return []

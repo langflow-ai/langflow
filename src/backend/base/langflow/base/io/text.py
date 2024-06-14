@@ -36,6 +36,8 @@ class TextComponent(Component):
                 # meaning, if text_key = "bacon", then data_template = "{bacon}"
                 data_template = "{" + input_value.text_key + "}"
             input_value = data_to_text(template=data_template, data=input_value)
+        elif not input_value:
+            input_value = ""
         self.status = input_value
         if not input_value:
             input_value = ""
