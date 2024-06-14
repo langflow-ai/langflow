@@ -270,10 +270,10 @@ export default function GenericModal({
                   ref={divRef}
                   className="max-h-20 overflow-y-auto custom-scroll"
                 >
-                  <div className="flex flex-wrap items-center">
+                  <div className="flex flex-wrap items-center gap-2">
                     <IconComponent
                       name="Braces"
-                      className=" -ml-px mr-1 flex h-4 w-4 text-primary"
+                      className=" flex h-4 w-4 text-primary"
                     />
                     <span className="text-md font-semibold text-primary">
                       Prompt Variables:
@@ -289,7 +289,7 @@ export default function GenericModal({
                           key={index}
                           variant="gray"
                           size="md"
-                          className="m-1 max-w-[40vw] cursor-default truncate p-2.5 text-sm"
+                          className="max-w-[40vw] cursor-default truncate p-1 text-sm"
                         >
                           <div className="relative bottom-[1px]">
                             <span id={"badge" + index.toString()}>
