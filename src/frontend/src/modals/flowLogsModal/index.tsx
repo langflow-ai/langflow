@@ -1,26 +1,20 @@
 import { ColDef, ColGroupDef } from "ag-grid-community";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import IconComponent from "../../components/genericIconComponent";
 import TableComponent from "../../components/tableComponent";
-import { getMessagesTable, getTransactionTable } from "../../controllers/API";
-import useAlertStore from "../../stores/alertStore";
-import useFlowStore from "../../stores/flowStore";
+import { getTransactionTable } from "../../controllers/API";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { FlowSettingsPropsType } from "../../types/components";
-import { NodeDataType } from "../../types/flow";
 import BaseModal from "../baseModal";
 
 export default function FlowLogsModal({
   open,
   setOpen,
 }: FlowSettingsPropsType): JSX.Element {
-  const nodes = useFlowStore((state) => state.nodes);
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
-  const setNoticeData = useAlertStore((state) => state.setNoticeData);
 
   const [columns, setColumns] = useState<Array<ColDef | ColGroupDef>>([]);
   const [rows, setRows] = useState<any>([]);
-  const noticed = useRef(false);
 
   useEffect(() => {
     getTransactionTable(currentFlowId, "union").then((data) => {

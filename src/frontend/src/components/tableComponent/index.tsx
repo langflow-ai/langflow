@@ -144,6 +144,7 @@ const TableComponent = forwardRef<
             minWidth: 100,
             autoHeight: true,
           }}
+          animateRows={false}
           columnDefs={colDef}
           ref={realRef}
           onGridReady={onGridReady}
