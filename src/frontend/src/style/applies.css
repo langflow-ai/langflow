@@ -411,7 +411,7 @@
   }
 
   .error-build-message {
-    @apply mt-6 w-96 cursor-pointer rounded-md bg-error-background p-4 shadow-xl;
+    @apply mt-6 w-96 rounded-md bg-error-background p-4 shadow-xl;
   }
   .error-build-message-circle {
     @apply alert-icon text-status-red;
