@@ -8,6 +8,7 @@ const useDeleteFolder = ({ navigate }) => {
   const folderToEdit = useFolderStore((state) => state.folderToEdit);
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
   const refreshFolders = useFolderStore((state) => state.refreshFolders);
+  const getFoldersApi = useFolderStore((state) => state.getFoldersApi);
 
   const handleDeleteFolder = () => {
     deleteFolder(folderToEdit?.id!)
@@ -16,7 +17,7 @@ const useDeleteFolder = ({ navigate }) => {
           title: "Folder deleted successfully.",
         });
         getFolderById(myCollectionId!);
-        refreshFolders();
+        getFoldersApi(true);
         navigate("/all");
       })
       .catch((err) => {
