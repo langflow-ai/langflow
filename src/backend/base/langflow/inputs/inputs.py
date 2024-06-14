@@ -18,7 +18,7 @@ from .input_mixin import (
 )
 
 
-class HandleInput(BaseInputMixin):
+class HandleInput(BaseInputMixin, ListableInputMixin):
     input_types: list[str] = Field(default_factory=list)
     field_type: Optional[str] = ""
 
