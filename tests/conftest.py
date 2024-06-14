@@ -14,9 +14,6 @@ from dotenv import load_dotenv
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
 from sqlmodel import Session, SQLModel, create_engine, select
-from sqlmodel.pool import StaticPool
-from typer.testing import CliRunner
-
 from langflow.graph.graph.base import Graph
 from langflow.initial_setup.setup import STARTER_FOLDER_NAME
 from langflow.services.auth.utils import get_password_hash
@@ -26,6 +23,9 @@ from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.user.model import User, UserCreate
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service
+from sqlmodel import Session, SQLModel, create_engine, select
+from sqlmodel.pool import StaticPool
+from typer.testing import CliRunner
 
 if TYPE_CHECKING:
     from langflow.services.database.service import DatabaseService
@@ -395,7 +395,9 @@ def added_vector_store(client, json_vector_store, logged_in_headers):
 def added_webhook_test(client, json_webhook_test, logged_in_headers):
     webhook_test = orjson.loads(json_webhook_test)
     data = webhook_test["data"]
-    webhook_test = FlowCreate(name="Webhook Test", description="description", data=data)
+    webhook_test = FlowCreate(
+        name="Webhook Test", description="description", data=data, endpoint_name=webhook_test["endpoint_name"]
+    )
     response = client.post("api/v1/flows/", json=webhook_test.model_dump(), headers=logged_in_headers)
     assert response.status_code == 201
     assert response.json()["name"] == webhook_test.name

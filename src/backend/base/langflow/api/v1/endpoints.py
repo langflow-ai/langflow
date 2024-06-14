@@ -30,7 +30,7 @@ from langflow.schema.graph import Tweaks
 from langflow.services.auth.utils import api_key_security, get_current_active_user
 from langflow.services.cache.utils import save_uploaded_file
 from langflow.services.database.models.flow import Flow
-from langflow.services.database.models.flow.utils import get_all_webhook_components_in_flow, get_flow_by_id
+from langflow.services.database.models.flow.utils import get_all_webhook_components_in_flow
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import (
     get_cache_service,
@@ -211,10 +211,10 @@ async def simplified_run_flow(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
 
 
-@router.post("/webhook/{flow_id}", response_model=dict, status_code=HTTPStatus.ACCEPTED)
+@router.post("/webhook/{flow_id_or_name}", response_model=dict, status_code=HTTPStatus.ACCEPTED)
 async def webhook_run_flow(
     db: Annotated[Session, Depends(get_session)],
-    flow: Annotated[Flow, Depends(get_flow_by_id)],
+    flow: Annotated[Flow, Depends(get_flow_by_id_or_endpoint_name)],
     request: Request,
     background_tasks: BackgroundTasks,
     session_service: SessionService = Depends(get_session_service),
