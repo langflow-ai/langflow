@@ -5,95 +5,98 @@ from pydantic.v1 import SecretStr
 
 from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
-from langflow.field_typing import Text
+from langflow.field_typing import BaseLanguageModel, Text
+from langflow.inputs import BoolInput, DropdownInput, FloatInput, IntInput, SecretStrInput, StrInput
+from langflow.template import Output
 
 
-class AnthropicLLM(LCModelComponent):
-    display_name: str = "Anthropic"
-    description: str = "Generate text using Anthropic Chat&Completion LLMs."
+class AnthropicModelComponent(LCModelComponent):
+    display_name = "Anthropic"
+    description = "Generate text using Anthropic Chat&Completion LLMs with prefill support."
     icon = "Anthropic"
 
-    field_order = [
-        "model",
-        "anthropic_api_key",
-        "max_tokens",
-        "temperature",
-        "anthropic_api_url",
-        "input_value",
-        "system_message",
-        "stream",
+    inputs = [
+        StrInput(
+            name="input_value",
+            display_name="Input",
+            input_types=["Text", "Data", "Prompt", "Message"]),
+        IntInput(
+            name="max_tokens",
+            display_name="Max Tokens",
+            advanced=True,
+            info="The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
+        ),
+        DropdownInput(
+            name="model",
+            display_name="Model Name",
+            options=[
+                "claude-3-opus-20240229",
+                "claude-3-sonnet-20240229", 
+                "claude-3-haiku-20240307",
+                "claude-2.1",
+                "claude-2.0",
+                "claude-instant-1.2",
+                "claude-instant-1",
+            ],
+            info="https://python.langchain.com/docs/integrations/chat/anthropic",
+            value="claude-3-opus-20240229",
+        ),
+        SecretStrInput(
+            name="anthropic_api_key",
+            display_name="Anthropic API Key",
+            info="Your Anthropic API key.",
+        ),
+        FloatInput(name="temperature", display_name="Temperature", value=0.1),
+        StrInput(
+            name="anthropic_api_url",
+            display_name="Anthropic API URL",
+            advanced=True,
+            info="Endpoint of the Anthropic API. Defaults to 'https://api.anthropic.com' if not specified.",
+        ),
+        BoolInput(name="stream", display_name="Stream", info=STREAM_INFO_TEXT, advanced=True),
+        StrInput(
+            name="system_message",
+            display_name="System Message",
+            info="System message to pass to the model.",
+            advanced=True,
+        ),
+        StrInput(
+            name="prefill",
+            display_name="Prefill",
+            info="Prefill text to guide the model's response.",
+            advanced=True,
+        ),
+    ]
+    outputs = [
+        Output(display_name="Text", name="text_output", method="text_response"),
+        Output(display_name="Language Model", name="model_output", method="build_model"),
     ]
 
-    def build_config(self):
-        return {
-            "model": {
-                "display_name": "Model Name",
-                "options": [
-                    "claude-3-opus-20240229",
-                    "claude-3-sonnet-20240229",
-                    "claude-3-haiku-20240307",
-                    "claude-2.1",
-                    "claude-2.0",
-                    "claude-instant-1.2",
-                    "claude-instant-1",
-                ],
-                "info": "https://python.langchain.com/docs/integrations/chat/anthropic",
-                "required": True,
-                "value": "claude-3-opus-20240229",
-            },
-            "anthropic_api_key": {
-                "display_name": "Anthropic API Key",
-                "required": True,
-                "password": True,
-                "info": "Your Anthropic API key.",
-            },
-            "max_tokens": {
-                "display_name": "Max Tokens",
-                "advanced": True,
-                "info": "The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
-            },
-            "temperature": {
-                "display_name": "Temperature",
-                "field_type": "float",
-                "value": 0.1,
-            },
-            "anthropic_api_url": {
-                "display_name": "Anthropic API URL",
-                "advanced": True,
-                "info": "Endpoint of the Anthropic API. Defaults to 'https://api.anthropic.com' if not specified.",
-            },
-            "code": {"show": False},
-            "input_value": {"display_name": "Input", "input_types": ["Text", "Data", "Prompt"]},
-            "stream": {
-                "display_name": "Stream",
-                "advanced": True,
-                "info": STREAM_INFO_TEXT,
-            },
-            "system_message": {
-                "display_name": "System Message",
-                "advanced": True,
-                "info": "System message to pass to the model.",
-            },
-        }
+    def text_response(self) -> Text:
+        input_value = self.input_value
+        stream = self.stream
+        system_message = self.system_message
+        prefill = self.prefill
+        output = self.build_model()
+        messages = [
+            ("system", system_message),
+            ("human", input_value),
+            ("assistant", prefill),
+        ]
+        result = output.invoke(messages)
+        self.status = prefill + result.content
+        return prefill + result.content
 
-    def build(
-        self,
-        model: str,
-        input_value: Text,
-        system_message: Optional[str] = None,
-        anthropic_api_key: Optional[str] = None,
-        max_tokens: Optional[int] = 1000,
-        temperature: Optional[float] = None,
-        anthropic_api_url: Optional[str] = None,
-        stream: bool = False,
-    ) -> Text:
-        # Set default API endpoint if not provided
-        if not anthropic_api_url:
-            anthropic_api_url = "https://api.anthropic.com"
+    def build_model(self) -> BaseLanguageModel:
+        model = self.model
+        anthropic_api_key = self.anthropic_api_key
+        max_tokens = self.max_tokens
+        temperature = self.temperature
+        anthropic_api_url = self.anthropic_api_url or "https://api.anthropic.com"
 
         try:
             output = ChatAnthropic(
-                model_name=model,
+                model=model,
                 anthropic_api_key=(SecretStr(anthropic_api_key) if anthropic_api_key else None),
                 max_tokens_to_sample=max_tokens,  # type: ignore
                 temperature=temperature,
@@ -102,4 +105,5 @@ class AnthropicLLM(LCModelComponent):
         except Exception as e:
             raise ValueError("Could not connect to Anthropic API.") from e
 
-        return self.get_chat_result(output, stream, input_value, system_message)
+        return output
+    
