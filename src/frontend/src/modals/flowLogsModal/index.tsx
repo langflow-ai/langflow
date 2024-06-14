@@ -69,6 +69,7 @@ export default function FlowLogsModal({
         className="h-max-full h-full w-full"
         pagination={rows.length === 0 ? false : true}
         columnDefs={columns}
+        rowHeight={48}
         autoSizeStrategy={{ type: "fitGridWidth" }}
         rowData={rows}
         headerHeight={rows.length === 0 ? 0 : undefined}
