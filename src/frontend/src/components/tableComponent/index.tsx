@@ -104,7 +104,7 @@ const TableComponent = forwardRef<
         }
       }, 50);
       setTimeout(() => {
-        realRef.current.api.hideOverlay();
+        realRef?.current?.api?.hideOverlay();
       }, 1000);
       if (props.onGridReady) props.onGridReady(params);
     };
@@ -143,6 +143,7 @@ const TableComponent = forwardRef<
             minWidth: 100,
             autoHeight: true,
           }}
+          animateRows={false}
           columnDefs={colDef}
           ref={realRef}
           onGridReady={onGridReady}
