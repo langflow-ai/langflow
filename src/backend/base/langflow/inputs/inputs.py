@@ -47,13 +47,14 @@ class TextInput(StrInput):
     @field_validator("value")
     @classmethod
     def validate_value(cls, v: Any, _info):
+        value = None
         if isinstance(v, str):
-            return v
+            value = v
         elif isinstance(v, Message):
-            return v.text
+            value = v.text
         elif isinstance(v, Data):
             if v.text_key in v.data:
-                return v.data[v.text_key]
+                value = v.data[v.text_key]
             else:
                 keys = ", ".join(v.data.keys())
                 input_name = _info.data["name"]
@@ -63,6 +64,9 @@ class TextInput(StrInput):
                 )
         else:
             raise ValueError(f"Invalid input type {type(v)}")
+        if isinstance(value, str):
+            return value
+        raise ValueError(f"Invalid value type {type(value)}")
 
 
 class MultilineInput(BaseInputMixin):
