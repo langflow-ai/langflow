@@ -30,10 +30,22 @@ export default function TableAutoCellRender({
               variant="outline"
               size="sq"
               className={cn(
-                "min-w-min bg-success-background text-success-foreground hover:bg-success-background"
+                "min-w-min bg-success-background text-success-foreground hover:bg-success-background",
               )}
             >
-              {value}
+              Success
+            </Badge>
+          );
+        } else if (value === "failure") {
+          return (
+            <Badge
+              variant="outline"
+              size="sq"
+              className={cn(
+                "min-w-min bg-error-background text-error-foreground hover:bg-error-background",
+              )}
+            >
+              Failure
             </Badge>
           );
         } else {
