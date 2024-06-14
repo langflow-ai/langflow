@@ -76,7 +76,7 @@ class BaseInputMixin(BaseModel, validate_assignment=True):
     @classmethod
     def validate_field_type(cls, v):
         if v not in FieldTypes:
-            raise ValueError(f"field_type must be one of {FieldTypes}")
+            return FieldTypes.OTHER
         return FieldTypes(v)
 
     @model_serializer(mode="wrap")
