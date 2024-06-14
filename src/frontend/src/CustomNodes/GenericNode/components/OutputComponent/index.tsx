@@ -40,7 +40,7 @@ export default function OutputComponent({
             size="xs"
             className={cn(
               frozen ? "text-ice" : "",
-              "items-center gap-1 pl-2 pr-1.5 align-middle text-xs font-normal",
+              "items-center gap-1 pl-2 pr-1.5 align-middle text-xs font-normal"
             )}
           >
             <span className="pb-px">{selected}</span>

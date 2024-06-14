@@ -8,11 +8,11 @@ import { useState } from "react";
 import TableComponent from "../../../../components/tableComponent";
 import useAlertStore from "../../../../stores/alertStore";
 import { useMessagesStore } from "../../../../stores/messagesStore";
+import { messagesSorter } from "../../../../utils/utils";
 import HeaderMessagesComponent from "./components/headerMessages";
 import useMessagesTable from "./hooks/use-messages-table";
 import useRemoveMessages from "./hooks/use-remove-messages";
 import useUpdateMessage from "./hooks/use-updateMessage";
-import { messagesSorter } from "../../../../utils/utils";
 
 export default function MessagesPage() {
   const [columns, setColumns] = useState<Array<ColDef | ColGroupDef>>([]);
