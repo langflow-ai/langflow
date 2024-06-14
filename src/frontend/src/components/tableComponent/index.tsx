@@ -105,7 +105,7 @@ const TableComponent = forwardRef<
         }
       }, 50);
       setTimeout(() => {
-        realRef.current.api.hideOverlay();
+        realRef?.current?.api?.hideOverlay();
       }, 1000);
       if (props.onGridReady) props.onGridReady(params);
     };
