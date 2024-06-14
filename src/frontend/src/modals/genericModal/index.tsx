@@ -83,7 +83,7 @@ export default function GenericModal({
     }
 
     const filteredWordsHighlight = matches.filter(
-      (word) => !invalid_chars.includes(word)
+      (word) => !invalid_chars.includes(word),
     );
 
     setWordsHighlight(filteredWordsHighlight);
@@ -98,14 +98,7 @@ export default function GenericModal({
   useEffect(() => {
     setInputValue(value);
   }, [value, modalOpen]);
-  let coloredContent = inputValue || "";
-  // Check if coloredContent is a string
-  // calling toString on undefined will throw an error
-  // so we need to check if it is a string first
-  if (typeof coloredContent !== "string") {
-    coloredContent = "";
-  }
-  coloredContent
+  const coloredContent = (inputValue || "")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(regexHighlight, (match, p1, p2) => {
@@ -141,7 +134,7 @@ export default function GenericModal({
         // to the first key of the custom_fields object
         if (field_name === "") {
           field_name = Array.isArray(
-            apiReturn.data?.frontend_node?.custom_fields?.[""]
+            apiReturn.data?.frontend_node?.custom_fields?.[""],
           )
             ? apiReturn.data?.frontend_node?.custom_fields?.[""][0] ?? ""
             : apiReturn.data?.frontend_node?.custom_fields?.[""] ?? "";
@@ -216,7 +209,7 @@ export default function GenericModal({
           <div
             className={classNames(
               !isEdit ? "rounded-lg border" : "",
-              "flex h-full max-h-[85%] w-full"
+              "flex h-full max-h-[85%] w-full",
             )}
           >
             {type === TypeModal.PROMPT && isEdit && !readonly ? (
