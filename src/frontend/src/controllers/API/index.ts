@@ -1094,8 +1094,6 @@ export async function getMessagesTable(
 
   const rowsOrganized = rows.data;
 
-  console.log(rowsOrganized);
-
   const columns = extractColumnsFromRows(rowsOrganized, mode, excludedFields);
   const sessions = new Set<string>();
   rowsOrganized.forEach((row) => {
