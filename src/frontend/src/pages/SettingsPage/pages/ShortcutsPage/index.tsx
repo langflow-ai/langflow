@@ -40,7 +40,7 @@ export default function ShortcutsPage() {
   const combinationToEdit = shortcuts.filter((s) => s.name === selectedRows[0]);
   const [open, setOpen] = useState(false);
   const updateUniqueShortcut = useShortcutsStore(
-    (state) => state.updateUniqueShortcut
+    (state) => state.updateUniqueShortcut,
   );
 
   function handleRestore() {
@@ -97,17 +97,19 @@ export default function ShortcutsPage() {
       </div>
       <div className="grid gap-6 pb-8">
         <div>
-          <TableComponent
-            suppressRowClickSelection={true}
-            domLayout="autoHeight"
-            pagination={false}
-            columnDefs={colDefs}
-            rowData={nodesRowData}
-            onCellDoubleClicked={(e) => {
-              setSelectedRows([e.data.name]);
-              setOpen(true);
-            }}
-          />
+          {colDefs && nodesRowData.length > 0 && (
+            <TableComponent
+              suppressRowClickSelection={true}
+              domLayout="autoHeight"
+              pagination={false}
+              columnDefs={colDefs}
+              rowData={nodesRowData}
+              onCellDoubleClicked={(e) => {
+                setSelectedRows([e.data.name]);
+                setOpen(true);
+              }}
+            />
+          )}
         </div>
       </div>
     </div>
