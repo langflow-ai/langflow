@@ -26,15 +26,17 @@ jobs:
   setup:
     runs-on: ubuntu-latest
     outputs:
-      base_tags: ${{ steps.set-vars.outputs.base_tags }}
-      main_tags: ${{ steps.set-vars.outputs.main_tags }}
+      tags: ${{ steps.set-vars.outputs.tags }}
     steps:
       - uses: actions/checkout@v4
       - name: Set Dockerfile and Tags
         id: set-vars
         run: |
-          echo "base_tags=langflowai/langflow:base-${{ inputs.version }}" >> $GITHUB_OUTPUT
-          echo "main_tags=langflowai/langflow:${{ inputs.version }},langflowai/langflow:1.0-alpha" >> $GITHUB_OUTPUT
+          if [[ "${{ inputs.release_type }}" == "base" ]]; then
+            echo "tags=langflowai/langflow:base-${{ inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "tags=langflowai/langflow:${{ inputs.version }},langflowai/langflow:1.0-alpha" >> $GITHUB_OUTPUT
+          fi
   build_base:
     runs-on: ubuntu-latest
     needs: setup
@@ -54,7 +56,10 @@ jobs:
           push: true
           platforms: "linux/amd64,linux/arm64/v8"
           file: ./docker/build_and_push_base.Dockerfile
-          tags: ${{ needs.setup.outputs.base_tags }}
+          # base_rags if release_type is base, main_tags if release_type is main
+          tags: ${{ needs.setup.outputs.tags }}
+      - name: Wait for Docker Hub to propagate
+        run: sleep 30
 
   build_components:
     if: ${{ inputs.release_type == 'main' }}
