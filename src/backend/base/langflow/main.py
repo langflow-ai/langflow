@@ -20,6 +20,7 @@ from langflow.initial_setup.setup import (
     load_flows_from_directory,
 )
 from langflow.interface.utils import setup_llm_caching
+from langflow.services.deps import get_settings_service
 from langflow.services.plugins.langfuse_plugin import LangfuseInstance
 from langflow.services.utils import initialize_services, teardown_services
 from langflow.utils.logger import configure
@@ -78,6 +79,7 @@ def create_app():
     socketio_server = socketio.AsyncServer(async_mode="asgi", cors_allowed_origins="*", logger=True)
     lifespan = get_lifespan(socketio_server=socketio_server, version=__version__)
     app = FastAPI(lifespan=lifespan, title="Langflow", version=__version__)
+    setup_sentry(app)
     origins = ["*"]
 
     app.add_middleware(
@@ -113,6 +115,20 @@ def create_app():
 def mount_socketio(app: FastAPI, socketio_server: socketio.AsyncServer):
     app.mount("/sio", socketio.ASGIApp(socketio_server, socketio_path=""))
     return app
+
+
+def setup_sentry(app: FastAPI):
+    settings = get_settings_service().settings
+    if settings.sentry_dsn:
+        import sentry_sdk
+        from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
+
+        sentry_sdk.init(
+            dsn=settings.sentry_dsn,
+            traces_sample_rate=settings.sentry_traces_sample_rate,
+            profiles_sample_rate=settings.sentry_profiles_sample_rate,
+        )
+        app.add_middleware(SentryAsgiMiddleware)
 
 
 def setup_static_files(app: FastAPI, static_files_dir: Path):
