@@ -47,7 +47,7 @@ export default function IOFieldView({
 
   const textOutputValue =
     (flowPool[node!.id] ?? [])[(flowPool[node!.id]?.length ?? 1) - 1]?.data
-      .results.result ?? "";
+      .results.text ?? "";
 
   function handleOutputType() {
     if (!node) return <>"No node found!"</>;
@@ -253,7 +253,7 @@ export default function IOFieldView({
                   rows={
                     Array.isArray(flowPoolNode?.data?.artifacts)
                       ? flowPoolNode?.data?.artifacts?.map(
-                          (artifact) => artifact.data
+                          (artifact) => artifact.data,
                         ) ?? []
                       : [flowPoolNode?.data?.artifacts]
                   }
