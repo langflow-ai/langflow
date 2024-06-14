@@ -48,4 +48,5 @@ jobs:
           git_email: "gabriel@langflow.org"
           mypy: true
           mypy_args: '--namespace-packages -p "langflow"'
+          mypy_command_prefix: "poetry run"
 
