@@ -4,13 +4,14 @@ from .inputs import (
     DropdownInput,
     FileInput,
     FloatInput,
+    HandleInput,
     IntInput,
     MultilineInput,
     NestedDictInput,
     PromptInput,
     SecretStrInput,
     StrInput,
-    HandleInput,
+    TextInput,
 )
 
 __all__ = [
@@ -26,4 +27,5 @@ __all__ = [
     "PromptInput",
     "MultilineInput",
     "HandleInput",
+    "TextInput",
 ]
