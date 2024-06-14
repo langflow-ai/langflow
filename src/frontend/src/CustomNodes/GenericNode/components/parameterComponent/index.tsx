@@ -91,7 +91,7 @@ export default function ParameterComponent({
 
   const logHasMessage = (data: any) => {
     if (!outputName) return;
-    const logs = data?.logs[outputName];
+    const logs = (data?.logs[outputName] ?? [])[0];
     if (Array.isArray(logs) && logs.length > 1) {
       return logs.some((log) => log.message);
     } else {
@@ -101,7 +101,7 @@ export default function ParameterComponent({
 
   const logTypeIsUnknown = (data: any) => {
     if (!outputName) return;
-    const logs = data?.logs[outputName];
+    const logs = (data?.logs[outputName] ?? [])[0];
     if (Array.isArray(logs) && logs.length > 1) {
       return logs.some((log) => log.type === "unknown");
     } else {
@@ -119,7 +119,7 @@ export default function ParameterComponent({
 
   let hasOutputs;
   if (flowPoolNode?.data?.logs && outputName) {
-    hasOutputs = flowPoolNode?.data?.logs[outputName] ?? null;
+    hasOutputs = (flowPoolNode?.data?.logs[outputName] ?? [])[0] ?? null;
   }
 
   const unknownOutput = logTypeIsUnknown(flowPoolNode?.data);
@@ -144,7 +144,7 @@ export default function ParameterComponent({
     handleUpdateValues,
     debouncedHandleUpdateValues,
     setNode,
-    setIsLoading
+    setIsLoading,
   );
 
   const { handleNodeClass: handleNodeClassHook } = useHandleNodeClass(
@@ -152,7 +152,7 @@ export default function ParameterComponent({
     name,
     takeSnapshot,
     setNode,
-    updateNodeInternals
+    updateNodeInternals,
   );
 
   const { handleRefreshButtonPress: handleRefreshButtonPressHook } =
@@ -161,13 +161,13 @@ export default function ParameterComponent({
   let disabled =
     edges.some(
       (edge) =>
-        edge.targetHandle === scapedJSONStringfy(proxy ? { ...id, proxy } : id)
+        edge.targetHandle === scapedJSONStringfy(proxy ? { ...id, proxy } : id),
     ) ?? false;
 
   let disabledOutput =
     edges.some(
       (edge) =>
-        edge.sourceHandle === scapedJSONStringfy(proxy ? { ...id, proxy } : id)
+        edge.sourceHandle === scapedJSONStringfy(proxy ? { ...id, proxy } : id),
     ) ?? false;
 
   const handleRefreshButtonPress = async (name, data) => {
@@ -178,7 +178,7 @@ export default function ParameterComponent({
 
   const handleOnNewValue = async (
     newValue: string | string[] | boolean | Object[],
-    skipSnapshot: boolean | undefined = false
+    skipSnapshot: boolean | undefined = false,
   ): Promise<void> => {
     handleOnNewValueHook(newValue, skipSnapshot);
   };
@@ -292,14 +292,14 @@ export default function ParameterComponent({
               className={classNames(
                 left ? "my-12 -ml-0.5 " : " my-12 -mr-0.5 ",
                 "h-3 w-3 rounded-full border-2 bg-background",
-                !showNode ? "mt-0" : ""
+                !showNode ? "mt-0" : "",
               )}
               style={{
                 borderColor: color ?? nodeColors.unknown,
               }}
               onClick={() => {
                 setFilterEdge(
-                  groupByFamily(myData, tooltipTitle!, left, nodes!)
+                  groupByFamily(myData, tooltipTitle!, left, nodes!),
                 );
               }}
             ></Handle>
@@ -379,7 +379,7 @@ export default function ParameterComponent({
                         "h-5 w-5 rounded-md",
                         displayOutputPreview && !unknownOutput
                           ? " hover:text-medium-indigo"
-                          : " cursor-not-allowed text-muted-foreground"
+                          : " cursor-not-allowed text-muted-foreground",
                       )}
                       name={"ScanEye"}
                     />
@@ -436,12 +436,12 @@ export default function ParameterComponent({
                   }
                   className={classNames(
                     left ? "-ml-0.5" : "-mr-0.5",
-                    "h-3 w-3 rounded-full border-2 bg-background"
+                    "h-3 w-3 rounded-full border-2 bg-background",
                   )}
                   style={{ borderColor: color ?? nodeColors.unknown }}
                   onClick={() => {
                     setFilterEdge(
-                      groupByFamily(myData, tooltipTitle!, left, nodes!)
+                      groupByFamily(myData, tooltipTitle!, left, nodes!),
                     );
                   }}
                 />
