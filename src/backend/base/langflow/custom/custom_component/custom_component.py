@@ -163,11 +163,11 @@ class CustomComponent(BaseComponent):
         if self.repr_value == "":
             self.repr_value = self.status
         if isinstance(self.repr_value, dict):
-            return yaml.dump(self.repr_value)
-        if isinstance(self.repr_value, str):
-            return self.repr_value
+            self.repr_value = yaml.dump(self.repr_value)
         if isinstance(self.repr_value, BaseModel) and not isinstance(self.repr_value, Data):
-            return str(self.repr_value)
+            self.repr_value = str(self.repr_value)
+        elif hasattr(self.repr_value, "to_json"):
+            self.repr_value = self.repr_value.to_json()
         return self.repr_value
 
     def build_config(self):

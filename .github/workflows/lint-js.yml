@@ -39,7 +39,7 @@ jobs:
         if: ${{ steps.setup-node.outputs.cache-hit != 'true' }}
 
       - name: Run linters
-        uses: wearerequired/lint-action@v1
+        uses: wearerequired/lint-action@v2
         with:
           github_token: ${{ secrets.github_token }}
           auto_fix: true
