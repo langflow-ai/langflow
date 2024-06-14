@@ -88,7 +88,6 @@ langchain-chroma = "^0.1.1"
 upstash-vector = "^0.4.0"
 cassio = { extras = ["cassio"], version = "^0.1.7", optional = true }
 unstructured = {extras = ["docx", "md", "pptx"], version = "^0.14.4"}
-sentry-sdk = "^2.5.1"
 
 
 [tool.poetry.group.dev.dependencies]
