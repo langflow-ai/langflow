@@ -42,8 +42,7 @@ jobs:
     needs: setup
     strategy:
       matrix:
-        platform: [linux/amd64, linux/arm64/v8]
-        file: [./docker/build_and_push.Dockerfile, ./docker/build_and_push_base.Dockerfile]
+        file: [./docker/build_and_push_base.Dockerfile, ]
     steps:
       - uses: actions/checkout@v4
       - name: Set up Docker Buildx
@@ -58,9 +57,11 @@ jobs:
         with:
           context: .
           push: true
-          platforms: ${{ matrix.platform }}
+          platforms: "linux/amd64,linux/arm64/v8"
           file: ${{ matrix.file }}
+          # base_rags if release_type is base, main_tags if release_type is main
           tags: ${{ needs.setup.outputs.tags }}
+
 
   build_components:
     if: ${{ inputs.release_type == 'main' }}
