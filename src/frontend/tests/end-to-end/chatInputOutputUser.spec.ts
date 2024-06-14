@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
+import * as dotenv from "dotenv";
 import { readFileSync } from "fs";
+import path from "path";
 
 test("user must interact with chat with Input/Output", async ({ page }) => {
   if (!process.env.CI) {
