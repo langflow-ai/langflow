@@ -1,4 +1,4 @@
 from .ChatOutput import ChatOutput
-from .TextOutput import TextOutput
+from .TextOutput import TextOutputComponent
 
-__all__ = ["ChatOutput", "TextOutput"]
+__all__ = ["ChatOutput", "TextOutputComponent"]

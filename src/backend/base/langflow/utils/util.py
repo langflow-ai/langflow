@@ -449,3 +449,10 @@ def update_settings(
     if not store:
         logger.debug("Setting store to False")
         settings_service.settings.update_settings(store=False)
+
+
+def is_class_method(func, cls):
+    """
+    Check if a function is a class method.
+    """
+    return inspect.ismethod(func) and func.__self__ is cls.__class__
