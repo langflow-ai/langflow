@@ -6,24 +6,21 @@ from typing import TYPE_CHECKING
 import sqlalchemy as sa
 from alembic import command, util
 from alembic.config import Config
-from loguru import logger
-from sqlalchemy import inspect
-from sqlalchemy.exc import OperationalError
-from sqlalchemy.engine import Engine
-from sqlalchemy import event
-from sqlmodel import Session, SQLModel, create_engine, select, text
-
 from langflow.services.base import Service
 from langflow.services.database import models  # noqa
 from langflow.services.database.models.user.crud import get_user_by_username
 from langflow.services.database.utils import Result, TableResults
 from langflow.services.deps import get_settings_service
 from langflow.services.utils import teardown_superuser
+from loguru import logger
+from sqlalchemy import event, inspect
+from sqlalchemy.engine import Engine
+from sqlalchemy.exc import OperationalError
+from sqlmodel import Session, SQLModel, create_engine, select, text
 
 if TYPE_CHECKING:
-    from sqlalchemy.engine import Engine
-
     from langflow.services.settings.service import SettingsService
+    from sqlalchemy.engine import Engine
 
 
 class DatabaseService(Service):
@@ -48,12 +45,23 @@ class DatabaseService(Service):
             connect_args = {"check_same_thread": False}
         else:
             connect_args = {}
-        return create_engine(
-            self.database_url,
-            connect_args=connect_args,
-            pool_size=self.settings_service.settings.pool_size,
-            max_overflow=self.settings_service.settings.max_overflow,
-        )
+        try:
+            return create_engine(
+                self.database_url,
+                connect_args=connect_args,
+                pool_size=self.settings_service.settings.pool_size,
+                max_overflow=self.settings_service.settings.max_overflow,
+            )
+        except sa.exc.NoSuchModuleError as exc:
+            # sqlalchemy.exc.NoSuchModuleError: Can't load plugin: sqlalchemy.dialects:postgres
+            if "postgres" in str(exc) and not self.database_url.startswith("postgresql"):
+                # https://stackoverflow.com/questions/62688256/sqlalchemy-exc-nosuchmoduleerror-cant-load-plugin-sqlalchemy-dialectspostgre
+                self.database_url = self.database_url.replace("postgres://", "postgresql://")
+                logger.warning(
+                    "Fixed postgres dialect in database URL. Replacing postgres:// with postgresql://. To avoid this warning, update the database URL."
+                )
+                return self._create_engine()
+            raise RuntimeError("Error creating database engine") from exc
 
     @event.listens_for(Engine, "connect")
     def on_connection(dbapi_connection, connection_record):
