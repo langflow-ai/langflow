@@ -66,7 +66,7 @@ class AnthropicLLM(CustomComponent):
         self,
         model: str,
         anthropic_api_key: Optional[str] = None,
-        max_tokens: Optional[int] = None,
+        max_tokens: Optional[int] = 1000,
         temperature: Optional[float] = None,
         anthropic_api_url: Optional[str] = None,
     ) -> BaseLanguageModel:
