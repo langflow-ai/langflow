@@ -81,10 +81,11 @@ class AnthropicModelComponent(LCModelComponent):
         messages = [
             ("system", system_message),
             ("human", input_value),
-            ("assistant", prefill),
         ]
+        if prefill:
+            messages.append(("assistant", prefill))
         result = output.invoke(messages)
-        self.status = prefill + result.content
+        self.status = result.content
         return prefill + result.content
 
     def build_model(self) -> BaseLanguageModel:

@@ -91,7 +91,7 @@ class OpenAIModelComponent(LCModelComponent):
             api_key = None
         response_format = None
         if json_mode:
-            response_format = {"type": "json_object"} 
+            response_format = {"type": "json_object"}
         output = ChatOpenAI(
             max_tokens=max_tokens or None,
             model_kwargs=model_kwargs or {},
