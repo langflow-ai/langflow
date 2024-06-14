@@ -37,8 +37,8 @@ const SideBarFoldersButtonsComponent = ({
   const currentFolder = pathname.split("/");
   const urlWithoutPath = pathname.split("/").length < 4;
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
-  const getFoldersApi = useFolderStore((state) => state.getFoldersApi);
   const folderIdDragging = useFolderStore((state) => state.folderIdDragging);
+  const refreshFolders = useFolderStore((state) => state.refreshFolders);
 
   const checkPathName = (itemId: string) => {
     if (urlWithoutPath && itemId === myCollectionId) {
@@ -85,7 +85,7 @@ const SideBarFoldersButtonsComponent = ({
   function addNewFolder() {
     addFolder({ name: "New Folder", parent_id: null, description: "" }).then(
       (res) => {
-        getFoldersApi(true);
+        refreshFolders();
       }
     );
   }

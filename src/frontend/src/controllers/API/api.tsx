@@ -87,6 +87,7 @@ function ApiInterceptor() {
 
         if (!checkRequest) {
           controller.abort("Duplicate Request");
+          console.error("Duplicate Request");
         }
 
         const accessToken = cookies.get("access_token_lf");
