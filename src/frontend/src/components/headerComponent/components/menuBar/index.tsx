@@ -21,6 +21,7 @@ import { cn } from "../../../../utils/utils";
 import IconComponent from "../../../genericIconComponent";
 import ShadTooltip from "../../../shadTooltipComponent";
 import { Button } from "../../../ui/button";
+import ToolbarSelectItem from "../../../../pages/FlowPage/components/nodeToolbarComponent/toolbarSelectItem";
 
 export const MenuBar = ({}: {}): JSX.Element => {
   const shortcuts = useShortcutsStore((state) => state.shortcuts);
@@ -115,7 +116,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
                       title: UPLOAD_ERROR_ALERT,
                       list: [error],
                     });
-                  }
+                  },
                 );
               }}
             >
@@ -137,21 +138,15 @@ export const MenuBar = ({}: {}): JSX.Element => {
               }}
               className="cursor-pointer"
             >
-              <IconComponent name="Undo" className="header-menu-options " />
-              Undo
-              {IS_MAC ? (
-                <IconComponent
-                  name="Command"
-                  className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
-                />
-              ) : (
-                <span className="absolute right-[1.15rem] top-[0.40em] stroke-2">
-                  {
-                    shortcuts.find((s) => s.name.toLowerCase() === "undo")
-                      ?.shortcut
-                  }
-                </span>
-              )}
+              <ToolbarSelectItem
+                value="Undo"
+                icon="Undo"
+                dataTestId=""
+                shortcut={
+                  shortcuts.find((s) => s.name.toLowerCase() === "undo")
+                    ?.shortcut!
+                }
+              />
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => {
@@ -159,21 +154,15 @@ export const MenuBar = ({}: {}): JSX.Element => {
               }}
               className="cursor-pointer"
             >
-              <IconComponent name="Redo" className="header-menu-options " />
-              Redo
-              {IS_MAC ? (
-                <IconComponent
-                  name="Command"
-                  className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
-                />
-              ) : (
-                <span className="absolute right-[1.15rem] top-[0.40em] stroke-2">
-                  {
-                    shortcuts.find((s) => s.name.toLowerCase() === "redo")
-                      ?.shortcut
-                  }
-                </span>
-              )}
+              <ToolbarSelectItem
+                value="Redo"
+                icon="Redo"
+                dataTestId=""
+                shortcut={
+                  shortcuts.find((s) => s.name.toLowerCase() === "redo")
+                    ?.shortcut!
+                }
+              />
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -201,7 +190,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
               name={isBuilding || saveLoading ? "Loader2" : "CheckCircle2"}
               className={cn(
                 "h-4 w-4",
-                isBuilding || saveLoading ? "animate-spin" : "animate-wiggle"
+                isBuilding || saveLoading ? "animate-spin" : "animate-wiggle",
               )}
             />
             {printByBuildStatus()}
