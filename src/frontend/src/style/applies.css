@@ -944,11 +944,11 @@
     @apply bg-white text-primary;
   }
   .code-highlight {
-    @apply block max-h-[64vh] w-full overflow-y-hidden border-0 px-3 py-2 text-sm outline-0 word-break-break-word;
+    @apply block w-full overflow-auto border-0 px-3 py-2 text-sm outline-0 word-break-break-word;
   }
 
   .code-nohighlight {
-    @apply block max-h-[70vh] w-full overflow-y-hidden border-0 px-3 py-2 text-sm outline-0 word-break-break-word;
+    @apply block w-full overflow-auto border-0 px-3 py-2 text-sm outline-0 word-break-break-word;
   }
   .form-modal-lockchat {
     @apply form-input block w-full rounded-md border-border p-4 pr-16 custom-scroll focus:border-ring focus:ring-ring sm:text-sm;
