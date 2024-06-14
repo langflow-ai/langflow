@@ -48,7 +48,7 @@ class AmazonBedrockComponent(LCModelComponent):
                 "stability.stable-diffusion-xl-v0",
                 "stability.stable-diffusion-xl-v1",
             ],
-            value="anthropic.claude-instant-v1",
+            value="anthropic.claude-3-haiku-20240307-v1:0",
         ),
         StrInput(name="credentials_profile_name", display_name="Credentials Profile Name"),
         StrInput(name="region_name", display_name="Region Name"),
