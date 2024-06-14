@@ -1,13 +1,11 @@
-from typing import Optional
-
 from langchain_openai import AzureChatOpenAI
 from pydantic.v1 import SecretStr
 
 from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import BaseLanguageModel, Text
-from langflow.template import Input, Output
-
+from langflow.inputs import BoolInput, DropdownInput, FloatInput, IntInput, StrInput
+from langflow.template import Output
 
 class AzureChatOpenAIComponent(LCModelComponent):
     display_name: str = "Azure OpenAI"
@@ -22,7 +20,8 @@ class AzureChatOpenAIComponent(LCModelComponent):
         "gpt-35-turbo-instruct",
         "gpt-4",
         "gpt-4-32k",
-        "gpt-4-vision",
+        "gpt-4o",
+        "gpt-4-turbo",
     ]
 
     AZURE_OPENAI_API_VERSIONS = [
@@ -33,41 +32,42 @@ class AzureChatOpenAIComponent(LCModelComponent):
         "2023-08-01-preview",
         "2023-09-01-preview",
         "2023-12-01-preview",
+        "2024-04-09",
+        "2024-05-13",
     ]
 
     inputs = [
-        Input(
-            name="model", type=str, display_name="Model Name", options=AZURE_OPENAI_MODELS, value=AZURE_OPENAI_MODELS[0]
+        DropdownInput(
+            name="model",
+            display_name="Model Name",
+            options=AZURE_OPENAI_MODELS,
+            value=AZURE_OPENAI_MODELS[0],
         ),
-        Input(
+        StrInput(
             name="azure_endpoint",
-            type=str,
             display_name="Azure Endpoint",
-            info="Your Azure endpoint, including the resource.. Example: `https://example-resource.azure.openai.com/`",
+            info="Your Azure endpoint, including the resource. Example: `https://example-resource.azure.openai.com/`",
         ),
-        Input(name="azure_deployment", type=str, display_name="Deployment Name"),
-        Input(
+        StrInput(name="azure_deployment", display_name="Deployment Name"),
+        DropdownInput(
             name="api_version",
-            type=str,
             display_name="API Version",
             options=AZURE_OPENAI_API_VERSIONS,
             value=AZURE_OPENAI_API_VERSIONS[-1],
             advanced=True,
         ),
-        Input(name="api_key", type=str, display_name="API Key", password=True),
-        Input(name="temperature", type=float, display_name="Temperature", default=0.7),
-        Input(
+        StrInput(name="api_key", display_name="API Key", password=True),
+        FloatInput(name="temperature", display_name="Temperature", value=0.7),
+        IntInput(
             name="max_tokens",
-            type=Optional[int],
             display_name="Max Tokens",
             advanced=True,
             info="The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
         ),
-        Input(name="input_value", type=str, display_name="Input", input_types=["Text", "Data", "Prompt"]),
-        Input(name="stream", type=bool, display_name="Stream", info=STREAM_INFO_TEXT, advanced=True),
-        Input(
+        StrInput(name="input_value", display_name="Input", input_types=["Text", "Data", "Prompt"]),
+        BoolInput(name="stream", display_name="Stream", info=STREAM_INFO_TEXT, advanced=True),
+        StrInput(
             name="system_message",
-            type=Optional[str],
             display_name="System Message",
             advanced=True,
             info="System message to pass to the model.",

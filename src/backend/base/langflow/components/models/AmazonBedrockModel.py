@@ -9,6 +9,7 @@ class AmazonBedrockComponent(LCModelComponent):
     display_name: str = "Amazon Bedrock"
     description: str = "Generate text using Amazon Bedrock LLMs."
     icon = "Amazon"
+
     inputs = [
         StrInput(name="input_value", display_name="Input", input_types=["Text", "Data", "Prompt"]),
         DropdownInput(
@@ -17,24 +18,35 @@ class AmazonBedrockComponent(LCModelComponent):
             options=[
                 "amazon.titan-text-express-v1",
                 "amazon.titan-text-lite-v1",
+                "amazon.titan-text-premier-v1:0",
                 "amazon.titan-embed-text-v1",
+                "amazon.titan-embed-text-v2:0",
                 "amazon.titan-embed-image-v1",
                 "amazon.titan-image-generator-v1",
                 "anthropic.claude-v2",
                 "anthropic.claude-v2:1",
                 "anthropic.claude-3-sonnet-20240229-v1:0",
                 "anthropic.claude-3-haiku-20240307-v1:0",
+                "anthropic.claude-3-opus-20240229-v1:0",
                 "anthropic.claude-instant-v1",
                 "ai21.j2-mid-v1",
                 "ai21.j2-ultra-v1",
                 "cohere.command-text-v14",
                 "cohere.command-light-text-v14",
+                "cohere.command-r-v1:0",
+                "cohere.command-r-plus-v1:0",
                 "cohere.embed-english-v3",
                 "cohere.embed-multilingual-v3",
                 "meta.llama2-13b-chat-v1",
                 "meta.llama2-70b-chat-v1",
+                "meta.llama3-8b-instruct-v1:0",
+                "meta.llama3-70b-instruct-v1:0",
                 "mistral.mistral-7b-instruct-v0:2",
                 "mistral.mixtral-8x7b-instruct-v0:1",
+                "mistral.mistral-large-2402-v1:0",
+                "mistral.mistral-small-2402-v1:0",
+                "stability.stable-diffusion-xl-v0",
+                "stability.stable-diffusion-xl-v1",
             ],
             value="anthropic.claude-instant-v1",
         ),
@@ -83,7 +95,6 @@ class AmazonBedrockComponent(LCModelComponent):
                 streaming=stream,
                 cache=cache,
             )
-
         except Exception as e:
             raise ValueError("Could not connect to AmazonBedrock API.") from e
         return output
