@@ -187,7 +187,8 @@ async def build_vertex(
             logger.exception(f"Error building vertex: {exc}")
             params = format_exception_message(exc)
             valid = False
-            logs = {vertex.outputs[0]["name"]: [Log(message=params, type="error")]}
+            output_label = vertex.outputs[0]["name"] if vertex.outputs else "output"
+            logs = {output_label: [Log(message=params, type="error")]}
             result_data_response = ResultDataResponse(results={})
             artifacts = {}
             # If there's an error building the vertex

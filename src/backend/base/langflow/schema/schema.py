@@ -29,7 +29,7 @@ def build_logs_from_artifacts(artifacts: dict) -> dict:
         elif _type:
             log = Log(message=message, type=_type)
 
-        logs[key] = log
+        logs[key] = [log]
     return logs
 
 
