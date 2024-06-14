@@ -82,7 +82,7 @@ class AnthropicLLM(LCModelComponent):
         input_value: Text,
         system_message: Optional[str] = None,
         anthropic_api_key: Optional[str] = None,
-        max_tokens: Optional[int] = None,
+        max_tokens: Optional[int] = 1000,
         temperature: Optional[float] = None,
         anthropic_api_url: Optional[str] = None,
         stream: bool = False,
