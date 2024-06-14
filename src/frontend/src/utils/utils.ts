@@ -364,7 +364,7 @@ export function extractColumnsFromRows(
   function intersection() {
     for (const key in rows[0]) {
       columnsKeys[key] = {
-        headerName: toTitleCase(key),
+        headerName: key,
         field: key,
         cellRenderer: TableAutoCellRender,
         filter: true,
@@ -382,7 +382,7 @@ export function extractColumnsFromRows(
     for (const row of rows) {
       for (const key in row) {
         columnsKeys[key] = {
-          headerName: toTitleCase(key),
+          headerName: key,
           field: key,
           filter: true,
           cellRenderer: TableAutoCellRender,
