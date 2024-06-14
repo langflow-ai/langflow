@@ -1,5 +1,6 @@
 import { cloneDeep } from "lodash";
 import { ReactNode, useEffect, useRef, useState } from "react";
+import { useHotkeys } from "react-hotkeys-hook";
 import { Handle, Position, useUpdateNodeInternals } from "reactflow";
 import CodeAreaComponent from "../../../../components/codeAreaComponent";
 import DictComponent from "../../../../components/dictComponent";
@@ -17,10 +18,7 @@ import TextAreaComponent from "../../../../components/textAreaComponent";
 import ToggleShadComponent from "../../../../components/toggleShadComponent";
 import { Button } from "../../../../components/ui/button";
 import { RefreshButton } from "../../../../components/ui/refreshButton";
-import {
-  LANGFLOW_SUPPORTED_TYPES,
-  TOOLTIP_EMPTY,
-} from "../../../../constants/constants";
+import { LANGFLOW_SUPPORTED_TYPES } from "../../../../constants/constants";
 import { Case } from "../../../../shared/components/caseComponent";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
@@ -51,10 +49,8 @@ import useHandleNodeClass from "../../../hooks/use-handle-node-class";
 import useHandleRefreshButtonPress from "../../../hooks/use-handle-refresh-buttons";
 import HandleTooltips from "../HandleTooltipComponent";
 import OutputComponent from "../OutputComponent";
-import TooltipRenderComponent from "../tooltipRenderComponent";
-import { TEXT_FIELD_TYPES } from "./constants";
 import OutputModal from "../outputModal";
-import { useHotkeys } from "react-hotkeys-hook";
+import { TEXT_FIELD_TYPES } from "./constants";
 
 export default function ParameterComponent({
   left,
@@ -93,23 +89,40 @@ export default function ParameterComponent({
   const [openOutputModal, setOpenOutputModal] = useState(false);
   const flowPool = useFlowStore((state) => state.flowPool);
 
-  const displayOutputPreview =
-    !!flowPool[data.id] &&
-    flowPool[data.id][flowPool[data.id].length - 1]?.valid &&
-    flowPool[data.id][flowPool[data.id].length - 1]?.data?.logs[0]?.message;
+  const logHasMessage = (data: any) => {
+    if (!outputName) return;
+    const logs = data?.logs[outputName];
+    if (Array.isArray(logs) && logs.length > 1) {
+      return logs.some((log) => log.message);
+    } else {
+      return logs?.message;
+    }
+  };
+
+  const logTypeIsUnknown = (data: any) => {
+    if (!outputName) return;
+    const logs = data?.logs[outputName];
+    if (Array.isArray(logs) && logs.length > 1) {
+      return logs.some((log) => log.type === "unknown");
+    } else {
+      return logs?.type === "unknown";
+    }
+  };
 
   const flowPoolNode = (flowPool[data.id] ?? [])[
     (flowPool[data.id]?.length ?? 1) - 1
   ];
+  const displayOutputPreview =
+    !!flowPool[data.id] &&
+    flowPool[data.id][flowPool[data.id].length - 1]?.valid &&
+    logHasMessage(flowPool[data.id][flowPool[data.id].length - 1]?.data);
+
   let hasOutputs;
   if (flowPoolNode?.data?.logs && outputName) {
     hasOutputs = flowPoolNode?.data?.logs[outputName] ?? null;
   }
-  const unknownOutput = !!(
-    flowPool[data.id] &&
-    flowPool[data.id][flowPool[data.id].length - 1]?.data?.logs[0]?.type ===
-      "unknown"
-  );
+
+  const unknownOutput = logTypeIsUnknown(flowPoolNode?.data);
 
   const preventDefault = true;
 
@@ -165,7 +178,7 @@ export default function ParameterComponent({
 
   const handleOnNewValue = async (
     newValue: string | string[] | boolean | Object[],
-    skipSnapshot: boolean | undefined = false,
+    skipSnapshot: boolean | undefined = false
   ): Promise<void> => {
     handleOnNewValueHook(newValue, skipSnapshot);
   };
@@ -278,7 +291,7 @@ export default function ParameterComponent({
               className={classNames(
                 left ? "my-12 -ml-0.5 " : " my-12 -mr-0.5 ",
                 "h-3 w-3 rounded-full border-2 bg-background",
-                !showNode ? "mt-0" : "",
+                !showNode ? "mt-0" : ""
               )}
               style={{
                 borderColor: color ?? nodeColors.unknown,
