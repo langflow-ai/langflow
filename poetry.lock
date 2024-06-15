@@ -4393,6 +4393,7 @@ alembic = "^1.13.0"
 asyncer = "^0.0.5"
 bcrypt = "4.0.1"
 cachetools = "^5.3.1"
+chardet = "^5.2.0"
 cryptography = "^42.0.5"
 docstring-parser = "^0.15"
 duckdb = "^1.0.0"
@@ -4479,13 +4480,13 @@ requests = ">=2,<3"
 
 [[package]]
 name = "litellm"
-version = "1.40.13"
+version = "1.40.14"
 description = "Library to easily interface with LLM API providers"
 optional = false
 python-versions = "!=2.7.*,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,!=3.6.*,!=3.7.*,>=3.8"
 files = [
-    {file = "litellm-1.40.13-py3-none-any.whl", hash = "sha256:b95ad1dea43f49804122c3f8a6c9f90ffb1d1d8654887d94aa6f77ed46ba7a5d"},
-    {file = "litellm-1.40.13.tar.gz", hash = "sha256:7898a59a2a5c49abe166c857f79eeebe4fa3218cb93879da5f17b640787587cf"},
+    {file = "litellm-1.40.14-py3-none-any.whl", hash = "sha256:5faf9e1ca7405ef7623d2fca521aee4e11e6aa4f761fcfcd3830dc485ce53af3"},
+    {file = "litellm-1.40.14.tar.gz", hash = "sha256:22ecc4e54afb78eca7a1e17aebf3709260b33efb3a69d85882d4e6553d6e93fa"},
 ]
 
 [package.dependencies]
@@ -4494,6 +4495,7 @@ click = "*"
 importlib-metadata = ">=6.8.0"
 jinja2 = ">=3.1.2,<4.0.0"
 openai = ">=1.27.0"
+pydantic = ">=2.0.0,<3.0.0"
 python-dotenv = ">=0.2.0"
 requests = ">=2.31.0,<3.0.0"
 tiktoken = ">=0.7.0"
