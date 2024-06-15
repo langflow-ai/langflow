@@ -1,7 +1,7 @@
 from .CreateData import CreateDataComponent
 from .CustomComponent import Component
 from .ParseData import ParseDataComponent
-from .DocumentToData import DocumentsToDataComponent
+from .DocumentsToData import DocumentsToDataComponent
 from .IDGenerator import UUIDGeneratorComponent
 from .UpdateData import UpdateDataComponent
 
