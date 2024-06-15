@@ -238,7 +238,7 @@ export default function ParameterComponent({
                 isValidConnection(connection, nodes, edges)
               }
               className={classNames(
-                left ? "my-12 -ml-0.5 " : " my-12 -mr-0.5 ",
+                left ? "my-12 -ml-0.5" : "my-12 -mr-0.5",
                 "h-3 w-3 rounded-full border-2 bg-background",
                 !showNode ? "mt-0" : "",
               )}
@@ -260,7 +260,7 @@ export default function ParameterComponent({
         "relative mt-1 flex w-full flex-wrap items-center justify-between bg-muted px-5 py-2" +
         ((name === "code" && type === "code") ||
         (name.includes("code") && proxy)
-          ? " hidden "
+          ? " hidden"
           : "")
       }
     >
@@ -279,13 +279,13 @@ export default function ParameterComponent({
 
           {proxy ? (
             <ShadTooltip content={<span>{proxy.id}</span>}>
-              <span className={!left && data.node?.frozen ? " text-ice" : ""}>
+              <span className={!left && data.node?.frozen ? "text-ice" : ""}>
                 {title}
               </span>
             </ShadTooltip>
           ) : (
             <div className="flex gap-2">
-              <span className={!left && data.node?.frozen ? " text-ice" : ""}>
+              <span className={!left && data.node?.frozen ? "text-ice" : ""}>
                 {title}
               </span>
               {!left && (
@@ -309,8 +309,8 @@ export default function ParameterComponent({
                       className={classNames(
                         "h-5 w-5 rounded-md",
                         displayOutputPreview && !unknownOutput
-                          ? " hover:bg-secondary-foreground/5 hover:text-medium-indigo"
-                          : " cursor-not-allowed text-muted-foreground",
+                          ? "hover:bg-secondary-foreground/5 hover:text-medium-indigo"
+                          : "cursor-not-allowed text-muted-foreground",
                       )}
                       name={"ScanEye"}
                     />
@@ -401,7 +401,7 @@ export default function ParameterComponent({
               </div>
             </Case>
             <Case condition={data.node?.template[name]?.multiline}>
-              <div className="mt-2 flex w-full flex-col ">
+              <div className="mt-2 flex w-full flex-col">
                 <div className="flex-grow">
                   <TextAreaComponent
                     disabled={disabled}

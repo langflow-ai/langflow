@@ -18,7 +18,7 @@ export default function RenderIcons({
       ) : (
         filteredShortcut[0]
       )}
-      <ForwardedIconComponent name="ArrowBigUp" className=" h-4 w-4" />
+      <ForwardedIconComponent name="ArrowBigUp" className="h-4 w-4" />
       {filteredShortcut.map((key, idx) => {
         if (idx > 0) {
           return <span className=""> {key.toUpperCase()} </span>;

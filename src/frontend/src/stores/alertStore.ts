@@ -6,7 +6,7 @@ import { customStringify } from "../utils/reactflowUtils";
 
 const pushNotificationList = (
   list: AlertItemType[],
-  notification: AlertItemType
+  notification: AlertItemType,
 ) => {
   list.unshift(notification);
   return list;
@@ -147,7 +147,7 @@ const useAlertStore = create<AlertStoreType>((set, get) => ({
   removeFromNotificationList: (index: string) => {
     set({
       notificationList: get().notificationList.filter(
-        (item) => item.id !== index
+        (item) => item.id !== index,
       ),
     });
   },
@@ -160,7 +160,7 @@ const useAlertStore = create<AlertStoreType>((set, get) => ({
   removeFromTempNotificationList: (index: string) => {
     set({
       tempNotificationList: get().tempNotificationList.filter(
-        (item) => item.id !== index
+        (item) => item.id !== index,
       ),
     });
   },

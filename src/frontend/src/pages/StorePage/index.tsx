@@ -46,7 +46,7 @@ export default function StorePage(): JSX.Element {
 
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setCurrentFlowId = useFlowsManagerStore(
-    (state) => state.setCurrentFlowId
+    (state) => state.setCurrentFlowId,
   );
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const [loading, setLoading] = useState(true);
@@ -143,7 +143,7 @@ export default function StorePage(): JSX.Element {
           setTotalRowsCount(
             filteredCategories?.length === 0
               ? Number(res?.count ?? 0)
-              : res?.results?.length ?? 0
+              : res?.results?.length ?? 0,
           );
         }
       })
@@ -183,7 +183,7 @@ export default function StorePage(): JSX.Element {
           disabled={loading}
           className={cn(
             `${!validApiKey ? "animate-pulse border-error" : ""}`,
-            loading ? "cursor-not-allowed" : ""
+            loading ? "cursor-not-allowed" : "",
           )}
           variant="primary"
           onClick={() => {
@@ -222,8 +222,8 @@ export default function StorePage(): JSX.Element {
                 className={
                   (tabActive === "All"
                     ? "border-b-2 border-primary p-3"
-                    : " border-b-2 border-transparent p-3 text-muted-foreground hover:text-primary") +
-                  (loading ? " cursor-not-allowed " : "")
+                    : "border-b-2 border-transparent p-3 text-muted-foreground hover:text-primary") +
+                  (loading ? " cursor-not-allowed" : "")
                 }
               >
                 All
@@ -238,8 +238,8 @@ export default function StorePage(): JSX.Element {
                 className={
                   (tabActive === "Flows"
                     ? "border-b-2 border-primary p-3"
-                    : " border-b-2 border-transparent p-3 text-muted-foreground hover:text-primary") +
-                  (loading ? " cursor-not-allowed " : "")
+                    : "border-b-2 border-transparent p-3 text-muted-foreground hover:text-primary") +
+                  (loading ? " cursor-not-allowed" : "")
                 }
               >
                 Flows
@@ -254,8 +254,8 @@ export default function StorePage(): JSX.Element {
                 className={
                   (tabActive === "Components"
                     ? "border-b-2 border-primary p-3"
-                    : " border-b-2 border-transparent p-3 text-muted-foreground hover:text-primary") +
-                  (loading ? " cursor-not-allowed " : "")
+                    : "border-b-2 border-transparent p-3 text-muted-foreground hover:text-primary") +
+                  (loading ? " cursor-not-allowed" : "")
                 }
               >
                 Components

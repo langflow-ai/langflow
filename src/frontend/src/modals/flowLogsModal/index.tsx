@@ -81,7 +81,7 @@ export default function FlowLogsModal({
     <BaseModal open={open} setOpen={setOpen} size="large">
       <BaseModal.Header description="Inspect component executions and monitor sent messages in the playground">
         <span className="pr-2">Logs</span>
-        <IconComponent name="ScrollText" className="mr-2 h-4 w-4 " />
+        <IconComponent name="ScrollText" className="mr-2 h-4 w-4" />
       </BaseModal.Header>
       <BaseModal.Content>
         <Tabs

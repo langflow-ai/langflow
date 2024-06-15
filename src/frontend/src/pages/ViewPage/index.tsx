@@ -6,7 +6,7 @@ import Page from "../FlowPage/components/PageComponent";
 export default function ViewPage() {
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const setCurrentFlowId = useFlowsManagerStore(
-    (state) => state.setCurrentFlowId
+    (state) => state.setCurrentFlowId,
   );
   const { id } = useParams();
 

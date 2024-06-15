@@ -496,10 +496,7 @@ export default function Page({
           >
             <Background className="" />
             {!view && (
-              <Controls
-                className="fill-foreground stroke-foreground text-primary [&>button]:border-b-border
-                   [&>button]:bg-muted hover:[&>button]:bg-border"
-              ></Controls>
+              <Controls className="fill-foreground stroke-foreground text-primary [&>button]:border-b-border [&>button]:bg-muted hover:[&>button]:bg-border"></Controls>
             )}
             <SelectionMenu
               lastSelection={lastSelection}

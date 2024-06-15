@@ -29,19 +29,19 @@ export default function AddNewVariableButton({
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const componentFields = useTypesStore((state) => state.ComponentFields);
   const unavaliableFields = new Set(
-    Object.keys(useGlobalVariablesStore((state) => state.unavaliableFields))
+    Object.keys(useGlobalVariablesStore((state) => state.unavaliableFields)),
   );
 
   const availableFields = () => {
     const fields = Array.from(componentFields).filter(
-      (field) => !unavaliableFields.has(field)
+      (field) => !unavaliableFields.has(field),
     );
 
     return sortByName(fields);
   };
 
   const addGlobalVariable = useGlobalVariablesStore(
-    (state) => state.addGlobalVariable
+    (state) => state.addGlobalVariable,
   );
 
   function handleSaveVariable() {
@@ -92,7 +92,7 @@ export default function AddNewVariableButton({
         <span className="pr-2"> Create Variable </span>
         <ForwardedIconComponent
           name="Globe"
-          className="h-6 w-6 pl-1 text-primary "
+          className="h-6 w-6 pl-1 text-primary"
           aria-hidden="true"
         />
       </BaseModal.Header>

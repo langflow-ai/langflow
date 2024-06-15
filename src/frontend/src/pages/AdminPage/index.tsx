@@ -53,7 +53,7 @@ export default function AdminPage() {
   const { userData } = useContext(AuthContext);
   const [totalRowsCount, setTotalRowsCount] = useState(0);
   const setCurrentFlowId = useFlowsManagerStore(
-    (state) => state.setCurrentFlowId
+    (state) => state.setCurrentFlowId,
   );
 
   // set null id
@@ -114,7 +114,7 @@ export default function AdminPage() {
       setFilterUserList(userList.current);
     } else {
       const filteredList = userList.current.filter((user: Users) =>
-        user.username.toLowerCase().includes(input.toLowerCase())
+        user.username.toLowerCase().includes(input.toLowerCase()),
       );
       setFilterUserList(filteredList);
     }
@@ -284,7 +284,7 @@ export default function AdminPage() {
                   (loadingUsers ? " border-0" : "")
                 }
               >
-                <Table className={"table-fixed outline-1 "}>
+                <Table className={"table-fixed outline-1"}>
                   <TableHeader
                     className={
                       loadingUsers ? "hidden" : "table-fixed bg-muted outline-1"
@@ -297,7 +297,7 @@ export default function AdminPage() {
                       <TableHead className="h-10">Superuser</TableHead>
                       <TableHead className="h-10">Created At</TableHead>
                       <TableHead className="h-10">Updated At</TableHead>
-                      <TableHead className="h-10 w-[100px]  text-right"></TableHead>
+                      <TableHead className="h-10 w-[100px] text-right"></TableHead>
                     </TableRow>
                   </TableHeader>
                   {!loadingUsers && (
@@ -331,7 +331,7 @@ export default function AdminPage() {
                                 handleDisableUser(
                                   user.is_active,
                                   user.id,
-                                  user
+                                  user,
                                 );
                               }}
                             >
@@ -363,7 +363,7 @@ export default function AdminPage() {
                                 handleSuperUserEdit(
                                   user.is_superuser,
                                   user.id,
-                                  user
+                                  user,
                                 );
                               }}
                             >
@@ -380,7 +380,7 @@ export default function AdminPage() {
                               </ConfirmationModal.Trigger>
                             </ConfirmationModal>
                           </TableCell>
-                          <TableCell className="truncate py-2 ">
+                          <TableCell className="truncate py-2">
                             {
                               new Date(user.create_at!)
                                 .toISOString()

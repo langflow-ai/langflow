@@ -6,7 +6,7 @@ import { VertexBuildTypeAPI } from "../../types/api";
 
 const useIconStatus = (
   buildStatus: BuildStatus | undefined,
-  validationStatus: VertexBuildTypeAPI | null
+  validationStatus: VertexBuildTypeAPI | null,
 ) => {
   const conditionSuccess = validationStatus && validationStatus.valid;
   const conditionError =

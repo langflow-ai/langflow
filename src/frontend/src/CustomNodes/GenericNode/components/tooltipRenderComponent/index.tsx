@@ -24,7 +24,7 @@ const TooltipRenderComponent = ({ item, index, left }) => {
       <span
         key={index}
         className={classNames(
-          index > 0 ? "mt-2 flex items-center" : "mt-3 flex items-center"
+          index > 0 ? "mt-2 flex items-center" : "mt-3 flex items-center",
         )}
       >
         <div

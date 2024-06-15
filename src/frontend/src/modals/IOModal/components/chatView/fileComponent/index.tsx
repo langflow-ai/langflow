@@ -29,7 +29,7 @@ export default function FileCard({
 
   const imgSrc = `${BACKEND_URL.slice(
     0,
-    BACKEND_URL.length - 1
+    BACKEND_URL.length - 1,
   )}${BASE_URL_API}files/images/${content}`;
 
   console.log(imgSrc);
@@ -47,7 +47,7 @@ export default function FileCard({
             <img
               src={imgSrc}
               alt="generated image"
-              className="m-0  h-auto w-auto rounded-lg border border-border p-0 transition-all"
+              className="m-0 h-auto w-auto rounded-lg border border-border p-0 transition-all"
             />
             <DownloadButton
               isHovered={isHovered}

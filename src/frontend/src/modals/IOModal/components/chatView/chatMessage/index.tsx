@@ -115,19 +115,19 @@ export default function ChatMessage({
       <div
         className={classNames(
           "form-modal-chat-position",
-          chat.isSend ? "" : " "
+          chat.isSend ? "" : " ",
         )}
       >
         <div
           className={classNames(
-            "mr-3 mt-1 flex w-24 flex-col items-center gap-1 overflow-hidden px-3 pb-3"
+            "mr-3 mt-1 flex w-24 flex-col items-center gap-1 overflow-hidden px-3 pb-3",
           )}
         >
           <div className="flex flex-col items-center gap-1">
             <div
               className={cn(
                 "relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-md p-5 text-2xl",
-                !chat.isSend ? "bg-chat-bot-icon" : "bg-chat-user-icon"
+                !chat.isSend ? "bg-chat-bot-icon" : "bg-chat-user-icon",
               )}
             >
               <img
@@ -162,7 +162,7 @@ export default function ChatMessage({
               )}
               {chat.thought && chat.thought !== "" && !hidden && (
                 <SanitizedHTMLWrapper
-                  className=" form-modal-chat-thought"
+                  className="form-modal-chat-thought"
                   content={convert.toHtml(chat.thought)}
                   onClick={() => setHidden((prev) => !prev)}
                 />
@@ -187,8 +187,7 @@ export default function ChatMessage({
                           <Markdown
                             remarkPlugins={[remarkGfm, remarkMath]}
                             rehypePlugins={[rehypeMathjax]}
-                            className="markdown prose flex flex-col text-primary word-break-break-word
-dark:prose-invert"
+                            className="markdown prose flex flex-col text-primary word-break-break-word dark:prose-invert"
                             components={{
                               pre({ node, ...props }) {
                                 return <>{props.children}</>;
@@ -211,12 +210,12 @@ dark:prose-invert"
 
                                   children[0] = (children[0] as string).replace(
                                     "`▍`",
-                                    "▍"
+                                    "▍",
                                   );
                                 }
 
                                 const match = /language-(\w+)/.exec(
-                                  className || ""
+                                  className || "",
                                 );
 
                                 return !inline ? (
@@ -231,7 +230,7 @@ dark:prose-invert"
                                         language: (match && match[1]) || "",
                                         code: String(children).replace(
                                           /\n$/,
-                                          ""
+                                          "",
                                         ),
                                       },
                                     ]}
@@ -249,7 +248,7 @@ dark:prose-invert"
                             {chatMessage}
                           </Markdown>
                         ),
-                      [chat.message, chatMessage]
+                      [chat.message, chatMessage],
                     )}
                   </div>
                 </div>
@@ -292,7 +291,7 @@ dark:prose-invert"
                             parts.push(
                               <span className="chat-message-highlight">
                                 {chat.message[match[1]]}
-                              </span>
+                              </span>,
                             );
                           }
 
@@ -319,7 +318,7 @@ dark:prose-invert"
                   {chatMessage}
                 </span>
                 {chat.files && (
-                  <div className="my-2 flex  flex-col gap-5">
+                  <div className="my-2 flex flex-col gap-5">
                     {chat.files.map((file, index) => {
                       return (
                         <FileCardWrapper

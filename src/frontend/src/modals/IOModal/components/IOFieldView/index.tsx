@@ -50,7 +50,7 @@ export default function IOFieldView({
       .results.result ?? "";
 
   console.log(
-    (flowPool[node!.id] ?? [])[(flowPool[node!.id]?.length ?? 1) - 1]?.data
+    (flowPool[node!.id] ?? [])[(flowPool[node!.id]?.length ?? 1) - 1]?.data,
   );
 
   function handleOutputType() {
@@ -62,7 +62,7 @@ export default function IOFieldView({
             return (
               <Textarea
                 className={`w-full custom-scroll ${
-                  left ? " min-h-32" : " h-full"
+                  left ? "min-h-32" : "h-full"
                 }`}
                 placeholder={"Enter text..."}
                 value={node.data.node!.template["input_value"].value}
@@ -146,7 +146,7 @@ export default function IOFieldView({
             return (
               <Textarea
                 className={`w-full custom-scroll ${
-                  left ? " min-h-32" : " h-full"
+                  left ? "min-h-32" : "h-full"
                 }`}
                 placeholder={"Enter text..."}
                 value={node.data.node!.template["input_value"]}
@@ -257,7 +257,7 @@ export default function IOFieldView({
                   rows={
                     Array.isArray(flowPoolNode?.data?.artifacts)
                       ? flowPoolNode?.data?.artifacts?.map(
-                          (artifact) => artifact.data
+                          (artifact) => artifact.data,
                         ) ?? []
                       : [flowPoolNode?.data?.artifacts]
                   }
@@ -270,7 +270,7 @@ export default function IOFieldView({
             return (
               <Textarea
                 className={`w-full custom-scroll ${
-                  left ? " min-h-32" : " h-full"
+                  left ? "min-h-32" : "h-full"
                 }`}
                 placeholder={"Empty"}
                 // update to real value on flowPool

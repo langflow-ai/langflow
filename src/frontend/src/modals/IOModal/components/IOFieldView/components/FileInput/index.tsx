@@ -136,7 +136,7 @@ export default function IOFileInput({ field, updateValue }: IOFileInputProps) {
           </>
         ) : image ? (
           <img
-            className="order-last h-12 w-12 rounded-full object-cover "
+            className="order-last h-12 w-12 rounded-full object-cover"
             src={image ?? ""}
           />
         ) : (

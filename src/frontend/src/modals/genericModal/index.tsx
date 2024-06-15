@@ -200,7 +200,7 @@ export default function GenericModal({
         </span>
         <IconComponent
           name={myModalTitle === "Edit Prompt" ? "TerminalSquare" : "FileText"}
-          className="h-6 w-6 pl-1 text-primary "
+          className="h-6 w-6 pl-1 text-primary"
           aria-hidden="true"
         />
       </BaseModal.Header>
@@ -265,7 +265,7 @@ export default function GenericModal({
         <div className="flex w-full shrink-0 items-end justify-between">
           <div className="mb-auto flex-1">
             {type === TypeModal.PROMPT && (
-              <div className=" mr-2">
+              <div className="mr-2">
                 <div
                   ref={divRef}
                   className="max-h-20 overflow-y-auto custom-scroll"
@@ -273,7 +273,7 @@ export default function GenericModal({
                   <div className="flex flex-wrap items-center gap-2">
                     <IconComponent
                       name="Braces"
-                      className=" flex h-4 w-4 text-primary"
+                      className="flex h-4 w-4 text-primary"
                     />
                     <span className="text-md font-semibold text-primary">
                       Prompt Variables:

@@ -18,18 +18,18 @@ export const useFolderStore = create<FoldersStoreType>((set, get) => ({
         getFolders().then(
           async (res) => {
             const foldersWithoutStarterProjects = res?.filter(
-              (folder) => folder.name !== STARTER_FOLDER_NAME
+              (folder) => folder.name !== STARTER_FOLDER_NAME,
             );
 
             const starterProjects = res?.find(
-              (folder) => folder.name === STARTER_FOLDER_NAME
+              (folder) => folder.name === STARTER_FOLDER_NAME,
             );
 
             set({ starterProjectId: starterProjects!.id ?? "" });
             set({ folders: foldersWithoutStarterProjects });
 
             const myCollectionId = res?.find(
-              (f) => f.name === DEFAULT_FOLDER
+              (f) => f.name === DEFAULT_FOLDER,
             )?.id;
 
             set({ myCollectionId });
@@ -55,7 +55,7 @@ export const useFolderStore = create<FoldersStoreType>((set, get) => ({
             set({ folders: [] });
             get().setIsLoadingFolders(false);
             reject(error);
-          }
+          },
         );
       }
     });
@@ -65,18 +65,18 @@ export const useFolderStore = create<FoldersStoreType>((set, get) => ({
       getFolders().then(
         async (res) => {
           const foldersWithoutStarterProjects = res?.filter(
-            (folder) => folder.name !== STARTER_FOLDER_NAME
+            (folder) => folder.name !== STARTER_FOLDER_NAME,
           );
 
           const starterProjects = res?.find(
-            (folder) => folder.name === STARTER_FOLDER_NAME
+            (folder) => folder.name === STARTER_FOLDER_NAME,
           );
 
           set({ starterProjectId: starterProjects!.id ?? "" });
           set({ folders: foldersWithoutStarterProjects });
 
           const myCollectionId = res?.find(
-            (f) => f.name === DEFAULT_FOLDER
+            (f) => f.name === DEFAULT_FOLDER,
           )?.id;
 
           set({ myCollectionId });
@@ -87,7 +87,7 @@ export const useFolderStore = create<FoldersStoreType>((set, get) => ({
           set({ folders: [] });
           get().setIsLoadingFolders(false);
           reject(error);
-        }
+        },
       );
     });
   },

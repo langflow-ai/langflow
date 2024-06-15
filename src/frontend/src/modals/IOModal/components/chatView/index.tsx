@@ -205,7 +205,7 @@ export default function ChatView({
                   <span>
                     <IconComponent
                       name="MessageSquareMore"
-                      className="mx-1 inline h-5 w-5 animate-bounce "
+                      className="mx-1 inline h-5 w-5 animate-bounce"
                     />
                   </span>{" "}
                   {CHAT_SECOND_INITIAL_TEXT}
