@@ -112,7 +112,7 @@ def test_astra_memory():
     input_value = Record.from_document(
         Document(
             page_content="memory1",
-            metadata={"session_id": 1, "sender": "User", "sender_name": "Bob"},
+            metadata={"session_id": 1, "sender": "human", "sender_name": "Bob"},
         )
     )
     writer.build(
