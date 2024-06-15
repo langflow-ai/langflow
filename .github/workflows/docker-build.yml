@@ -21,6 +21,7 @@ on:
           - main
 env:
   POETRY_VERSION: "1.8.2"
+  TEST_TAG: "langflowai/langflow:test"
 
 jobs:
   setup:
@@ -59,12 +60,13 @@ jobs:
           context: .
           push: false  # Do not push yet
           platforms: "linux/amd64,linux/arm64/v8"
+          load: true
           file: ${{ matrix.file }}
-          tags: ${{ needs.setup.outputs.tags }}
+          tags: ${{ env.TEST_TAG }}
       - name: Run Container
         run: |
           docker run -d --name test_container -p 8000:8000 ${{ needs.setup.outputs.tags }}
-      - name: Wait for Container to Start
+      - name: Wait for Container to Start and Check Health
         run: |
           timeout 40 bash -c 'until curl -f http://127.0.0.1:8000/health; do sleep 1; done' || (echo "Server did not start in time" && docker logs test_container && docker stop test_container && docker rm test_container && exit 1)
       - name: Stop and Remove Container
