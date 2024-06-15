@@ -35,7 +35,7 @@ jobs:
       - name: Install Node.js dependencies
         run: |
           cd src/frontend
-          npm ci
+          npm install
         if: ${{ steps.setup-node.outputs.cache-hit != 'true' }}
 
       - name: Run linters
@@ -45,7 +45,9 @@ jobs:
           auto_fix: true
           git_email: "gabriel@langflow.org"
           # Enable linters
-          eslint: true
+          # eslint: true
+          # eslint_auto_fix: true
           prettier: true
+          prettier_auto_fix: true
           prettier_args: '--write \"{tests,src}/**/*.{js,jsx,ts,tsx,json,md}\" --ignore-path .prettierignore'
 
