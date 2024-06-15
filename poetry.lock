@@ -2438,8 +2438,8 @@ files = [
 [package.dependencies]
 cffi = {version = ">=1.12.2", markers = "platform_python_implementation == \"CPython\" and sys_platform == \"win32\""}
 greenlet = [
-    {version = ">=2.0.0", markers = "platform_python_implementation == \"CPython\" and python_version < \"3.11\""},
     {version = ">=3.0rc3", markers = "platform_python_implementation == \"CPython\" and python_version >= \"3.11\""},
+    {version = ">=2.0.0", markers = "platform_python_implementation == \"CPython\" and python_version < \"3.11\""},
 ]
 "zope.event" = "*"
 "zope.interface" = "*"
@@ -2566,12 +2566,12 @@ files = [
 google-auth = ">=2.14.1,<3.0.dev0"
 googleapis-common-protos = ">=1.56.2,<2.0.dev0"
 grpcio = [
-    {version = ">=1.33.2,<2.0dev", optional = true, markers = "python_version < \"3.11\" and extra == \"grpc\""},
     {version = ">=1.49.1,<2.0dev", optional = true, markers = "python_version >= \"3.11\" and extra == \"grpc\""},
+    {version = ">=1.33.2,<2.0dev", optional = true, markers = "python_version < \"3.11\" and extra == \"grpc\""},
 ]
 grpcio-status = [
-    {version = ">=1.33.2,<2.0.dev0", optional = true, markers = "python_version < \"3.11\" and extra == \"grpc\""},
     {version = ">=1.49.1,<2.0.dev0", optional = true, markers = "python_version >= \"3.11\" and extra == \"grpc\""},
+    {version = ">=1.33.2,<2.0.dev0", optional = true, markers = "python_version < \"3.11\" and extra == \"grpc\""},
 ]
 proto-plus = ">=1.22.3,<2.0.0dev"
 protobuf = ">=3.19.5,<3.20.0 || >3.20.0,<3.20.1 || >3.20.1,<4.21.0 || >4.21.0,<4.21.1 || >4.21.1,<4.21.2 || >4.21.2,<4.21.3 || >4.21.3,<4.21.4 || >4.21.4,<4.21.5 || >4.21.5,<5.0.0.dev0"
@@ -4550,8 +4550,8 @@ psutil = ">=5.9.1"
 pywin32 = {version = "*", markers = "platform_system == \"Windows\""}
 pyzmq = ">=25.0.0"
 requests = [
-    {version = ">=2.26.0", markers = "python_version <= \"3.11\""},
     {version = ">=2.32.2", markers = "python_version > \"3.11\""},
+    {version = ">=2.26.0", markers = "python_version <= \"3.11\""},
 ]
 tomli = {version = ">=1.1.0", markers = "python_version < \"3.11\""}
 Werkzeug = ">=2.0.0"
@@ -6019,9 +6019,9 @@ files = [
 
 [package.dependencies]
 numpy = [
+    {version = ">=1.26.0,<2", markers = "python_version >= \"3.12\""},
     {version = ">=1.22.4,<2", markers = "python_version < \"3.11\""},
     {version = ">=1.23.2,<2", markers = "python_version == \"3.11\""},
-    {version = ">=1.26.0,<2", markers = "python_version >= \"3.12\""},
 ]
 python-dateutil = ">=2.8.2"
 pytz = ">=2020.1"
@@ -7218,20 +7218,6 @@ pytest = ">=6.2.5"
 
 [package.extras]
 dev = ["pre-commit", "pytest-asyncio", "tox"]
-
-[[package]]
-name = "pytest-order"
-version = "1.2.1"
-description = "pytest plugin to run your tests in a specific order"
-optional = false
-python-versions = ">=3.6"
-files = [
-    {file = "pytest-order-1.2.1.tar.gz", hash = "sha256:4451bd8821ba4fa2109455a2fcc882af60ef8e53e09d244d67674be08f56eac3"},
-    {file = "pytest_order-1.2.1-py3-none-any.whl", hash = "sha256:c3082fc73f9ddcf13e4a22dda9bbcc2f39865bf537438a1d50fa241e028dd743"},
-]
-
-[package.dependencies]
-pytest = {version = ">=6.2.4", markers = "python_version >= \"3.10\""}
 
 [[package]]
 name = "pytest-profiling"
@@ -10542,4 +10528,4 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-content-hash = "4cc7ae29f0f42bc9a5b1c6026937523c4fde45cc3f62dc7ca8b53343915feaf2"
+content-hash = "6cfa9f164710bf283b50a8e12e9d0c91c58f5d0176bbb277b5f5d3630ec8b2cb"
