@@ -59,6 +59,7 @@ class RunnableVerticesManager:
         set_cache_coro: Callable[["Graph", asyncio.Lock], Awaitable[None]],
         graph: "Graph",
         vertex: "Vertex",
+        cache: bool = True,
     ):
         """
         Retrieves the next runnable vertices in the graph for a given vertex.
@@ -86,7 +87,8 @@ class RunnableVerticesManager:
             for v_id in set(next_runnable_vertices):  # Use set to avoid duplicates
                 self.update_vertex_run_state(v_id, is_runnable=False)
                 self.remove_from_predecessors(v_id)
-            await set_cache_coro(data=graph, lock=lock)  # type: ignore
+            if cache:
+                await set_cache_coro(data=graph, lock=lock)  # type: ignore
         return next_runnable_vertices
 
     @staticmethod
