@@ -6,8 +6,6 @@ from uuid import UUID
 import yaml
 from cachetools import TTLCache, cachedmethod
 from langchain_core.documents import Document
-from pydantic import BaseModel
-
 from langflow.custom.code_parser.utils import (
     extract_inner_type_from_generic_alias,
     extract_union_types_from_generic_alias,
@@ -19,6 +17,7 @@ from langflow.schema.dotdict import dotdict
 from langflow.services.deps import get_storage_service, get_variable_service, session_scope
 from langflow.services.storage.service import StorageService
 from langflow.utils import validate
+from pydantic import BaseModel
 
 if TYPE_CHECKING:
     from langflow.graph.graph.base import Graph
@@ -160,9 +159,9 @@ class CustomComponent(Component):
             self.repr_value = self.status
         if isinstance(self.repr_value, dict):
             self.repr_value = yaml.dump(self.repr_value)
-        if isinstance(self.repr_value, BaseModel) and not isinstance(self.repr_value, Data):
+        if isinstance(self.repr_value, BaseModel) and not isinstance(self.repr_value, Record):
             self.repr_value = str(self.repr_value)
-        elif hasattr(self.repr_value, "to_json"):
+        elif hasattr(self.repr_value, "to_json") and not isinstance(self.repr_value, Record):
             self.repr_value = self.repr_value.to_json()
         return self.repr_value
 
@@ -468,4 +467,5 @@ class CustomComponent(Component):
         Returns:
             Any: The result of the build process.
         """
+        raise NotImplementedError
         raise NotImplementedError
