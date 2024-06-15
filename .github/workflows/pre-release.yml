@@ -62,6 +62,27 @@ jobs:
           else
             make build main=true
           fi
+      - name: Test CLI
+        run: |
+          if [ "${{ inputs.release_type }}" == "base" ]; then
+            pip install src/backend/base/dist/*.whl
+          else
+            pip install dist/*.whl
+          fi
+          langflow run --host 127.0.0.1 --port 7860 &
+          SERVER_PID=$!
+          # Wait for the server to start
+          timeout 40 bash -c 'until curl -f http://127.0.0.1:7860/health; do sleep 1; done' || (echo "Server did not start in time" && kill $SERVER_PID && exit 1)
+          # Terminate the server
+          kill $SERVER_PID || (echo "Failed to terminate the server" && exit 1)
+          sleep 10 # give the server some time to terminate
+          # Check if the server is still running
+          if kill -0 $SERVER_PID 2>/dev/null; then
+            echo "Failed to terminate the server"
+            exit 1
+          else
+            echo "Server terminated successfully"
+          fi
       - name: Publish to PyPI
         env:
           POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_API_TOKEN }}
