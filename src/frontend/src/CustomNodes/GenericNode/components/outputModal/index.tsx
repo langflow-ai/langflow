@@ -14,7 +14,7 @@ export default function OutputModal({ open, setOpen, nodeId }): JSX.Element {
         <SwitchOutputView nodeId={nodeId} />
       </BaseModal.Content>
       <BaseModal.Footer>
-        <div className="flex w-full justify-end  pt-2">
+        <div className="flex w-full justify-end pt-2">
           <Button className="flex gap-2 px-3" onClick={() => setOpen(false)}>
             Close
           </Button>

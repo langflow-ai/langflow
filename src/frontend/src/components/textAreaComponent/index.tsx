@@ -28,7 +28,7 @@ export default function TextAreaComponent({
           data-testid={id}
           value={value}
           disabled={disabled}
-          className={editNode ? "input-edit-node w-full" : " w-full"}
+          className={editNode ? "input-edit-node w-full" : "w-full"}
           placeholder={"Type something..."}
           onChange={(event) => {
             onChange(event.target.value);
