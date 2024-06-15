@@ -1,7 +1,8 @@
 from langflow.base.io.chat import ChatComponent
-from langflow.inputs import BoolInput, DropdownInput, MultilineInput, StrInput
+from langflow.inputs import BoolInput, DropdownInput, StrInput
 from langflow.schema.message import Message
 from langflow.template import Output
+from langflow.field_typing import Text
 
 
 class ChatOutput(ChatComponent):
@@ -10,11 +11,10 @@ class ChatOutput(ChatComponent):
     icon = "ChatOutput"
 
     inputs = [
-        MultilineInput(
+        StrInput(
             name="input_value",
             display_name="Text",
             info="Message to be passed as output.",
-            input_types=["Text", "Message"],
         ),
         DropdownInput(
             name="sender",
@@ -36,19 +36,21 @@ class ChatOutput(ChatComponent):
     ]
     outputs = [
         Output(display_name="Message", name="message", method="message_response"),
+        Output(display_name="Text", name="text", method="text_response"),
     ]
 
     def message_response(self) -> Message:
-        if isinstance(self.input_value, Message):
-            message = self.input_value
-        else:
-            message = Message(
-                text=self.input_value,
-                sender=self.sender,
-                sender_name=self.sender_name,
-                session_id=self.session_id,
-            )
+        message = Message(
+            text=self.input_value,
+            sender=self.sender,
+            sender_name=self.sender_name,
+            session_id=self.session_id,
+        )
         if self.session_id and isinstance(message, Message) and isinstance(message.text, str):
             self.store_message(message)
         self.status = message
         return message
+
+    def text_response(self) -> Text:
+        text = self.message_response().text
+        return text
