@@ -18,7 +18,7 @@ export default function CodeAreaComponent({
   setOpen,
 }: CodeAreaComponentType) {
   const [myValue, setMyValue] = useState(
-    typeof value == "string" ? value : JSON.stringify(value)
+    typeof value == "string" ? value : JSON.stringify(value),
   );
   useEffect(() => {
     if (disabled && myValue !== "") {
@@ -32,7 +32,7 @@ export default function CodeAreaComponent({
   }, [value]);
 
   return (
-    <div className={disabled ? "pointer-events-none w-full " : " w-full"}>
+    <div className={disabled ? "pointer-events-none w-full" : "w-full"}>
       <CodeAreaModal
         open={open}
         setOpen={setOpen}
@@ -53,8 +53,8 @@ export default function CodeAreaComponent({
             className={
               editNode
                 ? "input-edit-node input-dialog"
-                : (disabled ? " input-disable input-ring " : "") +
-                  " primary-input text-muted-foreground "
+                : (disabled ? "input-disable input-ring " : "") +
+                  " primary-input text-muted-foreground"
             }
           >
             {myValue !== "" ? myValue : "Type something..."}

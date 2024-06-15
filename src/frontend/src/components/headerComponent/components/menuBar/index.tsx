@@ -88,10 +88,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
               }}
               className="cursor-pointer"
             >
-              <IconComponent
-                name="Settings2"
-                className="header-menu-options "
-              />
+              <IconComponent name="Settings2" className="header-menu-options" />
               Settings
             </DropdownMenuItem>
             <DropdownMenuItem
@@ -102,7 +99,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
             >
               <IconComponent
                 name="ScrollText"
-                className="header-menu-options "
+                className="header-menu-options"
               />
               Logs
             </DropdownMenuItem>
@@ -115,11 +112,11 @@ export const MenuBar = ({}: {}): JSX.Element => {
                       title: UPLOAD_ERROR_ALERT,
                       list: [error],
                     });
-                  }
+                  },
                 );
               }}
             >
-              <IconComponent name="FileUp" className="header-menu-options " />
+              <IconComponent name="FileUp" className="header-menu-options" />
               Import
             </DropdownMenuItem>
             <ExportModal>
@@ -137,7 +134,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
               }}
               className="cursor-pointer"
             >
-              <IconComponent name="Undo" className="header-menu-options " />
+              <IconComponent name="Undo" className="header-menu-options" />
               Undo
               {IS_MAC ? (
                 <IconComponent
@@ -159,7 +156,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
               }}
               className="cursor-pointer"
             >
-              <IconComponent name="Redo" className="header-menu-options " />
+              <IconComponent name="Redo" className="header-menu-options" />
               Redo
               {IS_MAC ? (
                 <IconComponent
@@ -201,7 +198,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
               name={isBuilding || saveLoading ? "Loader2" : "CheckCircle2"}
               className={cn(
                 "h-4 w-4",
-                isBuilding || saveLoading ? "animate-spin" : "animate-wiggle"
+                isBuilding || saveLoading ? "animate-spin" : "animate-wiggle",
               )}
             />
             {printByBuildStatus()}

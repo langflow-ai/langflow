@@ -63,7 +63,7 @@ export default function FlowSettingsModal({
     >
       <BaseModal.Header description={SETTINGS_DIALOG_SUBTITLE}>
         <span className="pr-2">Settings</span>
-        <IconComponent name="Settings2" className="mr-2 h-4 w-4 " />
+        <IconComponent name="Settings2" className="mr-2 h-4 w-4" />
       </BaseModal.Header>
       <BaseModal.Content>
         <EditFlowSettings

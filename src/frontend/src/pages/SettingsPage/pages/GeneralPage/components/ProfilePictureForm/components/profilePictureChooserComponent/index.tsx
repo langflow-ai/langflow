@@ -58,7 +58,7 @@ export default function ProfilePictureChooserComponent({
                       key={idx}
                       src={`${BACKEND_URL.slice(
                         0,
-                        BACKEND_URL.length - 1
+                        BACKEND_URL.length - 1,
                       )}${BASE_URL_API}files/profile_pictures/${
                         folder + "/" + path
                       }`}
