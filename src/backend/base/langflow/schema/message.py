@@ -8,7 +8,6 @@ from pydantic import BeforeValidator, ConfigDict, Field, field_serializer
 
 from langflow.schema.data import Data
 from langflow.schema.image import Image, get_file_paths, is_image_file
-from langflow.utils.util import utc_now
 
 def _timestamp_to_str(timestamp: datetime) -> str:
     return timestamp.strftime("%Y-%m-%d %H:%M:%S")
@@ -24,7 +23,7 @@ class Message(Data):
     files: Optional[list[str | Image]] = Field(default=[])
     session_id: Optional[str] = Field(default="")
     timestamp: Annotated[str, BeforeValidator(_timestamp_to_str)] = Field(
-        default=utc_now(stringify=True)
+        default=datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
     )
     flow_id: Optional[str] = None
 
