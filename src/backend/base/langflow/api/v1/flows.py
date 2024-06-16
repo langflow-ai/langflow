@@ -19,6 +19,7 @@ from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_session, get_settings_service
 from langflow.services.settings.service import SettingsService
+from langflow.utils.util import utc_now
 
 # build router
 router = APIRouter(prefix="/flows", tags=["Flows"])
@@ -52,7 +53,7 @@ def create_flow(
                 flow.name = f"{flow.name} (1)"
 
         db_flow = Flow.model_validate(flow, from_attributes=True)
-        db_flow.updated_at = datetime.now(timezone.utc)
+        db_flow.updated_at = utc_now()
 
         if db_flow.folder_id is None:
             # Make sure flows always have a folder
@@ -188,7 +189,7 @@ def update_flow(
                 setattr(db_flow, key, value)
         webhook_component = get_webhook_component_in_flow(db_flow.data)
         db_flow.webhook = webhook_component is not None
-        db_flow.updated_at = datetime.now(timezone.utc)
+        db_flow.updated_at = utc_now()
         if db_flow.folder_id is None:
             default_folder = session.exec(select(Folder).where(Folder.name == DEFAULT_FOLDER_NAME)).first()
             if default_folder:

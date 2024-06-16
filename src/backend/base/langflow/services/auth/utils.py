@@ -16,6 +16,8 @@ from langflow.services.database.models.api_key.model import ApiKey
 from langflow.services.database.models.user.crud import get_user_by_id, get_user_by_username, update_user_last_login_at
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_session, get_settings_service
+from langflow.utils.util import utc_now
+
 
 oauth2_login = OAuth2PasswordBearer(tokenUrl="api/v1/login", auto_error=False)
 
@@ -112,7 +114,7 @@ async def get_current_user_by_jwt(
         token_type: str = payload.get("type")
         if expires := payload.get("exp", None):
             expires_datetime = datetime.fromtimestamp(expires, timezone.utc)
-            if datetime.now(timezone.utc) > expires_datetime:
+            if utc_now() > expires_datetime:
                 logger.info("Token expired for user")
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
@@ -189,7 +191,7 @@ def create_token(data: dict, expires_delta: timedelta):
     settings_service = get_settings_service()
 
     to_encode = data.copy()
-    expire = datetime.now(timezone.utc) + expires_delta
+    expire = utc_now() + expires_delta
     to_encode["exp"] = expire
 
     return jwt.encode(

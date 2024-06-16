@@ -9,6 +9,7 @@ from langflow.services.auth.utils import get_current_active_user
 from langflow.services.database.models.user.model import User
 from langflow.services.database.models.variable import Variable, VariableCreate, VariableRead, VariableUpdate
 from langflow.services.deps import get_session, get_settings_service
+from langflow.utils.util import utc_now
 
 router = APIRouter(prefix="/variables", tags=["Variables"])
 
@@ -89,7 +90,7 @@ def update_variable(
         variable_data = variable.model_dump(exclude_unset=True)
         for key, value in variable_data.items():
             setattr(db_variable, key, value)
-        db_variable.updated_at = datetime.now(timezone.utc)
+        db_variable.updated_at = utc_now()
         session.commit()
         session.refresh(db_variable)
         return db_variable
