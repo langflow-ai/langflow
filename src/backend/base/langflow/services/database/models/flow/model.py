@@ -14,7 +14,6 @@ from sqlalchemy import UniqueConstraint
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
 from langflow.schema import Data
-from langflow.utils.util import utc_now
 
 if TYPE_CHECKING:
     from langflow.services.database.models.folder import Folder
@@ -28,7 +27,7 @@ class FlowBase(SQLModel):
     icon_bg_color: Optional[str] = Field(default=None, nullable=True)
     data: Optional[Dict] = Field(default=None, nullable=True)
     is_component: Optional[bool] = Field(default=False, nullable=True)
-    updated_at: Optional[datetime] = Field(default_factory=lambda: utc_now(), nullable=True)
+    updated_at: Optional[datetime] = Field(default_factory=lambda: datetime.now(timezone.utc), nullable=True)
     webhook: Optional[bool] = Field(default=False, nullable=True, description="Can be used on the webhook endpoint")
     endpoint_name: Optional[str] = Field(default=None, nullable=True, index=True)
 

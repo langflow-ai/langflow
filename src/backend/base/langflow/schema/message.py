@@ -9,6 +9,7 @@ from pydantic import BeforeValidator, ConfigDict, Field, field_serializer
 from langflow.schema.data import Data
 from langflow.schema.image import Image, get_file_paths, is_image_file
 
+
 def _timestamp_to_str(timestamp: datetime) -> str:
     return timestamp.strftime("%Y-%m-%d %H:%M:%S")
 
@@ -40,7 +41,7 @@ class Message(Data):
         self,
     ) -> BaseMessage:
         """
-        Converts the Data into a BaseMessage.
+        Converts the Data to a BaseMessage.
 
         Returns:
             BaseMessage: The converted BaseMessage.
