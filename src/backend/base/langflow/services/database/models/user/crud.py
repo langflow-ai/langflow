@@ -9,7 +9,6 @@ from sqlmodel import Session, select
 
 from langflow.services.database.models.user.model import User, UserUpdate
 from langflow.services.deps import get_session
-from langflow.utils.util import utc_now
 
 
 def get_user_by_username(db: Session, username: str) -> Union[User, None]:
@@ -38,7 +37,7 @@ def update_user(user_db: Optional[User], user: UserUpdate, db: Session = Depends
     if not changed:
         raise HTTPException(status_code=status.HTTP_304_NOT_MODIFIED, detail="Nothing to update")
 
-    user_db.updated_at = utc_now()
+    user_db.updated_at = datetime.now(timezone.utc)
     flag_modified(user_db, "updated_at")
 
     try:
@@ -52,7 +51,7 @@ def update_user(user_db: Optional[User], user: UserUpdate, db: Session = Depends
 
 def update_user_last_login_at(user_id: UUID, db: Session = Depends(get_session)):
     try:
-        user_data = UserUpdate(last_login_at=utc_now())  # type: ignore
+        user_data = UserUpdate(last_login_at=datetime.now(timezone.utc))  # type: ignore
         user = get_user_by_id(db, user_id)
         return update_user(user, user_data, db)
     except Exception:
