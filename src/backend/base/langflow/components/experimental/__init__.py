@@ -1,6 +1,6 @@
 from .AgentComponent import AgentComponent
 from .ClearMessageHistory import ClearMessageHistoryComponent
-from .ExtractDataFromData import ExtractKeyFromDataComponent
+from .ExtractKeyFromData import ExtractKeyFromDataComponent
 from .FlowTool import FlowToolComponent
 from .Listen import ListenComponent
 from .ListFlows import ListFlowsComponent
