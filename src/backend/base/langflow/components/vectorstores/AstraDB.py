@@ -163,4 +163,3 @@ class AstraDBVectorStoreComponent(CustomComponent):
             )
 
         return vector_store
-        return vector_store
