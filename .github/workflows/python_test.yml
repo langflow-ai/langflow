@@ -42,4 +42,4 @@ jobs:
           poetry install
       - name: Run unit tests
         run: |
-          make tests args="-n auto"
+          make unit_tests args="-n auto"
