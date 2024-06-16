@@ -9,7 +9,7 @@ from langflow.utils.util import unescape_string
 
 class SplitContentComponent(Component):
     display_name: str = "Split Content"
-    description: str = "Split textual content into chunks of a specified length."
+    description: str = "Split textual content into chunks based on specified criteria."
     icon = "split"
 
     inputs = [
@@ -35,7 +35,21 @@ class SplitContentComponent(Component):
         IntInput(
             name="chunk_size",
             display_name="Chunk Size",
-            info="The maximum length (in number of characters) of each chunk. Defaults to 0 (no chunking).",
+            info="The target length (in number of characters) of each chunk.",
+            value=0,
+            advanced=True
+        ),
+        IntInput(
+            name="min_chunk_size",
+            display_name="Minimum Chunk Size",
+            info="The minimum size of chunks. Smaller chunks will be merged.",
+            value=0,
+            advanced=True
+        ),
+        IntInput(
+            name="max_chunk_size",
+            display_name="Maximum Chunk Size",
+            info="The maximum size of chunks. Larger chunks will be split.",
             value=0,
             advanced=True
         ),
@@ -46,12 +60,14 @@ class SplitContentComponent(Component):
     ]
 
     def split_text(self) -> List[Data]:
-        # TODO: Add minimum chunk size - can be removed or merged
         data = self.data if isinstance(self.data, list) else [self.data]
         content_key = self.content_key
         separator = unescape_string(self.separator)
         chunk_size = self.chunk_size
+        min_chunk_size = self.min_chunk_size
+        max_chunk_size = self.max_chunk_size
         results = []
+        buffer = ""
 
         for row in data:
             content = row.data.get(content_key, '')
@@ -61,8 +77,17 @@ class SplitContentComponent(Component):
                 chunks = content.split(separator)
 
             for chunk in chunks:
-                if chunk.strip():
-                    results.append(Data(data={"parent": content, "text": chunk}))
+                buffer += chunk
+                while len(buffer) >= max_chunk_size:
+                    results.append(Data(data={"parent": content, "chunk": buffer[:max_chunk_size]}))
+                    buffer = buffer[max_chunk_size:]
+                if len(buffer) >= min_chunk_size:
+                    results.append(Data(data={"parent": content, "chunk": buffer}))
+                    buffer = ""
+
+        # Handle any remaining content that may not meet the min_chunk_size requirement
+        if buffer:
+            results.append(Data(data={"parent": content, "chunk": buffer}))
 
         self.status = results
         return results

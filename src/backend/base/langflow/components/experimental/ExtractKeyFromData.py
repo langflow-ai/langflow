@@ -2,7 +2,7 @@ from langflow.custom import CustomComponent
 from langflow.schema import Data
 
 
-class ExtractKeyFromdataComponent(CustomComponent):
+class ExtractKeyFromDataComponent(CustomComponent):
     display_name = "Extract Key From Data"
     description = "Extracts a key from a data."
     beta: bool = True

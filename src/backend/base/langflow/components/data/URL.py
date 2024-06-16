@@ -60,7 +60,7 @@ class URLComponent(Component):
 
     def fetch_content(self) -> Data:
         urls = [self.ensure_url(url.strip()) for url in self.urls if url.strip()]
-        loader = WebBaseLoader(web_paths=urls)
+        loader = WebBaseLoader(web_paths=urls, encoding="utf-8")
         docs = loader.load()
         data = [Data(content=doc.page_content, **doc.metadata) for doc in docs]
         self.status = data
