@@ -23,6 +23,11 @@ class HandleInput(BaseInputMixin, ListableInputMixin):
     field_type: Optional[SerializableFieldTypes] = FieldTypes.OTHER
 
 
+# class DataInput(HandleInput):
+#     input_types: list[str] = ["Data"]
+# ! Let's add this?
+
+
 class PromptInput(BaseInputMixin, ListableInputMixin):
     field_type: Optional[SerializableFieldTypes] = FieldTypes.PROMPT
 
@@ -38,29 +43,29 @@ class StrInput(BaseInputMixin, ListableInputMixin, DatabaseLoadMixin):  # noqa: 
 class TextInput(StrInput):
     input_types: list[str] = ["Data", "Message", "Text"]
 
-    @field_validator("value")
-    @classmethod
-    def validate_value(cls, v: Any, _info):
-        value = None
-        if isinstance(v, str):
-            value = v
-        elif isinstance(v, Message):
-            value = v.text
-        elif isinstance(v, Data):
-            if v.text_key in v.data:
-                value = v.data[v.text_key]
-            else:
-                keys = ", ".join(v.data.keys())
-                input_name = _info.data["name"]
-                raise ValueError(
-                    f"The input to '{input_name}' must contain the key '{v.text_key}'."
-                    f"You can set `text_key` to one of the following keys: {keys} or set the value using another Component."
-                )
-        else:
-            raise ValueError(f"Invalid input type {type(v)}")
-        if isinstance(value, str):
-            return value
-        raise ValueError(f"Invalid value type {type(value)}")
+    # @field_validator("value")
+    # @classmethod
+    # def validate_value(cls, v: Any, _info):
+    #     value = None
+    #     if isinstance(v, str):
+    #         value = v
+    #     elif isinstance(v, Message):
+    #         value = v.text
+    #     elif isinstance(v, Data):
+    #         if v.text_key in v.data:
+    #             value = v.data[v.text_key]
+    #         else:
+    #             keys = ", ".join(v.data.keys())
+    #             input_name = _info.data["name"]
+    #             raise ValueError(
+    #                 f"The input to '{input_name}' must contain the key '{v.text_key}'."
+    #                 f"You can set `text_key` to one of the following keys: {keys} or set the value using another Component."
+    #             )
+    #     else:
+    #         raise ValueError(f"Invalid input type {type(v)}")
+    #     if isinstance(value, str):
+    #         return value
+    #     raise ValueError(f"Invalid value type {type(value)}")
 
 
 class MultilineInput(BaseInputMixin):
@@ -108,16 +113,17 @@ class FileInput(BaseInputMixin, ListableInputMixin, FileMixin):
 
 
 InputTypes = Union[
-    StrInput,
-    SecretStrInput,
-    IntInput,
-    FloatInput,
     BoolInput,
-    NestedDictInput,
+    # DataInput, # ! Let's add this
     DictInput,
     DropdownInput,
     FileInput,
-    PromptInput,
-    MultilineInput,
+    FloatInput,
     HandleInput,
+    IntInput,
+    MultilineInput,
+    NestedDictInput,
+    PromptInput,
+    SecretStrInput,
+    StrInput,
 ]
