@@ -247,7 +247,6 @@ export const nodeColors: { [char: string]: string } = {
   models: "#ab11ab",
   model_specs: "#6344BE",
   chains: "#FE7500",
-  Document: "#7AAE42",
   list: "#9AAE42",
   agents: "#903BBE",
   tools: "#FF3434",
@@ -267,14 +266,18 @@ export const nodeColors: { [char: string]: string } = {
   experimental: "#E6277A",
   langchain_utilities: "#31A3CC",
   output_parsers: "#E6A627",
-  str: "#4367BF",
-  Text: "#4367BF",
-  retrievers: "#e6b25a",
-  unknown: "#9CA3AF",
   // custom_components: "#ab11ab",
-  Data: "#9CA3AF",
-  Message: "#4367BF",
-  BaseLanguageModel: "#ab11ab",
+  retrievers: "#e6b25a",
+  //
+  str: "#2563eb",
+  Text: "#2563eb",
+  unknown: "#9CA3AF",
+  Document: "#65a30d",
+  Data: "#dc2626",
+  Message: "#4f46e5",
+  Prompt: "#7c3aed",
+  Embeddings: "#10b981",
+  BaseLanguageModel: "#c026d3",
 };
 
 export const nodeNames: { [char: string]: string } = {

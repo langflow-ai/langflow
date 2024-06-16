@@ -12,7 +12,7 @@ class ParseDataComponent(Component):
 
     inputs = [
         HandleInput(
-            name="data", display_name="Data", info="The data to convert to text.", input_types=["Message", "Data"]
+            name="data", display_name="Data", info="The data to convert to text.", input_types=["Data"]
         ),
         MultilineInput(
             name="template",
@@ -27,7 +27,7 @@ class ParseDataComponent(Component):
 
     def parse_data_to_text(self) -> Text:
         data = self.data if isinstance(self.data, list) else [self.data]
-        template = self.template or "Text: {text}"
+        template = self.template
 
         result_string = data_to_text(template, data)
         self.status = result_string
