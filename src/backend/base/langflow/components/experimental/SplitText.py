@@ -46,6 +46,7 @@ class SplitContentComponent(Component):
     ]
 
     def split_text(self) -> List[Data]:
+        # TODO: Add minimum chunk size - can be removed or merged
         data = self.data if isinstance(self.data, list) else [self.data]
         content_key = self.content_key
         separator = unescape_string(self.separator)
