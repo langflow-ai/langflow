@@ -14,6 +14,7 @@ from langflow.services.database.models.api_key.model import ApiKeyRead
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.flow import FlowCreate, FlowRead
 from langflow.services.database.models.user import UserRead
+from langflow.utils.util import utc_now
 
 
 class BuildStatus(Enum):
@@ -263,7 +264,7 @@ class VertexBuildResponse(BaseModel):
     """JSON string of the params."""
     data: ResultDataResponse
     """Mapping of vertex ids to result dict containing the param name and result value."""
-    timestamp: Optional[datetime] = Field(default_factory=lambda: datetime.now(timezone.utc))
+    timestamp: Optional[datetime] = Field(default_factory=lambda: utc_now())
     """Timestamp of the build."""
 
 

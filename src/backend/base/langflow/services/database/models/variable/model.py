@@ -4,12 +4,11 @@ from uuid import UUID, uuid4
 
 from sqlmodel import JSON, Column, DateTime, Field, Relationship, SQLModel, func
 
+from langflow.utils.util import utc_now
+
+
 if TYPE_CHECKING:
     from langflow.services.database.models.user.model import User
-
-
-def utc_now():
-    return datetime.now(timezone.utc)
 
 
 class VariableBase(SQLModel):

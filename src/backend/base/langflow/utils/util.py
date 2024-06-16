@@ -4,6 +4,7 @@ import re
 from functools import wraps
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
+from datetime import datetime, timezone
 
 from docstring_parser import parse
 
@@ -12,6 +13,13 @@ from langflow.services.deps import get_settings_service
 from langflow.template.frontend_node.constants import FORCE_SHOW_FIELDS
 from langflow.utils import constants
 from langflow.utils.logger import logger
+
+
+
+def utc_now(stringify=False):
+    if stringify:
+        return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+    return datetime.now(timezone.utc)
 
 
 def unescape_string(s: str):

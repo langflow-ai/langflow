@@ -4,6 +4,8 @@ from uuid import UUID, uuid4
 
 from sqlmodel import Field, Relationship, SQLModel
 
+from langflow.utils.util import utc_now
+
 if TYPE_CHECKING:
     from langflow.services.database.models.api_key import ApiKey
     from langflow.services.database.models.variable import Variable
@@ -18,8 +20,8 @@ class User(SQLModel, table=True):
     profile_image: Optional[str] = Field(default=None, nullable=True)
     is_active: bool = Field(default=False)
     is_superuser: bool = Field(default=False)
-    create_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    create_at: datetime = Field(default_factory=lambda: utc_now())
+    updated_at: datetime = Field(default_factory=lambda: utc_now())
     last_login_at: Optional[datetime] = Field(default=None, nullable=True)
     api_keys: list["ApiKey"] = Relationship(
         back_populates="user",
