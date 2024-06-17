@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING, Any, List, Optional
 
 from loguru import logger
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from langflow.schema.schema import INPUT_FIELD_NAME
 from langflow.services.monitor.utils import log_message
@@ -18,6 +18,17 @@ class SourceHandle(BaseModel):
     output_types: Optional[List[str]] = Field(
         default_factory=list, description="List of output types for the source handle."
     )
+
+    @field_validator("name", mode="before")
+    @classmethod
+    def validate_name(cls, v, _info):
+        if _info.data["dataType"] == "GroupNode":
+            # 'OpenAIModel-u4iGV_text_output'
+            splits = v.split("_", 1)
+            if len(splits) != 2:
+                raise ValueError(f"Invalid source handle name {v}")
+            v = splits[1]
+        return v
 
 
 class TargetHandle(BaseModel):
