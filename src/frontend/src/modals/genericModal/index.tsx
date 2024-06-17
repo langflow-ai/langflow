@@ -207,8 +207,7 @@ export default function GenericModal({
       <BaseModal.Content overflowHidden>
         <div
           className={classNames(
-            !isEdit ? "rounded-lg border" : "",
-            "flex h-full w-full"
+            "rounded-lg border flex h-full w-full"
           )}
         >
           {type === TypeModal.PROMPT && isEdit && !readonly ? (
