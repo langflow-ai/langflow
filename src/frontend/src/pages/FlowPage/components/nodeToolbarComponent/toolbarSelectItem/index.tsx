@@ -19,7 +19,7 @@ export default function ToolbarSelectItem({
     }
   });
   const filteredShortcut = fixedShortcut.filter(
-    (key) => !key.toLowerCase().includes("shift")
+    (key) => !key.toLowerCase().includes("shift"),
   );
   let shortcutWPlus: string[] = [];
   if (!hasShift) shortcutWPlus = filteredShortcut.join("+").split(" ");

@@ -48,7 +48,7 @@ export type shortcutsStoreType = {
     shortcut: string;
   }>;
   setShortcuts: (
-    newShortcuts: Array<{ name: string; shortcut: string }>
+    newShortcuts: Array<{ name: string; shortcut: string }>,
   ) => void;
   getShortcutsFromStorage: () => void;
 };

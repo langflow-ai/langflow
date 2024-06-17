@@ -60,7 +60,7 @@ test("TextInputOutputComponent", async ({ page }) => {
   // Click and hold on the first element
   await page
     .locator(
-      '//*[@id="react-flow-id"]/div/div[1]/div[1]/div/div[2]/div[1]/div/div[2]/div[6]/button/div/div'
+      '//*[@id="react-flow-id"]/div/div[1]/div[1]/div/div[2]/div[1]/div/div[2]/div[6]/button/div/div',
     )
     .hover();
   await page.mouse.down();
@@ -68,7 +68,7 @@ test("TextInputOutputComponent", async ({ page }) => {
   // Move to the second element
   await page
     .locator(
-      '//*[@id="react-flow-id"]/div/div[1]/div[1]/div/div[2]/div[2]/div/div[2]/div[3]/div/button/div/div'
+      '//*[@id="react-flow-id"]/div/div[1]/div[1]/div/div[2]/div[2]/div/div[2]/div[3]/div/button/div/div',
     )
     .hover();
 
@@ -92,7 +92,7 @@ test("TextInputOutputComponent", async ({ page }) => {
   // Click and hold on the first element
   await page
     .locator(
-      '//*[@id="react-flow-id"]/div/div[1]/div[1]/div/div[2]/div[2]/div/div[2]/div[13]/button/div/div'
+      '//*[@id="react-flow-id"]/div/div[1]/div[1]/div/div[2]/div[2]/div/div[2]/div[13]/button/div/div',
     )
     .hover();
   await page.mouse.down();
@@ -100,7 +100,7 @@ test("TextInputOutputComponent", async ({ page }) => {
   // Move to the second element
   await page
     .locator(
-      '//*[@id="react-flow-id"]/div/div[1]/div[1]/div/div[2]/div[3]/div/div[2]/div[3]/div/button/div/div'
+      '//*[@id="react-flow-id"]/div/div[1]/div[1]/div/div[2]/div[3]/div/div[2]/div[3]/div/button/div/div',
     )
     .hover();
 

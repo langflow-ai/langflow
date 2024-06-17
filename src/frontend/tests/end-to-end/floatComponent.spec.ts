@@ -68,32 +68,32 @@ test("FloatComponent", async ({ page }) => {
 
   await page.getByTestId("showmirostat_eta").click();
   expect(
-    await page.locator('//*[@id="showmirostat_eta"]').isChecked()
+    await page.locator('//*[@id="showmirostat_eta"]').isChecked(),
   ).toBeTruthy();
 
   await page.getByTestId("showmirostat_eta").click();
   expect(
-    await page.locator('//*[@id="showmirostat_eta"]').isChecked()
+    await page.locator('//*[@id="showmirostat_eta"]').isChecked(),
   ).toBeFalsy();
 
   await page.getByTestId("showmirostat_eta").click();
   expect(
-    await page.locator('//*[@id="showmirostat_eta"]').isChecked()
+    await page.locator('//*[@id="showmirostat_eta"]').isChecked(),
   ).toBeTruthy();
 
   await page.getByTestId("showmirostat_eta").click();
   expect(
-    await page.locator('//*[@id="showmirostat_eta"]').isChecked()
+    await page.locator('//*[@id="showmirostat_eta"]').isChecked(),
   ).toBeFalsy();
 
   await page.getByTestId("showmirostat_tau").click();
   expect(
-    await page.locator('//*[@id="showmirostat_tau"]').isChecked()
+    await page.locator('//*[@id="showmirostat_tau"]').isChecked(),
   ).toBeTruthy();
 
   await page.getByTestId("showmirostat_tau").click();
   expect(
-    await page.locator('//*[@id="showmirostat_tau"]').isChecked()
+    await page.locator('//*[@id="showmirostat_tau"]').isChecked(),
   ).toBeFalsy();
 
   await page.getByText("Save Changes", { exact: true }).click();
@@ -109,7 +109,7 @@ test("FloatComponent", async ({ page }) => {
     // showtemperature
     await page.locator('//*[@id="showtemperature"]').click();
     expect(
-      await page.locator('//*[@id="showtemperature"]').isChecked()
+      await page.locator('//*[@id="showtemperature"]').isChecked(),
     ).toBeTruthy();
 
     await page.getByText("Save Changes", { exact: true }).click();

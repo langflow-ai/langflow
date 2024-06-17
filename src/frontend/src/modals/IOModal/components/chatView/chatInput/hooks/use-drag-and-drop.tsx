@@ -10,7 +10,7 @@ const useDragAndDrop = (
   setIsDragging,
   setFiles,
   currentFlowId,
-  setErrorData
+  setErrorData,
 ) => {
   const dragOver = (e) => {
     e.preventDefault();

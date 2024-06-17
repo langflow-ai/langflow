@@ -5,7 +5,7 @@ const useHandleNodeClass = (
   name,
   takeSnapshot,
   setNode,
-  updateNodeInternals
+  updateNodeInternals,
 ) => {
   const handleNodeClass = (newNodeClass, code) => {
     if (!data.node) return;

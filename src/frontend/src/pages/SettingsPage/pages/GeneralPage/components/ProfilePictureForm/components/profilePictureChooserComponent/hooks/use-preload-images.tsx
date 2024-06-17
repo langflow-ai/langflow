@@ -14,8 +14,8 @@ const usePreloadImages = (profilePictures, setImagesLoaded) => {
             img.src = src;
             img.onload = resolve;
             img.onerror = resolve;
-          })
-      )
+          }),
+      ),
     );
   };
 
@@ -26,9 +26,9 @@ const usePreloadImages = (profilePictures, setImagesLoaded) => {
     Object.keys(profilePictures).flatMap((folder) =>
       profilePictures[folder].map((path) =>
         imageArray.push(
-          `${firstUrl}${BASE_URL_API}files/profile_pictures/${folder}/${path}`
-        )
-      )
+          `${firstUrl}${BASE_URL_API}files/profile_pictures/${folder}/${path}`,
+        ),
+      ),
     );
 
     preloadImages(imageArray).then(() => {

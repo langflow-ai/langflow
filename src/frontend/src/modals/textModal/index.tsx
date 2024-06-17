@@ -10,14 +10,14 @@ import JsonView from "react18-json-view";
 import "react18-json-view/src/dark.css";
 import "react18-json-view/src/style.css";
 import IconComponent from "../../components/genericIconComponent";
+import { Button } from "../../components/ui/button";
 import {
   CODE_DICT_DIALOG_SUBTITLE,
   TEXT_DIALOG_SUBTITLE,
 } from "../../constants/constants";
+import TextOutputView from "../../shared/components/textOutputView";
 import { useDarkStore } from "../../stores/darkStore";
 import BaseModal from "../baseModal";
-import TextOutputView from "../../shared/components/textOutputView";
-import { Button } from "../../components/ui/button";
 
 export default function TextModal({
   children,

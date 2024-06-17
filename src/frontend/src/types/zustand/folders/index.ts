@@ -4,7 +4,7 @@ export type FoldersStoreType = {
   folders: FolderType[];
   getFoldersApi: (
     refetch?: boolean,
-    startupApplication?: boolean
+    startupApplication?: boolean,
   ) => Promise<void>;
   setFolders: (folders: FolderType[]) => void;
   isLoadingFolders: boolean;

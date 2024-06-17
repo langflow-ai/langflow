@@ -14,13 +14,13 @@ import { useGlobalVariablesStore } from "../../../../stores/globalVariablesStore
 
 export default function GlobalVariablesPage() {
   const globalVariablesEntries = useGlobalVariablesStore(
-    (state) => state.globalVariablesEntries
+    (state) => state.globalVariablesEntries,
   );
   const removeGlobalVariable = useGlobalVariablesStore(
-    (state) => state.removeGlobalVariable
+    (state) => state.removeGlobalVariable,
   );
   const globalVariables = useGlobalVariablesStore(
-    (state) => state.globalVariables
+    (state) => state.globalVariables,
   );
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const getVariableId = useGlobalVariablesStore((state) => state.getVariableId);
