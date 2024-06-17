@@ -15,7 +15,7 @@ from langflow.helpers.data import docs_to_data
 from loguru import logger
 
 
-class FAISSVectorStoreComponent(Component):
+class FaissVectorStoreComponent(Component):
     """
     FAISS Vector Store with search capabilities
     """

@@ -1,6 +1,6 @@
 from typing import List, Optional
 
-from langflow.components.vectorstores.AstraDB import AstraDBVectorStoreComponent
+from langflow.components.vectorstores.AstraDB import AstraVectorStoreComponent
 from langflow.components.vectorstores.base.model import LCVectorStoreComponent
 from langflow.field_typing import Embeddings, Text
 from langflow.schema import Data
@@ -120,7 +120,7 @@ class AstraDBSearchComponent(LCVectorStoreComponent):
         metadata_indexing_exclude: Optional[List[str]] = None,
         collection_indexing_policy: Optional[dict] = None,
     ) -> List[Data]:
-        vector_store = AstraDBVectorStoreComponent().build(
+        vector_store = AstraVectorStoreComponent().build(
             embedding=embedding,
             collection_name=collection_name,
             token=token,

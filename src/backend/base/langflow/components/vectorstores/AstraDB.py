@@ -14,7 +14,7 @@ from langflow.field_typing import Embeddings
 
 from loguru import logger
 
-class AstraDBComponent(Component):
+class AstraVectorStoreComponent(Component):
     display_name: str = "Astra DB Vector Store"
     description: str = "Implementation of Vector Store using Astra DB with search capabilities"
     documentation: str = "https://python.langchain.com/docs/integrations/vectorstores/astradb"

@@ -11,7 +11,7 @@ from langflow.inputs import BoolInput, IntInput, StrInput, HandleInput
 from langflow.template import Output
 from langflow.helpers.data import docs_to_data
 
-class MongoDBAtlasComponent(Component):
+class MongoVectorStoreComponent(Component):
     display_name = "MongoDB Atlas"
     description = "MongoDB Atlas Vector Store with search capabilities"
     documentation = "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/mongodb_atlas"
