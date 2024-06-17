@@ -78,6 +78,16 @@ jobs:
         with:
           context: .
           push: false
+          load: true
           file: ./docker/build_and_push.Dockerfile
           platforms: "linux/amd64,linux/arm64/v8"
           tags: langflowai/langflow:latest-dev
+      - name: Run Container
+        run: |
+          docker run -d --name test_container -p 8000:8000 langflowai/langflow:latest-dev
+      - name: Wait for Container to Start and Check Health
+        run: |
+          timeout 40 bash -c 'until curl -f http://0.0.0.0:8000/health; do sleep 1; done' || (echo "Server did not start in time" && docker logs test_container && docker stop test_container && docker rm test_container && exit 1)
+      - name: Stop and Remove Container
+        run: |
+          docker rm -f test_container
