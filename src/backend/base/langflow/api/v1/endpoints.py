@@ -38,6 +38,8 @@ from langflow.services.task.service import TaskService
 if TYPE_CHECKING:
     from langflow.services.settings.manager import SettingsService
 
+all_types_dict = {}
+
 router = APIRouter(tags=["Base"])
 
 
@@ -49,7 +51,9 @@ def get_all(
 
     logger.debug("Building langchain types dict")
     try:
-        all_types_dict = get_all_types_dict(settings_service.settings.components_path)
+        global all_types_dict
+        if len(all_types_dict) == 0:
+            all_types_dict = get_all_types_dict(settings_service.settings.components_path)
         return all_types_dict
     except Exception as exc:
         logger.exception(exc)
