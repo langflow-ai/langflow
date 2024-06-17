@@ -73,15 +73,15 @@ class SplitTextComponent(Component):
             for chunk in chunks:
                 buffer += chunk
                 while len(buffer) >= max_chunk_size:
-                    results.append(Data(data={"parent": text, "chunk": buffer[:max_chunk_size]}))
+                    results.append(Data(data={"parent": text, "text": buffer[:max_chunk_size]}))
                     buffer = buffer[max_chunk_size:]
                 if len(buffer) >= min_chunk_size:
-                    results.append(Data(data={"parent": text, "chunk": buffer}))
+                    results.append(Data(data={"parent": text, "text": buffer}))
                     buffer = ""
 
         # Handle any remaining text that may not meet the min_chunk_size requirement
         if buffer:
-            results.append(Data(data={"parent": text, "chunk": buffer}))
+            results.append(Data(data={"parent": text, "text": buffer}))
 
         self.status = results
         return results
