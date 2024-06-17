@@ -1,6 +1,6 @@
 # from langflow.field_typing import Data
 from langflow.custom import Component
-from langflow.inputs import StrInput
+from langflow.inputs import TextInput
 from langflow.schema import Data
 from langflow.template import Output
 
@@ -12,7 +12,7 @@ class CustomComponent(Component):
     icon = "custom_components"
 
     inputs = [
-        StrInput(name="input_value", display_name="Input Value", value="Hello, World!"),
+        TextInput(name="input_value", display_name="Input Value", value="Hello, World!"),
     ]
 
     outputs = [

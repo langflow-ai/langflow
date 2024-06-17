@@ -1,6 +1,5 @@
 from langflow.custom import Component
-from langflow.field_typing import Text
-from langflow.inputs import StrInput
+from langflow.field_typing import Text, TextInput
 from langflow.template import Output
 
 
@@ -10,17 +9,17 @@ class CombineTextComponent(Component):
     icon = "merge"
 
     inputs = [
-        StrInput(
+        TextInput(
             name="text1",
             display_name="First Text",
             info="The first text input to concatenate.",
         ),
-        StrInput(
+        TextInput(
             name="text2",
             display_name="Second Text",
             info="The second text input to concatenate.",
         ),
-        StrInput(
+        TextInput(
             name="delimiter",
             display_name="Delimiter",
             info="A string used to separate the two text inputs. Defaults to a whitespace.",

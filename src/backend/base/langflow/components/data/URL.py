@@ -1,11 +1,11 @@
+import re
+
 from langchain_community.document_loaders.web_base import WebBaseLoader
 
 from langflow.custom import Component
-from langflow.inputs import StrInput
+from langflow.inputs import TextInput
 from langflow.schema import Data
 from langflow.template import Output
-
-import re
 
 
 class URLComponent(Component):
@@ -14,7 +14,7 @@ class URLComponent(Component):
     icon = "layout-template"
 
     inputs = [
-        StrInput(
+        TextInput(
             name="urls",
             display_name="URLs",
             info="Enter one or more URLs, separated by commas.",

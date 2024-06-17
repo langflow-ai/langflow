@@ -1,6 +1,6 @@
 from langflow.custom import Component
 from langflow.field_typing import Text
-from langflow.inputs import BoolInput, DropdownInput, StrInput
+from langflow.inputs import BoolInput, DropdownInput, TextInput
 from langflow.template import Output
 
 
@@ -10,12 +10,12 @@ class TextOperatorComponent(Component):
     icon = "equal"
 
     inputs = [
-        StrInput(
+        TextInput(
             name="input_text",
             display_name="Input Text",
             info="The primary text input for the operation.",
         ),
-        StrInput(
+        TextInput(
             name="match_text",
             display_name="Match Text",
             info="The text input to compare against.",
@@ -33,13 +33,13 @@ class TextOperatorComponent(Component):
             value=False,
             advanced=True,
         ),
-        StrInput(
+        TextInput(
             name="true_output",
             display_name="True Output",
             info="The output to return or display when the comparison is true.",
             advanced=True,
         ),
-        StrInput(
+        TextInput(
             name="false_output",
             display_name="False Output",
             info="The output to return or display when the comparison is false.",

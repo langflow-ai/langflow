@@ -1,11 +1,11 @@
 from typing import List
 
 from langflow.custom import Component
-from langflow.inputs import DropdownInput, StrInput, IntInput
-from langflow.template import Output
+from langflow.field_typing import Text
+from langflow.inputs import DropdownInput, IntInput, TextInput
 from langflow.memory import get_messages
 from langflow.schema import Data
-from langflow.field_typing import Text
+from langflow.template import Output
 
 
 class MemoryComponent(Component):
@@ -22,7 +22,7 @@ class MemoryComponent(Component):
             info="Type of sender.",
             advanced=True,
         ),
-        StrInput(
+        TextInput(
             name="sender_name",
             display_name="Sender Name",
             info="Name of the sender.",
@@ -35,7 +35,7 @@ class MemoryComponent(Component):
             info="Number of messages to retrieve.",
             advanced=True,
         ),
-        StrInput(
+        TextInput(
             name="session_id",
             display_name="Session ID",
             info="Session ID of the chat history.",

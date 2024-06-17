@@ -1,6 +1,6 @@
 from langflow.base.io.text import TextComponent
 from langflow.field_typing import Text
-from langflow.inputs import StrInput
+from langflow.inputs import TextInput
 from langflow.template import Output
 
 
@@ -10,7 +10,7 @@ class TextInputComponent(TextComponent):
     icon = "type"
 
     inputs = [
-        StrInput(
+        TextInput(
             name="input_value",
             display_name="Text",
             info="Text to be passed as input.",

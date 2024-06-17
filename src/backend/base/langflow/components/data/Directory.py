@@ -2,7 +2,7 @@ from typing import List, Optional
 
 from langflow.base.data.utils import parallel_load_data, parse_text_file_to_data, retrieve_file_paths
 from langflow.custom import Component
-from langflow.inputs import StrInput, IntInput, BoolInput
+from langflow.inputs import TextInput, IntInput, BoolInput
 from langflow.template import Output
 from langflow.schema import Data
 
@@ -13,12 +13,12 @@ class DirectoryComponent(Component):
     icon = "folder"
 
     inputs = [
-        StrInput(
+        TextInput(
             name="path",
             display_name="Path",
             info="Path to the directory to load files from.",
         ),
-        StrInput(
+        TextInput(
             name="types",
             display_name="Types",
             info="File types to load. Leave empty to load all types.",
