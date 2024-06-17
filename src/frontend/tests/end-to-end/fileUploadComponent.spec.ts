@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import path from "path";
 
-test("dropDownComponent", async ({ page }) => {
+test("should be able to upload a file", async ({ page }) => {
   await page.goto("/");
   await page.waitForTimeout(2000);
 
