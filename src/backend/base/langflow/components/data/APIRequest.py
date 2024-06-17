@@ -79,7 +79,7 @@ class APIRequestComponent(Component):
         return build_config
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
-        if field_name == "curl" and field_value is not None:
+        if field_name == "curl" and field_value:
             build_config = self.parse_curl(field_value, build_config)
         return build_config
 
