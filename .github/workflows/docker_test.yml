@@ -75,7 +75,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
       - name: Build image
         run: |
-          docker build -t langflowai/langflow:latest-dev \
+          docker buildx build -t langflowai/langflow:latest-dev \
             --platform linux/amd64,linux/arm64/v8 \
             -f docker/build_and_push.Dockerfile \
             .
