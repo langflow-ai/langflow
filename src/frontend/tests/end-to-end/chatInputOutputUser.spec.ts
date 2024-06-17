@@ -150,7 +150,7 @@ test("user must be able to see output inspection", async ({ page }) => {
 
   await page.getByTestId("button_run_chat output").last().click();
 
-  await page.waitForTimeout(8000);
+  await page.waitForTimeout(5000);
 
   await page.getByTestId("icon-ScanEye").nth(4).click();
 
@@ -235,6 +235,6 @@ test("user must be able to send an image on chat", async ({ page }) => {
   await page.getByText("chain.png").isVisible();
 
   await page.getByText("Close", { exact: true }).click();
-  await page.getByTestId("icon-ScanEye").last().click();
+  await page.getByTestId("icon-ScanEye").nth(4).click();
   await page.getByText("Restart").isHidden();
 });
