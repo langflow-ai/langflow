@@ -1452,6 +1452,7 @@ export const createNewFlow = (
     id: "",
     is_component: flow?.is_component ?? false,
     folder_id: folderId,
+    endpoint_name:flow?.endpoint_name ?? undefined,
   };
 };
 
