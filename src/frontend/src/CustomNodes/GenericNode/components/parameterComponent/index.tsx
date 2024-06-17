@@ -486,7 +486,7 @@ export default function ParameterComponent({
                   // Commenting this out until we have a better
                   // way to display
                   // (data.node?.template[name]?.refresh ? "w-5/6 " : "") +
-                  "flex-grow"
+                  "flex-grow mt-2"
                 }
               >
                 <InputListComponent
