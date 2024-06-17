@@ -104,6 +104,8 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Wait for Docker Hub to propagate (for backend)
+        run: sleep 120
       - name: Build and push ${{ matrix.component }}
         uses: docker/build-push-action@v5
         with:
