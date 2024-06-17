@@ -1,6 +1,6 @@
 from langflow.base.io.chat import ChatComponent
 from langflow.field_typing import Text
-from langflow.inputs import BoolInput, DropdownInput, StrInput
+from langflow.inputs import DropdownInput, StrInput
 from langflow.schema.message import Message
 from langflow.template import Output
 
@@ -26,7 +26,7 @@ class ChatOutput(ChatComponent):
         ),
         StrInput(name="sender_name", display_name="Sender Name", info="Name of the sender.", value="AI", advanced=True),
         StrInput(name="session_id", display_name="Session ID", info="Session ID for the message.", advanced=True),
-        BoolInput(
+        StrInput(
             name="data_template",
             display_name="Data Template",
             value="{text}",
