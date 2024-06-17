@@ -113,8 +113,6 @@ class Vertex:
         self.build_times.append(time)
 
     def set_result(self, result: ResultData) -> None:
-        from pprint import pprint
-        pprint(result.model_dump())
         self.result = result
 
     def get_built_result(self):
