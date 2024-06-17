@@ -17,11 +17,11 @@ class Log(TypedDict):
     type: str
 
 
-def build_logs_from_artifacts(artifacts: dict) -> dict:
+def build_logs(vertex) -> dict:
     logs = {}
-    for key in artifacts:
-        message = artifacts[key]["raw"]
-        _type = artifacts[key]["type"]
+    for key in vertex.artifacts:
+        message = vertex.artifacts[key]["raw"]
+        _type = vertex.artifacts[key]["type"]
 
         if "stream_url" in message and "type" in message:
             stream_url = StreamURL(location=message["stream_url"])
@@ -31,7 +31,3 @@ def build_logs_from_artifacts(artifacts: dict) -> dict:
 
         logs[key] = [log]
     return logs
-
-
-def build_log_from_raw_and_type(raw: Any, log_type: str) -> Log:
-    return Log(message=raw, type=log_type)

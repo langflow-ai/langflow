@@ -13,7 +13,7 @@ from langflow.graph.utils import UnbuiltObject, UnbuiltResult
 from langflow.interface.initialize import loading
 from langflow.interface.listing import lazy_load_dict
 from langflow.schema.artifact import ArtifactType
-from langflow.schema.schema import INPUT_FIELD_NAME, Log, build_log_from_raw_and_type
+from langflow.schema.schema import INPUT_FIELD_NAME, Log, build_logs
 from langflow.services.deps import get_storage_service
 from langflow.services.monitor.utils import log_transaction
 from langflow.utils.constants import DIRECT_TYPES
@@ -113,6 +113,8 @@ class Vertex:
         self.build_times.append(time)
 
     def set_result(self, result: ResultData) -> None:
+        from pprint import pprint
+        pprint(result.model_dump())
         self.result = result
 
     def get_built_result(self):
@@ -658,13 +660,11 @@ class Vertex:
             if len(result) == 2:
                 self._built_object, self.artifacts = result
             elif len(result) == 3:
+                import pdb; pdb.set_trace()
                 self._custom_component, self._built_object, self.artifacts = result
                 self.artifacts_raw = self.artifacts.get("raw", None)
                 self.artifacts_type = self.artifacts.get("type", None) or ArtifactType.UNKNOWN.value
-                self.logs[self.outputs[0]["name"]] = build_log_from_raw_and_type(
-                    self.artifacts_raw, self.artifacts_type
-                )
-
+                self.logs = build_log(self)
         else:
             self._built_object = result
 
