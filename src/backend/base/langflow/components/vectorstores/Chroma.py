@@ -1,10 +1,9 @@
 from copy import deepcopy
-from typing import List, Optional, Union
+from typing import List
 
 import chromadb
 from chromadb.config import Settings
 from langchain.vectorstores import Chroma
-from langchain.embeddings.base import Embeddings
 from langchain.schema import BaseRetriever
 
 from langflow.base.vectorstores.utils import chroma_collection_to_data
