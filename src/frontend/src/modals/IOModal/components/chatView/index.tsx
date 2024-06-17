@@ -4,6 +4,7 @@ import { Button } from "../../../../components/ui/button";
 import {
   CHAT_FIRST_INITIAL_TEXT,
   CHAT_SECOND_INITIAL_TEXT,
+  EMPTY_INPUT_SEND_MESSAGE,
 } from "../../../../constants/constants";
 import { deleteFlowPool } from "../../../../controllers/API";
 import useAlertStore from "../../../../stores/alertStore";
@@ -79,9 +80,7 @@ export default function ChatView({
           return {
             isSend: !is_ai,
             message:
-              message === "" || !message
-                ? "No input message provided."
-                : message,
+              message === "" || !message ? EMPTY_INPUT_SEND_MESSAGE : message,
             sender_name,
             componentId: output.id,
             stream_url: stream_url,
