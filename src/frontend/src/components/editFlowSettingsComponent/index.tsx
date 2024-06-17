@@ -4,6 +4,7 @@ import { Label } from "../../components/ui/label";
 import { Textarea } from "../../components/ui/textarea";
 import { InputProps } from "../../types/components";
 import { cn } from "../../utils/utils";
+import useFlowsManagerStore from "../../stores/flowsManagerStore";
 
 export const EditFlowSettings: React.FC<InputProps> = ({
   name,
@@ -17,6 +18,8 @@ export const EditFlowSettings: React.FC<InputProps> = ({
 }: InputProps): JSX.Element => {
   const [isMaxLength, setIsMaxLength] = useState(false);
   const [isEndpointNameValid, setIsEndpointNameValid] = useState(true);
+  const [isInvalidName, setIsInvalidName] = useState(false);
+  const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
 
   const handleNameChange = (event: ChangeEvent<HTMLInputElement>) => {
     const { value } = event.target;
@@ -25,6 +28,19 @@ export const EditFlowSettings: React.FC<InputProps> = ({
     } else {
       setIsMaxLength(false);
     }
+    let invalid = false;
+    for (let i = 0; i < invalidNameList!.length; i++) {
+      if (value === invalidNameList![i]) {
+        invalid = true;
+        break;
+      } 
+      if (value === currentFlow?.name) {
+        invalid = true;
+        break;
+      } 
+      invalid = false;
+    }
+    setIsInvalidName(invalid);
     setName!(value);
   };
 
@@ -54,6 +70,9 @@ export const EditFlowSettings: React.FC<InputProps> = ({
           <span className="font-medium">Name{setName ? "" : ":"}</span>{" "}
           {isMaxLength && (
             <span className="edit-flow-span">Character limit reached</span>
+          )}
+          {isInvalidName && (
+            <span className="edit-flow-span">Invalid name</span>
           )}
         </div>
         {setName ? (
