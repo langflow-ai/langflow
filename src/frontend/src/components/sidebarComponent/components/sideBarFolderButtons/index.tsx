@@ -104,6 +104,57 @@ const SideBarFoldersButtonsComponent = ({
     folders.map((obj) => ({ name: obj.name, edit: false }));
   }, [folders]);
 
+
+  const handleEditNameFolder = async (item) => {
+    const newEditFolders = editFolders.map((obj) => {
+      if (obj.name === item.name) {
+        return { name: item.name, edit: false };
+      }
+      return { name: obj.name, edit: false };
+    });
+    setEditFolderName(newEditFolders);
+    if (foldersNames[item.name].trim() !== "") {
+      setFoldersNames((old) => ({
+        ...old,
+        [item.name]: foldersNames[item.name],
+      }));
+      const body = {
+        ...item,
+        name: foldersNames[item.name],
+        flows: item.flows?.length > 0 ? item.flows : [],
+        components:
+          item.components?.length > 0
+            ? item.components
+            : [],
+      };
+      const updatedFolder = await updateFolder(
+        body,
+        item.id!
+      );
+      
+      const updatedFolderIndex = folders.findIndex(
+        (f) => f.id === updatedFolder.id
+      );
+
+      const updateFolders = [...folders];
+      updateFolders[updatedFolderIndex] = updatedFolder;
+      
+      setFolders(updateFolders);
+      setFoldersNames({});
+      setEditFolderName(
+        folders.map((obj) => ({
+          name: obj.name,
+          edit: false,
+        }))
+      );
+    } else {
+      setFoldersNames((old) => ({
+        ...old,
+        [item.name]: item.name,
+      }));
+    }
+  }
+
   return (
     <>
       <div className="flex shrink-0 items-center justify-between gap-2">
@@ -227,49 +278,8 @@ const SideBarFoldersButtonsComponent = ({
                           handleKeyDown(e, e.key, "");
                         }}
                         autoFocus={true}
-                        onBlur={async () => {
-                          const newEditFolders = editFolders.map((obj) => {
-                            if (obj.name === item.name) {
-                              return { name: item.name, edit: false };
-                            }
-                            return { name: obj.name, edit: false };
-                          });
-                          setEditFolderName(newEditFolders);
-                          if (foldersNames[item.name].trim() !== "") {
-                            setFoldersNames((old) => ({
-                              ...old,
-                              [item.name]: foldersNames[item.name],
-                            }));
-                            const body = {
-                              ...item,
-                              name: foldersNames[item.name],
-                              flows: item.flows?.length > 0 ? item.flows : [],
-                              components:
-                                item.components?.length > 0
-                                  ? item.components
-                                  : [],
-                            };
-                            const updatedFolder = await updateFolder(
-                              body,
-                              item.id!
-                            );
-                            const updateFolders = folders.filter(
-                              (f) => f.name !== item.name
-                            );
-                            setFolders([...updateFolders, updatedFolder]);
-                            setFoldersNames({});
-                            setEditFolderName(
-                              folders.map((obj) => ({
-                                name: obj.name,
-                                edit: false,
-                              }))
-                            );
-                          } else {
-                            setFoldersNames((old) => ({
-                              ...old,
-                              [item.name]: item.name,
-                            }));
-                          }
+                        onBlur={async () => { handleEditNameFolder(item)
+                          
                         }}
                         value={foldersNames[item.name]}
                         id={`input-folder-${item.name}`}
