@@ -26,8 +26,18 @@ export default function OutputComponent({
   const setNode = useFlowStore((state) => state.setNode);
   const updateNodeInternals = useUpdateNodeInternals();
 
+  const displayProxy = (children)=>{
+    if(proxy){
+      return <ShadTooltip content={<span>{proxy.nodeDisplayName}</span>}>
+        {children}
+      </ShadTooltip>
+    }else{
+      return children
+    }
+  }
+
   if (types.length < 2) {
-    return <span className={cn(frozen ? " text-ice" : "")}>{name}</span>;
+    return displayProxy(<span className={cn(frozen ? " text-ice" : "")}>{name}</span>);
   }
 
   return (
