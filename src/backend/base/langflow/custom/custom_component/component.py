@@ -1,6 +1,5 @@
 import inspect
 from typing import AsyncIterator, Awaitable, Callable, ClassVar, Generator, Iterator, List, Optional, Union
-
 from uuid import UUID
 
 import yaml
@@ -107,7 +106,7 @@ class Component(CustomComponent):
                             custom_repr = result
                         if not isinstance(custom_repr, str):
                             custom_repr = str(custom_repr)
-                        raw = self.status
+                        raw = result
                         if hasattr(raw, "data") and raw is not None:
                             raw = raw.data
                         if raw is None:
@@ -118,7 +117,7 @@ class Component(CustomComponent):
                         if raw is None and isinstance(result, (dict, Data, str)):
                             raw = result.data if isinstance(result, Data) else result
 
-                        artifact_type = get_artifact_type(self.repr_value or raw, result)
+                        artifact_type = get_artifact_type(self.status or raw, result)
                         raw = post_process_raw(raw, artifact_type)
                         artifact = {"repr": custom_repr, "raw": raw, "type": artifact_type}
                         _artifacts[output.name] = artifact
