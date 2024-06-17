@@ -124,8 +124,12 @@ class Component(CustomComponent):
                             raw = raw.model_dump()
                         if raw is None and isinstance(result, (dict, Data, str)):
                             raw = result.data if isinstance(result, Data) else result
-
-                        artifact_type = get_artifact_type(self.status or raw, result)
+                        if self.status is None:
+                            artifact_value = raw
+                        else:
+                            artifact_value = self.status
+                            raw = self.status
+                        artifact_type = get_artifact_type(artifact_value, result)
                         raw = post_process_raw(raw, artifact_type)
                         artifact = {"repr": custom_repr, "raw": raw, "type": artifact_type}
                         _artifacts[output.name] = artifact
