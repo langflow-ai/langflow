@@ -54,7 +54,7 @@ export default function TableAutoCellRender({
               variant="outline"
               size="sq"
               className={cn(
-                "min-w-min bg-error-background text-error-foreground hover:bg-error-background"
+                "min-w-min bg-error-background text-error-foreground hover:bg-error-background",
               )}
             >
               Failure
@@ -71,7 +71,7 @@ export default function TableAutoCellRender({
   }
 
   return (
-    <div className="group flex h-full w-full items-center truncate align-middle">
+    <div className="group flex h-full w-full truncate align-middle">
       {getCellType()}
     </div>
   );
