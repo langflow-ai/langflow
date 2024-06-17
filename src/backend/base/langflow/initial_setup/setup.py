@@ -1,5 +1,4 @@
 import json
-import logging
 import os
 import shutil
 from collections import defaultdict
@@ -320,7 +319,7 @@ def load_flows_from_directory():
     if not flows_path:
         return
     if not settings_service.auth_settings.AUTO_LOGIN:
-        logging.warning("AUTO_LOGIN is disabled, not loading flows from directory")
+        logger.warning("AUTO_LOGIN is disabled, not loading flows from directory")
         return
 
     with session_scope() as session:
