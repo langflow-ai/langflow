@@ -8,12 +8,19 @@
             "dataType": "TextOutput",
             "id": "TextOutput-BDknO",
             "name": "Text",
-            "output_types": ["Text"]
+            "output_types": [
+              "Text"
+            ]
           },
           "targetHandle": {
             "fieldName": "context",
             "id": "Prompt-xeI6K",
-            "inputTypes": ["Document", "Message", "Record", "Text"],
+            "inputTypes": [
+              "Document",
+              "Message",
+              "Record",
+              "Text"
+            ],
             "type": "str"
           }
         },
@@ -34,12 +41,19 @@
             "dataType": "ChatInput",
             "id": "ChatInput-yxMKE",
             "name": "message",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "question",
             "id": "Prompt-xeI6K",
-            "inputTypes": ["Document", "Message", "Record", "Text"],
+            "inputTypes": [
+              "Document",
+              "Message",
+              "Record",
+              "Text"
+            ],
             "type": "str"
           }
         },
@@ -60,12 +74,18 @@
             "dataType": "Prompt",
             "id": "Prompt-xeI6K",
             "name": "prompt",
-            "output_types": ["Prompt"]
+            "output_types": [
+              "Prompt"
+            ]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "OpenAIModel-EjXlN",
-            "inputTypes": ["Text", "Data", "Prompt"],
+            "inputTypes": [
+              "Text",
+              "Data",
+              "Prompt"
+            ],
             "type": "str"
           }
         },
@@ -86,12 +106,16 @@
             "dataType": "OpenAIModel",
             "id": "OpenAIModel-EjXlN",
             "name": "text_output",
-            "output_types": ["Text"]
+            "output_types": [
+              "Text"
+            ]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "ChatOutput-Q39I8",
-            "inputTypes": ["Text"],
+            "inputTypes": [
+              "Text"
+            ],
             "type": "str"
           }
         },
@@ -117,7 +141,10 @@
           "targetHandle": {
             "fieldName": "inputs",
             "id": "RecursiveCharacterTextSplitter-tR9QM",
-            "inputTypes": ["Document", "Data"],
+            "inputTypes": [
+              "Document",
+              "Data"
+            ],
             "type": "Document"
           }
         },
@@ -138,7 +165,9 @@
             "dataType": "OpenAIEmbeddings",
             "id": "OpenAIEmbeddings-ZlOk1",
             "name": "embeddings",
-            "output_types": ["Embeddings"]
+            "output_types": [
+              "Embeddings"
+            ]
           },
           "targetHandle": {
             "fieldName": "embedding",
@@ -163,12 +192,16 @@
             "dataType": "ChatInput",
             "id": "ChatInput-yxMKE",
             "name": "message",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "AstraDBSearch-41nRz",
-            "inputTypes": ["Text"],
+            "inputTypes": [
+              "Text"
+            ],
             "type": "str"
           }
         },
@@ -214,7 +247,9 @@
             "dataType": "OpenAIEmbeddings",
             "id": "OpenAIEmbeddings-9TPjc",
             "name": "embeddings",
-            "output_types": ["Embeddings"]
+            "output_types": [
+              "Embeddings"
+            ]
           },
           "targetHandle": {
             "fieldName": "embedding",
@@ -239,19 +274,22 @@
           "sourceHandle": {
             "dataType": "AstraDBSearch",
             "id": "AstraDBSearch-41nRz",
-            "name": "record",
+            "name": "search_results",
             "output_types": []
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "TextOutput-BDknO",
-            "inputTypes": ["Record", "Text"],
+            "inputTypes": [
+              "Record",
+              "Text"
+            ],
             "type": "str"
           }
         },
         "id": "reactflow__edge-AstraDBSearch-41nRz{œbaseClassesœ:[œRecordœ],œdataTypeœ:œAstraDBSearchœ,œidœ:œAstraDBSearch-41nRzœ}-TextOutput-BDknO{œfieldNameœ:œinput_valueœ,œidœ:œTextOutput-BDknOœ,œinputTypesœ:[œRecordœ,œTextœ],œtypeœ:œstrœ}",
         "source": "AstraDBSearch-41nRz",
-        "sourceHandle": "{œdataTypeœ: œAstraDBSearchœ, œidœ: œAstraDBSearch-41nRzœ, œoutput_typesœ: [], œnameœ: œrecordœ}",
+        "sourceHandle": "{œdataTypeœ: œAstraDBSearchœ, œidœ: œAstraDBSearch-41nRzœ, œoutput_typesœ: [], œnameœ: œsearch_resultsœ}",
         "style": {
           "stroke": "#555"
         },
@@ -264,7 +302,12 @@
         "data": {
           "id": "ChatInput-yxMKE",
           "node": {
-            "base_classes": ["Text", "str", "object", "Record"],
+            "base_classes": [
+              "Text",
+              "str",
+              "object",
+              "Record"
+            ],
             "beta": false,
             "custom_fields": {
               "input_value": null,
@@ -288,7 +331,9 @@
                 "method": "message_response",
                 "name": "message",
                 "selected": "Message",
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               },
               {
@@ -297,7 +342,9 @@
                 "method": "text_response",
                 "name": "text",
                 "selected": "Text",
-                "types": ["Text"],
+                "types": [
+                  "Text"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -319,7 +366,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langflow.base.io.chat import ChatComponent\nfrom langflow.inputs import DropdownInput, StrInput\nfrom langflow.schema.message import Message\nfrom langflow.template import Output\nfrom langflow.field_typing import Text\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    icon = \"ChatInput\"\n\n    inputs = [\n        StrInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            multiline=True,\n            input_types=[],\n            value=\"\",\n            info=\"Message to be passed as input.\",\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[\"Machine\", \"User\"],\n            value=\"User\",\n            info=\"Type of sender.\",\n            advanced=True,\n        ),\n        StrInput(\n            name=\"sender_name\",\n            type=str,\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=\"User\",\n            advanced=True,\n        ),\n        StrInput(\n            name=\"session_id\", type=str, display_name=\"Session ID\", info=\"Session ID for the message.\", advanced=True\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"message_response\"),\n        Output(display_name=\"Text\", name=\"text\", method=\"text_response\"),\n    ]\n\n    def message_response(self) -> Message:\n        message = Message(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n        )\n        if self.session_id and isinstance(message, Message) and isinstance(message.text, str):\n            self.store_message(message)\n            self.message.value = message\n\n        self.status = message\n        return message\n\n    def text_response(self) -> Text:\n        text = self.message_response().text\n        return text\n"
+                "value": "from langflow.base.io.chat import ChatComponent\nfrom langflow.field_typing import Text\nfrom langflow.inputs import DropdownInput, TextInput\nfrom langflow.schema.message import Message\nfrom langflow.template import Output\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    icon = \"ChatInput\"\n\n    inputs = [\n        TextInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            multiline=True,\n            input_types=[],\n            value=\"\",\n            info=\"Message to be passed as input.\",\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[\"Machine\", \"User\"],\n            value=\"User\",\n            info=\"Type of sender.\",\n            advanced=True,\n        ),\n        TextInput(\n            name=\"sender_name\",\n            type=str,\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=\"User\",\n            advanced=True,\n        ),\n        TextInput(\n            name=\"session_id\", type=str, display_name=\"Session ID\", info=\"Session ID for the message.\", advanced=True\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"message_response\"),\n        Output(display_name=\"Text\", name=\"text\", method=\"text_response\"),\n    ]\n\n    def message_response(self) -> Message:\n        message = Message(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n        )\n        if self.session_id and isinstance(message, Message) and isinstance(message.text, str):\n            self.store_message(message)\n            self.message.value = message\n\n        self.status = message\n        return message\n\n    def text_response(self) -> Text:\n        text = self.message_response().text\n        return text\n"
               },
               "input_value": {
                 "advanced": false,
@@ -348,12 +395,17 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Type of sender.",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
                 "name": "sender",
-                "options": ["Machine", "User"],
+                "options": [
+                  "Machine",
+                  "User"
+                ],
                 "password": false,
                 "placeholder": "",
                 "required": false,
@@ -369,7 +421,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Name of the sender.",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -389,7 +443,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Session ID for the message.",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -420,7 +476,11 @@
         "data": {
           "id": "TextOutput-BDknO",
           "node": {
-            "base_classes": ["object", "Text", "str"],
+            "base_classes": [
+              "object",
+              "Text",
+              "str"
+            ],
             "beta": false,
             "custom_fields": {
               "input_value": null,
@@ -433,12 +493,16 @@
             "field_order": [],
             "frozen": false,
             "icon": "type",
-            "output_types": ["Text"],
+            "output_types": [
+              "Text"
+            ],
             "outputs": [
               {
                 "name": "Text",
                 "selected": "Text",
-                "types": ["Text"]
+                "types": [
+                  "Text"
+                ]
               }
             ],
             "template": {
@@ -468,7 +532,10 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Text or Record to be passed as output.",
-                "input_types": ["Record", "Text"],
+                "input_types": [
+                  "Record",
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -488,7 +555,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Template to convert Record to Text. If left empty, it will be dynamically set to the Record's text key.",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -524,7 +593,9 @@
         "data": {
           "id": "OpenAIEmbeddings-ZlOk1",
           "node": {
-            "base_classes": ["Embeddings"],
+            "base_classes": [
+              "Embeddings"
+            ],
             "beta": false,
             "custom_fields": {
               "allowed_special": null,
@@ -565,7 +636,9 @@
                 "method": "build_embeddings",
                 "name": "embeddings",
                 "selected": "Embeddings",
-                "types": ["Embeddings"],
+                "types": [
+                  "Embeddings"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -590,7 +663,9 @@
                 "display_name": "Client",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "client",
@@ -617,7 +692,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langchain_openai.embeddings.base import OpenAIEmbeddings\n\nfrom langflow.base.models.model import LCModelComponent\nfrom langflow.field_typing import Embeddings\nfrom langflow.inputs import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, SecretStrInput, StrInput\nfrom langflow.template import Output\n\n\nclass OpenAIEmbeddingsComponent(LCModelComponent):\n    display_name = \"OpenAI Embeddings\"\n    description = \"Generate embeddings using OpenAI models.\"\n    icon = \"OpenAI\"\n    inputs = [\n        DictInput(\n            name=\"default_headers\",\n            display_name=\"Default Headers\",\n            advanced=True,\n            info=\"Default headers to use for the API request.\",\n        ),\n        DictInput(\n            name=\"default_query\",\n            display_name=\"Default Query\",\n            advanced=True,\n            info=\"Default query parameters to use for the API request.\",\n        ),\n        IntInput(name=\"chunk_size\", display_name=\"Chunk Size\", advanced=True, value=1000),\n        StrInput(name=\"client\", display_name=\"Client\", advanced=True),\n        StrInput(name=\"deployment\", display_name=\"Deployment\", advanced=True),\n        IntInput(name=\"embedding_ctx_length\", display_name=\"Embedding Context Length\", advanced=True, value=1536),\n        IntInput(name=\"max_retries\", display_name=\"Max Retries\", value=3, advanced=True),\n        DropdownInput(\n            name=\"model\",\n            display_name=\"Model\",\n            advanced=False,\n            options=[\n                \"text-embedding-3-small\",\n                \"text-embedding-3-large\",\n                \"text-embedding-ada-002\",\n            ],\n            value=\"text-embedding-3-small\",\n        ),\n        DictInput(name=\"model_kwargs\", display_name=\"Model Kwargs\", advanced=True),\n        SecretStrInput(name=\"openai_api_base\", display_name=\"OpenAI API Base\", advanced=True),\n        SecretStrInput(name=\"openai_api_key\", display_name=\"OpenAI API Key\"),\n        SecretStrInput(name=\"openai_api_type\", display_name=\"OpenAI API Type\", advanced=True),\n        StrInput(name=\"openai_api_version\", display_name=\"OpenAI API Version\", advanced=True),\n        StrInput(\n            name=\"openai_organization\",\n            display_name=\"OpenAI Organization\",\n            advanced=True,\n        ),\n        StrInput(name=\"openai_proxy\", display_name=\"OpenAI Proxy\", advanced=True),\n        FloatInput(name=\"request_timeout\", display_name=\"Request Timeout\", advanced=True),\n        BoolInput(name=\"show_progress_bar\", display_name=\"Show Progress Bar\", advanced=True),\n        BoolInput(name=\"skip_empty\", display_name=\"Skip Empty\", advanced=True),\n        StrInput(\n            name=\"tiktoken_model_name\",\n            display_name=\"TikToken Model Name\",\n            advanced=True,\n        ),\n        BoolInput(name=\"tiktoken_enable\", display_name=\"TikToken Enable\", advanced=True, value=True),\n    ]\n\n    outputs = [\n        Output(display_name=\"Embeddings\", name=\"embeddings\", method=\"build_embeddings\"),\n    ]\n\n    def build_embeddings(self) -> Embeddings:\n        return OpenAIEmbeddings(\n            tiktoken_enabled=self.tiktoken_enable,\n            default_headers=self.default_headers,\n            default_query=self.default_query,\n            allowed_special=\"all\",\n            disallowed_special=\"all\",\n            chunk_size=self.chunk_size,\n            deployment=self.deployment,\n            embedding_ctx_length=self.embedding_ctx_length,\n            max_retries=self.max_retries,\n            model=self.model,\n            model_kwargs=self.model_kwargs,\n            base_url=self.openai_api_base,\n            api_key=self.openai_api_key,\n            openai_api_type=self.openai_api_type,\n            api_version=self.openai_api_version,\n            organization=self.openai_organization,\n            openai_proxy=self.openai_proxy,\n            timeout=self.request_timeout,\n            show_progress_bar=self.show_progress_bar,\n            skip_empty=self.skip_empty,\n            tiktoken_model_name=self.tiktoken_model_name,\n        )\n"
+                "value": "from langchain_openai.embeddings.base import OpenAIEmbeddings\n\nfrom langflow.base.models.model import LCModelComponent\nfrom langflow.field_typing import Embeddings\nfrom langflow.inputs import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, SecretStrInput, TextInput\nfrom langflow.template import Output\n\n\nclass OpenAIEmbeddingsComponent(LCModelComponent):\n    display_name = \"OpenAI Embeddings\"\n    description = \"Generate embeddings using OpenAI models.\"\n    icon = \"OpenAI\"\n    inputs = [\n        DictInput(\n            name=\"default_headers\",\n            display_name=\"Default Headers\",\n            advanced=True,\n            info=\"Default headers to use for the API request.\",\n        ),\n        DictInput(\n            name=\"default_query\",\n            display_name=\"Default Query\",\n            advanced=True,\n            info=\"Default query parameters to use for the API request.\",\n        ),\n        IntInput(name=\"chunk_size\", display_name=\"Chunk Size\", advanced=True, value=1000),\n        TextInput(name=\"client\", display_name=\"Client\", advanced=True),\n        TextInput(name=\"deployment\", display_name=\"Deployment\", advanced=True),\n        IntInput(name=\"embedding_ctx_length\", display_name=\"Embedding Context Length\", advanced=True, value=1536),\n        IntInput(name=\"max_retries\", display_name=\"Max Retries\", value=3, advanced=True),\n        DropdownInput(\n            name=\"model\",\n            display_name=\"Model\",\n            advanced=False,\n            options=[\n                \"text-embedding-3-small\",\n                \"text-embedding-3-large\",\n                \"text-embedding-ada-002\",\n            ],\n            value=\"text-embedding-3-small\",\n        ),\n        DictInput(name=\"model_kwargs\", display_name=\"Model Kwargs\", advanced=True),\n        SecretStrInput(name=\"openai_api_base\", display_name=\"OpenAI API Base\", advanced=True),\n        SecretStrInput(name=\"openai_api_key\", display_name=\"OpenAI API Key\"),\n        SecretStrInput(name=\"openai_api_type\", display_name=\"OpenAI API Type\", advanced=True),\n        TextInput(name=\"openai_api_version\", display_name=\"OpenAI API Version\", advanced=True),\n        TextInput(\n            name=\"openai_organization\",\n            display_name=\"OpenAI Organization\",\n            advanced=True,\n        ),\n        TextInput(name=\"openai_proxy\", display_name=\"OpenAI Proxy\", advanced=True),\n        FloatInput(name=\"request_timeout\", display_name=\"Request Timeout\", advanced=True),\n        BoolInput(name=\"show_progress_bar\", display_name=\"Show Progress Bar\", advanced=True),\n        BoolInput(name=\"skip_empty\", display_name=\"Skip Empty\", advanced=True),\n        TextInput(\n            name=\"tiktoken_model_name\",\n            display_name=\"TikToken Model Name\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"tiktoken_enable\",\n            display_name=\"TikToken Enable\",\n            advanced=True,\n            value=True,\n            info=\"If False, you must have transformers installed.\",\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Embeddings\", name=\"embeddings\", method=\"build_embeddings\"),\n    ]\n\n    def build_embeddings(self) -> Embeddings:\n        return OpenAIEmbeddings(\n            tiktoken_enabled=self.tiktoken_enable,\n            default_headers=self.default_headers,\n            default_query=self.default_query,\n            allowed_special=\"all\",\n            disallowed_special=\"all\",\n            chunk_size=self.chunk_size,\n            deployment=self.deployment,\n            embedding_ctx_length=self.embedding_ctx_length,\n            max_retries=self.max_retries,\n            model=self.model,\n            model_kwargs=self.model_kwargs,\n            base_url=self.openai_api_base,\n            api_key=self.openai_api_key,\n            openai_api_type=self.openai_api_type,\n            api_version=self.openai_api_version,\n            organization=self.openai_organization,\n            openai_proxy=self.openai_proxy,\n            timeout=self.request_timeout,\n            show_progress_bar=self.show_progress_bar,\n            skip_empty=self.skip_empty,\n            tiktoken_model_name=self.tiktoken_model_name,\n        )\n"
               },
               "default_headers": {
                 "advanced": true,
@@ -652,7 +727,9 @@
                 "display_name": "Deployment",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "deployment",
@@ -728,7 +805,9 @@
                 "display_name": "OpenAI API Base",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "load_from_db": true,
                 "name": "openai_api_base",
                 "password": true,
@@ -744,7 +823,9 @@
                 "display_name": "OpenAI API Key",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "load_from_db": true,
                 "name": "openai_api_key",
                 "password": true,
@@ -760,7 +841,9 @@
                 "display_name": "OpenAI API Type",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "load_from_db": true,
                 "name": "openai_api_type",
                 "password": true,
@@ -776,7 +859,9 @@
                 "display_name": "OpenAI API Version",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "openai_api_version",
@@ -792,7 +877,9 @@
                 "display_name": "OpenAI Organization",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "openai_organization",
@@ -808,7 +895,9 @@
                 "display_name": "OpenAI Proxy",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "openai_proxy",
@@ -865,7 +954,7 @@
                 "advanced": true,
                 "display_name": "TikToken Enable",
                 "dynamic": false,
-                "info": "",
+                "info": "If False, you must have transformers installed.",
                 "list": false,
                 "name": "tiktoken_enable",
                 "placeholder": "",
@@ -880,7 +969,9 @@
                 "display_name": "TikToken Model Name",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "tiktoken_model_name",
@@ -910,7 +1001,11 @@
         "data": {
           "id": "OpenAIModel-EjXlN",
           "node": {
-            "base_classes": ["object", "Text", "str"],
+            "base_classes": [
+              "object",
+              "Text",
+              "str"
+            ],
             "beta": false,
             "custom_fields": {
               "input_value": null,
@@ -948,7 +1043,9 @@
                 "method": "text_response",
                 "name": "text_output",
                 "selected": "Text",
-                "types": ["Text"],
+                "types": [
+                  "Text"
+                ],
                 "value": "__UNDEFINED__"
               },
               {
@@ -957,7 +1054,9 @@
                 "method": "build_model",
                 "name": "model_output",
                 "selected": "BaseLanguageModel",
-                "types": ["BaseLanguageModel"],
+                "types": [
+                  "BaseLanguageModel"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -979,7 +1078,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langchain_openai import ChatOpenAI\nfrom pydantic.v1 import SecretStr\n\nfrom langflow.base.constants import STREAM_INFO_TEXT\nfrom langflow.base.models.model import LCModelComponent\nfrom langflow.base.models.openai_constants import MODEL_NAMES\nfrom langflow.field_typing import BaseLanguageModel, Text\nfrom langflow.inputs import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, SecretStrInput, StrInput\nfrom langflow.template import Output\n\n\n\nclass OpenAIModelComponent(LCModelComponent):\n    display_name = \"OpenAI\"\n    description = \"Generates text using OpenAI LLMs.\"\n    icon = \"OpenAI\"\n\n    inputs = [\n        StrInput(name=\"input_value\", display_name=\"Input\", input_types=[\"Text\", \"Data\", \"Prompt\"]),\n        IntInput(\n            name=\"max_tokens\",\n            display_name=\"Max Tokens\",\n            advanced=True,\n            info=\"The maximum number of tokens to generate. Set to 0 for unlimited tokens.\",\n        ),\n        DictInput(name=\"model_kwargs\", display_name=\"Model Kwargs\", advanced=True),\n        DropdownInput(\n            name=\"model_name\", display_name=\"Model Name\", advanced=False, options=MODEL_NAMES, value=MODEL_NAMES[0]\n        ),\n        StrInput(\n            name=\"openai_api_base\",\n            display_name=\"OpenAI API Base\",\n            advanced=True,\n            info=\"The base URL of the OpenAI API. Defaults to https://api.openai.com/v1. You can change this to use other APIs like JinaChat, LocalAI and Prem.\",\n        ),\n        SecretStrInput(\n            name=\"openai_api_key\",\n            display_name=\"OpenAI API Key\",\n            info=\"The OpenAI API Key to use for the OpenAI model.\",\n            advanced=False,\n            value=\"OPENAI_API_KEY\",\n        ),\n        FloatInput(name=\"temperature\", display_name=\"Temperature\", value=0.1),\n        BoolInput(name=\"stream\", display_name=\"Stream\", info=STREAM_INFO_TEXT, advanced=True),\n        StrInput(\n            name=\"system_message\",\n            display_name=\"System Message\",\n            info=\"System message to pass to the model.\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"json_mode\",\n            display_name=\"JSON Mode\",\n            info=\"Enable JSON mode for the model output.\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"seed\",\n            display_name=\"Seed\",\n            info=\"The seed controls the reproducibility of the job.\",\n            advanced=True,\n            value=1,\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Text\", name=\"text_output\", method=\"text_response\"),\n        Output(display_name=\"Language Model\", name=\"model_output\", method=\"build_model\"),\n    ]\n\n    def text_response(self) -> Text:\n        input_value = self.input_value\n        stream = self.stream\n        system_message = self.system_message\n        output = self.build_model()\n        result = self.get_chat_result(output, stream, input_value, system_message)\n        self.status = result\n        return result\n\n    def build_model(self) -> BaseLanguageModel:\n        openai_api_key = self.openai_api_key\n        temperature = self.temperature\n        model_name = self.model_name\n        max_tokens = self.max_tokens\n        model_kwargs = self.model_kwargs\n        openai_api_base = self.openai_api_base or \"https://api.openai.com/v1\"\n        json_mode = self.json_mode\n        seed = self.seed\n        if openai_api_key:\n            api_key = SecretStr(openai_api_key)\n        else:\n            api_key = None\n        response_format = None\n        if json_mode:\n            response_format = {\"type\": \"json_object\"}\n        output = ChatOpenAI(\n            max_tokens=max_tokens or None,\n            model_kwargs=model_kwargs or {},\n            model=model_name or None,\n            base_url=openai_api_base,\n            api_key=api_key,\n            temperature=temperature or 0.1,\n            response_format=response_format,\n            seed=seed,\n        )\n\n        return output\n"
+                "value": "from langchain_openai import ChatOpenAI\nfrom pydantic.v1 import SecretStr\n\nfrom langflow.base.constants import STREAM_INFO_TEXT\nfrom langflow.base.models.model import LCModelComponent\nfrom langflow.base.models.openai_constants import MODEL_NAMES\nfrom langflow.field_typing import BaseLanguageModel, Text\nfrom langflow.inputs import (\n    BoolInput,\n    DictInput,\n    DropdownInput,\n    FloatInput,\n    IntInput,\n    MessageInput,\n    SecretStrInput,\n    StrInput,\n)\nfrom langflow.template import Output\n\n\nclass OpenAIModelComponent(LCModelComponent):\n    display_name = \"OpenAI\"\n    description = \"Generates text using OpenAI LLMs.\"\n    icon = \"OpenAI\"\n\n    inputs = [\n        MessageInput(name=\"input_value\", display_name=\"Input\", input_types=[\"Text\", \"Data\", \"Prompt\"]),\n        IntInput(\n            name=\"max_tokens\",\n            display_name=\"Max Tokens\",\n            advanced=True,\n            info=\"The maximum number of tokens to generate. Set to 0 for unlimited tokens.\",\n        ),\n        DictInput(name=\"model_kwargs\", display_name=\"Model Kwargs\", advanced=True),\n        DropdownInput(\n            name=\"model_name\", display_name=\"Model Name\", advanced=False, options=MODEL_NAMES, value=MODEL_NAMES[0]\n        ),\n        StrInput(\n            name=\"openai_api_base\",\n            display_name=\"OpenAI API Base\",\n            advanced=True,\n            info=\"The base URL of the OpenAI API. Defaults to https://api.openai.com/v1. You can change this to use other APIs like JinaChat, LocalAI and Prem.\",\n        ),\n        SecretStrInput(\n            name=\"openai_api_key\",\n            display_name=\"OpenAI API Key\",\n            info=\"The OpenAI API Key to use for the OpenAI model.\",\n            advanced=False,\n            value=\"OPENAI_API_KEY\",\n        ),\n        FloatInput(name=\"temperature\", display_name=\"Temperature\", value=0.1),\n        BoolInput(name=\"stream\", display_name=\"Stream\", info=STREAM_INFO_TEXT, advanced=True),\n        StrInput(\n            name=\"system_message\",\n            display_name=\"System Message\",\n            info=\"System message to pass to the model.\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"json_mode\",\n            display_name=\"JSON Mode\",\n            info=\"Enable JSON mode for the model output.\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"seed\",\n            display_name=\"Seed\",\n            info=\"The seed controls the reproducibility of the job.\",\n            advanced=True,\n            value=1,\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Text\", name=\"text_output\", method=\"text_response\"),\n        Output(display_name=\"Language Model\", name=\"model_output\", method=\"build_model\"),\n    ]\n\n    def text_response(self) -> Text:\n        input_value = self.input_value\n        stream = self.stream\n        system_message = self.system_message\n        output = self.build_model()\n        result = self.get_chat_result(output, stream, input_value, system_message)\n        self.status = result\n        return result\n\n    def build_model(self) -> BaseLanguageModel:\n        openai_api_key = self.openai_api_key\n        temperature = self.temperature\n        model_name = self.model_name\n        max_tokens = self.max_tokens\n        model_kwargs = self.model_kwargs\n        openai_api_base = self.openai_api_base or \"https://api.openai.com/v1\"\n        json_mode = self.json_mode\n        seed = self.seed\n        if openai_api_key:\n            api_key = SecretStr(openai_api_key)\n        else:\n            api_key = None\n        response_format = None\n        if json_mode:\n            response_format = {\"type\": \"json_object\"}\n        output = ChatOpenAI(\n            max_tokens=max_tokens or None,\n            model_kwargs=model_kwargs or {},\n            model=model_name or None,\n            base_url=openai_api_base,\n            api_key=api_key,\n            temperature=temperature or 0.1,\n            response_format=response_format,\n            seed=seed,\n        )\n\n        return output\n"
               },
               "input_value": {
                 "advanced": false,
@@ -988,7 +1087,11 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Text", "Data", "Prompt"],
+                "input_types": [
+                  "Text",
+                  "Data",
+                  "Prompt"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -1008,7 +1111,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -1028,7 +1133,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -1048,7 +1155,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
@@ -1075,7 +1184,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "The base URL of the OpenAI API. Defaults to https://api.openai.com/v1. You can change this to use other APIs like JinaChat, LocalAI and Prem.",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -1095,7 +1206,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "The OpenAI API Key to use for the OpenAI model.",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": true,
                 "multiline": false,
@@ -1115,7 +1228,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Stream the response from the model. Streaming works only in Chat.",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -1135,7 +1250,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "System message to pass to the model.",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -1155,7 +1272,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -1193,10 +1312,17 @@
           "display_name": "Prompt",
           "id": "Prompt-xeI6K",
           "node": {
-            "base_classes": ["object", "Text", "str"],
+            "base_classes": [
+              "object",
+              "Text",
+              "str"
+            ],
             "beta": false,
             "custom_fields": {
-              "template": ["context", "question"]
+              "template": [
+                "context",
+                "question"
+              ]
             },
             "description": "Create a prompt template with dynamic variables.",
             "display_name": "Prompt",
@@ -1219,7 +1345,9 @@
                 "method": "build_prompt",
                 "name": "prompt",
                 "selected": "Prompt",
-                "types": ["Prompt"],
+                "types": [
+                  "Prompt"
+                ],
                 "value": "__UNDEFINED__"
               },
               {
@@ -1228,7 +1356,9 @@
                 "method": "format_prompt",
                 "name": "text",
                 "selected": "Text",
-                "types": ["Text"],
+                "types": [
+                  "Text"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1250,7 +1380,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langflow.custom import Component\nfrom langflow.field_typing.prompt import Prompt\nfrom langflow.inputs import PromptInput\nfrom langflow.template import Output\n\n\nclass PromptComponent(Component):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"prompts\"\n\n    inputs = [\n        PromptInput(name=\"template\", display_name=\"Template\"),\n    ]\n\n    outputs = [\n        Output(display_name=\"Prompt\", name=\"prompt\", method=\"build_prompt\"),\n        Output(display_name=\"Text\", name=\"text\", method=\"format_prompt\"),\n    ]\n\n    async def format_prompt(self) -> str:\n        prompt = await self.build_prompt()\n        formatted_text = prompt.format_text()\n        self.status = formatted_text\n        return formatted_text\n\n    async def build_prompt(\n        self,\n    ) -> Prompt:\n        kwargs = {k: v for k, v in self._arguments.items() if k != \"template\"}\n        prompt = await Prompt.from_template_and_variables(self.template, kwargs)\n        self.status = prompt.format_text()\n        return prompt\n"
+                "value": "from langflow.custom import Component\nfrom langflow.field_typing.prompt import Prompt\nfrom langflow.inputs import PromptInput\nfrom langflow.schema.message import Message\nfrom langflow.template import Output\n\n\nclass PromptComponent(Component):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"prompts\"\n\n    inputs = [\n        PromptInput(name=\"template\", display_name=\"Template\"),\n    ]\n\n    outputs = [\n        Output(display_name=\"Prompt\", name=\"prompt\", method=\"build_prompt\"),\n        Output(display_name=\"Text\", name=\"text\", method=\"format_prompt\"),\n    ]\n\n    async def format_prompt(self) -> str:\n        prompt = await self.build_prompt()\n        formatted_text = prompt.format_text()\n        self.status = formatted_text\n        return formatted_text\n\n    async def build_prompt(\n        self,\n    ) -> Prompt:\n        kwargs = {k: v for k, v in self._arguments.items() if k != \"template\"}\n        prompt = await Message.from_template_and_variables(self.template, kwargs)\n        self.status = prompt.format_text()\n        return prompt\n"
               },
               "context": {
                 "advanced": false,
@@ -1260,7 +1390,12 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Document", "Message", "Record", "Text"],
+                "input_types": [
+                  "Document",
+                  "Message",
+                  "Record",
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -1281,7 +1416,12 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Document", "Message", "Record", "Text"],
+                "input_types": [
+                  "Document",
+                  "Message",
+                  "Record",
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -1301,7 +1441,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -1337,7 +1479,12 @@
         "data": {
           "id": "ChatOutput-Q39I8",
           "node": {
-            "base_classes": ["object", "Text", "Record", "str"],
+            "base_classes": [
+              "object",
+              "Text",
+              "Record",
+              "str"
+            ],
             "beta": false,
             "custom_fields": {
               "input_value": null,
@@ -1362,7 +1509,9 @@
                 "method": "message_response",
                 "name": "message",
                 "selected": "Message",
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               },
               {
@@ -1371,7 +1520,9 @@
                 "method": "text_response",
                 "name": "text",
                 "selected": "Text",
-                "types": ["Text"],
+                "types": [
+                  "Text"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1393,7 +1544,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langflow.base.io.chat import ChatComponent\nfrom langflow.field_typing import Text\nfrom langflow.inputs import BoolInput, DropdownInput, StrInput\nfrom langflow.schema.message import Message\nfrom langflow.template import Output\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    icon = \"ChatOutput\"\n\n    inputs = [\n        StrInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            info=\"Message to be passed as output.\",\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[\"Machine\", \"User\"],\n            value=\"Machine\",\n            advanced=True,\n            info=\"Type of sender.\",\n        ),\n        StrInput(name=\"sender_name\", display_name=\"Sender Name\", info=\"Name of the sender.\", value=\"AI\", advanced=True),\n        StrInput(name=\"session_id\", display_name=\"Session ID\", info=\"Session ID for the message.\", advanced=True),\n        BoolInput(\n            name=\"data_template\",\n            display_name=\"Data Template\",\n            value=\"{text}\",\n            advanced=True,\n            info=\"Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.\",\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"message_response\"),\n        Output(display_name=\"Text\", name=\"text\", method=\"text_response\"),\n    ]\n\n    def message_response(self) -> Message:\n        message = Message(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n        )\n        if self.session_id and isinstance(message, Message) and isinstance(message.text, str):\n            self.store_message(message)\n            self.message.value = message\n\n        self.status = message\n        return message\n\n    def text_response(self) -> Text:\n        text = self.message_response().text\n        return text\n"
+                "value": "from langflow.base.io.chat import ChatComponent\nfrom langflow.field_typing import Text\nfrom langflow.inputs import DropdownInput, StrInput\nfrom langflow.schema.message import Message\nfrom langflow.template import Output\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    icon = \"ChatOutput\"\n\n    inputs = [\n        StrInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            info=\"Message to be passed as output.\",\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[\"Machine\", \"User\"],\n            value=\"Machine\",\n            advanced=True,\n            info=\"Type of sender.\",\n        ),\n        StrInput(name=\"sender_name\", display_name=\"Sender Name\", info=\"Name of the sender.\", value=\"AI\", advanced=True),\n        StrInput(name=\"session_id\", display_name=\"Session ID\", info=\"Session ID for the message.\", advanced=True),\n        StrInput(\n            name=\"data_template\",\n            display_name=\"Data Template\",\n            value=\"{text}\",\n            advanced=True,\n            info=\"Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.\",\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"message_response\"),\n        Output(display_name=\"Text\", name=\"text\", method=\"text_response\"),\n    ]\n\n    def message_response(self) -> Message:\n        message = Message(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n        )\n        if self.session_id and isinstance(message, Message) and isinstance(message.text, str):\n            self.store_message(message)\n            self.message.value = message\n\n        self.status = message\n        return message\n\n    def text_response(self) -> Text:\n        text = self.message_response().text\n        return text\n"
               },
               "input_value": {
                 "advanced": false,
@@ -1402,7 +1553,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Message to be passed as output.",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -1422,12 +1575,17 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Type of sender.",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
                 "name": "sender",
-                "options": ["Machine", "User"],
+                "options": [
+                  "Machine",
+                  "User"
+                ],
                 "password": false,
                 "placeholder": "",
                 "required": false,
@@ -1443,7 +1601,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Name of the sender.",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -1463,7 +1623,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Session ID for the message.",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -1499,7 +1661,9 @@
         "data": {
           "id": "File-t0a6a",
           "node": {
-            "base_classes": ["Record"],
+            "base_classes": [
+              "Record"
+            ],
             "beta": false,
             "custom_fields": {
               "path": null,
@@ -1520,7 +1684,9 @@
                 "method": "load_file",
                 "name": "data",
                 "selected": "Data",
-                "types": ["Data"],
+                "types": [
+                  "Data"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1615,7 +1781,9 @@
         "data": {
           "id": "RecursiveCharacterTextSplitter-tR9QM",
           "node": {
-            "base_classes": ["Record"],
+            "base_classes": [
+              "Record"
+            ],
             "beta": false,
             "custom_fields": {
               "chunk_overlap": null,
@@ -1629,7 +1797,9 @@
             "field_formatters": {},
             "field_order": [],
             "frozen": false,
-            "output_types": ["Data"],
+            "output_types": [
+              "Data"
+            ],
             "outputs": [
               {
                 "cache": true,
@@ -1638,7 +1808,9 @@
                 "method": null,
                 "name": "data",
                 "selected": "Data",
-                "types": ["Data"],
+                "types": [
+                  "Data"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1707,7 +1879,10 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "The texts to split.",
-                "input_types": ["Document", "Data"],
+                "input_types": [
+                  "Document",
+                  "Data"
+                ],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
@@ -1726,7 +1901,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "The characters to split on.\nIf left empty defaults to [\"\\n\\n\", \"\\n\", \" \", \"\"].",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
@@ -1737,7 +1914,9 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": [""]
+                "value": [
+                  ""
+                ]
               }
             }
           },
@@ -1762,7 +1941,9 @@
         "data": {
           "id": "AstraDBSearch-41nRz",
           "node": {
-            "base_classes": ["Record"],
+            "base_classes": [
+              "Record"
+            ],
             "beta": false,
             "custom_fields": {
               "api_endpoint": null,
@@ -1797,16 +1978,32 @@
             ],
             "frozen": false,
             "icon": "AstraDB",
-            "output_types": ["Data"],
+            "output_types": [
+              "Data"
+            ],
             "outputs": [
               {
                 "cache": true,
-                "display_name": "Data",
-                "hidden": null,
-                "method": null,
-                "name": "data",
-                "selected": "Data",
-                "types": ["Data"],
+                "display_name": "Vector Store",
+                "method": "build_vector_store",
+                "name": "vector_store",
+                "types": [],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "cache": true,
+                "display_name": "Base Retriever",
+                "method": "build_base_retriever",
+                "name": "base_retriever",
+                "types": [],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "cache": true,
+                "display_name": "Search Results",
+                "method": "search_documents",
+                "name": "search_results",
+                "types": [],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1819,7 +2016,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "API endpoint URL for the Astra DB service.",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -1920,7 +2119,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from typing import List, Optional\n\nfrom langflow.components.vectorstores.AstraDB import AstraDBVectorStoreComponent\nfrom langflow.components.vectorstores.base.model import LCVectorStoreComponent\nfrom langflow.field_typing import Embeddings, Text\nfrom langflow.schema import Data\n\n\nclass AstraDBSearchComponent(LCVectorStoreComponent):\n    display_name = \"Astra DB Search\"\n    description = \"Searches an existing Astra DB Vector Store.\"\n    icon = \"AstraDB\"\n    field_order = [\"token\", \"api_endpoint\", \"collection_name\", \"input_value\", \"embedding\"]\n\n    def build_config(self):\n        return {\n            \"search_type\": {\n                \"display_name\": \"Search Type\",\n                \"options\": [\"Similarity\", \"MMR\"],\n            },\n            \"input_value\": {\n                \"display_name\": \"Input Value\",\n                \"info\": \"Input value to search\",\n            },\n            \"embedding\": {\"display_name\": \"Embedding\", \"info\": \"Embedding to use\"},\n            \"collection_name\": {\n                \"display_name\": \"Collection Name\",\n                \"info\": \"The name of the collection within Astra DB where the vectors will be stored.\",\n            },\n            \"token\": {\n                \"display_name\": \"Astra DB Application Token\",\n                \"info\": \"Authentication token for accessing Astra DB.\",\n                \"password\": True,\n            },\n            \"api_endpoint\": {\n                \"display_name\": \"API Endpoint\",\n                \"info\": \"API endpoint URL for the Astra DB service.\",\n            },\n            \"namespace\": {\n                \"display_name\": \"Namespace\",\n                \"info\": \"Optional namespace within Astra DB to use for the collection.\",\n                \"advanced\": True,\n            },\n            \"metric\": {\n                \"display_name\": \"Metric\",\n                \"info\": \"Optional distance metric for vector comparisons in the vector store.\",\n                \"advanced\": True,\n            },\n            \"batch_size\": {\n                \"display_name\": \"Batch Size\",\n                \"info\": \"Optional number of data to process in a single batch.\",\n                \"advanced\": True,\n            },\n            \"bulk_insert_batch_concurrency\": {\n                \"display_name\": \"Bulk Insert Batch Concurrency\",\n                \"info\": \"Optional concurrency level for bulk insert operations.\",\n                \"advanced\": True,\n            },\n            \"bulk_insert_overwrite_concurrency\": {\n                \"display_name\": \"Bulk Insert Overwrite Concurrency\",\n                \"info\": \"Optional concurrency level for bulk insert operations that overwrite existing data.\",\n                \"advanced\": True,\n            },\n            \"bulk_delete_concurrency\": {\n                \"display_name\": \"Bulk Delete Concurrency\",\n                \"info\": \"Optional concurrency level for bulk delete operations.\",\n                \"advanced\": True,\n            },\n            \"setup_mode\": {\n                \"display_name\": \"Setup Mode\",\n                \"info\": \"Configuration mode for setting up the vector store, with options like “Sync”, “Async”, or “Off”.\",\n                \"options\": [\"Sync\", \"Async\", \"Off\"],\n                \"advanced\": True,\n            },\n            \"pre_delete_collection\": {\n                \"display_name\": \"Pre Delete Collection\",\n                \"info\": \"Boolean flag to determine whether to delete the collection before creating a new one.\",\n                \"advanced\": True,\n            },\n            \"metadata_indexing_include\": {\n                \"display_name\": \"Metadata Indexing Include\",\n                \"info\": \"Optional list of metadata fields to include in the indexing.\",\n                \"advanced\": True,\n            },\n            \"metadata_indexing_exclude\": {\n                \"display_name\": \"Metadata Indexing Exclude\",\n                \"info\": \"Optional list of metadata fields to exclude from the indexing.\",\n                \"advanced\": True,\n            },\n            \"collection_indexing_policy\": {\n                \"display_name\": \"Collection Indexing Policy\",\n                \"info\": \"Optional dictionary defining the indexing policy for the collection.\",\n                \"advanced\": True,\n            },\n            \"number_of_results\": {\n                \"display_name\": \"Number of Results\",\n                \"info\": \"Number of results to return.\",\n                \"advanced\": True,\n            },\n        }\n\n    def build(\n        self,\n        embedding: Embeddings,\n        collection_name: str,\n        input_value: Text,\n        token: str,\n        api_endpoint: str,\n        search_type: str = \"Similarity\",\n        number_of_results: int = 4,\n        namespace: Optional[str] = None,\n        metric: Optional[str] = None,\n        batch_size: Optional[int] = None,\n        bulk_insert_batch_concurrency: Optional[int] = None,\n        bulk_insert_overwrite_concurrency: Optional[int] = None,\n        bulk_delete_concurrency: Optional[int] = None,\n        setup_mode: str = \"Sync\",\n        pre_delete_collection: bool = False,\n        metadata_indexing_include: Optional[List[str]] = None,\n        metadata_indexing_exclude: Optional[List[str]] = None,\n        collection_indexing_policy: Optional[dict] = None,\n    ) -> List[Data]:\n        vector_store = AstraDBVectorStoreComponent().build(\n            embedding=embedding,\n            collection_name=collection_name,\n            token=token,\n            api_endpoint=api_endpoint,\n            namespace=namespace,\n            metric=metric,\n            batch_size=batch_size,\n            bulk_insert_batch_concurrency=bulk_insert_batch_concurrency,\n            bulk_insert_overwrite_concurrency=bulk_insert_overwrite_concurrency,\n            bulk_delete_concurrency=bulk_delete_concurrency,\n            setup_mode=setup_mode,\n            pre_delete_collection=pre_delete_collection,\n            metadata_indexing_include=metadata_indexing_include,\n            metadata_indexing_exclude=metadata_indexing_exclude,\n            collection_indexing_policy=collection_indexing_policy,\n        )\n        try:\n            return self.search_with_vector_store(input_value, search_type, vector_store, k=number_of_results)\n        except KeyError as e:\n            if \"content\" in str(e):\n                raise ValueError(\n                    \"You should ingest data through Langflow (or LangChain) to query it in Langflow. Your collection does not contain a field name 'content'.\"\n                )\n            else:\n                raise e\n"
+                "value": "from typing import List, Optional\n\nfrom langflow.components.vectorstores.AstraDB import AstraVectorStoreComponent\nfrom langflow.components.vectorstores.base.model import LCVectorStoreComponent\nfrom langflow.field_typing import Embeddings, Text\nfrom langflow.schema import Data\n\n\nclass AstraDBSearchComponent(LCVectorStoreComponent):\n    display_name = \"Astra DB Search\"\n    description = \"Searches an existing Astra DB Vector Store.\"\n    icon = \"AstraDB\"\n    field_order = [\"token\", \"api_endpoint\", \"collection_name\", \"input_value\", \"embedding\"]\n\n    def build_config(self):\n        return {\n            \"search_type\": {\n                \"display_name\": \"Search Type\",\n                \"options\": [\"Similarity\", \"MMR\"],\n            },\n            \"input_value\": {\n                \"display_name\": \"Input Value\",\n                \"info\": \"Input value to search\",\n            },\n            \"embedding\": {\"display_name\": \"Embedding\", \"info\": \"Embedding to use\"},\n            \"collection_name\": {\n                \"display_name\": \"Collection Name\",\n                \"info\": \"The name of the collection within Astra DB where the vectors will be stored.\",\n            },\n            \"token\": {\n                \"display_name\": \"Astra DB Application Token\",\n                \"info\": \"Authentication token for accessing Astra DB.\",\n                \"password\": True,\n            },\n            \"api_endpoint\": {\n                \"display_name\": \"API Endpoint\",\n                \"info\": \"API endpoint URL for the Astra DB service.\",\n            },\n            \"namespace\": {\n                \"display_name\": \"Namespace\",\n                \"info\": \"Optional namespace within Astra DB to use for the collection.\",\n                \"advanced\": True,\n            },\n            \"metric\": {\n                \"display_name\": \"Metric\",\n                \"info\": \"Optional distance metric for vector comparisons in the vector store.\",\n                \"advanced\": True,\n            },\n            \"batch_size\": {\n                \"display_name\": \"Batch Size\",\n                \"info\": \"Optional number of data to process in a single batch.\",\n                \"advanced\": True,\n            },\n            \"bulk_insert_batch_concurrency\": {\n                \"display_name\": \"Bulk Insert Batch Concurrency\",\n                \"info\": \"Optional concurrency level for bulk insert operations.\",\n                \"advanced\": True,\n            },\n            \"bulk_insert_overwrite_concurrency\": {\n                \"display_name\": \"Bulk Insert Overwrite Concurrency\",\n                \"info\": \"Optional concurrency level for bulk insert operations that overwrite existing data.\",\n                \"advanced\": True,\n            },\n            \"bulk_delete_concurrency\": {\n                \"display_name\": \"Bulk Delete Concurrency\",\n                \"info\": \"Optional concurrency level for bulk delete operations.\",\n                \"advanced\": True,\n            },\n            \"setup_mode\": {\n                \"display_name\": \"Setup Mode\",\n                \"info\": \"Configuration mode for setting up the vector store, with options like “Sync”, “Async”, or “Off”.\",\n                \"options\": [\"Sync\", \"Async\", \"Off\"],\n                \"advanced\": True,\n            },\n            \"pre_delete_collection\": {\n                \"display_name\": \"Pre Delete Collection\",\n                \"info\": \"Boolean flag to determine whether to delete the collection before creating a new one.\",\n                \"advanced\": True,\n            },\n            \"metadata_indexing_include\": {\n                \"display_name\": \"Metadata Indexing Include\",\n                \"info\": \"Optional list of metadata fields to include in the indexing.\",\n                \"advanced\": True,\n            },\n            \"metadata_indexing_exclude\": {\n                \"display_name\": \"Metadata Indexing Exclude\",\n                \"info\": \"Optional list of metadata fields to exclude from the indexing.\",\n                \"advanced\": True,\n            },\n            \"collection_indexing_policy\": {\n                \"display_name\": \"Collection Indexing Policy\",\n                \"info\": \"Optional dictionary defining the indexing policy for the collection.\",\n                \"advanced\": True,\n            },\n            \"number_of_results\": {\n                \"display_name\": \"Number of Results\",\n                \"info\": \"Number of results to return.\",\n                \"advanced\": True,\n            },\n        }\n\n    def build(\n        self,\n        embedding: Embeddings,\n        collection_name: str,\n        input_value: Text,\n        token: str,\n        api_endpoint: str,\n        search_type: str = \"Similarity\",\n        number_of_results: int = 4,\n        namespace: Optional[str] = None,\n        metric: Optional[str] = None,\n        batch_size: Optional[int] = None,\n        bulk_insert_batch_concurrency: Optional[int] = None,\n        bulk_insert_overwrite_concurrency: Optional[int] = None,\n        bulk_delete_concurrency: Optional[int] = None,\n        setup_mode: str = \"Sync\",\n        pre_delete_collection: bool = False,\n        metadata_indexing_include: Optional[List[str]] = None,\n        metadata_indexing_exclude: Optional[List[str]] = None,\n        collection_indexing_policy: Optional[dict] = None,\n    ) -> List[Data]:\n        vector_store = AstraVectorStoreComponent().build(\n            embedding=embedding,\n            collection_name=collection_name,\n            token=token,\n            api_endpoint=api_endpoint,\n            namespace=namespace,\n            metric=metric,\n            batch_size=batch_size,\n            bulk_insert_batch_concurrency=bulk_insert_batch_concurrency,\n            bulk_insert_overwrite_concurrency=bulk_insert_overwrite_concurrency,\n            bulk_delete_concurrency=bulk_delete_concurrency,\n            setup_mode=setup_mode,\n            pre_delete_collection=pre_delete_collection,\n            metadata_indexing_include=metadata_indexing_include,\n            metadata_indexing_exclude=metadata_indexing_exclude,\n            collection_indexing_policy=collection_indexing_policy,\n        )\n        try:\n            return self.search_with_vector_store(input_value, search_type, vector_store, k=number_of_results)\n        except KeyError as e:\n            if \"content\" in str(e):\n                raise ValueError(\n                    \"You should ingest data through Langflow (or LangChain) to query it in Langflow. Your collection does not contain a field name 'content'.\"\n                )\n            else:\n                raise e\n"
               },
               "collection_indexing_policy": {
                 "advanced": true,
@@ -1947,7 +2146,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "The name of the collection within Astra DB where the vectors will be stored.",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -1985,7 +2186,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Input value to search",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -2004,7 +2207,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Optional list of metadata fields to exclude from the indexing.",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
@@ -2023,7 +2228,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Optional list of metadata fields to include in the indexing.",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
@@ -2042,7 +2249,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Optional distance metric for vector comparisons in the vector store.",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -2061,7 +2270,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Optional namespace within Astra DB to use for the collection.",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -2118,12 +2329,17 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
                 "name": "search_type",
-                "options": ["Similarity", "MMR"],
+                "options": [
+                  "Similarity",
+                  "MMR"
+                ],
                 "password": false,
                 "placeholder": "",
                 "required": false,
@@ -2139,12 +2355,18 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Configuration mode for setting up the vector store, with options like “Sync”, “Async”, or “Off”.",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
                 "name": "setup_mode",
-                "options": ["Sync", "Async", "Off"],
+                "options": [
+                  "Sync",
+                  "Async",
+                  "Off"
+                ],
                 "password": false,
                 "placeholder": "",
                 "required": false,
@@ -2160,7 +2382,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Authentication token for accessing Astra DB.",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -2196,7 +2420,9 @@
         "data": {
           "id": "AstraDB-eUCSS",
           "node": {
-            "base_classes": ["VectorStore"],
+            "base_classes": [
+              "VectorStore"
+            ],
             "beta": false,
             "custom_fields": {
               "api_endpoint": null,
@@ -2229,7 +2455,10 @@
             ],
             "frozen": false,
             "icon": "AstraDB",
-            "output_types": ["VectorStore", "BaseRetriever"],
+            "output_types": [
+              "VectorStore",
+              "BaseRetriever"
+            ],
             "outputs": [
               {
                 "cache": true,
@@ -2238,7 +2467,9 @@
                 "method": null,
                 "name": "vectorstore",
                 "selected": "VectorStore",
-                "types": ["VectorStore"],
+                "types": [
+                  "VectorStore"
+                ],
                 "value": "__UNDEFINED__"
               },
               {
@@ -2248,7 +2479,9 @@
                 "method": null,
                 "name": "baseretriever",
                 "selected": "BaseRetriever",
-                "types": ["BaseRetriever"],
+                "types": [
+                  "BaseRetriever"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -2261,7 +2494,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "API endpoint URL for the Astra DB service.",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -2389,7 +2624,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "The name of the collection within Astra DB where the vectors will be stored.",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -2445,7 +2682,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Optional list of metadata fields to exclude from the indexing.",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
@@ -2464,7 +2703,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Optional list of metadata fields to include in the indexing.",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
@@ -2483,7 +2724,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Optional distance metric for vector comparisons in the vector store.",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -2502,7 +2745,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Optional namespace within Astra DB to use for the collection.",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -2540,12 +2785,18 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Configuration mode for setting up the vector store, with options like “Sync”, “Async”, or “Off”.",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
                 "name": "setup_mode",
-                "options": ["Sync", "Async", "Off"],
+                "options": [
+                  "Sync",
+                  "Async",
+                  "Off"
+                ],
                 "password": false,
                 "placeholder": "",
                 "required": false,
@@ -2561,7 +2812,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Authentication token for accessing Astra DB.",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -2597,7 +2850,9 @@
         "data": {
           "id": "OpenAIEmbeddings-9TPjc",
           "node": {
-            "base_classes": ["Embeddings"],
+            "base_classes": [
+              "Embeddings"
+            ],
             "beta": false,
             "custom_fields": {
               "allowed_special": null,
@@ -2638,7 +2893,9 @@
                 "method": "build_embeddings",
                 "name": "embeddings",
                 "selected": "Embeddings",
-                "types": ["Embeddings"],
+                "types": [
+                  "Embeddings"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -2663,7 +2920,9 @@
                 "display_name": "Client",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "client",
@@ -2690,7 +2949,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langchain_openai.embeddings.base import OpenAIEmbeddings\n\nfrom langflow.base.models.model import LCModelComponent\nfrom langflow.field_typing import Embeddings\nfrom langflow.inputs import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, SecretStrInput, StrInput\nfrom langflow.template import Output\n\n\nclass OpenAIEmbeddingsComponent(LCModelComponent):\n    display_name = \"OpenAI Embeddings\"\n    description = \"Generate embeddings using OpenAI models.\"\n    icon = \"OpenAI\"\n    inputs = [\n        DictInput(\n            name=\"default_headers\",\n            display_name=\"Default Headers\",\n            advanced=True,\n            info=\"Default headers to use for the API request.\",\n        ),\n        DictInput(\n            name=\"default_query\",\n            display_name=\"Default Query\",\n            advanced=True,\n            info=\"Default query parameters to use for the API request.\",\n        ),\n        IntInput(name=\"chunk_size\", display_name=\"Chunk Size\", advanced=True, value=1000),\n        StrInput(name=\"client\", display_name=\"Client\", advanced=True),\n        StrInput(name=\"deployment\", display_name=\"Deployment\", advanced=True),\n        IntInput(name=\"embedding_ctx_length\", display_name=\"Embedding Context Length\", advanced=True, value=1536),\n        IntInput(name=\"max_retries\", display_name=\"Max Retries\", value=3, advanced=True),\n        DropdownInput(\n            name=\"model\",\n            display_name=\"Model\",\n            advanced=False,\n            options=[\n                \"text-embedding-3-small\",\n                \"text-embedding-3-large\",\n                \"text-embedding-ada-002\",\n            ],\n            value=\"text-embedding-3-small\",\n        ),\n        DictInput(name=\"model_kwargs\", display_name=\"Model Kwargs\", advanced=True),\n        SecretStrInput(name=\"openai_api_base\", display_name=\"OpenAI API Base\", advanced=True),\n        SecretStrInput(name=\"openai_api_key\", display_name=\"OpenAI API Key\"),\n        SecretStrInput(name=\"openai_api_type\", display_name=\"OpenAI API Type\", advanced=True),\n        StrInput(name=\"openai_api_version\", display_name=\"OpenAI API Version\", advanced=True),\n        StrInput(\n            name=\"openai_organization\",\n            display_name=\"OpenAI Organization\",\n            advanced=True,\n        ),\n        StrInput(name=\"openai_proxy\", display_name=\"OpenAI Proxy\", advanced=True),\n        FloatInput(name=\"request_timeout\", display_name=\"Request Timeout\", advanced=True),\n        BoolInput(name=\"show_progress_bar\", display_name=\"Show Progress Bar\", advanced=True),\n        BoolInput(name=\"skip_empty\", display_name=\"Skip Empty\", advanced=True),\n        StrInput(\n            name=\"tiktoken_model_name\",\n            display_name=\"TikToken Model Name\",\n            advanced=True,\n        ),\n        BoolInput(name=\"tiktoken_enable\", display_name=\"TikToken Enable\", advanced=True, value=True),\n    ]\n\n    outputs = [\n        Output(display_name=\"Embeddings\", name=\"embeddings\", method=\"build_embeddings\"),\n    ]\n\n    def build_embeddings(self) -> Embeddings:\n        return OpenAIEmbeddings(\n            tiktoken_enabled=self.tiktoken_enable,\n            default_headers=self.default_headers,\n            default_query=self.default_query,\n            allowed_special=\"all\",\n            disallowed_special=\"all\",\n            chunk_size=self.chunk_size,\n            deployment=self.deployment,\n            embedding_ctx_length=self.embedding_ctx_length,\n            max_retries=self.max_retries,\n            model=self.model,\n            model_kwargs=self.model_kwargs,\n            base_url=self.openai_api_base,\n            api_key=self.openai_api_key,\n            openai_api_type=self.openai_api_type,\n            api_version=self.openai_api_version,\n            organization=self.openai_organization,\n            openai_proxy=self.openai_proxy,\n            timeout=self.request_timeout,\n            show_progress_bar=self.show_progress_bar,\n            skip_empty=self.skip_empty,\n            tiktoken_model_name=self.tiktoken_model_name,\n        )\n"
+                "value": "from langchain_openai.embeddings.base import OpenAIEmbeddings\n\nfrom langflow.base.models.model import LCModelComponent\nfrom langflow.field_typing import Embeddings\nfrom langflow.inputs import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, SecretStrInput, TextInput\nfrom langflow.template import Output\n\n\nclass OpenAIEmbeddingsComponent(LCModelComponent):\n    display_name = \"OpenAI Embeddings\"\n    description = \"Generate embeddings using OpenAI models.\"\n    icon = \"OpenAI\"\n    inputs = [\n        DictInput(\n            name=\"default_headers\",\n            display_name=\"Default Headers\",\n            advanced=True,\n            info=\"Default headers to use for the API request.\",\n        ),\n        DictInput(\n            name=\"default_query\",\n            display_name=\"Default Query\",\n            advanced=True,\n            info=\"Default query parameters to use for the API request.\",\n        ),\n        IntInput(name=\"chunk_size\", display_name=\"Chunk Size\", advanced=True, value=1000),\n        TextInput(name=\"client\", display_name=\"Client\", advanced=True),\n        TextInput(name=\"deployment\", display_name=\"Deployment\", advanced=True),\n        IntInput(name=\"embedding_ctx_length\", display_name=\"Embedding Context Length\", advanced=True, value=1536),\n        IntInput(name=\"max_retries\", display_name=\"Max Retries\", value=3, advanced=True),\n        DropdownInput(\n            name=\"model\",\n            display_name=\"Model\",\n            advanced=False,\n            options=[\n                \"text-embedding-3-small\",\n                \"text-embedding-3-large\",\n                \"text-embedding-ada-002\",\n            ],\n            value=\"text-embedding-3-small\",\n        ),\n        DictInput(name=\"model_kwargs\", display_name=\"Model Kwargs\", advanced=True),\n        SecretStrInput(name=\"openai_api_base\", display_name=\"OpenAI API Base\", advanced=True),\n        SecretStrInput(name=\"openai_api_key\", display_name=\"OpenAI API Key\"),\n        SecretStrInput(name=\"openai_api_type\", display_name=\"OpenAI API Type\", advanced=True),\n        TextInput(name=\"openai_api_version\", display_name=\"OpenAI API Version\", advanced=True),\n        TextInput(\n            name=\"openai_organization\",\n            display_name=\"OpenAI Organization\",\n            advanced=True,\n        ),\n        TextInput(name=\"openai_proxy\", display_name=\"OpenAI Proxy\", advanced=True),\n        FloatInput(name=\"request_timeout\", display_name=\"Request Timeout\", advanced=True),\n        BoolInput(name=\"show_progress_bar\", display_name=\"Show Progress Bar\", advanced=True),\n        BoolInput(name=\"skip_empty\", display_name=\"Skip Empty\", advanced=True),\n        TextInput(\n            name=\"tiktoken_model_name\",\n            display_name=\"TikToken Model Name\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"tiktoken_enable\",\n            display_name=\"TikToken Enable\",\n            advanced=True,\n            value=True,\n            info=\"If False, you must have transformers installed.\",\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Embeddings\", name=\"embeddings\", method=\"build_embeddings\"),\n    ]\n\n    def build_embeddings(self) -> Embeddings:\n        return OpenAIEmbeddings(\n            tiktoken_enabled=self.tiktoken_enable,\n            default_headers=self.default_headers,\n            default_query=self.default_query,\n            allowed_special=\"all\",\n            disallowed_special=\"all\",\n            chunk_size=self.chunk_size,\n            deployment=self.deployment,\n            embedding_ctx_length=self.embedding_ctx_length,\n            max_retries=self.max_retries,\n            model=self.model,\n            model_kwargs=self.model_kwargs,\n            base_url=self.openai_api_base,\n            api_key=self.openai_api_key,\n            openai_api_type=self.openai_api_type,\n            api_version=self.openai_api_version,\n            organization=self.openai_organization,\n            openai_proxy=self.openai_proxy,\n            timeout=self.request_timeout,\n            show_progress_bar=self.show_progress_bar,\n            skip_empty=self.skip_empty,\n            tiktoken_model_name=self.tiktoken_model_name,\n        )\n"
               },
               "default_headers": {
                 "advanced": true,
@@ -2725,7 +2984,9 @@
                 "display_name": "Deployment",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "deployment",
@@ -2801,7 +3062,9 @@
                 "display_name": "OpenAI API Base",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "load_from_db": true,
                 "name": "openai_api_base",
                 "password": true,
@@ -2817,7 +3080,9 @@
                 "display_name": "OpenAI API Key",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "load_from_db": true,
                 "name": "openai_api_key",
                 "password": true,
@@ -2833,7 +3098,9 @@
                 "display_name": "OpenAI API Type",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "load_from_db": true,
                 "name": "openai_api_type",
                 "password": true,
@@ -2849,7 +3116,9 @@
                 "display_name": "OpenAI API Version",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "openai_api_version",
@@ -2865,7 +3134,9 @@
                 "display_name": "OpenAI Organization",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "openai_organization",
@@ -2881,7 +3152,9 @@
                 "display_name": "OpenAI Proxy",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "openai_proxy",
@@ -2938,7 +3211,7 @@
                 "advanced": true,
                 "display_name": "TikToken Enable",
                 "dynamic": false,
-                "info": "",
+                "info": "If False, you must have transformers installed.",
                 "list": false,
                 "name": "tiktoken_enable",
                 "placeholder": "",
@@ -2953,7 +3226,9 @@
                 "display_name": "TikToken Model Name",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "tiktoken_model_name",
