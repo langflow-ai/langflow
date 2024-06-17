@@ -18,8 +18,12 @@ class ArtifactType(str, Enum):
 def get_artifact_type(value, build_result=None) -> str:
     result = ArtifactType.UNKNOWN
     match value:
+        case Message():
+            enum_value = get_artifact_type(value.text)
+            result = ArtifactType(enum_value)
         case Data():
-            result = ArtifactType.DATA
+            enum_value = get_artifact_type(value.data)
+            result = ArtifactType(enum_value)
 
         case str():
             result = ArtifactType.TEXT
@@ -29,9 +33,6 @@ def get_artifact_type(value, build_result=None) -> str:
 
         case list():
             result = ArtifactType.ARRAY
-
-        case Message():
-            result = ArtifactType.MESSAGE
 
     if result == ArtifactType.UNKNOWN:
         if build_result and isinstance(build_result, Generator):
