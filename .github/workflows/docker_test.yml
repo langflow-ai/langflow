@@ -73,15 +73,12 @@ jobs:
         id: qemu
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-      - name: Build and push
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: false
-          load: true
-          file: ./docker/build_and_push.Dockerfile
-          platforms: "linux/amd64,linux/arm64/v8"
-          tags: langflowai/langflow:latest-dev
+      - name: Build image
+        run: |
+          docker build -t langflowai/langflow:latest-dev \
+            --platform linux/amd64,linux/arm64/v8 \
+            -f docker/build_and_push.Dockerfile \
+            .
       - name: Run Container
         run: |
           docker run -d --name test_container -p 8000:8000 langflowai/langflow:latest-dev
