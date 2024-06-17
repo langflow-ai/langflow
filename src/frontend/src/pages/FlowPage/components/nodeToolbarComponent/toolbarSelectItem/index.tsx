@@ -1,5 +1,6 @@
 import ForwardedIconComponent from "../../../../../components/genericIconComponent";
 import RenderIcons from "../../../../../components/renderIconComponent";
+import { IS_MAC } from "../../../../../constants/constants";
 import { toolbarSelectItemProps } from "../../../../../types/components";
 
 export default function ToolbarSelectItem({
@@ -10,7 +11,6 @@ export default function ToolbarSelectItem({
   ping,
   shortcut,
 }: toolbarSelectItemProps) {
-  const isMac = navigator.platform.toUpperCase().includes("MAC");
   let hasShift = false;
   const fixedShortcut = shortcut?.split("+");
   fixedShortcut.forEach((key) => {
@@ -19,7 +19,7 @@ export default function ToolbarSelectItem({
     }
   });
   const filteredShortcut = fixedShortcut.filter(
-    (key) => !key.toLowerCase().includes("shift"),
+    (key) => !key.toLowerCase().includes("shift")
   );
   let shortcutWPlus: string[] = [];
   if (!hasShift) shortcutWPlus = filteredShortcut.join("+").split(" ");
@@ -41,7 +41,7 @@ export default function ToolbarSelectItem({
         className={`absolute right-2 top-[0.43em] flex items-center rounded-sm bg-muted px-1.5 py-[0.1em] text-muted-foreground`}
       >
         <RenderIcons
-          isMac={isMac}
+          isMac={IS_MAC}
           hasShift={hasShift}
           filteredShortcut={filteredShortcut}
           shortcutWPlus={shortcutWPlus}

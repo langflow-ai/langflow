@@ -17,12 +17,12 @@ export type FlowsManagerStoreType = {
   saveFlow: (flow: FlowType, silent?: boolean) => Promise<void> | undefined;
   saveFlowDebounce: (
     flow: FlowType,
-    silent?: boolean,
+    silent?: boolean
   ) => Promise<void> | undefined;
   autoSaveCurrentFlow: (
     nodes: Node[],
     edges: Edge[],
-    viewport: Viewport,
+    viewport: Viewport
   ) => void;
   uploadFlows: () => Promise<void>;
   uploadFlow: ({
@@ -41,13 +41,13 @@ export type FlowsManagerStoreType = {
     flow?: FlowType,
     override?: boolean,
     position?: XYPosition,
-    fromDragAndDrop?: boolean,
+    fromDragAndDrop?: boolean
   ) => Promise<string | undefined>;
   deleteComponent: (key: string) => Promise<void>;
   removeFlow: (id: string | string[]) => Promise<void>;
   saveComponent: (
     component: any,
-    override: boolean,
+    override: boolean
   ) => Promise<string | undefined>;
   undo: () => void;
   redo: () => void;

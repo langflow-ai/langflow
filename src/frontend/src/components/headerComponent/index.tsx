@@ -59,7 +59,7 @@ export default function Header(): JSX.Element {
     const lastFlowVisitedIndex = routeHistory
       .reverse()
       .findIndex(
-        (path) => path.includes("/flow/") && path !== location.pathname,
+        (path) => path.includes("/flow/") && path !== location.pathname
       );
 
     const lastFlowVisited = routeHistory[lastFlowVisitedIndex];
@@ -201,7 +201,7 @@ export default function Header(): JSX.Element {
                     src={
                       `${BACKEND_URL.slice(
                         0,
-                        BACKEND_URL.length - 1,
+                        BACKEND_URL.length - 1
                       )}${BASE_URL_API}files/profile_pictures/${
                         userData?.profile_image ?? "Space/046-rocket.svg"
                       }` ?? profileCircle
@@ -219,7 +219,7 @@ export default function Header(): JSX.Element {
                           src={
                             `${BACKEND_URL.slice(
                               0,
-                              BACKEND_URL.length - 1,
+                              BACKEND_URL.length - 1
                             )}${BASE_URL_API}files/profile_pictures/${
                               userData?.profile_image ?? "Space/046-rocket.svg"
                             }` ?? profileCircle
