@@ -9,7 +9,7 @@ from langflow.custom import Component
 from langflow.inputs import BoolInput, IntInput, StrInput, HandleInput
 from langflow.schema import Data
 from langflow.template import Output
-from langflow.field_typing import Embeddings, Text
+from langflow.field_typing import Text
 from langflow.helpers.data import docs_to_data
 
 from loguru import logger

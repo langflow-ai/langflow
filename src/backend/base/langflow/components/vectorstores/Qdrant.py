@@ -1,11 +1,9 @@
-from typing import List, Optional
+from typing import List
 
 from langchain.vectorstores import Qdrant
-from langchain.embeddings.base import Embeddings
 from langchain.schema import BaseRetriever
 
 from langflow.custom import Component
-from langflow.field_typing import Embeddings, Text
 from langflow.schema import Data
 from langflow.inputs import BoolInput, IntInput, StrInput, HandleInput, DropdownInput
 from langflow.template import Output
