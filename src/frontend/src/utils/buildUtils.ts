@@ -294,6 +294,7 @@ async function buildVertex({
       ],
       verticesIds.map((id) => ({ id }))
     );
+    buildResults.push(false);
     stopBuild();
   }
 }
