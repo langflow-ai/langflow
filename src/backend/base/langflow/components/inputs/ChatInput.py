@@ -44,8 +44,6 @@ class ChatInput(ChatComponent):
         Output(display_name="Text", name="text", method="text_response"),
     ]
 
-    _message_stored = False
-
     def message_response(self) -> Message:
         message = Message(
             text=self.input_value,
@@ -53,9 +51,9 @@ class ChatInput(ChatComponent):
             sender_name=self.sender_name,
             session_id=self.session_id,
         )
-        if self.session_id and isinstance(message, Message) and isinstance(message.text, str) and not self._message_stored:
+        if self.session_id and isinstance(message, Message) and isinstance(message.text, str):
             self.store_message(message)
-            self._message_stored = True
+            self.message.value = message
 
         self.status = message
         return message
