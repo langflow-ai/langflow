@@ -7,8 +7,7 @@ import tailwindcssDottedBackground from "tailwindcss-dotted-background";
 
 import plugin from "tailwindcss/plugin";
 
-// ! Check if removing the other module.exports made sense
-module.exports = {
+const config = {
   variants: {
     extend: {
       display: ["group-hover"],
@@ -253,3 +252,5 @@ module.exports = {
     tailwindcssDottedBackground,
   ],
 };
+
+export default config;

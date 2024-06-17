@@ -1879,13 +1879,13 @@ vectorstore-mmr = ["numpy (>=1)", "simsimd (>=3)"]
 
 [[package]]
 name = "email-validator"
-version = "2.1.1"
+version = "2.1.2"
 description = "A robust email address syntax and deliverability validation library."
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "email_validator-2.1.1-py3-none-any.whl", hash = "sha256:97d882d174e2a65732fb43bfce81a3a834cbc1bde8bf419e30ef5ea976370a05"},
-    {file = "email_validator-2.1.1.tar.gz", hash = "sha256:200a70680ba08904be6d1eef729205cc0d687634399a5924d842533efb824b84"},
+    {file = "email_validator-2.1.2-py3-none-any.whl", hash = "sha256:d89f6324e13b1e39889eab7f9ca2f91dc9aebb6fa50a6d8bd4329ab50f251115"},
+    {file = "email_validator-2.1.2.tar.gz", hash = "sha256:14c0f3d343c4beda37400421b39fa411bbe33a75df20825df73ad53e06a9f04c"},
 ]
 
 [package.dependencies]
@@ -2438,8 +2438,8 @@ files = [
 [package.dependencies]
 cffi = {version = ">=1.12.2", markers = "platform_python_implementation == \"CPython\" and sys_platform == \"win32\""}
 greenlet = [
-    {version = ">=3.0rc3", markers = "platform_python_implementation == \"CPython\" and python_version >= \"3.11\""},
     {version = ">=2.0.0", markers = "platform_python_implementation == \"CPython\" and python_version < \"3.11\""},
+    {version = ">=3.0rc3", markers = "platform_python_implementation == \"CPython\" and python_version >= \"3.11\""},
 ]
 "zope.event" = "*"
 "zope.interface" = "*"
@@ -2598,12 +2598,12 @@ files = [
 google-auth = ">=2.14.1,<3.0.dev0"
 googleapis-common-protos = ">=1.56.2,<2.0.dev0"
 grpcio = [
-    {version = ">=1.49.1,<2.0dev", optional = true, markers = "python_version >= \"3.11\" and extra == \"grpc\""},
     {version = ">=1.33.2,<2.0dev", optional = true, markers = "python_version < \"3.11\" and extra == \"grpc\""},
+    {version = ">=1.49.1,<2.0dev", optional = true, markers = "python_version >= \"3.11\" and extra == \"grpc\""},
 ]
 grpcio-status = [
-    {version = ">=1.49.1,<2.0.dev0", optional = true, markers = "python_version >= \"3.11\" and extra == \"grpc\""},
     {version = ">=1.33.2,<2.0.dev0", optional = true, markers = "python_version < \"3.11\" and extra == \"grpc\""},
+    {version = ">=1.49.1,<2.0.dev0", optional = true, markers = "python_version >= \"3.11\" and extra == \"grpc\""},
 ]
 proto-plus = ">=1.22.3,<2.0.0dev"
 protobuf = ">=3.19.5,<3.20.0 || >3.20.0,<3.20.1 || >3.20.1,<4.21.0 || >4.21.0,<4.21.1 || >4.21.1,<4.21.2 || >4.21.2,<4.21.3 || >4.21.3,<4.21.4 || >4.21.4,<4.21.5 || >4.21.5,<5.0.0.dev0"
@@ -4416,59 +4416,52 @@ name = "langflow-base"
 version = "0.0.70"
 description = "A Python package with a built-in web application"
 optional = false
-python-versions = ">=3.10,<3.13"
-files = []
-develop = true
+python-versions = "<3.13,>=3.10"
+files = [
+    {file = "langflow_base-0.0.70-py3-none-any.whl", hash = "sha256:a89783b2add157cc6b1be8b05b75f5dce613c0379e07ee4f277852c9c31318f5"},
+    {file = "langflow_base-0.0.70.tar.gz", hash = "sha256:fa930d0d473705fa66e85c36c4b987559a82bcff0eaf6a440a253be88da1cdb8"},
+]
 
 [package.dependencies]
-alembic = "^1.13.0"
-asyncer = "^0.0.5"
+alembic = ">=1.13.0,<2.0.0"
+asyncer = ">=0.0.5,<0.0.6"
 bcrypt = "4.0.1"
-cachetools = "^5.3.1"
-chardet = "^5.2.0"
-cryptography = "^42.0.5"
-docstring-parser = "^0.15"
-duckdb = "^1.0.0"
-emoji = "^2.12.0"
-fastapi = "^0.111.0"
-gunicorn = "^22.0.0"
+cachetools = ">=5.3.1,<6.0.0"
+chardet = ">=5.2.0,<6.0.0"
+cryptography = ">=42.0.5,<43.0.0"
+docstring-parser = ">=0.15,<0.16"
+duckdb = ">=1.0.0,<2.0.0"
+emoji = ">=2.12.0,<3.0.0"
+fastapi = ">=0.111.0,<0.112.0"
+gunicorn = ">=22.0.0,<23.0.0"
 httpx = "*"
-jq = {version = "^1.7.0", markers = "sys_platform != \"win32\""}
-langchain = "~0.2.0"
+jq = {version = ">=1.7.0,<2.0.0", markers = "sys_platform != \"win32\""}
+langchain = ">=0.2.0,<0.3.0"
 langchain-experimental = "*"
-langchainhub = "~0.1.15"
-loguru = "^0.7.1"
-multiprocess = "^0.70.14"
-nest-asyncio = "^1.6.0"
+langchainhub = ">=0.1.15,<0.2.0"
+loguru = ">=0.7.1,<0.8.0"
+multiprocess = ">=0.70.14,<0.71.0"
+nest-asyncio = ">=1.6.0,<2.0.0"
 orjson = "3.10.0"
 pandas = "2.2.0"
-passlib = "^1.7.4"
-pillow = "^10.2.0"
-platformdirs = "^4.2.0"
-pydantic = "^2.7.0"
-pydantic-settings = "^2.2.0"
-pypdf = "^4.2.0"
-pyperclip = "^1.8.2"
-python-docx = "^1.1.0"
-python-jose = "^3.3.0"
-python-multipart = "^0.0.7"
-python-socketio = "^5.11.0"
-rich = "^13.7.0"
-sentry-sdk = "^2.5.1"
-sqlmodel = "^0.0.18"
-typer = "^0.12.0"
-uncurl = "^0.0.11"
-uvicorn = "^0.30.0"
+passlib = ">=1.7.4,<2.0.0"
+pillow = ">=10.2.0,<11.0.0"
+platformdirs = ">=4.2.0,<5.0.0"
+pydantic = ">=2.7.0,<3.0.0"
+pydantic-settings = ">=2.2.0,<3.0.0"
+pypdf = ">=4.2.0,<5.0.0"
+pyperclip = ">=1.8.2,<2.0.0"
+python-docx = ">=1.1.0,<2.0.0"
+python-jose = ">=3.3.0,<4.0.0"
+python-multipart = ">=0.0.7,<0.0.8"
+python-socketio = ">=5.11.0,<6.0.0"
+rich = ">=13.7.0,<14.0.0"
+sentry-sdk = ">=2.5.1,<3.0.0"
+sqlmodel = ">=0.0.18,<0.0.19"
+typer = ">=0.12.0,<0.13.0"
+uncurl = ">=0.0.11,<0.0.12"
+uvicorn = ">=0.30.0,<0.31.0"
 websockets = "*"
-
-[package.extras]
-all = []
-deploy = []
-local = []
-
-[package.source]
-type = "directory"
-url = "src/backend/base"
 
 [[package]]
 name = "langfuse"
@@ -4512,13 +4505,13 @@ requests = ">=2,<3"
 
 [[package]]
 name = "litellm"
-version = "1.40.14"
+version = "1.40.15"
 description = "Library to easily interface with LLM API providers"
 optional = false
 python-versions = "!=2.7.*,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,!=3.6.*,!=3.7.*,>=3.8"
 files = [
-    {file = "litellm-1.40.14-py3-none-any.whl", hash = "sha256:5faf9e1ca7405ef7623d2fca521aee4e11e6aa4f761fcfcd3830dc485ce53af3"},
-    {file = "litellm-1.40.14.tar.gz", hash = "sha256:22ecc4e54afb78eca7a1e17aebf3709260b33efb3a69d85882d4e6553d6e93fa"},
+    {file = "litellm-1.40.15-py3-none-any.whl", hash = "sha256:4f51376535857c109723cede78f50e0794be3814b6da1f02ea8263fe5480dc42"},
+    {file = "litellm-1.40.15.tar.gz", hash = "sha256:bd3ca27c69deb47c5d11c69a6c2f7a618512720bd2d94ff64d055c09d9fba366"},
 ]
 
 [package.dependencies]
@@ -4582,8 +4575,8 @@ psutil = ">=5.9.1"
 pywin32 = {version = "*", markers = "platform_system == \"Windows\""}
 pyzmq = ">=25.0.0"
 requests = [
-    {version = ">=2.32.2", markers = "python_version > \"3.11\""},
     {version = ">=2.26.0", markers = "python_version <= \"3.11\""},
+    {version = ">=2.32.2", markers = "python_version > \"3.11\""},
 ]
 tomli = {version = ">=1.1.0", markers = "python_version < \"3.11\""}
 Werkzeug = ">=2.0.0"
@@ -6051,9 +6044,9 @@ files = [
 
 [package.dependencies]
 numpy = [
-    {version = ">=1.26.0,<2", markers = "python_version >= \"3.12\""},
     {version = ">=1.22.4,<2", markers = "python_version < \"3.11\""},
     {version = ">=1.23.2,<2", markers = "python_version == \"3.11\""},
+    {version = ">=1.26.0,<2", markers = "python_version >= \"3.12\""},
 ]
 python-dateutil = ">=2.8.2"
 pytz = ">=2020.1"
@@ -6768,13 +6761,13 @@ pyasn1 = ">=0.4.6,<0.7.0"
 
 [[package]]
 name = "pyautogen"
-version = "0.2.28"
+version = "0.2.29"
 description = "Enabling Next-Gen LLM Applications via Multi-Agent Conversation Framework"
 optional = false
 python-versions = "<3.13,>=3.8"
 files = [
-    {file = "pyautogen-0.2.28-py3-none-any.whl", hash = "sha256:69dffa4053096f496a50c8a252bbe23105b58fd6ffbb422fa8c043ecf3fc732b"},
-    {file = "pyautogen-0.2.28.tar.gz", hash = "sha256:f74686a981f2b6046a9cf6aff5a5e61615ec60d5559a49e7474467fbdf4e077b"},
+    {file = "pyautogen-0.2.29-py3-none-any.whl", hash = "sha256:633ed65cadf9580db31f653762f9d796003e4208befdb33a19d9624fb478222c"},
+    {file = "pyautogen-0.2.29.tar.gz", hash = "sha256:dec1eb362dd195103d30fca30215f195d7c996bce2d74f22429eb18b43d1d4c3"},
 ]
 
 [package.dependencies]
@@ -6790,10 +6783,10 @@ termcolor = "*"
 tiktoken = "*"
 
 [package.extras]
-autobuild = ["chromadb", "huggingface-hub", "sentence-transformers"]
+autobuild = ["chromadb", "huggingface-hub", "pysqlite3", "sentence-transformers"]
 blendsearch = ["flaml[blendsearch]"]
 cosmosdb = ["azure-cosmos (>=4.2.0)"]
-gemini = ["google-generativeai (>=0.5,<1)", "pillow", "pydantic"]
+gemini = ["google-auth", "google-cloud-aiplatform", "google-generativeai (>=0.5,<1)", "pillow", "pydantic"]
 graph = ["matplotlib", "networkx"]
 jupyter-executor = ["ipykernel (>=6.29.0)", "jupyter-client (>=8.6.0)", "jupyter-kernel-gateway", "requests", "websocket-client"]
 lmm = ["pillow", "replicate"]
@@ -7841,18 +7834,18 @@ full = ["numpy"]
 
 [[package]]
 name = "realtime"
-version = "1.0.5"
+version = "1.0.6"
 description = ""
 optional = false
 python-versions = "<4.0,>=3.8"
 files = [
-    {file = "realtime-1.0.5-py3-none-any.whl", hash = "sha256:93342fbcb8812ed8d81733f2782c1199376f0471e78014675420c7d31f2f327d"},
-    {file = "realtime-1.0.5.tar.gz", hash = "sha256:4abbb3218b6ce8bd8d9d3b1112661d325e36ceab67a0e918673d0fd8fca04fb1"},
+    {file = "realtime-1.0.6-py3-none-any.whl", hash = "sha256:c66918a106d8ef348d1821f2dbf6683d8833825580d95b2fdea9995406b42838"},
+    {file = "realtime-1.0.6.tar.gz", hash = "sha256:2be0d8a6305513d423604ee319216108fc20105cb7438922d5c8958c48f40a47"},
 ]
 
 [package.dependencies]
 python-dateutil = ">=2.8.1,<3.0.0"
-typing-extensions = ">=4.11.0,<5.0.0"
+typing-extensions = ">=4.12.2,<5.0.0"
 websockets = ">=11,<13"
 
 [[package]]
@@ -8793,13 +8786,13 @@ files = [
 
 [[package]]
 name = "tenacity"
-version = "8.3.0"
+version = "8.4.1"
 description = "Retry code until it succeeds"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "tenacity-8.3.0-py3-none-any.whl", hash = "sha256:3649f6443dbc0d9b01b9d8020a9c4ec7a1ff5f6f3c6c8a036ef371f573fe9185"},
-    {file = "tenacity-8.3.0.tar.gz", hash = "sha256:953d4e6ad24357bceffbc9707bc74349aca9d245f68eb65419cf0c249a1949a2"},
+    {file = "tenacity-8.4.1-py3-none-any.whl", hash = "sha256:28522e692eda3e1b8f5e99c51464efcc0b9fc86933da92415168bc1c4e2308fa"},
+    {file = "tenacity-8.4.1.tar.gz", hash = "sha256:54b1412b878ddf7e1f1577cd49527bad8cdef32421bd599beac0c6c3f10582fd"},
 ]
 
 [package.extras]
@@ -9650,13 +9643,13 @@ xlsx = ["networkx", "openpyxl", "pandas", "xlrd"]
 
 [[package]]
 name = "unstructured-client"
-version = "0.23.3"
+version = "0.23.5"
 description = "Python Client SDK for Unstructured API"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "unstructured-client-0.23.3.tar.gz", hash = "sha256:3aa6ad1365c09c17eaa9367d310e457bfe9bd9e23705567811ab2fdb41d66406"},
-    {file = "unstructured_client-0.23.3-py3-none-any.whl", hash = "sha256:446469fd263f4b3eec1a982e84c04b2680f9a4e560ae0968d6e0ff2f4eead233"},
+    {file = "unstructured-client-0.23.5.tar.gz", hash = "sha256:daf41bb0573324c6c76a72d4827c53675ae1d3b29cc3fb3ac127be1ac4d47a43"},
+    {file = "unstructured_client-0.23.5-py3-none-any.whl", hash = "sha256:e33ba5e3465b26395e84b65faf8ccbc4568ddd0c76f4b55277d1d6f3ff23dd32"},
 ]
 
 [package.dependencies]
@@ -9710,13 +9703,13 @@ files = [
 
 [[package]]
 name = "urllib3"
-version = "2.2.1"
+version = "2.2.2"
 description = "HTTP library with thread-safe connection pooling, file post, and more."
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "urllib3-2.2.1-py3-none-any.whl", hash = "sha256:450b20ec296a467077128bff42b73080516e71b56ff59a60a02bef2232c4fa9d"},
-    {file = "urllib3-2.2.1.tar.gz", hash = "sha256:d0570876c61ab9e520d776c38acbbb5b05a776d3f9ff98a5c8fd5162a444cf19"},
+    {file = "urllib3-2.2.2-py3-none-any.whl", hash = "sha256:a448b2f64d686155468037e1ace9f2d2199776e17f0a46610480d311f73e3472"},
+    {file = "urllib3-2.2.2.tar.gz", hash = "sha256:dd505485549a7a552833da5e6063639d0d177c04f23bc3864e41e5dc5f612168"},
 ]
 
 [package.extras]
@@ -10571,4 +10564,4 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-content-hash = "6f5103d7e9f32094f0ebe8f192b1b967043382a1b2b97db42c3680cd0bc11efd"
+content-hash = "57f91ee566abab193c808da1c6807eb6742879a66ad7a362f3ccb726cbf4d665"

@@ -1,5 +1,5 @@
 const config = {
-  plugins: ["prettier-plugin-tailwindcss", "prettier-plugin-organize-imports"],
+  plugins: ["prettier-plugin-organize-imports", "prettier-plugin-tailwindcss"],
   tailwindConfig: "./tailwind.config.mjs",
   organizeImportsSkipDestructiveCodeActions: true,
 };
