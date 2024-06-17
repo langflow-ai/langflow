@@ -10,7 +10,7 @@ from langflow.utils.util import unescape_string
 class SplitTextComponent(Component):
     display_name: str = "Split Text"
     description: str = "Split text into chunks based on specified criteria."
-    icon = "split"
+    icon = "scissors-line-dashed"
 
     inputs = [
         HandleInput(name="data", display_name="Data", info="Data with text to split.", input_types=["Data"]),
