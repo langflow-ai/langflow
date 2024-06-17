@@ -2,8 +2,9 @@ import { useEffect } from "react";
 import { InputListComponentType } from "../../types/components";
 
 import _ from "lodash";
-import { classNames } from "../../utils/utils";
+import { classNames, cn } from "../../utils/utils";
 import IconComponent from "../genericIconComponent";
+import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 
 export default function InputListComponent({
@@ -54,7 +55,13 @@ export default function InputListComponent({
               }
             />
             {idx === 0 ? (
-              <button
+              <Button
+                unstyled
+                className={cn(
+                  disabled || playgroundDisabled
+                    ? "cursor-not-allowed text-muted-foreground"
+                    : "text-primary hover:text-accent-foreground",
+                )}
                 onClick={(e) => {
                   let newInputList = _.cloneDeep(value);
                   newInputList.push("");
@@ -68,13 +75,16 @@ export default function InputListComponent({
                 }
                 disabled={disabled || playgroundDisabled}
               >
-                <IconComponent
-                  name="Plus"
-                  className={"h-4 w-4 hover:text-accent-foreground"}
-                />
-              </button>
+                <IconComponent name="Plus" className="h-4 w-4" />
+              </Button>
             ) : (
-              <button
+              <Button
+                unstyled
+                className={cn(
+                  disabled || playgroundDisabled
+                    ? "cursor-not-allowed text-muted-foreground"
+                    : "text-primary hover:text-accent-foreground",
+                )}
                 data-testid={
                   `input-list-minus-btn${
                     editNode ? "-edit" : ""
@@ -88,15 +98,8 @@ export default function InputListComponent({
                 }}
                 disabled={disabled || playgroundDisabled}
               >
-                <IconComponent
-                  name="X"
-                  className={`h-4 w-4 ${
-                    disabled || playgroundDisabled
-                      ? ""
-                      : "hover:text-accent-foreground"
-                  }`}
-                />
-              </button>
+                <IconComponent name="X" className="h-4 w-4" />
+              </Button>
             )}
           </div>
         );
