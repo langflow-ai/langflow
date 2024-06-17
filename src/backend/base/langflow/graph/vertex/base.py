@@ -13,7 +13,7 @@ from langflow.graph.utils import UnbuiltObject, UnbuiltResult
 from langflow.interface.initialize import loading
 from langflow.interface.listing import lazy_load_dict
 from langflow.schema.artifact import ArtifactType
-from langflow.schema.schema import INPUT_FIELD_NAME, Log
+from langflow.schema.schema import INPUT_FIELD_NAME, Log, build_logs
 from langflow.services.deps import get_storage_service
 from langflow.services.monitor.utils import log_transaction
 from langflow.utils.constants import DIRECT_TYPES
