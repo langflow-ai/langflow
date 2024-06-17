@@ -1,13 +1,14 @@
 from datetime import datetime, timezone
-from typing import Annotated, Any, AsyncIterator, Iterator, Optional
+from typing import TYPE_CHECKING, Annotated, Any, AsyncIterator, Iterator, Optional
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_core.prompt_values import ImagePromptValue
 from langchain_core.prompts.image import ImagePromptTemplate
+from langflow.schema.image import Image, get_file_paths, is_image_file
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, field_serializer
 
-from langflow.schema.image import Image, get_file_paths, is_image_file
-from langflow.schema.record import Record
+if TYPE_CHECKING:
+    from langflow.schema.record import Record
 
 
 def _timestamp_to_str(timestamp: datetime) -> str:
@@ -68,7 +69,7 @@ class Message(BaseModel):
         return AIMessage(content=self.text)
 
     @classmethod
-    def from_record(cls, record: Record) -> "Message":
+    def from_record(cls, record: "Record") -> "Message":
         """
         Converts a BaseMessage to a Record.
 
