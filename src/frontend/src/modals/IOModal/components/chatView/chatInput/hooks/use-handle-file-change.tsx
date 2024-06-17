@@ -28,8 +28,9 @@ export const useHandleFileChange = (setFiles, currentFlowId) => {
         return;
       }
 
-      const uid = new ShortUniqueId({ length: 10 }); // Increase the length to ensure uniqueness
-      const id = uid();
+      const uid = new ShortUniqueId();
+      const id = uid.randomUUID(10);
+
       const type = file.type.split("/")[0];
       const blob = file;
 
