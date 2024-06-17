@@ -9,12 +9,12 @@ import Robot from "../../../../../assets/robot.png";
 import CodeTabsComponent from "../../../../../components/codeTabsComponent";
 import IconComponent from "../../../../../components/genericIconComponent";
 import SanitizedHTMLWrapper from "../../../../../components/sanitizedHTMLWrapper";
+import { EMPTY_INPUT_SEND_MESSAGE } from "../../../../../constants/constants";
 import useAlertStore from "../../../../../stores/alertStore";
 import useFlowStore from "../../../../../stores/flowStore";
 import { chatMessagePropsType } from "../../../../../types/components";
 import { classNames, cn } from "../../../../../utils/utils";
 import FileCardWrapper from "./components/fileCardWrapper";
-import { EMPTY_INPUT_SEND_MESSAGE } from "../../../../../constants/constants";
 
 export default function ChatMessage({
   chat,

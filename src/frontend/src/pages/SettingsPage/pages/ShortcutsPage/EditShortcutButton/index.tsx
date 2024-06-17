@@ -31,7 +31,7 @@ export default function EditShortcutButton({
       ? defaultShortcuts.find(
           (s) =>
             s.name.split(" ")[0].toLowerCase().toLowerCase() ===
-            shortcut[0]?.split(" ")[0].toLowerCase()
+            shortcut[0]?.split(" ")[0].toLowerCase(),
         )?.shortcut
       : "";
   const [key, setKey] = useState<string | null>(null);
@@ -50,7 +50,7 @@ export default function EditShortcutButton({
   }
 
   const setUniqueShortcut = useShortcutsStore(
-    (state) => state.updateUniqueShortcut
+    (state) => state.updateUniqueShortcut,
   );
 
   function editCombination(): void {
@@ -74,7 +74,7 @@ export default function EditShortcutButton({
         setShortcuts(newCombination);
         localStorage.setItem(
           "langflow-shortcuts",
-          JSON.stringify(newCombination)
+          JSON.stringify(newCombination),
         );
         setKey(null);
         setOpen(false);
@@ -116,7 +116,7 @@ export default function EditShortcutButton({
     const keysArr = keys.split(" ");
     let hasNewKey = false;
     return keysArr.some(
-      (k) => k.toLowerCase().trim() === keyToCompare.toLowerCase().trim()
+      (k) => k.toLowerCase().trim() === keyToCompare.toLowerCase().trim(),
     );
   }
 
@@ -137,7 +137,7 @@ export default function EditShortcutButton({
         if (checkForKeys(key, fixedKey)) return;
       }
       setKey((oldKey) =>
-        getFixedCombination({ oldKey: oldKey!, key: fixedKey })
+        getFixedCombination({ oldKey: oldKey!, key: fixedKey }),
       );
     }
 

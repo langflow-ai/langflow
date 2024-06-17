@@ -9,7 +9,7 @@ export function checkDuplicateRequestAndStoreRequest(config) {
   const currentUrl = window.location.pathname;
   const currentTime = Date.now();
   const isContained = AUTHORIZED_DUPLICATE_REQUESTS.some((request) =>
-    config?.url!.includes(request)
+    config?.url!.includes(request),
   );
 
   if (

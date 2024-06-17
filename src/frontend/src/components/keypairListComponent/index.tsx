@@ -52,7 +52,7 @@ export default function KeypairListComponent({
     <div
       className={classNames(
         ref.current?.length > 1 && editNode ? "mx-2 my-1" : "",
-        "flex h-full flex-col gap-3"
+        "flex h-full flex-col gap-3",
       )}
     >
       {ref.current?.map((obj, index) => {
@@ -68,7 +68,7 @@ export default function KeypairListComponent({
                 value={key.trim()}
                 className={classNames(
                   editNode ? "input-edit-node" : "",
-                  duplicateKey ? "input-invalid" : ""
+                  duplicateKey ? "input-invalid" : "",
                 )}
                 placeholder="Type key..."
                 onChange={(event) => handleChangeKey(event, index)}

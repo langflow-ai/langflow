@@ -1,11 +1,11 @@
 /// <reference types="vite-plugin-svgr/client" />
 import { useLocation, useNavigate } from "react-router-dom";
-import TransferFiles from "../../../../assets/undraw_transfer_files_re_a2a9.svg?react";
-import APIRequest from "../../../../assets/undraw_real_time_analytics_re_yliv.svg?react";
-import PromptChaining from "../../../../assets/undraw_cloud_docs_re_xjht.svg?react";
-import ChatBot from "../../../../assets/undraw_chat_bot_re_e2gj.svg?react";
 import BlogPost from "../../../../assets/undraw_blog_post_re_fy5x.svg?react";
+import ChatBot from "../../../../assets/undraw_chat_bot_re_e2gj.svg?react";
+import PromptChaining from "../../../../assets/undraw_cloud_docs_re_xjht.svg?react";
+import APIRequest from "../../../../assets/undraw_real_time_analytics_re_yliv.svg?react";
 import BasicPrompt from "../../../../assets/undraw_short_bio_re_fmx0.svg?react";
+import TransferFiles from "../../../../assets/undraw_transfer_files_re_a2a9.svg?react";
 
 import {
   Card,

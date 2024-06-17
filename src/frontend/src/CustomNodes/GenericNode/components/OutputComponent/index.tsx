@@ -26,18 +26,22 @@ export default function OutputComponent({
   const setNode = useFlowStore((state) => state.setNode);
   const updateNodeInternals = useUpdateNodeInternals();
 
-  const displayProxy = (children)=>{
-    if(proxy){
-      return <ShadTooltip content={<span>{proxy.nodeDisplayName}</span>}>
-        {children}
-      </ShadTooltip>
-    }else{
-      return children
+  const displayProxy = (children) => {
+    if (proxy) {
+      return (
+        <ShadTooltip content={<span>{proxy.nodeDisplayName}</span>}>
+          {children}
+        </ShadTooltip>
+      );
+    } else {
+      return children;
     }
-  }
+  };
 
   if (types.length < 2) {
-    return displayProxy(<span className={cn(frozen ? " text-ice" : "")}>{name}</span>);
+    return displayProxy(
+      <span className={cn(frozen ? " text-ice" : "")}>{name}</span>,
+    );
   }
 
   return (
@@ -50,7 +54,7 @@ export default function OutputComponent({
             size="xs"
             className={cn(
               frozen ? "text-ice" : "",
-              "items-center gap-1 pl-2 pr-1.5 align-middle text-xs font-normal"
+              "items-center gap-1 pl-2 pr-1.5 align-middle text-xs font-normal",
             )}
           >
             <span className="pb-px">{selected}</span>

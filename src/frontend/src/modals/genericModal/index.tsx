@@ -83,7 +83,7 @@ export default function GenericModal({
     }
 
     const filteredWordsHighlight = new Set(
-      matches.filter((word) => !invalid_chars.includes(word))
+      matches.filter((word) => !invalid_chars.includes(word)),
     );
 
     setWordsHighlight(filteredWordsHighlight);
@@ -134,7 +134,7 @@ export default function GenericModal({
         // to the first key of the custom_fields object
         if (field_name === "") {
           field_name = Array.isArray(
-            apiReturn.data?.frontend_node?.custom_fields?.[""]
+            apiReturn.data?.frontend_node?.custom_fields?.[""],
           )
             ? apiReturn.data?.frontend_node?.custom_fields?.[""][0] ?? ""
             : apiReturn.data?.frontend_node?.custom_fields?.[""] ?? "";
@@ -205,11 +205,7 @@ export default function GenericModal({
         />
       </BaseModal.Header>
       <BaseModal.Content overflowHidden>
-        <div
-          className={classNames(
-            "rounded-lg border flex h-full w-full"
-          )}
-        >
+        <div className={classNames("rounded-lg border flex h-full w-full")}>
           {type === TypeModal.PROMPT && isEdit && !readonly ? (
             <Textarea
               id={"modal-" + id}

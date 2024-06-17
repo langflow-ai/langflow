@@ -9,7 +9,7 @@ const usePatchGradient = (
   setSuccessData,
   setErrorData,
   currentUserData,
-  setUserData
+  setUserData,
 ) => {
   const handlePatchGradient = async (gradient) => {
     try {
