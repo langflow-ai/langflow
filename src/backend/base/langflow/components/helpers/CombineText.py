@@ -1,5 +1,6 @@
 from langflow.custom import Component
-from langflow.field_typing import Text, TextInput
+from langflow.field_typing import Text
+from langflow.inputs import TextInput
 from langflow.template import Output
 
 
