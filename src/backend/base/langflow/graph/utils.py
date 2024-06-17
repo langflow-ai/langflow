@@ -54,6 +54,7 @@ def flatten_list(list_of_lists: list[Union[list, Any]]) -> list:
 def serialize_field(value):
     """Unified serialization function for handling both BaseModel and Document types,
     including handling lists of these types."""
+
     if isinstance(value, (list, tuple)):
         return [serialize_field(v) for v in value]
     elif isinstance(value, Document):

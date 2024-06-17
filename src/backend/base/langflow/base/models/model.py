@@ -7,6 +7,7 @@ from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
 from langflow.custom import Component
 from langflow.field_typing.prompt import Prompt
+from langflow.schema.message import Message
 
 
 class LCModelComponent(Component):
@@ -92,7 +93,7 @@ class LCModelComponent(Component):
         if system_message:
             messages.append(SystemMessage(content=system_message))
         if input_value:
-            if isinstance(input_value, Prompt):
+            if isinstance(input_value, Message):
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore")
                     if "prompt" in input_value:
