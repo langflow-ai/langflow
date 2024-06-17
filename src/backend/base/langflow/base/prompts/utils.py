@@ -3,7 +3,6 @@ from copy import deepcopy
 from langchain_core.documents import Document
 
 from langflow.schema import Data
-from langflow.schema.message import Message
 
 
 def data_to_string(record: Data) -> str:
@@ -29,6 +28,8 @@ def dict_values_to_string(d: dict) -> dict:
     Returns:
         dict: The dictionary with values converted to strings.
     """
+    from langflow.schema.message import Message
+
     # Do something similar to the above
     d_copy = deepcopy(d)
     for key, value in d_copy.items():
