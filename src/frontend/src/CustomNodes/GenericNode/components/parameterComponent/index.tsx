@@ -37,9 +37,9 @@ import {
   isValidConnection,
   scapedJSONStringfy,
 } from "../../../../utils/reactflowUtils";
-import { nodeColors } from "../../../../utils/styleUtils";
 import {
   classNames,
+  cn,
   groupByFamily,
   isThereModal,
 } from "../../../../utils/utils";
@@ -58,7 +58,7 @@ export default function ParameterComponent({
   data,
   tooltipTitle,
   title,
-  color,
+  colors,
   type,
   name = "",
   required = false,
@@ -282,39 +282,63 @@ export default function ParameterComponent({
             }
             side={left ? "left" : "right"}
           >
-            <Handle
-              data-test-id={`handle-${title.toLowerCase()}-${
-                left ? "target" : "source"
-              }`}
-              type={left ? "target" : "source"}
-              position={left ? Position.Left : Position.Right}
-              key={
-                proxy
-                  ? scapedJSONStringfy({ ...id, proxy })
-                  : scapedJSONStringfy(id)
-              }
-              id={
-                proxy
-                  ? scapedJSONStringfy({ ...id, proxy })
-                  : scapedJSONStringfy(id)
-              }
-              isValidConnection={(connection) =>
-                isValidConnection(connection, nodes, edges)
-              }
-              className={classNames(
-                left ? "my-12 -ml-0.5" : "my-12 -mr-0.5",
-                "h-3 w-3 rounded-full border-2 bg-background",
-                !showNode ? "mt-0" : "",
-              )}
-              style={{
-                borderColor: color ?? nodeColors.unknown,
-              }}
-              onClick={() => {
-                setFilterEdge(
-                  groupByFamily(myData, tooltipTitle!, left, nodes!),
-                );
-              }}
-            ></Handle>
+            <div>
+              <Handle
+                data-test-id={`handle-${title.toLowerCase()}-${
+                  left ? "target" : "source"
+                }`}
+                type={left ? "target" : "source"}
+                position={left ? Position.Left : Position.Right}
+                key={
+                  proxy
+                    ? scapedJSONStringfy({ ...id, proxy })
+                    : scapedJSONStringfy(id)
+                }
+                id={
+                  proxy
+                    ? scapedJSONStringfy({ ...id, proxy })
+                    : scapedJSONStringfy(id)
+                }
+                isValidConnection={(connection) =>
+                  isValidConnection(connection, nodes, edges)
+                }
+                className={classNames(
+                  left ? "my-12 -ml-1" : "my-12 -mr-1",
+                  "h-4 w-4 rounded-full border-2 bg-background",
+                  !showNode ? "mt-0" : "",
+                )}
+                style={{
+                  background:
+                    "conic-gradient(" +
+                    colors
+                      .map(
+                        (color, index) =>
+                          color +
+                          " " +
+                          (360 / colors.length) * index +
+                          "deg " +
+                          (360 / colors.length) * (index + 1) +
+                          "deg",
+                      )
+                      .join(" ,") +
+                    ")",
+                  WebkitMaskImage:
+                    "radial-gradient(transparent 40%, black 44%)",
+                  maskImage: "radial-gradient(transparent 40%, black 44%)",
+                }}
+                onClick={() => {
+                  setFilterEdge(
+                    groupByFamily(myData, tooltipTitle!, left, nodes!),
+                  );
+                }}
+              ></Handle>
+              <div
+                className={cn(
+                  left ? "my-12 -ml-1" : "my-12 -mr-1",
+                  "absolute -left-[4px] top-[50%] z-10 h-4 w-4 translate-y-[-50%] rounded-full bg-background",
+                )}
+              />
+            </div>
           </ShadTooltip>
         </div>
       </Button>
@@ -445,28 +469,54 @@ export default function ParameterComponent({
                 }
                 side={left ? "left" : "right"}
               >
-                <Handle
-                  data-test-id={`handle-${title.toLowerCase()}-${
-                    left ? "left" : "right"
-                  }`}
-                  type={left ? "target" : "source"}
-                  position={left ? Position.Left : Position.Right}
-                  key={scapedJSONStringfy(proxy ? { ...id, proxy } : id)}
-                  id={scapedJSONStringfy(proxy ? { ...id, proxy } : id)}
-                  isValidConnection={(connection) =>
-                    isValidConnection(connection, nodes, edges)
-                  }
-                  className={classNames(
-                    left ? "-ml-0.5" : "-mr-0.5",
-                    "h-3 w-3 rounded-full border-2 bg-background",
-                  )}
-                  style={{ borderColor: color ?? nodeColors.unknown }}
-                  onClick={() => {
-                    setFilterEdge(
-                      groupByFamily(myData, tooltipTitle!, left, nodes!),
-                    );
-                  }}
-                />
+                <div>
+                  <Handle
+                    data-test-id={`handle-${title.toLowerCase()}-${
+                      left ? "left" : "right"
+                    }`}
+                    type={left ? "target" : "source"}
+                    position={left ? Position.Left : Position.Right}
+                    key={scapedJSONStringfy(proxy ? { ...id, proxy } : id)}
+                    id={scapedJSONStringfy(proxy ? { ...id, proxy } : id)}
+                    isValidConnection={(connection) =>
+                      isValidConnection(connection, nodes, edges)
+                    }
+                    className={classNames(
+                      left ? "-ml-1" : "-mr-1",
+                      "z-20 h-4 w-4 rounded-full border-none bg-background",
+                    )}
+                    style={{
+                      background:
+                        "conic-gradient(" +
+                        colors
+                          .map(
+                            (color, index) =>
+                              color +
+                              " " +
+                              (360 / colors.length) * index +
+                              "deg " +
+                              (360 / colors.length) * (index + 1) +
+                              "deg",
+                          )
+                          .join(" ,") +
+                        ")",
+                      WebkitMaskImage:
+                        "radial-gradient(transparent 40%, black 44%)",
+                      maskImage: "radial-gradient(transparent 40%, black 44%)",
+                    }}
+                    onClick={() => {
+                      setFilterEdge(
+                        groupByFamily(myData, tooltipTitle!, left, nodes!),
+                      );
+                    }}
+                  />
+                  <div
+                    className={cn(
+                      "absolute top-[50%] z-10 h-4 w-4 translate-y-[-50%] rounded-full bg-background",
+                      left ? "-left-[4px] -ml-1" : "-right-[4px] -mr-1",
+                    )}
+                  />
+                </div>
               </ShadTooltip>
             </div>
           </Button>
@@ -486,7 +536,7 @@ export default function ParameterComponent({
                   // Commenting this out until we have a better
                   // way to display
                   // (data.node?.template[name]?.refresh ? "w-5/6 " : "") +
-                  "flex-grow mt-2"
+                  "mt-2 flex-grow"
                 }
               >
                 <InputListComponent
