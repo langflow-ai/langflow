@@ -57,9 +57,8 @@ class MessageInput(StrInput):
 class TextInput(StrInput):
     input_types: list[str] = ["Message"]
 
-    @field_validator("value")
-    @classmethod
-    def validate_value(cls, v: Any, _info):
+    @staticmethod
+    def _validate_value(v: Any, _info):
         value = None
         if isinstance(v, str):
             value = v
@@ -76,10 +75,19 @@ class TextInput(StrInput):
                     f"You can set `text_key` to one of the following keys: {keys} or set the value using another Component."
                 )
         else:
-            raise ValueError(f"Invalid input type {type(v)}")
-        if isinstance(value, str):
-            return value
-        raise ValueError(f"Invalid value type {type(value)}")
+            raise ValueError(f"Invalid value type {type(v)}")
+        return value
+
+    @field_validator("value")
+    @classmethod
+    def validate_value(cls, v: Any, _info):
+        is_list = _info.data["is_list"]
+        value = None
+        if is_list:
+            value = [cls._validate_value(vv, _info) for vv in v]
+        else:
+            value = cls._validate_value(v, _info)
+        return value
 
 
 class MultilineInput(BaseInputMixin):
