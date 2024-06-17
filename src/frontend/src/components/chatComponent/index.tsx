@@ -62,9 +62,9 @@ export default function FlowToolbar(): JSX.Element {
         <button
           disabled={!hasApiKey || !validApiKey || !hasStore}
           className={classNames(
-            "relative inline-flex h-full w-full items-center justify-center gap-[4px] bg-muted px-5 py-3 text-sm font-semibold text-foreground transition-all duration-150 ease-in-out hover:bg-background hover:bg-hover ",
+            "relative inline-flex h-full w-full items-center justify-center gap-[4px] bg-muted px-5 py-3 text-sm font-semibold text-foreground transition-all duration-150 ease-in-out hover:bg-background hover:bg-hover",
             !hasApiKey || !validApiKey || !hasStore
-              ? " button-disable text-muted-foreground  "
+              ? "button-disable text-muted-foreground"
               : ""
           )}
         >
@@ -105,28 +105,28 @@ export default function FlowToolbar(): JSX.Element {
       >
         <div
           className={
-            "shadow-round-btn-shadow hover:shadow-round-btn-shadow message-button-position flex items-center justify-center gap-7 rounded-sm  border bg-muted shadow-md transition-all"
+            "shadow-round-btn-shadow hover:shadow-round-btn-shadow message-button-position flex items-center justify-center gap-7 rounded-sm border bg-muted shadow-md transition-all"
           }
         >
           <div className="flex">
-            <div className="flex h-full w-full  gap-1 rounded-sm transition-all">
+            <div className="flex h-full w-full gap-1 rounded-sm transition-all">
               {hasIO ? (
                 <IOModal open={open} setOpen={setOpen} disable={!hasIO}>
-                  <div className="relative inline-flex w-full items-center justify-center   gap-1 px-5 py-3 text-sm font-semibold transition-all duration-500 ease-in-out hover:bg-hover">
+                  <div className="relative inline-flex w-full items-center justify-center gap-1 px-5 py-3 text-sm font-semibold transition-all duration-500 ease-in-out hover:bg-hover">
                     <ForwardedIconComponent
                       name="BotMessageSquareIcon"
-                      className={" h-5 w-5 transition-all"}
+                      className={"h-5 w-5 transition-all"}
                     />
                     Playground
                   </div>
                 </IOModal>
               ) : (
                 <div
-                  className={`relative inline-flex w-full cursor-not-allowed items-center justify-center gap-1 px-5 py-3 text-sm font-semibold text-muted-foreground transition-all duration-150 ease-in-out ease-in-out`}
+                  className={`relative inline-flex w-full cursor-not-allowed items-center justify-center gap-1 px-5 py-3 text-sm font-semibold text-muted-foreground transition-all duration-150 ease-in-out`}
                 >
                   <ForwardedIconComponent
                     name="BotMessageSquareIcon"
-                    className={" h-5 w-5 transition-all"}
+                    className={"h-5 w-5 transition-all"}
                   />
                   Playground
                 </div>
@@ -149,7 +149,7 @@ export default function FlowToolbar(): JSX.Element {
                   >
                     <ForwardedIconComponent
                       name="Code2"
-                      className={" h-5 w-5"}
+                      className={"h-5 w-5"}
                     />
                     API
                   </div>
@@ -163,8 +163,8 @@ export default function FlowToolbar(): JSX.Element {
               <div
                 className={`side-bar-button ${
                   !hasApiKey || !validApiKey || !hasStore
-                    ? " cursor-not-allowed"
-                    : " cursor-pointer"
+                    ? "cursor-not-allowed"
+                    : "cursor-pointer"
                 }`}
               >
                 {ModalMemo}

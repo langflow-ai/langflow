@@ -84,8 +84,8 @@ export default function TableOptions({
                 <IconComponent
                   name="Trash2"
                   className={cn(
-                    "h-5 w-5  text-primary transition-all",
-                    !hasSelection ? "" : "hover:text-status-red "
+                    "h-5 w-5 text-primary transition-all",
+                    !hasSelection ? "" : "hover:text-status-red"
                   )}
                 />
               </Button>

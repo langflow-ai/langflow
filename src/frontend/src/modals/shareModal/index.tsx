@@ -182,7 +182,7 @@ export default function ShareModal({
               current?
             </span>
             <br></br>
-            <span className=" text-xs text-destructive ">
+            <span className="text-xs text-destructive">
               Note: This action is irreversible.
             </span>
           </ConfirmationModal.Content>
@@ -253,11 +253,11 @@ export default function ShareModal({
               }}
               data-testid="public-checkbox"
             />
-            <label htmlFor="public" className="export-modal-save-api text-sm ">
+            <label htmlFor="public" className="export-modal-save-api text-sm">
               Set {nameComponent} status to public
             </label>
           </div>
-          <span className=" text-xs text-destructive ">
+          <span className="text-xs text-destructive">
             <b>Attention:</b> API keys in specified fields are automatically
             removed upon sharing.
           </span>

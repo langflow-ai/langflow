@@ -293,7 +293,7 @@ const SideBarFoldersButtonsComponent = ({
                     >
                       <IconComponent
                         name={"trash"}
-                        className=" w-4 stroke-[1.5]"
+                        className="w-4 stroke-[1.5]"
                       />
                     </Button>
                   )}
@@ -309,7 +309,7 @@ const SideBarFoldersButtonsComponent = ({
                   >
                     <IconComponent
                       name={"Download"}
-                      className="  w-4 stroke-[1.5] text-white  "
+                      className="w-4 stroke-[1.5] text-white"
                     />
                   </Button>
                 </div>

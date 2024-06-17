@@ -45,7 +45,7 @@ export default function FileCard({
             <img
               src={imgSrc}
               alt="generated image"
-              className="m-0  h-auto w-auto rounded-lg border border-border p-0 transition-all"
+              className="m-0 h-auto w-auto rounded-lg border border-border p-0 transition-all"
             />
             <DownloadButton
               isHovered={isHovered}

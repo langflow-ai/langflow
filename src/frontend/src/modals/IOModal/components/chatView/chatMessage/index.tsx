@@ -162,7 +162,7 @@ export default function ChatMessage({
               )}
               {chat.thought && chat.thought !== "" && !hidden && (
                 <SanitizedHTMLWrapper
-                  className=" form-modal-chat-thought"
+                  className="form-modal-chat-thought"
                   content={convert.toHtml(chat.thought)}
                   onClick={() => setHidden((prev) => !prev)}
                 />
@@ -187,8 +187,7 @@ export default function ChatMessage({
                           <Markdown
                             remarkPlugins={[remarkGfm, remarkMath]}
                             rehypePlugins={[rehypeMathjax]}
-                            className="markdown prose flex flex-col text-primary word-break-break-word
-dark:prose-invert"
+                            className="markdown prose flex flex-col text-primary word-break-break-word dark:prose-invert"
                             components={{
                               pre({ node, ...props }) {
                                 return <>{props.children}</>;
@@ -319,7 +318,7 @@ dark:prose-invert"
                   {chatMessage}
                 </span>
                 {chat.files && (
-                  <div className="my-2 flex  flex-col gap-5">
+                  <div className="my-2 flex flex-col gap-5">
                     {chat.files.map((file, index) => {
                       return (
                         <FileCardWrapper

@@ -1,5 +1,7 @@
 from typing import List
 
+from loguru import logger
+
 from langflow.graph.schema import ResultData, RunOutputs
 from langflow.schema import Data
 
@@ -37,9 +39,32 @@ def build_data_from_result_data(result_data: ResultData, get_final_results_only:
 
     """
     messages = result_data.messages
+
     if not messages:
         return []
     data = []
+
+    # Handle results without chat messages (calling flow)
+    if not messages:
+        # Result with a single record
+        if isinstance(result_data.artifacts, dict):
+            data.append(Data(data=result_data.artifacts))
+        # List of artifacts
+        elif isinstance(result_data.artifacts, list):
+            for artifact in result_data.artifacts:
+                # If multiple records are found as artifacts, return as-is
+                if isinstance(artifact, Data):
+                    data.append(artifact)
+                else:
+                    # Warn about unknown output type
+                    logger.warning(f"Unable to build record output from unknown ResultData.artifact: {str(artifact)}")
+        # Chat or text output
+        elif result_data.results:
+            data.append(Data(data={"result": result_data.results}, text_key="result"))
+            return data
+        else:
+            return []
+
     for message in messages:
         message_dict = message if isinstance(message, dict) else message.model_dump()
         if get_final_results_only:

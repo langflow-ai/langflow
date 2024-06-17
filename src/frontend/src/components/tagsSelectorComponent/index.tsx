@@ -33,7 +33,7 @@ export function TagsSelector({
             className={
               disabled
                 ? "cursor-not-allowed"
-                : " overflow-hidden whitespace-nowrap"
+                : "overflow-hidden whitespace-nowrap"
             }
             onClick={() => {
               updateTags(tag.name);

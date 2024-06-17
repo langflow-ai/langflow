@@ -24,7 +24,7 @@ export default function NewFlowModal({
         </span>
       </BaseModal.Header>
       <BaseModal.Content>
-        <div className=" mb-5 grid h-fit w-full grid-cols-3 gap-4 overflow-auto pb-6 custom-scroll">
+        <div className="mb-5 grid h-fit w-full grid-cols-3 gap-4 overflow-auto pb-6 custom-scroll">
           <NewFlowCardComponent />
 
           {examples.find((e) => e.name == "Basic Prompting (Hello, World)") && (

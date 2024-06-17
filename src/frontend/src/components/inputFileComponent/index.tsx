@@ -117,7 +117,7 @@ export default function InputFileComponent({
               name="FileSearch2"
               className={
                 "icons-parameters-comp" +
-                (disabled ? " text-ring " : " hover:text-accent-foreground")
+                (disabled ? " text-ring" : " hover:text-accent-foreground")
               }
             />
           )}

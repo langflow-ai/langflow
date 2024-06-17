@@ -117,7 +117,7 @@ export const SidebarDraggableComponent = forwardRef(
               <div ref={popoverRef}>
                 <IconComponent
                   name="Menu"
-                  className="side-bar-components-icon "
+                  className="side-bar-components-icon"
                 />
                 <SelectTrigger></SelectTrigger>
                 <SelectContent

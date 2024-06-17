@@ -21,12 +21,14 @@ on:
           - main
 env:
   POETRY_VERSION: "1.8.2"
+  TEST_TAG: "langflowai/langflow:test"
 
 jobs:
   setup:
     runs-on: ubuntu-latest
     outputs:
       tags: ${{ steps.set-vars.outputs.tags }}
+      file: ${{ steps.set-vars.outputs.file }}
     steps:
       - uses: actions/checkout@v4
       - name: Set Dockerfile and Tags
@@ -34,16 +36,22 @@ jobs:
         run: |
           if [[ "${{ inputs.release_type }}" == "base" ]]; then
             echo "tags=langflowai/langflow:base-${{ inputs.version }}" >> $GITHUB_OUTPUT
+            echo "file=./docker/build_and_push_base.Dockerfile" >> $GITHUB_OUTPUT
           else
             echo "tags=langflowai/langflow:${{ inputs.version }},langflowai/langflow:1.0-alpha" >> $GITHUB_OUTPUT
+            echo "file=./docker/build_and_push.Dockerfile" >> $GITHUB_OUTPUT
           fi
-  build_base:
+  build:
     runs-on: ubuntu-latest
     needs: setup
     strategy:
       matrix:
         platform: [linux/amd64, linux/arm64/v8]
-        file: [./docker/build_and_push.Dockerfile, ./docker/build_and_push_base.Dockerfile]
+        file:
+          [
+            ./docker/build_and_push.Dockerfile,
+            ./docker/build_and_push_base.Dockerfile
+          ]
     steps:
       - uses: actions/checkout@v4
       - name: Set up Docker Buildx
@@ -53,19 +61,39 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Build and push Base Image
+      # - name: Build Docker Image
+      #   uses: docker/build-push-action@v5
+      #   id: docker_build
+      #   with:
+      #     context: .
+      #     push: false  # Do not push yet
+      #     platforms: "linux/amd64,linux/arm64/v8"
+      #     load: true
+      #     file: ${{ matrix.file }}
+      #     tags: ${{ env.TEST_TAG }}
+      # - name: Run Container
+      #   run: |
+      #     docker run -d --name test_container -p 8000:8000 ${{ needs.setup.outputs.tags }}
+      # - name: Wait for Container to Start and Check Health
+      #   run: |
+      #     timeout 40 bash -c 'until curl -f http://127.0.0.1:8000/health; do sleep 1; done' || (echo "Server did not start in time" && docker logs test_container && docker stop test_container && docker rm test_container && exit 1)
+      # - name: Stop and Remove Container
+      #   run: |
+      #     docker stop test_container
+      #     docker rm test_container
+      - name: Build and Push Docker Image
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
-          platforms: ${{ matrix.platform }}
-          file: ${{ matrix.file }}
+          platforms: "linux/amd64,linux/arm64/v8"
+          file: ${{ needs.setup.outputs.file }}
           tags: ${{ needs.setup.outputs.tags }}
 
   build_components:
     if: ${{ inputs.release_type == 'main' }}
     runs-on: ubuntu-latest
-    needs: build_base
+    needs: build
     strategy:
       matrix:
         component: [backend, frontend]
@@ -85,6 +113,8 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Wait for Docker Hub to propagate (for backend)
+        run: sleep 120
       - name: Build and push ${{ matrix.component }}
         uses: docker/build-push-action@v5
         with:
@@ -100,7 +130,7 @@ jobs:
     name: Restart HuggingFace Spaces
     if: ${{ inputs.release_type == 'main' }}
     runs-on: ubuntu-latest
-    needs: build_base
+    needs: build
     strategy:
       matrix:
         python-version:

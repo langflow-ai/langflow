@@ -73,6 +73,7 @@ INPUT_COMPONENTS = [
 OUTPUT_COMPONENTS = [
     InterfaceComponentTypes.ChatOutput,
     InterfaceComponentTypes.TextOutput,
+    InterfaceComponentTypes.DataOutput,
 ]
 
 

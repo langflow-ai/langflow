@@ -98,7 +98,7 @@ export default function CodeTabsComponent({
       value={activeTab}
       className={
         "api-modal-tabs inset-0 m-0 " +
-        (isMessage ? "dark " : "") +
+        (isMessage ? "dark" : "") +
         (dark && isMessage ? "bg-background" : "")
       }
       onValueChange={(value) => {

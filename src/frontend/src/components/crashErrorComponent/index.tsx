@@ -9,7 +9,7 @@ export default function CrashErrorComponent({
 }: crashComponentPropsType): JSX.Element {
   return (
     <div className="z-50 flex h-screen w-screen items-center justify-center bg-foreground bg-opacity-50">
-      <div className="flex h-screen w-screen flex-col  bg-background text-start shadow-lg">
+      <div className="flex h-screen w-screen flex-col bg-background text-start shadow-lg">
         <div className="m-auto grid w-1/2 justify-center gap-5 text-center">
           <Card className="p-8">
             <CardHeader>
@@ -31,7 +31,7 @@ export default function CrashErrorComponent({
                     href="https://github.com/langflow-ai/langflow/issues"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="font-medium  hover:underline "
+                    className="font-medium hover:underline"
                   >
                     GitHub Issues
                   </a>{" "}

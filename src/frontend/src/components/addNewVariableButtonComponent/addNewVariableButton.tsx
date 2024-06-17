@@ -92,7 +92,7 @@ export default function AddNewVariableButton({
         <span className="pr-2"> Create Variable </span>
         <ForwardedIconComponent
           name="Globe"
-          className="h-6 w-6 pl-1 text-primary "
+          className="h-6 w-6 pl-1 text-primary"
           aria-hidden="true"
         />
       </BaseModal.Header>

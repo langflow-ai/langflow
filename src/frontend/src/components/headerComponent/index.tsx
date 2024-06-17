@@ -230,7 +230,7 @@ export default function Header(): JSX.Element {
                               userData?.profile_image ?? "Space/046-rocket.svg"
                             }` ?? profileCircle
                           }
-                          className="h-5 w-5 focus-visible:outline-0 "
+                          className="h-5 w-5 focus-visible:outline-0"
                         />
 
                         {userData?.username ?? "User"}

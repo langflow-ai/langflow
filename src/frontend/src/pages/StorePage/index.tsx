@@ -222,8 +222,8 @@ export default function StorePage(): JSX.Element {
                 className={
                   (tabActive === "All"
                     ? "border-b-2 border-primary p-3"
-                    : " border-b-2 border-transparent p-3 text-muted-foreground hover:text-primary") +
-                  (loading ? " cursor-not-allowed " : "")
+                    : "border-b-2 border-transparent p-3 text-muted-foreground hover:text-primary") +
+                  (loading ? " cursor-not-allowed" : "")
                 }
               >
                 All
@@ -238,8 +238,8 @@ export default function StorePage(): JSX.Element {
                 className={
                   (tabActive === "Flows"
                     ? "border-b-2 border-primary p-3"
-                    : " border-b-2 border-transparent p-3 text-muted-foreground hover:text-primary") +
-                  (loading ? " cursor-not-allowed " : "")
+                    : "border-b-2 border-transparent p-3 text-muted-foreground hover:text-primary") +
+                  (loading ? " cursor-not-allowed" : "")
                 }
               >
                 Flows
@@ -254,8 +254,8 @@ export default function StorePage(): JSX.Element {
                 className={
                   (tabActive === "Components"
                     ? "border-b-2 border-primary p-3"
-                    : " border-b-2 border-transparent p-3 text-muted-foreground hover:text-primary") +
-                  (loading ? " cursor-not-allowed " : "")
+                    : "border-b-2 border-transparent p-3 text-muted-foreground hover:text-primary") +
+                  (loading ? " cursor-not-allowed" : "")
                 }
               >
                 Components

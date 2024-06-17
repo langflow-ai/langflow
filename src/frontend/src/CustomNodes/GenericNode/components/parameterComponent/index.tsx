@@ -114,7 +114,7 @@ export default function ParameterComponent({
     const logs = (data?.logs[outputName] ?? [])[0];
     if (Array.isArray(logs) && logs.length > 1) {
       return logs.some(
-        (log) => log.type === "error" || log.type === "ValueError",
+        (log) => log.type === "error" || log.type === "ValueError"
       );
     } else {
       return logs?.type === "error" || logs?.type === "ValueError";
@@ -156,7 +156,7 @@ export default function ParameterComponent({
     handleUpdateValues,
     debouncedHandleUpdateValues,
     setNode,
-    setIsLoading,
+    setIsLoading
   );
 
   const { handleNodeClass: handleNodeClassHook } = useHandleNodeClass(
@@ -164,7 +164,7 @@ export default function ParameterComponent({
     name,
     takeSnapshot,
     setNode,
-    updateNodeInternals,
+    updateNodeInternals
   );
 
   const { handleRefreshButtonPress: handleRefreshButtonPressHook } =
@@ -173,13 +173,13 @@ export default function ParameterComponent({
   let disabled =
     edges.some(
       (edge) =>
-        edge.targetHandle === scapedJSONStringfy(proxy ? { ...id, proxy } : id),
+        edge.targetHandle === scapedJSONStringfy(proxy ? { ...id, proxy } : id)
     ) ?? false;
 
   let disabledOutput =
     edges.some(
       (edge) =>
-        edge.sourceHandle === scapedJSONStringfy(proxy ? { ...id, proxy } : id),
+        edge.sourceHandle === scapedJSONStringfy(proxy ? { ...id, proxy } : id)
     ) ?? false;
 
   const handleRefreshButtonPress = async (name, data) => {
@@ -190,7 +190,7 @@ export default function ParameterComponent({
 
   const handleOnNewValue = async (
     newValue: string | string[] | boolean | Object[],
-    skipSnapshot: boolean | undefined = false,
+    skipSnapshot: boolean | undefined = false
   ): Promise<void> => {
     handleOnNewValueHook(newValue, skipSnapshot);
   };
@@ -302,16 +302,16 @@ export default function ParameterComponent({
                 isValidConnection(connection, nodes, edges)
               }
               className={classNames(
-                left ? "my-12 -ml-0.5 " : " my-12 -mr-0.5 ",
+                left ? "my-12 -ml-0.5" : "my-12 -mr-0.5",
                 "h-3 w-3 rounded-full border-2 bg-background",
-                !showNode ? "mt-0" : "",
+                !showNode ? "mt-0" : ""
               )}
               style={{
                 borderColor: color ?? nodeColors.unknown,
               }}
               onClick={() => {
                 setFilterEdge(
-                  groupByFamily(myData, tooltipTitle!, left, nodes!),
+                  groupByFamily(myData, tooltipTitle!, left, nodes!)
                 );
               }}
             ></Handle>
@@ -326,7 +326,7 @@ export default function ParameterComponent({
         "relative mt-1 flex w-full flex-wrap items-center justify-between bg-muted px-5 py-2" +
         ((name === "code" && type === "code") ||
         (name.includes("code") && proxy)
-          ? " hidden "
+          ? " hidden"
           : "")
       }
     >
@@ -389,7 +389,7 @@ export default function ParameterComponent({
                     {errorOutput ? (
                       <IconComponent
                         className={classNames(
-                          "h-5 w-5 rounded-md text-status-red",
+                          "h-5 w-5 rounded-md text-status-red"
                         )}
                         name={"X"}
                       />
@@ -399,7 +399,7 @@ export default function ParameterComponent({
                           "h-5 w-5 rounded-md",
                           displayOutputPreview && !unknownOutput
                             ? " hover:text-medium-indigo"
-                            : " cursor-not-allowed text-muted-foreground",
+                            : " cursor-not-allowed text-muted-foreground"
                         )}
                         name={"ScanEye"}
                       />
@@ -457,12 +457,12 @@ export default function ParameterComponent({
                   }
                   className={classNames(
                     left ? "-ml-0.5" : "-mr-0.5",
-                    "h-3 w-3 rounded-full border-2 bg-background",
+                    "h-3 w-3 rounded-full border-2 bg-background"
                   )}
                   style={{ borderColor: color ?? nodeColors.unknown }}
                   onClick={() => {
                     setFilterEdge(
-                      groupByFamily(myData, tooltipTitle!, left, nodes!),
+                      groupByFamily(myData, tooltipTitle!, left, nodes!)
                     );
                   }}
                 />
@@ -502,7 +502,7 @@ export default function ParameterComponent({
               </div>
             </Case>
             <Case condition={data.node?.template[name]?.multiline}>
-              <div className="mt-2 flex w-full flex-col ">
+              <div className="mt-2 flex w-full flex-col">
                 <div className="flex-grow">
                   <TextAreaComponent
                     disabled={disabled}

@@ -58,7 +58,7 @@ export default function IOFieldView({
             return (
               <Textarea
                 className={`w-full custom-scroll ${
-                  left ? " min-h-32" : " h-full"
+                  left ? "min-h-32" : "h-full"
                 }`}
                 placeholder={"Enter text..."}
                 value={node.data.node!.template["input_value"].value}
@@ -142,7 +142,7 @@ export default function IOFieldView({
             return (
               <Textarea
                 className={`w-full custom-scroll ${
-                  left ? " min-h-32" : " h-full"
+                  left ? "min-h-32" : "h-full"
                 }`}
                 placeholder={"Enter text..."}
                 value={node.data.node!.template["input_value"]}
@@ -266,7 +266,7 @@ export default function IOFieldView({
             return (
               <Textarea
                 className={`w-full custom-scroll ${
-                  left ? " min-h-32" : " h-full"
+                  left ? "min-h-32" : "h-full"
                 }`}
                 placeholder={"Empty"}
                 // update to real value on flowPool
