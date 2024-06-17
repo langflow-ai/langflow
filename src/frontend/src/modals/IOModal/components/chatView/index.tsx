@@ -59,7 +59,7 @@ export default function ChatView({
       //
       .filter(
         (output) =>
-          output.data.message || (!output.data.message && output.artifacts)
+          output.data.message || (!output.data.message && output.artifacts),
       )
       .map((output, index) => {
         try {
@@ -140,7 +140,7 @@ export default function ChatView({
   function updateChat(
     chat: ChatMessageType,
     message: string,
-    stream_url?: string
+    stream_url?: string,
   ) {
     chat.message = message;
     updateFlowPool(chat.componentId, {
@@ -156,7 +156,7 @@ export default function ChatView({
     setIsDragging,
     setFiles,
     currentFlowId,
-    setErrorData
+    setErrorData,
   );
 
   return (
@@ -171,8 +171,7 @@ export default function ChatView({
         <div className="eraser-position">
           <Button
             className="flex gap-1"
-            size="none"
-            variant="none"
+            unstyled
             disabled={lockChat}
             onClick={() => handleSelectChange("builds")}
           >

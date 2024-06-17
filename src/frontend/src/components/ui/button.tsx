@@ -20,7 +20,6 @@ const buttonVariants = cva(
           "border border-muted bg-muted text-secondary-foreground hover:bg-secondary-foreground/5",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "underline-offset-4 hover:underline text-primary",
-        none: "",
       },
       size: {
         default: "h-10 py-2 px-4",
@@ -28,14 +27,13 @@ const buttonVariants = cva(
         xs: "py-0.5 px-3 rounded-md",
         lg: "h-11 px-8 rounded-md",
         icon: "py-1 px-1 rounded-md",
-        none: "",
       },
     },
     defaultVariants: {
       variant: "default",
       size: "default",
     },
-  }
+  },
 );
 
 export interface ButtonProps
@@ -43,6 +41,7 @@ export interface ButtonProps
     VariantProps<typeof buttonVariants> {
   asChild?: boolean;
   loading?: boolean;
+  unstyled?: boolean;
 }
 
 function toTitleCase(text: string) {
@@ -57,6 +56,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     {
       className,
       variant,
+      unstyled,
       size,
       loading,
       type,
@@ -65,7 +65,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       children,
       ...props
     },
-    ref
+    ref,
   ) => {
     const Comp = asChild ? Slot : "button";
     let newChildren = children;
@@ -75,7 +75,9 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     return (
       <>
         <Comp
-          className={cn(buttonVariants({ variant, size, className }))}
+          className={
+            !unstyled ? buttonVariants({ variant, size, className }) : className
+          }
           disabled={loading || disabled}
           {...(asChild ? {} : { type: type || "button" })}
           ref={ref}
@@ -97,7 +99,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         </Comp>
       </>
     );
-  }
+  },
 );
 Button.displayName = "Button";
 
