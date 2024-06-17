@@ -105,6 +105,7 @@ const Footer: React.FC<{
               type={submit.onClick ? "button" : "submit"}
               onClick={submit.onClick}
               loading={submit.loading}
+              disabled={submit.disabled}
             >
               {submit.icon && submit.icon}
               {submit.label}
