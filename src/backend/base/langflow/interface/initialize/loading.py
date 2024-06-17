@@ -123,8 +123,9 @@ async def build_component(
 ):
     # Now set the params as attributes of the custom_component
     custom_component.set_attributes(params)
-    warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
-    build_results, artifacts = await custom_component.build_results(vertex)
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
+        build_results, artifacts = await custom_component.build_results(vertex)
 
     return custom_component, build_results, artifacts
 
