@@ -232,7 +232,6 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
         // addFlowToLocalState(newFlow);
         return;
       }
-      console.log("folder id", folder_id);
       const newFlow = createNewFlow(
         flowData!,
         flow!,
@@ -263,8 +262,20 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
 
         // Return the id
         return id;
-      } catch (error) {
-        // Handle the error if needed
+      } catch (error:any) {
+        console.error(error);
+        if(error.response?.data?.detail){
+          useAlertStore.getState().setErrorData({
+            title: "Could not load flows from database",
+            list: [error.response?.data?.detail],
+          });
+        }
+        else{
+          useAlertStore.getState().setErrorData({
+            title: "Could not load flows from database",
+            list: [error.message?? "An unexpected error occurred, please try again"],
+          });
+        }
         throw error; // Re-throw the error so the caller can handle it if needed
       }
     } else {
