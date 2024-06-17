@@ -1,10 +1,12 @@
 import inspect
 import json
 import os
+import warnings
 from typing import TYPE_CHECKING, Any, Type
 
 import orjson
 from loguru import logger
+from pydantic import PydanticDeprecatedSince20
 
 from langflow.custom.eval import eval_custom_component_code
 from langflow.schema import Data
@@ -121,8 +123,8 @@ async def build_component(
 ):
     # Now set the params as attributes of the custom_component
     custom_component.set_attributes(params)
-
-    build_results, artifacts = await custom_component.build_results(vertex)
+    with warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20):
+        build_results, artifacts = await custom_component.build_results(vertex)
 
     return custom_component, build_results, artifacts
 
