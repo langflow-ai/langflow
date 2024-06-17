@@ -542,15 +542,13 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       onBuildComplete: (allNodesValid) => {
         const nodeId = startNodeId || stopNodeId;
         if (!silent) {
-          if (nodeId && allNodesValid) {
+          if (allNodesValid) {
             setSuccessData({
-              title: `${
+              title: nodeId?`${
                 get().nodes.find((node) => node.id === nodeId)?.data.node
                   ?.display_name
-              } built successfully`,
+              } built successfully`:FLOW_BUILD_SUCCESS_ALERT,
             });
-          } else {
-            setSuccessData({ title: FLOW_BUILD_SUCCESS_ALERT });
           }
         }
         get().setIsBuilding(false);
