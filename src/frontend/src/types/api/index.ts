@@ -19,6 +19,7 @@ export type APIClassType = {
   template: APITemplateType;
   display_name: string;
   icon?: string;
+  edited?: boolean;
   is_input?: boolean;
   is_output?: boolean;
   conditional_paths?: Array<string>;
