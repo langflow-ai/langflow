@@ -1,8 +1,8 @@
 from langflow.base.io.chat import ChatComponent
+from langflow.field_typing import Text
 from langflow.inputs import BoolInput, DropdownInput, StrInput
 from langflow.schema.message import Message
 from langflow.template import Output
-from langflow.field_typing import Text
 
 
 class ChatOutput(ChatComponent):
@@ -39,8 +39,6 @@ class ChatOutput(ChatComponent):
         Output(display_name="Text", name="text", method="text_response"),
     ]
 
-    _message_stored = False
-
     def message_response(self) -> Message:
         message = Message(
             text=self.input_value,
@@ -48,9 +46,9 @@ class ChatOutput(ChatComponent):
             sender_name=self.sender_name,
             session_id=self.session_id,
         )
-        if self.session_id and isinstance(message, Message) and isinstance(message.text, str) and not self._message_stored:
+        if self.session_id and isinstance(message, Message) and isinstance(message.text, str):
             self.store_message(message)
-            self._message_stored = True
+            self.message.value = message
 
         self.status = message
         return message
