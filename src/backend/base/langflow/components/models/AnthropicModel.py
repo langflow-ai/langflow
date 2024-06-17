@@ -74,7 +74,6 @@ class AnthropicModelComponent(LCModelComponent):
 
     def text_response(self) -> Text:
         input_value = self.input_value
-        stream = self.stream
         system_message = self.system_message
         prefill = self.prefill
         output = self.build_model()
