@@ -199,7 +199,7 @@ export default function ExtraSidebar(): JSX.Element {
           className={classNames(
             "extra-side-bar-buttons gap-[4px] text-sm font-semibold",
             !hasApiKey || !validApiKey || !hasStore
-              ? "button-disable  cursor-default text-muted-foreground"
+              ? "button-disable cursor-default text-muted-foreground"
               : ""
           )}
         >
@@ -262,7 +262,7 @@ export default function ExtraSidebar(): JSX.Element {
           }}
         />
         <div
-          className="search-icon "
+          className="search-icon"
           onClick={() => {
             if (search) {
               setFilterData(data);

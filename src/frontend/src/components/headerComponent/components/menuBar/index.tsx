@@ -9,10 +9,11 @@ import {
 
 import { useNavigate } from "react-router-dom";
 import { UPLOAD_ERROR_ALERT } from "../../../../constants/alerts_constants";
-import { IS_MAC, SAVED_HOVER } from "../../../../constants/constants";
+import { SAVED_HOVER } from "../../../../constants/constants";
 import ExportModal from "../../../../modals/exportModal";
 import FlowLogsModal from "../../../../modals/flowLogsModal";
 import FlowSettingsModal from "../../../../modals/flowSettingsModal";
+import ToolbarSelectItem from "../../../../pages/FlowPage/components/nodeToolbarComponent/toolbarSelectItem";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
@@ -96,10 +97,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
               }}
               className="cursor-pointer"
             >
-              <IconComponent
-                name="Settings2"
-                className="header-menu-options "
-              />
+              <IconComponent name="Settings2" className="header-menu-options" />
               Settings
             </DropdownMenuItem>
             <DropdownMenuItem
@@ -110,7 +108,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
             >
               <IconComponent
                 name="ScrollText"
-                className="header-menu-options "
+                className="header-menu-options"
               />
               Logs
             </DropdownMenuItem>
@@ -127,7 +125,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
                 );
               }}
             >
-              <IconComponent name="FileUp" className="header-menu-options " />
+              <IconComponent name="FileUp" className="header-menu-options" />
               Import
             </DropdownMenuItem>
             <ExportModal>
@@ -145,21 +143,15 @@ export const MenuBar = ({}: {}): JSX.Element => {
               }}
               className="cursor-pointer"
             >
-              <IconComponent name="Undo" className="header-menu-options " />
-              Undo
-              {IS_MAC ? (
-                <IconComponent
-                  name="Command"
-                  className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
-                />
-              ) : (
-                <span className="absolute right-[1.15rem] top-[0.40em] stroke-2">
-                  {
-                    shortcuts.find((s) => s.name.toLowerCase() === "undo")
-                      ?.shortcut
-                  }
-                </span>
-              )}
+              <ToolbarSelectItem
+                value="Undo"
+                icon="Undo"
+                dataTestId=""
+                shortcut={
+                  shortcuts.find((s) => s.name.toLowerCase() === "undo")
+                    ?.shortcut!
+                }
+              />
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => {
@@ -167,21 +159,15 @@ export const MenuBar = ({}: {}): JSX.Element => {
               }}
               className="cursor-pointer"
             >
-              <IconComponent name="Redo" className="header-menu-options " />
-              Redo
-              {IS_MAC ? (
-                <IconComponent
-                  name="Command"
-                  className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
-                />
-              ) : (
-                <span className="absolute right-[1.15rem] top-[0.40em] stroke-2">
-                  {
-                    shortcuts.find((s) => s.name.toLowerCase() === "redo")
-                      ?.shortcut
-                  }
-                </span>
-              )}
+              <ToolbarSelectItem
+                value="Redo"
+                icon="Redo"
+                dataTestId=""
+                shortcut={
+                  shortcuts.find((s) => s.name.toLowerCase() === "redo")
+                    ?.shortcut!
+                }
+              />
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => {

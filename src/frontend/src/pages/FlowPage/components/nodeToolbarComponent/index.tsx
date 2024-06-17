@@ -455,7 +455,7 @@ export default function NodeToolbarComponent({
               <button
                 className={`${
                   isGroup ? "rounded-l-md" : ""
-                } relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10`}
+                } relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10`}
                 onClick={() => {
                   setShowModalAdvanced(true);
                 }}
@@ -494,7 +494,7 @@ export default function NodeToolbarComponent({
           >
             <button
               className={classNames(
-                "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10"
+                "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10"
               )}
               onClick={(event) => {
                 event.preventDefault();
@@ -543,7 +543,7 @@ export default function NodeToolbarComponent({
                   <div
                     data-testid="more-options-modal"
                     className={classNames(
-                      "relative -ml-px inline-flex h-8 w-[31px] items-center rounded-r-md bg-background text-foreground  shadow-md ring-1 ring-inset  ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10"
+                      "relative -ml-px inline-flex h-8 w-[31px] items-center rounded-r-md bg-background text-foreground shadow-md ring-1 ring-inset ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10"
                     )}
                   >
                     <IconComponent
@@ -710,11 +710,11 @@ export default function NodeToolbarComponent({
                 <div className="font-red flex text-status-red">
                   <IconComponent
                     name="Trash2"
-                    className="relative top-0.5 mr-2 h-4 w-4 "
+                    className="relative top-0.5 mr-2 h-4 w-4"
                   />{" "}
                   <span className="">Delete</span>{" "}
                   <span
-                    className={` absolute right-2 top-2 flex items-center justify-center rounded-sm px-1 py-[0.2] ${
+                    className={`absolute right-2 top-2 flex items-center justify-center rounded-sm px-1 py-[0.2] ${
                       deleteIsFocus ? " " : "bg-muted"
                     }`}
                   >

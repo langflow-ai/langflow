@@ -83,7 +83,7 @@ export default function GenericModal({
     }
 
     const filteredWordsHighlight = new Set(
-      matches.filter((word) => !invalid_chars.includes(word)),
+      matches.filter((word) => !invalid_chars.includes(word))
     );
 
     setWordsHighlight(filteredWordsHighlight);
@@ -134,7 +134,7 @@ export default function GenericModal({
         // to the first key of the custom_fields object
         if (field_name === "") {
           field_name = Array.isArray(
-            apiReturn.data?.frontend_node?.custom_fields?.[""],
+            apiReturn.data?.frontend_node?.custom_fields?.[""]
           )
             ? apiReturn.data?.frontend_node?.custom_fields?.[""][0] ?? ""
             : apiReturn.data?.frontend_node?.custom_fields?.[""] ?? "";
@@ -200,7 +200,7 @@ export default function GenericModal({
         </span>
         <IconComponent
           name={myModalTitle === "Edit Prompt" ? "TerminalSquare" : "FileText"}
-          className="h-6 w-6 pl-1 text-primary "
+          className="h-6 w-6 pl-1 text-primary"
           aria-hidden="true"
         />
       </BaseModal.Header>
@@ -208,7 +208,7 @@ export default function GenericModal({
         <div
           className={classNames(
             !isEdit ? "rounded-lg border" : "",
-            "flex h-full w-full",
+            "flex h-full w-full"
           )}
         >
           {type === TypeModal.PROMPT && isEdit && !readonly ? (
@@ -265,15 +265,15 @@ export default function GenericModal({
         <div className="flex w-full shrink-0 items-end justify-between">
           <div className="mb-auto flex-1">
             {type === TypeModal.PROMPT && (
-              <div className=" mr-2">
+              <div className="mr-2">
                 <div
                   ref={divRef}
                   className="max-h-20 overflow-y-auto custom-scroll"
                 >
-                  <div className="flex flex-wrap items-center">
+                  <div className="flex flex-wrap items-center gap-2">
                     <IconComponent
                       name="Braces"
-                      className=" -ml-px mr-1 flex h-4 w-4 text-primary"
+                      className="flex h-4 w-4 text-primary"
                     />
                     <span className="text-md font-semibold text-primary">
                       Prompt Variables:
@@ -289,7 +289,7 @@ export default function GenericModal({
                           key={index}
                           variant="gray"
                           size="md"
-                          className="m-1 max-w-[40vw] cursor-default truncate p-2.5 text-sm"
+                          className="max-w-[40vw] cursor-default truncate p-1 text-sm"
                         >
                           <div className="relative bottom-[1px]">
                             <span id={"badge" + index.toString()}>

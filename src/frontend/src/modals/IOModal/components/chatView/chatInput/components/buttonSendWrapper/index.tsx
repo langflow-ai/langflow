@@ -27,7 +27,7 @@ const ButtonSendWrapper = ({
         "form-modal-send-button",
         noInput
           ? "bg-high-indigo text-background"
-          : chatValue === ""
+          : chatValue
           ? "text-primary"
           : "bg-chat-send text-background"
       )}
@@ -64,7 +64,7 @@ const ButtonSendWrapper = ({
       >
         <IconComponent
           name="LucideSend"
-          className="form-modal-send-icon "
+          className="form-modal-send-icon"
           aria-hidden="true"
         />
       </Case>

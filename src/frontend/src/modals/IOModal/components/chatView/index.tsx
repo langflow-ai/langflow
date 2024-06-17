@@ -58,7 +58,7 @@ export default function ChatView({
       //
       .filter(
         (output) =>
-          output.data.message || (!output.data.message && output.artifacts),
+          output.data.message || (!output.data.message && output.artifacts)
       )
       .map((output, index) => {
         try {
@@ -78,7 +78,10 @@ export default function ChatView({
             sender === "Machine" || sender === null || sender === undefined;
           return {
             isSend: !is_ai,
-            message: message,
+            message:
+              message === "" || !message
+                ? "No input message provided."
+                : message,
             sender_name,
             componentId: output.id,
             stream_url: stream_url,
@@ -138,7 +141,7 @@ export default function ChatView({
   function updateChat(
     chat: ChatMessageType,
     message: string,
-    stream_url?: string,
+    stream_url?: string
   ) {
     chat.message = message;
     updateFlowPool(chat.componentId, {
@@ -154,7 +157,7 @@ export default function ChatView({
     setIsDragging,
     setFiles,
     currentFlowId,
-    setErrorData,
+    setErrorData
   );
 
   return (
@@ -205,7 +208,7 @@ export default function ChatView({
                   <span>
                     <IconComponent
                       name="MessageSquareMore"
-                      className="mx-1 inline h-5 w-5 animate-bounce "
+                      className="mx-1 inline h-5 w-5 animate-bounce"
                     />
                   </span>{" "}
                   {CHAT_SECOND_INITIAL_TEXT}

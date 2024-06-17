@@ -262,10 +262,7 @@ export default function CollectionCardComponent({
                     )}
                     <ShadTooltip content="Likes">
                       <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <IconComponent
-                          name="Heart"
-                          className={cn("h-4 w-4 ")}
-                        />
+                        <IconComponent name="Heart" className={cn("h-4 w-4")} />
                         <span data-testid={`likes-${data.name}`}>
                           {likes_count ?? 0}
                         </span>
@@ -428,7 +425,7 @@ export default function CollectionCardComponent({
                             name="Trash2"
                             className={cn(
                               "h-5 w-5",
-                              !authorized ? " text-ring" : ""
+                              !authorized ? "text-ring" : ""
                             )}
                           />
                         </Button>
@@ -463,7 +460,7 @@ export default function CollectionCardComponent({
                             liked_by_user
                               ? "fill-destructive stroke-destructive"
                               : "",
-                            !authorized ? " text-ring" : ""
+                            !authorized ? "text-ring" : ""
                           )}
                         />
                       </Button>
@@ -501,7 +498,7 @@ export default function CollectionCardComponent({
                         }
                         className={cn(
                           loading ? "h-5 w-5 animate-spin" : "h-5 w-5",
-                          !authorized ? " text-ring" : ""
+                          !authorized ? "text-ring" : ""
                         )}
                       />
                     </Button>

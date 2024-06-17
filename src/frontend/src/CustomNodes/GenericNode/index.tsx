@@ -376,14 +376,14 @@ export default function GenericNode({
             className={
               "generic-node-div-title " +
               (!showNode
-                ? " relative h-24 w-24 rounded-full "
-                : " justify-between rounded-t-lg ")
+                ? " relative h-24 w-24 rounded-full"
+                : " justify-between rounded-t-lg")
             }
           >
             <div
               className={
                 "generic-node-title-arrangement rounded-full" +
-                (!showNode && " justify-center ")
+                (!showNode && " justify-center")
               }
               data-testid="generic-node-title-arrangement"
             >
@@ -714,10 +714,7 @@ export default function GenericNode({
                   nameEditable ? (
                     "Double Click to Edit Description"
                   ) : (
-                    <Markdown
-                      className="markdown prose flex flex-col text-primary word-break-break-word
-    dark:prose-invert"
-                    >
+                    <Markdown className="markdown prose flex flex-col text-primary word-break-break-word dark:prose-invert">
                       {String(data.node?.description)}
                     </Markdown>
                   )}

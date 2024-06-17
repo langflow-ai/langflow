@@ -89,6 +89,7 @@ class AstraDBMessageWriterComponent(BaseMemoryComponent):
                 sender_name=sender_name,
                 metadata=metadata,
                 session_id=session_id,
+                type=sender,
             )
         ]
 

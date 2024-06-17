@@ -61,7 +61,7 @@ const InputSearchComponent = ({
         >
           <ForwardedIconComponent
             name={loading ? "Loader2" : "Search"}
-            className={loading ? " animate-spin cursor-not-allowed" : ""}
+            className={loading ? "animate-spin cursor-not-allowed" : ""}
           />
         </button>
       </div>

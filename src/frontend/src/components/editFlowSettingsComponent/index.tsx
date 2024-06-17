@@ -78,7 +78,7 @@ export const EditFlowSettings: React.FC<InputProps> = ({
       </Label>
       <Label>
         <div className="edit-flow-arrangement mt-3">
-          <span className="font-medium ">
+          <span className="font-medium">
             Description{setDescription ? " (optional)" : ":"}
           </span>
         </div>

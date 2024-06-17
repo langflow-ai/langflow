@@ -84,7 +84,7 @@ export default function CollectionCardComponent({
               tabIndex={-1}
               variant="outline"
               size="sm"
-              className="whitespace-nowrap "
+              className="whitespace-nowrap"
             >
               <IconComponent
                 name="ExternalLink"

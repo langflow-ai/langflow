@@ -93,9 +93,9 @@ const CustomInputPopover = ({
               (!setSelectedOption || selectedOption === "") &&
               !pwdVisible &&
               value !== ""
-              ? " text-clip password "
+              ? "text-clip password"
               : "",
-            editNode ? " input-edit-node " : "",
+            editNode ? "input-edit-node" : "",
             password && (setSelectedOption || setSelectedOptions)
               ? "pr-[62.9px]"
               : "",

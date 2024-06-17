@@ -45,7 +45,19 @@ export default function TableAutoCellRender({
                 "min-w-min bg-error-background text-error-foreground hover:bg-error-background",
               )}
             >
-              {value}
+              Success
+            </Badge>
+          );
+        } else if (value === "failure") {
+          return (
+            <Badge
+              variant="outline"
+              size="sq"
+              className={cn(
+                "min-w-min bg-error-background text-error-foreground hover:bg-error-background"
+              )}
+            >
+              Failure
             </Badge>
           );
         } else {

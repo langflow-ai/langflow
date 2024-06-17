@@ -14,7 +14,7 @@ In this guide, we will use Astra DB as a vector store to store and retrieve the 
 <Admonition type="tip">
   This guide assumes that you have Langflow up and running. If you are new to
   Langflow, you can check out the [Getting
-  Started](../getting-started/install-langflow.mdx) guide.
+  Started](../getting-started/install-langflow) guide.
 </Admonition>
 
 TLDR;
@@ -41,7 +41,7 @@ Once you have created an account, you will be taken to the Astra DB dashboard. C
   alt="Docusaurus themed image"
   sources={{
     light: "img/astra-create-database.png",
-    dark: "img/astra-create-database.png",
+    dark: "img/astra-create-database.png"
   }}
   style={{ width: "80%", margin: "20px auto" }}
 />
@@ -54,7 +54,7 @@ After you have configured your database, click on the **Create Database** button
   alt="Docusaurus themed image"
   sources={{
     light: "img/astra-configure-deployment.png",
-    dark: "img/astra-configure-deployment.png",
+    dark: "img/astra-configure-deployment.png"
   }}
   style={{ width: "80%", margin: "20px auto" }}
 />
@@ -65,7 +65,7 @@ Once your database is initialized, to the right of the page, you will see the _D
   alt="Docusaurus themed image"
   sources={{
     light: "img/astra-generate-token.png",
-    dark: "img/astra-generate-token.png",
+    dark: "img/astra-generate-token.png"
   }}
   style={{ width: "50%", margin: "20px auto" }}
 />
@@ -97,7 +97,7 @@ The ingestion flow consists of:
   alt="Docusaurus themed image"
   sources={{
     light: "img/astra-ingestion-flow.png",
-    dark: "img/astra-ingestion-flow.png",
+    dark: "img/astra-ingestion-flow.png"
   }}
   style={{ width: "80%", margin: "20px auto" }}
 />
@@ -108,7 +108,7 @@ Now, let's update the **Astra DB** and **Astra DB Search** components with the *
   alt="Docusaurus themed image"
   sources={{
     light: "img/astra-ingestion-fields.png",
-    dark: "img/astra-ingestion-fields.png",
+    dark: "img/astra-ingestion-fields.png"
   }}
   style={{ width: "80%", margin: "20px auto" }}
 />
@@ -119,7 +119,7 @@ And run it! This will ingest the Text data from your file into the Astra DB data
   alt="Docusaurus themed image"
   sources={{
     light: "img/astra-ingestion-run.png",
-    dark: "img/astra-ingestion-run.png",
+    dark: "img/astra-ingestion-run.png"
   }}
   style={{ width: "80%", margin: "20px auto" }}
 />
@@ -141,23 +141,23 @@ The RAG flow is a bit more complex. It consists of:
   alt="Docusaurus themed image"
   sources={{
     light: "img/astra-rag-flow.png",
-    dark: "img/astra-rag-flow.png",
+    dark: "img/astra-rag-flow.png"
   }}
   style={{ width: "80%", margin: "20px auto" }}
 />
 
-To run it all we have to do is click on the 🤖 _Playground_ button and start interacting with your RAG application.
+To run it all we have to do is click on the **![Playground icon](/logos/botmessage.svg)Playground** button and start interacting with your RAG application.
 
 <ZoomableImage
   alt="Docusaurus themed image"
   sources={{
     light: "img/astra-rag-flow-run.png",
-    dark: "img/astra-rag-flow-run.png",
+    dark: "img/astra-rag-flow-run.png"
   }}
   style={{ width: "80%", margin: "20px auto" }}
 />
 
-This opens the Playground where you can chat your data.
+This opens the Playground where you can chat with your data.
 
 Because this flow has a **Chat Input** and a **Text Output** component, the Panel displays a chat input at the bottom and the Extracted Chunks section on the left.
 
@@ -165,7 +165,7 @@ Because this flow has a **Chat Input** and a **Text Output** component, the Pane
   alt="Docusaurus themed image"
   sources={{
     light: "img/astra-rag-flow-interaction-panel.png",
-    dark: "img/astra-rag-flow-interaction-panel.png",
+    dark: "img/astra-rag-flow-interaction-panel.png"
   }}
   style={{ width: "80%", margin: "20px auto" }}
 />
@@ -176,7 +176,7 @@ Once we interact with it we get a response and the Extracted Chunks section is u
   alt="Docusaurus themed image"
   sources={{
     light: "img/astra-rag-flow-interaction-panel-interaction.png",
-    dark: "img/astra-rag-flow-interaction-panel-interaction.png",
+    dark: "img/astra-rag-flow-interaction-panel-interaction.png"
   }}
   style={{ width: "80%", margin: "20px auto" }}
 />
@@ -187,15 +187,6 @@ And that's it! You have successfully ran a RAG application using Astra DB and La
 
 In this guide, we have learned how to run a RAG application using Astra DB and Langflow.
 We have seen how to create an Astra DB database, import the Astra DB RAG Flows project into Langflow, and run the ingestion and RAG flows.import ThemedImage from "@theme/ThemedImage";
-import useBaseUrl from "@docusaurus/useBaseUrl";
-import ZoomableImage from "/src/theme/ZoomableImage.js";
-import Admonition from "@theme/Admonition";import ThemedImage from "@theme/ThemedImage";
-import useBaseUrl from "@docusaurus/useBaseUrl";
-import ZoomableImage from "/src/theme/ZoomableImage.js";
-import Admonition from "@theme/Admonition";import ThemedImage from "@theme/ThemedImage";
-import useBaseUrl from "@docusaurus/useBaseUrl";
-import ZoomableImage from "/src/theme/ZoomableImage.js";
-import Admonition from "@theme/Admonition";import ThemedImage from "@theme/ThemedImage";
 import useBaseUrl from "@docusaurus/useBaseUrl";
 import ZoomableImage from "/src/theme/ZoomableImage.js";
 import Admonition from "@theme/Admonition";

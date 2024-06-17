@@ -27,10 +27,10 @@ export default function FilePreview({
     <div className="relative inline-block">
       {loading ? (
         isImage ? (
-          <div className="flex h-20 w-20 items-center justify-center rounded-md border border-ring bg-background ">
+          <div className="flex h-20 w-20 items-center justify-center rounded-md border border-ring bg-background">
             <svg
               aria-hidden="true"
-              className={`h-10 w-10 animate-spin fill-black  text-muted`}
+              className={`h-10 w-10 animate-spin fill-black text-muted`}
               viewBox="0 0 100 101"
               fill="none"
               xmlns="http://www.w3.org/2000/svg"
@@ -49,7 +49,7 @@ export default function FilePreview({
           <div
             className={`relative ${
               isImage ? "h-20 w-20" : "h-20 w-80"
-            } cursor-wait rounded-lg border  border-ring bg-background transition duration-300 ${
+            } cursor-wait rounded-lg border border-ring bg-background transition duration-300 ${
               isHovered ? "shadow-md" : ""
             }`}
           >
@@ -68,7 +68,7 @@ export default function FilePreview({
         <div
           className={`relative mt-2 ${
             isImage ? "h-20 w-20" : "h-20 w-80"
-          } cursor-pointer rounded-lg border  border-ring bg-background transition duration-300 ${
+          } cursor-pointer rounded-lg border border-ring bg-background transition duration-300 ${
             isHovered ? "shadow-md" : ""
           }`}
           onMouseEnter={() => setIsHovered(true)}
@@ -93,7 +93,7 @@ export default function FilePreview({
             <div
               className={`absolute ${
                 isImage ? "bottom-16 left-16" : "bottom-16 left-[19em]"
-              }  flex h-5 w-5 items-center justify-center`}
+              } flex h-5 w-5 items-center justify-center`}
             >
               <div
                 className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full bg-gray-200 p-2 transition-all"

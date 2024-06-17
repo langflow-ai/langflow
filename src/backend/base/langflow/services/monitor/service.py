@@ -4,19 +4,21 @@ from typing import TYPE_CHECKING, List, Optional, Union
 
 import duckdb
 from langflow.services.base import Service
-from langflow.services.monitor.schema import MessageModel, TransactionModel, VertexBuildModel
 from langflow.services.monitor.utils import add_row_to_table, drop_and_create_table_if_schema_mismatch
 from loguru import logger
 from platformdirs import user_cache_dir
 
 if TYPE_CHECKING:
     from langflow.services.settings.manager import SettingsService
+    from langflow.services.monitor.schema import MessageModel, TransactionModel, VertexBuildModel
 
 
 class MonitorService(Service):
     name = "monitor_service"
 
     def __init__(self, settings_service: "SettingsService"):
+        from langflow.services.monitor.schema import MessageModel, TransactionModel, VertexBuildModel
+
         self.settings_service = settings_service
         self.base_cache_dir = Path(user_cache_dir("langflow"))
         self.db_path = self.base_cache_dir / "monitor.duckdb"
@@ -45,7 +47,7 @@ class MonitorService(Service):
     def add_row(
         self,
         table_name: str,
-        data: Union[dict, TransactionModel, MessageModel, VertexBuildModel],
+        data: Union[dict, "TransactionModel", "MessageModel", "VertexBuildModel"],
     ):
         # Make sure the model passed matches the table
 
@@ -127,7 +129,7 @@ class MonitorService(Service):
 
         return self.exec_query(query, read_only=False)
 
-    def add_message(self, message: MessageModel):
+    def add_message(self, message: "MessageModel"):
         self.add_row("messages", message)
 
     def get_messages(

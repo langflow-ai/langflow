@@ -184,7 +184,7 @@ async def build_vertex(
 
             result_data_response = ResultDataResponse.model_validate(result_dict, from_attributes=True)
         except Exception as exc:
-            logger.exception(f"Error building vertex: {exc}")
+            logger.exception(f"Error building Component: {exc}")
             params = format_exception_message(exc)
             valid = False
             output_label = vertex.outputs[0]["name"] if vertex.outputs else "output"
@@ -241,7 +241,7 @@ async def build_vertex(
         )
         return build_response
     except Exception as exc:
-        logger.error(f"Error building vertex: {exc}")
+        logger.error(f"Error building Component: {exc}")
         logger.exception(exc)
         message = parse_exception(exc)
         raise HTTPException(status_code=500, detail=message) from exc
@@ -336,7 +336,7 @@ async def build_vertex_stream(
                     raise ValueError(f"No result found for vertex {vertex_id}")
 
             except Exception as exc:
-                logger.exception(f"Error building vertex: {exc}")
+                logger.exception(f"Error building Component: {exc}")
                 exc_message = parse_exception(exc)
                 if exc_message == "The message must be an iterator or an async iterator.":
                     exc_message = "This stream has already been closed."
@@ -347,4 +347,4 @@ async def build_vertex_stream(
 
         return StreamingResponse(stream_vertex(), media_type="text/event-stream")
     except Exception as exc:
-        raise HTTPException(status_code=500, detail="Error building vertex") from exc
+        raise HTTPException(status_code=500, detail="Error building Component") from exc

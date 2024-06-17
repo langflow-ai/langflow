@@ -5,9 +5,6 @@ from uuid import UUID
 
 import sqlalchemy as sa
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Request, UploadFile, status
-from loguru import logger
-from sqlmodel import Session, select
-
 from langflow.api.utils import update_frontend_node_with_template_values
 from langflow.api.v1.schemas import (
     ConfigResponse,
@@ -41,6 +38,8 @@ from langflow.services.deps import (
 )
 from langflow.services.session.service import SessionService
 from langflow.services.task.service import TaskService
+from loguru import logger
+from sqlmodel import Session, select
 
 if TYPE_CHECKING:
     from langflow.services.cache.base import CacheService
@@ -71,29 +70,20 @@ async def get_all(
 
 
 async def simple_run_flow(
-    db: Session,
     flow: Flow,
     input_request: SimplifiedAPIRequest,
-    session_service: SessionService,
     stream: bool = False,
     api_key_user: Optional[User] = None,
 ):
     try:
         task_result: List[RunOutputs] = []
-        artifacts = {}
         user_id = api_key_user.id if api_key_user else None
         flow_id_str = str(flow.id)
-        if input_request.session_id:
-            session_data = await session_service.load_session(input_request.session_id, flow_id=flow_id_str)
-            graph, artifacts = session_data if session_data else (None, None)
-            if graph is None:
-                raise ValueError(f"Session {input_request.session_id} not found")
-        else:
-            if flow.data is None:
-                raise ValueError(f"Flow {flow_id_str} has no data")
-            graph_data = flow.data
-            graph_data = process_tweaks(graph_data, input_request.tweaks or {}, stream=stream)
-            graph = Graph.from_payload(graph_data, flow_id=flow_id_str, user_id=str(user_id))
+        if flow.data is None:
+            raise ValueError(f"Flow {flow_id_str} has no data")
+        graph_data = flow.data.copy()
+        graph_data = process_tweaks(graph_data, input_request.tweaks or {}, stream=stream)
+        graph = Graph.from_payload(graph_data, flow_id=flow_id_str, user_id=str(user_id))
         inputs = [
             InputValueRequest(components=[], input_value=input_request.input_value, type=input_request.input_type)
         ]
@@ -115,8 +105,6 @@ async def simple_run_flow(
             session_id=input_request.session_id,
             inputs=inputs,
             outputs=outputs,
-            artifacts=artifacts,
-            session_service=session_service,
             stream=stream,
         )
 
@@ -189,10 +177,8 @@ async def simplified_run_flow(
     """
     try:
         return await simple_run_flow(
-            db=db,
             flow=flow,
             input_request=input_request,
-            session_service=session_service,
             stream=stream,
             api_key_user=api_key_user,
         )
@@ -263,7 +249,6 @@ async def webhook_run_flow(
             db=db,
             flow=flow,
             input_request=input_request,
-            session_service=session_service,
         )
         return {"message": "Task started in the background", "status": "in progress"}
     except Exception as exc:
@@ -541,4 +526,5 @@ def get_config():
         return settings_service.settings.model_dump()
     except Exception as exc:
         logger.exception(exc)
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
         raise HTTPException(status_code=500, detail=str(exc)) from exc

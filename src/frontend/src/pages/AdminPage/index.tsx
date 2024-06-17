@@ -284,7 +284,7 @@ export default function AdminPage() {
                   (loadingUsers ? " border-0" : "")
                 }
               >
-                <Table className={"table-fixed outline-1 "}>
+                <Table className={"table-fixed outline-1"}>
                   <TableHeader
                     className={
                       loadingUsers ? "hidden" : "table-fixed bg-muted outline-1"
@@ -297,7 +297,7 @@ export default function AdminPage() {
                       <TableHead className="h-10">Superuser</TableHead>
                       <TableHead className="h-10">Created At</TableHead>
                       <TableHead className="h-10">Updated At</TableHead>
-                      <TableHead className="h-10 w-[100px]  text-right"></TableHead>
+                      <TableHead className="h-10 w-[100px] text-right"></TableHead>
                     </TableRow>
                   </TableHeader>
                   {!loadingUsers && (
@@ -380,7 +380,7 @@ export default function AdminPage() {
                               </ConfirmationModal.Trigger>
                             </ConfirmationModal>
                           </TableCell>
-                          <TableCell className="truncate py-2 ">
+                          <TableCell className="truncate py-2">
                             {
                               new Date(user.create_at!)
                                 .toISOString()
