@@ -65,7 +65,7 @@ export type ParameterComponentType = {
   conditionPath?: string | null;
   key: string;
   id: sourceHandleType | targetHandleType;
-  color: string;
+  colors: string[];
   left: boolean;
   type: string | undefined;
   required?: boolean;

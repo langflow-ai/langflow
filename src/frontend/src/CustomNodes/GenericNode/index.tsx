@@ -32,6 +32,8 @@ import { nodeColors, nodeIconsLucide } from "../../utils/styleUtils";
 import { classNames, cn } from "../../utils/utils";
 import { countHandlesFn } from "../helpers/count-handles";
 import { getSpecificClassFromBuildStatus } from "../helpers/get-class-from-build-status";
+import { getNodeInputColors } from "../helpers/get-node-input-colors";
+import { getNodeOutputColors } from "../helpers/get-node-output-colors";
 import useCheckCodeValidity from "../hooks/use-check-code-validity";
 import useIconNodeRender from "../hooks/use-icon-render";
 import useIconStatus from "../hooks/use-icons-status";
@@ -279,12 +281,7 @@ export default function GenericNode({
           }) + idx
         }
         data={data}
-        color={
-          nodeColors[output.selected ?? output.types[0]] ??
-          nodeColors[types[output.selected ?? output.types[0]]] ??
-          nodeColors[types[data.type]] ??
-          nodeColors.unknown
-        }
+        colors={getNodeOutputColors(output, data, types)}
         outputProxy={output.proxy}
         title={output.display_name ?? output.name}
         tooltipTitle={output.selected ?? output.types[0]}
@@ -477,36 +474,11 @@ export default function GenericNode({
                               proxy: data.node!.template[templateField].proxy,
                             })}
                             data={data}
-                            color={
-                              data.node?.template[templateField].input_types &&
-                              data.node?.template[templateField].input_types!
-                                .length > 0
-                                ? nodeColors[
-                                    data.node?.template[templateField]
-                                      .input_types![
-                                      data.node?.template[templateField]
-                                        .input_types!.length - 1
-                                    ]
-                                  ] ??
-                                  nodeColors[
-                                    types[
-                                      data.node?.template[templateField]
-                                        .input_types![
-                                        data.node?.template[templateField]
-                                          .input_types!.length - 1
-                                      ]
-                                    ]
-                                  ]
-                                : nodeColors[
-                                    data.node?.template[templateField].type!
-                                  ] ??
-                                  nodeColors[
-                                    types[
-                                      data.node?.template[templateField].type!
-                                    ]
-                                  ] ??
-                                  nodeColors.unknown
-                            }
+                            colors={getNodeInputColors(
+                              data.node?.template[templateField].input_types,
+                              data.node?.template[templateField].type,
+                              types,
+                            )}
                             title={getFieldTitle(
                               data.node?.template!,
                               templateField,
@@ -739,33 +711,11 @@ export default function GenericNode({
                           proxy: data.node!.template[templateField].proxy,
                         })}
                         data={data}
-                        color={
-                          data.node?.template[templateField].input_types &&
-                          data.node?.template[templateField].input_types!
-                            .length > 0
-                            ? nodeColors[
-                                data.node?.template[templateField].input_types![
-                                  data.node?.template[templateField]
-                                    .input_types!.length - 1
-                                ]
-                              ] ??
-                              nodeColors[
-                                types[
-                                  data.node?.template[templateField]
-                                    .input_types![
-                                    data.node?.template[templateField]
-                                      .input_types!.length - 1
-                                  ]
-                                ]
-                              ]
-                            : nodeColors[
-                                data.node?.template[templateField].type!
-                              ] ??
-                              nodeColors[
-                                types[data.node?.template[templateField].type!]
-                              ] ??
-                              nodeColors.unknown
-                        }
+                        colors={getNodeInputColors(
+                          data.node?.template[templateField].input_types,
+                          data.node?.template[templateField].type,
+                          types,
+                        )}
                         title={getFieldTitle(
                           data.node?.template!,
                           templateField,
