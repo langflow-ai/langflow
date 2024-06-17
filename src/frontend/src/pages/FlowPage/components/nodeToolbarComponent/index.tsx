@@ -121,9 +121,7 @@ export default function NodeToolbarComponent({
   function handleAdvancedWShortcut(e: KeyboardEvent) {
     e.preventDefault();
     if (isThereModal() && !showModalAdvanced) return;
-    if (!isGroup) {
       setShowModalAdvanced((state) => !state);
-    }
   }
 
   function handleSaveWShortcut(e: KeyboardEvent) {
