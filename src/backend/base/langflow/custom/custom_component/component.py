@@ -57,6 +57,14 @@ class Component(CustomComponent):
         for input_ in inputs:
             self._inputs[input_.name] = input_
 
+    def validate(self, params: dict):
+        self._validate_inputs(params)
+        self._validate_outputs()
+
+    def _validate_outputs(self):
+        # Raise Error if some rule isn't met
+        pass
+
     def _validate_inputs(self, params: dict):
         # Params keys are the `name` attribute of the Input objects
         for key, value in params.copy().items():
