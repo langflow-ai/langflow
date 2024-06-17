@@ -3,6 +3,7 @@ import { NodeToolbar } from "reactflow";
 import { GradientGroup } from "../../../../icons/GradientSparkles";
 import useFlowStore from "../../../../stores/flowStore";
 import { validateSelection } from "../../../../utils/reactflowUtils";
+import { Button } from "../../../../components/ui/button";
 export default function SelectionMenu({
   onClick,
   nodes,
@@ -13,7 +14,7 @@ export default function SelectionMenu({
   const [disable, setDisable] = useState<boolean>(
     lastSelection && edges.length > 0
       ? validateSelection(lastSelection!, edges).length > 0
-      : false
+      : false,
   );
   const [isOpen, setIsOpen] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -61,7 +62,8 @@ export default function SelectionMenu({
             (isTransitioning ? " opacity-100" : " opacity-0")
           }
         >
-          <button
+          <Button
+            unstyled
             className={`${
               disable
                 ? "flex h-full w-full cursor-not-allowed items-center justify-between text-sm text-muted-foreground"
@@ -77,7 +79,7 @@ export default function SelectionMenu({
               disabled={disable}
             />
             Group
-          </button>
+          </Button>
         </div>
       </div>
     </NodeToolbar>

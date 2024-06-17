@@ -440,8 +440,7 @@ export default function GenericNode({
                         <ShadTooltip content={TOOLTIP_OUTDATED_NODE}>
                           <Button
                             onClick={handleUpdateCode}
-                            variant="none"
-                            size="none"
+                            unstyled
                             className={"group p-1"}
                             loading={loadingUpdate}
                           >
@@ -615,8 +614,7 @@ export default function GenericNode({
                       setValidationStatus(null);
                       buildFlow({ stopNodeId: data.id });
                     }}
-                    variant="none"
-                    size="none"
+                    unstyled
                     className="group p-1"
                   >
                     <div
@@ -844,8 +842,7 @@ export default function GenericNode({
                   )}
                 >
                   <Button
-                    variant="none"
-                    size="none"
+                    unstyled
                     className="left-0 right-0 rounded-full border bg-background"
                     onClick={() => setShowHiddenOutputs(!showHiddenOutputs)}
                   >

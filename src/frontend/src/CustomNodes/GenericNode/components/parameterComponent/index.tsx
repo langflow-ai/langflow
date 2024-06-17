@@ -114,7 +114,7 @@ export default function ParameterComponent({
     const logs = (data?.logs[outputName] ?? [])[0];
     if (Array.isArray(logs) && logs.length > 1) {
       return logs.some(
-        (log) => log.type === "error" || log.type === "ValueError"
+        (log) => log.type === "error" || log.type === "ValueError",
       );
     } else {
       return logs?.type === "error" || logs?.type === "ValueError";
@@ -156,7 +156,7 @@ export default function ParameterComponent({
     handleUpdateValues,
     debouncedHandleUpdateValues,
     setNode,
-    setIsLoading
+    setIsLoading,
   );
 
   const { handleNodeClass: handleNodeClassHook } = useHandleNodeClass(
@@ -164,7 +164,7 @@ export default function ParameterComponent({
     name,
     takeSnapshot,
     setNode,
-    updateNodeInternals
+    updateNodeInternals,
   );
 
   const { handleRefreshButtonPress: handleRefreshButtonPressHook } =
@@ -173,13 +173,13 @@ export default function ParameterComponent({
   let disabled =
     edges.some(
       (edge) =>
-        edge.targetHandle === scapedJSONStringfy(proxy ? { ...id, proxy } : id)
+        edge.targetHandle === scapedJSONStringfy(proxy ? { ...id, proxy } : id),
     ) ?? false;
 
   let disabledOutput =
     edges.some(
       (edge) =>
-        edge.sourceHandle === scapedJSONStringfy(proxy ? { ...id, proxy } : id)
+        edge.sourceHandle === scapedJSONStringfy(proxy ? { ...id, proxy } : id),
     ) ?? false;
 
   const handleRefreshButtonPress = async (name, data) => {
@@ -190,7 +190,7 @@ export default function ParameterComponent({
 
   const handleOnNewValue = async (
     newValue: string | string[] | boolean | Object[],
-    skipSnapshot: boolean | undefined = false
+    skipSnapshot: boolean | undefined = false,
   ): Promise<void> => {
     handleOnNewValueHook(newValue, skipSnapshot);
   };
@@ -304,14 +304,14 @@ export default function ParameterComponent({
               className={classNames(
                 left ? "my-12 -ml-0.5" : "my-12 -mr-0.5",
                 "h-3 w-3 rounded-full border-2 bg-background",
-                !showNode ? "mt-0" : ""
+                !showNode ? "mt-0" : "",
               )}
               style={{
                 borderColor: color ?? nodeColors.unknown,
               }}
               onClick={() => {
                 setFilterEdge(
-                  groupByFamily(myData, tooltipTitle!, left, nodes!)
+                  groupByFamily(myData, tooltipTitle!, left, nodes!),
                 );
               }}
             ></Handle>
@@ -341,8 +341,7 @@ export default function ParameterComponent({
             <div className="flex-1">
               <Button
                 disabled={disabledOutput}
-                variant="none"
-                size="none"
+                unstyled
                 onClick={() => handleUpdateOutputHide()}
                 data-testid={`output-inspection-${title.toLowerCase()}`}
               >
@@ -366,7 +365,7 @@ export default function ParameterComponent({
             </ShadTooltip>
           ) : (
             <div className="flex gap-2">
-              <span className={!left && data.node?.frozen ? " text-ice" : ""}>
+              <span className={!left && data.node?.frozen ? "text-ice" : ""}>
                 {renderTitle()}
               </span>
               {!left && (
@@ -380,8 +379,7 @@ export default function ParameterComponent({
                   }
                 >
                   <Button
-                    variant="none"
-                    size="none"
+                    unstyled
                     disabled={!displayOutputPreview || unknownOutput}
                     onClick={() => setOpenOutputModal(true)}
                     data-testid={`output-inspection-${title.toLowerCase()}`}
@@ -389,7 +387,7 @@ export default function ParameterComponent({
                     {errorOutput ? (
                       <IconComponent
                         className={classNames(
-                          "h-5 w-5 rounded-md text-status-red"
+                          "h-5 w-5 rounded-md text-status-red",
                         )}
                         name={"X"}
                       />
@@ -398,8 +396,8 @@ export default function ParameterComponent({
                         className={classNames(
                           "h-5 w-5 rounded-md",
                           displayOutputPreview && !unknownOutput
-                            ? " hover:text-medium-indigo"
-                            : " cursor-not-allowed text-muted-foreground"
+                            ? "hover:text-medium-indigo"
+                            : "cursor-not-allowed text-muted-foreground",
                         )}
                         name={"ScanEye"}
                       />
@@ -430,7 +428,10 @@ export default function ParameterComponent({
         {left && LANGFLOW_SUPPORTED_TYPES.has(type ?? "") && !optionalHandle ? (
           <></>
         ) : (
-          <Button className="h-7 truncate bg-muted p-0 text-sm font-normal text-black hover:bg-muted">
+          <Button
+            unstyled
+            className="h-7 truncate bg-muted p-0 text-sm font-normal text-black hover:bg-muted"
+          >
             <div className="flex">
               <ShadTooltip
                 styleClasses={"tooltip-fixed-width custom-scroll nowheel"}
@@ -457,12 +458,12 @@ export default function ParameterComponent({
                   }
                   className={classNames(
                     left ? "-ml-0.5" : "-mr-0.5",
-                    "h-3 w-3 rounded-full border-2 bg-background"
+                    "h-3 w-3 rounded-full border-2 bg-background",
                   )}
                   style={{ borderColor: color ?? nodeColors.unknown }}
                   onClick={() => {
                     setFilterEdge(
-                      groupByFamily(myData, tooltipTitle!, left, nodes!)
+                      groupByFamily(myData, tooltipTitle!, left, nodes!),
                     );
                   }}
                 />
