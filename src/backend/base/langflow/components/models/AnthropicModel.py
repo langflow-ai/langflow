@@ -1,4 +1,3 @@
-
 from langchain_anthropic.chat_models import ChatAnthropic
 from pydantic.v1 import SecretStr
 
@@ -15,10 +14,7 @@ class AnthropicModelComponent(LCModelComponent):
     icon = "Anthropic"
 
     inputs = [
-        StrInput(
-            name="input_value",
-            display_name="Input",
-            input_types=["Text", "Data", "Prompt", "Message"]),
+        StrInput(name="input_value", display_name="Input", input_types=["Text", "Data", "Prompt", "Message"]),
         IntInput(
             name="max_tokens",
             display_name="Max Tokens",
@@ -30,7 +26,7 @@ class AnthropicModelComponent(LCModelComponent):
             display_name="Model Name",
             options=[
                 "claude-3-opus-20240229",
-                "claude-3-sonnet-20240229", 
+                "claude-3-sonnet-20240229",
                 "claude-3-haiku-20240307",
                 "claude-2.1",
                 "claude-2.0",
@@ -105,4 +101,3 @@ class AnthropicModelComponent(LCModelComponent):
             raise ValueError("Could not connect to Anthropic API.") from e
 
         return output
-    

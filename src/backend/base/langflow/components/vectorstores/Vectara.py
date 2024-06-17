@@ -10,6 +10,7 @@ from langflow.inputs import BoolInput, IntInput, StrInput, HandleInput
 from langflow.template import Output
 from langflow.helpers.data import docs_to_data
 
+
 class VectaraVectorStoreComponent(Component):
     display_name = "Vectara"
     description = "Vectara Vector Store with search capabilities"
@@ -20,15 +21,35 @@ class VectaraVectorStoreComponent(Component):
         StrInput(name="vectara_customer_id", display_name="Vectara Customer ID", required=True),
         StrInput(name="vectara_corpus_id", display_name="Vectara Corpus ID", required=True),
         StrInput(name="vectara_api_key", display_name="Vectara API Key", password=True, required=True),
-        HandleInput(name="vector_store_inputs", display_name="Vector Store Inputs", input_types=["Document", "Data"], is_list=True),
-        BoolInput(name="add_to_vector_store", display_name="Add to Vector Store", info="If true, the Vector Store Inputs will be added to the Vector Store."),
+        HandleInput(
+            name="vector_store_inputs",
+            display_name="Vector Store Inputs",
+            input_types=["Document", "Data"],
+            is_list=True,
+        ),
+        BoolInput(
+            name="add_to_vector_store",
+            display_name="Add to Vector Store",
+            info="If true, the Vector Store Inputs will be added to the Vector Store.",
+        ),
         StrInput(name="search_input", display_name="Search Input"),
-        IntInput(name="number_of_results", display_name="Number of Results", info="Number of results to return.", value=4, advanced=True),
+        IntInput(
+            name="number_of_results",
+            display_name="Number of Results",
+            info="Number of results to return.",
+            value=4,
+            advanced=True,
+        ),
     ]
 
     outputs = [
         Output(display_name="Vector Store", name="vector_store", method="build_vector_store", output_type=Vectara),
-        Output(display_name="Base Retriever", name="base_retriever", method="build_base_retriever", output_type=BaseRetriever),
+        Output(
+            display_name="Base Retriever",
+            name="base_retriever",
+            method="build_base_retriever",
+            output_type=BaseRetriever,
+        ),
         Output(display_name="Search Results", name="search_results", method="search_documents"),
     ]
 

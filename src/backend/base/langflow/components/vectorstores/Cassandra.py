@@ -1,16 +1,14 @@
-from typing import Any, List, Optional, Tuple
+from typing import List
 
-from langchain_community.utilities.cassandra import SetupMode
 from langchain_community.vectorstores import Cassandra
-from langchain.embeddings.base import Embeddings
 from langchain.schema import BaseRetriever
 
 from langflow.custom import Component
-from langflow.field_typing import Embeddings, Text
 from langflow.schema import Data
 from langflow.inputs import BoolInput, IntInput, StrInput, HandleInput, DropdownInput
 from langflow.template import Output
 from langflow.helpers.data import docs_to_data
+
 
 class CassandraVectorStoreComponent(Component):
     display_name = "Cassandra"
@@ -19,24 +17,83 @@ class CassandraVectorStoreComponent(Component):
     icon = "Cassandra"
 
     inputs = [
-        StrInput(name="token", display_name="Token", info="Authentication token for accessing Cassandra on Astra DB.", password=True, required=True),
+        StrInput(
+            name="token",
+            display_name="Token",
+            info="Authentication token for accessing Cassandra on Astra DB.",
+            password=True,
+            required=True,
+        ),
         StrInput(name="database_id", display_name="Database ID", info="The Astra database ID.", required=True),
-        StrInput(name="table_name", display_name="Table Name", info="The name of the table where vectors will be stored.", required=True),
-        StrInput(name="keyspace", display_name="Keyspace", info="Optional key space within Astra DB. The keyspace should already be created.", advanced=True),
-        IntInput(name="ttl_seconds", display_name="TTL Seconds", info="Optional time-to-live for the added texts.", advanced=True),
-        IntInput(name="batch_size", display_name="Batch Size", info="Optional number of data to process in a single batch.", value=16, advanced=True),
-        StrInput(name="body_index_options", display_name="Body Index Options", info="Optional options used to create the body index.", advanced=True),
-        DropdownInput(name="setup_mode", display_name="Setup Mode", info="Configuration mode for setting up the Cassandra table, with options like 'Sync', 'Async', or 'Off'.", options=["Sync", "Async", "Off"], value="Sync", advanced=True),
+        StrInput(
+            name="table_name",
+            display_name="Table Name",
+            info="The name of the table where vectors will be stored.",
+            required=True,
+        ),
+        StrInput(
+            name="keyspace",
+            display_name="Keyspace",
+            info="Optional key space within Astra DB. The keyspace should already be created.",
+            advanced=True,
+        ),
+        IntInput(
+            name="ttl_seconds",
+            display_name="TTL Seconds",
+            info="Optional time-to-live for the added texts.",
+            advanced=True,
+        ),
+        IntInput(
+            name="batch_size",
+            display_name="Batch Size",
+            info="Optional number of data to process in a single batch.",
+            value=16,
+            advanced=True,
+        ),
+        StrInput(
+            name="body_index_options",
+            display_name="Body Index Options",
+            info="Optional options used to create the body index.",
+            advanced=True,
+        ),
+        DropdownInput(
+            name="setup_mode",
+            display_name="Setup Mode",
+            info="Configuration mode for setting up the Cassandra table, with options like 'Sync', 'Async', or 'Off'.",
+            options=["Sync", "Async", "Off"],
+            value="Sync",
+            advanced=True,
+        ),
         HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
-        HandleInput(name="vector_store_inputs", display_name="Vector Store Inputs", input_types=["Document", "Data"], is_list=True),
-        BoolInput(name="add_to_vector_store", display_name="Add to Vector Store", info="If true, the Vector Store Inputs will be added to the Vector Store."),
+        HandleInput(
+            name="vector_store_inputs",
+            display_name="Vector Store Inputs",
+            input_types=["Document", "Data"],
+            is_list=True,
+        ),
+        BoolInput(
+            name="add_to_vector_store",
+            display_name="Add to Vector Store",
+            info="If true, the Vector Store Inputs will be added to the Vector Store.",
+        ),
         StrInput(name="search_input", display_name="Search Input"),
-        IntInput(name="number_of_results", display_name="Number of Results", info="Number of results to return.", value=4, advanced=True),
+        IntInput(
+            name="number_of_results",
+            display_name="Number of Results",
+            info="Number of results to return.",
+            value=4,
+            advanced=True,
+        ),
     ]
 
     outputs = [
         Output(display_name="Vector Store", name="vector_store", method="build_vector_store", output_type=Cassandra),
-        Output(display_name="Base Retriever", name="base_retriever", method="build_base_retriever", output_type=BaseRetriever),
+        Output(
+            display_name="Base Retriever",
+            name="base_retriever",
+            method="build_base_retriever",
+            output_type=BaseRetriever,
+        ),
         Output(display_name="Search Results", name="search_results", method="search_documents"),
     ]
 

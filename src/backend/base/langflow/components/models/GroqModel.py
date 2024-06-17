@@ -1,4 +1,3 @@
-
 from langchain_groq import ChatGroq
 from langflow.base.models.groq_constants import MODEL_NAMES
 from pydantic.v1 import SecretStr
@@ -7,6 +6,7 @@ from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import BaseLanguageModel, Text
 from langflow.inputs import BoolInput, FloatInput, IntInput, SecretStrInput, StrInput, DropdownInput
 from langflow.template import Output
+
 
 class GroqModel(LCModelComponent):
     display_name: str = "Groq"

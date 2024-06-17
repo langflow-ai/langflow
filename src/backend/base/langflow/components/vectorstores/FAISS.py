@@ -1,8 +1,6 @@
-from copy import deepcopy
-from typing import List, Optional, Union
+from typing import List
 
 from langchain.vectorstores import FAISS
-from langchain.embeddings.base import Embeddings
 from langchain.schema import BaseRetriever
 
 from langflow.custom import Component
@@ -36,9 +34,7 @@ class FaissVectorStoreComponent(Component):
             display_name="Index Name",
             value="langflow_index",
         ),
-        HandleInput(
-            name="embedding", display_name="Embedding", input_types=["Embeddings"]
-        ),
+        HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
         StrInput(
             name="vector_store_inputs",
             display_name="Vector Store Inputs",
@@ -163,11 +159,7 @@ class FaissVectorStoreComponent(Component):
         logger.debug(f"Search input: {self.search_input}")
         logger.debug(f"Number of results: {self.number_of_results}")
 
-        if (
-            self.search_input
-            and isinstance(self.search_input, str)
-            and self.search_input.strip()
-        ):
+        if self.search_input and isinstance(self.search_input, str) and self.search_input.strip():
             docs = vector_store.similarity_search(
                 query=self.search_input,
                 k=self.number_of_results,
