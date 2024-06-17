@@ -23,7 +23,7 @@ export default function PromptAreaComponent({
   }, [disabled]);
 
   return (
-    <div className={disabled ? "pointer-events-none w-full " : " w-full"}>
+    <div className={disabled ? "pointer-events-none w-full" : "w-full"}>
       <GenericModal
         id={id}
         field_name={field_name}
@@ -43,8 +43,8 @@ export default function PromptAreaComponent({
             className={
               editNode
                 ? "input-edit-node input-dialog"
-                : (disabled ? " input-disable text-ring " : "") +
-                  " primary-input text-muted-foreground "
+                : (disabled ? "input-disable text-ring " : "") +
+                  " primary-input text-muted-foreground"
             }
           >
             {value !== "" ? value : "Type your prompt here..."}

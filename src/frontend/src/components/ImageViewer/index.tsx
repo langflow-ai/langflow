@@ -31,14 +31,14 @@ export default function ImageViewer({ image }) {
         const fullPageButton = document.getElementById("full-page-button");
 
         zoomInButton!.addEventListener("click", () =>
-          viewer.viewport.zoomBy(1.2)
+          viewer.viewport.zoomBy(1.2),
         );
         zoomOutButton!.addEventListener("click", () =>
-          viewer.viewport.zoomBy(0.8)
+          viewer.viewport.zoomBy(0.8),
         );
         homeButton!.addEventListener("click", () => viewer.viewport.goHome());
         fullPageButton!.addEventListener("click", () =>
-          viewer.setFullScreen(true)
+          viewer.setFullScreen(true),
         );
 
         // Optionally, you can set additional viewer options here
@@ -47,16 +47,16 @@ export default function ImageViewer({ image }) {
         return () => {
           viewer.destroy();
           zoomInButton!.removeEventListener("click", () =>
-            viewer.viewport.zoomBy(1.2)
+            viewer.viewport.zoomBy(1.2),
           );
           zoomOutButton!.removeEventListener("click", () =>
-            viewer.viewport.zoomBy(0.8)
+            viewer.viewport.zoomBy(0.8),
           );
           homeButton!.removeEventListener("click", () =>
-            viewer.viewport.goHome()
+            viewer.viewport.goHome(),
           );
           fullPageButton!.removeEventListener("click", () =>
-            viewer.setFullScreen(true)
+            viewer.setFullScreen(true),
           );
         };
       }
@@ -81,8 +81,8 @@ export default function ImageViewer({ image }) {
   }
 
   return image === "" ? (
-    <div className="align-center flex h-full w-full flex-col justify-center gap-5 rounded-md  border border-border bg-muted">
-      <div className="align-center flex justify-center gap-2 ">
+    <div className="align-center flex h-full w-full flex-col justify-center gap-5 rounded-md border border-border bg-muted">
+      <div className="align-center flex justify-center gap-2">
         <ForwardedIconComponent name="Image" />
         {IMGViewErrorTitle}
       </div>
@@ -95,10 +95,10 @@ export default function ImageViewer({ image }) {
   ) : (
     <>
       <div className="align-center my-2 mb-4 flex w-full justify-center">
-        <div className="shadow-round-btn-shadow hover:shadow-round-btn-shadow flex w-[50%] items-center justify-center  rounded-sm border bg-muted shadow-md transition-all">
+        <div className="shadow-round-btn-shadow hover:shadow-round-btn-shadow flex w-[50%] items-center justify-center rounded-sm border bg-muted shadow-md transition-all">
           <button
             id="zoom-in-button"
-            className="relative inline-flex w-full w-full items-center justify-center px-3 py-3 text-sm font-semibold transition-all transition-all duration-500 ease-in-out ease-in-out hover:bg-hover"
+            className="relative inline-flex w-full items-center justify-center px-3 py-3 text-sm font-semibold transition-all duration-500 ease-in-out hover:bg-hover"
           >
             <ForwardedIconComponent
               name="ZoomIn"
@@ -110,7 +110,7 @@ export default function ImageViewer({ image }) {
           </div>
           <button
             id="zoom-out-button"
-            className="relative inline-flex w-full items-center justify-center px-3 py-3 text-sm font-semibold transition-all transition-all duration-500 ease-in-out ease-in-out hover:bg-hover"
+            className="relative inline-flex w-full items-center justify-center px-3 py-3 text-sm font-semibold transition-all duration-500 ease-in-out hover:bg-hover"
           >
             <ForwardedIconComponent
               name="ZoomOut"
@@ -122,7 +122,7 @@ export default function ImageViewer({ image }) {
           </div>
           <button
             id="home-button"
-            className="relative inline-flex w-full items-center justify-center px-3 py-3 text-sm font-semibold transition-all transition-all duration-500 ease-in-out ease-in-out hover:bg-hover"
+            className="relative inline-flex w-full items-center justify-center px-3 py-3 text-sm font-semibold transition-all duration-500 ease-in-out hover:bg-hover"
           >
             <ForwardedIconComponent
               name="RotateCcw"
@@ -134,7 +134,7 @@ export default function ImageViewer({ image }) {
           </div>
           <button
             id="full-page-button"
-            className="relative inline-flex w-full items-center justify-center px-3 py-3 text-sm font-semibold transition-all transition-all duration-500 ease-in-out ease-in-out hover:bg-hover"
+            className="relative inline-flex w-full items-center justify-center px-3 py-3 text-sm font-semibold transition-all duration-500 ease-in-out hover:bg-hover"
           >
             <ForwardedIconComponent
               name="Maximize2"
@@ -147,7 +147,7 @@ export default function ImageViewer({ image }) {
 
           <button
             onClick={download}
-            className="relative inline-flex w-full items-center justify-center px-3 py-3 text-sm font-semibold transition-all transition-all duration-500 ease-in-out ease-in-out hover:bg-hover"
+            className="relative inline-flex w-full items-center justify-center px-3 py-3 text-sm font-semibold transition-all duration-500 ease-in-out hover:bg-hover"
           >
             <ForwardedIconComponent
               name="ArrowDownToLine"
@@ -156,7 +156,7 @@ export default function ImageViewer({ image }) {
           </button>
         </div>
       </div>
-      <div id="canvas" ref={viewerRef} className={`h-[90%] w-full `} />
+      <div id="canvas" ref={viewerRef} className={`h-[90%] w-full`} />
     </>
   );
 }

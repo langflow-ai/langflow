@@ -131,14 +131,14 @@ export default function ShareModal({
             title: "Error sharing " + is_component ? "component" : "flow",
             list: [err["response"]["data"]["detail"]],
           });
-        }
+        },
       );
     else
       updateFlowStore(
         flow!,
         getTagsIds(selectedTags, tags),
         sharePublic,
-        unavaliableNames.find((e) => e.name === name)!.id
+        unavaliableNames.find((e) => e.name === name)!.id,
       ).then(successShare, (err) => {
         setErrorData({
           title: "Error sharing " + is_component ? "component" : "flow",
@@ -182,7 +182,7 @@ export default function ShareModal({
               current?
             </span>
             <br></br>
-            <span className=" text-xs text-destructive ">
+            <span className="text-xs text-destructive">
               Note: This action is irreversible.
             </span>
           </ConfirmationModal.Content>
@@ -205,7 +205,7 @@ export default function ShareModal({
         setOpen={internalSetOpen}
         onSubmit={() => {
           const isNameAvailable = !unavaliableNames.some(
-            (element) => element.name === name
+            (element) => element.name === name,
           );
 
           if (isNameAvailable) {
@@ -253,11 +253,11 @@ export default function ShareModal({
               }}
               data-testid="public-checkbox"
             />
-            <label htmlFor="public" className="export-modal-save-api text-sm ">
+            <label htmlFor="public" className="export-modal-save-api text-sm">
               Set {nameComponent} status to public
             </label>
           </div>
-          <span className=" text-xs text-destructive ">
+          <span className="text-xs text-destructive">
             <b>Attention:</b> API keys in specified fields are automatically
             removed upon sharing.
           </span>

@@ -11,7 +11,7 @@ export default function DownloadButton({
   if (isHovered) {
     return (
       <div
-        className={`absolute right-1 top-1 rounded-md bg-muted text-sm font-bold text-foreground `}
+        className={`absolute right-1 top-1 rounded-md bg-muted text-sm font-bold text-foreground`}
       >
         <Button
           variant={"none"}

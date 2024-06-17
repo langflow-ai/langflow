@@ -13,6 +13,7 @@ env:
 
 jobs:
   lint:
+    name: Ruff Style Check
     runs-on: ubuntu-latest
     strategy:
       matrix:

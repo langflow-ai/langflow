@@ -89,10 +89,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
               }}
               className="cursor-pointer"
             >
-              <IconComponent
-                name="Settings2"
-                className="header-menu-options "
-              />
+              <IconComponent name="Settings2" className="header-menu-options" />
               Settings
             </DropdownMenuItem>
             <DropdownMenuItem
@@ -103,7 +100,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
             >
               <IconComponent
                 name="ScrollText"
-                className="header-menu-options "
+                className="header-menu-options"
               />
               Logs
             </DropdownMenuItem>
@@ -120,7 +117,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
                 );
               }}
             >
-              <IconComponent name="FileUp" className="header-menu-options " />
+              <IconComponent name="FileUp" className="header-menu-options" />
               Import
             </DropdownMenuItem>
             <ExportModal>

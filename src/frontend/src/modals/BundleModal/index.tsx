@@ -48,7 +48,7 @@ export default function FoldersModal({
           </span>
           <ForwardedIconComponent
             name="Plus"
-            className="h-6 w-6 pl-1 text-primary "
+            className="h-6 w-6 pl-1 text-primary"
             aria-hidden="true"
           />
         </BaseModal.Header>

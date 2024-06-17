@@ -60,14 +60,14 @@ const CustomInputPopoverObject = ({
               ? options.find((option) => option.id === selectedOption)?.name ||
                 ""
               : (selectedOptions?.length !== 0 || !onChange) &&
-                setSelectedOptions
-              ? selectedOptions
-                  .map(
-                    (optionId) =>
-                      options.find((option) => option.id === optionId)?.name
-                  )
-                  .join(", ")
-              : value
+                  setSelectedOptions
+                ? selectedOptions
+                    .map(
+                      (optionId) =>
+                        options.find((option) => option.id === optionId)?.name,
+                    )
+                    .join(", ")
+                : value
           }
           autoFocus={autoFocus}
           disabled={disabled}
@@ -115,15 +115,15 @@ const CustomInputPopoverObject = ({
                   onSelect={(currentValue) => {
                     setSelectedOption &&
                       setSelectedOption(
-                        currentValue === selectedOption ? "" : currentValue
+                        currentValue === selectedOption ? "" : currentValue,
                       );
                     setSelectedOptions &&
                       setSelectedOptions(
                         selectedOptions?.includes(currentValue)
                           ? selectedOptions.filter(
-                              (item) => item !== currentValue
+                              (item) => item !== currentValue,
                             )
-                          : [...selectedOptions, currentValue]
+                          : [...selectedOptions, currentValue],
                       );
                     !setSelectedOptions && setShowOptions(false);
                   }}
@@ -136,7 +136,7 @@ const CustomInputPopoverObject = ({
                           selectedOption === option.id ||
                             selectedOptions?.includes(option.id)
                             ? "opacity-100"
-                            : "opacity-0"
+                            : "opacity-0",
                         )}
                       >
                         <div className="absolute opacity-100 transition-all group-hover:opacity-0">
