@@ -1,4 +1,3 @@
-from typing import Optional
 
 from langchain_anthropic.chat_models import ChatAnthropic
 from pydantic.v1 import SecretStr

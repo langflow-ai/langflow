@@ -1,4 +1,3 @@
-from typing import Optional
 
 from langchain_community.chat_models.huggingface import ChatHuggingFace
 from langchain_community.llms.huggingface_endpoint import HuggingFaceEndpoint

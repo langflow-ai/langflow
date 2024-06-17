@@ -41,7 +41,7 @@ import {
   updateEdgesHandleIdsType,
 } from "../types/utils/reactflowUtils";
 import { createRandomKey, toTitleCase } from "./utils";
-const uid = new ShortUniqueId({ length: 5 });
+const uid = new ShortUniqueId();
 
 export function checkChatInput(nodes: Node[]) {
   return nodes.some((node) => node.data.type === "ChatInput");
@@ -712,7 +712,6 @@ export function generateFlow(
   name: string,
 ): generateFlowType {
   const newFlowData = { nodes, edges, viewport: { zoom: 1, x: 0, y: 0 } };
-  const uid = new ShortUniqueId();
   /*	remove edges that are not connected to selected nodes on both ends
    */
   newFlowData.edges = edges.filter(

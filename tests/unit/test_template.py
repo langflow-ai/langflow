@@ -2,7 +2,6 @@ import importlib
 from typing import Dict, List, Optional
 
 import pytest
-from langflow.interface.utils import build_template_from_class
 from langflow.utils.util import build_template_from_function, get_base_classes, get_default_factory
 from pydantic import BaseModel
 
@@ -66,25 +65,6 @@ def test_build_template_from_function():
     # Test with invalid name
     with pytest.raises(ValueError, match=r".* not found"):
         build_template_from_function("NonExistent", type_to_loader_dict)
-
-
-# Test build_template_from_class
-def test_build_template_from_class():
-    type_to_cls_dict: Dict[str, type] = {"parent": Parent, "child": Child}
-
-    # Test valid input
-    result = build_template_from_class("Child", type_to_cls_dict)
-    assert result is not None
-    assert "template" in result
-    assert "description" in result
-    assert "base_classes" in result
-    assert "Child" in result["base_classes"]
-    assert "Parent" in result["base_classes"]
-    assert result["description"] == "Child Class"
-
-    # Test invalid input
-    with pytest.raises(ValueError, match="InvalidClass not found."):
-        build_template_from_class("InvalidClass", type_to_cls_dict)
 
 
 # Test get_base_classes

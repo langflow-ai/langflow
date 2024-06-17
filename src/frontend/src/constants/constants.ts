@@ -141,6 +141,7 @@ export const CODE_PROMPT_DIALOG_SUBTITLE =
 
 export const CODE_DICT_DIALOG_SUBTITLE =
   "Edit your dictionary. This dialog allows you to create your own customized dictionary. You can add as many key-value pairs as you want. While in edit mode, you can enter ({}) or ([]), and this will result in adding a new object or array.";
+
 /**
  * The base text for subtitle of Prompt Dialog
  * @constant
@@ -859,4 +860,4 @@ export const ERROR_UPDATING_COMPONENT =
 export const TITLE_ERROR_UPDATING_COMPONENT =
   "Error while updating the Component";
 
-  export const EMPTY_INPUT_SEND_MESSAGE = "No input message provided.";
+export const EMPTY_INPUT_SEND_MESSAGE = "No input message provided.";
