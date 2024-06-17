@@ -219,7 +219,7 @@ class CustomComponent(BaseComponent):
         """
         if not keys:
             keys = []
-        data = []
+        data_objects = []
         if not isinstance(data, Sequence):
             data = [data]
         for item in data:
@@ -245,9 +245,9 @@ class CustomComponent(BaseComponent):
             else:
                 raise ValueError(f"Invalid data type: {type(item)}")
 
-            data.append(Data(data=data_dict))
+            data_objects.append(Data(data=data_dict))
 
-        return data
+        return data_objects
 
     def create_references_from_data(self, data: List[Data], include_data: bool = False) -> str:
         """
