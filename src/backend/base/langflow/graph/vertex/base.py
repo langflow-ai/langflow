@@ -661,6 +661,7 @@ class Vertex:
                 self._custom_component, self._built_object, self.artifacts = result
                 self.artifacts_raw = self.artifacts.get("raw", None)
                 self.artifacts_type = self.artifacts.get("type", None) or ArtifactType.UNKNOWN.value
+                self.artifacts = {self.outputs[0]["name"]: self.artifacts}
                 self.logs = build_logs(self)
         else:
             self._built_object = result
