@@ -35,15 +35,14 @@ jobs:
         run: |
           if [[ "${{ inputs.release_type }}" == "base" ]]; then
             echo "tags=langflowai/langflow:base-${{ inputs.version }}" >> $GITHUB_OUTPUT
+            echo "file=./docker/build_and_push_base.Dockerfile" >> $GITHUB_OUTPUT
           else
             echo "tags=langflowai/langflow:${{ inputs.version }},langflowai/langflow:1.0-alpha" >> $GITHUB_OUTPUT
+            echo "file=./docker/build_and_push.Dockerfile" >> $GITHUB_OUTPUT
           fi
-  build_base:
+  build:
     runs-on: ubuntu-latest
     needs: setup
-    strategy:
-      matrix:
-        file: [./docker/build_and_push_base.Dockerfile, ]
     steps:
       - uses: actions/checkout@v4
       - name: Set up Docker Buildx
@@ -79,9 +78,8 @@ jobs:
           context: .
           push: true
           platforms: "linux/amd64,linux/arm64/v8"
-          file: ${{ matrix.file }}
+          file: ${{ needs.setup.outputs.file }}
           tags: ${{ needs.setup.outputs.tags }}
-
 
   build_components:
     if: ${{ inputs.release_type == 'main' }}
@@ -106,6 +104,8 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Wait for Docker Hub to propagate (for backend)
+        run: sleep 120
       - name: Build and push ${{ matrix.component }}
         uses: docker/build-push-action@v5
         with:
