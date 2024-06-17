@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from typing import Annotated, Any, AsyncIterator, Iterator, Optional
 
+from fastapi.encoders import jsonable_encoder
 from langchain_core.load import load
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_core.prompt_values import ImagePromptValue
@@ -149,6 +150,6 @@ class Message(Data):
                 content_dicts = await value.get_file_content_dicts()
                 contents.extend(content_dicts)
         prompt_template = ChatPromptTemplate.from_messages([HumanMessage(content=contents)])
-        instance.messages = prompt_template.messages
-        instance.prompt = prompt_template.to_json()
+        instance.prompt = jsonable_encoder(prompt_template.to_json())
+        instance.messages = instance.prompt.get("kwargs", {}).get("messages", [])
         return instance
