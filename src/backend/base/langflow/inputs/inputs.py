@@ -2,7 +2,7 @@ from typing import Any, Callable, Optional, Union
 
 from pydantic import Field, field_validator
 
-from langflow.inputs.validators import StrictBoolean
+from langflow.inputs.validators import CoalesceBool
 from langflow.schema.data import Data
 from langflow.schema.message import Message
 
@@ -35,7 +35,7 @@ class PromptInput(BaseInputMixin, ListableInputMixin):
 # Applying mixins to a specific input type
 class StrInput(BaseInputMixin, ListableInputMixin, DatabaseLoadMixin):  # noqa: F821
     field_type: Optional[SerializableFieldTypes] = FieldTypes.TEXT
-    load_from_db: StrictBoolean = False
+    load_from_db: CoalesceBool = False
     input_types: list[str] = ["Text"]
     """Defines if the field will allow the user to open a text editor. Default is False."""
 
@@ -84,12 +84,12 @@ class TextInput(StrInput):
 
 class MultilineInput(BaseInputMixin):
     field_type: Optional[SerializableFieldTypes] = FieldTypes.TEXT
-    multiline: StrictBoolean = True
+    multiline: CoalesceBool = True
 
 
 class SecretStrInput(BaseInputMixin, DatabaseLoadMixin):
     field_type: Optional[SerializableFieldTypes] = FieldTypes.PASSWORD
-    password: StrictBoolean = Field(default=True)
+    password: CoalesceBool = Field(default=True)
     input_types: list[str] = ["Text"]
 
 
@@ -103,7 +103,7 @@ class FloatInput(BaseInputMixin, ListableInputMixin, RangeMixin):
 
 class BoolInput(BaseInputMixin, ListableInputMixin):
     field_type: Optional[SerializableFieldTypes] = FieldTypes.BOOLEAN
-    value: StrictBoolean = False
+    value: CoalesceBool = False
 
 
 class NestedDictInput(BaseInputMixin, ListableInputMixin):
