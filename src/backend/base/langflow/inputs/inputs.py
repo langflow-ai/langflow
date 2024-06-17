@@ -140,4 +140,6 @@ InputTypes = Union[
     PromptInput,
     SecretStrInput,
     StrInput,
+    TextInput,
+    MessageInput,
 ]
