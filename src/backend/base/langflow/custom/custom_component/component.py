@@ -4,7 +4,6 @@ from uuid import UUID
 
 import yaml
 from git import TYPE_CHECKING
-from loguru import logger
 from pydantic import BaseModel
 
 from langflow.inputs.inputs import InputTypes
@@ -52,18 +51,20 @@ class Component(CustomComponent):
             self.map_inputs(self.inputs)
 
     def map_inputs(self, inputs: List[Input]):
+        self._inputs = {}
         self.inputs = inputs
         for input_ in inputs:
             self._inputs[input_.name] = input_
 
     def _validate_inputs(self, params: dict):
         # Params keys are the `name` attribute of the Input objects
-        for key, value in params.items():
+        for key, value in params.copy().items():
             if key not in self._inputs:
                 continue
             input_ = self._inputs[key]
             # BaseInputMixin has a `validate_assignment=True`
             input_.value = value
+            params[input_.name] = input_.value
 
     def set_attributes(self, params: dict):
         self._validate_inputs(params)
@@ -71,10 +72,6 @@ class Component(CustomComponent):
             if key in self.__dict__:
                 raise ValueError(f"Key {key} already exists in {self.__class__.__name__}")
             setattr(self, key, value)
-        for input_ in self.inputs:
-            if input_.name not in params:
-                setattr(self, input_.name, input_.value)
-                logger.warning(f"Input {input_.name} not found in arguments")
         self._arguments = params
 
     def _set_outputs(self, outputs: List[dict]):
