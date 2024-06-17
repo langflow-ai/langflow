@@ -1,7 +1,6 @@
 from enum import Enum
 from typing import Any, Callable, GenericAlias, Optional, Union, _GenericAlias, _UnionGenericAlias
 
-
 from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator, model_serializer, model_validator
 
 from langflow.field_typing import Text
@@ -185,7 +184,7 @@ class Output(BaseModel):
             self.types.append(type_)
 
     def set_selected(self):
-        if not self.selected:
+        if not self.selected and self.types:
             self.selected = self.types[0]
 
     @model_serializer(mode="wrap")
