@@ -149,7 +149,6 @@ async def build_vertex(
 
     next_runnable_vertices = []
     top_level_vertices = []
-    logs = {}
     try:
         start_time = time.perf_counter()
         cache = await chat_service.get_cache(flow_id_str)
@@ -189,15 +188,13 @@ async def build_vertex(
             valid = False
             output_label = vertex.outputs[0]["name"] if vertex.outputs else "output"
             logs = {output_label: [Log(message=params, type="error")]}
-            result_data_response = ResultDataResponse(results={})
+            result_data_response = ResultDataResponse(results={}, logs=logs)
             artifacts = {}
             # If there's an error building the vertex
             # we need to clear the cache
             await chat_service.clear_cache(flow_id_str)
 
         result_data_response.message = artifacts
-        if logs:
-            result_data_response.logs = logs
 
         # Log the vertex build
         if not vertex.will_stream:
