@@ -1,7 +1,7 @@
 from typing import List
 
 from langflow.custom import Component
-from langflow.inputs import StrInput, HandleInput
+from langflow.inputs import HandleInput, TextInput
 from langflow.schema import Data
 from langflow.template import Output
 
@@ -18,7 +18,7 @@ class FilterDataComponent(Component):
             info="Data object to filter.",
             input_types=["Message", "Data"],
         ),
-        StrInput(
+        TextInput(
             name="filter_criteria",
             display_name="Filter Criteria",
             info="List of keys to filter by.",
