@@ -4,8 +4,12 @@ from pydantic.v1 import SecretStr
 from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import BaseLanguageModel, Text
-from langflow.inputs import BoolInput, FloatInput, IntInput, SecretStrInput, StrInput, DropdownInput
+from langflow.inputs import BoolInput, DropdownInput, FloatInput, IntInput, SecretStrInput, StrInput
 from langflow.template import Output
+
+
+from langflow.inputs import MessageInput
+
 
 class GoogleGenerativeAIComponent(LCModelComponent):
     display_name: str = "Google Generative AI"
@@ -55,7 +59,12 @@ class GoogleGenerativeAIComponent(LCModelComponent):
             info="Number of chat completions to generate for each prompt. Note that the API may not return the full n completions if duplicates are generated.",
             advanced=True,
         ),
-        StrInput(name="input_value", display_name="Input", info="The input to the model.", input_types=["Text", "Data", "Prompt"]),
+        MessageInput(
+            name="input_value",
+            display_name="Input",
+            info="The input to the model.",
+            input_types=["Text", "Data", "Prompt"],
+        ),
         BoolInput(name="stream", display_name="Stream", info=STREAM_INFO_TEXT, advanced=True),
         StrInput(
             name="system_message",

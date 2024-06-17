@@ -1,4 +1,3 @@
-
 from langchain_community.chat_models.huggingface import ChatHuggingFace
 from langchain_community.llms.huggingface_endpoint import HuggingFaceEndpoint
 
@@ -7,6 +6,7 @@ from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import BaseLanguageModel, Text
 from langflow.inputs import BoolInput, DictInput, DropdownInput, SecretStrInput, StrInput
 from langflow.template import Output
+from langflow.inputs import MessageInput
 
 
 class HuggingFaceEndpointsComponent(LCModelComponent):
@@ -15,7 +15,7 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
     icon = "HuggingFace"
 
     inputs = [
-        StrInput(name="input_value", display_name="Input", input_types=["Text", "Data", "Prompt"]),
+        MessageInput(name="input_value", display_name="Input", input_types=["Text", "Data", "Prompt"]),
         SecretStrInput(name="endpoint_url", display_name="Endpoint URL", password=True),
         DropdownInput(
             name="task",

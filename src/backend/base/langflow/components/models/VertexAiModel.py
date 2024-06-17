@@ -1,9 +1,11 @@
 from langchain_google_vertexai import ChatVertexAI
+
 from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import BaseLanguageModel, Text
-from langflow.inputs import BoolInput, FloatInput, IntInput, StrInput
+from langflow.inputs import BoolInput, FloatInput, IntInput, MessageInput, StrInput
 from langflow.template import Output
+
 
 class ChatVertexAIComponent(LCModelComponent):
     display_name = "Vertex AI"
@@ -11,7 +13,7 @@ class ChatVertexAIComponent(LCModelComponent):
     icon = "VertexAI"
 
     inputs = [
-        StrInput(name="input_value", display_name="Input", input_types=["Text", "Data", "Prompt"]),
+        MessageInput(name="input_value", display_name="Input", input_types=["Text", "Data", "Prompt"]),
         StrInput(
             name="credentials",
             display_name="Credentials",
@@ -85,4 +87,3 @@ class ChatVertexAIComponent(LCModelComponent):
         )
 
         return output
-    
