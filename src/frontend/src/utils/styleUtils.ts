@@ -34,6 +34,7 @@ import {
   Compass,
   Copy,
   Cpu,
+  CpuIcon,
   Database,
   Delete,
   Dot,
@@ -331,7 +332,7 @@ export const nodeIconsLucide: iconsType = {
   Azure: AzureIcon,
   OllamaEmbeddings: OllamaIcon,
   ChatOllamaModel: OllamaIcon,
-  Faiss: MetaIcon,
+  FAISS: MetaIcon,
   FaissSearch: MetaIcon,
   LangChain: LangChainIcon,
   AzureOpenAiModel: AzureIcon,
@@ -556,4 +557,5 @@ export const nodeIconsLucide: iconsType = {
   Streamlit,
   MistralAI:MistralIcon,
   Upstash: UpstashSvgIcon,
+  PGVector: CpuIcon,
 };
