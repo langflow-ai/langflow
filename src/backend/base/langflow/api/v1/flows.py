@@ -273,7 +273,7 @@ async def upload_file(
     if "flows" in data:
         flow_list = FlowListCreate(**data)
     else:
-        flow_list = FlowListCreate(flows=[FlowCreate(**flow) for flow in data])
+        flow_list = FlowListCreate(flows=[FlowCreate(**data)])
     # Now we set the user_id for all flows
     for flow in flow_list.flows:
         flow.user_id = current_user.id
