@@ -62,6 +62,6 @@ class URLComponent(Component):
         urls = [self.ensure_url(url.strip()) for url in self.urls if url.strip()]
         loader = WebBaseLoader(web_paths=urls, encoding="utf-8")
         docs = loader.load()
-        data = [Data(text_key="content", content=doc.page_content, **doc.metadata) for doc in docs]
+        data = [Data(text_key="text", content=doc.page_content, **doc.metadata) for doc in docs]
         self.status = data
         return data
