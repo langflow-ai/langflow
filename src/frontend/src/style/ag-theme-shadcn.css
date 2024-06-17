@@ -36,6 +36,10 @@
   top: 2px;
 }
 
+.ag-cell-wrapper > *:not(.ag-cell-value):not(.ag-group-value) {
+  height: 0px;
+}
+
 .ag-cell-wrapper {
   align-items: normal !important;
 }
