@@ -9,6 +9,7 @@ from langflow.inputs import BoolInput, IntInput, StrInput, HandleInput, Dropdown
 from langflow.template import Output
 from langflow.helpers.data import docs_to_data
 
+
 class QdrantVectorStoreComponent(Component):
     display_name = "Qdrant"
     description = "Qdrant Vector Store with search capabilities"
@@ -25,19 +26,45 @@ class QdrantVectorStoreComponent(Component):
         IntInput(name="timeout", display_name="Timeout", advanced=True),
         StrInput(name="path", display_name="Path", advanced=True),
         StrInput(name="url", display_name="URL", advanced=True),
-        DropdownInput(name="distance_func", display_name="Distance Function", options=["Cosine", "Euclidean", "Dot Product"], value="Cosine", advanced=True),
+        DropdownInput(
+            name="distance_func",
+            display_name="Distance Function",
+            options=["Cosine", "Euclidean", "Dot Product"],
+            value="Cosine",
+            advanced=True,
+        ),
         StrInput(name="content_payload_key", display_name="Content Payload Key", value="page_content", advanced=True),
         StrInput(name="metadata_payload_key", display_name="Metadata Payload Key", value="metadata", advanced=True),
         HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
-        HandleInput(name="vector_store_inputs", display_name="Vector Store Inputs", input_types=["Document", "Data"], is_list=True),
-        BoolInput(name="add_to_vector_store", display_name="Add to Vector Store", info="If true, the Vector Store Inputs will be added to the Vector Store."),
+        HandleInput(
+            name="vector_store_inputs",
+            display_name="Vector Store Inputs",
+            input_types=["Document", "Data"],
+            is_list=True,
+        ),
+        BoolInput(
+            name="add_to_vector_store",
+            display_name="Add to Vector Store",
+            info="If true, the Vector Store Inputs will be added to the Vector Store.",
+        ),
         StrInput(name="search_input", display_name="Search Input"),
-        IntInput(name="number_of_results", display_name="Number of Results", info="Number of results to return.", value=4, advanced=True),
+        IntInput(
+            name="number_of_results",
+            display_name="Number of Results",
+            info="Number of results to return.",
+            value=4,
+            advanced=True,
+        ),
     ]
 
     outputs = [
         Output(display_name="Vector Store", name="vector_store", method="build_vector_store", output_type=Qdrant),
-        Output(display_name="Base Retriever", name="base_retriever", method="build_base_retriever", output_type=BaseRetriever),
+        Output(
+            display_name="Base Retriever",
+            name="base_retriever",
+            method="build_base_retriever",
+            output_type=BaseRetriever,
+        ),
         Output(display_name="Search Results", name="search_results", method="search_documents"),
     ]
 
@@ -79,10 +106,7 @@ class QdrantVectorStoreComponent(Component):
 
             if documents:
                 qdrant = Qdrant.from_documents(
-                    documents,
-                    embedding=self.embedding,
-                    client_kwargs=server_kwargs,
-                    **qdrant_kwargs
+                    documents, embedding=self.embedding, client_kwargs=server_kwargs, **qdrant_kwargs
                 )
             else:
                 from qdrant_client import QdrantClient

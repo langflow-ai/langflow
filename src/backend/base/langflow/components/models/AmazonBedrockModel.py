@@ -8,7 +8,6 @@ from langflow.inputs import MessageInput
 from langflow.template import Output
 
 
-
 class AmazonBedrockComponent(LCModelComponent):
     display_name: str = "Amazon Bedrock"
     description: str = "Generate text using Amazon Bedrock LLMs."

@@ -6,6 +6,7 @@ from langflow.field_typing import BaseLanguageModel, Text
 from langflow.inputs import BoolInput, FloatInput, SecretStrInput, StrInput
 from langflow.template import Output
 
+
 class QianfanChatEndpointComponent(LCModelComponent):
     display_name: str = "Qianfan"
     description: str = "Generate text using Baidu Qianfan LLMs."

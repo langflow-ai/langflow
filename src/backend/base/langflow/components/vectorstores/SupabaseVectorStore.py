@@ -10,6 +10,7 @@ from langflow.inputs import IntInput, StrInput, HandleInput
 from langflow.template import Output
 from langflow.helpers.data import docs_to_data
 
+
 class SupabaseVectorStoreComponent(Component):
     display_name = "Supabase"
     description = "Supabase Vector Store with search capabilities"
@@ -22,14 +23,35 @@ class SupabaseVectorStoreComponent(Component):
         StrInput(name="table_name", display_name="Table Name", advanced=True),
         StrInput(name="query_name", display_name="Query Name"),
         HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
-        HandleInput(name="vector_store_inputs", display_name="Vector Store Inputs", input_types=["Document", "Data"], is_list=True),
+        HandleInput(
+            name="vector_store_inputs",
+            display_name="Vector Store Inputs",
+            input_types=["Document", "Data"],
+            is_list=True,
+        ),
         StrInput(name="search_input", display_name="Search Input"),
-        IntInput(name="number_of_results", display_name="Number of Results", info="Number of results to return.", value=4, advanced=True),
+        IntInput(
+            name="number_of_results",
+            display_name="Number of Results",
+            info="Number of results to return.",
+            value=4,
+            advanced=True,
+        ),
     ]
 
     outputs = [
-        Output(display_name="Vector Store", name="vector_store", method="build_vector_store", output_type=SupabaseVectorStore),
-        Output(display_name="Base Retriever", name="base_retriever", method="build_base_retriever", output_type=BaseRetriever),
+        Output(
+            display_name="Vector Store",
+            name="vector_store",
+            method="build_vector_store",
+            output_type=SupabaseVectorStore,
+        ),
+        Output(
+            display_name="Base Retriever",
+            name="base_retriever",
+            method="build_base_retriever",
+            output_type=BaseRetriever,
+        ),
         Output(display_name="Search Results", name="search_results", method="search_documents"),
     ]
 

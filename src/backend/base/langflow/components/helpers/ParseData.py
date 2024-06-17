@@ -11,9 +11,7 @@ class ParseDataComponent(Component):
     icon = "braces"
 
     inputs = [
-        HandleInput(
-            name="data", display_name="Data", info="The data to convert to text.", input_types=["Data"]
-        ),
+        HandleInput(name="data", display_name="Data", info="The data to convert to text.", input_types=["Data"]),
         MultilineInput(
             name="template",
             display_name="Template",

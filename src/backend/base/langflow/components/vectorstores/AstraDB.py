@@ -1,5 +1,4 @@
 from langflow.custom import Component
-from langflow.field_typing import Text
 from langflow.inputs import (
     StrInput,
     IntInput,
@@ -10,9 +9,9 @@ from langflow.inputs import (
 )
 from langflow.schema import Data
 from langflow.template import Output
-from langflow.field_typing import Embeddings
 
 from loguru import logger
+
 
 class AstraVectorStoreComponent(Component):
     display_name: str = "Astra DB Vector Store"
