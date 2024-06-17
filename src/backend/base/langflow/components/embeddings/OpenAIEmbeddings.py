@@ -90,7 +90,7 @@ class OpenAIEmbeddingsComponent(LCModelComponent):
             api_version=self.openai_api_version,
             organization=self.openai_organization,
             openai_proxy=self.openai_proxy,
-            timeout=self.request_timeout,
+            timeout=self.request_timeout or None,
             show_progress_bar=self.show_progress_bar,
             skip_empty=self.skip_empty,
             tiktoken_model_name=self.tiktoken_model_name,
