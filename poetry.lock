@@ -472,17 +472,17 @@ files = [
 
 [[package]]
 name = "boto3"
-version = "1.34.127"
+version = "1.34.128"
 description = "The AWS SDK for Python"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "boto3-1.34.127-py3-none-any.whl", hash = "sha256:d370befe4fb7aea5bc383057d7dad18dda5d0cf3cd3295915bcc8c8c4191905c"},
-    {file = "boto3-1.34.127.tar.gz", hash = "sha256:58ccdeae3a96811ecc9d5d866d8226faadbd0ee1891756e4a04d5186e9a57a64"},
+    {file = "boto3-1.34.128-py3-none-any.whl", hash = "sha256:a048ff980a81cd652724a73bc496c519b336fabe19cc8bfc6c53b2ff6eb22c7b"},
+    {file = "boto3-1.34.128.tar.gz", hash = "sha256:43a6e99f53a8d34b3b4dbe424dbcc6b894350dc41a85b0af7c7bc24a7ec2cead"},
 ]
 
 [package.dependencies]
-botocore = ">=1.34.127,<1.35.0"
+botocore = ">=1.34.128,<1.35.0"
 jmespath = ">=0.7.1,<2.0.0"
 s3transfer = ">=0.10.0,<0.11.0"
 
@@ -491,13 +491,13 @@ crt = ["botocore[crt] (>=1.21.0,<2.0a0)"]
 
 [[package]]
 name = "botocore"
-version = "1.34.127"
+version = "1.34.128"
 description = "Low-level, data-driven core of boto 3."
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "botocore-1.34.127-py3-none-any.whl", hash = "sha256:e14fa28c8bb141de965e700f88b196d17c67a703c7f0f5c7e14f7dd1cf636011"},
-    {file = "botocore-1.34.127.tar.gz", hash = "sha256:a377871742c40603d559103f19acb7bc93cfaf285e68f21b81637ec396099877"},
+    {file = "botocore-1.34.128-py3-none-any.whl", hash = "sha256:db67fda136c372ab3fa432580c819c89ba18d28a6152a4d2a7ea40d44082892e"},
+    {file = "botocore-1.34.128.tar.gz", hash = "sha256:8d8e03f7c8c080ecafda72036eb3b482d649f8417c90b5dca33b7c2c47adb0c9"},
 ]
 
 [package.dependencies]
@@ -1177,13 +1177,13 @@ types = ["chardet (>=5.1.0)", "mypy", "pytest", "pytest-cov", "pytest-dependency
 
 [[package]]
 name = "cohere"
-version = "5.5.3"
+version = "5.5.8"
 description = ""
 optional = false
 python-versions = "<4.0,>=3.8"
 files = [
-    {file = "cohere-5.5.3-py3-none-any.whl", hash = "sha256:99d20129713a6dae052368b4839773a214592a76bee345b94a4846d00f702da3"},
-    {file = "cohere-5.5.3.tar.gz", hash = "sha256:8c7ebe2f5bf83fee8e55a24a0acdd4b0e94de274fd0ef32b285978289a03e930"},
+    {file = "cohere-5.5.8-py3-none-any.whl", hash = "sha256:e1ed84b90eadd13c6a68ee28e378a0bb955f8945eadc6eb7ee126b3399cafd54"},
+    {file = "cohere-5.5.8.tar.gz", hash = "sha256:84ce7666ff8fbdf4f41fb5f6ca452ab2639a514bc88967a2854a9b1b820d6ea0"},
 ]
 
 [package.dependencies]
@@ -1191,9 +1191,10 @@ boto3 = ">=1.34.0,<2.0.0"
 fastavro = ">=1.9.4,<2.0.0"
 httpx = ">=0.21.2"
 httpx-sse = ">=0.4.0,<0.5.0"
+parameterized = ">=0.9.0,<0.10.0"
 pydantic = ">=1.9.2"
 requests = ">=2.0.0,<3.0.0"
-tokenizers = ">=0.19,<0.20"
+tokenizers = ">=0.15,<1"
 types-requests = ">=2.0.0,<3.0.0"
 typing_extensions = ">=4.0.0"
 
@@ -1879,13 +1880,13 @@ vectorstore-mmr = ["numpy (>=1)", "simsimd (>=3)"]
 
 [[package]]
 name = "email-validator"
-version = "2.1.1"
+version = "2.1.2"
 description = "A robust email address syntax and deliverability validation library."
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "email_validator-2.1.1-py3-none-any.whl", hash = "sha256:97d882d174e2a65732fb43bfce81a3a834cbc1bde8bf419e30ef5ea976370a05"},
-    {file = "email_validator-2.1.1.tar.gz", hash = "sha256:200a70680ba08904be6d1eef729205cc0d687634399a5924d842533efb824b84"},
+    {file = "email_validator-2.1.2-py3-none-any.whl", hash = "sha256:d89f6324e13b1e39889eab7f9ca2f91dc9aebb6fa50a6d8bd4329ab50f251115"},
+    {file = "email_validator-2.1.2.tar.gz", hash = "sha256:14c0f3d343c4beda37400421b39fa411bbe33a75df20825df73ad53e06a9f04c"},
 ]
 
 [package.dependencies]
@@ -2438,8 +2439,8 @@ files = [
 [package.dependencies]
 cffi = {version = ">=1.12.2", markers = "platform_python_implementation == \"CPython\" and sys_platform == \"win32\""}
 greenlet = [
-    {version = ">=3.0rc3", markers = "platform_python_implementation == \"CPython\" and python_version >= \"3.11\""},
     {version = ">=2.0.0", markers = "platform_python_implementation == \"CPython\" and python_version < \"3.11\""},
+    {version = ">=3.0rc3", markers = "platform_python_implementation == \"CPython\" and python_version >= \"3.11\""},
 ]
 "zope.event" = "*"
 "zope.interface" = "*"
@@ -2566,12 +2567,12 @@ files = [
 google-auth = ">=2.14.1,<3.0.dev0"
 googleapis-common-protos = ">=1.56.2,<2.0.dev0"
 grpcio = [
-    {version = ">=1.49.1,<2.0dev", optional = true, markers = "python_version >= \"3.11\" and extra == \"grpc\""},
     {version = ">=1.33.2,<2.0dev", optional = true, markers = "python_version < \"3.11\" and extra == \"grpc\""},
+    {version = ">=1.49.1,<2.0dev", optional = true, markers = "python_version >= \"3.11\" and extra == \"grpc\""},
 ]
 grpcio-status = [
-    {version = ">=1.49.1,<2.0.dev0", optional = true, markers = "python_version >= \"3.11\" and extra == \"grpc\""},
     {version = ">=1.33.2,<2.0.dev0", optional = true, markers = "python_version < \"3.11\" and extra == \"grpc\""},
+    {version = ">=1.49.1,<2.0.dev0", optional = true, markers = "python_version >= \"3.11\" and extra == \"grpc\""},
 ]
 proto-plus = ">=1.22.3,<2.0.0dev"
 protobuf = ">=3.19.5,<3.20.0 || >3.20.0,<3.20.1 || >3.20.1,<4.21.0 || >4.21.0,<4.21.1 || >4.21.1,<4.21.2 || >4.21.2,<4.21.3 || >4.21.3,<4.21.4 || >4.21.4,<4.21.5 || >4.21.5,<5.0.0.dev0"
@@ -4158,18 +4159,18 @@ numpy = ">=1,<2"
 
 [[package]]
 name = "langchain-cohere"
-version = "0.1.5"
+version = "0.1.8"
 description = "An integration package connecting Cohere and LangChain"
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
-    {file = "langchain_cohere-0.1.5-py3-none-any.whl", hash = "sha256:f07bd53fadbebf744b8de1eebf977353f340f2010156821623a0c6247032ab9b"},
-    {file = "langchain_cohere-0.1.5.tar.gz", hash = "sha256:d0be4e76079a74c4259fe4db2bab535d690efe0efac5e9e2fbf486476c0a85c8"},
+    {file = "langchain_cohere-0.1.8-py3-none-any.whl", hash = "sha256:d3ef73d5050513ff3ca0f07c8f3f73b7773eec182312aae92138d3a0ad33e631"},
+    {file = "langchain_cohere-0.1.8.tar.gz", hash = "sha256:edbeca8d041186d2831b495d9a392a0a94d15b0e2c98863e0a0cd001fc888842"},
 ]
 
 [package.dependencies]
-cohere = ">=5.5,<6.0"
-langchain-core = ">=0.1.42,<0.3"
+cohere = ">=5.5.6,<6.0"
+langchain-core = ">=0.2.0,<0.3"
 
 [[package]]
 name = "langchain-community"
@@ -4381,7 +4382,7 @@ six = "*"
 
 [[package]]
 name = "langflow-base"
-version = "0.0.70"
+version = "0.0.71"
 description = "A Python package with a built-in web application"
 optional = false
 python-versions = ">=3.10,<3.13"
@@ -4464,13 +4465,13 @@ openai = ["openai (>=0.27.8)"]
 
 [[package]]
 name = "langsmith"
-version = "0.1.77"
+version = "0.1.78"
 description = "Client library to connect to the LangSmith LLM Tracing and Evaluation Platform."
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
-    {file = "langsmith-0.1.77-py3-none-any.whl", hash = "sha256:2202cc21b1ed7e7b9e5d2af2694be28898afa048c09fdf09f620cbd9301755ae"},
-    {file = "langsmith-0.1.77.tar.gz", hash = "sha256:4ace09077a9a4e412afeb4b517ca68e7de7b07f36e4792dc8236ac5207c0c0c7"},
+    {file = "langsmith-0.1.78-py3-none-any.whl", hash = "sha256:87bc5d9072bfcb6392d7552cbcd6089dcc1faed36d688b1587d80bd48a1acba2"},
+    {file = "langsmith-0.1.78.tar.gz", hash = "sha256:d9112d2e9298ec6b02d3b1afec6ed557df9db3746c79d34ef3b448fc18e116cd"},
 ]
 
 [package.dependencies]
@@ -4480,13 +4481,13 @@ requests = ">=2,<3"
 
 [[package]]
 name = "litellm"
-version = "1.40.14"
+version = "1.40.15"
 description = "Library to easily interface with LLM API providers"
 optional = false
 python-versions = "!=2.7.*,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,!=3.6.*,!=3.7.*,>=3.8"
 files = [
-    {file = "litellm-1.40.14-py3-none-any.whl", hash = "sha256:5faf9e1ca7405ef7623d2fca521aee4e11e6aa4f761fcfcd3830dc485ce53af3"},
-    {file = "litellm-1.40.14.tar.gz", hash = "sha256:22ecc4e54afb78eca7a1e17aebf3709260b33efb3a69d85882d4e6553d6e93fa"},
+    {file = "litellm-1.40.15-py3-none-any.whl", hash = "sha256:4f51376535857c109723cede78f50e0794be3814b6da1f02ea8263fe5480dc42"},
+    {file = "litellm-1.40.15.tar.gz", hash = "sha256:bd3ca27c69deb47c5d11c69a6c2f7a618512720bd2d94ff64d055c09d9fba366"},
 ]
 
 [package.dependencies]
@@ -4550,8 +4551,8 @@ psutil = ">=5.9.1"
 pywin32 = {version = "*", markers = "platform_system == \"Windows\""}
 pyzmq = ">=25.0.0"
 requests = [
-    {version = ">=2.32.2", markers = "python_version > \"3.11\""},
     {version = ">=2.26.0", markers = "python_version <= \"3.11\""},
+    {version = ">=2.32.2", markers = "python_version > \"3.11\""},
 ]
 tomli = {version = ">=1.1.0", markers = "python_version < \"3.11\""}
 Werkzeug = ">=2.0.0"
@@ -6019,9 +6020,9 @@ files = [
 
 [package.dependencies]
 numpy = [
-    {version = ">=1.26.0,<2", markers = "python_version >= \"3.12\""},
     {version = ">=1.22.4,<2", markers = "python_version < \"3.11\""},
     {version = ">=1.23.2,<2", markers = "python_version == \"3.11\""},
+    {version = ">=1.26.0,<2", markers = "python_version >= \"3.12\""},
 ]
 python-dateutil = ">=2.8.2"
 pytz = ">=2020.1"
@@ -6068,6 +6069,20 @@ numpy = [
     {version = ">=1.26.0", markers = "python_version >= \"3.12\" and python_version < \"3.13\""},
 ]
 types-pytz = ">=2022.1.1"
+
+[[package]]
+name = "parameterized"
+version = "0.9.0"
+description = "Parameterized testing with any Python test framework"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "parameterized-0.9.0-py2.py3-none-any.whl", hash = "sha256:4e0758e3d41bea3bbd05ec14fc2c24736723f243b28d702081aef438c9372b1b"},
+    {file = "parameterized-0.9.0.tar.gz", hash = "sha256:7fc905272cefa4f364c1a3429cbbe9c0f98b793988efb5bf90aac80f08db09b1"},
+]
+
+[package.extras]
+dev = ["jinja2"]
 
 [[package]]
 name = "parso"
@@ -6736,13 +6751,13 @@ pyasn1 = ">=0.4.6,<0.7.0"
 
 [[package]]
 name = "pyautogen"
-version = "0.2.28"
+version = "0.2.29"
 description = "Enabling Next-Gen LLM Applications via Multi-Agent Conversation Framework"
 optional = false
 python-versions = "<3.13,>=3.8"
 files = [
-    {file = "pyautogen-0.2.28-py3-none-any.whl", hash = "sha256:69dffa4053096f496a50c8a252bbe23105b58fd6ffbb422fa8c043ecf3fc732b"},
-    {file = "pyautogen-0.2.28.tar.gz", hash = "sha256:f74686a981f2b6046a9cf6aff5a5e61615ec60d5559a49e7474467fbdf4e077b"},
+    {file = "pyautogen-0.2.29-py3-none-any.whl", hash = "sha256:633ed65cadf9580db31f653762f9d796003e4208befdb33a19d9624fb478222c"},
+    {file = "pyautogen-0.2.29.tar.gz", hash = "sha256:dec1eb362dd195103d30fca30215f195d7c996bce2d74f22429eb18b43d1d4c3"},
 ]
 
 [package.dependencies]
@@ -6758,10 +6773,10 @@ termcolor = "*"
 tiktoken = "*"
 
 [package.extras]
-autobuild = ["chromadb", "huggingface-hub", "sentence-transformers"]
+autobuild = ["chromadb", "huggingface-hub", "pysqlite3", "sentence-transformers"]
 blendsearch = ["flaml[blendsearch]"]
 cosmosdb = ["azure-cosmos (>=4.2.0)"]
-gemini = ["google-generativeai (>=0.5,<1)", "pillow", "pydantic"]
+gemini = ["google-auth", "google-cloud-aiplatform", "google-generativeai (>=0.5,<1)", "pillow", "pydantic"]
 graph = ["matplotlib", "networkx"]
 jupyter-executor = ["ipykernel (>=6.29.0)", "jupyter-client (>=8.6.0)", "jupyter-kernel-gateway", "requests", "websocket-client"]
 lmm = ["pillow", "replicate"]
@@ -7809,18 +7824,18 @@ full = ["numpy"]
 
 [[package]]
 name = "realtime"
-version = "1.0.5"
+version = "1.0.6"
 description = ""
 optional = false
 python-versions = "<4.0,>=3.8"
 files = [
-    {file = "realtime-1.0.5-py3-none-any.whl", hash = "sha256:93342fbcb8812ed8d81733f2782c1199376f0471e78014675420c7d31f2f327d"},
-    {file = "realtime-1.0.5.tar.gz", hash = "sha256:4abbb3218b6ce8bd8d9d3b1112661d325e36ceab67a0e918673d0fd8fca04fb1"},
+    {file = "realtime-1.0.6-py3-none-any.whl", hash = "sha256:c66918a106d8ef348d1821f2dbf6683d8833825580d95b2fdea9995406b42838"},
+    {file = "realtime-1.0.6.tar.gz", hash = "sha256:2be0d8a6305513d423604ee319216108fc20105cb7438922d5c8958c48f40a47"},
 ]
 
 [package.dependencies]
 python-dateutil = ">=2.8.1,<3.0.0"
-typing-extensions = ">=4.11.0,<5.0.0"
+typing-extensions = ">=4.12.2,<5.0.0"
 websockets = ">=11,<13"
 
 [[package]]
@@ -8750,13 +8765,13 @@ files = [
 
 [[package]]
 name = "tenacity"
-version = "8.3.0"
+version = "8.4.1"
 description = "Retry code until it succeeds"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "tenacity-8.3.0-py3-none-any.whl", hash = "sha256:3649f6443dbc0d9b01b9d8020a9c4ec7a1ff5f6f3c6c8a036ef371f573fe9185"},
-    {file = "tenacity-8.3.0.tar.gz", hash = "sha256:953d4e6ad24357bceffbc9707bc74349aca9d245f68eb65419cf0c249a1949a2"},
+    {file = "tenacity-8.4.1-py3-none-any.whl", hash = "sha256:28522e692eda3e1b8f5e99c51464efcc0b9fc86933da92415168bc1c4e2308fa"},
+    {file = "tenacity-8.4.1.tar.gz", hash = "sha256:54b1412b878ddf7e1f1577cd49527bad8cdef32421bd599beac0c6c3f10582fd"},
 ]
 
 [package.extras]
@@ -9607,13 +9622,13 @@ xlsx = ["networkx", "openpyxl", "pandas", "xlrd"]
 
 [[package]]
 name = "unstructured-client"
-version = "0.23.3"
+version = "0.23.7"
 description = "Python Client SDK for Unstructured API"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "unstructured-client-0.23.3.tar.gz", hash = "sha256:3aa6ad1365c09c17eaa9367d310e457bfe9bd9e23705567811ab2fdb41d66406"},
-    {file = "unstructured_client-0.23.3-py3-none-any.whl", hash = "sha256:446469fd263f4b3eec1a982e84c04b2680f9a4e560ae0968d6e0ff2f4eead233"},
+    {file = "unstructured-client-0.23.7.tar.gz", hash = "sha256:9161ca25365764712b66cbb50e7cb22bc59a89a613de2bb2e2b171ef7b17e5b0"},
+    {file = "unstructured_client-0.23.7-py3-none-any.whl", hash = "sha256:95df14697b1f79cc2a4580c7f143bd463d3dd5fab605220d2e4888321342decb"},
 ]
 
 [package.dependencies]
@@ -9667,13 +9682,13 @@ files = [
 
 [[package]]
 name = "urllib3"
-version = "2.2.1"
+version = "2.2.2"
 description = "HTTP library with thread-safe connection pooling, file post, and more."
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "urllib3-2.2.1-py3-none-any.whl", hash = "sha256:450b20ec296a467077128bff42b73080516e71b56ff59a60a02bef2232c4fa9d"},
-    {file = "urllib3-2.2.1.tar.gz", hash = "sha256:d0570876c61ab9e520d776c38acbbb5b05a776d3f9ff98a5c8fd5162a444cf19"},
+    {file = "urllib3-2.2.2-py3-none-any.whl", hash = "sha256:a448b2f64d686155468037e1ace9f2d2199776e17f0a46610480d311f73e3472"},
+    {file = "urllib3-2.2.2.tar.gz", hash = "sha256:dd505485549a7a552833da5e6063639d0d177c04f23bc3864e41e5dc5f612168"},
 ]
 
 [package.extras]
