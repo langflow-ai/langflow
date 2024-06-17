@@ -10,7 +10,7 @@ from langflow.graph.utils import UnbuiltObject, serialize_field
 from langflow.graph.vertex.base import Vertex
 from langflow.schema import Data
 from langflow.schema.artifact import ArtifactType
-from langflow.schema.schema import INPUT_FIELD_NAME, build_logs_from_artifacts
+from langflow.schema.schema import INPUT_FIELD_NAME, build_logs
 from langflow.services.monitor.utils import log_transaction, log_vertex_build
 from langflow.utils.schemas import ChatOutputResponse, DataOutputResponse
 from langflow.utils.util import unescape_string
@@ -48,7 +48,7 @@ class ComponentVertex(Vertex):
                 for key in self.artifacts:
                     self.artifacts_raw[key] = self.artifacts[key].get("raw", None)
                     self.artifacts_type[key] = self.artifacts[key].get("type", None) or ArtifactType.UNKNOWN.value
-                self.logs = build_logs_from_artifacts(self.artifacts)
+                self.logs = build_logs(self)
         else:
             self._built_object = result
 
