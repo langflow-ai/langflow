@@ -38,6 +38,7 @@ export default function NodeToolbarComponent({
   deleteNode,
   setShowNode,
   numberOfHandles,
+  numberOfOutputHandles,
   showNode,
   name = "code",
   selected,
@@ -187,7 +188,7 @@ export default function NodeToolbarComponent({
   useHotkeys(download, handleDownloadWShortcut, { preventDefault });
   useHotkeys(freeze, handleFreeze, { preventDefault });
 
-  const isMinimal = numberOfHandles <= 1;
+  const isMinimal = numberOfHandles <= 1 && numberOfOutputHandles <= 1;
   const isGroup = data.node?.flow ? true : false;
 
   const frozen = data.node?.frozen ?? false;

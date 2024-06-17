@@ -557,6 +557,7 @@ export type nodeToolbarPropsType = {
   deleteNode: (idx: string) => void;
   setShowNode: (boolean: any) => void;
   numberOfHandles: number;
+  numberOfOutputHandles: number;
   showNode: boolean;
   name?: string;
   openAdvancedModal?: boolean;

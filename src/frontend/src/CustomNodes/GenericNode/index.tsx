@@ -324,6 +324,7 @@ export default function GenericNode({
           }}
           setShowState={setShowNode}
           numberOfHandles={handles}
+          numberOfOutputHandles={shownOutputs.length ?? 0}
           showNode={showNode}
           openAdvancedModal={false}
           onCloseAdvancedModal={() => {}}
@@ -511,32 +512,9 @@ export default function GenericNode({
                           />
                         ),
                     )}
-                  {/* <ParameterComponent
-                    index={0}
-                    key={scapedJSONStringfy({
-                      baseClasses: data.node!.base_classes,
-                      id: data.id,
-                      dataType: data.type,
-                    })}
-                    data={data}
-                    color={nodeColors[types[data.type]] ?? nodeColors.unknown}
-                    title={
-                      data.node?.output_types &&
-                      data.node.output_types.length > 0
-                        ? data.node.output_types.join(" | ")
-                        : data.type
-                    }
-                    tooltipTitle={data.node?.base_classes.join("\n")}
-                    id={{
-                      baseClasses: data.node!.base_classes,
-                      id: data.id,
-                      dataType: data.type,
-                      idx: 0,
-                    }}
-                    type={data.node?.base_classes.join("|")}
-                    left={false}
-                    showNode={showNode}
-                  /> */}
+                  {shownOutputs &&
+                    shownOutputs.length > 0 &&
+                    renderOutputParameter(shownOutputs[0], 0)}
                 </>
               )}
             </div>
