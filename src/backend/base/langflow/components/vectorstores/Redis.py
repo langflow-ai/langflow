@@ -9,7 +9,7 @@ from langflow.custom import CustomComponent
 from langflow.schema import Data
 
 
-class RedisComponent(CustomComponent):
+class RedisVectorStoreComponent(CustomComponent):
     """
     A custom component for implementing a Vector Store using Redis.
     """

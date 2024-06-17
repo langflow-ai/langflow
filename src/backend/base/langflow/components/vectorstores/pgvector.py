@@ -11,7 +11,7 @@ from langflow.inputs import BoolInput, IntInput, StrInput, HandleInput
 from langflow.template import Output
 from langflow.helpers.data import docs_to_data
 
-class PGVectorComponent(Component):
+class PGVectorStoreComponent(Component):
     display_name = "PGVector"
     description = "PGVector Vector Store with search capabilities"
     documentation = "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/pgvector"
