@@ -62,8 +62,8 @@ const handleFiles = (files, setFiles, currentFlowId, setErrorData) => {
       });
       return;
     }
-    const uid = new ShortUniqueId({ length: 3 });
-    const id = uid();
+    const uid = new ShortUniqueId();
+    const id = uid.randomUUID(3);
     const type = files[0].type.split("/")[0];
     const blob = files[0];
 

@@ -77,10 +77,13 @@ export default function ChatView({
 
           const is_ai =
             sender === "Machine" || sender === null || sender === undefined;
+
           return {
             isSend: !is_ai,
             message:
-              ((message === "" || !message) && !stream_url) ? EMPTY_INPUT_SEND_MESSAGE : message,
+              (message === "" || !message) && !stream_url && files?.length === 0
+                ? EMPTY_INPUT_SEND_MESSAGE
+                : message,
             sender_name,
             componentId: output.id,
             stream_url: stream_url,

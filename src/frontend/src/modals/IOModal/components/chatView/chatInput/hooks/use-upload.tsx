@@ -19,7 +19,7 @@ const useUpload = (uploadFile, currentFlowId, setFiles, lockChat) => {
       if (items) {
         for (let i = 0; i < items.length; i++) {
           const type = items[0].type.split("/")[0];
-          const uid = new ShortUniqueId({ length: 3 });
+          const uid = new ShortUniqueId();
           const blob = items[i].getAsFile();
           if (blob) {
             const fileExtension = blob.name.split(".").pop()?.toLowerCase();
@@ -34,7 +34,7 @@ const useUpload = (uploadFile, currentFlowId, setFiles, lockChat) => {
               });
               return;
             }
-            const id = uid();
+            const id = uid.randomUUID(3);
             setFiles((prevFiles) => [
               ...prevFiles,
               { file: blob, loading: true, error: false, id, type },

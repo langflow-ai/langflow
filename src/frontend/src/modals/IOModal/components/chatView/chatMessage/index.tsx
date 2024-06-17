@@ -200,8 +200,8 @@ export default function ChatMessage({
                                 children,
                                 ...props
                               }) => {
-                                if (children.length) {
-                                  if (children[0] === "▍") {
+                                if (children?.length) {
+                                  if (children![0] === "▍") {
                                     return (
                                       <span className="form-modal-markdown-span">
                                         ▍
@@ -209,10 +209,9 @@ export default function ChatMessage({
                                     );
                                   }
 
-                                  children[0] = (children[0] as string).replace(
-                                    "`▍`",
-                                    "▍",
-                                  );
+                                  children![0] = (
+                                    children![0] as string
+                                  ).replace("`▍`", "▍");
                                 }
 
                                 const match = /language-(\w+)/.exec(
