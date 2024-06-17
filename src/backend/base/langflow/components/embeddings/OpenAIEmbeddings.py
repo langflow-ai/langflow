@@ -58,7 +58,13 @@ class OpenAIEmbeddingsComponent(LCModelComponent):
             display_name="TikToken Model Name",
             advanced=True,
         ),
-        BoolInput(name="tiktoken_enable", display_name="TikToken Enable", advanced=True, value=True),
+        BoolInput(
+            name="tiktoken_enable",
+            display_name="TikToken Enable",
+            advanced=True,
+            value=True,
+            info="If False, you must have transformers installed.",
+        ),
     ]
 
     outputs = [
