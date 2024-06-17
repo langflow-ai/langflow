@@ -1,7 +1,7 @@
 import os
 from typing import List
 
-from langflow.field_typing import Embeddings, VectorStore
+from langflow.field_typing import Embeddings
 
 
 def check_env_vars(*vars):

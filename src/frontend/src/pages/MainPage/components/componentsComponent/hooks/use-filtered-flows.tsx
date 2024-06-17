@@ -4,7 +4,7 @@ import { useEffect } from "react";
 const useFilteredFlows = (
   flowsFromFolder,
   searchFlowsComponents,
-  setAllFlows,
+  setAllFlows
 ) => {
   useEffect(() => {
     const newFlows = cloneDeep(flowsFromFolder || []);
@@ -13,7 +13,7 @@ const useFilteredFlows = (
         f.name.toLowerCase().includes(searchFlowsComponents.toLowerCase()) ||
         f.description
           .toLowerCase()
-          .includes(searchFlowsComponents.toLowerCase()),
+          .includes(searchFlowsComponents.toLowerCase())
     );
 
     if (searchFlowsComponents === "") {

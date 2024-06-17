@@ -5,7 +5,7 @@ const useSelectOptionsChange = (
   setErrorData,
   setOpenDelete,
   handleDuplicate,
-  handleExport,
+  handleExport
 ) => {
   const handleSelectOptionsChange = useCallback(
     (action) => {
@@ -31,7 +31,7 @@ const useSelectOptionsChange = (
       setOpenDelete,
       handleDuplicate,
       handleExport,
-    ],
+    ]
   );
 
   return { handleSelectOptionsChange };

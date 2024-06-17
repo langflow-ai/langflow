@@ -492,7 +492,7 @@ export type ChatInputType = {
   isDragging: boolean;
   files: FilePreviewType[];
   setFiles: (
-    files: FilePreviewType[] | ((prev: FilePreviewType[]) => FilePreviewType[]),
+    files: FilePreviewType[] | ((prev: FilePreviewType[]) => FilePreviewType[])
   ) => void;
   chatValue: string;
   inputRef: {
@@ -595,7 +595,7 @@ export type chatMessagePropsType = {
   updateChat: (
     chat: ChatMessageType,
     message: string,
-    stream_url?: string,
+    stream_url?: string
   ) => void;
 };
 
@@ -687,12 +687,12 @@ export type codeTabsPropsType = {
       value: string,
       node: NodeType,
       template: TemplateVariableType,
-      tweak: tweakType,
+      tweak: tweakType
     ) => string;
     buildTweakObject?: (
       tw: string,
       changes: string | string[] | boolean | number | Object[] | Object,
-      template: TemplateVariableType,
+      template: TemplateVariableType
     ) => Promise<string | void>;
   };
   activeTweaks?: boolean;

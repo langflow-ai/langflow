@@ -21,7 +21,7 @@ export const handleUpdateValues = async (name: string, data: NodeDataType) => {
       code,
       template,
       name,
-      data.node?.template[name]?.value,
+      data.node?.template[name]?.value
     );
     if (res.status === 200 && data.node?.template) {
       return res.data.template;
@@ -34,5 +34,5 @@ export const handleUpdateValues = async (name: string, data: NodeDataType) => {
 
 export const debouncedHandleUpdateValues = debounce(
   handleUpdateValues,
-  SAVE_DEBOUNCE_TIME,
+  SAVE_DEBOUNCE_TIME
 );

@@ -45,5 +45,5 @@ export const useGlobalVariablesStore = create<GlobalVariablesStore>(
     getVariableId: (name) => {
       return get().globalVariables[name]?.id;
     },
-  }),
+  })
 );

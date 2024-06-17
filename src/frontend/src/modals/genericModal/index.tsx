@@ -83,7 +83,7 @@ export default function GenericModal({
     }
 
     const filteredWordsHighlight = matches.filter(
-      (word) => !invalid_chars.includes(word),
+      (word) => !invalid_chars.includes(word)
     );
 
     setWordsHighlight(filteredWordsHighlight);
@@ -134,7 +134,7 @@ export default function GenericModal({
         // to the first key of the custom_fields object
         if (field_name === "") {
           field_name = Array.isArray(
-            apiReturn.data?.frontend_node?.custom_fields?.[""],
+            apiReturn.data?.frontend_node?.custom_fields?.[""]
           )
             ? apiReturn.data?.frontend_node?.custom_fields?.[""][0] ?? ""
             : apiReturn.data?.frontend_node?.custom_fields?.[""] ?? "";
@@ -208,7 +208,7 @@ export default function GenericModal({
         <div
           className={classNames(
             !isEdit ? "rounded-lg border" : "",
-            "flex h-full w-full",
+            "flex h-full w-full"
           )}
         >
           {type === TypeModal.PROMPT && isEdit && !readonly ? (

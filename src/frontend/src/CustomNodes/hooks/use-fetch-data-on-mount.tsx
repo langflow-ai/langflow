@@ -13,7 +13,7 @@ const useFetchDataOnMount = (
   handleUpdateValues,
   setNode,
   renderTooltips,
-  setIsLoading,
+  setIsLoading
 ) => {
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
