@@ -1,5 +1,9 @@
 /** @type {import('tailwindcss').Config} */
-const { fontFamily } = require("tailwindcss/defaultTheme");
+import { fontFamily } from "tailwindcss/defaultTheme";
+import tailwindcssForms from "@tailwindcss/forms";
+import tailwindcssAnimate from "tailwindcss-animate";
+import tailwindcssTypography from "@tailwindcss/typography";
+import tailwindcssDottedBackground from "tailwindcss-dotted-background";
 
 import plugin from "tailwindcss/plugin";
 
@@ -155,8 +159,8 @@ module.exports = {
   },
 
   plugins: [
-    require("tailwindcss-animate"),
-    require("@tailwindcss/forms")({
+    tailwindcssAnimate,
+    tailwindcssForms({
       strategy: "class", // only generate classes
     }),
     plugin(function ({ addUtilities }) {
@@ -245,8 +249,7 @@ module.exports = {
         },
       });
     }),
-    require("@tailwindcss/typography"),
-    require("daisyui"),
-    require("tailwindcss-dotted-background"),
+    tailwindcssTypography,
+    tailwindcssDottedBackground,
   ],
 };

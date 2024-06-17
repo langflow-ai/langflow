@@ -7,7 +7,7 @@ const apiRoutes = ["^/api/v1/", "/health"];
 const target = process.env.VITE_PROXY_TARGET || "http://127.0.0.1:7860";
 
 // Use environment variable to determine the UI server port
-const port = process.env.VITE_PORT || 3000;
+const port = Number(process.env.VITE_PORT) || 3000;
 
 const proxyTargets = apiRoutes.reduce((proxyObj, route) => {
   proxyObj[route] = {
@@ -18,17 +18,15 @@ const proxyTargets = apiRoutes.reduce((proxyObj, route) => {
   };
   return proxyObj;
 }, {});
-export default defineConfig(() => {
-  return {
-    build: {
-      outDir: "build",
+export default defineConfig({
+  build: {
+    outDir: "build",
+  },
+  plugins: [react(), svgr()],
+  server: {
+    port: port,
+    proxy: {
+      ...proxyTargets,
     },
-    plugins: [react(), svgr()],
-    server: {
-      port: port,
-      proxy: {
-        ...proxyTargets,
-      },
-    },
-  };
+  },
 });
