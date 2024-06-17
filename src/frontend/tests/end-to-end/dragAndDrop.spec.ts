@@ -27,7 +27,7 @@ test.describe("drag and drop test", () => {
     // Read your file into a buffer.
     const jsonContent = readFileSync(
       "src/frontend/tests/end-to-end/assets/collection.json",
-      "utf-8",
+      "utf-8"
     );
 
     // Create the DataTransfer and File
@@ -47,7 +47,7 @@ test.describe("drag and drop test", () => {
       "drop",
       {
         dataTransfer,
-      },
+      }
     );
 
     const genericNoda = page.getByTestId("div-generic-node");

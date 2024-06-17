@@ -131,14 +131,14 @@ export default function ShareModal({
             title: "Error sharing " + is_component ? "component" : "flow",
             list: [err["response"]["data"]["detail"]],
           });
-        },
+        }
       );
     else
       updateFlowStore(
         flow!,
         getTagsIds(selectedTags, tags),
         sharePublic,
-        unavaliableNames.find((e) => e.name === name)!.id,
+        unavaliableNames.find((e) => e.name === name)!.id
       ).then(successShare, (err) => {
         setErrorData({
           title: "Error sharing " + is_component ? "component" : "flow",
@@ -205,7 +205,7 @@ export default function ShareModal({
         setOpen={internalSetOpen}
         onSubmit={() => {
           const isNameAvailable = !unavaliableNames.some(
-            (element) => element.name === name,
+            (element) => element.name === name
           );
 
           if (isNameAvailable) {

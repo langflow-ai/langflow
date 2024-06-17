@@ -11,7 +11,7 @@ export function handleDownloadFolderFn(folderId: string) {
     data.folder_description = folder?.description || "";
 
     const jsonString = `data:text/json;chatset=utf-8,${encodeURIComponent(
-      JSON.stringify(data),
+      JSON.stringify(data)
     )}`;
 
     const link = document.createElement("a");

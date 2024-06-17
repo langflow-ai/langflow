@@ -87,77 +87,77 @@ test("IntComponent", async ({ page }) => {
 
   await page.locator('//*[@id="showmodel_kwargs"]').click();
   expect(
-    await page.locator('//*[@id="showmodel_kwargs"]').isChecked(),
+    await page.locator('//*[@id="showmodel_kwargs"]').isChecked()
   ).toBeTruthy();
 
   await page.locator('//*[@id="showmodel_name"]').click();
   expect(
-    await page.locator('//*[@id="showmodel_name"]').isChecked(),
+    await page.locator('//*[@id="showmodel_name"]').isChecked()
   ).toBeFalsy();
 
   await page.locator('//*[@id="showopenai_api_base"]').click();
   expect(
-    await page.locator('//*[@id="showopenai_api_base"]').isChecked(),
+    await page.locator('//*[@id="showopenai_api_base"]').isChecked()
   ).toBeTruthy();
 
   await page.locator('//*[@id="showopenai_api_key"]').click();
   expect(
-    await page.locator('//*[@id="showopenai_api_key"]').isChecked(),
+    await page.locator('//*[@id="showopenai_api_key"]').isChecked()
   ).toBeFalsy();
 
   await page.locator('//*[@id="showtemperature"]').click();
   expect(
-    await page.locator('//*[@id="showtemperature"]').isChecked(),
+    await page.locator('//*[@id="showtemperature"]').isChecked()
   ).toBeFalsy();
 
   await page.locator('//*[@id="showmodel_kwargs"]').click();
   expect(
-    await page.locator('//*[@id="showmodel_kwargs"]').isChecked(),
+    await page.locator('//*[@id="showmodel_kwargs"]').isChecked()
   ).toBeFalsy();
 
   await page.locator('//*[@id="showmodel_name"]').click();
   expect(
-    await page.locator('//*[@id="showmodel_name"]').isChecked(),
+    await page.locator('//*[@id="showmodel_name"]').isChecked()
   ).toBeTruthy();
 
   await page.locator('//*[@id="showopenai_api_base"]').click();
   expect(
-    await page.locator('//*[@id="showopenai_api_base"]').isChecked(),
+    await page.locator('//*[@id="showopenai_api_base"]').isChecked()
   ).toBeFalsy();
 
   await page.locator('//*[@id="showopenai_api_key"]').click();
   expect(
-    await page.locator('//*[@id="showopenai_api_key"]').isChecked(),
+    await page.locator('//*[@id="showopenai_api_key"]').isChecked()
   ).toBeTruthy();
 
   await page.locator('//*[@id="showtemperature"]').click();
   expect(
-    await page.locator('//*[@id="showtemperature"]').isChecked(),
+    await page.locator('//*[@id="showtemperature"]').isChecked()
   ).toBeTruthy();
 
   await page.locator('//*[@id="showmodel_kwargs"]').click();
   expect(
-    await page.locator('//*[@id="showmodel_kwargs"]').isChecked(),
+    await page.locator('//*[@id="showmodel_kwargs"]').isChecked()
   ).toBeTruthy();
 
   await page.locator('//*[@id="showmodel_name"]').click();
   expect(
-    await page.locator('//*[@id="showmodel_name"]').isChecked(),
+    await page.locator('//*[@id="showmodel_name"]').isChecked()
   ).toBeFalsy();
 
   await page.locator('//*[@id="showopenai_api_base"]').click();
   expect(
-    await page.locator('//*[@id="showopenai_api_base"]').isChecked(),
+    await page.locator('//*[@id="showopenai_api_base"]').isChecked()
   ).toBeTruthy();
 
   await page.locator('//*[@id="showopenai_api_key"]').click();
   expect(
-    await page.locator('//*[@id="showopenai_api_key"]').isChecked(),
+    await page.locator('//*[@id="showopenai_api_key"]').isChecked()
   ).toBeFalsy();
 
   await page.locator('//*[@id="showtemperature"]').click();
   expect(
-    await page.locator('//*[@id="showtemperature"]').isChecked(),
+    await page.locator('//*[@id="showtemperature"]').isChecked()
   ).toBeFalsy();
 
   await page.getByText("Save Changes", { exact: true }).click();
@@ -172,7 +172,7 @@ test("IntComponent", async ({ page }) => {
 
     await page.locator('//*[@id="showtimeout"]').click();
     expect(
-      await page.locator('//*[@id="showtimeout"]').isChecked(),
+      await page.locator('//*[@id="showtimeout"]').isChecked()
     ).toBeTruthy();
 
     const valueEditNode = await page

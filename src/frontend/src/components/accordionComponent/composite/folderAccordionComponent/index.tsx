@@ -15,7 +15,7 @@ export default function FolderAccordionComponent({
   options,
 }: AccordionComponentType): JSX.Element {
   const [value, setValue] = useState(
-    open.length === 0 ? "" : getOpenAccordion(),
+    open.length === 0 ? "" : getOpenAccordion()
   );
 
   function getOpenAccordion(): string {

@@ -6,7 +6,7 @@ export const checkCanBuildTweakObject = (element, templateField) => {
     templateField.charAt(0) !== "_" &&
     element.data.node.template[templateField].show &&
     LANGFLOW_SUPPORTED_TYPES.has(
-      element.data.node.template[templateField].type,
+      element.data.node.template[templateField].type
     ) &&
     templateField !== "code"
   );

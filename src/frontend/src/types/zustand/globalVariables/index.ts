@@ -21,7 +21,7 @@ export type GlobalVariablesStore = {
     id: string,
     type?: string,
     default_fields?: string[],
-    value?: string,
+    value?: string
   ) => void;
   removeGlobalVariable: (name: string) => Promise<void>;
   getVariableId: (name: string) => string | undefined;
