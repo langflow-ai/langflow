@@ -660,11 +660,10 @@ class Vertex:
             if len(result) == 2:
                 self._built_object, self.artifacts = result
             elif len(result) == 3:
-                import pdb; pdb.set_trace()
                 self._custom_component, self._built_object, self.artifacts = result
                 self.artifacts_raw = self.artifacts.get("raw", None)
                 self.artifacts_type = self.artifacts.get("type", None) or ArtifactType.UNKNOWN.value
-                self.logs = build_log(self)
+                self.logs = build_logs(self)
         else:
             self._built_object = result
 

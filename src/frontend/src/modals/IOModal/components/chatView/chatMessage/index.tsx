@@ -116,19 +116,19 @@ export default function ChatMessage({
       <div
         className={classNames(
           "form-modal-chat-position",
-          chat.isSend ? "" : " "
+          chat.isSend ? "" : " ",
         )}
       >
         <div
           className={classNames(
-            "mr-3 mt-1 flex w-24 flex-col items-center gap-1 overflow-hidden px-3 pb-3"
+            "mr-3 mt-1 flex w-24 flex-col items-center gap-1 overflow-hidden px-3 pb-3",
           )}
         >
           <div className="flex flex-col items-center gap-1">
             <div
               className={cn(
                 "relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-md p-5 text-2xl",
-                !chat.isSend ? "bg-chat-bot-icon" : "bg-chat-user-icon"
+                !chat.isSend ? "bg-chat-bot-icon" : "bg-chat-user-icon",
               )}
             >
               <img
@@ -211,12 +211,12 @@ export default function ChatMessage({
 
                                   children[0] = (children[0] as string).replace(
                                     "`▍`",
-                                    "▍"
+                                    "▍",
                                   );
                                 }
 
                                 const match = /language-(\w+)/.exec(
-                                  className || ""
+                                  className || "",
                                 );
 
                                 return !inline ? (
@@ -231,7 +231,7 @@ export default function ChatMessage({
                                         language: (match && match[1]) || "",
                                         code: String(children).replace(
                                           /\n$/,
-                                          ""
+                                          "",
                                         ),
                                       },
                                     ]}
@@ -249,7 +249,7 @@ export default function ChatMessage({
                             {chatMessage}
                           </Markdown>
                         ),
-                      [chat.message, chatMessage]
+                      [chat.message, chatMessage],
                     )}
                   </div>
                 </div>
@@ -292,7 +292,7 @@ export default function ChatMessage({
                             parts.push(
                               <span className="chat-message-highlight">
                                 {chat.message[match[1]]}
-                              </span>
+                              </span>,
                             );
                           }
 
@@ -311,9 +311,11 @@ export default function ChatMessage({
             ) : (
               <div className="flex flex-col">
                 <span
-        className={`prose word-break-break-word dark:prose-invert ${
-          chatMessage === EMPTY_INPUT_SEND_MESSAGE ? "text-gray-400" : "text-primary"
-        }`}
+                  className={`prose word-break-break-word dark:prose-invert ${
+                    chatMessage === EMPTY_INPUT_SEND_MESSAGE
+                      ? "text-gray-400"
+                      : "text-primary"
+                  }`}
                   data-testid={
                     "chat-message-" + chat.sender_name + "-" + chatMessage
                   }
