@@ -80,7 +80,7 @@ export default function FlowSettingsModal({
       <BaseModal.Footer
         submit={{
           label: "Save",
-          disabled: nameLists.includes(name) && name !== currentFlow!.name,
+          disabled: nameLists.includes(name) || name === currentFlow!.name,
           dataTestId: "save-flow-settings",
           loading: isSaving,
         }}
