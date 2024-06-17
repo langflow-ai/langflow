@@ -29,7 +29,7 @@ export default function TextModal({
   const [open, setOpen] = useState(false);
 
   return (
-    <BaseModal size="medium-h-full" open={open} setOpen={setOpen}>
+    <BaseModal size="small" open={open} setOpen={setOpen}>
       <BaseModal.Trigger className="h-full">{children}</BaseModal.Trigger>
       <BaseModal.Header description={"Inspect the text below."}>
         <span className="pr-2">{"View Text"}</span>
