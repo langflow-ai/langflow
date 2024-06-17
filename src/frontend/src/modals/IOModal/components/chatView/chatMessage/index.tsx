@@ -14,6 +14,7 @@ import useFlowStore from "../../../../../stores/flowStore";
 import { chatMessagePropsType } from "../../../../../types/components";
 import { classNames, cn } from "../../../../../utils/utils";
 import FileCardWrapper from "./components/fileCardWrapper";
+import { EMPTY_INPUT_SEND_MESSAGE } from "../../../../../constants/constants";
 
 export default function ChatMessage({
   chat,
@@ -310,7 +311,9 @@ export default function ChatMessage({
             ) : (
               <div className="flex flex-col">
                 <span
-                  className="prose text-primary word-break-break-word dark:prose-invert"
+        className={`prose word-break-break-word dark:prose-invert ${
+          chatMessage === EMPTY_INPUT_SEND_MESSAGE ? "text-gray-400" : "text-primary"
+        }`}
                   data-testid={
                     "chat-message-" + chat.sender_name + "-" + chatMessage
                   }

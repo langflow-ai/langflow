@@ -858,3 +858,5 @@ export const ERROR_UPDATING_COMPONENT =
   "An unexpected error occurred while updating the Component. Please try again.";
 export const TITLE_ERROR_UPDATING_COMPONENT =
   "Error while updating the Component";
+
+  export const EMPTY_INPUT_SEND_MESSAGE = "No input message provided.";
