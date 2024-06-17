@@ -40,8 +40,22 @@ class StrInput(BaseInputMixin, ListableInputMixin, DatabaseLoadMixin):  # noqa: 
     """Defines if the field will allow the user to open a text editor. Default is False."""
 
 
+class MessageInput(StrInput):
+    input_types: list[str] = ["Message"]
+
+    @field_validator("value")
+    @classmethod
+    def validate_value(cls, v: Any, _info):
+        # If v is a instance of Message, then its fine
+        if isinstance(v, Message):
+            return v
+        if isinstance(v, str):
+            return Message(text=v)
+        raise ValueError(f"Invalid value type {type(v)}")
+
+
 class TextInput(StrInput):
-    input_types: list[str] = ["Data", "Message", "Text"]
+    input_types: list[str] = ["Message"]
 
     @field_validator("value")
     @classmethod
