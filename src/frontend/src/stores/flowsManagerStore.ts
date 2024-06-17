@@ -263,7 +263,6 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
         // Return the id
         return id;
       } catch (error:any) {
-        console.error(error);
         if(error.response?.data?.detail){
           useAlertStore.getState().setErrorData({
             title: "Could not load flows from database",
