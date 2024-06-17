@@ -260,6 +260,13 @@ export default function ExtraSidebar(): JSX.Element {
             // Set search input state
             setSearch(event.target.value);
           }}
+          autocomplete="off"
+          readonly="readonly"
+          onClick={()=>
+            document
+              .getElementById('search')
+              .removeAttribute("readonly")
+          }
         />
         <div
           className="search-icon"
