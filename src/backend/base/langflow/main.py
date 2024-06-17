@@ -1,3 +1,4 @@
+import warnings
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Optional
@@ -10,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from loguru import logger
+from pydantic import PydanticDeprecatedSince20
 from rich import print as rprint
 from starlette.middleware.base import BaseHTTPMiddleware
 
@@ -24,6 +26,9 @@ from langflow.services.deps import get_settings_service
 from langflow.services.plugins.langfuse_plugin import LangfuseInstance
 from langflow.services.utils import initialize_services, teardown_services
 from langflow.utils.logger import configure
+
+# Ignore Pydantic deprecation warnings from Langchain
+warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
 
 
 class JavaScriptMIMETypeMiddleware(BaseHTTPMiddleware):
