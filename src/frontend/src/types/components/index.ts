@@ -479,6 +479,7 @@ export type nodeToolbarType = {
       description: string;
       display_name: string;
       documentation: string;
+      edited: boolean;
       template: APITemplateType;
     };
     value: void;
