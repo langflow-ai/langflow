@@ -42,17 +42,16 @@ class Component(CustomComponent):
     inputs: Optional[List[InputTypes]] = None
     outputs: Optional[List[Output]] = None
     code_class_base_inheritance: ClassVar[str] = "Component"
-    _results: dict = {}
-    _arguments: dict = {}
-    _inputs: dict[str, InputTypes] = {}
 
     def __init__(self, **data):
         super().__init__(**data)
+        self._inputs: dict[str, InputTypes] = {}
+        self._results: dict = {}
+        self._arguments: dict = {}
         if self.inputs is not None:
             self.map_inputs(self.inputs)
 
     def map_inputs(self, inputs: List[Input]):
-        self._inputs = {}
         self.inputs = inputs
         for input_ in inputs:
             self._inputs[input_.name] = input_
