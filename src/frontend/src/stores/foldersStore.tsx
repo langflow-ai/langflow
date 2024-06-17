@@ -136,6 +136,7 @@ export const useFolderStore = create<FoldersStoreType>((set, get) => ({
     return new Promise<void>((resolve, reject) => {
       const input = document.createElement("input");
       input.type = "file";
+      input.accept = ".json";
       input.onchange = (event: Event) => {
         if (
           (event.target as HTMLInputElement).files![0].type ===
