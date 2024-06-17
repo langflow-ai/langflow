@@ -73,7 +73,7 @@ jobs:
       #   run: |
       #     docker stop test_container
       #     docker rm test_container
-      - name: Push Docker Image
+      - name: Build and Push Docker Image
         uses: docker/build-push-action@v5
         with:
           context: .
