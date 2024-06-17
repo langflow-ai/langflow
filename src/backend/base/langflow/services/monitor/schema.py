@@ -1,5 +1,5 @@
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Optional
 
 from pydantic import BaseModel, Field, field_serializer, field_validator
@@ -17,7 +17,7 @@ class DefaultModel(BaseModel):
 
     def json(self, **kwargs):
         # Usa a função de serialização personalizada
-        return super().json(**kwargs, encoder=self.custom_encoder)
+        return super().model_dump_json(**kwargs, encoder=self.custom_encoder)
 
     @staticmethod
     def custom_encoder(obj):
@@ -83,7 +83,7 @@ class TransactionModelResponse(DefaultModel):
 class MessageModel(DefaultModel):
     index: Optional[int] = Field(default=None)
     flow_id: Optional[str] = Field(default=None, alias="flow_id")
-    timestamp: datetime = Field(default_factory=datetime.now)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     sender: str
     sender_name: str
     session_id: str
@@ -96,6 +96,12 @@ class MessageModel(DefaultModel):
         if isinstance(v, str):
             v = json.loads(v)
         return v
+
+    @field_serializer("timestamp")
+    @classmethod
+    def serialize_timestamp(cls, v):
+        v = v.replace(microsecond=0)
+        return v.strftime("%Y-%m-%d %H:%M:%S")
 
     @field_serializer("files")
     @classmethod
