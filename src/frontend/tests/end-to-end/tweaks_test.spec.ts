@@ -90,7 +90,7 @@ test("check if tweaks are updating when someothing on the flow changes", async (
   await page.waitForTimeout(1000);
 
   await page
-    .getByTestId("vectorstoresChroma")
+    .getByTestId("vectorstoresChroma DB")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.mouse.up();
   await page.mouse.down();
@@ -103,25 +103,25 @@ test("check if tweaks are updating when someothing on the flow changes", async (
     .getByTestId("popover-anchor-input-collection_name")
     .fill("collection_name_test_123123123!@#$&*(&%$@");
 
-  await page.getByTestId("popover-anchor-input-index_directory").click();
+  await page.getByTestId("popover-anchor-input-persist_directory").click();
   await page
-    .getByTestId("popover-anchor-input-index_directory")
-    .fill("index_directory_123123123!@#$&*(&%$@");
+    .getByTestId("popover-anchor-input-persist_directory")
+    .fill("persist_directory_123123123!@#$&*(&%$@");
 
   await page.getByText("API", { exact: true }).first().click();
 
   await page.getByText("Tweaks").nth(1).click();
 
   await page.getByText("collection_name_test_123123123!@#$&*(&%$@").isVisible();
-  await page.getByText("index_directory_123123123!@#$&*(&%$@").isVisible();
+  await page.getByText("persist_directory_123123123!@#$&*(&%$@").isVisible();
 
   await page.getByText("Python API", { exact: true }).click();
 
   await page.getByText("collection_name_test_123123123!@#$&*(&%$@").isVisible();
-  await page.getByText("index_directory_123123123!@#$&*(&%$@").isVisible();
+  await page.getByText("persist_directory_123123123!@#$&*(&%$@").isVisible();
 
   await page.getByText("Python Code", { exact: true }).click();
 
   await page.getByText("collection_name_test_123123123!@#$&*(&%$@").isVisible();
-  await page.getByText("index_directory_123123123!@#$&*(&%$@").isVisible();
+  await page.getByText("persist_directory_123123123!@#$&*(&%$@").isVisible();
 });

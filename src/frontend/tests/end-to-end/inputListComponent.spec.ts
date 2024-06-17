@@ -28,7 +28,7 @@ test("InputListComponent", async ({ page }) => {
 
   await page.waitForTimeout(1000);
   await page
-    .getByTestId("vectorstoresAstra DB")
+    .getByTestId("vectorsearchAstra DB Search")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.mouse.up();
   await page.mouse.down();

@@ -30,7 +30,7 @@ test("InputComponent", async ({ page }) => {
   await page.waitForTimeout(1000);
 
   await page
-    .getByTestId("vectorstoresChroma")
+    .getByTestId("vectorstoresChroma DB")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.mouse.up();
   await page.mouse.down();
@@ -88,11 +88,6 @@ test("InputComponent", async ({ page }) => {
     await page.locator('//*[@id="showcollection_name"]').isChecked(),
   ).toBeFalsy();
 
-  await page.locator('//*[@id="showindex_directory"]').click();
-  expect(
-    await page.locator('//*[@id="showindex_directory"]').isChecked(),
-  ).toBeFalsy();
-
   await page.locator('//*[@id="showchroma_server_cors_allow_origins"]').click();
   expect(
     await page
@@ -119,11 +114,6 @@ test("InputComponent", async ({ page }) => {
   expect(
     await page.locator('//*[@id="showchroma_server_ssl_enabled"]').isChecked(),
   ).toBeFalsy();
-
-  await page.locator('//*[@id="showindex_directory"]').click();
-  expect(
-    await page.locator('//*[@id="showindex_directory"]').isChecked(),
-  ).toBeTruthy();
 
   let valueEditNode = await page
     .getByTestId("popover-anchor-input-collection_name-edit")

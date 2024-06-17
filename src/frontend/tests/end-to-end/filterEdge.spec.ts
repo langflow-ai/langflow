@@ -188,9 +188,9 @@ test("LLMChain - Filter", async ({ page }) => {
     )
     .click();
 
-  await expect(page.getByTestId("inputsChat Input")).toBeVisible();
+  await expect(page.getByTestId("saved_componentsChat Input")).toBeVisible();
   await expect(page.getByTestId("outputsChat Output")).toBeVisible();
   await expect(page.getByTestId("helpersID Generator")).toBeVisible();
-  await expect(page.getByTestId("vectorstoresChroma")).toBeVisible();
+  await expect(page.getByTestId("vectorstoresChroma DB")).toBeVisible();
   await expect(page.getByTestId("disclosure-vector stores")).toBeVisible();
 });

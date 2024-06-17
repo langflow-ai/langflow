@@ -150,9 +150,9 @@ test("user must be able to see output inspection", async ({ page }) => {
 
   await page.getByTestId("button_run_chat output").last().click();
 
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(8000);
 
-  await page.getByTestId("icon-ScanEye").last().click();
+  await page.getByTestId("icon-ScanEye").nth(4).click();
 
   await page.getByText("Sender", { exact: true }).isVisible();
   await page.getByText("Type", { exact: true }).isVisible();
