@@ -5,9 +5,17 @@ from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
 from langflow.base.models.openai_constants import MODEL_NAMES
 from langflow.field_typing import BaseLanguageModel, Text
-from langflow.inputs import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, SecretStrInput, StrInput
+from langflow.inputs import (
+    BoolInput,
+    DictInput,
+    DropdownInput,
+    FloatInput,
+    IntInput,
+    MessageInput,
+    SecretStrInput,
+    StrInput,
+)
 from langflow.template import Output
-
 
 
 class OpenAIModelComponent(LCModelComponent):
@@ -16,7 +24,7 @@ class OpenAIModelComponent(LCModelComponent):
     icon = "OpenAI"
 
     inputs = [
-        StrInput(name="input_value", display_name="Input", input_types=["Text", "Data", "Prompt"]),
+        MessageInput(name="input_value", display_name="Input", input_types=["Text", "Data", "Prompt"]),
         IntInput(
             name="max_tokens",
             display_name="Max Tokens",

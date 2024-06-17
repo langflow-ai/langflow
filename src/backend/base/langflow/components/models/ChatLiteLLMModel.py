@@ -1,11 +1,13 @@
 from typing import Optional
 
 from langchain_community.chat_models.litellm import ChatLiteLLM, ChatLiteLLMException
+
 from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import BaseLanguageModel, Text
 from langflow.inputs import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, StrInput
 from langflow.template import Output
+from langflow.inputs import MessageInput
 
 
 class ChatLiteLLMModelComponent(LCModelComponent):
@@ -15,7 +17,7 @@ class ChatLiteLLMModelComponent(LCModelComponent):
     icon = "LiteLLM"
 
     inputs = [
-        StrInput(name="input_value", display_name="Input", input_types=["Text", "Data", "Prompt"]),
+        MessageInput(name="input_value", display_name="Input", input_types=["Text", "Data", "Prompt"]),
         StrInput(
             name="model",
             display_name="Model name",
@@ -177,4 +179,3 @@ class ChatLiteLLMModelComponent(LCModelComponent):
         )
 
         return output
-    

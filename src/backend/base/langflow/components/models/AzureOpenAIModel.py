@@ -6,6 +6,8 @@ from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import BaseLanguageModel, Text
 from langflow.inputs import BoolInput, DropdownInput, FloatInput, IntInput, StrInput
 from langflow.template import Output
+from langflow.inputs import MessageInput
+
 
 class AzureChatOpenAIComponent(LCModelComponent):
     display_name: str = "Azure OpenAI"
@@ -64,7 +66,7 @@ class AzureChatOpenAIComponent(LCModelComponent):
             advanced=True,
             info="The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
         ),
-        StrInput(name="input_value", display_name="Input", input_types=["Text", "Data", "Prompt"]),
+        MessageInput(name="input_value", display_name="Input", input_types=["Text", "Data", "Prompt"]),
         BoolInput(name="stream", display_name="Stream", info=STREAM_INFO_TEXT, advanced=True),
         StrInput(
             name="system_message",

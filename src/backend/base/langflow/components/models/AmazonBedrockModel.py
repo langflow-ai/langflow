@@ -1,9 +1,13 @@
 from langchain_community.chat_models.bedrock import BedrockChat
+
 from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import BaseLanguageModel, Text
 from langflow.inputs import BoolInput, DictInput, DropdownInput, StrInput
+from langflow.inputs import MessageInput
 from langflow.template import Output
+
+
 
 class AmazonBedrockComponent(LCModelComponent):
     display_name: str = "Amazon Bedrock"
@@ -11,7 +15,7 @@ class AmazonBedrockComponent(LCModelComponent):
     icon = "Amazon"
 
     inputs = [
-        StrInput(name="input_value", display_name="Input", input_types=["Text", "Data", "Prompt"]),
+        MessageInput(name="input_value", display_name="Input", input_types=["Text", "Data", "Prompt"]),
         DropdownInput(
             name="model_id",
             display_name="Model Id",
