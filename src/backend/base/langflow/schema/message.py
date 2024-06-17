@@ -22,8 +22,8 @@ class Message(Data):
     # Helper class to deal with image data
     text_key: str = "text"
     text: Optional[str | AsyncIterator | Iterator] = Field(default="")
-    sender: str
-    sender_name: str
+    sender: Optional[str] = None
+    sender_name: Optional[str] = None
     files: Optional[list[str | Image]] = Field(default=[])
     session_id: Optional[str] = Field(default="")
     timestamp: Annotated[str, BeforeValidator(_timestamp_to_str)] = Field(
@@ -39,6 +39,11 @@ class Message(Data):
             else:
                 new_files.append(file)
         self.files = new_files
+        if "timestamp" not in self.data:
+            self.data["timestamp"] = self.timestamp
+
+    def set_flow_id(self, flow_id: str):
+        self.flow_id = flow_id
 
     def to_lc_message(
         self,
