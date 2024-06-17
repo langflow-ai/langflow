@@ -40,7 +40,7 @@
             "id": "Prompt-3QeXa",
             "name": "prompt",
             "output_types": [
-              "Prompt"
+              "Message"
             ]
           },
           "targetHandle": {
@@ -56,7 +56,7 @@
         },
         "id": "reactflow__edge-Prompt-3QeXa{œdataTypeœ:œPromptœ,œidœ:œPrompt-3QeXaœ,œnameœ:œpromptœ,œoutput_typesœ:[œPromptœ]}-OpenAIModel-SsPHS{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-SsPHSœ,œinputTypesœ:[œTextœ,œDataœ,œPromptœ],œtypeœ:œstrœ}",
         "source": "Prompt-3QeXa",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-3QeXaœ, œnameœ: œpromptœ, œoutput_typesœ: [œPromptœ]}",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-3QeXaœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
         "target": "OpenAIModel-SsPHS",
         "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-SsPHSœ, œinputTypesœ: [œTextœ, œDataœ, œPromptœ], œtypeœ: œstrœ}"
       },
@@ -124,9 +124,9 @@
                 "display_name": "Prompt",
                 "method": "build_prompt",
                 "name": "prompt",
-                "selected": "Prompt",
+                "selected": "Message",
                 "types": [
-                  "Prompt"
+                  "Message"
                 ],
                 "value": "__UNDEFINED__"
               },
@@ -160,7 +160,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langflow.custom import Component\nfrom langflow.field_typing.prompt import Prompt\nfrom langflow.inputs import PromptInput\nfrom langflow.schema.message import Message\nfrom langflow.template import Output\n\n\nclass PromptComponent(Component):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"prompts\"\n\n    inputs = [\n        PromptInput(name=\"template\", display_name=\"Template\"),\n    ]\n\n    outputs = [\n        Output(display_name=\"Prompt\", name=\"prompt\", method=\"build_prompt\"),\n        Output(display_name=\"Text\", name=\"text\", method=\"format_prompt\"),\n    ]\n\n    async def format_prompt(self) -> str:\n        prompt = await self.build_prompt()\n        formatted_text = prompt.format_text()\n        self.status = formatted_text\n        return formatted_text\n\n    async def build_prompt(\n        self,\n    ) -> Prompt:\n        kwargs = {k: v for k, v in self._arguments.items() if k != \"template\"}\n        prompt = await Message.from_template_and_variables(self.template, kwargs)\n        self.status = prompt.format_text()\n        return prompt\n"
+                "value": "from langflow.custom import Component\nfrom langflow.inputs import PromptInput\nfrom langflow.schema.message import Message\nfrom langflow.template import Output\n\n\nclass PromptComponent(Component):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"prompts\"\n\n    inputs = [\n        PromptInput(name=\"template\", display_name=\"Template\"),\n    ]\n\n    outputs = [\n        Output(display_name=\"Prompt\", name=\"prompt\", method=\"build_prompt\"),\n        Output(display_name=\"Text\", name=\"text\", method=\"format_prompt\"),\n    ]\n\n    async def format_prompt(self) -> str:\n        prompt = await self.build_prompt()\n        formatted_text = prompt.format_text()\n        self.status = formatted_text\n        return formatted_text\n\n    async def build_prompt(\n        self,\n    ) -> Message:\n        kwargs = {k: v for k, v in self._arguments.items() if k != \"template\"}\n        prompt = await Message.from_template_and_variables(self.template, kwargs)\n        self.status = prompt.format_text()\n        return prompt\n"
               },
               "template": {
                 "advanced": false,
