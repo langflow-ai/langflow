@@ -21,7 +21,6 @@ from langflow.type_extraction.type_extraction import (
     extract_union_types_from_generic_alias,
 )
 from langflow.utils import validate
-from pydantic import BaseModel
 
 if TYPE_CHECKING:
     from langflow.graph.graph.base import Graph

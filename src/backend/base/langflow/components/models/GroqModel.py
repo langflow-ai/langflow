@@ -1,4 +1,3 @@
-from typing import Optional
 
 from langchain_groq import ChatGroq
 from langflow.base.models.groq_constants import MODEL_NAMES
