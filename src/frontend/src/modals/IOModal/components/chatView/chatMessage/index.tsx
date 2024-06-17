@@ -200,7 +200,7 @@ export default function ChatMessage({
                                 children,
                                 ...props
                               }) => {
-                                if (children?.length) {
+                                if ((children as string)!.length) {
                                   if (children![0] === "▍") {
                                     return (
                                       <span className="form-modal-markdown-span">
