@@ -74,7 +74,8 @@ def add_messages(messages: Message | list[Message], flow_id: Optional[str] = Non
 
         messages_models: list[MessageModel] = []
         for msg in messages:
-            msg.timestamp = monitor_service.get_timestamp()
+            if not msg.timestamp:
+                msg.timestamp = monitor_service.get_timestamp()
             messages_models.append(MessageModel.from_message(msg, flow_id=flow_id))
 
         for message_model in messages_models:
