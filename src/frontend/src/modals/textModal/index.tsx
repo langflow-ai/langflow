@@ -32,12 +32,7 @@ export default function TextModal({
     <BaseModal size="small" open={open} setOpen={setOpen}>
       <BaseModal.Trigger className="h-full">{children}</BaseModal.Trigger>
       <BaseModal.Header description={"Inspect the text below."}>
-        <span className="pr-2">{"View Text"}</span>
-        <IconComponent
-          name="Type"
-          className="h-6 w-6 pl-1 text-primary"
-          aria-hidden="true"
-        />
+        "View Text"
       </BaseModal.Header>
       <BaseModal.Content>
         <div className="flex h-full w-full flex-col transition-all">
