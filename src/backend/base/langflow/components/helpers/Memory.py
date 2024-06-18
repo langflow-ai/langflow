@@ -1,11 +1,11 @@
 from typing import List
 
 from langflow.custom import Component
-from langflow.field_typing import Text
 from langflow.inputs import DropdownInput, IntInput, TextInput
 from langflow.memory import get_messages
 from langflow.schema import Data
 from langflow.template import Output
+from langflow.schema.message import Message
 
 
 class MemoryComponent(Component):
@@ -52,11 +52,11 @@ class MemoryComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Messages", name="messages", method="retrieve_messages"),
-        Output(display_name="Text", name="messages_text", method="retrieve_messages_as_text"),
+        Output(display_name="Message Data", name="messages", method="retrieve_messages"),
+        Output(display_name="Parsed", name="messages_text", method="retrieve_messages_as_text"),
     ]
 
-    def retrieve_messages(self) -> List[Data]:
+    def retrieve_messages(self) -> Data:
         sender = self.sender
         sender_name = self.sender_name
         session_id = self.session_id
@@ -76,10 +76,10 @@ class MemoryComponent(Component):
         self.status = messages
         return messages
 
-    def retrieve_messages_as_text(self) -> Text:
+    def retrieve_messages_as_text(self) -> Message:
         messages = self.retrieve_messages()
         messages_text = "\n".join(
             [f"{message.data.get('sender_name')}: {message.data.get('text')}" for message in messages]
         )
         self.status = messages_text
-        return Text(messages_text)
+        return Message(text=messages_text)

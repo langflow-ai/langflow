@@ -2,7 +2,7 @@ from typing import Optional
 
 from langflow.template.field.base import Input
 
-DEFAULT_PROMPT_INTUT_TYPES = ["Document", "Message", "Data", "Text"]
+DEFAULT_PROMPT_INTUT_TYPES = ["Message", "Text"]
 
 
 class DefaultPromptField(Input):
