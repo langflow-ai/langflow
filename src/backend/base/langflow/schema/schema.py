@@ -82,7 +82,7 @@ def build_logs(vertex, result) -> dict:
             output_result = payload.get(output["name"])
         else:
             payload = component_instance._artifacts
-            output_result = payload.get(output["name"]).get("raw")
+            output_result = payload.get(output["name"], {}).get("raw")
         message = get_message(output_result)
         _type = get_type(output_result)
 
