@@ -1,9 +1,10 @@
-from typing import Literal, Union, Generator
 from enum import Enum
-from pydantic import BaseModel
-from langflow.schema.message import Message
-from langflow.schema import Data
+from typing import Generator, Literal, Union
 
+from pydantic import BaseModel
+
+from langflow.schema import Data
+from langflow.schema.message import Message
 
 INPUT_FIELD_NAME = "input_value"
 
@@ -74,10 +75,11 @@ def get_message(payload):
 
 def build_logs(vertex, result) -> dict:
     logs = dict()
-    payload = result[0].repr_value
+    payload = result[0]._results
     for index, output in enumerate(vertex.outputs):
-        message = get_message(payload)
-        _type = get_type(payload)
+        output_result = payload.get(output["name"])
+        message = get_message(output_result)
+        _type = get_type(output_result)
 
         match _type:
             case LogType.STREAM if "stream_url" in message:
@@ -95,4 +97,4 @@ def build_logs(vertex, result) -> dict:
         name = output.get("name", f"output_{index}")
         logs |= {name: Log(message=message, type=_type).model_dump()}
 
-    return {}  # logs  # TODO
+    return logs
