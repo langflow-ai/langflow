@@ -19,11 +19,28 @@ from .input_mixin import (
 
 
 class HandleInput(BaseInputMixin, ListableInputMixin):
+    """
+    Represents an Input that has a Handle to a specific type (e.g. BaseLanguageModel, BaseRetriever, etc.)
+
+    This class inherits from the `BaseInputMixin` and `ListableInputMixin` classes.
+
+    Attributes:
+        input_types (list[str]): A list of input types.
+        field_type (Optional[SerializableFieldTypes]): The field type of the input.
+    """
+
     input_types: list[str] = Field(default_factory=list)
     field_type: Optional[SerializableFieldTypes] = FieldTypes.OTHER
 
 
 class DataInput(HandleInput):
+    """
+    Represents an Input that has a Handle that receives a Data object.
+
+    Attributes:
+        input_types (list[str]): A list of input types supported by this data input.
+    """
+
     input_types: list[str] = ["Data"]
 
 
@@ -54,10 +71,32 @@ class MessageInput(StrInput):
 
 
 class TextInput(StrInput):
+    """
+    Represents a text input component for the Langflow system.
+
+    This component is used to handle text inputs in the Langflow system. It provides methods for validating and processing text values.
+
+    Attributes:
+        input_types (list[str]): A list of input types that this component supports. In this case, it supports the "Message" input type.
+    """
+
     input_types: list[str] = ["Message"]
 
     @staticmethod
     def _validate_value(v: Any, _info):
+        """
+        Validates the given value and returns the processed value.
+
+        Args:
+            v (Any): The value to be validated.
+            _info: Additional information about the input.
+
+        Returns:
+            The processed value.
+
+        Raises:
+            ValueError: If the value is not of a valid type or if the input is missing a required key.
+        """
         value = None
         if isinstance(v, str):
             value = v
@@ -80,6 +119,19 @@ class TextInput(StrInput):
     @field_validator("value")
     @classmethod
     def validate_value(cls, v: Any, _info):
+        """
+        Validates the given value and returns the processed value.
+
+        Args:
+            v (Any): The value to be validated.
+            _info: Additional information about the input.
+
+        Returns:
+            The processed value.
+
+        Raises:
+            ValueError: If the value is not of a valid type or if the input is missing a required key.
+        """
         is_list = _info.data["is_list"]
         value = None
         if is_list:
@@ -90,46 +142,139 @@ class TextInput(StrInput):
 
 
 class MultilineInput(BaseInputMixin):
+    """
+    Represents a multiline input field.
+
+    Attributes:
+        field_type (Optional[SerializableFieldTypes]): The type of the field. Defaults to FieldTypes.TEXT.
+        multiline (CoalesceBool): Indicates whether the input field should support multiple lines. Defaults to True.
+    """
+
     field_type: Optional[SerializableFieldTypes] = FieldTypes.TEXT
     multiline: CoalesceBool = True
 
 
 class SecretStrInput(BaseInputMixin, DatabaseLoadMixin):
+    """
+    Represents a field with password field type.
+
+    This class inherits from `BaseInputMixin` and `DatabaseLoadMixin`.
+
+    Attributes:
+        field_type (Optional[SerializableFieldTypes]): The field type of the input. Defaults to `FieldTypes.PASSWORD`.
+        password (CoalesceBool): A boolean indicating whether the input is a password. Defaults to `True`.
+        input_types (list[str]): A list of input types associated with this input. Defaults to an empty list.
+    """
+
     field_type: Optional[SerializableFieldTypes] = FieldTypes.PASSWORD
     password: CoalesceBool = Field(default=True)
-    input_types: list[str] = ["Text"]
+    input_types: list[str] = []
 
 
 class IntInput(BaseInputMixin, ListableInputMixin, RangeMixin):
+    """
+    Represents an integer field.
+
+    This class represents an integer input and provides functionality for handling integer values.
+    It inherits from the `BaseInputMixin`, `ListableInputMixin`, and `RangeMixin` classes.
+
+    Attributes:
+        field_type (Optional[SerializableFieldTypes]): The field type of the input. Defaults to FieldTypes.INTEGER.
+    """
+
     field_type: Optional[SerializableFieldTypes] = FieldTypes.INTEGER
 
 
 class FloatInput(BaseInputMixin, ListableInputMixin, RangeMixin):
+    """
+    Represents a float field.
+
+    This class represents a float input and provides functionality for handling float values.
+    It inherits from the `BaseInputMixin`, `ListableInputMixin`, and `RangeMixin` classes.
+
+    Attributes:
+        field_type (Optional[SerializableFieldTypes]): The field type of the input. Defaults to FieldTypes.FLOAT.
+    """
+
     field_type: Optional[SerializableFieldTypes] = FieldTypes.FLOAT
 
 
 class BoolInput(BaseInputMixin, ListableInputMixin):
+    """
+    Represents a boolean field.
+
+    This class represents a boolean input and provides functionality for handling boolean values.
+    It inherits from the `BaseInputMixin` and `ListableInputMixin` classes.
+
+    Attributes:
+        field_type (Optional[SerializableFieldTypes]): The field type of the input. Defaults to FieldTypes.BOOLEAN.
+        value (CoalesceBool): The value of the boolean input.
+    """
+
     field_type: Optional[SerializableFieldTypes] = FieldTypes.BOOLEAN
     value: CoalesceBool = False
 
 
 class NestedDictInput(BaseInputMixin, ListableInputMixin):
+    """
+    Represents a nested dictionary field.
+
+    This class represents a nested dictionary input and provides functionality for handling dictionary values.
+    It inherits from the `BaseInputMixin` and `ListableInputMixin` classes.
+
+    Attributes:
+        field_type (Optional[SerializableFieldTypes]): The field type of the input. Defaults to FieldTypes.NESTED_DICT.
+        value (Optional[dict]): The value of the input. Defaults to an empty dictionary.
+    """
+
     field_type: Optional[SerializableFieldTypes] = FieldTypes.NESTED_DICT
     value: Optional[dict] = {}
 
 
 class DictInput(BaseInputMixin, ListableInputMixin):
+    """
+    Represents a dictionary field.
+
+    This class represents a dictionary input and provides functionality for handling dictionary values.
+    It inherits from the `BaseInputMixin` and `ListableInputMixin` classes.
+
+    Attributes:
+        field_type (Optional[SerializableFieldTypes]): The field type of the input. Defaults to FieldTypes.DICT.
+        value (Optional[dict]): The value of the dictionary input. Defaults to an empty dictionary.
+    """
+
     field_type: Optional[SerializableFieldTypes] = FieldTypes.DICT
     value: Optional[dict] = {}
 
 
 class DropdownInput(BaseInputMixin, DropDownMixin):
+    """
+    Represents a dropdown input field.
+
+    This class represents a dropdown input field and provides functionality for handling dropdown values.
+    It inherits from the `BaseInputMixin` and `DropDownMixin` classes.
+
+    Attributes:
+        field_type (Optional[SerializableFieldTypes]): The field type of the input. Defaults to FieldTypes.TEXT.
+        options (Optional[Union[list[str], Callable]]): List of options for the field. Only used when is_list=True.
+            Default is None.
+    """
+
     field_type: Optional[SerializableFieldTypes] = FieldTypes.TEXT
     options: Optional[Union[list[str], Callable]] = None
-    """List of options for the field. Only used when is_list=True. Default is an empty list."""
 
 
 class FileInput(BaseInputMixin, ListableInputMixin, FileMixin):
+    """
+    Represents a file field.
+
+    This class represents a file input and provides functionality for handling file values.
+    It inherits from the `BaseInputMixin`, `ListableInputMixin`, and `FileMixin` classes.
+
+    Attributes:
+        field_type (Optional[SerializableFieldTypes]): The field type of the input. Defaults to FieldTypes.FILE.
+    """
+
     field_type: Optional[SerializableFieldTypes] = FieldTypes.FILE
 
 
