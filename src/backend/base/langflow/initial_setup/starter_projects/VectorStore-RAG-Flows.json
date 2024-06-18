@@ -272,7 +272,7 @@
           "sourceHandle": {
             "dataType": "AstraDBSearch",
             "id": "AstraDBSearch-41nRz",
-            "name": "base_retriever",
+            "name": "search_results",
             "output_types": []
           },
           "targetHandle": {
@@ -287,7 +287,7 @@
         },
         "id": "reactflow__edge-AstraDBSearch-41nRz{œbaseClassesœ:[œRecordœ],œdataTypeœ:œAstraDBSearchœ,œidœ:œAstraDBSearch-41nRzœ}-TextOutput-BDknO{œfieldNameœ:œinput_valueœ,œidœ:œTextOutput-BDknOœ,œinputTypesœ:[œRecordœ,œTextœ],œtypeœ:œstrœ}",
         "source": "AstraDBSearch-41nRz",
-        "sourceHandle": "{œdataTypeœ: œAstraDBSearchœ, œidœ: œAstraDBSearch-41nRzœ, œoutput_typesœ: [], œnameœ: œbase_retrieverœ}",
+        "sourceHandle": "{œdataTypeœ: œAstraDBSearchœ, œidœ: œAstraDBSearch-41nRzœ, œoutput_typesœ: [], œnameœ: œsearch_resultsœ}",
         "style": {
           "stroke": "#555"
         },
@@ -1952,10 +1952,7 @@
                 "display_name": "Search Results",
                 "method": "search_documents",
                 "name": "search_results",
-                "selected": "Data",
-                "types": [
-                  "Data"
-                ],
+                "types": [],
                 "value": "__UNDEFINED__"
               }
             ],
