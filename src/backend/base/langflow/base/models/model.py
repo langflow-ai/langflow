@@ -7,7 +7,6 @@ from langchain_core.language_models.llms import LLM
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
 from langflow.custom import Component
-from langflow.field_typing.prompt import Prompt
 from langflow.schema.message import Message
 
 
@@ -86,7 +85,7 @@ class LCModelComponent(Component):
         return status_message
 
     def get_chat_result(
-        self, runnable: BaseChatModel, stream: bool, input_value: str | Prompt, system_message: Optional[str] = None
+        self, runnable: BaseChatModel, stream: bool, input_value: str | Message, system_message: Optional[str] = None
     ):
         messages: list[Union[HumanMessage, SystemMessage]] = []
         if not input_value and not system_message:

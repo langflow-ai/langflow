@@ -25,7 +25,6 @@ from .constants import (
     Tool,
     VectorStore,
 )
-from .prompt import Prompt
 from .range_spec import RangeSpec
 
 
@@ -45,7 +44,6 @@ def __getattr__(name: str) -> Any:
     # This is to avoid circular imports
     if name == "Input":
         return _import_input_class()
-    elif name == "RangeSpec":
         return RangeSpec
     elif name == "Output":
         return _import_output_class()
@@ -76,7 +74,6 @@ __all__ = [
     "Input",
     "NestedDict",
     "Object",
-    "Prompt",
     "PromptTemplate",
     "RangeSpec",
     "Text",
