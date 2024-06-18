@@ -8,6 +8,7 @@ import { VertexBuildTypeAPI } from "../types/api";
 import { VertexLayerElementType } from "../types/zustand/flow";
 
 type BuildVerticesParams = {
+  setLockChat: (lock: boolean) => void;
   flowId: string; // Assuming FlowType is the type for your flow
   input_value?: any; // Replace any with the actual type if it's not any
   files?: string[];
@@ -52,6 +53,7 @@ function getInactiveVertexData(vertexId: string): VertexBuildTypeAPI {
 
 export async function updateVerticesOrder(
   flowId: string,
+  setLockChat: (lock: boolean) => void,
   startNodeId?: string | null,
   stopNodeId?: string | null,
   nodes?: Node[],
@@ -79,6 +81,7 @@ export async function updateVerticesOrder(
         list: [error.response?.data?.detail ?? "Unknown Error"],
       });
       useFlowStore.getState().setIsBuilding(false);
+      setLockChat(false);
       throw new Error("Invalid nodes");
     }
     // orderResponse.data.ids,
@@ -117,6 +120,7 @@ export async function buildVertices({
   onValidateNodes,
   nodes,
   edges,
+  setLockChat,
 }: BuildVerticesParams) {
   // if startNodeId and stopNodeId are provided
   // something is wrong
@@ -125,6 +129,7 @@ export async function buildVertices({
   }
   let verticesOrderResponse = await updateVerticesOrder(
     flowId,
+    setLockChat,
     startNodeId,
     stopNodeId,
     nodes,
@@ -135,7 +140,7 @@ export async function buildVertices({
       onValidateNodes(verticesOrderResponse.verticesToRun);
     } catch (e) {
       useFlowStore.getState().setIsBuilding(false);
-
+      setLockChat(false)
       return;
     }
   }
