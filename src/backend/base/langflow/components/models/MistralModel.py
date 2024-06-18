@@ -4,11 +4,8 @@ from pydantic.v1 import SecretStr
 from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import BaseLanguageModel, Text
-from langflow.inputs import BoolInput, DropdownInput, FloatInput, IntInput, SecretStrInput, StrInput
+from langflow.inputs import BoolInput, DropdownInput, FloatInput, IntInput, MessageInput, SecretStrInput, StrInput
 from langflow.template import Output
-
-
-from langflow.inputs import MessageInput
 
 
 class MistralAIModelComponent(LCModelComponent):
@@ -17,7 +14,7 @@ class MistralAIModelComponent(LCModelComponent):
     icon = "MistralAI"
 
     inputs = [
-        MessageInput(name="input_value", display_name="Input", input_types=["Text", "Data", "Prompt"]),
+        MessageInput(name="input_value", display_name="Input"),
         IntInput(
             name="max_tokens",
             display_name="Max Tokens",

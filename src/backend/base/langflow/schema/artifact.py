@@ -19,8 +19,11 @@ def get_artifact_type(value, build_result=None) -> str:
     result = ArtifactType.UNKNOWN
     match value:
         case Message():
-            enum_value = get_artifact_type(value.text)
-            result = ArtifactType(enum_value)
+            if not isinstance(value.text, str):
+                enum_value = get_artifact_type(value.text)
+                result = ArtifactType(enum_value)
+            else:
+                result = ArtifactType.MESSAGE
         case Data():
             enum_value = get_artifact_type(value.data)
             result = ArtifactType(enum_value)
