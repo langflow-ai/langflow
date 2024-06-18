@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Annotated, Any, AsyncIterator, Iterator, Optional
+from typing import Annotated, Any, AsyncIterator, Iterator, Optional
 
 from fastapi.encoders import jsonable_encoder
 from langchain_core.load import load
@@ -10,10 +10,8 @@ from langchain_core.prompts.image import ImagePromptTemplate
 from pydantic import BeforeValidator, ConfigDict, Field, field_serializer
 
 from langflow.base.prompts.utils import dict_values_to_string
+from langflow.schema.data import Data
 from langflow.schema.image import Image, get_file_paths, is_image_file
-
-if TYPE_CHECKING:
-    from langflow.schema.data import Data
 
 
 def _timestamp_to_str(timestamp: datetime) -> str:
