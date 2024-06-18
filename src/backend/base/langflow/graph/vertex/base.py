@@ -309,7 +309,8 @@ class Vertex:
                 elif field.get("required"):
                     field_display_name = field.get("display_name")
                     logger.warning(
-                        f"File path not found for {field_display_name} in component {self.display_name}. Setting to None."
+                        f"File path not found for {field_display_name} in component {self.display_name}. "
+                        "Setting to None."
                     )
                     params[field_name] = None
 
