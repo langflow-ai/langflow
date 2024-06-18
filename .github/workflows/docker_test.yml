@@ -78,6 +78,7 @@ jobs:
           docker buildx build -t langflowai/langflow:latest-dev \
             --platform linux/amd64,linux/arm64/v8 \
             -f docker/build_and_push.Dockerfile \
+            --load \
             .
       - name: Run Container
         run: |
