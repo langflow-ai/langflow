@@ -76,8 +76,6 @@ class MemoryComponent(Component):
 
     def retrieve_messages_as_text(self) -> Message:
         messages = self.retrieve_messages()
-        messages_text = "\n".join(
-            [f"{message.data.get('sender_name')}: {message.data.get('text')}" for message in messages]
-        )
+        messages_text = "\n".join(["{sender_name}: {text}".format(**message.data) for message in messages])
         self.status = messages_text
         return Message(text=messages_text)
