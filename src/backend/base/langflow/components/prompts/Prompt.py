@@ -14,20 +14,14 @@ class PromptComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Prompt", name="prompt", method="build_prompt"),
-        Output(display_name="Text", name="text", method="format_prompt"),
+        Output(display_name="Prompt Message", name="prompt", method="build_prompt"),
     ]
-
-    async def format_prompt(self) -> str:
-        prompt = await self.build_prompt()
-        formatted_text = prompt.format_text()
-        self.status = formatted_text
-        return formatted_text
 
     async def build_prompt(
         self,
     ) -> Message:
         kwargs = {k: v for k, v in self._arguments.items() if k != "template"}
         prompt = await Message.from_template_and_variables(self.template, kwargs)
-        self.status = prompt.format_text()
-        return prompt
+        prompt_message = Message(text=prompt.format_text(), **kwargs)
+        self.status = prompt_message
+        return prompt_message

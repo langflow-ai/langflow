@@ -1,7 +1,7 @@
 from langflow.base.io.text import TextComponent
-from langflow.field_typing import Text
 from langflow.template import Output
-from langflow.inputs import StrInput
+from langflow.inputs import TextInput
+from langflow.schema.message import Message
 
 
 class TextOutputComponent(TextComponent):
@@ -10,15 +10,21 @@ class TextOutputComponent(TextComponent):
     icon = "type"
 
     inputs = [
-        StrInput(
+        TextInput(
             name="input_value",
             display_name="Text",
-            info="Text or Data to be passed as output.",
+            info="Text to be passed as output.",
         ),
     ]
     outputs = [
         Output(display_name="Text", name="text", method="text_response"),
     ]
 
-    def text_response(self) -> Text:
-        return self.build(input_value=self.input_value)
+    def text_response(self) -> Message:
+        message = Message(
+            text=self.input_value,
+            sender=self.sender,
+            sender_name=self.sender_name,
+            session_id=self.session_id,
+        )
+        return message
