@@ -1,6 +1,6 @@
 from langflow.custom import Component
 from langflow.helpers.data import data_to_text
-from langflow.inputs import MultilineInput, DataInput
+from langflow.inputs import MultilineInput, DataInput, StrInput
 from langflow.template import Output
 from langflow.schema.message import Message
 
@@ -18,6 +18,12 @@ class ParseDataComponent(Component):
             info="The template to use for formatting the data. It can contain the keys {text}, {data} or any other key in the Data.",
             value="{text}"
         ),
+        StrInput(
+            name="sep",
+            display_name="Separator",
+            advanced=True,
+            value='---'
+            )
     ]
 
     outputs = [
@@ -28,6 +34,6 @@ class ParseDataComponent(Component):
         data = self.data if isinstance(self.data, list) else [self.data]
         template = self.template
 
-        result_string = data_to_text(template, data)
+        result_string = data_to_text(template, data, sep=self.sep)
         self.status = result_string
         return Message(text=result_string)

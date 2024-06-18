@@ -19,7 +19,7 @@ def docs_to_data(documents: list[Document]) -> list[Data]:
     return [Data.from_document(document) for document in documents]
 
 
-def data_to_text(template: str, data: Union[Data, list[Data]]) -> str:
+def data_to_text(template: str, data: Union[Data, list[Data]], sep: str = "\n") -> str:
     """
     Converts a list of Data to a list of texts.
 
@@ -40,7 +40,7 @@ def data_to_text(template: str, data: Union[Data, list[Data]]) -> str:
         _data.append(value)
 
     formated_data = [template.format(data=value.data, **value.data) for value in _data]
-    return "\n".join(formated_data)
+    return sep.join(formated_data)
 
 
 def messages_to_text(template: str, messages: Union[Message, list[Message]]) -> str:
