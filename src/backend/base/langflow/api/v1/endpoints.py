@@ -325,8 +325,6 @@ async def experimental_run_flow(
             session_id=session_id,
             inputs=inputs,
             outputs=outputs,
-            artifacts=artifacts,
-            session_service=session_service,
             stream=stream,
         )
 
