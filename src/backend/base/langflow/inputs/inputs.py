@@ -1,4 +1,4 @@
-from typing import Any, Callable, Optional, Union
+from typing import Any, AsyncIterator, Callable, Iterator, Optional, Union
 
 from pydantic import Field, field_validator
 
@@ -153,6 +153,8 @@ class TextInput(StrInput):
                     f"The input to '{input_name}' must contain the key '{v.text_key}'."
                     f"You can set `text_key` to one of the following keys: {keys} or set the value using another Component."
                 )
+        elif isinstance(v, (AsyncIterator, Iterator)):
+            value = v
         else:
             raise ValueError(f"Invalid value type {type(v)}")
         return value
