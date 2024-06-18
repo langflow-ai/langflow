@@ -92,7 +92,7 @@ export default function ParameterComponent({
 
   const logHasMessage = (data: any) => {
     if (!outputName) return;
-    const logs = (data?.logs[outputName] ?? [])[0];
+    const logs = data?.logs[outputName];
     if (Array.isArray(logs) && logs.length > 1) {
       return logs.some((log) => log.message);
     } else {
@@ -102,7 +102,7 @@ export default function ParameterComponent({
 
   const logTypeIsUnknown = (data: any) => {
     if (!outputName) return;
-    const logs = (data?.logs[outputName] ?? [])[0];
+    const logs = data?.logs[outputName];
     if (Array.isArray(logs) && logs.length > 1) {
       return logs.some((log) => log.type === "unknown");
     } else {
@@ -112,7 +112,7 @@ export default function ParameterComponent({
 
   const logTypeIsError = (data: any) => {
     if (!outputName) return;
-    const logs = (data?.logs[outputName] ?? [])[0];
+    const logs = data?.logs[outputName];
     if (Array.isArray(logs) && logs.length > 1) {
       return logs.some(
         (log) => log.type === "error" || log.type === "ValueError",
@@ -131,7 +131,7 @@ export default function ParameterComponent({
 
   let hasOutputs;
   if (flowPoolNode?.data?.logs && outputName) {
-    hasOutputs = (flowPoolNode?.data?.logs[outputName] ?? [])[0] ?? null;
+    hasOutputs = flowPoolNode?.data?.logs[outputName] ?? null;
   }
 
   const unknownOutput = logTypeIsUnknown(flowPoolNode?.data);
