@@ -193,9 +193,9 @@ export default function Page({
   }
 
   function handleGroup(e: KeyboardEvent) {
+    if (selectionMenuVisible) {
     e.preventDefault();
     (e as unknown as Event).stopImmediatePropagation();
-    if (selectionMenuVisible) {
       handleGroupNode();
     }
   }
