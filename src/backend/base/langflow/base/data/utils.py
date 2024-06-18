@@ -33,12 +33,7 @@ TEXT_FILE_TYPES = [
     "tsx",
 ]
 
-IMG_FILE_TYPES = [
-    "jpg",
-    "jpeg",
-    "png",
-    "bmp",
-]
+IMG_FILE_TYPES = ["jpg", "jpeg", "png", "bmp", "image"]
 
 
 def normalize_text(text):
