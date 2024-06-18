@@ -13,7 +13,6 @@ import pytest
 from dotenv import load_dotenv
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
-from sqlmodel import Session, SQLModel, create_engine, select
 from langflow.graph.graph.base import Graph
 from langflow.initial_setup.setup import STARTER_FOLDER_NAME
 from langflow.services.auth.utils import get_password_hash
@@ -23,6 +22,7 @@ from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.user.model import User, UserCreate
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service
+from sqlmodel import Session, SQLModel, create_engine, select
 from sqlmodel.pool import StaticPool
 from typer.testing import CliRunner
 
@@ -35,7 +35,7 @@ load_dotenv()
 
 def pytest_configure(config):
     config.addinivalue_line("markers", "noclient: don't create a client for this test")
-    data_path = Path(__file__).parent.parent.absolute() / "data"
+    data_path = Path(__file__).parent.absolute() / "data"
 
     pytest.BASIC_EXAMPLE_PATH = data_path / "basic_example.json"
     pytest.COMPLEX_EXAMPLE_PATH = data_path / "complex_example.json"
