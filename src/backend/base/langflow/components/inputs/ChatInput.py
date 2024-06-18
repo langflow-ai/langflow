@@ -48,6 +48,7 @@ class ChatInput(ChatComponent):
             sender=self.sender,
             sender_name=self.sender_name,
             session_id=self.session_id,
+            files=self.files,
         )
         if self.session_id and isinstance(message, Message) and isinstance(message.text, str):
             self.store_message(message)
