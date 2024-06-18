@@ -1,13 +1,12 @@
 from typing import List
 
-from langchain.vectorstores import Qdrant
-from langchain.schema import BaseRetriever
-
 from langflow.custom import Component
 from langflow.schema import Data
 from langflow.inputs import BoolInput, IntInput, StrInput, HandleInput, DropdownInput
 from langflow.template import Output
 from langflow.helpers.data import docs_to_data
+from langchain_community.vectorstores import Qdrant
+from langchain_core.retrievers import BaseRetriever
 
 
 class QdrantVectorStoreComponent(Component):

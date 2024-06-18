@@ -1,13 +1,12 @@
 from typing import List
 
-from langchain.vectorstores import Pinecone
-from langchain.schema import BaseRetriever
-
 from langflow.custom import Component
 from langflow.schema import Data
 from langflow.inputs import BoolInput, IntInput, StrInput, HandleInput, DropdownInput
 from langflow.template import Output
 from langflow.helpers.data import docs_to_data
+from langchain_core.retrievers import BaseRetriever
+from langchain_pinecone import Pinecone
 
 
 class PineconeVectorStoreComponent(Component):
