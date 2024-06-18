@@ -165,51 +165,17 @@ class Vertex:
         return self.graph.successor_map.get(self.id, [])
 
     def __getstate__(self):
-        return {
-            "_data": self._data,
-            "params": {},
-            "base_type": self.base_type,
-            "base_name": self.base_name,
-            "is_task": self.is_task,
-            "id": self.id,
-            "_built_object": UnbuiltObject(),
-            "_built": False,
-            "parent_node_id": self.parent_node_id,
-            "parent_is_top_level": self.parent_is_top_level,
-            "load_from_db_fields": self.load_from_db_fields,
-            "is_input": self.is_input,
-            "is_output": self.is_output,
-        }
+        state = self.__dict__.copy()
+        state["_lock"] = None  # Locks are not serializable
+        state["_built_object"] = None if isinstance(self._built_object, UnbuiltObject) else self._built_object
+        state["_built_result"] = None if isinstance(self._built_result, UnbuiltResult) else self._built_result
+        return state
 
     def __setstate__(self, state):
-        self._lock = asyncio.Lock()
-        self._data = state["_data"]
-        self.params = state["params"]
-        self.base_type = state["base_type"]
-        self.is_task = state["is_task"]
-        self.id = state["id"]
-        self.frozen = state.get("frozen", False)
-        self.is_input = state.get("is_input", False)
-        self.is_output = state.get("is_output", False)
-        self.base_name = state["base_name"]
-        self._parse_data()
-        if "_built_object" in state:
-            self._built_object = state["_built_object"]
-            self._built = state["_built"]
-        else:
-            self._built_object = UnbuiltObject()
-            self._built = False
-        if "_built_result" in state:
-            self._built_result = state["_built_result"]
-        else:
-            self._built_result = UnbuiltResult()
-        self.artifacts: Dict[str, Any] = {}
-        self.task_id: Optional[str] = None
-        self.parent_node_id = state["parent_node_id"]
-        self.parent_is_top_level = state["parent_is_top_level"]
-        self.load_from_db_fields = state["load_from_db_fields"]
-        self.layer = state.get("layer")
-        self.steps = state.get("steps", [self._build])
+        self.__dict__.update(state)
+        self._lock = asyncio.Lock()  # Reinitialize the lock
+        self._built_object = state.get("_built_object") or UnbuiltObject()
+        self._built_result = state.get("_built_result") or UnbuiltResult()
 
     def set_top_level(self, top_level_vertices: List[str]) -> None:
         self.parent_is_top_level = self.parent_node_id in top_level_vertices
