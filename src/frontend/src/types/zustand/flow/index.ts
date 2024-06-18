@@ -124,7 +124,9 @@ export type FlowStoreType = {
     input_value,
     files,
     silent,
+    setLockChat
   }: {
+    setLockChat: (lock: boolean) => void;
     startNodeId?: string;
     stopNodeId?: string;
     input_value?: string;

@@ -427,12 +427,14 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     input_value,
     files,
     silent,
+    setLockChat,
   }: {
     startNodeId?: string;
     stopNodeId?: string;
     input_value?: string;
     files?: string[];
     silent?: boolean;
+    setLockChat: (lock: boolean) => void;
   }) => {
     get().setIsBuilding(true);
     const currentFlow = useFlowsManagerStore.getState().currentFlow;
@@ -534,6 +536,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       flowId: currentFlow!.id,
       startNodeId,
       stopNodeId,
+      setLockChat,
       onGetOrderSuccess: () => {
         if (!silent) {
           setNoticeData({ title: "Running components" });

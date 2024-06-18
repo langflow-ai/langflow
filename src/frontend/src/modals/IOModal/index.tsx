@@ -86,9 +86,6 @@ export default function IOModal({
   const messages = useMessagesStore((state) => state.messages);
   const setColumns = useMessagesStore((state) => state.setColumns);
   const flowPool = useFlowStore((state) => state.flowPool);
-  async function updateVertices() {
-    return updateVerticesOrder(currentFlow!.id, null);
-  }
 
   async function sendMessage({
     repeat = 1,
@@ -107,6 +104,7 @@ export default function IOModal({
         startNodeId: chatInput?.id,
         files: files,
         silent: true,
+        setLockChat,
       }).catch((err) => {
         console.error(err);
         setLockChat(false);
