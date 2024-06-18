@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, List, Optional, Tuple
 from langchain_community.vectorstores import Cassandra
 from langchain_community.utilities.cassandra import SetupMode
 
