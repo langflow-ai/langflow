@@ -77,7 +77,7 @@ jobs:
         run: |
           docker buildx build -o type=docker,dest=image-amd64.tar -t langflowai/langflow:latest-dev-amd64 --platform linux/amd64 -f docker/build_and_push.Dockerfile .
           docker buildx build -o type=docker,dest=image-arm64.tar -t langflowai/langflow:latest-dev-arm64 --platform linux/arm64/v8 -f docker/build_and_push.Dockerfile .
-          docker image load image-amd64.tar
+          docker image load -i image-amd64.tar
       - name: Test container
         run: |
           docker run -d --name test_container -p 8000:8000 langflowai/langflow:latest-dev
