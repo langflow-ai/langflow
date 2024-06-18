@@ -1,3 +1,4 @@
+import json
 import warnings
 from typing import Optional, Union
 
@@ -108,10 +109,13 @@ class LCModelComponent(Component):
             return runnable.stream(inputs)
         else:
             message = runnable.invoke(inputs)
-            result = message.content
+            result = message.content if hasattr(message, "content") else message
             if isinstance(message, AIMessage):
                 status_message = self.build_status_message(message)
                 self.status = status_message
+            elif isinstance(result, dict):
+                result = json.dumps(message, indent=4)
+                self.status = result
             else:
                 self.status = result
             return result
