@@ -89,7 +89,9 @@ LABEL org.opencontainers.image.source=https://github.com/langflow-ai/langflow
 RUN useradd user -u 1000 -g 0 --no-create-home --home-dir /app/data
 COPY --from=builder-base --chown=1000 /app/.venv /app/.venv
 ENV PATH="/app/.venv/bin:${PATH}"
-RUN python -m pip install --force-reinstall pydantic==$(python -m pip show pydantic | grep Version | cut -d ' ' -f 2)
+RUN python -m pip install --force-reinstall \
+      pydantic==$(python -m pip show pydantic | grep Version | cut -d ' ' -f 2) \
+      orjson==$(python -m pip show orjson | grep Version | cut -d ' ' -f 2)
 
 USER user
 WORKDIR /app
