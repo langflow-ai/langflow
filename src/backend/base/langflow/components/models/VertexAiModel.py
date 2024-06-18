@@ -13,7 +13,7 @@ class ChatVertexAIComponent(LCModelComponent):
     icon = "VertexAI"
 
     inputs = [
-        MessageInput(name="input_value", display_name="Input", input_types=["Text", "Data", "Prompt"]),
+        MessageInput(name="input_value", display_name="Input"),
         StrInput(
             name="credentials",
             display_name="Credentials",

@@ -201,7 +201,7 @@ class AmazonBedrockComponent(LCModelComponent):
     icon = "Amazon"
 
     inputs = [
-        MessageInput(name="input_value", display_name="Input", input_types=["Text", "Data", "Prompt"]),
+        MessageInput(name="input_value", display_name="Input"),
         DropdownInput(
             name="model_id",
             display_name="Model Id",
