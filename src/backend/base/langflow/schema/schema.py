@@ -75,9 +75,14 @@ def get_message(payload):
 
 def build_logs(vertex, result) -> dict:
     logs = dict()
-    payload = result[0]._results
+    component_instance = result[0]
     for index, output in enumerate(vertex.outputs):
-        output_result = payload.get(output["name"])
+        if component_instance.status is None:
+            payload = component_instance._results
+            output_result = payload.get(output["name"])
+        else:
+            payload = component_instance._artifacts
+            output_result = payload.get(output["name"]).get("raw")
         message = get_message(output_result)
         _type = get_type(output_result)
 
