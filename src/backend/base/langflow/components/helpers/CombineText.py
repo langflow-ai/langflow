@@ -1,7 +1,7 @@
 from langflow.custom import Component
-from langflow.field_typing import Text
 from langflow.inputs import TextInput
 from langflow.template import Output
+from langflow.schema.message import Message
 
 
 class CombineTextComponent(Component):
@@ -32,7 +32,7 @@ class CombineTextComponent(Component):
         Output(display_name="Combined Text", name="combined_text", method="combine_texts"),
     ]
 
-    def combine_texts(self) -> Text:
+    def combine_texts(self) -> Message:
         combined = self.delimiter.join([self.text1, self.text2])
         self.status = combined
-        return combined
+        return Message(text=combined)
