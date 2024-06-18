@@ -29,6 +29,7 @@ jobs:
     outputs:
       tags: ${{ steps.set-vars.outputs.tags }}
       file: ${{ steps.set-vars.outputs.file }}
+      platforms: ${{ steps.set-vars.outputs.platforms }}
     steps:
       - uses: actions/checkout@v4
       - name: Set Dockerfile and Tags
@@ -37,9 +38,11 @@ jobs:
           if [[ "${{ inputs.release_type }}" == "base" ]]; then
             echo "tags=langflowai/langflow:base-${{ inputs.version }}" >> $GITHUB_OUTPUT
             echo "file=./docker/build_and_push_base.Dockerfile" >> $GITHUB_OUTPUT
+            echo "platforms=linux/amd64" >> $GITHUB_OUTPUT
           else
             echo "tags=langflowai/langflow:${{ inputs.version }},langflowai/langflow:1.0-alpha" >> $GITHUB_OUTPUT
             echo "file=./docker/build_and_push.Dockerfile" >> $GITHUB_OUTPUT
+            echo "platforms=linux/amd64,linux/arm64/v8" >> $GITHUB_OUTPUT
           fi
   build:
     runs-on: ubuntu-latest
@@ -53,32 +56,12 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      # - name: Build Docker Image
-      #   uses: docker/build-push-action@v5
-      #   id: docker_build
-      #   with:
-      #     context: .
-      #     push: false  # Do not push yet
-      #     platforms: "linux/amd64,linux/arm64/v8"
-      #     load: true
-      #     file: ${{ matrix.file }}
-      #     tags: ${{ env.TEST_TAG }}
-      # - name: Run Container
-      #   run: |
-      #     docker run -d --name test_container -p 8000:8000 ${{ needs.setup.outputs.tags }}
-      # - name: Wait for Container to Start and Check Health
-      #   run: |
-      #     timeout 40 bash -c 'until curl -f http://127.0.0.1:8000/health; do sleep 1; done' || (echo "Server did not start in time" && docker logs test_container && docker stop test_container && docker rm test_container && exit 1)
-      # - name: Stop and Remove Container
-      #   run: |
-      #     docker stop test_container
-      #     docker rm test_container
       - name: Build and Push Docker Image
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
-          platforms: "linux/amd64"
+          platforms: ${{ needs.setup.outputs.platforms }}
           file: ${{ needs.setup.outputs.file }}
           tags: ${{ needs.setup.outputs.tags }}
 
