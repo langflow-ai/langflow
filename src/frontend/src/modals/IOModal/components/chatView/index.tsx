@@ -80,10 +80,7 @@ export default function ChatView({
 
           return {
             isSend: !is_ai,
-            message:
-              (message === "" || !message) && !stream_url && files?.length === 0
-                ? EMPTY_INPUT_SEND_MESSAGE
-                : message,
+            message,
             sender_name,
             componentId: output.id,
             stream_url: stream_url,
