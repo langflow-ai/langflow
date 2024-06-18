@@ -7,7 +7,7 @@ from loguru import logger
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent
 from langflow.base.vectorstores.utils import chroma_collection_to_data
-from langflow.inputs import BoolInput, DataInput, DropdownInput, HandleInput, IntInput, MessageInput, StrInput
+from langflow.inputs import BoolInput, DataInput, DropdownInput, HandleInput, IntInput, StrInput, TextInput
 from langflow.schema import Data
 
 if TYPE_CHECKING:
@@ -39,7 +39,7 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
             display_name="Code",
             advanced=True,
         ),
-        MessageInput(
+        TextInput(
             name="search_query",
             display_name="Search Query",
             is_list=True,
@@ -139,7 +139,8 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
             collection_name=self.collection_name,
         )
 
-        self.status = chroma_collection_to_data(chroma.get(self.limit))
+        self._add_documents_to_vector_store(chroma)
+        self.status = chroma_collection_to_data(chroma.get(limit=self.limit))
         return chroma
 
     def _add_documents_to_vector_store(self, vector_store: "Chroma") -> None:
@@ -177,7 +178,7 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
         """
         Search for documents in the Chroma vector store.
         """
-        if not self.search_query.text:
+        if not self.search_query:
             self.status = ""
             return
 
@@ -194,6 +195,6 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
                 self.search_query = self.search_query[0]
 
         search_results = self.search_with_vector_store(
-            self.search_query.text, self.search_type, vector_store, k=self.number_of_results
+            self.search_query, self.search_type, vector_store, k=self.number_of_results
         )
         return search_results
