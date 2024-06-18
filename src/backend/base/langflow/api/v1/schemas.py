@@ -245,7 +245,7 @@ class VerticesOrderResponse(BaseModel):
 
 class ResultDataResponse(BaseModel):
     results: Optional[Any] = Field(default_factory=dict)
-    logs: dict[str, List[Log]] = Field(default_factory=dict)
+    logs: dict[str, Log] = Field(default_factory=dict)
     message: Optional[Any] = Field(default_factory=dict)
     artifacts: Optional[Any] = Field(default_factory=dict)
     timedelta: Optional[float] = None

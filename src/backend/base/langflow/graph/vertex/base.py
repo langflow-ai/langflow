@@ -77,7 +77,7 @@ class Vertex:
         self.layer = None
         self.result: Optional[ResultData] = None
         self.results: Dict[str, Any] = {}
-        self.logs: Dict[str, List[Log]] = {}
+        self.logs: Dict[str, Log] = {}
         try:
             self.is_interface_component = self.vertex_type in InterfaceComponentTypes
         except ValueError:
