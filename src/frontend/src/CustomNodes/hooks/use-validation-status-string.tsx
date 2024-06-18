@@ -7,15 +7,10 @@ const useValidationStatusString = (validationStatus: VertexBuildTypeAPI, setVali
       // if it is not a string turn it into a string
       console.log("validationStatus", validationStatus);
       let newValidationString = "";
-      Object.values(validationStatus?.data?.logs).forEach((log: LogType | LogType[]) => {
-        if (!Array.isArray(log)) {
-          log = [log];
-        }
-        log.forEach((logItem) => {
-          if (logItem.type === "error" || logItem.type === "ValueError") {
-            newValidationString += `${logItem.message}\n`;
+      Object.values(validationStatus?.data?.logs).forEach((log: any) => {
+          if (log.type === "error" || log.type === "ValueError") {
+            newValidationString += `${log.message}\n`;
           }
-        });
       });
       setValidationString(newValidationString);
     }
