@@ -13,6 +13,7 @@ import ForwardedIconComponent from "../genericIconComponent";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import TableOptions from "./components/TableOptions";
 import resetGrid from "./utils/reset-grid-columns";
+import cloneDeep from "lodash-es";
 
 interface TableComponentProps extends AgGridReactProps {
   columnDefs: NonNullable<AgGridReactProps["columnDefs"]>;
@@ -41,12 +42,6 @@ const TableComponent = forwardRef<
       let newCol = {
         ...col,
       };
-      if (index === props.columnDefs.length - 1) {
-        newCol = {
-          ...newCol,
-          resizable: false,
-        };
-      }
       if (props.onSelectionChanged && index === 0) {
         newCol = {
           ...newCol,
@@ -76,17 +71,11 @@ const TableComponent = forwardRef<
     const initialColumnDefs = useRef(colDef);
     const [columnStateChange, setColumnStateChange] = useState(false);
     const storeReference = props.columnDefs.map((e) => e.headerName).join("_");
-    const makeLastColumnNonResizable = (columnDefs) => {
-      columnDefs.forEach((colDef, index) => {
-        colDef.resizable = index !== columnDefs.length - 1;
-      });
-      return columnDefs;
-    };
 
     const onGridReady = (params) => {
       // @ts-ignore
       realRef.current = params;
-      const updatedColumnDefs = makeLastColumnNonResizable([...colDef]);
+      const updatedColumnDefs = [...colDef];
       params.api.setGridOption("columnDefs", updatedColumnDefs);
       const customInit = localStorage.getItem(storeReference);
       initialColumnDefs.current = params.api.getColumnDefs();
@@ -109,9 +98,7 @@ const TableComponent = forwardRef<
       if (props.onGridReady) props.onGridReady(params);
     };
     const onColumnMoved = (params) => {
-      const updatedColumnDefs = makeLastColumnNonResizable(
-        params.columnApi.getAllGridColumns().map((col) => col.getColDef()),
-      );
+      const updatedColumnDefs = cloneDeep(params.columnApi.getAllGridColumns().map((col) => col.getColDef()));
       params.api.setGridOption("columnDefs", updatedColumnDefs);
       if (props.onColumnMoved) props.onColumnMoved(params);
     };
@@ -178,3 +165,4 @@ const TableComponent = forwardRef<
 );
 
 export default TableComponent;
+

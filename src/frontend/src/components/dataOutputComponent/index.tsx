@@ -19,12 +19,17 @@ function DataOutputComponent({
 
   const columnDefs = columns.map((col, idx) => ({
     ...col,
-    resizable: idx !== columns.length - 1,
-    flex: idx !== columns.length - 1 ? 1 : 2,
+    resizable: true,
+    maxWidth: 400,
   })) as (ColDef<any> | ColGroupDef<any>)[];
 
   return (
     <TableComponent
+      gridOptions={{
+        autoSizeStrategy: {
+          type: "fitCellContents",
+        },
+      }}
       key={"dataOutputComponent"}
       overlayNoRowsTemplate="No data available"
       suppressRowClickSelection={true}
