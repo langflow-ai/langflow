@@ -205,7 +205,7 @@ def format_elapsed_time(elapsed_time: float) -> str:
         return f"{minutes} {minutes_unit}, {seconds} {seconds_unit}"
 
 
-async def build_and_cache_graph_from_db(flow_id: str, session: Session, chat_service: "ChatService"):
+async def build_graph_from_db(flow_id: str, session: Session, chat_service: "ChatService"):
     """Build and cache the graph."""
     flow: Optional[Flow] = session.get(Flow, flow_id)
     if not flow or not flow.data:

@@ -8,7 +8,7 @@ from loguru import logger
 
 from langflow.api.utils import (
     build_and_cache_graph_from_data,
-    build_and_cache_graph_from_db,
+    build_graph_from_db,
     format_elapsed_time,
     format_exception_message,
     get_top_level_vertices,
@@ -81,7 +81,7 @@ async def retrieve_vertices_order(
         flow_id_str = str(flow_id)
         # First, we need to check if the flow_id is in the cache
         if not data:
-            graph = await build_and_cache_graph_from_db(flow_id=flow_id_str, session=session, chat_service=chat_service)
+            graph = await build_graph_from_db(flow_id=flow_id_str, session=session, chat_service=chat_service)
         else:
             graph = await build_and_cache_graph_from_data(
                 flow_id=flow_id_str, graph_data=data.model_dump(), chat_service=chat_service
@@ -108,6 +108,7 @@ async def retrieve_vertices_order(
         run_id = uuid.uuid4()
         graph.set_run_id(run_id)
         vertices_to_run = list(graph.vertices_to_run) + get_top_level_vertices(graph, graph.vertices_to_run)
+        await chat_service.set_cache(flow_id, graph)
         return VerticesOrderResponse(ids=first_layer, run_id=run_id, vertices_to_run=vertices_to_run)
 
     except Exception as exc:
@@ -155,7 +156,7 @@ async def build_vertex(
         if not cache:
             # If there's no cache
             logger.warning(f"No cache found for {flow_id_str}. Building graph starting at {vertex_id}")
-            graph = await build_and_cache_graph_from_db(
+            graph = await build_graph_from_db(
                 flow_id=flow_id_str, session=next(get_session()), chat_service=chat_service
             )
         else:

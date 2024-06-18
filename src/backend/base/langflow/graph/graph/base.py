@@ -5,6 +5,8 @@ from functools import partial
 from itertools import chain
 from typing import TYPE_CHECKING, Callable, Coroutine, Dict, Generator, List, Optional, Tuple, Type, Union
 
+from loguru import logger
+
 from langflow.graph.edge.base import ContractEdge
 from langflow.graph.graph.constants import lazy_load_vertex_dict
 from langflow.graph.graph.runnable_vertices_manager import RunnableVerticesManager
@@ -19,7 +21,6 @@ from langflow.services.cache.utils import CacheMiss
 from langflow.services.chat.service import ChatService
 from langflow.services.deps import get_chat_service
 from langflow.services.monitor.utils import log_transaction
-from loguru import logger
 
 if TYPE_CHECKING:
     from langflow.graph.schema import ResultData
@@ -511,10 +512,38 @@ class Graph:
         self._updates += 1
 
     def __getstate__(self):
-        return self.raw_graph_data
+        # Get all attributes that are useful in runs.
+        # We don't need to save the state_manager because it is
+        # a singleton and it is not necessary to save it
+        return {
+            "vertices": self.vertices,
+            "edges": self.edges,
+            "flow_id": self.flow_id,
+            "user_id": self.user_id,
+            "raw_graph_data": self.raw_graph_data,
+            "top_level_vertices": self.top_level_vertices,
+            "inactivated_vertices": self.inactivated_vertices,
+            "run_manager": self.run_manager.to_dict(),
+            "_run_id": self._run_id,
+            "in_degree_map": self.in_degree_map,
+            "parent_child_map": self.parent_child_map,
+            "predecessor_map": self.predecessor_map,
+            "successor_map": self.successor_map,
+            "activated_vertices": self.activated_vertices,
+            "vertices_layers": self.vertices_layers,
+            "vertices_to_run": self.vertices_to_run,
+            "stop_vertex": self.stop_vertex,
+            "vertex_map": self.vertex_map,
+        }
 
     def __setstate__(self, state):
-        self.__init__(**state)
+        run_manager = state["run_manager"]
+        if isinstance(run_manager, RunnableVerticesManager):
+            state["run_manager"] = run_manager
+        else:
+            state["run_manager"] = RunnableVerticesManager.from_dict(run_manager)
+        self.__dict__.update(state)
+        self.state_manager = GraphStateManager()
 
     @classmethod
     def from_payload(cls, payload: Dict, flow_id: Optional[str] = None, user_id: Optional[str] = None) -> "Graph":

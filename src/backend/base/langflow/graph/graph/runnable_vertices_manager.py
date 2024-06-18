@@ -13,6 +13,33 @@ class RunnableVerticesManager:
         self.run_predecessors = defaultdict(set)  # Tracks predecessors for each vertex
         self.vertices_to_run = set()  # Set of vertices that are ready to run
 
+    def to_dict(self) -> dict:
+        return {
+            "run_map": self.run_map,
+            "run_predecessors": self.run_predecessors,
+            "vertices_to_run": self.vertices_to_run,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "RunnableVerticesManager":
+        instance = cls()
+        instance.run_map = data["run_map"]
+        instance.run_predecessors = data["run_predecessors"]
+        instance.vertices_to_run = data["vertices_to_run"]
+        return instance
+
+    def __getstate__(self) -> object:
+        return {
+            "run_map": self.run_map,
+            "run_predecessors": self.run_predecessors,
+            "vertices_to_run": self.vertices_to_run,
+        }
+
+    def __setstate__(self, state: dict) -> None:
+        self.run_map = state["run_map"]
+        self.run_predecessors = state["run_predecessors"]
+        self.vertices_to_run = state["vertices_to_run"]
+
     def is_vertex_runnable(self, vertex_id: str) -> bool:
         """Determines if a vertex is runnable."""
 
