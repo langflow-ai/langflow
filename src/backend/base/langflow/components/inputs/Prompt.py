@@ -16,9 +16,9 @@ class PromptComponent(CustomComponent):
 
     async def build(
         self,
-        template: Prompt,
+        template: str,
         **kwargs,
     ) -> Prompt:
-        prompt = await Prompt.from_template_and_variables(template, kwargs)  # type: ignore
+        prompt = await Prompt.from_template_and_variables(template, kwargs)
         self.status = prompt.format_text()
         return prompt
