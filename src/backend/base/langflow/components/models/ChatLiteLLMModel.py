@@ -4,8 +4,9 @@ from langchain_community.chat_models.litellm import ChatLiteLLM, ChatLiteLLMExce
 
 from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
+from langflow.field_typing import BaseLanguageModel
 from langflow.inputs import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, MessageInput, StrInput
-from langflow.template import Output
+from langflow.schema.message import Message
 from langflow.template import Output
 
 
@@ -13,7 +14,7 @@ class ChatLiteLLMModelComponent(LCModelComponent):
     display_name = "LiteLLM"
     description = "`LiteLLM` collection of large language models."
     documentation = "https://python.langchain.com/docs/integrations/chat/litellm"
-    icon = "🚅"
+    icon = "LiteLLM"
 
     inputs = [
         MessageInput(name="input_value", display_name="Input"),
@@ -119,7 +120,7 @@ class ChatLiteLLMModelComponent(LCModelComponent):
         Output(display_name="Language Model", name="model_output", method="build_model"),
     ]
 
-    def text_response(self) -> Text:
+    def text_response(self) -> Message:
         input_value = self.input_value
         stream = self.stream
         system_message = self.system_message
