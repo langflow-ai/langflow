@@ -23,9 +23,8 @@ class HandleInput(BaseInputMixin, ListableInputMixin):
     field_type: Optional[SerializableFieldTypes] = FieldTypes.OTHER
 
 
-# class DataInput(HandleInput):
-#     input_types: list[str] = ["Data"]
-# ! Let's add this?
+class DataInput(HandleInput):
+    input_types: list[str] = ["Data"]
 
 
 class PromptInput(BaseInputMixin, ListableInputMixin):
@@ -136,7 +135,7 @@ class FileInput(BaseInputMixin, ListableInputMixin, FileMixin):
 
 InputTypes = Union[
     BoolInput,
-    # DataInput, # ! Let's add this
+    DataInput,
     DictInput,
     DropdownInput,
     FileInput,

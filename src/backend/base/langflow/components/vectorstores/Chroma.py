@@ -7,7 +7,7 @@ from loguru import logger
 
 from langflow.base.vectorstores.utils import chroma_collection_to_data
 from langflow.components.vectorstores.base.model import LCVectorStoreComponent
-from langflow.inputs import BoolInput, DropdownInput, HandleInput, IntInput, StrInput
+from langflow.inputs import BoolInput, DropdownInput, HandleInput, IntInput, StrInput, MessageInput, DataInput
 from langflow.schema import Data
 
 if TYPE_CHECKING:
@@ -39,11 +39,14 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
             display_name="Code",
             advanced=True,
         ),
-        StrInput(
-            name="vector_store_inputs",
-            display_name="Vector Store Inputs",
-            input_types=["Document", "Data"],
+        MessageInput(
+            name="search_query",
+            display_name="Search Query",
             is_list=True,
+        ),
+        DataInput(
+            name="ingest_data",
+            display_name="Ingest Data",
         ),
         HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
         StrInput(
@@ -77,27 +80,19 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
             advanced=True,
             info="If false, will not add documents that are already in the Vector Store.",
         ),
-        BoolInput(
-            name="add_to_vector_store",
-            display_name="Add to Vector Store",
-            info="If true, the Vector Store Inputs will be added to the Vector Store.",
-        ),
-        StrInput(
-            name="search_input",
-            display_name="Search Input",
-        ),
         DropdownInput(
             name="search_type",
             display_name="Search Type",
             options=["Similarity", "MMR"],
             value="Similarity",
+            advanced=True
         ),
         IntInput(
             name="number_of_results",
             display_name="Number of Results",
             info="Number of results to return.",
             advanced=True,
-            value=4,
+            value=10,
         ),
         IntInput(
             name="limit",
@@ -144,9 +139,6 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
             collection_name=self.collection_name,
         )
 
-        if self.add_to_vector_store:
-            self._add_documents_to_vector_store(chroma)
-
         self.status = chroma_collection_to_data(chroma.get(self.limit))
         return chroma
 
@@ -154,6 +146,10 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
         """
         Adds documents to the Vector Store.
         """
+        if not self.ingest_data:
+            self.status = ""
+            return
+
         if self.allow_duplicates:
             stored_data = []
         else:
@@ -164,7 +160,7 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
                 _stored_documents_without_id.append(value)
 
         documents = []
-        for _input in self.vector_store_inputs or []:
+        for _input in self.ingest_data or []:
             if isinstance(_input, Data):
                 if _input not in _stored_documents_without_id:
                     documents.append(_input.to_lc_document())
@@ -181,16 +177,23 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
         """
         Search for documents in the Chroma vector store.
         """
-        if not self.search_input:
+        if not self.search_query.text:
+            self.status = ""
             return
 
-        vector_store = self._build_chroma()
+        vector_store = self.build_vector_store()
 
-        logger.debug(f"Search input: {self.search_input}")
+        logger.debug(f"Search input: {self.search_query}")
         logger.debug(f"Search type: {self.search_type}")
         logger.debug(f"Number of results: {self.number_of_results}")
 
+        if isinstance(self.search_query, list):
+            if len(self.search_query) > 1:
+                raise ValueError("Input value must be a single-item list.")
+            else:
+                self.search_query = self.search_query[0]
+
         search_results = self.search_with_vector_store(
-            self.input_value, self.search_type, vector_store, k=self.number_of_results
+            self.search_query.text, self.search_type, vector_store, k=self.number_of_results
         )
         return search_results
