@@ -52,16 +52,57 @@ class PromptInput(BaseInputMixin, ListableInputMixin):
 class StrInput(BaseInputMixin, ListableInputMixin, DatabaseLoadMixin):  # noqa: F821
     field_type: Optional[SerializableFieldTypes] = FieldTypes.TEXT
     load_from_db: CoalesceBool = False
-    input_types: list[str] = ["Text"]
     """Defines if the field will allow the user to open a text editor. Default is False."""
+
+    @staticmethod
+    def _validate_value(v: Any, _info):
+        """
+        Validates the given value and returns the processed value.
+
+        Args:
+            v (Any): The value to be validated.
+            _info: Additional information about the input.
+
+        Returns:
+            The processed value.
+
+        Raises:
+            ValueError: If the value is not of a valid type or if the input is missing a required key.
+        """
+        if not isinstance(v, str) and v is not None:
+            raise ValueError(f"Invalid value type {type(v)}")
+        return v
+
+    @field_validator("value")
+    @classmethod
+    def validate_value(cls, v: Any, _info):
+        """
+        Validates the given value and returns the processed value.
+
+        Args:
+            v (Any): The value to be validated.
+            _info: Additional information about the input.
+
+        Returns:
+            The processed value.
+
+        Raises:
+            ValueError: If the value is not of a valid type or if the input is missing a required key.
+        """
+        is_list = _info.data["is_list"]
+        value = None
+        if is_list:
+            value = [cls._validate_value(vv, _info) for vv in v]
+        else:
+            value = cls._validate_value(v, _info)
+        return value
 
 
 class MessageInput(StrInput):
     input_types: list[str] = ["Message"]
 
-    @field_validator("value")
-    @classmethod
-    def validate_value(cls, v: Any, _info):
+    @staticmethod
+    def _validate_value(v: Any, _info):
         # If v is a instance of Message, then its fine
         if isinstance(v, Message):
             return v
@@ -114,30 +155,6 @@ class TextInput(StrInput):
                 )
         else:
             raise ValueError(f"Invalid value type {type(v)}")
-        return value
-
-    @field_validator("value")
-    @classmethod
-    def validate_value(cls, v: Any, _info):
-        """
-        Validates the given value and returns the processed value.
-
-        Args:
-            v (Any): The value to be validated.
-            _info: Additional information about the input.
-
-        Returns:
-            The processed value.
-
-        Raises:
-            ValueError: If the value is not of a valid type or if the input is missing a required key.
-        """
-        is_list = _info.data["is_list"]
-        value = None
-        if is_list:
-            value = [cls._validate_value(vv, _info) for vv in v]
-        else:
-            value = cls._validate_value(v, _info)
         return value
 
 
