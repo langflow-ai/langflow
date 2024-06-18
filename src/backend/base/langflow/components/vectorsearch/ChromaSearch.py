@@ -3,7 +3,9 @@ from typing import List, Optional
 import chromadb
 from chromadb.config import Settings
 from langchain_chroma import Chroma
-from langflow.components.vectorstores.base.model import LCVectorStoreComponent
+
+
+from langflow.base.vectorstores.model import LCVectorStoreComponent
 from langflow.field_typing import Embeddings, Text
 from langflow.schema import Data
 

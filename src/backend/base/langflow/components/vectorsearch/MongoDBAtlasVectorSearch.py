@@ -1,6 +1,6 @@
 from typing import List, Optional
 
-from langflow.components.vectorstores.base.model import LCVectorStoreComponent
+from langflow.base.vectorstores.model import LCVectorStoreComponent
 from langflow.components.vectorstores.MongoDBAtlasVector import MongoVectorStoreComponent
 from langflow.field_typing import Embeddings, NestedDict, Text
 from langflow.schema import Data

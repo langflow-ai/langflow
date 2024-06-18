@@ -5,9 +5,10 @@ from chromadb.config import Settings
 from langchain_chroma.vectorstores import Chroma
 from loguru import logger
 
+from langflow.base.vectorstores.model import LCVectorStoreComponent
 from langflow.base.vectorstores.utils import chroma_collection_to_data
-from langflow.components.vectorstores.base.model import LCVectorStoreComponent
-from langflow.inputs import BoolInput, DropdownInput, HandleInput, IntInput, StrInput, MessageInput, DataInput
+from langflow.inputs import BoolInput, DataInput, DropdownInput, HandleInput, IntInput, MessageInput, StrInput
+                             IntInput, MessageInput, StrInput)
 from langflow.schema import Data
 
 if TYPE_CHECKING:

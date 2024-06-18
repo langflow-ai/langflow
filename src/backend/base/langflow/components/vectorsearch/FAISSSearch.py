@@ -2,7 +2,7 @@ from typing import List
 
 from langchain_community.vectorstores.faiss import FAISS
 
-from langflow.components.vectorstores.base.model import LCVectorStoreComponent
+from langflow.base.vectorstores.model import LCVectorStoreComponent
 from langflow.field_typing import Embeddings, Text
 from langflow.schema import Data
 

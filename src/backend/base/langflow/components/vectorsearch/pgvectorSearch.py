@@ -2,7 +2,7 @@ from typing import List
 
 from langchain_core.embeddings import Embeddings
 
-from langflow.components.vectorstores.base.model import LCVectorStoreComponent
+from langflow.base.vectorstores.model import LCVectorStoreComponent
 from langflow.components.vectorstores.pgvector import PGVectorStoreComponent
 from langflow.field_typing import Text
 from langflow.schema import Data
