@@ -2,7 +2,6 @@ import { Textarea } from "../../../components/ui/textarea";
 
 const TextOutputView = ({ left, value }) => {
   return (
-    <>
       <Textarea
         className={`w-full custom-scroll ${left ? "min-h-32" : "h-full"}`}
         placeholder={"Empty"}
@@ -10,7 +9,6 @@ const TextOutputView = ({ left, value }) => {
         value={value}
         readOnly
       />
-    </>
   );
 };
 

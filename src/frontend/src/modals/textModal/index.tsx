@@ -29,7 +29,7 @@ export default function TextModal({
   const [open, setOpen] = useState(false);
 
   return (
-    <BaseModal size="small" open={open} setOpen={setOpen}>
+    <BaseModal size="medium-h-full" open={open} setOpen={setOpen}>
       <BaseModal.Trigger className="h-full">{children}</BaseModal.Trigger>
       <BaseModal.Header description={""}>
       <span className="pr-2">View Text</span>
@@ -41,7 +41,9 @@ export default function TextModal({
       </BaseModal.Header>
       <BaseModal.Content>
         <div className="flex h-full w-full flex-col transition-all">
+          <div className="h-[370px]">
           <TextOutputView value={value} left={false} />
+          </div>
         </div>
       </BaseModal.Content>
       <BaseModal.Footer>
