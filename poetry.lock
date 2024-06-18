@@ -4200,13 +4200,13 @@ tenacity = ">=8.1.0,<9.0.0"
 
 [[package]]
 name = "langchain-core"
-version = "0.2.7"
+version = "0.2.8"
 description = "Building applications with LLMs through composability"
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
-    {file = "langchain_core-0.2.7-py3-none-any.whl", hash = "sha256:fd02e153c898486dd728d634684ffc64bc257ff2ba443dc7e53d017ac0bf4658"},
-    {file = "langchain_core-0.2.7.tar.gz", hash = "sha256:b0b1b6dfbdedb39426fcb8bd3f07e40eec7964856e3fc384c420ca6dba61b34e"},
+    {file = "langchain_core-0.2.8-py3-none-any.whl", hash = "sha256:172c81c858dc1f3123cc72b7e44e10f44c92f8a761cae18c364081f6c208e9f6"},
+    {file = "langchain_core-0.2.8.tar.gz", hash = "sha256:2db866a4514672c4875b69d5590aa2ed50aa0d144874268bef68d74b5e7f33f9"},
 ]
 
 [package.dependencies]
@@ -4382,7 +4382,7 @@ six = "*"
 
 [[package]]
 name = "langflow-base"
-version = "0.0.71"
+version = "0.0.72"
 description = "A Python package with a built-in web application"
 optional = false
 python-versions = ">=3.10,<3.13"
@@ -4423,7 +4423,7 @@ python-jose = "^3.3.0"
 python-multipart = "^0.0.7"
 python-socketio = "^5.11.0"
 rich = "^13.7.0"
-sentry-sdk = "^2.5.1"
+sentry-sdk = {version = "^2.5.1", extras = ["fastapi", "loguru"]}
 sqlmodel = "^0.0.18"
 typer = "^0.12.0"
 uncurl = "^0.0.11"
@@ -8332,6 +8332,8 @@ files = [
 
 [package.dependencies]
 certifi = "*"
+fastapi = {version = ">=0.79.0", optional = true, markers = "extra == \"fastapi\""}
+loguru = {version = ">=0.5", optional = true, markers = "extra == \"loguru\""}
 urllib3 = ">=1.26.11"
 
 [package.extras]
