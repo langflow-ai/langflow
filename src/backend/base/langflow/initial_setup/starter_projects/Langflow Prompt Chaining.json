@@ -1241,9 +1241,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "The OpenAI API Key to use for the OpenAI model.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": [],
                 "list": false,
                 "load_from_db": true,
                 "multiline": false,
@@ -1656,9 +1654,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "The OpenAI API Key to use for the OpenAI model.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": [],
                 "list": false,
                 "load_from_db": true,
                 "multiline": false,
