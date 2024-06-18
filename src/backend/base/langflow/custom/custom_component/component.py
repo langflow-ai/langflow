@@ -80,6 +80,11 @@ class Component(CustomComponent):
             if key in self.__dict__:
                 raise ValueError(f"Key {key} already exists in {self.__class__.__name__}")
             setattr(self, key, value)
+        for key, input_obj in self._inputs.items():
+            if not hasattr(self, key):
+                setattr(self, key, input_obj.value or None)
+            if key not in params:
+                params[key] = input_obj.value or None
         self._arguments = params
 
     def _set_outputs(self, outputs: List[dict]):
