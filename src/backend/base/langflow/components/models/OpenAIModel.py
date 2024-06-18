@@ -1,11 +1,10 @@
 from langchain_openai import ChatOpenAI
-from langflow.schema.message import Message
 from pydantic.v1 import SecretStr
 
 from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
 from langflow.base.models.openai_constants import MODEL_NAMES
-from langflow.field_typing import BaseLanguageModel, Text
+from langflow.field_typing import BaseLanguageModel
 from langflow.inputs import (
     BoolInput,
     DictInput,
@@ -16,6 +15,7 @@ from langflow.inputs import (
     SecretStrInput,
     StrInput,
 )
+from langflow.schema.message import Message
 from langflow.template import Output
 
 
@@ -62,12 +62,6 @@ class OpenAIModelComponent(LCModelComponent):
             name="system_message",
             display_name="System Message",
             info="System message to pass to the model.",
-            advanced=True,
-        ),
-        BoolInput(
-            name="json_mode",
-            display_name="JSON Mode",
-            info="Enable JSON mode for the model output.",
             advanced=True,
         ),
         IntInput(
