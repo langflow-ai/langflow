@@ -317,7 +317,7 @@ export default function ParameterComponent({
               </Button>
             </div>
           )}
-          <Case condition={left && data.node?.frozen}>
+          <Case condition={!left && data.node?.frozen}>
             <div className="pr-1">
               <IconComponent className="h-5 w-5 text-ice" name={"Snowflake"} />
             </div>
