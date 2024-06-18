@@ -133,9 +133,9 @@ class Record(BaseModel):
                 contents = [{"type": "text", "text": text}]
                 for file_path in files:
                     image_template = ImagePromptTemplate()
-                    image_prompt_value: ImagePromptValue = image_template.invoke(input={"path": file_path})
+                    image_prompt_value: ImagePromptValue = image_template.invoke(input={"path": file_path})  # type: ignore
                     contents.append({"type": "image_url", "image_url": image_prompt_value.image_url})
-                human_message = HumanMessage(content=contents)
+                human_message = HumanMessage(content=contents)  # type: ignore
             else:
                 human_message = HumanMessage(
                     content=[{"type": "text", "text": text}],
@@ -143,7 +143,7 @@ class Record(BaseModel):
 
             return human_message
 
-        return AIMessage(content=text)
+        return AIMessage(content=text)  # type: ignore
 
     def __getattr__(self, key):
         """

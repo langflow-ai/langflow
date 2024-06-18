@@ -34,8 +34,8 @@ class Message(BaseModel):
             if is_image_file(file):
                 new_files.append(Image(path=file))
             else:
-                new_files.append(file)
-        self.files = new_files
+                new_files.append(file)  # type: ignore
+        self.files = new_files  # type: ignore
 
     def to_lc_message(
         self,
@@ -58,7 +58,7 @@ class Message(BaseModel):
             if self.files:
                 contents = [{"type": "text", "text": self.text}]
                 contents.extend(self.get_file_content_dicts())
-                human_message = HumanMessage(content=contents)
+                human_message = HumanMessage(content=contents)  # type: ignore
             else:
                 human_message = HumanMessage(
                     content=[{"type": "text", "text": self.text}],
@@ -66,7 +66,7 @@ class Message(BaseModel):
 
             return human_message
 
-        return AIMessage(content=self.text)
+        return AIMessage(content=self.text)  # type: ignore
 
     @classmethod
     def from_record(cls, record: "Record") -> "Message":

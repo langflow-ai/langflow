@@ -62,7 +62,7 @@ class SelfQueryRetrieverComponent(CustomComponent):
             input_text = query
         else:
             raise ValueError(f"Query type {type(query)} not supported.")
-        documents = self_query_retriever.invoke(input=input_text)
+        documents = self_query_retriever.invoke(input=input_text)  # type: ignore
         records = [Record.from_document(document) for document in documents]
-        self.status = records
-        return records
+        self.status = records  # type: ignore
+        return records  # type: ignore

@@ -389,9 +389,9 @@ class Vertex:
         if any(isinstance(self._raw_params.get(key), Vertex) for key in new_params):
             return
         if not overwrite:
-            for key in new_params.copy():
+            for key in new_params.copy():  # type: ignore
                 if key not in self._raw_params:
-                    new_params.pop(key)
+                    new_params.pop(key)  # type: ignore
         self._raw_params.update(new_params)
         self.params = self._raw_params.copy()
         self.updated_raw_params = True

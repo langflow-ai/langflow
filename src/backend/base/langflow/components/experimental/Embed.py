@@ -9,7 +9,7 @@ class EmbedComponent(CustomComponent):
     def build_config(self):
         return {"texts": {"display_name": "Texts"}, "embbedings": {"display_name": "Embeddings"}}
 
-    def build(self, texts: list[str], embbedings: Embeddings) -> Embeddings:
+    def build(self, texts: list[str], embbedings: Embeddings) -> Record:
         vectors = Record(vector=embbedings.embed_documents(texts))
         self.status = vectors
         return vectors
