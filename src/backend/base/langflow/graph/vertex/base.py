@@ -5,6 +5,7 @@ import os
 import types
 from enum import Enum
 from typing import TYPE_CHECKING, Any, AsyncIterator, Callable, Dict, Iterator, List, Mapping, Optional
+import traceback
 
 from loguru import logger
 
@@ -613,9 +614,11 @@ class Vertex:
             self.logs = build_logs(self, result)
             self._update_built_object_and_artifacts(result)
         except Exception as exc:
-            logger.exception(exc)
+            tb = traceback.format_exc()
+            error_detail = f"Error: {exc}\nTraceback: {tb}"
+            logger.exception(error_detail)
 
-            raise ValueError(f"Error building Component {self.display_name}: {str(exc)}") from exc
+            raise ValueError(f"Error building Component {self.display_name}: {str(exc)}\n{error_detail}") from exc
 
     def _update_built_object_and_artifacts(self, result):
         """
