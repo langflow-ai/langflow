@@ -20,8 +20,9 @@ class PromptComponent(Component):
     async def build_prompt(
         self,
     ) -> Message:
-        kwargs = {k: v for k, v in self._arguments.items() if k != "template"}
-        prompt = await Message.from_template_and_variables(self.template, kwargs)
-        prompt_message = Message(text=prompt.format_text(), **kwargs)
+        prompt = await Message.from_template_and_variables(**self._arguments)
+        kwargs = self._arguments.copy()
+        kwargs["text"] = prompt.format_text()
+        prompt_message = Message(**kwargs)
         self.status = prompt_message
         return prompt
