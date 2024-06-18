@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "langflow-base"
-version = "0.0.70"
+version = "0.0.72"
 description = "A Python package with a built-in web application"
 authors = ["Langflow <contact@langflow.org>"]
 maintainers = [
@@ -63,7 +63,7 @@ cryptography = "^42.0.5"
 asyncer = "^0.0.5"
 pyperclip = "^1.8.2"
 uncurl = "^0.0.11"
-sentry-sdk = "^2.5.1"
+sentry-sdk = {extras = ["fastapi", "loguru"], version = "^2.5.1"}
 chardet = "^5.2.0"
 
 
