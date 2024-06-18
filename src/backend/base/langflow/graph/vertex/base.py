@@ -610,6 +610,7 @@ class Vertex:
                 fallback_to_env_vars=fallback_to_env_vars,
                 vertex=self,
             )
+            self.logs = build_logs(self, result)
             self._update_built_object_and_artifacts(result)
         except Exception as exc:
             logger.exception(exc)
@@ -628,7 +629,6 @@ class Vertex:
                 self.artifacts_raw = self.artifacts.get("raw", None)
                 self.artifacts_type = self.artifacts.get("type", None) or ArtifactType.UNKNOWN.value
                 self.artifacts = {self.outputs[0]["name"]: self.artifacts}
-                self.logs = build_logs(self)
         else:
             self._built_object = result
 
