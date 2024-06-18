@@ -24,5 +24,5 @@ class PromptComponent(Component):
         kwargs = self._arguments.copy()
         kwargs["text"] = prompt.format_text()
         prompt_message = Message(**kwargs)
-        self.status = prompt_message
-        return prompt
+        self.status = prompt.format_text()
+        return prompt_message
