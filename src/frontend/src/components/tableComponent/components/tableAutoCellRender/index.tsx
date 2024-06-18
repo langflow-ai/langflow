@@ -30,7 +30,7 @@ export default function TableAutoCellRender({
               variant="outline"
               size="sq"
               className={cn(
-                "min-w-min bg-success-background text-success-foreground hover:bg-success-background",
+                "h-[18px] w-full justify-center bg-success-background text-success-foreground hover:bg-success-background",
               )}
             >
               {value}
@@ -42,22 +42,10 @@ export default function TableAutoCellRender({
               variant="outline"
               size="sq"
               className={cn(
-                "min-w-min bg-error-background text-error-foreground hover:bg-error-background",
+                "h-[18px] w-full justify-center bg-error-background text-error-foreground hover:bg-error-background",
               )}
             >
-              Success
-            </Badge>
-          );
-        } else if (value === "failure") {
-          return (
-            <Badge
-              variant="outline"
-              size="sq"
-              className={cn(
-                "min-w-min bg-error-background text-error-foreground hover:bg-error-background",
-              )}
-            >
-              Failure
+              {value}
             </Badge>
           );
         } else {

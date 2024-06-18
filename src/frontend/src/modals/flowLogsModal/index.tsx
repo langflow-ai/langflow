@@ -24,13 +24,15 @@ export default function FlowLogsModal({
     });
   }, [open]);
 
+  console.log(rows);
+
   return (
     <BaseModal open={open} setOpen={setOpen} size="large">
       <BaseModal.Header description="Inspect component executions.">
         <div className="flex w-full justify-between">
           <div className="flex h-fit w-32 items-center">
             <span className="pr-2">Logs</span>
-            <IconComponent name="ScrollText" className="mr-2 h-4 w-4 " />
+            <IconComponent name="ScrollText" className="mr-2 h-4 w-4" />
           </div>
           <div className="flex h-fit w-32 items-center"></div>
         </div>
