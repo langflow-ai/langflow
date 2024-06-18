@@ -78,9 +78,9 @@ class LCModelComponent(CustomComponent):
                     }
                 }
             else:
-                status_message = f"Response: {content}"
+                status_message = f"Response: {content}"  # type: ignore
         else:
-            status_message = f"Response: {message.content}"
+            status_message = f"Response: {message.content}"  # type: ignore
         return status_message
 
     def get_chat_result(
@@ -102,11 +102,11 @@ class LCModelComponent(CustomComponent):
                         messages.append(input_value.to_lc_message())
             else:
                 messages.append(HumanMessage(content=input_value))
-        inputs = messages or {}
+        inputs = messages or {}  # type: ignore
         if stream:
-            return runnable.stream(inputs)
+            return runnable.stream(inputs)  # type: ignore
         else:
-            message = runnable.invoke(inputs)
+            message = runnable.invoke(inputs)  # type: ignore
             result = message.content
             if isinstance(message, AIMessage):
                 status_message = self.build_status_message(message)

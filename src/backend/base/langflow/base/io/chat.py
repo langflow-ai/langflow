@@ -82,9 +82,9 @@ class ChatComponent(CustomComponent):
         if not return_message:
             message_text = message.text
         else:
-            message_text = message
+            message_text = message  # type: ignore
 
         self.status = message_text
         if session_id and isinstance(message, Message) and isinstance(message.text, str):
             self.store_message(message)
-        return message_text
+        return message_text  # type: ignore

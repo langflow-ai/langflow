@@ -87,7 +87,7 @@ async def update_message(
     try:
         message_dict = message.model_dump(exclude_none=True)
         message_dict.pop("index", None)
-        monitor_service.update_message(message_id=message_id, **message_dict)
+        monitor_service.update_message(message_id=message_id, **message_dict)  # type: ignore
         return MessageModelResponse(index=message_id, **message_dict)
 
     except Exception as e:

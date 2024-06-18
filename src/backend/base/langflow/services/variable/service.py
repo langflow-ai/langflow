@@ -61,7 +61,7 @@ class VariableService(Service):
         # credential = session.query(Variable).filter(Variable.user_id == user_id, Variable.name == name).first()
         variable = session.exec(select(Variable).where(Variable.user_id == user_id, Variable.name == name)).first()
 
-        if variable.type == "Credential" and field == "session_id":
+        if variable.type == "Credential" and field == "session_id":  # type: ignore
             raise TypeError(
                 f"variable {name} of type 'Credential' cannot be used in a Session ID field "
                 "because its purpose is to prevent the exposure of values."

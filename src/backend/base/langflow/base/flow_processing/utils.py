@@ -62,7 +62,7 @@ def build_records_from_result_data(result_data: ResultData, get_final_results_on
         else:
             return []
 
-    for message in messages:
+    for message in messages:  # type: ignore
         message_dict = message if isinstance(message, dict) else message.model_dump()
         if get_final_results_only:
             result_data_dict = result_data.model_dump()

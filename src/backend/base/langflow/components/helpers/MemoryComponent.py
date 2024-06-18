@@ -43,7 +43,7 @@ class MemoryComponent(BaseMemoryComponent):
             },
         }
 
-    def get_messages(self, **kwargs) -> list[Message]:
+    def get_messages(self, **kwargs) -> list[Message]:  # type: ignore
         # Validate kwargs by checking if it contains the correct keys
         if "sender" not in kwargs:
             kwargs["sender"] = None

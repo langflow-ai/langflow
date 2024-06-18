@@ -43,7 +43,7 @@ def create_flow(
         # based on the highest number found
         if session.exec(select(Flow).where(Flow.name == flow.name).where(Flow.user_id == current_user.id)).first():
             flows = session.exec(
-                select(Flow).where(Flow.name.like(f"{flow.name} (%")).where(Flow.user_id == current_user.id)
+                select(Flow).where(Flow.name.like(f"{flow.name} (%")).where(Flow.user_id == current_user.id)  # type: ignore
             ).all()
             if flows:
                 numbers = [int(flow.name.split("(")[1].split(")")[0]) for flow in flows]

@@ -37,6 +37,6 @@ class Prompt(Record):
             if isinstance(value, Message):
                 content_dicts = await value.get_file_content_dicts()
                 contents.extend(content_dicts)
-        prompt_template = ChatPromptTemplate.from_messages([HumanMessage(content=contents)])
+        prompt_template = ChatPromptTemplate.from_messages([HumanMessage(content=contents)])  # type: ignore
         instance.prompt = prompt_template.to_json()
         return instance
