@@ -1,8 +1,8 @@
 from langflow.custom import Component
 from langflow.helpers.data import data_to_text
-from langflow.field_typing import Text
-from langflow.inputs import MultilineInput, HandleInput
+from langflow.inputs import MultilineInput, DataInput
 from langflow.template import Output
+from langflow.schema.message import Message
 
 
 class ParseDataComponent(Component):
@@ -11,22 +11,23 @@ class ParseDataComponent(Component):
     icon = "braces"
 
     inputs = [
-        HandleInput(name="data", display_name="Data", info="The data to convert to text.", input_types=["Data"]),
+        DataInput(name="data", display_name="Data", info="The data to convert to text."),
         MultilineInput(
             name="template",
             display_name="Template",
             info="The template to use for formatting the data. It can contain the keys {text}, {data} or any other key in the Data.",
+            value="{text}"
         ),
     ]
 
     outputs = [
-        Output(display_name="Text", name="text", method="parse_data_to_text"),
+        Output(display_name="Text", name="text", method="parse_data"),
     ]
 
-    def parse_data_to_text(self) -> Text:
+    def parse_data(self) -> Message:
         data = self.data if isinstance(self.data, list) else [self.data]
         template = self.template
 
         result_string = data_to_text(template, data)
         self.status = result_string
-        return result_string
+        return Message(text=result_string)

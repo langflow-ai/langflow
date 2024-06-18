@@ -1,7 +1,7 @@
 from typing import List
 
 from langflow.custom import Component
-from langflow.inputs import HandleInput, TextInput
+from langflow.inputs import DataInput, TextInput
 from langflow.schema import Data
 from langflow.template import Output
 
@@ -12,11 +12,10 @@ class FilterDataComponent(Component):
     icon = "filter"
 
     inputs = [
-        HandleInput(
+        DataInput(
             name="data",
             display_name="Data",
             info="Data object to filter.",
-            input_types=["Message", "Data"],
         ),
         TextInput(
             name="filter_criteria",

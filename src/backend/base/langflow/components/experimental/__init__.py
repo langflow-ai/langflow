@@ -12,10 +12,12 @@ from .RunnableExecutor import RunnableExecComponent
 from .SplitText import SplitTextComponent
 from .SQLExecutor import SQLExecutorComponent
 from .SubFlow import SubFlowComponent
+from .ConditionalRouter import ConditionalRouterComponent
 
 __all__ = [
     "AgentComponent",
     "ClearMessageHistoryComponent",
+    "ConditionalRouterComponent",
     "ExtractKeyFromDataComponent",
     "FlowToolComponent",
     "ListenComponent",
