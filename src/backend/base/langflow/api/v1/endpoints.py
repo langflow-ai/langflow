@@ -120,12 +120,10 @@ async def simple_run_flow(
 
 @router.post("/run/{flow_id_or_name}", response_model=RunResponse, response_model_exclude_none=True)
 async def simplified_run_flow(
-    db: Annotated[Session, Depends(get_session)],
     flow: Annotated[Flow, Depends(get_flow_by_id_or_endpoint_name)],
     input_request: SimplifiedAPIRequest = SimplifiedAPIRequest(),
     stream: bool = False,
     api_key_user: User = Depends(api_key_security),
-    session_service: SessionService = Depends(get_session_service),
 ):
     """
     Executes a specified flow by ID with input customization, performance enhancements through caching, and optional data streaming.
@@ -246,7 +244,6 @@ async def webhook_run_flow(
         logger.debug("Starting background task")
         background_tasks.add_task(
             simple_run_flow,
-            db=db,
             flow=flow,
             input_request=input_request,
         )
