@@ -1,7 +1,6 @@
 import operator
 from functools import reduce
 
-
 from langchain_openai import ChatOpenAI
 from pydantic.v1 import SecretStr
 
@@ -93,7 +92,7 @@ class OpenAIModelComponent(LCModelComponent):
     def build_model(self) -> BaseLanguageModel:
         # self.output_schea is a list of dictionaries
         # let's convert it to a dictionary
-        output_schema_dict = reduce(operator.ior, self.output_schema, {})
+        output_schema_dict = reduce(operator.ior, self.output_schema or {}, {})
         openai_api_key = self.openai_api_key
         temperature = self.temperature
         model_name = self.model_name
