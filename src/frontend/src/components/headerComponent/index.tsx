@@ -18,7 +18,7 @@ import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { useLocationStore } from "../../stores/locationStore";
 import { useStoreStore } from "../../stores/storeStore";
-import IconComponent from "../genericIconComponent";
+import IconComponent, { ForwardedIconComponent } from "../genericIconComponent";
 import { Button } from "../ui/button";
 import {
   DropdownMenu,
@@ -214,7 +214,7 @@ export default function Header(): JSX.Element {
                   />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent>
+              <DropdownMenuContent className="mr-1 mt-1 min-w-40">
                 {!autoLogin && (
                   <>
                     <DropdownMenuLabel>
@@ -239,33 +239,61 @@ export default function Header(): JSX.Element {
                 )}
                 <DropdownMenuLabel>General</DropdownMenuLabel>
                 <DropdownMenuItem
-                  className="cursor-pointer"
+                  className="cursor-pointer gap-2"
                   onClick={() => navigate("/settings")}
                 >
+                  <ForwardedIconComponent name="Settings" className="w-4" />
                   Settings
                 </DropdownMenuItem>
                 {!autoLogin && (
                   <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuLabel>My Account</DropdownMenuLabel>
                     {isAdmin && (
                       <DropdownMenuItem
-                        className="cursor-pointer"
+                        className="cursor-pointer gap-2"
                         onClick={() => navigate("/admin")}
                       >
+                        <ForwardedIconComponent name="Shield" className="w-4" />
                         Admin Page
                       </DropdownMenuItem>
                     )}
-                    <DropdownMenuItem
-                      className="cursor-pointer"
-                      onClick={() => {
-                        logout();
-                      }}
-                    >
-                      Sign Out
-                    </DropdownMenuItem>
                   </>
                 )}
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel>Help</DropdownMenuLabel>
+                <DropdownMenuItem
+                  className="cursor-pointer gap-2"
+                  onClick={() =>
+                    window.open("https://pre-release.langflow.org/", "_blank")
+                  }
+                >
+                  <ForwardedIconComponent name="FileText" className="w-4" />
+                  Docs
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="cursor-pointer gap-2"
+                  onClick={() =>
+                    window.open(
+                      "https://github.com/langflow-ai/langflow/discussions",
+                      "_blank",
+                    )
+                  }
+                >
+                  <ForwardedIconComponent
+                    name="MessagesSquare"
+                    className="w-4"
+                  />
+                  Discussions
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="cursor-pointer gap-2"
+                  onClick={() => {
+                    logout();
+                  }}
+                >
+                  <ForwardedIconComponent name="LogOut" className="w-4" />
+                  Log Out
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </>
