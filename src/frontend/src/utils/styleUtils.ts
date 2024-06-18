@@ -273,8 +273,8 @@ export const nodeColors: { [char: string]: string } = {
   // custom_components: "#ab11ab",
   retrievers: "#e6b25a",
   //
-  str: "#2563eb",
-  Text: "#2563eb",
+  str: "#4F46E5",
+  Text: "#4F46E5",
   unknown: "#9CA3AF",
   Document: "#65a30d",
   Data: "#dc2626",
