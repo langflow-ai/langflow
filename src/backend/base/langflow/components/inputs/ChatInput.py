@@ -15,7 +15,6 @@ class ChatInput(ChatComponent):
             name="input_value",
             display_name="Text",
             multiline=True,
-            input_types=[],
             value="",
             info="Message to be passed as input.",
         ),
@@ -41,7 +40,6 @@ class ChatInput(ChatComponent):
     ]
     outputs = [
         Output(display_name="Message", name="message", method="message_response"),
-        Output(display_name="Text", name="text", method="text_response"),
     ]
 
     def message_response(self) -> Message:
@@ -57,7 +55,3 @@ class ChatInput(ChatComponent):
 
         self.status = message
         return message
-
-    def text_response(self) -> Text:
-        text = self.message_response().text
-        return text

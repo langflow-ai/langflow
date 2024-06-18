@@ -1,7 +1,7 @@
 from langflow.base.io.text import TextComponent
-from langflow.field_typing import Text
 from langflow.inputs import TextInput
 from langflow.template import Output
+from langflow.schema.message import Message
 
 
 class TextInputComponent(TextComponent):
@@ -20,5 +20,8 @@ class TextInputComponent(TextComponent):
         Output(display_name="Text", name="text", method="text_response"),
     ]
 
-    def text_response(self) -> Text:
-        return self.build(input_value=self.input_value)
+    def text_response(self) -> Message:
+        message = Message(
+            text=self.input_value,
+        )
+        return message
