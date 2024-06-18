@@ -35,7 +35,7 @@ class CassandraSearchComponent(LCVectorStoreComponent):
             },
             "table_name": {
                 "display_name": "Table Name",
-                "info": "The name of the table where vectors will be stored.",
+                "info": "The name of the collection where vectors will be stored.",
             },
             "keyspace": {
                 "display_name": "Keyspace",
