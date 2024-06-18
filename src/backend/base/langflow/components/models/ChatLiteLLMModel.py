@@ -126,8 +126,9 @@ class ChatLiteLLMModelComponent(LCModelComponent):
         system_message = self.system_message
         output = self.build_model()
         result = self.get_chat_result(output, stream, input_value, system_message)
-        self.status = result
-        return result
+        message = Message(text=result)
+        self.status = message
+        return message
 
     def build_model(self) -> BaseLanguageModel:
         try:
