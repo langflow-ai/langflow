@@ -1,8 +1,5 @@
 from typing import List
 
-from langchain.vectorstores import FAISS
-from langchain.schema import BaseRetriever
-
 from langflow.custom import Component
 from langflow.inputs import BoolInput, IntInput, StrInput, HandleInput
 from langflow.schema import Data
@@ -11,6 +8,8 @@ from langflow.field_typing import Text
 from langflow.helpers.data import docs_to_data
 
 from loguru import logger
+from langchain_community.vectorstores import FAISS
+from langchain_core.retrievers import BaseRetriever
 
 
 class FaissVectorStoreComponent(Component):
