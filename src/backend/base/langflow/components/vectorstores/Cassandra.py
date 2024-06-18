@@ -1,4 +1,4 @@
-from typing import Any, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 from langchain_community.vectorstores import Cassandra
 from langchain_community.utilities.cassandra import SetupMode
 
@@ -22,12 +22,12 @@ class CassandraVectorStoreComponent(CustomComponent):
             "embedding": {"display_name": "Embedding", "info": "Embedding to use"},
             "token": {
                 "display_name": "Token",
-                "info": "Authentication token for accessing Cassandra on Astra DB.",
+                "info": "Authentication token for Astra connections.",
                 "password": True,
             },
             "database_id": {
                 "display_name": "Database ID",
-                "info": "The Astra database ID.",
+                "info": "The Astra database ID. Used only for Astra connections.",
             },
             "table_name": {
                 "display_name": "Table Name",
@@ -35,7 +35,7 @@ class CassandraVectorStoreComponent(CustomComponent):
             },
             "keyspace": {
                 "display_name": "Keyspace",
-                "info": "Optional key space within Astra DB. The keyspace should already be created.",
+                "info": "Optional key space to work in.",
                 "advanced": True,
             },
             "ttl_seconds": {
@@ -59,13 +59,34 @@ class CassandraVectorStoreComponent(CustomComponent):
                 "options": ["Sync", "Async", "Off"],
                 "advanced": True,
             },
+            "username": {
+                "display_name": "Username",
+                "info": "Username for Cassandra connections.",
+                "advanced": True,
+            },
+            "password": {
+                "display_name": "Password",
+                "info": "Password for Cassandra connections.",
+                "password": True,
+                "advanced": True,
+            },
+            "contact_points": {
+                "display_name": "Contact Points",
+                "info": 'List of contact points for the Cassandra cluster. If this is passed, it is assumed this is Cassandra (rather than Astra). Accepts a single contact point, such as "127.0.0.1", or a comma-separated list, such as "192.168.1.1,192.168.1.2".',
+                "advanced": True,
+            },
+            "cluster_kwargs": {
+                "display_name": "Cluster Kwargs",
+                "info": "Optional dictionary of additional keyword arguments for the Cassandra cluster.",
+                "advanced": True,
+            },
         }
 
     def build(
         self,
         embedding: Embeddings,
-        token: str,
-        database_id: str,
+        token: Optional[str] = None,
+        database_id: Optional[str] = None,
         inputs: Optional[List[Record]] = None,
         keyspace: Optional[str] = None,
         table_name: str = "",
@@ -73,17 +94,31 @@ class CassandraVectorStoreComponent(CustomComponent):
         batch_size: int = 16,
         body_index_options: Optional[List[Tuple[str, Any]]] = None,
         setup_mode: SetupMode = SetupMode.SYNC,
+        username: Optional[str] = None,
+        password: Optional[str] = None,
+        contact_points: Optional[str] = None,  # TODO: Accept a list of strings
+        cluster_kwargs: Optional[dict] = None,
     ) -> VectorStore:
         try:
             import cassio
         except ImportError:
             raise ImportError(
-                "Could not import cassio integration package. " "Please install it with `pip install cassio`."
+                "Could not import cassio integration package. "
+                "Please install it with `pip install cassio`."
             )
+
+        if contact_points is not None:
+            # accepts a comma-separated string of points
+            if "," in contact_points:
+                contact_points = contact_points.split(",")
 
         cassio.init(
             database_id=database_id,
             token=token,
+            username=username,
+            password=password,
+            contact_points=contact_points,
+            cluster_kwargs=cluster_kwargs,
         )
 
         if inputs:

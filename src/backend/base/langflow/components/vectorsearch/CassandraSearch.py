@@ -26,12 +26,12 @@ class CassandraSearchComponent(LCVectorStoreComponent):
             "embedding": {"display_name": "Embedding", "info": "Embedding to use"},
             "token": {
                 "display_name": "Token",
-                "info": "Authentication token for accessing Cassandra on Astra DB.",
+                "info": "Authentication token for Astra connections.",
                 "password": True,
             },
             "database_id": {
                 "display_name": "Database ID",
-                "info": "The Astra database ID.",
+                "info": "The Astra database ID. Used only for Astra connections.",
             },
             "table_name": {
                 "display_name": "Table Name",
@@ -39,7 +39,7 @@ class CassandraSearchComponent(LCVectorStoreComponent):
             },
             "keyspace": {
                 "display_name": "Keyspace",
-                "info": "Optional key space within Astra DB. The keyspace should already be created.",
+                "info": "Optional key space to work in.",
                 "advanced": True,
             },
             "body_index_options": {
@@ -58,6 +58,27 @@ class CassandraSearchComponent(LCVectorStoreComponent):
                 "info": "Number of results to return.",
                 "advanced": True,
             },
+            "username": {
+                "display_name": "Username",
+                "info": "Username for Cassandra connections.",
+                "advanced": True,
+            },
+            "password": {
+                "display_name": "Password",
+                "info": "Password for Cassandra connections.",
+                "password": True,
+                "advanced": True,
+            },
+            "contact_points": {
+                "display_name": "Contact Points",
+                "info": 'List of contact points for the Cassandra cluster. If this is passed, it is assumed this is Cassandra (rather than Astra). Accepts a single contact point, such as "127.0.0.1", or a comma-separated list, such as "192.168.1.1,192.168.1.2".',
+                "advanced": True,
+            },
+            "cluster_kwargs": {
+                "display_name": "Cluster Kwargs",
+                "info": "Optional dictionary of additional keyword arguments for the Cassandra cluster.",
+                "advanced": True,
+            },
         }
 
     def build(
@@ -65,13 +86,17 @@ class CassandraSearchComponent(LCVectorStoreComponent):
         embedding: Embeddings,
         table_name: str,
         input_value: Text,
-        token: str,
-        database_id: str,
+        token: Optional[str] = None,
+        database_id: Optional[str] = None,
         search_type: str = "similarity",
         number_of_results: int = 4,
         keyspace: Optional[str] = None,
         body_index_options: Optional[List[Tuple[str, Any]]] = None,
         setup_mode: SetupMode = SetupMode.SYNC,
+        username: Optional[str] = None,
+        password: Optional[str] = None,
+        contact_points: Optional[str] = None,  # TODO: Accept a list of strings
+        cluster_kwargs: Optional[dict] = None,
     ) -> List[Record]:
         vector_store = CassandraVectorStoreComponent().build(
             embedding=embedding,
@@ -81,6 +106,10 @@ class CassandraSearchComponent(LCVectorStoreComponent):
             keyspace=keyspace,
             body_index_options=body_index_options,
             setup_mode=setup_mode,
+            username=username,
+            password=password,
+            contact_points=contact_points,
+            cluster_kwargs=cluster_kwargs,
         )
 
         try:
