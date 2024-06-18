@@ -12,7 +12,7 @@ import { title } from "process";
 export default function HandleRenderComponent({
   left,
   nodes,
-  tooltipTitle,
+  tooltipTitle = "",
   proxy,
   id,
   title,
@@ -21,7 +21,21 @@ export default function HandleRenderComponent({
   colors,
   setFilterEdge,
   showNode,
-}) {
+} :
+{
+  left: boolean;
+  nodes: any;
+  tooltipTitle?: string;
+  proxy: any;
+  id: any;
+  title: string;
+  edges: any;
+  myData: any;
+  colors: string[];
+  setFilterEdge: any;
+  showNode: any;
+}
+) {
   return (
     <Button
       unstyled
@@ -59,20 +73,20 @@ export default function HandleRenderComponent({
                 isValidConnection(connection, nodes, edges)
               }
               className={classNames(
-                left ? "-ml-1" : "-mr-1",
-                "z-20 h-4 w-4 rounded-full border-none bg-background",
+                left ? "-ml-0.5" : "-mr-0.5",
+                "z-20 h-3 w-3 rounded-full border-none bg-background",
               )}
               style={{
                 background:
                   "conic-gradient(" +
-                  colors
+                  colors.concat(colors[0])
                     .map(
                       (color, index) =>
                         color +
                         " " +
-                        (360 / colors.length) * index +
+                        ((360 / colors.length) * (index) - (360 / (colors.length * 4))) +
                         "deg " +
-                        (360 / colors.length) * (index + 1) +
+                        (((360 / colors.length) * (index))+ (360 / (colors.length * 4))) +
                         "deg",
                     )
                     .join(" ,") +
@@ -88,8 +102,8 @@ export default function HandleRenderComponent({
             />
             <div
               className={cn(
-                "absolute top-[50%] z-10 h-4 w-4 translate-y-[-50%] rounded-full bg-background",
-                left ? "-left-[4px] -ml-1" : "-right-[4px] -mr-1",
+                "absolute top-[50%] z-10 h-3 w-3 translate-y-[-50%] rounded-full bg-background",
+                left ? "-left-[4px] -ml-0.5" : "-right-[4px] -mr-0.5",
               )}
             />
           </div>
