@@ -2,10 +2,10 @@ import ast
 import asyncio
 import inspect
 import os
+import traceback
 import types
 from enum import Enum
 from typing import TYPE_CHECKING, Any, AsyncIterator, Callable, Dict, Iterator, List, Mapping, Optional
-import traceback
 
 from loguru import logger
 
@@ -313,6 +313,11 @@ class Vertex:
                         "Setting to None."
                     )
                     params[field_name] = None
+                else:
+                    if field["list"]:
+                        params[field_name] = []
+                    else:
+                        params[field_name] = None
 
             elif field.get("type") in DIRECT_TYPES and params.get(field_name) is None:
                 val = field.get("value")
@@ -619,7 +624,7 @@ class Vertex:
             error_detail = f"Error: {exc}\nTraceback: {tb}"
             logger.exception(error_detail)
 
-            raise ValueError(f"Error building Component {self.display_name}: {str(exc)}\n{error_detail}") from exc
+            raise ValueError(f"Error building Component {self.display_name}: {error_detail}") from exc
 
     def _update_built_object_and_artifacts(self, result):
         """
