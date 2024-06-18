@@ -7,6 +7,7 @@ from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, System
 from langchain_core.prompt_values import ImagePromptValue
 from langchain_core.prompts import BaseChatPromptTemplate, ChatPromptTemplate, PromptTemplate
 from langchain_core.prompts.image import ImagePromptTemplate
+from loguru import logger
 from pydantic import BeforeValidator, ConfigDict, Field, field_serializer
 
 from langflow.base.prompts.utils import dict_values_to_string
@@ -61,9 +62,9 @@ class Message(Data):
         # But first we check if all required keys are present in the data dictionary
         # they are: "text", "sender"
         if self.text is None or not self.sender:
-            raise ValueError("Missing required keys ('text', 'sender') in Message.")
+            logger.warn("Missing required keys ('text', 'sender') in Message, defaulting to HumanMessage.")
 
-        if self.sender == "User":
+        if self.sender == "User" or not self.sender:
             if self.files:
                 contents = [{"type": "text", "text": self.text}]
                 contents.extend(self.get_file_content_dicts())
