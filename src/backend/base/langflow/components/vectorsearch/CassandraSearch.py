@@ -2,7 +2,7 @@ from typing import Any, List, Optional, Tuple
 
 from langchain_community.utilities.cassandra import SetupMode
 
-from langflow.components.vectorstores.base.model import LCVectorStoreComponent
+from langflow.base.vectorstores.model import LCVectorStoreComponent
 from langflow.components.vectorstores.Cassandra import CassandraVectorStoreComponent
 from langflow.field_typing import Embeddings, Text
 from langflow.schema import Data

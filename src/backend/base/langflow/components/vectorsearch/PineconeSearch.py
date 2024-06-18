@@ -2,7 +2,7 @@ from typing import List, Optional
 
 from langchain_pinecone._utilities import DistanceStrategy
 
-from langflow.components.vectorstores.base.model import LCVectorStoreComponent
+from langflow.base.vectorstores.model import LCVectorStoreComponent
 from langflow.components.vectorstores.Pinecone import PineconeVectorStoreComponent
 from langflow.field_typing import Embeddings, Text
 from langflow.field_typing.constants import NestedDict
