@@ -32,9 +32,6 @@ jobs:
         run: |
           poetry env use ${{ matrix.python-version }}
           poetry install
-      - name: Run mypy
-        uses: jpetrucciani/mypy-check@master
-        with:
-          mypy_flags: '--namespace-packages -p "langflow"'
+          poetry run mypy  --namespace-packages -p "langflow"
         env:
           GITHUB_TOKEN: ${{ secrets.github_token }}
