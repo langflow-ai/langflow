@@ -7,7 +7,7 @@ from loguru import logger
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent
 from langflow.base.vectorstores.utils import chroma_collection_to_data
-from langflow.inputs import BoolInput, DataInput, DropdownInput, HandleInput, IntInput, MessageInput, StrInput, TextInput
+from langflow.inputs import BoolInput, DataInput, DropdownInput, HandleInput, IntInput, StrInput, TextInput
 from langflow.schema import Data
 
 if TYPE_CHECKING:
@@ -140,7 +140,7 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
         )
 
         self._add_documents_to_vector_store(chroma)
-        self.status = chroma_collection_to_data(chroma.get(self.limit))
+        self.status = chroma_collection_to_data(chroma.get(limit=self.limit))
         return chroma
 
     def _add_documents_to_vector_store(self, vector_store: "Chroma") -> None:
