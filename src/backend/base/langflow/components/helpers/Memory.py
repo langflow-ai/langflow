@@ -1,11 +1,9 @@
-from typing import List
-
 from langflow.custom import Component
 from langflow.inputs import DropdownInput, IntInput, TextInput
 from langflow.memory import get_messages
 from langflow.schema import Data
-from langflow.template import Output
 from langflow.schema.message import Message
+from langflow.template import Output
 
 
 class MemoryComponent(Component):
@@ -45,7 +43,7 @@ class MemoryComponent(Component):
             name="order",
             display_name="Order",
             options=["Ascending", "Descending"],
-            value="Descending",
+            value="Ascending",
             info="Order of the messages.",
             advanced=True,
         ),
