@@ -122,7 +122,7 @@ export default function NodeToolbarComponent({
   function handleAdvancedWShortcut(e: KeyboardEvent) {
     e.preventDefault();
     if (isThereModal() && !showModalAdvanced) return;
-      setShowModalAdvanced((state) => !state);
+    setShowModalAdvanced((state) => !state);
   }
 
   function handleSaveWShortcut(e: KeyboardEvent) {
@@ -687,19 +687,16 @@ export default function NodeToolbarComponent({
                   style={`${frozen ? " text-ice" : ""} transition-all`}
                 />
               </SelectItem>
-              {(!hasStore || !hasApiKey || !validApiKey) && (
-                <SelectItem value="Download">
-                  <ToolbarSelectItem
-                    shortcut={
-                      shortcuts.find((obj) => obj.name === "Download")
-                        ?.shortcut!
-                    }
-                    value={"Download"}
-                    icon={"Download"}
-                    dataTestId="download-button-modal"
-                  />
-                </SelectItem>
-              )}
+              <SelectItem value="Download">
+                <ToolbarSelectItem
+                  shortcut={
+                    shortcuts.find((obj) => obj.name === "Download")?.shortcut!
+                  }
+                  value={"Download"}
+                  icon={"Download"}
+                  dataTestId="download-button-modal"
+                />
+              </SelectItem>
               <SelectItem
                 value={"delete"}
                 className="focus:bg-red-400/[.20]"
