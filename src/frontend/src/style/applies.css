@@ -931,7 +931,7 @@
   }
 
   .icons-parameters-comp {
-    @apply ml-3 h-6 w-6;
+    @apply h-6 w-6;
   }
 
   .form-modal-lock-true {
