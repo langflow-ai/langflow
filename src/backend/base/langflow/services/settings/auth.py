@@ -2,13 +2,12 @@ import secrets
 from pathlib import Path
 from typing import Literal
 
+from langflow.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
+from langflow.services.settings.utils import read_secret_from_file, write_secret_to_file
 from loguru import logger
 from passlib.context import CryptContext
 from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings
-
-from langflow.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
-from langflow.services.settings.utils import read_secret_from_file, write_secret_to_file
 
 
 class AuthSettings(BaseSettings):
@@ -91,9 +90,9 @@ class AuthSettings(BaseSettings):
 
         secret_key_path = Path(config_dir) / "secret_key"
 
-        if value and isinstance(value, SecretStr):
+        if value:
             logger.debug("Secret key provided")
-            secret_value = value.get_secret_value()
+            secret_value = value.get_secret_value() if isinstance(value, SecretStr) else value
             write_secret_to_file(secret_key_path, secret_value)
         else:
             logger.debug("No secret key provided, generating a random one")
