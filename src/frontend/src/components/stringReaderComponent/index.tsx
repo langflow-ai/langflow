@@ -5,11 +5,9 @@ export default function StringReader({
 }: {
   string: string;
 }): JSX.Element {
-  return string.length > 10 ? (
+  return (
     <TextModal value={string}>
       <span className="truncate">{string}</span>
     </TextModal>
-  ) : (
-    <span className="truncate">{string}</span>
-  );
+  )
 }
