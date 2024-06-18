@@ -91,9 +91,8 @@ def build_logs(vertex, result) -> dict:
             case LogType.MESSAGE if hasattr(message, "message"):
                 message = message.message
 
-            case LogType.UNKNOWN if message is None:
+            case LogType.UNKNOWN:
                 message = ""
-
         name = output.get("name", f"output_{index}")
         logs |= {name: Log(message=message, type=_type).model_dump()}
 
