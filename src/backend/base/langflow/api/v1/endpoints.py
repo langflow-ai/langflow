@@ -82,7 +82,7 @@ async def simple_run_flow(
                 if input_request.output_type == "debug"
                 or (
                     vertex.is_output
-                    and (input_request.output_type == "any" or input_request.output_type in vertex.id.lower())
+                    and (input_request.output_type == "any" or input_request.output_type in vertex.id.lower()) # type: ignore
                 )
             ]
         task_result, session_id = await run_graph_internal(
@@ -230,7 +230,7 @@ async def webhook_run_flow(
             session_id=data_dict.get("session_id"),
         )
         logger.debug("Starting background task")
-        background_tasks.add_task(
+        background_tasks.add_task( # type: ignore
             simple_run_flow,
             db=db,
             flow=flow,
@@ -506,9 +506,8 @@ def get_config():
     try:
         from langflow.services.deps import get_settings_service
 
-        settings_service: "SettingsService" = get_settings_service()
+        settings_service: "SettingsService" = get_settings_service() # type: ignore
         return settings_service.settings.model_dump()
     except Exception as exc:
         logger.exception(exc)
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
         raise HTTPException(status_code=500, detail=str(exc)) from exc

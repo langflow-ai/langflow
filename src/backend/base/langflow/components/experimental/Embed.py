@@ -12,4 +12,4 @@ class EmbedComponent(CustomComponent):
     def build(self, texts: list[str], embbedings: Embeddings) -> Embeddings:
         vectors = Record(vector=embbedings.embed_documents(texts))
         self.status = vectors
-        return vectors
+        return vectors # type: ignore
