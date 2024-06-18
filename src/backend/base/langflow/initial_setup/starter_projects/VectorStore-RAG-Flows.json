@@ -794,9 +794,7 @@
                 "display_name": "OpenAI API Base",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": [],
                 "load_from_db": true,
                 "name": "openai_api_base",
                 "password": true,
@@ -812,9 +810,7 @@
                 "display_name": "OpenAI API Key",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": [],
                 "load_from_db": true,
                 "name": "openai_api_key",
                 "password": true,
@@ -830,9 +826,7 @@
                 "display_name": "OpenAI API Type",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": [],
                 "load_from_db": true,
                 "name": "openai_api_type",
                 "password": true,
@@ -1193,9 +1187,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "The OpenAI API Key to use for the OpenAI model.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": [],
                 "list": false,
                 "load_from_db": true,
                 "multiline": false,
@@ -2076,7 +2068,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from typing import List, Optional\n\nfrom langflow.components.vectorstores.AstraDB import AstraVectorStoreComponent\nfrom langflow.components.vectorstores.base.model import LCVectorStoreComponent\nfrom langflow.field_typing import Embeddings, Text\nfrom langflow.schema import Data\n\n\nclass AstraDBSearchComponent(LCVectorStoreComponent):\n    display_name = \"Astra DB Search\"\n    description = \"Searches an existing Astra DB Vector Store.\"\n    icon = \"AstraDB\"\n    field_order = [\"token\", \"api_endpoint\", \"collection_name\", \"input_value\", \"embedding\"]\n\n    def build_config(self):\n        return {\n            \"search_type\": {\n                \"display_name\": \"Search Type\",\n                \"options\": [\"Similarity\", \"MMR\"],\n            },\n            \"input_value\": {\n                \"display_name\": \"Input Value\",\n                \"info\": \"Input value to search\",\n            },\n            \"embedding\": {\"display_name\": \"Embedding\", \"info\": \"Embedding to use\"},\n            \"collection_name\": {\n                \"display_name\": \"Collection Name\",\n                \"info\": \"The name of the collection within Astra DB where the vectors will be stored.\",\n            },\n            \"token\": {\n                \"display_name\": \"Astra DB Application Token\",\n                \"info\": \"Authentication token for accessing Astra DB.\",\n                \"password\": True,\n            },\n            \"api_endpoint\": {\n                \"display_name\": \"API Endpoint\",\n                \"info\": \"API endpoint URL for the Astra DB service.\",\n            },\n            \"namespace\": {\n                \"display_name\": \"Namespace\",\n                \"info\": \"Optional namespace within Astra DB to use for the collection.\",\n                \"advanced\": True,\n            },\n            \"metric\": {\n                \"display_name\": \"Metric\",\n                \"info\": \"Optional distance metric for vector comparisons in the vector store.\",\n                \"advanced\": True,\n            },\n            \"batch_size\": {\n                \"display_name\": \"Batch Size\",\n                \"info\": \"Optional number of data to process in a single batch.\",\n                \"advanced\": True,\n            },\n            \"bulk_insert_batch_concurrency\": {\n                \"display_name\": \"Bulk Insert Batch Concurrency\",\n                \"info\": \"Optional concurrency level for bulk insert operations.\",\n                \"advanced\": True,\n            },\n            \"bulk_insert_overwrite_concurrency\": {\n                \"display_name\": \"Bulk Insert Overwrite Concurrency\",\n                \"info\": \"Optional concurrency level for bulk insert operations that overwrite existing data.\",\n                \"advanced\": True,\n            },\n            \"bulk_delete_concurrency\": {\n                \"display_name\": \"Bulk Delete Concurrency\",\n                \"info\": \"Optional concurrency level for bulk delete operations.\",\n                \"advanced\": True,\n            },\n            \"setup_mode\": {\n                \"display_name\": \"Setup Mode\",\n                \"info\": \"Configuration mode for setting up the vector store, with options like “Sync”, “Async”, or “Off”.\",\n                \"options\": [\"Sync\", \"Async\", \"Off\"],\n                \"advanced\": True,\n            },\n            \"pre_delete_collection\": {\n                \"display_name\": \"Pre Delete Collection\",\n                \"info\": \"Boolean flag to determine whether to delete the collection before creating a new one.\",\n                \"advanced\": True,\n            },\n            \"metadata_indexing_include\": {\n                \"display_name\": \"Metadata Indexing Include\",\n                \"info\": \"Optional list of metadata fields to include in the indexing.\",\n                \"advanced\": True,\n            },\n            \"metadata_indexing_exclude\": {\n                \"display_name\": \"Metadata Indexing Exclude\",\n                \"info\": \"Optional list of metadata fields to exclude from the indexing.\",\n                \"advanced\": True,\n            },\n            \"collection_indexing_policy\": {\n                \"display_name\": \"Collection Indexing Policy\",\n                \"info\": \"Optional dictionary defining the indexing policy for the collection.\",\n                \"advanced\": True,\n            },\n            \"number_of_results\": {\n                \"display_name\": \"Number of Results\",\n                \"info\": \"Number of results to return.\",\n                \"advanced\": True,\n            },\n        }\n\n    def build(\n        self,\n        embedding: Embeddings,\n        collection_name: str,\n        input_value: Text,\n        token: str,\n        api_endpoint: str,\n        search_type: str = \"Similarity\",\n        number_of_results: int = 4,\n        namespace: Optional[str] = None,\n        metric: Optional[str] = None,\n        batch_size: Optional[int] = None,\n        bulk_insert_batch_concurrency: Optional[int] = None,\n        bulk_insert_overwrite_concurrency: Optional[int] = None,\n        bulk_delete_concurrency: Optional[int] = None,\n        setup_mode: str = \"Sync\",\n        pre_delete_collection: bool = False,\n        metadata_indexing_include: Optional[List[str]] = None,\n        metadata_indexing_exclude: Optional[List[str]] = None,\n        collection_indexing_policy: Optional[dict] = None,\n    ) -> List[Data]:\n        vector_store = AstraVectorStoreComponent().build(\n            embedding=embedding,\n            collection_name=collection_name,\n            token=token,\n            api_endpoint=api_endpoint,\n            namespace=namespace,\n            metric=metric,\n            batch_size=batch_size,\n            bulk_insert_batch_concurrency=bulk_insert_batch_concurrency,\n            bulk_insert_overwrite_concurrency=bulk_insert_overwrite_concurrency,\n            bulk_delete_concurrency=bulk_delete_concurrency,\n            setup_mode=setup_mode,\n            pre_delete_collection=pre_delete_collection,\n            metadata_indexing_include=metadata_indexing_include,\n            metadata_indexing_exclude=metadata_indexing_exclude,\n            collection_indexing_policy=collection_indexing_policy,\n        )\n        try:\n            return self.search_with_vector_store(input_value, search_type, vector_store, k=number_of_results)\n        except KeyError as e:\n            if \"content\" in str(e):\n                raise ValueError(\n                    \"You should ingest data through Langflow (or LangChain) to query it in Langflow. Your collection does not contain a field name 'content'.\"\n                )\n            else:\n                raise e\n"
+                "value": "from typing import List, Optional\n\nfrom langflow.base.vectorstores.model import LCVectorStoreComponent\nfrom langflow.components.vectorstores.AstraDB import AstraVectorStoreComponent\nfrom langflow.field_typing import Embeddings, Text\nfrom langflow.schema import Data\n\n\nclass AstraDBSearchComponent(LCVectorStoreComponent):\n    display_name = \"Astra DB Search\"\n    description = \"Searches an existing Astra DB Vector Store.\"\n    icon = \"AstraDB\"\n    field_order = [\"token\", \"api_endpoint\", \"collection_name\", \"input_value\", \"embedding\"]\n\n    def build_config(self):\n        return {\n            \"search_type\": {\n                \"display_name\": \"Search Type\",\n                \"options\": [\"Similarity\", \"MMR\"],\n            },\n            \"input_value\": {\n                \"display_name\": \"Input Value\",\n                \"info\": \"Input value to search\",\n            },\n            \"embedding\": {\"display_name\": \"Embedding\", \"info\": \"Embedding to use\"},\n            \"collection_name\": {\n                \"display_name\": \"Collection Name\",\n                \"info\": \"The name of the collection within Astra DB where the vectors will be stored.\",\n            },\n            \"token\": {\n                \"display_name\": \"Astra DB Application Token\",\n                \"info\": \"Authentication token for accessing Astra DB.\",\n                \"password\": True,\n            },\n            \"api_endpoint\": {\n                \"display_name\": \"API Endpoint\",\n                \"info\": \"API endpoint URL for the Astra DB service.\",\n            },\n            \"namespace\": {\n                \"display_name\": \"Namespace\",\n                \"info\": \"Optional namespace within Astra DB to use for the collection.\",\n                \"advanced\": True,\n            },\n            \"metric\": {\n                \"display_name\": \"Metric\",\n                \"info\": \"Optional distance metric for vector comparisons in the vector store.\",\n                \"advanced\": True,\n            },\n            \"batch_size\": {\n                \"display_name\": \"Batch Size\",\n                \"info\": \"Optional number of data to process in a single batch.\",\n                \"advanced\": True,\n            },\n            \"bulk_insert_batch_concurrency\": {\n                \"display_name\": \"Bulk Insert Batch Concurrency\",\n                \"info\": \"Optional concurrency level for bulk insert operations.\",\n                \"advanced\": True,\n            },\n            \"bulk_insert_overwrite_concurrency\": {\n                \"display_name\": \"Bulk Insert Overwrite Concurrency\",\n                \"info\": \"Optional concurrency level for bulk insert operations that overwrite existing data.\",\n                \"advanced\": True,\n            },\n            \"bulk_delete_concurrency\": {\n                \"display_name\": \"Bulk Delete Concurrency\",\n                \"info\": \"Optional concurrency level for bulk delete operations.\",\n                \"advanced\": True,\n            },\n            \"setup_mode\": {\n                \"display_name\": \"Setup Mode\",\n                \"info\": \"Configuration mode for setting up the vector store, with options like “Sync”, “Async”, or “Off”.\",\n                \"options\": [\"Sync\", \"Async\", \"Off\"],\n                \"advanced\": True,\n            },\n            \"pre_delete_collection\": {\n                \"display_name\": \"Pre Delete Collection\",\n                \"info\": \"Boolean flag to determine whether to delete the collection before creating a new one.\",\n                \"advanced\": True,\n            },\n            \"metadata_indexing_include\": {\n                \"display_name\": \"Metadata Indexing Include\",\n                \"info\": \"Optional list of metadata fields to include in the indexing.\",\n                \"advanced\": True,\n            },\n            \"metadata_indexing_exclude\": {\n                \"display_name\": \"Metadata Indexing Exclude\",\n                \"info\": \"Optional list of metadata fields to exclude from the indexing.\",\n                \"advanced\": True,\n            },\n            \"collection_indexing_policy\": {\n                \"display_name\": \"Collection Indexing Policy\",\n                \"info\": \"Optional dictionary defining the indexing policy for the collection.\",\n                \"advanced\": True,\n            },\n            \"number_of_results\": {\n                \"display_name\": \"Number of Results\",\n                \"info\": \"Number of results to return.\",\n                \"advanced\": True,\n            },\n        }\n\n    def build(\n        self,\n        embedding: Embeddings,\n        collection_name: str,\n        input_value: Text,\n        token: str,\n        api_endpoint: str,\n        search_type: str = \"Similarity\",\n        number_of_results: int = 4,\n        namespace: Optional[str] = None,\n        metric: Optional[str] = None,\n        batch_size: Optional[int] = None,\n        bulk_insert_batch_concurrency: Optional[int] = None,\n        bulk_insert_overwrite_concurrency: Optional[int] = None,\n        bulk_delete_concurrency: Optional[int] = None,\n        setup_mode: str = \"Sync\",\n        pre_delete_collection: bool = False,\n        metadata_indexing_include: Optional[List[str]] = None,\n        metadata_indexing_exclude: Optional[List[str]] = None,\n        collection_indexing_policy: Optional[dict] = None,\n    ) -> List[Data]:\n        vector_store = AstraVectorStoreComponent().build(\n            embedding=embedding,\n            collection_name=collection_name,\n            token=token,\n            api_endpoint=api_endpoint,\n            namespace=namespace,\n            metric=metric,\n            batch_size=batch_size,\n            bulk_insert_batch_concurrency=bulk_insert_batch_concurrency,\n            bulk_insert_overwrite_concurrency=bulk_insert_overwrite_concurrency,\n            bulk_delete_concurrency=bulk_delete_concurrency,\n            setup_mode=setup_mode,\n            pre_delete_collection=pre_delete_collection,\n            metadata_indexing_include=metadata_indexing_include,\n            metadata_indexing_exclude=metadata_indexing_exclude,\n            collection_indexing_policy=collection_indexing_policy,\n        )\n        try:\n            return self.search_with_vector_store(input_value, search_type, vector_store, k=number_of_results)\n        except KeyError as e:\n            if \"content\" in str(e):\n                raise ValueError(\n                    \"You should ingest data through Langflow (or LangChain) to query it in Langflow. Your collection does not contain a field name 'content'.\"\n                )\n            else:\n                raise e\n"
               },
               "collection_indexing_policy": {
                 "advanced": true,
@@ -3019,9 +3011,7 @@
                 "display_name": "OpenAI API Base",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": [],
                 "load_from_db": true,
                 "name": "openai_api_base",
                 "password": true,
@@ -3037,9 +3027,7 @@
                 "display_name": "OpenAI API Key",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": [],
                 "load_from_db": true,
                 "name": "openai_api_key",
                 "password": true,
@@ -3055,9 +3043,7 @@
                 "display_name": "OpenAI API Type",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": [],
                 "load_from_db": true,
                 "name": "openai_api_type",
                 "password": true,
