@@ -1,3 +1,7 @@
+import operator
+from functools import reduce
+
+
 from langchain_openai import ChatOpenAI
 from pydantic.v1 import SecretStr
 
@@ -34,7 +38,7 @@ class OpenAIModelComponent(LCModelComponent):
         ),
         DictInput(name="model_kwargs", display_name="Model Kwargs", advanced=True),
         DictInput(
-            name="schema",
+            name="output_schema",
             is_list=True,
             display_name="Schema",
             advanced=True,
@@ -87,13 +91,16 @@ class OpenAIModelComponent(LCModelComponent):
         return result
 
     def build_model(self) -> BaseLanguageModel:
+        # self.output_schea is a list of dictionaries
+        # let's convert it to a dictionary
+        output_schema_dict = reduce(operator.ior, self.output_schema, {})
         openai_api_key = self.openai_api_key
         temperature = self.temperature
         model_name = self.model_name
         max_tokens = self.max_tokens
         model_kwargs = self.model_kwargs
         openai_api_base = self.openai_api_base or "https://api.openai.com/v1"
-        json_mode = bool(self.schema)
+        json_mode = bool(output_schema_dict)
         seed = self.seed
         if openai_api_key:
             api_key = SecretStr(openai_api_key)
@@ -109,6 +116,6 @@ class OpenAIModelComponent(LCModelComponent):
             seed=seed,
         )
         if json_mode:
-            output = output.with_structured_output(schema=self.schema, method="json_mode")
+            output = output.with_structured_output(schema=output_schema_dict, method="json_mode")
 
         return output
