@@ -71,7 +71,7 @@ class MistralAIModelComponent(CustomComponent):
     ) -> BaseLanguageModel:
         # Set default API endpoint if not provided
         if not mistral_api_base:
-            mistral_api_base = "https://api.mistral.ai"
+            mistral_api_base = "https://api.mistral.ai/v1/chat/completions"
 
         try:
             output = ChatMistralAI(
