@@ -509,6 +509,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           runId: runId,
           verticesToRun: get().verticesBuild!.verticesToRun,
         });
+
         get().updateBuildStatus(top_level_vertices, BuildStatus.TO_BUILD);
       }
 
@@ -522,9 +523,11 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       const verticesIds = get().verticesBuild?.verticesIds;
       const newFlowBuildStatus = { ...get().flowBuildStatus };
       // filter out the vertices that are not status
+
       const verticesToUpdate = verticesIds?.filter(
         (id) => newFlowBuildStatus[id]?.status !== BuildStatus.BUILT,
       );
+
 
       if (verticesToUpdate) {
         useFlowStore.getState().updateBuildStatus(verticesToUpdate, status);
@@ -625,6 +628,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     });
   },
   updateBuildStatus: (nodeIdList: string[], status: BuildStatus) => {
+
     const newFlowBuildStatus = { ...get().flowBuildStatus };
     nodeIdList.forEach((id) => {
       newFlowBuildStatus[id] = {
@@ -644,6 +648,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         newFlowBuildStatus[id].status = BuildStatus.BUILT;
       }
     });
+    set({ flowBuildStatus: newFlowBuildStatus });
   },
 }));
 
