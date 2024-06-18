@@ -21,8 +21,5 @@ class PromptComponent(Component):
         self,
     ) -> Message:
         prompt = await Message.from_template_and_variables(**self._arguments)
-        kwargs = self._arguments.copy()
-        kwargs["text"] = prompt.format_text()
-        prompt_message = Message(**kwargs)
         self.status = prompt.format_text()
-        return prompt_message
+        return prompt
