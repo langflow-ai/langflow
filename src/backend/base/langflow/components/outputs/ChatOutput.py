@@ -2,6 +2,7 @@ from typing import Optional, Union
 
 from langflow.base.io.chat import ChatComponent
 from langflow.field_typing import Text
+from langflow.schema import Record
 from langflow.schema.message import Message
 
 
@@ -14,7 +15,7 @@ class ChatOutput(ChatComponent):
         self,
         sender: Optional[str] = "Machine",
         sender_name: Optional[str] = "AI",
-        input_value: Optional[str] = None,
+        input_value: Optional[Union[str, Message, Record]] = None,
         session_id: Optional[str] = None,
         files: Optional[list[str]] = None,
         return_message: Optional[bool] = False,

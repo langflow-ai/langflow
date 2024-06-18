@@ -2,6 +2,7 @@ from typing import Optional, Union
 
 from langflow.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES
 from langflow.custom import CustomComponent
+from langflow.field_typing import Text
 from langflow.memory import store_message
 from langflow.schema import Record
 from langflow.schema.message import Message
@@ -14,7 +15,7 @@ class ChatComponent(CustomComponent):
     def build_config(self):
         return {
             "input_value": {
-                "input_types": ["Text"],
+                "input_types": ["Text", "Record", "Message"],
                 "display_name": "Text",
                 "multiline": True,
             },
@@ -69,12 +70,14 @@ class ChatComponent(CustomComponent):
         files: Optional[list[str]] = None,
         session_id: Optional[str] = None,
         return_message: Optional[bool] = False,
-    ) -> Message:
+    ) -> Union[Message, Text]:
         message: Message | None = None
 
         if isinstance(input_value, Record):
             # Update the data of the record
             message = Message.from_record(input_value)
+        elif isinstance(input_value, Message):
+            message = input_value
         else:
             message = Message(
                 text=input_value, sender=sender, sender_name=sender_name, files=files, session_id=session_id

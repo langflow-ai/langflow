@@ -14,7 +14,6 @@ class ChatInput(ChatComponent):
     def build_config(self):
         build_config = super().build_config()
         build_config["input_value"] = {
-            "input_types": [],
             "display_name": "Text",
             "multiline": True,
         }
@@ -32,7 +31,7 @@ class ChatInput(ChatComponent):
         input_value: Optional[str] = None,
         files: Optional[list[str]] = None,
         session_id: Optional[str] = None,
-        return_message: Optional[bool] = True,
+        return_message: Optional[bool] = False,
     ) -> Union[Message, Text]:
         return super().build_with_record(
             sender=sender,

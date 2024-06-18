@@ -183,7 +183,7 @@ class InterfaceVertex(Vertex):
     async def stream(self):
         iterator = self.params.get(INPUT_FIELD_NAME, None)
         if not isinstance(iterator, (AsyncIterator, Iterator)):
-            raise ValueError("The message must be an iterator or an async iterator.")
+            raise ValueError(f"The message must be an iterator or an async iterator. Found: {type(iterator)}")
         is_async = isinstance(iterator, AsyncIterator)
         complete_message = ""
         if is_async:
