@@ -4,6 +4,7 @@ import { Button } from "../../../../components/ui/button";
 import { GradientGroup } from "../../../../icons/GradientSparkles";
 import useFlowStore from "../../../../stores/flowStore";
 import { validateSelection } from "../../../../utils/reactflowUtils";
+import { useHotkeys } from "react-hotkeys-hook";
 export default function SelectionMenu({
   onClick,
   nodes,
@@ -11,6 +12,7 @@ export default function SelectionMenu({
   lastSelection,
 }) {
   const edges = useFlowStore((state) => state.edges);
+  const unselectAll = useFlowStore((state) => state.unselectAll);
   const [disable, setDisable] = useState<boolean>(
     lastSelection && edges.length > 0
       ? validateSelection(lastSelection!, edges).length > 0
@@ -19,6 +21,8 @@ export default function SelectionMenu({
   const [isOpen, setIsOpen] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [lastNodes, setLastNodes] = useState(nodes);
+
+  useHotkeys("esc", unselectAll, { preventDefault: true });
 
   useEffect(() => {
     if (isOpen) {
