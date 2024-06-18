@@ -228,7 +228,7 @@ export default function GenericModal({
             />
           ) : type === TypeModal.PROMPT && (!isEdit || readonly) ? (
             <SanitizedHTMLWrapper
-              className={getClassByNumberLength()}
+              className={getClassByNumberLength()+ " bg-muted"}
               content={coloredContent}
               onClick={() => {
                 setIsEdit(true);
