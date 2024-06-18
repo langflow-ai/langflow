@@ -284,16 +284,20 @@ export default function Header(): JSX.Element {
                   />
                   Discussions
                 </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  className="cursor-pointer gap-2"
-                  onClick={() => {
-                    logout();
-                  }}
-                >
-                  <ForwardedIconComponent name="LogOut" className="w-4" />
-                  Log Out
-                </DropdownMenuItem>
+                {!autoLogin && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="cursor-pointer gap-2"
+                      onClick={() => {
+                        logout();
+                      }}
+                    >
+                      <ForwardedIconComponent name="LogOut" className="w-4" />
+                      Log Out
+                    </DropdownMenuItem>
+                  </>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </>
