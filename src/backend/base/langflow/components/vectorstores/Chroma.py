@@ -8,7 +8,6 @@ from loguru import logger
 from langflow.base.vectorstores.model import LCVectorStoreComponent
 from langflow.base.vectorstores.utils import chroma_collection_to_data
 from langflow.inputs import BoolInput, DataInput, DropdownInput, HandleInput, IntInput, MessageInput, StrInput
-                             IntInput, MessageInput, StrInput)
 from langflow.schema import Data
 
 if TYPE_CHECKING:
@@ -86,7 +85,7 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
             display_name="Search Type",
             options=["Similarity", "MMR"],
             value="Similarity",
-            advanced=True
+            advanced=True,
         ),
         IntInput(
             name="number_of_results",
