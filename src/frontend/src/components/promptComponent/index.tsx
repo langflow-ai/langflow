@@ -36,7 +36,7 @@ export default function PromptAreaComponent({
         nodeClass={nodeClass}
         setNodeClass={setNodeClass}
       >
-        <div className="flex w-full items-center">
+        <div className="flex w-full items-center gap-3">
           <span
             id={id}
             data-testid={id}
@@ -54,7 +54,7 @@ export default function PromptAreaComponent({
               id={id}
               name="ExternalLink"
               className={
-                "icons-parameters-comp" +
+                "icons-parameters-comp shrink-0" +
                 (disabled ? " text-ring" : " hover:text-accent-foreground")
               }
             />

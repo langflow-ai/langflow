@@ -99,7 +99,7 @@ export default function InputFileComponent({
 
   return (
     <div className={disabled ? "input-component-div" : "w-full"}>
-      <div className="input-file-component">
+      <div className="input-file-component gap-3">
         <span
           onClick={handleButtonClick}
           className={
@@ -115,14 +115,14 @@ export default function InputFileComponent({
         {!editNode && (
           <Button
             unstyled
-            className="ml-3 inline-flex items-center justify-center"
+            className="inline-flex items-center justify-center"
             onClick={handleButtonClick}
             loading={loading}
             disabled={disabled}
           >
             <IconComponent
               name="FileSearch2"
-              className={"icons-parameters-comp"}
+              className="icons-parameters-comp shrink-0"
             />
           </Button>
         )}
