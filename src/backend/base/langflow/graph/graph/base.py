@@ -807,6 +807,7 @@ class Graph:
                     # Now set update the vertex with the cached vertex
                     vertex._built = cached_vertex._built
                     vertex.result = cached_vertex.result
+                    vertex.results = cached_vertex.results
                     vertex.artifacts = cached_vertex.artifacts
                     vertex._built_object = cached_vertex._built_object
                     vertex._custom_component = cached_vertex._custom_component
