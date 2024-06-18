@@ -13,6 +13,8 @@ from .SplitText import SplitTextComponent
 from .SQLExecutor import SQLExecutorComponent
 from .SubFlow import SubFlowComponent
 from .ConditionalRouter import ConditionalRouterComponent
+from .SelectivePassThrough import SelectivePassThroughComponent
+
 
 __all__ = [
     "AgentComponent",
@@ -30,4 +32,5 @@ __all__ = [
     "SplitTextComponent",
     "SQLExecutorComponent",
     "SubFlowComponent",
+    "SelectivePassThroughComponent",
 ]
