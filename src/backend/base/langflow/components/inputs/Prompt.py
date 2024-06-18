@@ -19,6 +19,6 @@ class PromptComponent(CustomComponent):
         template: Prompt,
         **kwargs,
     ) -> Prompt:
-        prompt = await Prompt.from_template_and_variables(template, kwargs) # type: ignore
+        prompt = await Prompt.from_template_and_variables(template, kwargs)  # type: ignore
         self.status = prompt.format_text()
         return prompt
