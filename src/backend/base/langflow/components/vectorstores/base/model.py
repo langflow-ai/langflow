@@ -1,25 +1,19 @@
 from typing import List, Union
 
 from langchain_core.documents import Document
-from langchain_core.retrievers import BaseRetriever
-from langchain_core.vectorstores import VectorStore
 
 from langflow.custom import Component
 from langflow.field_typing import Text
 from langflow.helpers.data import docs_to_data
 from langflow.schema import Data
 from langflow.template import Output
+from langflow.field_typing import BaseRetriever, VectorStore
 
 
 class LCVectorStoreComponent(Component):
     outputs = [
         Output(
-            display_name="Vector Store",
-            name="vector_store",
-            method="build_vector_store",
-        ),
-        Output(
-            display_name="Base Retriever",
+            display_name="Retriever",
             name="base_retriever",
             method="build_base_retriever",
         ),
