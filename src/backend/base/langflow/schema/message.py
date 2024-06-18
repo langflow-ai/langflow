@@ -155,7 +155,7 @@ class Message(Data):
         return formatted_prompt
 
     @classmethod
-    async def from_template_and_variables(cls, template: str, variables: dict):
+    async def from_template_and_variables(cls, template: str, **variables):
         instance = cls(template=template, variables=variables)
         contents = [{"type": "text", "text": instance.format_text()}]
         # Get all Message instances from the kwargs
