@@ -7,6 +7,7 @@ import pytest
 import respx
 from dictdiffer import diff
 from httpx import Response
+
 from langflow.components import data
 
 
@@ -181,7 +182,7 @@ def test_directory_without_mocks():
     # check if the directory component can load them
     # just check if the number of results is the same as the number of files
     directory_component = data.DirectoryComponent()
-    docs_path = Path(__file__).parent.parent / "docs" / "docs" / "components"
+    docs_path = Path(__file__).parent.parent.parent / "docs" / "docs" / "components"
     directory_component.set_attributes({"path": str(docs_path), "use_multithreading": False})
     results = directory_component.load_directory()
     docs_files = list(docs_path.glob("*.mdx"))
@@ -194,5 +195,5 @@ def test_url_component():
     # the url component can be used to load the contents of a website
     _data = url_component.fetch_content()
     assert all(value.data for value in _data)
-    assert all(value.content for value in _data)
+    assert all(value.text for value in _data)
     assert all(value.source for value in _data)
