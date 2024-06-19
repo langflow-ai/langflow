@@ -23,8 +23,6 @@ class TextOutputComponent(TextComponent):
     def text_response(self) -> Message:
         message = Message(
             text=self.input_value,
-            sender=self.sender,
-            sender_name=self.sender_name,
-            session_id=self.session_id,
         )
+        self.status = self.input_value
         return message
