@@ -1,5 +1,7 @@
 from langchain_community.chat_models import ChatOllama
 from langchain_core.language_models.chat_models import BaseChatModel
+
+
 from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import BaseLanguageModel, Text
@@ -128,7 +130,7 @@ class ChatOllamaComponent(LCModelComponent):
             advanced=True,
         ),
         StrInput(
-            name="stop",
+            name="stop_tokens",
             display_name="Stop Tokens",
             info="Comma-separated list of tokens to signal the model to stop generating text.",
             advanced=True,
@@ -207,7 +209,7 @@ class ChatOllamaComponent(LCModelComponent):
             "repeat_last_n": self.repeat_last_n or None,
             "repeat_penalty": self.repeat_penalty or None,
             "temperature": self.temperature or None,
-            "stop": self.stop.split(",") if self.stop else None,
+            "stop": self.stop_tokens.split(",") if self.stop_tokens else None,
             "system": self.system,
             "template": self.template,
             "tfs_z": self.tfs_z or None,
