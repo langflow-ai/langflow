@@ -8,7 +8,7 @@ import { cn } from "../../utils/utils";
 
 export const EditFlowSettings: React.FC<InputProps> = ({
   name,
-  invalidNameList,
+  invalidNameList = [],
   description,
   endpointName,
   maxLength = 50,
