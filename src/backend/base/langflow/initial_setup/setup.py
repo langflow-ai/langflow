@@ -510,6 +510,8 @@ def load_flows_from_directory():
                 if existing:
                     logger.info(f"Updating existing flow: {flow_id} with endpoint name {flow_endpoint_name}")
                     for key, value in flow.items():
+                        if key == "last_tested_version":
+                            continue
                         setattr(existing, key, value)
                     existing.updated_at = datetime.utcnow()
                     existing.user_id = user_id
