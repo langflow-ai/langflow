@@ -14,6 +14,7 @@ from langflow.template.field.base import Output
 class LCModelComponent(Component):
     display_name: str = "Model Name"
     description: str = "Model Description"
+    trace_type = "llm"
 
     outputs = [
         Output(display_name="Text", name="text_output", method="text_response"),
@@ -138,6 +139,9 @@ class LCModelComponent(Component):
                 messages.append(HumanMessage(content=input_value))
         inputs: Union[list, dict] = messages or {}
         try:
+            runnable = runnable.with_config(
+                {"run_name": self.display_name, "project_name": self.tracing_service.project_name}
+            )
             if stream:
                 return runnable.stream(inputs)
             else:
