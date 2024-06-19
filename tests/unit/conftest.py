@@ -224,7 +224,6 @@ def json_vector_store():
 
 @pytest.fixture(name="client", autouse=True)
 def client_fixture(session: Session, monkeypatch, request, load_flows_dir):
-    monkeypatch.setenv("LANGFLOW_LOG_LEVEL", "DEBUG")
     # Set the database url to a test database
     if "noclient" in request.keywords:
         yield
