@@ -3,10 +3,9 @@ from typing import List
 import weaviate
 from langchain_community.vectorstores import Weaviate
 from langchain_core.retrievers import BaseRetriever
-
 from langflow.custom import Component
 from langflow.helpers.data import docs_to_data
-from langflow.io import BoolInput, HandleInput, IntInput, Output, StrInput
+from langflow.io import BoolInput, HandleInput, IntInput, Output, SecretStrInput, StrInput
 from langflow.schema import Data
 
 
@@ -18,7 +17,7 @@ class WeaviateVectorStoreComponent(Component):
 
     inputs = [
         StrInput(name="url", display_name="Weaviate URL", value="http://localhost:8080", required=True),
-        StrInput(name="api_key", display_name="API Key", password=True, required=False),
+        SecretStrInput(name="api_key", display_name="API Key", required=False),
         StrInput(name="index_name", display_name="Index Name", required=True),
         StrInput(name="text_key", display_name="Text Key", value="text", advanced=True),
         HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),

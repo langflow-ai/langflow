@@ -1,7 +1,6 @@
 from typing import Optional
 
 from langchain_community.chat_models.vertexai import ChatVertexAI
-
 from langflow.custom import CustomComponent
 from langflow.field_typing import BaseLanguageModel
 
@@ -16,7 +15,7 @@ class ChatVertexAIComponent(CustomComponent):
             "credentials": {
                 "display_name": "Credentials",
                 "field_type": "file",
-                "file_types": [".json"],
+                "file_types": ["json"],
                 "file_path": None,
             },
             "examples": {

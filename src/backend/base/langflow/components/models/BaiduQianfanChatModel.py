@@ -4,7 +4,7 @@ from pydantic.v1 import SecretStr
 from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import BaseLanguageModel, Text
-from langflow.io import BoolInput, FloatInput, Output, SecretStrInput, StrInput
+from langflow.io import BoolInput, FloatInput, Output, SecretStrInput, StrInput, DropdownInput
 
 
 class QianfanChatEndpointComponent(LCModelComponent):
@@ -19,7 +19,7 @@ class QianfanChatEndpointComponent(LCModelComponent):
             display_name="Input",
             input_types=["Text", "Data", "Prompt"],
         ),
-        StrInput(
+        DropdownInput(
             name="model",
             display_name="Model Name",
             options=[

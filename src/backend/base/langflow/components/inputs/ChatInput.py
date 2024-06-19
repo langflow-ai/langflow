@@ -1,6 +1,6 @@
 from langflow.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES
 from langflow.base.io.chat import ChatComponent
-from langflow.io import DropdownInput, FileInput, Output, TextInput
+from langflow.io import DropdownInput, FileInput, MultilineInput, Output, TextInput
 from langflow.schema.message import Message
 
 
@@ -10,10 +10,9 @@ class ChatInput(ChatComponent):
     icon = "ChatInput"
 
     inputs = [
-        TextInput(
+        MultilineInput(
             name="input_value",
             display_name="Text",
-            multiline=True,
             value="",
             info="Message to be passed as input.",
         ),
@@ -27,15 +26,12 @@ class ChatInput(ChatComponent):
         ),
         TextInput(
             name="sender_name",
-            type=str,
             display_name="Sender Name",
             info="Name of the sender.",
             value="User",
             advanced=True,
         ),
-        TextInput(
-            name="session_id", type=str, display_name="Session ID", info="Session ID for the message.", advanced=True
-        ),
+        TextInput(name="session_id", display_name="Session ID", info="Session ID for the message.", advanced=True),
         FileInput(
             name="files",
             display_name="Files",

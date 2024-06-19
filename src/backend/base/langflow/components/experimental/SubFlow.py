@@ -1,7 +1,5 @@
 from typing import Any, List, Optional
 
-from loguru import logger
-
 from langflow.base.flow_processing.utils import build_data_from_result_data
 from langflow.custom import CustomComponent
 from langflow.graph.graph.base import Graph
@@ -11,6 +9,7 @@ from langflow.helpers.flow import get_flow_inputs
 from langflow.schema import Data
 from langflow.schema.dotdict import dotdict
 from langflow.template.field.base import Input
+from loguru import logger
 
 
 class SubFlowComponent(CustomComponent):
@@ -63,7 +62,7 @@ class SubFlowComponent(CustomComponent):
                 name=vertex.id,
                 info=vertex.description,
                 field_type="str",
-                default=None,
+                value=None,
             )
             new_fields.append(field)
         logger.debug(new_fields)

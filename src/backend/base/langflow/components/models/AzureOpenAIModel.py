@@ -4,7 +4,7 @@ from pydantic.v1 import SecretStr
 from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import BaseLanguageModel, Text
-from langflow.io import BoolInput, DropdownInput, FloatInput, IntInput, MessageInput, Output, StrInput
+from langflow.io import BoolInput, DropdownInput, FloatInput, IntInput, MessageInput, Output, StrInput, SecretStrInput
 
 
 class AzureChatOpenAIComponent(LCModelComponent):
@@ -56,7 +56,7 @@ class AzureChatOpenAIComponent(LCModelComponent):
             value=AZURE_OPENAI_API_VERSIONS[-1],
             advanced=True,
         ),
-        StrInput(name="api_key", display_name="API Key", password=True),
+        SecretStrInput(name="api_key", display_name="API Key", password=True),
         FloatInput(name="temperature", display_name="Temperature", value=0.7),
         IntInput(
             name="max_tokens",

@@ -2,10 +2,9 @@ from typing import List
 
 from langchain_core.retrievers import BaseRetriever
 from langchain_pinecone import Pinecone
-
 from langflow.custom import Component
 from langflow.helpers.data import docs_to_data
-from langflow.io import BoolInput, DropdownInput, HandleInput, IntInput, Output, StrInput
+from langflow.io import BoolInput, DropdownInput, HandleInput, IntInput, Output, SecretStrInput, StrInput
 from langflow.schema import Data
 
 
@@ -25,7 +24,7 @@ class PineconeVectorStoreComponent(Component):
             value="Cosine",
             advanced=True,
         ),
-        StrInput(name="pinecone_api_key", display_name="Pinecone API Key", password=True, required=True),
+        SecretStrInput(name="pinecone_api_key", display_name="Pinecone API Key", required=True),
         HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
         StrInput(
             name="text_key",

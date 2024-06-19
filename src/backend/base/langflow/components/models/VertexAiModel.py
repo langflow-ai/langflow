@@ -1,9 +1,8 @@
 from langchain_google_vertexai import ChatVertexAI
-
 from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import BaseLanguageModel, Text
-from langflow.io import BoolInput, FloatInput, IntInput, MessageInput, Output, StrInput
+from langflow.io import BoolInput, FileInput, FloatInput, IntInput, MessageInput, MultilineInput, Output, StrInput
 
 
 class ChatVertexAIComponent(LCModelComponent):
@@ -13,19 +12,18 @@ class ChatVertexAIComponent(LCModelComponent):
 
     inputs = [
         MessageInput(name="input_value", display_name="Input"),
-        StrInput(
+        FileInput(
             name="credentials",
             display_name="Credentials",
             info="Path to the JSON file containing the credentials.",
-            file_types=[".json"],
+            file_types=["json"],
             advanced=True,
         ),
         StrInput(name="project", display_name="Project", info="The project ID."),
-        StrInput(
+        MultilineInput(
             name="examples",
             display_name="Examples",
             info="Examples to pass to the model.",
-            multiline=True,
             advanced=True,
         ),
         StrInput(name="location", display_name="Location", value="us-central1", advanced=True),
