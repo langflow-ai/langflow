@@ -14,6 +14,7 @@ import {
   RUN_TIMESTAMP_PREFIX,
   STATUS_BUILD,
   STATUS_BUILDING,
+  STATUS_INACTIVE,
   TOOLTIP_OUTDATED_NODE,
 } from "../../constants/constants";
 import { BuildStatus } from "../../constants/enums";
@@ -525,6 +526,8 @@ export default function GenericNode({
                     content={
                       buildStatus === BuildStatus.BUILDING ? (
                         <span> {STATUS_BUILDING} </span>
+                      ) : buildStatus === BuildStatus.INACTIVE ? (
+                        <span> {STATUS_INACTIVE} </span>
                       ) : !validationStatus ? (
                         <span className="flex">{STATUS_BUILD}</span>
                       ) : (
