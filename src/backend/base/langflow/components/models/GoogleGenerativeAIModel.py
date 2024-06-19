@@ -1,4 +1,3 @@
-from langchain_google_genai import ChatGoogleGenerativeAI
 from pydantic.v1 import SecretStr
 
 from langflow.base.constants import STREAM_INFO_TEXT
@@ -84,6 +83,11 @@ class GoogleGenerativeAIComponent(LCModelComponent):
         return result
 
     def build_model(self) -> BaseLanguageModel:
+        try:
+            from langchain_google_genai import ChatGoogleGenerativeAI
+        except ImportError:
+            raise ImportError("The 'langchain_google_genai' package is required to use the Google Generative AI model.")
+
         google_api_key = self.google_api_key
         model = self.model
         max_output_tokens = self.max_output_tokens
