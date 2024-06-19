@@ -24,8 +24,7 @@ function DataOutputComponent({
 
   return (
     <TableComponent
-    autoSizeStrategy={{type: 'fitGridWidth',
-      defaultMinWidth: 100,}}
+      autoSizeStrategy={{ type: "fitGridWidth", defaultMinWidth: 100 }}
       key={"dataOutputComponent"}
       overlayNoRowsTemplate="No data available"
       suppressRowClickSelection={true}
