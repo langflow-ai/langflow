@@ -46,7 +46,7 @@ class Component(CustomComponent):
         super().__init__(**data)
         self._inputs: dict[str, InputTypes] = {}
         self._results: dict[str, Any] = {}
-        _attributes: dict[str, Any] = {}
+        self._attributes: dict[str, Any] = {}
         if self.inputs is not None:
             self.map_inputs(self.inputs)
 
@@ -187,5 +187,6 @@ class Component(CustomComponent):
             inputs = self.template_config["inputs"]
             return [field.name for field in inputs]
         except KeyError:
+            return []
             return []
             return []
