@@ -26,6 +26,7 @@ if TYPE_CHECKING:
     from langflow.graph.graph.base import Graph
     from langflow.graph.vertex.base import Vertex
     from langflow.services.storage.service import StorageService
+    from langflow.services.tracing.service import TracingService
 
 
 LoggableType = Union[str, dict, list, int, float, bool, None, Data, Message]
@@ -82,6 +83,7 @@ class CustomComponent(BaseComponent):
     """The status of the component. This is displayed on the frontend. Defaults to None."""
     _flows_data: Optional[List[Data]] = None
     _logs: List[Log] = []
+    tracing_service: Optional["TracingService"] = None
 
     def update_state(self, name: str, value: Any):
         if not self.vertex:
