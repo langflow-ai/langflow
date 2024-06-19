@@ -341,7 +341,9 @@ def load_flows_from_directory():
                 if existing:
                     logger.info(f"Updating existing flow: {flow_id} with endpoint name {flow_endpoint_name}")
                     for key, value in flow.items():
-                        setattr(existing, key, value)
+                        if hasattr(existing, key):
+                            # flow dict from json and db representation are not 100% the same
+                            setattr(existing, key, value)
                     existing.updated_at = datetime.utcnow()
                     existing.user_id = user_id
                     session.add(existing)
