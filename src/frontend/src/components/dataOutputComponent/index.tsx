@@ -20,11 +20,12 @@ function DataOutputComponent({
   const columnDefs = columns.map((col, idx) => ({
     ...col,
     resizable: true,
-    initialWidth: 150,
   })) as (ColDef<any> | ColGroupDef<any>)[];
 
   return (
     <TableComponent
+    autoSizeStrategy={{type: 'fitGridWidth',
+      defaultMinWidth: 100,}}
       key={"dataOutputComponent"}
       overlayNoRowsTemplate="No data available"
       suppressRowClickSelection={true}
