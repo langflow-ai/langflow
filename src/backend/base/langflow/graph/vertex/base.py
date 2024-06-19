@@ -60,6 +60,7 @@ class Vertex:
         self.graph = graph
         self._data = data
         self.base_type: Optional[str] = base_type
+        self.outputs: List[Dict] = []
         self._parse_data()
         self._built_object = UnbuiltObject()
         self._built_result = None
@@ -190,6 +191,7 @@ class Vertex:
         else:
             self.outputs = self.data["node"].get("outputs", [])
             self.output = self.data["node"]["base_classes"]
+
         self.display_name = self.data["node"].get("display_name", self.id.split("-")[0])
 
         self.description = self.data["node"].get("description", "")
