@@ -34,11 +34,6 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
             name="persist_directory",
             display_name="Persist Directory",
         ),
-        StrInput(
-            name="code",
-            display_name="Code",
-            advanced=True,
-        ),
         TextInput(
             name="search_query",
             display_name="Search Query",
