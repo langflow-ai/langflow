@@ -37,6 +37,8 @@ class Message(Data):
     def validate_files(cls, value):
         if not value:
             value = []
+        elif not isinstance(value, list):
+            value = [value]
         return value
 
     def model_post_init(self, __context: Any) -> None:
@@ -173,4 +175,5 @@ class Message(Data):
         prompt_template = ChatPromptTemplate.from_messages([HumanMessage(content=contents)])
         instance.prompt = jsonable_encoder(prompt_template.to_json())
         instance.messages = instance.prompt.get("kwargs", {}).get("messages", [])
+        return instance
         return instance
