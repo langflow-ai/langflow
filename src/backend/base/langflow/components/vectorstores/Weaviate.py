@@ -5,7 +5,7 @@ from langchain_community.vectorstores import Weaviate
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent
 from langflow.helpers.data import docs_to_data
-from langflow.io import BoolInput, HandleInput, IntInput, StrInput, SecretStrInput
+from langflow.io import BoolInput, HandleInput, IntInput, StrInput, SecretStrInput, DataInput
 from langflow.schema import Data
 
 
@@ -21,10 +21,9 @@ class WeaviateVectorStoreComponent(LCVectorStoreComponent):
         StrInput(name="index_name", display_name="Index Name", required=True),
         StrInput(name="text_key", display_name="Text Key", value="text", advanced=True),
         HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
-        HandleInput(
+        DataInput(
             name="vector_store_inputs",
             display_name="Vector Store Inputs",
-            input_types=["Document", "Data"],
             is_list=True,
         ),
         BoolInput(

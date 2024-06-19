@@ -4,9 +4,9 @@ from langchain_community.vectorstores import FAISS
 from loguru import logger
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent
-from langflow.field_typing import Text
+from langflow.field_typing import Text, BaseRetriever
 from langflow.helpers.data import docs_to_data
-from langflow.io import BoolInput, HandleInput, IntInput, StrInput
+from langflow.io import BoolInput, HandleInput, IntInput, StrInput, DataInput
 from langflow.schema import Data
 
 
@@ -32,10 +32,9 @@ class FaissVectorStoreComponent(LCVectorStoreComponent):
             value="langflow_index",
         ),
         HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
-        StrInput(
+        DataInput(
             name="vector_store_inputs",
             display_name="Vector Store Inputs",
-            input_types=["Document", "Data"],
             is_list=True,
         ),
         BoolInput(

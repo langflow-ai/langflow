@@ -5,7 +5,7 @@ from langchain_community.vectorstores import Vectara
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent
 from langflow.helpers.data import docs_to_data
-from langflow.io import BoolInput, HandleInput, IntInput, StrInput, SecretStrInput
+from langflow.io import BoolInput, HandleInput, IntInput, StrInput, SecretStrInput, DataInput
 from langflow.schema import Data
 
 
@@ -19,10 +19,9 @@ class VectaraVectorStoreComponent(LCVectorStoreComponent):
         StrInput(name="vectara_customer_id", display_name="Vectara Customer ID", required=True),
         StrInput(name="vectara_corpus_id", display_name="Vectara Corpus ID", required=True),
         SecretStrInput(name="vectara_api_key", display_name="Vectara API Key", required=True),
-        HandleInput(
+        DataInput(
             name="vector_store_inputs",
             display_name="Vector Store Inputs",
-            input_types=["Document", "Data"],
             is_list=True,
         ),
         BoolInput(

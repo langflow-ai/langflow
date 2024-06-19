@@ -1,7 +1,7 @@
 from loguru import logger
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent
-from langflow.io import BoolInput, DropdownInput, HandleInput, IntInput, MultilineInput, SecretStrInput, StrInput
+from langflow.io import BoolInput, DropdownInput, HandleInput, IntInput, MultilineInput, SecretStrInput, StrInput, DataInput
 from langflow.schema import Data
 
 
@@ -29,10 +29,9 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             info="API endpoint URL for the Astra DB service.",
             value="ASTRA_DB_API_ENDPOINT",
         ),
-        HandleInput(
+        DataInput(
             name="vector_store_inputs",
             display_name="Vector Store Inputs",
-            input_types=["Document", "Data"],
             is_list=True,
         ),
         HandleInput(

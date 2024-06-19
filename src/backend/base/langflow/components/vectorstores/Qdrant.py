@@ -4,7 +4,7 @@ from langchain_community.vectorstores import Qdrant
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent
 from langflow.helpers.data import docs_to_data
-from langflow.io import BoolInput, DropdownInput, HandleInput, IntInput, StrInput, SecretStrInput
+from langflow.io import BoolInput, DropdownInput, HandleInput, IntInput, StrInput, SecretStrInput, DataInput
 from langflow.schema import Data
 
 
@@ -34,10 +34,9 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
         StrInput(name="content_payload_key", display_name="Content Payload Key", value="page_content", advanced=True),
         StrInput(name="metadata_payload_key", display_name="Metadata Payload Key", value="metadata", advanced=True),
         HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
-        HandleInput(
+        DataInput(
             name="vector_store_inputs",
             display_name="Vector Store Inputs",
-            input_types=["Document", "Data"],
             is_list=True,
         ),
         BoolInput(

@@ -4,7 +4,7 @@ from langchain_community.vectorstores import Cassandra
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent
 from langflow.helpers.data import docs_to_data
-from langflow.io import BoolInput, DropdownInput, HandleInput, IntInput, StrInput, SecretStrInput
+from langflow.io import BoolInput, DropdownInput, HandleInput, IntInput, SecretStrInput, TextInput, DataInput
 from langflow.schema import Data
 
 
@@ -19,17 +19,16 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
             name="token",
             display_name="Token",
             info="Authentication token for accessing Cassandra on Astra DB.",
-            password=True,
             required=True,
         ),
-        StrInput(name="database_id", display_name="Database ID", info="The Astra database ID.", required=True),
-        StrInput(
+        TextInput(name="database_id", display_name="Database ID", info="The Astra database ID.", required=True),
+        TextInput(
             name="table_name",
             display_name="Table Name",
             info="The name of the table where vectors will be stored.",
             required=True,
         ),
-        StrInput(
+        TextInput(
             name="keyspace",
             display_name="Keyspace",
             info="Optional key space within Astra DB. The keyspace should already be created.",
@@ -48,7 +47,7 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
             value=16,
             advanced=True,
         ),
-        StrInput(
+        TextInput(
             name="body_index_options",
             display_name="Body Index Options",
             info="Optional options used to create the body index.",
@@ -63,10 +62,9 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
             advanced=True,
         ),
         HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
-        HandleInput(
+        DataInput(
             name="vector_store_inputs",
             display_name="Vector Store Inputs",
-            input_types=["Document", "Data"],
             is_list=True,
         ),
         BoolInput(
@@ -74,7 +72,7 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
             display_name="Add to Vector Store",
             info="If true, the Vector Store Inputs will be added to the Vector Store.",
         ),
-        StrInput(name="search_input", display_name="Search Input"),
+        TextInput(name="search_input", display_name="Search Input"),
         IntInput(
             name="number_of_results",
             display_name="Number of Results",

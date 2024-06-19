@@ -5,7 +5,7 @@ from langchain_community.vectorstores import CouchbaseVectorStore
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent
 from langflow.helpers.data import docs_to_data
-from langflow.io import BoolInput, HandleInput, IntInput, StrInput, SecretStrInput
+from langflow.io import BoolInput, HandleInput, IntInput, StrInput, SecretStrInput, DataInput
 from langflow.schema import Data
 
 
@@ -24,10 +24,9 @@ class CouchbaseVectorStoreComponent(LCVectorStoreComponent):
         StrInput(name="collection_name", display_name="Collection Name", required=True),
         StrInput(name="index_name", display_name="Index Name", required=True),
         HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
-        HandleInput(
+        DataInput(
             name="vector_store_inputs",
             display_name="Vector Store Inputs",
-            input_types=["Document", "Data"],
             is_list=True,
         ),
         BoolInput(

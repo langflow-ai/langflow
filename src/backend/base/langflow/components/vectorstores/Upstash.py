@@ -4,7 +4,7 @@ from langchain_community.vectorstores import UpstashVectorStore
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent
 from langflow.helpers.data import docs_to_data
-from langflow.io import BoolInput, HandleInput, IntInput, StrInput, SecretStrInput
+from langflow.io import BoolInput, HandleInput, IntInput, StrInput, SecretStrInput, DataInput
 from langflow.schema import Data
 
 
@@ -32,10 +32,9 @@ class UpstashVectorStoreComponent(LCVectorStoreComponent):
             input_types=["Embeddings"],
             info="To use Upstash's embeddings, don't provide an embedding.",
         ),
-        HandleInput(
+        DataInput(
             name="vector_store_inputs",
             display_name="Vector Store Inputs",
-            input_types=["Document", "Data"],
             is_list=True,
         ),
         BoolInput(
