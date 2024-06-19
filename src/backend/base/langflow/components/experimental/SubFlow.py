@@ -21,12 +21,12 @@ class SubFlowComponent(CustomComponent):
     field_order = ["flow_name"]
 
     def get_flow_names(self) -> List[str]:
-        flow_data = self.list_flows()
-        return [flow_data.data["name"] for flow_data in flow_data]
+        flow_datas = self.list_flows()
+        return [flow_data.data["name"] for flow_data in flow_datas]
 
     def get_flow(self, flow_name: str) -> Optional[Data]:
-        flow_data = self.list_flows()
-        for flow_data in flow_data:
+        flow_datas = self.list_flows()
+        for flow_data in flow_datas:
             if flow_data.data["name"] == flow_name:
                 return flow_data
         return None
