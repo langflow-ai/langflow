@@ -46,7 +46,7 @@ class GoogleGenerativeAIComponent(CustomComponent):
             "model": {
                 "display_name": "Model",
                 "info": "The name of the model to use. Supported examples: gemini-pro",
-                "options": ["gemini-1.5-pro", "gemini-1.5-flash", "gemini-1.0-pro", "gemini-1.0pro-vision"],
+                "options": ["gemini-1.5-pro", "gemini-1.5-flash", "gemini-1.0-pro", "gemini-1.0-pro-vision"],
             },
             "code": {
                 "advanced": True,
