@@ -56,14 +56,14 @@ def create_flow(
         ).first():
             flows = session.exec(
                 select(Flow)
-                .where(Flow.endpoint_name.like(f"{flow.endpoint_name}-%"))
+                .where(Flow.endpoint_name.like(f"{flow.endpoint_name}-%"))  # type: ignore
                 .where(Flow.user_id == current_user.id)
             ).all()
             if flows:
                 # The endpoitn name is like "my-endpoint","my-endpoint-1", "my-endpoint-2"
                 # so we need to get the highest number and add 1
                 # we need to get the last part of the endpoint name
-                numbers = [int(flow.endpoint_name.split("-")[-1]) for flow in flows]
+                numbers = [int(flow.endpoint_name.split("-")[-1]) for flow in flows]  # type: ignore
                 flow.endpoint_name = f"{flow.endpoint_name}-{max(numbers) + 1}"
             else:
                 flow.endpoint_name = f"{flow.endpoint_name}-1"
