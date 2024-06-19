@@ -1,4 +1,4 @@
-from .AmazonBedrockEmbeddings import AmazonBedrockEmeddingsComponent
+from .AmazonBedrockEmbeddings import AmazonBedrockEmbeddingsComponent
 from .AzureOpenAIEmbeddings import AzureOpenAIEmbeddingsComponent
 from .CohereEmbeddings import CohereEmbeddingsComponent
 from .HuggingFaceEmbeddings import HuggingFaceEmbeddingsComponent
@@ -8,7 +8,7 @@ from .OpenAIEmbeddings import OpenAIEmbeddingsComponent
 from .VertexAIEmbeddings import VertexAIEmbeddingsComponent
 
 __all__ = [
-    "AmazonBedrockEmeddingsComponent",
+    "AmazonBedrockEmbeddingsComponent",
     "AzureOpenAIEmbeddingsComponent",
     "CohereEmbeddingsComponent",
     "HuggingFaceEmbeddingsComponent",
