@@ -1,5 +1,6 @@
 from typing import Any, AsyncIterator, Callable, Iterator, Optional, Union
 
+from loguru import logger
 from pydantic import Field, field_validator
 
 from langflow.inputs.validators import CoalesceBool
@@ -13,6 +14,7 @@ from .input_mixin import (
     FieldTypes,
     FileMixin,
     ListableInputMixin,
+    MultilineMixin,
     RangeMixin,
     SerializableFieldTypes,
 )
@@ -49,12 +51,11 @@ class PromptInput(BaseInputMixin, ListableInputMixin):
 
 
 # Applying mixins to a specific input type
-class StrInput(BaseInputMixin, ListableInputMixin, DatabaseLoadMixin):  # noqa: F821
+class StrInput(BaseInputMixin, ListableInputMixin, DatabaseLoadMixin, MultilineMixin):
     field_type: Optional[SerializableFieldTypes] = FieldTypes.TEXT
     load_from_db: CoalesceBool = False
     """Defines if the field will allow the user to open a text editor. Default is False."""
 
-    @staticmethod
     def _validate_value(v: Any, _info):
         """
         Validates the given value and returns the processed value.
@@ -70,7 +71,8 @@ class StrInput(BaseInputMixin, ListableInputMixin, DatabaseLoadMixin):  # noqa: 
             ValueError: If the value is not of a valid type or if the input is missing a required key.
         """
         if not isinstance(v, str) and v is not None:
-            raise ValueError(f"Invalid value type {type(v)}")
+            if _info.data.get("input_types") and v.__class__.__name__ not in _info.data.get("input_types"):
+                logger.warning(f"Invalid value type {type(v)}")
         return v
 
     @field_validator("value")
@@ -160,7 +162,7 @@ class TextInput(StrInput):
         return value
 
 
-class MultilineInput(BaseInputMixin):
+class MultilineInput(BaseInputMixin, MultilineMixin):
     """
     Represents a multiline input field.
 
