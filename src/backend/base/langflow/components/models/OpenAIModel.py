@@ -92,10 +92,10 @@ class OpenAIModelComponent(LCModelComponent):
     def build_model(self) -> BaseLanguageModel:
         # self.output_schea is a list of dictionaries
         # let's convert it to a dictionary
-        output_schema_dict = reduce(operator.ior, self.output_schema or {}, {})
+        output_schema_dict: dict[str, str] = reduce(operator.ior, self.output_schema or {}, {})
         openai_api_key = self.openai_api_key
         temperature = self.temperature
-        model_name = self.model_name
+        model_name: str = self.model_name
         max_tokens = self.max_tokens
         model_kwargs = self.model_kwargs
         openai_api_base = self.openai_api_base or "https://api.openai.com/v1"
@@ -108,7 +108,7 @@ class OpenAIModelComponent(LCModelComponent):
         output = ChatOpenAI(
             max_tokens=max_tokens or None,
             model_kwargs=model_kwargs or {},
-            model=model_name or None,
+            model=model_name,
             base_url=openai_api_base,
             api_key=api_key,
             temperature=temperature or 0.1,
