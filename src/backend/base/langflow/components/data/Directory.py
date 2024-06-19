@@ -1,12 +1,10 @@
 from typing import List, Optional
 
-from langflow.base.data.utils import (parallel_load_data,
-                                      parse_text_file_to_data,
+from langflow.base.data.utils import parallel_load_data, parse_text_file_to_data, retrieve_file_paths
+from langflow.custom import Component
 from langflow.io import BoolInput, IntInput, TextInput
 from langflow.schema import Data
-from langflow.io import Output
-from langflow.schema import Data
-from langflow.io import Output
+from langflow.template import Output
 
 
 class DirectoryComponent(Component):

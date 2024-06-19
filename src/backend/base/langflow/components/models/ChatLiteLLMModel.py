@@ -4,8 +4,8 @@ from langchain_community.chat_models.litellm import ChatLiteLLM, ChatLiteLLMExce
 
 from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
+from langflow.field_typing import BaseLanguageModel
 from langflow.io import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, MessageInput, Output, StrInput
-from langflow.schema.message import Message
 from langflow.schema.message import Message
 
 
