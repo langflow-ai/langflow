@@ -675,6 +675,8 @@ class Vertex:
         requester: Optional["Vertex"] = None,
         **kwargs,
     ) -> Any:
+
+
         async with self._lock:
             if self.state == VertexStates.INACTIVE:
                 # If the vertex is inactive, return None

@@ -165,8 +165,6 @@ async def build_vertex(
         try:
             lock = chat_service._cache_locks[flow_id_str]
             (
-                next_runnable_vertices,
-                top_level_vertices,
                 result_dict,
                 params,
                 valid,
@@ -214,7 +212,6 @@ async def build_vertex(
         result_data_response.duration = duration
         result_data_response.timedelta = timedelta
         vertex.add_build_time(timedelta)
-        inactivated_vertices = None
         inactivated_vertices = list(graph.inactivated_vertices)
         graph.reset_inactivated_vertices()
         graph.reset_activated_vertices()
