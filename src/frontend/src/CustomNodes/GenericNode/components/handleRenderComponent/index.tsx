@@ -1,3 +1,4 @@
+import { title } from "process";
 import { Handle, Position } from "reactflow";
 import ShadTooltip from "../../../../components/shadTooltipComponent";
 import { Button } from "../../../../components/ui/button";
@@ -7,7 +8,6 @@ import {
 } from "../../../../utils/reactflowUtils";
 import { classNames, cn, groupByFamily } from "../../../../utils/utils";
 import HandleTooltips from "../HandleTooltipComponent";
-import { title } from "process";
 
 export default function HandleRenderComponent({
   left,
@@ -21,8 +21,7 @@ export default function HandleRenderComponent({
   colors,
   setFilterEdge,
   showNode,
-} :
-{
+}: {
   left: boolean;
   nodes: any;
   tooltipTitle?: string;
@@ -34,8 +33,7 @@ export default function HandleRenderComponent({
   colors: string[];
   setFilterEdge: any;
   showNode: any;
-}
-) {
+}) {
   return (
     <Button
       unstyled
@@ -79,14 +77,17 @@ export default function HandleRenderComponent({
               style={{
                 background:
                   "conic-gradient(" +
-                  colors.concat(colors[0])
+                  colors
+                    .concat(colors[0])
                     .map(
                       (color, index) =>
                         color +
                         " " +
-                        ((360 / colors.length) * (index) - (360 / (colors.length * 4))) +
+                        ((360 / colors.length) * index -
+                          360 / (colors.length * 4)) +
                         "deg " +
-                        (((360 / colors.length) * (index))+ (360 / (colors.length * 4))) +
+                        ((360 / colors.length) * index +
+                          360 / (colors.length * 4)) +
                         "deg",
                     )
                     .join(" ,") +

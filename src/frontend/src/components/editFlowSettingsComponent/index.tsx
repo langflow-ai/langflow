@@ -2,9 +2,9 @@ import React, { ChangeEvent, useState } from "react";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { Textarea } from "../../components/ui/textarea";
+import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { InputProps } from "../../types/components";
 import { cn } from "../../utils/utils";
-import useFlowsManagerStore from "../../stores/flowsManagerStore";
 
 export const EditFlowSettings: React.FC<InputProps> = ({
   name,
@@ -33,11 +33,11 @@ export const EditFlowSettings: React.FC<InputProps> = ({
       if (value === invalidNameList![i]) {
         invalid = true;
         break;
-      } 
+      }
       if (value === currentFlow?.name) {
         invalid = true;
         break;
-      } 
+      }
       invalid = false;
     }
     setIsInvalidName(invalid);

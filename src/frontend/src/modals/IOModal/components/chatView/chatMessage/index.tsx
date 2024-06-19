@@ -188,7 +188,12 @@ export default function ChatMessage({
                           <Markdown
                             remarkPlugins={[remarkGfm, remarkMath]}
                             rehypePlugins={[rehypeMathjax]}
-                            className={cn("markdown prose flex flex-col word-break-break-word dark:prose-invert",chatMessage === "" ? "text-chat-trigger-disabled" : "text-primary")}
+                            className={cn(
+                              "markdown prose flex flex-col word-break-break-word dark:prose-invert",
+                              chatMessage === ""
+                                ? "text-chat-trigger-disabled"
+                                : "text-primary",
+                            )}
                             components={{
                               pre({ node, ...props }) {
                                 return <>{props.children}</>;
@@ -235,7 +240,7 @@ export default function ChatMessage({
                                       },
                                     ]}
                                     activeTab={"0"}
-                                    setActiveTab={() => { }}
+                                    setActiveTab={() => {}}
                                   />
                                 ) : (
                                   <code className={className} {...props}>
@@ -245,7 +250,9 @@ export default function ChatMessage({
                               },
                             }}
                           >
-                            {chatMessage===""?EMPTY_INPUT_SEND_MESSAGE:chatMessage}
+                            {chatMessage === ""
+                              ? EMPTY_INPUT_SEND_MESSAGE
+                              : chatMessage}
                           </Markdown>
                         ),
                       [chat.message, chatMessage],
@@ -274,52 +281,63 @@ export default function ChatMessage({
                     }
                   />
                 </button>
-                <span className={cn("prose word-break-break-word dark:prose-invert",(chatMessage!==""?EMPTY_INPUT_SEND_MESSAGE:chatMessage?"text-primary":"text-chat-trigger-disabled"))}>
+                <span
+                  className={cn(
+                    "prose word-break-break-word dark:prose-invert",
+                    chatMessage !== ""
+                      ? EMPTY_INPUT_SEND_MESSAGE
+                      : chatMessage
+                        ? "text-primary"
+                        : "text-chat-trigger-disabled",
+                  )}
+                >
                   {promptOpen
                     ? template?.split("\n")?.map((line, index) => {
-                      const regex = /{([^}]+)}/g;
-                      let match;
-                      let parts: Array<JSX.Element | string> = [];
-                      let lastIndex = 0;
-                      while ((match = regex.exec(line)) !== null) {
-                        // Push text up to the match
-                        if (match.index !== lastIndex) {
-                          parts.push(line.substring(lastIndex, match.index));
-                        }
-                        // Push div with matched text
-                        if (chat.message[match[1]]) {
-                          parts.push(
-                            <span className="chat-message-highlight">
-                              {chat.message[match[1]]}
-                            </span>,
-                          );
-                        }
+                        const regex = /{([^}]+)}/g;
+                        let match;
+                        let parts: Array<JSX.Element | string> = [];
+                        let lastIndex = 0;
+                        while ((match = regex.exec(line)) !== null) {
+                          // Push text up to the match
+                          if (match.index !== lastIndex) {
+                            parts.push(line.substring(lastIndex, match.index));
+                          }
+                          // Push div with matched text
+                          if (chat.message[match[1]]) {
+                            parts.push(
+                              <span className="chat-message-highlight">
+                                {chat.message[match[1]]}
+                              </span>,
+                            );
+                          }
 
-                        // Update last index
-                        lastIndex = regex.lastIndex;
-                      }
-                      // Push text after the last match
-                      if (lastIndex !== line.length) {
-                        parts.push(line.substring(lastIndex));
-                      }
-                      return <p>{parts}</p>;
-                    })
-                    : (chatMessage === "" ? EMPTY_INPUT_SEND_MESSAGE : chatMessage)
-                  }
+                          // Update last index
+                          lastIndex = regex.lastIndex;
+                        }
+                        // Push text after the last match
+                        if (lastIndex !== line.length) {
+                          parts.push(line.substring(lastIndex));
+                        }
+                        return <p>{parts}</p>;
+                      })
+                    : chatMessage === ""
+                      ? EMPTY_INPUT_SEND_MESSAGE
+                      : chatMessage}
                 </span>
               </>
             ) : (
               <div className="flex flex-col">
                 <span
-                  className={`prose word-break-break-word dark:prose-invert ${chatMessage === ""
+                  className={`prose word-break-break-word dark:prose-invert ${
+                    chatMessage === ""
                       ? "text-chat-trigger-disabled"
                       : "text-primary"
-                    }`}
+                  }`}
                   data-testid={
                     "chat-message-" + chat.sender_name + "-" + chatMessage
                   }
                 >
-                  {(chatMessage === "" ? EMPTY_INPUT_SEND_MESSAGE : chatMessage)}
+                  {chatMessage === "" ? EMPTY_INPUT_SEND_MESSAGE : chatMessage}
                 </span>
                 {chat.files && (
                   <div className="my-2 flex flex-col gap-5">

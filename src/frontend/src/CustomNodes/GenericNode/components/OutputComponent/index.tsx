@@ -40,12 +40,12 @@ export default function OutputComponent({
 
   if (types.length < 2) {
     return displayProxy(
-      <span className={cn(frozen ? " text-ice" : "")}>{name}</span>,
+      <span className={cn(frozen ? "text-ice" : "")}>{name}</span>,
     );
   }
 
   return (
-    <div className="nocopy nopan nodelete nodrag noundo flex items-center gap-2 ">
+    <div className="nocopy nopan nodelete nodrag noundo flex items-center gap-2">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button

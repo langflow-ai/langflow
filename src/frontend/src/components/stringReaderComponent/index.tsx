@@ -9,5 +9,5 @@ export default function StringReader({
     <TextModal value={string}>
       <span className="truncate">{string}</span>
     </TextModal>
-  )
+  );
 }

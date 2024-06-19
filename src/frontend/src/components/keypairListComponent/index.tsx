@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { KeyPairListComponentType } from "../../types/components";
 
+import { cloneDeep } from "lodash";
 import { classNames } from "../../utils/utils";
 import IconComponent from "../genericIconComponent";
 import { Input } from "../ui/input";
-import { cloneDeep } from "lodash";
 
 export default function KeypairListComponent({
   value,

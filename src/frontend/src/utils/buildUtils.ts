@@ -140,7 +140,7 @@ export async function buildVertices({
       onValidateNodes(verticesOrderResponse.verticesToRun);
     } catch (e) {
       useFlowStore.getState().setIsBuilding(false);
-      setLockChat(false)
+      setLockChat(false);
       return;
     }
   }
