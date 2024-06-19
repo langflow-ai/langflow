@@ -1,4 +1,4 @@
-def get_message_from_openai_exception(exception: Exception) -> str:
+def get_message_from_openai_exception(exception: Exception) -> str | None:
     """
     Get a message from an OpenAI exception.
 
@@ -13,7 +13,7 @@ def get_message_from_openai_exception(exception: Exception) -> str:
     except ImportError:
         return
     if isinstance(exception, BadRequestError):
-        message = exception.body.get("message")
+        message = exception.body.get("message")  # type: ignore
         if message:
             return message
     return
