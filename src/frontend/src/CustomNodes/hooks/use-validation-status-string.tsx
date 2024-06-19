@@ -3,11 +3,11 @@ import { VertexBuildTypeAPI } from "../../types/api";
 import { isErrorLog } from "../../types/utils/typeCheckingUtils";
 
 const useValidationStatusString = (
-  validationStatus: VertexBuildTypeAPI,
+  validationStatus: VertexBuildTypeAPI | null,
   setValidationString,
 ) => {
   useEffect(() => {
-    if (validationStatus?.data?.logs) {
+    if (validationStatus && validationStatus.data?.logs) {
       // if it is not a string turn it into a string
       let newValidationString = "";
       Object.values(validationStatus?.data?.logs).forEach((log: any) => {

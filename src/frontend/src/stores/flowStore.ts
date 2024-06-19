@@ -434,7 +434,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     input_value?: string;
     files?: string[];
     silent?: boolean;
-    setLockChat: (lock: boolean) => void;
+    setLockChat?: (lock: boolean) => void;
   }) => {
     get().setIsBuilding(true);
     const currentFlow = useFlowsManagerStore.getState().currentFlow;
