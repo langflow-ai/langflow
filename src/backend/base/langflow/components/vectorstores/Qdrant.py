@@ -2,10 +2,9 @@ from typing import List
 
 from langchain_community.vectorstores import Qdrant
 from langchain_core.retrievers import BaseRetriever
-
 from langflow.custom import Component
 from langflow.helpers.data import docs_to_data
-from langflow.io import BoolInput, DropdownInput, HandleInput, IntInput, Output, StrInput
+from langflow.io import BoolInput, DropdownInput, HandleInput, IntInput, Output, SecretStrInput, StrInput
 from langflow.schema import Data
 
 
@@ -20,7 +19,7 @@ class QdrantVectorStoreComponent(Component):
         StrInput(name="host", display_name="Host", value="localhost", advanced=True),
         IntInput(name="port", display_name="Port", value=6333, advanced=True),
         IntInput(name="grpc_port", display_name="gRPC Port", value=6334, advanced=True),
-        StrInput(name="api_key", display_name="API Key", password=True, advanced=True),
+        SecretStrInput(name="api_key", display_name="API Key", advanced=True),
         StrInput(name="prefix", display_name="Prefix", advanced=True),
         IntInput(name="timeout", display_name="Timeout", advanced=True),
         StrInput(name="path", display_name="Path", advanced=True),

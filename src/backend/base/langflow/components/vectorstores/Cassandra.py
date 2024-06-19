@@ -2,10 +2,9 @@ from typing import List
 
 from langchain_community.vectorstores import Cassandra
 from langchain_core.retrievers import BaseRetriever
-
 from langflow.custom import Component
 from langflow.helpers.data import docs_to_data
-from langflow.io import BoolInput, DropdownInput, HandleInput, IntInput, Output, StrInput
+from langflow.io import BoolInput, DropdownInput, HandleInput, IntInput, Output, SecretStrInput, StrInput
 from langflow.schema import Data
 
 
@@ -16,11 +15,10 @@ class CassandraVectorStoreComponent(Component):
     icon = "Cassandra"
 
     inputs = [
-        StrInput(
+        SecretStrInput(
             name="token",
             display_name="Token",
             info="Authentication token for accessing Cassandra on Astra DB.",
-            password=True,
             required=True,
         ),
         StrInput(name="database_id", display_name="Database ID", info="The Astra database ID.", required=True),

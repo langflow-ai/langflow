@@ -1,11 +1,20 @@
 from typing import Optional
 
 from langchain_community.chat_models.litellm import ChatLiteLLM, ChatLiteLLMException
-
 from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import BaseLanguageModel
-from langflow.io import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, MessageInput, Output, StrInput
+from langflow.io import (
+    BoolInput,
+    DictInput,
+    DropdownInput,
+    FloatInput,
+    IntInput,
+    MessageInput,
+    Output,
+    SecretStrInput,
+    StrInput,
+)
 from langflow.schema.message import Message
 
 
@@ -24,12 +33,11 @@ class ChatLiteLLMModelComponent(LCModelComponent):
             required=True,
             info="The name of the model to use. For example, `gpt-3.5-turbo`.",
         ),
-        StrInput(
+        SecretStrInput(
             name="api_key",
             display_name="API key",
             advanced=False,
             required=False,
-            password=True,
         ),
         DropdownInput(
             name="provider",
@@ -49,14 +57,14 @@ class ChatLiteLLMModelComponent(LCModelComponent):
             display_name="Temperature",
             advanced=False,
             required=False,
-            default=0.7,
+            value=0.7,
         ),
         DictInput(
             name="model_kwargs",
             display_name="Model kwargs",
             advanced=True,
             required=False,
-            default={},
+            value={},
         ),
         FloatInput(
             name="top_p",
@@ -77,13 +85,13 @@ class ChatLiteLLMModelComponent(LCModelComponent):
             required=False,
             info="Number of chat completions to generate for each prompt. "
             "Note that the API may not return the full n completions if duplicates are generated.",
-            default=1,
+            value=1,
         ),
         IntInput(
             name="max_tokens",
             display_name="Max tokens",
             advanced=False,
-            default=256,
+            value=256,
             info="The maximum number of tokens to generate for each chat completion.",
         ),
         IntInput(
@@ -91,14 +99,14 @@ class ChatLiteLLMModelComponent(LCModelComponent):
             display_name="Max retries",
             advanced=True,
             required=False,
-            default=6,
+            value=6,
         ),
         BoolInput(
             name="verbose",
             display_name="Verbose",
             advanced=True,
             required=False,
-            default=False,
+            value=False,
         ),
         BoolInput(
             name="stream",
@@ -178,4 +186,5 @@ class ChatLiteLLMModelComponent(LCModelComponent):
             openrouter_api_key=api_keys["openrouter_api_key"],
         )
 
+        return output
         return output

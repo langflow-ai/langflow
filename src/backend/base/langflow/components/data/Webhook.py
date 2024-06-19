@@ -1,7 +1,7 @@
 import json
 
 from langflow.custom import Component
-from langflow.io import Output, TextInput
+from langflow.io import MultilineInput, Output
 from langflow.schema import Data
 
 
@@ -10,11 +10,10 @@ class WebhookComponent(Component):
     description = "Defines a webhook input for the flow."
 
     inputs = [
-        TextInput(
+        MultilineInput(
             name="data",
             display_name="Data",
             info="Use this field to quickly test the webhook component by providing a JSON payload.",
-            multiline=True,
         )
     ]
     outputs = [

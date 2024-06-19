@@ -3,10 +3,9 @@ from typing import List
 
 from langchain_community.vectorstores import CouchbaseVectorStore
 from langchain_core.retrievers import BaseRetriever
-
 from langflow.custom import Component
 from langflow.helpers.data import docs_to_data
-from langflow.io import BoolInput, HandleInput, IntInput, Output, StrInput
+from langflow.io import BoolInput, HandleInput, IntInput, Output, SecretStrInput, StrInput
 from langflow.schema import Data
 
 
@@ -19,7 +18,7 @@ class CouchbaseVectorStoreComponent(Component):
     inputs = [
         StrInput(name="couchbase_connection_string", display_name="Couchbase Cluster connection string", required=True),
         StrInput(name="couchbase_username", display_name="Couchbase username", required=True),
-        StrInput(name="couchbase_password", display_name="Couchbase password", password=True, required=True),
+        SecretStrInput(name="couchbase_password", display_name="Couchbase password", required=True),
         StrInput(name="bucket_name", display_name="Bucket Name", required=True),
         StrInput(name="scope_name", display_name="Scope Name", required=True),
         StrInput(name="collection_name", display_name="Collection Name", required=True),

@@ -1,7 +1,6 @@
 from typing import Dict, Optional
 
 from langchain_community.llms.vertexai import VertexAI
-
 from langflow.custom import CustomComponent
 from langflow.field_typing import BaseLanguageModel
 
@@ -16,7 +15,7 @@ class VertexAIComponent(CustomComponent):
             "credentials": {
                 "display_name": "Credentials",
                 "field_type": "file",
-                "file_types": [".json"],
+                "file_types": ["json"],
                 "required": False,
                 "value": None,
             },

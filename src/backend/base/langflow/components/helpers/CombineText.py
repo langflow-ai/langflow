@@ -23,7 +23,7 @@ class CombineTextComponent(Component):
             name="delimiter",
             display_name="Delimiter",
             info="A string used to separate the two text inputs. Defaults to a whitespace.",
-            default=" ",
+            value=" ",
         ),
     ]
 
