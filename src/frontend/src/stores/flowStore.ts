@@ -43,6 +43,10 @@ import useFlowsManagerStore from "./flowsManagerStore";
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
 const useFlowStore = create<FlowStoreType>((set, get) => ({
   onFlowPage: false,
+  lockChat: false,
+  setLockChat: (lockChat) => {
+    set({ lockChat });
+  },
   setOnFlowPage: (FlowPage) => set({ onFlowPage: FlowPage }),
   flowState: undefined,
   flowBuildStatus: {},
