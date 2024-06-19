@@ -90,23 +90,7 @@ export default function GenericModal({
     setWordsHighlight(filteredWordsHighlight);
   }
 
-  useEffect(() => {
-    if (type === TypeModal.PROMPT && inputValue && inputValue != "") {
-      checkVariables(inputValue);
-    }
-  }, [inputValue, type]);
-
-  useEffect(() => {
-    if (typeof value === "string") setInputValue(value);
-  }, [value, modalOpen]);
-  let coloredContent = inputValue || "";
-  // Check if coloredContent is a string
-  // calling toString on undefined will throw an error
-  // so we need to check if it is a string first
-  if (typeof coloredContent !== "string") {
-    coloredContent = "";
-  }
-  coloredContent
+  const coloredContent = (typeof inputValue === "string" ? inputValue : "")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(regexHighlight, (match, p1, p2) => {
@@ -123,6 +107,17 @@ export default function GenericModal({
       return match;
     })
     .replace(/\n/g, "<br />");
+
+  useEffect(() => {
+    if (type === TypeModal.PROMPT && inputValue && inputValue != "") {
+      checkVariables(inputValue);
+    }
+  }, [inputValue, type]);
+
+  useEffect(() => {
+    if (typeof value === "string") setInputValue(value);
+  }, [value, modalOpen]);
+
   function getClassByNumberLength(): string {
     let sumOfCaracteres: number = 0;
     wordsHighlight.forEach((element) => {
@@ -188,7 +183,9 @@ export default function GenericModal({
       open={modalOpen}
       setOpen={setModalOpen}
     >
-      <BaseModal.Trigger disable={disabled} asChild>{children}</BaseModal.Trigger>
+      <BaseModal.Trigger disable={disabled} asChild>
+        {children}
+      </BaseModal.Trigger>
       <BaseModal.Header
         description={(() => {
           switch (myModalTitle) {
