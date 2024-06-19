@@ -1,10 +1,9 @@
 from enum import Enum
 from typing import Annotated, Any, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, PlainSerializer, field_validator, model_serializer
-
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.inputs.validators import CoalesceBool
+from pydantic import BaseModel, ConfigDict, Field, PlainSerializer, field_validator, model_serializer
 
 
 class FieldTypes(str, Enum):
@@ -25,7 +24,7 @@ SerializableFieldTypes = Annotated[FieldTypes, PlainSerializer(lambda v: v.value
 
 # Base mixin for common input field attributes and methods
 class BaseInputMixin(BaseModel, validate_assignment=True):
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+    model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
 
     field_type: Optional[SerializableFieldTypes] = Field(default=FieldTypes.TEXT)
 
