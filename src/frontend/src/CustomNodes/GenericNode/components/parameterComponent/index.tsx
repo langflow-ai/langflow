@@ -35,20 +35,17 @@ import {
   convertObjToArray,
   convertValuesToNumbers,
   hasDuplicateKeys,
-  isValidConnection,
   scapedJSONStringfy,
 } from "../../../../utils/reactflowUtils";
 import {
   classNames,
   cn,
-  groupByFamily,
   isThereModal,
 } from "../../../../utils/utils";
 import useFetchDataOnMount from "../../../hooks/use-fetch-data-on-mount";
 import useHandleOnNewValue from "../../../hooks/use-handle-new-value";
 import useHandleNodeClass from "../../../hooks/use-handle-node-class";
 import useHandleRefreshButtonPress from "../../../hooks/use-handle-refresh-buttons";
-import HandleTooltips from "../HandleTooltipComponent";
 import OutputComponent from "../OutputComponent";
 import HandleRenderComponent from "../handleRenderComponent";
 import OutputModal from "../outputModal";
@@ -74,9 +71,7 @@ export default function ParameterComponent({
   outputProxy,
 }: ParameterComponentType): JSX.Element {
   const ref = useRef<HTMLDivElement>(null);
-  const refHtml = useRef<HTMLDivElement & ReactNode>(null);
   const infoHtml = useRef<HTMLDivElement & ReactNode>(null);
-  const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
   const setNode = useFlowStore((state) => state.setNode);
@@ -85,8 +80,6 @@ export default function ParameterComponent({
   const [isLoading, setIsLoading] = useState(false);
   const updateNodeInternals = useUpdateNodeInternals();
   const [errorDuplicateKey, setErrorDuplicateKey] = useState(false);
-  const flow = currentFlow?.data?.nodes ?? null;
-  const groupedEdge = useRef(null);
   const setFilterEdge = useFlowStore((state) => state.setFilterEdge);
   const [openOutputModal, setOpenOutputModal] = useState(false);
   const flowPool = useFlowStore((state) => state.flowPool);
