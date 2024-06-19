@@ -1,13 +1,14 @@
 from random import randint
 
 from langflow.custom import Component
-from langflow.template.field.base import Input, Output
+from langflow.inputs.inputs import IntInput, TextInput
+from langflow.template.field.base import Output
 
 
 class MultipleOutputsComponent(Component):
     inputs = [
-        Input(display_name="Input", name="input", field_type=str),
-        Input(display_name="Number", name="number", field_type=int),
+        TextInput(display_name="Input", name="input"),
+        IntInput(display_name="Number", name="number"),
     ]
     outputs = [
         Output(display_name="Certain Output", name="certain_output", method="certain_output"),
