@@ -505,5 +505,6 @@
       "y": 0,
       "zoom": 0.5
     }
-  }
+  },
+  "last_tested_version": "0.6.2"
 }
