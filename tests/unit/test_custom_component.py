@@ -4,7 +4,8 @@ from uuid import uuid4
 
 import pytest
 from langchain_core.documents import Document
-from langflow.custom import CustomComponent, Component
+
+from langflow.custom import Component, CustomComponent
 from langflow.custom.code_parser.code_parser import CodeParser, CodeSyntaxError
 from langflow.custom.custom_component.base_component import BaseComponent, ComponentCodeNullError
 from langflow.custom.utils import build_custom_component_template
@@ -19,7 +20,6 @@ def code_component_with_multiple_outputs():
 
 
 code_default = """
-from langflow.field_typing import Prompt
 from langflow.custom import CustomComponent
 
 from langflow.field_typing import BaseLanguageModel
@@ -34,12 +34,8 @@ class YourComponent(CustomComponent):
     description: str = "Your description"
     field_config = { "url": { "multiline": True, "required": True } }
 
-    def build(self, url: str, llm: BaseLanguageModel, template: Prompt) -> Document:
-        response = requests.get(url)
-        prompt = PromptTemplate.from_template(template)
-        chain = LLMChain(llm=llm, prompt=prompt)
-        result = chain.run(response.text[:300])
-        return Document(page_content=str(result))
+    def build(self, url: str, llm: BaseLanguageModel) -> Document:
+        return Document(page_content="Hello World")
 """
 
 
@@ -211,7 +207,7 @@ def test_custom_component_get_function_entrypoint_args():
     """
     custom_component = CustomComponent(code=code_default, function_entrypoint_name="build")
     args = custom_component.get_function_entrypoint_args
-    assert len(args) == 4
+    assert len(args) == 3
     assert args[0]["name"] == "self"
     assert args[1]["name"] == "url"
     assert args[2]["name"] == "llm"
