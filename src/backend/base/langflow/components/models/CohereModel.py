@@ -21,12 +21,6 @@ class CohereComponent(LCModelComponent):
             advanced=False,
             value="COHERE_API_KEY",
         ),
-        IntInput(
-            name="max_tokens",
-            display_name="Max Tokens",
-            advanced=True,
-            info="The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
-        ),
         FloatInput(name="temperature", display_name="Temperature", value=0.75),
         MessageInput(name="input_value", display_name="Input"),
         BoolInput(name="stream", display_name="Stream", info=STREAM_INFO_TEXT, advanced=True),
@@ -54,7 +48,6 @@ class CohereComponent(LCModelComponent):
     def build_model(self) -> BaseLanguageModel:
         cohere_api_key = self.cohere_api_key
         temperature = self.temperature
-        max_tokens = self.max_tokens
 
         if cohere_api_key:
             api_key = SecretStr(cohere_api_key)
@@ -62,7 +55,6 @@ class CohereComponent(LCModelComponent):
             api_key = None
 
         output = ChatCohere(
-            max_tokens=max_tokens or None,
             temperature=temperature or 0.75,
             cohere_api_key=api_key,
         )
