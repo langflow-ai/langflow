@@ -1,39 +1,39 @@
 import json
-import uuid
-from typing import Any, Optional
 
-from langflow.custom import CustomComponent
+from langflow.custom import Component
+from langflow.inputs import TextInput
 from langflow.schema import Data
-from langflow.schema.dotdict import dotdict
+from langflow.template import Output
 
 
-class WebhookComponent(CustomComponent):
+class WebhookComponent(Component):
     display_name = "Webhook Input"
     description = "Defines a webhook input for the flow."
 
-    def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
-        if field_name == "webhook_id":
-            build_config["webhook_id"]["value"] = uuid.uuid4().hex
-        return build_config
+    inputs = [
+        TextInput(
+            name="data",
+            display_name="Data",
+            info="Use this field to quickly test the webhook component by providing a JSON payload.",
+            multiline=True,
+        )
+    ]
+    outputs = [
+        Output(display_name="Data", name="output_data", method="build_data"),
+    ]
 
-    def build_config(self):
-        return {
-            "data": {
-                "display_name": "Data",
-                "info": "Use this field to quickly test the webhook component by providing a JSON payload.",
-                "multiline": True,
-            }
-        }
-
-    def build(self, data: Optional[str] = "") -> Data:
+    def build_data(self) -> Data:
         message = ""
+        if not self.data:
+            self.status = "No data provided."
+            return Data(data={})
         try:
-            body = json.loads(data or "{}")
+            body = json.loads(self.data or "{}")
         except json.JSONDecodeError:
-            body = {"payload": data}
-            message = f"Invalid JSON payload. Please check the format.\n\n{data}"
-        record = Data(data=body)
+            body = {"payload": self.data}
+            message = f"Invalid JSON payload. Please check the format.\n\n{self.data}"
+        data = Data(data=body)
         if not message:
-            message = record
+            message = data
         self.status = message
-        return record
+        return data
