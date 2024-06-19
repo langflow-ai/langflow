@@ -145,7 +145,6 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
             self.status = ""
             return
 
-
         _stored_documents_without_id = []
         if self.allow_duplicates:
             stored_data = []
