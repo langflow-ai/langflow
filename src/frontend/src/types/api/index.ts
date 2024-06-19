@@ -181,8 +181,13 @@ export type VertexBuildTypeAPI = {
   artifacts: any | ChatOutputType | ChatInputType;
 };
 
+export type ErrorLogType = {
+  errorMessage: string;
+  stackTrace: string;
+};
+
 export type LogType = {
-  message: any;
+  message: any | ErrorLogType;
   type: string;
 };
 

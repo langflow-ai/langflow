@@ -582,7 +582,7 @@ class Vertex:
                     logger.exception(e)
                     raise ValueError(
                         f"Params {key} ({self.params[key]}) is not a list and cannot be extended with {result}"
-                        f"Error building Component {self.display_name}: {str(e)}"
+                        f"Error building Component {self.display_name}:\n\n{str(e)}"
                     ) from e
 
     def _handle_func(self, key, result):
@@ -622,11 +622,8 @@ class Vertex:
             self.logs = build_logs(self, result)
             self._update_built_object_and_artifacts(result)
         except Exception as exc:
-            tb = traceback.format_exc()
-            error_detail = f"Error: {exc}\nTraceback: {tb}"
-            logger.exception(error_detail)
-
-            raise ValueError(f"Error building Component {self.display_name}: {error_detail}") from exc
+            logger.exception(exc)
+            raise ValueError(f"Error building Component {self.display_name}:\n\n{exc}") from exc
 
     def _update_built_object_and_artifacts(self, result):
         """

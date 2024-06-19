@@ -830,7 +830,7 @@ class Graph:
             log_transaction(flow_id, vertex, status="success")
             return result_dict, params, valid, artifacts, vertex
         except Exception as exc:
-            logger.exception(f"Error building Component: {exc}")
+            logger.exception(f"Error building Component:\n\n{exc}")
             flow_id = self.flow_id
             log_transaction(flow_id, vertex, status="failure", error=str(exc))
             raise exc
