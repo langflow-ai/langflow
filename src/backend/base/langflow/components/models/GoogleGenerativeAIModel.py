@@ -96,7 +96,7 @@ class GoogleGenerativeAIComponent(LCModelComponent):
         top_p = self.top_p
         n = self.n
 
-        output = ChatGoogleGenerativeAI(
+        output = ChatGoogleGenerativeAI(  # type: ignore
             model=model,
             max_output_tokens=max_output_tokens or None,
             temperature=temperature,
