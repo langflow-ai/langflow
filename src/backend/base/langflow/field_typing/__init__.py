@@ -7,6 +7,7 @@ from .constants import (
     BaseLLM,
     BaseLoader,
     BaseMemory,
+    BaseChatModel,
     BaseOutputParser,
     BasePromptTemplate,
     BaseRetriever,
@@ -80,4 +81,5 @@ __all__ = [
     "TextSplitter",
     "Tool",
     "VectorStore",
+    "BaseChatModel",
 ]
