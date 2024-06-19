@@ -1,14 +1,13 @@
 from typing import List
 
 from langchain_community.vectorstores import SupabaseVectorStore
+from langchain_core.retrievers import BaseRetriever
 from supabase.client import Client, create_client
 
 from langflow.custom import Component
-from langflow.schema import Data
-from langflow.inputs import IntInput, StrInput, HandleInput
-from langflow.template import Output
 from langflow.helpers.data import docs_to_data
-from langchain_core.retrievers import BaseRetriever
+from langflow.io import HandleInput, IntInput, Output, StrInput
+from langflow.schema import Data
 
 
 class SupabaseVectorStoreComponent(Component):

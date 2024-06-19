@@ -4,8 +4,7 @@ from langchain_community.llms.huggingface_endpoint import HuggingFaceEndpoint
 from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import BaseLanguageModel, Text
-from langflow.inputs import BoolInput, DictInput, DropdownInput, MessageInput, SecretStrInput, StrInput
-from langflow.template import Output
+from langflow.io import BoolInput, DictInput, DropdownInput, MessageInput, Output, SecretStrInput, StrInput
 
 
 class HuggingFaceEndpointsComponent(LCModelComponent):

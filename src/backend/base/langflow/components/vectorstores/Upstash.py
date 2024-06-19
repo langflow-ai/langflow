@@ -1,13 +1,12 @@
 from typing import List
 
 from langchain_community.vectorstores import UpstashVectorStore
+from langchain_core.retrievers import BaseRetriever
 
 from langflow.custom import Component
-from langflow.schema import Data
-from langflow.inputs import BoolInput, IntInput, StrInput, HandleInput
-from langflow.template import Output
 from langflow.helpers.data import docs_to_data
-from langchain_core.retrievers import BaseRetriever
+from langflow.io import BoolInput, HandleInput, IntInput, Output, StrInput
+from langflow.schema import Data
 
 
 class UpstashVectorStoreComponent(Component):

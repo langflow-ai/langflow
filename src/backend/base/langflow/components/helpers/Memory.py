@@ -1,10 +1,9 @@
 from langflow.custom import Component
-from langflow.inputs import DropdownInput, IntInput, TextInput
+from langflow.helpers.data import data_to_text
+from langflow.io import DropdownInput, IntInput, MultilineInput, Output, TextInput
 from langflow.memory import get_messages
 from langflow.schema import Data
 from langflow.schema.message import Message
-from langflow.template import Output
-from langflow.helpers.data import data_to_text
 
 
 class MemoryComponent(Component):

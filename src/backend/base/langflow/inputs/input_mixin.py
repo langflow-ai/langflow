@@ -5,7 +5,6 @@ from pydantic import BaseModel, ConfigDict, Field, PlainSerializer, field_valida
 
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.inputs.validators import CoalesceBool
-from langflow.inputs.validators import CoalesceBool
 
 
 class FieldTypes(str, Enum):

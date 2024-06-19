@@ -190,9 +190,9 @@ test("dropDownComponent", async ({ page }) => {
 from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import BaseLanguageModel, Text
-from langflow.inputs import BoolInput, DictInput, DropdownInput, StrInput
-from langflow.inputs import MessageInput
-from langflow.template import Output
+from langflow.io import BoolInput, DictInput, DropdownInput, StrInput
+from langflow.io import MessageInput
+from langflow.io import Output
 
 
 class AmazonBedrockComponent(LCModelComponent):

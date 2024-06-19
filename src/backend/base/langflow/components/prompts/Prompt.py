@@ -1,7 +1,6 @@
 from langflow.custom import Component
-from langflow.inputs import PromptInput
+from langflow.io import Output, PromptInput
 from langflow.schema.message import Message
-from langflow.template import Output
 
 
 class PromptComponent(Component):

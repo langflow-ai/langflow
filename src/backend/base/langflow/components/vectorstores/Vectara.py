@@ -1,13 +1,13 @@
 from typing import List
 
-from langflow.custom import Component
-from langflow.schema import Data
-from langflow.inputs import BoolInput, IntInput, StrInput, HandleInput
-from langflow.template import Output
-from langflow.helpers.data import docs_to_data
 from langchain_community.embeddings import FakeEmbeddings
 from langchain_community.vectorstores import Vectara
 from langchain_core.retrievers import BaseRetriever
+
+from langflow.custom import Component
+from langflow.helpers.data import docs_to_data
+from langflow.io import BoolInput, HandleInput, IntInput, Output, StrInput
+from langflow.schema import Data
 
 
 class VectaraVectorStoreComponent(Component):

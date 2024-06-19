@@ -3,8 +3,7 @@ from langchain_community.chat_models.bedrock import BedrockChat
 from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import BaseLanguageModel, Text
-from langflow.inputs import BoolInput, DictInput, DropdownInput, MessageInput, StrInput
-from langflow.template import Output
+from langflow.io import BoolInput, DictInput, DropdownInput, MessageInput, Output, StrInput
 
 
 class AmazonBedrockComponent(LCModelComponent):

@@ -1,6 +1,5 @@
 from langflow.custom import Component
-from langflow.inputs import BoolInput, DropdownInput, TextInput, MessageInput
-from langflow.template import Output
+from langflow.io import BoolInput, DropdownInput, MessageInput, Output, TextInput
 from langflow.schema.message import Message
 
 
@@ -26,7 +25,7 @@ class ConditionalRouterComponent(Component):
             options=["equals", "not equals", "contains", "starts with", "ends with"],
             info="The operator to apply for comparing the texts.",
             value="equals",
-            advanced=True
+            advanced=True,
         ),
         BoolInput(
             name="case_sensitive",

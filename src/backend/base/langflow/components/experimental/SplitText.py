@@ -2,10 +2,10 @@ from typing import List
 
 from langchain_text_splitters import CharacterTextSplitter
 from langflow.custom import Component
-from langflow.inputs import IntInput, TextInput, HandleInput
+from langflow.io import HandleInput, IntInput, Output, TextInput
 from langflow.schema import Data
-from langflow.template import Output
 from langflow.utils.util import unescape_string
+
 
 class SplitTextComponent(Component):
     display_name: str = "Split Text"

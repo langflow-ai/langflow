@@ -7,7 +7,7 @@ from loguru import logger
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent
 from langflow.base.vectorstores.utils import chroma_collection_to_data
-from langflow.inputs import BoolInput, DataInput, DropdownInput, HandleInput, IntInput, StrInput, TextInput
+from langflow.io import BoolInput, DataInput, DropdownInput, HandleInput, IntInput, StrInput, TextInput
 from langflow.schema import Data
 
 if TYPE_CHECKING:
