@@ -1,5 +1,6 @@
 import time
 import uuid
+from functools import partial
 from typing import TYPE_CHECKING, Annotated, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException
@@ -178,6 +179,11 @@ async def build_vertex(
                 inputs_dict=inputs.model_dump() if inputs else {},
                 files=files,
             )
+            set_cache_coro = partial(get_chat_service().set_cache, key=flow_id_str)
+            next_runnable_vertices = await graph.run_manager.get_next_runnable_vertices(
+                lock, set_cache_coro, graph=graph, vertex=vertex, cache=False
+            )
+            top_level_vertices = graph.run_manager.get_top_level_vertices(graph, next_runnable_vertices)
             log_obj = Log(message=vertex.artifacts_raw, type=vertex.artifacts_type)
             result_data_response = ResultDataResponse(**result_dict.model_dump())
 

@@ -1,6 +1,6 @@
 import asyncio
 from collections import defaultdict
-from typing import TYPE_CHECKING, Awaitable, Callable, List
+from typing import TYPE_CHECKING, Awaitable, Callable, List, Coroutine
 
 if TYPE_CHECKING:
     from langflow.graph.graph.base import Graph
@@ -56,7 +56,7 @@ class RunnableVerticesManager:
     async def get_next_runnable_vertices(
         self,
         lock: asyncio.Lock,
-        set_cache_coro: Callable[["Graph", asyncio.Lock], Awaitable[None]],
+        set_cache_coro: Callable[["Graph", asyncio.Lock], Coroutine],
         graph: "Graph",
         vertex: "Vertex",
         cache: bool = True,
