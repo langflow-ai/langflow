@@ -18,10 +18,7 @@ const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
   nodeId,
   outputName,
 }) => {
-  const nodes = useFlowStore((state) => state.nodes);
   const flowPool = useFlowStore((state) => state.flowPool);
-  const node = nodes.find((node) => node?.id === nodeId);
-
   const flowPoolNode = (flowPool[nodeId] ?? [])[
     (flowPool[nodeId]?.length ?? 1) - 1
   ];
@@ -46,7 +43,7 @@ const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
         ></ErrorOutput>
       </Case>
 
-      <Case condition={node && resultType === "text"}>
+      <Case condition={resultType === "text"}>
         <TextOutputView left={false} value={resultMessage} />
       </Case>
 

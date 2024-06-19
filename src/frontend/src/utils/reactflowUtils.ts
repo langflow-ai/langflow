@@ -1,4 +1,4 @@
-import { cloneDeep } from "lodash";
+import { cloneDeep, get } from "lodash";
 import {
   Connection,
   Edge,
@@ -1489,4 +1489,16 @@ export function updateGroupRecursion(groupNode: NodeType, edges: Edge[]) {
     let flowEdges = edges;
     updateEdgesIds(flowEdges, idsMap);
   }
+}
+
+export function getGroupOutputNodeId(flow:FlowType,p_name:string,p_node_id:string){
+  let node:NodeType|undefined = flow.data?.nodes.find((n) => n.id === p_node_id);
+  if(!node) return;
+  if(node.data.node?.flow){
+    let output = node.data.node.outputs?.find((o) => o.name === p_name);
+    if(output && output.proxy){
+      return getGroupOutputNodeId(node.data.node.flow,output.proxy.name,output.proxy.id);
+    }
+  }
+  return {id: node.id, outputName: p_name};
 }
