@@ -72,16 +72,16 @@ class VectaraVectorStoreComponent(Component):
                 return Vectara.from_documents(
                     documents=documents,
                     embedding=FakeEmbeddings(size=768),
-                    customer_id=self.vectara_customer_id,
-                    corpus_id=self.vectara_corpus_id,
-                    api_key=self.vectara_api_key,
+                    vectara_customer_id=self.vectara_customer_id,
+                    vectara_corpus_id=self.vectara_corpus_id,
+                    vectara_api_key=self.vectara_api_key,
                     source=source,
                 )
 
         return Vectara(
-            customer_id=self.vectara_customer_id,
-            corpus_id=self.vectara_corpus_id,
-            api_key=self.vectara_api_key,
+            vectara_customer_id=self.vectara_customer_id,
+            vectara_corpus_id=self.vectara_corpus_id,
+            vectara_api_key=self.vectara_api_key,
             source=source,
         )
 
