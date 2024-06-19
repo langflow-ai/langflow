@@ -51,7 +51,7 @@ class PromptInput(BaseInputMixin, ListableInputMixin):
 
 
 # Applying mixins to a specific input type
-class StrInput(BaseInputMixin, ListableInputMixin, DatabaseLoadMixin, MultilineMixin):
+class StrInput(BaseInputMixin, ListableInputMixin, DatabaseLoadMixin):
     field_type: Optional[SerializableFieldTypes] = FieldTypes.TEXT
     load_from_db: CoalesceBool = False
     """Defines if the field will allow the user to open a text editor. Default is False."""
@@ -162,7 +162,7 @@ class TextInput(StrInput):
         return value
 
 
-class MultilineInput(BaseInputMixin, MultilineMixin):
+class MultilineInput(TextInput, MultilineMixin):
     """
     Represents a multiline input field.
 
