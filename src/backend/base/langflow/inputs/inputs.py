@@ -56,6 +56,7 @@ class StrInput(BaseInputMixin, ListableInputMixin, DatabaseLoadMixin):
     load_from_db: CoalesceBool = False
     """Defines if the field will allow the user to open a text editor. Default is False."""
 
+    @staticmethod
     def _validate_value(v: Any, _info):
         """
         Validates the given value and returns the processed value.
