@@ -107,8 +107,8 @@ async def get_current_user_by_jwt(
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             payload = jwt.decode(token, secret_key, algorithms=[settings_service.auth_settings.ALGORITHM])
-        user_id: UUID = payload.get("sub")
-        token_type: str = payload.get("type")
+        user_id: UUID = payload.get("sub")  # type: ignore
+        token_type: str = payload.get("type")  # type: ignore
         if expires := payload.get("exp", None):
             expires_datetime = datetime.fromtimestamp(expires, timezone.utc)
             if datetime.now(timezone.utc) > expires_datetime:

@@ -76,7 +76,7 @@ class ChatOutputResponse(BaseModel):
     ):
         """Build chat output response from message."""
         content = message.content
-        return cls(message=content, sender=sender, sender_name=sender_name)
+        return cls(message=content, sender=sender, sender_name=sender_name)  # type: ignore
 
     @model_validator(mode="after")
     def validate_message(self):

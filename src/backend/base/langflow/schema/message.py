@@ -68,7 +68,7 @@ class Message(Data):
             if self.files:
                 contents = [{"type": "text", "text": self.text}]
                 contents.extend(self.get_file_content_dicts())
-                human_message = HumanMessage(content=contents)
+                human_message = HumanMessage(content=contents)  # type: ignore
             else:
                 human_message = HumanMessage(
                     content=[{"type": "text", "text": self.text}],
@@ -76,7 +76,7 @@ class Message(Data):
 
             return human_message
 
-        return AIMessage(content=self.text)
+        return AIMessage(content=self.text)  # type: ignore
 
     @classmethod
     def from_data(cls, data: "Data") -> "Message":
