@@ -529,7 +529,7 @@ export default function GenericNode({
                         <span className="flex">{STATUS_BUILD}</span>
                       ) : (
                         <div className="max-h-100 p-2">
-                          <div>
+                          <div className="max-h-80 overflow-auto">
                             {validationString && (
                               <div className="ml-1 pb-2 text-status-red">
                                 {validationString}
