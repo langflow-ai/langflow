@@ -836,7 +836,7 @@ class Graph:
                 next_runnable_vertices = await self._execute_tasks(tasks, lock=lock)
             except Exception as e:
                 logger.error(f"Error executing tasks in layer {layer_index}: {e}")
-                break
+                raise e
             if not next_runnable_vertices:
                 break
             to_process.extend(next_runnable_vertices)
