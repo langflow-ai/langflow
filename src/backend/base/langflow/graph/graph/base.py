@@ -711,7 +711,7 @@ class Graph:
         inputs_dict: Optional[Dict[str, str]] = None,
         files: Optional[list[str]] = None,
         user_id: Optional[str] = None,
-        fallback_to_env_vars: bool = False
+        fallback_to_env_vars: bool = False,
     ):
         """
         Builds a vertex in the graph.
@@ -774,7 +774,6 @@ class Graph:
             log_transaction(flow_id, vertex, status="failure", error=str(exc))
             raise exc
 
-
     def get_vertex_edges(
         self,
         vertex_id: str,
@@ -825,7 +824,7 @@ class Graph:
                         vertex_id=vertex_id,
                         user_id=self.user_id,
                         inputs_dict={},
-                        fallback_to_env_vars=fallback_to_env_vars
+                        fallback_to_env_vars=fallback_to_env_vars,
                     ),
                     name=f"{vertex.display_name} Run {vertex_task_run_count.get(vertex_id, 0)}",
                 )
