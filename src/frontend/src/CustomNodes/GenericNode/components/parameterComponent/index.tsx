@@ -304,7 +304,7 @@ export default function ParameterComponent({
                 data-testid={`output-inspection-${title.toLowerCase()}`}
               >
                 <IconComponent
-                  className="h-4 w-4"
+                  className={cn("h-4 w-4", disabledOutput ? "text-muted-foreground" : "")}
                   strokeWidth={1.5}
                   name={data.node?.outputs![index].hidden ? "EyeOff" : "Eye"}
                 />
