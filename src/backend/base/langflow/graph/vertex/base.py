@@ -2,7 +2,6 @@ import ast
 import asyncio
 import inspect
 import os
-import traceback
 import types
 from enum import Enum
 from typing import TYPE_CHECKING, Any, AsyncIterator, Callable, Dict, Iterator, List, Mapping, Optional
@@ -192,13 +191,13 @@ class Vertex:
             self.outputs = self.data["node"].get("outputs", [])
             self.output = self.data["node"]["base_classes"]
 
-        self.display_name = self.data["node"].get("display_name", self.id.split("-")[0])
+        self.display_name: str = self.data["node"].get("display_name", self.id.split("-")[0])
 
-        self.description = self.data["node"].get("description", "")
-        self.frozen = self.data["node"].get("frozen", False)
+        self.description: str = self.data["node"].get("description", "")
+        self.frozen: bool = self.data["node"].get("frozen", False)
 
-        self.is_input = self.data["node"].get("is_input") or self.is_input
-        self.is_output = self.data["node"].get("is_output") or self.is_output
+        self.is_input: bool = self.data["node"].get("is_input") or self.is_input
+        self.is_output: bool = self.data["node"].get("is_output") or self.is_output
         template_dicts = {key: value for key, value in self.data["node"]["template"].items() if isinstance(value, dict)}
 
         self.has_session_id = "session_id" in template_dicts
