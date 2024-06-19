@@ -149,6 +149,7 @@ export default function NodeToolbarComponent({
 
   function handleFreeze(e: KeyboardEvent) {
     e.preventDefault();
+    if (data.node?.flow) return;
     setNode(data.id, (old) => ({
       ...old,
       data: {
@@ -239,6 +240,7 @@ export default function NodeToolbarComponent({
         saveComponent(cloneDeep(data), false);
         break;
       case "freeze":
+        if (data.node?.flow) return;
         setNode(data.id, (old) => ({
           ...old,
           data: {
@@ -445,9 +447,8 @@ export default function NodeToolbarComponent({
               side="top"
             >
               <button
-                className={`${
-                  isGroup ? "rounded-l-md" : ""
-                } relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10`}
+                className={`${isGroup ? "rounded-l-md" : ""
+                  } relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10`}
                 onClick={() => {
                   setShowModalAdvanced(true);
                 }}
@@ -476,7 +477,7 @@ export default function NodeToolbarComponent({
               <IconComponent name="SaveAll" className="h-4 w-4" />
             </button>
           </ShadTooltip>*/}
-          <ShadTooltip
+          {!data.node?.flow && <ShadTooltip
             content={displayShortcut(
               shortcuts.find(
                 ({ name }) => name.split(" ")[0].toLowerCase() === "freeze",
@@ -511,7 +512,7 @@ export default function NodeToolbarComponent({
                 )}
               />
             </button>
-          </ShadTooltip>
+          </ShadTooltip>}
 
           {/*<ShadTooltip content={"Duplicate"} side="top">
             <button
@@ -681,7 +682,7 @@ export default function NodeToolbarComponent({
                   />
                 </SelectItem>
               )}
-              <SelectItem value="freeze">
+              {!data.node?.flow&&<SelectItem value="freeze">
                 <ToolbarSelectItem
                   shortcut={
                     shortcuts.find((obj) => obj.name === "Freeze")?.shortcut!
@@ -691,7 +692,7 @@ export default function NodeToolbarComponent({
                   dataTestId="group-button-modal"
                   style={`${frozen ? " text-ice" : ""} transition-all`}
                 />
-              </SelectItem>
+              </SelectItem>}
               <SelectItem value="Download">
                 <ToolbarSelectItem
                   shortcut={
@@ -715,9 +716,8 @@ export default function NodeToolbarComponent({
                   />{" "}
                   <span className="">Delete</span>{" "}
                   <span
-                    className={`absolute right-2 top-2 flex items-center justify-center rounded-sm px-1 py-[0.2] ${
-                      deleteIsFocus ? " " : "bg-muted"
-                    }`}
+                    className={`absolute right-2 top-2 flex items-center justify-center rounded-sm px-1 py-[0.2] ${deleteIsFocus ? " " : "bg-muted"
+                      }`}
                   >
                     <IconComponent
                       name="Delete"
