@@ -1,9 +1,10 @@
 import asyncio
 import uuid
 from collections import defaultdict, deque
+from datetime import datetime, timezone
 from functools import partial
 from itertools import chain
-from typing import TYPE_CHECKING, Dict, Generator, List, Optional, Tuple, Type, Union
+from typing import TYPE_CHECKING, Any, Dict, Generator, List, Optional, Tuple, Type, Union
 
 from loguru import logger
 
@@ -20,7 +21,7 @@ from langflow.schema import Data
 from langflow.schema.schema import INPUT_FIELD_NAME, InputType
 from langflow.services.cache.utils import CacheMiss
 from langflow.services.chat.service import ChatService
-from langflow.services.deps import get_chat_service
+from langflow.services.deps import get_chat_service, get_tracing_service
 from langflow.services.monitor.utils import log_transaction
 
 if TYPE_CHECKING:
@@ -35,6 +36,7 @@ class Graph:
         nodes: List[Dict],
         edges: List[Dict[str, str]],
         flow_id: Optional[str] = None,
+        flow_name: Optional[str] = None,
         user_id: Optional[str] = None,
     ) -> None:
         """
@@ -51,6 +53,7 @@ class Graph:
         self._runs = 0
         self._updates = 0
         self.flow_id = flow_id
+        self.flow_name = flow_name
         self.user_id = user_id
         self._is_input_vertices: List[str] = []
         self._is_output_vertices: List[str] = []
@@ -58,6 +61,7 @@ class Graph:
         self._has_session_id_vertices: List[str] = []
         self._sorted_vertices_layers: List[List[str]] = []
         self._run_id = ""
+        self._start_time = datetime.now(timezone.utc)
 
         self.top_level_vertices = []
         for vertex in self._vertices:
@@ -81,6 +85,11 @@ class Graph:
         self.build_graph_maps(self.edges)
         self.define_vertices_lists()
         self.state_manager = GraphStateManager()
+        try:
+            self.tracing_service = get_tracing_service()
+        except Exception as exc:
+            logger.error(f"Error getting tracing service: {exc}")
+            self.tracing_service = None
 
     def get_state(self, name: str) -> Optional[Data]:
         """
@@ -214,6 +223,24 @@ class Graph:
         for vertex in self.vertices:
             self.state_manager.subscribe(run_id, vertex.update_graph_state)
         self._run_id = run_id
+        self.tracing_service.set_run_id(run_id)
+
+    def set_run_name(self):
+        # Given a flow name, flow_id
+        if not self.tracing_service:
+            return
+        name = f"{self.flow_name} - {self.flow_id}"
+        self.tracing_service.set_run_name(name)
+        self.tracing_service.initialize_tracers()
+
+    def end_all_traces(self, outputs: dict[str, Any] | None = None):
+        if not self.tracing_service:
+            return
+        self._end_time = datetime.now(timezone.utc)
+        if outputs is None:
+            outputs = {}
+        outputs |= self.metadata
+        self.tracing_service.end(outputs)
 
     @property
     def sorted_vertices_layers(self) -> List[List[str]]:
@@ -442,10 +469,13 @@ class Graph:
         Returns:
             dict: The metadata of the graph.
         """
+        time_format = "%Y-%m-%d %H:%M:%S"
         return {
-            "runs": self._runs,
-            "updates": self._updates,
-            "inactivated_vertices": self.inactivated_vertices,
+            "start_time": self._start_time.strftime(time_format),
+            "end_time": self._end_time.strftime(time_format),
+            "time_elapsed": f"{(self._end_time - self._start_time).total_seconds()} seconds",
+            "flow_id": self.flow_id,
+            "flow_name": self.flow_name,
         }
 
     def build_graph_maps(self, edges: Optional[List[ContractEdge]] = None, vertices: Optional[List[Vertex]] = None):
@@ -553,9 +583,18 @@ class Graph:
             state["run_manager"] = RunnableVerticesManager.from_dict(run_manager)
         self.__dict__.update(state)
         self.state_manager = GraphStateManager()
+        self.tracing_service = get_tracing_service()
+        self.set_run_id(self._run_id)
+        self.set_run_name()
 
     @classmethod
-    def from_payload(cls, payload: Dict, flow_id: Optional[str] = None, user_id: Optional[str] = None) -> "Graph":
+    def from_payload(
+        cls,
+        payload: Dict,
+        flow_id: Optional[str] = None,
+        flow_name: Optional[str] = None,
+        user_id: Optional[str] = None,
+    ) -> "Graph":
         """
         Creates a graph from a payload.
 
@@ -570,7 +609,7 @@ class Graph:
         try:
             vertices = payload["nodes"]
             edges = payload["edges"]
-            return cls(vertices, edges, flow_id, user_id)
+            return cls(vertices, edges, flow_id, flow_name, user_id)
         except KeyError as exc:
             logger.exception(exc)
             if "nodes" not in payload and "edges" not in payload:
@@ -880,6 +919,7 @@ class Graph:
         chat_service = get_chat_service()
         run_id = uuid.uuid4()
         self.set_run_id(run_id)
+        self.set_run_name()
         lock = chat_service._cache_locks[self.run_id]
         while to_process:
             current_batch = list(to_process)  # Copy current deque items to a list

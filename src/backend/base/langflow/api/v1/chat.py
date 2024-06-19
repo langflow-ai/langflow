@@ -108,11 +108,9 @@ async def retrieve_vertices_order(
         # Now vertices is a list of lists
         # We need to get the id of each vertex
         # and return the same structure but only with the ids
-        run_id = uuid.uuid4()
-        graph.set_run_id(run_id)
         vertices_to_run = list(graph.vertices_to_run) + get_top_level_vertices(graph, graph.vertices_to_run)
         await chat_service.set_cache(str(flow_id), graph)
-        return VerticesOrderResponse(ids=first_layer, run_id=run_id, vertices_to_run=vertices_to_run)
+        return VerticesOrderResponse(ids=first_layer, run_id=graph._run_id, vertices_to_run=vertices_to_run)
 
     except Exception as exc:
         if "stream or streaming set to True" in str(exc):
@@ -204,6 +202,7 @@ async def build_vertex(
             logs = {output_label: Log(message=message, type="error")}
             result_data_response = ResultDataResponse(results={}, logs=logs)
             artifacts = {}
+            graph.end_all_traces(outputs=message)
             # If there's an error building the vertex
             # we need to clear the cache
             await chat_service.clear_cache(flow_id_str)
@@ -239,6 +238,9 @@ async def build_vertex(
         # vertices from next_vertices_ids
         if graph.stop_vertex and graph.stop_vertex in next_runnable_vertices:
             next_runnable_vertices = [graph.stop_vertex]
+
+        if not next_runnable_vertices:
+            graph.end_all_traces()
 
         build_response = VertexBuildResponse(
             inactivated_vertices=inactivated_vertices,
