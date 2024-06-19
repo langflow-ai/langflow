@@ -4,6 +4,7 @@ import { TypeModal } from "../../constants/enums";
 import GenericModal from "../../modals/genericModal";
 import { TextAreaComponentType } from "../../types/components";
 import IconComponent from "../genericIconComponent";
+import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 
 export default function TextAreaComponent({
@@ -46,15 +47,17 @@ export default function TextAreaComponent({
             disabled={disabled}
           >
             {!editNode && (
-              <IconComponent
-                strokeWidth={1.5}
-                id={id}
-                name="ExternalLink"
-                className={
-                  "icons-parameters-comp shrink-0" +
-                  (disabled ? " text-ring" : " hover:text-accent-foreground")
-                }
-              />
+              <Button unstyled>
+                <IconComponent
+                  strokeWidth={1.5}
+                  id={id}
+                  name="ExternalLink"
+                  className={
+                    "icons-parameters-comp shrink-0" +
+                    (disabled ? " text-ring" : " hover:text-accent-foreground")
+                  }
+                />
+              </Button>
             )}
           </GenericModal>
         </div>
