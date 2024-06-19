@@ -48,6 +48,7 @@ export function checkChatInput(nodes: Node[]) {
 }
 
 export function cleanEdges(nodes: NodeType[], edges: Edge[]) {
+  console.log("cleanEdges", nodes, edges);
   let newEdges = cloneDeep(edges);
   edges.forEach((edge) => {
     // check if the source and target node still exists
@@ -97,6 +98,9 @@ export function cleanEdges(nodes: NodeType[], edges: Edge[]) {
         if (scapedJSONStringfy(id) !== sourceHandle) {
           newEdges = newEdges.filter((e) => e.id !== edge.id);
         }
+      }
+      else {
+        newEdges = newEdges.filter((e) => e.id !== edge.id);
       }
     }
   });
