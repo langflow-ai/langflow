@@ -201,7 +201,7 @@ export type VertexDataTypeAPI = {
   timedelta?: number;
   duration?: string;
   artifacts?: any | ChatOutputType | ChatInputType;
-  message: ChatOutputType | ChatInputType;
+  message?: ChatOutputType | ChatInputType;
 };
 
 export type CodeErrorDataTypeAPI = {
