@@ -1,6 +1,6 @@
 import asyncio
 from collections import defaultdict
-from typing import TYPE_CHECKING, Awaitable, Callable, List, Coroutine
+from typing import TYPE_CHECKING, Callable, List, Coroutine
 
 if TYPE_CHECKING:
     from langflow.graph.graph.base import Graph
