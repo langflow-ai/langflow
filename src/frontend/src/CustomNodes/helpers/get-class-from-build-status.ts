@@ -7,11 +7,6 @@ export const getSpecificClassFromBuildStatus = (
   isDark: boolean,
 ) => {
   let isInvalid = validationStatus && !validationStatus.valid;
-
-  if (buildStatus === BuildStatus.INACTIVE) {
-    // INACTIVE should have its own class
-    return "inactive-status";
-  }
   if (
     (buildStatus === BuildStatus.BUILT && isInvalid) ||
     buildStatus === BuildStatus.ERROR
