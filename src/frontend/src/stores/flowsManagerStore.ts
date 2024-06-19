@@ -262,17 +262,18 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
 
         // Return the id
         return id;
-      } catch (error:any) {
-        if(error.response?.data?.detail){
+      } catch (error: any) {
+        if (error.response?.data?.detail) {
           useAlertStore.getState().setErrorData({
             title: "Could not load flows from database",
             list: [error.response?.data?.detail],
           });
-        }
-        else{
+        } else {
           useAlertStore.getState().setErrorData({
             title: "Could not load flows from database",
-            list: [error.message?? "An unexpected error occurred, please try again"],
+            list: [
+              error.message ?? "An unexpected error occurred, please try again",
+            ],
           });
         }
         throw error; // Re-throw the error so the caller can handle it if needed

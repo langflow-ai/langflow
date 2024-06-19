@@ -528,7 +528,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         (id) => newFlowBuildStatus[id]?.status !== BuildStatus.BUILT,
       );
 
-
       if (verticesToUpdate) {
         useFlowStore.getState().updateBuildStatus(verticesToUpdate, status);
       }
@@ -628,7 +627,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     });
   },
   updateBuildStatus: (nodeIdList: string[], status: BuildStatus) => {
-
     const newFlowBuildStatus = { ...get().flowBuildStatus };
     nodeIdList.forEach((id) => {
       newFlowBuildStatus[id] = {

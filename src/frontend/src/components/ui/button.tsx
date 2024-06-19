@@ -76,7 +76,9 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       <>
         <Comp
           className={
-            !unstyled ? buttonVariants({ variant, size, className }) : cn(className, "nocopy nowheel nopan nodelete nodrag noundo")
+            !unstyled
+              ? buttonVariants({ variant, size, className })
+              : cn(className, "nocopy nowheel nopan nodelete nodrag noundo")
           }
           disabled={loading || disabled}
           {...(asChild ? {} : { type: type || "button" })}
@@ -89,7 +91,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
               <span className="absolute inset-0">
                 <ForwardedIconComponent
                   name={"Loader2"}
-                  className={"animate-spin m-auto h-full"}
+                  className={"m-auto h-full animate-spin"}
                 />
               </span>
             </span>

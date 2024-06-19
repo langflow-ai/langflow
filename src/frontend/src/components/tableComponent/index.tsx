@@ -1,6 +1,7 @@
 import "ag-grid-community/styles/ag-grid.css"; // Mandatory CSS required by the grid
 import "ag-grid-community/styles/ag-theme-quartz.css"; // Optional Theme applied to the grid
 import { AgGridReact, AgGridReactProps } from "ag-grid-react";
+import cloneDeep from "lodash";
 import { ElementRef, forwardRef, useRef, useState } from "react";
 import {
   DEFAULT_TABLE_ALERT_MSG,
@@ -13,7 +14,6 @@ import ForwardedIconComponent from "../genericIconComponent";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import TableOptions from "./components/TableOptions";
 import resetGrid from "./utils/reset-grid-columns";
-import cloneDeep from "lodash";
 
 interface TableComponentProps extends AgGridReactProps {
   columnDefs: NonNullable<AgGridReactProps["columnDefs"]>;
@@ -98,7 +98,9 @@ const TableComponent = forwardRef<
       if (props.onGridReady) props.onGridReady(params);
     };
     const onColumnMoved = (params) => {
-      const updatedColumnDefs = cloneDeep(params.columnApi.getAllGridColumns().map((col) => col.getColDef()));
+      const updatedColumnDefs = cloneDeep(
+        params.columnApi.getAllGridColumns().map((col) => col.getColDef()),
+      );
       params.api.setGridOption("columnDefs", updatedColumnDefs);
       if (props.onColumnMoved) props.onColumnMoved(params);
     };
@@ -165,4 +167,3 @@ const TableComponent = forwardRef<
 );
 
 export default TableComponent;
-
