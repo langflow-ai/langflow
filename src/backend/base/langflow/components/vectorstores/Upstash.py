@@ -1,15 +1,14 @@
 from typing import List
 
 from langchain_community.vectorstores import UpstashVectorStore
-from langchain_core.retrievers import BaseRetriever
 
-from langflow.custom import Component
+from langflow.base.vectorstores.model import LCVectorStoreComponent
 from langflow.helpers.data import docs_to_data
-from langflow.io import BoolInput, HandleInput, IntInput, Output, StrInput
+from langflow.io import BoolInput, HandleInput, IntInput, StrInput, SecretStrInput
 from langflow.schema import Data
 
 
-class UpstashVectorStoreComponent(Component):
+class UpstashVectorStoreComponent(LCVectorStoreComponent):
     display_name = "Upstash"
     description = "Upstash Vector Store with search capabilities"
     documentation = "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/upstash"
@@ -17,7 +16,7 @@ class UpstashVectorStoreComponent(Component):
 
     inputs = [
         StrInput(name="index_url", display_name="Index URL", info="The URL of the Upstash index.", required=True),
-        StrInput(
+        SecretStrInput(
             name="index_token", display_name="Index Token", info="The token for the Upstash index.", required=True
         ),
         StrInput(
@@ -54,26 +53,7 @@ class UpstashVectorStoreComponent(Component):
         ),
     ]
 
-    outputs = [
-        Output(
-            display_name="Vector Store",
-            name="vector_store",
-            method="build_vector_store",
-            output_type=UpstashVectorStore,
-        ),
-        Output(
-            display_name="Base Retriever",
-            name="base_retriever",
-            method="build_base_retriever",
-            output_type=BaseRetriever,
-        ),
-        Output(display_name="Search Results", name="search_results", method="search_documents"),
-    ]
-
     def build_vector_store(self) -> UpstashVectorStore:
-        return self._build_upstash()
-
-    def build_base_retriever(self) -> BaseRetriever:
         return self._build_upstash()
 
     def _build_upstash(self) -> UpstashVectorStore:

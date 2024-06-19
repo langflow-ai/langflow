@@ -1,16 +1,15 @@
 from typing import List
 
 from langchain_community.vectorstores import SupabaseVectorStore
-from langchain_core.retrievers import BaseRetriever
 from supabase.client import Client, create_client
 
-from langflow.custom import Component
+from langflow.base.vectorstores.model import LCVectorStoreComponent
 from langflow.helpers.data import docs_to_data
-from langflow.io import HandleInput, IntInput, Output, StrInput
+from langflow.io import HandleInput, IntInput, StrInput, SecretStrInput
 from langflow.schema import Data
 
 
-class SupabaseVectorStoreComponent(Component):
+class SupabaseVectorStoreComponent(LCVectorStoreComponent):
     display_name = "Supabase"
     description = "Supabase Vector Store with search capabilities"
     documentation = "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/supabase"
@@ -18,7 +17,7 @@ class SupabaseVectorStoreComponent(Component):
 
     inputs = [
         StrInput(name="supabase_url", display_name="Supabase URL", required=True),
-        StrInput(name="supabase_service_key", display_name="Supabase Service Key", required=True),
+        SecretStrInput(name="supabase_service_key", display_name="Supabase Service Key", required=True),
         StrInput(name="table_name", display_name="Table Name", advanced=True),
         StrInput(name="query_name", display_name="Query Name"),
         HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
@@ -38,26 +37,7 @@ class SupabaseVectorStoreComponent(Component):
         ),
     ]
 
-    outputs = [
-        Output(
-            display_name="Vector Store",
-            name="vector_store",
-            method="build_vector_store",
-            output_type=SupabaseVectorStore,
-        ),
-        Output(
-            display_name="Base Retriever",
-            name="base_retriever",
-            method="build_base_retriever",
-            output_type=BaseRetriever,
-        ),
-        Output(display_name="Search Results", name="search_results", method="search_documents"),
-    ]
-
     def build_vector_store(self) -> SupabaseVectorStore:
-        return self._build_supabase()
-
-    def build_base_retriever(self) -> BaseRetriever:
         return self._build_supabase()
 
     def _build_supabase(self) -> SupabaseVectorStore:

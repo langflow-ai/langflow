@@ -2,15 +2,14 @@ from datetime import timedelta
 from typing import List
 
 from langchain_community.vectorstores import CouchbaseVectorStore
-from langchain_core.retrievers import BaseRetriever
 
-from langflow.custom import Component
+from langflow.base.vectorstores.model import LCVectorStoreComponent
 from langflow.helpers.data import docs_to_data
-from langflow.io import BoolInput, HandleInput, IntInput, Output, StrInput
+from langflow.io import BoolInput, HandleInput, IntInput, StrInput, SecretStrInput
 from langflow.schema import Data
 
 
-class CouchbaseVectorStoreComponent(Component):
+class CouchbaseVectorStoreComponent(LCVectorStoreComponent):
     display_name = "Couchbase"
     description = "Couchbase Vector Store with search capabilities"
     documentation = "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/couchbase"
@@ -19,7 +18,7 @@ class CouchbaseVectorStoreComponent(Component):
     inputs = [
         StrInput(name="couchbase_connection_string", display_name="Couchbase Cluster connection string", required=True),
         StrInput(name="couchbase_username", display_name="Couchbase username", required=True),
-        StrInput(name="couchbase_password", display_name="Couchbase password", password=True, required=True),
+        SecretStrInput(name="couchbase_password", display_name="Couchbase password", required=True),
         StrInput(name="bucket_name", display_name="Bucket Name", required=True),
         StrInput(name="scope_name", display_name="Scope Name", required=True),
         StrInput(name="collection_name", display_name="Collection Name", required=True),
@@ -46,26 +45,7 @@ class CouchbaseVectorStoreComponent(Component):
         ),
     ]
 
-    outputs = [
-        Output(
-            display_name="Vector Store",
-            name="vector_store",
-            method="build_vector_store",
-            output_type=CouchbaseVectorStore,
-        ),
-        Output(
-            display_name="Base Retriever",
-            name="base_retriever",
-            method="build_base_retriever",
-            output_type=BaseRetriever,
-        ),
-        Output(display_name="Search Results", name="search_results", method="search_documents"),
-    ]
-
     def build_vector_store(self) -> CouchbaseVectorStore:
-        return self._build_couchbase()
-
-    def build_base_retriever(self) -> BaseRetriever:
         return self._build_couchbase()
 
     def _build_couchbase(self) -> CouchbaseVectorStore:

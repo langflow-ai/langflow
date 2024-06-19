@@ -1,22 +1,21 @@
 from typing import List
 
-from langchain.schema import BaseRetriever
 from langchain_community.vectorstores import PGVector
 
-from langflow.custom import Component
+from langflow.base.vectorstores.model import LCVectorStoreComponent
 from langflow.helpers.data import docs_to_data
-from langflow.io import BoolInput, HandleInput, IntInput, Output, StrInput
+from langflow.io import BoolInput, HandleInput, IntInput, StrInput, SecretStrInput
 from langflow.schema import Data
 
 
-class PGVectorStoreComponent(Component):
+class PGVectorStoreComponent(LCVectorStoreComponent):
     display_name = "PGVector"
     description = "PGVector Vector Store with search capabilities"
     documentation = "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/pgvector"
     icon = "PGVector"
 
     inputs = [
-        StrInput(name="pg_server_url", display_name="PostgreSQL Server Connection String", required=True),
+        SecretStrInput(name="pg_server_url", display_name="PostgreSQL Server Connection String", required=True),
         StrInput(name="collection_name", display_name="Table", required=True),
         HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
         HandleInput(
@@ -40,21 +39,7 @@ class PGVectorStoreComponent(Component):
         ),
     ]
 
-    outputs = [
-        Output(display_name="Vector Store", name="vector_store", method="build_vector_store", output_type=PGVector),
-        Output(
-            display_name="Base Retriever",
-            name="base_retriever",
-            method="build_base_retriever",
-            output_type=BaseRetriever,
-        ),
-        Output(display_name="Search Results", name="search_results", method="search_documents"),
-    ]
-
     def build_vector_store(self) -> PGVector:
-        return self._build_pgvector()
-
-    def build_base_retriever(self) -> BaseRetriever:
         return self._build_pgvector()
 
     def _build_pgvector(self) -> PGVector:

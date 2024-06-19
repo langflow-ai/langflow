@@ -2,15 +2,14 @@ from typing import List
 
 import weaviate
 from langchain_community.vectorstores import Weaviate
-from langchain_core.retrievers import BaseRetriever
 
-from langflow.custom import Component
+from langflow.base.vectorstores.model import LCVectorStoreComponent
 from langflow.helpers.data import docs_to_data
-from langflow.io import BoolInput, HandleInput, IntInput, Output, StrInput
+from langflow.io import BoolInput, HandleInput, IntInput, StrInput, SecretStrInput
 from langflow.schema import Data
 
 
-class WeaviateVectorStoreComponent(Component):
+class WeaviateVectorStoreComponent(LCVectorStoreComponent):
     display_name = "Weaviate"
     description = "Weaviate Vector Store with search capabilities"
     documentation = "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/weaviate"
@@ -18,7 +17,7 @@ class WeaviateVectorStoreComponent(Component):
 
     inputs = [
         StrInput(name="url", display_name="Weaviate URL", value="http://localhost:8080", required=True),
-        StrInput(name="api_key", display_name="API Key", password=True, required=False),
+        SecretStrInput(name="api_key", display_name="API Key", required=False),
         StrInput(name="index_name", display_name="Index Name", required=True),
         StrInput(name="text_key", display_name="Text Key", value="text", advanced=True),
         HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
@@ -44,21 +43,7 @@ class WeaviateVectorStoreComponent(Component):
         BoolInput(name="search_by_text", display_name="Search By Text", advanced=True),
     ]
 
-    outputs = [
-        Output(display_name="Vector Store", name="vector_store", method="build_vector_store", output_type=Weaviate),
-        Output(
-            display_name="Base Retriever",
-            name="base_retriever",
-            method="build_base_retriever",
-            output_type=BaseRetriever,
-        ),
-        Output(display_name="Search Results", name="search_results", method="search_documents"),
-    ]
-
     def build_vector_store(self) -> Weaviate:
-        return self._build_weaviate()
-
-    def build_base_retriever(self) -> BaseRetriever:
         return self._build_weaviate()
 
     def _build_weaviate(self) -> Weaviate:

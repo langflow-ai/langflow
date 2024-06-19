@@ -1,15 +1,14 @@
 from typing import List
 
-from langchain_core.retrievers import BaseRetriever
 from langchain_pinecone import Pinecone
 
-from langflow.custom import Component
+from langflow.base.vectorstores.model import LCVectorStoreComponent
 from langflow.helpers.data import docs_to_data
-from langflow.io import BoolInput, DropdownInput, HandleInput, IntInput, Output, StrInput
+from langflow.io import BoolInput, DropdownInput, HandleInput, IntInput, StrInput, SecretStrInput
 from langflow.schema import Data
 
 
-class PineconeVectorStoreComponent(Component):
+class PineconeVectorStoreComponent(LCVectorStoreComponent):
     display_name = "Pinecone"
     description = "Pinecone Vector Store with search capabilities"
     documentation = "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/pinecone"
@@ -25,7 +24,7 @@ class PineconeVectorStoreComponent(Component):
             value="Cosine",
             advanced=True,
         ),
-        StrInput(name="pinecone_api_key", display_name="Pinecone API Key", password=True, required=True),
+        SecretStrInput(name="pinecone_api_key", display_name="Pinecone API Key", required=True),
         HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
         StrInput(
             name="text_key",
@@ -55,21 +54,7 @@ class PineconeVectorStoreComponent(Component):
         ),
     ]
 
-    outputs = [
-        Output(display_name="Vector Store", name="vector_store", method="build_vector_store", output_type=Pinecone),
-        Output(
-            display_name="Base Retriever",
-            name="base_retriever",
-            method="build_base_retriever",
-            output_type=BaseRetriever,
-        ),
-        Output(display_name="Search Results", name="search_results", method="search_documents"),
-    ]
-
     def build_vector_store(self) -> Pinecone:
-        return self._build_pinecone()
-
-    def build_base_retriever(self) -> BaseRetriever:
         return self._build_pinecone()
 
     def _build_pinecone(self) -> Pinecone:
