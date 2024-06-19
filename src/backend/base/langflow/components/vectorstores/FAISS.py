@@ -1,17 +1,16 @@
 from typing import List
 
 from langchain_community.vectorstores import FAISS
-from langchain_core.retrievers import BaseRetriever
 from loguru import logger
 
-from langflow.custom import Component
+from langflow.base.vectorstores.model import LCVectorStoreComponent
 from langflow.field_typing import Text
 from langflow.helpers.data import docs_to_data
 from langflow.io import BoolInput, HandleInput, IntInput, Output, StrInput
 from langflow.schema import Data
 
 
-class FaissVectorStoreComponent(Component):
+class FaissVectorStoreComponent(LCVectorStoreComponent):
     """
     FAISS Vector Store with search capabilities
     """
@@ -83,18 +82,6 @@ class FaissVectorStoreComponent(Component):
     ]
 
     def build_vector_store(self) -> FAISS:
-        """
-        Builds the Vector Store object.
-        """
-        return self._build_faiss()
-
-    def build_base_retriever(self) -> BaseRetriever:
-        """
-        Builds the BaseRetriever object.
-        """
-        return self._build_faiss()
-
-    def _build_faiss(self) -> FAISS:
         """
         Builds the FAISS object.
         """
