@@ -173,7 +173,6 @@ async def build_vertex(
                 artifacts,
                 vertex,
             ) = await graph.build_vertex(
-                lock=lock,
                 chat_service=chat_service,
                 vertex_id=vertex_id,
                 user_id=current_user.id,
