@@ -102,6 +102,17 @@ class FrontendNode(BaseModel):
     def get_base_classes_from_outputs(self) -> list[str]:
         self.base_classes = [output_type for output in self.outputs for output_type in output.types]
 
+    def validate_name_overlap(self) -> None:
+        # Check if any of the output names overlap with the any of the inputs
+        output_names = [output.name for output in self.outputs]
+        input_names = [input_.name for input_ in self.template.fields]
+        overlap = set(output_names).intersection(input_names)
+        if overlap:
+            overlap = ", ".join(map(lambda x: f"'{x}'", overlap))
+            raise ValueError(
+                f"There should be no overlap between input and output names. Names {overlap} are duplicated."
+            )
+
     def add_base_class(self, base_class: Union[str, List[str]]) -> None:
         """Adds a base class to the frontend node."""
         if isinstance(base_class, str):
