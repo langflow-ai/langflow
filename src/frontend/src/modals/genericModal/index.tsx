@@ -188,7 +188,7 @@ export default function GenericModal({
       open={modalOpen}
       setOpen={setModalOpen}
     >
-      <BaseModal.Trigger disable={disabled}>{children}</BaseModal.Trigger>
+      <BaseModal.Trigger disable={disabled} asChild>{children}</BaseModal.Trigger>
       <BaseModal.Header
         description={(() => {
           switch (myModalTitle) {
