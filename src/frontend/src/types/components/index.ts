@@ -622,6 +622,7 @@ export type genericModalPropsType = {
   buttonText: string;
   modalTitle: string;
   type: number;
+  disabled?: boolean;
   nodeClass?: APIClassType;
   setNodeClass?: (Class: APIClassType, code?: string) => void;
   children: ReactNode;
