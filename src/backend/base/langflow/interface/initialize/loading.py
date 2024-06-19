@@ -1,10 +1,12 @@
 import inspect
 import json
 import os
+import warnings
 from typing import TYPE_CHECKING, Any, Type
 
 import orjson
 from loguru import logger
+from pydantic import PydanticDeprecatedSince20
 
 from langflow.custom.eval import eval_custom_component_code
 from langflow.schema import Data
@@ -43,12 +45,14 @@ async def instantiate_class(
     params_copy = update_params_with_load_from_db_fields(
         custom_component, params_copy, vertex.load_from_db_fields, fallback_to_env_vars
     )
-    if base_type == "custom_components":
-        return await build_custom_component(params=params_copy, custom_component=custom_component)
-    elif base_type == "component":
-        return await build_component(params=params_copy, custom_component=custom_component, vertex=vertex)
-    else:
-        raise ValueError(f"Base type {base_type} not found.")
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
+        if base_type == "custom_components":
+            return await build_custom_component(params=params_copy, custom_component=custom_component)
+        elif base_type == "component":
+            return await build_component(params=params_copy, custom_component=custom_component, vertex=vertex)
+        else:
+            raise ValueError(f"Base type {base_type} not found.")
 
 
 def convert_params_to_sets(params):
