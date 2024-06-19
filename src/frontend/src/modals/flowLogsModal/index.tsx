@@ -24,8 +24,6 @@ export default function FlowLogsModal({
     });
   }, [open]);
 
-  console.log(rows);
-
   return (
     <BaseModal open={open} setOpen={setOpen} size="large">
       <BaseModal.Header description="Inspect component executions.">
