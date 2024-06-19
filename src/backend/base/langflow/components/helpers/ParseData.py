@@ -22,7 +22,7 @@ class ParseDataComponent(Component):
             name="sep",
             display_name="Separator",
             advanced=True,
-            value='---'
+            value='\n'
             )
     ]
 

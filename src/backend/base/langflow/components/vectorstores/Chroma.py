@@ -37,7 +37,6 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
         TextInput(
             name="search_query",
             display_name="Search Query",
-            is_list=True,
         ),
         DataInput(
             name="ingest_data",
@@ -146,11 +145,12 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
             self.status = ""
             return
 
+
+        _stored_documents_without_id = []
         if self.allow_duplicates:
             stored_data = []
         else:
             stored_data = chroma_collection_to_data(vector_store.get(self.limit))
-            _stored_documents_without_id = []
             for value in deepcopy(stored_data):
                 del value.id
                 _stored_documents_without_id.append(value)
@@ -192,4 +192,5 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
         search_results = self.search_with_vector_store(
             self.search_query, self.search_type, vector_store, k=self.number_of_results
         )
+        self.status = search_results
         return search_results

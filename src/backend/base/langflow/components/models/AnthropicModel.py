@@ -19,6 +19,7 @@ class AnthropicModelComponent(LCModelComponent):
             name="max_tokens",
             display_name="Max Tokens",
             advanced=True,
+            value=4096,
             info="The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
         ),
         DropdownInput(
