@@ -93,12 +93,12 @@ class GroqModel(LCModelComponent):
         stream = self.stream
 
         output = ChatGroq(
-            model_name=model_name,
+            model=model_name,
             max_tokens=max_tokens or None,
             temperature=temperature,
-            groq_api_base=groq_api_base,
+            base_url=groq_api_base,
             n=n or 1,
-            groq_api_key=SecretStr(groq_api_key),
+            api_key=SecretStr(groq_api_key),
             streaming=stream,
         )
 
