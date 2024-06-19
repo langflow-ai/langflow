@@ -99,7 +99,7 @@ class FrontendNode(BaseModel):
     def add_extra_base_classes(self) -> None:
         pass
 
-    def get_base_classes_from_outputs(self) -> list[str]:
+    def set_base_classes_from_outputs(self):
         self.base_classes = [output_type for output in self.outputs for output_type in output.types]
 
     def validate(self) -> None:

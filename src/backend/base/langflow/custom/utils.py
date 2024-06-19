@@ -376,7 +376,7 @@ def build_custom_component_template_from_inputs(
     # Validate that there is not name overlap between inputs and outputs
     frontend_node.validate()
     # ! This should be removed when we have a better way to handle this
-    frontend_node.get_base_classes_from_outputs()
+    frontend_node.set_base_classes_from_outputs()
     reorder_fields(frontend_node, custom_component._get_field_order())
     cc_instance = get_component_instance(custom_component, user_id=user_id)
     return frontend_node.to_dict(add_name=False), cc_instance
