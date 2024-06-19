@@ -294,8 +294,14 @@ async function buildVertex({
           verticesIds.map((id) => ({ id })),
         );
         stopBuild();
+        onBuildUpdate(buildData, BuildStatus.ERROR);
+
       }
-      onBuildUpdate(buildData, BuildStatus.BUILT);
+      else
+      {
+
+        onBuildUpdate(buildData, BuildStatus.BUILT);
+      }
     }
     buildResults.push(buildData.valid);
   } catch (error) {
