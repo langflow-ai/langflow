@@ -171,7 +171,7 @@ def test_directory_without_mocks():
     # in ../docs/docs/components there are many mdx files
     # check if the directory component can load them
     # just check if the number of results is the same as the number of files
-    docs_path = Path(__file__).parent.parent / "docs" / "docs" / "components"
+    docs_path = Path(__file__).parent.parent.parent / "docs" / "docs" / "components"
     results = directory_component.build(str(docs_path), use_multithreading=False)
     docs_files = list(docs_path.glob("*.mdx"))
     assert len(results) == len(docs_files)
