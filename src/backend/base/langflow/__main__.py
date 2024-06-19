@@ -1,3 +1,4 @@
+import os
 import platform
 import socket
 import sys
@@ -73,6 +74,13 @@ def set_var_for_macos_issue():
         logger.debug("Set OBJC_DISABLE_INITIALIZE_FORK_SAFETY to YES to avoid error")
 
 
+def set_requests_user_agent():
+    """
+    Remove annoying warning from requests library.
+    'USER_AGENT environment variable not set, consider setting it to identify your requests.'
+    """
+    os.environ["USER_AGENT"] = "Langflow"
+
 @app.command()
 def run(
     host: str = typer.Option("127.0.0.1", help="Host to bind the server to.", envvar="LANGFLOW_HOST"),
@@ -126,6 +134,7 @@ def run(
 
     configure(log_level=log_level, log_file=log_file)
     set_var_for_macos_issue()
+    set_requests_user_agent()
     # override env variables with .env file
 
     if env_file:
@@ -140,6 +149,7 @@ def run(
     )
     # create path object if path is provided
     static_files_dir: Optional[Path] = Path(path) if path else None
+
     app = setup_app(static_files_dir=static_files_dir, backend_only=backend_only)
     # check if port is being used
     if is_port_in_use(port, host):
