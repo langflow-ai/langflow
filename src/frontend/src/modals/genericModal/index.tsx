@@ -96,9 +96,16 @@ export default function GenericModal({
   }, [inputValue, type]);
 
   useEffect(() => {
-    setInputValue(value);
+    if (typeof value === "string") setInputValue(value);
   }, [value, modalOpen]);
-  const coloredContent = (inputValue || "")
+  let coloredContent = inputValue || "";
+  // Check if coloredContent is a string
+  // calling toString on undefined will throw an error
+  // so we need to check if it is a string first
+  if (typeof coloredContent !== "string") {
+    coloredContent = "";
+  }
+  coloredContent
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(regexHighlight, (match, p1, p2) => {
@@ -205,7 +212,7 @@ export default function GenericModal({
         />
       </BaseModal.Header>
       <BaseModal.Content overflowHidden>
-        <div className={classNames("rounded-lg border flex h-full w-full")}>
+        <div className={classNames("flex h-full w-full rounded-lg border")}>
           {type === TypeModal.PROMPT && isEdit && !readonly ? (
             <Textarea
               id={"modal-" + id}
@@ -228,7 +235,7 @@ export default function GenericModal({
             />
           ) : type === TypeModal.PROMPT && (!isEdit || readonly) ? (
             <SanitizedHTMLWrapper
-              className={getClassByNumberLength()+ " bg-muted"}
+              className={getClassByNumberLength() + " bg-muted"}
               content={coloredContent}
               onClick={() => {
                 setIsEdit(true);
