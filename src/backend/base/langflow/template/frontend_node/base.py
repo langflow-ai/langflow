@@ -102,6 +102,10 @@ class FrontendNode(BaseModel):
     def get_base_classes_from_outputs(self) -> list[str]:
         self.base_classes = [output_type for output in self.outputs for output_type in output.types]
 
+    def validate(self) -> None:
+        self.validate_name_overlap()
+        self.validate_attributes()
+
     def validate_name_overlap(self) -> None:
         # Check if any of the output names overlap with the any of the inputs
         output_names = [output.name for output in self.outputs]
@@ -112,6 +116,35 @@ class FrontendNode(BaseModel):
             raise ValueError(
                 f"There should be no overlap between input and output names. Names {overlap} are duplicated."
             )
+
+    def validate_attributes(self) -> None:
+        # None of inputs, outputs, _artifacts, _results, logs, status, vertex, graph, display_name, description, documentation, icon
+        # should be present in outputs or input names
+        output_names = [output.name for output in self.outputs]
+        input_names = [input_.name for input_ in self.template.fields]
+        attributes = [
+            "inputs",
+            "outputs",
+            "_artifacts",
+            "_results",
+            "logs",
+            "status",
+            "vertex",
+            "graph",
+            "display_name",
+            "description",
+            "documentation",
+            "icon",
+        ]
+        output_overlap = set(output_names).intersection(attributes)
+        input_overlap = set(input_names).intersection(attributes)
+        error_message = ""
+        if output_overlap:
+            output_overlap = ", ".join(map(lambda x: f"'{x}'", output_overlap))
+            error_message += f"Output names {output_overlap} are reserved attributes.\n"
+        if input_overlap:
+            input_overlap = ", ".join(map(lambda x: f"'{x}'", input_overlap))
+            error_message += f"Input names {input_overlap} are reserved attributes."
 
     def add_base_class(self, base_class: Union[str, List[str]]) -> None:
         """Adds a base class to the frontend node."""
