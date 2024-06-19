@@ -6,6 +6,7 @@ from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.language_models.llms import LLM
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
+from langflow.base.models.exceptions import get_message_from_openai_exception
 from langflow.custom import Component
 from langflow.schema.message import Message
 
@@ -26,13 +27,18 @@ class LCModelComponent(Component):
         Returns:
             The result obtained from the output object.
         """
-        if stream:
-            result = runnable.stream(input_value)
-        else:
-            message = runnable.invoke(input_value)
-            result = message.content if hasattr(message, "content") else message
-            self.status = result
-        return result
+        try:
+            if stream:
+                result = runnable.stream(input_value)
+            else:
+                message = runnable.invoke(input_value)
+                result = message.content if hasattr(message, "content") else message
+                self.status = result
+            return result
+        except Exception as e:
+            if message := get_message_from_openai_exception(e):
+                raise ValueError(message)
+            raise e
 
     def build_status_message(self, message: AIMessage):
         """
@@ -104,17 +110,22 @@ class LCModelComponent(Component):
             else:
                 messages.append(HumanMessage(content=input_value))
         inputs = messages or {}
-        if stream:
-            return runnable.stream(inputs)
-        else:
-            message = runnable.invoke(inputs)
-            result = message.content if hasattr(message, "content") else message
-            if isinstance(message, AIMessage):
-                status_message = self.build_status_message(message)
-                self.status = status_message
-            elif isinstance(result, dict):
-                result = json.dumps(message, indent=4)
-                self.status = result
+        try:
+            if stream:
+                return runnable.stream(inputs)
             else:
-                self.status = result
-            return result
+                message = runnable.invoke(inputs)
+                result = message.content if hasattr(message, "content") else message
+                if isinstance(message, AIMessage):
+                    status_message = self.build_status_message(message)
+                    self.status = status_message
+                elif isinstance(result, dict):
+                    result = json.dumps(message, indent=4)
+                    self.status = result
+                else:
+                    self.status = result
+                return result
+        except Exception as e:
+            if message := get_message_from_openai_exception(e):
+                raise ValueError(message)
+            raise e
