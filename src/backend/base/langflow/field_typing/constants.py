@@ -1,5 +1,5 @@
 from typing import Callable, Dict, Text, Union
-
+from langchain_core.language_models.chat_models import BaseChatModel
 from langchain.agents.agent import AgentExecutor
 from langchain.chains.base import Chain
 from langchain.memory.chat_memory import BaseChatMemory
@@ -48,6 +48,7 @@ LANGCHAIN_BASE_TYPES = {
     "BaseOutputParser": BaseOutputParser,
     "BaseMemory": BaseMemory,
     "BaseChatMemory": BaseChatMemory,
+    "BaseChatModel": BaseChatModel,
 }
 # Langchain base types plus Python base types
 CUSTOM_COMPONENT_SUPPORTED_TYPES = {
