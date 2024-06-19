@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Any, Callable, GenericAlias, Optional, Union, _GenericAlias, _UnionGenericAlias
+from typing import Any, Callable, GenericAlias, Optional, Union, _GenericAlias, _UnionGenericAlias  # type: ignore
 
 from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator, model_serializer, model_validator
 
