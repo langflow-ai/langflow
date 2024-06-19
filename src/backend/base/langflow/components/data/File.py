@@ -2,9 +2,8 @@ from pathlib import Path
 
 from langflow.base.data.utils import TEXT_FILE_TYPES, parse_text_file_to_data
 from langflow.custom import Component
-from langflow.inputs import BoolInput, FileInput
+from langflow.io import BoolInput, FileInput, Output
 from langflow.schema import Data
-from langflow.template import Output
 
 
 class FileComponent(Component):

@@ -1,7 +1,6 @@
 from langflow.custom import Component
 from langflow.field_typing import Text
-from langflow.inputs import BoolInput, DropdownInput, TextInput
-from langflow.template import Output
+from langflow.io import BoolInput, DropdownInput, Output, TextInput
 
 
 class SelectivePassThroughComponent(Component):

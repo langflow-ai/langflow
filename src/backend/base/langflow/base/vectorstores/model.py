@@ -3,11 +3,10 @@ from typing import List, Union
 from langchain_core.documents import Document
 
 from langflow.custom import Component
-from langflow.field_typing import Text
+from langflow.field_typing import BaseRetriever, Text, VectorStore
 from langflow.helpers.data import docs_to_data
+from langflow.io import Output
 from langflow.schema import Data
-from langflow.template import Output
-from langflow.field_typing import BaseRetriever, VectorStore
 
 
 class LCVectorStoreComponent(Component):

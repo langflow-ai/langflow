@@ -1,9 +1,8 @@
 from typing import List
 
 from langflow.custom import Component
-from langflow.inputs import DataInput, TextInput
+from langflow.io import DataInput, Output, TextInput
 from langflow.schema import Data
-from langflow.template import Output
 
 
 class FilterDataComponent(Component):

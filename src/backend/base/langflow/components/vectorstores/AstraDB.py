@@ -1,7 +1,7 @@
 from loguru import logger
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent
-from langflow.inputs import BoolInput, DropdownInput, HandleInput, IntInput, MultilineInput, SecretStrInput, StrInput
+from langflow.io import BoolInput, DropdownInput, HandleInput, IntInput, MultilineInput, SecretStrInput, StrInput
 from langflow.schema import Data
 
 

@@ -1,6 +1,5 @@
 from langflow.base.io.text import TextComponent
-from langflow.template import Output
-from langflow.inputs import TextInput
+from langflow.io import Output, TextInput
 from langflow.schema.message import Message
 
 

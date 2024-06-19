@@ -3,8 +3,7 @@ from langchain_google_vertexai import ChatVertexAI
 from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import BaseLanguageModel, Text
-from langflow.inputs import BoolInput, FloatInput, IntInput, MessageInput, StrInput
-from langflow.template import Output
+from langflow.io import BoolInput, FloatInput, IntInput, MessageInput, Output, StrInput
 
 
 class ChatVertexAIComponent(LCModelComponent):

@@ -7,10 +7,9 @@ from loguru import logger
 
 from langflow.base.curl.parse import parse_context
 from langflow.custom import Component
-from langflow.inputs import DropdownInput, IntInput, NestedDictInput, TextInput
+from langflow.io import DropdownInput, IntInput, NestedDictInput, Output, TextInput
 from langflow.schema import Data
 from langflow.schema.dotdict import dotdict
-from langflow.template import Output
 
 
 class APIRequestComponent(Component):

@@ -3,9 +3,8 @@ import re
 from langchain_community.document_loaders.web_base import WebBaseLoader
 
 from langflow.custom import Component
-from langflow.inputs import TextInput
+from langflow.io import Output, TextInput
 from langflow.schema import Data
-from langflow.template import Output
 
 
 class URLComponent(Component):
