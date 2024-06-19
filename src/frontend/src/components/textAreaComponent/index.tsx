@@ -43,6 +43,7 @@ export default function TextAreaComponent({
             setValue={(value: string) => {
               onChange(value);
             }}
+            disabled={disabled}
           >
             {!editNode && (
               <IconComponent

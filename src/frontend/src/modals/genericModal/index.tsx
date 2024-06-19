@@ -38,6 +38,7 @@ export default function GenericModal({
   nodeClass,
   setNodeClass,
   children,
+  disabled,
   id = "",
   readonly = false,
 }: genericModalPropsType): JSX.Element {
@@ -187,7 +188,7 @@ export default function GenericModal({
       open={modalOpen}
       setOpen={setModalOpen}
     >
-      <BaseModal.Trigger>{children}</BaseModal.Trigger>
+      <BaseModal.Trigger disable={disabled}>{children}</BaseModal.Trigger>
       <BaseModal.Header
         description={(() => {
           switch (myModalTitle) {
