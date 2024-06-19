@@ -350,7 +350,7 @@ class AsyncInMemoryCache(AsyncBaseCacheService, Service):
                 return pickle.loads(item["value"]) if isinstance(item["value"], bytes) else item["value"]
             else:
                 logger.info(f"Cache item for key '{key}' has expired and will be deleted.")
-                await self.delete(key)  # Log before deleting the expired item
+                await self._delete(key)  # Log before deleting the expired item
         return CACHE_MISS
 
     async def set(self, key, value, lock: Optional[asyncio.Lock] = None):
