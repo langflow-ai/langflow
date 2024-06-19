@@ -32,21 +32,6 @@ jobs:
         run: |
           poetry env use ${{ matrix.python-version }}
           poetry install
-      - name: Get .mypy_cache to speed up mypy
-        uses: actions/cache@v4
+          make lint
         env:
-          SEGMENT_DOWNLOAD_TIMEOUT_MIN: "2"
-        with:
-          path: |
-            ./.mypy_cache
-          key: ${{ runner.os }}-mypy-${{ hashFiles('**/pyproject.toml') }}
-      - name: Run linters
-        uses: wearerequired/lint-action@v2
-        with:
-          github_token: ${{ secrets.github_token }}
-          # Enable linters
-          git_email: "gabriel@langflow.org"
-          mypy: true
-          mypy_args: '--namespace-packages -p "langflow"'
-          mypy_command_prefix: "poetry run"
-
+          GITHUB_TOKEN: ${{ secrets.github_token }}

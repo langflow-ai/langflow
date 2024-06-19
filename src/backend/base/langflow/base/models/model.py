@@ -85,9 +85,9 @@ class LCModelComponent(Component):
                     }
                 }
             else:
-                status_message = f"Response: {content}"
+                status_message = f"Response: {content}"  # type: ignore
         else:
-            status_message = f"Response: {message.content}"
+            status_message = f"Response: {message.content}"  # type: ignore
         return status_message
 
     def get_chat_result(
