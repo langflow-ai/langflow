@@ -56,7 +56,7 @@ class URLComponent(Component):
 
         return string
 
-    def fetch_content(self) -> Data:
+    def fetch_content(self) -> list[Data]:
         urls = [self.ensure_url(url.strip()) for url in self.urls if url.strip()]
         loader = WebBaseLoader(web_paths=urls, encoding="utf-8")
         docs = loader.load()
