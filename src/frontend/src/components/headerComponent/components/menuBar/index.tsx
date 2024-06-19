@@ -24,12 +24,15 @@ import IconComponent from "../../../genericIconComponent";
 import ShadTooltip from "../../../shadTooltipComponent";
 import { Button } from "../../../ui/button";
 
-export const MenuBar = ({}: {}): JSX.Element => {
+export const MenuBar = ({ }: {}): JSX.Element => {
   const shortcuts = useShortcutsStore((state) => state.shortcuts);
   const addFlow = useFlowsManagerStore((state) => state.addFlow);
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const setLockChat = useFlowStore((state) => state.setLockChat);
+  const setIsBuilding = useFlowStore((state) => state.setIsBuilding);
+  const revertBuiltStatusFromBuilding = useFlowStore((state) => state.revertBuiltStatusFromBuilding);
   const undo = useFlowsManagerStore((state) => state.undo);
   const redo = useFlowsManagerStore((state) => state.redo);
   const saveLoading = useFlowsManagerStore((state) => state.saveLoading);
@@ -202,15 +205,37 @@ export const MenuBar = ({}: {}): JSX.Element => {
           side="bottom"
           styleClasses="cursor-default"
         >
-          <div className="flex cursor-default items-center gap-1.5 text-sm text-muted-foreground">
-            <IconComponent
-              name={isBuilding || saveLoading ? "Loader2" : "CheckCircle2"}
-              className={cn(
-                "h-4 w-4",
-                isBuilding || saveLoading ? "animate-spin" : "animate-wiggle",
-              )}
-            />
-            {printByBuildStatus()}
+          <div className="flex group transition-all cursor-default items-center gap-1.5 text-sm text-muted-foreground">
+            <div className="absolute flex transition-all cursor-default items-center gap-1.5 text-sm text-muted-foreground">
+              <IconComponent
+                name={isBuilding || saveLoading ? "Loader2" : "CheckCircle2"}
+                className={cn(
+                  "h-4 w-4",
+                  isBuilding || saveLoading ? "animate-spin" : "animate-wiggle",
+                  isBuilding ? "group-hover:opacity-0 transition-all" : ""
+                )}
+              />
+              <div className={isBuilding ? "group-hover:opacity-0 transition-all" : ""
+              }>
+                {printByBuildStatus()}
+              </div>
+            </div>
+            <button disabled={!isBuilding} onClick={_ => {
+              if (isBuilding) {
+                setIsBuilding(false);
+                revertBuiltStatusFromBuilding();
+                setLockChat(false);
+              }
+            }
+            } className={isBuilding ? "absolute opacity-0 group-hover:opacity-100 text-status-red flex gap-1.5 items-center transition-all " : "opacity-0"}>
+              <IconComponent
+                name="Square"
+                className="h-4 w-4"
+              />
+              <span>
+                Stop
+              </span>
+            </button>
           </div>
         </ShadTooltip>
       )}

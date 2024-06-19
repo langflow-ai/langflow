@@ -77,7 +77,8 @@ export default function IOModal({
 
   const buildFlow = useFlowStore((state) => state.buildFlow);
   const setIsBuilding = useFlowStore((state) => state.setIsBuilding);
-  const [lockChat, setLockChat] = useState(false);
+  const lockChat = useFlowStore((state) => state.lockChat);
+  const setLockChat = useFlowStore((state) => state.setLockChat);
   const [chatValue, setChatValue] = useState("");
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
