@@ -24,7 +24,7 @@ import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useShortcutsStore } from "../../../../stores/shortcuts";
 import { useTypesStore } from "../../../../stores/typesStore";
-import { APIClassType } from "../../../../types/api";
+import { APIClassType, VertexDataTypeAPI } from "../../../../types/api";
 import { ParameterComponentType } from "../../../../types/components";
 import { isErrorLog } from "../../../../types/utils/typeCheckingUtils";
 import {
@@ -34,6 +34,7 @@ import {
 import {
   convertObjToArray,
   convertValuesToNumbers,
+  getGroupOutputNodeId,
   hasDuplicateKeys,
   scapedJSONStringfy,
 } from "../../../../utils/reactflowUtils";
@@ -41,6 +42,9 @@ import {
   classNames,
   cn,
   isThereModal,
+  logHasMessage,
+  logTypeIsError,
+  logTypeIsUnknown,
 } from "../../../../utils/utils";
 import useFetchDataOnMount from "../../../hooks/use-fetch-data-on-mount";
 import useHandleOnNewValue from "../../../hooks/use-handle-new-value";
@@ -84,46 +88,30 @@ export default function ParameterComponent({
   const [openOutputModal, setOpenOutputModal] = useState(false);
   const flowPool = useFlowStore((state) => state.flowPool);
 
-  const logHasMessage = (data: any) => {
-    if (!outputName) return;
-    const logs = data?.logs[outputName];
-    if (Array.isArray(logs) && logs.length > 1) {
-      return logs.some((log) => log.message);
-    } else {
-      return logs?.message;
+  let flowPoolId = data.id;
+  let internalOutputName = outputName;
+  
+  if(data.node?.flow && outputProxy){
+    const realOutput =  getGroupOutputNodeId(data.node.flow, outputProxy.name, outputProxy.id)
+    if(realOutput){
+      flowPoolId = realOutput.id;
+      internalOutputName = realOutput.outputName;
     }
-  };
+  }
 
-  const logTypeIsUnknown = (data: any) => {
-    if (!outputName) return;
-    const logs = data?.logs[outputName];
-    if (Array.isArray(logs) && logs.length > 1) {
-      return logs.some((log) => log.type === "unknown");
-    } else {
-      return logs?.type === "unknown";
-    }
-  };
-
-  const logTypeIsError = (data: any) => {
-    if (!outputName) return;
-    const logs = data?.logs[outputName];
-    if (Array.isArray(logs) && logs.length > 1) {
-      return logs.some((log) => isErrorLog(log));
-    } else {
-      return isErrorLog(logs);
-    }
-  };
-
-  const flowPoolNode = (flowPool[data.id] ?? [])[
-    (flowPool[data.id]?.length ?? 1) - 1
+  const flowPoolNode = (flowPool[flowPoolId] ?? [])[
+    (flowPool[flowPoolId]?.length ?? 1) - 1
   ];
-  const displayOutputPreview =
-    !!flowPool[data.id] &&
-    logHasMessage(flowPool[data.id][flowPool[data.id].length - 1]?.data);
+  
+  const displayOutputPreview = !!flowPool[flowPoolId] && logHasMessage(flowPoolNode?.data,internalOutputName);
+  
+  const unknownOutput = logTypeIsUnknown(flowPoolNode?.data,internalOutputName);
+  const errorOutput = logTypeIsError(flowPoolNode?.data,internalOutputName);
 
-  const unknownOutput = logTypeIsUnknown(flowPoolNode?.data);
-  const errorOutput = logTypeIsError(flowPoolNode?.data);
-
+  if (outputProxy) {
+    console.log(logHasMessage(flowPoolNode?.data,internalOutputName))
+  }
+  
   const preventDefault = true;
 
   function handleOutputWShortcut() {
@@ -276,7 +264,7 @@ export default function ParameterComponent({
       className={
         "relative mt-1 flex w-full flex-wrap items-center justify-between bg-muted px-5 py-2" +
         ((name === "code" && type === "code") ||
-        (name.includes("code") && proxy)
+          (name.includes("code") && proxy)
           ? " hidden"
           : "")
       }
@@ -416,7 +404,7 @@ export default function ParameterComponent({
                   disabled={disabled}
                   value={
                     !data.node!.template[name]?.value ||
-                    data.node!.template[name]?.value === ""
+                      data.node!.template[name]?.value === ""
                       ? [""]
                       : data.node!.template[name]?.value
                   }
@@ -631,7 +619,7 @@ export default function ParameterComponent({
               editNode={false}
               value={
                 !data.node!.template[name]?.value ||
-                data.node!.template[name]?.value?.toString() === "{}"
+                  data.node!.template[name]?.value?.toString() === "{}"
                   ? {}
                   : data.node!.template[name]?.value
               }
@@ -648,7 +636,7 @@ export default function ParameterComponent({
               editNode={false}
               value={
                 data.node!.template[name]?.value?.length === 0 ||
-                !data.node!.template[name]?.value
+                  !data.node!.template[name]?.value
                   ? [{ "": "" }]
                   : convertObjToArray(data.node!.template[name]?.value, type!)
               }
@@ -670,9 +658,9 @@ export default function ParameterComponent({
         {openOutputModal && (
           <OutputModal
             open={openOutputModal}
-            nodeId={data.id}
+            nodeId={flowPoolId}
             setOpen={setOpenOutputModal}
-            outputName={outputName}
+            outputName={internalOutputName}
           />
         )}
       </>

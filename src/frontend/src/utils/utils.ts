@@ -3,7 +3,7 @@ import clsx, { ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import TableAutoCellRender from "../components/tableComponent/components/tableAutoCellRender";
 import { MESSAGES_TABLE_ORDER, MODAL_CLASSES } from "../constants/constants";
-import { APIDataType, InputFieldType } from "../types/api";
+import { APIDataType, InputFieldType, VertexDataTypeAPI } from "../types/api";
 import {
   groupedObjType,
   nodeGroupedObjType,
@@ -11,6 +11,7 @@ import {
 } from "../types/components";
 import { NodeType } from "../types/flow";
 import { FlowState } from "../types/tabs";
+import { isErrorLog } from "../types/utils/typeCheckingUtils";
 
 export function classNames(...classes: Array<string>): string {
   return classes.filter(Boolean).join(" ");
@@ -423,3 +424,33 @@ export function messagesSorter(a: any, b: any) {
 
   return orderA - orderB;
 }
+
+export const logHasMessage = (data: VertexDataTypeAPI,outputName:string|undefined) => {
+  if (!outputName) return;
+  const logs = data?.logs[outputName];
+  if (Array.isArray(logs) && logs.length > 1) {
+    return logs.some((log) => log.message);
+  } else {
+    return logs?.message;
+  }
+};
+
+export const logTypeIsUnknown = (data: VertexDataTypeAPI,outputName:string|undefined) => {
+  if (!outputName) return;
+  const logs = data?.logs[outputName];
+  if (Array.isArray(logs) && logs.length > 1) {
+    return logs.some((log) => log.type === "unknown");
+  } else {
+    return logs?.type === "unknown";
+  }
+};
+
+export const logTypeIsError = (data: VertexDataTypeAPI,outputName:string|undefined) => {
+  if (!outputName) return;
+  const logs = data?.logs[outputName];
+  if (Array.isArray(logs) && logs.length > 1) {
+    return logs.some((log) => isErrorLog(log));
+  } else {
+    return isErrorLog(logs);
+  }
+};
