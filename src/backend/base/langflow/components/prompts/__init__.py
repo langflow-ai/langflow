@@ -1,3 +1,3 @@
-from .Prompt import Prompt
+from .Prompt import PromptComponent
 
-__all__ = ["Prompt"]
+__all__ = ["PromptComponent"]
