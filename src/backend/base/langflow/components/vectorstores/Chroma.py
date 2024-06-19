@@ -172,24 +172,19 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
         """
         Search for documents in the Chroma vector store.
         """
-        if not self.search_query:
+        search_query: str = self.search_query
+        if not search_query:
             self.status = ""
-            return
+            return []
 
         vector_store = self.build_vector_store()
 
-        logger.debug(f"Search input: {self.search_query}")
+        logger.debug(f"Search input: {search_query}")
         logger.debug(f"Search type: {self.search_type}")
         logger.debug(f"Number of results: {self.number_of_results}")
 
-        if isinstance(self.search_query, list):
-            if len(self.search_query) > 1:
-                raise ValueError("Input value must be a single-item list.")
-            else:
-                self.search_query = self.search_query[0]
-
         search_results = self.search_with_vector_store(
-            self.search_query, self.search_type, vector_store, k=self.number_of_results
+            search_query, self.search_type, vector_store, k=self.number_of_results
         )
         self.status = search_results
         return search_results
