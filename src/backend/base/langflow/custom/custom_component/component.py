@@ -1,5 +1,5 @@
 import inspect
-from typing import AsyncIterator, Awaitable, Callable, ClassVar, Generator, Iterator, List, Optional, Union
+from typing import Any, AsyncIterator, Awaitable, Callable, ClassVar, Generator, Iterator, List, Optional, Union
 from uuid import UUID
 
 import yaml
@@ -46,10 +46,23 @@ class Component(CustomComponent):
     def __init__(self, **data):
         super().__init__(**data)
         self._inputs: dict[str, InputTypes] = {}
-        self._results: dict = {}
-        self._arguments: dict = {}
+        self._results: dict[str, Any] = {}
+        self._attributes: dict[str, Any] = {}
         if self.inputs is not None:
             self.map_inputs(self.inputs)
+
+    def __getattr__(self, name: str) -> Any:
+        if "_attributes" in self.__dict__ and name in self.__dict__["_attributes"]:
+            return self.__dict__["_attributes"][name]
+        if "_inputs" in self.__dict__ and name in self.__dict__["_inputs"]:
+            return self.__dict__["_inputs"][name].value
+        raise AttributeError(f"{name} not found in {self.__class__.__name__}")
+
+    # def __getattribute__(self, name: str) -> Any:
+    #     try:
+    #         return super().__getattribute__(name)
+    #     except AttributeError:
+    #         return self.__getattr__(name)
 
     def map_inputs(self, inputs: List[Input]):
         self.inputs = inputs
@@ -76,16 +89,15 @@ class Component(CustomComponent):
 
     def set_attributes(self, params: dict):
         self._validate_inputs(params)
+        _attributes = {}
         for key, value in params.items():
             if key in self.__dict__:
                 raise ValueError(f"Key {key} already exists in {self.__class__.__name__}")
-            setattr(self, key, value)
+            _attributes[key] = value
         for key, input_obj in self._inputs.items():
-            if not hasattr(self, key):
-                setattr(self, key, input_obj.value or None)
-            if key not in params:
-                params[key] = input_obj.value or None
-        self._arguments = params
+            if key not in _attributes:
+                _attributes[key] = input_obj.value or None
+        self._arguments = _attributes
 
     def _set_outputs(self, outputs: List[dict]):
         self.outputs = [Output(**output) for output in outputs]
