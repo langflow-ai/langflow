@@ -41,10 +41,10 @@ export default function NodeToolbarComponent({
   numberOfOutputHandles,
   showNode,
   name = "code",
-  selected,
   setShowState,
   onCloseAdvancedModal,
   updateNode,
+  isOutdated,
 }: nodeToolbarPropsType): JSX.Element {
   const version = useDarkStore((state) => state.version);
   const [showModalAdvanced, setShowModalAdvanced] = useState(false);
@@ -88,13 +88,6 @@ export default function NodeToolbarComponent({
         "Minimization are only available for nodes with one handle or fewer.",
     });
     return;
-  }
-
-  function handleUpdateWShortcut(e: KeyboardEvent) {
-    e.preventDefault();
-    if (hasApiKey || hasStore) {
-      handleSelectChange("update");
-    }
   }
 
   function handleGroupWShortcut(e: KeyboardEvent) {
@@ -609,6 +602,18 @@ export default function NodeToolbarComponent({
                   dataTestId="copy-button-modal"
                 />
               </SelectItem>
+              {isOutdated && (
+                <SelectItem value={"update"}>
+                  <ToolbarSelectItem
+                    shortcut={
+                      shortcuts.find((obj) => obj.name === "Update")?.shortcut!
+                    }
+                    value={"Restore"}
+                    icon={"RefreshCcwDot"}
+                    dataTestId="update-button-modal"
+                  />
+                </SelectItem>
+              )}
               {hasStore && (
                 <SelectItem
                   value={"Share"}

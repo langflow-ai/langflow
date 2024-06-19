@@ -6,6 +6,7 @@ const useCheckCodeValidity = (
   data: NodeDataType,
   templates: { [key: string]: any },
   setIsOutdated: (value: boolean) => void,
+  setIsUserEdited: (value: boolean) => void,
   types,
 ) => {
   useEffect(() => {
@@ -24,17 +25,12 @@ const useCheckCodeValidity = (
     const currentCode = thisNodeTemplate.code?.value;
     const thisNodesCode = data.node!.template?.code?.value;
     const componentsToIgnore = ["CustomComponent", "Prompt"];
-    if (
-      currentCode !== thisNodesCode &&
-      !componentsToIgnore.includes(data.type) &&
-      !(data.node?.edited ?? false)
-    ) {
-      setIsOutdated(true);
-    } else {
-      setIsOutdated(false);
-    }
+    setIsOutdated(
+      currentCode !== thisNodesCode && !componentsToIgnore.includes(data.type),
+    );
+    setIsUserEdited(data.node?.edited ?? false);
     // template.code can be undefined
-  }, [data.node?.template?.code?.value, templates, setIsOutdated]);
+  }, [data.node?.template?.code?.value, templates, setIsOutdated, setIsUserEdited]);
 };
 
 export default useCheckCodeValidity;
