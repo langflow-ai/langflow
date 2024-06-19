@@ -91,7 +91,8 @@ COPY --from=builder-base --chown=1000 /app/.venv /app/.venv
 ENV PATH="/app/.venv/bin:${PATH}"
 RUN python -m pip install --force-reinstall \
       pydantic==$(python -m pip show pydantic | grep Version | cut -d ' ' -f 2) \
-      orjson==$(python -m pip show orjson | grep Version | cut -d ' ' -f 2)
+      orjson==$(python -m pip show orjson | grep Version | cut -d ' ' -f 2) \
+      cryptography==$(python -m pip show cryptography | grep Version | cut -d ' ' -f 2)
 
 USER user
 WORKDIR /app
