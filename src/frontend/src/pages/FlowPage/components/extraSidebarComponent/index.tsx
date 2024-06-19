@@ -25,6 +25,7 @@ import ParentDisclosureComponent from "../ParentDisclosureComponent";
 import SidebarDraggableComponent from "./sideBarDraggableComponent";
 import { sortKeys } from "./utils";
 import sensitiveSort from "./utils/sensitive-sort";
+import { useTranslation } from "react-i18next";
 
 export default function ExtraSidebar(): JSX.Element {
   const data = useTypesStore((state) => state.data);
@@ -244,6 +245,7 @@ export default function ExtraSidebar(): JSX.Element {
     };
   }, []);
 
+  const {t} = useTranslation();
   return (
     <div className="side-bar-arrangement">
       <div className="side-bar-search-div-placement">
@@ -283,7 +285,7 @@ export default function ExtraSidebar(): JSX.Element {
       <div className="side-bar-components-div-arrangement">
         <div className="parent-disclosure-arrangement">
           <div className="flex items-center gap-4 align-middle">
-            <span className="parent-disclosure-title">Basic Components</span>
+            <span className="parent-disclosure-title">{t("Basic Components")}</span>
           </div>
         </div>
         {Object.keys(dataFilter)
@@ -362,7 +364,7 @@ export default function ExtraSidebar(): JSX.Element {
           openDisc={false}
           key={"Advanced"}
           button={{
-            title: "Advanced",
+            title: t("Advanced"),
             Icon: nodeIconsLucide.unknown,
           }}
           testId="extended-disclosure"
