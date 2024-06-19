@@ -8,6 +8,7 @@ from sqlmodel import Session, select
 
 from langflow.services.auth import utils as auth_utils
 from langflow.services.base import Service
+from langflow.services.variable.base import VariableService
 from langflow.services.database.models.variable.model import Variable, VariableCreate
 from langflow.services.deps import get_session
 
@@ -15,8 +16,7 @@ if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
 
 
-class VariableService(Service):
-    name = "variable_service"
+class DatabaseVariableService(VariableService, Service):
 
     def __init__(self, settings_service: "SettingsService"):
         self.settings_service = settings_service
@@ -127,3 +127,53 @@ class VariableService(Service):
         session.commit()
         session.refresh(variable)
         return variable
+
+
+
+class KubernetesSecretService(VariableService, Service):
+
+    def __init__(self, settings_service: "SettingsService"):
+        self.settings_service = settings_service
+
+    def initialize_user_variables(self, user_id: Union[UUID, str], session: Session = Depends(get_session)):
+        return
+
+    def get_variable(
+        self,
+        user_id: Union[UUID, str],
+        name: str,
+        field: str,
+        session: Session = Depends(get_session),
+    ) -> str:
+        return ""
+
+    def list_variables(self, user_id: Union[UUID, str], session: Session = Depends(get_session)) -> list[Optional[str]]:
+        return []
+    
+    def update_variable(
+        self,
+        user_id: Union[UUID, str],
+        name: str,
+        value: str,
+        session: Session = Depends(get_session),
+    ):
+        return
+    
+    def delete_variable(    
+        self,
+        user_id: Union[UUID, str],
+        name: str,
+        session: Session = Depends(get_session),
+    ):
+        return
+    
+    def create_variable(
+        self,
+        user_id: Union[UUID, str],
+        name: str,
+        value: str,
+        default_fields: list[str] = [],
+        _type: str = "Generic",
+        session: Session = Depends(get_session),
+    ):
+        return
