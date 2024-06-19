@@ -62,7 +62,7 @@ class Message(Data):
         # But first we check if all required keys are present in the data dictionary
         # they are: "text", "sender"
         if self.text is None or not self.sender:
-            logger.warn("Missing required keys ('text', 'sender') in Message, defaulting to HumanMessage.")
+            logger.warning("Missing required keys ('text', 'sender') in Message, defaulting to HumanMessage.")
 
         if self.sender == "User" or not self.sender:
             if self.files:
