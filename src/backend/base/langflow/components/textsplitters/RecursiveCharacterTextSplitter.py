@@ -73,6 +73,8 @@ class RecursiveCharacterTextSplitterComponent(Component):
             chunk_overlap=self.chunk_overlap,
         )
         documents = []
+        if not isinstance(self.data_input, list):
+            self.data_input = [self.data_input]
         for _input in self.data_input:
             if isinstance(_input, Data):
                 documents.append(_input.to_lc_document())
