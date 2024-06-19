@@ -1,11 +1,11 @@
 from langchain_openai.embeddings.base import OpenAIEmbeddings
 
-from langflow.base.models.model import LCModelComponent
+from langflow.base.embeddings.model import LCEmbeddingsModel
 from langflow.field_typing import Embeddings
-from langflow.io import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, Output, SecretStrInput, TextInput
+from langflow.io import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, SecretStrInput, TextInput
 
 
-class OpenAIEmbeddingsComponent(LCModelComponent):
+class OpenAIEmbeddingsComponent(LCEmbeddingsModel):
     display_name = "OpenAI Embeddings"
     description = "Generate embeddings using OpenAI models."
     icon = "OpenAI"
@@ -64,10 +64,6 @@ class OpenAIEmbeddingsComponent(LCModelComponent):
             value=True,
             info="If False, you must have transformers installed.",
         ),
-    ]
-
-    outputs = [
-        Output(display_name="Embeddings", name="embeddings", method="build_embeddings"),
     ]
 
     def build_embeddings(self) -> Embeddings:
