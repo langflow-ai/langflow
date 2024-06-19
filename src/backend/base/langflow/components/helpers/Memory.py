@@ -4,12 +4,13 @@ from langflow.memory import get_messages
 from langflow.schema import Data
 from langflow.schema.message import Message
 from langflow.template import Output
+from langflow.helpers.data import data_to_text
 
 
 class MemoryComponent(Component):
-    display_name = "Memory"
+    display_name = "Chat Memory"
     description = "Retrieves stored chat messages."
-    icon = "history"
+    icon = "message-square-more"
 
     inputs = [
         DropdownInput(
@@ -47,11 +48,18 @@ class MemoryComponent(Component):
             info="Order of the messages.",
             advanced=True,
         ),
+        MultilineInput(
+            name="template",
+            display_name="Template",
+            info="The template to use for formatting the data. It can contain the keys {text}, {sender} or any other key in the message data.",
+            value="{sender_name}: {text}",
+            advanced=True,
+        ),
     ]
 
     outputs = [
-        Output(display_name="Message Data", name="messages", method="retrieve_messages"),
-        Output(display_name="Parsed", name="messages_text", method="retrieve_messages_as_text"),
+        Output(display_name="Chat History", name="messages", method="retrieve_messages"),
+        Output(display_name="Messages (Text)", name="messages_text", method="retrieve_messages_as_text"),
     ]
 
     def retrieve_messages(self) -> Data:
@@ -75,7 +83,6 @@ class MemoryComponent(Component):
         return messages
 
     def retrieve_messages_as_text(self) -> Message:
-        messages = self.retrieve_messages()
-        messages_text = "\n".join(["{sender_name}: {text}".format(**message.data) for message in messages])
+        messages_text = data_to_text(self.template, self.retrieve_messages())
         self.status = messages_text
         return Message(text=messages_text)

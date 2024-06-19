@@ -18,7 +18,6 @@ class URLComponent(Component):
             name="urls",
             display_name="URLs",
             info="Enter one or more URLs, separated by commas.",
-            value="",
             is_list=True,
         ),
     ]

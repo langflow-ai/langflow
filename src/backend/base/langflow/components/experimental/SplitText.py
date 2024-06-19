@@ -1,11 +1,11 @@
 from typing import List
 
+from langchain_text_splitters import CharacterTextSplitter
 from langflow.custom import Component
-from langflow.inputs import HandleInput, IntInput, TextInput
+from langflow.inputs import IntInput, TextInput, HandleInput
 from langflow.schema import Data
 from langflow.template import Output
 from langflow.utils.util import unescape_string
-
 
 class SplitTextComponent(Component):
     display_name: str = "Split Text"
@@ -13,33 +13,30 @@ class SplitTextComponent(Component):
     icon = "scissors-line-dashed"
 
     inputs = [
-        HandleInput(name="data", display_name="Data", info="Data with text to split.", input_types=["Data"]),
-        TextInput(
-            name="text_key",
-            display_name="Text Key",
-            info="The key to access the text content in the Data object.",
-            value="text",
+        HandleInput(
+            name="data_inputs",
+            display_name="Data Inputs",
+            info="The data to split.",
+            input_types=["Data"],
+            is_list=True,
+        ),
+        IntInput(
+            name="chunk_overlap",
+            display_name="Chunk Overlap",
+            info="Number of characters to overlap between chunks.",
+            value=200,
+        ),
+        IntInput(
+            name="chunk_size",
+            display_name="Chunk Size",
+            info="The maximum number of characters in each chunk.",
+            value=1000,
         ),
         TextInput(
             name="separator",
             display_name="Separator",
-            info='The character to split on. Defaults to "\n".',
+            info="The character to split on. Defaults to newline.",
             value="\n",
-            advanced=True,
-        ),
-        IntInput(
-            name="min_chunk_size",
-            display_name="Minimum Chunk Size",
-            info="The minimum size of chunks. Smaller chunks will be merged.",
-            value=10,
-            advanced=True,
-        ),
-        IntInput(
-            name="max_chunk_size",
-            display_name="Maximum Chunk Size",
-            info="The maximum size of chunks. Larger chunks will be split.",
-            value=200,
-            advanced=True,
         ),
     ]
 
@@ -47,41 +44,26 @@ class SplitTextComponent(Component):
         Output(display_name="Chunks", name="chunks", method="split_text"),
     ]
 
+    def _docs_to_data(self, docs):
+        data = []
+        for doc in docs:
+            data.append(Data(text=doc.page_content, data=doc.metadata))
+        return data
+
     def split_text(self) -> List[Data]:
-        data = self.data if isinstance(self.data, list) else [self.data]
-        text_key = self.text_key
         separator = unescape_string(self.separator)
-        min_chunk_size = self.min_chunk_size
-        max_chunk_size = self.max_chunk_size
-        results = []
 
-        if not separator:
-            raise ValueError("Separator cannot be empty.")
-        if max_chunk_size < 10:
-            raise ValueError("Maximum chunk size cannot be less than 10 characters.")
-        if min_chunk_size < 10:
-            raise ValueError("Minimum chunk size cannot be less than 10 characters.")
-        if max_chunk_size < min_chunk_size:
-            raise ValueError("Maximum chunk size cannot be less than minimum chunk size.")
+        documents = []
+        for _input in self.data_inputs:
+            if isinstance(_input, Data):
+                documents.append(_input.to_lc_document())
 
-        buffer = ""
-
-        for row in data:
-            parent = row.data.get(text_key, "")
-            chunks = parent.split(separator)
-
-            for chunk in chunks:
-                buffer += chunk
-                while len(buffer) >= max_chunk_size:
-                    results.append(Data(data={"parent": parent, "text": buffer[:max_chunk_size]}))
-                    buffer = buffer[max_chunk_size:]
-                if len(buffer) >= min_chunk_size:
-                    results.append(Data(data={"parent": parent, "text": buffer}))
-                    buffer = ""
-
-        # Handle any remaining text that may not meet the min_chunk_size requirement
-        if buffer:
-            results.append(Data(parent=parent, text=buffer))
-
-        self.status = results
-        return results
+        splitter = CharacterTextSplitter(
+            chunk_overlap=self.chunk_overlap,
+            chunk_size=self.chunk_size,
+            separator=separator,
+        )
+        docs = splitter.split_documents(documents)
+        data = self._docs_to_data(docs)
+        self.status = data
+        return data
