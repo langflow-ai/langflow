@@ -11,6 +11,7 @@ from langflow.schema import Data
 
 
 class LCVectorStoreComponent(Component):
+    trace_type = "retriever"
     outputs = [
         Output(
             display_name="Retriever",
