@@ -1,4 +1,4 @@
-from langchain_community.chat_models.bedrock import BedrockChat
+from langchain_aws import ChatBedrock
 
 from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
@@ -87,7 +87,7 @@ class AmazonBedrockComponent(LCModelComponent):
         cache = self.cache
         stream = self.stream
         try:
-            output = BedrockChat(
+            output = ChatBedrock(
                 credentials_profile_name=credentials_profile_name,
                 model_id=model_id,
                 region_name=region_name,
