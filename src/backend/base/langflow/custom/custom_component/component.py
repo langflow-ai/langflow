@@ -4,13 +4,12 @@ from uuid import UUID
 
 import yaml
 from git import TYPE_CHECKING
-from pydantic import BaseModel
-
 from langflow.inputs.inputs import InputTypes
 from langflow.schema.artifact import get_artifact_type, post_process_raw
 from langflow.schema.data import Data
 from langflow.schema.message import Message
 from langflow.template.field.base import UNDEFINED, Input, Output
+from pydantic import BaseModel
 
 from .custom_component import CustomComponent
 
@@ -47,7 +46,7 @@ class Component(CustomComponent):
         super().__init__(**data)
         self._inputs: dict[str, InputTypes] = {}
         self._results: dict[str, Any] = {}
-        self._attributes: dict[str, Any] = {}
+        _attributes: dict[str, Any] = {}
         if self.inputs is not None:
             self.map_inputs(self.inputs)
 
@@ -97,7 +96,7 @@ class Component(CustomComponent):
         for key, input_obj in self._inputs.items():
             if key not in _attributes:
                 _attributes[key] = input_obj.value or None
-        self._arguments = _attributes
+        self._attributes = _attributes
 
     def _set_outputs(self, outputs: List[dict]):
         self.outputs = [Output(**output) for output in outputs]
@@ -188,4 +187,5 @@ class Component(CustomComponent):
             inputs = self.template_config["inputs"]
             return [field.name for field in inputs]
         except KeyError:
+            return []
             return []

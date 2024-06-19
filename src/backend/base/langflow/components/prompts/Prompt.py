@@ -19,6 +19,6 @@ class PromptComponent(Component):
     async def build_prompt(
         self,
     ) -> Message:
-        prompt = await Message.from_template_and_variables(**self._arguments)
+        prompt = await Message.from_template_and_variables(**self._attributes)
         self.status = prompt.text
         return prompt
