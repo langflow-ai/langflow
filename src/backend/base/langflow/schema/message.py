@@ -7,12 +7,11 @@ from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, System
 from langchain_core.prompt_values import ImagePromptValue
 from langchain_core.prompts import BaseChatPromptTemplate, ChatPromptTemplate, PromptTemplate
 from langchain_core.prompts.image import ImagePromptTemplate
-from loguru import logger
-from pydantic import BeforeValidator, ConfigDict, Field, field_serializer
-
 from langflow.base.prompts.utils import dict_values_to_string
 from langflow.schema.data import Data
 from langflow.schema.image import Image, get_file_paths, is_image_file
+from loguru import logger
+from pydantic import BeforeValidator, ConfigDict, Field, field_serializer, field_validator
 
 
 def _timestamp_to_str(timestamp: datetime) -> str:
@@ -32,6 +31,13 @@ class Message(Data):
         default=datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
     )
     flow_id: Optional[str] = None
+
+    @field_validator("files", mode="before")
+    @classmethod
+    def validate_files(cls, value):
+        if not value:
+            value = []
+        return value
 
     def model_post_init(self, __context: Any) -> None:
         new_files = []
