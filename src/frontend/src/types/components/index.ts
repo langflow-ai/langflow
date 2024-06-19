@@ -562,7 +562,7 @@ export type nodeToolbarPropsType = {
   name?: string;
   openAdvancedModal?: boolean;
   onCloseAdvancedModal?: (close: boolean) => void;
-  selected: boolean;
+  isOutdated: boolean;
   setShowState: (show: boolean | SetStateAction<boolean>) => void;
   updateNode: () => void;
 };

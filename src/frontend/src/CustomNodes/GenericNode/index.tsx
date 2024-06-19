@@ -75,6 +75,7 @@ export default function GenericNode({
     data.node?.description!,
   );
   const [isOutdated, setIsOutdated] = useState(false);
+  const [isUserEdited, setIsUserEdited] = useState(false);
   const buildStatus = useFlowStore(
     (state) => state.flowBuildStatus[data.id]?.status,
   );
@@ -96,6 +97,7 @@ export default function GenericNode({
     data.node!,
     setNode,
     setIsOutdated,
+    setIsUserEdited,
     updateNodeInternals,
   );
 
@@ -170,7 +172,7 @@ export default function GenericNode({
     deleteNode(data.id);
   }
 
-  useCheckCodeValidity(data, templates, setIsOutdated, types);
+  useCheckCodeValidity(data, templates, setIsOutdated, setIsUserEdited, types);
   useUpdateValidationStatus(data?.id, flowPool, setValidationStatus);
   useValidationStatusString(validationStatus, setValidationString);
 
@@ -329,8 +331,8 @@ export default function GenericNode({
           showNode={showNode}
           openAdvancedModal={false}
           onCloseAdvancedModal={() => {}}
-          selected={selected}
           updateNode={handleUpdateCode}
+          isOutdated={isOutdated && isUserEdited}
         />
       </NodeToolbar>
     );
@@ -344,6 +346,7 @@ export default function GenericNode({
     showNode,
     updateNodeCode,
     isOutdated,
+    isUserEdited,
     selected,
     shortcuts,
     //    openWDoubleCLick,
@@ -435,7 +438,7 @@ export default function GenericNode({
                           {data.node?.display_name}
                         </div>
                       </ShadTooltip>
-                      {isOutdated && (
+                      {isOutdated && !isUserEdited && (
                         <ShadTooltip content={TOOLTIP_OUTDATED_NODE}>
                           <Button
                             onClick={handleUpdateCode}
