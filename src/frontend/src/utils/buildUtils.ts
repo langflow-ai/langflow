@@ -5,6 +5,7 @@ import { getVerticesOrder, postBuildVertex } from "../controllers/API";
 import useAlertStore from "../stores/alertStore";
 import useFlowStore from "../stores/flowStore";
 import { VertexBuildTypeAPI } from "../types/api";
+import { isErrorLogType } from "../types/utils/typeCheckingUtils";
 import { VertexLayerElementType } from "../types/zustand/flow";
 
 type BuildVerticesParams = {
@@ -275,9 +276,14 @@ async function buildVertex({
         const errorMessages = Object.keys(buildData.data.logs).map((key) => {
           const logs = buildData.data.logs[key];
           if (Array.isArray(logs)) {
-            return logs.map((log) => log.message);
+            return logs
+              .filter((log) => isErrorLogType(log.message))
+              .map((log) => log.message.errorMessage);
           }
-          return [logs.message];
+          if (!isErrorLogType(logs.message)) {
+            return [];
+          }
+          return [logs.message.errorMessage];
         });
         onBuildError!(
           "Error Building Component",

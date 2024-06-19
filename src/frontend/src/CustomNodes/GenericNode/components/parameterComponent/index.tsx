@@ -26,6 +26,7 @@ import { useShortcutsStore } from "../../../../stores/shortcuts";
 import { useTypesStore } from "../../../../stores/typesStore";
 import { APIClassType } from "../../../../types/api";
 import { ParameterComponentType } from "../../../../types/components";
+import { isErrorLog } from "../../../../types/utils/typeCheckingUtils";
 import {
   debouncedHandleUpdateValues,
   handleUpdateValues,
@@ -114,11 +115,9 @@ export default function ParameterComponent({
     if (!outputName) return;
     const logs = data?.logs[outputName];
     if (Array.isArray(logs) && logs.length > 1) {
-      return logs.some(
-        (log) => log.type === "error" || log.type === "ValueError",
-      );
+      return logs.some((log) => isErrorLog(log));
     } else {
-      return logs?.type === "error" || logs?.type === "ValueError";
+      return isErrorLog(logs);
     }
   };
 
@@ -128,11 +127,6 @@ export default function ParameterComponent({
   const displayOutputPreview =
     !!flowPool[data.id] &&
     logHasMessage(flowPool[data.id][flowPool[data.id].length - 1]?.data);
-
-  let hasOutputs;
-  if (flowPoolNode?.data?.logs && outputName) {
-    hasOutputs = flowPoolNode?.data?.logs[outputName] ?? null;
-  }
 
   const unknownOutput = logTypeIsUnknown(flowPoolNode?.data);
   const errorOutput = logTypeIsError(flowPoolNode?.data);

@@ -2,6 +2,7 @@ from enum import Enum
 from typing import Generator, Literal, Union
 
 from pydantic import BaseModel
+from typing_extensions import TypedDict
 
 from langflow.schema import Data
 from langflow.schema.message import Message
@@ -22,12 +23,17 @@ class LogType(str, Enum):
     UNKNOWN = "unknown"
 
 
-class StreamURL(BaseModel):
+class StreamURL(TypedDict):
     location: str
 
 
+class ErrorLog(TypedDict):
+    errorMessage: str
+    stackTrace: str
+
+
 class Log(BaseModel):
-    message: Union[StreamURL, dict, list, str]
+    message: Union[ErrorLog, StreamURL, dict, list, str]
     type: str
 
 

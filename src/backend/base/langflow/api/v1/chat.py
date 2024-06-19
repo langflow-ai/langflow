@@ -1,4 +1,5 @@
 import time
+import traceback
 import uuid
 from functools import partial
 from typing import TYPE_CHECKING, Annotated, Optional
@@ -189,11 +190,13 @@ async def build_vertex(
 
             result_data_response = ResultDataResponse.model_validate(result_dict, from_attributes=True)
         except Exception as exc:
+            tb = traceback.format_exc()
             logger.exception(f"Error building Component: {exc}")
             params = format_exception_message(exc)
+            message = {"errorMessage": params, "stackTrace": tb}
             valid = False
             output_label = vertex.outputs[0]["name"] if vertex.outputs else "output"
-            logs = {output_label: Log(message=params, type="error")}
+            logs = {output_label: Log(message=message, type="error")}
             result_data_response = ResultDataResponse(results={}, logs=logs)
             artifacts = {}
             # If there's an error building the vertex
@@ -243,7 +246,7 @@ async def build_vertex(
         )
         return build_response
     except Exception as exc:
-        logger.error(f"Error building Component: {exc}")
+        logger.error(f"Error building Component:\n\n{exc}")
         logger.exception(exc)
         message = parse_exception(exc)
         raise HTTPException(status_code=500, detail=message) from exc

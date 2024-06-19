@@ -1,5 +1,6 @@
 import { useEffect } from "react";
-import { LogType, VertexBuildTypeAPI } from "../../types/api";
+import { VertexBuildTypeAPI } from "../../types/api";
+import { isErrorLog } from "../../types/utils/typeCheckingUtils";
 
 const useValidationStatusString = (
   validationStatus: VertexBuildTypeAPI,
@@ -8,11 +9,10 @@ const useValidationStatusString = (
   useEffect(() => {
     if (validationStatus?.data?.logs) {
       // if it is not a string turn it into a string
-      console.log("validationStatus", validationStatus);
       let newValidationString = "";
       Object.values(validationStatus?.data?.logs).forEach((log: any) => {
-        if (log.type === "error" || log.type === "ValueError") {
-          newValidationString += `${log.message}\n`;
+        if (isErrorLog(log)) {
+          newValidationString += `${log.message.errorMessage}\n`;
         }
       });
       setValidationString(newValidationString);
