@@ -87,6 +87,14 @@ class BaseInputMixin(BaseModel, validate_assignment=True):
         return dump
 
 
+class InputTraceMixin(BaseModel):
+    trace_as_input: bool = True
+
+
+class MetadataTraceMixin(BaseModel):
+    trace_as_metadata: bool = True
+
+
 # Mixin for input fields that can be listable
 class ListableInputMixin(BaseModel):
     is_list: bool = Field(default=False, serialization_alias="list")
