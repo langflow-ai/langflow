@@ -167,7 +167,7 @@ def run(
         else:
             # Run using gunicorn on Linux
             process = run_on_mac_or_linux(host, port, log_level, options, app)
-        if open_browser:
+        if open_browser and not backend_only:
             click.launch(f"http://{host}:{port}")
         if process:
             process.join()
