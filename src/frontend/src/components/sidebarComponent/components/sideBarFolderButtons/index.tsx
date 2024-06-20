@@ -234,11 +234,11 @@ const SideBarFoldersButtonsComponent = ({
                     event.stopPropagation();
                     event.preventDefault();
                   }}
-                  className="flex w-full items-center gap-4"
+                  className="flex w-full items-center gap-2"
                 >
                   <IconComponent
                     name={"folder"}
-                    className="w-4 flex-shrink-0 justify-start stroke-[1.5] opacity-100"
+                    className="mr-2 w-4 flex-shrink-0 justify-start stroke-[1.5] opacity-100"
                   />
                   {editFolderName?.edit ? (
                     <div>
@@ -293,10 +293,11 @@ const SideBarFoldersButtonsComponent = ({
                         e.preventDefault();
                       }}
                       variant={"ghost"}
+                      size={"icon"}
                     >
                       <IconComponent
                         name={"trash"}
-                        className="w-4 stroke-[1.5]"
+                        className="w-4 stroke-[1.5] p-0"
                       />
                     </Button>
                   )}
