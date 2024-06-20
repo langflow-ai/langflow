@@ -1,6 +1,14 @@
+import asyncio
 import json
 
+from git import TYPE_CHECKING
+from loguru import logger
+
 from langflow.custom.utils import abuild_custom_components, build_custom_components
+
+if TYPE_CHECKING:
+    from langflow.services.cache.base import CacheService
+    from langflow.services.settings.manager import SettingsService
 
 
 async def aget_all_types_dict(components_paths):
@@ -47,3 +55,17 @@ def get_all_components(components_paths, as_dict=False):
             else:
                 components.append(component)
     return components
+
+
+async def get_and_cache_all_types_dict(
+    settings_service: "SettingsService",
+    cache_service: "CacheService",
+    force_refresh: bool = False,
+    lock: asyncio.Lock | None = None,
+):
+    all_types_dict = await cache_service.get(key="all_types_dict", lock=lock)
+    if not all_types_dict or force_refresh:
+        logger.debug("Building langchain types dict")
+        all_types_dict = await aget_all_types_dict(settings_service.settings.components_path)
+    await cache_service.set(key="all_types_dict", value=all_types_dict, lock=lock)
+    return all_types_dict

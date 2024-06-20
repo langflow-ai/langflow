@@ -5,6 +5,9 @@ from uuid import UUID
 
 import sqlalchemy as sa
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Request, UploadFile, status
+from loguru import logger
+from sqlmodel import Session, select
+
 from langflow.api.utils import update_frontend_node_with_template_values
 from langflow.api.v1.schemas import (
     ConfigResponse,
@@ -38,8 +41,6 @@ from langflow.services.deps import (
 )
 from langflow.services.session.service import SessionService
 from langflow.services.task.service import TaskService
-from loguru import logger
-from sqlmodel import Session, select
 
 if TYPE_CHECKING:
     from langflow.services.cache.base import CacheService
@@ -54,15 +55,14 @@ async def get_all(
     cache_service: "CacheService" = Depends(dependency=get_cache_service),
     force_refresh: bool = False,
 ):
-    from langflow.interface.types import aget_all_types_dict
+    from langflow.interface.types import get_and_cache_all_types_dict
 
     try:
         async with Lock() as lock:
-            all_types_dict = await cache_service.get(key="all_types_dict", lock=lock)
-            if not all_types_dict or force_refresh:
-                logger.debug("Building langchain types dict")
-                all_types_dict = await aget_all_types_dict(settings_service.settings.components_path)
-            await cache_service.set(key="all_types_dict", value=all_types_dict, lock=lock)
+            all_types_dict = await get_and_cache_all_types_dict(
+                settings_service=settings_service, cache_service=cache_service, force_refresh=force_refresh, lock=lock
+            )
+
             return all_types_dict
     except Exception as exc:
         logger.exception(exc)
