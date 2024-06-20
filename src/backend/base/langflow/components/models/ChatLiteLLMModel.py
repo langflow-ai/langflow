@@ -16,7 +16,6 @@ from langflow.io import (
     SecretStrInput,
     StrInput,
 )
-from langflow.schema.message import Message
 
 
 class ChatLiteLLMModelComponent(LCModelComponent):
@@ -127,16 +126,6 @@ class ChatLiteLLMModelComponent(LCModelComponent):
         Output(display_name="Text", name="text_output", method="text_response"),
         Output(display_name="Language Model", name="model_output", method="build_model"),
     ]
-
-    def text_response(self) -> Message:
-        input_value = self.input_value
-        stream = self.stream
-        system_message = self.system_message
-        output = self.build_model()
-        result = self.get_chat_result(output, stream, input_value, system_message)
-        message = Message(text=result)
-        self.status = message
-        return message
 
     def build_model(self) -> LanguageModel:
         try:

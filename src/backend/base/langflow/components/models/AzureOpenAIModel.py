@@ -78,15 +78,6 @@ class AzureChatOpenAIComponent(LCModelComponent):
         Output(display_name="Language Model", name="model_output", method="model_response"),
     ]
 
-    def text_response(self) -> Text:
-        input_value = self.input_value
-        stream = self.stream
-        system_message = self.system_message
-        output = self.model_response()
-        result = self.get_chat_result(output, stream, input_value, system_message)
-        self.status = result
-        return result
-
     def model_response(self) -> LanguageModel:
         model = self.model
         azure_endpoint = self.azure_endpoint
