@@ -103,3 +103,24 @@ class OpenAIModelComponent(LCModelComponent):
             output = output.with_structured_output(schema=output_schema_dict, method="json_mode")
 
         return output
+
+    def _get_exception_message(self, e: Exception):
+        """
+        Get a message from an OpenAI exception.
+
+        Args:
+            exception (Exception): The exception to get the message from.
+
+        Returns:
+            str: The message from the exception.
+        """
+
+        try:
+            from openai import BadRequestError
+        except ImportError:
+            return
+        if isinstance(e, BadRequestError):
+            message = e.body.get("message")  # type: ignore
+            if message:
+                return message
+        return
