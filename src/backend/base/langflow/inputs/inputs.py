@@ -124,8 +124,7 @@ class TextInput(StrInput):
         input_types (list[str]): A list of input types that this component supports. In this case, it supports the "Message" input type.
     """
 
-    # ! adding str since it's checked on line 143
-    input_types: list[str] = ["Message", "str"]
+    input_types: list[str] = ["Message"]
 
     @staticmethod
     def _validate_value(v: Any, _info):
