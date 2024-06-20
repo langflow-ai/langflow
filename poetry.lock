@@ -4354,6 +4354,22 @@ langchain-core = ">=0.2.0,<0.3"
 tokenizers = ">=0.15.1,<1"
 
 [[package]]
+name = "langchain-mongodb"
+version = "0.1.6"
+description = "An integration package connecting MongoDB and LangChain"
+optional = false
+python-versions = "<4.0,>=3.8.1"
+files = [
+    {file = "langchain_mongodb-0.1.6-py3-none-any.whl", hash = "sha256:ba5e1e388131ae00e8fcd39c4b38ce42c29f00c4bc39c58023b354b597ffa8df"},
+    {file = "langchain_mongodb-0.1.6.tar.gz", hash = "sha256:a7a6b66d5270d6f8732c4e848f9a3742bbd4485c8829a2d629332ee683b936d1"},
+]
+
+[package.dependencies]
+langchain-core = ">=0.1.46,<0.3"
+numpy = ">=1,<2"
+pymongo = ">=4.6.1,<5.0"
+
+[[package]]
 name = "langchain-openai"
 version = "0.1.8"
 description = "An integration package connecting OpenAI and LangChain"
@@ -10610,4 +10626,4 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-content-hash = "65701c22864b203bdeb0fbdd0e51d0b58855e77aa65e49df3dad2c9ebb04c976"
+content-hash = "332baeb07342a5ad1367ce6b13a87bd96504f628d2e91e33dfda1a8317b2de13"
