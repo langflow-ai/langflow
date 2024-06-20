@@ -4,8 +4,8 @@ from pydantic.v1 import SecretStr
 from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.groq_constants import MODEL_NAMES
 from langflow.base.models.model import LCModelComponent
-from langflow.field_typing import LanguageModel, Text
-from langflow.io import BoolInput, DropdownInput, FloatInput, IntInput, Output, SecretStrInput, TextInput
+from langflow.field_typing import LanguageModel
+from langflow.io import BoolInput, DropdownInput, FloatInput, IntInput, SecretStrInput, TextInput
 
 
 class GroqModel(LCModelComponent):
@@ -67,20 +67,6 @@ class GroqModel(LCModelComponent):
             advanced=True,
         ),
     ]
-
-    outputs = [
-        Output(display_name="Text", name="text_output", method="text_response"),
-        Output(display_name="Language Model", name="model_output", method="build_model"),
-    ]
-
-    def text_response(self) -> Text:
-        input_value = self.input_value
-        stream = self.stream
-        system_message = self.system_message
-        output = self.build_model()
-        result = self.get_chat_result(output, stream, input_value, system_message)
-        self.status = result
-        return result
 
     def build_model(self) -> LanguageModel:
         groq_api_key = self.groq_api_key

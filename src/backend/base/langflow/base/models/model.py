@@ -9,11 +9,36 @@ from langflow.base.models.exceptions import get_message_from_openai_exception
 from langflow.custom import Component
 from langflow.field_typing import LanguageModel
 from langflow.schema.message import Message
+from langflow.template.field.base import Output
 
 
 class LCModelComponent(Component):
     display_name: str = "Model Name"
     description: str = "Model Description"
+
+    outputs = [
+        Output(display_name="Text", name="text_output", method="text_response"),
+        Output(display_name="Language Model", name="model_output", method="build_model"),
+    ]
+
+    def _validate_outputs(self):
+        # At least these two outputs must be defined
+        required_output_methods = ["text_response", "build_model"]
+        output_names = [output.name for output in self.outputs]
+        for method_name in required_output_methods:
+            if method_name not in output_names:
+                raise ValueError(f"Output with name '{method_name}' must be defined.")
+            elif not hasattr(self, method_name):
+                raise ValueError(f"Method '{method_name}' must be defined.")
+
+    def text_response(self) -> Message:
+        input_value = self.input_value
+        stream = self.stream
+        system_message = self.system_message
+        output = self.build_model()
+        result = self.get_chat_result(output, stream, input_value, system_message)
+        self.status = result
+        return result
 
     def get_result(self, runnable: LLM, stream: bool, input_value: str):
         """
