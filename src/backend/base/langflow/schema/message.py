@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from typing import Annotated, Any, AsyncIterator, Iterator, Optional, List
+from typing import Annotated, Any, AsyncIterator, Iterator, List, Optional
 
 from fastapi.encoders import jsonable_encoder
 from langchain_core.load import load
@@ -7,11 +7,16 @@ from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, System
 from langchain_core.prompt_values import ImagePromptValue
 from langchain_core.prompts import BaseChatPromptTemplate, ChatPromptTemplate, PromptTemplate
 from langchain_core.prompts.image import ImagePromptTemplate
+from loguru import logger
+from pydantic import BeforeValidator, ConfigDict, Field, field_serializer, field_validator
+
 from langflow.base.prompts.utils import dict_values_to_string
 from langflow.schema.data import Data
 from langflow.schema.image import Image, get_file_paths, is_image_file
-from loguru import logger
-from pydantic import BeforeValidator, ConfigDict, Field, field_serializer, field_validator
+
+from langflow.base.prompts.utils import dict_values_to_string
+from langflow.schema.data import Data
+from langflow.schema.image import Image, get_file_paths, is_image_file
 
 
 def _timestamp_to_str(timestamp: datetime) -> str:
@@ -172,8 +177,7 @@ class Message(Data):
             if isinstance(value, cls):
                 content_dicts = await value.get_file_content_dicts()
                 contents.extend(content_dicts)
-        prompt_template = ChatPromptTemplate.from_messages([HumanMessage(content=contents)])
+        prompt_template = ChatPromptTemplate.from_messages([HumanMessage(content=contents)])  # type: ignore
         instance.prompt = jsonable_encoder(prompt_template.to_json())
         instance.messages = instance.prompt.get("kwargs", {}).get("messages", [])
-        return instance
         return instance
