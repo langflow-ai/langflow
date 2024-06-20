@@ -81,7 +81,7 @@ class CustomComponent(BaseComponent):
     status: Optional[Any] = None
     """The status of the component. This is displayed on the frontend. Defaults to None."""
     _flows_data: Optional[List[Data]] = None
-    _logs: Optional[List[Log]] = []
+    _logs: List[Log] = []
 
     def update_state(self, name: str, value: Any):
         if not self.vertex:
@@ -92,7 +92,7 @@ class CustomComponent(BaseComponent):
             raise ValueError(f"Error updating state: {e}")
 
     def stop(self, output_name: str | None):
-        if not output_name and len(self.vertex.outputs) == 1:
+        if not output_name and self.vertex and len(self.vertex.outputs) == 1:
             output_name = self.vertex.outputs[0]["name"]
         else:
             raise ValueError("You must specify an output name to call stop")
