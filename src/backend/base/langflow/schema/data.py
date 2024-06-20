@@ -154,8 +154,7 @@ class Data(BaseModel):
                 return self.__getattribute__(key)
             if key in {"data", "text_key"} or key.startswith("_"):
                 return super().__getattr__(key)
-
-            return self.data.get(key, self.default_value)
+            return self.data[key]
         except KeyError:
             # Fallback to default behavior to raise AttributeError for undefined attributes
             raise AttributeError(f"'{type(self).__name__}' object has no attribute '{key}'")
