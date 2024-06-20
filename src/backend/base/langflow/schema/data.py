@@ -3,7 +3,7 @@ import json
 from typing import Optional, cast
 
 from langchain_core.documents import Document
-from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_core.prompt_values import ImagePromptValue
 from langchain_core.prompts.image import ImagePromptTemplate
 from pydantic import BaseModel, model_serializer, model_validator
@@ -112,7 +112,7 @@ class Data(BaseModel):
 
     def to_lc_message(
         self,
-    ) -> HumanMessage | SystemMessage:
+    ) -> BaseMessage:
         """
         Converts the Data to a BaseMessage.
 
