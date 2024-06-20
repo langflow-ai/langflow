@@ -198,8 +198,8 @@ class Vertex:
         self.description: str = self.data["node"].get("description", "")
         self.frozen: bool = self.data["node"].get("frozen", False)
 
-        self.is_input: bool = self.data["node"].get("is_input") or self.is_input
-        self.is_output: bool = self.data["node"].get("is_output") or self.is_output
+        self.is_input = self.data["node"].get("is_input") or self.is_input
+        self.is_output = self.data["node"].get("is_output") or self.is_output
         template_dicts = {key: value for key, value in self.data["node"]["template"].items() if isinstance(value, dict)}
 
         self.has_session_id = "session_id" in template_dicts
