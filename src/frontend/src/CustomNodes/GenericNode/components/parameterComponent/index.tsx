@@ -90,10 +90,14 @@ export default function ParameterComponent({
 
   let flowPoolId = data.id;
   let internalOutputName = outputName;
-  
-  if(data.node?.flow && outputProxy){
-    const realOutput =  getGroupOutputNodeId(data.node.flow, outputProxy.name, outputProxy.id)
-    if(realOutput){
+
+  if (data.node?.flow && outputProxy) {
+    const realOutput = getGroupOutputNodeId(
+      data.node.flow,
+      outputProxy.name,
+      outputProxy.id,
+    );
+    if (realOutput) {
       flowPoolId = realOutput.id;
       internalOutputName = realOutput.outputName;
     }
@@ -102,16 +106,21 @@ export default function ParameterComponent({
   const flowPoolNode = (flowPool[flowPoolId] ?? [])[
     (flowPool[flowPoolId]?.length ?? 1) - 1
   ];
-  
-  const displayOutputPreview = !!flowPool[flowPoolId] && logHasMessage(flowPoolNode?.data,internalOutputName);
-  
-  const unknownOutput = logTypeIsUnknown(flowPoolNode?.data,internalOutputName);
-  const errorOutput = logTypeIsError(flowPoolNode?.data,internalOutputName);
+
+  const displayOutputPreview =
+    !!flowPool[flowPoolId] &&
+    logHasMessage(flowPoolNode?.data, internalOutputName);
+
+  const unknownOutput = logTypeIsUnknown(
+    flowPoolNode?.data,
+    internalOutputName,
+  );
+  const errorOutput = logTypeIsError(flowPoolNode?.data, internalOutputName);
 
   if (outputProxy) {
-    console.log(logHasMessage(flowPoolNode?.data,internalOutputName))
+    console.log(logHasMessage(flowPoolNode?.data, internalOutputName));
   }
-  
+
   const preventDefault = true;
 
   function handleOutputWShortcut() {
@@ -264,7 +273,7 @@ export default function ParameterComponent({
       className={
         "relative mt-1 flex w-full flex-wrap items-center justify-between bg-muted px-5 py-2" +
         ((name === "code" && type === "code") ||
-          (name.includes("code") && proxy)
+        (name.includes("code") && proxy)
           ? " hidden"
           : "")
       }
@@ -285,7 +294,10 @@ export default function ParameterComponent({
                 data-testid={`output-inspection-${title.toLowerCase()}`}
               >
                 <IconComponent
-                  className={cn("h-4 w-4", disabledOutput ? "text-muted-foreground" : "")}
+                  className={cn(
+                    "h-4 w-4",
+                    disabledOutput ? "text-muted-foreground" : "",
+                  )}
                   strokeWidth={1.5}
                   name={data.node?.outputs![index].hidden ? "EyeOff" : "Eye"}
                 />
@@ -404,7 +416,7 @@ export default function ParameterComponent({
                   disabled={disabled}
                   value={
                     !data.node!.template[name]?.value ||
-                      data.node!.template[name]?.value === ""
+                    data.node!.template[name]?.value === ""
                       ? [""]
                       : data.node!.template[name]?.value
                   }
@@ -619,7 +631,7 @@ export default function ParameterComponent({
               editNode={false}
               value={
                 !data.node!.template[name]?.value ||
-                  data.node!.template[name]?.value?.toString() === "{}"
+                data.node!.template[name]?.value?.toString() === "{}"
                   ? {}
                   : data.node!.template[name]?.value
               }
@@ -636,7 +648,7 @@ export default function ParameterComponent({
               editNode={false}
               value={
                 data.node!.template[name]?.value?.length === 0 ||
-                  !data.node!.template[name]?.value
+                !data.node!.template[name]?.value
                   ? [{ "": "" }]
                   : convertObjToArray(data.node!.template[name]?.value, type!)
               }

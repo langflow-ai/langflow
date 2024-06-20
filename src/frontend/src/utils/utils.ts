@@ -425,7 +425,10 @@ export function messagesSorter(a: any, b: any) {
   return orderA - orderB;
 }
 
-export const logHasMessage = (data: VertexDataTypeAPI,outputName:string|undefined) => {
+export const logHasMessage = (
+  data: VertexDataTypeAPI,
+  outputName: string | undefined,
+) => {
   if (!outputName) return;
   const logs = data?.logs[outputName];
   if (Array.isArray(logs) && logs.length > 1) {
@@ -435,7 +438,10 @@ export const logHasMessage = (data: VertexDataTypeAPI,outputName:string|undefine
   }
 };
 
-export const logTypeIsUnknown = (data: VertexDataTypeAPI,outputName:string|undefined) => {
+export const logTypeIsUnknown = (
+  data: VertexDataTypeAPI,
+  outputName: string | undefined,
+) => {
   if (!outputName) return;
   const logs = data?.logs[outputName];
   if (Array.isArray(logs) && logs.length > 1) {
@@ -445,7 +451,10 @@ export const logTypeIsUnknown = (data: VertexDataTypeAPI,outputName:string|undef
   }
 };
 
-export const logTypeIsError = (data: VertexDataTypeAPI,outputName:string|undefined) => {
+export const logTypeIsError = (
+  data: VertexDataTypeAPI,
+  outputName: string | undefined,
+) => {
   if (!outputName) return;
   const logs = data?.logs[outputName];
   if (Array.isArray(logs) && logs.length > 1) {

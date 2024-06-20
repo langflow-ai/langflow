@@ -30,7 +30,12 @@ const useCheckCodeValidity = (
     );
     setIsUserEdited(data.node?.edited ?? false);
     // template.code can be undefined
-  }, [data.node?.template?.code?.value, templates, setIsOutdated, setIsUserEdited]);
+  }, [
+    data.node?.template?.code?.value,
+    templates,
+    setIsOutdated,
+    setIsUserEdited,
+  ]);
 };
 
 export default useCheckCodeValidity;
