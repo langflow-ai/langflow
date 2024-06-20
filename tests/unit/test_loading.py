@@ -33,6 +33,7 @@ def test_load_flow_from_json_object():
 
 
 @pytest.mark.noclient
+@pytest.mark.api_key_required
 def test_run_flow_from_json_object():
     """Test loading a flow from a json file and applying tweaks"""
     _, projects = zip(*load_starter_projects())

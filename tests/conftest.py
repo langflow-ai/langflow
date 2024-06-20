@@ -35,7 +35,9 @@ load_dotenv()
 
 def pytest_configure(config):
     config.addinivalue_line("markers", "noclient: don't create a client for this test")
-    data_path = Path(__file__).parent.absolute() / "data"
+    config.addinivalue_line("markers", "load_flows: load the flows for this test")
+    config.addinivalue_line("markers", "api_key_required: run only if the api key is set in the environment variables")
+    data_path = Path(__file__).parent.parent.absolute() / "data"
 
     pytest.BASIC_EXAMPLE_PATH = data_path / "basic_example.json"
     pytest.COMPLEX_EXAMPLE_PATH = data_path / "complex_example.json"
