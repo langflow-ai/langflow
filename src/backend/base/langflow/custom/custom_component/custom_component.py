@@ -91,7 +91,11 @@ class CustomComponent(BaseComponent):
         except Exception as e:
             raise ValueError(f"Error updating state: {e}")
 
-    def stop(self, output_name: str):
+    def stop(self, output_name: str | None):
+        if not output_name and len(self.vertex.outputs) == 1:
+            output_name = self.vertex.outputs[0]["name"]
+        else:
+            raise ValueError("You must specify an output name to call stop")
         if not self.vertex:
             raise ValueError("Vertex is not set")
         try:
