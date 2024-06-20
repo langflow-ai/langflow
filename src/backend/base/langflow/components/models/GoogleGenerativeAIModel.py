@@ -73,15 +73,6 @@ class GoogleGenerativeAIComponent(LCModelComponent):
         Output(display_name="Language Model", name="model_output", method="build_model"),
     ]
 
-    def text_response(self) -> Text:
-        input_value = self.input_value
-        stream = self.stream
-        system_message = self.system_message
-        output = self.build_model()
-        result = self.get_chat_result(output, stream, input_value, system_message)
-        self.status = result
-        return result
-
     def build_model(self) -> LanguageModel:
         try:
             from langchain_google_genai import ChatGoogleGenerativeAI
