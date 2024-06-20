@@ -5,7 +5,7 @@ from pydantic.v1 import SecretStr
 
 from langflow.base.models.openai_constants import MODEL_NAMES
 from langflow.custom import CustomComponent
-from langflow.field_typing import BaseLanguageModel, NestedDict
+from langflow.field_typing import LanguageModel, NestedDict
 
 
 class ChatOpenAIComponent(CustomComponent):
@@ -57,7 +57,7 @@ class ChatOpenAIComponent(CustomComponent):
         openai_api_base: Optional[str] = None,
         openai_api_key: Optional[str] = None,
         temperature: float = 0.7,
-    ) -> BaseLanguageModel:
+    ) -> LanguageModel:
         if not openai_api_base:
             openai_api_base = "https://api.openai.com/v1"
         if openai_api_key:

@@ -15,7 +15,9 @@ from langchain_core.tools import Tool
 from langchain_core.vectorstores import VectorStore
 from langchain_text_splitters import TextSplitter
 
+
 NestedDict = Dict[str, Union[str, Dict]]
+type LanguageModel = Union[BaseLanguageModel, BaseLLM, BaseChatModel]
 
 
 class Object:
@@ -58,4 +60,5 @@ CUSTOM_COMPONENT_SUPPORTED_TYPES = {
     "Text": Text,
     "Object": Object,
     "Callable": Callable,
+    "LanguageModel": LanguageModel,
 }

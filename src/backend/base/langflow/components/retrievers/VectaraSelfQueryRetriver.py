@@ -3,11 +3,11 @@ from typing import List
 
 from langchain.chains.query_constructor.base import AttributeInfo
 from langchain.retrievers.self_query.base import SelfQueryRetriever
-from langchain_core.language_models import BaseLanguageModel
 from langchain_core.retrievers import BaseRetriever
 from langchain_core.vectorstores import VectorStore
 
 from langflow.custom import CustomComponent
+from langflow.field_typing.constants import LanguageModel
 
 
 class VectaraSelfQueryRetriverComponent(CustomComponent):
@@ -38,7 +38,7 @@ class VectaraSelfQueryRetriverComponent(CustomComponent):
         self,
         vectorstore: VectorStore,
         document_content_description: str,
-        llm: BaseLanguageModel,
+        llm: LanguageModel,
         metadata_field_info: List[str],
     ) -> BaseRetriever:
         metadata_field_obj = []

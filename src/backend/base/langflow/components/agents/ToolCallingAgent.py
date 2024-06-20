@@ -4,7 +4,7 @@ from langchain.agents.tool_calling_agent.base import create_tool_calling_agent
 from langchain_core.prompts import ChatPromptTemplate
 
 from langflow.base.agents.agent import LCAgentComponent
-from langflow.field_typing import BaseLanguageModel, Text, Tool
+from langflow.field_typing import LanguageModel, Text, Tool
 from langflow.schema import Data
 
 
@@ -39,7 +39,7 @@ class ToolCallingAgentComponent(LCAgentComponent):
     async def build(
         self,
         input_value: str,
-        llm: BaseLanguageModel,
+        llm: LanguageModel,
         tools: List[Tool],
         user_prompt: str = "{input}",
         message_history: Optional[List[Data]] = None,

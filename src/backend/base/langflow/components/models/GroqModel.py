@@ -4,7 +4,7 @@ from pydantic.v1 import SecretStr
 from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.groq_constants import MODEL_NAMES
 from langflow.base.models.model import LCModelComponent
-from langflow.field_typing import BaseLanguageModel, Text
+from langflow.field_typing import LanguageModel, Text
 from langflow.io import BoolInput, DropdownInput, FloatInput, IntInput, Output, SecretStrInput, TextInput
 
 
@@ -82,7 +82,7 @@ class GroqModel(LCModelComponent):
         self.status = result
         return result
 
-    def build_model(self) -> BaseLanguageModel:
+    def build_model(self) -> LanguageModel:
         groq_api_key = self.groq_api_key
         model_name = self.model_name
         max_tokens = self.max_tokens

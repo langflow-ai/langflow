@@ -1,7 +1,7 @@
 from typing import Optional
 
 from langchain_cohere import ChatCohere
-from langchain_core.language_models.base import BaseLanguageModel
+from langflow.field_typing import LanguageModel
 from pydantic.v1 import SecretStr
 
 from langflow.custom import CustomComponent
@@ -29,7 +29,7 @@ class CohereComponent(CustomComponent):
         cohere_api_key: str,
         max_tokens: Optional[int] = 256,
         temperature: float = 0.75,
-    ) -> BaseLanguageModel:
+    ) -> LanguageModel:
         if cohere_api_key:
             api_key = SecretStr(cohere_api_key)
         else:

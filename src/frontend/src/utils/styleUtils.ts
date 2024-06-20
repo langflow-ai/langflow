@@ -284,6 +284,7 @@ export const nodeColors: { [char: string]: string } = {
   Prompt: "#7c3aed",
   Embeddings: "#10b981",
   BaseLanguageModel: "#c026d3",
+  LanguageModel: "#c026d3",
 };
 
 export const nodeNames: { [char: string]: string } = {

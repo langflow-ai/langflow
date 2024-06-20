@@ -3,9 +3,7 @@ from typing import Optional
 from langchain_anthropic import ChatAnthropic
 from pydantic.v1.types import SecretStr
 
-
-from langflow.custom import CustomComponent
-from langflow.field_typing import BaseLanguageModel
+from langflow.field_typing import LanguageModel
 
 
 class AnthropicLLM(CustomComponent):
@@ -69,7 +67,7 @@ class AnthropicLLM(CustomComponent):
         max_tokens: Optional[int] = 1000,
         temperature: Optional[float] = None,
         anthropic_api_url: Optional[str] = None,
-    ) -> BaseLanguageModel:
+    ) -> LanguageModel:
         # Set default API endpoint if not provided
         if not anthropic_api_url:
             anthropic_api_url = "https://api.anthropic.com"
