@@ -4,6 +4,7 @@ from langchain_community.vectorstores import UpstashVectorStore
 from langchain_core.retrievers import BaseRetriever
 
 from langflow.custom import Component
+from langflow.field_typing import Retriever
 from langflow.helpers.data import docs_to_data
 from langflow.io import BoolInput, HandleInput, IntInput, Output, StrInput
 from langflow.schema import Data
@@ -73,7 +74,7 @@ class UpstashVectorStoreComponent(Component):
     def build_vector_store(self) -> UpstashVectorStore:
         return self._build_upstash()
 
-    def build_base_retriever(self) -> BaseRetriever:
+    def build_base_retriever(self) -> Retriever:
         return self._build_upstash()
 
     def _build_upstash(self) -> UpstashVectorStore:

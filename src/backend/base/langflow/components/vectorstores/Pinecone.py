@@ -2,7 +2,9 @@ from typing import List
 
 from langchain_core.retrievers import BaseRetriever
 from langchain_pinecone import Pinecone
+
 from langflow.custom import Component
+from langflow.field_typing import Retriever
 from langflow.helpers.data import docs_to_data
 from langflow.io import BoolInput, DropdownInput, HandleInput, IntInput, Output, SecretStrInput, StrInput
 from langflow.schema import Data
@@ -68,7 +70,7 @@ class PineconeVectorStoreComponent(Component):
     def build_vector_store(self) -> Pinecone:
         return self._build_pinecone()
 
-    def build_base_retriever(self) -> BaseRetriever:
+    def build_base_retriever(self) -> Retriever:
         return self._build_pinecone()
 
     def _build_pinecone(self) -> Pinecone:

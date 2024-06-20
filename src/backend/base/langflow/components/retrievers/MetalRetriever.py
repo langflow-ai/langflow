@@ -1,10 +1,10 @@
 from typing import Optional
 
 from langchain_community.retrievers import MetalRetriever
-from langchain_core.retrievers import BaseRetriever
 from metal_sdk.metal import Metal  # type: ignore
 
 from langflow.custom import CustomComponent
+from langflow.field_typing import Retriever
 
 
 class MetalRetrieverComponent(CustomComponent):
@@ -20,7 +20,7 @@ class MetalRetrieverComponent(CustomComponent):
             "code": {"show": False},
         }
 
-    def build(self, api_key: str, client_id: str, index_id: str, params: Optional[dict] = None) -> BaseRetriever:
+    def build(self, api_key: str, client_id: str, index_id: str, params: Optional[dict] = None) -> Retriever:
         try:
             metal = Metal(api_key=api_key, client_id=client_id, index_id=index_id)
         except Exception as e:

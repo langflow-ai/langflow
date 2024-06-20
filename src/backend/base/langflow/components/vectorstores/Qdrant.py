@@ -2,7 +2,9 @@ from typing import List
 
 from langchain_community.vectorstores import Qdrant
 from langchain_core.retrievers import BaseRetriever
+
 from langflow.custom import Component
+from langflow.field_typing import Retriever
 from langflow.helpers.data import docs_to_data
 from langflow.io import BoolInput, DropdownInput, HandleInput, IntInput, Output, SecretStrInput, StrInput
 from langflow.schema import Data
@@ -69,7 +71,7 @@ class QdrantVectorStoreComponent(Component):
     def build_vector_store(self) -> Qdrant:
         return self._build_qdrant()
 
-    def build_base_retriever(self) -> BaseRetriever:
+    def build_base_retriever(self) -> Retriever:
         return self._build_qdrant()
 
     def _build_qdrant(self) -> Qdrant:
