@@ -5,7 +5,7 @@ from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.groq_constants import MODEL_NAMES
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import BaseLanguageModel, Text
-from langflow.io import BoolInput, DropdownInput, FloatInput, IntInput, Output, SecretStrInput, StrInput
+from langflow.io import BoolInput, DropdownInput, FloatInput, IntInput, Output, SecretStrInput, TextInput
 
 
 class GroqModel(LCModelComponent):
@@ -19,7 +19,7 @@ class GroqModel(LCModelComponent):
             display_name="Groq API Key",
             info="API key for the Groq API.",
         ),
-        StrInput(
+        TextInput(
             name="groq_api_base",
             display_name="Groq API Base",
             info="Base URL path for API requests, leave blank if not using a proxy or service emulator.",
@@ -49,11 +49,10 @@ class GroqModel(LCModelComponent):
             info="The name of the model to use.",
             options=MODEL_NAMES,
         ),
-        StrInput(
+        TextInput(
             name="input_value",
             display_name="Input",
             info="The input to the model.",
-            input_types=["Text", "Data", "Prompt"],
         ),
         BoolInput(
             name="stream",
@@ -61,7 +60,7 @@ class GroqModel(LCModelComponent):
             info=STREAM_INFO_TEXT,
             advanced=True,
         ),
-        StrInput(
+        TextInput(
             name="system_message",
             display_name="System Message",
             info="System message to pass to the model.",
