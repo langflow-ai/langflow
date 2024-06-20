@@ -167,24 +167,3 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
             vector_store.add_documents(documents)
         else:
             logger.debug("No documents to add to the Vector Store.")
-
-    def search_documents(self) -> List[Data]:
-        """
-        Search for documents in the Chroma vector store.
-        """
-        search_query: str = self.search_query
-        if not search_query:
-            self.status = ""
-            return []
-
-        vector_store = self.build_vector_store()
-
-        logger.debug(f"Search input: {search_query}")
-        logger.debug(f"Search type: {self.search_type}")
-        logger.debug(f"Number of results: {self.number_of_results}")
-
-        search_results = self.search_with_vector_store(
-            search_query, self.search_type, vector_store, k=self.number_of_results
-        )
-        self.status = search_results
-        return search_results

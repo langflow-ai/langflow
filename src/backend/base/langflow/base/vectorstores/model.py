@@ -1,6 +1,7 @@
 from typing import List
 
 from langchain_core.documents import Document
+from loguru import logger
 
 from langflow.custom import Component
 from langflow.field_typing import Retriever, Text, VectorStore
@@ -80,3 +81,24 @@ class LCVectorStoreComponent(Component):
             return vector_store.as_retriever()
         else:
             raise ValueError(f"Vector Store {vector_store.__class__.__name__} does not have an as_retriever method.")
+
+    def search_documents(self) -> List[Data]:
+        """
+        Search for documents in the Chroma vector store.
+        """
+        search_query: str = self.search_query
+        if not search_query:
+            self.status = ""
+            return []
+
+        vector_store = self.build_vector_store()
+
+        logger.debug(f"Search input: {search_query}")
+        logger.debug(f"Search type: {self.search_type}")
+        logger.debug(f"Number of results: {self.number_of_results}")
+
+        search_results = self.search_with_vector_store(
+            search_query, self.search_type, vector_store, k=self.number_of_results
+        )
+        self.status = search_results
+        return search_results
