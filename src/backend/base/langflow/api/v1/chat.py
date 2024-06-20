@@ -202,7 +202,7 @@ async def build_vertex(
             logs = {output_label: Log(message=message, type="error")}
             result_data_response = ResultDataResponse(results={}, logs=logs)
             artifacts = {}
-            graph.end_all_traces(outputs=message)
+            background_tasks.add_task(graph.end_all_traces, error=message["errorMessage"])
             # If there's an error building the vertex
             # we need to clear the cache
             await chat_service.clear_cache(flow_id_str)
@@ -240,7 +240,7 @@ async def build_vertex(
             next_runnable_vertices = [graph.stop_vertex]
 
         if not next_runnable_vertices:
-            graph.end_all_traces()
+            background_tasks.add_task(graph.end_all_traces)
 
         build_response = VertexBuildResponse(
             inactivated_vertices=inactivated_vertices,
