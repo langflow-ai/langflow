@@ -25,6 +25,7 @@ from .constants import (
     TextSplitter,
     Tool,
     VectorStore,
+    Retriever,
 )
 from .range_spec import RangeSpec
 
@@ -82,4 +83,5 @@ __all__ = [
     "Tool",
     "VectorStore",
     "BaseChatModel",
+    "Retriever",
 ]
