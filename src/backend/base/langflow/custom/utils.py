@@ -359,7 +359,7 @@ def add_code_field(frontend_node: CustomComponentFrontendNode, raw_code, field_c
 
 
 def build_custom_component_template_from_inputs(
-    custom_component: Component, user_id: Optional[Union[str, UUID]] = None
+    custom_component: Union[Component, CustomComponent], user_id: Optional[Union[str, UUID]] = None
 ):
     # The List of Inputs fills the role of the build_config and the entrypoint_args
     field_config = custom_component.template_config
