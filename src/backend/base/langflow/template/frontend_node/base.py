@@ -116,9 +116,9 @@ class FrontendNode(BaseModel):
         input_names = [input_.name for input_ in self.template.fields]
         overlap = set(output_names).intersection(input_names)
         if overlap:
-            overlap = ", ".join(map(lambda x: f"'{x}'", overlap))
+            overlap_str = ", ".join(map(lambda x: f"'{x}'", overlap))
             raise ValueError(
-                f"There should be no overlap between input and output names. Names {overlap} are duplicated."
+                f"There should be no overlap between input and output names. Names {overlap_str} are duplicated."
             )
 
     def validate_attributes(self) -> None:
