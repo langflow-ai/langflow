@@ -63,9 +63,6 @@ class MongoVectorStoreComponent(Component):
     def build_vector_store(self) -> MongoDBAtlasVectorSearch:
         return self._build_mongodb_atlas()
 
-    def build_base_retriever(self) -> Retriever:
-        return self._build_mongodb_atlas()
-
     def _build_mongodb_atlas(self) -> MongoDBAtlasVectorSearch:
         try:
             from pymongo import MongoClient

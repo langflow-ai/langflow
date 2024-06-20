@@ -66,9 +66,6 @@ class CouchbaseVectorStoreComponent(Component):
     def build_vector_store(self) -> CouchbaseVectorStore:
         return self._build_couchbase()
 
-    def build_base_retriever(self) -> Retriever:
-        return self._build_couchbase()
-
     def _build_couchbase(self) -> CouchbaseVectorStore:
         try:
             from couchbase.auth import PasswordAuthenticator  # type: ignore

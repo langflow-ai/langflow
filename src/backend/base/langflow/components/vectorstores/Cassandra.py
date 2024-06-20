@@ -99,9 +99,6 @@ class CassandraVectorStoreComponent(Component):
     def build_vector_store(self) -> Cassandra:
         return self._build_cassandra()
 
-    def build_base_retriever(self) -> Retriever:
-        return self._build_cassandra()
-
     def _build_cassandra(self) -> Cassandra:
         try:
             import cassio

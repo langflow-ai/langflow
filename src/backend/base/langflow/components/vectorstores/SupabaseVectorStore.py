@@ -58,9 +58,6 @@ class SupabaseVectorStoreComponent(Component):
     def build_vector_store(self) -> SupabaseVectorStore:
         return self._build_supabase()
 
-    def build_base_retriever(self) -> Retriever:
-        return self._build_supabase()
-
     def _build_supabase(self) -> SupabaseVectorStore:
         supabase: Client = create_client(self.supabase_url, supabase_key=self.supabase_service_key)
 

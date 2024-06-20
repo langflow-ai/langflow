@@ -71,9 +71,6 @@ class QdrantVectorStoreComponent(Component):
     def build_vector_store(self) -> Qdrant:
         return self._build_qdrant()
 
-    def build_base_retriever(self) -> Retriever:
-        return self._build_qdrant()
-
     def _build_qdrant(self) -> Qdrant:
         qdrant_kwargs = {
             "collection_name": self.collection_name,

@@ -43,7 +43,7 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
         model_kwargs = self.model_kwargs or {}
 
         try:
-            llm = HuggingFaceEndpoint(
+            llm = HuggingFaceEndpoint(  # type: ignore
                 endpoint_url=endpoint_url,
                 task=task,
                 huggingfacehub_api_token=huggingfacehub_api_token,
