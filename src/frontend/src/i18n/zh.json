@@ -115,5 +115,7 @@
   "Export": "导出",
   "Undo": "撤销",
   "Redo": "重做",
-  "Options": "选项"
+  "Options": "选项",
+  "No chat input variables found. Click to run your flow.": "无需对话输入，直接点击运行",
+  "Instructions": "指令"
 }

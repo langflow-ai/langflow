@@ -29,6 +29,7 @@ import { FormControl, FormField } from "../ui/form";
 import Loading from "../ui/loading";
 import DragCardComponent from "./components/dragCardComponent";
 import { convertTestName } from "./utils/convert-test-name";
+import { useTranslation } from "react-i18next";
 
 export default function CollectionCardComponent({
   data,
@@ -208,6 +209,8 @@ export default function CollectionCardComponent({
       event.dataTransfer.setData("flow", JSON.stringify(data));
     }
   }
+
+  const { t } = useTranslation();
 
   return (
     <>
@@ -556,7 +559,7 @@ export default function CollectionCardComponent({
                   ) : (
                     <Loading className="h-4 w-4 text-medium-indigo" />
                   )}
-                  Playground
+                  {t("Playground")}
                 </Button>
               )}
             </div>

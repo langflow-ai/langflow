@@ -246,7 +246,7 @@ export default function IOModal({
                                 >
                                   <div>
                                     <Badge variant="gray" size="md">
-                                      {node.data.node.display_name}
+                                      {t(node.data.node.display_name)}
                                     </Badge>
                                   </div>
                                 </ShadTooltip>
@@ -315,7 +315,7 @@ export default function IOModal({
                                 >
                                   <div>
                                     <Badge variant="gray" size="md">
-                                      {node.data.node.display_name}
+                                      {t(node.data.node.display_name)}
                                     </Badge>
                                   </div>
                                 </ShadTooltip>
@@ -455,8 +455,7 @@ export default function IOModal({
                       </button>
                     )}
                     {
-                      nodes.find((node) => node.id === selectedViewField.id)
-                        ?.data.node.display_name
+                      t(nodes.find((node) => node.id === selectedViewField.id)?.data.node.display_name)
                     }
                   </div>
                   <div className="h-full w-full">
