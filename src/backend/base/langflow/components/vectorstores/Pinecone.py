@@ -67,7 +67,7 @@ class PineconeVectorStoreComponent(Component):
         Output(display_name="Search Results", name="search_results", method="search_documents"),
     ]
 
-    def build_vector_store(self) -> Retriever:
+    def build_vector_store(self) -> Pinecone:
         return self._build_pinecone()
 
     def _build_pinecone(self) -> Pinecone:
