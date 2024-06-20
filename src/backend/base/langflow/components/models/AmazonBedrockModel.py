@@ -15,7 +15,7 @@ class AmazonBedrockComponent(LCModelComponent):
         MessageInput(name="input_value", display_name="Input"),
         DropdownInput(
             name="model_id",
-            display_name="Model Id",
+            display_name="Model ID",
             options=[
                 "amazon.titan-text-express-v1",
                 "amazon.titan-text-lite-v1",
