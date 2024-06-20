@@ -205,18 +205,16 @@ export const MenuBar = ({ }: {}): JSX.Element => {
           side="bottom"
           styleClasses="cursor-default"
         >
-          <div className="flex group transition-all cursor-default items-center gap-1.5 text-sm text-muted-foreground">
-            <div className="absolute flex transition-all cursor-default items-center gap-1.5 text-sm text-muted-foreground">
+          <div className="flex transition-all cursor-default items-center gap-2 text-sm text-muted-foreground">
+            <div className="flex transition-all cursor-default items-center gap-1.5 text-sm text-muted-foreground">
               <IconComponent
                 name={isBuilding || saveLoading ? "Loader2" : "CheckCircle2"}
                 className={cn(
                   "h-4 w-4",
                   isBuilding || saveLoading ? "animate-spin" : "animate-wiggle",
-                  isBuilding ? "group-hover:opacity-0 transition-all" : ""
                 )}
               />
-              <div className={isBuilding ? "group-hover:opacity-0 transition-all" : ""
-              }>
+              <div>
                 {printByBuildStatus()}
               </div>
             </div>
@@ -228,7 +226,7 @@ export const MenuBar = ({ }: {}): JSX.Element => {
                 window.stop();
               }
             }
-            } className={isBuilding ? "absolute opacity-0 group-hover:opacity-100 text-status-red flex gap-1.5 items-center transition-all " : "opacity-0"}>
+            } className={isBuilding ? "opacity-100 text-status-red flex gap-1.5 items-center transition-all " : "opacity-0"}>
               <IconComponent
                 name="Square"
                 className="h-4 w-4"
