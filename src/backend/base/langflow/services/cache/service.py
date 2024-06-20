@@ -3,18 +3,18 @@ import pickle
 import threading
 import time
 from collections import OrderedDict
-from typing import Optional
+from typing import Generic, Optional
 
 from loguru import logger
 
 from langflow.services.base import Service
-from langflow.services.cache.base import AsyncBaseCacheService, CacheService
+from langflow.services.cache.base import AsyncBaseCacheService, AsyncLockType, CacheService, LockType
 from langflow.services.cache.utils import CacheMiss
 
 CACHE_MISS = CacheMiss()
 
 
-class ThreadingInMemoryCache(CacheService, Service):
+class ThreadingInMemoryCache(CacheService, Generic[LockType]):
     """
     A simple in-memory cache using an OrderedDict.
 
@@ -182,7 +182,7 @@ class ThreadingInMemoryCache(CacheService, Service):
         return f"InMemoryCache(max_size={self.max_size}, expiration_time={self.expiration_time})"
 
 
-class RedisCache(CacheService):
+class RedisCache(CacheService, Generic[LockType]):
     """
     A Redis-based cache implementation.
 
@@ -332,7 +332,7 @@ class RedisCache(CacheService):
         return f"RedisCache(expiration_time={self.expiration_time})"
 
 
-class AsyncInMemoryCache(AsyncBaseCacheService, Service):
+class AsyncInMemoryCache(AsyncBaseCacheService, Generic[AsyncLockType]):
     def __init__(self, max_size=None, expiration_time=3600):
         self.cache = OrderedDict()
 
