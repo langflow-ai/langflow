@@ -34,6 +34,7 @@ import { useStoreStore } from "../../stores/storeStore";
 import { storeComponent } from "../../types/store";
 import { cn } from "../../utils/utils";
 import InputSearchComponent from "../MainPage/components/myCollectionComponent/components/inputSearchComponent";
+import { useTranslation } from "react-i18next";
 
 export default function StorePage(): JSX.Element {
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
@@ -172,11 +173,13 @@ export default function StorePage(): JSX.Element {
     setPageSize(12);
   }
 
+  const { t } = useTranslation();
+
   return (
     <PageLayout
       betaIcon
-      title={STORE_TITLE}
-      description={STORE_DESC}
+      title={t(STORE_TITLE)}
+      description={t(STORE_DESC)}
       button={
         <Button
           data-testid="api-key-button-store"
@@ -191,7 +194,7 @@ export default function StorePage(): JSX.Element {
           }}
         >
           <IconComponent name="Key" className="mr-2 w-4" />
-          API Key
+          {t("API Key")}
         </Button>
       }
     >

@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useFolderStore } from "../../../../../../stores/foldersStore";
+import { useTranslation } from "react-i18next";
 
 type TabsSearchComponentProps = {
   tabsOptions: string[];
@@ -47,6 +48,8 @@ const TabsSearchComponent = ({
     }
   }, [window.location.pathname]);
 
+  const { t } = useTranslation();
+
   return (
     <>
       <div className="ml-4 flex w-full gap-2 border-b border-border">
@@ -66,7 +69,7 @@ const TabsSearchComponent = ({
                 (loading ? " cursor-not-allowed" : "")
               }
             >
-              {tabOption}
+              {t(tabOption)}
             </button>
           );
         })}

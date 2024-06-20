@@ -2,6 +2,7 @@ import { ChangeEvent, KeyboardEvent } from "react";
 import ForwardedIconComponent from "../../../../../../components/genericIconComponent";
 import { Input } from "../../../../../../components/ui/input";
 import useFlowsManagerStore from "../../../../../../stores/flowsManagerStore";
+import { useTranslation } from "react-i18next";
 
 type InputSearchComponentProps = {
   loading: boolean;
@@ -41,13 +42,14 @@ const InputSearchComponent = ({
     }
   };
 
+  const { t } = useTranslation();
   return (
     <>
       <div className={`${divClasses ? divClasses : "relative h-12 w-[60%]"}`}>
         <Input
           data-testid="search-store-input"
           disabled={disableInputSearch}
-          placeholder={getSearchPlaceholder()}
+          placeholder={t(getSearchPlaceholder())}
           className="absolute h-12 pl-5 pr-12"
           onChange={onChange}
           onKeyDown={onKeyDown}

@@ -2,6 +2,7 @@ import { cn } from "../../../../utils/utils";
 import IconComponent from "../../../genericIconComponent";
 import ShadTooltip from "../../../shadTooltipComponent";
 import { Button } from "../../../ui/button";
+import { useTranslation } from "react-i18next";
 
 export default function TableOptions({
   resetGrid,
@@ -16,6 +17,7 @@ export default function TableOptions({
   hasSelection: boolean;
   stateChange: boolean;
 }): JSX.Element {
+  const { t } = useTranslation();
   return (
     <div className={cn("absolute bottom-3 left-6")}>
       <div className="flex items-center gap-3">
@@ -44,9 +46,9 @@ export default function TableOptions({
             <ShadTooltip
               content={
                 !hasSelection ? (
-                  <span>Select items to duplicate</span>
+                  <span>{t("Select items to duplicate")}</span>
                 ) : (
-                  <span>Duplicate selected items</span>
+                  <span>{t("Duplicate selected items")}</span>
                 )
               }
             >
@@ -69,9 +71,9 @@ export default function TableOptions({
             <ShadTooltip
               content={
                 !hasSelection ? (
-                  <span>Select items to delete</span>
+                  <span>{t("Select items to delete")}</span>
                 ) : (
-                  <span>Delete selected items</span>
+                  <span>{t("Delete selected items")}</span>
                 )
               }
             >

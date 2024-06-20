@@ -4,6 +4,7 @@ import ShadTooltip from "../../../../components/shadTooltipComponent";
 import { Button } from "../../../../components/ui/button";
 import { Checkbox } from "../../../../components/ui/checkbox";
 import { cn } from "../../../../utils/utils";
+import { useTranslation } from "react-i18next";
 
 type HeaderComponentProps = {
   handleSelectAll: (select) => void;
@@ -27,6 +28,8 @@ const HeaderComponent = ({
     setShouldSelectAll((prevState) => !prevState);
   };
 
+  const { t } = useTranslation();
+
   return (
     <>
       <div className="flex w-full items-center justify-between gap-4">
@@ -35,7 +38,7 @@ const HeaderComponent = ({
             <div className="flex items-center space-x-2">
               <Checkbox checked={!shouldSelectAll} id="terms" />
               <span className="label text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                {shouldSelectAll ? "Select All" : "Unselect All"}
+                {t(shouldSelectAll ? "Select All" : "Unselect All")}
               </span>
             </div>
           </a>
@@ -45,9 +48,9 @@ const HeaderComponent = ({
             <ShadTooltip
               content={
                 disableFunctions ? (
-                  <span>Select items to export</span>
+                  <span>{t("Select items to export")}</span>
                 ) : (
-                  <span>Export selected items</span>
+                  <span>{t("Export selected items")}</span>
                 )
               }
             >
@@ -68,9 +71,9 @@ const HeaderComponent = ({
             <ShadTooltip
               content={
                 disableFunctions ? (
-                  <span>Select items to duplicate</span>
+                  <span>{t("Select items to duplicate")}</span>
                 ) : (
-                  <span>Duplicate selected items</span>
+                  <span>{t("Duplicate selected items")}</span>
                 )
               }
             >
@@ -91,9 +94,9 @@ const HeaderComponent = ({
             <ShadTooltip
               content={
                 disableFunctions ? (
-                  <span>Select items to delete</span>
+                  <span>{t("Select items to delete")}</span>
                 ) : (
-                  <span>Delete selected items</span>
+                  <span>{t("Delete selected items")}</span>
                 )
               }
             >

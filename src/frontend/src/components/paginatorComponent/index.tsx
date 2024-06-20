@@ -9,6 +9,7 @@ import {
 import { PaginatorComponentType } from "../../types/components";
 import IconComponent from "../genericIconComponent";
 import { Button } from "../ui/button";
+import { useTranslation } from "react-i18next";
 
 export default function PaginatorComponent({
   pageSize = 12,
@@ -27,6 +28,8 @@ export default function PaginatorComponent({
     setMaxPageIndex(Math.ceil(totalRowsCount / size));
   }, [totalRowsCount]);
 
+  const { t } = useTranslation();
+
   return (
     <>
       <div className="flex items-center justify-between px-2">
@@ -39,7 +42,7 @@ export default function PaginatorComponent({
           }
         >
           <div className="flex items-center space-x-2">
-            <p className="text-sm font-medium">Rows per page</p>
+            <p className="text-sm font-medium">{t("Rows per page")}</p>
             <Select
               onValueChange={(pageSize: string) => {
                 setPageSize(Number(pageSize));
@@ -61,7 +64,7 @@ export default function PaginatorComponent({
             </Select>
           </div>
           <div className="flex w-[100px] items-center justify-center text-sm font-medium">
-            Page {pageIndex}
+            {t("PageStart")} {pageIndex} {t("PageEnd")}
             {!storeComponent && <> of {maxIndex}</>}
           </div>
           <div className="flex items-center space-x-2">
@@ -73,7 +76,7 @@ export default function PaginatorComponent({
                 paginate(size, 1);
               }}
             >
-              <span className="sr-only">Go to first page</span>
+              <span className="sr-only">{t("Go to first page")}</span>
               <IconComponent name="ChevronsLeft" className="h-4 w-4" />
             </Button>
             <Button
@@ -86,7 +89,7 @@ export default function PaginatorComponent({
               variant="outline"
               className="h-8 w-8 p-0"
             >
-              <span className="sr-only">Go to previous page</span>
+              <span className="sr-only">{t("Go to previous page")}</span>
               <IconComponent name="ChevronLeft" className="h-4 w-4" />
             </Button>
             <Button
@@ -97,7 +100,7 @@ export default function PaginatorComponent({
               variant="outline"
               className="h-8 w-8 p-0"
             >
-              <span className="sr-only">Go to next page</span>
+              <span className="sr-only">{t("Go to next page")}</span>
               <IconComponent name="ChevronRight" className="h-4 w-4" />
             </Button>
             <Button
@@ -108,7 +111,7 @@ export default function PaginatorComponent({
                 paginate(size, maxIndex);
               }}
             >
-              <span className="sr-only">Go to last page</span>
+              <span className="sr-only">{t("Go to last page")}</span>
               <IconComponent name="ChevronsRight" className="h-4 w-4" />
             </Button>
           </div>

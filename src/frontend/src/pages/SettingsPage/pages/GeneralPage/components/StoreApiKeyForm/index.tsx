@@ -15,6 +15,7 @@ import {
   INVALID_API_KEY,
   NO_API_KEY,
 } from "../../../../../../constants/constants";
+import { useTranslation } from "react-i18next";
 
 type StoreApiKeyFormComponentProps = {
   apikey: string;
@@ -32,6 +33,7 @@ const StoreApiKeyFormComponent = ({
   validApiKey,
   hasApiKey,
 }: StoreApiKeyFormComponentProps) => {
+  const { t } = useTranslation();
   return (
     <>
       <Form.Root
@@ -42,7 +44,7 @@ const StoreApiKeyFormComponent = ({
       >
         <Card x-chunk="dashboard-04-chunk-2" id="api">
           <CardHeader>
-            <CardTitle>Store API Key</CardTitle>
+            <CardTitle>{t("Store API Key")}</CardTitle>
             <CardDescription>
               {(hasApiKey && !validApiKey
                 ? INVALID_API_KEY

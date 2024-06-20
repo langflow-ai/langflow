@@ -22,8 +22,11 @@ import { cn } from "../../../../utils/utils";
 import IconComponent from "../../../genericIconComponent";
 import ShadTooltip from "../../../shadTooltipComponent";
 import { Button } from "../../../ui/button";
+import { useTranslation } from "react-i18next";
 
 export const MenuBar = ({}: {}): JSX.Element => {
+  const { t } = useTranslation()
+
   const shortcuts = useShortcutsStore((state) => state.shortcuts);
   const addFlow = useFlowsManagerStore((state) => state.addFlow);
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
@@ -50,11 +53,11 @@ export const MenuBar = ({}: {}): JSX.Element => {
 
   function printByBuildStatus() {
     if (isBuilding) {
-      return "Building...";
+      return t("Building...");
     } else if (saveLoading) {
-      return "Saving...";
+      return t("Saving...");
     }
-    return "Saved";
+    return t("Saved");
   }
 
   return currentFlow ? (
