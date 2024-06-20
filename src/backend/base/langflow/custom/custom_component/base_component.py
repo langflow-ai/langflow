@@ -1,4 +1,4 @@
-import operator
+from ast import operator
 import warnings
 from typing import Any, ClassVar, Optional
 
