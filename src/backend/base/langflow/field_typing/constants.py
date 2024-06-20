@@ -17,7 +17,7 @@ from langchain_text_splitters import TextSplitter
 
 
 NestedDict = Dict[str, Union[str, Dict]]
-type LanguageModel = Union[BaseLanguageModel, BaseLLM, BaseChatModel]
+LanguageModel = Union[BaseLanguageModel, BaseLLM, BaseChatModel]
 
 
 class Object:
