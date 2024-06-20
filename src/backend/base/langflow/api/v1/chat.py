@@ -4,7 +4,7 @@ import uuid
 from functools import partial
 from typing import TYPE_CHECKING, Annotated, Optional
 
-from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from loguru import logger
 
@@ -15,7 +15,7 @@ from langflow.api.utils import (
     format_exception_message,
     get_top_level_vertices,
     parse_exception,
-    cancel_on_disconnect
+    check_client_disconnection,
 )
 from langflow.api.v1.schemas import (
     FlowDataRequest,
@@ -57,9 +57,10 @@ async def try_running_celery_task(vertex, user_id):
 
 
 @router.post("/build/{flow_id}/vertices", response_model=VerticesOrderResponse)
-@cancel_on_disconnect
 async def retrieve_vertices_order(
     flow_id: uuid.UUID,
+    background_tasks: BackgroundTasks,
+    request: Request,
     data: Optional[Annotated[Optional[FlowDataRequest], Body(embed=True)]] = None,
     stop_component_id: Optional[str] = None,
     start_component_id: Optional[str] = None,
@@ -83,6 +84,7 @@ async def retrieve_vertices_order(
     Raises:
         HTTPException: If there is an error checking the build status.
     """
+    background_tasks.add_task(check_client_disconnection, request)
     try:
         flow_id_str = str(flow_id)
         # First, we need to check if the flow_id is in the cache
@@ -124,11 +126,11 @@ async def retrieve_vertices_order(
 
 
 @router.post("/build/{flow_id}/vertices/{vertex_id}")
-@cancel_on_disconnect
 async def build_vertex(
     flow_id: uuid.UUID,
     vertex_id: str,
     background_tasks: BackgroundTasks,
+    request: Request,
     inputs: Annotated[Optional[InputValueRequest], Body(embed=True)] = None,
     files: Optional[list[str]] = None,
     chat_service: "ChatService" = Depends(get_chat_service),
@@ -151,6 +153,8 @@ async def build_vertex(
         HTTPException: If there is an error building the vertex.
 
     """
+    background_tasks.add_task(check_client_disconnection, request)
+
     flow_id_str = str(flow_id)
 
     next_runnable_vertices = []
@@ -265,10 +269,11 @@ async def build_vertex(
 
 
 @router.get("/build/{flow_id}/{vertex_id}/stream", response_class=StreamingResponse)
-@cancel_on_disconnect
 async def build_vertex_stream(
     flow_id: uuid.UUID,
     vertex_id: str,
+    background_tasks: BackgroundTasks,
+    request: Request,
     session_id: Optional[str] = None,
     chat_service: "ChatService" = Depends(get_chat_service),
     session_service: "SessionService" = Depends(get_session_service),
@@ -298,6 +303,7 @@ async def build_vertex_stream(
     Raises:
         HTTPException: If an error occurs while building the vertex.
     """
+    background_tasks.add_task(check_client_disconnection, request)
     try:
         flow_id_str = str(flow_id)
 
