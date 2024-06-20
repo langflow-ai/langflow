@@ -1,17 +1,5 @@
 import inspect
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    AsyncIterator,
-    Awaitable,
-    Callable,
-    ClassVar,
-    Generator,
-    Iterator,
-    List,
-    Optional,
-    Union,
-)
+from typing import TYPE_CHECKING, Any, AsyncIterator, Callable, ClassVar, Generator, Iterator, List, Optional, Union
 from uuid import UUID
 
 import yaml
@@ -124,7 +112,7 @@ class Component(CustomComponent):
                 # Build the output if it's connected to some other vertex
                 # or if it's not connected to any vertex
                 if not vertex.outgoing_edges or output.name in vertex.edges_source_names:
-                    method: Callable | Awaitable = getattr(self, output.method)
+                    method: Callable = getattr(self, output.method)
                     if output.cache and output.value != UNDEFINED:
                         _results[output.name] = output.value
                     else:
