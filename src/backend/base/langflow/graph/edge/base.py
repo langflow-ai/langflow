@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
 
 class SourceHandle(BaseModel):
-    baseClasses: Optional[List[str]] = Field(None, description="List of base classes for the source handle.")
+    baseClasses: list[str] = Field(default_factory=list, description="List of base classes for the source handle.")
     dataType: str = Field(..., description="Data type for the source handle.")
     id: str = Field(..., description="Unique identifier for the source handle.")
     name: Optional[str] = Field(None, description="Name of the source handle.")
