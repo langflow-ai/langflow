@@ -80,7 +80,7 @@ def get_message(payload):
 
 
 def build_logs(vertex, result) -> dict:
-    logs = dict()
+    logs: dict[str, Log] = dict()
     component_instance = result[0]
     for index, output in enumerate(vertex.outputs):
         if component_instance.status is None:
