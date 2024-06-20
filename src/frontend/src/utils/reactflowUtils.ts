@@ -98,8 +98,7 @@ export function cleanEdges(nodes: NodeType[], edges: Edge[]) {
         if (scapedJSONStringfy(id) !== sourceHandle) {
           newEdges = newEdges.filter((e) => e.id !== edge.id);
         }
-      }
-      else {
+      } else {
         newEdges = newEdges.filter((e) => e.id !== edge.id);
       }
     }
@@ -1491,14 +1490,24 @@ export function updateGroupRecursion(groupNode: NodeType, edges: Edge[]) {
   }
 }
 
-export function getGroupOutputNodeId(flow:FlowType,p_name:string,p_node_id:string){
-  let node:NodeType|undefined = flow.data?.nodes.find((n) => n.id === p_node_id);
-  if(!node) return;
-  if(node.data.node?.flow){
+export function getGroupOutputNodeId(
+  flow: FlowType,
+  p_name: string,
+  p_node_id: string,
+) {
+  let node: NodeType | undefined = flow.data?.nodes.find(
+    (n) => n.id === p_node_id,
+  );
+  if (!node) return;
+  if (node.data.node?.flow) {
     let output = node.data.node.outputs?.find((o) => o.name === p_name);
-    if(output && output.proxy){
-      return getGroupOutputNodeId(node.data.node.flow,output.proxy.name,output.proxy.id);
+    if (output && output.proxy) {
+      return getGroupOutputNodeId(
+        node.data.node.flow,
+        output.proxy.name,
+        output.proxy.id,
+      );
     }
   }
-  return {id: node.id, outputName: p_name};
+  return { id: node.id, outputName: p_name };
 }

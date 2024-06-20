@@ -295,11 +295,7 @@ async function buildVertex({
         );
         stopBuild();
         onBuildUpdate(buildData, BuildStatus.ERROR);
-
-      }
-      else
-      {
-
+      } else {
         onBuildUpdate(buildData, BuildStatus.BUILT);
       }
     }

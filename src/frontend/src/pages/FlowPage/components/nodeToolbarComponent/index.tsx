@@ -447,8 +447,9 @@ export default function NodeToolbarComponent({
               side="top"
             >
               <button
-                className={`${isGroup ? "rounded-l-md" : ""
-                  } relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10`}
+                className={`${
+                  isGroup ? "rounded-l-md" : ""
+                } relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10`}
                 onClick={() => {
                   setShowModalAdvanced(true);
                 }}
@@ -477,42 +478,44 @@ export default function NodeToolbarComponent({
               <IconComponent name="SaveAll" className="h-4 w-4" />
             </button>
           </ShadTooltip>*/}
-          {!data.node?.flow && <ShadTooltip
-            content={displayShortcut(
-              shortcuts.find(
-                ({ name }) => name.split(" ")[0].toLowerCase() === "freeze",
-              )!,
-            )}
-            side="top"
-          >
-            <button
-              className={classNames(
-                "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10",
+          {!data.node?.flow && (
+            <ShadTooltip
+              content={displayShortcut(
+                shortcuts.find(
+                  ({ name }) => name.split(" ")[0].toLowerCase() === "freeze",
+                )!,
               )}
-              onClick={(event) => {
-                event.preventDefault();
-                setNode(data.id, (old) => ({
-                  ...old,
-                  data: {
-                    ...old.data,
-                    node: {
-                      ...old.data.node,
-                      frozen: old.data?.node?.frozen ? false : true,
-                    },
-                  },
-                }));
-              }}
+              side="top"
             >
-              <IconComponent
-                name="Snowflake"
-                className={cn(
-                  "h-4 w-4 transition-all",
-                  // TODO UPDATE THIS COLOR TO BE A VARIABLE
-                  frozen ? "animate-wiggle text-ice" : "",
+              <button
+                className={classNames(
+                  "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10",
                 )}
-              />
-            </button>
-          </ShadTooltip>}
+                onClick={(event) => {
+                  event.preventDefault();
+                  setNode(data.id, (old) => ({
+                    ...old,
+                    data: {
+                      ...old.data,
+                      node: {
+                        ...old.data.node,
+                        frozen: old.data?.node?.frozen ? false : true,
+                      },
+                    },
+                  }));
+                }}
+              >
+                <IconComponent
+                  name="Snowflake"
+                  className={cn(
+                    "h-4 w-4 transition-all",
+                    // TODO UPDATE THIS COLOR TO BE A VARIABLE
+                    frozen ? "animate-wiggle text-ice" : "",
+                  )}
+                />
+              </button>
+            </ShadTooltip>
+          )}
 
           {/*<ShadTooltip content={"Duplicate"} side="top">
             <button
@@ -682,17 +685,19 @@ export default function NodeToolbarComponent({
                   />
                 </SelectItem>
               )}
-              {!data.node?.flow&&<SelectItem value="freeze">
-                <ToolbarSelectItem
-                  shortcut={
-                    shortcuts.find((obj) => obj.name === "Freeze")?.shortcut!
-                  }
-                  value={"Freeze"}
-                  icon={"Snowflake"}
-                  dataTestId="group-button-modal"
-                  style={`${frozen ? " text-ice" : ""} transition-all`}
-                />
-              </SelectItem>}
+              {!data.node?.flow && (
+                <SelectItem value="freeze">
+                  <ToolbarSelectItem
+                    shortcut={
+                      shortcuts.find((obj) => obj.name === "Freeze")?.shortcut!
+                    }
+                    value={"Freeze"}
+                    icon={"Snowflake"}
+                    dataTestId="group-button-modal"
+                    style={`${frozen ? " text-ice" : ""} transition-all`}
+                  />
+                </SelectItem>
+              )}
               <SelectItem value="Download">
                 <ToolbarSelectItem
                   shortcut={
@@ -716,8 +721,9 @@ export default function NodeToolbarComponent({
                   />{" "}
                   <span className="">Delete</span>{" "}
                   <span
-                    className={`absolute right-2 top-2 flex items-center justify-center rounded-sm px-1 py-[0.2] ${deleteIsFocus ? " " : "bg-muted"
-                      }`}
+                    className={`absolute right-2 top-2 flex items-center justify-center rounded-sm px-1 py-[0.2] ${
+                      deleteIsFocus ? " " : "bg-muted"
+                    }`}
                   >
                     <IconComponent
                       name="Delete"

@@ -38,9 +38,9 @@ export default function OutputComponent({
     }
   };
 
-    return displayProxy(
-      <span className={cn(frozen ? "text-ice" : "")}>{name}</span>,
-    );
+  return displayProxy(
+    <span className={cn(frozen ? "text-ice" : "")}>{name}</span>,
+  );
 
   // ! DEACTIVATED UNTIL BETTER IMPLEMENTATION
   // return (
