@@ -1,5 +1,6 @@
 import time
 import uuid
+from functools import partial
 from typing import TYPE_CHECKING, Annotated, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException
@@ -165,21 +166,23 @@ async def build_vertex(
         try:
             lock = chat_service._cache_locks[flow_id_str]
             (
-                next_runnable_vertices,
-                top_level_vertices,
                 result_dict,
                 params,
                 valid,
                 artifacts,
                 vertex,
             ) = await graph.build_vertex(
-                lock=lock,
                 chat_service=chat_service,
                 vertex_id=vertex_id,
                 user_id=current_user.id,
                 inputs_dict=inputs.model_dump() if inputs else {},
                 files=files,
             )
+            set_cache_coro = partial(get_chat_service().set_cache, key=flow_id_str)
+            next_runnable_vertices = await graph.run_manager.get_next_runnable_vertices(
+                lock, set_cache_coro, graph=graph, vertex=vertex, cache=False
+            )
+            top_level_vertices = graph.run_manager.get_top_level_vertices(graph, next_runnable_vertices)
             log_obj = Log(message=vertex.artifacts_raw, type=vertex.artifacts_type)
             result_data_response = ResultDataResponse(**result_dict.model_dump())
 
@@ -214,7 +217,6 @@ async def build_vertex(
         result_data_response.duration = duration
         result_data_response.timedelta = timedelta
         vertex.add_build_time(timedelta)
-        inactivated_vertices = None
         inactivated_vertices = list(graph.inactivated_vertices)
         graph.reset_inactivated_vertices()
         graph.reset_activated_vertices()
