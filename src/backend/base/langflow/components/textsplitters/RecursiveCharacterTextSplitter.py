@@ -56,17 +56,17 @@ class RecursiveCharacterTextSplitterComponent(Component):
         """
 
         if self.separators == "":
-            self.separators = None
+            self.separators: list[str] | None = None
         elif self.separators:
             # check if the separators list has escaped characters
             # if there are escaped characters, unescape them
-            self.separators = [unescape_string(x) for x in self.separators]
+            self.separators: list[str] | None = [unescape_string(x) for x in self.separators]
 
         # Make sure chunk_size and chunk_overlap are ints
         if self.chunk_size:
-            self.chunk_size = int(self.chunk_size)
+            self.chunk_size: int = int(self.chunk_size)
         if self.chunk_overlap:
-            self.chunk_overlap = int(self.chunk_overlap)
+            self.chunk_overlap: int = int(self.chunk_overlap)
         splitter = RecursiveCharacterTextSplitter(
             separators=self.separators,
             chunk_size=self.chunk_size,
@@ -74,7 +74,7 @@ class RecursiveCharacterTextSplitterComponent(Component):
         )
         documents = []
         if not isinstance(self.data_input, list):
-            self.data_input = [self.data_input]
+            self.data_input: list[Data] = [self.data_input]
         for _input in self.data_input:
             if isinstance(_input, Data):
                 documents.append(_input.to_lc_document())
