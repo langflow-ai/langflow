@@ -106,7 +106,7 @@ class FrontendNode(BaseModel):
     def set_base_classes_from_outputs(self):
         self.base_classes = [output_type for output in self.outputs for output_type in output.types]
 
-    def validate(self) -> None:
+    def validate_component(self) -> None:
         self.validate_name_overlap()
         self.validate_attributes()
 
