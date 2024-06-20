@@ -136,7 +136,7 @@ class LCModelComponent(Component):
                         messages.append(input_value.to_lc_message())
             else:
                 messages.append(HumanMessage(content=input_value))
-        inputs = messages or {}
+        inputs: Union[list, dict] = messages or {}
         try:
             if stream:
                 return runnable.stream(inputs)
