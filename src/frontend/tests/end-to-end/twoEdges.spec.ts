@@ -27,15 +27,12 @@ test("user should be able to see multiple edges and interact with them", async (
   await page.waitForTimeout(3000);
   await page.getByText("Retriever", { exact: true }).first().isVisible();
   await page.getByText("Search Results", { exact: true }).first().isVisible();
-  await page.getByTestId("icon-Eye").nth(19).click();
-  await page.getByTestId("icon-Eye").nth(20).click();
+  await page.getByTestId("icon-Eye").nth(24).click();
   await page.getByText("Retriever", { exact: true }).first().isHidden();
-  await page.getByText("Search Results", { exact: true }).first().isHidden();
   await page.getByTestId("icon-ChevronDown").last().isVisible();
   await page.getByTestId("icon-ChevronDown").last().click();
   await page.getByText("Retriever", { exact: true }).first().isVisible();
   await page.getByText("Search Results", { exact: true }).first().isVisible();
 
   await page.getByTestId("icon-EyeOff").nth(0).isVisible();
-  await page.getByTestId("icon-EyeOff").nth(1).isVisible();
 });

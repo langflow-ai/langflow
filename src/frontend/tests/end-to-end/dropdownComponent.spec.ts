@@ -181,7 +181,7 @@ test("dropDownComponent", async ({ page }) => {
   await page.getByTestId("code-button-modal").click();
   await page
     .locator("#CodeEditor div")
-    .filter({ hasText: "import BedrockChat" })
+    .filter({ hasText: "import ChatBedrock" })
     .nth(1)
     .click();
   await page.locator("textarea").press("Control+a");

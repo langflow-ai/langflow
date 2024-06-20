@@ -74,11 +74,11 @@ test("user must interact with chat with Input/Output", async ({ page }) => {
   await page.getByText("Save Changes", { exact: true }).click();
 
   await page
-    .getByTestId("popover-anchor-input-sender_name")
+    .getByTestId("textarea-sender_name")
     .nth(1)
     .fill("TestSenderNameUser");
   await page
-    .getByTestId("popover-anchor-input-sender_name")
+    .getByTestId("textarea-sender_name")
     .nth(0)
     .fill("TestSenderNameAI");
 
