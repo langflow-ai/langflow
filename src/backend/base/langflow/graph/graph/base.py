@@ -233,14 +233,14 @@ class Graph:
         self.tracing_service.set_run_name(name)
         self.tracing_service.initialize_tracers()
 
-    def end_all_traces(self, outputs: dict[str, Any] | None = None):
+    async def end_all_traces(self, outputs: dict[str, Any] | None = None, error: str | None = None):
         if not self.tracing_service:
             return
         self._end_time = datetime.now(timezone.utc)
         if outputs is None:
             outputs = {}
         outputs |= self.metadata
-        self.tracing_service.end(outputs)
+        await self.tracing_service.end(outputs, error)
 
     @property
     def sorted_vertices_layers(self) -> List[List[str]]:
