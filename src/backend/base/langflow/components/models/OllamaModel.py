@@ -1,8 +1,6 @@
 from langchain_community.chat_models import ChatOllama
 from langchain_core.language_models.chat_models import BaseChatModel
 
-
-from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import BaseLanguageModel, Text
 from langflow.io import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, Output, StrInput
@@ -19,6 +17,7 @@ class ChatOllamaComponent(LCModelComponent):
             display_name="Base URL",
             info="Endpoint of the Ollama API. Defaults to 'http://localhost:11434' if not specified.",
             advanced=True,
+            value="http://localhost:11434",
         ),
         StrInput(
             name="model",
