@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING
 
 from langflow.services.factory import ServiceFactory
-from langflow.services.variable.service import DatabaseVariableService, KubernetesSecretService
+from langflow.services.variable.service import VariableService, DatabaseVariableService, KubernetesSecretService
 
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
