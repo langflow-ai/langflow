@@ -24,13 +24,7 @@ from langflow.api.v1.schemas import (
     VertexBuildResponse,
     VerticesOrderResponse,
 )
-from langflow.schema.schema import Log
-from langflow.services.auth.utils import get_current_active_user
-from langflow.services.chat.service import ChatService
-from langflow.services.deps import get_chat_service, get_session, get_session_service
-from langflow.services.monitor.utils import log_vertex_build
-
-if TYPE_CHECKING:
+from langflow.exceptions.component import ComponentBuildException
     from langflow.graph.vertex.types import InterfaceVertex
     from langflow.services.session.service import SessionService
 
@@ -190,9 +184,13 @@ async def build_vertex(
 
             result_data_response = ResultDataResponse.model_validate(result_dict, from_attributes=True)
         except Exception as exc:
-            tb = traceback.format_exc()
-            logger.exception(f"Error building Component: {exc}")
-            params = format_exception_message(exc)
+            if isinstance(exc, ComponentBuildException):
+                params = exc.message
+                tb = exc.formatted_traceback
+            else:
+                tb = traceback.format_exc()
+                logger.exception(f"Error building Component: {exc}")
+                params = format_exception_message(exc)
             message = {"errorMessage": params, "stackTrace": tb}
             valid = False
             output_label = vertex.outputs[0]["name"] if vertex.outputs else "output"

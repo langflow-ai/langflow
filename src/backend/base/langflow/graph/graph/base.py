@@ -4,9 +4,10 @@ from collections import defaultdict, deque
 from functools import partial
 from itertools import chain
 from typing import TYPE_CHECKING, Dict, Generator, List, Optional, Tuple, Type, Union
-
 from loguru import logger
 
+from langflow.exceptions.component import ComponentBuildException
+from langflow.exceptions.component import ComponentBuildException
 from langflow.graph.edge.base import ContractEdge
 from langflow.graph.graph.constants import lazy_load_vertex_dict
 from langflow.graph.graph.runnable_vertices_manager import RunnableVerticesManager
@@ -830,7 +831,8 @@ class Graph:
             log_transaction(flow_id, vertex, status="success")
             return result_dict, params, valid, artifacts, vertex
         except Exception as exc:
-            logger.exception(f"Error building Component:\n\n{exc}")
+            if not isinstance(exc, ComponentBuildException):
+                logger.exception(f"Error building Component:\n\n{exc}")
             flow_id = self.flow_id
             log_transaction(flow_id, vertex, status="failure", error=str(exc))
             raise exc

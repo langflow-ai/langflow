@@ -2,12 +2,14 @@ import ast
 import asyncio
 import inspect
 import os
+import traceback
 import types
 from enum import Enum
 from typing import TYPE_CHECKING, Any, AsyncIterator, Callable, Dict, Iterator, List, Mapping, Optional
 
 from loguru import logger
 
+from langflow.exceptions.component import ComponentBuildException
 from langflow.graph.schema import INPUT_COMPONENTS, OUTPUT_COMPONENTS, InterfaceComponentTypes, ResultData
 from langflow.graph.utils import UnbuiltObject, UnbuiltResult
 from langflow.interface.initialize import loading
@@ -621,8 +623,9 @@ class Vertex:
             self.logs = build_logs(self, result)
             self._update_built_object_and_artifacts(result)
         except Exception as exc:
+            tb = traceback.format_exc()
             logger.exception(exc)
-            raise ValueError(f"Error building Component {self.display_name}:\n\n{exc}") from exc
+            raise ComponentBuildException(f"Error building Component {self.display_name}:\n\n{exc}", tb) from exc
 
     def _update_built_object_and_artifacts(self, result):
         """
