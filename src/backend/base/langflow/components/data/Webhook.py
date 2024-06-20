@@ -21,7 +21,7 @@ class WebhookComponent(Component):
     ]
 
     def build_data(self) -> Data:
-        message = ""
+        message: str | Data = ""
         if not self.data:
             self.status = "No data provided."
             return Data(data={})
