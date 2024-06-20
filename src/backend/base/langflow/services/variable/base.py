@@ -9,10 +9,12 @@ from langflow.services.base import Service
 from langflow.services.database.models.variable.model import Variable
 from langflow.services.deps import get_session
 
+
 class VariableService(Service):
     """
     Abstract base class for a variable service.
     """
+
     name = "variable_service"
 
     @abc.abstractmethod
@@ -39,7 +41,7 @@ class VariableService(Service):
         Returns:
             The value of the variable.
         """
-    
+
     @abc.abstractmethod
     def list_variables(self, user_id: Union[UUID, str], session: Session) -> list[Optional[str]]:
         """
@@ -52,7 +54,7 @@ class VariableService(Service):
         Returns:
             A list of variable names.
         """
-    
+
     @abc.abstractmethod
     def update_variable(self, user_id: Union[UUID, str], name: str, value: str, session: Session) -> Variable:
         """
@@ -66,7 +68,7 @@ class VariableService(Service):
 
         Returns:
             The updated variable.
-        """ 
+        """
 
     @abc.abstractmethod
     def delete_variable(self, user_id: Union[UUID, str], name: str, session: Session) -> Variable:
@@ -80,8 +82,8 @@ class VariableService(Service):
 
         Returns:
             The deleted variable.
-        """ 
-    
+        """
+
     @abc.abstractmethod
     def create_variable(
         self,
@@ -106,4 +108,3 @@ class VariableService(Service):
         Returns:
             The created variable.
         """
-
