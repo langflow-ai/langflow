@@ -18,8 +18,6 @@ from langflow.inputs import (
     SecretStrInput,
     StrInput,
 )
-from langflow.schema.message import Message
-from langflow.template import Output
 
 
 class OpenAIModelComponent(LCModelComponent):
@@ -75,19 +73,6 @@ class OpenAIModelComponent(LCModelComponent):
             value=1,
         ),
     ]
-    outputs = [
-        Output(display_name="Text", name="text_output", method="text_response"),
-        Output(display_name="Language Model", name="model_output", method="build_model"),
-    ]
-
-    def text_response(self) -> Message:
-        input_value = self.input_value
-        stream = self.stream
-        system_message = self.system_message
-        output = self.build_model()
-        result = self.get_chat_result(output, stream, input_value, system_message)
-        self.status = result
-        return result
 
     def build_model(self) -> LanguageModel:
         # self.output_schea is a list of dictionaries
