@@ -62,7 +62,7 @@ test("chat_io_teste", async ({ page }) => {
   // Click and hold on the first element
   await page
     .locator(
-      '//*[@id="react-flow-id"]/div/div[1]/div[1]/div/div[2]/div[2]/div/div[2]/div[8]/button/div/div',
+      '//*[@id="react-flow-id"]/div/div[1]/div/div/div[2]/div[2]/div/div[2]/div[9]/button/div[1]',
     )
     .hover();
   await page.mouse.down();
@@ -70,7 +70,7 @@ test("chat_io_teste", async ({ page }) => {
   // Move to the second element
   await page
     .locator(
-      '//*[@id="react-flow-id"]/div/div[1]/div[1]/div/div[2]/div[1]/div/div[2]/div[3]/div/button/div/div',
+      '//*[@id="react-flow-id"]/div/div[1]/div/div/div[2]/div[1]/div/div[2]/div[3]/div/button/div[1]',
     )
     .hover();
 

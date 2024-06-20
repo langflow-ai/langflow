@@ -61,10 +61,24 @@ test("should be able to upload a file", async ({ page }) => {
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
 
+  await page.getByPlaceholder("Search").click();
+  await page.getByPlaceholder("Search").fill("parse data");
+  await page
+    .getByTestId("helpersParse Data")
+    .first()
+    .dragTo(page.locator('//*[@id="react-flow-id"]'));
+
+  await page.mouse.up();
+  await page.mouse.down();
+  await page.getByTitle("fit view").click();
+  await page.getByTitle("zoom out").click();
+  await page.getByTitle("zoom out").click();
+  await page.getByTitle("zoom out").click();
+
   // Click and hold on the first element
   await page
     .locator(
-      '//*[@id="react-flow-id"]/div/div[1]/div[1]/div/div[2]/div[1]/div/div[2]/div[6]/button/div/div',
+      '//*[@id="react-flow-id"]/div/div[1]/div[1]/div/div[2]/div[1]/div/div[2]/div[6]/button/div[1]',
     )
     .hover();
   await page.mouse.down();
@@ -72,7 +86,25 @@ test("should be able to upload a file", async ({ page }) => {
   // Move to the second element
   await page
     .locator(
-      '//*[@id="react-flow-id"]/div/div[1]/div[1]/div/div[2]/div[2]/div/div[2]/div[3]/div/button/div/div',
+      '//*[@id="react-flow-id"]/div/div[1]/div[1]/div/div[2]/div[3]/div/div[2]/div[4]/div/button/div[1]',
+    )
+    .hover();
+
+  // Release the mouse
+  await page.mouse.up();
+
+  // Click and hold on the first element
+  await page
+    .locator(
+      '//*[@id="react-flow-id"]/div/div[1]/div[1]/div/div[2]/div[3]/div/div[2]/div[7]/button/div[1]',
+    )
+    .hover();
+  await page.mouse.down();
+
+  // Move to the second element
+  await page
+    .locator(
+      '//*[@id="react-flow-id"]/div/div[1]/div[1]/div/div[2]/div[2]/div/div[2]/div[3]/div/button/div[1]',
     )
     .hover();
 
