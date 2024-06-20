@@ -66,6 +66,8 @@ class Component(CustomComponent):
     def map_inputs(self, inputs: List[InputTypes]):
         self.inputs = inputs
         for input_ in inputs:
+            if input_.name is None:
+                raise ValueError("Input name cannot be None.")
             self._inputs[input_.name] = input_
 
     def validate(self, params: dict):
@@ -112,6 +114,8 @@ class Component(CustomComponent):
                 # Build the output if it's connected to some other vertex
                 # or if it's not connected to any vertex
                 if not vertex.outgoing_edges or output.name in vertex.edges_source_names:
+                    if output.method is None:
+                        raise ValueError(f"Output {output.name} does not have a method defined.")
                     method: Callable = getattr(self, output.method)
                     if output.cache and output.value != UNDEFINED:
                         _results[output.name] = output.value
