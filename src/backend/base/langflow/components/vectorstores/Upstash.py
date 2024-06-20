@@ -74,9 +74,6 @@ class UpstashVectorStoreComponent(Component):
     def build_vector_store(self) -> UpstashVectorStore:
         return self._build_upstash()
 
-    def build_base_retriever(self) -> Retriever:
-        return self._build_upstash()
-
     def _build_upstash(self) -> UpstashVectorStore:
         use_upstash_embedding = self.embedding is None
 

@@ -181,10 +181,6 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
         if self.add_to_vector_store:
             self._add_documents_to_vector_store(vector_store)
 
-        return vector_store
-
-    def build_base_retriever(self):
-        vector_store = self.build_vector_store()
         self.status = self._astradb_collection_to_data(vector_store.collection)
         return vector_store
 

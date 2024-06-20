@@ -56,9 +56,6 @@ class PGVectorStoreComponent(Component):
     def build_vector_store(self) -> PGVector:
         return self._build_pgvector()
 
-    def build_base_retriever(self) -> Retriever:
-        return self._build_pgvector()
-
     def _build_pgvector(self) -> PGVector:
         if self.add_to_vector_store:
             documents = []

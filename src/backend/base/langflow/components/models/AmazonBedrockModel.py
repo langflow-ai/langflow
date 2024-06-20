@@ -78,7 +78,7 @@ class AmazonBedrockComponent(LCModelComponent):
         cache = self.cache
         stream = self.stream
         try:
-            output = ChatBedrock(
+            output = ChatBedrock(  # type: ignore
                 credentials_profile_name=credentials_profile_name,
                 model_id=model_id,
                 region_name=region_name,

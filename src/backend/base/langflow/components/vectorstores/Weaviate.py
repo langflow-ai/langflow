@@ -59,9 +59,6 @@ class WeaviateVectorStoreComponent(Component):
     def build_vector_store(self) -> Weaviate:
         return self._build_weaviate()
 
-    def build_base_retriever(self) -> Retriever:
-        return self._build_weaviate()
-
     def _build_weaviate(self) -> Weaviate:
         if self.api_key:
             auth_config = weaviate.AuthApiKey(api_key=self.api_key)
