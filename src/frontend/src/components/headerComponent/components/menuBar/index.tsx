@@ -225,6 +225,7 @@ export const MenuBar = ({ }: {}): JSX.Element => {
                 setIsBuilding(false);
                 revertBuiltStatusFromBuilding();
                 setLockChat(false);
+                window.stop();
               }
             }
             } className={isBuilding ? "absolute opacity-0 group-hover:opacity-100 text-status-red flex gap-1.5 items-center transition-all " : "opacity-0"}>
