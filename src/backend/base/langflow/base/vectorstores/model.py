@@ -1,9 +1,9 @@
-from typing import List, Union
+from typing import List
 
 from langchain_core.documents import Document
 
 from langflow.custom import Component
-from langflow.field_typing import BaseRetriever, Text, VectorStore
+from langflow.field_typing import Retriever, Text, VectorStore
 from langflow.helpers.data import docs_to_data
 from langflow.io import Output
 from langflow.schema import Data
@@ -37,7 +37,7 @@ class LCVectorStoreComponent(Component):
         self,
         input_value: Text,
         search_type: str,
-        vector_store: Union[VectorStore, BaseRetriever],
+        vector_store: VectorStore,
         k=10,
         **kwargs,
     ) -> List[Data]:
@@ -71,7 +71,7 @@ class LCVectorStoreComponent(Component):
         """
         raise NotImplementedError("build_vector_store method must be implemented.")
 
-    def build_base_retriever(self) -> BaseRetriever:
+    def build_base_retriever(self) -> Retriever:
         """
         Builds the BaseRetriever object.
         """

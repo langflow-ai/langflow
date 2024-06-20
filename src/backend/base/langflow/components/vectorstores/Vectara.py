@@ -3,10 +3,12 @@ from typing import List
 from langchain_community.embeddings import FakeEmbeddings
 from langchain_community.vectorstores import Vectara
 from langchain_core.retrievers import BaseRetriever
+
 from langflow.custom import Component
 from langflow.helpers.data import docs_to_data
 from langflow.io import BoolInput, HandleInput, IntInput, Output, SecretStrInput, StrInput
 from langflow.schema import Data
+from langflow.field_typing import Retriever
 
 
 class VectaraVectorStoreComponent(Component):
@@ -54,7 +56,7 @@ class VectaraVectorStoreComponent(Component):
     def build_vector_store(self) -> Vectara:
         return self._build_vectara()
 
-    def build_base_retriever(self) -> BaseRetriever:
+    def build_base_retriever(self) -> Retriever:
         return self._build_vectara()
 
     def _build_vectara(self) -> Vectara:
