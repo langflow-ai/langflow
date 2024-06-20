@@ -78,7 +78,7 @@ langflow:
 By default, the chart will use a SQLLite database stored in a local persistent disk.
 If you want to use an external PostgreSQL database, you can set the `langflow.database` values in the `values.yaml` file.
 
-```
+```yaml
 # Deploy postgresql. You can skip this section if you have an existing postgresql database.
 postgresql:
   enabled: true
@@ -185,11 +185,10 @@ There are two ways to import a flow (or multiple flows) and deploy it with the L
 
    ```bash
    # Create the Dockerfile
-   echo """
-      FROM langflowai/langflow-backend:latest
-      RUN mkdir /app/flows
-      ENV LANGFLOW_LOAD_FLOWS_PATH=/app/flows
-      COPY ./*json /app/flows/.""" > Dockerfile
+   echo """FROM langflowai/langflow-backend:latest
+   RUN mkdir /app/flows
+   ENV LANGFLOW_LOAD_FLOWS_PATH=/app/flows
+   COPY ./*json /app/flows/.""" > Dockerfile
    # Download the flows
    wget https://raw.githubusercontent.com/langflow-ai/langflow/dev/src/backend/base/langflow/initial_setup/starter_projects/Basic%20Prompting%20(Hello%2C%20world!).json
    # Build the docker image locally
