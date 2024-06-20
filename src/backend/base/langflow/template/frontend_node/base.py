@@ -49,7 +49,11 @@ class FrontendNode(BaseModel):
     field_order: list[str] = []
     """Order of the fields in the frontend node."""
     beta: bool = False
+    """Whether the frontend node is in beta."""
     error: Optional[str] = None
+    """Error message for the frontend node."""
+    edited: bool = False
+    """Whether the frontend node has been edited."""
 
     def set_documentation(self, documentation: str) -> None:
         """Sets the documentation of the frontend node."""
