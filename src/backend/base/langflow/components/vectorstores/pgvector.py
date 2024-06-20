@@ -8,8 +8,6 @@ from langflow.helpers.data import docs_to_data
 from langflow.io import BoolInput, HandleInput, IntInput, Output, StrInput
 from langflow.schema import Data
 
-from langflow.field_typing import Retriever
-
 
 class PGVectorStoreComponent(Component):
     display_name = "PGVector"
@@ -54,9 +52,6 @@ class PGVectorStoreComponent(Component):
     ]
 
     def build_vector_store(self) -> PGVector:
-        return self._build_pgvector()
-
-    def build_base_retriever(self) -> Retriever:
         return self._build_pgvector()
 
     def _build_pgvector(self) -> PGVector:

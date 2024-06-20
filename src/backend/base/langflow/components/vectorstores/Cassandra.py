@@ -7,7 +7,6 @@ from langflow.custom import Component
 from langflow.helpers.data import docs_to_data
 from langflow.io import BoolInput, DropdownInput, HandleInput, IntInput, Output, SecretStrInput, StrInput
 from langflow.schema import Data
-from langflow.field_typing import Retriever
 
 
 class CassandraVectorStoreComponent(Component):
@@ -97,9 +96,6 @@ class CassandraVectorStoreComponent(Component):
     ]
 
     def build_vector_store(self) -> Cassandra:
-        return self._build_cassandra()
-
-    def build_base_retriever(self) -> Retriever:
         return self._build_cassandra()
 
     def _build_cassandra(self) -> Cassandra:

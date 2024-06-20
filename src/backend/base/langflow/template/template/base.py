@@ -1,4 +1,4 @@
-from typing import Callable, Union
+from typing import Callable, Union, cast
 
 from pydantic import BaseModel, Field, model_serializer
 
@@ -9,7 +9,7 @@ from langflow.utils.constants import DIRECT_TYPES
 
 class Template(BaseModel):
     type_name: str = Field(serialization_alias="_type")
-    fields: list[Input | InputTypes]
+    fields: list[Union[Input, InputTypes]]
 
     def process_fields(
         self,
@@ -49,7 +49,7 @@ class Template(BaseModel):
         field = next((field for field in self.fields if field.name == field_name), None)
         if field is None:
             raise ValueError(f"Field {field_name} not found in template {self.type_name}")
-        return field
+        return cast(Input, field)
 
     def update_field(self, field_name: str, field: Input) -> None:
         """Updates the field with the given name."""

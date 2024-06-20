@@ -8,7 +8,6 @@ from langflow.custom import Component
 from langflow.helpers.data import docs_to_data
 from langflow.io import BoolInput, HandleInput, IntInput, Output, SecretStrInput, StrInput
 from langflow.schema import Data
-from langflow.field_typing import Retriever
 
 
 class CouchbaseVectorStoreComponent(Component):
@@ -64,9 +63,6 @@ class CouchbaseVectorStoreComponent(Component):
     ]
 
     def build_vector_store(self) -> CouchbaseVectorStore:
-        return self._build_couchbase()
-
-    def build_base_retriever(self) -> Retriever:
         return self._build_couchbase()
 
     def _build_couchbase(self) -> CouchbaseVectorStore:

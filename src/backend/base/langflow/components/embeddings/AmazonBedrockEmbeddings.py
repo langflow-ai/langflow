@@ -1,9 +1,7 @@
-from typing import Optional
-
 from langchain_community.embeddings import BedrockEmbeddings
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import Embeddings
-from langflow.io import DropdownInput, Output, SecretStrInput, TextInput
+from langflow.io import DropdownInput, Output, TextInput
 
 
 class AmazonBedrockEmbeddingsComponent(LCModelComponent):

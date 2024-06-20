@@ -70,9 +70,6 @@ class PineconeVectorStoreComponent(Component):
     def build_vector_store(self) -> Pinecone:
         return self._build_pinecone()
 
-    def build_base_retriever(self) -> Retriever:
-        return self._build_pinecone()
-
     def _build_pinecone(self) -> Pinecone:
         from langchain_pinecone._utilities import DistanceStrategy
         from langchain_pinecone.vectorstores import Pinecone

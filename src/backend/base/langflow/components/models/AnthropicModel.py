@@ -98,9 +98,9 @@ class AnthropicModelComponent(LCModelComponent):
         try:
             from anthropic import BadRequestError
         except ImportError:
-            return
+            return None
         if isinstance(exception, BadRequestError):
             message = exception.body.get("error", {}).get("message")  # type: ignore
             if message:
                 return message
-        return
+        return None

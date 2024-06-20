@@ -2,7 +2,7 @@ from langchain_community.embeddings.cohere import CohereEmbeddings
 
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import Embeddings
-from langflow.io import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, Output, SecretStrInput, TextInput
+from langflow.io import DropdownInput, FloatInput, IntInput, Output, SecretStrInput, TextInput
 
 
 class CohereEmbeddingsComponent(LCModelComponent):
@@ -34,7 +34,7 @@ class CohereEmbeddingsComponent(LCModelComponent):
     ]
 
     def build_embeddings(self) -> Embeddings:
-        return CohereEmbeddings(
+        return CohereEmbeddings(  # type: ignore
             cohere_api_key=self.cohere_api_key,
             model=self.model,
             truncate=self.truncate,
