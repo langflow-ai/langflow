@@ -60,7 +60,8 @@ class SelfQueryRetrieverComponent(CustomComponent):
             input_text = query.text
         elif isinstance(query, str):
             input_text = query
-        else:
+
+        if not isinstance(query, str):
             raise ValueError(f"Query type {type(query)} not supported.")
         documents = self_query_retriever.invoke(input=input_text)
         data = [Data.from_document(document) for document in documents]
