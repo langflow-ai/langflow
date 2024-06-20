@@ -8,7 +8,7 @@ from langflow.custom.utils import abuild_custom_components, build_custom_compone
 
 if TYPE_CHECKING:
     from langflow.services.cache.base import CacheService
-    from langflow.services.settings.manager import SettingsService
+    from langflow.services.settings.service import SettingsService
 
 
 async def aget_all_types_dict(components_paths):
