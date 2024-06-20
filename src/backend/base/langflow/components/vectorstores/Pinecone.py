@@ -42,6 +42,7 @@ class PineconeVectorStoreComponent(LCVectorStoreComponent):
             name="add_to_vector_store",
             display_name="Add to Vector Store",
             info="If true, the Vector Store Inputs will be added to the Vector Store.",
+            value=True,
         ),
         StrInput(name="search_input", display_name="Search Input"),
         IntInput(

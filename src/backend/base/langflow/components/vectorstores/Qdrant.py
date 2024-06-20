@@ -78,7 +78,6 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
 
         # Remove None values from server_kwargs
         server_kwargs = {k: v for k, v in server_kwargs.items() if v is not None}
-
         if self.add_to_vector_store:
             documents = []
             for _input in self.vector_store_inputs or []:
@@ -89,7 +88,7 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
 
             if documents:
                 qdrant = Qdrant.from_documents(
-                    documents, embedding=self.embedding, client_kwargs=server_kwargs, **qdrant_kwargs
+                    documents, embedding=self.embedding, **qdrant_kwargs
                 )
             else:
                 from qdrant_client import QdrantClient
