@@ -6,6 +6,7 @@ from collections import defaultdict
 from copy import deepcopy
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Awaitable
 from uuid import UUID
 
 import orjson
@@ -15,7 +16,6 @@ from sqlmodel import select
 
 from langflow.base.constants import FIELD_FORMAT_ATTRIBUTES, NODE_FORMAT_ATTRIBUTES, ORJSON_OPTIONS
 from langflow.graph.graph.base import Graph
-from langflow.interface.types import aget_all_components
 from langflow.services.auth.utils import create_super_user
 from langflow.services.database.models.flow.model import Flow, FlowCreate
 from langflow.services.database.models.folder.model import Folder, FolderCreate
@@ -537,10 +537,9 @@ def find_existing_flow(session, flow_id, flow_endpoint_name):
     return None
 
 
-async def create_or_update_starter_projects():
-    components_paths = get_settings_service().settings.components_path
+async def create_or_update_starter_projects(get_all_components_coro: Awaitable[dict]):
     try:
-        all_types_dict = await aget_all_components(components_paths, as_dict=True)
+        all_types_dict = await get_all_components_coro
     except Exception as e:
         logger.exception(f"Error loading components: {e}")
         raise e
