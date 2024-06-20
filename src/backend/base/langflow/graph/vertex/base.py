@@ -204,8 +204,8 @@ class Vertex:
 
         self.has_session_id = "session_id" in template_dicts
 
-        self.required_inputs = []
-        self.optional_inputs = []
+        self.required_inputs: list[str] = []
+        self.optional_inputs: list[str] = []
         for value_dict in template_dicts.values():
             list_to_append = self.required_inputs if value_dict.get("required") else self.optional_inputs
 
