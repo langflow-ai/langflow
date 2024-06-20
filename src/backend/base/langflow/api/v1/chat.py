@@ -25,6 +25,13 @@ from langflow.api.v1.schemas import (
     VerticesOrderResponse,
 )
 from langflow.exceptions.component import ComponentBuildException
+from langflow.schema.schema import Log
+from langflow.services.auth.utils import get_current_active_user
+from langflow.services.chat.service import ChatService
+from langflow.services.deps import get_chat_service, get_session, get_session_service
+from langflow.services.monitor.utils import log_vertex_build
+
+if TYPE_CHECKING:
     from langflow.graph.vertex.types import InterfaceVertex
     from langflow.services.session.service import SessionService
 
