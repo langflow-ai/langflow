@@ -1,6 +1,6 @@
 from typing import List
 
-import weaviate
+import weaviate  # type: ignore
 from langchain_community.vectorstores import Weaviate
 from langchain_core.retrievers import BaseRetriever
 
