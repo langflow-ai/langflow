@@ -9,7 +9,7 @@ from langflow.inputs.inputs import InputTypes
 from langflow.schema.artifact import get_artifact_type, post_process_raw
 from langflow.schema.data import Data
 from langflow.schema.message import Message
-from langflow.template.field.base import UNDEFINED, Input, Output
+from langflow.template.field.base import UNDEFINED, Output
 
 from .custom_component import CustomComponent
 
@@ -63,7 +63,7 @@ class Component(CustomComponent):
     #     except AttributeError:
     #         return self.__getattr__(name)
 
-    def map_inputs(self, inputs: List[Input]):
+    def map_inputs(self, inputs: List[InputTypes]):
         self.inputs = inputs
         for input_ in inputs:
             self._inputs[input_.name] = input_
