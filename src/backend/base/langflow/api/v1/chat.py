@@ -15,6 +15,7 @@ from langflow.api.utils import (
     format_exception_message,
     get_top_level_vertices,
     parse_exception,
+    cancel_on_disconnect
 )
 from langflow.api.v1.schemas import (
     FlowDataRequest,
@@ -56,6 +57,7 @@ async def try_running_celery_task(vertex, user_id):
 
 
 @router.post("/build/{flow_id}/vertices", response_model=VerticesOrderResponse)
+@cancel_on_disconnect
 async def retrieve_vertices_order(
     flow_id: uuid.UUID,
     data: Optional[Annotated[Optional[FlowDataRequest], Body(embed=True)]] = None,
@@ -122,6 +124,7 @@ async def retrieve_vertices_order(
 
 
 @router.post("/build/{flow_id}/vertices/{vertex_id}")
+@cancel_on_disconnect
 async def build_vertex(
     flow_id: uuid.UUID,
     vertex_id: str,
@@ -262,6 +265,7 @@ async def build_vertex(
 
 
 @router.get("/build/{flow_id}/{vertex_id}/stream", response_class=StreamingResponse)
+@cancel_on_disconnect
 async def build_vertex_stream(
     flow_id: uuid.UUID,
     vertex_id: str,
