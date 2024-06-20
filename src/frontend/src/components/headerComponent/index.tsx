@@ -236,12 +236,12 @@ export default function Header(): JSX.Element {
                     <DropdownMenuSeparator />
                   </>
                 )}
-                <DropdownMenuLabel>General</DropdownMenuLabel>
+                <DropdownMenuLabel>{t("General")}</DropdownMenuLabel>
                 <DropdownMenuItem
                   className="cursor-pointer"
                   onClick={() => navigate("/settings")}
                 >
-                  Settings
+                  {t("Settings")}
                 </DropdownMenuItem>
                 {!autoLogin && (
                   <>
@@ -252,7 +252,7 @@ export default function Header(): JSX.Element {
                         className="cursor-pointer"
                         onClick={() => navigate("/admin")}
                       >
-                        Admin Page
+                        {t("Admin Page")}
                       </DropdownMenuItem>
                     )}
                     <DropdownMenuItem
@@ -261,7 +261,7 @@ export default function Header(): JSX.Element {
                         logout();
                       }}
                     >
-                      Sign Out
+                      {t("Sign Out")}
                     </DropdownMenuItem>
                   </>
                 )}

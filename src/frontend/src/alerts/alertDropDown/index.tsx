@@ -10,6 +10,7 @@ import { ZERO_NOTIFICATIONS } from "../../constants/constants";
 import useAlertStore from "../../stores/alertStore";
 import { AlertDropdownType } from "../../types/alerts";
 import SingleAlert from "./components/singleAlertComponent";
+import { useTranslation } from "react-i18next";
 
 export default function AlertDropdown({
   children,
@@ -27,6 +28,8 @@ export default function AlertDropdown({
 
   const [open, setOpen] = useState(false);
 
+  const { t } = useTranslation();
+
   return (
     <Popover
       open={open}
@@ -38,7 +41,7 @@ export default function AlertDropdown({
       <PopoverTrigger>{children}</PopoverTrigger>
       <PopoverContent className="nocopy nowheel nopan nodelete nodrag noundo flex h-[500px] w-[500px] flex-col">
         <div className="text-md flex flex-row justify-between pl-3 font-medium text-foreground">
-          Notifications
+          {t("Notifications")}
           <div className="flex gap-3 pr-3">
             <button
               className="text-foreground hover:text-status-red"
@@ -70,7 +73,7 @@ export default function AlertDropdown({
             ))
           ) : (
             <div className="flex h-full w-full items-center justify-center pb-16 text-ring">
-              {ZERO_NOTIFICATIONS}
+              {t(ZERO_NOTIFICATIONS)}
             </div>
           )}
         </div>

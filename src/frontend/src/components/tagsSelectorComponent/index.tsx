@@ -1,6 +1,7 @@
 import { cn } from "../../utils/utils";
 import HorizontalScrollFadeComponent from "../horizontalScrollFadeComponent";
 import { Badge } from "../ui/badge";
+import { useTranslation } from "react-i18next";
 
 export function TagsSelector({
   tags,
@@ -23,6 +24,8 @@ export function TagsSelector({
         : selectedTags.filter((_, i) => i !== index);
     setSelectedTags(newArray);
   };
+
+  const { t } = useTranslation();
 
   return (
     <HorizontalScrollFadeComponent isFolder={false}>
@@ -51,7 +54,7 @@ export function TagsSelector({
                   : ""
               )}
             >
-              {tag.name}
+              {t(tag.name)}
             </Badge>
           </button>
         ))}
