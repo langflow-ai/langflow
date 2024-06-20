@@ -8,8 +8,6 @@ from langflow.helpers.data import docs_to_data
 from langflow.io import BoolInput, HandleInput, IntInput, Output, StrInput
 from langflow.schema import Data
 
-from langflow.field_typing import Retriever
-
 
 class MongoVectorStoreComponent(Component):
     display_name = "MongoDB Atlas"

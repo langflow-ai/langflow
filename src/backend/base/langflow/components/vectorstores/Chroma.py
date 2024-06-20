@@ -1,5 +1,5 @@
 from copy import deepcopy
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING
 
 from chromadb.config import Settings
 from langchain_chroma.vectorstores import Chroma

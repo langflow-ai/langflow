@@ -1,11 +1,9 @@
-from typing import Dict, Optional
-
 from langchain_community.embeddings.huggingface import HuggingFaceInferenceAPIEmbeddings
 from pydantic.v1.types import SecretStr
 
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import Embeddings
-from langflow.io import BoolInput, DictInput, FloatInput, Output, SecretStrInput, TextInput
+from langflow.io import BoolInput, DictInput, Output, SecretStrInput, TextInput
 
 
 class HuggingFaceInferenceAPIEmbeddingsComponent(LCModelComponent):
