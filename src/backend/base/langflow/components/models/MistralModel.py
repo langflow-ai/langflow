@@ -119,7 +119,7 @@ class MistralAIModelComponent(LCModelComponent):
         safe_mode: bool = False,
     ) -> Text:
         if not mistral_api_base:
-            mistral_api_base = "https://api.mistral.ai"
+            mistral_api_base = "https://api.mistral.ai/v1/chat/completions"
         if mistral_api_key:
             api_key = SecretStr(mistral_api_key)
         else:
