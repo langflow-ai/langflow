@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, Dict, Generator, List, Optional, Tuple, Type, 
 from loguru import logger
 
 from langflow.exceptions.component import ComponentBuildException
-from langflow.exceptions.component import ComponentBuildException
 from langflow.graph.edge.base import ContractEdge
 from langflow.graph.graph.constants import lazy_load_vertex_dict
 from langflow.graph.graph.runnable_vertices_manager import RunnableVerticesManager

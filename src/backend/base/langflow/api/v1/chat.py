@@ -111,7 +111,7 @@ async def retrieve_vertices_order(
         run_id = uuid.uuid4()
         graph.set_run_id(run_id)
         vertices_to_run = list(graph.vertices_to_run) + get_top_level_vertices(graph, graph.vertices_to_run)
-        await chat_service.set_cache(flow_id, graph)
+        await chat_service.set_cache(str(flow_id), graph)
         return VerticesOrderResponse(ids=first_layer, run_id=run_id, vertices_to_run=vertices_to_run)
 
     except Exception as exc:

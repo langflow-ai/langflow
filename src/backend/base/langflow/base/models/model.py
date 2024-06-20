@@ -3,7 +3,7 @@ import warnings
 from typing import Optional, Union
 
 from langchain_core.language_models.llms import LLM
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 
 from langflow.custom import Component
 from langflow.field_typing import LanguageModel
@@ -120,7 +120,7 @@ class LCModelComponent(Component):
     def get_chat_result(
         self, runnable: LanguageModel, stream: bool, input_value: str | Message, system_message: Optional[str] = None
     ):
-        messages: list[Union[HumanMessage, SystemMessage]] = []
+        messages: list[Union[BaseMessage]] = []
         if not input_value and not system_message:
             raise ValueError("The message you want to send to the model is empty.")
         if system_message:
@@ -136,7 +136,7 @@ class LCModelComponent(Component):
                         messages.append(input_value.to_lc_message())
             else:
                 messages.append(HumanMessage(content=input_value))
-        inputs = messages or {}
+        inputs: Union[list, dict] = messages or {}
         try:
             if stream:
                 return runnable.stream(inputs)

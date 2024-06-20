@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from typing import Annotated, Any, AsyncIterator, Iterator, Optional
+from typing import Annotated, Any, AsyncIterator, Iterator, Optional, List
 
 from fastapi.encoders import jsonable_encoder
 from langchain_core.load import load
@@ -42,7 +42,7 @@ class Message(Data):
         return value
 
     def model_post_init(self, __context: Any) -> None:
-        new_files = []
+        new_files: List[Any] = []
         for file in self.files or []:
             if is_image_file(file):
                 new_files.append(Image(path=file))

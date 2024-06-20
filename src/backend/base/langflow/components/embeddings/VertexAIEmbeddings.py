@@ -1,5 +1,3 @@
-from typing import List, Optional
-
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import Embeddings
 from langflow.io import BoolInput, DictInput, FileInput, FloatInput, IntInput, Output, TextInput

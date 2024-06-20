@@ -5,7 +5,6 @@ from langchain_core.retrievers import BaseRetriever
 from supabase.client import Client, create_client
 
 from langflow.custom import Component
-from langflow.field_typing import Retriever
 from langflow.helpers.data import docs_to_data
 from langflow.io import HandleInput, IntInput, Output, StrInput
 from langflow.schema import Data
@@ -56,9 +55,6 @@ class SupabaseVectorStoreComponent(Component):
     ]
 
     def build_vector_store(self) -> SupabaseVectorStore:
-        return self._build_supabase()
-
-    def build_base_retriever(self) -> Retriever:
         return self._build_supabase()
 
     def _build_supabase(self) -> SupabaseVectorStore:

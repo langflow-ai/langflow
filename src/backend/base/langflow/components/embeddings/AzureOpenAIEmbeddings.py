@@ -1,4 +1,3 @@
-from typing import Optional
 from langchain_openai import AzureOpenAIEmbeddings
 from pydantic.v1 import SecretStr
 

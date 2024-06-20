@@ -82,25 +82,26 @@ class OpenAIModelComponent(LCModelComponent):
         temperature = self.temperature
         model_name: str = self.model_name
         max_tokens = self.max_tokens
-        model_kwargs = self.model_kwargs
+        model_kwargs = self.model_kwargs or {}
         openai_api_base = self.openai_api_base or "https://api.openai.com/v1"
         json_mode = bool(output_schema_dict)
         seed = self.seed
+        model_kwargs["seed"] = seed
+
         if openai_api_key:
             api_key = SecretStr(openai_api_key)
         else:
             api_key = None
         output = ChatOpenAI(
             max_tokens=max_tokens or None,
-            model_kwargs=model_kwargs or {},
+            model_kwargs=model_kwargs,
             model=model_name,
             base_url=openai_api_base,
             api_key=api_key,
             temperature=temperature or 0.1,
-            seed=seed,
         )
         if json_mode:
-            output = output.with_structured_output(schema=output_schema_dict, method="json_mode")
+            output = output.with_structured_output(schema=output_schema_dict, method="json_mode")  # type: ignore
 
         return output
 
