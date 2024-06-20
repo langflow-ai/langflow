@@ -4,6 +4,7 @@ from collections import defaultdict, deque
 from functools import partial
 from itertools import chain
 from typing import TYPE_CHECKING, Dict, Generator, List, Optional, Tuple, Type, Union
+
 from loguru import logger
 
 from langflow.exceptions.component import ComponentBuildException
@@ -489,7 +490,7 @@ class Graph:
             # should be marked
             if output_name:
                 edge = self.get_edge(vertex_id, child_id)
-                if edge.source_handle.name != output_name:
+                if edge and edge.source_handle.name != output_name:
                     continue
             self.mark_branch(child_id, state)
 
