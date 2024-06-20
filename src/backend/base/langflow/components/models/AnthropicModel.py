@@ -3,7 +3,7 @@ from pydantic.v1 import SecretStr
 
 from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
-from langflow.field_typing import LanguageModel, Text
+from langflow.field_typing import LanguageModel
 from langflow.io import BoolInput, DropdownInput, FloatInput, IntInput, Output, SecretStrInput, TextInput
 
 
@@ -25,16 +25,13 @@ class AnthropicModelComponent(LCModelComponent):
             name="model",
             display_name="Model Name",
             options=[
+                "claude-3-5-sonnet-20240620",
                 "claude-3-opus-20240229",
                 "claude-3-sonnet-20240229",
                 "claude-3-haiku-20240307",
-                "claude-2.1",
-                "claude-2.0",
-                "claude-instant-1.2",
-                "claude-instant-1",
             ],
             info="https://python.langchain.com/docs/integrations/chat/anthropic",
-            value="claude-3-opus-20240229",
+            value="claude-3-5-sonnet-20240620",
         ),
         SecretStrInput(
             name="anthropic_api_key",
@@ -48,7 +45,7 @@ class AnthropicModelComponent(LCModelComponent):
             advanced=True,
             info="Endpoint of the Anthropic API. Defaults to 'https://api.anthropic.com' if not specified.",
         ),
-        BoolInput(name="stream", display_name="Stream", info=STREAM_INFO_TEXT, advanced=True),
+        BoolInput(name="stream", display_name="Stream", info=STREAM_INFO_TEXT, advanced=True, value=False),
         TextInput(
             name="system_message",
             display_name="System Message",
@@ -67,21 +64,6 @@ class AnthropicModelComponent(LCModelComponent):
         Output(display_name="Language Model", name="model_output", method="build_model"),
     ]
 
-    def text_response(self) -> Text:
-        input_value = self.input_value
-        system_message = self.system_message
-        prefill = self.prefill
-        output = self.build_model()
-        messages = [
-            ("system", system_message),
-            ("human", input_value),
-        ]
-        if prefill:
-            messages.append(("assistant", prefill))
-        result = output.invoke(messages)
-        self.status = result.content
-        return prefill + result.content
-
     def build_model(self) -> LanguageModel:
         model = self.model
         anthropic_api_key = self.anthropic_api_key
@@ -96,8 +78,29 @@ class AnthropicModelComponent(LCModelComponent):
                 max_tokens_to_sample=max_tokens,  # type: ignore
                 temperature=temperature,
                 anthropic_api_url=anthropic_api_url,
+                streaming=self.stream,
             )
         except Exception as e:
             raise ValueError("Could not connect to Anthropic API.") from e
 
         return output
+
+    def _get_exception_message(self, exception: Exception) -> str | None:
+        """
+        Get a message from an Anthropic exception.
+
+        Args:
+            exception (Exception): The exception to get the message from.
+
+        Returns:
+            str: The message from the exception.
+        """
+        try:
+            from anthropic import BadRequestError
+        except ImportError:
+            return
+        if isinstance(exception, BadRequestError):
+            message = exception.body.get("error", {}).get("message")  # type: ignore
+            if message:
+                return message
+        return

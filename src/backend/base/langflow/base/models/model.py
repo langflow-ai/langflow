@@ -5,7 +5,6 @@ from typing import Optional, Union
 from langchain_core.language_models.llms import LLM
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
-from langflow.base.models.exceptions import get_message_from_openai_exception
 from langflow.custom import Component
 from langflow.field_typing import LanguageModel
 from langflow.schema.message import Message
@@ -20,6 +19,9 @@ class LCModelComponent(Component):
         Output(display_name="Text", name="text_output", method="text_response"),
         Output(display_name="Language Model", name="model_output", method="build_model"),
     ]
+
+    def _get_exception_message(self, e: Exception):
+        return str(e)
 
     def _validate_outputs(self):
         # At least these two outputs must be defined
@@ -61,8 +63,8 @@ class LCModelComponent(Component):
                 self.status = result
             return result
         except Exception as e:
-            if message := get_message_from_openai_exception(e):
-                raise ValueError(message)
+            if message := self._get_exception_message(e):
+                raise ValueError(message) from e
             raise e
 
     def build_status_message(self, message: AIMessage):
@@ -151,6 +153,6 @@ class LCModelComponent(Component):
                     self.status = result
                 return result
         except Exception as e:
-            if message := get_message_from_openai_exception(e):
-                raise ValueError(message)
+            if message := self._get_exception_message(e):
+                raise ValueError(message) from e
             raise e
