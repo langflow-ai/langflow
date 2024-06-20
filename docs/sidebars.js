@@ -118,6 +118,7 @@ module.exports = {
       items: [
         "deployment/docker",
         "deployment/backend-only",
+        "deployment/kubernetes",
         "deployment/gcp-deployment",
       ],
     },

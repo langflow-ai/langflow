@@ -114,6 +114,10 @@ Or this one to deploy Langflow 0.6.x:
 <img src="https://render.com/images/deploy-to-render-button.svg" alt="Deploy to Render" />
 </a>
 
+## Deploy on Kubernetes
+
+Follow our step-by-step guide to deploy [Langflow on Kubernetes](https://github.com/langflow-ai/langflow/blob/dev/docs/docs/deployment/kubernetes.md).
+
 # 🖥️ Command Line Interface (CLI)
 
 Langflow provides a command-line interface (CLI) for easy management and configuration.
