@@ -1,9 +1,10 @@
 from typing import Optional
 
 from langchain_community.chat_models.litellm import ChatLiteLLM, ChatLiteLLMException
+
 from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
-from langflow.field_typing import BaseLanguageModel
+from langflow.field_typing import LanguageModel
 from langflow.io import (
     BoolInput,
     DictInput,
@@ -137,7 +138,7 @@ class ChatLiteLLMModelComponent(LCModelComponent):
         self.status = message
         return message
 
-    def build_model(self) -> BaseLanguageModel:
+    def build_model(self) -> LanguageModel:
         try:
             import litellm  # type: ignore
 

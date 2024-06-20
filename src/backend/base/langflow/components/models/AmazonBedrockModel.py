@@ -2,7 +2,7 @@ from langchain_aws import ChatBedrock
 
 from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
-from langflow.field_typing import BaseLanguageModel, Text
+from langflow.field_typing import LanguageModel, Text
 from langflow.io import BoolInput, DictInput, DropdownInput, MessageInput, Output, StrInput
 
 
@@ -78,7 +78,7 @@ class AmazonBedrockComponent(LCModelComponent):
         self.status = result
         return result
 
-    def build_model(self) -> BaseLanguageModel:
+    def build_model(self) -> LanguageModel:
         model_id = self.model_id
         credentials_profile_name = self.credentials_profile_name
         region_name = self.region_name

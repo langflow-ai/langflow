@@ -2,14 +2,14 @@ from langchain_core.messages import BaseMessage
 from langchain_core.prompts import PromptTemplate
 
 from langflow.custom import CustomComponent
-from langflow.field_typing import BaseLanguageModel, Text
+from langflow.field_typing import LanguageModel, Text
 
 
 class ShouldRunNextComponent(CustomComponent):
     display_name = "Should Run Next"
     description = "Determines if a vertex is runnable."
 
-    def build(self, llm: BaseLanguageModel, question: str, context: str, retries: int = 3) -> Text:
+    def build(self, llm: LanguageModel, question: str, context: str, retries: int = 3) -> Text:
         template = "Given the following question and the context below, answer with a yes or no.\n\n{error_message}\n\nQuestion: {question}\n\nContext: {context}\n\nAnswer:"
 
         prompt = PromptTemplate.from_template(template)

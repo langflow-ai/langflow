@@ -3,8 +3,8 @@ from pydantic.v1 import SecretStr
 
 from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
-from langflow.field_typing import BaseLanguageModel, Text
-from langflow.io import BoolInput, FloatInput, Output, SecretStrInput, TextInput, DropdownInput
+from langflow.io import BoolInput, DropdownInput, FloatInput, Output, SecretStrInput, TextInput
+from langflow.io import BoolInput, DropdownInput, FloatInput, Output, SecretStrInput, TextInput
 
 
 class QianfanChatEndpointComponent(LCModelComponent):
@@ -98,7 +98,7 @@ class QianfanChatEndpointComponent(LCModelComponent):
         self.status = result
         return result
 
-    def build_model(self) -> BaseLanguageModel:
+    def build_model(self) -> LanguageModel:
         model = self.model
         qianfan_ak = self.qianfan_ak
         qianfan_sk = self.qianfan_sk

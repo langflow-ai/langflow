@@ -1,8 +1,10 @@
 from typing import Dict, Optional
 
 from langchain_community.llms.vertexai import VertexAI
+
+
 from langflow.custom import CustomComponent
-from langflow.field_typing import BaseLanguageModel
+from langflow.field_typing import LanguageModel
 
 
 class VertexAIComponent(CustomComponent):
@@ -128,7 +130,7 @@ class VertexAIComponent(CustomComponent):
         top_p: float = 0.95,
         tuned_model_name: Optional[str] = None,
         verbose: bool = False,
-    ) -> BaseLanguageModel:
+    ) -> LanguageModel:
         return VertexAI(
             credentials=credentials,
             location=location,

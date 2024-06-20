@@ -7,7 +7,7 @@ from pydantic.v1 import SecretStr
 from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
 from langflow.base.models.openai_constants import MODEL_NAMES
-from langflow.field_typing import BaseLanguageModel
+from langflow.field_typing import LanguageModel
 from langflow.inputs import (
     BoolInput,
     DictInput,
@@ -89,7 +89,7 @@ class OpenAIModelComponent(LCModelComponent):
         self.status = result
         return result
 
-    def build_model(self) -> BaseLanguageModel:
+    def build_model(self) -> LanguageModel:
         # self.output_schea is a list of dictionaries
         # let's convert it to a dictionary
         output_schema_dict: dict[str, str] = reduce(operator.ior, self.output_schema or {}, {})

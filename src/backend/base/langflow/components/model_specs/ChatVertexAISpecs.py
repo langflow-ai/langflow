@@ -1,8 +1,10 @@
 from typing import Optional
 
 from langchain_community.chat_models.vertexai import ChatVertexAI
+
+
 from langflow.custom import CustomComponent
-from langflow.field_typing import BaseLanguageModel
+from langflow.field_typing import LanguageModel
 
 
 class ChatVertexAIComponent(CustomComponent):
@@ -70,7 +72,7 @@ class ChatVertexAIComponent(CustomComponent):
         top_k: int = 40,
         top_p: float = 0.95,
         verbose: bool = False,
-    ) -> BaseLanguageModel:
+    ) -> LanguageModel:
         return ChatVertexAI(
             credentials=credentials,
             location=location,

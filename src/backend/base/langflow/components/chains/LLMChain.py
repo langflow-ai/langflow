@@ -4,7 +4,7 @@ from langchain.chains.llm import LLMChain
 from langchain_core.prompts import PromptTemplate
 
 from langflow.custom import CustomComponent
-from langflow.field_typing import BaseLanguageModel, BaseMemory, Text
+from langflow.field_typing import BaseMemory, LanguageModel, Text
 
 
 class LLMChainComponent(CustomComponent):
@@ -21,7 +21,7 @@ class LLMChainComponent(CustomComponent):
     def build(
         self,
         template: Text,
-        llm: BaseLanguageModel,
+        llm: LanguageModel,
         memory: Optional[BaseMemory] = None,
     ) -> Text:
         prompt = PromptTemplate.from_template(template)

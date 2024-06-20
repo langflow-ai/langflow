@@ -3,8 +3,8 @@ from pydantic.v1 import SecretStr
 
 from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
-from langflow.field_typing import BaseLanguageModel, Text
-from langflow.io import BoolInput, DropdownInput, FloatInput, IntInput, MessageInput, Output, StrInput, SecretStrInput
+from langflow.field_typing import LanguageModel, Text
+from langflow.io import BoolInput, DropdownInput, FloatInput, IntInput, MessageInput, Output, SecretStrInput, StrInput
 
 
 class AzureChatOpenAIComponent(LCModelComponent):
@@ -87,7 +87,7 @@ class AzureChatOpenAIComponent(LCModelComponent):
         self.status = result
         return result
 
-    def model_response(self) -> BaseLanguageModel:
+    def model_response(self) -> LanguageModel:
         model = self.model
         azure_endpoint = self.azure_endpoint
         azure_deployment = self.azure_deployment

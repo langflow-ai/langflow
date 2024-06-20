@@ -4,7 +4,7 @@ from pydantic.v1 import SecretStr
 
 from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
-from langflow.field_typing import BaseLanguageModel, Text
+from langflow.field_typing import LanguageModel, Text
 from langflow.io import BoolInput, FloatInput, MessageInput, Output, SecretStrInput, StrInput
 
 
@@ -46,7 +46,7 @@ class CohereComponent(LCModelComponent):
         self.status = result
         return result
 
-    def build_model(self) -> BaseLanguageModel | BaseChatModel:
+    def build_model(self) -> LanguageModel | BaseChatModel:
         cohere_api_key = self.cohere_api_key
         temperature = self.temperature
 

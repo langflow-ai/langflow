@@ -4,7 +4,7 @@ from langchain.chains.retrieval_qa.base import RetrievalQA
 from langchain_core.documents import Document
 
 from langflow.custom import CustomComponent
-from langflow.field_typing import BaseLanguageModel, BaseMemory, BaseRetriever, Text
+from langflow.field_typing import BaseMemory, BaseRetriever, LanguageModel, Text
 from langflow.schema import Data
 
 
@@ -29,7 +29,7 @@ class RetrievalQAComponent(CustomComponent):
 
     def build(
         self,
-        llm: BaseLanguageModel,
+        llm: LanguageModel,
         chain_type: str,
         retriever: BaseRetriever,
         input_value: str = "",
