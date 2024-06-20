@@ -1,4 +1,4 @@
-from typing import Callable, Dict, Text, TypeAlias, Union
+from typing import Callable, Dict, Text, TypeAlias, TypeVar, Union
 
 from langchain.agents.agent import AgentExecutor
 from langchain.chains.base import Chain
@@ -16,9 +16,8 @@ from langchain_core.tools import Tool
 from langchain_core.vectorstores import VectorStore
 from langchain_text_splitters import TextSplitter
 
-
 NestedDict: TypeAlias = Dict[str, Union[str, Dict]]
-LanguageModel: TypeAlias = Union[BaseLanguageModel, BaseLLM, BaseChatModel]
+LanguageModel = TypeVar("LanguageModel", BaseLanguageModel, BaseLLM, BaseChatModel)
 Retriever: TypeAlias = BaseRetriever
 
 

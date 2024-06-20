@@ -2,12 +2,12 @@ import json
 import warnings
 from typing import Optional, Union
 
-from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.language_models.llms import LLM
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
 from langflow.base.models.exceptions import get_message_from_openai_exception
 from langflow.custom import Component
+from langflow.field_typing import LanguageModel
 from langflow.schema.message import Message
 
 
@@ -91,7 +91,7 @@ class LCModelComponent(Component):
         return status_message
 
     def get_chat_result(
-        self, runnable: BaseChatModel, stream: bool, input_value: str | Message, system_message: Optional[str] = None
+        self, runnable: LanguageModel, stream: bool, input_value: str | Message, system_message: Optional[str] = None
     ):
         messages: list[Union[HumanMessage, SystemMessage]] = []
         if not input_value and not system_message:
