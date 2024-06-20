@@ -281,7 +281,7 @@ const SideBarFoldersButtonsComponent = ({
                     </div>
                   ) : (
                     <span className="block w-full truncate opacity-100">
-                      {item.name}
+                      {t(item.name)}
                     </span>
                   )}
                   {index > 0 && (
