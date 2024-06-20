@@ -75,7 +75,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-44">
-            <DropdownMenuLabel>Options</DropdownMenuLabel>
+            <DropdownMenuLabel>{t("Options")}</DropdownMenuLabel>
             <DropdownMenuItem
               onClick={() => {
                 handleAddFlow();
@@ -83,7 +83,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
               className="cursor-pointer"
             >
               <IconComponent name="Plus" className="header-menu-options" />
-              New
+              {t("New")}
             </DropdownMenuItem>
 
             <DropdownMenuItem
@@ -93,7 +93,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
               className="cursor-pointer"
             >
               <IconComponent name="Settings2" className="header-menu-options" />
-              Settings
+              {t("Settings")}
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => {
@@ -105,7 +105,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
                 name="ScrollText"
                 className="header-menu-options"
               />
-              Logs
+              {t("Logs")}
             </DropdownMenuItem>
             <DropdownMenuItem
               className="cursor-pointer"
@@ -121,7 +121,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
               }}
             >
               <IconComponent name="FileUp" className="header-menu-options" />
-              Import
+              {t("Import")}
             </DropdownMenuItem>
             <ExportModal>
               <div className="header-menubar-item">
@@ -129,7 +129,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
                   name="FileDown"
                   className="header-menu-options"
                 />
-                Export
+                {t("Export")}
               </div>
             </ExportModal>
             <DropdownMenuItem
@@ -139,7 +139,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
               className="cursor-pointer"
             >
               <ToolbarSelectItem
-                value="Undo"
+                value={t("Undo")}
                 icon="Undo"
                 dataTestId=""
                 shortcut={
@@ -155,7 +155,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
               className="cursor-pointer"
             >
               <ToolbarSelectItem
-                value="Redo"
+                value={t("Redo")}
                 icon="Redo"
                 dataTestId=""
                 shortcut={

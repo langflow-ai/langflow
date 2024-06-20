@@ -11,6 +11,7 @@ import { useStoreStore } from "../../stores/storeStore";
 import { classNames, isThereModal } from "../../utils/utils";
 import ForwardedIconComponent from "../genericIconComponent";
 import { Separator } from "../ui/separator";
+import { useTranslation } from "react-i18next";
 
 export default function FlowToolbar(): JSX.Element {
   const preventDefault = true;
@@ -50,6 +51,8 @@ export default function FlowToolbar(): JSX.Element {
 
   const prevNodesRef = useRef<any[] | undefined>();
 
+  const { t } = useTranslation();
+
   const ModalMemo = useMemo(
     () => (
       <ShareModal
@@ -62,7 +65,7 @@ export default function FlowToolbar(): JSX.Element {
         <button
           disabled={!hasApiKey || !validApiKey || !hasStore}
           className={classNames(
-            "relative inline-flex h-full w-full items-center justify-center gap-[4px] bg-muted px-5 py-3 text-sm font-semibold text-foreground transition-all duration-150 ease-in-out hover:bg-background hover:bg-hover",
+            "relative ag-cell inline-flex h-full w-full items-center justify-center gap-[4px] bg-muted px-5 py-3 text-sm font-semibold text-foreground transition-all duration-150 ease-in-out hover:bg-background hover:bg-hover",
             !hasApiKey || !validApiKey || !hasStore
               ? "button-disable text-muted-foreground"
               : ""
@@ -71,13 +74,13 @@ export default function FlowToolbar(): JSX.Element {
           <ForwardedIconComponent
             name="Share3"
             className={classNames(
-              "-m-0.5 -ml-1 h-6 w-6",
+              "h-6 w-6",
               !hasApiKey || !validApiKey || !hasStore
                 ? "extra-side-bar-save-disable"
                 : ""
             )}
           />
-          Share
+          {t("Share")}
         </button>
       </ShareModal>
     ),
@@ -112,23 +115,23 @@ export default function FlowToolbar(): JSX.Element {
             <div className="flex h-full w-full gap-1 rounded-sm transition-all">
               {hasIO ? (
                 <IOModal open={open} setOpen={setOpen} disable={!hasIO}>
-                  <div className="relative inline-flex w-full items-center justify-center gap-1 px-5 py-3 text-sm font-semibold transition-all duration-500 ease-in-out hover:bg-hover">
+                  <div className="relative ag-cell inline-flex w-full items-center justify-center gap-1 px-5 py-3 text-sm font-semibold transition-all duration-500 ease-in-out hover:bg-hover">
                     <ForwardedIconComponent
                       name="BotMessageSquareIcon"
                       className={"h-5 w-5 transition-all"}
                     />
-                    Playground
+                    {t("Playground")}
                   </div>
                 </IOModal>
               ) : (
                 <div
-                  className={`relative inline-flex w-full cursor-not-allowed items-center justify-center gap-1 px-5 py-3 text-sm font-semibold text-muted-foreground transition-all duration-150 ease-in-out`}
+                  className={`relative ag-cell inline-flex w-full cursor-not-allowed items-center justify-center gap-1 px-5 py-3 text-sm font-semibold text-muted-foreground transition-all duration-150 ease-in-out`}
                 >
                   <ForwardedIconComponent
                     name="BotMessageSquareIcon"
                     className={"h-5 w-5 transition-all"}
                   />
-                  Playground
+                  {t("Playground")}
                 </div>
               )}
             </div>
@@ -144,14 +147,14 @@ export default function FlowToolbar(): JSX.Element {
                 >
                   <div
                     className={classNames(
-                      "relative inline-flex w-full items-center justify-center gap-1 px-5 py-3 text-sm font-semibold text-foreground transition-all duration-150 ease-in-out hover:bg-hover"
+                      "relative inline-flex ag-cell w-full items-center justify-center gap-1 px-5 py-3 text-sm font-semibold text-foreground transition-all duration-150 ease-in-out hover:bg-hover"
                     )}
                   >
                     <ForwardedIconComponent
                       name="Code2"
                       className={"h-5 w-5"}
                     />
-                    API
+                    {t("API")}
                   </div>
                 </ApiModal>
               )}

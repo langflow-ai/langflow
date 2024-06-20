@@ -5,8 +5,10 @@ import { Button } from "../../../../components/ui/button";
 import { defaultShortcuts } from "../../../../constants/constants";
 import { useShortcutsStore } from "../../../../stores/shortcuts";
 import EditShortcutButton from "./EditShortcutButton";
+import { useTranslation } from "react-i18next";
 
 export default function ShortcutsPage() {
+  const { t } = useTranslation();
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const shortcuts = useShortcutsStore((state) => state.shortcuts);
   const setShortcuts = useShortcutsStore((state) => state.setShortcuts);

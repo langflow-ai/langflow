@@ -32,6 +32,7 @@ import {
 } from "../../../../utils/reactflowUtils";
 import { classNames, cn, isThereModal } from "../../../../utils/utils";
 import ToolbarSelectItem from "./toolbarSelectItem";
+import { useTranslation } from "react-i18next";
 
 export default function NodeToolbarComponent({
   data,
@@ -45,6 +46,7 @@ export default function NodeToolbarComponent({
   onCloseAdvancedModal,
   updateNode,
 }: nodeToolbarPropsType): JSX.Element {
+  const { t } = useTranslation();
   const version = useDarkStore((state) => state.version);
   const [showModalAdvanced, setShowModalAdvanced] = useState(false);
   const [showconfirmShare, setShowconfirmShare] = useState(false);
@@ -352,7 +354,7 @@ export default function NodeToolbarComponent({
     if (!hasShift) shortcutWPlus = filteredShortcut.join("+").split(" ");
     return (
       <div className="flex justify-center">
-        <span> {name} </span>
+        <span> {t(name)} </span>
         <span
           className={`ml-3 flex items-center rounded-sm bg-muted px-1.5 py-[0.1em] text-lg text-muted-foreground`}
         >
@@ -536,7 +538,7 @@ export default function NodeToolbarComponent({
           </ShadTooltip>*/}
 
           <Select onValueChange={handleSelectChange} value="">
-            <ShadTooltip content="All" side="top">
+            <ShadTooltip content={t("All")} side="top">
               <SelectTrigger>
                 <div>
                   <div
@@ -560,7 +562,7 @@ export default function NodeToolbarComponent({
                     shortcut={
                       shortcuts.find((obj) => obj.name === "Code")?.shortcut!
                     }
-                    value={"Code"}
+                    value={t("Code")}
                     icon={"Code"}
                     dataTestId="code-button-modal"
                   />
@@ -573,7 +575,7 @@ export default function NodeToolbarComponent({
                       shortcuts.find((obj) => obj.name === "Advanced Settings")
                         ?.shortcut!
                     }
-                    value={"Advanced"}
+                    value={t("Advanced Settings")}
                     icon={"Settings2"}
                     dataTestId="edit-button-modal"
                   />
@@ -584,7 +586,7 @@ export default function NodeToolbarComponent({
                   shortcut={
                     shortcuts.find((obj) => obj.name === "Save")?.shortcut!
                   }
-                  value={"Save"}
+                  value={t("Save")}
                   icon={"SaveAll"}
                   dataTestId="save-button-modal"
                 />
@@ -594,7 +596,7 @@ export default function NodeToolbarComponent({
                   shortcut={
                     shortcuts.find((obj) => obj.name === "Duplicate")?.shortcut!
                   }
-                  value={"Duplicate"}
+                  value={t("Duplicate")}
                   icon={"Copy"}
                   dataTestId="copy-button-modal"
                 />
@@ -604,14 +606,14 @@ export default function NodeToolbarComponent({
                   shortcut={
                     shortcuts.find((obj) => obj.name === "Copy")?.shortcut!
                   }
-                  value={"Copy"}
+                  value={t("Copy")}
                   icon={"Clipboard"}
                   dataTestId="copy-button-modal"
                 />
               </SelectItem>
               {hasStore && (
                 <SelectItem
-                  value={"Share"}
+                  value={t("Share")}
                   disabled={!hasApiKey || !validApiKey}
                 >
                   <ToolbarSelectItem
@@ -619,7 +621,7 @@ export default function NodeToolbarComponent({
                       shortcuts.find((obj) => obj.name === "Component Share")
                         ?.shortcut!
                     }
-                    value={"Share"}
+                    value={t("Share")}
                     icon={"Share3"}
                     dataTestId="share-button-modal"
                   />
@@ -646,7 +648,7 @@ export default function NodeToolbarComponent({
                   shortcut={
                     shortcuts.find((obj) => obj.name === "Docs")?.shortcut!
                   }
-                  value={"Docs"}
+                  value={t("Docs")}
                   icon={"FileText"}
                   dataTestId="docs-button-modal"
                 />
@@ -681,7 +683,7 @@ export default function NodeToolbarComponent({
                   shortcut={
                     shortcuts.find((obj) => obj.name === "Freeze")?.shortcut!
                   }
-                  value={"Freeze"}
+                  value={t("Freeze")}
                   icon={"Snowflake"}
                   dataTestId="group-button-modal"
                   style={`${frozen ? " text-ice" : ""} transition-all`}

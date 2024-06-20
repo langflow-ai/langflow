@@ -1,7 +1,9 @@
 import { deleteMessagesFn } from "../../../../../controllers/API";
 import { useMessagesStore } from "../../../../../stores/messagesStore";
+import { useTranslation } from "react-i18next";
 
 const useRemoveSession = (setSuccessData, setErrorData) => {
+  const { t } = useTranslation();
   const deleteSession = useMessagesStore((state) => state.deleteSession);
   const messages = useMessagesStore((state) => state.messages);
 
@@ -14,11 +16,11 @@ const useRemoveSession = (setSuccessData, setErrorData) => {
       );
       deleteSession(session_id);
       setSuccessData({
-        title: "Session deleted successfully.",
+        title: t("Session deleted successfully."),
       });
     } catch (error) {
       setErrorData({
-        title: "Error deleting Session.",
+        title: t("Error deleting Session."),
       });
     }
   };

@@ -1,5 +1,6 @@
 import { Textarea } from "../../../../../../../components/ui/textarea";
 import { classNames } from "../../../../../../../utils/utils";
+import { useTranslation } from "react-i18next";
 
 const TextAreaWrapper = ({
   checkSendingOk,
@@ -43,6 +44,8 @@ const TextAreaWrapper = ({
 
   const additionalClassNames = "form-modal-lockchat pl-14";
 
+  const { t } = useTranslation();
+
   return (
     <Textarea
       onFocus={(e) => {
@@ -68,12 +71,12 @@ const TextAreaWrapper = ({
             : "hidden"
         }`,
       }}
-      value={lockChat ? "Thinking..." : saveLoading ? "Saving..." : chatValue}
+      value={lockChat ? t("Thinking...") : saveLoading ? t("Saving...") : chatValue}
       onChange={(event): void => {
         setChatValue(event.target.value);
       }}
       className={classNames(lockClass, fileClass, additionalClassNames)}
-      placeholder={getPlaceholderText(isDragging, noInput)}
+      placeholder={t(getPlaceholderText(isDragging, noInput))}
     />
   );
 };

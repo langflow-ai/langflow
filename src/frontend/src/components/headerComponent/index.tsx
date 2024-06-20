@@ -230,7 +230,7 @@ export default function Header(): JSX.Element {
                           className="h-5 w-5 focus-visible:outline-0"
                         />
 
-                        {userData?.username ?? "User"}
+                        {t(userData?.username ?? "User")}
                       </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />

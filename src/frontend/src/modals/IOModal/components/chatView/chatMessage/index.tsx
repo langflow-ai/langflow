@@ -14,6 +14,7 @@ import useFlowStore from "../../../../../stores/flowStore";
 import { chatMessagePropsType } from "../../../../../types/components";
 import { classNames, cn } from "../../../../../utils/utils";
 import FileCardWrapper from "./components/fileCardWrapper";
+import { useTranslation } from "react-i18next";
 
 export default function ChatMessage({
   chat,
@@ -22,6 +23,7 @@ export default function ChatMessage({
   updateChat,
   setLockChat,
 }: chatMessagePropsType): JSX.Element {
+  const { t } = useTranslation();
   const [showFile, setShowFile] = useState<boolean>(true);
   const convert = new Convert({ newline: true });
   const [hidden, setHidden] = useState(true);
@@ -142,7 +144,7 @@ export default function ChatMessage({
                 "sender_name_" + chat.sender_name?.toLocaleLowerCase()
               }
             >
-              {chat.sender_name}
+              {t(chat.sender_name)}
             </span>
           </div>
         </div>
