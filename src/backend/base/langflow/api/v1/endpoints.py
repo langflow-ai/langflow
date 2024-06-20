@@ -44,7 +44,7 @@ from langflow.services.task.service import TaskService
 
 if TYPE_CHECKING:
     from langflow.services.cache.base import CacheService
-    from langflow.services.settings.manager import SettingsService
+    from langflow.services.settings.service import SettingsService
 
 router = APIRouter(tags=["Base"])
 
