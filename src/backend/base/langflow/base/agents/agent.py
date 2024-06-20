@@ -55,7 +55,7 @@ class LCAgentComponent(CustomComponent):
         handle_parsing_errors: bool = True,
         output_key: str = "output",
         lc_callback: Optional[List[BaseCallbackHandler]] = None,
-    ) -> str:
+    ) -> Text:
         if isinstance(agent, AgentExecutor):
             runnable = agent
         else:
