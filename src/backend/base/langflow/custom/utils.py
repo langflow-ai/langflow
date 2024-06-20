@@ -3,6 +3,7 @@ import contextlib
 import re
 import traceback
 import warnings
+from itertools import chain
 from typing import Any, Dict, List, Optional, Tuple, Union
 from uuid import UUID
 
@@ -21,7 +22,7 @@ from langflow.custom.directory_reader.utils import (
 from langflow.custom.eval import eval_custom_component_code
 from langflow.custom.schema import MissingDefault
 from langflow.field_typing.range_spec import RangeSpec
-from langflow.helpers.custom import format_type
+from langflow.helpers.custom import get_all_types_from_type
 from langflow.schema import dotdict
 from langflow.template.field.base import Input
 from langflow.template.frontend_node.custom_components import ComponentFrontendNode, CustomComponentFrontendNode
@@ -370,8 +371,8 @@ def build_custom_component_template_from_inputs(
         if output.types:
             continue
         return_types = custom_component.get_method_return_type(output.method)
-        return_types = [format_type(return_type) for return_type in return_types]
-        output.add_types(return_types)
+        all_types = [get_all_types_from_type(return_type) for return_type in return_types]
+        output.add_types(chain.from_iterable(all_types))
         output.set_selected()
     # Validate that there is not name overlap between inputs and outputs
     frontend_node.validate()
