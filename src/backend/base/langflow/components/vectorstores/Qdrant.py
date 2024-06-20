@@ -4,7 +4,6 @@ from langchain_community.vectorstores import Qdrant
 from langchain_core.retrievers import BaseRetriever
 
 from langflow.custom import Component
-from langflow.field_typing import Retriever
 from langflow.helpers.data import docs_to_data
 from langflow.io import BoolInput, DropdownInput, HandleInput, IntInput, Output, SecretStrInput, StrInput
 from langflow.schema import Data

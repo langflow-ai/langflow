@@ -47,7 +47,7 @@ class RecursiveCharacterTextSplitterComponent(Component):
         Split text into chunks of a specified length.
 
         Args:
-            separators (list[str]): The characters to split on.
+            separators (list[str] | None): The characters to split on.
             chunk_size (int): The maximum length of each chunk.
             chunk_overlap (int): The amount of overlap between chunks.
 
@@ -63,9 +63,9 @@ class RecursiveCharacterTextSplitterComponent(Component):
             self.separators = [unescape_string(x) for x in self.separators]
 
         # Make sure chunk_size and chunk_overlap are ints
-        if isinstance(self.chunk_size, str):
+        if self.chunk_size:
             self.chunk_size = int(self.chunk_size)
-        if isinstance(self.chunk_overlap, str):
+        if self.chunk_overlap:
             self.chunk_overlap = int(self.chunk_overlap)
         splitter = RecursiveCharacterTextSplitter(
             separators=self.separators,
