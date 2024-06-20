@@ -1,15 +1,27 @@
 import inspect
-from typing import Any, AsyncIterator, Awaitable, Callable, ClassVar, Generator, Iterator, List, Optional, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    AsyncIterator,
+    Awaitable,
+    Callable,
+    ClassVar,
+    Generator,
+    Iterator,
+    List,
+    Optional,
+    Union,
+)
 from uuid import UUID
 
 import yaml
-from git import TYPE_CHECKING
+from pydantic import BaseModel
+
 from langflow.inputs.inputs import InputTypes
 from langflow.schema.artifact import get_artifact_type, post_process_raw
 from langflow.schema.data import Data
 from langflow.schema.message import Message
 from langflow.template.field.base import UNDEFINED, Input, Output
-from pydantic import BaseModel
 
 from .custom_component import CustomComponent
 
@@ -120,7 +132,7 @@ class Component(CustomComponent):
                         # If the method is asynchronous, we need to await it
                         if inspect.iscoroutinefunction(method):
                             result = await result
-                        if isinstance(result, Message) and result.flow_id is None:
+                        if isinstance(result, Message) and result.flow_id is None and vertex.graph.flow_id is not None:
                             result.set_flow_id(vertex.graph.flow_id)
                         _results[output.name] = result
                         output.value = result
