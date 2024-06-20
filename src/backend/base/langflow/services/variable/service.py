@@ -17,7 +17,6 @@ if TYPE_CHECKING:
 
 
 class DatabaseVariableService(VariableService, Service):
-
     def __init__(self, settings_service: "SettingsService"):
         self.settings_service = settings_service
 
@@ -129,9 +128,7 @@ class DatabaseVariableService(VariableService, Service):
         return variable
 
 
-
 class KubernetesSecretService(VariableService, Service):
-
     def __init__(self, settings_service: "SettingsService"):
         self.settings_service = settings_service
 
@@ -149,7 +146,7 @@ class KubernetesSecretService(VariableService, Service):
 
     def list_variables(self, user_id: Union[UUID, str], session: Session = Depends(get_session)) -> list[Optional[str]]:
         return []
-    
+
     def update_variable(
         self,
         user_id: Union[UUID, str],
@@ -158,15 +155,15 @@ class KubernetesSecretService(VariableService, Service):
         session: Session = Depends(get_session),
     ):
         return
-    
-    def delete_variable(    
+
+    def delete_variable(
         self,
         user_id: Union[UUID, str],
         name: str,
         session: Session = Depends(get_session),
     ):
         return
-    
+
     def create_variable(
         self,
         user_id: Union[UUID, str],
