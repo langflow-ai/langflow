@@ -1,5 +1,5 @@
 import os
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, Optional, Tuple, Union
 from uuid import UUID
 
 from fastapi import Depends
@@ -8,12 +8,16 @@ from sqlmodel import Session, select
 
 from langflow.services.auth import utils as auth_utils
 from langflow.services.base import Service
-from langflow.services.variable.base import VariableService
 from langflow.services.database.models.variable.model import Variable, VariableCreate
 from langflow.services.deps import get_session
+from langflow.services.variable.base import VariableService
+from langflow.services.variable.kubernetes_secrets import KubernetesSecretManager, encode_user_id
 
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
+
+CREDENTIAL_TYPE = "Credential"
+GENERIC_TYPE = "Generic"
 
 
 class DatabaseVariableService(VariableService, Service):
@@ -40,7 +44,7 @@ class DatabaseVariableService(VariableService, Service):
                                 name=var,
                                 value=value,
                                 default_fields=[],
-                                _type="Credential",
+                                _type=CREDENTIAL_TYPE,
                                 session=session,
                             )
                         except Exception as e:
@@ -60,7 +64,7 @@ class DatabaseVariableService(VariableService, Service):
         # credential = session.query(Variable).filter(Variable.user_id == user_id, Variable.name == name).first()
         variable = session.exec(select(Variable).where(Variable.user_id == user_id, Variable.name == name)).first()
 
-        if variable and variable.type == "Credential" and field == "session_id":
+        if variable.type == CREDENTIAL_TYPE and field == "session_id":  # type: ignore
             raise TypeError(
                 f"variable {name} of type 'Credential' cannot be used in a Session ID field "
                 "because its purpose is to prevent the exposure of values."
@@ -112,7 +116,7 @@ class DatabaseVariableService(VariableService, Service):
         name: str,
         value: str,
         default_fields: list[str] = [],
-        _type: str = "Generic",
+        _type: str = GENERIC_TYPE,
         session: Session = Depends(get_session),
     ):
         variable_base = VariableCreate(
@@ -131,37 +135,109 @@ class DatabaseVariableService(VariableService, Service):
 class KubernetesSecretService(VariableService, Service):
     def __init__(self, settings_service: "SettingsService"):
         self.settings_service = settings_service
+        # TODO: settings_service to set kubernetes namespace
+        self.kubernetes_secrets = KubernetesSecretManager()
 
-    def initialize_user_variables(self, user_id: Union[UUID, str], session: Session = Depends(get_session)):
-        return
+    def initialize_user_variables(self, user_id: Union[UUID, str], session: Session):
+        # Check for environment variables that should be stored in the database
+        should_or_should_not = "Should" if self.settings_service.settings.store_environment_variables else "Should not"
+        logger.info(f"{should_or_should_not} store environment variables in the kubernetes.")
+        if self.settings_service.settings.store_environment_variables:
+            variables = {}
+            for var in self.settings_service.settings.variables_to_get_from_environment:
+                if var in os.environ:
+                    logger.debug(f"Creating {var} variable from environment.")
+                    value = os.environ[var]
+                    if isinstance(value, str):
+                        value = value.strip()
+                    key = CREDENTIAL_TYPE + "_" + var
+                    variables[key] = str(value)
+
+            try:
+                secret_name = user_id
+                self.kubernetes_secrets.create_secret(
+                    name=secret_name,
+                    data=variables,
+                )
+            except Exception as e:
+                logger.error(f"Error creating {var} variable: {e}")
+
+        else:
+            logger.info("Skipping environment variable storage.")
+
+    # resolve_variable is a helper function that resolves the variable name to the actual key in the secret
+    def resolve_variable(
+        self,
+        secret_name: str,
+        user_id: Union[UUID, str],
+        name: str,
+    ) -> Tuple[str, str]:
+        variables = self.kubernetes_secrets.get_secret(name=secret_name)
+        if not variables:
+            raise ValueError(f"user_id {user_id} variable not found.")
+
+        if name in variables:
+            return name, variables[name]
+        else:
+            credential_name = CREDENTIAL_TYPE + "_" + name
+            if credential_name in variables:
+                return credential_name, variables[credential_name]
+            else:
+                raise ValueError(f"user_id {user_id} variable name {name} not found.")
 
     def get_variable(
         self,
         user_id: Union[UUID, str],
         name: str,
         field: str,
-        session: Session = Depends(get_session),
+        _session: Session = None,
     ) -> str:
-        return ""
+        secret_name = encode_user_id(user_id)
+        key, value = self.resolve_variable(secret_name, user_id, name)
+        if key.startswith(CREDENTIAL_TYPE + "_") and field == "session_id":  # type: ignore
+            raise TypeError(
+                f"variable {name} of type 'Credential' cannot be used in a Session ID field "
+                "because its purpose is to prevent the exposure of values."
+            )
+        return value
 
-    def list_variables(self, user_id: Union[UUID, str], session: Session = Depends(get_session)) -> list[Optional[str]]:
-        return []
+    def list_variables(
+        self,
+        user_id: Union[UUID, str],
+        _session: Session = None,
+    ) -> list[Optional[str]]:
+        variables = self.kubernetes_secrets.get_secret(name=encode_user_id(user_id))
+        if not variables:
+            return []
+
+        names = []
+        for key in variables.keys():
+            if key.startswith(CREDENTIAL_TYPE + "_"):
+                names.append(key[len(CREDENTIAL_TYPE) + 1 :])
+            else:
+                names.append(key)
+        return names
 
     def update_variable(
         self,
         user_id: Union[UUID, str],
         name: str,
         value: str,
-        session: Session = Depends(get_session),
+        _session: Session = None,
     ):
-        return
+        secret_name = encode_user_id(user_id)
+        secret_key, _ = self.resolve_variable(secret_name, user_id, name)
+        return self.kubernetes_secrets.update_secret_key(name=secret_name, data={secret_key: value})
 
     def delete_variable(
         self,
         user_id: Union[UUID, str],
         name: str,
-        session: Session = Depends(get_session),
+        _session: Session = None,
     ):
+        secret_name = encode_user_id(user_id)
+        secret_key, _ = self.resolve_variable(secret_name, user_id, name)
+        self.kubernetes_secrets.delete_secret_key(name=secret_name, key=secret_key)
         return
 
     def create_variable(
@@ -171,6 +247,11 @@ class KubernetesSecretService(VariableService, Service):
         value: str,
         default_fields: list[str] = [],
         _type: str = "Generic",
-        session: Session = Depends(get_session),
+        _session: Session = None,
     ):
-        return
+        secret_name = encode_user_id(user_id)
+        secret_key = name
+        if _type == CREDENTIAL_TYPE:
+            secret_key = CREDENTIAL_TYPE + "_" + name
+
+        return self.kubernetes_secrets.upsert_secret(name=secret_name, data={secret_key: value})
