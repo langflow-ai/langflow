@@ -1,5 +1,5 @@
+import pytest
 from langchain_core.documents import Document
-
 from langflow.schema import Data
 
 
@@ -57,7 +57,8 @@ def test_custom_attribute_get_set_del():
     record.custom_attr = "custom_value"
     assert record.custom_attr == "custom_value"
     del record.custom_attr
-    assert record.custom_attr == record.default_value
+    with pytest.raises(AttributeError):
+        _ = record.custom_attr
 
 
 def test_deep_copy():

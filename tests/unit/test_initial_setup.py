@@ -4,12 +4,7 @@ from pathlib import Path
 import pytest
 from sqlmodel import select
 
-from langflow.initial_setup.setup import (
-    STARTER_FOLDER_NAME,
-    create_or_update_starter_projects,
-    get_project_data,
-    load_starter_projects,
-)
+from langflow.initial_setup.setup import STARTER_FOLDER_NAME, get_project_data, load_starter_projects
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.deps import session_scope
 
@@ -43,16 +38,14 @@ def test_get_project_data():
 
 
 @pytest.mark.asyncio
-async def test_create_or_update_starter_projects(client):
+async def test_create_or_update_starter_projects():
     with session_scope() as session:
-        # Run the function to create or update projects
-        await create_or_update_starter_projects()
-
         # Get the number of projects returned by load_starter_projects
         num_projects = len(load_starter_projects())
 
         # Get the number of projects in the database
         folder = session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME)).first()
+        assert folder is not None
         num_db_projects = len(folder.flows)
 
         # Check that the number of projects in the database is the same as the number of projects returned by load_starter_projects
