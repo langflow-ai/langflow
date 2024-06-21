@@ -94,7 +94,7 @@ export default function ComponentsComponent({
     getFolderById(folderId ? folderId : myCollectionId);
   }, [location]);
 
-  useFilteredFlows(flowsFromFolder, searchFlowsComponents, setAllFlows);
+  useFilteredFlows(flowsFromFolder!, searchFlowsComponents, setAllFlows);
 
   const resetFilter = () => {
     setPageIndex(1);

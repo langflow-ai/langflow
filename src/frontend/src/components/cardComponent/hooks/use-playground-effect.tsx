@@ -1,13 +1,14 @@
 import { useEffect } from "react";
+import { FlowType } from "../../../types/flow";
 
 const usePlaygroundEffect = (
-  currentFlowId,
-  playground,
-  openPlayground,
-  currentFlow,
-  setNodes,
-  setEdges,
-  cleanFlowPool,
+  currentFlowId: string,
+  playground: boolean,
+  openPlayground: boolean,
+  currentFlow: FlowType | undefined,
+  setNodes: (value: any, value2: boolean) => void,
+  setEdges: (value: any, value2: boolean) => void,
+  cleanFlowPool: () => void,
 ) => {
   useEffect(() => {
     if (currentFlowId && playground) {

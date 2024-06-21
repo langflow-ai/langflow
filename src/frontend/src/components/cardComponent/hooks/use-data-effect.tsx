@@ -1,10 +1,11 @@
 import { useEffect } from "react";
+import { storeComponent } from "../../../types/store";
 
 const useDataEffect = (
-  data,
-  setLikedByUser,
-  setLikesCount,
-  setDownloadsCount,
+  data: storeComponent,
+  setLikedByUser: (value: any) => void,
+  setLikesCount: (value: any) => void,
+  setDownloadsCount: (value: any) => void,
 ) => {
   useEffect(() => {
     if (data) {
