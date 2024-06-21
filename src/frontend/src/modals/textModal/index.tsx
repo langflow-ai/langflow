@@ -18,6 +18,7 @@ import {
 import TextOutputView from "../../shared/components/textOutputView";
 import { useDarkStore } from "../../stores/darkStore";
 import BaseModal from "../baseModal";
+import TextEditorArea from "./components/textEditorArea";
 
 export default function TextModal({
   children,
@@ -45,7 +46,7 @@ export default function TextModal({
       <BaseModal.Content>
         <div className="flex h-full w-full flex-col transition-all">
           <div className="h-[370px]">
-            <TextOutputView onChange={(text)=>setInternalValue(text)} value={internalValue} left={false} />
+            <TextEditorArea onChange={(text)=>setInternalValue(text)} value={internalValue} left={false} />
           </div>
         </div>
       </BaseModal.Content>
