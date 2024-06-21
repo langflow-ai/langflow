@@ -1,15 +1,16 @@
 import ShortUniqueId from "short-unique-id";
+import {
+  ALLOWED_IMAGE_INPUT_EXTENSIONS,
+  FS_ERROR_TEXT,
+  SN_ERROR_TEXT,
+} from "../../../../../../constants/constants";
 import useFileUpload from "./use-file-upload";
-
-const fsErrorText =
-  "Please ensure your file has one of the following extensions:";
-const snErrorTxt = "png, jpg, jpeg";
 
 const useDragAndDrop = (
   setIsDragging,
   setFiles,
   currentFlowId,
-  setErrorData
+  setErrorData,
 ) => {
   const dragOver = (e) => {
     e.preventDefault();
@@ -48,19 +49,21 @@ const useDragAndDrop = (
 
 const handleFiles = (files, setFiles, currentFlowId, setErrorData) => {
   if (files) {
-    const allowedExtensions = ["png", "jpg", "jpeg"];
     const file = files?.[0];
     const fileExtension = file.name.split(".").pop()?.toLowerCase();
-    if (!fileExtension || !allowedExtensions.includes(fileExtension)) {
+    if (
+      !fileExtension ||
+      !ALLOWED_IMAGE_INPUT_EXTENSIONS.includes(fileExtension)
+    ) {
       console.log("Error uploading file");
       setErrorData({
         title: "Error uploading file",
-        list: [fsErrorText, snErrorTxt],
+        list: [FS_ERROR_TEXT, SN_ERROR_TEXT],
       });
       return;
     }
-    const uid = new ShortUniqueId({ length: 3 });
-    const id = uid();
+    const uid = new ShortUniqueId();
+    const id = uid.randomUUID(3);
     const type = files[0].type.split("/")[0];
     const blob = files[0];
 

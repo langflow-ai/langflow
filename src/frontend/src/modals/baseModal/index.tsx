@@ -37,7 +37,7 @@ const Content: React.FC<ContentProps> = ({ children, overflowHidden }) => {
     <div
       className={cn(
         `flex w-full flex-grow flex-col transition-all duration-300`,
-        overflowHidden ? "overflow-hidden" : "overflow-visible"
+        overflowHidden ? "overflow-hidden" : "overflow-visible",
       )}
     >
       {children}
@@ -105,6 +105,7 @@ const Footer: React.FC<{
               type={submit.onClick ? "button" : "submit"}
               onClick={submit.onClick}
               loading={submit.loading}
+              disabled={submit.disabled}
             >
               {submit.icon && submit.icon}
               {submit.label}
@@ -122,7 +123,7 @@ interface BaseModalProps {
     React.ReactElement<ContentProps>,
     React.ReactElement<HeaderProps>,
     React.ReactElement<TriggerProps>?,
-    React.ReactElement<FooterProps>?
+    React.ReactElement<FooterProps>?,
   ];
   open?: boolean;
   setOpen?: (open: boolean) => void;
@@ -158,16 +159,16 @@ function BaseModal({
   onSubmit,
 }: BaseModalProps) {
   const headerChild = React.Children.toArray(children).find(
-    (child) => (child as React.ReactElement).type === Header
+    (child) => (child as React.ReactElement).type === Header,
   );
   const triggerChild = React.Children.toArray(children).find(
-    (child) => (child as React.ReactElement).type === Trigger
+    (child) => (child as React.ReactElement).type === Trigger,
   );
   const ContentChild = React.Children.toArray(children).find(
-    (child) => (child as React.ReactElement).type === Content
+    (child) => (child as React.ReactElement).type === Content,
   );
   const ContentFooter = React.Children.toArray(children).find(
-    (child) => (child as React.ReactElement).type === Footer
+    (child) => (child as React.ReactElement).type === Footer,
   );
 
   let { minWidth, height } = switchCaseModalSize(size);
@@ -189,7 +190,7 @@ function BaseModal({
   const contentClasses = cn(
     minWidth,
     height,
-    "flex flex-col duration-300 overflow-hidden"
+    "flex flex-col duration-300 overflow-hidden",
   );
 
   //UPDATE COLORS AND STYLE CLASSSES

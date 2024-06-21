@@ -37,156 +37,137 @@ test("NestedComponent", async ({ page }) => {
   await page.getByTestId("more-options-modal").click();
   await page.getByTestId("edit-button-modal").click();
 
-  //showpool_threads
-  await page.locator('//*[@id="showpool_threads"]').click();
+  // showindex_name
+  await page.locator('//*[@id="showindex_name"]').click();
 
   expect(
-    await page.locator('//*[@id="showpool_threads"]').isChecked()
+    await page.locator('//*[@id="showindex_name"]').isChecked(),
+  ).toBeFalsy();
+
+  // shownamespace
+  await page.locator('//*[@id="shownamespace"]').click();
+
+  expect(
+    await page.locator('//*[@id="shownamespace"]').isChecked(),
+  ).toBeFalsy();
+
+  // showpinecone_api_key
+  await page.locator('//*[@id="showpinecone_api_key"]').click();
+
+  expect(
+    await page.locator('//*[@id="showpinecone_api_key"]').isChecked(),
+  ).toBeFalsy();
+
+  // showindex_name
+  await page.locator('//*[@id="showindex_name"]').click();
+
+  expect(
+    await page.locator('//*[@id="showindex_name"]').isChecked(),
+  ).toBeTruthy();
+
+  // shownamespace
+  await page.locator('//*[@id="shownamespace"]').click();
+
+  expect(
+    await page.locator('//*[@id="shownamespace"]').isChecked(),
+  ).toBeTruthy();
+
+  // showpinecone_api_key
+  await page.locator('//*[@id="showpinecone_api_key"]').click();
+
+  expect(
+    await page.locator('//*[@id="showpinecone_api_key"]').isChecked(),
+  ).toBeTruthy();
+
+  // showindex_name
+  await page.locator('//*[@id="showindex_name"]').click();
+
+  expect(
+    await page.locator('//*[@id="showindex_name"]').isChecked(),
+  ).toBeFalsy();
+
+  // shownamespace
+  await page.locator('//*[@id="shownamespace"]').click();
+
+  expect(
+    await page.locator('//*[@id="shownamespace"]').isChecked(),
+  ).toBeFalsy();
+
+  // showpinecone_api_key
+  await page.locator('//*[@id="showpinecone_api_key"]').click();
+
+  expect(
+    await page.locator('//*[@id="showpinecone_api_key"]').isChecked(),
+  ).toBeFalsy();
+
+  // showindex_name
+  await page.locator('//*[@id="showindex_name"]').click();
+
+  expect(
+    await page.locator('//*[@id="showindex_name"]').isChecked(),
+  ).toBeTruthy();
+
+  // shownamespace
+  await page.locator('//*[@id="shownamespace"]').click();
+
+  expect(
+    await page.locator('//*[@id="shownamespace"]').isChecked(),
+  ).toBeTruthy();
+
+  // showpinecone_api_key
+  await page.locator('//*[@id="showpinecone_api_key"]').click();
+
+  expect(
+    await page.locator('//*[@id="showpinecone_api_key"]').isChecked(),
+  ).toBeTruthy();
+
+  // showindex_name
+  await page.locator('//*[@id="showindex_name"]').click();
+
+  expect(
+    await page.locator('//*[@id="showindex_name"]').isChecked(),
+  ).toBeFalsy();
+
+  // shownamespace
+  await page.locator('//*[@id="shownamespace"]').click();
+
+  expect(
+    await page.locator('//*[@id="shownamespace"]').isChecked(),
+  ).toBeFalsy();
+
+  // showpinecone_api_key
+  await page.locator('//*[@id="showpinecone_api_key"]').click();
+
+  expect(
+    await page.locator('//*[@id="showpinecone_api_key"]').isChecked(),
+  ).toBeFalsy();
+
+  // showindex_name
+  await page.locator('//*[@id="showindex_name"]').click();
+
+  expect(
+    await page.locator('//*[@id="showindex_name"]').isChecked(),
+  ).toBeTruthy();
+
+  // shownamespace
+  await page.locator('//*[@id="shownamespace"]').click();
+
+  expect(
+    await page.locator('//*[@id="shownamespace"]').isChecked(),
+  ).toBeTruthy();
+
+  // showpinecone_api_key
+  await page.locator('//*[@id="showpinecone_api_key"]').click();
+
+  expect(
+    await page.locator('//*[@id="showpinecone_api_key"]').isChecked(),
   ).toBeTruthy();
 
   //showtext_key
   await page.locator('//*[@id="showtext_key"]').click();
 
-  expect(await page.locator('//*[@id="showtext_key"]').isChecked()).toBeFalsy();
-
-  // showindex_name
-  await page.locator('//*[@id="showindex_name"]').click();
-
   expect(
-    await page.locator('//*[@id="showindex_name"]').isChecked()
-  ).toBeFalsy();
-
-  // shownamespace
-  await page.locator('//*[@id="shownamespace"]').click();
-
-  expect(
-    await page.locator('//*[@id="shownamespace"]').isChecked()
-  ).toBeFalsy();
-
-  // showpinecone_api_key
-  await page.locator('//*[@id="showpinecone_api_key"]').click();
-
-  expect(
-    await page.locator('//*[@id="showpinecone_api_key"]').isChecked()
-  ).toBeFalsy();
-
-  // showindex_name
-  await page.locator('//*[@id="showindex_name"]').click();
-
-  expect(
-    await page.locator('//*[@id="showindex_name"]').isChecked()
-  ).toBeTruthy();
-
-  // shownamespace
-  await page.locator('//*[@id="shownamespace"]').click();
-
-  expect(
-    await page.locator('//*[@id="shownamespace"]').isChecked()
-  ).toBeTruthy();
-
-  // showpinecone_api_key
-  await page.locator('//*[@id="showpinecone_api_key"]').click();
-
-  expect(
-    await page.locator('//*[@id="showpinecone_api_key"]').isChecked()
-  ).toBeTruthy();
-
-  // showindex_name
-  await page.locator('//*[@id="showindex_name"]').click();
-
-  expect(
-    await page.locator('//*[@id="showindex_name"]').isChecked()
-  ).toBeFalsy();
-
-  // shownamespace
-  await page.locator('//*[@id="shownamespace"]').click();
-
-  expect(
-    await page.locator('//*[@id="shownamespace"]').isChecked()
-  ).toBeFalsy();
-
-  // showpinecone_api_key
-  await page.locator('//*[@id="showpinecone_api_key"]').click();
-
-  expect(
-    await page.locator('//*[@id="showpinecone_api_key"]').isChecked()
-  ).toBeFalsy();
-
-  // showindex_name
-  await page.locator('//*[@id="showindex_name"]').click();
-
-  expect(
-    await page.locator('//*[@id="showindex_name"]').isChecked()
-  ).toBeTruthy();
-
-  // shownamespace
-  await page.locator('//*[@id="shownamespace"]').click();
-
-  expect(
-    await page.locator('//*[@id="shownamespace"]').isChecked()
-  ).toBeTruthy();
-
-  // showpinecone_api_key
-  await page.locator('//*[@id="showpinecone_api_key"]').click();
-
-  expect(
-    await page.locator('//*[@id="showpinecone_api_key"]').isChecked()
-  ).toBeTruthy();
-
-  // showindex_name
-  await page.locator('//*[@id="showindex_name"]').click();
-
-  expect(
-    await page.locator('//*[@id="showindex_name"]').isChecked()
-  ).toBeFalsy();
-
-  // shownamespace
-  await page.locator('//*[@id="shownamespace"]').click();
-
-  expect(
-    await page.locator('//*[@id="shownamespace"]').isChecked()
-  ).toBeFalsy();
-
-  // showpinecone_api_key
-  await page.locator('//*[@id="showpinecone_api_key"]').click();
-
-  expect(
-    await page.locator('//*[@id="showpinecone_api_key"]').isChecked()
-  ).toBeFalsy();
-
-  // showindex_name
-  await page.locator('//*[@id="showindex_name"]').click();
-
-  expect(
-    await page.locator('//*[@id="showindex_name"]').isChecked()
-  ).toBeTruthy();
-
-  // shownamespace
-  await page.locator('//*[@id="shownamespace"]').click();
-
-  expect(
-    await page.locator('//*[@id="shownamespace"]').isChecked()
-  ).toBeTruthy();
-
-  // showpinecone_api_key
-  await page.locator('//*[@id="showpinecone_api_key"]').click();
-
-  expect(
-    await page.locator('//*[@id="showpinecone_api_key"]').isChecked()
-  ).toBeTruthy();
-
-  //showpool_threads
-  await page.locator('//*[@id="showpool_threads"]').click();
-
-  expect(
-    await page.locator('//*[@id="showpool_threads"]').isChecked()
-  ).toBeFalsy();
-
-  //showtext_key
-  await page.locator('//*[@id="showtext_key"]').click();
-
-  expect(
-    await page.locator('//*[@id="showtext_key"]').isChecked()
+    await page.locator('//*[@id="showtext_key"]').isChecked(),
   ).toBeTruthy();
 
   await page.getByText("Save Changes", { exact: true }).click();

@@ -13,7 +13,7 @@ This component retrieves stored chat messages based on a specific session ID.
 - **Number of messages:** Number of messages to retrieve.
 - **Session ID:** The session ID of the chat history.
 - **Order:** Choose the message order, either "Ascending" or "Descending".
-- **Record template:** (Optional) Template to convert a record to text. If left empty, the system dynamically sets it to the record's text key.
+- **Data template:** (Optional) Template to convert a record to text. If left empty, the system dynamically sets it to the record's text key.
 
 ---
 
@@ -59,13 +59,13 @@ Learn more about creating custom components at [Custom Component](http://docs.la
 
 ---
 
-### Documents to records
+### Documents to Data
 
-Convert LangChain documents into records.
+Convert LangChain documents into Data.
 
 #### Parameters
 
-- **Documents:** Documents to be converted into records.
+- **Documents:** Documents to be converted into Data.
 
 ---
 
@@ -93,14 +93,14 @@ Retrieves stored chat messages based on a specific session ID.
 
 ---
 
-### Records to text
+### Data to text
 
-Convert records into plain text following a specified template.
+Convert Data into plain text following a specified template.
 
 #### Parameters
 
-- **Records:** The records to convert to text.
-- **Template:** The template used for formatting the records. It can contain keys like `{text}`, `{data}`, or any other key in the record.
+- **Data:** The Data to convert to text.
+- **Template:** The template used for formatting the Data. It can contain keys like `{text}`, `{data}`, or any other key in the record.
 
 ---
 
@@ -124,5 +124,5 @@ Update a record with text-based key/value pairs, similar to updating a Python di
 
 #### Parameters
 
-- **Record:** The record to update.
+- **Data:** The record to update.
 - **New data:** The new data to update the record with.

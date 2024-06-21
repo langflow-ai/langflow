@@ -42,10 +42,11 @@ const ExportModal = forwardRef(
                 description,
                 name,
                 last_tested_version: version,
+                endpoint_name: currentFlow!.endpoint_name,
                 is_component: false,
               },
               name!,
-              description
+              description,
             );
             setNoticeData({
               title: API_WARNING_NOTICE_ALERT,
@@ -58,10 +59,11 @@ const ExportModal = forwardRef(
                 description,
                 name,
                 last_tested_version: version,
+                endpoint_name: currentFlow!.endpoint_name,
                 is_component: false,
               }),
               name!,
-              description
+              description,
             );
           setOpen(false);
         }}
@@ -102,6 +104,6 @@ const ExportModal = forwardRef(
         <BaseModal.Footer submit={{ label: "Export" }} />
       </BaseModal>
     );
-  }
+  },
 );
 export default ExportModal;

@@ -1,5 +1,4 @@
 from .ChatInput import ChatInput
-from .Prompt import PromptComponent
-from .TextInput import TextInput
+from .TextInput import TextInputComponent
 
-__all__ = ["ChatInput", "PromptComponent", "TextInput"]
+__all__ = ["ChatInput", "TextInputComponent"]

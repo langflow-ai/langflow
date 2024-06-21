@@ -61,7 +61,7 @@ export default function RenameLabel(props) {
           onInput={resizeInput}
           className={cn(
             "nopan nodelete nodrag noundo nocopy rounded-md bg-transparent px-2 outline-ring hover:outline focus:border-none focus:outline active:outline",
-            props.className
+            props.className,
           )}
           onBlur={() => {
             setIsRename(false);

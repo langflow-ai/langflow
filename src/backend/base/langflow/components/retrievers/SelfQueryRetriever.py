@@ -4,8 +4,8 @@ from langchain.retrievers.self_query.base import SelfQueryRetriever
 from langchain_core.vectorstores import VectorStore
 
 from langflow.custom import CustomComponent
-from langflow.field_typing import BaseLanguageModel, Text
-from langflow.schema import Record
+from langflow.field_typing import LanguageModel, Text
+from langflow.schema import Data
 from langflow.schema.message import Message
 
 
@@ -43,11 +43,11 @@ class SelfQueryRetrieverComponent(CustomComponent):
         self,
         query: Message,
         vectorstore: VectorStore,
-        attribute_infos: list[Record],
+        attribute_infos: list[Data],
         document_content_description: Text,
-        llm: BaseLanguageModel,
-    ) -> Record:
-        metadata_field_infos = [AttributeInfo(**record.data) for record in attribute_infos]
+        llm: LanguageModel,
+    ) -> Data:
+        metadata_field_infos = [AttributeInfo(**value.data) for value in attribute_infos]
         self_query_retriever = SelfQueryRetriever.from_llm(
             llm=llm,
             vectorstore=vectorstore,
@@ -60,9 +60,10 @@ class SelfQueryRetrieverComponent(CustomComponent):
             input_text = query.text
         elif isinstance(query, str):
             input_text = query
-        else:
+
+        if not isinstance(query, str):
             raise ValueError(f"Query type {type(query)} not supported.")
-        documents = self_query_retriever.invoke(input=input_text)  # type: ignore
-        records = [Record.from_document(document) for document in documents]
-        self.status = records  # type: ignore
-        return records  # type: ignore
+        documents = self_query_retriever.invoke(input=input_text)
+        data = [Data.from_document(document) for document in documents]
+        self.status = data
+        return data

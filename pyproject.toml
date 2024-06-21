@@ -74,7 +74,7 @@ assemblyai = "^0.26.0"
 litellm = "^1.38.0"
 chromadb = "^0.5.0"
 langchain-anthropic = "^0.1.6"
-langchain-astradb = "^0.3.0"
+langchain-astradb = "^0.3.3"
 langchain-openai = "^0.1.1"
 zep-python = { version = "^2.0.0rc5", allow-prereleases = true }
 langchain-google-vertexai = "^1.0.3"
@@ -86,8 +86,11 @@ youtube-transcript-api = "^0.6.2"
 markdown = "^3.6"
 langchain-chroma = "^0.1.1"
 upstash-vector = "^0.4.0"
+gitpython = "^3.1.43"
 cassio = { extras = ["cassio"], version = "^0.1.7", optional = true }
 unstructured = {extras = ["docx", "md", "pptx"], version = "^0.14.4"}
+langchain-aws = "^0.1.6"
+langchain-mongodb = "^0.1.6"
 
 
 [tool.poetry.group.dev.dependencies]
@@ -130,17 +133,16 @@ local = ["llama-cpp-python", "sentence-transformers", "ctransformers"]
 optional = true
 
 [tool.poetry.group.spelling.dependencies]
-codespell = "^2.2.6"
+codespell = "^2.3.0"
 
 [tool.codespell]
-skip = '.git,*.pdf,*.svg,*.pdf,*.yaml,*.ipynb,poetry.lock,*.min.js,*.css,package-lock.json,*.trig'
+skip = '.git,*.pdf,*.svg,*.pdf,*.yaml,*.ipynb,poetry.lock,*.min.js,*.css,package-lock.json,*.trig.,**/node_modules/**,./stuff/*,*.csv'
 # Ignore latin etc
 ignore-regex = '.*(Stati Uniti|Tense=Pres).*'
 
 
 [tool.pytest.ini_options]
 minversion = "6.0"
-addopts = "-ra -n auto"
 testpaths = ["tests", "integration"]
 console_output_style = "progress"
 filterwarnings = ["ignore::DeprecationWarning"]

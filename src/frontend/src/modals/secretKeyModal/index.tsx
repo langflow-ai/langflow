@@ -112,8 +112,7 @@ export default function SecretKeyModal({
                 onClick={() => {
                   handleCopyClick();
                 }}
-                variant="none"
-                size="none"
+                unstyled
               >
                 {textCopied ? (
                   <IconComponent name="Copy" className="h-4 w-4" />

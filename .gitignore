@@ -268,5 +268,7 @@ stuff/*
 src/frontend/playwright-report/index.html
 *.bak
 prof/*
-*-shm
-*-wal
+
+src/frontend/temp
+*.db-shm
+*.db-wal

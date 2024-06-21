@@ -2,9 +2,9 @@ from typing import List
 
 from langchain_community.vectorstores.faiss import FAISS
 
-from langflow.components.vectorstores.base.model import LCVectorStoreComponent
+from langflow.base.vectorstores.model import LCVectorStoreComponent
 from langflow.field_typing import Embeddings, Text
-from langflow.schema import Record
+from langflow.schema import Data
 
 
 class FAISSSearchComponent(LCVectorStoreComponent):
@@ -35,7 +35,7 @@ class FAISSSearchComponent(LCVectorStoreComponent):
         folder_path: str,
         number_of_results: int = 4,
         index_name: str = "langflow_index",
-    ) -> List[Record]:
+    ) -> List[Data]:
         if not folder_path:
             raise ValueError("Folder path is required to save the FAISS index.")
         path = self.resolve_path(folder_path)

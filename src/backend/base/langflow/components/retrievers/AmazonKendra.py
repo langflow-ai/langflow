@@ -1,9 +1,9 @@
 from typing import Optional
 
 from langchain_community.retrievers import AmazonKendraRetriever
-from langchain_core.retrievers import BaseRetriever
 
 from langflow.custom import CustomComponent
+from langflow.field_typing import Retriever
 
 
 class AmazonKendraRetrieverComponent(CustomComponent):
@@ -36,7 +36,7 @@ class AmazonKendraRetrieverComponent(CustomComponent):
         credentials_profile_name: Optional[str] = None,
         attribute_filter: Optional[dict] = None,
         user_context: Optional[dict] = None,
-    ) -> BaseRetriever:
+    ) -> Retriever:
         try:
             output = AmazonKendraRetriever(
                 index_id=index_id,

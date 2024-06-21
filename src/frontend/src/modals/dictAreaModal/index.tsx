@@ -18,10 +18,12 @@ export default function DictAreaModal({
   children,
   onChange,
   value,
+  disabled = false,
 }: {
   children: JSX.Element;
   onChange?: (value: Object) => void;
   value: Object;
+  disabled?: boolean;
 }): JSX.Element {
   const [open, setOpen] = useState(false);
   const isDark = useDarkStore((state) => state.dark);
@@ -35,6 +37,7 @@ export default function DictAreaModal({
     <BaseModal
       size="medium-h-full"
       open={open}
+      disable={disabled}
       setOpen={setOpen}
       onSubmit={
         onChange

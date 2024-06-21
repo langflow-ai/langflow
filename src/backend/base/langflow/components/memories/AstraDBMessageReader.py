@@ -1,7 +1,7 @@
 from typing import Optional, cast
 
 from langflow.base.memory.memory import BaseMemoryComponent
-from langflow.schema.record import Record
+from langflow.schema import Data
 
 
 class AstraDBMessageReaderComponent(BaseMemoryComponent):
@@ -38,7 +38,7 @@ class AstraDBMessageReaderComponent(BaseMemoryComponent):
             },
         }
 
-    def get_messages(self, **kwargs) -> list[Record]:
+    def get_messages(self, **kwargs) -> list[Data]:
         """
         Retrieves messages from the AstraDBChatMessageHistory memory.
 
@@ -46,7 +46,7 @@ class AstraDBMessageReaderComponent(BaseMemoryComponent):
             memory (AstraDBChatMessageHistory): The AstraDBChatMessageHistory instance to retrieve messages from.
 
         Returns:
-            list[Record]: A list of Record objects representing the search results.
+            list[Data]: A list of Data objects representing the search results.
         """
         try:
             from langchain_astradb.chat_message_histories import AstraDBChatMessageHistory
@@ -62,7 +62,7 @@ class AstraDBMessageReaderComponent(BaseMemoryComponent):
 
         # Get messages from the memory
         messages = memory.messages
-        results = [Record.from_lc_message(message) for message in messages]
+        results = [Data.from_lc_message(message) for message in messages]
 
         return list(results)
 
@@ -73,7 +73,7 @@ class AstraDBMessageReaderComponent(BaseMemoryComponent):
         token: str,
         api_endpoint: str,
         namespace: Optional[str] = None,
-    ) -> list[Record]:
+    ) -> list[Data]:
         try:
             from langchain_astradb.chat_message_histories import AstraDBChatMessageHistory
         except ImportError:
@@ -90,7 +90,7 @@ class AstraDBMessageReaderComponent(BaseMemoryComponent):
             namespace=namespace,
         )
 
-        records = self.get_messages(memory=memory)
-        self.status = records
+        data = self.get_messages(memory=memory)
+        self.status = data
 
-        return records
+        return data

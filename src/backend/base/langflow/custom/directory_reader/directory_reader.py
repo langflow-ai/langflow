@@ -1,4 +1,5 @@
 import ast
+import asyncio
 import os
 import zlib
 from pathlib import Path
@@ -220,8 +221,6 @@ class DirectoryReader:
             return False, "Empty file"
         elif not self.validate_code(file_content):
             return False, "Syntax error"
-        elif not self.validate_build(file_content):
-            return False, "Missing build function"
         elif self._is_type_hint_used_in_args("Optional", file_content) and not self._is_type_hint_imported(
             "Optional", file_content
         ):
@@ -283,6 +282,85 @@ class DirectoryReader:
 
             if menu_result not in response["menu"]:
                 response["menu"].append(menu_result)
+        logger.debug("-------------------- Component menu list built --------------------")
+        return response
+
+    async def process_file_async(self, file_path):
+        try:
+            file_content = self.read_file_content(file_path)
+        except Exception as exc:
+            logger.exception(exc)
+            logger.error(f"Error while reading file {file_path}: {str(exc)}")
+            return False, f"Could not read {file_path}"
+
+        if file_content is None:
+            return False, f"Could not read {file_path}"
+        elif self.is_empty_file(file_content):
+            return False, "Empty file"
+        elif not self.validate_code(file_content):
+            return False, "Syntax error"
+        elif self._is_type_hint_used_in_args("Optional", file_content) and not self._is_type_hint_imported(
+            "Optional", file_content
+        ):
+            return (
+                False,
+                "Type hint 'Optional' is used but not imported in the code.",
+            )
+        else:
+            if self.compress_code_field:
+                file_content = str(StringCompressor(file_content).compress_string())
+            return True, file_content
+
+    async def get_output_types_from_code_async(self, code: str):
+        return await asyncio.to_thread(self.get_output_types_from_code, code)
+
+    async def abuild_component_menu_list(self, file_paths):
+        response = {"menu": []}
+        logger.debug("-------------------- Async Building component menu list --------------------")
+
+        tasks = [self.process_file_async(file_path) for file_path in file_paths]
+        results = await asyncio.gather(*tasks)
+
+        for file_path, (validation_result, result_content) in zip(file_paths, results):
+            menu_name = os.path.basename(os.path.dirname(file_path))
+            filename = os.path.basename(file_path)
+
+            if not validation_result:
+                logger.error(f"Error while processing file {file_path}")
+
+            menu_result = self.find_menu(response, menu_name) or {
+                "name": menu_name,
+                "path": os.path.dirname(file_path),
+                "components": [],
+            }
+            component_name = filename.split(".")[0]
+
+            if "_" in component_name:
+                component_name_camelcase = " ".join(word.title() for word in component_name.split("_"))
+            else:
+                component_name_camelcase = component_name
+
+            if validation_result:
+                try:
+                    output_types = await self.get_output_types_from_code_async(result_content)
+                except Exception as exc:
+                    logger.exception(f"Error while getting output types from code: {str(exc)}")
+                    output_types = [component_name_camelcase]
+            else:
+                output_types = [component_name_camelcase]
+
+            component_info = {
+                "name": component_name_camelcase,
+                "output_types": output_types,
+                "file": filename,
+                "code": result_content if validation_result else "",
+                "error": "" if validation_result else result_content,
+            }
+            menu_result["components"].append(component_info)
+
+            if menu_result not in response["menu"]:
+                response["menu"].append(menu_result)
+
         logger.debug("-------------------- Component menu list built --------------------")
         return response
 

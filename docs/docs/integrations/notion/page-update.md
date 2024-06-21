@@ -26,7 +26,7 @@ import requests
 from typing import Dict, Any
 
 from langflow import CustomComponent
-from langflow.schema import Record
+from langflow.schema import Data
 
 
 class NotionPageUpdate(CustomComponent):
@@ -61,7 +61,7 @@ class NotionPageUpdate(CustomComponent):
         page_id: str,
         properties: str,
         notion_secret: str,
-    ) -> Record:
+    ) -> Data:
         url = f"https://api.notion.com/v1/pages/{page_id}"
         headers = {
             "Authorization": f"Bearer {notion_secret}",
@@ -88,7 +88,7 @@ class NotionPageUpdate(CustomComponent):
             output += f"{prop_name}: {prop_value}\n"
 
         self.status = output
-        return Record(data=updated_page)
+        return Data(data=updated_page)
 ```
 
 Let's break down the key parts of this component:
@@ -99,7 +99,7 @@ Let's break down the key parts of this component:
 
 - The component interacts with the Notion API to update the page properties. It constructs the API URL, headers, and request data based on the provided parameters.
 
-- The processed data is returned as a `Record` object, which can be connected to other components in the Langflow flow. The `Record` object contains the updated page data.
+- The processed data is returned as a `Data` object, which can be connected to other components in the Langflow flow. The `Data` object contains the updated page data.
 
 - The component also stores the updated page properties in the `status` attribute for logging and debugging purposes.
 
@@ -124,7 +124,7 @@ When using the `NotionPageUpdate` component, consider the following best practic
 
 - Ensure that you have a valid Notion integration token with the necessary permissions to update page properties.
 - Handle edge cases and error scenarios gracefully, such as invalid JSON format for properties or API request failures.
-- We recommend using an LLM to generate the inputs for this component, to allow flexibilty
+- We recommend using an LLM to generate the inputs for this component, to allow flexibility
 
 By leveraging the `NotionPageUpdate` component in Langflow, you can easily integrate updating Notion page properties into your language model workflows and build powerful applications that extend Langflow's capabilities.
 

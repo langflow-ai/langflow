@@ -4,8 +4,8 @@ from langchain.chains.retrieval_qa.base import RetrievalQA
 from langchain_core.documents import Document
 
 from langflow.custom import CustomComponent
-from langflow.field_typing import BaseLanguageModel, BaseMemory, BaseRetriever, Text
-from langflow.schema import Record
+from langflow.field_typing import BaseMemory, BaseRetriever, LanguageModel, Text
+from langflow.schema import Data
 
 
 class RetrievalQAComponent(CustomComponent):
@@ -23,13 +23,13 @@ class RetrievalQAComponent(CustomComponent):
             "return_source_documents": {"display_name": "Return Source Documents"},
             "input_value": {
                 "display_name": "Input",
-                "input_types": ["Record", "Document"],
+                "input_types": ["Data", "Document"],
             },
         }
 
     def build(
         self,
-        llm: BaseLanguageModel,
+        llm: LanguageModel,
         chain_type: str,
         retriever: BaseRetriever,
         input_value: str = "",
@@ -50,17 +50,17 @@ class RetrievalQAComponent(CustomComponent):
         )
         if isinstance(input_value, Document):
             input_value = input_value.page_content
-        if isinstance(input_value, Record):
+        if isinstance(input_value, Data):
             input_value = input_value.get_text()
         self.status = runnable
         result = runnable.invoke({input_key: input_value})
         result = result.content if hasattr(result, "content") else result
         # Result is a dict with keys "query",  "result" and "source_documents"
         # for now we just return the result
-        records = self.to_records(result.get("source_documents"))
+        data = self.to_data(result.get("source_documents"))
         references_str = ""
         if return_source_documents:
-            references_str = self.create_references_from_records(records)
+            references_str = self.create_references_from_data(data)
         result_str = result.get("result", "")
 
         final_result = "\n".join([Text(result_str), references_str])

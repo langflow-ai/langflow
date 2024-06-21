@@ -5,6 +5,9 @@ from functools import partial
 from itertools import chain
 from typing import TYPE_CHECKING, Dict, Generator, List, Optional, Tuple, Type, Union
 
+from loguru import logger
+
+from langflow.exceptions.component import ComponentBuildException
 from langflow.graph.edge.base import ContractEdge
 from langflow.graph.graph.constants import lazy_load_vertex_dict
 from langflow.graph.graph.runnable_vertices_manager import RunnableVerticesManager
@@ -13,13 +16,12 @@ from langflow.graph.graph.utils import process_flow
 from langflow.graph.schema import InterfaceComponentTypes, RunOutputs
 from langflow.graph.vertex.base import Vertex
 from langflow.graph.vertex.types import InterfaceVertex, StateVertex
-from langflow.schema import Record
+from langflow.schema import Data
 from langflow.schema.schema import INPUT_FIELD_NAME, InputType
 from langflow.services.cache.utils import CacheMiss
 from langflow.services.chat.service import ChatService
 from langflow.services.deps import get_chat_service
 from langflow.services.monitor.utils import log_transaction
-from loguru import logger
 
 if TYPE_CHECKING:
     from langflow.graph.schema import ResultData
@@ -80,7 +82,7 @@ class Graph:
         self.define_vertices_lists()
         self.state_manager = GraphStateManager()
 
-    def get_state(self, name: str) -> Optional[Record]:
+    def get_state(self, name: str) -> Optional[Data]:
         """
         Returns the state of the graph with the given name.
 
@@ -88,17 +90,17 @@ class Graph:
             name (str): The name of the state.
 
         Returns:
-            Optional[Record]: The state record, or None if the state does not exist.
+            Optional[Data]: The state record, or None if the state does not exist.
         """
         return self.state_manager.get_state(name, run_id=self._run_id)
 
-    def update_state(self, name: str, record: Union[str, Record], caller: Optional[str] = None) -> None:
+    def update_state(self, name: str, record: Union[str, Data], caller: Optional[str] = None) -> None:
         """
         Updates the state of the graph with the given name.
 
         Args:
             name (str): The name of the state.
-            record (Union[str, Record]): The new state record.
+            record (Union[str, Data]): The new state record.
             caller (Optional[str], optional): The ID of the vertex that is updating the state. Defaults to None.
         """
         if caller:
@@ -153,13 +155,13 @@ class Graph:
         """
         self.activated_vertices = []
 
-    def append_state(self, name: str, record: Union[str, Record], caller: Optional[str] = None) -> None:
+    def append_state(self, name: str, record: Union[str, Data], caller: Optional[str] = None) -> None:
         """
         Appends the state of the graph with the given name.
 
         Args:
             name (str): The name of the state.
-            record (Union[str, Record]): The state record to append.
+            record (Union[str, Data]): The state record to append.
             caller (Optional[str], optional): The ID of the vertex that is updating the state. Defaults to None.
         """
         if caller:
@@ -288,6 +290,13 @@ class Graph:
                 raise ValueError(f"Vertex {vertex_id} not found")
             vertex.update_raw_params({"session_id": session_id})
         # Process the graph
+        try:
+            cache_service = get_chat_service()
+            if self.flow_id:
+                await cache_service.set_cache(self.flow_id, self)
+        except Exception as exc:
+            logger.exception(exc)
+
         try:
             start_component_id = next(
                 (vertex_id for vertex_id in self._is_input_vertices if "chat" in vertex_id.lower()), None
@@ -458,6 +467,8 @@ class Graph:
         """
         Resets the inactivated vertices in the graph.
         """
+        for vertex_id in self.inactivated_vertices.copy():
+            self.mark_vertex(vertex_id, "ACTIVE")
         self.inactivated_vertices = []
         self.inactivated_vertices = set()
 
@@ -471,7 +482,7 @@ class Graph:
         vertex = self.get_vertex(vertex_id)
         vertex.set_state(state)
 
-    def mark_branch(self, vertex_id: str, state: str, visited: Optional[set] = None):
+    def mark_branch(self, vertex_id: str, state: str, visited: Optional[set] = None, output_name: Optional[str] = None):
         """Marks a branch of the graph."""
         if visited is None:
             visited = set()
@@ -482,7 +493,20 @@ class Graph:
         self.mark_vertex(vertex_id, state)
 
         for child_id in self.parent_child_map[vertex_id]:
+            # Only child_id that have an edge with the vertex_id through the output_name
+            # should be marked
+            if output_name:
+                edge = self.get_edge(vertex_id, child_id)
+                if edge and edge.source_handle.name != output_name:
+                    continue
             self.mark_branch(child_id, state)
+
+    def get_edge(self, source_id: str, target_id: str) -> Optional[ContractEdge]:
+        """Returns the edge between two vertices."""
+        for edge in self.edges:
+            if edge.source_id == source_id and edge.target_id == target_id:
+                return edge
+        return None
 
     def build_parent_child_map(self, vertices: List[Vertex]):
         parent_child_map = defaultdict(list)
@@ -497,10 +521,38 @@ class Graph:
         self._updates += 1
 
     def __getstate__(self):
-        return self.raw_graph_data
+        # Get all attributes that are useful in runs.
+        # We don't need to save the state_manager because it is
+        # a singleton and it is not necessary to save it
+        return {
+            "vertices": self.vertices,
+            "edges": self.edges,
+            "flow_id": self.flow_id,
+            "user_id": self.user_id,
+            "raw_graph_data": self.raw_graph_data,
+            "top_level_vertices": self.top_level_vertices,
+            "inactivated_vertices": self.inactivated_vertices,
+            "run_manager": self.run_manager.to_dict(),
+            "_run_id": self._run_id,
+            "in_degree_map": self.in_degree_map,
+            "parent_child_map": self.parent_child_map,
+            "predecessor_map": self.predecessor_map,
+            "successor_map": self.successor_map,
+            "activated_vertices": self.activated_vertices,
+            "vertices_layers": self.vertices_layers,
+            "vertices_to_run": self.vertices_to_run,
+            "stop_vertex": self.stop_vertex,
+            "vertex_map": self.vertex_map,
+        }
 
     def __setstate__(self, state):
-        self.__init__(**state)
+        run_manager = state["run_manager"]
+        if isinstance(run_manager, RunnableVerticesManager):
+            state["run_manager"] = run_manager
+        else:
+            state["run_manager"] = RunnableVerticesManager.from_dict(run_manager)
+        self.__dict__.update(state)
+        self.state_manager = GraphStateManager()
 
     @classmethod
     def from_payload(cls, payload: Dict, flow_id: Optional[str] = None, user_id: Optional[str] = None) -> "Graph":
@@ -526,6 +578,7 @@ class Graph:
                 raise ValueError(
                     f"Invalid payload. Expected keys 'nodes' and 'edges'. Found {list(payload.keys())}"
                 ) from exc
+
             raise ValueError(f"Error while creating graph from payload: {exc}") from exc
 
     def __eq__(self, other: object) -> bool:
@@ -704,6 +757,20 @@ class Graph:
         except KeyError:
             raise ValueError(f"Vertex {vertex_id} not found")
 
+    def get_root_of_group_node(self, vertex_id: str) -> Vertex:
+        """Returns the root of a group node."""
+        if vertex_id in self.top_level_vertices:
+            # Get all vertices with vertex_id as .parent_node_id
+            # then get the one at the top
+            vertices = [vertex for vertex in self.vertices if vertex.parent_node_id == vertex_id]
+            # Now go through successors of the vertices
+            # and get the one that none of its successors is in vertices
+            for vertex in vertices:
+                successors = self.get_all_successors(vertex, recursive=False)
+                if not any(successor in vertices for successor in successors):
+                    return vertex
+        raise ValueError(f"Vertex {vertex_id} is not a top level vertex or no root vertex found")
+
     async def build_vertex(
         self,
         chat_service: ChatService,
@@ -746,6 +813,7 @@ class Graph:
                     # Now set update the vertex with the cached vertex
                     vertex._built = cached_vertex._built
                     vertex.result = cached_vertex.result
+                    vertex.results = cached_vertex.results
                     vertex.artifacts = cached_vertex.artifacts
                     vertex._built_object = cached_vertex._built_object
                     vertex._custom_component = cached_vertex._custom_component
@@ -769,7 +837,8 @@ class Graph:
             log_transaction(flow_id, vertex, status="success")
             return result_dict, params, valid, artifacts, vertex
         except Exception as exc:
-            logger.exception(f"Error building Component: {exc}")
+            if not isinstance(exc, ComponentBuildException):
+                logger.exception(f"Error building Component:\n\n{exc}")
             flow_id = self.flow_id
             log_transaction(flow_id, vertex, status="failure", error=str(exc))
             raise exc
@@ -1062,7 +1131,6 @@ class Graph:
         # Initial setup
         visited = set()  # To keep track of visited vertices
         excluded = set()  # To keep track of vertices that should be excluded
-        stack = [vertex_id]  # Use a list as a stack for DFS
 
         def get_successors(vertex, recursive=True):
             # Recursively get the successors of the current vertex
@@ -1078,7 +1146,12 @@ class Graph:
                 successors_result.append(successor)
             return successors_result
 
-        stop_or_start_vertex = self.get_vertex(vertex_id)
+        try:
+            stop_or_start_vertex = self.get_vertex(vertex_id)
+            stack = [vertex_id]  # Use a list as a stack for DFS
+        except ValueError:
+            stop_or_start_vertex = self.get_root_of_group_node(vertex_id)
+            stack = [stop_or_start_vertex.id]
         stop_predecessors = [pre.id for pre in stop_or_start_vertex.predecessors]
         # DFS to collect all vertices that can reach the specified vertex
         while stack:
@@ -1134,6 +1207,7 @@ class Graph:
         )
         layers: List[List[str]] = []
         visited = set(queue)
+
         current_layer = 0
         while queue:
             layers.append([])  # Start a new layer

@@ -1,10 +1,11 @@
 from typing import Any, List, Optional, Tuple
 
-from langflow.components.vectorstores.Cassandra import CassandraVectorStoreComponent
-from langflow.components.vectorstores.base.model import LCVectorStoreComponent
-from langflow.field_typing import Embeddings, Text
-from langflow.schema import Record
 from langchain_community.utilities.cassandra import SetupMode
+
+from langflow.base.vectorstores.model import LCVectorStoreComponent
+from langflow.components.vectorstores.Cassandra import CassandraVectorStoreComponent
+from langflow.field_typing import Embeddings, Text
+from langflow.schema import Data
 
 
 class CassandraSearchComponent(LCVectorStoreComponent):
@@ -72,7 +73,7 @@ class CassandraSearchComponent(LCVectorStoreComponent):
         keyspace: Optional[str] = None,
         body_index_options: Optional[List[Tuple[str, Any]]] = None,
         setup_mode: SetupMode = SetupMode.SYNC,
-    ) -> List[Record]:
+    ) -> List[Data]:
         vector_store = CassandraVectorStoreComponent().build(
             embedding=embedding,
             table_name=table_name,

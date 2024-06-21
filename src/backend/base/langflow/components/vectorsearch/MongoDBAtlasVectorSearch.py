@@ -1,9 +1,9 @@
 from typing import List, Optional
 
-from langflow.components.vectorstores.base.model import LCVectorStoreComponent
-from langflow.components.vectorstores.MongoDBAtlasVector import MongoDBAtlasComponent
+from langflow.base.vectorstores.model import LCVectorStoreComponent
+from langflow.components.vectorstores.MongoDBAtlasVector import MongoVectorStoreComponent
 from langflow.field_typing import Embeddings, NestedDict, Text
-from langflow.schema import Record
+from langflow.schema import Data
 
 
 class MongoDBAtlasSearchComponent(LCVectorStoreComponent):
@@ -41,9 +41,9 @@ class MongoDBAtlasSearchComponent(LCVectorStoreComponent):
         index_name: str = "",
         mongodb_atlas_cluster_uri: str = "",
         search_kwargs: Optional[NestedDict] = None,
-    ) -> List[Record]:
+    ) -> List[Data]:
         search_kwargs = search_kwargs or {}
-        vector_store = MongoDBAtlasComponent().build(
+        vector_store = MongoVectorStoreComponent().build(
             mongodb_atlas_cluster_uri=mongodb_atlas_cluster_uri,
             collection_name=collection_name,
             db_name=db_name,

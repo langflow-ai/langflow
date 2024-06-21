@@ -23,10 +23,25 @@
 .ag-row .ag-cell {
   align-content: center !important;
 }
+
 .ag-cell {
   line-height: 1.25rem;
   padding-top: 0.675rem;
   padding-bottom: 0.675rem;
+}
+
+.ag-cell-wrapper > *:not(.ag-cell-value):not(.ag-group-value) {
+  align-items: self-start;
+  position: relative;
+  top: 2px;
+}
+
+.ag-cell-wrapper > *:not(.ag-cell-value):not(.ag-group-value) {
+  height: 0px;
+}
+
+.ag-cell-wrapper {
+  align-items: normal !important;
 }
 
 .ag-body-horizontal-scroll-viewport,

@@ -1,12 +1,6 @@
 import ForwardedIconComponent from "../../../../../../components/genericIconComponent";
 
-type HeaderMessagesComponentProps = {
-  selectedRows: number[];
-  handleRemoveMessages: () => void;
-};
-const HeaderMessagesComponent = ({
-  selectedRows,
-}: HeaderMessagesComponentProps) => {
+const HeaderMessagesComponent = () => {
   return (
     <>
       <div className="flex w-full items-center justify-between gap-4 space-y-0.5">

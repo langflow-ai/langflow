@@ -1,114 +1,133 @@
-from typing import Optional, Union
+from typing import List
 
-from langchain_community.vectorstores.qdrant import Qdrant
+from langchain_community.vectorstores import Qdrant
 from langchain_core.retrievers import BaseRetriever
-from langchain_core.vectorstores import VectorStore
 
-from langflow.custom import CustomComponent
-from langflow.field_typing import Embeddings
-from langflow.schema import Record
+from langflow.custom import Component
+from langflow.helpers.data import docs_to_data
+from langflow.io import BoolInput, DropdownInput, HandleInput, IntInput, Output, SecretStrInput, StrInput
+from langflow.schema import Data
 
 
-class QdrantComponent(CustomComponent):
+class QdrantVectorStoreComponent(Component):
     display_name = "Qdrant"
-    description = "Construct Qdrant wrapper from a list of texts."
+    description = "Qdrant Vector Store with search capabilities"
+    documentation = "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/qdrant"
     icon = "Qdrant"
 
-    def build_config(self):
-        return {
-            "inputs": {"display_name": "Input", "input_types": ["Document", "Record"]},
-            "embedding": {"display_name": "Embedding"},
-            "api_key": {"display_name": "API Key", "password": True, "advanced": True},
-            "collection_name": {"display_name": "Collection Name"},
-            "content_payload_key": {
-                "display_name": "Content Payload Key",
-                "advanced": True,
-            },
-            "distance_func": {"display_name": "Distance Function", "advanced": True},
-            "grpc_port": {"display_name": "gRPC Port", "advanced": True},
-            "host": {"display_name": "Host", "advanced": True},
-            "https": {"display_name": "HTTPS", "advanced": True},
-            "location": {"display_name": "Location", "advanced": True},
-            "metadata_payload_key": {
-                "display_name": "Metadata Payload Key",
-                "advanced": True,
-            },
-            "path": {"display_name": "Path", "advanced": True},
-            "port": {"display_name": "Port", "advanced": True},
-            "prefer_grpc": {"display_name": "Prefer gRPC", "advanced": True},
-            "prefix": {"display_name": "Prefix", "advanced": True},
-            "timeout": {"display_name": "Timeout", "advanced": True},
-            "url": {"display_name": "URL", "advanced": True},
+    inputs = [
+        StrInput(name="collection_name", display_name="Collection Name", required=True),
+        StrInput(name="host", display_name="Host", value="localhost", advanced=True),
+        IntInput(name="port", display_name="Port", value=6333, advanced=True),
+        IntInput(name="grpc_port", display_name="gRPC Port", value=6334, advanced=True),
+        SecretStrInput(name="api_key", display_name="API Key", advanced=True),
+        StrInput(name="prefix", display_name="Prefix", advanced=True),
+        IntInput(name="timeout", display_name="Timeout", advanced=True),
+        StrInput(name="path", display_name="Path", advanced=True),
+        StrInput(name="url", display_name="URL", advanced=True),
+        DropdownInput(
+            name="distance_func",
+            display_name="Distance Function",
+            options=["Cosine", "Euclidean", "Dot Product"],
+            value="Cosine",
+            advanced=True,
+        ),
+        StrInput(name="content_payload_key", display_name="Content Payload Key", value="page_content", advanced=True),
+        StrInput(name="metadata_payload_key", display_name="Metadata Payload Key", value="metadata", advanced=True),
+        HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
+        HandleInput(
+            name="vector_store_inputs",
+            display_name="Vector Store Inputs",
+            input_types=["Document", "Data"],
+            is_list=True,
+        ),
+        BoolInput(
+            name="add_to_vector_store",
+            display_name="Add to Vector Store",
+            info="If true, the Vector Store Inputs will be added to the Vector Store.",
+        ),
+        StrInput(name="search_input", display_name="Search Input"),
+        IntInput(
+            name="number_of_results",
+            display_name="Number of Results",
+            info="Number of results to return.",
+            value=4,
+            advanced=True,
+        ),
+    ]
+
+    outputs = [
+        Output(display_name="Vector Store", name="vector_store", method="build_vector_store", output_type=Qdrant),
+        Output(
+            display_name="Base Retriever",
+            name="base_retriever",
+            method="build_base_retriever",
+            output_type=BaseRetriever,
+        ),
+        Output(display_name="Search Results", name="search_results", method="search_documents"),
+    ]
+
+    def build_vector_store(self) -> Qdrant:
+        return self._build_qdrant()
+
+    def _build_qdrant(self) -> Qdrant:
+        qdrant_kwargs = {
+            "collection_name": self.collection_name,
+            "content_payload_key": self.content_payload_key,
+            "distance_func": self.distance_func,
+            "metadata_payload_key": self.metadata_payload_key,
         }
 
-    def build(
-        self,
-        embedding: Embeddings,
-        collection_name: str,
-        inputs: Optional[Record] = None,
-        api_key: Optional[str] = None,
-        content_payload_key: str = "page_content",
-        distance_func: str = "Cosine",
-        grpc_port: int = 6334,
-        https: bool = False,
-        host: Optional[str] = None,
-        location: Optional[str] = None,
-        metadata_payload_key: str = "metadata",
-        path: Optional[str] = None,
-        port: Optional[int] = 6333,
-        prefer_grpc: bool = False,
-        prefix: Optional[str] = None,
-        timeout: Optional[int] = None,
-        url: Optional[str] = None,
-    ) -> Union[VectorStore, Qdrant, BaseRetriever]:
-        documents = []
-        for _input in inputs or []:
-            if isinstance(_input, Record):
-                documents.append(_input.to_lc_document())
+        server_kwargs = {
+            "host": self.host,
+            "port": self.port,
+            "grpc_port": self.grpc_port,
+            "api_key": self.api_key,
+            "prefix": self.prefix,
+            "timeout": self.timeout,
+            "path": self.path,
+            "url": self.url,
+        }
+
+        # Remove None values from server_kwargs
+        server_kwargs = {k: v for k, v in server_kwargs.items() if v is not None}
+
+        if self.add_to_vector_store:
+            documents = []
+            for _input in self.vector_store_inputs or []:
+                if isinstance(_input, Data):
+                    documents.append(_input.to_lc_document())
+                else:
+                    documents.append(_input)
+
+            if documents:
+                qdrant = Qdrant.from_documents(
+                    documents, embedding=self.embedding, client_kwargs=server_kwargs, **qdrant_kwargs
+                )
             else:
-                documents.append(_input)
-        if not documents:
+                from qdrant_client import QdrantClient
+
+                client = QdrantClient(**server_kwargs)
+                qdrant = Qdrant(embedding_function=self.embedding.embed_query, client=client, **qdrant_kwargs)
+        else:
             from qdrant_client import QdrantClient
 
-            client = QdrantClient(
-                location=location,
-                url=url,
-                port=port,
-                grpc_port=grpc_port,
-                https=https,
-                prefix=prefix,
-                timeout=timeout,
-                prefer_grpc=prefer_grpc,
-                api_key=api_key,
-                host=host,
-                path=path,
+            client = QdrantClient(**server_kwargs)
+            qdrant = Qdrant(embedding_function=self.embedding.embed_query, client=client, **qdrant_kwargs)
+
+        return qdrant
+
+    def search_documents(self) -> List[Data]:
+        vector_store = self._build_qdrant()
+
+        if self.search_input and isinstance(self.search_input, str) and self.search_input.strip():
+            docs = vector_store.similarity_search(
+                query=self.search_input,
+                k=self.number_of_results,
             )
-            vs = Qdrant(
-                client=client,
-                collection_name=collection_name,
-                embeddings=embedding,
-                content_payload_key=content_payload_key,
-                metadata_payload_key=metadata_payload_key,
-            )
-            return vs
+
+            data = docs_to_data(docs)
+            self.status = data
+            return data
         else:
-            vs = Qdrant.from_documents(
-                documents=documents,  # type: ignore
-                embedding=embedding,
-                api_key=api_key,
-                collection_name=collection_name,
-                content_payload_key=content_payload_key,
-                distance_func=distance_func,
-                grpc_port=grpc_port,
-                host=host,
-                https=https,
-                location=location,
-                metadata_payload_key=metadata_payload_key,
-                path=path,
-                port=port,
-                prefer_grpc=prefer_grpc,
-                prefix=prefix,
-                timeout=timeout,
-                url=url,
-            )
-        return vs
+            return []

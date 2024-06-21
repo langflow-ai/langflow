@@ -1,16 +1,17 @@
 import pytest
-from langflow.template.field.base import TemplateField
+
+from langflow.template.field.base import Input
 from langflow.template.frontend_node.base import FrontendNode
 from langflow.template.template.base import Template
 
 
 @pytest.fixture
-def sample_template_field() -> TemplateField:
-    return TemplateField(name="test_field", field_type="str")
+def sample_template_field() -> Input:
+    return Input(name="test_field", field_type="str")
 
 
 @pytest.fixture
-def sample_template(sample_template_field: TemplateField) -> Template:
+def sample_template(sample_template_field: Input) -> Template:
     return Template(type_name="test_template", fields=[sample_template_field])
 
 
@@ -24,21 +25,21 @@ def sample_frontend_node(sample_template: Template) -> FrontendNode:
     )
 
 
-def test_template_field_defaults(sample_template_field: TemplateField):
+def test_template_field_defaults(sample_template_field: Input):
     assert sample_template_field.field_type == "str"
     assert sample_template_field.required is False
     assert sample_template_field.placeholder == ""
     assert sample_template_field.is_list is False
     assert sample_template_field.show is True
     assert sample_template_field.multiline is False
-    assert sample_template_field.value == ""
+    assert sample_template_field.value is None
     assert sample_template_field.file_types == []
     assert sample_template_field.file_path == ""
     assert sample_template_field.password is False
     assert sample_template_field.name == "test_field"
 
 
-def test_template_to_dict(sample_template: Template, sample_template_field: TemplateField):
+def test_template_to_dict(sample_template: Template, sample_template_field: Input):
     template_dict = sample_template.to_dict()
     assert template_dict["_type"] == "test_template"
     assert len(template_dict) == 2  # _type and test_field

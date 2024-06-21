@@ -2,13 +2,13 @@ from typing import List
 
 from langchain_community.vectorstores.vectara import Vectara
 
-from langflow.components.vectorstores.base.model import LCVectorStoreComponent
-from langflow.components.vectorstores.Vectara import VectaraComponent
+from langflow.base.vectorstores.model import LCVectorStoreComponent
+from langflow.components.vectorstores.Vectara import VectaraVectorStoreComponent
 from langflow.field_typing import Text
-from langflow.schema import Record
+from langflow.schema import Data
 
 
-class VectaraSearchComponent(VectaraComponent, LCVectorStoreComponent):
+class VectaraSearchComponent(VectaraVectorStoreComponent, LCVectorStoreComponent):
     display_name: str = "Vectara Search"
     description: str = "Search a Vectara Vector Store for similar documents."
     documentation = "https://python.langchain.com/docs/integrations/vectorstores/vectara"
@@ -49,7 +49,7 @@ class VectaraSearchComponent(VectaraComponent, LCVectorStoreComponent):
         vectara_corpus_id: str,
         vectara_api_key: str,
         number_of_results: int = 4,
-    ) -> List[Record]:
+    ) -> List[Data]:
         source = "Langflow"
         vector_store = Vectara(
             vectara_customer_id=vectara_customer_id,

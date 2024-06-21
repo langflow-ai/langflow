@@ -2,8 +2,8 @@ import { ColDef, ColGroupDef } from "ag-grid-community";
 import clsx, { ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import TableAutoCellRender from "../components/tableComponent/components/tableAutoCellRender";
-import { MODAL_CLASSES } from "../constants/constants";
-import { APIDataType, TemplateVariableType } from "../types/api";
+import { MESSAGES_TABLE_ORDER, MODAL_CLASSES } from "../constants/constants";
+import { APIDataType, InputFieldType, VertexDataTypeAPI } from "../types/api";
 import {
   groupedObjType,
   nodeGroupedObjType,
@@ -11,6 +11,7 @@ import {
 } from "../types/components";
 import { NodeType } from "../types/flow";
 import { FlowState } from "../types/tabs";
+import { isErrorLog } from "../types/utils/typeCheckingUtils";
 
 export function classNames(...classes: Array<string>): string {
   return classes.filter(Boolean).join(" ");
@@ -56,7 +57,7 @@ export function normalCaseToSnakeCase(str: string): string {
 
 export function toTitleCase(
   str: string | undefined,
-  isNodeField?: boolean
+  isNodeField?: boolean,
 ): string {
   if (!str) return "";
   let result = str
@@ -65,7 +66,7 @@ export function toTitleCase(
       if (isNodeField) return word;
       if (index === 0) {
         return checkUpperWords(
-          word[0].toUpperCase() + word.slice(1).toLowerCase()
+          word[0].toUpperCase() + word.slice(1).toLowerCase(),
         );
       }
       return checkUpperWords(word.toLowerCase());
@@ -78,7 +79,7 @@ export function toTitleCase(
       if (isNodeField) return word;
       if (index === 0) {
         return checkUpperWords(
-          word[0].toUpperCase() + word.slice(1).toLowerCase()
+          word[0].toUpperCase() + word.slice(1).toLowerCase(),
         );
       }
       return checkUpperWords(word.toLowerCase());
@@ -182,7 +183,7 @@ export function checkLocalStorageKey(key: string): boolean {
 
 export function IncrementObjectKey(
   object: object,
-  key: string
+  key: string,
 ): { newKey: string; increment: number } {
   let count = 1;
   const type = removeCountFromString(key);
@@ -217,7 +218,7 @@ export function groupByFamily(
   data: APIDataType,
   baseClasses: string,
   left: boolean,
-  flow?: NodeType[]
+  flow?: NodeType[],
 ): groupedObjType[] {
   const baseClassesSet = new Set(baseClasses.split("\n"));
   let arrOfPossibleInputs: Array<{
@@ -235,7 +236,7 @@ export function groupByFamily(
   let checkedNodes = new Map();
   const excludeTypes = new Set(["bool", "float", "code", "file", "int"]);
 
-  const checkBaseClass = (template: TemplateVariableType) => {
+  const checkBaseClass = (template: InputFieldType) => {
     return (
       template?.type &&
       template?.show &&
@@ -243,7 +244,7 @@ export function groupByFamily(
         baseClassesSet.has(template.type)) ||
         (template?.input_types &&
           template?.input_types.some((inputType) =>
-            baseClassesSet.has(inputType)
+            baseClassesSet.has(inputType),
           )))
     );
   };
@@ -262,8 +263,8 @@ export function groupByFamily(
           Object.values(nodeData.node!.template).some(checkBaseClass),
         hasBaseClassInBaseClasses:
           foundNode?.hasBaseClassInBaseClasses ||
-          nodeData.node!.base_classes.some((baseClass) =>
-            baseClassesSet.has(baseClass)
+          nodeData.node!.base_classes?.some((baseClass) =>
+            baseClassesSet.has(baseClass),
           ), //seta como anterior ou verifica se o node tem base class
         displayName: nodeData.node?.display_name,
       });
@@ -280,10 +281,10 @@ export function groupByFamily(
       if (!foundNode) {
         foundNode = {
           hasBaseClassInTemplate: Object.values(node!.template).some(
-            checkBaseClass
+            checkBaseClass,
           ),
           hasBaseClassInBaseClasses: node!.base_classes?.some((baseClass) =>
-            baseClassesSet.has(baseClass)
+            baseClassesSet.has(baseClass),
           ),
           displayName: node?.display_name,
         };
@@ -355,7 +356,7 @@ export function isTimeStampString(str: string): boolean {
 export function extractColumnsFromRows(
   rows: object[],
   mode: "intersection" | "union",
-  excludeColumns?: Array<string>
+  excludeColumns?: Array<string>,
 ): (ColDef<any> | ColGroupDef<any>)[] {
   let columnsKeys: { [key: string]: ColDef<any> | ColGroupDef<any> } = {};
   if (rows.length === 0) {
@@ -412,3 +413,53 @@ export function isThereModal(): boolean {
   const modal = document.body.getElementsByClassName(MODAL_CLASSES);
   return modal.length > 0;
 }
+
+export function messagesSorter(a: any, b: any) {
+  const indexA = MESSAGES_TABLE_ORDER.indexOf(a.field);
+  const indexB = MESSAGES_TABLE_ORDER.indexOf(b.field);
+
+  // If the field is not in the MESSAGES_TABLE_ORDER, we can place it at the end.
+  const orderA = indexA === -1 ? MESSAGES_TABLE_ORDER.length : indexA;
+  const orderB = indexB === -1 ? MESSAGES_TABLE_ORDER.length : indexB;
+
+  return orderA - orderB;
+}
+
+export const logHasMessage = (
+  data: VertexDataTypeAPI,
+  outputName: string | undefined,
+) => {
+  if (!outputName) return;
+  const logs = data?.logs[outputName];
+  if (Array.isArray(logs) && logs.length > 1) {
+    return logs.some((log) => log.message);
+  } else {
+    return logs?.message;
+  }
+};
+
+export const logTypeIsUnknown = (
+  data: VertexDataTypeAPI,
+  outputName: string | undefined,
+) => {
+  if (!outputName) return;
+  const logs = data?.logs[outputName];
+  if (Array.isArray(logs) && logs.length > 1) {
+    return logs.some((log) => log.type === "unknown");
+  } else {
+    return logs?.type === "unknown";
+  }
+};
+
+export const logTypeIsError = (
+  data: VertexDataTypeAPI,
+  outputName: string | undefined,
+) => {
+  if (!outputName) return;
+  const logs = data?.logs[outputName];
+  if (Array.isArray(logs) && logs.length > 1) {
+    return logs.some((log) => isErrorLog(log));
+  } else {
+    return isErrorLog(logs);
+  }
+};

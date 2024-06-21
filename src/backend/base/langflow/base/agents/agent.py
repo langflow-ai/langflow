@@ -4,10 +4,10 @@ from langchain.agents import AgentExecutor, BaseMultiActionAgent, BaseSingleActi
 from langchain_core.messages import BaseMessage
 from langchain_core.runnables import Runnable
 
-from langflow.base.agents.utils import get_agents_list, records_to_messages
+from langflow.base.agents.utils import data_to_messages, get_agents_list
 from langflow.custom import CustomComponent
 from langflow.field_typing import Text, Tool
-from langflow.schema import Record
+from langflow.schema import Data
 
 
 class LCAgentComponent(CustomComponent):
@@ -49,7 +49,7 @@ class LCAgentComponent(CustomComponent):
         agent: Union[Runnable, BaseSingleActionAgent, BaseMultiActionAgent, AgentExecutor],
         inputs: str,
         tools: List[Tool],
-        message_history: Optional[List[Record]] = None,
+        message_history: Optional[List[Data]] = None,
         handle_parsing_errors: bool = True,
         output_key: str = "output",
     ) -> Text:
@@ -64,7 +64,7 @@ class LCAgentComponent(CustomComponent):
             )
         input_dict: dict[str, str | list[BaseMessage]] = {"input": inputs}
         if message_history:
-            input_dict["chat_history"] = records_to_messages(message_history)
+            input_dict["chat_history"] = data_to_messages(message_history)
         result = await runnable.ainvoke(input_dict)
         self.status = result
         if output_key in result:

@@ -97,10 +97,10 @@ class ChatOutputResponse(BaseModel):
         return self
 
 
-class RecordOutputResponse(BaseModel):
-    """Record output response schema."""
+class DataOutputResponse(BaseModel):
+    """Data output response schema."""
 
-    records: List[Optional[Dict]]
+    data: List[Optional[Dict]]
 
 
 class ContainsEnumMeta(enum.EnumMeta):

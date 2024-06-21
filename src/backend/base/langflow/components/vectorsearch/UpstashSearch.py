@@ -2,10 +2,10 @@ from typing import List, Optional
 
 from langchain_core.embeddings import Embeddings
 
-from langflow.components.vectorstores.base.model import LCVectorStoreComponent
+from langflow.base.vectorstores.model import LCVectorStoreComponent
 from langflow.components.vectorstores.Upstash import UpstashVectorStoreComponent
 from langflow.field_typing import Text
-from langflow.schema import Record
+from langflow.schema import Data
 
 
 class UpstashSearchComponent(UpstashVectorStoreComponent, LCVectorStoreComponent):
@@ -29,7 +29,7 @@ class UpstashSearchComponent(UpstashVectorStoreComponent, LCVectorStoreComponent
                 "options": ["Similarity", "MMR"],
             },
             "input_value": {"display_name": "Input"},
-            "inputs": {"display_name": "Input", "input_types": ["Document", "Record"]},
+            "inputs": {"display_name": "Input", "input_types": ["Document", "Data"]},
             "embedding": {
                 "display_name": "Embedding",
                 "input_types": ["Embeddings"],
@@ -64,7 +64,7 @@ class UpstashSearchComponent(UpstashVectorStoreComponent, LCVectorStoreComponent
         index_token: Optional[str] = None,
         embedding: Optional[Embeddings] = None,
         number_of_results: int = 4,
-    ) -> List[Record]:
+    ) -> List[Data]:
         vector_store = super().build(
             embedding=embedding,
             text_key=text_key,

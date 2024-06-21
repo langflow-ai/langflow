@@ -1,134 +1,169 @@
 from copy import deepcopy
-from typing import List, Optional, Union
+from typing import TYPE_CHECKING
 
-import chromadb
 from chromadb.config import Settings
-from langchain_chroma import Chroma
-from langchain_core.embeddings import Embeddings
-from langchain_core.retrievers import BaseRetriever
-from langchain_core.vectorstores import VectorStore
-from langflow.base.vectorstores.utils import chroma_collection_to_records
-from langflow.custom import CustomComponent
-from langflow.schema import Record
+from langchain_chroma.vectorstores import Chroma
+from loguru import logger
+
+from langflow.base.vectorstores.model import LCVectorStoreComponent
+from langflow.base.vectorstores.utils import chroma_collection_to_data
+from langflow.io import BoolInput, DataInput, DropdownInput, HandleInput, IntInput, StrInput, TextInput
+from langflow.schema import Data
+
+if TYPE_CHECKING:
+    from langchain_chroma import Chroma
 
 
-class ChromaComponent(CustomComponent):
+class ChromaVectorStoreComponent(LCVectorStoreComponent):
     """
-    A custom component for implementing a Vector Store using Chroma.
+    Chroma Vector Store with search capabilities
     """
 
-    display_name: str = "Chroma"
-    description: str = "Implementation of Vector Store using Chroma"
+    display_name: str = "Chroma DB"
+    description: str = "Chroma Vector Store with search capabilities"
     documentation = "https://python.langchain.com/docs/integrations/vectorstores/chroma"
     icon = "Chroma"
 
-    def build_config(self):
+    inputs = [
+        StrInput(
+            name="collection_name",
+            display_name="Collection Name",
+            value="langflow",
+        ),
+        StrInput(
+            name="persist_directory",
+            display_name="Persist Directory",
+        ),
+        TextInput(
+            name="search_query",
+            display_name="Search Query",
+        ),
+        DataInput(
+            name="ingest_data",
+            display_name="Ingest Data",
+        ),
+        HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
+        StrInput(
+            name="chroma_server_cors_allow_origins",
+            display_name="Server CORS Allow Origins",
+            advanced=True,
+        ),
+        StrInput(
+            name="chroma_server_host",
+            display_name="Server Host",
+            advanced=True,
+        ),
+        IntInput(
+            name="chroma_server_http_port",
+            display_name="Server HTTP Port",
+            advanced=True,
+        ),
+        IntInput(
+            name="chroma_server_grpc_port",
+            display_name="Server gRPC Port",
+            advanced=True,
+        ),
+        BoolInput(
+            name="chroma_server_ssl_enabled",
+            display_name="Server SSL Enabled",
+            advanced=True,
+        ),
+        BoolInput(
+            name="allow_duplicates",
+            display_name="Allow Duplicates",
+            advanced=True,
+            info="If false, will not add documents that are already in the Vector Store.",
+        ),
+        DropdownInput(
+            name="search_type",
+            display_name="Search Type",
+            options=["Similarity", "MMR"],
+            value="Similarity",
+            advanced=True,
+        ),
+        IntInput(
+            name="number_of_results",
+            display_name="Number of Results",
+            info="Number of results to return.",
+            advanced=True,
+            value=10,
+        ),
+        IntInput(
+            name="limit",
+            display_name="Limit",
+            advanced=True,
+            info="Limit the number of records to compare when Allow Duplicates is False.",
+        ),
+    ]
+
+    def build_vector_store(self) -> "Chroma":
         """
-        Builds the configuration for the component.
-
-        Returns:
-        - dict: A dictionary containing the configuration options for the component.
+        Builds the Chroma object.
         """
-        return {
-            "collection_name": {"display_name": "Collection Name", "value": "langflow"},
-            "index_directory": {"display_name": "Persist Directory"},
-            "code": {"advanced": True, "display_name": "Code"},
-            "inputs": {"display_name": "Input", "input_types": ["Document", "Record"]},
-            "embedding": {"display_name": "Embedding"},
-            "chroma_server_cors_allow_origins": {
-                "display_name": "Server CORS Allow Origins",
-                "advanced": True,
-            },
-            "chroma_server_host": {"display_name": "Server Host", "advanced": True},
-            "chroma_server_http_port": {"display_name": "Server HTTP Port", "advanced": True},
-            "chroma_server_grpc_port": {
-                "display_name": "Server gRPC Port",
-                "advanced": True,
-            },
-            "chroma_server_ssl_enabled": {
-                "display_name": "Server SSL Enabled",
-                "advanced": True,
-            },
-            "allow_duplicates": {
-                "display_name": "Allow Duplicates",
-                "advanced": True,
-                "info": "If false, will not add documents that are already in the Vector Store.",
-            },
-        }
-
-    def build(
-        self,
-        collection_name: str,
-        embedding: Embeddings,
-        chroma_server_ssl_enabled: bool,
-        index_directory: Optional[str] = None,
-        inputs: Optional[List[Record]] = None,
-        chroma_server_cors_allow_origins: List[str] = [],
-        chroma_server_host: Optional[str] = None,
-        chroma_server_http_port: Optional[int] = None,
-        chroma_server_grpc_port: Optional[int] = None,
-        allow_duplicates: bool = False,
-    ) -> Union[VectorStore, BaseRetriever]:
-        """
-        Builds the Vector Store or BaseRetriever object.
-
-        Args:
-        - collection_name (str): The name of the collection.
-        - embedding (Embeddings): The embeddings to use for the Vector Store.
-        - chroma_server_ssl_enabled (bool): Whether to enable SSL for the Chroma server.
-        - index_directory (Optional[str]): The directory to persist the Vector Store to.
-        - inputs (Optional[List[Record]]): The input records to use for the Vector Store.
-        - chroma_server_cors_allow_origins (List[str]): The CORS allow origins for the Chroma server.
-        - chroma_server_host (Optional[str]): The host for the Chroma server.
-        - chroma_server_http_port (Optional[int]): The HTTP port for the Chroma server.
-        - chroma_server_grpc_port (Optional[int]): The gRPC port for the Chroma server.
-        - allow_duplicates (bool): Whether to allow duplicates in the Vector Store.
-
-        Returns:
-        - Union[VectorStore, BaseRetriever]: The Vector Store or BaseRetriever object.
-        """
-
+        try:
+            from chromadb import Client
+            from langchain_chroma import Chroma
+        except ImportError:
+            raise ImportError(
+                "Could not import Chroma integration package. " "Please install it with `pip install langchain-chroma`."
+            )
         # Chroma settings
         chroma_settings = None
         client = None
-        if chroma_server_host is not None:
+        if self.chroma_server_host:
             chroma_settings = Settings(
-                chroma_server_cors_allow_origins=chroma_server_cors_allow_origins or [],
-                chroma_server_host=chroma_server_host,
-                chroma_server_http_port=chroma_server_http_port or None,
-                chroma_server_grpc_port=chroma_server_grpc_port or None,
-                chroma_server_ssl_enabled=chroma_server_ssl_enabled,
+                chroma_server_cors_allow_origins=self.chroma_server_cors_allow_origins or [],
+                chroma_server_host=self.chroma_server_host,
+                chroma_server_http_port=self.chroma_server_http_port or None,
+                chroma_server_grpc_port=self.chroma_server_grpc_port or None,
+                chroma_server_ssl_enabled=self.chroma_server_ssl_enabled,
             )
-            client = chromadb.HttpClient(settings=chroma_settings)
+            client = Client(settings=chroma_settings)
 
-        # Check index_directory and expand it if it is a relative path
-        if index_directory is not None:
-            index_directory = self.resolve_path(index_directory)
+        # Check persist_directory and expand it if it is a relative path
+        if self.persist_directory is not None:
+            persist_directory = self.resolve_path(self.persist_directory)
+        else:
+            persist_directory = None
 
         chroma = Chroma(
-            persist_directory=index_directory or None,
+            persist_directory=persist_directory,
             client=client,
-            embedding_function=embedding,
-            collection_name=collection_name,
+            embedding_function=self.embedding,
+            collection_name=self.collection_name,
         )
-        if allow_duplicates:
-            stored_records = []
+
+        self._add_documents_to_vector_store(chroma)
+        self.status = chroma_collection_to_data(chroma.get(limit=self.limit))
+        return chroma
+
+    def _add_documents_to_vector_store(self, vector_store: "Chroma") -> None:
+        """
+        Adds documents to the Vector Store.
+        """
+        if not self.ingest_data:
+            self.status = ""
+            return
+
+        _stored_documents_without_id = []
+        if self.allow_duplicates:
+            stored_data = []
         else:
-            stored_records = chroma_collection_to_records(chroma.get())
-            _stored_documents_without_id = []
-            for record in deepcopy(stored_records):
-                del record.id
-                _stored_documents_without_id.append(record)
+            stored_data = chroma_collection_to_data(vector_store.get(self.limit))
+            for value in deepcopy(stored_data):
+                del value.id
+                _stored_documents_without_id.append(value)
+
         documents = []
-        for _input in inputs or []:
-            if isinstance(_input, Record):
+        for _input in self.ingest_data or []:
+            if isinstance(_input, Data):
                 if _input not in _stored_documents_without_id:
                     documents.append(_input.to_lc_document())
             else:
-                raise ValueError("Inputs must be a Record objects.")
+                raise ValueError("Vector Store Inputs must be Data objects.")
 
-        if documents and embedding is not None:
-            chroma.add_documents(documents)
-
-        self.status = stored_records
-        return chroma
+        if documents and self.embedding is not None:
+            logger.debug(f"Adding {len(documents)} documents to the Vector Store.")
+            vector_store.add_documents(documents)
+        else:
+            logger.debug("No documents to add to the Vector Store.")

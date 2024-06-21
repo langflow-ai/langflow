@@ -4,6 +4,7 @@ import { TypeModal } from "../../constants/enums";
 import GenericModal from "../../modals/genericModal";
 import { TextAreaComponentType } from "../../types/components";
 import IconComponent from "../genericIconComponent";
+import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 
 export default function TextAreaComponent({
@@ -22,7 +23,7 @@ export default function TextAreaComponent({
 
   return (
     <div className={"flex w-full items-center " + (disabled ? "" : "")}>
-      <div className="flex w-full items-center" data-testid={"div-" + id}>
+      <div className="flex w-full items-center gap-3" data-testid={"div-" + id}>
         <Input
           id={id}
           data-testid={id}
@@ -34,7 +35,7 @@ export default function TextAreaComponent({
             onChange(event.target.value);
           }}
         />
-        <div>
+        <div className="flex items-center">
           <GenericModal
             type={TypeModal.TEXT}
             buttonText="Finish Editing"
@@ -43,17 +44,20 @@ export default function TextAreaComponent({
             setValue={(value: string) => {
               onChange(value);
             }}
+            disabled={disabled}
           >
             {!editNode && (
-              <IconComponent
-                strokeWidth={1.5}
-                id={id}
-                name="ExternalLink"
-                className={
-                  "icons-parameters-comp w-[1.35rem]" +
-                  (disabled ? " text-ring" : " hover:text-accent-foreground")
-                }
-              />
+              <Button unstyled>
+                <IconComponent
+                  strokeWidth={1.5}
+                  id={id}
+                  name="ExternalLink"
+                  className={
+                    "icons-parameters-comp shrink-0" +
+                    (disabled ? " text-ring" : " hover:text-accent-foreground")
+                  }
+                />
+              </Button>
             )}
           </GenericModal>
         </div>

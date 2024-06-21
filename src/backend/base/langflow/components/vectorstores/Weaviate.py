@@ -1,108 +1,106 @@
-from typing import Optional, Union
+from typing import List
 
 import weaviate  # type: ignore
 from langchain_community.vectorstores import Weaviate
-from langchain_core.documents import Document
-from langchain_core.embeddings import Embeddings
 from langchain_core.retrievers import BaseRetriever
-from langchain_core.vectorstores import VectorStore
 
-from langflow.custom import CustomComponent
-from langflow.schema import Record
+from langflow.custom import Component
+from langflow.helpers.data import docs_to_data
+from langflow.io import BoolInput, HandleInput, IntInput, Output, SecretStrInput, StrInput
+from langflow.schema import Data
 
 
-class WeaviateVectorStoreComponent(CustomComponent):
-    display_name: str = "Weaviate"
-    description: str = "Implementation of Vector Store using Weaviate"
-    documentation = "https://python.langchain.com/docs/integrations/vectorstores/weaviate"
-    field_config = {
-        "url": {"display_name": "Weaviate URL", "value": "http://localhost:8080"},
-        "api_key": {
-            "display_name": "API Key",
-            "password": True,
-            "required": False,
-        },
-        "index_name": {
-            "display_name": "Index name",
-            "required": False,
-        },
-        "text_key": {
-            "display_name": "Text Key",
-            "required": False,
-            "advanced": True,
-            "value": "text",
-        },
-        "inputs": {"display_name": "Input", "input_types": ["Document", "Record"]},
-        "embedding": {"display_name": "Embedding"},
-        "attributes": {
-            "display_name": "Attributes",
-            "required": False,
-            "is_list": True,
-            "field_type": "str",
-            "advanced": True,
-        },
-        "search_by_text": {
-            "display_name": "Search By Text",
-            "field_type": "bool",
-            "advanced": True,
-        },
-        "code": {"show": False},
-    }
+class WeaviateVectorStoreComponent(Component):
+    display_name = "Weaviate"
+    description = "Weaviate Vector Store with search capabilities"
+    documentation = "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/weaviate"
+    icon = "Weaviate"
 
-    def build(
-        self,
-        url: str,
-        index_name: str,
-        search_by_text: bool = False,
-        api_key: Optional[str] = None,
-        text_key: str = "text",
-        embedding: Optional[Embeddings] = None,
-        inputs: Optional[Record] = None,
-        attributes: Optional[list] = None,
-    ) -> Union[VectorStore, BaseRetriever]:
-        if api_key:
-            auth_config = weaviate.AuthApiKey(api_key=api_key)
-            client = weaviate.Client(url=url, auth_client_secret=auth_config)
+    inputs = [
+        StrInput(name="url", display_name="Weaviate URL", value="http://localhost:8080", required=True),
+        SecretStrInput(name="api_key", display_name="API Key", required=False),
+        StrInput(name="index_name", display_name="Index Name", required=True),
+        StrInput(name="text_key", display_name="Text Key", value="text", advanced=True),
+        HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
+        HandleInput(
+            name="vector_store_inputs",
+            display_name="Vector Store Inputs",
+            input_types=["Document", "Data"],
+            is_list=True,
+        ),
+        BoolInput(
+            name="add_to_vector_store",
+            display_name="Add to Vector Store",
+            info="If true, the Vector Store Inputs will be added to the Vector Store.",
+        ),
+        StrInput(name="search_input", display_name="Search Input"),
+        IntInput(
+            name="number_of_results",
+            display_name="Number of Results",
+            info="Number of results to return.",
+            value=4,
+            advanced=True,
+        ),
+        BoolInput(name="search_by_text", display_name="Search By Text", advanced=True),
+    ]
+
+    outputs = [
+        Output(display_name="Vector Store", name="vector_store", method="build_vector_store", output_type=Weaviate),
+        Output(
+            display_name="Base Retriever",
+            name="base_retriever",
+            method="build_base_retriever",
+            output_type=BaseRetriever,
+        ),
+        Output(display_name="Search Results", name="search_results", method="search_documents"),
+    ]
+
+    def build_vector_store(self) -> Weaviate:
+        return self._build_weaviate()
+
+    def _build_weaviate(self) -> Weaviate:
+        if self.api_key:
+            auth_config = weaviate.AuthApiKey(api_key=self.api_key)
+            client = weaviate.Client(url=self.url, auth_client_secret=auth_config)
         else:
-            client = weaviate.Client(url=url)
+            client = weaviate.Client(url=self.url)
 
-        def _to_pascal_case(word: str):
-            if word and not word[0].isupper():
-                word = word.capitalize()
+        if self.add_to_vector_store:
+            documents = []
+            for _input in self.vector_store_inputs or []:
+                if isinstance(_input, Data):
+                    documents.append(_input.to_lc_document())
+                else:
+                    documents.append(_input)
 
-            if word.isidentifier():
-                return word
-
-            word = word.replace("-", " ").replace("_", " ")
-            parts = word.split()
-            pascal_case_word = "".join([part.capitalize() for part in parts])
-
-            return pascal_case_word
-
-        index_name = _to_pascal_case(index_name) if index_name else None
-        if not index_name:
-            raise ValueError("Index name is required")
-        documents: list[Document] = []
-        for _input in inputs or []:
-            if isinstance(_input, Record):
-                documents.append(_input.to_lc_document())
-            elif isinstance(_input, Document):
-                documents.append(_input)
-
-        if documents and embedding is not None:
-            return Weaviate.from_documents(
-                client=client,
-                index_name=index_name,
-                documents=documents,
-                embedding=embedding,
-                by_text=search_by_text,
-            )
+            if documents and self.embedding:
+                return Weaviate.from_documents(
+                    client=client,
+                    index_name=self.index_name,
+                    documents=documents,
+                    embedding=self.embedding,
+                    by_text=self.search_by_text,
+                )
 
         return Weaviate(
             client=client,
-            index_name=index_name,
-            text_key=text_key,
-            embedding=embedding,
-            by_text=search_by_text,
-            attributes=attributes if attributes is not None else [],
+            index_name=self.index_name,
+            text_key=self.text_key,
+            embedding=self.embedding,
+            by_text=self.search_by_text,
         )
+
+    def search_documents(self) -> List[Data]:
+        vector_store = self._build_weaviate()
+
+        if self.search_input and isinstance(self.search_input, str) and self.search_input.strip():
+            docs = vector_store.similarity_search(
+                query=self.search_input,
+                k=self.number_of_results,
+            )
+
+            data = docs_to_data(docs)
+            self.status = data
+            return data
+        else:
+            return []

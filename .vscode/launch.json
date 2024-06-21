@@ -15,7 +15,9 @@
         "--log-level",
         "debug",
         "--loop",
-        "asyncio"
+        "asyncio",
+        "--reload-include",
+        "src/backend/*"
       ],
       "jinja": true,
       "justMyCode": false,

@@ -6,7 +6,7 @@ from langchain_community.tools.json.tool import JsonSpec
 from langchain_community.utilities.requests import TextRequestsWrapper
 
 from langflow.custom import CustomComponent
-from langflow.field_typing import BaseLanguageModel
+from langflow.field_typing import LanguageModel
 
 
 class OpenAPIToolkitComponent(CustomComponent):
@@ -19,7 +19,7 @@ class OpenAPIToolkitComponent(CustomComponent):
             "requests_wrapper": {"display_name": "Text Requests Wrapper"},
         }
 
-    def build(self, llm: BaseLanguageModel, path: str, allow_dangerous_requests: bool = False) -> BaseToolkit:
+    def build(self, llm: LanguageModel, path: str, allow_dangerous_requests: bool = False) -> BaseToolkit:
         if path.endswith("yaml") or path.endswith("yml"):
             yaml_dict = yaml.load(open(path, "r"), Loader=yaml.FullLoader)
             spec = JsonSpec(dict_=yaml_dict)

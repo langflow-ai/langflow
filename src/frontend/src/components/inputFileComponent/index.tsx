@@ -8,6 +8,7 @@ import useAlertStore from "../../stores/alertStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { FileComponentType } from "../../types/components";
 import IconComponent from "../genericIconComponent";
+import { Button } from "../ui/button";
 
 export default function InputFileComponent({
   value,
@@ -98,33 +99,33 @@ export default function InputFileComponent({
 
   return (
     <div className={disabled ? "input-component-div" : "w-full"}>
-      <div className="input-file-component">
+      <div className="input-file-component gap-3">
         <span
           onClick={handleButtonClick}
           className={
             editNode
               ? "input-edit-node input-dialog text-muted-foreground"
               : disabled
-              ? "input-disable input-dialog primary-input"
-              : "input-dialog primary-input text-muted-foreground"
+                ? "input-disable input-dialog primary-input"
+                : "input-dialog primary-input text-muted-foreground"
           }
         >
           {myValue !== "" ? myValue : "No file"}
         </span>
-        <button onClick={handleButtonClick}>
-          {!editNode && !loading && (
+        {!editNode && (
+          <Button
+            unstyled
+            className="inline-flex items-center justify-center"
+            onClick={handleButtonClick}
+            loading={loading}
+            disabled={disabled}
+          >
             <IconComponent
               name="FileSearch2"
-              className={
-                "icons-parameters-comp" +
-                (disabled ? " text-ring" : " hover:text-accent-foreground")
-              }
+              className="icons-parameters-comp shrink-0"
             />
-          )}
-          {!editNode && loading && (
-            <span className="loading loading-spinner loading-sm pointer-events-none h-8 pl-3"></span>
-          )}
-        </button>
+          </Button>
+        )}
       </div>
     </div>
   );

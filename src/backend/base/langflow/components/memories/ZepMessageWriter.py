@@ -2,7 +2,7 @@ from typing import TYPE_CHECKING, Optional
 
 from langflow.base.memory.memory import BaseMemoryComponent
 from langflow.field_typing import Text
-from langflow.schema import Record
+from langflow.schema import Data
 
 if TYPE_CHECKING:
     from zep_python.langchain import ZepChatMessageHistory
@@ -35,8 +35,8 @@ class ZepMessageWriterComponent(BaseMemoryComponent):
                 "advanced": True,
             },
             "input_value": {
-                "display_name": "Input Record",
-                "info": "Record to write to Zep.",
+                "display_name": "Input Data",
+                "info": "Data to write to Zep.",
             },
             "api_base_path": {
                 "display_name": "API Base Path",
@@ -78,12 +78,12 @@ class ZepMessageWriterComponent(BaseMemoryComponent):
 
     def build(
         self,
-        input_value: Record,
+        input_value: Data,
         session_id: Text,
         api_base_path: str = "api/v1",
         url: Optional[Text] = None,
         api_key: Optional[Text] = None,
-    ) -> Record:
+    ) -> Data:
         try:
             # Monkeypatch API_BASE_PATH to
             # avoid 404

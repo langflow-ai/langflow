@@ -29,10 +29,8 @@ export default function FileCard({
 
   const imgSrc = `${BACKEND_URL.slice(
     0,
-    BACKEND_URL.length - 1
+    BACKEND_URL.length - 1,
   )}${BASE_URL_API}files/images/${content}`;
-
-  console.log(imgSrc);
 
   if (showFile) {
     if (imgTypes.has(fileType)) {

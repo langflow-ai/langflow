@@ -1,10 +1,10 @@
 from typing import Any, List, Optional
 
-from langflow.base.flow_processing.utils import build_records_from_run_outputs
+from langflow.base.flow_processing.utils import build_data_from_run_outputs
 from langflow.custom import CustomComponent
 from langflow.field_typing import NestedDict, Text
 from langflow.graph.schema import RunOutputs
-from langflow.schema import Record, dotdict
+from langflow.schema import Data, dotdict
 
 
 class RunFlowComponent(CustomComponent):
@@ -13,8 +13,8 @@ class RunFlowComponent(CustomComponent):
     beta: bool = True
 
     def get_flow_names(self) -> List[str]:
-        flow_records = self.list_flows()
-        return [flow_record.data["name"] for flow_record in flow_records]
+        flow_data = self.list_flows()
+        return [flow_data.data["name"] for flow_data in flow_data]
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
         if field_name == "flow_name":
@@ -40,17 +40,17 @@ class RunFlowComponent(CustomComponent):
             },
         }
 
-    async def build(self, input_value: Text, flow_name: str, tweaks: NestedDict) -> List[Record]:
+    async def build(self, input_value: Text, flow_name: str, tweaks: NestedDict) -> List[Data]:
         results: List[Optional[RunOutputs]] = await self.run_flow(
             inputs={"input_value": input_value}, flow_name=flow_name, tweaks=tweaks
         )
         if isinstance(results, list):
-            records = []
+            data = []
             for result in results:
                 if result:
-                    records.extend(build_records_from_run_outputs(result))
+                    data.extend(build_data_from_run_outputs(result))
         else:
-            records = build_records_from_run_outputs()(results)
+            data = build_data_from_run_outputs()(results)
 
-        self.status = records
-        return records
+        self.status = data
+        return data

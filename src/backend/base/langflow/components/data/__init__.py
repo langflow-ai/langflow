@@ -1,8 +1,7 @@
-from .APIRequest import APIRequest
+from .APIRequest import APIRequestComponent
 from .Directory import DirectoryComponent
 from .File import FileComponent
+from .URL import URLComponent
 from .Webhook import WebhookComponent
 
-from .URL import URLComponent
-
-__all__ = ["APIRequest", "DirectoryComponent", "FileComponent", "URLComponent", "WebhookComponent"]
+__all__ = ["APIRequestComponent", "DirectoryComponent", "FileComponent", "URLComponent", "WebhookComponent"]

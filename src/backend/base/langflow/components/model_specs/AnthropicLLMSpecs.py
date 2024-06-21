@@ -1,10 +1,10 @@
 from typing import Optional
 
 from langchain_anthropic import ChatAnthropic
-from langchain_core.language_models import BaseLanguageModel
 from pydantic.v1 import SecretStr
 
 from langflow.custom import CustomComponent
+from langflow.field_typing import LanguageModel
 
 
 class ChatAntropicSpecsComponent(CustomComponent):
@@ -54,10 +54,10 @@ class ChatAntropicSpecsComponent(CustomComponent):
         self,
         model: str,
         anthropic_api_key: Optional[str] = None,
-        max_tokens: Optional[int] = None,
+        max_tokens: Optional[int] = 1000,
         temperature: Optional[float] = None,
         api_endpoint: Optional[str] = None,
-    ) -> BaseLanguageModel:
+    ) -> LanguageModel:
         # Set default API endpoint if not provided
         if not api_endpoint:
             api_endpoint = "https://api.anthropic.com"

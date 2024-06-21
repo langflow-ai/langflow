@@ -1,15 +1,14 @@
-from typing import Optional, Union
+from typing import Optional, cast
 
 from langchain_community.vectorstores.redis import Redis
 from langchain_core.embeddings import Embeddings
-from langchain_core.retrievers import BaseRetriever
-from langchain_core.vectorstores import VectorStore
 
 from langflow.custom import CustomComponent
-from langflow.schema import Record
+from langflow.field_typing import VectorStore
+from langflow.schema import Data
 
 
-class RedisComponent(CustomComponent):
+class RedisVectorStoreComponent(CustomComponent):
     """
     A custom component for implementing a Vector Store using Redis.
     """
@@ -28,7 +27,7 @@ class RedisComponent(CustomComponent):
         return {
             "index_name": {"display_name": "Index Name", "value": "your_index"},
             "code": {"show": False, "display_name": "Code"},
-            "inputs": {"display_name": "Input", "input_types": ["Document", "Record"]},
+            "inputs": {"display_name": "Input", "input_types": ["Document", "Data"]},
             "embedding": {"display_name": "Embedding"},
             "schema": {"display_name": "Schema", "file_types": [".yaml"]},
             "redis_server_url": {
@@ -44,8 +43,8 @@ class RedisComponent(CustomComponent):
         redis_server_url: str,
         redis_index_name: str,
         schema: Optional[str] = None,
-        inputs: Optional[Record] = None,
-    ) -> Union[VectorStore, BaseRetriever]:
+        inputs: Optional[Data] = None,
+    ) -> VectorStore:
         """
         Builds the Vector Store or BaseRetriever object.
 
@@ -60,7 +59,7 @@ class RedisComponent(CustomComponent):
         """
         documents = []
         for _input in inputs or []:
-            if isinstance(_input, Record):
+            if isinstance(_input, Data):
                 documents.append(_input.to_lc_document())
             else:
                 documents.append(_input)
@@ -81,4 +80,4 @@ class RedisComponent(CustomComponent):
                 redis_url=redis_server_url,
                 index_name=redis_index_name,
             )
-        return redis_vs
+        return cast(VectorStore, redis_vs)

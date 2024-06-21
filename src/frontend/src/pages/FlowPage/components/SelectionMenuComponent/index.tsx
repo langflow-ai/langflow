@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
+import { useHotkeys } from "react-hotkeys-hook";
 import { NodeToolbar } from "reactflow";
+import { Button } from "../../../../components/ui/button";
 import { GradientGroup } from "../../../../icons/GradientSparkles";
 import useFlowStore from "../../../../stores/flowStore";
 import { validateSelection } from "../../../../utils/reactflowUtils";
@@ -10,14 +12,17 @@ export default function SelectionMenu({
   lastSelection,
 }) {
   const edges = useFlowStore((state) => state.edges);
+  const unselectAll = useFlowStore((state) => state.unselectAll);
   const [disable, setDisable] = useState<boolean>(
     lastSelection && edges.length > 0
       ? validateSelection(lastSelection!, edges).length > 0
-      : false
+      : false,
   );
   const [isOpen, setIsOpen] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [lastNodes, setLastNodes] = useState(nodes);
+
+  useHotkeys("esc", unselectAll, { preventDefault: true });
 
   useEffect(() => {
     if (isOpen) {
@@ -61,7 +66,8 @@ export default function SelectionMenu({
             (isTransitioning ? " opacity-100" : " opacity-0")
           }
         >
-          <button
+          <Button
+            unstyled
             className={`${
               disable
                 ? "flex h-full w-full cursor-not-allowed items-center justify-between text-sm text-muted-foreground"
@@ -77,7 +83,7 @@ export default function SelectionMenu({
               disabled={disable}
             />
             Group
-          </button>
+          </Button>
         </div>
       </div>
     </NodeToolbar>

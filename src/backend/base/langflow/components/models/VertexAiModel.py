@@ -1,8 +1,9 @@
-from typing import Optional
+from langchain_google_vertexai import ChatVertexAI
 
 from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
-from langflow.field_typing import Text
+from langflow.field_typing import LanguageModel
+from langflow.io import BoolInput, FileInput, FloatInput, IntInput, MessageInput, MultilineInput, Output, StrInput
 
 
 class ChatVertexAIComponent(LCModelComponent):
@@ -10,103 +11,58 @@ class ChatVertexAIComponent(LCModelComponent):
     description = "Generate text using Vertex AI LLMs."
     icon = "VertexAI"
 
-    field_order = [
-        "credentials",
-        "project",
-        "examples",
-        "location",
-        "max_output_tokens",
-        "model_name",
-        "temperature",
-        "top_k",
-        "top_p",
-        "verbose",
-        "input_value",
-        "system_message",
-        "stream",
+    inputs = [
+        MessageInput(name="input_value", display_name="Input"),
+        FileInput(
+            name="credentials",
+            display_name="Credentials",
+            info="Path to the JSON file containing the credentials.",
+            file_types=["json"],
+            advanced=True,
+        ),
+        StrInput(name="project", display_name="Project", info="The project ID."),
+        MultilineInput(
+            name="examples",
+            display_name="Examples",
+            info="Examples to pass to the model.",
+            advanced=True,
+        ),
+        StrInput(name="location", display_name="Location", value="us-central1", advanced=True),
+        IntInput(
+            name="max_output_tokens",
+            display_name="Max Output Tokens",
+            value=128,
+            advanced=True,
+        ),
+        StrInput(name="model_name", display_name="Model Name", value="gemini-1.5-pro"),
+        FloatInput(name="temperature", display_name="Temperature", value=0.0),
+        IntInput(name="top_k", display_name="Top K", value=40, advanced=True),
+        FloatInput(name="top_p", display_name="Top P", value=0.95, advanced=True),
+        BoolInput(name="verbose", display_name="Verbose", value=False, advanced=True),
+        BoolInput(name="stream", display_name="Stream", info=STREAM_INFO_TEXT, advanced=True),
+        StrInput(
+            name="system_message",
+            display_name="System Message",
+            info="System message to pass to the model.",
+            advanced=True,
+        ),
+    ]
+    outputs = [
+        Output(display_name="Text", name="text_output", method="text_response"),
+        Output(display_name="Language Model", name="model_output", method="build_model"),
     ]
 
-    def build_config(self):
-        return {
-            "credentials": {
-                "display_name": "Credentials",
-                "field_type": "file",
-                "file_types": [".json"],
-                "file_path": None,
-            },
-            "examples": {
-                "display_name": "Examples",
-                "multiline": True,
-            },
-            "location": {
-                "display_name": "Location",
-                "value": "us-central1",
-            },
-            "max_output_tokens": {
-                "display_name": "Max Output Tokens",
-                "value": 128,
-                "advanced": True,
-            },
-            "model_name": {
-                "display_name": "Model Name",
-                "value": "chat-bison",
-            },
-            "project": {
-                "display_name": "Project",
-            },
-            "temperature": {
-                "display_name": "Temperature",
-                "value": 0.0,
-            },
-            "top_k": {
-                "display_name": "Top K",
-                "value": 40,
-                "advanced": True,
-            },
-            "top_p": {
-                "display_name": "Top P",
-                "value": 0.95,
-                "advanced": True,
-            },
-            "verbose": {
-                "display_name": "Verbose",
-                "value": False,
-                "advanced": True,
-            },
-            "input_value": {"display_name": "Input", "input_types": ["Text", "Record", "Prompt"]},
-            "stream": {
-                "display_name": "Stream",
-                "info": STREAM_INFO_TEXT,
-                "advanced": True,
-            },
-            "system_message": {
-                "display_name": "System Message",
-                "info": "System message to pass to the model.",
-                "advanced": True,
-            },
-        }
+    def build_model(self) -> LanguageModel:
+        credentials = self.credentials
+        location = self.location
+        max_output_tokens = self.max_output_tokens
+        model_name = self.model_name
+        project = self.project
+        temperature = self.temperature
+        top_k = self.top_k
+        top_p = self.top_p
+        verbose = self.verbose
 
-    def build(
-        self,
-        input_value: Text,
-        credentials: Optional[str],
-        project: str,
-        location: str = "us-central1",
-        max_output_tokens: int = 128,
-        model_name: str = "chat-bison",
-        temperature: float = 0.0,
-        top_k: int = 40,
-        top_p: float = 0.95,
-        verbose: bool = False,
-        stream: bool = False,
-        system_message: Optional[str] = None,
-    ) -> Text:
-        try:
-            from langchain_google_vertexai import ChatVertexAI  # type: ignore
-        except ImportError:
-            raise ImportError(
-                "To use the ChatVertexAI model, you need to install the langchain-google-vertexai package."
-            )
         output = ChatVertexAI(
             credentials=credentials,
             location=location,
@@ -119,4 +75,4 @@ class ChatVertexAIComponent(LCModelComponent):
             verbose=verbose,
         )
 
-        return self.get_chat_result(output, stream, input_value, system_message)
+        return output

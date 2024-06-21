@@ -25,7 +25,7 @@ const EditNodeModal = forwardRef(
       //      setOpenWDoubleClick: (open: boolean) => void;
       data: NodeDataType;
     },
-    ref
+    ref,
   ) => {
     const myData = useRef(cloneDeep(data));
 
@@ -53,7 +53,7 @@ const EditNodeModal = forwardRef(
       handleOnNewValue,
       handleOnChangeDb,
       changeAdvanced,
-      open
+      open,
     );
 
     const [gridApi, setGridApi] = useState<GridApi | null>(null);
@@ -119,7 +119,7 @@ const EditNodeModal = forwardRef(
         />
       </BaseModal>
     );
-  }
+  },
 );
 
 export default EditNodeModal;

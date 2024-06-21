@@ -1,33 +1,34 @@
 from typing import Any, List, Optional
 
-from loguru import logger
-
-from langflow.base.flow_processing.utils import build_records_from_result_data
+from langflow.base.flow_processing.utils import build_data_from_result_data
 from langflow.custom import CustomComponent
 from langflow.graph.graph.base import Graph
 from langflow.graph.schema import RunOutputs
 from langflow.graph.vertex.base import Vertex
 from langflow.helpers.flow import get_flow_inputs
-from langflow.schema import Record
+from langflow.schema import Data
 from langflow.schema.dotdict import dotdict
-from langflow.template.field.base import TemplateField
+from langflow.template.field.base import Input
+from loguru import logger
 
 
 class SubFlowComponent(CustomComponent):
     display_name = "Sub Flow"
-    description = "Dynamically Generates a Component from a Flow. The output is a list of records with keys 'result' and 'message'."
+    description = (
+        "Dynamically Generates a Component from a Flow. The output is a list of data with keys 'result' and 'message'."
+    )
     beta: bool = True
     field_order = ["flow_name"]
 
     def get_flow_names(self) -> List[str]:
-        flow_records = self.list_flows()
-        return [flow_record.data["name"] for flow_record in flow_records]
+        flow_datas = self.list_flows()
+        return [flow_data.data["name"] for flow_data in flow_datas]
 
-    def get_flow(self, flow_name: str) -> Optional[Record]:
-        flow_records = self.list_flows()
-        for flow_record in flow_records:
-            if flow_record.data["name"] == flow_name:
-                return flow_record
+    def get_flow(self, flow_name: str) -> Optional[Data]:
+        flow_datas = self.list_flows()
+        for flow_data in flow_datas:
+            if flow_data.data["name"] == flow_name:
+                return flow_data
         return None
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
@@ -40,10 +41,10 @@ class SubFlowComponent(CustomComponent):
                 del build_config[key]
         if field_value is not None and field_name == "flow_name":
             try:
-                flow_record = self.get_flow(field_value)
-                if not flow_record:
+                flow_data = self.get_flow(field_value)
+                if not flow_data:
                     raise ValueError(f"Flow {field_value} not found.")
-                graph = Graph.from_payload(flow_record.data["data"])
+                graph = Graph.from_payload(flow_data.data["data"])
                 # Get all inputs from the graph
                 inputs = get_flow_inputs(graph)
                 # Add inputs to the build config
@@ -54,14 +55,14 @@ class SubFlowComponent(CustomComponent):
         return build_config
 
     def add_inputs_to_build_config(self, inputs: List[Vertex], build_config: dotdict):
-        new_fields: list[TemplateField] = []
+        new_fields: list[Input] = []
         for vertex in inputs:
-            field = TemplateField(
+            field = Input(
                 display_name=vertex.display_name,
                 name=vertex.id,
                 info=vertex.description,
                 field_type="str",
-                default=None,
+                value=None,
             )
             new_fields.append(field)
         logger.debug(new_fields)
@@ -93,7 +94,7 @@ class SubFlowComponent(CustomComponent):
             },
         }
 
-    async def build(self, flow_name: str, get_final_results_only: bool = True, **kwargs) -> List[Record]:
+    async def build(self, flow_name: str, get_final_results_only: bool = True, **kwargs) -> List[Data]:
         tweaks = {key: {"input_value": value} for key, value in kwargs.items()}
         run_outputs: List[Optional[RunOutputs]] = await self.run_flow(
             tweaks=tweaks,
@@ -103,12 +104,12 @@ class SubFlowComponent(CustomComponent):
             return []
         run_output = run_outputs[0]
 
-        records = []
+        data = []
         if run_output is not None:
             for output in run_output.outputs:
                 if output:
-                    records.extend(build_records_from_result_data(output, get_final_results_only))
+                    data.extend(build_data_from_result_data(output, get_final_results_only))
 
-        self.status = records
-        logger.debug(records)
-        return records
+        self.status = data
+        logger.debug(data)
+        return data

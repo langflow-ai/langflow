@@ -6,7 +6,7 @@ from pydantic.v1 import BaseModel, Field, create_model
 from sqlmodel import Session, select
 
 from langflow.graph.schema import RunOutputs
-from langflow.schema import Record
+from langflow.schema import Data
 from langflow.schema.schema import INPUT_FIELD_NAME
 from langflow.services.database.models.flow import Flow
 from langflow.services.deps import get_session, get_settings_service, session_scope
@@ -22,7 +22,7 @@ INPUT_TYPE_MAP = {
 }
 
 
-def list_flows(*, user_id: Optional[str] = None) -> List[Record]:
+def list_flows(*, user_id: Optional[str] = None) -> List[Data]:
     if not user_id:
         raise ValueError("Session is invalid")
     try:
@@ -31,8 +31,8 @@ def list_flows(*, user_id: Optional[str] = None) -> List[Record]:
                 select(Flow).where(Flow.user_id == user_id).where(Flow.is_component == False)  # noqa
             ).all()
 
-            flows_records = [flow.to_record() for flow in flows]
-            return flows_records
+            flows_data = [flow.to_data() for flow in flows]
+            return flows_data
     except Exception as e:
         raise ValueError(f"Error listing flows: {e}")
 
@@ -142,7 +142,7 @@ async def flow_function({func_args}):
     tweaks = {{ {arg_mappings} }}
     from langflow.helpers.flow import run_flow
     from langchain_core.tools import ToolException
-    from langflow.base.flow_processing.utils import build_records_from_result_data, format_flow_output_records
+    from langflow.base.flow_processing.utils import build_data_from_result_data, format_flow_output_data
     try:
         run_outputs = await run_flow(
             tweaks={{key: {{'input_value': value}} for key, value in tweaks.items()}},
@@ -153,12 +153,12 @@ async def flow_function({func_args}):
                 return []
         run_output = run_outputs[0]
 
-        records = []
+        data = []
         if run_output is not None:
             for output in run_output.outputs:
                 if output:
-                    records.extend(build_records_from_result_data(output, get_final_results_only=True))
-        return format_flow_output_records(records)
+                    data.extend(build_data_from_result_data(output, get_final_results_only=True))
+        return format_flow_output_data(data)
     except Exception as e:
         raise ToolException(f'Error running flow: ' + e)
 """
@@ -170,22 +170,22 @@ async def flow_function({func_args}):
 
 
 def build_function_and_schema(
-    flow_record: Record, graph: "Graph", user_id: str | UUID | None
+    flow_data: Data, graph: "Graph", user_id: str | UUID | None
 ) -> Tuple[Callable[..., Awaitable[Any]], Type[BaseModel]]:
     """
     Builds a dynamic function and schema for a given flow.
 
     Args:
-        flow_record (Record): The flow record containing information about the flow.
+        flow_data (Data): The flow record containing information about the flow.
         graph (Graph): The graph representing the flow.
 
     Returns:
         Tuple[Callable, BaseModel]: A tuple containing the dynamic function and the schema.
     """
-    flow_id = flow_record.id
+    flow_id = flow_data.id
     inputs = get_flow_inputs(graph)
     dynamic_flow_function = generate_function_for_flow(inputs, flow_id, user_id=user_id)
-    schema = build_schema_from_inputs(flow_record.name, inputs)
+    schema = build_schema_from_inputs(flow_data.name, inputs)
     return dynamic_flow_function, schema
 
 
@@ -197,7 +197,7 @@ def get_flow_inputs(graph: "Graph") -> List["Vertex"]:
         graph (Graph): The graph object representing the flow.
 
     Returns:
-        List[Record]: A list of input records, where each record contains the ID, name, and description of the input vertex.
+        List[Data]: A list of input data, where each record contains the ID, name, and description of the input vertex.
     """
     inputs = []
     for vertex in graph.vertices:

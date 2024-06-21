@@ -3,9 +3,11 @@ from typing import List, Optional
 import chromadb
 from chromadb.config import Settings
 from langchain_chroma import Chroma
-from langflow.components.vectorstores.base.model import LCVectorStoreComponent
+
+
+from langflow.base.vectorstores.model import LCVectorStoreComponent
 from langflow.field_typing import Embeddings, Text
-from langflow.schema import Record
+from langflow.schema import Data
 
 
 class ChromaSearchComponent(LCVectorStoreComponent):
@@ -68,7 +70,7 @@ class ChromaSearchComponent(LCVectorStoreComponent):
         chroma_server_host: Optional[str] = None,
         chroma_server_http_port: Optional[int] = None,
         chroma_server_grpc_port: Optional[int] = None,
-    ) -> List[Record]:
+    ) -> List[Data]:
         """
         Builds the Vector Store or BaseRetriever object.
 
@@ -86,7 +88,7 @@ class ChromaSearchComponent(LCVectorStoreComponent):
         - chroma_server_grpc_port (int, optional): The gRPC port for the Chroma server. Defaults to None.
 
         Returns:
-        - List[Record]: The list of records.
+        - List[Data]: The list of data.
         """
 
         # Chroma settings

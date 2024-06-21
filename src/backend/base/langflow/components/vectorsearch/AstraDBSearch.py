@@ -1,9 +1,9 @@
 from typing import List, Optional
 
-from langflow.components.vectorstores.AstraDB import AstraDBVectorStoreComponent
-from langflow.components.vectorstores.base.model import LCVectorStoreComponent
+from langflow.base.vectorstores.model import LCVectorStoreComponent
+from langflow.components.vectorstores.AstraDB import AstraVectorStoreComponent
 from langflow.field_typing import Embeddings, Text
-from langflow.schema import Record
+from langflow.schema import Data
 
 
 class AstraDBSearchComponent(LCVectorStoreComponent):
@@ -48,7 +48,7 @@ class AstraDBSearchComponent(LCVectorStoreComponent):
             },
             "batch_size": {
                 "display_name": "Batch Size",
-                "info": "Optional number of records to process in a single batch.",
+                "info": "Optional number of data to process in a single batch.",
                 "advanced": True,
             },
             "bulk_insert_batch_concurrency": {
@@ -58,7 +58,7 @@ class AstraDBSearchComponent(LCVectorStoreComponent):
             },
             "bulk_insert_overwrite_concurrency": {
                 "display_name": "Bulk Insert Overwrite Concurrency",
-                "info": "Optional concurrency level for bulk insert operations that overwrite existing records.",
+                "info": "Optional concurrency level for bulk insert operations that overwrite existing data.",
                 "advanced": True,
             },
             "bulk_delete_concurrency": {
@@ -119,8 +119,8 @@ class AstraDBSearchComponent(LCVectorStoreComponent):
         metadata_indexing_include: Optional[List[str]] = None,
         metadata_indexing_exclude: Optional[List[str]] = None,
         collection_indexing_policy: Optional[dict] = None,
-    ) -> List[Record]:
-        vector_store = AstraDBVectorStoreComponent().build(
+    ) -> List[Data]:
+        vector_store = AstraVectorStoreComponent().build(
             embedding=embedding,
             collection_name=collection_name,
             token=token,

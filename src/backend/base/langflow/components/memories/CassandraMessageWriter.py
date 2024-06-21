@@ -4,7 +4,7 @@ from langchain_community.chat_message_histories import CassandraChatMessageHisto
 from langchain_core.messages import BaseMessage
 
 from langflow.base.memory.memory import BaseMemoryComponent
-from langflow.schema.record import Record
+from langflow.schema.data import Data
 
 
 class CassandraMessageWriterComponent(BaseMemoryComponent):
@@ -14,8 +14,8 @@ class CassandraMessageWriterComponent(BaseMemoryComponent):
     def build_config(self):
         return {
             "input_value": {
-                "display_name": "Input Record",
-                "info": "Record to write to Cassandra.",
+                "display_name": "Input Data",
+                "info": "Data to write to Cassandra.",
             },
             "session_id": {
                 "display_name": "Session ID",
@@ -93,14 +93,14 @@ class CassandraMessageWriterComponent(BaseMemoryComponent):
 
     def build(
         self,
-        input_value: Record,
+        input_value: Data,
         session_id: str,
         table_name: str,
         token: str,
         database_id: str,
         keyspace: Optional[str] = None,
         ttl_seconds: Optional[int] = None,
-    ) -> Record:
+    ) -> Data:
         try:
             import cassio
         except ImportError:

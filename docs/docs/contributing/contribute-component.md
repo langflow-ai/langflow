@@ -15,7 +15,7 @@ You have a new document loader called **MyCustomDocumentLoader** and it would lo
 5. Add the code to the [/components/documentloaders](https://github.com/langflow-ai/langflow/tree/dev/src/backend/base/langflow/components) folder.
 6. Add the dependency to [/documentloaders/\_\_init\_\_.py](https://github.com/langflow-ai/langflow/blob/dev/src/backend/base/langflow/components/documentloaders/__init__.py) as `from .MyCustomDocumentLoader import MyCustomDocumentLoader`.
 7. Add any new dependencies to the outer [pyproject.toml](https://github.com/langflow-ai/langflow/blob/dev/pyproject.toml#L27) file.
-8. Submit documentation for your component. For this example, you'd submit documentation to the [loaders page](https://github.com/langflow-ai/langflow/blob/dev/docs/docs/components/loaders.mdx).
+8. Submit documentation for your component. For this example, you'd submit documentation to the [loaders page](https://github.com/langflow-ai/langflow/blob/dev/docs/docs/components/loaders).
 9. Submit your changes as a pull request. The Langflow team will have a look, suggest changes, and add your component to Langflow.
 
 ## User Sharing

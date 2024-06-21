@@ -1,7 +1,7 @@
 import { cloneDeep } from "lodash";
 import { ReactNode, useEffect, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
-import { Handle, Position, useUpdateNodeInternals } from "reactflow";
+import { useUpdateNodeInternals } from "reactflow";
 import CodeAreaComponent from "../../../../components/codeAreaComponent";
 import DictComponent from "../../../../components/dictComponent";
 import Dropdown from "../../../../components/dropdownComponent";
@@ -18,10 +18,7 @@ import TextAreaComponent from "../../../../components/textAreaComponent";
 import ToggleShadComponent from "../../../../components/toggleShadComponent";
 import { Button } from "../../../../components/ui/button";
 import { RefreshButton } from "../../../../components/ui/refreshButton";
-import {
-  LANGFLOW_SUPPORTED_TYPES,
-  TOOLTIP_EMPTY,
-} from "../../../../constants/constants";
+import { LANGFLOW_SUPPORTED_TYPES } from "../../../../constants/constants";
 import { Case } from "../../../../shared/components/caseComponent";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
@@ -36,22 +33,25 @@ import {
 import {
   convertObjToArray,
   convertValuesToNumbers,
+  getGroupOutputNodeId,
   hasDuplicateKeys,
-  isValidConnection,
   scapedJSONStringfy,
 } from "../../../../utils/reactflowUtils";
-import { nodeColors } from "../../../../utils/styleUtils";
 import {
   classNames,
-  groupByFamily,
+  cn,
   isThereModal,
+  logHasMessage,
+  logTypeIsError,
+  logTypeIsUnknown,
 } from "../../../../utils/utils";
 import useFetchDataOnMount from "../../../hooks/use-fetch-data-on-mount";
 import useHandleOnNewValue from "../../../hooks/use-handle-new-value";
 import useHandleNodeClass from "../../../hooks/use-handle-node-class";
 import useHandleRefreshButtonPress from "../../../hooks/use-handle-refresh-buttons";
+import OutputComponent from "../OutputComponent";
+import HandleRenderComponent from "../handleRenderComponent";
 import OutputModal from "../outputModal";
-import TooltipRenderComponent from "../tooltipRenderComponent";
 import { TEXT_FIELD_TYPES } from "./constants";
 
 export default function ParameterComponent({
@@ -60,7 +60,7 @@ export default function ParameterComponent({
   data,
   tooltipTitle,
   title,
-  color,
+  colors,
   type,
   name = "",
   required = false,
@@ -68,13 +68,13 @@ export default function ParameterComponent({
   info = "",
   proxy,
   showNode,
-  index = "",
+  index,
+  outputName,
   selected,
+  outputProxy,
 }: ParameterComponentType): JSX.Element {
   const ref = useRef<HTMLDivElement>(null);
-  const refHtml = useRef<HTMLDivElement & ReactNode>(null);
   const infoHtml = useRef<HTMLDivElement & ReactNode>(null);
-  const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
   const setNode = useFlowStore((state) => state.setNode);
@@ -83,22 +83,42 @@ export default function ParameterComponent({
   const [isLoading, setIsLoading] = useState(false);
   const updateNodeInternals = useUpdateNodeInternals();
   const [errorDuplicateKey, setErrorDuplicateKey] = useState(false);
-  const flow = currentFlow?.data?.nodes ?? null;
-  const groupedEdge = useRef(null);
   const setFilterEdge = useFlowStore((state) => state.setFilterEdge);
   const [openOutputModal, setOpenOutputModal] = useState(false);
   const flowPool = useFlowStore((state) => state.flowPool);
 
-  const displayOutputPreview =
-    !!flowPool[data.id] &&
-    flowPool[data.id][flowPool[data.id].length - 1]?.valid &&
-    flowPool[data.id][flowPool[data.id].length - 1]?.data?.logs[0]?.message;
+  let flowPoolId = data.id;
+  let internalOutputName = outputName;
 
-  const unknownOutput = !!(
-    flowPool[data.id] &&
-    flowPool[data.id][flowPool[data.id].length - 1]?.data?.logs[0]?.type ===
-      "unknown"
+  if (data.node?.flow && outputProxy) {
+    const realOutput = getGroupOutputNodeId(
+      data.node.flow,
+      outputProxy.name,
+      outputProxy.id,
+    );
+    if (realOutput) {
+      flowPoolId = realOutput.id;
+      internalOutputName = realOutput.outputName;
+    }
+  }
+
+  const flowPoolNode = (flowPool[flowPoolId] ?? [])[
+    (flowPool[flowPoolId]?.length ?? 1) - 1
+  ];
+
+  const displayOutputPreview =
+    !!flowPool[flowPoolId] &&
+    logHasMessage(flowPoolNode?.data, internalOutputName);
+
+  const unknownOutput = logTypeIsUnknown(
+    flowPoolNode?.data,
+    internalOutputName,
   );
+  const errorOutput = logTypeIsError(flowPoolNode?.data, internalOutputName);
+
+  if (outputProxy) {
+    console.log(logHasMessage(flowPoolNode?.data, internalOutputName));
+  }
 
   const preventDefault = true;
 
@@ -120,8 +140,7 @@ export default function ParameterComponent({
     handleUpdateValues,
     debouncedHandleUpdateValues,
     setNode,
-    renderTooltips,
-    setIsLoading
+    setIsLoading,
   );
 
   const { handleNodeClass: handleNodeClassHook } = useHandleNodeClass(
@@ -130,34 +149,32 @@ export default function ParameterComponent({
     takeSnapshot,
     setNode,
     updateNodeInternals,
-    renderTooltips
   );
 
   const { handleRefreshButtonPress: handleRefreshButtonPressHook } =
-    useHandleRefreshButtonPress(setIsLoading, setNode, renderTooltips);
+    useHandleRefreshButtonPress(setIsLoading, setNode);
 
   let disabled =
     edges.some(
       (edge) =>
-        edge.targetHandle === scapedJSONStringfy(proxy ? { ...id, proxy } : id)
+        edge.targetHandle === scapedJSONStringfy(proxy ? { ...id, proxy } : id),
+    ) ?? false;
+
+  let disabledOutput =
+    edges.some(
+      (edge) =>
+        edge.sourceHandle === scapedJSONStringfy(proxy ? { ...id, proxy } : id),
     ) ?? false;
 
   const handleRefreshButtonPress = async (name, data) => {
     handleRefreshButtonPressHook(name, data);
   };
 
-  useFetchDataOnMount(
-    data,
-    name,
-    handleUpdateValues,
-    setNode,
-    renderTooltips,
-    setIsLoading
-  );
+  useFetchDataOnMount(data, name, handleUpdateValues, setNode, setIsLoading);
 
   const handleOnNewValue = async (
     newValue: string | string[] | boolean | Object[],
-    skipSnapshot: boolean | undefined = false
+    skipSnapshot: boolean | undefined = false,
   ): Promise<void> => {
     handleOnNewValueHook(newValue, skipSnapshot);
   };
@@ -179,21 +196,24 @@ export default function ParameterComponent({
     );
   }, [info]);
 
-  function renderTooltips() {
-    let groupedObj: any = groupByFamily(myData, tooltipTitle!, left, flow!);
-    groupedEdge.current = groupedObj;
-
-    if (groupedObj && groupedObj.length > 0) {
-      //@ts-ignore
-      refHtml.current = groupedObj.map((item, index) => {
-        return <TooltipRenderComponent index={index} item={item} left={left} />;
-      });
-    } else {
-      //@ts-ignore
-      refHtml.current = (
-        <span data-testid={`empty-tooltip-filter`}>{TOOLTIP_EMPTY}</span>
-      );
-    }
+  function renderTitle() {
+    return !left ? (
+      <OutputComponent
+        proxy={outputProxy}
+        idx={index}
+        types={type?.split("|") ?? []}
+        selected={
+          data.node?.outputs![index].selected ??
+          data.node?.outputs![index].types[0] ??
+          title
+        }
+        nodeId={data.id}
+        frozen={data.node?.frozen}
+        name={title ?? type}
+      />
+    ) : (
+      <span>{title}</span>
+    );
   }
 
   useEffect(() => {
@@ -202,56 +222,49 @@ export default function ParameterComponent({
     }
   }, [optionalHandle]);
 
+  const handleUpdateOutputHide = (value?: boolean) => {
+    setNode(data.id, (oldNode) => {
+      let newNode = cloneDeep(oldNode);
+      newNode.data = {
+        ...newNode.data,
+        node: {
+          ...newNode.data.node,
+          outputs: newNode.data.node.outputs?.map((output, i) => {
+            if (i === index) {
+              output.hidden = value ?? !output.hidden;
+            }
+            return output;
+          }),
+        },
+      };
+      return newNode;
+    });
+    updateNodeInternals(data.id);
+  };
+
   useEffect(() => {
-    renderTooltips();
-  }, [tooltipTitle, flow]);
+    if (disabledOutput) {
+      handleUpdateOutputHide(false);
+    }
+  }, [disabledOutput]);
 
   return !showNode ? (
     left && LANGFLOW_SUPPORTED_TYPES.has(type ?? "") && !optionalHandle ? (
       <></>
     ) : (
-      <Button className="h-7 truncate bg-muted p-0 text-sm font-normal text-black hover:bg-muted">
-        <div className="flex">
-          <ShadTooltip
-            styleClasses={"tooltip-fixed-width custom-scroll nowheel"}
-            delayDuration={1000}
-            content={refHtml.current}
-            side={left ? "left" : "right"}
-          >
-            <Handle
-              data-test-id={`handle-${title.toLowerCase()}-${
-                left ? "target" : "source"
-              }`}
-              type={left ? "target" : "source"}
-              position={left ? Position.Left : Position.Right}
-              key={
-                proxy
-                  ? scapedJSONStringfy({ ...id, proxy })
-                  : scapedJSONStringfy(id)
-              }
-              id={
-                proxy
-                  ? scapedJSONStringfy({ ...id, proxy })
-                  : scapedJSONStringfy(id)
-              }
-              isValidConnection={(connection) =>
-                isValidConnection(connection, nodes, edges)
-              }
-              className={classNames(
-                left ? "my-12 -ml-0.5" : "my-12 -mr-0.5",
-                "h-3 w-3 rounded-full border-2 bg-background",
-                !showNode ? "mt-0" : ""
-              )}
-              style={{
-                borderColor: color ?? nodeColors.unknown,
-              }}
-              onClick={() => {
-                setFilterEdge(groupedEdge.current);
-              }}
-            ></Handle>
-          </ShadTooltip>
-        </div>
-      </Button>
+      <HandleRenderComponent
+        left={left}
+        nodes={nodes}
+        tooltipTitle={tooltipTitle}
+        proxy={proxy}
+        id={id}
+        title={title}
+        edges={edges}
+        myData={myData}
+        colors={colors}
+        setFilterEdge={setFilterEdge}
+        showNode={showNode}
+      />
     )
   ) : (
     <div
@@ -271,6 +284,25 @@ export default function ParameterComponent({
             (left ? "" : " justify-end")
           }
         >
+          {!left && (
+            <div className="flex-1">
+              <Button
+                disabled={disabledOutput}
+                unstyled
+                onClick={() => handleUpdateOutputHide()}
+                data-testid={`output-inspection-${title.toLowerCase()}`}
+              >
+                <IconComponent
+                  className={cn(
+                    "h-4 w-4",
+                    disabledOutput ? "text-muted-foreground" : "",
+                  )}
+                  strokeWidth={1.5}
+                  name={data.node?.outputs![index].hidden ? "EyeOff" : "Eye"}
+                />
+              </Button>
+            </div>
+          )}
           <Case condition={!left && data.node?.frozen}>
             <div className="pr-1">
               <IconComponent className="h-5 w-5 text-ice" name={"Snowflake"} />
@@ -279,14 +311,12 @@ export default function ParameterComponent({
 
           {proxy ? (
             <ShadTooltip content={<span>{proxy.id}</span>}>
-              <span className={!left && data.node?.frozen ? "text-ice" : ""}>
-                {title}
-              </span>
+              {renderTitle()}
             </ShadTooltip>
           ) : (
             <div className="flex gap-2">
               <span className={!left && data.node?.frozen ? "text-ice" : ""}>
-                {title}
+                {renderTitle()}
               </span>
               {!left && (
                 <ShadTooltip
@@ -299,21 +329,29 @@ export default function ParameterComponent({
                   }
                 >
                   <Button
-                    variant="none"
-                    size="none"
+                    unstyled
                     disabled={!displayOutputPreview || unknownOutput}
                     onClick={() => setOpenOutputModal(true)}
                     data-testid={`output-inspection-${title.toLowerCase()}`}
                   >
-                    <IconComponent
-                      className={classNames(
-                        "h-5 w-5 rounded-md",
-                        displayOutputPreview && !unknownOutput
-                          ? "hover:bg-secondary-foreground/5 hover:text-medium-indigo"
-                          : "cursor-not-allowed text-muted-foreground"
-                      )}
-                      name={"ScanEye"}
-                    />
+                    {errorOutput ? (
+                      <IconComponent
+                        className={classNames(
+                          "h-5 w-5 rounded-md text-status-red",
+                        )}
+                        name={"X"}
+                      />
+                    ) : (
+                      <IconComponent
+                        className={classNames(
+                          "h-5 w-5 rounded-md",
+                          displayOutputPreview && !unknownOutput
+                            ? "hover:text-medium-indigo"
+                            : "cursor-not-allowed text-muted-foreground",
+                        )}
+                        name={"ScanEye"}
+                      />
+                    )}
                   </Button>
                 </ShadTooltip>
               )}
@@ -336,38 +374,23 @@ export default function ParameterComponent({
             )}
           </div>
         </div>
+
         {left && LANGFLOW_SUPPORTED_TYPES.has(type ?? "") && !optionalHandle ? (
           <></>
         ) : (
-          <Button className="h-7 truncate bg-muted p-0 text-sm font-normal text-black hover:bg-muted">
-            <div className="flex">
-              <ShadTooltip
-                styleClasses={"tooltip-fixed-width custom-scroll nowheel"}
-                delayDuration={1000}
-                content={refHtml.current}
-                side={left ? "left" : "right"}
-              >
-                <Handle
-                  data-test-id={`handle-${title.toLowerCase()}-${
-                    left ? "left" : "right"
-                  }`}
-                  type={left ? "target" : "source"}
-                  position={left ? Position.Left : Position.Right}
-                  key={scapedJSONStringfy(proxy ? { ...id, proxy } : id)}
-                  id={scapedJSONStringfy(proxy ? { ...id, proxy } : id)}
-                  isValidConnection={(connection) =>
-                    isValidConnection(connection, nodes, edges)
-                  }
-                  className={classNames(
-                    left ? "-ml-0.5" : "-mr-0.5",
-                    "h-3 w-3 rounded-full border-2 bg-background"
-                  )}
-                  style={{ borderColor: color ?? nodeColors.unknown }}
-                  onClick={() => setFilterEdge(groupedEdge.current)}
-                />
-              </ShadTooltip>
-            </div>
-          </Button>
+          <HandleRenderComponent
+            left={left}
+            nodes={nodes}
+            tooltipTitle={tooltipTitle}
+            proxy={proxy}
+            id={id}
+            title={title}
+            edges={edges}
+            myData={myData}
+            colors={colors}
+            setFilterEdge={setFilterEdge}
+            showNode={showNode}
+          />
         )}
 
         <Case
@@ -384,7 +407,7 @@ export default function ParameterComponent({
                   // Commenting this out until we have a better
                   // way to display
                   // (data.node?.template[name]?.refresh ? "w-5/6 " : "") +
-                  "flex-grow"
+                  "mt-2 flex-grow"
                 }
               >
                 <InputListComponent
@@ -601,7 +624,9 @@ export default function ParameterComponent({
         </Case>
 
         <Case condition={left === true && type === "NestedDict"}>
-          <div className="mt-2 w-full">
+          <div
+            className={"mt-2 w-full" + (disabled ? " cursor-not-allowed" : "")}
+          >
             <DictComponent
               disabled={disabled}
               editNode={false}
@@ -646,8 +671,9 @@ export default function ParameterComponent({
         {openOutputModal && (
           <OutputModal
             open={openOutputModal}
-            nodeId={data.id}
+            nodeId={flowPoolId}
             setOpen={setOpenOutputModal}
+            outputName={internalOutputName}
           />
         )}
       </>

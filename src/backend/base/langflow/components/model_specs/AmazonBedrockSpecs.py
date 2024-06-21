@@ -3,7 +3,7 @@ from typing import Optional
 from langchain_community.llms.bedrock import Bedrock
 
 from langflow.custom import CustomComponent
-from langflow.field_typing import BaseLanguageModel
+from langflow.field_typing import LanguageModel
 
 
 class AmazonBedrockComponent(CustomComponent):
@@ -46,7 +46,7 @@ class AmazonBedrockComponent(CustomComponent):
         endpoint_url: Optional[str] = None,
         streaming: bool = False,
         cache: Optional[bool] = None,
-    ) -> BaseLanguageModel:
+    ) -> LanguageModel:
         try:
             output = Bedrock(
                 credentials_profile_name=credentials_profile_name,

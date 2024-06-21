@@ -9,7 +9,7 @@ const useExportFlows = (
   setSuccessData,
   setSelectedFlowsComponentsCards,
   handleSelectAll,
-  cardTypes
+  cardTypes,
 ) => {
   const handleExport = useCallback(() => {
     selectedFlowsComponentsCards.forEach((selectedFlowId) => {
@@ -22,10 +22,11 @@ const useExportFlows = (
             description: selectedFlow.description,
             name: selectedFlow.name,
             last_tested_version: version,
+            endpoint_name: selectedFlow.endpoint_name,
             is_component: false,
           }),
           selectedFlow.name,
-          selectedFlow.description
+          selectedFlow.description,
         );
       }
     });

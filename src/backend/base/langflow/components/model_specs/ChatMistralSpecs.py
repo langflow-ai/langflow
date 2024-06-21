@@ -4,7 +4,7 @@ from langchain_mistralai import ChatMistralAI
 from pydantic.v1 import SecretStr
 
 from langflow.custom import CustomComponent
-from langflow.field_typing import BaseLanguageModel
+from langflow.field_typing import LanguageModel
 
 
 class MistralAIModelComponent(CustomComponent):
@@ -68,7 +68,7 @@ class MistralAIModelComponent(CustomComponent):
         mistral_api_key: Optional[str] = None,
         max_tokens: Optional[int] = None,
         mistral_api_base: Optional[str] = None,
-    ) -> BaseLanguageModel:
+    ) -> LanguageModel:
         # Set default API endpoint if not provided
         if not mistral_api_base:
             mistral_api_base = "https://api.mistral.ai"

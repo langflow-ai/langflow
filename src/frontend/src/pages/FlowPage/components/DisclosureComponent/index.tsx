@@ -6,10 +6,10 @@ export default function DisclosureComponent({
   button: { title, Icon, buttons = [] },
   isChild = true,
   children,
-  openDisc,
+  defaultOpen,
 }: DisclosureComponentType): JSX.Element {
   return (
-    <Disclosure as="div" defaultOpen={openDisc} key={title}>
+    <Disclosure as="div" defaultOpen={defaultOpen} key={title}>
       {({ open }) => (
         <>
           <div>
@@ -36,7 +36,7 @@ export default function DisclosureComponent({
                   <IconComponent
                     name="ChevronRight"
                     className={`${
-                      open || openDisc ? "rotate-90 transform" : ""
+                      open || defaultOpen ? "rotate-90 transform" : ""
                     } h-4 w-4 text-foreground`}
                   />
                 </div>

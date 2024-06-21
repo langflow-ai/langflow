@@ -2,7 +2,11 @@ import { NodeDataType } from "../../types/flow";
 
 export function countHandlesFn(data: NodeDataType): number {
   let count = Object.keys(data.node!.template)
-    .filter((templateField) => templateField.charAt(0) !== "_")
+    .filter(
+      (templateField) =>
+        templateField.charAt(0) !== "_" &&
+        !data.node!.template[templateField].advanced,
+    )
     .map((templateCamp) => {
       const { template } = data.node!;
       if (template[templateCamp]?.input_types) return true;

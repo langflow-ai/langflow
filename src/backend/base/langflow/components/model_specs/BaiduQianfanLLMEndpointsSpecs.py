@@ -3,7 +3,7 @@ from typing import Optional
 from langchain_community.llms.baidu_qianfan_endpoint import QianfanLLMEndpoint
 
 from langflow.custom import CustomComponent
-from langflow.field_typing import BaseLanguageModel
+from langflow.field_typing import LanguageModel
 
 
 class QianfanLLMEndpointComponent(CustomComponent):
@@ -78,7 +78,7 @@ class QianfanLLMEndpointComponent(CustomComponent):
         temperature: Optional[float] = None,
         penalty_score: Optional[float] = None,
         endpoint: Optional[str] = None,
-    ) -> BaseLanguageModel:
+    ) -> LanguageModel:
         try:
             output = QianfanLLMEndpoint(  # type: ignore
                 model=model,

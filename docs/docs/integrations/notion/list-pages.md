@@ -39,7 +39,7 @@ import requests
 import json
 from typing import Dict, Any, List
 from langflow.custom import CustomComponent
-from langflow.schema import Record
+from langflow.schema import Data
 
 class NotionListPages(CustomComponent):
     display_name = "List Pages [Notion]"
@@ -83,7 +83,7 @@ class NotionListPages(CustomComponent):
         notion_secret: str,
         database_id: str,
         query_payload: str = "{}",
-    ) -> List[Record]:
+    ) -> List[Data]:
         try:
             query_data = json.loads(query_payload)
             filter_obj = query_data.get("filter")
@@ -107,7 +107,7 @@ class NotionListPages(CustomComponent):
             response.raise_for_status()
 
             results = response.json()
-            records = []
+            data = []
             combined_text = f"Pages found: {len(results['results'])}\n\n"
             for page in results['results']:
                 page_data = {
@@ -127,14 +127,14 @@ class NotionListPages(CustomComponent):
                 )
 
                 combined_text += text
-                records.append(Record(text=text, data=page_data))
+                data.append(Data(text=text, data=page_data))
 
             self.status = combined_text.strip()
-            return records
+            return data
 
         except Exception as e:
             self.status = f"An error occurred: {str(e)}"
-            return [Record(text=self.status, data=[])]
+            return [Data(text=self.status, data=[])]
 ```
 
 <Admonition type="info" title="Example Usage">

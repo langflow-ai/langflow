@@ -6,7 +6,7 @@ from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import ToolException
 from pydantic.v1 import BaseModel
 
-from langflow.base.flow_processing.utils import build_records_from_result_data, format_flow_output_records
+from langflow.base.flow_processing.utils import build_data_from_result_data, format_flow_output_data
 from langflow.graph.graph.base import Graph
 from langflow.graph.vertex.base import Vertex
 from langflow.helpers.flow import build_schema_from_inputs, get_arg_names, get_flow_inputs, run_flow
@@ -59,14 +59,12 @@ class FlowTool(BaseTool):
             return "No output"
         run_output = run_outputs[0]
 
-        records = []
+        data = []
         if run_output is not None:
             for output in run_output.outputs:
                 if output:
-                    records.extend(
-                        build_records_from_result_data(output, get_final_results_only=self.get_final_results_only)
-                    )
-        return format_flow_output_records(records)
+                    data.extend(build_data_from_result_data(output, get_final_results_only=self.get_final_results_only))
+        return format_flow_output_data(data)
 
     def validate_inputs(self, args_names: List[dict[str, str]], args: Any, kwargs: Any):
         """Validate the inputs."""
@@ -107,11 +105,9 @@ class FlowTool(BaseTool):
             return "No output"
         run_output = run_outputs[0]
 
-        records = []
+        data = []
         if run_output is not None:
             for output in run_output.outputs:
                 if output:
-                    records.extend(
-                        build_records_from_result_data(output, get_final_results_only=self.get_final_results_only)
-                    )
-        return format_flow_output_records(records)
+                    data.extend(build_data_from_result_data(output, get_final_results_only=self.get_final_results_only))
+        return format_flow_output_data(data)

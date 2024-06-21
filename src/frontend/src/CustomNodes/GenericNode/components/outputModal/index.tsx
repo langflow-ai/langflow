@@ -2,7 +2,12 @@ import { Button } from "../../../../components/ui/button";
 import BaseModal from "../../../../modals/baseModal";
 import SwitchOutputView from "./components/switchOutputView";
 
-export default function OutputModal({ open, setOpen, nodeId }): JSX.Element {
+export default function OutputModal({
+  open,
+  setOpen,
+  nodeId,
+  outputName,
+}): JSX.Element {
   return (
     <BaseModal open={open} setOpen={setOpen} size="medium-tall">
       <BaseModal.Header description="Inspect the output of the component below.">
@@ -11,7 +16,7 @@ export default function OutputModal({ open, setOpen, nodeId }): JSX.Element {
         </div>
       </BaseModal.Header>
       <BaseModal.Content>
-        <SwitchOutputView nodeId={nodeId} />
+        <SwitchOutputView nodeId={nodeId} outputName={outputName} />
       </BaseModal.Content>
       <BaseModal.Footer>
         <div className="flex w-full justify-end pt-2">
