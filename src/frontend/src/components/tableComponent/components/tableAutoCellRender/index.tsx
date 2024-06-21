@@ -51,7 +51,13 @@ export default function TableAutoCellRender({
             </Badge>
           );
         } else {
-          return <StringReader editable={!!colDef?.onCellValueChanged} setValue={setValue!} string={value} />;
+          return (
+            <StringReader
+              editable={!!colDef?.onCellValueChanged}
+              setValue={setValue!}
+              string={value}
+            />
+          );
         }
       case "number":
         return <NumberReader number={value} />;

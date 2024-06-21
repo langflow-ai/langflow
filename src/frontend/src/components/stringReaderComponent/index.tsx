@@ -4,7 +4,7 @@ import TextModal from "../../modals/textModal";
 export default function StringReader({
   string,
   setValue,
-  editable=false,
+  editable = false,
 }: {
   string: string;
   setValue: (value: string) => void;

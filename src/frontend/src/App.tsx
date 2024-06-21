@@ -3,6 +3,7 @@ import { ErrorBoundary } from "react-error-boundary";
 import { useNavigate } from "react-router-dom";
 import "reactflow/dist/style.css";
 import "./App.css";
+import AlertDisplayArea from "./alerts/displayArea";
 import ErrorAlert from "./alerts/error";
 import NoticeAlert from "./alerts/notice";
 import SuccessAlert from "./alerts/success";
@@ -25,13 +26,11 @@ import useFlowsManagerStore from "./stores/flowsManagerStore";
 import { useFolderStore } from "./stores/foldersStore";
 import { useGlobalVariablesStore } from "./stores/globalVariablesStore/globalVariables";
 import { useStoreStore } from "./stores/storeStore";
-import AlertDisplayArea from "./alerts/displayArea";
 export default function App() {
   useTrackLastVisitedPath();
 
   const [fetchError, setFetchError] = useState(false);
   const isLoading = useFlowsManagerStore((state) => state.isLoading);
-
 
   const { isAuthenticated, login, setUserData, setAutoLogin, getUser } =
     useContext(AuthContext);
@@ -200,7 +199,7 @@ export default function App() {
       </ErrorBoundary>
       <div></div>
       <div className="app-div">
-        <AlertDisplayArea/>
+        <AlertDisplayArea />
       </div>
     </div>
   );

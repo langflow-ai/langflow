@@ -24,7 +24,7 @@ export default function TextModal({
   children,
   value,
   setValue,
-  editable = false
+  editable = false,
 }: {
   children: JSX.Element;
   value: string;
@@ -48,18 +48,28 @@ export default function TextModal({
       <BaseModal.Content>
         <div className="flex h-full w-full flex-col transition-all">
           <div className="h-[370px]">
-            <TextEditorArea readonly={!editable} onChange={(text) => setInternalValue(text)} value={internalValue} left={false} />
+            <TextEditorArea
+              readonly={!editable}
+              onChange={(text) => setInternalValue(text)}
+              value={internalValue}
+              left={false}
+            />
           </div>
         </div>
       </BaseModal.Content>
       <BaseModal.Footer>
         <div className="flex w-full justify-end gap-2 pt-2">
-          {editable && <Button className="flex gap-2 px-3" onClick={() => {
-            setValue(internalValue);
-            setOpen(false);
-          }}>
-            Save
-          </Button>}
+          {editable && (
+            <Button
+              className="flex gap-2 px-3"
+              onClick={() => {
+                setValue(internalValue);
+                setOpen(false);
+              }}
+            >
+              Save
+            </Button>
+          )}
           <Button className="flex gap-2 px-3" onClick={() => setOpen(false)}>
             Close
           </Button>
