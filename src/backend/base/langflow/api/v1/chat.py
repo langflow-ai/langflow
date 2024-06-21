@@ -295,18 +295,12 @@ async def build_vertex_stream(
 
         async def stream_vertex():
             try:
-                if not session_id:
-                    cache = await chat_service.get_cache(flow_id_str)
-                    if not cache:
-                        # If there's no cache
-                        raise ValueError(f"No cache found for {flow_id_str}.")
-                    else:
-                        graph = cache.get("result")
+                cache = await chat_service.get_cache(flow_id_str)
+                if not cache:
+                    # If there's no cache
+                    raise ValueError(f"No cache found for {flow_id_str}.")
                 else:
-                    session_data = await session_service.load_session(session_id, flow_id=flow_id_str)
-                    graph, artifacts = session_data if session_data else (None, None)
-                    if not graph:
-                        raise ValueError(f"No graph found for {flow_id_str}.")
+                    graph = cache.get("result")
 
                 vertex: "InterfaceVertex" = graph.get_vertex(vertex_id)
                 if not hasattr(vertex, "stream"):

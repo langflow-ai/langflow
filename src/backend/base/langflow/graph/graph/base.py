@@ -291,6 +291,12 @@ class Graph:
             vertex.update_raw_params({"session_id": session_id})
         # Process the graph
         try:
+            cache_service = get_chat_service()
+            await cache_service.set_cache(self.flow_id, self)
+        except Exception as exc:
+            logger.exception(exc)
+
+        try:
             start_component_id = next(
                 (vertex_id for vertex_id in self._is_input_vertices if "chat" in vertex_id.lower()), None
             )
