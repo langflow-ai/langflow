@@ -23,7 +23,7 @@ class ChatService(Service):
             "result": data,
             "type": type(data),
         }
-        await self.cache_service.upsert(key, result_dict, lock=lock or self._cache_locks[key])
+        await self.cache_service.upsert(str(key), result_dict, lock=lock or self._cache_locks[key])
         return key in self.cache_service
 
     async def get_cache(self, key: str, lock: Optional[asyncio.Lock] = None) -> Any:

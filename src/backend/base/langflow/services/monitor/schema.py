@@ -1,5 +1,5 @@
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Optional
 
 from pydantic import BaseModel, Field, field_serializer, field_validator
@@ -17,7 +17,7 @@ class DefaultModel(BaseModel):
 
     def json(self, **kwargs):
         # Usa a função de serialização personalizada
-        return super().json(**kwargs, encoder=self.custom_encoder)
+        return super().model_dump_json(**kwargs, encoder=self.custom_encoder)
 
     @staticmethod
     def custom_encoder(obj):
@@ -83,7 +83,7 @@ class TransactionModelResponse(DefaultModel):
 class MessageModel(DefaultModel):
     index: Optional[int] = Field(default=None)
     flow_id: Optional[str] = Field(default=None, alias="flow_id")
-    timestamp: datetime = Field(default_factory=datetime.now)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     sender: str
     sender_name: str
     session_id: str
@@ -97,6 +97,12 @@ class MessageModel(DefaultModel):
             v = json.loads(v)
         return v
 
+    @field_serializer("timestamp")
+    @classmethod
+    def serialize_timestamp(cls, v):
+        v = v.replace(microsecond=0)
+        return v.strftime("%Y-%m-%d %H:%M:%S")
+
     @field_serializer("files")
     @classmethod
     def serialize_files(cls, v):
@@ -108,7 +114,7 @@ class MessageModel(DefaultModel):
     def from_message(cls, message: Message, flow_id: Optional[str] = None):
         # first check if the record has all the required fields
         if message.text is None or not message.sender or not message.sender_name:
-            raise ValueError("The message does not have the required fields 'sender' and 'sender_name' in the data.")
+            raise ValueError("The message does not have the required fields (text, sender, sender_name).")
         return cls(
             sender=message.sender,
             sender_name=message.sender_name,

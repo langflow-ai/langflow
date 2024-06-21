@@ -4,7 +4,7 @@ from langchain.chains import RetrievalQAWithSourcesChain
 from langchain_core.documents import Document
 
 from langflow.custom import CustomComponent
-from langflow.field_typing import BaseLanguageModel, BaseMemory, BaseRetriever, Text
+from langflow.field_typing import BaseMemory, BaseRetriever, LanguageModel, Text
 
 
 class RetrievalQAWithSourcesChainComponent(CustomComponent):
@@ -32,7 +32,7 @@ class RetrievalQAWithSourcesChainComponent(CustomComponent):
         self,
         input_value: Text,
         retriever: BaseRetriever,
-        llm: BaseLanguageModel,
+        llm: LanguageModel,
         chain_type: str,
         memory: Optional[BaseMemory] = None,
         return_source_documents: Optional[bool] = True,
@@ -53,10 +53,10 @@ class RetrievalQAWithSourcesChainComponent(CustomComponent):
         result = result.content if hasattr(result, "content") else result
         # Result is a dict with keys "query",  "result" and "source_documents"
         # for now we just return the result
-        records = self.to_records(result.get("source_documents"))
+        data = self.to_data(result.get("source_documents"))
         references_str = ""
         if return_source_documents:
-            references_str = self.create_references_from_records(records)
+            references_str = self.create_references_from_data(data)
         result_str = Text(result.get("answer", ""))
         final_result = "\n".join([result_str, references_str])
         self.status = final_result

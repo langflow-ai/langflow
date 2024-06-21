@@ -1,34 +1,44 @@
-from typing import Optional
-
 from langchain_community.embeddings import OllamaEmbeddings
-from langchain_core.embeddings import Embeddings
+from langflow.base.models.model import LCModelComponent
+from langflow.field_typing import Embeddings
+from langflow.io import FloatInput, Output, TextInput
 
-from langflow.custom import CustomComponent
 
-
-class OllamaEmbeddingsComponent(CustomComponent):
+class OllamaEmbeddingsComponent(LCModelComponent):
     display_name: str = "Ollama Embeddings"
     description: str = "Generate embeddings using Ollama models."
     documentation = "https://python.langchain.com/docs/integrations/text_embedding/ollama"
+    icon = "Ollama"
 
-    def build_config(self):
-        return {
-            "model": {
-                "display_name": "Ollama Model",
-            },
-            "base_url": {"display_name": "Ollama Base URL"},
-            "temperature": {"display_name": "Model Temperature"},
-            "code": {"show": False},
-        }
+    inputs = [
+        TextInput(
+            name="model",
+            display_name="Ollama Model",
+            value="llama2",
+        ),
+        TextInput(
+            name="base_url",
+            display_name="Ollama Base URL",
+            value="http://localhost:11434",
+        ),
+        FloatInput(
+            name="temperature",
+            display_name="Model Temperature",
+            advanced=True,
+        ),
+    ]
 
-    def build(
-        self,
-        model: str = "llama2",
-        base_url: str = "http://localhost:11434",
-        temperature: Optional[float] = None,
-    ) -> Embeddings:
+    outputs = [
+        Output(display_name="Embeddings", name="embeddings", method="build_embeddings"),
+    ]
+
+    def build_embeddings(self) -> Embeddings:
         try:
-            output = OllamaEmbeddings(model=model, base_url=base_url, temperature=temperature)  # type: ignore
+            output = OllamaEmbeddings(
+                model=self.model,
+                base_url=self.base_url,
+                temperature=self.temperature,
+            )  # type: ignore
         except Exception as e:
             raise ValueError("Could not connect to Ollama API.") from e
         return output

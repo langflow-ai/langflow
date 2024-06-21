@@ -58,7 +58,7 @@ test("user must interact with chat with Input/Output", async ({ page }) => {
     .getByTestId("textarea-input_value")
     .nth(1)
     .fill(
-      "testtesttesttesttesttestte;.;.,;,.;,.;.,;,..,;;;;;;;;;;;;;;;;;;;;;,;.;,.;,.,;.,;.;.,~~çççççççççççççççççççççççççççççççççççççççisdajfdasiopjfaodisjhvoicxjiovjcxizopjviopasjioasfhjaiohf23432432432423423sttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttestççççççççççççççççççççççççççççççççç,.,.,.,.,.,.,.,.,.,.,.,.,.,.,.,.,!"
+      "testtesttesttesttesttestte;.;.,;,.;,.;.,;,..,;;;;;;;;;;;;;;;;;;;;;,;.;,.;,.,;.,;.;.,~~çççççççççççççççççççççççççççççççççççççççisdajfdasiopjfaodisjhvoicxjiovjcxizopjviopasjioasfhjaiohf23432432432423423sttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttestççççççççççççççççççççççççççççççççç,.,.,.,.,.,.,.,.,.,.,.,.,.,.,.,.,!",
     );
   await page.getByText("Playground", { exact: true }).last().click();
   await page.getByTestId("icon-LucideSend").click();
@@ -68,12 +68,17 @@ test("user must interact with chat with Input/Output", async ({ page }) => {
   await page.getByTestId("showsender_name").click();
   await page.getByText("Save Changes", { exact: true }).click();
 
+  await page.getByText("Chat Output", { exact: true }).click();
+  await page.getByTestId("advanced-button-modal").click();
+  await page.getByTestId("showsender_name").click();
+  await page.getByText("Save Changes", { exact: true }).click();
+
   await page
-    .getByTestId("popover-anchor-input-sender_name")
+    .getByTestId("textarea-sender_name")
     .nth(1)
     .fill("TestSenderNameUser");
   await page
-    .getByTestId("popover-anchor-input-sender_name")
+    .getByTestId("textarea-sender_name")
     .nth(0)
     .fill("TestSenderNameAI");
 
@@ -94,9 +99,9 @@ test("user must interact with chat with Input/Output", async ({ page }) => {
     await page
       .getByText(
         "testtesttesttesttesttestte;.;.,;,.;,.;.,;,..,;;;;;;;;;;;;;;;;;;;;;,;.;,.;,.,;.,;.;.,~~çççççççççççççççççççççççççççççççççççççççisdajfdasiopjfaodisjhvoicxjiovjcxizopjviopasjioasfhjaiohf23432432432423423sttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttestççççççççççççççççççççççççççççççççç,.,.,.,.,.,.,.,.,.,.,.,.,.,.,.,.,!",
-        { exact: true }
+        { exact: true },
       )
-      .isVisible()
+      .isVisible(),
   );
 });
 
@@ -145,9 +150,9 @@ test("user must be able to see output inspection", async ({ page }) => {
 
   await page.getByTestId("button_run_chat output").last().click();
 
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(5000);
 
-  await page.getByTestId("icon-ScanEye").last().click();
+  await page.getByTestId("icon-ScanEye").nth(4).click();
 
   await page.getByText("Sender", { exact: true }).isVisible();
   await page.getByText("Type", { exact: true }).isVisible();
@@ -206,7 +211,7 @@ test("user must be able to send an image on chat", async ({ page }) => {
 
   const jsonContent = readFileSync(
     "src/frontend/tests/end-to-end/assets/chain.png",
-    "utf-8"
+    "utf-8",
   );
 
   // Create the DataTransfer and File
@@ -230,6 +235,6 @@ test("user must be able to send an image on chat", async ({ page }) => {
   await page.getByText("chain.png").isVisible();
 
   await page.getByText("Close", { exact: true }).click();
-  await page.getByTestId("icon-ScanEye").last().click();
+  await page.getByTestId("icon-ScanEye").nth(4).click();
   await page.getByText("Restart").isHidden();
 });

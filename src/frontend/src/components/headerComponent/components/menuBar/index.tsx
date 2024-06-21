@@ -18,6 +18,7 @@ import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useShortcutsStore } from "../../../../stores/shortcuts";
+import { useTypesStore } from "../../../../stores/typesStore";
 import { cn } from "../../../../utils/utils";
 import IconComponent from "../../../genericIconComponent";
 import ShadTooltip from "../../../shadTooltipComponent";
@@ -37,6 +38,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
   const uploadFlow = useFlowsManagerStore((state) => state.uploadFlow);
   const navigate = useNavigate();
   const isBuilding = useFlowStore((state) => state.isBuilding);
+  const getTypes = useTypesStore((state) => state.getTypes);
 
   function handleAddFlow() {
     try {
@@ -46,6 +48,12 @@ export const MenuBar = ({}: {}): JSX.Element => {
     } catch (err) {
       setErrorData(err as { title: string; list?: Array<string> });
     }
+  }
+
+  function handleReloadComponents() {
+    getTypes(true).then(() => {
+      setSuccessData({ title: "Components reloaded successfully" });
+    });
   }
 
   function printByBuildStatus() {
@@ -113,7 +121,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
                       title: UPLOAD_ERROR_ALERT,
                       list: [error],
                     });
-                  }
+                  },
                 );
               }}
             >
@@ -161,6 +169,18 @@ export const MenuBar = ({}: {}): JSX.Element => {
                 }
               />
             </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => {
+                handleReloadComponents();
+              }}
+              className="cursor-pointer"
+            >
+              <IconComponent
+                name="RefreshCcw"
+                className="header-menu-options"
+              />
+              Refresh All
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
         <FlowSettingsModal
@@ -187,7 +207,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
               name={isBuilding || saveLoading ? "Loader2" : "CheckCircle2"}
               className={cn(
                 "h-4 w-4",
-                isBuilding || saveLoading ? "animate-spin" : "animate-wiggle"
+                isBuilding || saveLoading ? "animate-spin" : "animate-wiggle",
               )}
             />
             {printByBuildStatus()}

@@ -6,7 +6,7 @@
  */
 export default function getPythonCode(
   flowName: string,
-  tweaksBuildedObject: any[]
+  tweaksBuildedObject: any[],
 ): string {
   let tweaksString = "{}";
   if (tweaksBuildedObject && tweaksBuildedObject.length > 0) {

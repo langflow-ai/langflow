@@ -5,6 +5,7 @@ import useRemoveMessages from "../../../../pages/SettingsPage/pages/messagesPage
 import useUpdateMessage from "../../../../pages/SettingsPage/pages/messagesPage/hooks/use-updateMessage";
 import useAlertStore from "../../../../stores/alertStore";
 import { useMessagesStore } from "../../../../stores/messagesStore";
+import { messagesSorter } from "../../../../utils/utils";
 
 export default function SessionView({ rows }: { rows: Array<any> }) {
   const columns = useMessagesStore((state) => state.columns);
@@ -17,7 +18,7 @@ export default function SessionView({ rows }: { rows: Array<any> }) {
     setSelectedRows,
     setSuccessData,
     setErrorData,
-    selectedRows
+    selectedRows,
   );
 
   const { handleUpdate } = useUpdateMessage(setSuccessData, setErrorData);
@@ -41,7 +42,7 @@ export default function SessionView({ rows }: { rows: Array<any> }) {
       onCellEditRequest={(event) => {
         handleUpdateMessage(event);
       }}
-      editable={["Sender Name", "Message"]}
+      editable={["Sender Name", "Message", "Text"]}
       overlayNoRowsTemplate="No data available"
       onSelectionChanged={(event: SelectionChangedEvent) => {
         setSelectedRows(event.api.getSelectedRows().map((row) => row.index));
@@ -49,7 +50,7 @@ export default function SessionView({ rows }: { rows: Array<any> }) {
       rowSelection="multiple"
       suppressRowClickSelection={true}
       pagination={true}
-      columnDefs={columns}
+      columnDefs={columns.sort(messagesSorter)}
       rowData={rows}
     />
   );

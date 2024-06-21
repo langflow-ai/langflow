@@ -245,6 +245,8 @@ test("should share component with share button", async ({ page }) => {
   }
   await page.waitForTimeout(1000);
 
+  const randomName = Math.random().toString(36).substring(2);
+
   await page.getByRole("heading", { name: "Basic Prompting" }).click();
   await page.waitForTimeout(1000);
   const flowName = await page.getByTestId("flow_name").innerText();
@@ -253,6 +255,7 @@ test("should share component with share button", async ({ page }) => {
   const flowDescription = await page
     .getByPlaceholder("Flow description")
     .inputValue();
+  await page.getByPlaceholder("Flow name").fill(randomName);
   await page.getByText("Save").last().click();
   await page.getByText("Close").last().click();
 
@@ -262,7 +265,7 @@ test("should share component with share button", async ({ page }) => {
   await page.getByText("Set workflow status to public").isVisible();
   await page
     .getByText(
-      "Attention: API keys in specified fields are automatically removed upon sharing."
+      "Attention: API keys in specified fields are automatically removed upon sharing.",
     )
     .isVisible();
   await page.getByText("Export").first().isVisible();

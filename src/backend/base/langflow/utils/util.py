@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional, Union
 
 from docstring_parser import parse
 
-from langflow.schema import Record
+from langflow.schema import Data
 from langflow.services.deps import get_settings_service
 from langflow.template.frontend_node.constants import FORCE_SHOW_FIELDS
 from langflow.utils import constants
@@ -400,23 +400,23 @@ def add_options_to_field(value: Dict[str, Any], class_name: Optional[str], key: 
         value["value"] = options_map[class_name][0]
 
 
-def build_loader_repr_from_records(records: List[Record]) -> str:
+def build_loader_repr_from_data(data: List[Data]) -> str:
     """
-    Builds a string representation of the loader based on the given records.
+    Builds a string representation of the loader based on the given data.
 
     Args:
-        records (List[Record]): A list of records.
+        data (List[Data]): A list of data.
 
     Returns:
         str: A string representation of the loader.
 
     """
-    if records:
-        avg_length = sum(len(doc.text) for doc in records) / len(records)
-        return f"""{len(records)} records
-        \nAvg. Record Length (characters): {int(avg_length)}
-        Records: {records[:3]}..."""
-    return "0 records"
+    if data:
+        avg_length = sum(len(doc.text) for doc in data) / len(data)
+        return f"""{len(data)} data
+        \nAvg. Data Length (characters): {int(avg_length)}
+        Data: {data[:3]}..."""
+    return "0 data"
 
 
 def update_settings(
@@ -449,3 +449,10 @@ def update_settings(
     if not store:
         logger.debug("Setting store to False")
         settings_service.settings.update_settings(store=False)
+
+
+def is_class_method(func, cls):
+    """
+    Check if a function is a class method.
+    """
+    return inspect.ismethod(func) and func.__self__ is cls.__class__

@@ -129,9 +129,6 @@ def update_template_field(frontend_template, key, value_dict):
             template_field["value"] = ""
         template_field["file_path"] = file_path_value
 
-    if "load_from_db" in value_dict and value_dict["load_from_db"]:
-        template_field["load_from_db"] = value_dict["load_from_db"]
-
 
 def get_file_path_value(file_path):
     """Get the file path value if the file exists, else return empty string."""
@@ -208,7 +205,7 @@ def format_elapsed_time(elapsed_time: float) -> str:
         return f"{minutes} {minutes_unit}, {seconds} {seconds_unit}"
 
 
-async def build_and_cache_graph_from_db(flow_id: str, session: Session, chat_service: "ChatService"):
+async def build_graph_from_db(flow_id: str, session: Session, chat_service: "ChatService"):
     """Build and cache the graph."""
     flow: Optional[Flow] = session.get(Flow, flow_id)
     if not flow or not flow.data:

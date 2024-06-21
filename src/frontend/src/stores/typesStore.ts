@@ -21,11 +21,11 @@ export const useTypesStore = create<TypesStoreType>((set, get) => ({
   types: {},
   templates: {},
   data: {},
-  getTypes: () => {
+  getTypes: (force_refresh: boolean = false) => {
     return new Promise<void>(async (resolve, reject) => {
       const setLoading = useFlowsManagerStore.getState().setIsLoading;
       setLoading(true);
-      getAll()
+      getAll(force_refresh)
         .then((response) => {
           const data = response?.data;
           useAlertStore.setState({ loading: false });

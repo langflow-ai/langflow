@@ -3,7 +3,7 @@ from typing import Optional
 from langchain_community.llms.huggingface_endpoint import HuggingFaceEndpoint
 
 from langflow.custom import CustomComponent
-from langflow.field_typing import BaseLanguageModel
+from langflow.field_typing import LanguageModel
 
 
 class HuggingFaceEndpointsComponent(CustomComponent):
@@ -32,7 +32,7 @@ class HuggingFaceEndpointsComponent(CustomComponent):
         task: str = "text2text-generation",
         huggingfacehub_api_token: Optional[str] = None,
         model_kwargs: Optional[dict] = None,
-    ) -> BaseLanguageModel:
+    ) -> LanguageModel:
         try:
             output = HuggingFaceEndpoint(  # type: ignore
                 endpoint_url=endpoint_url,

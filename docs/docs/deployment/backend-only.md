@@ -9,11 +9,11 @@ Langflow will now serve requests to its API without the frontend running.
 
 ## Prerequisites
 
-- [Langflow installed](../getting-started/install-langflow.mdx)
+- [Langflow installed](../getting-started/install-langflow)
 
 - [OpenAI API key](https://platform.openai.com)
 
-- [A Langflow flow created](../starter-projects/basic-prompting.mdx)
+- [A Langflow flow created](../starter-projects/basic-prompting)
 
 ## Download your flow's curl call
 
@@ -120,4 +120,4 @@ The result is similar to the curl call:
 
 Your Python app POSTs to your Langflow server, and the server runs the flow and returns the result.
 
-See [API](../administration/api.mdx) for more ways to interact with your headless Langflow server.
+See [API](../administration/api) for more ways to interact with your headless Langflow server.

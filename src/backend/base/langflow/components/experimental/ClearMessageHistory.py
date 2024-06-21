@@ -21,6 +21,6 @@ class ClearMessageHistoryComponent(CustomComponent):
         session_id: str,
     ) -> None:
         delete_messages(session_id=session_id)
-        records = get_messages(session_id=session_id)
-        self.records = records
-        return records
+        data = get_messages(session_id=session_id)
+        self.data = data
+        return data

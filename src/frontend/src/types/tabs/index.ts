@@ -18,12 +18,12 @@ export type FlowsContextType = {
     newProject: boolean,
     flow?: FlowType,
     override?: boolean,
-    position?: XYPosition
+    position?: XYPosition,
   ) => Promise<String | undefined>;
   downloadFlow: (
     flow: FlowType,
     flowName: string,
-    flowDescription?: string
+    flowDescription?: string,
   ) => void;
   //keep
   downloadFlows: () => void;
@@ -43,11 +43,11 @@ export type FlowsContextType = {
   }) => Promise<String | never>;
   tabsState: FlowsState;
   setTabsState: (
-    update: FlowsState | ((oldState: FlowsState) => FlowsState)
+    update: FlowsState | ((oldState: FlowsState) => FlowsState),
   ) => void;
   saveComponent: (
     component: NodeDataType,
-    override: boolean
+    override: boolean,
   ) => Promise<String | undefined>;
   deleteComponent: (key: string) => void;
   version: string;

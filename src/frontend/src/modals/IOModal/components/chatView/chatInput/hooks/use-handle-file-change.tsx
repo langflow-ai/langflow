@@ -1,32 +1,36 @@
 import ShortUniqueId from "short-unique-id";
+import {
+  ALLOWED_IMAGE_INPUT_EXTENSIONS,
+  FS_ERROR_TEXT,
+  SN_ERROR_TEXT,
+} from "../../../../../../constants/constants";
 import useAlertStore from "../../../../../../stores/alertStore";
 import useFileUpload from "./use-file-upload";
-
-const fsErrorText =
-  "Please ensure your file has one of the following extensions:";
-const snErrorTxt = "png, jpg, jpeg";
 
 export const useHandleFileChange = (setFiles, currentFlowId) => {
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const handleFileChange = async (
-    event: React.ChangeEvent<HTMLInputElement>
+    event: React.ChangeEvent<HTMLInputElement>,
   ) => {
     const fileInput = event.target;
     const file = fileInput.files?.[0];
     if (file) {
-      const allowedExtensions = ["png", "jpg", "jpeg"];
       const fileExtension = file.name.split(".").pop()?.toLowerCase();
 
-      if (!fileExtension || !allowedExtensions.includes(fileExtension)) {
+      if (
+        !fileExtension ||
+        !ALLOWED_IMAGE_INPUT_EXTENSIONS.includes(fileExtension)
+      ) {
         setErrorData({
           title: "Error uploading file",
-          list: [fsErrorText, snErrorTxt],
+          list: [FS_ERROR_TEXT, SN_ERROR_TEXT],
         });
         return;
       }
 
-      const uid = new ShortUniqueId({ length: 10 }); // Increase the length to ensure uniqueness
-      const id = uid();
+      const uid = new ShortUniqueId();
+      const id = uid.randomUUID(10);
+
       const type = file.type.split("/")[0];
       const blob = file;
 

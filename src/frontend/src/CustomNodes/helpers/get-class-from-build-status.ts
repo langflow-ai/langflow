@@ -4,14 +4,9 @@ import { VertexBuildTypeAPI } from "../../types/api";
 export const getSpecificClassFromBuildStatus = (
   buildStatus: BuildStatus | undefined,
   validationStatus: VertexBuildTypeAPI | null,
-  isDark: boolean
+  isDark: boolean,
 ) => {
   let isInvalid = validationStatus && !validationStatus.valid;
-
-  if (buildStatus === BuildStatus.INACTIVE) {
-    // INACTIVE should have its own class
-    return "inactive-status";
-  }
   if (
     (buildStatus === BuildStatus.BUILT && isInvalid) ||
     buildStatus === BuildStatus.ERROR
