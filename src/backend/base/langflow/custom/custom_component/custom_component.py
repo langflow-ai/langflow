@@ -83,7 +83,7 @@ class CustomComponent(BaseComponent):
     _flows_data: Optional[List[Data]] = None
     _outputs: List[OutputLog] = []
     _logs: List[Log] = []
-    _tracing_service: "TracingService"
+    tracing_service: Optional["TracingService"] = None
 
     def update_state(self, name: str, value: Any):
         if not self.vertex:
@@ -489,13 +489,10 @@ class CustomComponent(BaseComponent):
             message (LoggableType | list[LoggableType]): The message to log.
         """
         if name is None:
-            name = self.display_name if self.display_name else self.__class__.__name__
-        if hasattr(message, "model_dump") and isinstance(message, BaseModel):
-            message = message.model_dump()
+            name = self.display_name
         log = Log(message=message, type=get_artifact_type(message), name=name)
         self._logs.append(log)
-        if self.vertex:
-            self._tracing_service.add_log(trace_name=self.vertex.id, log=log)
+        self.tracing_service.add_log(trace_name=self.vertex.id, log=log)
 
     def post_code_processing(self, new_build_config: dict, current_build_config: dict):
         """
