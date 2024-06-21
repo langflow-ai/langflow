@@ -1,10 +1,8 @@
-import uuid
-import asyncio
 import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional
 
-from fastapi import HTTPException, Request
+from fastapi import HTTPException
 from platformdirs import user_cache_dir
 from sqlmodel import Session
 
@@ -327,9 +325,4 @@ def parse_exception(exc):
     if hasattr(exc, "body"):
         return exc.body["message"]
     return str(exc)
-
-
-async def check_client_disconnection(request: Request):
-    while not await request.is_disconnected():
-        await asyncio.sleep(1)
-    raise HTTPException(status_code=499, detail="Client disconnected")
+    return str(exc)
