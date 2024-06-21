@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, cast
 
 from langchain_community.vectorstores.redis import Redis
 from langchain_core.embeddings import Embeddings
@@ -80,5 +80,4 @@ class RedisVectorStoreComponent(CustomComponent):
                 redis_url=redis_server_url,
                 index_name=redis_index_name,
             )
-        return redis_vs
-        return redis_vs
+        return cast(Retriever, redis_vs)
