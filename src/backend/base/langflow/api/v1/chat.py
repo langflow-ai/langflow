@@ -25,7 +25,7 @@ from langflow.api.v1.schemas import (
     VerticesOrderResponse,
 )
 from langflow.exceptions.component import ComponentBuildException
-from langflow.schema.schema import Log
+from langflow.schema.schema import OutputLog
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.chat.service import ChatService
 from langflow.services.deps import get_chat_service, get_session, get_session_service
@@ -199,8 +199,8 @@ async def build_vertex(
             message = {"errorMessage": params, "stackTrace": tb}
             valid = False
             output_label = vertex.outputs[0]["name"] if vertex.outputs else "output"
-            logs = {output_label: Log(message=message, type="error")}
-            result_data_response = ResultDataResponse(results={}, logs=logs)
+            outputs = {output_label: OutputLog(message=message, type="error")}
+            result_data_response = ResultDataResponse(results={}, outputs=outputs)
             artifacts = {}
             background_tasks.add_task(graph.end_all_traces, error=message["errorMessage"])
             # If there's an error building the vertex

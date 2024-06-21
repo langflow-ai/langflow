@@ -32,7 +32,7 @@ class ErrorLog(TypedDict):
     stackTrace: str
 
 
-class Log(BaseModel):
+class OutputLog(BaseModel):
     message: Union[ErrorLog, StreamURL, dict, list, str]
     type: str
 
@@ -79,8 +79,8 @@ def get_message(payload):
     return message or payload
 
 
-def build_logs(vertex, result) -> dict:
-    logs: dict[str, Log] = dict()
+def build_output_logs(vertex, result) -> dict:
+    outputs: dict[str, OutputLog] = dict()
     component_instance = result[0]
     for index, output in enumerate(vertex.outputs):
         if component_instance.status is None:
@@ -105,6 +105,6 @@ def build_logs(vertex, result) -> dict:
             case LogType.UNKNOWN:
                 message = ""
         name = output.get("name", f"output_{index}")
-        logs |= {name: Log(message=message, type=_type).model_dump()}
+        outputs |= {name: OutputLog(message=message, type=_type).model_dump()}
 
-    return logs
+    return outputs

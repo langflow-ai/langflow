@@ -148,7 +148,7 @@ class ComponentVertex(Vertex):
         result_dict = ResultData(
             results=result_dict,
             artifacts=self.artifacts,
-            logs=self.logs,
+            outputs=self.outputs_logs,
             messages=messages,
             component_display_name=self.display_name,
             component_id=self.id,

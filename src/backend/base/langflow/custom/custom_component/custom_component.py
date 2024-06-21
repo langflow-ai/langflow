@@ -13,7 +13,7 @@ from langflow.schema import Data
 from langflow.schema.artifact import get_artifact_type
 from langflow.schema.dotdict import dotdict
 from langflow.schema.message import Message
-from langflow.schema.schema import Log
+from langflow.schema.schema import OutputLog
 from langflow.services.deps import get_storage_service, get_variable_service, session_scope
 from langflow.services.storage.service import StorageService
 from langflow.type_extraction.type_extraction import (
@@ -82,7 +82,7 @@ class CustomComponent(BaseComponent):
     status: Optional[Any] = None
     """The status of the component. This is displayed on the frontend. Defaults to None."""
     _flows_data: Optional[List[Data]] = None
-    _logs: List[Log] = []
+    _logs: List[OutputLog] = []
     tracing_service: Optional["TracingService"] = None
 
     def update_state(self, name: str, value: Any):
@@ -488,5 +488,5 @@ class CustomComponent(BaseComponent):
         Args:
             message (LoggableType | list[LoggableType]): The message to log.
         """
-        log = Log(message=message, type=get_artifact_type(message))
+        log = OutputLog(message=message, type=get_artifact_type(message))
         self._logs.append(log)
