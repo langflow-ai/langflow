@@ -80,7 +80,9 @@ To debug, hover over the component status to see the outputs.
 
 </div>
 
----
+### Output Preview
+
+Langflow now includes an output visualizer for components that opens a pop-up screen. This allows you to easily inspect and monitor transmissions between components, providing instant feedback on your workflows.
 
 ### Component Parameters
 
@@ -121,7 +123,9 @@ Modify the parameters of your component.
 
 #### Freeze
 
-Freeze this component and configuration in the canvas.
+After a component runs, lock its previous output state to prevent it from re-running.
+
+This avoids spending tokens when consistent output is expected.
 
 #### More
 
@@ -260,8 +264,8 @@ To see options for your project, in the upper left corner of the canvas, select 
 <ZoomableImage
   alt="Docusaurus themed image"
   sources={{
-    light: "img/project-options-menu.png",
-    dark: "img/project-options-menu.png",
+    light: "img/project-options-menu-light.png",
+    dark: "img/project-options-menu-dark.png",
   }}
   style={{ width: "30%", margin: "20px auto" }}
 />
