@@ -1,5 +1,6 @@
 import Admonition from "@theme/Admonition";
 import ZoomableImage from "/src/theme/ZoomableImage.js";
+import useBaseUrl from "@docusaurus/useBaseUrl";
 
 # Inputs and Outputs
 
@@ -48,8 +49,8 @@ One significant capability of the Chat Input component is its ability to transfo
 <ZoomableImage
   alt="Docusaurus themed image"
   sources={{
-    light: "img/playground-chat.png",
-    dark: "img/playground-chat.png",
+    light: useBaseUrl("img/playground-chat.png"),
+    dark: useBaseUrl("img/playground-chat.png"),
   }}
   style={{ width: "100%", maxWidth: "800px", margin: "0 auto" }}
 />
@@ -154,5 +155,4 @@ The `PromptTemplate` component enables users to create prompts and define variab
 
 After defining a variable in the prompt template, it acts as its own component input. See [Prompt Customization](../administration/prompt-customization) for more details.
 
-- **template:** The template used to format an individual request.import Admonition from "@theme/Admonition";
-  import ZoomableImage from "/src/theme/ZoomableImage.js";
+- **template:** The template used to format an individual request.
