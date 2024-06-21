@@ -1,15 +1,14 @@
 from typing import List
 
-from langchain_core.retrievers import BaseRetriever
 from langchain_pinecone import Pinecone
 
-from langflow.custom import Component
+from langflow.base.vectorstores.model import LCVectorStoreComponent
 from langflow.helpers.data import docs_to_data
-from langflow.io import BoolInput, DropdownInput, HandleInput, IntInput, Output, SecretStrInput, StrInput
+from langflow.io import BoolInput, DropdownInput, HandleInput, IntInput, StrInput, SecretStrInput, DataInput, MultilineInput
 from langflow.schema import Data
 
 
-class PineconeVectorStoreComponent(Component):
+class PineconeVectorStoreComponent(LCVectorStoreComponent):
     display_name = "Pinecone"
     description = "Pinecone Vector Store with search capabilities"
     documentation = "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/pinecone"
@@ -34,18 +33,18 @@ class PineconeVectorStoreComponent(Component):
             value="text",
             advanced=True,
         ),
-        HandleInput(
+        DataInput(
             name="vector_store_inputs",
             display_name="Vector Store Inputs",
-            input_types=["Document", "Data"],
             is_list=True,
         ),
         BoolInput(
             name="add_to_vector_store",
             display_name="Add to Vector Store",
             info="If true, the Vector Store Inputs will be added to the Vector Store.",
+            value=True,
         ),
-        StrInput(name="search_input", display_name="Search Input"),
+        MultilineInput(name="search_input", display_name="Search Input"),
         IntInput(
             name="number_of_results",
             display_name="Number of Results",
@@ -53,17 +52,6 @@ class PineconeVectorStoreComponent(Component):
             value=4,
             advanced=True,
         ),
-    ]
-
-    outputs = [
-        Output(display_name="Vector Store", name="vector_store", method="build_vector_store", output_type=Pinecone),
-        Output(
-            display_name="Base Retriever",
-            name="base_retriever",
-            method="build_base_retriever",
-            output_type=BaseRetriever,
-        ),
-        Output(display_name="Search Results", name="search_results", method="search_documents"),
     ]
 
     def build_vector_store(self) -> Pinecone:

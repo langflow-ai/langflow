@@ -1,15 +1,14 @@
 from typing import List
 
 from langchain_community.vectorstores import Cassandra
-from langchain_core.retrievers import BaseRetriever
 
-from langflow.custom import Component
+from langflow.base.vectorstores.model import LCVectorStoreComponent
 from langflow.helpers.data import docs_to_data
-from langflow.io import BoolInput, DropdownInput, HandleInput, IntInput, Output, SecretStrInput, StrInput
+from langflow.io import BoolInput, DropdownInput, HandleInput, IntInput, SecretStrInput, TextInput, DataInput, MultilineInput
 from langflow.schema import Data
 
 
-class CassandraVectorStoreComponent(Component):
+class CassandraVectorStoreComponent(LCVectorStoreComponent):
     display_name = "Cassandra"
     description = "Cassandra Vector Store with search capabilities"
     documentation = "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/cassandra"
@@ -22,14 +21,14 @@ class CassandraVectorStoreComponent(Component):
             info="Authentication token for accessing Cassandra on Astra DB.",
             required=True,
         ),
-        StrInput(name="database_id", display_name="Database ID", info="The Astra database ID.", required=True),
-        StrInput(
+        TextInput(name="database_id", display_name="Database ID", info="The Astra database ID.", required=True),
+        TextInput(
             name="table_name",
             display_name="Table Name",
             info="The name of the table where vectors will be stored.",
             required=True,
         ),
-        StrInput(
+        TextInput(
             name="keyspace",
             display_name="Keyspace",
             info="Optional key space within Astra DB. The keyspace should already be created.",
@@ -48,7 +47,7 @@ class CassandraVectorStoreComponent(Component):
             value=16,
             advanced=True,
         ),
-        StrInput(
+        TextInput(
             name="body_index_options",
             display_name="Body Index Options",
             info="Optional options used to create the body index.",
@@ -63,10 +62,9 @@ class CassandraVectorStoreComponent(Component):
             advanced=True,
         ),
         HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
-        HandleInput(
+        DataInput(
             name="vector_store_inputs",
             display_name="Vector Store Inputs",
-            input_types=["Document", "Data"],
             is_list=True,
         ),
         BoolInput(
@@ -74,7 +72,7 @@ class CassandraVectorStoreComponent(Component):
             display_name="Add to Vector Store",
             info="If true, the Vector Store Inputs will be added to the Vector Store.",
         ),
-        StrInput(name="search_input", display_name="Search Input"),
+        MultilineInput(name="search_input", display_name="Search Input"),
         IntInput(
             name="number_of_results",
             display_name="Number of Results",
@@ -82,17 +80,6 @@ class CassandraVectorStoreComponent(Component):
             value=4,
             advanced=True,
         ),
-    ]
-
-    outputs = [
-        Output(display_name="Vector Store", name="vector_store", method="build_vector_store", output_type=Cassandra),
-        Output(
-            display_name="Base Retriever",
-            name="base_retriever",
-            method="build_base_retriever",
-            output_type=BaseRetriever,
-        ),
-        Output(display_name="Search Results", name="search_results", method="search_documents"),
     ]
 
     def build_vector_store(self) -> Cassandra:
