@@ -68,11 +68,13 @@ class Edge:
     def _validate_handles(self, source, target) -> None:
         if self.target_handle.inputTypes is None:
             self.valid_handles = self.target_handle.type in self.source_handle.output_types
-        else:
+
+        elif self.source_handle.output_types is not None:
             self.valid_handles = (
                 any(output_type in self.target_handle.inputTypes for output_type in self.source_handle.output_types)
                 or self.target_handle.type in self.source_handle.output_types
             )
+
         if not self.valid_handles:
             logger.debug(self.source_handle)
             logger.debug(self.target_handle)
