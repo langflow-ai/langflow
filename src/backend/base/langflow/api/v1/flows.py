@@ -51,9 +51,12 @@ def create_flow(
             else:
                 flow.name = f"{flow.name} (1)"
         # Now check if the endpoint is unique
-        if session.exec(
-            select(Flow).where(Flow.endpoint_name == flow.endpoint_name).where(Flow.user_id == current_user.id)
-        ).first():
+        if (
+            flow.endpoint_name
+            and session.exec(
+                select(Flow).where(Flow.endpoint_name == flow.endpoint_name).where(Flow.user_id == current_user.id)
+            ).first()
+        ):
             flows = session.exec(
                 select(Flow)
                 .where(Flow.endpoint_name.like(f"{flow.endpoint_name}-%"))  # type: ignore
