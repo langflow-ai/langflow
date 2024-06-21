@@ -12,8 +12,8 @@ from loguru import logger
 
 from langflow.schema.data import Data
 from langflow.services.base import Service
-from langflow.services.tracing.schema import Log
 from langflow.services.tracing.base import BaseTrace
+from langflow.services.tracing.schema import Log
 
 if TYPE_CHECKING:
     from langflow.services.monitor.service import MonitorService
