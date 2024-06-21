@@ -38,8 +38,8 @@ def recursive_serialize_or_str(obj):
 
 
 class Component(CustomComponent):
-    inputs: Optional[List[InputTypes]] = None
-    outputs: Optional[List[Output]] = None
+    inputs: List[InputTypes] = []
+    outputs: List[Output] = []
     code_class_base_inheritance: ClassVar[str] = "Component"
 
     def __init__(self, **data):
