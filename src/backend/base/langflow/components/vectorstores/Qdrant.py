@@ -1,15 +1,23 @@
 from typing import List
 
 from langchain_community.vectorstores import Qdrant
-from langchain_core.retrievers import BaseRetriever
 
-from langflow.custom import Component
+from langflow.base.vectorstores.model import LCVectorStoreComponent
 from langflow.helpers.data import docs_to_data
-from langflow.io import BoolInput, DropdownInput, HandleInput, IntInput, Output, SecretStrInput, StrInput
+from langflow.io import (
+    BoolInput,
+    DropdownInput,
+    HandleInput,
+    IntInput,
+    StrInput,
+    SecretStrInput,
+    DataInput,
+    MultilineInput,
+)
 from langflow.schema import Data
 
 
-class QdrantVectorStoreComponent(Component):
+class QdrantVectorStoreComponent(LCVectorStoreComponent):
     display_name = "Qdrant"
     description = "Qdrant Vector Store with search capabilities"
     documentation = "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/qdrant"
@@ -35,10 +43,9 @@ class QdrantVectorStoreComponent(Component):
         StrInput(name="content_payload_key", display_name="Content Payload Key", value="page_content", advanced=True),
         StrInput(name="metadata_payload_key", display_name="Metadata Payload Key", value="metadata", advanced=True),
         HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
-        HandleInput(
+        DataInput(
             name="vector_store_inputs",
             display_name="Vector Store Inputs",
-            input_types=["Document", "Data"],
             is_list=True,
         ),
         BoolInput(
@@ -46,7 +53,7 @@ class QdrantVectorStoreComponent(Component):
             display_name="Add to Vector Store",
             info="If true, the Vector Store Inputs will be added to the Vector Store.",
         ),
-        StrInput(name="search_input", display_name="Search Input"),
+        MultilineInput(name="search_input", display_name="Search Input"),
         IntInput(
             name="number_of_results",
             display_name="Number of Results",
@@ -54,17 +61,6 @@ class QdrantVectorStoreComponent(Component):
             value=4,
             advanced=True,
         ),
-    ]
-
-    outputs = [
-        Output(display_name="Vector Store", name="vector_store", method="build_vector_store", output_type=Qdrant),
-        Output(
-            display_name="Base Retriever",
-            name="base_retriever",
-            method="build_base_retriever",
-            output_type=BaseRetriever,
-        ),
-        Output(display_name="Search Results", name="search_results", method="search_documents"),
     ]
 
     def build_vector_store(self) -> Qdrant:
@@ -91,7 +87,6 @@ class QdrantVectorStoreComponent(Component):
 
         # Remove None values from server_kwargs
         server_kwargs = {k: v for k, v in server_kwargs.items() if v is not None}
-
         if self.add_to_vector_store:
             documents = []
             for _input in self.vector_store_inputs or []:
@@ -101,9 +96,7 @@ class QdrantVectorStoreComponent(Component):
                     documents.append(_input)
 
             if documents:
-                qdrant = Qdrant.from_documents(
-                    documents, embedding=self.embedding, client_kwargs=server_kwargs, **qdrant_kwargs
-                )
+                qdrant = Qdrant.from_documents(documents, embedding=self.embedding, **qdrant_kwargs)
             else:
                 from qdrant_client import QdrantClient
 

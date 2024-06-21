@@ -7,7 +7,7 @@ from loguru import logger
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent
 from langflow.base.vectorstores.utils import chroma_collection_to_data
-from langflow.io import BoolInput, DataInput, DropdownInput, HandleInput, IntInput, StrInput, TextInput
+from langflow.io import BoolInput, DataInput, DropdownInput, HandleInput, IntInput, StrInput, MultilineInput
 from langflow.schema import Data
 
 if TYPE_CHECKING:
@@ -34,13 +34,14 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
             name="persist_directory",
             display_name="Persist Directory",
         ),
-        TextInput(
+        MultilineInput(
             name="search_query",
             display_name="Search Query",
         ),
         DataInput(
             name="ingest_data",
             display_name="Ingest Data",
+            is_list=True,
         ),
         HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
         StrInput(
@@ -96,7 +97,7 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
         ),
     ]
 
-    def build_vector_store(self) -> "Chroma":
+    def build_vector_store(self) -> Chroma:
         """
         Builds the Chroma object.
         """
