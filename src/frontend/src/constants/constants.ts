@@ -568,7 +568,8 @@ export const ADMIN_HEADER_DESCRIPTION =
 
 export const BASE_URL_API = "/api/v1/";
 
-export const BACKEND_URL = "http://localhost:7860/";
+export const LANGFLOW_PORT = process.env.LANGFLOW_PORT || "7860";
+export const BACKEND_URL = `http://localhost:${LANGFLOW_PORT}/`;
 
 /**
  * URLs excluded from error retries.
