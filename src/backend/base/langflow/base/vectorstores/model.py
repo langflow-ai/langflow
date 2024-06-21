@@ -26,7 +26,7 @@ class LCVectorStoreComponent(Component):
 
     def _validate_outputs(self):
         # At least these three outputs must be defined
-        required_output_methods = ["build_vector_store", "build_base_retriever", "search_documents"]
+        required_output_methods = ["build_base_retriever", "search_documents"]
         output_names = [output.name for output in self.outputs]
         for method_name in required_output_methods:
             if method_name not in output_names:
@@ -68,7 +68,7 @@ class LCVectorStoreComponent(Component):
 
     def build_vector_store(self) -> VectorStore:
         """
-        Builds the Vector Store object.
+        Builds the Vector Store object.c
         """
         raise NotImplementedError("build_vector_store method must be implemented.")
 
