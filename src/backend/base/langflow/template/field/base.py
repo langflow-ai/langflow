@@ -1,20 +1,11 @@
 from enum import Enum
-from typing import (
-    Any,
-    Callable,
-    GenericAlias,
-    Optional,  # type: ignore
-    Union,
-    _GenericAlias,
-    _UnionGenericAlias,
-)
+from typing import Optional  # type: ignore
+from typing import Any, Callable, Union
 
 from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator, model_serializer, model_validator
 
 from langflow.field_typing import Text
 from langflow.field_typing.range_spec import RangeSpec
-from langflow.helpers.custom import format_type
-from langflow.type_extraction.type_extraction import post_process_type
 
 
 class UndefinedType(Enum):
@@ -120,18 +111,6 @@ class Input(BaseModel):
     @field_serializer("file_path")
     def serialize_file_path(self, value):
         return value if self.field_type == "file" else ""
-
-    @field_validator("field_type", mode="before")
-    def validate_type(cls, v):
-        # If the user passes CustomComponent as a type insteado of "CustomComponent" we need to convert it to a string
-        # this should be done for all types
-        # How to check if v is a type?
-        if isinstance(v, (type, _GenericAlias, GenericAlias, _UnionGenericAlias)):
-            v = post_process_type(v)[0]
-            v = format_type(v)
-        elif not isinstance(v, str):
-            raise ValueError(f"type must be a string or a type, not {type(v)}")
-        return v
 
     @field_serializer("field_type")
     def serialize_field_type(self, value, _info):
