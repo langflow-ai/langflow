@@ -91,7 +91,7 @@ class CustomComponent(BaseComponent):
         except Exception as e:
             raise ValueError(f"Error updating state: {e}")
 
-    def stop(self, output_name: str | None):
+    def stop(self, output_name: str | None = None):
         if not output_name and self.vertex and len(self.vertex.outputs) == 1:
             output_name = self.vertex.outputs[0]["name"]
         else:
