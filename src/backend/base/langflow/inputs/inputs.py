@@ -141,7 +141,7 @@ class TextInput(StrInput):
         Raises:
             ValueError: If the value is not of a valid type or if the input is missing a required key.
         """
-        value = None
+        value: str | AsyncIterator | Iterator | None = None
         if isinstance(v, str):
             value = v
         elif isinstance(v, Message):
