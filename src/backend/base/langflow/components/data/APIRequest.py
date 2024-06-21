@@ -1,14 +1,14 @@
 import asyncio
 import json
 from typing import Any, List, Optional
-from urllib.parse import urlencode, urlparse, parse_qsl, urlunparse
+from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 import httpx
 from loguru import logger
 
 from langflow.base.curl.parse import parse_context
 from langflow.custom import Component
-from langflow.io import DropdownInput, IntInput, NestedDictInput, Output, TextInput, DataInput
+from langflow.io import DataInput, DropdownInput, IntInput, NestedDictInput, Output, TextInput
 from langflow.schema import Data
 from langflow.schema.dotdict import dotdict
 
@@ -44,27 +44,17 @@ class APIRequestComponent(Component):
             value="GET",
             info="The HTTP method to use (GET, POST, PATCH, PUT).",
         ),
-        DataInput(
+        NestedDictInput(
             name="headers",
-            display_name="Headers Data",
-            info="The headers to send with the request as a Data object.",
-        ),
-        NestedDictInput(
-            name="headers_dict",
-            display_name="Headers Dictionary",
+            display_name="Headers",
             info="The headers to send with the request as a dictionary. This is populated when using the CURL field.",
-            advanced=True,
-        ),
-        DataInput(
-            name="body",
-            display_name="Body Data",
-            info="The body to send with the request as a Data object (for POST, PATCH, PUT).",
+            input_types=["Data"],
         ),
         NestedDictInput(
-            name="body_dict",
-            display_name="Body Dictionary",
+            name="body",
+            display_name="Body",
             info="The body to send with the request as a dictionary (for POST, PATCH, PUT). This is populated when using the CURL field.",
-            advanced=True,
+            input_types=["Data"],
         ),
         DataInput(
             name="query_params",
@@ -88,16 +78,16 @@ class APIRequestComponent(Component):
             parsed = parse_context(curl)
             build_config["urls"]["value"] = [parsed.url]
             build_config["method"]["value"] = parsed.method.upper()
-            build_config["headers_dict"]["value"] = dict(parsed.headers)
+            build_config["headers"]["value"] = dict(parsed.headers)
 
             if parsed.data:
                 try:
                     json_data = json.loads(parsed.data)
-                    build_config["body_dict"]["value"] = json_data
+                    build_config["body"]["value"] = json_data
                 except json.JSONDecodeError as e:
                     logger.error(f"Error decoding JSON data: {e}")
             else:
-                build_config["body_dict"]["value"] = None
+                build_config["body"]["value"] = {}
         except Exception as exc:
             logger.error(f"Error parsing curl: {exc}")
             raise ValueError(f"Error parsing curl: {exc}")
@@ -106,11 +96,6 @@ class APIRequestComponent(Component):
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
         if field_name == "curl" and field_value:
             build_config = self.parse_curl(field_value, build_config)
-            # Apply the parsed values to the component fields
-            self.urls = build_config["urls"]["value"]
-            self.method = build_config["method"]["value"]
-            self.headers_dict = build_config["headers"]["value"]
-            self.body_dict = build_config["body"]["value"]
         return build_config
 
     async def make_request(
@@ -172,8 +157,8 @@ class APIRequestComponent(Component):
         method = self.method
         urls = [url.strip() for url in self.urls if url.strip()]
         curl = self.curl
-        headers = self.headers if self.headers else (self.headers_dict or {})
-        body = self.body if self.body else (self.body_dict or {})
+        headers = self.headers or {}
+        body = self.body or {}
         timeout = self.timeout
         query_params = self.query_params.data if self.query_params else {}
 
