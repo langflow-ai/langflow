@@ -56,9 +56,6 @@ class VectaraVectorStoreComponent(Component):
     def build_vector_store(self) -> Vectara:
         return self._build_vectara()
 
-    def build_base_retriever(self) -> Retriever:
-        return self._build_vectara()
-
     def _build_vectara(self) -> Vectara:
         source = "Langflow"
 
