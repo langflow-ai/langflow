@@ -80,7 +80,7 @@ class Message(Data):
                 human_message = HumanMessage(content=contents)  # type: ignore
             else:
                 human_message = HumanMessage(
-                    content=[{"type": "text", "text": self.text}],
+                    content=self.text,
                 )
 
             return human_message
@@ -167,13 +167,18 @@ class Message(Data):
     @classmethod
     async def from_template_and_variables(cls, template: str, **variables):
         instance = cls(template=template, variables=variables)
-        contents = [{"type": "text", "text": instance.format_text()}]
+        text = instance.format_text()
         # Get all Message instances from the kwargs
+        message = HumanMessage(content=text)
+        contents = []
         for value in variables.values():
-            if isinstance(value, cls):
+            if isinstance(value, cls) and value.files:
                 content_dicts = await value.get_file_content_dicts()
                 contents.extend(content_dicts)
-        prompt_template = ChatPromptTemplate.from_messages([HumanMessage(content=contents)])  # type: ignore
+        if contents:
+            message = HumanMessage(content=[{"type": "text", "text": text}] + contents)
+
+        prompt_template = ChatPromptTemplate.from_messages([message])  # type: ignore
         instance.prompt = jsonable_encoder(prompt_template.to_json())
         instance.messages = instance.prompt.get("kwargs", {}).get("messages", [])
         return instance
