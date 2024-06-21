@@ -1,6 +1,6 @@
 import { Textarea } from "../../../components/ui/textarea";
 
-const TextOutputView = ({ left, value,onChange }) => {
+const TextOutputView = ({ left, value,onChange }:{left:boolean|undefined,value:any,onChange?:(string)=>void;}) => {
   if (typeof value === "object" && Object.keys(value).includes("text")) {
     value = value.text;
   }
@@ -10,7 +10,7 @@ const TextOutputView = ({ left, value,onChange }) => {
       placeholder={"Empty"}
       // update to real value on flowPool
       value={value}
-      onChange={(e) => onChange(e.target.value)}
+      onChange={(e) => {if(onChange) onChange(e.target.value)}}
     />
   );
 };
