@@ -5,7 +5,7 @@ from pydantic.v1 import SecretStr
 
 from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
-from langflow.field_typing.constants import LanguageModel
+from langflow.field_typing.constants import BaseLLM, LanguageModel
 from langflow.io import BoolInput, DropdownInput, FloatInput, Output, SecretStrInput, TextInput
 
 
@@ -113,4 +113,4 @@ class QianfanChatEndpointComponent(LCModelComponent):
         except Exception as e:
             raise ValueError("Could not connect to Baidu Qianfan API.") from e
 
-        return cast(LanguageModel, output)
+        return cast(BaseLLM, output)
