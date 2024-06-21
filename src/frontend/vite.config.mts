@@ -31,6 +31,7 @@ export default defineConfig(({ mode }) => {
     },
     define: {
       "process.env.LANGFLOW_PORT": JSON.stringify(process.env.LANGFLOW_PORT),
+      "process.env.LANGFLOW_HOST": JSON.stringify(process.env.LANGFLOW_HOST),
     },
     plugins: [react(), svgr()],
     server: {
