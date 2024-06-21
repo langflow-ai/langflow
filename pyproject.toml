@@ -52,7 +52,7 @@ psycopg = "^3.1.9"
 psycopg-binary = "^3.1.9"
 fastavro = "^1.8.0"
 celery = { extras = ["redis"], version = "^5.3.6", optional = true }
-redis = { version = "^5.0.1", optional = true }
+redis = "^5.0.1"
 flower = { version = "^2.0.0", optional = true }
 metaphor-python = "^0.1.11"
 pywin32 = { version = "^306", markers = "sys_platform == 'win32'" }
