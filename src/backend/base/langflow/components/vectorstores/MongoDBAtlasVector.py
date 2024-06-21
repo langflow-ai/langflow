@@ -86,7 +86,7 @@ class MongoVectorStoreComponent(LCVectorStoreComponent):
         return vector_store
 
     def search_documents(self) -> List[Data]:
-        from typing import Optional, Union
+        from typing import Union
         from bson import ObjectId
         from langchain.schema import Document
         import json
