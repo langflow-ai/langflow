@@ -4,7 +4,7 @@ from langchain_community.vectorstores.redis import Redis
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent
 from langflow.helpers.data import docs_to_data
-from langflow.io import HandleInput, IntInput, StrInput, SecretStrInput, MultilineInput, DataInput
+from langflow.io import HandleInput, IntInput, StrInput, SecretStrInput, DataInput, MultilineInput
 from langflow.schema import Data
 from langchain.text_splitter import CharacterTextSplitter
 
@@ -28,7 +28,6 @@ class RedisVectorStoreComponent(LCVectorStoreComponent):
         StrInput(
             name="schema",
             display_name="Schema",
-            field_type=[".yaml"],
         ),
         DataInput(
             name="vector_store_inputs",
@@ -79,7 +78,7 @@ class RedisVectorStoreComponent(LCVectorStoreComponent):
         return redis_vs
 
     def search_documents(self) -> List[Data]:
-        vector_store = self._build_redis()
+        vector_store = self.build_vector_store()
 
         if self.search_input and isinstance(self.search_input, str) and self.search_input.strip():
             docs = vector_store.similarity_search(
