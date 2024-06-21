@@ -7,17 +7,17 @@ const useValidationStatusString = (
   setValidationString,
 ) => {
   useEffect(() => {
-    if (validationStatus && validationStatus.data?.logs) {
+    if (validationStatus && validationStatus.data?.outputs) {
       // if it is not a string turn it into a string
       let newValidationString = "";
-      Object.values(validationStatus?.data?.logs).forEach((log: any) => {
-        if (isErrorLog(log)) {
-          newValidationString += `${log.message.errorMessage}\n`;
+      Object.values(validationStatus?.data?.outputs).forEach((output: any) => {
+        if (isErrorLog(output)) {
+          newValidationString += `${output.message.errorMessage}\n`;
         }
       });
       setValidationString(newValidationString);
     }
-  }, [validationStatus, validationStatus?.data?.logs, setValidationString]);
+  }, [validationStatus, validationStatus?.data?.outputs, setValidationString]);
 };
 
 export default useValidationStatusString;
