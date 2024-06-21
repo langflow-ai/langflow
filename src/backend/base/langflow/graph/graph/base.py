@@ -292,7 +292,8 @@ class Graph:
         # Process the graph
         try:
             cache_service = get_chat_service()
-            await cache_service.set_cache(self.flow_id, self)
+            if self.flow_id:
+                await cache_service.set_cache(self.flow_id, self)
         except Exception as exc:
             logger.exception(exc)
 
