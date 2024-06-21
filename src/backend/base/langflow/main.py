@@ -62,7 +62,7 @@ class RequestCancelledMiddleware:
         try:
             return await handler_task
         except asyncio.CancelledError:
-            logger.debug("Cancelling request due to disconnect")
+            pass
 
 
 class JavaScriptMIMETypeMiddleware(BaseHTTPMiddleware):
