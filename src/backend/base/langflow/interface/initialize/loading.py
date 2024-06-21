@@ -66,9 +66,9 @@ async def build_component_and_get_results(
     )
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
-        if base_type == "custom_components":
+        if base_type == "custom_components" and isinstance(custom_component, CustomComponent):
             return await build_custom_component(params=params_copy, custom_component=custom_component)
-        elif base_type == "component":
+        elif base_type == "component" and isinstance(custom_component, Component):
             return await build_component(params=params_copy, custom_component=custom_component)
         else:
             raise ValueError(f"Base type {base_type} not found.")
