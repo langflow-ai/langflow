@@ -16,6 +16,7 @@ from langflow.schema.message import Message
 from langflow.schema.schema import OutputLog
 from langflow.services.deps import get_storage_service, get_variable_service, session_scope
 from langflow.services.storage.service import StorageService
+from langflow.services.tracing.schema import Log
 from langflow.type_extraction.type_extraction import (
     extract_inner_type_from_generic_alias,
     extract_union_types_from_generic_alias,
@@ -82,7 +83,8 @@ class CustomComponent(BaseComponent):
     status: Optional[Any] = None
     """The status of the component. This is displayed on the frontend. Defaults to None."""
     _flows_data: Optional[List[Data]] = None
-    _logs: List[OutputLog] = []
+    _outputs: List[OutputLog] = []
+    _logs: List[Log] = []
     tracing_service: Optional["TracingService"] = None
 
     def update_state(self, name: str, value: Any):
@@ -481,12 +483,15 @@ class CustomComponent(BaseComponent):
         """
         raise NotImplementedError
 
-    def log(self, message: LoggableType | list[LoggableType]):
+    def log(self, message: LoggableType | list[LoggableType], name: str | None = None):
         """
         Logs a message.
 
         Args:
             message (LoggableType | list[LoggableType]): The message to log.
         """
-        log = OutputLog(message=message, type=get_artifact_type(message))
+        if name is None:
+            name = self.display_name
+        log = Log(message=message, type=get_artifact_type(message), name=name)
         self._logs.append(log)
+        self.tracing_service.add_log(trace_name=self.vertex.id, log=log)

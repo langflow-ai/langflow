@@ -1,6 +1,7 @@
 import os
 import traceback
 from contextlib import contextmanager
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, Dict
 
 from langchain.callbacks.tracers.langchain import wait_for_all_tracers
@@ -8,6 +9,7 @@ from loguru import logger
 
 from langflow.schema.data import Data
 from langflow.services.base import Service
+from langflow.services.tracing.schema import Log
 
 if TYPE_CHECKING:
     from langflow.services.monitor.service import MonitorService
@@ -78,6 +80,15 @@ class TracingService(Service):
     async def end(self, outputs: dict[str, Any] | None = None, error: str | None = None):
         self._end_all_traces(outputs, error)
         self._reset_io()
+
+    async def add_log(self, trace_name: str, log: Log):
+        for tracer in self._tracers.values():
+            if not tracer.ready:
+                continue
+            try:
+                tracer.add_log(trace_name, log)
+            except Exception as e:
+                logger.error(f"Error adding log to trace {trace_name}: {e}")
 
     @contextmanager
     def trace_context(
@@ -189,6 +200,11 @@ class LangSmithTracer:
             child.patch()
         else:
             child.post()
+        self._child_link[trace_name] = child.get_url()
+
+    def add_log(self, trace_name: str, log: Log):
+        log_dict = {"name": log.name, "time": datetime.now(timezone.utc).isoformat(), "message": log.message}
+        self._children[trace_name].add_event(log_dict)
 
     def end(self, outputs: Dict[str, Any], error: str | None = None):
         self._run_tree.end(outputs=outputs, error=error)
