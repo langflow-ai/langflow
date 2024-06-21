@@ -52,7 +52,7 @@ const SideBarFoldersButtonsComponent = ({
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
 
-  const handleFolderChange = (folderId: string) => {
+  const handleFolderChange = () => {
     getFolderById(folderId);
   };
 
