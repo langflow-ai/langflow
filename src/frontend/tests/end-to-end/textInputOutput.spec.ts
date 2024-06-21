@@ -4,7 +4,6 @@ import path from "path";
 
 test("TextInputOutputComponent", async ({ page }) => {
   if (!process.env.CI) {
-    dotenv.config();
     dotenv.config({ path: path.resolve(__dirname, "../../.env") });
   }
 

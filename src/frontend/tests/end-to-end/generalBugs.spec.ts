@@ -42,7 +42,6 @@ test("should interact with api request", async ({ page }) => {
 
 test("erase button should clear the chat messages", async ({ page }) => {
   if (!process.env.CI) {
-    dotenv.config();
     dotenv.config({ path: path.resolve(__dirname, "../../.env") });
   }
 
