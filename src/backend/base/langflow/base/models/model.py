@@ -140,7 +140,7 @@ class LCModelComponent(Component):
         inputs: Union[list, dict] = messages or {}
         try:
             runnable = runnable.with_config(
-                {"run_name": self.display_name, "project_name": self.tracing_service.project_name}
+                {"run_name": self.display_name, "project_name": self._tracing_service.project_name}
             )
             if stream:
                 return runnable.stream(inputs)
