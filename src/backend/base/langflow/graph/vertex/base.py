@@ -15,7 +15,7 @@ from langflow.graph.utils import UnbuiltObject, UnbuiltResult
 from langflow.interface.initialize import loading
 from langflow.interface.listing import lazy_load_dict
 from langflow.schema.artifact import ArtifactType
-from langflow.schema.schema import INPUT_FIELD_NAME, Log, build_logs
+from langflow.schema.schema import INPUT_FIELD_NAME, OutputLog, build_output_logs
 from langflow.services.deps import get_storage_service
 from langflow.services.monitor.utils import log_transaction
 from langflow.utils.constants import DIRECT_TYPES
@@ -80,7 +80,7 @@ class Vertex:
         self.layer = None
         self.result: Optional[ResultData] = None
         self.results: Dict[str, Any] = {}
-        self.logs: Dict[str, Log] = {}
+        self.outputs_logs: Dict[str, OutputLog] = {}
         try:
             self.is_interface_component = self.vertex_type in InterfaceComponentTypes
         except ValueError:
@@ -457,7 +457,7 @@ class Vertex:
         result_dict = ResultData(
             results=result_dict,
             artifacts=artifacts,
-            logs=self.logs,
+            outputs=self.outputs_logs,
             messages=messages,
             component_display_name=self.display_name,
             component_id=self.id,
@@ -620,7 +620,7 @@ class Vertex:
                 fallback_to_env_vars=fallback_to_env_vars,
                 vertex=self,
             )
-            self.logs = build_logs(self, result)
+            self.outputs_logs = build_output_logs(self, result)
             self._update_built_object_and_artifacts(result)
         except Exception as exc:
             tb = traceback.format_exc()
