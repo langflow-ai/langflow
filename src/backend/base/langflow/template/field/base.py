@@ -2,7 +2,8 @@ from enum import Enum
 from typing import Optional  # type: ignore
 from typing import Any, Callable, Union
 
-from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator, model_serializer, model_validator
+from pydantic import (BaseModel, ConfigDict, Field, field_serializer,
+                      field_validator, model_serializer, model_validator)
 
 from langflow.field_typing import Text
 from langflow.field_typing.range_spec import RangeSpec
@@ -147,7 +148,7 @@ class Output(BaseModel):
     selected: Optional[str] = Field(default=None)
     """The selected output type for the field."""
 
-    name: Optional[str] = Field(default=None)
+    name: str = Field(description="The name of the field.")
     """The name of the field."""
 
     hidden: Optional[bool] = Field(default=None)
@@ -189,6 +190,10 @@ class Output(BaseModel):
         if self.value == UNDEFINED.value:
             self.value = UNDEFINED
         if self.name is None:
+            raise ValueError("name must be set")
+        if self.display_name is None:
+            self.display_name = self.name
+        return self
             raise ValueError("name must be set")
         if self.display_name is None:
             self.display_name = self.name
