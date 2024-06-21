@@ -118,11 +118,11 @@ class Component(CustomComponent):
     async def build_results(self):
         inputs = self.get_trace_as_inputs()
         metadata = self.get_trace_as_metadata()
-        with self.tracing_service.trace_context(
+        with self._tracing_service.trace_context(
             f"{self.display_name} ({self.vertex.id})", self.trace_type, inputs, metadata
         ):
             _results, _artifacts = await self._build_results()
-            self.tracing_service.set_outputs(_results)
+            self._tracing_service.set_outputs(_results)
 
         return _results, _artifacts
 
@@ -180,8 +180,8 @@ class Component(CustomComponent):
                         _artifacts[output.name] = artifact
         self._artifacts = _artifacts
         self._results = _results
-        if self.tracing_service:
-            self.tracing_service.set_outputs(_results)
+        if self._tracing_service:
+            self._tracing_service.set_outputs(_results)
         return _results, _artifacts
 
     def custom_repr(self):
