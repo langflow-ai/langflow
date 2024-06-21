@@ -1,3 +1,4 @@
+import json
 import os
 from pathlib import Path
 from unittest.mock import Mock, patch
@@ -176,7 +177,8 @@ def test_directory_without_mocks():
     # each result is a Data that contains the content attribute
     # each are dict that are exactly the same as one of the projects
     for i, result in enumerate(results):
-        assert result.text in projects, list(diff(result.text, projects[i]))
+        file_dict = json.loads(result.text)
+        assert file_dict in projects, list(diff(file_dict, projects[i]))
 
     # in ../docs/docs/components there are many mdx files
     # check if the directory component can load them
