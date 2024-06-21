@@ -34,8 +34,8 @@ export default function InputGlobalComponent({
   useEffect(() => {
     if (data)
       if (
-        globalVariablesEntries &&
-        !globalVariablesEntries.includes(data.value) &&
+        ((globalVariablesEntries &&
+        !globalVariablesEntries.includes(data.value))||!globalVariablesEntries) &&
         data.load_from_db
       ) {
         setTimeout(() => {
@@ -43,7 +43,7 @@ export default function InputGlobalComponent({
           setDb(false);
         }, 100);
       }
-  }, [globalVariablesEntries]);
+  }, [globalVariablesEntries,data]);
 
   useEffect(() => {
     if (!data.value && data.display_name) {
