@@ -5,7 +5,6 @@ import path from "path";
 
 test("user must interact with chat with Input/Output", async ({ page }) => {
   if (!process.env.CI) {
-    dotenv.config();
     dotenv.config({ path: path.resolve(__dirname, "../../.env") });
   }
 
@@ -107,7 +106,6 @@ test("user must interact with chat with Input/Output", async ({ page }) => {
 
 test("user must be able to see output inspection", async ({ page }) => {
   if (!process.env.CI) {
-    dotenv.config();
     dotenv.config({ path: path.resolve(__dirname, "../../.env") });
   }
 
@@ -161,7 +159,6 @@ test("user must be able to see output inspection", async ({ page }) => {
 
 test("user must be able to send an image on chat", async ({ page }) => {
   if (!process.env.CI) {
-    dotenv.config();
     dotenv.config({ path: path.resolve(__dirname, "../../.env") });
   }
 
