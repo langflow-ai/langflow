@@ -140,6 +140,7 @@ def parse_text_file_to_data(file_path: str, silent_errors: bool) -> Optional[Dat
                 text = {k: normalize_text(v) if isinstance(v, str) else v for k, v in text.items()}
             elif isinstance(text, list):
                 text = [normalize_text(item) if isinstance(item, str) else item for item in text]
+            text = orjson.dumps(text).decode("utf-8")
 
         elif file_path.endswith(".yaml") or file_path.endswith(".yml"):
             text = yaml.safe_load(text)
