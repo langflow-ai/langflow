@@ -212,13 +212,16 @@ class Graph:
             raise ValueError("Run ID not set")
         return self._run_id
 
-    def set_run_id(self, run_id: str | uuid.UUID):
+    def set_run_id(self, run_id: str | uuid.UUID | None = None):
         """
         Sets the ID of the current run.
 
         Args:
             run_id (str): The run ID.
         """
+        if run_id is None:
+            run_id = uuid.uuid4()
+
         run_id = str(run_id)
         for vertex in self.vertices:
             self.state_manager.subscribe(run_id, vertex.update_graph_state)
@@ -230,6 +233,8 @@ class Graph:
         if not self.tracing_service:
             return
         name = f"{self.flow_name} - {self.flow_id}"
+
+        self.set_run_id()
         self.tracing_service.set_run_name(name)
         self.tracing_service.initialize_tracers()
 
@@ -558,6 +563,7 @@ class Graph:
             "vertices": self.vertices,
             "edges": self.edges,
             "flow_id": self.flow_id,
+            "flow_name": self.flow_name,
             "user_id": self.user_id,
             "raw_graph_data": self.raw_graph_data,
             "top_level_vertices": self.top_level_vertices,
