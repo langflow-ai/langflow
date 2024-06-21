@@ -1,4 +1,4 @@
-from typing import Any, AsyncIterator, Callable, Iterator, Optional, Union
+from typing import Any, AsyncIterator, Iterator, Optional, Union
 
 from loguru import logger
 from pydantic import Field, field_validator
@@ -284,7 +284,7 @@ class DropdownInput(BaseInputMixin, DropDownMixin):
     """
 
     field_type: Optional[SerializableFieldTypes] = FieldTypes.TEXT
-    options: Optional[Union[list[str], Callable]] = None
+    options: list[str] = Field(default_factory=list)
 
 
 class FileInput(BaseInputMixin, ListableInputMixin, FileMixin):
