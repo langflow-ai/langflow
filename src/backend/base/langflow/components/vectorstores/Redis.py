@@ -24,15 +24,11 @@ class RedisVectorStoreComponent(LCVectorStoreComponent):
             name="redis_index_name",
             display_name="Redis Index",
         ),
-        StrInput(
-            name="code",
-            display_name="Code",
-            advanced=True
-        ),
+        StrInput(name="code", display_name="Code", advanced=True),
         StrInput(
             name="schema",
             display_name="Schema",
-            file_types=[".yaml"],
+            field_type=[".yaml"],
         ),
         DataInput(
             name="vector_store_inputs",

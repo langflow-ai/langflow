@@ -4,7 +4,16 @@ from langchain_community.vectorstores import Cassandra
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent
 from langflow.helpers.data import docs_to_data
-from langflow.io import BoolInput, DropdownInput, HandleInput, IntInput, SecretStrInput, TextInput, DataInput, MultilineInput
+from langflow.io import (
+    BoolInput,
+    DropdownInput,
+    HandleInput,
+    IntInput,
+    SecretStrInput,
+    TextInput,
+    DataInput,
+    MultilineInput,
+)
 from langflow.schema import Data
 
 

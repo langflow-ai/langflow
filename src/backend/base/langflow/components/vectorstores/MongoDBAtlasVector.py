@@ -65,10 +65,7 @@ class MongoVectorStoreComponent(LCVectorStoreComponent):
 
             if documents:
                 vector_store = MongoDBAtlasVectorSearch.from_documents(
-                    documents=documents,
-                    embedding=self.embedding,
-                    collection=collection,
-                    index_name=self.index_name
+                    documents=documents, embedding=self.embedding, collection=collection, index_name=self.index_name
                 )
             else:
                 vector_store = MongoDBAtlasVectorSearch(
@@ -90,19 +87,27 @@ class MongoVectorStoreComponent(LCVectorStoreComponent):
         from bson import ObjectId
         from langchain.schema import Document
         import json
+
         vector_store = self._build_mongodb_atlas()
+
         class JSONEncoder(json.JSONEncoder):
             def default(self, o):
                 if isinstance(o, Union[ObjectId, Document]):
                     return str(o)
                 return super(JSONEncoder, self).default(o)
+
         if self.search_input and isinstance(self.search_input, str):
             docs = vector_store.similarity_search(
                 query=self.search_input,
                 k=self.number_of_results,
             )
             for index in range(len(docs)):
-                docs[index].metadata = {key:str(docs[index].metadata[key]) if isinstance(docs[index].metadata[key], ObjectId) else docs[index].metadata[key] for key in docs[index].metadata}
+                docs[index].metadata = {
+                    key: str(docs[index].metadata[key])
+                    if isinstance(docs[index].metadata[key], ObjectId)
+                    else docs[index].metadata[key]
+                    for key in docs[index].metadata
+                }
             data = docs_to_data(docs)
             self.status = data
             return data

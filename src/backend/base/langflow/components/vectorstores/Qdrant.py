@@ -4,7 +4,16 @@ from langchain_community.vectorstores import Qdrant
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent
 from langflow.helpers.data import docs_to_data
-from langflow.io import BoolInput, DropdownInput, HandleInput, IntInput, StrInput, SecretStrInput, DataInput, MultilineInput
+from langflow.io import (
+    BoolInput,
+    DropdownInput,
+    HandleInput,
+    IntInput,
+    StrInput,
+    SecretStrInput,
+    DataInput,
+    MultilineInput,
+)
 from langflow.schema import Data
 
 
@@ -87,9 +96,7 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
                     documents.append(_input)
 
             if documents:
-                qdrant = Qdrant.from_documents(
-                    documents, embedding=self.embedding, **qdrant_kwargs
-                )
+                qdrant = Qdrant.from_documents(documents, embedding=self.embedding, **qdrant_kwargs)
             else:
                 from qdrant_client import QdrantClient
 
