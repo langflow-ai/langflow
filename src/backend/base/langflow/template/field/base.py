@@ -147,7 +147,7 @@ class Output(BaseModel):
     selected: Optional[str] = Field(default=None)
     """The selected output type for the field."""
 
-    name: str = Field(default=None)
+    name: Optional[str] = Field(default=None)
     """The name of the field."""
 
     hidden: Optional[bool] = Field(default=None)
