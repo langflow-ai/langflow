@@ -1,7 +1,7 @@
 import { cloneDeep } from "lodash";
 import { ReactNode, useEffect, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
-import { Handle, Position, useUpdateNodeInternals } from "reactflow";
+import { useUpdateNodeInternals } from "reactflow";
 import CodeAreaComponent from "../../../../components/codeAreaComponent";
 import DictComponent from "../../../../components/dictComponent";
 import Dropdown from "../../../../components/dropdownComponent";
@@ -24,9 +24,8 @@ import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useShortcutsStore } from "../../../../stores/shortcuts";
 import { useTypesStore } from "../../../../stores/typesStore";
-import { APIClassType, VertexDataTypeAPI } from "../../../../types/api";
+import { APIClassType } from "../../../../types/api";
 import { ParameterComponentType } from "../../../../types/components";
-import { isErrorLog } from "../../../../types/utils/typeCheckingUtils";
 import {
   debouncedHandleUpdateValues,
   handleUpdateValues,
@@ -625,7 +624,9 @@ export default function ParameterComponent({
         </Case>
 
         <Case condition={left === true && type === "NestedDict"}>
-          <div className="mt-2 w-full">
+          <div
+            className={"mt-2 w-full" + (disabled ? " cursor-not-allowed" : "")}
+          >
             <DictComponent
               disabled={disabled}
               editNode={false}

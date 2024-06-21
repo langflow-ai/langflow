@@ -25,6 +25,7 @@ export default function DictComponent({
       className={classNames(
         value.length > 1 && editNode ? "my-1" : "",
         "flex w-full flex-col gap-3",
+        disabled ? "pointer-events-none" : "",
       )}
     >
       {
@@ -34,6 +35,7 @@ export default function DictComponent({
             onChange={(obj) => {
               onChange(obj);
             }}
+            disabled={disabled}
           >
             <Input
               type="text"
@@ -42,7 +44,7 @@ export default function DictComponent({
                   ? "input-edit-node input-disable pointer-events-none cursor-pointer"
                   : "input-disable pointer-events-none cursor-pointer"
               }
-              placeholder="Click to edit your dictionary..."
+              placeholder={disabled ? "" : "Click to edit your dictionary..."}
               data-testid="dict-input"
             />
           </DictAreaModal>
