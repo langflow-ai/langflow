@@ -1,11 +1,10 @@
-from typing import Optional, Union
+from typing import Optional
 
 from langchain_community.vectorstores.redis import Redis
 from langchain_core.embeddings import Embeddings
-from langchain_core.retrievers import BaseRetriever
-from langchain_core.vectorstores import VectorStore
 
 from langflow.custom import CustomComponent
+from langflow.field_typing import Retriever
 from langflow.schema import Data
 
 
@@ -45,7 +44,7 @@ class RedisVectorStoreComponent(CustomComponent):
         redis_index_name: str,
         schema: Optional[str] = None,
         inputs: Optional[Data] = None,
-    ) -> Union[VectorStore, BaseRetriever]:
+    ) -> Retriever:
         """
         Builds the Vector Store or BaseRetriever object.
 
@@ -81,4 +80,5 @@ class RedisVectorStoreComponent(CustomComponent):
                 redis_url=redis_server_url,
                 index_name=redis_index_name,
             )
+        return redis_vs
         return redis_vs
