@@ -4,7 +4,7 @@ from langchain_community.vectorstores import Cassandra
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent
 from langflow.helpers.data import docs_to_data
-from langflow.io import BoolInput, DropdownInput, HandleInput, IntInput, SecretStrInput, TextInput, DataInput
+from langflow.io import BoolInput, DropdownInput, HandleInput, IntInput, SecretStrInput, TextInput, DataInput, MultilineInput
 from langflow.schema import Data
 
 
@@ -72,7 +72,7 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
             display_name="Add to Vector Store",
             info="If true, the Vector Store Inputs will be added to the Vector Store.",
         ),
-        TextInput(name="search_input", display_name="Search Input"),
+        MultilineInput(name="search_input", display_name="Search Input"),
         IntInput(
             name="number_of_results",
             display_name="Number of Results",

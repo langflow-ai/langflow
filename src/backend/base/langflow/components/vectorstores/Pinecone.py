@@ -4,7 +4,7 @@ from langchain_pinecone import Pinecone
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent
 from langflow.helpers.data import docs_to_data
-from langflow.io import BoolInput, DropdownInput, HandleInput, IntInput, StrInput, SecretStrInput, DataInput
+from langflow.io import BoolInput, DropdownInput, HandleInput, IntInput, StrInput, SecretStrInput, DataInput, MultilineInput
 from langflow.schema import Data
 
 
@@ -44,7 +44,7 @@ class PineconeVectorStoreComponent(LCVectorStoreComponent):
             info="If true, the Vector Store Inputs will be added to the Vector Store.",
             value=True,
         ),
-        StrInput(name="search_input", display_name="Search Input"),
+        MultilineInput(name="search_input", display_name="Search Input"),
         IntInput(
             name="number_of_results",
             display_name="Number of Results",

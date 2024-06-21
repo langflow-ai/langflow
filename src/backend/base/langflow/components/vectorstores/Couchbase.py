@@ -5,7 +5,7 @@ from langchain_community.vectorstores import CouchbaseVectorStore
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent
 from langflow.helpers.data import docs_to_data
-from langflow.io import BoolInput, HandleInput, IntInput, StrInput, SecretStrInput, DataInput
+from langflow.io import BoolInput, HandleInput, IntInput, StrInput, SecretStrInput, DataInput, MultilineInput
 from langflow.schema import Data
 
 
@@ -34,7 +34,7 @@ class CouchbaseVectorStoreComponent(LCVectorStoreComponent):
             display_name="Add to Vector Store",
             info="If true, the Vector Store Inputs will be added to the Vector Store.",
         ),
-        StrInput(name="search_input", display_name="Search Input"),
+        MultilineInput(name="search_input", display_name="Search Input"),
         IntInput(
             name="number_of_results",
             display_name="Number of Results",

@@ -6,7 +6,7 @@ from loguru import logger
 from langflow.base.vectorstores.model import LCVectorStoreComponent
 from langflow.field_typing import Text, BaseRetriever
 from langflow.helpers.data import docs_to_data
-from langflow.io import BoolInput, HandleInput, IntInput, StrInput, DataInput
+from langflow.io import BoolInput, HandleInput, IntInput, StrInput, DataInput, MultilineInput
 from langflow.schema import Data
 
 
@@ -49,7 +49,7 @@ class FaissVectorStoreComponent(LCVectorStoreComponent):
             advanced=True,
             value=True,
         ),
-        StrInput(
+        MultilineInput(
             name="search_input",
             display_name="Search Input",
         ),

@@ -5,7 +5,7 @@ from supabase.client import Client, create_client
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent
 from langflow.helpers.data import docs_to_data
-from langflow.io import HandleInput, IntInput, StrInput, SecretStrInput, DataInput
+from langflow.io import HandleInput, IntInput, StrInput, SecretStrInput, DataInput, MultilineInput
 from langflow.schema import Data
 
 
@@ -26,7 +26,7 @@ class SupabaseVectorStoreComponent(LCVectorStoreComponent):
             display_name="Vector Store Inputs",
             is_list=True,
         ),
-        StrInput(name="search_input", display_name="Search Input"),
+        MultilineInput(name="search_input", display_name="Search Input"),
         IntInput(
             name="number_of_results",
             display_name="Number of Results",
