@@ -29,7 +29,6 @@ jobs:
     outputs:
       tags: ${{ steps.set-vars.outputs.tags }}
       file: ${{ steps.set-vars.outputs.file }}
-      platforms: ${{ steps.set-vars.outputs.platforms }}
     steps:
       - uses: actions/checkout@v4
       - name: Set Dockerfile and Tags
@@ -38,11 +37,9 @@ jobs:
           if [[ "${{ inputs.release_type }}" == "base" ]]; then
             echo "tags=langflowai/langflow:base-${{ inputs.version }}" >> $GITHUB_OUTPUT
             echo "file=./docker/build_and_push_base.Dockerfile" >> $GITHUB_OUTPUT
-            echo "platforms=linux/amd64" >> $GITHUB_OUTPUT
           else
             echo "tags=langflowai/langflow:${{ inputs.version }},langflowai/langflow:1.0-alpha" >> $GITHUB_OUTPUT
             echo "file=./docker/build_and_push.Dockerfile" >> $GITHUB_OUTPUT
-            echo "platforms=linux/amd64,linux/arm64/v8" >> $GITHUB_OUTPUT
           fi
   build:
     runs-on: ubuntu-latest
@@ -61,9 +58,10 @@ jobs:
         with:
           context: .
           push: true
-          platforms: ${{ needs.setup.outputs.platforms }}
           file: ${{ needs.setup.outputs.file }}
           tags: ${{ needs.setup.outputs.tags }}
+          # provenance: false will result in a single manifest for all platforms which makes the image pullable from arm64 machines via the emulation (e.g. Apple Silicon machines)
+          provenance: false
 
   build_components:
     if: ${{ inputs.release_type == 'main' }}
@@ -95,11 +93,12 @@ jobs:
         with:
           context: .
           push: true
-          platforms: "linux/amd64"
           build-args: |
             LANGFLOW_IMAGE=langflowai/langflow:${{ inputs.version }}
           file: ${{ matrix.dockerfile }}
           tags: ${{ matrix.tags }}
+          # provenance: false will result in a single manifest for all platforms which makes the image pullable from arm64 machines via the emulation (e.g. Apple Silicon machines)
+          provenance: false
 
   restart-space:
     name: Restart HuggingFace Spaces
