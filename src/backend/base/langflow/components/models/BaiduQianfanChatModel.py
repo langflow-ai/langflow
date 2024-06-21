@@ -1,11 +1,9 @@
-from typing import cast
-
 from langchain_community.chat_models.baidu_qianfan_endpoint import QianfanChatEndpoint
 from pydantic.v1 import SecretStr
 
 from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
-from langflow.field_typing.constants import BaseLLM, LanguageModel
+from langflow.field_typing.constants import LanguageModel
 from langflow.io import BoolInput, DropdownInput, FloatInput, Output, SecretStrInput, TextInput
 
 
@@ -91,7 +89,7 @@ class QianfanChatEndpointComponent(LCModelComponent):
         Output(display_name="Language Model", name="model_output", method="build_model"),
     ]
 
-    def build_model(self) -> LanguageModel:
+    def build_model(self) -> LanguageModel:  # type: ignore[type-var]
         model = self.model
         qianfan_ak = self.qianfan_ak
         qianfan_sk = self.qianfan_sk
@@ -113,4 +111,4 @@ class QianfanChatEndpointComponent(LCModelComponent):
         except Exception as e:
             raise ValueError("Could not connect to Baidu Qianfan API.") from e
 
-        return cast(BaseLLM, output)
+        return output  # type: ignore
