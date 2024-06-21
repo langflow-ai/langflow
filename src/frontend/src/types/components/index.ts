@@ -732,7 +732,7 @@ export type Log = {
 export type validationStatusType = {
   id: string;
   data: object | any;
-  logs: Log[];
+  outputs: Log[];
   progress?: number;
   valid: boolean;
   duration?: string;

@@ -33,7 +33,7 @@ export type FlowPoolObjectTypeNew = {
   timestamp: string;
   valid: boolean;
   data: {
-    logs?: any | ChatOutputType | ChatInputType;
+    outputs?: any | ChatOutputType | ChatInputType;
     results: any | ChatOutputType | ChatInputType;
   };
   duration?: string;
