@@ -4,7 +4,7 @@ from langchain_community.vectorstores.redis import Redis
 from langchain_core.embeddings import Embeddings
 
 from langflow.custom import CustomComponent
-from langflow.field_typing import Retriever
+from langflow.field_typing import VectorStore
 from langflow.schema import Data
 
 
@@ -44,7 +44,7 @@ class RedisVectorStoreComponent(CustomComponent):
         redis_index_name: str,
         schema: Optional[str] = None,
         inputs: Optional[Data] = None,
-    ) -> Retriever:
+    ) -> VectorStore:
         """
         Builds the Vector Store or BaseRetriever object.
 
@@ -80,4 +80,4 @@ class RedisVectorStoreComponent(CustomComponent):
                 redis_url=redis_server_url,
                 index_name=redis_index_name,
             )
-        return cast(Retriever, redis_vs)
+        return cast(VectorStore, redis_vs)
