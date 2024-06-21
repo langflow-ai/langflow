@@ -107,7 +107,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
         HandleInput(
             name="embedding",
             display_name="Embedding",
-            input_types=["Embeddings"],
+            input_types=["Embeddings", "dict"],
         ),
         StrInput(
             name="metadata_indexing_exclude",
@@ -155,8 +155,12 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
         except KeyError:
             raise ValueError(f"Invalid setup mode: {self.setup_mode}")
 
+        if isinstance(self.embedding, dict):
+            embedding_dict = {"embedding": self.embedding}
+        else:
+            embedding_dict = self.embedding.to_dict()
         vector_store_kwargs = {
-            "embedding": self.embedding,
+            **embedding_dict,
             "collection_name": self.collection_name,
             "token": self.token,
             "api_endpoint": self.api_endpoint,
