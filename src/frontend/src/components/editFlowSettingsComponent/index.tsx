@@ -2,12 +2,13 @@ import React, { ChangeEvent, useState } from "react";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { Textarea } from "../../components/ui/textarea";
+import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { InputProps } from "../../types/components";
 import { cn } from "../../utils/utils";
 
 export const EditFlowSettings: React.FC<InputProps> = ({
   name,
-  invalidNameList,
+  invalidNameList = [],
   description,
   endpointName,
   maxLength = 50,
@@ -17,6 +18,8 @@ export const EditFlowSettings: React.FC<InputProps> = ({
 }: InputProps): JSX.Element => {
   const [isMaxLength, setIsMaxLength] = useState(false);
   const [isEndpointNameValid, setIsEndpointNameValid] = useState(true);
+  const [isInvalidName, setIsInvalidName] = useState(false);
+  const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
 
   const handleNameChange = (event: ChangeEvent<HTMLInputElement>) => {
     const { value } = event.target;
@@ -25,6 +28,19 @@ export const EditFlowSettings: React.FC<InputProps> = ({
     } else {
       setIsMaxLength(false);
     }
+    let invalid = false;
+    for (let i = 0; i < invalidNameList!.length; i++) {
+      if (value === invalidNameList![i]) {
+        invalid = true;
+        break;
+      }
+      if (value === currentFlow?.name) {
+        invalid = true;
+        break;
+      }
+      invalid = false;
+    }
+    setIsInvalidName(invalid);
     setName!(value);
   };
 
@@ -54,6 +70,9 @@ export const EditFlowSettings: React.FC<InputProps> = ({
           <span className="font-medium">Name{setName ? "" : ":"}</span>{" "}
           {isMaxLength && (
             <span className="edit-flow-span">Character limit reached</span>
+          )}
+          {isInvalidName && (
+            <span className="edit-flow-span">Invalid name</span>
           )}
         </div>
         {setName ? (
@@ -89,8 +108,8 @@ export const EditFlowSettings: React.FC<InputProps> = ({
             onChange={handleDescriptionChange}
             value={description!}
             placeholder="Flow description"
-            className="mt-2 max-h-[100px] resize-none font-normal"
-            rows={3}
+            className="mt-2 max-h-[250px] resize-none font-normal"
+            rows={5}
             onDoubleClickCapture={(event) => {
               handleFocus(event);
             }}
@@ -99,7 +118,7 @@ export const EditFlowSettings: React.FC<InputProps> = ({
           <span
             className={cn(
               "font-normal text-muted-foreground word-break-break-word",
-              description === "" ? "font-light italic" : ""
+              description === "" ? "font-light italic" : "",
             )}
           >
             {description === "" ? "No description" : description}

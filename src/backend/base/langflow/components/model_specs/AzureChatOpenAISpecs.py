@@ -1,10 +1,10 @@
 from typing import Optional
 
-from langchain_core.language_models import BaseLanguageModel
 from langchain_openai import AzureChatOpenAI
 from pydantic.v1 import SecretStr
 
 from langflow.custom import CustomComponent
+from langflow.field_typing import LanguageModel
 
 
 class AzureChatOpenAISpecsComponent(CustomComponent):
@@ -81,7 +81,7 @@ class AzureChatOpenAISpecsComponent(CustomComponent):
         api_version: str,
         temperature: float = 0.7,
         max_tokens: Optional[int] = 1000,
-    ) -> BaseLanguageModel:
+    ) -> LanguageModel:
         if api_key:
             azure_api_key = SecretStr(api_key)
         else:

@@ -27,7 +27,7 @@ def get_messages(
         limit (Optional[int]): The maximum number of messages to retrieve.
 
     Returns:
-        List[Record]: A list of Record objects representing the retrieved messages.
+        List[Data]: A list of Data objects representing the retrieved messages.
     """
     monitor_service = get_monitor_service()
     messages_df = monitor_service.get_messages(
@@ -74,7 +74,8 @@ def add_messages(messages: Message | list[Message], flow_id: Optional[str] = Non
 
         messages_models: list[MessageModel] = []
         for msg in messages:
-            msg.timestamp = monitor_service.get_timestamp()
+            if not msg.timestamp:
+                msg.timestamp = monitor_service.get_timestamp()
             messages_models.append(MessageModel.from_message(msg, flow_id=flow_id))
 
         for message_model in messages_models:
@@ -113,7 +114,7 @@ def store_message(
         flow_id (Optional[str]): The flow ID associated with the message. When running from the CustomComponent you can access this using `self.graph.flow_id`.
 
     Returns:
-        List[Message]: A list of records containing the stored message.
+        List[Message]: A list of data containing the stored message.
 
     Raises:
         ValueError: If any of the required parameters (session_id, sender, sender_name) is not provided.

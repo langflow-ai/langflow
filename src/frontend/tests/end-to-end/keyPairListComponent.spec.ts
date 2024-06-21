@@ -81,7 +81,7 @@ test("KeypairListComponent", async ({ page }) => {
   expect(await page.locator('//*[@id="showcache"]').isChecked()).toBeFalsy();
   await page.locator('//*[@id="showcredentials_profile_name"]').click();
   expect(
-    await page.locator('//*[@id="showcredentials_profile_name"]').isChecked()
+    await page.locator('//*[@id="showcredentials_profile_name"]').isChecked(),
   ).toBeFalsy();
   await page.getByText("Save Changes", { exact: true }).click();
 
@@ -96,7 +96,7 @@ test("KeypairListComponent", async ({ page }) => {
 
     await page.locator('//*[@id="showcredentials_profile_name"]').click();
     expect(
-      await page.locator('//*[@id="showcredentials_profile_name"]').isChecked()
+      await page.locator('//*[@id="showcredentials_profile_name"]').isChecked(),
     ).toBeTruthy();
     await page.locator('//*[@id="showcache"]').click();
     expect(await page.locator('//*[@id="showcache"]').isChecked()).toBeTruthy();

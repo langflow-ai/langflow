@@ -6,7 +6,7 @@ from pydantic.v1 import SecretStr
 from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.groq_constants import MODEL_NAMES
 from langflow.base.models.model import LCModelComponent
-from langflow.field_typing import BaseLanguageModel
+from langflow.field_typing import LanguageModel
 
 
 class GroqModelSpecs(LCModelComponent):
@@ -74,7 +74,7 @@ class GroqModelSpecs(LCModelComponent):
         temperature: float = 0.1,
         n: Optional[int] = 1,
         stream: bool = False,
-    ) -> BaseLanguageModel:
+    ) -> LanguageModel:
         return ChatGroq(
             model_name=model_name,
             max_tokens=max_tokens or None,  # type: ignore

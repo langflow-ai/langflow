@@ -19,23 +19,24 @@ export default function InputGlobalComponent({
   editNode = false,
 }: InputGlobalComponentType): JSX.Element {
   const globalVariablesEntries = useGlobalVariablesStore(
-    (state) => state.globalVariablesEntries
+    (state) => state.globalVariablesEntries,
   );
 
   const getVariableId = useGlobalVariablesStore((state) => state.getVariableId);
   const unavaliableFields = useGlobalVariablesStore(
-    (state) => state.unavaliableFields
+    (state) => state.unavaliableFields,
   );
   const removeGlobalVariable = useGlobalVariablesStore(
-    (state) => state.removeGlobalVariable
+    (state) => state.removeGlobalVariable,
   );
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
   useEffect(() => {
     if (data)
       if (
-        globalVariablesEntries &&
-        !globalVariablesEntries.includes(data.value) &&
+        ((globalVariablesEntries &&
+          !globalVariablesEntries.includes(data.value)) ||
+          !globalVariablesEntries) &&
         data.load_from_db
       ) {
         setTimeout(() => {
@@ -43,7 +44,7 @@ export default function InputGlobalComponent({
           setDb(false);
         }, 100);
       }
-  }, [globalVariablesEntries]);
+  }, [globalVariablesEntries, data]);
 
   useEffect(() => {
     if (!data.value && data.display_name) {
@@ -121,7 +122,7 @@ export default function InputGlobalComponent({
             <ForwardedIconComponent
               name="Trash2"
               className={cn(
-                "h-4 w-4 text-primary opacity-0 hover:text-status-red group-hover:opacity-100"
+                "h-4 w-4 text-primary opacity-0 hover:text-status-red group-hover:opacity-100",
               )}
               aria-hidden="true"
             />

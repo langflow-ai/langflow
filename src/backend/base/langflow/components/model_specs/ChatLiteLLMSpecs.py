@@ -3,7 +3,7 @@ from typing import Any, Dict, Optional
 from langchain_community.chat_models.litellm import ChatLiteLLM, ChatLiteLLMException
 
 from langflow.custom import CustomComponent
-from langflow.field_typing import BaseLanguageModel
+from langflow.field_typing import LanguageModel
 
 
 class ChatLiteLLMComponent(CustomComponent):
@@ -116,7 +116,7 @@ class ChatLiteLLMComponent(CustomComponent):
         max_tokens: int = 256,
         max_retries: int = 6,
         verbose: bool = False,
-    ) -> BaseLanguageModel:
+    ) -> LanguageModel:
         try:
             import litellm  # type: ignore
 

@@ -9,7 +9,7 @@ const usePatchProfilePicture = (
   setSuccessData,
   setErrorData,
   currentUserData,
-  setUserData
+  setUserData,
 ) => {
   const handlePatchProfilePicture = async (profile_picture) => {
     try {

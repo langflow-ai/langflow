@@ -1,9 +1,9 @@
 from typing import List
 
-from langflow.components.vectorstores.base.model import LCVectorStoreComponent
-from langflow.components.vectorstores.Couchbase import CouchbaseComponent
+from langflow.base.vectorstores.model import LCVectorStoreComponent
+from langflow.components.vectorstores.Couchbase import CouchbaseVectorStoreComponent
 from langflow.field_typing import Embeddings, Text
-from langflow.schema import Record
+from langflow.schema import Data
 
 
 class CouchbaseSearchComponent(LCVectorStoreComponent):
@@ -51,8 +51,8 @@ class CouchbaseSearchComponent(LCVectorStoreComponent):
         couchbase_connection_string: str = "",
         couchbase_username: str = "",
         couchbase_password: str = "",
-    ) -> List[Record]:
-        vector_store = CouchbaseComponent().build(
+    ) -> List[Data]:
+        vector_store = CouchbaseVectorStoreComponent().build(
             couchbase_connection_string=couchbase_connection_string,
             couchbase_username=couchbase_username,
             couchbase_password=couchbase_password,

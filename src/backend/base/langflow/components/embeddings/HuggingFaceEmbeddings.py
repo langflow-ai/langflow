@@ -1,11 +1,11 @@
-from typing import Dict, Optional
-
 from langchain_community.embeddings.huggingface import HuggingFaceEmbeddings
 
-from langflow.custom import CustomComponent
+from langflow.base.models.model import LCModelComponent
+from langflow.field_typing import Embeddings
+from langflow.io import BoolInput, DictInput, TextInput, Output
 
 
-class HuggingFaceEmbeddingsComponent(CustomComponent):
+class HuggingFaceEmbeddingsComponent(LCModelComponent):
     display_name = "Hugging Face Embeddings"
     description = "Generate embeddings using HuggingFace models."
     documentation = (
@@ -13,27 +13,23 @@ class HuggingFaceEmbeddingsComponent(CustomComponent):
     )
     icon = "HuggingFace"
 
-    def build_config(self):
-        return {
-            "cache_folder": {"display_name": "Cache Folder", "advanced": True},
-            "encode_kwargs": {"display_name": "Encode Kwargs", "advanced": True, "field_type": "dict"},
-            "model_kwargs": {"display_name": "Model Kwargs", "field_type": "dict", "advanced": True},
-            "model_name": {"display_name": "Model Name"},
-            "multi_process": {"display_name": "Multi Process", "advanced": True},
-        }
+    inputs = [
+        TextInput(name="cache_folder", display_name="Cache Folder", advanced=True),
+        DictInput(name="encode_kwargs", display_name="Encode Kwargs", advanced=True),
+        DictInput(name="model_kwargs", display_name="Model Kwargs", advanced=True),
+        TextInput(name="model_name", display_name="Model Name", value="sentence-transformers/all-mpnet-base-v2"),
+        BoolInput(name="multi_process", display_name="Multi Process", advanced=True),
+    ]
 
-    def build(
-        self,
-        cache_folder: Optional[str] = None,
-        encode_kwargs: Optional[Dict] = {},
-        model_kwargs: Optional[Dict] = {},
-        model_name: str = "sentence-transformers/all-mpnet-base-v2",
-        multi_process: bool = False,
-    ) -> HuggingFaceEmbeddings:
+    outputs = [
+        Output(display_name="Embeddings", name="embeddings", method="build_embeddings"),
+    ]
+
+    def build_embeddings(self) -> Embeddings:
         return HuggingFaceEmbeddings(
-            cache_folder=cache_folder,
-            encode_kwargs=encode_kwargs,
-            model_kwargs=model_kwargs,
-            model_name=model_name,
-            multi_process=multi_process,
+            cache_folder=self.cache_folder,
+            encode_kwargs=self.encode_kwargs,
+            model_kwargs=self.model_kwargs,
+            model_name=self.model_name,
+            multi_process=self.multi_process,
         )

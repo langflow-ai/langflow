@@ -30,7 +30,7 @@ import requests
 from typing import List
 
 from langflow import CustomComponent
-from langflow.schema import Record
+from langflow.schema import Data
 
 
 class NotionUserList(CustomComponent):
@@ -52,7 +52,7 @@ class NotionUserList(CustomComponent):
     def build(
         self,
         notion_secret: str,
-    ) -> List[Record]:
+    ) -> List[Data]:
         url = "https://api.notion.com/v1/users"
         headers = {
             "Authorization": f"Bearer {notion_secret}",
@@ -65,14 +65,14 @@ class NotionUserList(CustomComponent):
         data = response.json()
         results = data['results']
 
-        records = []
+        data = []
         for user in results:
             id = user['id']
             type = user['type']
             name = user.get('name', '')
             avatar_url = user.get('avatar_url', '')
 
-            record_data = {
+            data_dict = {
                 "id": id,
                 "type": type,
                 "name": name,
@@ -80,15 +80,15 @@ class NotionUserList(CustomComponent):
             }
 
             output = "User:\n"
-            for key, value in record_data.items():
+            for key, value in data_dict.items():
                 output += f"{key.replace('_', ' ').title()}: {value}\n"
             output += "________________________\n"
 
-            record = Record(text=output, data=record_data)
-            records.append(record)
+            record = Data(text=output, data=data_dict)
+            data.append(record)
 
-        self.status = "\n".join(record.text for record in records)
-        return records
+        self.status = "\n".join(record.text for record in data)
+        return data
 ```
 
 ## Example Usage

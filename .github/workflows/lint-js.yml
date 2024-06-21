@@ -10,8 +10,10 @@ env:
 
 jobs:
   run-linters:
-    name: Run linters
+    name: Run Prettier
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout code
@@ -38,16 +40,13 @@ jobs:
           npm install
         if: ${{ steps.setup-node.outputs.cache-hit != 'true' }}
 
-      - name: Run linters
-        uses: wearerequired/lint-action@v2
+      - name: Run Prettier
+        run: |
+          cd src/frontend
+          npm run format
+      - name: Commit changes
+        uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          github_token: ${{ secrets.github_token }}
-          auto_fix: true
-          git_email: "gabriel@langflow.org"
-          # Enable linters
-          # eslint: true
-          # eslint_auto_fix: true
-          prettier: true
-          prettier_auto_fix: true
-          prettier_args: '--write \"{tests,src}/**/*.{js,jsx,ts,tsx,json,md}\" --ignore-path .prettierignore'
+          commit_message: Apply Prettier formatting
+          branch: ${{ github.head_ref }}
 

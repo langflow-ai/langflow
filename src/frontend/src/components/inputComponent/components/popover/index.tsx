@@ -75,9 +75,9 @@ const CustomInputPopover = ({
             (selectedOption !== "" || !onChange) && setSelectedOption
               ? selectedOption
               : (selectedOptions?.length !== 0 || !onChange) &&
-                setSelectedOptions
-              ? selectedOptions?.join(", ")
-              : value
+                  setSelectedOptions
+                ? selectedOptions?.join(", ")
+                : value
           }
           autoFocus={autoFocus}
           disabled={disabled}
@@ -103,7 +103,7 @@ const CustomInputPopover = ({
               (password && !(setSelectedOption || setSelectedOptions))
               ? "pr-8"
               : "",
-            className!
+            className!,
           )}
           placeholder={password && editNode ? "Key" : placeholder}
           onChange={handleInputChange}
@@ -141,15 +141,15 @@ const CustomInputPopover = ({
                   onSelect={(currentValue) => {
                     setSelectedOption &&
                       setSelectedOption(
-                        currentValue === selectedOption ? "" : currentValue
+                        currentValue === selectedOption ? "" : currentValue,
                       );
                     setSelectedOptions &&
                       setSelectedOptions(
                         selectedOptions?.includes(currentValue)
                           ? selectedOptions.filter(
-                              (item) => item !== currentValue
+                              (item) => item !== currentValue,
                             )
-                          : [...selectedOptions, currentValue]
+                          : [...selectedOptions, currentValue],
                       );
                     !setSelectedOptions && setShowOptions(false);
                   }}
@@ -162,7 +162,7 @@ const CustomInputPopover = ({
                           selectedOption === option ||
                             selectedOptions?.includes(option)
                             ? "opacity-100"
-                            : "opacity-0"
+                            : "opacity-0",
                         )}
                       >
                         <div className="absolute opacity-100 transition-all group-hover:opacity-0">
