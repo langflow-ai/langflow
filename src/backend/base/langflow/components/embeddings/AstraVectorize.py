@@ -32,7 +32,7 @@ from base.langflow.template.field.base import Output
 
 
 from langflow.custom import Component
-from langflow.inputs.inputs import DataInput, IntInput, TextInput, DictInput
+from langflow.inputs.inputs import DataInput, IntInput, TextInput, DictInput, SecretStrInput
 from langflow.schema import Data
 from langflow.template.field.base import Output
 from langflow.utils.util import build_loader_repr_from_data, unescape_string
@@ -61,13 +61,7 @@ class AstraVectorize(Component):
             info='Authentication parameters. Use the Astra Portal to add the embedding provider integration to your Astra organization.',
             is_list=True
         ),
-        DictInput(
-            name="authentication2",
-            display_name="Authentication",
-            info='Authentication parameters. Use the Astra Portal to add the embedding provider integration to your Astra organization.',
-            is_list=False
-        ),
-        TextInput(
+        SecretStrInput(
             name="provider_api_key",
             display_name="Provider API Key to authenticate to the external service",
             info='An alternative to the Astra Authentication that let you use directly the API key of the provider.',
