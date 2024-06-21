@@ -107,7 +107,7 @@ export default function ComponentsComponent({
   const methods = useForm();
 
   const { handleSelectAll } = useSelectAll(
-    flowsFromFolder,
+    flowsFromFolder!,
     getValues,
     setValue,
   );
@@ -119,7 +119,7 @@ export default function ComponentsComponent({
     resetFilter,
     getFoldersApi,
     folderId,
-    myCollectionId,
+    myCollectionId!,
     getFolderById,
     setSuccessData,
     setSelectedFlowsComponentsCards,
@@ -155,7 +155,7 @@ export default function ComponentsComponent({
     resetFilter,
     getFoldersApi,
     folderId,
-    myCollectionId,
+    myCollectionId!,
     getFolderById,
     setSuccessData,
     setErrorData,

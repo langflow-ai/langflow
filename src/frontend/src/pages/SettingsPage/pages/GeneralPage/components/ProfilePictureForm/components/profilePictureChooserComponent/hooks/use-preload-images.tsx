@@ -4,7 +4,10 @@ import {
   BASE_URL_API,
 } from "../../../../../../../../../constants/constants";
 
-const usePreloadImages = (profilePictures, setImagesLoaded) => {
+const usePreloadImages = (
+  profilePictures: { [key: string]: string[] },
+  setImagesLoaded: (value: boolean) => void,
+) => {
   const preloadImages = async (imageUrls) => {
     return Promise.all(
       imageUrls.map(
