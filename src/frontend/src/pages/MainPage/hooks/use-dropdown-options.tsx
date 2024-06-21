@@ -1,7 +1,26 @@
+import { XYPosition } from "reactflow";
 import { CONSOLE_ERROR_MSG } from "../../../constants/alerts_constants";
 import useAlertStore from "../../../stores/alertStore";
 
-const useDropdownOptions = ({ uploadFlow, navigate, is_component }) => {
+const useDropdownOptions = ({
+  uploadFlow,
+  navigate,
+  is_component,
+}: {
+  uploadFlow: ({
+    newProject,
+    file,
+    isComponent,
+    position,
+  }: {
+    newProject: boolean;
+    file?: File;
+    isComponent: boolean | null;
+    position?: XYPosition;
+  }) => Promise<string | never>;
+  navigate: (url: string) => void;
+  is_component: boolean;
+}) => {
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const handleImportFromJSON = () => {
