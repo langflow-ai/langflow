@@ -762,8 +762,7 @@ class Graph:
                 successors = self.get_all_successors(vertex, recursive=False)
                 if not any(successor in vertices for successor in successors):
                     return vertex
-        else:
-            raise ValueError(f"Vertex {vertex_id} is not a top level vertex")
+        raise ValueError(f"Vertex {vertex_id} is not a top level vertex or no root vertex found")
 
     async def build_vertex(
         self,
