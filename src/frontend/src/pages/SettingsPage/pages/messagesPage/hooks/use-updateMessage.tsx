@@ -20,6 +20,7 @@ const useUpdateMessage = (setSuccessData, setErrorData) => {
       setErrorData({
         title: "Error updating messages.",
       });
+      return Promise.reject(error);
     }
   };
 

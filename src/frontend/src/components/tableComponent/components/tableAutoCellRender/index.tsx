@@ -8,7 +8,8 @@ import { Badge } from "../../../ui/badge";
 
 export default function TableAutoCellRender({
   value,
-}: CustomCellRendererProps | { value: any }) {
+  setValue,
+}: CustomCellRendererProps) {
   function getCellType() {
     switch (typeof value) {
       case "object":
@@ -49,7 +50,7 @@ export default function TableAutoCellRender({
             </Badge>
           );
         } else {
-          return <StringReader string={value} />;
+          return <StringReader setValue={setValue!} string={value} />;
         }
       case "number":
         return <NumberReader number={value} />;

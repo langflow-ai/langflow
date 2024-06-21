@@ -14,13 +14,14 @@ import ForwardedIconComponent from "../genericIconComponent";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import TableOptions from "./components/TableOptions";
 import resetGrid from "./utils/reset-grid-columns";
+import { boolean } from "zod";
 
 interface TableComponentProps extends AgGridReactProps {
   columnDefs: NonNullable<AgGridReactProps["columnDefs"]>;
   rowData: NonNullable<AgGridReactProps["rowData"]>;
   alertTitle?: string;
   alertDescription?: string;
-  editable?: boolean | string[];
+  editable?: boolean | string[] | {field: string, onUpdate: (value:any)=>void,editableCell:boolean}[];
   pagination?: boolean;
   onDelete?: () => void;
   onDuplicate?: () => void;
@@ -52,13 +53,23 @@ const TableComponent = forwardRef<
       }
       if (
         (typeof props.editable === "boolean" && props.editable) ||
-        (Array.isArray(props.editable) &&
-          props.editable.includes(newCol.headerName ?? ""))
+        (Array.isArray(props.editable) && props.editable.every(field=>typeof field ==="string") &&
+          (props.editable as Array<string>).includes(newCol.headerName ?? ""))
       ) {
         newCol = {
           ...newCol,
           editable: true,
         };
+      }
+      if(Array.isArray(props.editable) && props.editable.every(field=>typeof field ==="object")){
+        const field = (props.editable as Array<{field:string, onUpdate:(value:any)=>void,editableCell:boolean}>).find(field=>field.field===newCol.headerName);
+        if(field){
+          newCol = {
+            ...newCol,
+            editable: field.editableCell,
+            onCellValueChanged: (e)=>field.onUpdate(e)
+          }
+        }
       }
       return newCol;
     });
