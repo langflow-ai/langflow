@@ -2,7 +2,7 @@ from typing import List, cast
 
 from langchain.agents import AgentExecutor, BaseSingleActionAgent
 from langchain.agents.tool_calling_agent.base import create_tool_calling_agent
-from langchain_core.messages import BaseMessage
+from langchain_core.messages import BaseMessage, HumanMessage
 from langchain_core.prompts import ChatPromptTemplate
 
 from langflow.custom import Component
@@ -92,10 +92,16 @@ class ToolCallingAgentComponent(Component):
 
         return Message(text=result_string)
 
-    def convert_chat_history(self, chat_history: List[Data]) -> List[dict[str, str]]:
+    def convert_chat_history(self, chat_history: List[Message | Data]) -> List[BaseMessage]:
         messages = []
         for item in chat_history:
-            role = "user" if item.sender == "User" else "assistant"
-            messages.append({"role": role, "content": item.text})
-        return messages
+            if isinstance(item, (Message, Data)):
+                messages.append(item.to_lc_message())
+            elif isinstance(item, str):
+                messages.append(HumanMessage(content=item))
+            elif isinstance(item, dict) and "sender" in item and "text" in item:
+                messages.append(HumanMessage(content=item["text"], sender=item["sender"]))
+            else:
+                raise ValueError(f"Invalid item ({type(item)}) in chat history: {item}")
+
         return messages
