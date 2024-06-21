@@ -10,6 +10,7 @@ from langflow.graph.utils import UnbuiltObject, serialize_field
 from langflow.graph.vertex.base import Vertex
 from langflow.schema import Data
 from langflow.schema.artifact import ArtifactType
+from langflow.schema.message import Message
 from langflow.schema.schema import INPUT_FIELD_NAME
 from langflow.services.monitor.utils import log_transaction, log_vertex_build
 from langflow.template.field.base import UNDEFINED
@@ -115,19 +116,21 @@ class ComponentVertex(Vertex):
         messages = []
         for key in artifacts:
             artifact = artifacts[key]
-            if any(key not in artifact for key in ["text", "sender", "sender_name", "session_id", "stream_url"]):
+            if any(
+                key not in artifact for key in ["text", "sender", "sender_name", "session_id", "stream_url"]
+            ) and not isinstance(artifact, Message):
                 continue
+            message_dict = artifact if isinstance(artifact, dict) else artifact.model_dump()
             try:
                 messages.append(
                     ChatOutputResponse(
-                        message=artifacts[key]["text"],
-                        sender=artifacts[key].get("sender"),
-                        sender_name=artifacts[key].get("sender_name"),
-                        session_id=artifacts[key].get("session_id"),
-                        stream_url=artifacts[key].get("stream_url"),
+                        message=message_dict["text"],
+                        sender=message_dict.get("sender"),
+                        sender_name=message_dict.get("sender_name"),
+                        session_id=message_dict.get("session_id"),
+                        stream_url=message_dict.get("stream_url"),
                         files=[
-                            {"path": file} if isinstance(file, str) else file
-                            for file in artifacts[key].get("files", [])
+                            {"path": file} if isinstance(file, str) else file for file in message_dict.get("files", [])
                         ],
                         component_id=self.id,
                         type=self.artifacts_type[key],
@@ -141,12 +144,11 @@ class ComponentVertex(Vertex):
         result_dict = self.get_built_result()
         # We need to set the artifacts to pass information
         # to the frontend
-        self.set_artifacts()
         artifacts = self.artifacts_raw
-        messages = self.extract_messages_from_artifacts(artifacts)
+        messages = self.extract_messages_from_artifacts(result_dict)
         result_dict = ResultData(
             results=result_dict,
-            artifacts=artifacts,
+            artifacts=self.artifacts,
             logs=self.logs,
             messages=messages,
             component_display_name=self.display_name,
@@ -341,9 +343,24 @@ class InterfaceVertex(ComponentVertex):
             files=[{"path": file} if isinstance(file, str) else file for file in self.params.get("files", [])],
             type=ArtifactType.OBJECT.value,
         ).model_dump()
+
+        message = Message(
+            text=complete_message,
+            sender=self.params.get("sender", ""),
+            sender_name=self.params.get("sender_name", ""),
+            files=self.params.get("files", []),
+            flow_id=self.graph.flow_id,
+            session_id=self.params.get("session_id", ""),
+        )
         self.params[INPUT_FIELD_NAME] = complete_message
-        self._built_object = Data(text=complete_message, data=self.artifacts)
-        self._built_result = complete_message
+        if isinstance(self._built_object, dict):
+            for key, value in self._built_object.items():
+                if hasattr(value, "text") and (isinstance(value.text, (AsyncIterator, Iterator)) or value.text == ""):
+                    self._built_object[key] = message
+        else:
+            self._built_object = message
+            self.artifacts_type = ArtifactType.MESSAGE
+
         # Update artifacts with the message
         # and remove the stream_url
         self._finalize_build()
