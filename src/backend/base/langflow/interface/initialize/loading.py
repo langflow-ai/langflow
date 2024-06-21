@@ -2,7 +2,7 @@ import inspect
 import json
 import os
 import warnings
-from typing import TYPE_CHECKING, Any, Type
+from typing import TYPE_CHECKING, Any
 
 import orjson
 from loguru import logger
@@ -36,8 +36,8 @@ async def instantiate_class(
 
     params_copy = params.copy()
     # Remove code from params
-    class_object: Type["CustomComponent"] = eval_custom_component_code(params_copy.pop("code"))
-    custom_component: "CustomComponent" | "Component" = class_object(
+    class_object = eval_custom_component_code(params_copy.pop("code"))
+    custom_component = class_object(
         user_id=user_id,
         parameters=params_copy,
         vertex=vertex,
@@ -47,9 +47,9 @@ async def instantiate_class(
     )
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
-        if issubclass(class_object, Component):
+        if isinstance(custom_component, Component):
             return await build_component(params=params_copy, custom_component=custom_component, vertex=vertex)
-        elif issubclass(class_object, CustomComponent):
+        elif isinstance(custom_component, CustomComponent):
             return await build_custom_component(params=params_copy, custom_component=custom_component)
         else:
             raise ValueError(f"Base type {base_type} not found.")
