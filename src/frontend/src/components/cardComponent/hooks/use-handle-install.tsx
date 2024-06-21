@@ -1,17 +1,18 @@
 import { useState } from "react";
 import { getComponent } from "../../../controllers/API";
 import useFlowsManagerStore from "../../../stores/flowsManagerStore";
+import { storeComponent } from "../../../types/store";
 import cloneFlowWithParent from "../../../utils/storeUtils";
 
 const useInstallComponent = (
-  data,
-  name,
-  isStore,
-  downloadsCount,
-  setDownloadsCount,
-  setLoading,
-  setSuccessData,
-  setErrorData,
+  data: storeComponent,
+  name: string,
+  isStore: boolean,
+  downloadsCount: number,
+  setDownloadsCount: (value: any) => void,
+  setLoading: (value: boolean) => void,
+  setSuccessData: (value: { title: string }) => void,
+  setErrorData: (value: { title: string; list: string[] }) => void,
 ) => {
   const addFlow = useFlowsManagerStore((state) => state.addFlow);
 

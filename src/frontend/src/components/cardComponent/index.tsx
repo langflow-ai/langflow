@@ -104,7 +104,7 @@ export default function CollectionCardComponent({
 
   usePlaygroundEffect(
     currentFlowId,
-    playground,
+    playground!,
     openPlayground,
     currentFlow,
     setNodes,
