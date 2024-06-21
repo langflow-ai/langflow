@@ -60,7 +60,7 @@ class RecursiveCharacterTextSplitterComponent(Component):
         elif self.separators:
             # check if the separators list has escaped characters
             # if there are escaped characters, unescape them
-            self.separators: list[str] | None = [unescape_string(x) for x in self.separators]
+            self.separators = [unescape_string(x) for x in self.separators]
 
         # Make sure chunk_size and chunk_overlap are ints
         if self.chunk_size:
