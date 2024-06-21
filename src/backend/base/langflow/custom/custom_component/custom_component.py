@@ -85,7 +85,7 @@ class CustomComponent(BaseComponent):
     _flows_data: Optional[List[Data]] = None
     _outputs: List[OutputLog] = []
     _logs: List[Log] = []
-    tracing_service: Optional["TracingService"] = None
+    _tracing_service: "TracingService"
 
     def update_state(self, name: str, value: Any):
         if not self.vertex:
@@ -494,4 +494,4 @@ class CustomComponent(BaseComponent):
             name = self.display_name
         log = Log(message=message, type=get_artifact_type(message), name=name)
         self._logs.append(log)
-        self.tracing_service.add_log(trace_name=self.vertex.id, log=log)
+        self._tracing_service.add_log(trace_name=self.vertex.id, log=log)
