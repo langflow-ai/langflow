@@ -144,11 +144,11 @@ class FrontendNode(BaseModel):
         input_overlap = set(input_names).intersection(attributes)
         error_message = ""
         if output_overlap:
-            output_overlap = ", ".join(map(lambda x: f"'{x}'", output_overlap))
-            error_message += f"Output names {output_overlap} are reserved attributes.\n"
+            output_overlap_str = ", ".join(map(lambda x: f"'{x}'", output_overlap))
+            error_message += f"Output names {output_overlap_str} are reserved attributes.\n"
         if input_overlap:
-            input_overlap = ", ".join(map(lambda x: f"'{x}'", input_overlap))
-            error_message += f"Input names {input_overlap} are reserved attributes."
+            input_overlap_str = ", ".join(map(lambda x: f"'{x}'", input_overlap))
+            error_message += f"Input names {input_overlap_str} are reserved attributes."
 
     def add_base_class(self, base_class: Union[str, List[str]]) -> None:
         """Adds a base class to the frontend node."""
