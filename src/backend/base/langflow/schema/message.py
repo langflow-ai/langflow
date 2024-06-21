@@ -79,8 +79,12 @@ class Message(Data):
                 contents.extend(self.get_file_content_dicts())
                 human_message = HumanMessage(content=contents)  # type: ignore
             else:
+                if not isinstance(self.text, str):
+                    text = ""
+                else:
+                    text = self.text
                 human_message = HumanMessage(
-                    content=self.text,
+                    content=text,
                 )
 
             return human_message
