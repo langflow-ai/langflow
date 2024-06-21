@@ -60,7 +60,7 @@ def get_lifespan(fix_migration=False, socketio_server=None, version=None):
             LangfuseInstance.update()
             initialize_super_user_if_needed()
             task = asyncio.create_task(get_and_cache_all_types_dict(get_settings_service(), get_cache_service()))
-            asyncio.create_task(create_or_update_starter_projects(task))
+            await create_or_update_starter_projects(task)
             load_flows_from_directory()
             yield
         except Exception as exc:
