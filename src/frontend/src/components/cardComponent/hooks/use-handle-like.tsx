@@ -1,15 +1,16 @@
 import { postLikeComponent } from "../../../controllers/API";
+import { storeComponent } from "../../../types/store";
 
 const useLikeComponent = (
-  data,
-  name,
-  setLoadingLike,
-  likedByUser,
-  likesCount,
-  setLikedByUser,
-  setLikesCount,
-  setValidApiKey,
-  setErrorData,
+  data: storeComponent,
+  name: string,
+  setLoadingLike: (value: boolean) => void,
+  likedByUser: boolean | null | undefined,
+  likesCount: number,
+  setLikedByUser: (value: any) => void,
+  setLikesCount: (value: any) => void,
+  setValidApiKey: (value: boolean) => void,
+  setErrorData: (value: { title: string; list: string[] }) => void,
 ) => {
   const handleLike = () => {
     setLoadingLike(true);

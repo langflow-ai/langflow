@@ -1,10 +1,11 @@
 import cloneDeep from "lodash/cloneDeep";
 import { useEffect } from "react";
+import { FlowType } from "../../../../../types/flow";
 
 const useFilteredFlows = (
-  flowsFromFolder,
-  searchFlowsComponents,
-  setAllFlows,
+  flowsFromFolder: FlowType[],
+  searchFlowsComponents: string,
+  setAllFlows: (value: any[]) => void,
 ) => {
   useEffect(() => {
     const newFlows = cloneDeep(flowsFromFolder || []);
