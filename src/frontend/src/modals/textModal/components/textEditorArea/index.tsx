@@ -1,6 +1,6 @@
-import { Textarea } from "../../../components/ui/textarea";
+import { Textarea } from "../../../../components/ui/textarea";
 
-const TextOutputView = ({ left, value }:{left:boolean|undefined,value:any}) => {
+const TextEditorArea = ({ left, value,onChange }:{left:boolean|undefined,value:any,onChange?:(string)=>void;}) => {
   if (typeof value === "object" && Object.keys(value).includes("text")) {
     value = value.text;
   }
@@ -8,11 +8,11 @@ const TextOutputView = ({ left, value }:{left:boolean|undefined,value:any}) => {
     <Textarea
       className={`w-full custom-scroll ${left ? "min-h-32" : "h-full"}`}
       placeholder={"Empty"}
-      readOnly
       // update to real value on flowPool
       value={value}
+      onChange={(e) => {if(onChange) onChange(e.target.value)}}
     />
   );
 };
 
-export default TextOutputView;
+export default TextEditorArea;
