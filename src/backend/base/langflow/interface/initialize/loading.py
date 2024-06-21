@@ -37,7 +37,7 @@ async def instantiate_class(
     params_copy = params.copy()
     # Remove code from params
     class_object: Type["CustomComponent"] = eval_custom_component_code(params_copy.pop("code"))
-    custom_component: "CustomComponent" = class_object(
+    custom_component: "CustomComponent" | "Component" = class_object(
         user_id=user_id,
         parameters=params_copy,
         vertex=vertex,
@@ -47,10 +47,10 @@ async def instantiate_class(
     )
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
-        if base_type == "custom_components":
-            return await build_custom_component(params=params_copy, custom_component=custom_component)
-        elif base_type == "component":
+        if issubclass(class_object, Component):
             return await build_component(params=params_copy, custom_component=custom_component, vertex=vertex)
+        elif issubclass(class_object, CustomComponent):
+            return await build_custom_component(params=params_copy, custom_component=custom_component)
         else:
             raise ValueError(f"Base type {base_type} not found.")
 
