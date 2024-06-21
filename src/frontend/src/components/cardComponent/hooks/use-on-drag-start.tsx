@@ -1,9 +1,10 @@
 import { useCallback } from "react";
 import { createRoot } from "react-dom/client";
 import useFlowsManagerStore from "../../../stores/flowsManagerStore";
+import { storeComponent } from "../../../types/store";
 import DragCardComponent from "../components/dragCardComponent";
 
-const useDragStart = (data) => {
+const useDragStart = (data: storeComponent) => {
   const getFlowById = useFlowsManagerStore((state) => state.getFlowById);
 
   const onDragStart = useCallback(
