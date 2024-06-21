@@ -1,3 +1,5 @@
+from typing import cast
+
 from langchain_community.chat_models.baidu_qianfan_endpoint import QianfanChatEndpoint
 from pydantic.v1 import SecretStr
 
@@ -111,4 +113,4 @@ class QianfanChatEndpointComponent(LCModelComponent):
         except Exception as e:
             raise ValueError("Could not connect to Baidu Qianfan API.") from e
 
-        return output
+        return cast(LanguageModel, output)
