@@ -144,7 +144,6 @@ class ComponentVertex(Vertex):
         result_dict = self.get_built_result()
         # We need to set the artifacts to pass information
         # to the frontend
-        artifacts = self.artifacts_raw
         messages = self.extract_messages_from_artifacts(result_dict)
         result_dict = ResultData(
             results=result_dict,
