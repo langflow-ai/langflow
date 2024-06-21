@@ -1,13 +1,12 @@
-from typing import List, Optional
+from typing import List
 
 from langchain.agents.tool_calling_agent.base import create_tool_calling_agent
 from langchain_core.prompts import ChatPromptTemplate
 from langchain.agents import AgentExecutor
-from langchain_core.messages import BaseMessage, HumanMessage, AIMessage
+from langchain_core.messages import BaseMessage
 from langflow.schema.message import Message
 from langflow.custom import Component
 from langflow.io import HandleInput, TextInput, BoolInput, Output
-from langflow.field_typing import LanguageModel, Text, Tool
 from langflow.schema import Data
 
 
@@ -92,7 +91,7 @@ class ToolCallingAgentComponent(Component):
 
         return Message(text=result_string)
 
-    def convert_chat_history(self, chat_history: List[Data]) -> List[Dict[str, str]]:
+    def convert_chat_history(self, chat_history: List[Data]) -> List[dict[str, str]]:
         messages = []
         for item in chat_history:
             role = "user" if item.sender == "User" else "assistant"
