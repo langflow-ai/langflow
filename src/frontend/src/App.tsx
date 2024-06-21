@@ -25,21 +25,13 @@ import useFlowsManagerStore from "./stores/flowsManagerStore";
 import { useFolderStore } from "./stores/foldersStore";
 import { useGlobalVariablesStore } from "./stores/globalVariablesStore/globalVariables";
 import { useStoreStore } from "./stores/storeStore";
+import AlertDisplayArea from "./alerts/displayArea";
 export default function App() {
   useTrackLastVisitedPath();
 
-  const removeFromTempNotificationList = useAlertStore(
-    (state) => state.removeFromTempNotificationList,
-  );
-  const tempNotificationList = useAlertStore(
-    (state) => state.tempNotificationList,
-  );
   const [fetchError, setFetchError] = useState(false);
   const isLoading = useFlowsManagerStore((state) => state.isLoading);
 
-  const removeAlert = (id: string) => {
-    removeFromTempNotificationList(id);
-  };
 
   const { isAuthenticated, login, setUserData, setAutoLogin, getUser } =
     useContext(AuthContext);
@@ -208,38 +200,7 @@ export default function App() {
       </ErrorBoundary>
       <div></div>
       <div className="app-div">
-        <div className="flex flex-col-reverse" style={{ zIndex: 999 }}>
-          {tempNotificationList.map((alert) => (
-            <div key={alert.id}>
-              {alert.type === "error" ? (
-                <ErrorAlert
-                  key={alert.id}
-                  title={alert.title}
-                  list={alert.list}
-                  id={alert.id}
-                  removeAlert={removeAlert}
-                />
-              ) : alert.type === "notice" ? (
-                <NoticeAlert
-                  key={alert.id}
-                  title={alert.title}
-                  link={alert.link}
-                  id={alert.id}
-                  removeAlert={removeAlert}
-                />
-              ) : (
-                alert.type === "success" && (
-                  <SuccessAlert
-                    key={alert.id}
-                    title={alert.title}
-                    id={alert.id}
-                    removeAlert={removeAlert}
-                  />
-                )
-              )}
-            </div>
-          ))}
-        </div>
+        <AlertDisplayArea/>
       </div>
     </div>
   );

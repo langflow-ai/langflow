@@ -12,14 +12,14 @@ const useUpdateMessage = (setSuccessData, setErrorData) => {
       updateMessage(data);
 
       // Set success message
-      setSuccessData({
-        title: "Messages updated successfully.",
-      });
+      // setSuccessData({
+      //   title: "Messages updated successfully.",
+      // });
     } catch (error) {
       // Set error message
-      setErrorData({
-        title: "Error updating messages.",
-      });
+      // setErrorData({
+      //   title: "Error updating messages.",
+      // });
       return Promise.reject(error);
     }
   };
