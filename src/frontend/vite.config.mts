@@ -30,8 +30,7 @@ export default defineConfig(({ mode }) => {
       outDir: "build",
     },
     define: {
-      "process.env.LANGFLOW_PORT": JSON.stringify(process.env.LANGFLOW_PORT),
-      "process.env.LANGFLOW_HOST": JSON.stringify(process.env.LANGFLOW_HOST),
+      "process.env.BACKEND_URL": JSON.stringify(process.env.BACKEND_URL),
     },
     plugins: [react(), svgr()],
     server: {
