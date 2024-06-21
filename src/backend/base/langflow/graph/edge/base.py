@@ -15,9 +15,7 @@ class SourceHandle(BaseModel):
     dataType: str = Field(..., description="Data type for the source handle.")
     id: str = Field(..., description="Unique identifier for the source handle.")
     name: Optional[str] = Field(None, description="Name of the source handle.")
-    output_types: Optional[List[str]] = Field(
-        default_factory=list, description="List of output types for the source handle."
-    )
+    output_types: List[str] = Field(default_factory=list, description="List of output types for the source handle.")
 
     @field_validator("name", mode="before")
     @classmethod
