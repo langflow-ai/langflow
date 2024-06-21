@@ -5,7 +5,7 @@ import os
 import traceback
 import types
 from enum import Enum
-from typing import TYPE_CHECKING, Any, AsyncIterator, Callable, Dict, Iterator, List, Mapping, Optional
+from typing import TYPE_CHECKING, Set, Any, AsyncIterator, Callable, Dict, Iterator, List, Mapping, Optional
 
 from loguru import logger
 
@@ -152,7 +152,7 @@ class Vertex:
         return [edge for edge in self.edges if edge.target_id == self.id]
 
     @property
-    def edges_source_names(self) -> List[str]:
+    def edges_source_names(self) -> Set[str | None]:
         return {edge.source_handle.name for edge in self.edges}
 
     @property
