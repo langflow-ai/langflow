@@ -430,11 +430,11 @@ export const logHasMessage = (
   outputName: string | undefined,
 ) => {
   if (!outputName) return;
-  const logs = data?.logs[outputName];
-  if (Array.isArray(logs) && logs.length > 1) {
-    return logs.some((log) => log.message);
+  const outputs = data?.outputs[outputName];
+  if (Array.isArray(outputs) && outputs.length > 1) {
+    return outputs.some((outputLog) => outputLog.message);
   } else {
-    return logs?.message;
+    return outputs?.message;
   }
 };
 
@@ -443,11 +443,11 @@ export const logTypeIsUnknown = (
   outputName: string | undefined,
 ) => {
   if (!outputName) return;
-  const logs = data?.logs[outputName];
-  if (Array.isArray(logs) && logs.length > 1) {
-    return logs.some((log) => log.type === "unknown");
+  const outputs = data?.outputs[outputName];
+  if (Array.isArray(outputs) && outputs.length > 1) {
+    return outputs.some((outputLog) => outputLog.type === "unknown");
   } else {
-    return logs?.type === "unknown";
+    return outputs?.type === "unknown";
   }
 };
 
@@ -456,10 +456,10 @@ export const logTypeIsError = (
   outputName: string | undefined,
 ) => {
   if (!outputName) return;
-  const logs = data?.logs[outputName];
-  if (Array.isArray(logs) && logs.length > 1) {
-    return logs.some((log) => isErrorLog(log));
+  const outputs = data?.outputs[outputName];
+  if (Array.isArray(outputs) && outputs.length > 1) {
+    return outputs.some((log) => isErrorLog(log));
   } else {
-    return isErrorLog(logs);
+    return isErrorLog(outputs);
   }
 };

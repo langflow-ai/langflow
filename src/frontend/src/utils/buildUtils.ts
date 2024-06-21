@@ -33,7 +33,7 @@ function getInactiveVertexData(vertexId: string): VertexBuildTypeAPI {
   // Build VertexBuildTypeAPI
   let inactiveData = {
     results: {},
-    logs: {},
+    outputs: {},
     messages: [],
     inactive: true,
   };
@@ -276,17 +276,17 @@ async function buildVertex({
       if (!buildData.valid) {
         // lots is a dictionary with the key the output field name and the value the log object
         // logs: { [key: string]: { message: any; type: string }[] };
-        const errorMessages = Object.keys(buildData.data.logs).map((key) => {
-          const logs = buildData.data.logs[key];
-          if (Array.isArray(logs)) {
-            return logs
+        const errorMessages = Object.keys(buildData.data.outputs).map((key) => {
+          const outputs = buildData.data.outputs[key];
+          if (Array.isArray(outputs)) {
+            return outputs
               .filter((log) => isErrorLogType(log.message))
               .map((log) => log.message.errorMessage);
           }
-          if (!isErrorLogType(logs.message)) {
+          if (!isErrorLogType(outputs.message)) {
             return [];
           }
-          return [logs.message.errorMessage];
+          return [outputs.message.errorMessage];
         });
         onBuildError!(
           "Error Building Component",

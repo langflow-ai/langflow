@@ -22,7 +22,7 @@ const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
   const flowPoolNode = (flowPool[nodeId] ?? [])[
     (flowPool[nodeId]?.length ?? 1) - 1
   ];
-  let results = flowPoolNode?.data?.logs[outputName] ?? "";
+  let results = flowPoolNode?.data?.outputs[outputName] ?? "";
   if (Array.isArray(results)) {
     return;
   }
