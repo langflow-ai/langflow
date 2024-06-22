@@ -25,6 +25,7 @@ from langflow.api.v1.schemas import (
     VerticesOrderResponse,
 )
 from langflow.exceptions.component import ComponentBuildException
+from langflow.graph.graph.base import Graph
 from langflow.schema.schema import OutputLog
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.chat.service import ChatService
@@ -161,7 +162,8 @@ async def build_vertex(
                 flow_id=flow_id_str, session=next(get_session()), chat_service=chat_service
             )
         else:
-            graph = cache.get("result")
+            graph: "Graph" = cache.get("result")
+            await graph.initialize_run()
         vertex = graph.get_vertex(vertex_id)
 
         try:
