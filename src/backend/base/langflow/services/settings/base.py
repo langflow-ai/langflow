@@ -130,7 +130,7 @@ class Settings(BaseSettings):
     @classmethod
     def set_user_agent(cls, value):
         if not value:
-            value = "langflow"
+            value = "Langflow"
         import os
 
         os.environ["USER_AGENT"] = value
