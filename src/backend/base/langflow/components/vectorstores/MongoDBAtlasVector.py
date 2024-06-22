@@ -4,7 +4,7 @@ from langchain_community.vectorstores import MongoDBAtlasVectorSearch
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent
 from langflow.helpers.data import docs_to_data
-from langflow.io import BoolInput, HandleInput, IntInput, StrInput, SecretStrInput, DataInput, MultilineInput
+from langflow.io import HandleInput, IntInput, StrInput, SecretStrInput, DataInput, MultilineInput
 from langflow.schema import Data
 
 
@@ -78,7 +78,6 @@ class MongoVectorStoreComponent(LCVectorStoreComponent):
 
     def search_documents(self) -> List[Data]:
         from bson import ObjectId
-        from langchain.schema import Document
 
         vector_store = self._build_mongodb_atlas()
 
