@@ -122,7 +122,8 @@ class Component(CustomComponent):
             f"{self.display_name} ({self.vertex.id})", self.trace_type, inputs, metadata
         ):
             _results, _artifacts = await self._build_results()
-            self._tracing_service.set_outputs(_results)
+            trace_name = self._tracing_service.run_name
+            self._tracing_service.set_outputs(trace_name, _results)
 
         return _results, _artifacts
 
@@ -181,7 +182,8 @@ class Component(CustomComponent):
         self._artifacts = _artifacts
         self._results = _results
         if self._tracing_service:
-            self._tracing_service.set_outputs(_results)
+            trace_name = self._tracing_service.run_name
+            self._tracing_service.set_outputs(trace_name, _results)
         return _results, _artifacts
 
     def custom_repr(self):
