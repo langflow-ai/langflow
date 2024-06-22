@@ -270,5 +270,5 @@ src/frontend/playwright-report/index.html
 prof/*
 
 src/frontend/temp
-*.db-shm
-*.db-wal
+*-shm
+*-wal
