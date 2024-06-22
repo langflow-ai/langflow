@@ -65,7 +65,7 @@ export default function FlowToolbar(): JSX.Element {
         <button
           disabled={!hasApiKey || !validApiKey || !hasStore}
           className={classNames(
-            "relative ag-cell inline-flex h-full w-full items-center justify-center gap-[4px] bg-muted px-5 py-3 text-sm font-semibold text-foreground transition-all duration-150 ease-in-out hover:bg-background hover:bg-hover",
+            "relative inline-flex h-full w-full items-center justify-center gap-[4px] bg-muted px-5 py-3 text-sm font-semibold text-foreground transition-all duration-150 ease-in-out hover:bg-background hover:bg-hover",
             !hasApiKey || !validApiKey || !hasStore
               ? "button-disable text-muted-foreground"
               : "",
@@ -74,7 +74,7 @@ export default function FlowToolbar(): JSX.Element {
           <ForwardedIconComponent
             name="Share3"
             className={classNames(
-              "h-6 w-6",
+              "-m-0.5 -ml-1 h-6 w-6",
               !hasApiKey || !validApiKey || !hasStore
                 ? "extra-side-bar-save-disable"
                 : "",
@@ -115,7 +115,7 @@ export default function FlowToolbar(): JSX.Element {
             <div className="flex h-full w-full gap-1 rounded-sm transition-all">
               {hasIO ? (
                 <IOModal open={open} setOpen={setOpen} disable={!hasIO}>
-                  <div className="relative ag-cell inline-flex w-full items-center justify-center gap-1 px-5 py-3 text-sm font-semibold transition-all duration-500 ease-in-out hover:bg-hover">
+                  <div className="relative inline-flex w-full items-center justify-center gap-1 px-5 py-3 text-sm font-semibold transition-all duration-500 ease-in-out hover:bg-hover">
                     <ForwardedIconComponent
                       name="BotMessageSquareIcon"
                       className={"h-5 w-5 transition-all"}
@@ -125,7 +125,7 @@ export default function FlowToolbar(): JSX.Element {
                 </IOModal>
               ) : (
                 <div
-                  className={`relative ag-cell inline-flex w-full cursor-not-allowed items-center justify-center gap-1 px-5 py-3 text-sm font-semibold text-muted-foreground transition-all duration-150 ease-in-out`}
+                className={`relative inline-flex w-full cursor-not-allowed items-center justify-center gap-1 px-5 py-3 text-sm font-semibold text-muted-foreground transition-all duration-150 ease-in-out`}
                 >
                   <ForwardedIconComponent
                     name="BotMessageSquareIcon"
@@ -147,7 +147,7 @@ export default function FlowToolbar(): JSX.Element {
                 >
                   <div
                     className={classNames(
-                      "relative inline-flex ag-cell w-full items-center justify-center gap-1 px-5 py-3 text-sm font-semibold text-foreground transition-all duration-150 ease-in-out hover:bg-hover",
+                      "relative inline-flex w-full items-center justify-center gap-1 px-5 py-3 text-sm font-semibold text-foreground transition-all duration-150 ease-in-out hover:bg-hover",
                     )}
                   >
                     <ForwardedIconComponent

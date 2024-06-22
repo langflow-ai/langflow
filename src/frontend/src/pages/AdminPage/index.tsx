@@ -24,6 +24,10 @@ import {
   USER_EDIT_ERROR_ALERT,
   USER_EDIT_SUCCESS_ALERT,
 } from "../../constants/alerts_constants";
+import {
+  ADMIN_HEADER_DESCRIPTION,
+  ADMIN_HEADER_TITLE,
+} from "../../constants/constants";
 import { AuthContext } from "../../contexts/authContext";
 import {
   addUser,
@@ -217,11 +221,11 @@ export default function AdminPage() {
           <div className="main-page-nav-arrangement">
             <span className="main-page-nav-title">
               <IconComponent name="Shield" className="w-6" />
-              {t("Admin Page")}
+              {t(ADMIN_HEADER_TITLE)}
             </span>
           </div>
           <span className="admin-page-description-text">
-            {t("Navigate through this section to efficiently oversee all application users. From here, you can seamlessly manage user accounts.")}
+            {t(ADMIN_HEADER_DESCRIPTION)}
           </span>
           <div className="flex w-full justify-between px-4">
             <div className="flex w-96 items-center gap-4">
