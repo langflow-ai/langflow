@@ -17,7 +17,7 @@ class VariableServiceFactory(ServiceFactory):
 
         if settings_service.settings.variable_store == "kubernetes":
             # Keep it here to avoid import errors
-            from langflow.services.variable.service import KubernetesSecretService
+            from langflow.services.variable.kubernetes import KubernetesSecretService
 
             return KubernetesSecretService(settings_service)
         else:
