@@ -239,6 +239,14 @@ export default function GenericNode({
           }
         })
         .catch((err) => {
+          setErrorData({
+            title: "Error updating Compoenent code",
+            list: [
+              "There was an error updating the Component.",
+              "If the error persists, please report it on our Discord or GitHub.",
+            ],
+          });
+          setLoadingUpdate(false);
           console.log(err);
         });
     }
