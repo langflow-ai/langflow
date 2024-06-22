@@ -2,12 +2,10 @@ import abc
 from typing import Optional, Union
 from uuid import UUID
 
-from fastapi import Depends
 from sqlmodel import Session
 
 from langflow.services.base import Service
 from langflow.services.database.models.variable.model import Variable
-from langflow.services.deps import get_session
 
 
 class VariableService(Service):
@@ -90,9 +88,9 @@ class VariableService(Service):
         user_id: Union[UUID, str],
         name: str,
         value: str,
-        default_fields: list[str] = [],
-        _type: str = "Generic",
-        session: Session = Depends(get_session),
+        default_fields: list[str],
+        _type: str,
+        session: Session,
     ) -> Variable:
         """
         Create a variable.
