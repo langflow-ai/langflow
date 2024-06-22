@@ -213,7 +213,7 @@ class Graph:
             raise ValueError("Run ID not set")
         return self._run_id
 
-    def set_run_id(self, run_id: str | uuid.UUID | None = None):
+    def set_run_id(self, run_id: uuid.UUID | None = None):
         """
         Sets the ID of the current run.
 
@@ -223,10 +223,10 @@ class Graph:
         if run_id is None:
             run_id = uuid.uuid4()
 
-        run_id = str(run_id)
+        run_id_str = str(run_id)
         for vertex in self.vertices:
-            self.state_manager.subscribe(run_id, vertex.update_graph_state)
-        self._run_id = run_id
+            self.state_manager.subscribe(run_id_str, vertex.update_graph_state)
+        self._run_id = run_id_str
         if self.tracing_service:
             self.tracing_service.set_run_id(run_id)
 
