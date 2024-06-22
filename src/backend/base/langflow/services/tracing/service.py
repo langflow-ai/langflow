@@ -127,7 +127,7 @@ class TracingService(Service):
         self.logs_queue.put_nowait((self._add_log, (trace_name, log)))
 
     @asynccontextmanager
-    def trace_context(
+    async def trace_context(
         self, trace_name: str, trace_type: str, inputs: Dict[str, Any] = None, metadata: Dict[str, Any] = None
     ):
         self._start_traces(trace_name, trace_type, inputs, metadata)
@@ -196,6 +196,7 @@ class LangSmithTracer:
         if metadata:
             child.add_metadata(raw_inputs)
         self._children[trace_name] = child
+        self._child_link = {}
 
     def _convert_to_langchain_types(self, io_dict: Dict[str, Any]):
         converted = {}
