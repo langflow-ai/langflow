@@ -1,10 +1,13 @@
+from collections import defaultdict
+from typing import Any, Dict, List, Optional
+
 from fastapi import HTTPException
+from langchain_core.prompts import PromptTemplate
 from loguru import logger
 
 from langflow.api.v1.base import INVALID_NAMES, check_input_variables
 from langflow.interface.utils import extract_input_variables_from_prompt
 from langflow.template.field.prompt import DefaultPromptField
-from langchain_core.prompts import PromptTemplate
 
 
 def validate_prompt(prompt_template: str, silent_errors: bool = False) -> list[str]:
@@ -81,3 +84,45 @@ def remove_old_variables_from_template(old_custom_fields, input_variables, custo
 def update_input_variables_field(input_variables, template):
     if "input_variables" in template:
         template["input_variables"]["value"] = input_variables
+
+
+def process_prompt_template(
+    template: str, name: str, custom_fields: Optional[Dict[str, List[str]]], frontend_node_template: Dict[str, Any]
+):
+    """Process and validate prompt template, update template and custom fields."""
+    # Validate the prompt template and extract input variables
+    input_variables = validate_prompt(template)
+
+    # Initialize custom_fields if None
+    if custom_fields is None:
+        custom_fields = defaultdict(list)
+
+    # Retrieve old custom fields
+    old_custom_fields = get_old_custom_fields(custom_fields, name)
+
+    # Add new variables to the template
+    add_new_variables_to_template(input_variables, custom_fields, frontend_node_template, name)
+
+    # Remove old variables from the template
+    remove_old_variables_from_template(old_custom_fields, input_variables, custom_fields, frontend_node_template, name)
+
+    # Update the input variables field in the template
+    update_input_variables_field(input_variables, frontend_node_template)
+
+    # Optional: cleanup fields based on specific conditions
+    cleanup_prompt_template_fields(input_variables, frontend_node_template)
+
+    return input_variables
+
+
+def cleanup_prompt_template_fields(input_variables, template):
+    """Removes unused fields if the conditions are met in the template."""
+    prompt_fields = [
+        key for key, field in template.items() if isinstance(field, dict) and field.get("type") == "prompt"
+    ]
+
+    if len(prompt_fields) == 1:
+        for key in list(template.keys()):  # Use list to copy keys
+            field = template.get(key, {})
+            if isinstance(field, dict) and field.get("type") != "code" and key not in input_variables + prompt_fields:
+                del template[key]
