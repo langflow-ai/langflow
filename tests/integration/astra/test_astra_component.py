@@ -55,6 +55,7 @@ def test_astra_setup(astra_fixture):
         collection_name=COLLECTION,
         embedding=embedding,
     )
+    component.build_vector_store()
 
 
 @pytest.mark.skipif(
