@@ -1,3 +1,4 @@
+import uuid
 import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional
@@ -21,7 +22,9 @@ API_WORDS = ["api", "key", "token"]
 
 
 def has_api_terms(word: str):
-    return "api" in word and ("key" in word or ("token" in word and "tokens" not in word))
+    return "api" in word and (
+        "key" in word or ("token" in word and "tokens" not in word)
+    )
 
 
 def remove_api_keys(flow: dict):
@@ -31,7 +34,11 @@ def remove_api_keys(flow: dict):
             node_data = node.get("data").get("node")
             template = node_data.get("template")
             for value in template.values():
-                if isinstance(value, dict) and has_api_terms(value["name"]) and value.get("password"):
+                if (
+                    isinstance(value, dict)
+                    and has_api_terms(value["name"])
+                    and value.get("password")
+                ):
                     value["value"] = None
 
     return flow
@@ -52,7 +59,9 @@ def build_input_keys_response(langchain_object, artifacts):
             input_keys_response["input_keys"][key] = value
     # If the object has memory, that memory will have a memory_variables attribute
     # memory variables should be removed from the input keys
-    if hasattr(langchain_object, "memory") and hasattr(langchain_object.memory, "memory_variables"):
+    if hasattr(langchain_object, "memory") and hasattr(
+        langchain_object.memory, "memory_variables"
+    ):
         # Remove memory variables from input keys
         input_keys_response["input_keys"] = {
             key: value
@@ -62,7 +71,9 @@ def build_input_keys_response(langchain_object, artifacts):
         # Add memory variables to memory_keys
         input_keys_response["memory_keys"] = langchain_object.memory.memory_variables
 
-    if hasattr(langchain_object, "prompt") and hasattr(langchain_object.prompt, "template"):
+    if hasattr(langchain_object, "prompt") and hasattr(
+        langchain_object.prompt, "template"
+    ):
         input_keys_response["template"] = langchain_object.prompt.template
 
     return input_keys_response
@@ -101,7 +112,11 @@ def raw_frontend_data_is_valid(raw_frontend_data):
 def is_valid_data(frontend_node, raw_frontend_data):
     """Check if the data is valid for processing."""
 
-    return frontend_node and "template" in frontend_node and raw_frontend_data_is_valid(raw_frontend_data)
+    return (
+        frontend_node
+        and "template" in frontend_node
+        and raw_frontend_data_is_valid(raw_frontend_data)
+    )
 
 
 def update_template_values(frontend_template, raw_template):
@@ -175,7 +190,9 @@ async def check_langflow_version(component: StoreComponentCreate):
 
     langflow_version = get_lf_version_from_pypi()
     if langflow_version is None:
-        raise HTTPException(status_code=500, detail="Unable to verify the latest version of Langflow")
+        raise HTTPException(
+            status_code=500, detail="Unable to verify the latest version of Langflow"
+        )
     elif langflow_version != component.last_tested_version:
         warnings.warn(
             f"Your version of Langflow ({component.last_tested_version}) is outdated. "
@@ -205,12 +222,16 @@ def format_elapsed_time(elapsed_time: float) -> str:
         return f"{minutes} {minutes_unit}, {seconds} {seconds_unit}"
 
 
-async def build_graph_from_db(flow_id: str, session: Session, chat_service: "ChatService"):
+async def build_graph_from_db(
+    flow_id: str, session: Session, chat_service: "ChatService"
+):
     """Build and cache the graph."""
     flow: Optional[Flow] = session.get(Flow, flow_id)
     if not flow or not flow.data:
         raise ValueError("Invalid flow ID")
-    graph = Graph.from_payload(flow.data, flow_id, flow_name=flow.name, user_id=str(flow.user_id))
+    graph = Graph.from_payload(
+        flow.data, flow_id, flow_name=flow.name, user_id=str(flow.user_id)
+    )
     for vertex_id in graph._has_session_id_vertices:
         vertex = graph.get_vertex(vertex_id)
         if vertex is None:
@@ -284,10 +305,14 @@ async def get_next_runnable_vertices(
     """
     async with chat_service._cache_locks[flow_id] as lock:
         graph.remove_from_predecessors(vertex_id)
-        direct_successors_ready = [v for v in vertex.successors_ids if graph.is_vertex_runnable(v)]
+        direct_successors_ready = [
+            v for v in vertex.successors_ids if graph.is_vertex_runnable(v)
+        ]
         if not direct_successors_ready:
             # No direct successors ready, look for runnable predecessors of successors
-            next_runnable_vertices = graph.find_runnable_predecessors_for_successors(vertex_id)
+            next_runnable_vertices = graph.find_runnable_predecessors_for_successors(
+                vertex_id
+            )
         else:
             next_runnable_vertices = direct_successors_ready
 
