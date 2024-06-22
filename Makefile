@@ -256,6 +256,10 @@ lock:
 	cd src/backend/base && poetry lock
 	poetry lock
 
+update:
+	@echo 'Updating dependencies'
+	cd src/backend/base && poetry update
+	poetry update
 
 publish_base:
 	cd src/backend/base && poetry publish
