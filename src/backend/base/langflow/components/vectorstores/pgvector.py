@@ -4,7 +4,7 @@ from langchain_community.vectorstores import PGVector
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent
 from langflow.helpers.data import docs_to_data
-from langflow.io import BoolInput, HandleInput, IntInput, StrInput, SecretStrInput, DataInput, MultilineInput
+from langflow.io import HandleInput, IntInput, StrInput, SecretStrInput, DataInput, MultilineInput
 from langflow.schema import Data
 
 
