@@ -4,7 +4,7 @@ import "ace-builds/src-noconflict/mode-python";
 import "ace-builds/src-noconflict/theme-github";
 import "ace-builds/src-noconflict/theme-twilight";
 // import "ace-builds/webpack-resolver";
-import { cloneDeep } from "lodash";
+import { cloneDeep, set } from "lodash";
 import { useEffect, useState } from "react";
 import JsonView from "react18-json-view";
 import "react18-json-view/src/dark.css";
@@ -18,15 +18,21 @@ import {
 import TextOutputView from "../../shared/components/textOutputView";
 import { useDarkStore } from "../../stores/darkStore";
 import BaseModal from "../baseModal";
+import TextEditorArea from "./components/textEditorArea";
 
 export default function TextModal({
   children,
   value,
+  setValue,
+  editable = false,
 }: {
   children: JSX.Element;
-  value: Object;
+  value: string;
+  setValue: (value: string) => void;
+  editable?: boolean;
 }): JSX.Element {
   const [open, setOpen] = useState(false);
+  const [internalValue, setInternalValue] = useState(value);
 
   return (
     <BaseModal size="medium-h-full" open={open} setOpen={setOpen}>
@@ -42,12 +48,28 @@ export default function TextModal({
       <BaseModal.Content>
         <div className="flex h-full w-full flex-col transition-all">
           <div className="h-[370px]">
-            <TextOutputView value={value} left={false} />
+            <TextEditorArea
+              readonly={!editable}
+              onChange={(text) => setInternalValue(text)}
+              value={internalValue}
+              left={false}
+            />
           </div>
         </div>
       </BaseModal.Content>
       <BaseModal.Footer>
-        <div className="flex w-full justify-end pt-2">
+        <div className="flex w-full justify-end gap-2 pt-2">
+          {editable && (
+            <Button
+              className="flex gap-2 px-3"
+              onClick={() => {
+                setValue(internalValue);
+                setOpen(false);
+              }}
+            >
+              Save
+            </Button>
+          )}
           <Button className="flex gap-2 px-3" onClick={() => setOpen(false)}>
             Close
           </Button>
