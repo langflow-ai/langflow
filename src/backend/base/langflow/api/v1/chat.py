@@ -158,11 +158,11 @@ async def build_vertex(
         if not cache:
             # If there's no cache
             logger.warning(f"No cache found for {flow_id_str}. Building graph starting at {vertex_id}")
-            graph = await build_graph_from_db(
+            graph: "Graph" = await build_graph_from_db(
                 flow_id=flow_id_str, session=next(get_session()), chat_service=chat_service
             )
         else:
-            graph: "Graph" = cache.get("result")
+            graph = cache.get("result")
             await graph.initialize_run()
         vertex = graph.get_vertex(vertex_id)
 
