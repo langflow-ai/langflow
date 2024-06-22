@@ -125,7 +125,7 @@ export default function FlowToolbar(): JSX.Element {
                 </IOModal>
               ) : (
                 <div
-                className={`relative inline-flex w-full cursor-not-allowed items-center justify-center gap-1 px-5 py-3 text-sm font-semibold text-muted-foreground transition-all duration-150 ease-in-out`}
+                  className={`relative inline-flex w-full cursor-not-allowed items-center justify-center gap-1 px-5 py-3 text-sm font-semibold text-muted-foreground transition-all duration-150 ease-in-out`}
                 >
                   <ForwardedIconComponent
                     name="BotMessageSquareIcon"
