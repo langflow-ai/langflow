@@ -52,7 +52,8 @@ jobs:
           context: .
           push: true
           file: ./docker/build_and_push.Dockerfile
-          platforms: "linux/amd64,linux/arm64/v8"
+          # provenance: false will result in a single manifest for all platforms which makes the image pullable from arm64 machines via the emulation (e.g. Apple Silicon machines)
+          provenance: false
           tags: |
             langflowai/langflow:${{ steps.check-version.outputs.version }}
             langflowai/langflow:latest
@@ -64,7 +65,8 @@ jobs:
           context: .
           push: true
           file: ./docker/build_and_push_backend.Dockerfile
-          platforms: "linux/amd64,linux/arm64/v8"
+          # provenance: false will result in a single manifest for all platforms which makes the image pullable from arm64 machines via the emulation (e.g. Apple Silicon machines)
+          provenance: false
           build-args: |
             LANGFLOW_IMAGE=langflowai/langflow:${{ steps.check-version.outputs.version }}
           tags: |
@@ -76,7 +78,8 @@ jobs:
           context: .
           push: true
           file: ./docker/frontend/build_and_push_frontend.Dockerfile
-          platforms: "linux/amd64,linux/arm64/v8"
+          # provenance: false will result in a single manifest for all platforms which makes the image pullable from arm64 machines via the emulation (e.g. Apple Silicon machines)
+          provenance: false
           tags: |
             langflowai/langflow-frontend:${{ steps.check-version.outputs.version }}
             langflowai/langflow-frontend:latest
