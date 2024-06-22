@@ -18,7 +18,10 @@ from langchain_text_splitters import TextSplitter
 
 NestedDict: TypeAlias = Dict[str, Union[str, Dict]]
 LanguageModel = TypeVar("LanguageModel", BaseLanguageModel, BaseLLM, BaseChatModel)
-Retriever: TypeAlias = BaseRetriever
+
+
+class Retriever(BaseRetriever):
+    pass
 
 
 class Object:
