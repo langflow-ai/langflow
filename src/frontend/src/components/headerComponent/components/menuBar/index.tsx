@@ -182,7 +182,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
                 name="RefreshCcw"
                 className="header-menu-options"
               />
-              Refresh All
+              {t("Refresh All")}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

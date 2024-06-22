@@ -65,7 +65,7 @@ export default function PaginatorComponent({
           </div>
           <div className="flex w-[100px] items-center justify-center text-sm font-medium">
             {t("PageStart")} {pageIndex} {t("PageEnd")}
-            {!storeComponent && <> of {maxIndex}</>}
+            {!storeComponent && <> {t("of")} {maxIndex}</>}
           </div>
           <div className="flex items-center space-x-2">
             <Button

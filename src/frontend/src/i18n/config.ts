@@ -4,6 +4,7 @@ import { initReactI18next } from "react-i18next";
 
 import translationEN from './en.json'
 import translationZH from './zh.json'
+import translationZHTW from './zh-TW.json'
 
 const resources = {
   en: {
@@ -11,6 +12,9 @@ const resources = {
   },
   zh: {
     translation: translationZH
+  },
+  'zh-TW': {
+    translation: translationZHTW
   }
 }
 
