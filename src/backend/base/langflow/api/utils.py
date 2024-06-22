@@ -13,6 +13,8 @@ from langflow.services.database.models.flow import Flow
 from langflow.services.store.schema import StoreComponentCreate
 from langflow.services.store.utils import get_lf_version_from_pypi
 
+import uuid
+
 if TYPE_CHECKING:
     from langflow.graph.vertex.base import Vertex
     from langflow.services.database.models.flow.model import Flow
