@@ -211,7 +211,7 @@ async def build_graph_from_db(flow_id: str, session: Session, chat_service: "Cha
     flow: Optional[Flow] = session.get(Flow, flow_id)
     if not flow or not flow.data:
         raise ValueError("Invalid flow ID")
-    graph = Graph.from_payload(flow.data, flow_id, flow_name=flow.name, user_id=flow.user_id)
+    graph = Graph.from_payload(flow.data, flow_id, flow_name=flow.name, user_id=str(flow.user_id))
     for vertex_id in graph._has_session_id_vertices:
         vertex = graph.get_vertex(vertex_id)
         if vertex is None:
@@ -222,6 +222,7 @@ async def build_graph_from_db(flow_id: str, session: Session, chat_service: "Cha
     run_id = uuid.uuid4()
     graph.set_run_id(run_id)
     graph.set_run_name()
+    await graph.initialize_run()
     await chat_service.set_cache(flow_id, graph)
     return graph
 
