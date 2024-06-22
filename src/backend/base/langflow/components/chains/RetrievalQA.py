@@ -63,6 +63,6 @@ class RetrievalQAComponent(CustomComponent):
             references_str = self.create_references_from_data(data)
         result_str = result.get("result", "")
 
-        final_result = "\n".join([Text(result_str), references_str])
+        final_result = "\n".join([str(result_str), references_str])
         self.status = final_result
         return final_result  # OK
