@@ -41,7 +41,7 @@
   "Select All": "全選",
   "Unselect All": "取消",
   "Delete selected items": "刪除選擇項目",
-  "Duplicate selected items": "複製選擇項目",
+  "Duplicate selected items": "複製一份選擇項目",
   "Export selected items": "匯出選擇項目",
   "Store": "商店",
   "Store API Key": "商店金鑰",
@@ -141,5 +141,10 @@
   "Refresh All": "全部重新整理",
   "Ungroup": "取消群組",
   "Download": "下載",
-  "Expand": "展開"
+  "Expand": "展開",
+  "Select items to export": "匯出選擇項目",
+  "Select items to delete": "刪除選擇項目",
+  "Select items to duplicate": "新增選擇項目複本",
+  "Discussions": "論壇",
+  "Help": "幫助"
 }

@@ -141,5 +141,10 @@
   "Refresh All": "全部刷新",
   "Ungroup": "取消群组",
   "Download": "下载",
-  "Expand": "展开"
+  "Expand": "展开",
+  "Select items to export": "导出选择项目",
+  "Select items to delete": "删除选择项目",
+  "Select items to duplicate": "添加选择项目复本",
+  "Discussions": "论坛",
+  "Help": "帮助"
 }
