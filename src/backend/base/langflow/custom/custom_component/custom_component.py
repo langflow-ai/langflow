@@ -12,7 +12,7 @@ from langflow.helpers.flow import list_flows, load_flow, run_flow
 from langflow.schema import Data
 from langflow.schema.artifact import get_artifact_type
 from langflow.schema.dotdict import dotdict
-from langflow.schema.message import Message
+from langflow.schema.log import LoggableType
 from langflow.schema.schema import OutputLog
 from langflow.services.deps import get_storage_service, get_variable_service, session_scope
 from langflow.services.storage.service import StorageService
@@ -28,9 +28,6 @@ if TYPE_CHECKING:
     from langflow.graph.vertex.base import Vertex
     from langflow.services.storage.service import StorageService
     from langflow.services.tracing.service import TracingService
-
-
-LoggableType = Union[str, dict, list, int, float, bool, None, Data, Message]
 
 
 class CustomComponent(BaseComponent):
@@ -491,7 +488,10 @@ class CustomComponent(BaseComponent):
             message (LoggableType | list[LoggableType]): The message to log.
         """
         if name is None:
-            name = self.display_name
+            name = self.display_name if self.display_name else self.__class__.__name__
+        if hasattr(message, "model_dump"):
+            message = message.model_dump()
         log = Log(message=message, type=get_artifact_type(message), name=name)
         self._logs.append(log)
-        self._tracing_service.add_log(trace_name=self.vertex.id, log=log)
+        if self.vertex:
+            self._tracing_service.add_log(trace_name=self.vertex.id, log=log)
