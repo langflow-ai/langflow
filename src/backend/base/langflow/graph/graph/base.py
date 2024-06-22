@@ -26,6 +26,7 @@ from langflow.services.monitor.utils import log_transaction
 
 if TYPE_CHECKING:
     from langflow.graph.schema import ResultData
+    from langflow.services.tracing.service import TracingService
 
 
 class Graph:
@@ -86,7 +87,7 @@ class Graph:
         self.define_vertices_lists()
         self.state_manager = GraphStateManager()
         try:
-            self.tracing_service = get_tracing_service()
+            self.tracing_service: "TracingService" | None = get_tracing_service()
         except Exception as exc:
             logger.error(f"Error getting tracing service: {exc}")
             self.tracing_service = None
@@ -226,7 +227,8 @@ class Graph:
         for vertex in self.vertices:
             self.state_manager.subscribe(run_id, vertex.update_graph_state)
         self._run_id = run_id
-        self.tracing_service.set_run_id(run_id)
+        if self.tracing_service:
+            self.tracing_service.set_run_id(run_id)
 
     def set_run_name(self):
         # Given a flow name, flow_id
@@ -236,7 +238,9 @@ class Graph:
 
         self.set_run_id()
         self.tracing_service.set_run_name(name)
-        self.tracing_service.initialize_tracers()
+
+    async def initialize_run(self):
+        await self.tracing_service.initialize_tracers()
 
     async def end_all_traces(self, outputs: dict[str, Any] | None = None, error: str | None = None):
         if not self.tracing_service:
@@ -926,6 +930,7 @@ class Graph:
         run_id = uuid.uuid4()
         self.set_run_id(run_id)
         self.set_run_name()
+        await self.initialize_run()
         lock = chat_service._cache_locks[self.run_id]
         while to_process:
             current_batch = list(to_process)  # Copy current deque items to a list
