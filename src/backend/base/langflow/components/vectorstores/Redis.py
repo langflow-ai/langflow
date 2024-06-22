@@ -29,12 +29,12 @@ class RedisVectorStoreComponent(LCVectorStoreComponent):
             name="schema",
             display_name="Schema",
         ),
+        MultilineInput(name="search_query", display_name="Search Query"),
         DataInput(
-            name="vector_store_inputs",
-            display_name="Vector Store Inputs",
+            name="ingest_data",
+            display_name="Ingest Data",
             is_list=True,
         ),
-        MultilineInput(name="search_input", display_name="Search Input"),
         IntInput(
             name="number_of_results",
             display_name="Number of Results",
@@ -48,7 +48,7 @@ class RedisVectorStoreComponent(LCVectorStoreComponent):
     def build_vector_store(self) -> Redis:
         documents = []
 
-        for _input in self.vector_store_inputs or []:
+        for _input in self.ingest_data or []:
             if isinstance(_input, Data):
                 documents.append(_input.to_lc_document())
             else:
@@ -80,9 +80,9 @@ class RedisVectorStoreComponent(LCVectorStoreComponent):
     def search_documents(self) -> List[Data]:
         vector_store = self.build_vector_store()
 
-        if self.search_input and isinstance(self.search_input, str) and self.search_input.strip():
+        if self.search_query and isinstance(self.search_query, str) and self.search_query.strip():
             docs = vector_store.similarity_search(
-                query=self.search_input,
+                query=self.search_query,
                 k=self.number_of_results,
             )
 
