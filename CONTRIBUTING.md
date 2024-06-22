@@ -7,6 +7,19 @@ to contributions, whether it be in the form of a new feature, improved infra, or
 To contribute to this project, please follow a ["fork and pull request"](https://docs.github.com/en/get-started/quickstart/contributing-to-projects) workflow.
 Please do not try to push directly to this repo unless you are a maintainer.
 
+## Linear History
+
+We strive to maintain a linear history in our git repository. This means that we do not accept merge commits in pull requests. To achieve this, we ask that you rebase your branch on top of the `dev` branch before opening a pull request. This can be done by running the following commands:
+
+```bash
+git checkout dev
+git pull
+git checkout <your-branch>
+git rebase dev
+# Fix any conflicts that arise
+git push --force-with-lease
+```
+
 The branch structure is as follows:
 
 - `main`: The stable version of Langflow
