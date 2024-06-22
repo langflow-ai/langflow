@@ -489,7 +489,7 @@ class CustomComponent(BaseComponent):
         """
         if name is None:
             name = self.display_name if self.display_name else self.__class__.__name__
-        if hasattr(message, "model_dump"):
+        if hasattr(message, "model_dump") and isinstance(message, BaseModel):
             message = message.model_dump()
         log = Log(message=message, type=get_artifact_type(message), name=name)
         self._logs.append(log)
