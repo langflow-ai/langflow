@@ -559,7 +559,7 @@ async def create_or_update_starter_projects(get_all_components_coro: Awaitable[d
                 project_icon_bg_color,
             ) = get_project_data(project)
             updated_project_data = update_projects_components_with_latest_component_versions(
-                project_data, all_types_dict
+                project_data.copy(), all_types_dict
             )
             updated_project_data = update_edges_with_latest_component_versions(updated_project_data)
             try:
