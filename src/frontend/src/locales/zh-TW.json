@@ -1,5 +1,5 @@
 {
-  "Loading...": "載入中(Loading)...",
+  "Loading":"載入中(Loading)...",
   "Basic Components": "基本組件",
   "Advanced": "進階組件",
   "Building...": "編譯中...",
@@ -138,5 +138,8 @@
   "Please confirm your password": "請確認你的密碼",
   "Confirm your password": "請確認你的密碼",
   "Passwords do not match": "密碼與第一次輸入不一致",
-  "Refresh All": "全部重新整理"
+  "Refresh All": "全部重新整理",
+  "text":{
+    "cool":"帥帥的"
+  }
 }

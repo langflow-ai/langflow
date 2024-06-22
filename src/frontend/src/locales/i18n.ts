@@ -2,25 +2,25 @@
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 
-import translationEN from './en.json'
-import translationZH from './zh.json'
-import translationZHTW from './zh-TW.json'
+import en from './en.json'
+import zh from './zh.json'
+import zh_tw from './zh-TW.json'
 
 const resources = {
   en: {
-    translation: translationEN
+    translation: en
   },
   zh: {
-    translation: translationZH
+    translation: zh
   },
-  'zh-TW': {
-    translation: translationZHTW
+  "zh-TW": {
+    translation: zh_tw
   }
 }
 
 i18n.use(initReactI18next).init({
   resources,
-  lng: "zh",
+  lng: "zh-TW",
   fallbackLng: "en",
   interpolation: {
     escapeValue: false,
