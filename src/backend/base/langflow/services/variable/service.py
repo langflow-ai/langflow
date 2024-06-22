@@ -154,7 +154,7 @@ class KubernetesSecretService(VariableService, Service):
                     variables[key] = str(value)
 
             try:
-                secret_name = user_id
+                secret_name = encode_user_id(user_id)
                 self.kubernetes_secrets.create_secret(
                     name=secret_name,
                     data=variables,
@@ -190,7 +190,7 @@ class KubernetesSecretService(VariableService, Service):
         user_id: Union[UUID, str],
         name: str,
         field: str,
-        _session: Session = None,
+        _session: Session,
     ) -> str:
         secret_name = encode_user_id(user_id)
         key, value = self.resolve_variable(secret_name, user_id, name)
@@ -204,7 +204,7 @@ class KubernetesSecretService(VariableService, Service):
     def list_variables(
         self,
         user_id: Union[UUID, str],
-        _session: Session = None,
+        _session: Session,
     ) -> list[Optional[str]]:
         variables = self.kubernetes_secrets.get_secret(name=encode_user_id(user_id))
         if not variables:
@@ -223,17 +223,17 @@ class KubernetesSecretService(VariableService, Service):
         user_id: Union[UUID, str],
         name: str,
         value: str,
-        _session: Session = None,
+        _session: Session,
     ):
         secret_name = encode_user_id(user_id)
         secret_key, _ = self.resolve_variable(secret_name, user_id, name)
-        return self.kubernetes_secrets.update_secret_key(name=secret_name, data={secret_key: value})
+        return self.kubernetes_secrets.update_secret(name=secret_name, data={secret_key: value})
 
     def delete_variable(
         self,
         user_id: Union[UUID, str],
         name: str,
-        _session: Session = None,
+        _session: Session,
     ):
         secret_name = encode_user_id(user_id)
         secret_key, _ = self.resolve_variable(secret_name, user_id, name)
@@ -245,13 +245,24 @@ class KubernetesSecretService(VariableService, Service):
         user_id: Union[UUID, str],
         name: str,
         value: str,
-        default_fields: list[str] = [],
-        _type: str = "Generic",
-        _session: Session = None,
-    ):
+        default_fields: list[str],
+        _type: str,
+        _session: Session,
+    ) -> Variable:
         secret_name = encode_user_id(user_id)
         secret_key = name
         if _type == CREDENTIAL_TYPE:
             secret_key = CREDENTIAL_TYPE + "_" + name
+        else:
+            _type = GENERIC_TYPE
 
-        return self.kubernetes_secrets.upsert_secret(name=secret_name, data={secret_key: value})
+        self.kubernetes_secrets.upsert_secret(secret_name=secret_name, data={secret_key: value})
+
+        variable_base = VariableCreate(
+            name=name,
+            type=_type,
+            value=auth_utils.encrypt_api_key(value, settings_service=self.settings_service),
+            default_fields=default_fields,
+        )
+        variable = Variable.model_validate(variable_base, from_attributes=True, update={"user_id": user_id})
+        return variable
