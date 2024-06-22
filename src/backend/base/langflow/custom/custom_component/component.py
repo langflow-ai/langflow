@@ -226,7 +226,7 @@ class Component(CustomComponent):
     def build(self, **kwargs):
         self.set_attributes(kwargs)
 
-    def post_code_validation(self, new_build_config: dict, current_build_config: dict):
+    def post_code_processing(self, new_build_config: dict, current_build_config: dict):
         """
         This function is called after the code validation is done.
         """
