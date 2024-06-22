@@ -208,7 +208,6 @@ ifdef base
 endif
 
 ifdef main
-	make build_frontend
 	make build_langflow
 endif
 
