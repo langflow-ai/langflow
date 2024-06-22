@@ -385,7 +385,7 @@ def build_custom_component_template_from_inputs(
 def build_custom_component_template(
     custom_component: CustomComponent,
     user_id: Optional[Union[str, UUID]] = None,
-) -> Tuple[Dict[str, Any], CustomComponent]:
+) -> Tuple[Dict[str, Any], CustomComponent | Component]:
     """Build a custom component template"""
     try:
         if "inputs" in custom_component.template_config:
