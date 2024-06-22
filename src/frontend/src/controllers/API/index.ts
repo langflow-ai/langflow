@@ -324,11 +324,10 @@ export async function getVersion() {
  * @returns {Promise<AxiosResponse<any>>} A promise that resolves to an AxiosResponse containing the health status.
  */
 export async function getHealth() {
-  return await api.get("/health").catch(e=>{    
-    if(e.code==="ECONNABORTED"){
+  return await api.get("/health").catch((e) => {
+    if (e.code === "ECONNABORTED") {
       console.log("request cancelled");
-    }
-    else{
+    } else {
       // raise error to be caught by the caller
       throw e;
     }
