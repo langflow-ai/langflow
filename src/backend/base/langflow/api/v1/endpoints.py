@@ -467,7 +467,7 @@ async def custom_component(
 
     built_frontend_node, component_instance = build_custom_component_template(component, user_id=user.id)
 
-    built_frontend_node = component_instance.post_code_validation(built_frontend_node, raw_code.frontend_node)
+    built_frontend_node = component_instance.post_code_processing(built_frontend_node, raw_code.frontend_node)
     return built_frontend_node
 
 
