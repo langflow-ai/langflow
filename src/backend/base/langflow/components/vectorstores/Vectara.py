@@ -5,7 +5,7 @@ from langchain_community.vectorstores import Vectara
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent
 from langflow.helpers.data import docs_to_data
-from langflow.io import BoolInput, IntInput, StrInput, SecretStrInput, DataInput, MultilineInput
+from langflow.io import IntInput, StrInput, SecretStrInput, DataInput, MultilineInput
 from langflow.schema import Data
 
 
