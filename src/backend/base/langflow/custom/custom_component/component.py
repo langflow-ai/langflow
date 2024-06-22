@@ -221,5 +221,6 @@ class Component(CustomComponent):
             return [field.name for field in inputs]
         except KeyError:
             return []
-            return []
-            return []
+
+    def build(self, **kwargs):
+        self.set_attributes(kwargs)

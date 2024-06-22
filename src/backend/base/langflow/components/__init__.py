@@ -12,6 +12,5 @@ __all__ = [
     "textsplitters",
     "toolkits",
     "tools",
-    "vectorsearch",
     "vectorstores",
 ]
