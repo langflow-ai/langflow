@@ -19,18 +19,13 @@ class MongoVectorStoreComponent(LCVectorStoreComponent):
         StrInput(name="db_name", display_name="Database Name", required=True),
         StrInput(name="collection_name", display_name="Collection Name", required=True),
         StrInput(name="index_name", display_name="Index Name", required=True),
-        HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
+        MultilineInput(name="search_query", display_name="Search Query"),
         DataInput(
-            name="vector_store_inputs",
-            display_name="Vector Store Inputs",
+            name="ingest_data",
+            display_name="Ingest Data",
             is_list=True,
         ),
-        BoolInput(
-            name="add_to_vector_store",
-            display_name="Add to Vector Store",
-            info="If true, the Vector Store Inputs will be added to the Vector Store.",
-        ),
-        MultilineInput(name="search_input", display_name="Search Input"),
+        HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
         IntInput(
             name="number_of_results",
             display_name="Number of Results",
@@ -55,13 +50,12 @@ class MongoVectorStoreComponent(LCVectorStoreComponent):
         except Exception as e:
             raise ValueError(f"Failed to connect to MongoDB Atlas: {e}")
 
-        if self.add_to_vector_store:
-            documents = []
-            for _input in self.vector_store_inputs or []:
-                if isinstance(_input, Data):
-                    documents.append(_input.to_lc_document())
-                else:
-                    documents.append(_input)
+        documents = []
+        for _input in self.ingest_data or []:
+            if isinstance(_input, Data):
+                documents.append(_input.to_lc_document())
+            else:
+                documents.append(_input)
 
             if documents:
                 vector_store = MongoDBAtlasVectorSearch.from_documents(
@@ -88,9 +82,9 @@ class MongoVectorStoreComponent(LCVectorStoreComponent):
 
         vector_store = self._build_mongodb_atlas()
 
-        if self.search_input and isinstance(self.search_input, str):
+        if self.search_query and isinstance(self.search_query, str):
             docs = vector_store.similarity_search(
-                query=self.search_input,
+                query=self.search_query,
                 k=self.number_of_results,
             )
             for doc in docs:
