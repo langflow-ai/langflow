@@ -39,10 +39,10 @@ class RecursiveCharacterTextSplitterComponent(Component):
         ),
     ]
     outputs = [
-        Output(display_name="Data", name="data", method="build"),
+        Output(display_name="Data", name="data", method="split_data"),
     ]
 
-    def build(self) -> list[Data]:
+    def split_data(self) -> list[Data]:
         """
         Split text into chunks of a specified length.
 

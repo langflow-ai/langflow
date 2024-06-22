@@ -24,13 +24,3 @@ class MergeDataComponent(CustomComponent):
                 merged_data += value
         self.status = merged_data
         return merged_data
-
-
-if __name__ == "__main__":
-    data = [
-        Data(data={"key1": "value1"}),
-        Data(data={"key2": "value2"}),
-    ]
-    component = MergeDataComponent()
-    result = component.build(data)
-    print(result)

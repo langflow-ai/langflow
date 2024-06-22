@@ -4,9 +4,8 @@ from langchain_community.vectorstores import FAISS
 from loguru import logger
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent
-from langflow.field_typing import Text
 from langflow.helpers.data import docs_to_data
-from langflow.io import BoolInput, HandleInput, IntInput, StrInput, DataInput, MultilineInput
+from langflow.io import BoolInput, DataInput, HandleInput, IntInput, MultilineInput, StrInput
 from langflow.schema import Data
 
 
@@ -74,7 +73,7 @@ class FaissVectorStoreComponent(LCVectorStoreComponent):
                 documents.append(_input)
 
         faiss = FAISS.from_documents(documents=documents, embedding=self.embedding)
-        faiss.save_local(Text(path), self.index_name)
+        faiss.save_local(str(path), self.index_name)
 
         return faiss
 
@@ -87,7 +86,7 @@ class FaissVectorStoreComponent(LCVectorStoreComponent):
         path = self.resolve_path(self.persist_directory)
 
         vector_store = FAISS.load_local(
-            persist_directory=Text(path),
+            folder_path=path,
             embeddings=self.embedding,
             index_name=self.index_name,
             allow_dangerous_deserialization=self.allow_dangerous_deserialization,
