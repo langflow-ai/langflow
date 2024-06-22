@@ -6,7 +6,6 @@ __all__ = [
     "experimental",
     "inputs",
     "memories",
-    "model_specs",
     "outputs",
     "retrievers",
     "textsplitters",
