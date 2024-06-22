@@ -6,7 +6,6 @@ from typing import Optional
 from urllib.parse import urlencode
 
 import nest_asyncio  # type: ignore
-import socketio  # type: ignore
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -84,8 +83,7 @@ def create_app():
         __version__ = version("langflow-base")
 
     configure()
-    socketio_server = socketio.AsyncServer(async_mode="asgi", cors_allowed_origins="*", logger=True)
-    lifespan = get_lifespan(socketio_server=socketio_server, version=__version__)
+    lifespan = get_lifespan(version=__version__)
     app = FastAPI(lifespan=lifespan, title="Langflow", version=__version__)
     setup_sentry(app)
     origins = ["*"]
@@ -115,13 +113,6 @@ def create_app():
 
     app.include_router(router)
 
-    app = mount_socketio(app, socketio_server)
-
-    return app
-
-
-def mount_socketio(app: FastAPI, socketio_server: socketio.AsyncServer):
-    app.mount("/sio", socketio.ASGIApp(socketio_server, socketio_path=""))
     return app
 
 
