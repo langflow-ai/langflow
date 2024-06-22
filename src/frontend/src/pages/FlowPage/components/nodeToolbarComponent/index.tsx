@@ -669,7 +669,7 @@ export default function NodeToolbarComponent({
                       shortcuts.find((obj) => obj.name === "Minimize")
                         ?.shortcut!
                     }
-                    value={showNode ? "Minimize" : "Expand"}
+                    value={showNode ? t("Minimize") : t("Expand")}
                     icon={showNode ? "Minimize2" : "Maximize2"}
                     dataTestId="minimize-button-modal"
                   />
@@ -681,7 +681,7 @@ export default function NodeToolbarComponent({
                     shortcut={
                       shortcuts.find((obj) => obj.name === "Group")?.shortcut!
                     }
-                    value={"Ungroup"}
+                    value={t("Ungroup")}
                     icon={"Ungroup"}
                     dataTestId="group-button-modal"
                   />
@@ -705,7 +705,7 @@ export default function NodeToolbarComponent({
                   shortcut={
                     shortcuts.find((obj) => obj.name === "Download")?.shortcut!
                   }
-                  value={"Download"}
+                  value={t("Download")}
                   icon={"Download"}
                   dataTestId="download-button-modal"
                 />

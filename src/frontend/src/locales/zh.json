@@ -138,5 +138,8 @@
   "Please confirm your password": "请确认你的密码",
   "Confirm your password": "请确认你的密码",
   "Passwords do not match": "密码与第一次输入不一致",
-  "Refresh All": "全部刷新"
+  "Refresh All": "全部刷新",
+  "Ungroup": "取消群组",
+  "Download": "下载",
+  "Expand": "展开"
 }
