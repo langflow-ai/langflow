@@ -1,16 +1,15 @@
-from typing import Optional
-from langchain_core.embeddings import Embeddings
 from langchain_openai import AzureOpenAIEmbeddings
 from pydantic.v1 import SecretStr
 
-from langflow.custom import CustomComponent
+from langflow.base.models.model import LCModelComponent
+from langflow.field_typing import Embeddings
+from langflow.io import DropdownInput, IntInput, Output, SecretStrInput, TextInput
 
 
-class AzureOpenAIEmbeddingsComponent(CustomComponent):
+class AzureOpenAIEmbeddingsComponent(LCModelComponent):
     display_name: str = "Azure OpenAI Embeddings"
     description: str = "Generate embeddings using Azure OpenAI models."
     documentation: str = "https://python.langchain.com/docs/integrations/text_embedding/azureopenai"
-    beta = False
     icon = "Azure"
 
     API_VERSION_OPTIONS = [
@@ -22,57 +21,56 @@ class AzureOpenAIEmbeddingsComponent(CustomComponent):
         "2023-08-01-preview",
     ]
 
-    def build_config(self):
-        return {
-            "azure_endpoint": {
-                "display_name": "Azure Endpoint",
-                "required": True,
-                "info": "Your Azure endpoint, including the resource.. Example: `https://example-resource.azure.openai.com/`",
-            },
-            "azure_deployment": {
-                "display_name": "Deployment Name",
-                "required": True,
-            },
-            "api_version": {
-                "display_name": "API Version",
-                "options": self.API_VERSION_OPTIONS,
-                "value": self.API_VERSION_OPTIONS[-1],
-                "advanced": True,
-            },
-            "api_key": {
-                "display_name": "API Key",
-                "required": True,
-                "password": True,
-            },
-            "code": {"show": False},
-            "dimensions": {
-                "display_name": "Dimensions",
-                "info": "The number of dimensions the resulting output embeddings should have. Only supported by certain models.",
-                "advanced": True,
-            },
-        }
+    inputs = [
+        TextInput(
+            name="azure_endpoint",
+            display_name="Azure Endpoint",
+            required=True,
+            info="Your Azure endpoint, including the resource. Example: `https://example-resource.azure.openai.com/`",
+        ),
+        TextInput(
+            name="azure_deployment",
+            display_name="Deployment Name",
+            required=True,
+        ),
+        DropdownInput(
+            name="api_version",
+            display_name="API Version",
+            options=API_VERSION_OPTIONS,
+            value=API_VERSION_OPTIONS[-1],
+            advanced=True,
+        ),
+        SecretStrInput(
+            name="api_key",
+            display_name="API Key",
+            required=True,
+        ),
+        IntInput(
+            name="dimensions",
+            display_name="Dimensions",
+            info="The number of dimensions the resulting output embeddings should have. Only supported by certain models.",
+            advanced=True,
+        ),
+    ]
 
-    def build(
-        self,
-        azure_endpoint: str,
-        azure_deployment: str,
-        api_version: str,
-        api_key: str,
-        dimensions: Optional[int] = None,
-    ) -> Embeddings:
-        if api_key:
-            azure_api_key = SecretStr(api_key)
-        else:
-            azure_api_key = None
+    outputs = [
+        Output(display_name="Embeddings", name="embeddings", method="build_embeddings"),
+    ]
+
+    def build_embeddings(self) -> Embeddings:
+        if not self.api_key:
+            raise ValueError("API Key is required")
+
+        azure_api_key = SecretStr(self.api_key)
+
         try:
             embeddings = AzureOpenAIEmbeddings(
-                azure_endpoint=azure_endpoint,
-                azure_deployment=azure_deployment,
-                api_version=api_version,
+                azure_endpoint=self.azure_endpoint,
+                azure_deployment=self.azure_deployment,
+                api_version=self.api_version,
                 api_key=azure_api_key,
-                dimensions=dimensions,
+                dimensions=self.dimensions,
             )
-
         except Exception as e:
             raise ValueError("Could not connect to AzureOpenAIEmbeddings API.") from e
 

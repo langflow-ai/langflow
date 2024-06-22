@@ -1,15 +1,17 @@
+import asyncio
+import warnings
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Optional
 from urllib.parse import urlencode
 
 import nest_asyncio  # type: ignore
-import socketio  # type: ignore
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from loguru import logger
+from pydantic import PydanticDeprecatedSince20
 from rich import print as rprint
 from starlette.middleware.base import BaseHTTPMiddleware
 
@@ -19,11 +21,15 @@ from langflow.initial_setup.setup import (
     initialize_super_user_if_needed,
     load_flows_from_directory,
 )
+from langflow.interface.types import get_and_cache_all_types_dict
 from langflow.interface.utils import setup_llm_caching
-from langflow.services.deps import get_settings_service
+from langflow.services.deps import get_cache_service, get_settings_service
 from langflow.services.plugins.langfuse_plugin import LangfuseInstance
 from langflow.services.utils import initialize_services, teardown_services
 from langflow.utils.logger import configure
+
+# Ignore Pydantic deprecation warnings from Langchain
+warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
 
 
 class JavaScriptMIMETypeMiddleware(BaseHTTPMiddleware):
@@ -52,7 +58,8 @@ def get_lifespan(fix_migration=False, socketio_server=None, version=None):
             setup_llm_caching()
             LangfuseInstance.update()
             initialize_super_user_if_needed()
-            create_or_update_starter_projects()
+            task = asyncio.create_task(get_and_cache_all_types_dict(get_settings_service(), get_cache_service()))
+            await create_or_update_starter_projects(task)
             load_flows_from_directory()
             yield
         except Exception as exc:
@@ -76,8 +83,7 @@ def create_app():
         __version__ = version("langflow-base")
 
     configure()
-    socketio_server = socketio.AsyncServer(async_mode="asgi", cors_allowed_origins="*", logger=True)
-    lifespan = get_lifespan(socketio_server=socketio_server, version=__version__)
+    lifespan = get_lifespan(version=__version__)
     app = FastAPI(lifespan=lifespan, title="Langflow", version=__version__)
     setup_sentry(app)
     origins = ["*"]
@@ -107,13 +113,6 @@ def create_app():
 
     app.include_router(router)
 
-    app = mount_socketio(app, socketio_server)
-
-    return app
-
-
-def mount_socketio(app: FastAPI, socketio_server: socketio.AsyncServer):
-    app.mount("/sio", socketio.ASGIApp(socketio_server, socketio_path=""))
     return app
 
 

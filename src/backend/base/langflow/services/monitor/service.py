@@ -9,7 +9,7 @@ from loguru import logger
 from platformdirs import user_cache_dir
 
 if TYPE_CHECKING:
-    from langflow.services.settings.manager import SettingsService
+    from langflow.services.settings.service import SettingsService
     from langflow.services.monitor.schema import MessageModel, TransactionModel, VertexBuildModel
 
 

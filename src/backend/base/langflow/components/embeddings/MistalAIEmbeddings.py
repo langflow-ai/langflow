@@ -1,64 +1,56 @@
 from langchain_mistralai.embeddings import MistralAIEmbeddings
 from pydantic.v1 import SecretStr
 
-from langflow.custom import CustomComponent
+from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import Embeddings
+from langflow.io import DropdownInput, IntInput, Output, SecretStrInput, TextInput
 
 
-class MistralAIEmbeddingsComponent(CustomComponent):
+class MistralAIEmbeddingsComponent(LCModelComponent):
     display_name = "MistralAI Embeddings"
     description = "Generate embeddings using MistralAI models."
+    icon = "MistralAI"
 
-    def build_config(self):
-        return {
-            "model": {
-                "display_name": "Model",
-                "advanced": False,
-                "options": ["mistral-embed"],
-                "value": "mistral-embed",
-            },
-            "mistral_api_key": {
-                "display_name": "Mistral API Key",
-                "password": True,
-                "advanced": False,
-            },
-            "max_concurrent_requests": {
-                "display_name": "Max Concurrent Requests",
-                "advanced": True,
-                "value": 64,
-            },
-            "max_retries": {
-                "display_name": "Max Retries",
-                "advanced": True,
-                "value": 5,
-            },
-            "timeout": {
-                "display_name": "Request Timeout",
-                "advanced": True,
-                "value": 120,
-            },
-            "endpoint": {"display_name": "API Endpoint", "advanced": True, "value": "https://api.mistral.ai/v1/"},
-        }
+    inputs = [
+        DropdownInput(
+            name="model",
+            display_name="Model",
+            advanced=False,
+            options=["mistral-embed"],
+            value="mistral-embed",
+        ),
+        SecretStrInput(name="mistral_api_key", display_name="Mistral API Key"),
+        IntInput(
+            name="max_concurrent_requests",
+            display_name="Max Concurrent Requests",
+            advanced=True,
+            value=64,
+        ),
+        IntInput(name="max_retries", display_name="Max Retries", advanced=True, value=5),
+        IntInput(name="timeout", display_name="Request Timeout", advanced=True, value=120),
+        TextInput(
+            name="endpoint",
+            display_name="API Endpoint",
+            advanced=True,
+            value="https://api.mistral.ai/v1/",
+        ),
+    ]
 
-    def build(
-        self,
-        mistral_api_key: str,
-        model: str = "mistral-embed",
-        max_concurrent_requests: int = 64,
-        max_retries: int = 5,
-        timeout: int = 120,
-        endpoint: str = "https://api.mistral.ai/v1/",
-    ) -> Embeddings:
-        if mistral_api_key:
-            api_key = SecretStr(mistral_api_key)
-        else:
-            api_key = None
+    outputs = [
+        Output(display_name="Embeddings", name="embeddings", method="build_embeddings"),
+    ]
+
+    def build_embeddings(self) -> Embeddings:
+        if not self.mistral_api_key:
+            raise ValueError("Mistral API Key is required")
+
+        api_key = SecretStr(self.mistral_api_key)
 
         return MistralAIEmbeddings(
             api_key=api_key,
-            model=model,
-            endpoint=endpoint,
-            max_concurrent_requests=max_concurrent_requests,
-            max_retries=max_retries,
-            timeout=timeout,
+            model=self.model,
+            endpoint=self.endpoint,
+            max_concurrent_requests=self.max_concurrent_requests,
+            max_retries=self.max_retries,
+            timeout=self.timeout,
         )

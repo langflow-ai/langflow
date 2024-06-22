@@ -4,6 +4,7 @@ import { Button } from "../../../../components/ui/button";
 import {
   CHAT_FIRST_INITIAL_TEXT,
   CHAT_SECOND_INITIAL_TEXT,
+  EMPTY_INPUT_SEND_MESSAGE,
 } from "../../../../constants/constants";
 import { deleteFlowPool } from "../../../../controllers/API";
 import useAlertStore from "../../../../stores/alertStore";
@@ -61,7 +62,7 @@ export default function ChatView({
       //
       .filter(
         (output) =>
-          output.data.message || (!output.data.message && output.artifacts)
+          output.data.message || (!output.data.message && output.artifacts),
       )
       .map((output, index) => {
         try {
@@ -79,9 +80,10 @@ export default function ChatView({
 
           const is_ai =
             sender === "Machine" || sender === null || sender === undefined;
+
           return {
             isSend: !is_ai,
-            message: message,
+            message,
             sender_name,
             componentId: output.id,
             stream_url: stream_url,
@@ -141,7 +143,7 @@ export default function ChatView({
   function updateChat(
     chat: ChatMessageType,
     message: string,
-    stream_url?: string
+    stream_url?: string,
   ) {
     chat.message = message;
     updateFlowPool(chat.componentId, {
@@ -157,7 +159,7 @@ export default function ChatView({
     setIsDragging,
     setFiles,
     currentFlowId,
-    setErrorData
+    setErrorData,
   );
 
   return (
@@ -172,8 +174,7 @@ export default function ChatView({
         <div className="eraser-position">
           <Button
             className="flex gap-1"
-            size="none"
-            variant="none"
+            unstyled
             disabled={lockChat}
             onClick={() => handleSelectChange("builds")}
           >

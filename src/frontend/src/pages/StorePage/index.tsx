@@ -47,7 +47,7 @@ export default function StorePage(): JSX.Element {
 
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setCurrentFlowId = useFlowsManagerStore(
-    (state) => state.setCurrentFlowId
+    (state) => state.setCurrentFlowId,
   );
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const [loading, setLoading] = useState(true);
@@ -146,7 +146,7 @@ export default function StorePage(): JSX.Element {
           setTotalRowsCount(
             filteredCategories?.length === 0
               ? Number(res?.count ?? 0)
-              : res?.results?.length ?? 0
+              : res?.results?.length ?? 0,
           );
         }
       })
@@ -186,7 +186,7 @@ export default function StorePage(): JSX.Element {
           disabled={loading}
           className={cn(
             `${!validApiKey ? "animate-pulse border-error" : ""}`,
-            loading ? "cursor-not-allowed" : ""
+            loading ? "cursor-not-allowed" : "",
           )}
           variant="primary"
           onClick={() => {

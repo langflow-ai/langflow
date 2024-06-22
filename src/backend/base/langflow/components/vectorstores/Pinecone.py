@@ -1,151 +1,114 @@
-from typing import List, Optional, Union
+from typing import List
 
-from langchain_core.documents import Document
 from langchain_core.retrievers import BaseRetriever
-from langchain_core.vectorstores import VectorStore
-from langchain_pinecone._utilities import DistanceStrategy
-from langchain_pinecone.vectorstores import PineconeVectorStore
+from langchain_pinecone import Pinecone
 
-from langflow.custom import CustomComponent
-from langflow.field_typing import Embeddings
-from langflow.schema import Record
+from langflow.custom import Component
+from langflow.helpers.data import docs_to_data
+from langflow.io import BoolInput, DropdownInput, HandleInput, IntInput, Output, SecretStrInput, StrInput
+from langflow.schema import Data
 
 
-class PineconeComponent(CustomComponent):
+class PineconeVectorStoreComponent(Component):
     display_name = "Pinecone"
-    description = "Construct Pinecone wrapper from raw documents."
+    description = "Pinecone Vector Store with search capabilities"
+    documentation = "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/pinecone"
     icon = "Pinecone"
-    field_order = ["index_name", "namespace", "distance_strategy", "pinecone_api_key", "documents", "embedding"]
 
-    def build_config(self):
-        distance_options = [e.value.title().replace("_", " ") for e in DistanceStrategy]
-        distance_value = distance_options[0]
-        return {
-            "inputs": {"display_name": "Input", "input_types": ["Document", "Record"]},
-            "embedding": {"display_name": "Embedding"},
-            "index_name": {"display_name": "Index Name"},
-            "namespace": {"display_name": "Namespace"},
-            "text_key": {"display_name": "Text Key"},
-            "distance_strategy": {
-                "display_name": "Distance Strategy",
-                # get values from enum
-                # and make them title case for display
-                "options": distance_options,
-                "advanced": True,
-                "value": distance_value,
-            },
-            "pinecone_api_key": {
-                "display_name": "Pinecone API Key",
-                "default": "",
-                "password": True,
-                "required": True,
-            },
-            "pool_threads": {
-                "display_name": "Pool Threads",
-                "default": 1,
-                "advanced": True,
-            },
-        }
+    inputs = [
+        StrInput(name="index_name", display_name="Index Name", required=True),
+        StrInput(name="namespace", display_name="Namespace", info="Namespace for the index."),
+        DropdownInput(
+            name="distance_strategy",
+            display_name="Distance Strategy",
+            options=["Cosine", "Euclidean", "Dot Product"],
+            value="Cosine",
+            advanced=True,
+        ),
+        SecretStrInput(name="pinecone_api_key", display_name="Pinecone API Key", required=True),
+        HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
+        StrInput(
+            name="text_key",
+            display_name="Text Key",
+            info="Key in the record to use as text.",
+            value="text",
+            advanced=True,
+        ),
+        HandleInput(
+            name="vector_store_inputs",
+            display_name="Vector Store Inputs",
+            input_types=["Document", "Data"],
+            is_list=True,
+        ),
+        BoolInput(
+            name="add_to_vector_store",
+            display_name="Add to Vector Store",
+            info="If true, the Vector Store Inputs will be added to the Vector Store.",
+        ),
+        StrInput(name="search_input", display_name="Search Input"),
+        IntInput(
+            name="number_of_results",
+            display_name="Number of Results",
+            info="Number of results to return.",
+            value=4,
+            advanced=True,
+        ),
+    ]
 
-    def from_existing_index(
-        self,
-        index_name: str,
-        embedding: Embeddings,
-        pinecone_api_key: str | None,
-        text_key: str = "text",
-        namespace: Optional[str] = None,
-        distance_strategy: DistanceStrategy = DistanceStrategy.COSINE,
-        pool_threads: int = 4,
-    ) -> PineconeVectorStore:
-        """Load pinecone vectorstore from index name."""
-        pinecone_index = PineconeVectorStore.get_pinecone_index(
-            index_name, pool_threads, pinecone_api_key=pinecone_api_key
-        )
-        return PineconeVectorStore(
-            index=pinecone_index,
-            embedding=embedding,
-            text_key=text_key,
-            namespace=namespace,
-            distance_strategy=distance_strategy,
+    outputs = [
+        Output(display_name="Vector Store", name="vector_store", method="build_vector_store", output_type=Pinecone),
+        Output(
+            display_name="Base Retriever",
+            name="base_retriever",
+            method="build_base_retriever",
+            output_type=BaseRetriever,
+        ),
+        Output(display_name="Search Results", name="search_results", method="search_documents"),
+    ]
+
+    def build_vector_store(self) -> Pinecone:
+        return self._build_pinecone()
+
+    def _build_pinecone(self) -> Pinecone:
+        from langchain_pinecone._utilities import DistanceStrategy
+        from langchain_pinecone.vectorstores import Pinecone
+
+        distance_strategy = self.distance_strategy.replace(" ", "_").upper()
+        _distance_strategy = DistanceStrategy[distance_strategy]
+
+        pinecone = Pinecone(
+            index_name=self.index_name,
+            embedding=self.embedding,
+            text_key=self.text_key,
+            namespace=self.namespace,
+            distance_strategy=_distance_strategy,
+            pinecone_api_key=self.pinecone_api_key,
         )
 
-    def from_documents(
-        self,
-        documents: List[Document],
-        embedding: Embeddings,
-        index_name: str,
-        pinecone_api_key: str | None,
-        text_key: str = "text",
-        namespace: Optional[str] = None,
-        pool_threads: int = 4,
-        distance_strategy: DistanceStrategy = DistanceStrategy.COSINE,
-        batch_size: int = 32,
-        upsert_kwargs: Optional[dict] = None,
-        embeddings_chunk_size: int = 1000,
-    ) -> PineconeVectorStore:
-        """Create a new pinecone vectorstore from documents."""
-        texts = [d.page_content for d in documents]
-        metadatas = [d.metadata for d in documents]
-        pinecone = self.from_existing_index(
-            index_name=index_name,
-            embedding=embedding,
-            pinecone_api_key=pinecone_api_key,
-            text_key=text_key,
-            namespace=namespace,
-            distance_strategy=distance_strategy,
-            pool_threads=pool_threads,
-        )
-        pinecone.add_texts(
-            texts,
-            metadatas=metadatas,
-            ids=None,
-            namespace=namespace,
-            batch_size=batch_size,
-            embedding_chunk_size=embeddings_chunk_size,
-            **(upsert_kwargs or {}),
-        )
+        if self.add_to_vector_store:
+            documents = []
+            for _input in self.vector_store_inputs or []:
+                if isinstance(_input, Data):
+                    documents.append(_input.to_lc_document())
+                else:
+                    documents.append(_input)
+
+            if documents:
+                pinecone.add_documents(documents)
+
         return pinecone
 
-    def build(
-        self,
-        embedding: Embeddings,
-        distance_strategy: str,
-        inputs: Optional[List[Record]] = None,
-        text_key: str = "text",
-        pool_threads: int = 4,
-        index_name: Optional[str] = None,
-        pinecone_api_key: Optional[str] = None,
-        namespace: Optional[str] = "default",
-    ) -> Union[VectorStore, BaseRetriever]:
-        # get distance strategy from string
-        distance_strategy = distance_strategy.replace(" ", "_").upper()
-        _distance_strategy = DistanceStrategy[distance_strategy]
-        if not index_name:
-            raise ValueError("Index Name is required.")
-        documents = []
-        for _input in inputs or []:
-            if isinstance(_input, Record):
-                documents.append(_input.to_lc_document())
-            else:
-                documents.append(_input)
-        if documents:
-            return self.from_documents(
-                documents=documents,
-                embedding=embedding,
-                index_name=index_name,
-                pinecone_api_key=pinecone_api_key,
-                text_key=text_key,
-                namespace=namespace,
-                distance_strategy=_distance_strategy,
-                pool_threads=pool_threads,
+    def search_documents(self) -> List[Data]:
+        vector_store = self._build_pinecone()
+
+        if self.search_input and isinstance(self.search_input, str) and self.search_input.strip():
+            docs = vector_store.similarity_search(
+                query=self.search_input,
+                k=self.number_of_results,
             )
 
-        return self.from_existing_index(
-            index_name=index_name,
-            embedding=embedding,
-            pinecone_api_key=pinecone_api_key,
-            text_key=text_key,
-            namespace=namespace,
-            distance_strategy=_distance_strategy,
-            pool_threads=pool_threads,
-        )
+            data = docs_to_data(docs)
+            self.status = data
+            return data
+        else:
+            return []

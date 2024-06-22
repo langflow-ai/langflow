@@ -7,7 +7,7 @@ from langflow.custom import CustomComponent
 from langflow.field_typing import Tool
 from langflow.graph.graph.base import Graph
 from langflow.helpers.flow import get_flow_inputs
-from langflow.schema import Record
+from langflow.schema import Data
 from langflow.schema.dotdict import dotdict
 
 
@@ -15,12 +15,13 @@ class FlowToolComponent(CustomComponent):
     display_name = "Flow as Tool"
     description = "Construct a Tool from a function that runs the loaded Flow."
     field_order = ["flow_name", "name", "description", "return_direct"]
+    trace_type = "tool"
 
     def get_flow_names(self) -> List[str]:
-        flow_records = self.list_flows()
-        return [flow_record.data["name"] for flow_record in flow_records]
+        flow_datas = self.list_flows()
+        return [flow_data.data["name"] for flow_data in flow_datas]
 
-    def get_flow(self, flow_name: str) -> Optional[Record]:
+    def get_flow(self, flow_name: str) -> Optional[Data]:
         """
         Retrieves a flow by its name.
 
@@ -30,10 +31,10 @@ class FlowToolComponent(CustomComponent):
         Returns:
             Optional[Text]: The flow record if found, None otherwise.
         """
-        flow_records = self.list_flows()
-        for flow_record in flow_records:
-            if flow_record.data["name"] == flow_name:
-                return flow_record
+        flow_datas = self.list_flows()
+        for flow_data in flow_datas:
+            if flow_data.data["name"] == flow_name:
+                return flow_data
         return None
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
@@ -69,10 +70,10 @@ class FlowToolComponent(CustomComponent):
 
     async def build(self, flow_name: str, name: str, description: str, return_direct: bool = False) -> Tool:
         FlowTool.update_forward_refs()
-        flow_record = self.get_flow(flow_name)
-        if not flow_record:
+        flow_data = self.get_flow(flow_name)
+        if not flow_data:
             raise ValueError("Flow not found.")
-        graph = Graph.from_payload(flow_record.data["data"])
+        graph = Graph.from_payload(flow_data.data["data"])
         inputs = get_flow_inputs(graph)
         tool = FlowTool(
             name=name,
@@ -80,7 +81,7 @@ class FlowToolComponent(CustomComponent):
             graph=graph,
             return_direct=return_direct,
             inputs=inputs,
-            flow_id=str(flow_record.id),
+            flow_id=str(flow_data.id),
             user_id=str(self._user_id),
         )
         description_repr = repr(tool.description).strip("'")

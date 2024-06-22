@@ -4,8 +4,8 @@ from langchain.agents import create_xml_agent
 from langchain_core.prompts import ChatPromptTemplate
 
 from langflow.base.agents.agent import LCAgentComponent
-from langflow.field_typing import BaseLanguageModel, Text, Tool
-from langflow.schema import Record
+from langflow.field_typing import LanguageModel, Text, Tool
+from langflow.schema import Data
 
 
 class XMLAgentComponent(LCAgentComponent):
@@ -72,11 +72,11 @@ class XMLAgentComponent(LCAgentComponent):
     async def build(
         self,
         input_value: str,
-        llm: BaseLanguageModel,
+        llm: LanguageModel,
         tools: List[Tool],
         user_prompt: str = "{input}",
         system_message: str = "You are a helpful assistant",
-        message_history: Optional[List[Record]] = None,
+        message_history: Optional[List[Data]] = None,
         tool_template: str = "{name}: {description}",
         handle_parsing_errors: bool = True,
     ) -> Text:

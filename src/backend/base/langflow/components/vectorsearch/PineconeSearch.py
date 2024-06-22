@@ -2,14 +2,14 @@ from typing import List, Optional
 
 from langchain_pinecone._utilities import DistanceStrategy
 
-from langflow.components.vectorstores.base.model import LCVectorStoreComponent
-from langflow.components.vectorstores.Pinecone import PineconeComponent
+from langflow.base.vectorstores.model import LCVectorStoreComponent
+from langflow.components.vectorstores.Pinecone import PineconeVectorStoreComponent
 from langflow.field_typing import Embeddings, Text
 from langflow.field_typing.constants import NestedDict
-from langflow.schema import Record
+from langflow.schema import Data
 
 
-class PineconeSearchComponent(PineconeComponent, LCVectorStoreComponent):
+class PineconeSearchComponent(PineconeVectorStoreComponent, LCVectorStoreComponent):
     display_name = "Pinecone Search"
     description = "Search a Pinecone Vector Store for similar documents."
     icon = "Pinecone"
@@ -70,7 +70,7 @@ class PineconeSearchComponent(PineconeComponent, LCVectorStoreComponent):
         namespace: Optional[str] = "default",
         search_type: str = "similarity",
         search_kwargs: Optional[NestedDict] = None,
-    ) -> List[Record]:  # type: ignore[override]
+    ) -> List[Data]:  # type: ignore[override]
         vector_store = super().build(
             embedding=embedding,
             distance_strategy=distance_strategy,

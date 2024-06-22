@@ -4,6 +4,7 @@ import { TypeModal } from "../../constants/enums";
 import GenericModal from "../../modals/genericModal";
 import { PromptAreaComponentType } from "../../types/components";
 import IconComponent from "../genericIconComponent";
+import { Button } from "../ui/button";
 
 export default function PromptAreaComponent({
   field_name,
@@ -36,30 +37,32 @@ export default function PromptAreaComponent({
         nodeClass={nodeClass}
         setNodeClass={setNodeClass}
       >
-        <div className="flex w-full items-center">
-          <span
-            id={id}
-            data-testid={id}
-            className={
-              editNode
-                ? "input-edit-node input-dialog"
-                : (disabled ? "input-disable text-ring " : "") +
-                  " primary-input text-muted-foreground"
-            }
-          >
-            {value !== "" ? value : "Type your prompt here..."}
-          </span>
-          {!editNode && (
-            <IconComponent
+        <Button unstyled className="w-full">
+          <div className="flex w-full items-center gap-3">
+            <span
               id={id}
-              name="ExternalLink"
+              data-testid={id}
               className={
-                "icons-parameters-comp" +
-                (disabled ? " text-ring" : " hover:text-accent-foreground")
+                editNode
+                  ? "input-edit-node input-dialog"
+                  : (disabled ? "input-disable text-ring " : "") +
+                    " primary-input text-muted-foreground"
               }
-            />
-          )}
-        </div>
+            >
+              {value !== "" ? value : "Type your prompt here..."}
+            </span>
+            {!editNode && (
+              <IconComponent
+                id={id}
+                name="ExternalLink"
+                className={
+                  "icons-parameters-comp shrink-0" +
+                  (disabled ? " text-ring" : " hover:text-accent-foreground")
+                }
+              />
+            )}
+          </div>
+        </Button>
       </GenericModal>
     </div>
   );

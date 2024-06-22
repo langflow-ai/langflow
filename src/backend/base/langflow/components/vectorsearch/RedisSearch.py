@@ -2,13 +2,13 @@ from typing import List, Optional
 
 from langchain_core.embeddings import Embeddings
 
-from langflow.components.vectorstores.base.model import LCVectorStoreComponent
-from langflow.components.vectorstores.Redis import RedisComponent
+from langflow.base.vectorstores.model import LCVectorStoreComponent
+from langflow.components.vectorstores.Redis import RedisVectorStoreComponent
 from langflow.field_typing import Text
-from langflow.schema import Record
+from langflow.schema import Data
 
 
-class RedisSearchComponent(RedisComponent, LCVectorStoreComponent):
+class RedisSearchComponent(RedisVectorStoreComponent, LCVectorStoreComponent):
     """
     A custom component for implementing a Vector Store using Redis.
     """
@@ -55,7 +55,7 @@ class RedisSearchComponent(RedisComponent, LCVectorStoreComponent):
         redis_index_name: str,
         number_of_results: int = 4,
         schema: Optional[str] = None,
-    ) -> List[Record]:
+    ) -> List[Data]:
         """
         Builds the Vector Store or BaseRetriever object.
 

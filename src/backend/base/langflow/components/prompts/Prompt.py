@@ -1,24 +1,25 @@
-from langflow.custom import CustomComponent
-from langflow.field_typing import TemplateField
-from langflow.field_typing.prompt import Prompt
+from langflow.custom import Component
+from langflow.io import Output, PromptInput
+from langflow.schema.message import Message
 
 
-class PromptComponent(CustomComponent):
-    display_name: str = "Empty Prompt"
+class PromptComponent(Component):
+    display_name: str = "Prompt"
     description: str = "Create a prompt template with dynamic variables."
     icon = "prompts"
+    trace_type = "prompt"
 
-    def build_config(self):
-        return {
-            "template": TemplateField(display_name="Template"),
-            "code": TemplateField(advanced=True),
-        }
+    inputs = [
+        PromptInput(name="template", display_name="Template"),
+    ]
 
-    async def build(
+    outputs = [
+        Output(display_name="Prompt Message", name="prompt", method="build_prompt"),
+    ]
+
+    async def build_prompt(
         self,
-        template: Prompt,
-        **kwargs,
-    ) -> Prompt:
-        prompt = await Prompt.from_template_and_variables(template, kwargs)  # type: ignore
-        self.status = prompt.format_text()
+    ) -> Message:
+        prompt = await Message.from_template_and_variables(**self._attributes)
+        self.status = prompt.text
         return prompt

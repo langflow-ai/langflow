@@ -2,9 +2,9 @@ import { cloneDeep } from "lodash";
 import { useState } from "react";
 import ImageViewer from "../../../../components/ImageViewer";
 import CsvOutputComponent from "../../../../components/csvOutputComponent";
+import DataOutputComponent from "../../../../components/dataOutputComponent";
 import InputListComponent from "../../../../components/inputListComponent";
 import PdfViewer from "../../../../components/pdfViewer";
-import RecordsOutputComponent from "../../../../components/recordsOutputComponent";
 import { Textarea } from "../../../../components/ui/textarea";
 import { PDFViewConstant } from "../../../../constants/constants";
 import { InputOutput } from "../../../../constants/enums";
@@ -47,11 +47,7 @@ export default function IOFieldView({
 
   const textOutputValue =
     (flowPool[node!.id] ?? [])[(flowPool[node!.id]?.length ?? 1) - 1]?.data
-      .results.result ?? "";
-
-  console.log(
-    (flowPool[node!.id] ?? [])[(flowPool[node!.id]?.length ?? 1) - 1]?.data
-  );
+      .results.text ?? "";
 
   function handleOutputType() {
     if (!node) return <>"No node found!"</>;
@@ -249,15 +245,15 @@ export default function IOFieldView({
                 />
               </>
             );
-          case "RecordsOutput":
+          case "DataOutput":
             return (
               <div className={left ? "h-56" : "h-full"}>
-                <RecordsOutputComponent
+                <DataOutputComponent
                   pagination={!left}
                   rows={
                     Array.isArray(flowPoolNode?.data?.artifacts)
                       ? flowPoolNode?.data?.artifacts?.map(
-                          (artifact) => artifact.data
+                          (artifact) => artifact.data,
                         ) ?? []
                       : [flowPoolNode?.data?.artifacts]
                   }

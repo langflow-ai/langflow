@@ -1,22 +1,23 @@
 import { useEffect } from "react";
+import { VertexBuildTypeAPI } from "../../types/api";
+import { isErrorLog } from "../../types/utils/typeCheckingUtils";
 
-const useValidationStatusString = (validationStatus, setValidationString) => {
+const useValidationStatusString = (
+  validationStatus: VertexBuildTypeAPI | null,
+  setValidationString,
+) => {
   useEffect(() => {
-    if (validationStatus?.data.logs) {
+    if (validationStatus && validationStatus.data?.outputs) {
       // if it is not a string turn it into a string
       let newValidationString = "";
-      if (Array.isArray(validationStatus.data.logs)) {
-        newValidationString = validationStatus.data.logs
-          .map((log) => (log?.message ? log.message : JSON.stringify(log)))
-          .join("\n");
-      }
-      if (typeof newValidationString !== "string") {
-        newValidationString = JSON.stringify(validationStatus.data.logs);
-      }
-
+      Object.values(validationStatus?.data?.outputs).forEach((output: any) => {
+        if (isErrorLog(output)) {
+          newValidationString += `${output.message.errorMessage}\n`;
+        }
+      });
       setValidationString(newValidationString);
     }
-  }, [validationStatus, validationStatus?.data.logs, setValidationString]);
+  }, [validationStatus, validationStatus?.data?.outputs, setValidationString]);
 };
 
 export default useValidationStatusString;

@@ -42,12 +42,17 @@ test("should able to see and interact with logs", async ({ page }) => {
   await page.getByTestId("icon-ChevronDown").click();
   await page.getByText("Logs").click();
 
-  await page.getByText("timestamp").isVisible();
-  await page.getByText("flow_id").isVisible();
-  await page.getByText("source").isVisible();
-  await page.getByText("target", { exact: true }).isVisible();
-  await page.getByText("target_args", { exact: true }).isVisible();
+  await page.getByText("timestamp").first().isVisible();
+  await page.getByText("flow_id").first().isVisible();
+  await page.getByText("source").first().isVisible();
+  await page.getByText("target", { exact: true }).first().isVisible();
+  await page.getByText("target_args", { exact: true }).first().isVisible();
   await page.getByRole("gridcell").first().isVisible();
+
+  await page.keyboard.press("Escape");
+
+  await page.getByTestId("user-profile-settings").first().click();
+  await page.getByText("Settings", { exact: true }).click();
 
   await page.getByText("Messages", { exact: true }).click();
   await page.getByText("index", { exact: true }).last().isVisible();

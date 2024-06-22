@@ -71,6 +71,16 @@ export const programmingLanguages: languageMap = {
  */
 export const MAX_LENGTH_TO_SCROLL_TOOLTIP = 200;
 
+export const MESSAGES_TABLE_ORDER = [
+  "timestamp",
+  "message",
+  "text",
+  "sender",
+  "sender_name",
+  "session_id",
+  "files",
+];
+
 /**
  * Number maximum of components to scroll on tooltips
  * @constant
@@ -131,6 +141,7 @@ export const CODE_PROMPT_DIALOG_SUBTITLE =
 
 export const CODE_DICT_DIALOG_SUBTITLE =
   "Edit your dictionary. This dialog allows you to create your own customized dictionary. You can add as many key-value pairs as you want. While in edit mode, you can enter ({}) or ([]), and this will result in adding a new object or array.";
+
 /**
  * The base text for subtitle of Prompt Dialog
  * @constant
@@ -557,7 +568,7 @@ export const ADMIN_HEADER_DESCRIPTION =
 
 export const BASE_URL_API = "/api/v1/";
 
-export const BACKEND_URL = "http://localhost:7860/";
+export const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:7860/";
 
 /**
  * URLs excluded from error retries.
@@ -654,17 +665,17 @@ export const OUTPUT_TYPES = new Set([
   "JsonOutput",
   "KeyPairOutput",
   "StringListOutput",
-  "RecordsOutput",
+  "DataOutput",
   "TableOutput",
 ]);
 
 export const CHAT_FIRST_INITIAL_TEXT =
-  "Start a conversation and click the agent's thoughts";
+  "Start a conversation and click the agent's memories";
 
 export const TOOLTIP_OUTDATED_NODE =
   "Your component is outdated. Click to update (data may be lost)";
 
-export const CHAT_SECOND_INITIAL_TEXT = "to inspect the chaining process.";
+export const CHAT_SECOND_INITIAL_TEXT = "to inspect previous messages.";
 
 export const ZERO_NOTIFICATIONS = "No new notifications";
 
@@ -689,11 +700,12 @@ export const MY_COLLECTION_DESC =
   "Manage your personal projects. Download and upload entire collections.";
 export const STORE_DESC = "Explore community-shared flows and components.";
 export const STORE_TITLE = "Langflow Store";
-export const NO_API_KEY = "You don't have an API key. ";
+export const NO_API_KEY = "You don't have an API key.";
 export const INSERT_API_KEY = "Insert your Langflow API key.";
 export const INVALID_API_KEY = "Your API key is not valid. ";
 export const CREATE_API_KEY = `Don’t have an API key? Sign up at`;
 export const STATUS_BUILD = "Build to validate status.";
+export const STATUS_INACTIVE = "Execution blocked";
 export const STATUS_BUILDING = "Building...";
 export const SAVED_HOVER = "Last saved at ";
 export const RUN_TIMESTAMP_PREFIX = "Last Run: ";
@@ -838,7 +850,15 @@ export const MAX_BATCH_SIZE = 50;
 export const MODAL_CLASSES =
   "nopan nodelete nodrag noundo nocopy fixed inset-0 bottom-0 left-0 right-0 top-0 z-50 overflow-auto bg-blur-shared backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0";
 
+export const ALLOWED_IMAGE_INPUT_EXTENSIONS = ["png", "jpg", "jpeg"];
+
+export const FS_ERROR_TEXT =
+  "Please ensure your file has one of the following extensions:";
+export const SN_ERROR_TEXT = ALLOWED_IMAGE_INPUT_EXTENSIONS.join(", ");
+
 export const ERROR_UPDATING_COMPONENT =
   "An unexpected error occurred while updating the Component. Please try again.";
 export const TITLE_ERROR_UPDATING_COMPONENT =
   "Error while updating the Component";
+
+export const EMPTY_INPUT_SEND_MESSAGE = "No input message provided.";

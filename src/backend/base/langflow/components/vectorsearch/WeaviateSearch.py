@@ -2,10 +2,10 @@ from typing import List, Optional
 
 from langchain_core.embeddings import Embeddings
 
-from langflow.components.vectorstores.base.model import LCVectorStoreComponent
+from langflow.base.vectorstores.model import LCVectorStoreComponent
 from langflow.components.vectorstores.Weaviate import WeaviateVectorStoreComponent
 from langflow.field_typing import Text
-from langflow.schema import Record
+from langflow.schema import Data
 
 
 class WeaviateSearchVectorStore(WeaviateVectorStoreComponent, LCVectorStoreComponent):
@@ -68,7 +68,7 @@ class WeaviateSearchVectorStore(WeaviateVectorStoreComponent, LCVectorStoreCompo
         text_key: str = "text",
         embedding: Optional[Embeddings] = None,
         attributes: Optional[list] = None,
-    ) -> List[Record]:
+    ) -> List[Data]:
         vector_store = super().build(
             url=url,
             api_key=api_key,

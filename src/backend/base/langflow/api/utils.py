@@ -1,3 +1,4 @@
+import uuid
 import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional
@@ -129,9 +130,6 @@ def update_template_field(frontend_template, key, value_dict):
             template_field["value"] = ""
         template_field["file_path"] = file_path_value
 
-    if "load_from_db" in value_dict and value_dict["load_from_db"]:
-        template_field["load_from_db"] = value_dict["load_from_db"]
-
 
 def get_file_path_value(file_path):
     """Get the file path value if the file exists, else return empty string."""
@@ -208,18 +206,23 @@ def format_elapsed_time(elapsed_time: float) -> str:
         return f"{minutes} {minutes_unit}, {seconds} {seconds_unit}"
 
 
-async def build_and_cache_graph_from_db(flow_id: str, session: Session, chat_service: "ChatService"):
+async def build_graph_from_db(flow_id: str, session: Session, chat_service: "ChatService"):
     """Build and cache the graph."""
     flow: Optional[Flow] = session.get(Flow, flow_id)
     if not flow or not flow.data:
         raise ValueError("Invalid flow ID")
-    graph = Graph.from_payload(flow.data, flow_id)
+    graph = Graph.from_payload(flow.data, flow_id, flow_name=flow.name, user_id=str(flow.user_id))
     for vertex_id in graph._has_session_id_vertices:
         vertex = graph.get_vertex(vertex_id)
         if vertex is None:
             raise ValueError(f"Vertex {vertex_id} not found")
         if not vertex._raw_params.get("session_id"):
             vertex.update_raw_params({"session_id": flow_id}, overwrite=True)
+
+    run_id = uuid.uuid4()
+    graph.set_run_id(run_id)
+    graph.set_run_name()
+    await graph.initialize_run()
     await chat_service.set_cache(flow_id, graph)
     return graph
 

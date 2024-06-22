@@ -1,210 +1,18 @@
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import httpx
-from langchain_community.chat_models.ollama import ChatOllama
+from langchain_community.chat_models import ChatOllama
 
 from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
-from langflow.field_typing import Text
+from langflow.field_typing import LanguageModel
+from langflow.io import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, MessageInput, Output, StrInput
 
 
 class ChatOllamaComponent(LCModelComponent):
     display_name = "Ollama"
     description = "Generate text using Ollama Local LLMs."
     icon = "Ollama"
-
-    field_order = [
-        "base_url",
-        "headers",
-        "keep_alive_flag",
-        "keep_alive",
-        "metadata",
-        "model",
-        "temperature",
-        "cache",
-        "format",
-        "metadata",
-        "mirostat",
-        "mirostat_eta",
-        "mirostat_tau",
-        "num_ctx",
-        "num_gpu",
-        "num_thread",
-        "repeat_last_n",
-        "repeat_penalty",
-        "tfs_z",
-        "timeout",
-        "top_k",
-        "top_p",
-        "verbose",
-        "tags",
-        "stop",
-        "system",
-        "template",
-        "input_value",
-        "system_message",
-        "stream",
-    ]
-
-    def build_config(self) -> dict:
-        return {
-            "base_url": {
-                "display_name": "Base URL",
-                "info": "Endpoint of the Ollama API. Defaults to 'http://localhost:11434' if not specified.",
-            },
-            "format": {
-                "display_name": "Format",
-                "info": "Specify the format of the output (e.g., json)",
-                "advanced": True,
-            },
-            "headers": {
-                "display_name": "Headers",
-                "advanced": True,
-            },
-            "keep_alive_flag": {
-                "display_name": "Unload interval",
-                "options": ["Keep", "Immediately", "Minute", "Hour", "sec"],
-                "real_time_refresh": True,
-                "refresh_button": True,
-            },
-            "keep_alive": {
-                "display_name": "interval",
-                "info": "How long the model will stay loaded into memory.",
-            },
-            "model": {
-                "display_name": "Model Name",
-                "options": [],
-                "info": "Refer to https://ollama.ai/library for more models.",
-                "real_time_refresh": True,
-                "refresh_button": True,
-            },
-            "temperature": {
-                "display_name": "Temperature",
-                "field_type": "float",
-                "value": 0.8,
-                "info": "Controls the creativity of model responses.",
-            },
-            "metadata": {
-                "display_name": "Metadata",
-                "info": "Metadata to add to the run trace.",
-                "advanced": True,
-            },
-            "mirostat": {
-                "display_name": "Mirostat",
-                "options": ["Disabled", "Mirostat", "Mirostat 2.0"],
-                "info": "Enable/disable Mirostat sampling for controlling perplexity.",
-                "advanced": False,
-                "real_time_refresh": True,
-                "refresh_button": True,
-            },
-            "mirostat_eta": {
-                "display_name": "Mirostat Eta",
-                "field_type": "float",
-                "info": "Learning rate for Mirostat algorithm. (Default: 0.1)",
-                "advanced": True,
-                "real_time_refresh": True,
-            },
-            "mirostat_tau": {
-                "display_name": "Mirostat Tau",
-                "field_type": "float",
-                "info": "Controls the balance between coherence and diversity of the output. (Default: 5.0)",
-                "advanced": True,
-                "real_time_refresh": True,
-            },
-            "num_ctx": {
-                "display_name": "Context Window Size",
-                "field_type": "int",
-                "info": "Size of the context window for generating tokens. (Default: 2048)",
-                "advanced": True,
-            },
-            "num_gpu": {
-                "display_name": "Number of GPUs",
-                "field_type": "int",
-                "info": "Number of GPUs to use for computation. (Default: 1 on macOS, 0 to disable)",
-                "advanced": True,
-            },
-            "num_thread": {
-                "display_name": "Number of Threads",
-                "field_type": "int",
-                "info": "Number of threads to use during computation. (Default: detected for optimal performance)",
-                "advanced": True,
-            },
-            "repeat_last_n": {
-                "display_name": "Repeat Last N",
-                "field_type": "int",
-                "info": "How far back the model looks to prevent repetition. (Default: 64, 0 = disabled, -1 = num_ctx)",
-                "advanced": True,
-            },
-            "repeat_penalty": {
-                "display_name": "Repeat Penalty",
-                "field_type": "float",
-                "info": "Penalty for repetitions in generated text. (Default: 1.1)",
-                "advanced": True,
-            },
-            "tfs_z": {
-                "display_name": "TFS Z",
-                "field_type": "float",
-                "info": "Tail free sampling value. (Default: 1)",
-                "advanced": True,
-            },
-            "timeout": {
-                "display_name": "Timeout",
-                "field_type": "int",
-                "info": "Timeout for the request stream.",
-                "advanced": True,
-            },
-            "top_k": {
-                "display_name": "Top K",
-                "field_type": "int",
-                "info": "Limits token selection to top K. (Default: 40)",
-                "advanced": True,
-            },
-            "top_p": {
-                "display_name": "Top P",
-                "field_type": "float",
-                "info": "Works together with top-k. (Default: 0.9)",
-                "advanced": True,
-            },
-            "verbose": {
-                "display_name": "Verbose",
-                "field_type": "bool",
-                "info": "Whether to print out response text.",
-            },
-            "tags": {
-                "display_name": "Tags",
-                "field_type": "list",
-                "info": "Tags to add to the run trace.",
-                "advanced": True,
-            },
-            "stop": {
-                "display_name": "Stop Tokens",
-                "field_type": "list",
-                "info": "List of tokens to signal the model to stop generating text.",
-                "advanced": True,
-            },
-            "system": {
-                "display_name": "System",
-                "field_type": "str",
-                "info": "System to use for generating text.",
-                "advanced": True,
-            },
-            "template": {
-                "display_name": "Template",
-                "field_type": "str",
-                "info": "Template to use for generating text.",
-                "advanced": True,
-            },
-            "input_value": {"display_name": "Input", "input_types": ["Text", "Record", "Prompt"]},
-            "stream": {
-                "display_name": "Stream",
-                "info": STREAM_INFO_TEXT,
-            },
-            "system_message": {
-                "display_name": "System Message",
-                "info": "System message to pass to the model.",
-                "advanced": True,
-            },
-        }
 
     def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None):
         if field_name == "mirostat":
@@ -247,7 +55,7 @@ class ChatOllamaComponent(LCModelComponent):
 
         return build_config
 
-    def get_model(self, url: str) -> List[str]:
+    def get_model(self, url: str) -> list[str]:
         try:
             with httpx.Client() as client:
                 response = client.get(url)
@@ -257,88 +65,206 @@ class ChatOllamaComponent(LCModelComponent):
                 model_names = [model["name"] for model in data.get("models", [])]
                 return model_names
         except Exception as e:
-            raise ValueError("Could not retrieve models") from e
-            return [""]
+            raise ValueError("Could not retrieve models. Please, make sure Ollama is running.") from e
 
-    def build(
-        self,
-        base_url: Optional[str],
-        model: str,
-        input_value: Text,
-        mirostat: Optional[str] = "Disabled",
-        mirostat_eta: Optional[float] = None,
-        mirostat_tau: Optional[float] = None,
-        repeat_last_n: Optional[int] = None,
-        verbose: Optional[bool] = None,
-        keep_alive: Optional[int] = None,
-        keep_alive_flag: Optional[str] = "Keep",
-        num_ctx: Optional[int] = None,
-        num_gpu: Optional[int] = None,
-        format: Optional[str] = None,
-        metadata: Optional[Dict] = None,
-        num_thread: Optional[int] = None,
-        repeat_penalty: Optional[float] = None,
-        stop: Optional[List[str]] = None,
-        system: Optional[str] = None,
-        tags: Optional[List[str]] = None,
-        temperature: Optional[float] = None,
-        template: Optional[str] = None,
-        tfs_z: Optional[float] = None,
-        timeout: Optional[int] = None,
-        top_k: Optional[int] = None,
-        top_p: Optional[int] = None,
-        stream: bool = False,
-        system_message: Optional[str] = None,
-    ) -> Text:
-        if not base_url:
-            base_url = "http://localhost:11434"
+    inputs = [
+        StrInput(
+            name="base_url",
+            display_name="Base URL",
+            info="Endpoint of the Ollama API. Defaults to 'http://localhost:11434' if not specified.",
+            value="http://localhost:11434",
+        ),
+        DropdownInput(
+            name="model",
+            display_name="Model Name",
+            value="llama2",
+            info="Refer to https://ollama.ai/library for more models.",
+            refresh_button=True,
+        ),
+        FloatInput(
+            name="temperature",
+            display_name="Temperature",
+            value=0.2,
+            info="Controls the creativity of model responses.",
+        ),
+        StrInput(
+            name="format",
+            display_name="Format",
+            info="Specify the format of the output (e.g., json).",
+            advanced=True,
+        ),
+        DictInput(
+            name="metadata",
+            display_name="Metadata",
+            info="Metadata to add to the run trace.",
+            advanced=True,
+        ),
+        DropdownInput(
+            name="mirostat",
+            display_name="Mirostat",
+            options=["Disabled", "Mirostat", "Mirostat 2.0"],
+            info="Enable/disable Mirostat sampling for controlling perplexity.",
+            value="Disabled",
+            advanced=True,
+        ),
+        FloatInput(
+            name="mirostat_eta",
+            display_name="Mirostat Eta",
+            info="Learning rate for Mirostat algorithm. (Default: 0.1)",
+            advanced=True,
+        ),
+        FloatInput(
+            name="mirostat_tau",
+            display_name="Mirostat Tau",
+            info="Controls the balance between coherence and diversity of the output. (Default: 5.0)",
+            advanced=True,
+        ),
+        IntInput(
+            name="num_ctx",
+            display_name="Context Window Size",
+            info="Size of the context window for generating tokens. (Default: 2048)",
+            advanced=True,
+        ),
+        IntInput(
+            name="num_gpu",
+            display_name="Number of GPUs",
+            info="Number of GPUs to use for computation. (Default: 1 on macOS, 0 to disable)",
+            advanced=True,
+        ),
+        IntInput(
+            name="num_thread",
+            display_name="Number of Threads",
+            info="Number of threads to use during computation. (Default: detected for optimal performance)",
+            advanced=True,
+        ),
+        IntInput(
+            name="repeat_last_n",
+            display_name="Repeat Last N",
+            info="How far back the model looks to prevent repetition. (Default: 64, 0 = disabled, -1 = num_ctx)",
+            advanced=True,
+        ),
+        FloatInput(
+            name="repeat_penalty",
+            display_name="Repeat Penalty",
+            info="Penalty for repetitions in generated text. (Default: 1.1)",
+            advanced=True,
+        ),
+        FloatInput(
+            name="tfs_z",
+            display_name="TFS Z",
+            info="Tail free sampling value. (Default: 1)",
+            advanced=True,
+        ),
+        IntInput(
+            name="timeout",
+            display_name="Timeout",
+            info="Timeout for the request stream.",
+            advanced=True,
+        ),
+        IntInput(
+            name="top_k",
+            display_name="Top K",
+            info="Limits token selection to top K. (Default: 40)",
+            advanced=True,
+        ),
+        FloatInput(
+            name="top_p",
+            display_name="Top P",
+            info="Works together with top-k. (Default: 0.9)",
+            advanced=True,
+        ),
+        BoolInput(
+            name="verbose",
+            display_name="Verbose",
+            info="Whether to print out response text.",
+        ),
+        StrInput(
+            name="tags",
+            display_name="Tags",
+            info="Comma-separated list of tags to add to the run trace.",
+            advanced=True,
+        ),
+        StrInput(
+            name="stop_tokens",
+            display_name="Stop Tokens",
+            info="Comma-separated list of tokens to signal the model to stop generating text.",
+            advanced=True,
+        ),
+        StrInput(
+            name="system",
+            display_name="System",
+            info="System to use for generating text.",
+            advanced=True,
+        ),
+        StrInput(
+            name="template",
+            display_name="Template",
+            info="Template to use for generating text.",
+            advanced=True,
+        ),
+        MessageInput(
+            name="input_value",
+            display_name="Input",
+        ),
+        BoolInput(
+            name="stream",
+            display_name="Stream",
+            info=STREAM_INFO_TEXT,
+        ),
+        StrInput(
+            name="system_message",
+            display_name="System Message",
+            info="System message to pass to the model.",
+            advanced=True,
+        ),
+    ]
+    outputs = [
+        Output(display_name="Text", name="text_output", method="text_response"),
+        Output(display_name="Language Model", name="model_output", method="build_model"),
+    ]
 
-        if keep_alive_flag == "Minute":
-            keep_alive_instance = f"{keep_alive}m"
-        elif keep_alive_flag == "Hour":
-            keep_alive_instance = f"{keep_alive}h"
-        elif keep_alive_flag == "sec":
-            keep_alive_instance = f"{keep_alive}s"
-        elif keep_alive_flag == "Keep":
-            keep_alive_instance = "-1"
-        elif keep_alive_flag == "Immediately":
-            keep_alive_instance = "0"
+    def build_model(self) -> LanguageModel:
+        # Mapping mirostat settings to their corresponding values
+        mirostat_options = {"Mirostat": 1, "Mirostat 2.0": 2}
+
+        # Default to 0 for 'Disabled'
+        mirostat_value = mirostat_options.get(self.mirostat, 0)  # type: ignore
+
+        # Set mirostat_eta and mirostat_tau to None if mirostat is disabled
+        if mirostat_value == 0:
+            mirostat_eta = None
+            mirostat_tau = None
         else:
-            keep_alive_instance = "Invalid option"
-
-        mirostat_instance = 0
-
-        if mirostat == "disable":
-            mirostat_instance = 0
+            mirostat_eta = self.mirostat_eta
+            mirostat_tau = self.mirostat_tau
 
         # Mapping system settings to their corresponding values
         llm_params = {
-            "base_url": base_url,
-            "model": model,
-            "mirostat": mirostat_instance,
-            "keep_alive": keep_alive_instance,
-            "format": format,
-            "metadata": metadata,
-            "tags": tags,
+            "base_url": self.base_url,
+            "model": self.model,
+            "mirostat": mirostat_value,
+            "format": self.format,
+            "metadata": self.metadata,
+            "tags": self.tags.split(",") if self.tags else None,
             "mirostat_eta": mirostat_eta,
             "mirostat_tau": mirostat_tau,
-            "num_ctx": num_ctx,
-            "num_gpu": num_gpu,
-            "num_thread": num_thread,
-            "repeat_last_n": repeat_last_n,
-            "repeat_penalty": repeat_penalty,
-            "temperature": temperature,
-            "stop": stop,
-            "system": system,
-            "template": template,
-            "tfs_z": tfs_z,
-            "timeout": timeout,
-            "top_k": top_k,
-            "top_p": top_p,
-            "verbose": verbose,
+            "num_ctx": self.num_ctx or None,
+            "num_gpu": self.num_gpu or None,
+            "num_thread": self.num_thread or None,
+            "repeat_last_n": self.repeat_last_n or None,
+            "repeat_penalty": self.repeat_penalty or None,
+            "temperature": self.temperature or None,
+            "stop": self.stop_tokens.split(",") if self.stop_tokens else None,
+            "system": self.system,
+            "template": self.template,
+            "tfs_z": self.tfs_z or None,
+            "timeout": self.timeout or None,
+            "top_k": self.top_k or None,
+            "top_p": self.top_p or None,
+            "verbose": self.verbose,
         }
 
-        # None Value remove
+        # Remove parameters with None values
         llm_params = {k: v for k, v in llm_params.items() if v is not None}
 
         try:
@@ -346,4 +272,4 @@ class ChatOllamaComponent(LCModelComponent):
         except Exception as e:
             raise ValueError("Could not initialize Ollama LLM.") from e
 
-        return self.get_chat_result(output, stream, input_value, system_message)
+        return output

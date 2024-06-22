@@ -1,31 +1,36 @@
-import operator
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, ClassVar, List, Optional, Sequence, Union
 from uuid import UUID
 
 import yaml
-from cachetools import TTLCache, cachedmethod
+from cachetools import TTLCache
 from langchain_core.documents import Document
-from langflow.custom.code_parser.utils import (
+from pydantic import BaseModel
+
+from langflow.custom.custom_component.base_component import BaseComponent
+from langflow.helpers.flow import list_flows, load_flow, run_flow
+from langflow.schema import Data
+from langflow.schema.artifact import get_artifact_type
+from langflow.schema.dotdict import dotdict
+from langflow.schema.log import LoggableType
+from langflow.schema.schema import OutputLog
+from langflow.services.deps import get_storage_service, get_variable_service, session_scope
+from langflow.services.storage.service import StorageService
+from langflow.services.tracing.schema import Log
+from langflow.type_extraction.type_extraction import (
     extract_inner_type_from_generic_alias,
     extract_union_types_from_generic_alias,
 )
-from langflow.custom.custom_component.component import Component
-from langflow.helpers.flow import list_flows, load_flow, run_flow
-from langflow.schema import Record
-from langflow.schema.dotdict import dotdict
-from langflow.services.deps import get_storage_service, get_variable_service, session_scope
-from langflow.services.storage.service import StorageService
 from langflow.utils import validate
-from pydantic import BaseModel
 
 if TYPE_CHECKING:
     from langflow.graph.graph.base import Graph
     from langflow.graph.vertex.base import Vertex
     from langflow.services.storage.service import StorageService
+    from langflow.services.tracing.service import TracingService
 
 
-class CustomComponent(Component):
+class CustomComponent(BaseComponent):
     """
     Represents a custom component in Langflow.
 
@@ -65,8 +70,6 @@ class CustomComponent(Component):
     """The default frozen state of the component. Defaults to False."""
     build_parameters: Optional[dict] = None
     """The build parameters of the component. Defaults to None."""
-    selected_output_type: Optional[str] = None
-    """The selected output type of the component. Defaults to None."""
     vertex: Optional["Vertex"] = None
     """The edge target parameter of the component. Defaults to None."""
     code_class_base_inheritance: ClassVar[str] = "CustomComponent"
@@ -76,7 +79,10 @@ class CustomComponent(Component):
     user_id: Optional[Union[UUID, str]] = None
     status: Optional[Any] = None
     """The status of the component. This is displayed on the frontend. Defaults to None."""
-    _flows_records: Optional[List[Record]] = None
+    _flows_data: Optional[List[Data]] = None
+    _outputs: List[OutputLog] = []
+    _logs: List[Log] = []
+    _tracing_service: "TracingService"
 
     def update_state(self, name: str, value: Any):
         if not self.vertex:
@@ -86,11 +92,15 @@ class CustomComponent(Component):
         except Exception as e:
             raise ValueError(f"Error updating state: {e}")
 
-    def stop(self):
+    def stop(self, output_name: str | None = None):
+        if not output_name and self.vertex and len(self.vertex.outputs) == 1:
+            output_name = self.vertex.outputs[0]["name"]
+        else:
+            raise ValueError("You must specify an output name to call stop")
         if not self.vertex:
             raise ValueError("Vertex is not set")
         try:
-            self.graph.mark_branch(self.vertex.id, "INACTIVE")
+            self.graph.mark_branch(vertex_id=self.vertex.id, output_name=output_name, state="INACTIVE")
         except Exception as e:
             raise ValueError(f"Error stopping {self.display_name}: {e}")
 
@@ -159,9 +169,9 @@ class CustomComponent(Component):
             self.repr_value = self.status
         if isinstance(self.repr_value, dict):
             self.repr_value = yaml.dump(self.repr_value)
-        if isinstance(self.repr_value, BaseModel) and not isinstance(self.repr_value, Record):
+        if isinstance(self.repr_value, BaseModel) and not isinstance(self.repr_value, Data):
             self.repr_value = str(self.repr_value)
-        elif hasattr(self.repr_value, "to_json") and not isinstance(self.repr_value, Record):
+        elif hasattr(self.repr_value, "to_json") and not isinstance(self.repr_value, Data):
             self.repr_value = self.repr_value.to_json()
         return self.repr_value
 
@@ -193,9 +203,9 @@ class CustomComponent(Component):
         """
         return self.get_code_tree(self.code or "")
 
-    def to_records(self, data: Any, keys: Optional[List[str]] = None, silent_errors: bool = False) -> List[Record]:
+    def to_data(self, data: Any, keys: Optional[List[str]] = None, silent_errors: bool = False) -> List[Data]:
         """
-        Converts input data into a list of Record objects.
+        Converts input data into a list of Data objects.
 
         Args:
             data (Any): The input data to be converted. It can be a single item or a sequence of items.
@@ -206,7 +216,7 @@ class CustomComponent(Component):
                 Defaults to None, in which case the default keys "text" and "data" are used.
 
         Returns:
-            List[Record]: A list of Record objects.
+            List[Data]: A list of Data objects.
 
         Raises:
             ValueError: If the input data is not of a valid type or if the specified keys are not found in the data.
@@ -214,7 +224,7 @@ class CustomComponent(Component):
         """
         if not keys:
             keys = []
-        records = []
+        data_objects = []
         if not isinstance(data, Sequence):
             data = [data]
         for item in data:
@@ -240,28 +250,28 @@ class CustomComponent(Component):
             else:
                 raise ValueError(f"Invalid data type: {type(item)}")
 
-            records.append(Record(data=data_dict))
+            data_objects.append(Data(data=data_dict))
 
-        return records
+        return data_objects
 
-    def create_references_from_records(self, records: List[Record], include_data: bool = False) -> str:
+    def create_references_from_data(self, data: List[Data], include_data: bool = False) -> str:
         """
-        Create references from a list of records.
+        Create references from a list of data.
 
         Args:
-            records (List[dict]): A list of records, where each record is a dictionary.
+            data (List[dict]): A list of data, where each record is a dictionary.
             include_data (bool, optional): Whether to include data in the references. Defaults to False.
 
         Returns:
             str: A string containing the references in markdown format.
         """
-        if not records:
+        if not data:
             return ""
         markdown_string = "---\n"
-        for record in records:
-            markdown_string += f"- Text: {record.get_text()}"
+        for value in data:
+            markdown_string += f"- Text: {value.get_text()}"
             if include_data:
-                markdown_string += f" Data: {record.data}"
+                markdown_string += f" Data: {value.data}"
             markdown_string += "\n"
         return markdown_string
 
@@ -273,7 +283,7 @@ class CustomComponent(Component):
         Returns:
             list: The arguments of the function entrypoint.
         """
-        build_method = self.get_build_method()
+        build_method = self.get_method(self.function_entrypoint_name)
         if not build_method:
             return []
 
@@ -284,8 +294,7 @@ class CustomComponent(Component):
                 arg["type"] = "Data"
         return args
 
-    @cachedmethod(operator.attrgetter("cache"))
-    def get_build_method(self):
+    def get_method(self, method_name: str):
         """
         Gets the build method for the custom component.
 
@@ -295,15 +304,15 @@ class CustomComponent(Component):
         if not self.code:
             return {}
 
-        component_classes = [cls for cls in self.tree["classes"] if self.code_class_base_inheritance in cls["bases"]]
+        component_classes = [
+            cls for cls in self.tree["classes"] if "Component" in cls["bases"] or "CustomComponent" in cls["bases"]
+        ]
         if not component_classes:
             return {}
 
         # Assume the first Component class is the one we're interested in
         component_class = component_classes[0]
-        build_methods = [
-            method for method in component_class["methods"] if method["name"] == self.function_entrypoint_name
-        ]
+        build_methods = [method for method in component_class["methods"] if method["name"] == (method_name)]
 
         return build_methods[0] if build_methods else {}
 
@@ -315,12 +324,14 @@ class CustomComponent(Component):
         Returns:
             List[Any]: The return type of the function entrypoint.
         """
-        build_method = self.get_build_method()
+        return self.get_method_return_type(self.function_entrypoint_name)
+
+    def get_method_return_type(self, method_name: str):
+        build_method = self.get_method(method_name)
         if not build_method or not build_method.get("has_return"):
             return []
         return_type = build_method["return_type"]
 
-        # If list or List is in the return type, then we remove it and return the inner type
         if hasattr(return_type, "__origin__") and return_type.__origin__ in [
             list,
             List,
@@ -448,7 +459,7 @@ class CustomComponent(Component):
     ) -> Any:
         return await run_flow(inputs=inputs, flow_id=flow_id, flow_name=flow_name, tweaks=tweaks, user_id=self._user_id)
 
-    def list_flows(self) -> List[Record]:
+    def list_flows(self) -> List[Data]:
         if not self._user_id:
             raise ValueError("Session is invalid")
         try:
@@ -468,4 +479,19 @@ class CustomComponent(Component):
             Any: The result of the build process.
         """
         raise NotImplementedError
-        raise NotImplementedError
+
+    def log(self, message: LoggableType | list[LoggableType], name: str | None = None):
+        """
+        Logs a message.
+
+        Args:
+            message (LoggableType | list[LoggableType]): The message to log.
+        """
+        if name is None:
+            name = self.display_name if self.display_name else self.__class__.__name__
+        if hasattr(message, "model_dump") and isinstance(message, BaseModel):
+            message = message.model_dump()
+        log = Log(message=message, type=get_artifact_type(message), name=name)
+        self._logs.append(log)
+        if self.vertex:
+            self._tracing_service.add_log(trace_name=self.vertex.id, log=log)

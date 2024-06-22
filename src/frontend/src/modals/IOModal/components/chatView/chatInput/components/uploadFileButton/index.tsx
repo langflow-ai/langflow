@@ -22,8 +22,7 @@ const UploadFileButton = ({
           lockChat ? "cursor-not-allowed" : "hover:text-muted-foreground"
         }`}
         onClick={handleButtonClick}
-        variant="none"
-        size="none"
+        unstyled
       >
         <ForwardedIconComponent name="PaperclipIcon" />
       </Button>

@@ -170,6 +170,10 @@ print(run_flow(inputs, flow_id=FLOW_ID, tweaks=TWEAKS, apiKey=api_key))
 - **Visibility**: For security reasons, the API key cannot be retrieved again through the UI.
 - **Scope**: The key allows access only to the flows and components of the specific user to whom it was issued.
 
+## Custom API endpoint
+
+As of Langflow v1.0 alpha, under **Project Settings** > **Endpoint Name**, you can pick a custom name for the endpoint used to call your flow from the API.
+
 ## Revoke an API Key
 
 To revoke an API key, delete it from the UI. This action immediately invalidates the key and prevents it from being used again.

@@ -1,5 +1,6 @@
 import Admonition from "@theme/Admonition";
 import ZoomableImage from "/src/theme/ZoomableImage.js";
+import useBaseUrl from "@docusaurus/useBaseUrl";
 
 # Inputs and Outputs
 
@@ -8,11 +9,11 @@ They also dynamically change the Playground and can be renamed to facilitate bui
 
 ## Inputs
 
-Inputs are components used to define where data enters your flow. They can receive data from the user, a database, or any other source that can be converted to Text or Record.
+Inputs are components used to define where data enters your flow. They can receive data from the user, a database, or any other source that can be converted to Text or Data.
 
 The difference between Chat Input and other Input components is the output format, the number of configurable fields, and the way they are displayed in the Playground.
 
-Chat Input components can output `Text` or `Record`. When you want to pass the sender name or sender to the next component, use the `Record` output. To pass only the message, use the `Text` output, useful when saving the message to a database or memory system like Zep.
+Chat Input components can output `Text` or `Data`. When you want to pass the sender name or sender to the next component, use the `Data` output. To pass only the message, use the `Text` output, useful when saving the message to a database or memory system like Zep.
 
 You can find out more about Chat Input and other Inputs [here](#chat-input).
 
@@ -38,8 +39,8 @@ This component collects user input from the chat.
 
 <Admonition type="note" title="Note">
   <p>
-    If `As Record` is `true` and the `Message` is a `Record`, the data of the
-    `Record` will be updated with the `Sender`, `Sender Name`, and `Session ID`.
+    If `As Data` is `true` and the `Message` is a `Data`, the data of the `Data`
+    will be updated with the `Sender`, `Sender Name`, and `Session ID`.
   </p>
 </Admonition>
 
@@ -48,8 +49,8 @@ One significant capability of the Chat Input component is its ability to transfo
 <ZoomableImage
   alt="Docusaurus themed image"
   sources={{
-    light: "img/playground-chat.png",
-    dark: "img/playground-chat.png",
+    light: useBaseUrl("img/playground-chat.png"),
+    dark: useBaseUrl("img/playground-chat.png"),
   }}
   style={{ width: "100%", maxWidth: "800px", margin: "0 auto" }}
 />
@@ -70,11 +71,11 @@ The **Text Input** component adds an **Input** field on the Playground. This ena
 **Parameters**
 
 - **Value:** Specifies the text input value. This is where the user inputs text data that will be passed to the next component in the sequence. If no value is provided, it defaults to an empty string.
-- **Record Template:** Specifies how a `Record` should be converted into `Text`.
+- **Data Template:** Specifies how a `Data` should be converted into `Text`.
 
-The **Record Template** field is used to specify how a `Record` should be converted into `Text`. This is particularly useful when you want to extract specific information from a `Record` and pass it as text to the next component in the sequence.
+The **Data Template** field is used to specify how a `Data` should be converted into `Text`. This is particularly useful when you want to extract specific information from a `Data` and pass it as text to the next component in the sequence.
 
-For example, if you have a `Record` with the following structure:
+For example, if you have a `Data` with the following structure:
 
 ```json
 {
@@ -84,9 +85,9 @@ For example, if you have a `Record` with the following structure:
 }
 ```
 
-A template with `Name: {name}, Age: {age}` will convert the `Record` into a text string of `Name: John Doe, Age: 30`.
+A template with `Name: {name}, Age: {age}` will convert the `Data` into a text string of `Name: John Doe, Age: 30`.
 
-If you pass more than one `Record`, the text will be concatenated with a new line separator.
+If you pass more than one `Data`, the text will be concatenated with a new line separator.
 
 ## Outputs
 
@@ -112,8 +113,8 @@ This component sends a message to the chat.
 
 <Admonition type="note" title="Note">
   <p>
-    If `As Record` is `true` and the `Message` is a `Record`, the data in the
-    `Record` is updated with the `Sender`, `Sender Name`, and `Session ID`.
+    If `As Data` is `true` and the `Message` is a `Data`, the data in the `Data`
+    is updated with the `Sender`, `Sender Name`, and `Session ID`.
   </p>
 </Admonition>
 

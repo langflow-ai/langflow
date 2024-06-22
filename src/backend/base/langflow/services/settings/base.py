@@ -73,6 +73,10 @@ class Settings(BaseSettings):
     max_overflow: int = 20
     """The number of connections to allow that can be opened beyond the pool size. If not provided, the default is 10."""
     cache_type: str = "async"
+
+    """The store can be 'db' or 'kubernetes'."""
+    variable_store: str = "db"
+
     remove_api_keys: bool = False
     components_path: List[str] = []
     langchain_cache: str = "InMemoryCache"
@@ -119,8 +123,22 @@ class Settings(BaseSettings):
     """Timeout for the API calls in seconds."""
     frontend_timeout: int = 0
     """Timeout for the frontend API calls in seconds."""
+    user_agent: str = "langflow"
+    """User agent for the API calls."""
+
+    @field_validator("user_agent", mode="after")
+    @classmethod
+    def set_user_agent(cls, value):
+        if not value:
+            value = "langflow"
+        import os
+
+        os.environ["USER_AGENT"] = value
+        logger.debug(f"Setting user agent to {value}")
+        return value
 
     @field_validator("config_dir", mode="before")
+    @classmethod
     def set_langflow_dir(cls, value):
         if not value:
             from platformdirs import user_cache_dir
@@ -144,6 +162,7 @@ class Settings(BaseSettings):
         return str(value)
 
     @field_validator("database_url", mode="before")
+    @classmethod
     def set_database_url(cls, value, info):
         if not value:
             logger.debug("No database_url provided, trying LANGFLOW_DATABASE_URL env variable")

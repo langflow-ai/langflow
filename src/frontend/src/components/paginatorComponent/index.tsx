@@ -21,7 +21,7 @@ export default function PaginatorComponent({
 }: PaginatorComponentType) {
   const [size, setPageSize] = useState(pageSize);
   const [maxIndex, setMaxPageIndex] = useState(
-    Math.ceil(totalRowsCount / pageSize)
+    Math.ceil(totalRowsCount / pageSize),
   );
 
   useEffect(() => {
