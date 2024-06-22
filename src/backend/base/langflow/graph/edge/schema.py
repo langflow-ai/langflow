@@ -1,4 +1,4 @@
-from typing import Any, List
+from typing import Optional, Any, List
 from pydantic import BaseModel
 
 
@@ -13,7 +13,7 @@ class Payload(BaseModel):
     def __iter__(self):
         return iter(self.result_pairs)
 
-    def add_result_pair(self, result: Any, extra: Any = None) -> None:
+    def add_result_pair(self, result: Any, extra: Optional[Any] = None) -> None:
         self.result_pairs.append(ResultPair(result=result, extra=extra))
 
     def get_last_result_pair(self) -> ResultPair:
