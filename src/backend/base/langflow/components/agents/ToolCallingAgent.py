@@ -1,13 +1,13 @@
-from typing import List
+from typing import List, cast
 
+from langchain.agents import AgentExecutor, BaseSingleActionAgent
 from langchain.agents.tool_calling_agent.base import create_tool_calling_agent
 from langchain_core.prompts import ChatPromptTemplate
-from langchain.agents import AgentExecutor
-from langchain_core.messages import BaseMessage
-from langflow.schema.message import Message
+
 from langflow.custom import Component
-from langflow.io import HandleInput, TextInput, BoolInput, Output
+from langflow.io import BoolInput, HandleInput, Output, TextInput
 from langflow.schema import Data
+from langflow.schema.message import Message
 
 
 class ToolCallingAgentComponent(Component):
@@ -80,12 +80,12 @@ class ToolCallingAgentComponent(Component):
         agent = create_tool_calling_agent(self.llm, self.tools, prompt)
 
         runnable = AgentExecutor.from_agent_and_tools(
-            agent=agent,
+            agent=cast(BaseSingleActionAgent, agent),
             tools=self.tools,
             verbose=True,
             handle_parsing_errors=self.handle_parsing_errors,
         )
-        input_dict: dict[str, str | list[BaseMessage]] = {"input": self.input_value}
+        input_dict: dict[str, str | list[dict[str, str]]] = {"input": self.input_value}
         if hasattr(self, "memory") and self.memory:
             input_dict["chat_history"] = self.convert_chat_history(self.memory)
         result = await runnable.ainvoke(input_dict)
