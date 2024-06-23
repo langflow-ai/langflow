@@ -9,45 +9,17 @@ from loguru import logger
 from pydantic import BaseModel
 
 from langflow.services.base import Service
+from langflow.services.telemetry.schema import (
+    ComponentPayload,
+    PlaygroundPayload,
+    RunPayload,
+    ShutdownPayload,
+    VersionPayload,
+)
 from langflow.utils.version import get_version_info
 
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
-
-
-class RunPayload(BaseModel):
-    isEndpointName: str
-    IsWebhook: bool
-    seconds: int
-    success: bool
-    errorMessage: str
-
-
-class ShutdownPayload(BaseModel):
-    timeRunning: int
-
-
-class VersionPayload(BaseModel):
-    version: str
-    platform: str
-    python: str
-    arch: str
-    autoLogin: bool
-    cacheType: str
-    backendOnly: bool
-
-
-class PlaygroundPayload(BaseModel):
-    seconds: int
-    componentCount: int
-    success: bool
-
-
-class ComponentPayload(BaseModel):
-    name: str
-    seconds: int
-    success: bool
-    errorMessage: str
 
 
 class TelemetryService(Service):
