@@ -25,7 +25,6 @@ Retriever = TypeVar(
     BaseRetriever,
     VectorStoreRetriever,
 )
-Text: TypeAlias = Message
 
 
 class Object:
@@ -66,7 +65,6 @@ CUSTOM_COMPONENT_SUPPORTED_TYPES = {
     "NestedDict": NestedDict,
     "Data": Data,
     "Message": Message,
-    "Text": Text,
     "Object": Object,
     "Callable": Callable,
     "LanguageModel": LanguageModel,
