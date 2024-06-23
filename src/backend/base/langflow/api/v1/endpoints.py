@@ -8,7 +8,6 @@ from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Re
 from loguru import logger
 from sqlmodel import Session, select
 
-from langflow.api.utils import update_frontend_node_with_template_values
 from langflow.api.v1.schemas import (
     ConfigResponse,
     CustomComponentRequest,
@@ -466,9 +465,9 @@ async def custom_component(
 ):
     component = Component(code=raw_code.code)
 
-    built_frontend_node, _ = build_custom_component_template(component, user_id=user.id)
+    built_frontend_node, component_instance = build_custom_component_template(component, user_id=user.id)
 
-    built_frontend_node = update_frontend_node_with_template_values(built_frontend_node, raw_code.frontend_node)
+    built_frontend_node = component_instance.post_code_processing(built_frontend_node, raw_code.frontend_node)
     return built_frontend_node
 
 
