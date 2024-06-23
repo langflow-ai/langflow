@@ -46,6 +46,7 @@
 
     --beta-background: rgb(219 234 254);
     --beta-foreground: rgb(37 99 235);
+    --beta-foreground-soft: rgb(37 99 235 / 80%);
 
     --chat-bot-icon: #afe6ef;
     --chat-user-icon: #aface9;
