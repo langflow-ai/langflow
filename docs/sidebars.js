@@ -95,7 +95,6 @@ module.exports = {
       label: "Migration",
       collapsed: false,
       items: [
-        "migration/possible-installation-issues",
         "migration/migrating-to-one-point-zero",
         "migration/compatibility",
       ],
