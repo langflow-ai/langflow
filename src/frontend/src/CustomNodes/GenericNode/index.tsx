@@ -232,13 +232,21 @@ export default function GenericNode({
     if (data.node) {
       postCustomComponent(currentCode, data.node)
         .then((apiReturn) => {
-          const { data } = apiReturn;
-          if (data && updateNodeCode) {
-            updateNodeCode(data, currentCode, "code");
+          const { data, type } = apiReturn.data;
+          if (data && type && updateNodeCode) {
+            updateNodeCode(data, currentCode, "code", type);
             setLoadingUpdate(false);
           }
         })
         .catch((err) => {
+          setErrorData({
+            title: "Error updating Compoenent code",
+            list: [
+              "There was an error updating the Component.",
+              "If the error persists, please report it on our Discord or GitHub.",
+            ],
+          });
+          setLoadingUpdate(false);
           console.log(err);
         });
     }

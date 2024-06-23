@@ -1,6 +1,6 @@
 from langflow.custom import Component
 from langflow.field_typing import Text
-from langflow.io import BoolInput, DropdownInput, Output, TextInput
+from langflow.io import BoolInput, DropdownInput, MessageTextInput, Output
 
 
 class SelectivePassThroughComponent(Component):
@@ -9,12 +9,12 @@ class SelectivePassThroughComponent(Component):
     icon = "filter"
 
     inputs = [
-        TextInput(
+        MessageTextInput(
             name="input_value",
             display_name="Input Value",
             info="The primary input value to evaluate.",
         ),
-        TextInput(
+        MessageTextInput(
             name="comparison_value",
             display_name="Comparison Value",
             info="The value to compare against the input value.",
@@ -25,7 +25,7 @@ class SelectivePassThroughComponent(Component):
             options=["equals", "not equals", "contains", "starts with", "ends with"],
             info="Condition to evaluate the input value.",
         ),
-        TextInput(
+        MessageTextInput(
             name="value_to_pass",
             display_name="Value to Pass",
             info="The value to pass if the condition is met.",

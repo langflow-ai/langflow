@@ -20,11 +20,18 @@ export function createTabsArray(
       code: codes[2],
     },
     {
+      name: "JS API",
+      mode: "javascript",
+      image: "https://cdn-icons-png.flaticon.com/512/136/136530.png",
+      language: "js",
+      code: codes[3],
+    },
+    {
       name: "Python Code",
       mode: "python",
       image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
       language: "py",
-      code: codes[3],
+      code: codes[4],
     },
     {
       name: "Chat Widget HTML",
@@ -33,7 +40,7 @@ export function createTabsArray(
       mode: "html",
       image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
       language: "html",
-      code: codes[4],
+      code: codes[5],
     },
   ];
 
@@ -53,7 +60,7 @@ export function createTabsArray(
       mode: "python",
       image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
       language: "py",
-      code: codes[5],
+      code: codes[6],
     });
   }
 

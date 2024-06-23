@@ -8,10 +8,10 @@ from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Re
 from loguru import logger
 from sqlmodel import Session, select
 
-from langflow.api.utils import update_frontend_node_with_template_values
 from langflow.api.v1.schemas import (
     ConfigResponse,
     CustomComponentRequest,
+    CustomComponentResponse,
     InputValueRequest,
     ProcessResponse,
     RunResponse,
@@ -459,17 +459,17 @@ def get_version():
     return {"version": version, "package": package}
 
 
-@router.post("/custom_component", status_code=HTTPStatus.OK)
+@router.post("/custom_component", status_code=HTTPStatus.OK, response_model=CustomComponentResponse)
 async def custom_component(
     raw_code: CustomComponentRequest,
     user: User = Depends(get_current_active_user),
 ):
     component = Component(code=raw_code.code)
 
-    built_frontend_node, _ = build_custom_component_template(component, user_id=user.id)
-
-    built_frontend_node = update_frontend_node_with_template_values(built_frontend_node, raw_code.frontend_node)
-    return built_frontend_node
+    built_frontend_node, component_instance = build_custom_component_template(component, user_id=user.id)
+    if raw_code.frontend_node is not None:
+        built_frontend_node = component_instance.post_code_processing(built_frontend_node, raw_code.frontend_node)
+    return CustomComponentResponse(data=built_frontend_node, type=component_instance.__class__.__name__)
 
 
 @router.post("/custom_component/update", status_code=HTTPStatus.OK)

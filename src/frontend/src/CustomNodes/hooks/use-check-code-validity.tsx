@@ -24,7 +24,7 @@ const useCheckCodeValidity = (
     if (!thisNodeTemplate.code) return;
     const currentCode = thisNodeTemplate.code?.value;
     const thisNodesCode = data.node!.template?.code?.value;
-    const componentsToIgnore = ["CustomComponent", "Prompt"];
+    const componentsToIgnore = ["CustomComponent"];
     setIsOutdated(
       currentCode !== thisNodesCode && !componentsToIgnore.includes(data.type),
     );

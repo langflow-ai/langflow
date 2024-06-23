@@ -118,7 +118,6 @@ def update_projects_components_with_latest_component_versions(project_data, all_
                 for field_name in list(node_data["template"].keys()):
                     if field_name not in latest_template:
                         node_data["template"].pop(field_name)
-    project_data_copy = update_new_output(project_data_copy)
     log_node_changes(node_changes_log)
     return project_data_copy
 
@@ -559,7 +558,7 @@ async def create_or_update_starter_projects(get_all_components_coro: Awaitable[d
                 project_icon_bg_color,
             ) = get_project_data(project)
             updated_project_data = update_projects_components_with_latest_component_versions(
-                project_data, all_types_dict
+                project_data.copy(), all_types_dict
             )
             updated_project_data = update_edges_with_latest_component_versions(updated_project_data)
             try:

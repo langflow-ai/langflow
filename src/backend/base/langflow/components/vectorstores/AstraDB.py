@@ -15,7 +15,7 @@ from langflow.schema import Data
 
 
 class AstraVectorStoreComponent(LCVectorStoreComponent):
-    display_name: str = "Astra DB Vector Store"
+    display_name: str = "Astra DB"
     description: str = "Implementation of Vector Store using Astra DB with search capabilities"
     documentation: str = "https://python.langchain.com/docs/integrations/vectorstores/astradb"
     icon: str = "AstraDB"
@@ -38,15 +38,14 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             info="API endpoint URL for the Astra DB service.",
             value="ASTRA_DB_API_ENDPOINT",
         ),
-        DataInput(
-            name="vector_store_inputs",
-            display_name="Vector Store Inputs",
-            is_list=True,
+        MultilineInput(
+            name="search_input",
+            display_name="Search Input",
         ),
-        HandleInput(
-            name="embedding",
-            display_name="Embedding",
-            input_types=["Embeddings"],
+        DataInput(
+            name="ingest_data",
+            display_name="Ingest Data",
+            is_list=True,
         ),
         StrInput(
             name="namespace",
@@ -105,6 +104,11 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             info="Optional list of metadata fields to include in the indexing.",
             advanced=True,
         ),
+        HandleInput(
+            name="embedding",
+            display_name="Embedding",
+            input_types=["Embeddings"],
+        ),
         StrInput(
             name="metadata_indexing_exclude",
             display_name="Metadata Indexing Exclude",
@@ -117,20 +121,12 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             info="Optional dictionary defining the indexing policy for the collection.",
             advanced=True,
         ),
-        BoolInput(
-            name="add_to_vector_store",
-            display_name="Add to Vector Store",
-            info="If true, the Vector Store Inputs will be added to the Vector Store.",
-        ),
-        MultilineInput(
-            name="search_input",
-            display_name="Search Input",
-        ),
         DropdownInput(
             name="search_type",
             display_name="Search Type",
             options=["Similarity", "MMR"],
             value="Similarity",
+            advanced=True,
         ),
         IntInput(
             name="number_of_results",
@@ -186,15 +182,12 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
         except Exception as e:
             raise ValueError(f"Error initializing AstraDBVectorStore: {str(e)}") from e
 
-        if self.add_to_vector_store:
-            self._add_documents_to_vector_store(vector_store)
-
         self.status = self._astradb_collection_to_data(vector_store.collection)
         return vector_store
 
     def _add_documents_to_vector_store(self, vector_store):
         documents = []
-        for _input in self.vector_store_inputs or []:
+        for _input in self.ingest_data or []:
             if isinstance(_input, Data):
                 documents.append(_input.to_lc_document())
             else:

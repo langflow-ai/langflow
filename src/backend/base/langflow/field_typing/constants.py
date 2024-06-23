@@ -13,12 +13,18 @@ from langchain_core.output_parsers import BaseOutputParser
 from langchain_core.prompts import BasePromptTemplate, ChatPromptTemplate, PromptTemplate
 from langchain_core.retrievers import BaseRetriever
 from langchain_core.tools import Tool
-from langchain_core.vectorstores import VectorStore
+from langchain_core.vectorstores import VectorStore, VectorStoreRetriever
 from langchain_text_splitters import TextSplitter
+
+from langflow.schema.message import Message
 
 NestedDict: TypeAlias = Dict[str, Union[str, Dict]]
 LanguageModel = TypeVar("LanguageModel", BaseLanguageModel, BaseLLM, BaseChatModel)
-Retriever: TypeAlias = BaseRetriever
+Retriever = TypeVar(
+    "Retriever",
+    BaseRetriever,
+    VectorStoreRetriever,
+)
 
 
 class Object:
@@ -58,6 +64,7 @@ CUSTOM_COMPONENT_SUPPORTED_TYPES = {
     **LANGCHAIN_BASE_TYPES,
     "NestedDict": NestedDict,
     "Data": Data,
+    "Message": Message,
     "Text": Text,
     "Object": Object,
     "Callable": Callable,
