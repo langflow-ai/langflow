@@ -26,7 +26,7 @@
         },
         "id": "reactflow__edge-TextInput-sptaH{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œTextInputœ,œidœ:œTextInput-sptaHœ}-Prompt-amqBu{œfieldNameœ:œdocumentœ,œidœ:œPrompt-amqBuœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
         "source": "TextInput-sptaH",
-        "sourceHandle": "{œdataTypeœ: œTextInputœ, œidœ: œTextInput-sptaHœ, œoutput_typesœ: [œMessageœ], œnameœ: œtextœ}",
+        "sourceHandle": "{œdataTypeœ: œTextInputœ, œidœ: œTextInput-sptaHœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
         "style": {
           "stroke": "#555"
         },
@@ -54,7 +54,7 @@
         },
         "id": "reactflow__edge-Prompt-amqBu{œbaseClassesœ:[œobjectœ,œstrœ,œTextœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-amqBuœ}-TextOutput-2MS4a{œfieldNameœ:œinput_valueœ,œidœ:œTextOutput-2MS4aœ,œinputTypesœ:[œRecordœ,œTextœ],œtypeœ:œstrœ}",
         "source": "Prompt-amqBu",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-amqBuœ, œoutput_typesœ: [], œnameœ: œtextœ}",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-amqBuœ, œnameœ: œtextœ, œoutput_typesœ: []}",
         "style": {
           "stroke": "#555"
         },
@@ -83,7 +83,7 @@
         },
         "id": "reactflow__edge-Prompt-amqBu{œbaseClassesœ:[œobjectœ,œstrœ,œTextœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-amqBuœ}-OpenAIModel-uYXZJ{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-uYXZJœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
         "source": "Prompt-amqBu",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-amqBuœ, œoutput_typesœ: [œMessageœ], œnameœ: œpromptœ}",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-amqBuœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
         "style": {
           "stroke": "#555"
         },
@@ -115,7 +115,7 @@
         },
         "id": "reactflow__edge-OpenAIModel-uYXZJ{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-uYXZJœ}-Prompt-gTNiz{œfieldNameœ:œsummaryœ,œidœ:œPrompt-gTNizœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
         "source": "OpenAIModel-uYXZJ",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-uYXZJœ, œoutput_typesœ: [œMessageœ], œnameœ: œtext_outputœ}",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-uYXZJœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "style": {
           "stroke": "#555"
         },
@@ -145,7 +145,7 @@
         },
         "id": "reactflow__edge-OpenAIModel-uYXZJ{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-uYXZJœ}-ChatOutput-EJkG3{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-EJkG3œ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
         "source": "OpenAIModel-uYXZJ",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-uYXZJœ, œoutput_typesœ: [œMessageœ], œnameœ: œtext_outputœ}",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-uYXZJœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "style": {
           "stroke": "#555"
         },
@@ -173,7 +173,7 @@
         },
         "id": "reactflow__edge-Prompt-gTNiz{œbaseClassesœ:[œobjectœ,œstrœ,œTextœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-gTNizœ}-TextOutput-MUDOR{œfieldNameœ:œinput_valueœ,œidœ:œTextOutput-MUDORœ,œinputTypesœ:[œRecordœ,œTextœ],œtypeœ:œstrœ}",
         "source": "Prompt-gTNiz",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-gTNizœ, œoutput_typesœ: [], œnameœ: œtextœ}",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-gTNizœ, œnameœ: œtextœ, œoutput_typesœ: []}",
         "style": {
           "stroke": "#555"
         },
@@ -202,7 +202,7 @@
         },
         "id": "reactflow__edge-Prompt-gTNiz{œbaseClassesœ:[œobjectœ,œstrœ,œTextœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-gTNizœ}-OpenAIModel-XawYB{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-XawYBœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
         "source": "Prompt-gTNiz",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-gTNizœ, œoutput_typesœ: [œMessageœ], œnameœ: œpromptœ}",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-gTNizœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
         "style": {
           "stroke": "#555"
         },
@@ -232,7 +232,7 @@
         },
         "id": "reactflow__edge-OpenAIModel-XawYB{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-XawYBœ}-ChatOutput-DNmvg{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-DNmvgœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
         "source": "OpenAIModel-XawYB",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-XawYBœ, œoutput_typesœ: [œMessageœ], œnameœ: œtext_outputœ}",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-XawYBœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "style": {
           "stroke": "#555"
         },
@@ -557,7 +557,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langflow.base.io.chat import ChatComponent\nfrom langflow.io import DropdownInput, Output, TextInput\nfrom langflow.schema.message import Message\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    icon = \"ChatOutput\"\n\n    inputs = [\n        TextInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            info=\"Message to be passed as output.\",\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[\"Machine\", \"User\"],\n            value=\"Machine\",\n            advanced=True,\n            info=\"Type of sender.\",\n        ),\n        TextInput(\n            name=\"sender_name\", display_name=\"Sender Name\", info=\"Name of the sender.\", value=\"AI\", advanced=True\n        ),\n        TextInput(name=\"session_id\", display_name=\"Session ID\", info=\"Session ID for the message.\", advanced=True),\n        TextInput(\n            name=\"data_template\",\n            display_name=\"Data Template\",\n            value=\"{text}\",\n            advanced=True,\n            info=\"Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.\",\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    def message_response(self) -> Message:\n        message = Message(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n        )\n        if self.session_id and isinstance(message, Message) and isinstance(message.text, str):\n            self.store_message(message)\n            self.message.value = message\n\n        self.status = message\n        return message\n"
+                "value": "from langflow.base.io.chat import ChatComponent\nfrom langflow.io import DropdownInput, Output, MessageTextInput\nfrom langflow.schema.message import Message\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    icon = \"ChatOutput\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            info=\"Message to be passed as output.\",\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[\"Machine\", \"User\"],\n            value=\"Machine\",\n            advanced=True,\n            info=\"Type of sender.\",\n        ),\n        MessageTextInput(\n            name=\"sender_name\", display_name=\"Sender Name\", info=\"Name of the sender.\", value=\"AI\", advanced=True\n        ),\n        MessageTextInput(name=\"session_id\", display_name=\"Session ID\", info=\"Session ID for the message.\", advanced=True),\n        MessageTextInput(\n            name=\"data_template\",\n            display_name=\"Data Template\",\n            value=\"{text}\",\n            advanced=True,\n            info=\"Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.\",\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    def message_response(self) -> Message:\n        message = Message(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n        )\n        if self.session_id and isinstance(message, Message) and isinstance(message.text, str):\n            self.store_message(message)\n            self.message.value = message\n\n        self.status = message\n        return message\n"
               },
               "input_value": {
                 "advanced": false,
@@ -727,7 +727,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langflow.base.io.chat import ChatComponent\nfrom langflow.io import DropdownInput, Output, TextInput\nfrom langflow.schema.message import Message\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    icon = \"ChatOutput\"\n\n    inputs = [\n        TextInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            info=\"Message to be passed as output.\",\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[\"Machine\", \"User\"],\n            value=\"Machine\",\n            advanced=True,\n            info=\"Type of sender.\",\n        ),\n        TextInput(\n            name=\"sender_name\", display_name=\"Sender Name\", info=\"Name of the sender.\", value=\"AI\", advanced=True\n        ),\n        TextInput(name=\"session_id\", display_name=\"Session ID\", info=\"Session ID for the message.\", advanced=True),\n        TextInput(\n            name=\"data_template\",\n            display_name=\"Data Template\",\n            value=\"{text}\",\n            advanced=True,\n            info=\"Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.\",\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    def message_response(self) -> Message:\n        message = Message(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n        )\n        if self.session_id and isinstance(message, Message) and isinstance(message.text, str):\n            self.store_message(message)\n            self.message.value = message\n\n        self.status = message\n        return message\n"
+                "value": "from langflow.base.io.chat import ChatComponent\nfrom langflow.io import DropdownInput, Output, MessageTextInput\nfrom langflow.schema.message import Message\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    icon = \"ChatOutput\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            info=\"Message to be passed as output.\",\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[\"Machine\", \"User\"],\n            value=\"Machine\",\n            advanced=True,\n            info=\"Type of sender.\",\n        ),\n        MessageTextInput(\n            name=\"sender_name\", display_name=\"Sender Name\", info=\"Name of the sender.\", value=\"AI\", advanced=True\n        ),\n        MessageTextInput(name=\"session_id\", display_name=\"Session ID\", info=\"Session ID for the message.\", advanced=True),\n        MessageTextInput(\n            name=\"data_template\",\n            display_name=\"Data Template\",\n            value=\"{text}\",\n            advanced=True,\n            info=\"Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.\",\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    def message_response(self) -> Message:\n        message = Message(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n        )\n        if self.session_id and isinstance(message, Message) and isinstance(message.text, str):\n            self.store_message(message)\n            self.message.value = message\n\n        self.status = message\n        return message\n"
               },
               "input_value": {
                 "advanced": false,
@@ -891,7 +891,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langflow.base.io.text import TextComponent\nfrom langflow.io import Output, TextInput\nfrom langflow.schema.message import Message\n\n\nclass TextInputComponent(TextComponent):\n    display_name = \"Text Input\"\n    description = \"Get text inputs from the Playground.\"\n    icon = \"type\"\n\n    inputs = [\n        TextInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            info=\"Text to be passed as input.\",\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Text\", name=\"text\", method=\"text_response\"),\n    ]\n\n    def text_response(self) -> Message:\n        message = Message(\n            text=self.input_value,\n        )\n        return message\n"
+                "value": "from langflow.base.io.text import TextComponent\nfrom langflow.io import Output, MessageTextInput\nfrom langflow.schema.message import Message\n\n\nclass TextInputComponent(TextComponent):\n    display_name = \"Text Input\"\n    description = \"Get text inputs from the Playground.\"\n    icon = \"type\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            info=\"Text to be passed as input.\",\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Text\", name=\"text\", method=\"text_response\"),\n    ]\n\n    def text_response(self) -> Message:\n        message = Message(\n            text=self.input_value,\n        )\n        return message\n"
               },
               "input_value": {
                 "advanced": false,

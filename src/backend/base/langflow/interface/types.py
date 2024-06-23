@@ -1,7 +1,7 @@
 import asyncio
 import json
 
-from git import TYPE_CHECKING
+from typing import TYPE_CHECKING
 from loguru import logger
 
 from langflow.custom.utils import abuild_custom_components, build_custom_components
