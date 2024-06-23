@@ -90,7 +90,8 @@ def read_folders(
                 or_(Folder.user_id == current_user.id, Folder.user_id == None)  # type: ignore # noqa: E711
             )
         ).all()
-        return folders
+        sorted_folders = sorted(folders, key=lambda x: x.name != DEFAULT_FOLDER_NAME)
+        return sorted_folders
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -127,7 +128,14 @@ def update_folder(
         ).first()
         if not existing_folder:
             raise HTTPException(status_code=404, detail="Folder not found")
-        folder_data = folder.model_dump(exclude_unset=True)
+        if folder.name and folder.name != existing_folder.name:
+            existing_folder.name = folder.name
+            session.add(existing_folder)
+            session.commit()
+            session.refresh(existing_folder)
+            return existing_folder
+        
+        folder_data = existing_folder.model_dump(exclude_unset=True)
         for key, value in folder_data.items():
             if key != "components" and key != "flows":
                 setattr(existing_folder, key, value)
