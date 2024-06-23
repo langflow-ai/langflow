@@ -205,7 +205,7 @@ export default function ChatMessage({
                                 children,
                                 ...props
                               }) => {
-                                if(typeof children === "string"){
+                                if (typeof children === "string") {
                                   if ((children as string)!.length) {
                                     if (children![0] === "▍") {
                                       return (
