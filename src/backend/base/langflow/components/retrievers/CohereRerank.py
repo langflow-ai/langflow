@@ -11,7 +11,7 @@ from langflow.schema import Data
 
 class CohereRerankComponent(LCVectorStoreComponent):
     display_name = "Cohere Rerank"
-    description = "Rerank documents using the Cohere API."
+    description = "Rerank documents using the Cohere API and a retriever."
     icon = "Cohere"
 
     inputs = [
@@ -38,13 +38,13 @@ class CohereRerankComponent(LCVectorStoreComponent):
 
     def build_base_retriever(self) -> Retriever:
         cohere_reranker = CohereRerank(
-            api_key=self.api_key, model=self.model, top_n=self.top_n, user_agent=self.user_agent
+            cohere_api_key=self.api_key, model=self.model, top_n=self.top_n, user_agent=self.user_agent
         )
         retriever = ContextualCompressionRetriever(base_compressor=cohere_reranker, base_retriever=self.retriever)
         return retriever
 
     async def search_documents(self) -> List[Data]:
-        retriever = self.build_base_retriever()
+        retriever: ContextualCompressionRetriever = self.build_base_retriever()
         documents = await retriever.ainvoke(self.search_query)
         data = self.to_data(documents)
         self.status = data
