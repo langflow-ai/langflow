@@ -1,27 +1,17 @@
-from typing import List, Optional
-
+from typing import List, Dict
 from langchain.agents.tool_calling_agent.base import create_tool_calling_agent
 from langchain_core.prompts import ChatPromptTemplate
-<<<<<<< Updated upstream
-
-from langflow.custom import Component
-from langflow.io import BoolInput, HandleInput, MessageTextInput, Output
-from langflow.schema import Data
-=======
 from langchain.agents import AgentExecutor
 from langchain_core.messages import BaseMessage
->>>>>>> Stashed changes
 from langflow.schema.message import Message
 from langflow.custom import Component
-from langflow.io import HandleInput, TextInput, BoolInput, Output
+from langflow.io import HandleInput, BoolInput, Output, MessageTextInput
 from langflow.schema import Data
 
 
 class ToolCallingAgentComponent(Component):
     display_name: str = "Tool Calling Agent"
-    description: str = (
-        "Agent that uses tools. Only models that are compatible with function calling are supported."
-    )
+    description: str = "Agent that uses tools. Only models that are compatible with function calling are supported."
     icon = "LangChain"
     beta = True
 
