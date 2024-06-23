@@ -102,7 +102,7 @@ class AgentComponent(LCAgentComponent):
             return system_message, user_prompt
         return None, None
 
-    def update_build_config(self, build_config: dotdict, field_value: Any, field_name: Text | None = None):
+    def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
         """
         Updates the build configuration based on the provided field value and field name.
 
