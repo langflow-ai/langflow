@@ -3,7 +3,7 @@ from pydantic.v1 import SecretStr
 
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import Embeddings
-from langflow.io import DropdownInput, IntInput, Output, SecretStrInput, TextInput
+from langflow.io import DropdownInput, IntInput, MessageTextInput, Output, SecretStrInput
 
 
 class AzureOpenAIEmbeddingsComponent(LCModelComponent):
@@ -22,13 +22,13 @@ class AzureOpenAIEmbeddingsComponent(LCModelComponent):
     ]
 
     inputs = [
-        TextInput(
+        MessageTextInput(
             name="azure_endpoint",
             display_name="Azure Endpoint",
             required=True,
             info="Your Azure endpoint, including the resource. Example: `https://example-resource.azure.openai.com/`",
         ),
-        TextInput(
+        MessageTextInput(
             name="azure_deployment",
             display_name="Deployment Name",
             required=True,
