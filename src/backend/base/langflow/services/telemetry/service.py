@@ -1,6 +1,7 @@
 import asyncio
 import os
 import platform
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
 import httpx
@@ -16,7 +17,7 @@ if TYPE_CHECKING:
 
 class RunPayload(BaseModel):
     isEndpointName: str
-    isWebhook: bool
+    IsWebhook: bool
     seconds: int
     success: bool
     errorMessage: str
@@ -24,10 +25,6 @@ class RunPayload(BaseModel):
 
 class ShutdownPayload(BaseModel):
     timeRunning: int
-    startingFlowsCount: int
-    finalFlowsCount: int
-    startingCompCount: int
-    finalCompCount: int
 
 
 class VersionPayload(BaseModel):
@@ -100,7 +97,8 @@ class TelemetryService(Service):
     async def log_package_run(self, payload: RunPayload):
         await self.telemetry_queue.put((self.send_telemetry_data, payload, "run"))
 
-    async def log_package_shutdown(self, payload: ShutdownPayload):
+    async def log_package_shutdown(self):
+        payload = ShutdownPayload(timeRunning=(datetime.now(timezone.utc) - self._start_time).seconds)
         await self.telemetry_queue.put((self.send_telemetry_data, payload, "shutdown"))
 
     async def log_package_version(self):
@@ -129,6 +127,7 @@ class TelemetryService(Service):
             return
         try:
             self.running = True
+            self._start_time = datetime.now(timezone.utc)
             self.worker_task = asyncio.create_task(self.telemetry_worker())
             asyncio.create_task(self.log_package_version())
         except Exception as e:
