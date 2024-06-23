@@ -74,7 +74,7 @@ You can also preview Langflow in [HuggingFace Spaces](https://huggingface.co/spa
 
 # 🎨 Create Flows
 
-Creating flows with Langflow is easy. Simply drag components from the sidebar onto the canvas and connect them to start building your application.
+Creating flows with Langflow is easy. Simply drag components from the sidebar onto the workspace and connect them to start building your application.
 
 Explore by editing prompt parameters, grouping components into a single high-level component, and building your own Custom Components.
 
