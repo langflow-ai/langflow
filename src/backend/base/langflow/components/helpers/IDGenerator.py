@@ -5,14 +5,12 @@ from langflow.custom import CustomComponent
 
 
 class UUIDGeneratorComponent(CustomComponent):
-    documentation: str = "http://docs.langflow.org/components/custom"
     display_name = "ID Generator"
     description = "Generates a unique ID."
 
     def update_build_config(
         self,
         build_config: dict,
-        field_value: Any,
         field_name: Optional[str] = None,
     ):
         if field_name == "unique_id":
