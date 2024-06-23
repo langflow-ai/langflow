@@ -23,7 +23,7 @@ from langflow.initial_setup.setup import (
 )
 from langflow.interface.types import get_and_cache_all_types_dict
 from langflow.interface.utils import setup_llm_caching
-from langflow.services.deps import get_cache_service, get_settings_service
+from langflow.services.deps import get_cache_service, get_settings_service, get_telemetry_service
 from langflow.services.plugins.langfuse_plugin import LangfuseInstance
 from langflow.services.utils import initialize_services, teardown_services
 from langflow.utils.logger import configure
@@ -93,6 +93,7 @@ def get_lifespan(fix_migration=False, socketio_server=None, version=None):
             initialize_super_user_if_needed()
             task = asyncio.create_task(get_and_cache_all_types_dict(get_settings_service(), get_cache_service()))
             await create_or_update_starter_projects(task)
+            asyncio.create_task(get_telemetry_service().start())
             load_flows_from_directory()
             yield
         except Exception as exc:
