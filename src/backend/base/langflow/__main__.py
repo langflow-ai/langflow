@@ -140,12 +140,12 @@ def run(
     )
     # create path object if path is provided
     static_files_dir: Optional[Path] = Path(path) if path else None
+    settings_service = get_settings_service()
+    settings_service.set("backend_only", backend_only)
     app = setup_app(static_files_dir=static_files_dir, backend_only=backend_only)
     # check if port is being used
     if is_port_in_use(port, host):
         port = get_free_port(port)
-
-    settings_service = get_settings_service()
 
     settings_service.set("worker_timeout", timeout)
 
