@@ -22,6 +22,7 @@ def generate_unique_folder_name(folder_name, user_id, session):
         folder_name = f"{original_name} ({n})"
         n += 1
 
+
 def custom_sort(folder):
     if folder.name == "My Projects":
         return (0, folder.name)
