@@ -86,6 +86,7 @@ async def retrieve_vertices_order(
         HTTPException: If there is an error checking the build status.
     """
     start_time = time.perf_counter()
+    components_count = None
     try:
         flow_id_str = str(flow_id)
         # First, we need to check if the flow_id is in the cache
