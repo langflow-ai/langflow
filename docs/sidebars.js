@@ -40,6 +40,7 @@ module.exports = {
         "administration/login",
         "administration/cli",
         "administration/playground",
+        "administration/collections-projects",
         "administration/settings",
         "administration/global-env",
         "administration/chat-widget",
