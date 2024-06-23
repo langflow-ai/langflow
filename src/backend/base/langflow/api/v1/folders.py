@@ -134,7 +134,7 @@ def update_folder(
             session.commit()
             session.refresh(existing_folder)
             return existing_folder
-        
+
         folder_data = existing_folder.model_dump(exclude_unset=True)
         for key, value in folder_data.items():
             if key != "components" and key != "flows":
