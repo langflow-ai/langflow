@@ -129,10 +129,6 @@ module.exports = {
         textColor: "#1C1E21",
         isCloseable: false,
       },
-      footer: {
-        links: [],
-        copyright: `Copyright © ${new Date().getFullYear()} Langflow.`,
-      },
       zoom: {
         selector: ".markdown :not(a) > img:not(.no-zoom)",
         background: {
