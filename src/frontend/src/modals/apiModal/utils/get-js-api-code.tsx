@@ -18,11 +18,8 @@ export default function getJsApiCode(
     if (!tweaksObject) {
       throw new Error("Expected tweaks object is not provided.");
     }
-    tweaksString = JSON.stringify(tweaksObject, null, 2)
-      .replace(/true/g, "true") // Ensuring JavaScript boolean literals are correctly formatted
-      .replace(/false/g, "false");
+    tweaksString = JSON.stringify(tweaksObject, null, 2);
   }
-
   return `class LangflowClient {
     constructor(baseURL, apiKey) {
         this.baseURL = baseURL;
