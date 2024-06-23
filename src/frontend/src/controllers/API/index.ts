@@ -7,6 +7,7 @@ import {
   APIObjectType,
   APITemplateType,
   Component,
+  CustomComponentRequest,
   LoginType,
   ProfilePicturesTypeAPI,
   Users,
@@ -386,7 +387,7 @@ export async function getProfilePictures(): Promise<ProfilePicturesTypeAPI | nul
 export async function postCustomComponent(
   code: string,
   apiClass: APIClassType,
-): Promise<AxiosResponse<APIClassType>> {
+): Promise<AxiosResponse<CustomComponentRequest>> {
   // let template = apiClass.template;
   return await api.post(`${BASE_URL_API}custom_component`, {
     code,

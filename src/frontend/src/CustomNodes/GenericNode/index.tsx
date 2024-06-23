@@ -232,9 +232,9 @@ export default function GenericNode({
     if (data.node) {
       postCustomComponent(currentCode, data.node)
         .then((apiReturn) => {
-          const { data } = apiReturn;
-          if (data && updateNodeCode) {
-            updateNodeCode(data, currentCode, "code");
+          const { data, type } = apiReturn.data;
+          if (data && type && updateNodeCode) {
+            updateNodeCode(data, currentCode, "code", type);
             setLoadingUpdate(false);
           }
         })

@@ -13,6 +13,11 @@ export type CustomFieldsType = {
   [key: string]: Array<string>;
 };
 
+export type CustomComponentRequest = {
+  data: APIClassType;
+  type: string;
+};
+
 export type APIClassType = {
   base_classes?: Array<string>;
   description: string;
