@@ -1,5 +1,5 @@
 import uuid
-from typing import Any, Optional
+from typing import Optional
 
 from langflow.custom import CustomComponent
 
