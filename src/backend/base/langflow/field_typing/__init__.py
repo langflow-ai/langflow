@@ -3,11 +3,11 @@ from typing import Any
 from .constants import (
     AgentExecutor,
     BaseChatMemory,
+    BaseChatModel,
     BaseLanguageModel,
     BaseLLM,
     BaseLoader,
     BaseMemory,
-    BaseChatModel,
     BaseOutputParser,
     BasePromptTemplate,
     BaseRetriever,
@@ -21,10 +21,11 @@ from .constants import (
     NestedDict,
     Object,
     PromptTemplate,
+    Retriever,
+    Text,
     TextSplitter,
     Tool,
     VectorStore,
-    Retriever,
 )
 from .range_spec import RangeSpec
 
@@ -82,4 +83,5 @@ __all__ = [
     "VectorStore",
     "BaseChatModel",
     "Retriever",
+    "Text",
 ]
