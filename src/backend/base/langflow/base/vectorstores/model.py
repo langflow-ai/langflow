@@ -73,7 +73,7 @@ class LCVectorStoreComponent(Component):
         """
         raise NotImplementedError("build_vector_store method must be implemented.")
 
-    def build_base_retriever(self) -> Retriever:
+    def build_base_retriever(self) -> Retriever:  # type: ignore[type-var]
         """
         Builds the BaseRetriever object.
         """
