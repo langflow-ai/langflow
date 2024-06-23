@@ -126,6 +126,7 @@ module.exports = {
       label: "Contributing",
       collapsed: false,
       items: [
+        "contributing/telemetry",
         "contributing/how-contribute",
         "contributing/github-issues",
         "contributing/community",
