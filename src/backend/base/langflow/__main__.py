@@ -3,7 +3,6 @@ from pathlib import Path
 from typing import Optional
 
 import typer
-from rich.console import Console
 from sqlmodel import select
 
 from langflow.services.database.models.folder.utils import create_default_folder_if_it_doesnt_exist
@@ -13,8 +12,6 @@ from langflow.services.settings.constants import DEFAULT_SUPERUSER
 from langflow.services.utils import initialize_services
 from langflow.utils.cli import api_key_banner, display_results, setup_and_run_langflow
 from langflow.utils.logger import configure
-
-console = Console()
 
 app = typer.Typer(no_args_is_help=True)
 
@@ -101,6 +98,11 @@ def serve(
     workers: int = typer.Option(1, help="Number of worker processes.", envvar="LANGFLOW_WORKERS"),
     timeout: int = typer.Option(300, help="Worker timeout in seconds.", envvar="LANGFLOW_WORKER_TIMEOUT"),
     port: int = typer.Option(7860, help="Port to listen on.", envvar="LANGFLOW_PORT"),
+    flows_path: Optional[Path] = typer.Option(
+        default=None,
+        help="Path to the directory containing flows to preload.",
+        envvar="LANGFLOW_LOAD_FLOWS_PATH",
+    ),
     components_path: Optional[Path] = typer.Option(
         Path(__file__).parent / "components",
         help="Path to the directory containing custom components.",
@@ -137,12 +139,13 @@ def serve(
         envvar="LANGFLOW_STORE",
     ),
 ):
-    """Serve Langflow"""
+    """Serve Flows."""
     setup_and_run_langflow(
         host=host,
         workers=workers,
         timeout=timeout,
         port=port,
+        flows_path=flows_path,
         components_path=components_path,
         env_file=env_file,
         log_level=log_level,

@@ -16,11 +16,12 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-from langflow.__main__ import console
 from langflow.main import setup_app
 from langflow.services.deps import get_settings_service
 from langflow.utils.logger import configure, logger
 from langflow.utils.util import update_settings
+
+console = Console()
 
 
 def get_number_of_workers(workers=None):
