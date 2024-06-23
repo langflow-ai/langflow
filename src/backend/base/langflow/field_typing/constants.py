@@ -13,15 +13,16 @@ from langchain_core.output_parsers import BaseOutputParser
 from langchain_core.prompts import BasePromptTemplate, ChatPromptTemplate, PromptTemplate
 from langchain_core.retrievers import BaseRetriever
 from langchain_core.tools import Tool
-from langchain_core.vectorstores import VectorStore
+from langchain_core.vectorstores import VectorStore, VectorStoreRetriever
 from langchain_text_splitters import TextSplitter
 
 NestedDict: TypeAlias = Dict[str, Union[str, Dict]]
 LanguageModel = TypeVar("LanguageModel", BaseLanguageModel, BaseLLM, BaseChatModel)
-
-
-class Retriever(BaseRetriever):
-    pass
+Retriever = TypeVar(
+    "Retriever",
+    BaseRetriever,
+    VectorStoreRetriever,
+)
 
 
 class Object:

@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, cast
 
 from langchain.retrievers import ContextualCompressionRetriever
 from langchain_cohere import CohereRerank
@@ -36,15 +36,15 @@ class CohereRerankComponent(LCVectorStoreComponent):
         HandleInput(name="retriever", display_name="Retriever", input_types=["Retriever"]),
     ]
 
-    def build_base_retriever(self) -> Retriever:
+    def build_base_retriever(self) -> Retriever:  # type: ignore[type-var]
         cohere_reranker = CohereRerank(
             cohere_api_key=self.api_key, model=self.model, top_n=self.top_n, user_agent=self.user_agent
         )
         retriever = ContextualCompressionRetriever(base_compressor=cohere_reranker, base_retriever=self.retriever)
-        return retriever
+        return cast(Retriever, retriever)
 
-    async def search_documents(self) -> List[Data]:
-        retriever: ContextualCompressionRetriever = self.build_base_retriever()
+    async def search_documents(self) -> List[Data]:  # type: ignore
+        retriever = self.build_base_retriever()
         documents = await retriever.ainvoke(self.search_query)
         data = self.to_data(documents)
         self.status = data
