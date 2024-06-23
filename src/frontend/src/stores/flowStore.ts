@@ -241,9 +241,14 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       });
       return;
     }
-    if(selection.nodes){
-      if(checkOldComponents({nodes:selection.nodes ?? []})){
-        useAlertStore.getState().setNoticeData({title:"Components created before Langflow 1.0 may be unstable. Ensure components are up to date."})
+    if (selection.nodes) {
+      if (checkOldComponents({ nodes: selection.nodes ?? [] })) {
+        useAlertStore
+          .getState()
+          .setNoticeData({
+            title:
+              "Components created before Langflow 1.0 may be unstable. Ensure components are up to date.",
+          });
       }
     }
     let minimumX = Infinity;

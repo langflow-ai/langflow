@@ -172,11 +172,14 @@ export default function Page({
     }
   }, [currentFlowId, reactFlowInstance]);
 
-useEffect(() => {
-  if(checkOldComponents({nodes:flow?.data?.nodes ?? []})){
-    setNoticeData({title:"Components created before Langflow 1.0 may be unstable. Ensure components are up to date."})
-  }
-},[])
+  useEffect(() => {
+    if (checkOldComponents({ nodes: flow?.data?.nodes ?? [] })) {
+      setNoticeData({
+        title:
+          "Components created before Langflow 1.0 may be unstable. Ensure components are up to date.",
+      });
+    }
+  }, []);
 
   useEffect(() => {
     return () => {

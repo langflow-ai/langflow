@@ -1512,7 +1512,12 @@ export function getGroupOutputNodeId(
   return { id: node.id, outputName: p_name };
 }
 
-export function checkOldComponents({nodes}:{nodes:any[]}) {
-  return nodes.some((node) => node.data.node?.template.code && (node.data.node?.template.code.value as string).includes("(CustomComponent):"));
-
+export function checkOldComponents({ nodes }: { nodes: any[] }) {
+  return nodes.some(
+    (node) =>
+      node.data.node?.template.code &&
+      (node.data.node?.template.code.value as string).includes(
+        "(CustomComponent):",
+      ),
+  );
 }
