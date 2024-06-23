@@ -262,13 +262,13 @@ extras = ["pyaudio (>=0.2.13)"]
 
 [[package]]
 name = "astrapy"
-version = "1.2.1"
+version = "1.3.0"
 description = "AstraPy is a Pythonic SDK for DataStax Astra and its Data API"
 optional = false
 python-versions = "<4.0.0,>=3.8.0"
 files = [
-    {file = "astrapy-1.2.1-py3-none-any.whl", hash = "sha256:0d7ca1e6f18a6a4e9a41ffaf2aa4cc585d36de3e983b5c5ce0bbb30a1595e30b"},
-    {file = "astrapy-1.2.1.tar.gz", hash = "sha256:c4ba88ef16ac1e990ccba322d376b6ea256513a3004a0894c14bfa2403f1d646"},
+    {file = "astrapy-1.3.0-py3-none-any.whl", hash = "sha256:349589b1616e6d7765cbd5c0062f9b8cebcee1a8315057531307ff066994a70d"},
+    {file = "astrapy-1.3.0.tar.gz", hash = "sha256:7d6fbccb93cf69433182d3e258b12f9e3c6f91b4b109aaa91df161f4434ea1d2"},
 ]
 
 [package.dependencies]
@@ -2091,13 +2091,13 @@ zstandard = ["zstandard"]
 
 [[package]]
 name = "filelock"
-version = "3.15.3"
+version = "3.15.4"
 description = "A platform independent file lock."
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "filelock-3.15.3-py3-none-any.whl", hash = "sha256:0151273e5b5d6cf753a61ec83b3a9b7d8821c39ae9af9d7ecf2f9e2f17404103"},
-    {file = "filelock-3.15.3.tar.gz", hash = "sha256:e1199bf5194a2277273dacd50269f0d87d0682088a3c561c15674ea9005d8635"},
+    {file = "filelock-3.15.4-py3-none-any.whl", hash = "sha256:6ca1fffae96225dab4c6eaf1c4f4f28cd2568d3ec2a44e15a08520504de468e7"},
+    {file = "filelock-3.15.4.tar.gz", hash = "sha256:2207938cbc1844345cb01a5a95524dae30f0ce089eba5b00378295a17e3e90cb"},
 ]
 
 [package.extras]
@@ -4544,13 +4544,13 @@ requests = ">=2,<3"
 
 [[package]]
 name = "litellm"
-version = "1.40.21"
+version = "1.40.22"
 description = "Library to easily interface with LLM API providers"
 optional = false
 python-versions = "!=2.7.*,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,!=3.6.*,!=3.7.*,>=3.8"
 files = [
-    {file = "litellm-1.40.21-py3-none-any.whl", hash = "sha256:def0e17c31a896efe61cb0ef5816bd27c0168ee59606d8d8ae2d7e039ca4cffd"},
-    {file = "litellm-1.40.21.tar.gz", hash = "sha256:cbe26595129292bcea898292135b134b2233f2432537f47084e69cece12e3ed7"},
+    {file = "litellm-1.40.22-py3-none-any.whl", hash = "sha256:f4e539eee5332fa4a64d71e564a7115d80d8f7f519fd01c4bf569a16c3886a45"},
+    {file = "litellm-1.40.22.tar.gz", hash = "sha256:654b8b26b7f4ccc75a577ca4baa79d8be6797af10047c266df6e5293618ad35d"},
 ]
 
 [package.dependencies]
@@ -6813,13 +6813,13 @@ pyasn1 = ">=0.4.6,<0.7.0"
 
 [[package]]
 name = "pyautogen"
-version = "0.2.30"
+version = "0.2.31"
 description = "Enabling Next-Gen LLM Applications via Multi-Agent Conversation Framework"
 optional = false
 python-versions = "<3.13,>=3.8"
 files = [
-    {file = "pyautogen-0.2.30-py3-none-any.whl", hash = "sha256:4810e50072fbe6680c7fce500695c5998dde1c92bc6c4691a6ed371aea9810cf"},
-    {file = "pyautogen-0.2.30.tar.gz", hash = "sha256:69dd4c0adab73c2964a2d91f62457398cf663fabe061567a8b3cc62252a5afac"},
+    {file = "pyautogen-0.2.31-py3-none-any.whl", hash = "sha256:f1268dbbb191756a105815e1f46a6c6786c3059784b04a3831f4c24b9429c8c7"},
+    {file = "pyautogen-0.2.31.tar.gz", hash = "sha256:157a6d2c68f1fe0c8d1e07c6886f97962dc85effd8da4baad7d7804ad284cc76"},
 ]
 
 [package.dependencies]
