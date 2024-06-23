@@ -34,6 +34,8 @@ class VersionPayload(BaseModel):
     version: str
     platform: str
     python: str
+    arch: str
+    autoLogin: bool
     cacheType: str
     backendOnly: bool
 
@@ -83,7 +85,7 @@ class TelemetryService(Service):
             logger.debug("Telemetry tracking is disabled.")
             return
 
-        url = f"{self.base_url}/{self.package}"
+        url = f"{self.base_url}/{self.package.lower()}"
         if path:
             url = f"{url}/{path}"
         try:
@@ -104,12 +106,15 @@ class TelemetryService(Service):
     async def log_package_version(self):
         python_version = ".".join(platform.python_version().split(".")[:2])
         version_info = get_version_info()
+        architecture = platform.architecture()[0]
         payload = VersionPayload(
             version=version_info["version"],
             platform=platform.platform(),
             python=python_version,
             cacheType=self.settings_service.settings.cache_type,
             backendOnly=self.settings_service.settings.backend_only,
+            arch=architecture,
+            autoLogin=self.settings_service.auth_settings.AUTO_LOGIN,
         )
         await self.telemetry_queue.put((self.send_telemetry_data, payload, None))
 
@@ -125,8 +130,7 @@ class TelemetryService(Service):
         try:
             self.running = True
             self.worker_task = asyncio.create_task(self.telemetry_worker())
-            await self.worker_task
-            await self.log_package_version()
+            asyncio.create_task(self.log_package_version())
         except Exception as e:
             logger.error(f"Error starting telemetry service: {e}")
 
