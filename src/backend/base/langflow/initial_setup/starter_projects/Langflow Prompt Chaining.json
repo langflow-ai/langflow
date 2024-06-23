@@ -26,7 +26,7 @@
         },
         "id": "reactflow__edge-TextInput-sptaH{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œTextInputœ,œidœ:œTextInput-sptaHœ}-Prompt-amqBu{œfieldNameœ:œdocumentœ,œidœ:œPrompt-amqBuœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
         "source": "TextInput-sptaH",
-        "sourceHandle": "{œdataTypeœ: œTextInputœ, œidœ: œTextInput-sptaHœ, œoutput_typesœ: [œMessageœ], œnameœ: œtextœ}",
+        "sourceHandle": "{œdataTypeœ: œTextInputœ, œidœ: œTextInput-sptaHœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
         "style": {
           "stroke": "#555"
         },
@@ -54,7 +54,7 @@
         },
         "id": "reactflow__edge-Prompt-amqBu{œbaseClassesœ:[œobjectœ,œstrœ,œTextœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-amqBuœ}-TextOutput-2MS4a{œfieldNameœ:œinput_valueœ,œidœ:œTextOutput-2MS4aœ,œinputTypesœ:[œRecordœ,œTextœ],œtypeœ:œstrœ}",
         "source": "Prompt-amqBu",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-amqBuœ, œoutput_typesœ: [], œnameœ: œtextœ}",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-amqBuœ, œnameœ: œtextœ, œoutput_typesœ: []}",
         "style": {
           "stroke": "#555"
         },
@@ -83,7 +83,7 @@
         },
         "id": "reactflow__edge-Prompt-amqBu{œbaseClassesœ:[œobjectœ,œstrœ,œTextœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-amqBuœ}-OpenAIModel-uYXZJ{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-uYXZJœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
         "source": "Prompt-amqBu",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-amqBuœ, œoutput_typesœ: [œMessageœ], œnameœ: œpromptœ}",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-amqBuœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
         "style": {
           "stroke": "#555"
         },
@@ -115,7 +115,7 @@
         },
         "id": "reactflow__edge-OpenAIModel-uYXZJ{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-uYXZJœ}-Prompt-gTNiz{œfieldNameœ:œsummaryœ,œidœ:œPrompt-gTNizœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
         "source": "OpenAIModel-uYXZJ",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-uYXZJœ, œoutput_typesœ: [œMessageœ], œnameœ: œtext_outputœ}",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-uYXZJœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "style": {
           "stroke": "#555"
         },
@@ -145,7 +145,7 @@
         },
         "id": "reactflow__edge-OpenAIModel-uYXZJ{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-uYXZJœ}-ChatOutput-EJkG3{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-EJkG3œ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
         "source": "OpenAIModel-uYXZJ",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-uYXZJœ, œoutput_typesœ: [œMessageœ], œnameœ: œtext_outputœ}",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-uYXZJœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "style": {
           "stroke": "#555"
         },
@@ -173,7 +173,7 @@
         },
         "id": "reactflow__edge-Prompt-gTNiz{œbaseClassesœ:[œobjectœ,œstrœ,œTextœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-gTNizœ}-TextOutput-MUDOR{œfieldNameœ:œinput_valueœ,œidœ:œTextOutput-MUDORœ,œinputTypesœ:[œRecordœ,œTextœ],œtypeœ:œstrœ}",
         "source": "Prompt-gTNiz",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-gTNizœ, œoutput_typesœ: [], œnameœ: œtextœ}",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-gTNizœ, œnameœ: œtextœ, œoutput_typesœ: []}",
         "style": {
           "stroke": "#555"
         },
@@ -202,7 +202,7 @@
         },
         "id": "reactflow__edge-Prompt-gTNiz{œbaseClassesœ:[œobjectœ,œstrœ,œTextœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-gTNizœ}-OpenAIModel-XawYB{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-XawYBœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
         "source": "Prompt-gTNiz",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-gTNizœ, œoutput_typesœ: [œMessageœ], œnameœ: œpromptœ}",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-gTNizœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
         "style": {
           "stroke": "#555"
         },
@@ -232,7 +232,7 @@
         },
         "id": "reactflow__edge-OpenAIModel-XawYB{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-XawYBœ}-ChatOutput-DNmvg{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-DNmvgœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
         "source": "OpenAIModel-XawYB",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-XawYBœ, œoutput_typesœ: [œMessageœ], œnameœ: œtext_outputœ}",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-XawYBœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "style": {
           "stroke": "#555"
         },

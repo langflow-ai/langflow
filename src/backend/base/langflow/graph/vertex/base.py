@@ -761,4 +761,4 @@ class Vertex:
 
     def _built_object_repr(self):
         # Add a message with an emoji, stars for sucess,
-        return "Built sucessfully ✨" if self._built_object is not None else "Failed to build 😵‍💫"
+        return "Built successfully ✨" if self._built_object is not None else "Failed to build 😵‍💫"
