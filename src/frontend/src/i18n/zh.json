@@ -134,5 +134,22 @@
   "Vector Store RAG": "向量存储检索增强生成",
   "Blank Flow": "空白流程",
   "Help": "帮助",
-  "Discussions": "讨论"
+  "Discussions": "讨论",
+  "Global Variables": "全局变量",
+  "Langflow API": "服务接口",
+  "Shortcuts": "快捷方式",
+  "Messages": "消息",
+  "Manage the general settings for Langflow.": "系统通用设置",
+  "Manage settings related to Langflow and your account.": "系统和账户相关设置",
+  "Profile Picture": "头像",
+  "Choose the image that appears as your profile picture.": "选择您的头像",
+  "People": "人像",
+  "Space": "空间",
+  "Please enter your API Key": "请输入您的密钥",
+  "Insert your API Key": "输入您的密钥",
+  "Your API key is not valid. ": "您的密钥无效",
+  "You don't have an API key.": "您还没有密钥",
+  "Insert your Langflow API key.": "输入您的接口密钥",
+  "Don’t have an API key? Sign up at": "没有密钥？请去",
+  "langflow.store": "langflow.store注册"
 }

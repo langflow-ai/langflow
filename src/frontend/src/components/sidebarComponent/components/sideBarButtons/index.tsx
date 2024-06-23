@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { cn } from "../../../../utils/utils";
 import { buttonVariants } from "../../../ui/button";
+import { useTranslation } from "react-i18next";
 
 type SideBarButtonsComponentProps = {
   items: {
@@ -15,6 +16,7 @@ const SideBarButtonsComponent = ({
   items,
   pathname,
 }: SideBarButtonsComponentProps) => {
+  const { t } = useTranslation();
   return (
     <div className="flex gap-2 overflow-auto lg:h-[70vh] lg:flex-col">
       {items.map((item) => (
@@ -32,7 +34,7 @@ const SideBarButtonsComponent = ({
           >
             {item.icon}
             <span className="block max-w-full truncate opacity-100">
-              {item.title}
+              {t(item.title)}
             </span>
           </div>
         </Link>

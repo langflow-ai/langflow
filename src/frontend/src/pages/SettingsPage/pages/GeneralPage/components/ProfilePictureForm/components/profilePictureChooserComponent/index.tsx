@@ -8,6 +8,7 @@ import {
 import { useDarkStore } from "../../../../../../../../stores/darkStore";
 import { cn } from "../../../../../../../../utils/utils";
 import usePreloadImages from "./hooks/use-preload-images";
+import { useTranslation } from "react-i18next";
 
 type ProfilePictureChooserComponentProps = {
   profilePictures: { [key: string]: string[] };
@@ -34,6 +35,8 @@ export default function ProfilePictureChooserComponent({
 
   usePreloadImages(profilePictures, setImagesLoaded);
 
+  const { t } = useTranslation();
+
   return (
     <div className="flex flex-col justify-center gap-2">
       {loading || !imagesLoaded ? (
@@ -42,7 +45,7 @@ export default function ProfilePictureChooserComponent({
         Object.keys(profilePictures).map((folder, idx) => (
           <div className="flex flex-col gap-2">
             <div className="edit-flow-arrangement">
-              <span className="font-normal">{folder}</span>
+              <span className="font-normal">{t(folder)}</span>
             </div>
             <div className="block overflow-hidden">
               <div className="flex items-center gap-1 overflow-x-auto rounded-lg bg-muted px-1 custom-scroll">

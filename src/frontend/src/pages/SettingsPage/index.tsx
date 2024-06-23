@@ -4,6 +4,7 @@ import ForwardedIconComponent from "../../components/genericIconComponent";
 import PageLayout from "../../components/pageLayout";
 import SidebarNav from "../../components/sidebarComponent";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
+import { useTranslation } from "react-i18next";
 
 export default function SettingsPage(): JSX.Element {
   const pathname = location.pathname;
@@ -13,6 +14,8 @@ export default function SettingsPage(): JSX.Element {
   useEffect(() => {
     setCurrentFlowId("");
   }, [pathname]);
+
+  const { t } = useTranslation();
 
   const sidebarNavItems = [
     {
@@ -68,8 +71,8 @@ export default function SettingsPage(): JSX.Element {
   ];
   return (
     <PageLayout
-      title="Settings"
-      description="Manage the general settings for Langflow."
+      title={t("Settings")}
+      description={t("Manage the general settings for Langflow.")}
     >
       <div className="flex h-full w-full space-y-8 lg:flex-row lg:space-x-8 lg:space-y-0">
         <aside className="flex h-full shrink-0 flex-col space-y-6 lg:w-[20vw]">
