@@ -24,16 +24,32 @@ The large central area where users can visually assemble and connect components 
 - **My Collection**: Provides access to saved or user-defined collections of components or flows.
 - **Store**: Opens the component store where users can browse and add new components to their workspace.
 
+In the top navigation bar, the dropdown menu labeled with the project name offers several management and customization options for the current flow in the Langflow Workspace.
+
+<ZoomableImage
+  alt="Docusaurus themed image"
+  sources={{
+    light: useBaseUrl("img/topnav.png"),
+    dark: useBaseUrl("img/topnav.png"),
+  }}
+  style={{ width: "40%", margin: "20px auto" }}
+/>
+
+**New**: Create a new flow from scratch.
+**Settings**: Adjust settings specific to the current flow, such as its Name, Description, and Endpoint Name.
+**Logs**: View logs for the current project, including execution history, errors, and other runtime events.
+**Import**: Import a flow or component from a JSON file into the Workspace.
+**Export**: Export the current flow as a JSON file.
+**Undo (⌘Z)**: Revert the last action taken in the project.
+**Redo (⌘Y)**: Reapply a previously undone action.
+**Refresh All**: Refresh all components and data within the Workspace.
+
 ## Control Panel
 
 - **Star**: Located in the top-right corner, allowing users to star or favorite the project for easy access.
 - **Playground**: Button that executes the current flow in the workspace.
 - **API**: Provides API access details and integration options for the current flow.
 - **Share**: Allows users to share their project or flow with others, providing options for collaboration and review.
-
-## Footer
-
-- **Langflow DataStax**: Displays the branding, indicating that the workspace is part of the Langflow suite, maintained or developed by DataStax.
 
 ## Utility Buttons
 
@@ -97,7 +113,7 @@ will see orange <span style={{ color: "orange" }}>o</span> and purple{" "}
     dark: useBaseUrl("img/single-component-dark.png"),
   }}
   style={{ width: "40%", margin: "20px auto" }}
-/> */}
+/>
 
 <div style={{ marginBottom: "20px" }}>
 In the top right corner of the component, you'll find the component status icon (![Status icon](/logos/playbutton.svg)).
