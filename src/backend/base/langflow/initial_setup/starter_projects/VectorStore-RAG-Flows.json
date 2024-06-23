@@ -6,316 +6,216 @@
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-jzPqb",
+            "id": "Prompt-u2AvW",
             "name": "prompt",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "OpenAIModel-ickkA",
-            "inputTypes": [
-              "Message"
-            ],
+            "id": "OpenAIModel-vQLKZ",
+            "inputTypes": ["Message"],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-jzPqb{œdataTypeœ:œPromptœ,œidœ:œPrompt-jzPqbœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-ickkA{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-ickkAœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Prompt-u2AvW{œdataTypeœ:œPromptœ,œidœ:œPrompt-u2AvWœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-vQLKZ{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-vQLKZœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Prompt-jzPqb",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-jzPqbœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "source": "Prompt-u2AvW",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-u2AvWœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
         "style": {
           "stroke": "#555"
         },
-        "target": "OpenAIModel-ickkA",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-ickkAœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "target": "OpenAIModel-vQLKZ",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-vQLKZœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIModel",
-            "id": "OpenAIModel-ickkA",
+            "id": "OpenAIModel-vQLKZ",
             "name": "text_output",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-Zy354",
-            "inputTypes": [
-              "Message",
-              "str"
-            ],
+            "id": "ChatOutput-FhGp4",
+            "inputTypes": ["Message", "str"],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-OpenAIModel-ickkA{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-ickkAœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-Zy354{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-Zy354œ,œinputTypesœ:[œMessageœ,œstrœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-OpenAIModel-vQLKZ{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-vQLKZœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-FhGp4{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-FhGp4œ,œinputTypesœ:[œMessageœ,œstrœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "OpenAIModel-ickkA",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-ickkAœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "source": "OpenAIModel-vQLKZ",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-vQLKZœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "style": {
           "stroke": "#555"
         },
-        "target": "ChatOutput-Zy354",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-Zy354œ, œinputTypesœ: [œMessageœ, œstrœ], œtypeœ: œstrœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "File",
-            "id": "File-28ckd",
-            "name": "data",
-            "output_types": [
-              "Data"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "data_input",
-            "id": "RecursiveCharacterTextSplitter-HVESL",
-            "inputTypes": [
-              "Document",
-              "Data"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-File-28ckd{œdataTypeœ:œFileœ,œidœ:œFile-28ckdœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-RecursiveCharacterTextSplitter-HVESL{œfieldNameœ:œdata_inputœ,œidœ:œRecursiveCharacterTextSplitter-HVESLœ,œinputTypesœ:[œDocumentœ,œDataœ],œtypeœ:œotherœ}",
-        "source": "File-28ckd",
-        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-28ckdœ, œnameœ: œdataœ, œoutput_typesœ: [œDataœ]}",
-        "target": "RecursiveCharacterTextSplitter-HVESL",
-        "targetHandle": "{œfieldNameœ: œdata_inputœ, œidœ: œRecursiveCharacterTextSplitter-HVESLœ, œinputTypesœ: [œDocumentœ, œDataœ], œtypeœ: œotherœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "RecursiveCharacterTextSplitter",
-            "id": "RecursiveCharacterTextSplitter-HVESL",
-            "name": "data",
-            "output_types": [
-              "Data"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "vector_store_inputs",
-            "id": "AstraDB-irvai",
-            "inputTypes": [
-              "Document",
-              "Data"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-RecursiveCharacterTextSplitter-HVESL{œdataTypeœ:œRecursiveCharacterTextSplitterœ,œidœ:œRecursiveCharacterTextSplitter-HVESLœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-AstraDB-irvai{œfieldNameœ:œvector_store_inputsœ,œidœ:œAstraDB-irvaiœ,œinputTypesœ:[œDocumentœ,œDataœ],œtypeœ:œotherœ}",
-        "source": "RecursiveCharacterTextSplitter-HVESL",
-        "sourceHandle": "{œdataTypeœ: œRecursiveCharacterTextSplitterœ, œidœ: œRecursiveCharacterTextSplitter-HVESLœ, œnameœ: œdataœ, œoutput_typesœ: [œDataœ]}",
-        "target": "AstraDB-irvai",
-        "targetHandle": "{œfieldNameœ: œvector_store_inputsœ, œidœ: œAstraDB-irvaiœ, œinputTypesœ: [œDocumentœ, œDataœ], œtypeœ: œotherœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "OpenAIEmbeddings",
-            "id": "OpenAIEmbeddings-YeYtt",
-            "name": "embeddings",
-            "output_types": [
-              "Embeddings"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "embedding",
-            "id": "AstraDB-irvai",
-            "inputTypes": [
-              "Embeddings"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-OpenAIEmbeddings-YeYtt{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-YeYttœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-AstraDB-irvai{œfieldNameœ:œembeddingœ,œidœ:œAstraDB-irvaiœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
-        "source": "OpenAIEmbeddings-YeYtt",
-        "sourceHandle": "{œdataTypeœ: œOpenAIEmbeddingsœ, œidœ: œOpenAIEmbeddings-YeYttœ, œnameœ: œembeddingsœ, œoutput_typesœ: [œEmbeddingsœ]}",
-        "target": "AstraDB-irvai",
-        "targetHandle": "{œfieldNameœ: œembeddingœ, œidœ: œAstraDB-irvaiœ, œinputTypesœ: [œEmbeddingsœ], œtypeœ: œotherœ}"
+        "target": "ChatOutput-FhGp4",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-FhGp4œ, œinputTypesœ: [œMessageœ, œstrœ], œtypeœ: œstrœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-IY8UK",
+            "id": "ChatInput-3a6yh",
             "name": "message",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "search_input",
-            "id": "AstraDB-wANQu",
-            "inputTypes": [
-              "Message",
-              "str"
-            ],
+            "id": "AstraDB-qgZyO",
+            "inputTypes": ["Message", "str"],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-IY8UK{œdataTypeœ:œChatInputœ,œidœ:œChatInput-IY8UKœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-AstraDB-wANQu{œfieldNameœ:œsearch_inputœ,œidœ:œAstraDB-wANQuœ,œinputTypesœ:[œMessageœ,œstrœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-3a6yh{œdataTypeœ:œChatInputœ,œidœ:œChatInput-3a6yhœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-AstraDB-qgZyO{œfieldNameœ:œsearch_inputœ,œidœ:œAstraDB-qgZyOœ,œinputTypesœ:[œMessageœ,œstrœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-IY8UK",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-IY8UKœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "AstraDB-wANQu",
-        "targetHandle": "{œfieldNameœ: œsearch_inputœ, œidœ: œAstraDB-wANQuœ, œinputTypesœ: [œMessageœ, œstrœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-3a6yh",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-3a6yhœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "AstraDB-qgZyO",
+        "targetHandle": "{œfieldNameœ: œsearch_inputœ, œidœ: œAstraDB-qgZyOœ, œinputTypesœ: [œMessageœ, œstrœ], œtypeœ: œstrœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIEmbeddings",
-            "id": "OpenAIEmbeddings-HoSp5",
+            "id": "OpenAIEmbeddings-9yYF4",
             "name": "embeddings",
-            "output_types": [
-              "Embeddings"
-            ]
+            "output_types": ["Embeddings"]
           },
           "targetHandle": {
             "fieldName": "embedding",
-            "id": "AstraDB-wANQu",
-            "inputTypes": [
-              "Embeddings"
-            ],
+            "id": "AstraDB-qgZyO",
+            "inputTypes": ["Embeddings"],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-OpenAIEmbeddings-HoSp5{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-HoSp5œ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-AstraDB-wANQu{œfieldNameœ:œembeddingœ,œidœ:œAstraDB-wANQuœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-OpenAIEmbeddings-9yYF4{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-9yYF4œ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-AstraDB-qgZyO{œfieldNameœ:œembeddingœ,œidœ:œAstraDB-qgZyOœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "OpenAIEmbeddings-HoSp5",
-        "sourceHandle": "{œdataTypeœ: œOpenAIEmbeddingsœ, œidœ: œOpenAIEmbeddings-HoSp5œ, œnameœ: œembeddingsœ, œoutput_typesœ: [œEmbeddingsœ]}",
-        "target": "AstraDB-wANQu",
-        "targetHandle": "{œfieldNameœ: œembeddingœ, œidœ: œAstraDB-wANQuœ, œinputTypesœ: [œEmbeddingsœ], œtypeœ: œotherœ}"
+        "source": "OpenAIEmbeddings-9yYF4",
+        "sourceHandle": "{œdataTypeœ: œOpenAIEmbeddingsœ, œidœ: œOpenAIEmbeddings-9yYF4œ, œnameœ: œembeddingsœ, œoutput_typesœ: [œEmbeddingsœ]}",
+        "target": "AstraDB-qgZyO",
+        "targetHandle": "{œfieldNameœ: œembeddingœ, œidœ: œAstraDB-qgZyOœ, œinputTypesœ: [œEmbeddingsœ], œtypeœ: œotherœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "AstraDB",
-            "id": "AstraDB-wANQu",
+            "id": "AstraDB-qgZyO",
             "name": "search_results",
-            "output_types": [
-              "Data"
-            ]
+            "output_types": ["Data"]
           },
           "targetHandle": {
             "fieldName": "data",
-            "id": "ParseData-C9tUn",
-            "inputTypes": [
-              "Data"
-            ],
+            "id": "ParseData-6rzWI",
+            "inputTypes": ["Data"],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-AstraDB-wANQu{œdataTypeœ:œAstraDBœ,œidœ:œAstraDB-wANQuœ,œnameœ:œsearch_resultsœ,œoutput_typesœ:[œDataœ]}-ParseData-C9tUn{œfieldNameœ:œdataœ,œidœ:œParseData-C9tUnœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-AstraDB-qgZyO{œdataTypeœ:œAstraDBœ,œidœ:œAstraDB-qgZyOœ,œnameœ:œsearch_resultsœ,œoutput_typesœ:[œDataœ]}-ParseData-6rzWI{œfieldNameœ:œdataœ,œidœ:œParseData-6rzWIœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "AstraDB-wANQu",
-        "sourceHandle": "{œdataTypeœ: œAstraDBœ, œidœ: œAstraDB-wANQuœ, œnameœ: œsearch_resultsœ, œoutput_typesœ: [œDataœ]}",
-        "target": "ParseData-C9tUn",
-        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-C9tUnœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
+        "source": "AstraDB-qgZyO",
+        "sourceHandle": "{œdataTypeœ: œAstraDBœ, œidœ: œAstraDB-qgZyOœ, œnameœ: œsearch_resultsœ, œoutput_typesœ: [œDataœ]}",
+        "target": "ParseData-6rzWI",
+        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-6rzWIœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "ParseData",
-            "id": "ParseData-C9tUn",
+            "id": "ParseData-6rzWI",
             "name": "text",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "TextOutput-IxTee",
-            "inputTypes": [
-              "Message"
-            ],
+            "id": "TextOutput-f0Bb5",
+            "inputTypes": ["Message"],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ParseData-C9tUn{œdataTypeœ:œParseDataœ,œidœ:œParseData-C9tUnœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-TextOutput-IxTee{œfieldNameœ:œinput_valueœ,œidœ:œTextOutput-IxTeeœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "ParseData-C9tUn",
-        "sourceHandle": "{œdataTypeœ: œParseDataœ, œidœ: œParseData-C9tUnœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "TextOutput-IxTee",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œTextOutput-IxTeeœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-ParseData-6rzWI{œdataTypeœ:œParseDataœ,œidœ:œParseData-6rzWIœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-TextOutput-f0Bb5{œfieldNameœ:œinput_valueœ,œidœ:œTextOutput-f0Bb5œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "ParseData-6rzWI",
+        "sourceHandle": "{œdataTypeœ: œParseDataœ, œidœ: œParseData-6rzWIœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "TextOutput-f0Bb5",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œTextOutput-f0Bb5œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "TextOutput",
-            "id": "TextOutput-IxTee",
+            "id": "TextOutput-f0Bb5",
             "name": "text",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "context",
-            "id": "Prompt-jzPqb",
-            "inputTypes": [
-              "Message",
-              "Text"
-            ],
+            "id": "Prompt-u2AvW",
+            "inputTypes": ["Message", "Text"],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-TextOutput-IxTee{œdataTypeœ:œTextOutputœ,œidœ:œTextOutput-IxTeeœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-jzPqb{œfieldNameœ:œcontextœ,œidœ:œPrompt-jzPqbœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "TextOutput-IxTee",
-        "sourceHandle": "{œdataTypeœ: œTextOutputœ, œidœ: œTextOutput-IxTeeœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-jzPqb",
-        "targetHandle": "{œfieldNameœ: œcontextœ, œidœ: œPrompt-jzPqbœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-TextOutput-f0Bb5{œdataTypeœ:œTextOutputœ,œidœ:œTextOutput-f0Bb5œ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-u2AvW{œfieldNameœ:œcontextœ,œidœ:œPrompt-u2AvWœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "TextOutput-f0Bb5",
+        "sourceHandle": "{œdataTypeœ: œTextOutputœ, œidœ: œTextOutput-f0Bb5œ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-u2AvW",
+        "targetHandle": "{œfieldNameœ: œcontextœ, œidœ: œPrompt-u2AvWœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-IY8UK",
+            "id": "ChatInput-3a6yh",
             "name": "message",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "question",
-            "id": "Prompt-jzPqb",
-            "inputTypes": [
-              "Message",
-              "Text"
-            ],
+            "id": "Prompt-u2AvW",
+            "inputTypes": ["Message", "Text"],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-IY8UK{œdataTypeœ:œChatInputœ,œidœ:œChatInput-IY8UKœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-jzPqb{œfieldNameœ:œquestionœ,œidœ:œPrompt-jzPqbœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "ChatInput-IY8UK",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-IY8UKœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-jzPqb",
-        "targetHandle": "{œfieldNameœ: œquestionœ, œidœ: œPrompt-jzPqbœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-ChatInput-3a6yh{œdataTypeœ:œChatInputœ,œidœ:œChatInput-3a6yhœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-u2AvW{œfieldNameœ:œquestionœ,œidœ:œPrompt-u2AvWœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "ChatInput-3a6yh",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-3a6yhœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-u2AvW",
+        "targetHandle": "{œfieldNameœ: œquestionœ, œidœ: œPrompt-u2AvWœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "File",
+            "id": "File-QuzYs",
+            "name": "data",
+            "output_types": ["Data"]
+          },
+          "targetHandle": {
+            "fieldName": "vector_store_inputs",
+            "id": "AstraDB-qgZyO",
+            "inputTypes": ["Document", "Data"],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-File-QuzYs{œdataTypeœ:œFileœ,œidœ:œFile-QuzYsœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-AstraDB-qgZyO{œfieldNameœ:œvector_store_inputsœ,œidœ:œAstraDB-qgZyOœ,œinputTypesœ:[œDocumentœ,œDataœ],œtypeœ:œotherœ}",
+        "source": "File-QuzYs",
+        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-QuzYsœ, œnameœ: œdataœ, œoutput_typesœ: [œDataœ]}",
+        "target": "AstraDB-qgZyO",
+        "targetHandle": "{œfieldNameœ: œvector_store_inputsœ, œidœ: œAstraDB-qgZyOœ, œinputTypesœ: [œDocumentœ, œDataœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ChatInput-IY8UK",
+          "id": "ChatInput-3a6yh",
           "node": {
-            "base_classes": [
-              "Text",
-              "str",
-              "object",
-              "Record"
-            ],
+            "base_classes": ["Text", "str", "object", "Record"],
             "beta": false,
             "custom_fields": {
               "input_value": null,
@@ -340,9 +240,7 @@
                 "method": "message_response",
                 "name": "message",
                 "selected": "Message",
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -373,10 +271,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Message to be passed as input.",
-                "input_types": [
-                  "Message",
-                  "str"
-                ],
+                "input_types": ["Message", "str"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -387,7 +282,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "What is the document is about?"
               },
               "sender": {
                 "advanced": true,
@@ -396,17 +291,12 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Type of sender.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
+                "options": ["Machine", "User"],
                 "password": false,
                 "placeholder": "",
                 "required": false,
@@ -422,10 +312,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Name of the sender.",
-                "input_types": [
-                  "Message",
-                  "str"
-                ],
+                "input_types": ["Message", "str"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -445,10 +332,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Session ID for the message.",
-                "input_types": [
-                  "Message",
-                  "str"
-                ],
+                "input_types": ["Message", "str"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -467,14 +351,14 @@
         },
         "dragging": false,
         "height": 309,
-        "id": "ChatInput-IY8UK",
+        "id": "ChatInput-3a6yh",
         "position": {
-          "x": 702.4571951501161,
-          "y": 119.7726926425525
+          "x": 624.0800629349039,
+          "y": -122.27433331619108
         },
         "positionAbsolute": {
-          "x": 702.4571951501161,
-          "y": 119.7726926425525
+          "x": 624.0800629349039,
+          "y": -122.27433331619108
         },
         "selected": false,
         "type": "genericNode",
@@ -485,11 +369,9 @@
           "description": "Display a text output in the Playground.",
           "display_name": "Extracted Chunks",
           "edited": false,
-          "id": "TextOutput-IxTee",
+          "id": "TextOutput-f0Bb5",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -497,9 +379,7 @@
             "display_name": "Extracted Chunks",
             "documentation": "",
             "edited": true,
-            "field_order": [
-              "input_value"
-            ],
+            "field_order": ["input_value"],
             "frozen": false,
             "icon": "type",
             "output_types": [],
@@ -510,9 +390,7 @@
                 "method": "text_response",
                 "name": "text",
                 "selected": "Message",
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -542,9 +420,7 @@
                 "display_name": "Text",
                 "dynamic": false,
                 "info": "Text to be passed as output.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "input_value",
@@ -561,14 +437,14 @@
         },
         "dragging": false,
         "height": 309,
-        "id": "TextOutput-IxTee",
+        "id": "TextOutput-f0Bb5",
         "position": {
-          "x": 2439.792450398153,
-          "y": 661.149562774499
+          "x": 2162.8620626321713,
+          "y": 563.3311191022217
         },
         "positionAbsolute": {
-          "x": 2439.792450398153,
-          "y": 661.149562774499
+          "x": 2162.8620626321713,
+          "y": 563.3311191022217
         },
         "selected": false,
         "type": "genericNode",
@@ -576,11 +452,9 @@
       },
       {
         "data": {
-          "id": "OpenAIEmbeddings-HoSp5",
+          "id": "OpenAIEmbeddings-9yYF4",
           "node": {
-            "base_classes": [
-              "Embeddings"
-            ],
+            "base_classes": ["Embeddings"],
             "beta": false,
             "custom_fields": {
               "allowed_special": null,
@@ -622,9 +496,7 @@
                 "method": "build_embeddings",
                 "name": "embeddings",
                 "selected": "Embeddings",
-                "types": [
-                  "Embeddings"
-                ],
+                "types": ["Embeddings"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -649,10 +521,7 @@
                 "display_name": "Client",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "Message",
-                  "str"
-                ],
+                "input_types": ["Message", "str"],
                 "list": false,
                 "load_from_db": false,
                 "name": "client",
@@ -714,10 +583,7 @@
                 "display_name": "Deployment",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "Message",
-                  "str"
-                ],
+                "input_types": ["Message", "str"],
                 "list": false,
                 "load_from_db": false,
                 "name": "deployment",
@@ -841,10 +707,7 @@
                 "display_name": "OpenAI API Version",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "Message",
-                  "str"
-                ],
+                "input_types": ["Message", "str"],
                 "list": false,
                 "load_from_db": false,
                 "name": "openai_api_version",
@@ -860,10 +723,7 @@
                 "display_name": "OpenAI Organization",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "Message",
-                  "str"
-                ],
+                "input_types": ["Message", "str"],
                 "list": false,
                 "load_from_db": false,
                 "name": "openai_organization",
@@ -879,10 +739,7 @@
                 "display_name": "OpenAI Proxy",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "Message",
-                  "str"
-                ],
+                "input_types": ["Message", "str"],
                 "list": false,
                 "load_from_db": false,
                 "name": "openai_proxy",
@@ -954,10 +811,7 @@
                 "display_name": "TikToken Model Name",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "Message",
-                  "str"
-                ],
+                "input_types": ["Message", "str"],
                 "list": false,
                 "load_from_db": false,
                 "name": "tiktoken_model_name",
@@ -974,14 +828,14 @@
         },
         "dragging": false,
         "height": 395,
-        "id": "OpenAIEmbeddings-HoSp5",
+        "id": "OpenAIEmbeddings-9yYF4",
         "position": {
-          "x": 690.5967478991026,
-          "y": 597.6680004855787
+          "x": 409.97787890910945,
+          "y": 750.6301903976979
         },
         "positionAbsolute": {
-          "x": 690.5967478991026,
-          "y": 597.6680004855787
+          "x": 409.97787890910945,
+          "y": 750.6301903976979
         },
         "selected": false,
         "type": "genericNode",
@@ -992,12 +846,9 @@
           "description": "Generates text using OpenAI LLMs.",
           "display_name": "OpenAI",
           "edited": false,
-          "id": "OpenAIModel-ickkA",
+          "id": "OpenAIModel-vQLKZ",
           "node": {
-            "base_classes": [
-              "LanguageModel",
-              "Message"
-            ],
+            "base_classes": ["LanguageModel", "Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -1029,9 +880,7 @@
                 "method": "text_response",
                 "name": "text_output",
                 "selected": "Message",
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               },
               {
@@ -1040,9 +889,7 @@
                 "method": "build_model",
                 "name": "model_output",
                 "selected": "LanguageModel",
-                "types": [
-                  "LanguageModel"
-                ],
+                "types": ["LanguageModel"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1072,9 +919,7 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "input_value",
@@ -1131,7 +976,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "gpt-3.5-turbo"
+                "value": "gpt-4o"
               },
               "openai_api_base": {
                 "advanced": true,
@@ -1241,14 +1086,14 @@
         },
         "dragging": false,
         "height": 623,
-        "id": "OpenAIModel-ickkA",
+        "id": "OpenAIModel-vQLKZ",
         "position": {
-          "x": 3410.117202077183,
-          "y": 431.2038048137648
+          "x": 3124.6478080882357,
+          "y": 763.401137844505
         },
         "positionAbsolute": {
-          "x": 3410.117202077183,
-          "y": 431.2038048137648
+          "x": 3124.6478080882357,
+          "y": 763.401137844505
         },
         "selected": false,
         "type": "genericNode",
@@ -1258,45 +1103,31 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-jzPqb",
+          "edited": false,
+          "id": "Prompt-u2AvW",
           "node": {
-            "base_classes": [
-              "object",
-              "str",
-              "Text"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {
-              "template": [
-                "context",
-                "question"
-              ]
+              "template": ["context", "question"]
             },
             "description": "Create a prompt template with dynamic variables.",
             "display_name": "Prompt",
             "documentation": "",
-            "error": null,
-            "field_order": [],
+            "edited": true,
+            "field_order": ["template"],
             "frozen": false,
-            "full_path": null,
             "icon": "prompts",
-            "is_composition": null,
-            "is_input": null,
-            "is_output": null,
-            "name": "",
             "output_types": [],
             "outputs": [
               {
                 "cache": true,
                 "display_name": "Prompt Message",
-                "hidden": false,
                 "method": "build_prompt",
                 "name": "prompt",
                 "selected": "Message",
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1319,7 +1150,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langflow.custom import Component\nfrom langflow.io import Output, PromptInput\nfrom langflow.schema.message import Message\n\n\nclass PromptComponent(Component):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"prompts\"\n    trace_type = \"prompt\"\n\n    inputs = [\n        PromptInput(name=\"template\", display_name=\"Template\"),\n    ]\n\n    outputs = [\n        Output(display_name=\"Prompt Message\", name=\"prompt\", method=\"build_prompt\"),\n    ]\n\n    async def build_prompt(\n        self,\n    ) -> Message:\n        prompt = await Message.from_template_and_variables(**self._attributes)\n        self.status = prompt.text\n        return prompt\n"
+                "value": "from langflow.base.prompts.api_utils import process_prompt_template\nfrom langflow.custom import Component\nfrom langflow.io import Output, PromptInput\nfrom langflow.schema.message import Message\nfrom langflow.template.utils import update_template_values\n\n\nclass PromptComponent(Component):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"prompts\"\n    trace_type = \"prompt\"\n\n    inputs = [\n        PromptInput(name=\"template\", display_name=\"Template\"),\n    ]\n\n    outputs = [\n        Output(display_name=\"Prompt Message\", name=\"prompt\", method=\"build_prompt\"),\n    ]\n\n    async def build_prompt(\n        self,\n    ) -> Message:\n        prompt = await Message.from_template_and_variables(**self._attributes)\n        self.status = prompt.text\n        return prompt\n\n    def post_code_processing(self, new_build_config: dict, current_build_config: dict):\n        \"\"\"\n        This function is called after the code validation is done.\n        \"\"\"\n        frontend_node = super().post_code_processing(new_build_config, current_build_config)\n        template = frontend_node[\"template\"][\"template\"][\"value\"]\n        _ = process_prompt_template(\n            template=template,\n            name=\"template\",\n            custom_fields=frontend_node[\"custom_fields\"],\n            frontend_node_template=frontend_node[\"template\"],\n        )\n        # Now that template is updated, we need to grab any values that were set in the current_build_config\n        # and update the frontend_node with those values\n        update_template_values(frontend_template=frontend_node, raw_template=current_build_config[\"template\"])\n        return frontend_node\n"
               },
               "context": {
                 "advanced": false,
@@ -1329,10 +1160,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Message",
-                  "Text"
-                ],
+                "input_types": ["Message", "Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -1353,10 +1181,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Message",
-                  "Text"
-                ],
+                "input_types": ["Message", "Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -1373,21 +1198,14 @@
                 "advanced": false,
                 "display_name": "Template",
                 "dynamic": false,
-                "fileTypes": [],
-                "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Text"
-                ],
                 "list": false,
-                "load_from_db": false,
-                "multiline": false,
                 "name": "template",
-                "password": false,
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "trace_as_input": true,
                 "type": "prompt",
                 "value": "{context}\n\n---\n\nGiven the context above, answer the question as best as possible.\n\nQuestion: {question}\n\nAnswer: "
               }
@@ -1396,15 +1214,15 @@
           "type": "Prompt"
         },
         "dragging": false,
-        "height": 525,
-        "id": "Prompt-jzPqb",
+        "height": 517,
+        "id": "Prompt-u2AvW",
         "position": {
-          "x": 2941.2776396951576,
-          "y": 446.43037366459487
+          "x": 2630.827555844291,
+          "y": 656.4256905068721
         },
         "positionAbsolute": {
-          "x": 2941.2776396951576,
-          "y": 446.43037366459487
+          "x": 2630.827555844291,
+          "y": 656.4256905068721
         },
         "selected": false,
         "type": "genericNode",
@@ -1412,14 +1230,9 @@
       },
       {
         "data": {
-          "id": "ChatOutput-Zy354",
+          "id": "ChatOutput-FhGp4",
           "node": {
-            "base_classes": [
-              "object",
-              "Text",
-              "Record",
-              "str"
-            ],
+            "base_classes": ["object", "Text", "Record", "str"],
             "beta": false,
             "custom_fields": {
               "input_value": null,
@@ -1444,9 +1257,7 @@
                 "method": "message_response",
                 "name": "message",
                 "selected": "Message",
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1477,10 +1288,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Message to be passed as output.",
-                "input_types": [
-                  "Message",
-                  "str"
-                ],
+                "input_types": ["Message", "str"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -1500,17 +1308,12 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Type of sender.",
-                "input_types": [
-                  "Text"
-                ],
+                "input_types": ["Text"],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
+                "options": ["Machine", "User"],
                 "password": false,
                 "placeholder": "",
                 "required": false,
@@ -1526,10 +1329,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Name of the sender.",
-                "input_types": [
-                  "Message",
-                  "str"
-                ],
+                "input_types": ["Message", "str"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -1549,10 +1349,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "Session ID for the message.",
-                "input_types": [
-                  "Message",
-                  "str"
-                ],
+                "input_types": ["Message", "str"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -1571,14 +1368,14 @@
         },
         "dragging": false,
         "height": 309,
-        "id": "ChatOutput-Zy354",
+        "id": "ChatOutput-FhGp4",
         "position": {
-          "x": 3998.201592537035,
-          "y": 603.4216529723935
+          "x": 3642.5888573141374,
+          "y": 973.1582768773071
         },
         "positionAbsolute": {
-          "x": 3998.201592537035,
-          "y": 603.4216529723935
+          "x": 3642.5888573141374,
+          "y": 973.1582768773071
         },
         "selected": false,
         "type": "genericNode",
@@ -1586,21 +1383,525 @@
       },
       {
         "data": {
-          "id": "File-28ckd",
+          "description": "Implementation of Vector Store using Astra DB with search capabilities",
+          "display_name": "Astra DB Vector Store",
+          "id": "AstraDB-qgZyO",
           "node": {
-            "base_classes": [
-              "Record"
-            ],
+            "base_classes": ["Data"],
             "beta": false,
-            "custom_fields": {
-              "path": null,
-              "silent_errors": null
-            },
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Implementation of Vector Store using Astra DB with search capabilities",
+            "display_name": "Astra DB Vector Store",
+            "documentation": "https://python.langchain.com/docs/integrations/vectorstores/astradb",
+            "edited": false,
+            "field_order": [
+              "collection_name",
+              "token",
+              "api_endpoint",
+              "vector_store_inputs",
+              "embedding",
+              "namespace",
+              "metric",
+              "batch_size",
+              "bulk_insert_batch_concurrency",
+              "bulk_insert_overwrite_concurrency",
+              "bulk_delete_concurrency",
+              "setup_mode",
+              "pre_delete_collection",
+              "metadata_indexing_include",
+              "metadata_indexing_exclude",
+              "collection_indexing_policy",
+              "add_to_vector_store",
+              "search_input",
+              "search_type",
+              "number_of_results"
+            ],
+            "frozen": false,
+            "icon": "AstraDB",
+            "output_types": [],
+            "outputs": [
+              {
+                "cache": true,
+                "display_name": "Retriever",
+                "method": "build_base_retriever",
+                "name": "base_retriever",
+                "selected": "Data",
+                "types": ["Data"],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "cache": true,
+                "display_name": "Search Results",
+                "hidden": false,
+                "method": "search_documents",
+                "name": "search_results",
+                "selected": "Data",
+                "types": ["Data"],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "add_to_vector_store": {
+                "advanced": false,
+                "display_name": "Add to Vector Store",
+                "dynamic": false,
+                "info": "If true, the Vector Store Inputs will be added to the Vector Store.",
+                "list": false,
+                "name": "add_to_vector_store",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "bool",
+                "value": true
+              },
+              "api_endpoint": {
+                "advanced": false,
+                "display_name": "API Endpoint",
+                "dynamic": false,
+                "info": "API endpoint URL for the Astra DB service.",
+                "input_types": [],
+                "load_from_db": true,
+                "name": "api_endpoint",
+                "password": true,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": ""
+              },
+              "batch_size": {
+                "advanced": true,
+                "display_name": "Batch Size",
+                "dynamic": false,
+                "info": "Optional number of data to process in a single batch.",
+                "list": false,
+                "name": "batch_size",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "int",
+                "value": ""
+              },
+              "bulk_delete_concurrency": {
+                "advanced": true,
+                "display_name": "Bulk Delete Concurrency",
+                "dynamic": false,
+                "info": "Optional concurrency level for bulk delete operations.",
+                "list": false,
+                "name": "bulk_delete_concurrency",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "int",
+                "value": ""
+              },
+              "bulk_insert_batch_concurrency": {
+                "advanced": true,
+                "display_name": "Bulk Insert Batch Concurrency",
+                "dynamic": false,
+                "info": "Optional concurrency level for bulk insert operations.",
+                "list": false,
+                "name": "bulk_insert_batch_concurrency",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "int",
+                "value": ""
+              },
+              "bulk_insert_overwrite_concurrency": {
+                "advanced": true,
+                "display_name": "Bulk Insert Overwrite Concurrency",
+                "dynamic": false,
+                "info": "Optional concurrency level for bulk insert operations that overwrite existing data.",
+                "list": false,
+                "name": "bulk_insert_overwrite_concurrency",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "int",
+                "value": ""
+              },
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from loguru import logger\n\nfrom langflow.base.vectorstores.model import LCVectorStoreComponent\nfrom langflow.io import BoolInput, DropdownInput, HandleInput, IntInput, MultilineInput, SecretStrInput, StrInput\nfrom langflow.schema import Data\n\n\nclass AstraVectorStoreComponent(LCVectorStoreComponent):\n    display_name: str = \"Astra DB Vector Store\"\n    description: str = \"Implementation of Vector Store using Astra DB with search capabilities\"\n    documentation: str = \"https://python.langchain.com/docs/integrations/vectorstores/astradb\"\n    icon: str = \"AstraDB\"\n\n    inputs = [\n        StrInput(\n            name=\"collection_name\",\n            display_name=\"Collection Name\",\n            info=\"The name of the collection within Astra DB where the vectors will be stored.\",\n        ),\n        SecretStrInput(\n            name=\"token\",\n            display_name=\"Astra DB Application Token\",\n            info=\"Authentication token for accessing Astra DB.\",\n            value=\"ASTRA_DB_APPLICATION_TOKEN\",\n        ),\n        SecretStrInput(\n            name=\"api_endpoint\",\n            display_name=\"API Endpoint\",\n            info=\"API endpoint URL for the Astra DB service.\",\n            value=\"ASTRA_DB_API_ENDPOINT\",\n        ),\n        HandleInput(\n            name=\"vector_store_inputs\",\n            display_name=\"Vector Store Inputs\",\n            input_types=[\"Document\", \"Data\"],\n            is_list=True,\n        ),\n        HandleInput(\n            name=\"embedding\",\n            display_name=\"Embedding\",\n            input_types=[\"Embeddings\"],\n        ),\n        StrInput(\n            name=\"namespace\",\n            display_name=\"Namespace\",\n            info=\"Optional namespace within Astra DB to use for the collection.\",\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"metric\",\n            display_name=\"Metric\",\n            info=\"Optional distance metric for vector comparisons in the vector store.\",\n            options=[\"cosine\", \"dot_product\", \"euclidean\"],\n            advanced=True,\n        ),\n        IntInput(\n            name=\"batch_size\",\n            display_name=\"Batch Size\",\n            info=\"Optional number of data to process in a single batch.\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"bulk_insert_batch_concurrency\",\n            display_name=\"Bulk Insert Batch Concurrency\",\n            info=\"Optional concurrency level for bulk insert operations.\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"bulk_insert_overwrite_concurrency\",\n            display_name=\"Bulk Insert Overwrite Concurrency\",\n            info=\"Optional concurrency level for bulk insert operations that overwrite existing data.\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"bulk_delete_concurrency\",\n            display_name=\"Bulk Delete Concurrency\",\n            info=\"Optional concurrency level for bulk delete operations.\",\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"setup_mode\",\n            display_name=\"Setup Mode\",\n            info=\"Configuration mode for setting up the vector store, with options like 'Sync', 'Async', or 'Off'.\",\n            options=[\"Sync\", \"Async\", \"Off\"],\n            advanced=True,\n            value=\"Sync\",\n        ),\n        BoolInput(\n            name=\"pre_delete_collection\",\n            display_name=\"Pre Delete Collection\",\n            info=\"Boolean flag to determine whether to delete the collection before creating a new one.\",\n            advanced=True,\n        ),\n        StrInput(\n            name=\"metadata_indexing_include\",\n            display_name=\"Metadata Indexing Include\",\n            info=\"Optional list of metadata fields to include in the indexing.\",\n            advanced=True,\n        ),\n        StrInput(\n            name=\"metadata_indexing_exclude\",\n            display_name=\"Metadata Indexing Exclude\",\n            info=\"Optional list of metadata fields to exclude from the indexing.\",\n            advanced=True,\n        ),\n        StrInput(\n            name=\"collection_indexing_policy\",\n            display_name=\"Collection Indexing Policy\",\n            info=\"Optional dictionary defining the indexing policy for the collection.\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"add_to_vector_store\",\n            display_name=\"Add to Vector Store\",\n            info=\"If true, the Vector Store Inputs will be added to the Vector Store.\",\n        ),\n        MultilineInput(\n            name=\"search_input\",\n            display_name=\"Search Input\",\n        ),\n        DropdownInput(\n            name=\"search_type\",\n            display_name=\"Search Type\",\n            options=[\"Similarity\", \"MMR\"],\n            value=\"Similarity\",\n        ),\n        IntInput(\n            name=\"number_of_results\",\n            display_name=\"Number of Results\",\n            info=\"Number of results to return.\",\n            advanced=True,\n            value=4,\n        ),\n    ]\n\n    def build_vector_store(self):\n        try:\n            from langchain_astradb import AstraDBVectorStore\n            from langchain_astradb.utils.astradb import SetupMode\n        except ImportError:\n            raise ImportError(\n                \"Could not import langchain Astra DB integration package. \"\n                \"Please install it with `pip install langchain-astradb`.\"\n            )\n\n        try:\n            if not self.setup_mode:\n                self.setup_mode = self._inputs[\"setup_mode\"].options[0]\n\n            setup_mode_value = SetupMode[self.setup_mode.upper()]\n        except KeyError:\n            raise ValueError(f\"Invalid setup mode: {self.setup_mode}\")\n\n        vector_store_kwargs = {\n            \"embedding\": self.embedding,\n            \"collection_name\": self.collection_name,\n            \"token\": self.token,\n            \"api_endpoint\": self.api_endpoint,\n            \"namespace\": self.namespace or None,\n            \"metric\": self.metric or None,\n            \"batch_size\": self.batch_size or None,\n            \"bulk_insert_batch_concurrency\": self.bulk_insert_batch_concurrency or None,\n            \"bulk_insert_overwrite_concurrency\": self.bulk_insert_overwrite_concurrency or None,\n            \"bulk_delete_concurrency\": self.bulk_delete_concurrency or None,\n            \"setup_mode\": setup_mode_value,\n            \"pre_delete_collection\": self.pre_delete_collection or False,\n        }\n\n        if self.metadata_indexing_include:\n            vector_store_kwargs[\"metadata_indexing_include\"] = self.metadata_indexing_include\n        elif self.metadata_indexing_exclude:\n            vector_store_kwargs[\"metadata_indexing_exclude\"] = self.metadata_indexing_exclude\n        elif self.collection_indexing_policy:\n            vector_store_kwargs[\"collection_indexing_policy\"] = self.collection_indexing_policy\n\n        try:\n            vector_store = AstraDBVectorStore(**vector_store_kwargs)\n        except Exception as e:\n            raise ValueError(f\"Error initializing AstraDBVectorStore: {str(e)}\") from e\n\n        if self.add_to_vector_store:\n            self._add_documents_to_vector_store(vector_store)\n\n        return vector_store\n\n    def build_base_retriever(self):\n        vector_store = self.build_vector_store()\n        self.status = self._astradb_collection_to_data(vector_store.collection)\n        return vector_store\n\n    def _add_documents_to_vector_store(self, vector_store):\n        documents = []\n        for _input in self.vector_store_inputs or []:\n            if isinstance(_input, Data):\n                documents.append(_input.to_lc_document())\n            else:\n                raise ValueError(\"Vector Store Inputs must be Data objects.\")\n\n        if documents and self.embedding is not None:\n            logger.debug(f\"Adding {len(documents)} documents to the Vector Store.\")\n            try:\n                vector_store.add_documents(documents)\n            except Exception as e:\n                raise ValueError(f\"Error adding documents to AstraDBVectorStore: {str(e)}\") from e\n        else:\n            logger.debug(\"No documents to add to the Vector Store.\")\n\n    def search_documents(self):\n        vector_store = self.build_vector_store()\n\n        logger.debug(f\"Search input: {self.search_input}\")\n        logger.debug(f\"Search type: {self.search_type}\")\n        logger.debug(f\"Number of results: {self.number_of_results}\")\n\n        if self.search_input and isinstance(self.search_input, str) and self.search_input.strip():\n            try:\n                if self.search_type == \"Similarity\":\n                    docs = vector_store.similarity_search(\n                        query=self.search_input,\n                        k=self.number_of_results,\n                    )\n                elif self.search_type == \"MMR\":\n                    docs = vector_store.max_marginal_relevance_search(\n                        query=self.search_input,\n                        k=self.number_of_results,\n                    )\n                else:\n                    raise ValueError(f\"Invalid search type: {self.search_type}\")\n            except Exception as e:\n                raise ValueError(f\"Error performing search in AstraDBVectorStore: {str(e)}\") from e\n\n            logger.debug(f\"Retrieved documents: {len(docs)}\")\n\n            data = [Data.from_document(doc) for doc in docs]\n            logger.debug(f\"Converted documents to data: {len(data)}\")\n            self.status = data\n            return data\n        else:\n            logger.debug(\"No search input provided. Skipping search.\")\n            return []\n\n    def _astradb_collection_to_data(self, collection):\n        data = []\n        data_dict = collection.find()\n        if data_dict and \"data\" in data_dict:\n            data_dict = data_dict[\"data\"].get(\"documents\", [])\n\n        for item in data_dict:\n            data.append(Data(content=item[\"content\"]))\n        return data\n"
+              },
+              "collection_indexing_policy": {
+                "advanced": true,
+                "display_name": "Collection Indexing Policy",
+                "dynamic": false,
+                "info": "Optional dictionary defining the indexing policy for the collection.",
+                "list": false,
+                "load_from_db": false,
+                "name": "collection_indexing_policy",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": ""
+              },
+              "collection_name": {
+                "advanced": false,
+                "display_name": "Collection Name",
+                "dynamic": false,
+                "info": "The name of the collection within Astra DB where the vectors will be stored.",
+                "list": false,
+                "load_from_db": false,
+                "name": "collection_name",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": "langflow"
+              },
+              "embedding": {
+                "advanced": false,
+                "display_name": "Embedding",
+                "dynamic": false,
+                "info": "",
+                "input_types": ["Embeddings"],
+                "list": false,
+                "name": "embedding",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "other",
+                "value": ""
+              },
+              "metadata_indexing_exclude": {
+                "advanced": true,
+                "display_name": "Metadata Indexing Exclude",
+                "dynamic": false,
+                "info": "Optional list of metadata fields to exclude from the indexing.",
+                "list": false,
+                "load_from_db": false,
+                "name": "metadata_indexing_exclude",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": ""
+              },
+              "metadata_indexing_include": {
+                "advanced": true,
+                "display_name": "Metadata Indexing Include",
+                "dynamic": false,
+                "info": "Optional list of metadata fields to include in the indexing.",
+                "list": false,
+                "load_from_db": false,
+                "name": "metadata_indexing_include",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": ""
+              },
+              "metric": {
+                "advanced": true,
+                "display_name": "Metric",
+                "dynamic": false,
+                "info": "Optional distance metric for vector comparisons in the vector store.",
+                "name": "metric",
+                "options": ["cosine", "dot_product", "euclidean"],
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": ""
+              },
+              "namespace": {
+                "advanced": true,
+                "display_name": "Namespace",
+                "dynamic": false,
+                "info": "Optional namespace within Astra DB to use for the collection.",
+                "list": false,
+                "load_from_db": false,
+                "name": "namespace",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": ""
+              },
+              "number_of_results": {
+                "advanced": true,
+                "display_name": "Number of Results",
+                "dynamic": false,
+                "info": "Number of results to return.",
+                "list": false,
+                "name": "number_of_results",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "int",
+                "value": 4
+              },
+              "pre_delete_collection": {
+                "advanced": true,
+                "display_name": "Pre Delete Collection",
+                "dynamic": false,
+                "info": "Boolean flag to determine whether to delete the collection before creating a new one.",
+                "list": false,
+                "name": "pre_delete_collection",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "bool",
+                "value": false
+              },
+              "search_input": {
+                "advanced": false,
+                "display_name": "Search Input",
+                "dynamic": false,
+                "info": "",
+                "input_types": ["Message", "str"],
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "search_input",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": ""
+              },
+              "search_type": {
+                "advanced": false,
+                "display_name": "Search Type",
+                "dynamic": false,
+                "info": "",
+                "name": "search_type",
+                "options": ["Similarity", "MMR"],
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": "Similarity"
+              },
+              "setup_mode": {
+                "advanced": true,
+                "display_name": "Setup Mode",
+                "dynamic": false,
+                "info": "Configuration mode for setting up the vector store, with options like 'Sync', 'Async', or 'Off'.",
+                "name": "setup_mode",
+                "options": ["Sync", "Async", "Off"],
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": "Sync"
+              },
+              "token": {
+                "advanced": false,
+                "display_name": "Astra DB Application Token",
+                "dynamic": false,
+                "info": "Authentication token for accessing Astra DB.",
+                "input_types": [],
+                "load_from_db": true,
+                "name": "token",
+                "password": true,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": ""
+              },
+              "vector_store_inputs": {
+                "advanced": false,
+                "display_name": "Vector Store Inputs",
+                "dynamic": false,
+                "info": "",
+                "input_types": ["Document", "Data"],
+                "list": true,
+                "name": "vector_store_inputs",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "other",
+                "value": ""
+              }
+            }
+          },
+          "type": "AstraDB"
+        },
+        "dragging": false,
+        "height": 917,
+        "id": "AstraDB-qgZyO",
+        "position": {
+          "x": 1086.21939482509,
+          "y": 236.666870683534
+        },
+        "positionAbsolute": {
+          "x": 1086.21939482509,
+          "y": 236.666870683534
+        },
+        "selected": false,
+        "type": "genericNode",
+        "width": 384
+      },
+      {
+        "data": {
+          "id": "ParseData-6rzWI",
+          "node": {
+            "base_classes": ["Message"],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Convert Data into plain text following a specified template.",
+            "display_name": "Parse Data",
+            "documentation": "",
+            "field_order": ["data", "template", "sep"],
+            "frozen": false,
+            "icon": "braces",
+            "output_types": [],
+            "outputs": [
+              {
+                "cache": true,
+                "display_name": "Text",
+                "hidden": false,
+                "method": "parse_data",
+                "name": "text",
+                "selected": "Message",
+                "types": ["Message"],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from langflow.custom import Component\nfrom langflow.helpers.data import data_to_text\nfrom langflow.io import DataInput, MultilineInput, Output, StrInput\nfrom langflow.schema.message import Message\n\n\nclass ParseDataComponent(Component):\n    display_name = \"Parse Data\"\n    description = \"Convert Data into plain text following a specified template.\"\n    icon = \"braces\"\n\n    inputs = [\n        DataInput(name=\"data\", display_name=\"Data\", info=\"The data to convert to text.\"),\n        MultilineInput(\n            name=\"template\",\n            display_name=\"Template\",\n            info=\"The template to use for formatting the data. It can contain the keys {text}, {data} or any other key in the Data.\",\n            value=\"{text}\",\n        ),\n        StrInput(name=\"sep\", display_name=\"Separator\", advanced=True, value=\"\\n\"),\n    ]\n\n    outputs = [\n        Output(display_name=\"Text\", name=\"text\", method=\"parse_data\"),\n    ]\n\n    def parse_data(self) -> Message:\n        data = self.data if isinstance(self.data, list) else [self.data]\n        template = self.template\n\n        result_string = data_to_text(template, data, sep=self.sep)\n        self.status = result_string\n        return Message(text=result_string)\n"
+              },
+              "data": {
+                "advanced": false,
+                "display_name": "Data",
+                "dynamic": false,
+                "info": "The data to convert to text.",
+                "input_types": ["Data"],
+                "list": false,
+                "name": "data",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "other",
+                "value": ""
+              },
+              "sep": {
+                "advanced": true,
+                "display_name": "Separator",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "name": "sep",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": "---"
+              },
+              "template": {
+                "advanced": false,
+                "display_name": "Template",
+                "dynamic": false,
+                "info": "The template to use for formatting the data. It can contain the keys {text}, {data} or any other key in the Data.",
+                "input_types": ["Message", "str"],
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "template",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": "{text}"
+              }
+            }
+          },
+          "type": "ParseData"
+        },
+        "dragging": false,
+        "height": 385,
+        "id": "ParseData-6rzWI",
+        "position": {
+          "x": 1610.517114444544,
+          "y": 466.87747924593134
+        },
+        "positionAbsolute": {
+          "x": 1610.517114444544,
+          "y": 466.87747924593134
+        },
+        "selected": false,
+        "type": "genericNode",
+        "width": 384
+      },
+      {
+        "data": {
+          "id": "File-QuzYs",
+          "node": {
+            "base_classes": ["Data"],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
             "description": "A generic file loader.",
             "display_name": "File",
             "documentation": "",
-            "field_formatters": {},
-            "field_order": [],
+            "edited": false,
+            "field_order": ["path", "silent_errors"],
             "frozen": false,
             "icon": "file-text",
             "output_types": [],
@@ -1612,12 +1913,11 @@
                 "method": "load_file",
                 "name": "data",
                 "selected": "Data",
-                "types": [
-                  "Data"
-                ],
+                "types": ["Data"],
                 "value": "__UNDEFINED__"
               }
             ],
+            "pinned": false,
             "template": {
               "_type": "Component",
               "code": {
@@ -1662,7 +1962,7 @@
                   "ts",
                   "tsx"
                 ],
-                "file_path": "c9e0cb46-c474-451a-8496-413f58481d92/Context Once.json",
+                "file_path": "132d3eea-22e3-4dcc-8746-9f779cf4186c/sample.pdf",
                 "info": "Supported file types: txt, md, mdx, csv, json, yaml, yml, xml, html, htm, pdf, docx, py, sh, sql, js, ts, tsx",
                 "list": false,
                 "name": "path",
@@ -1670,6 +1970,7 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "trace_as_metadata": true,
                 "type": "file",
                 "value": ""
               },
@@ -1684,6 +1985,7 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "trace_as_metadata": true,
                 "type": "bool",
                 "value": false
               }
@@ -1693,1538 +1995,14 @@
         },
         "dragging": false,
         "height": 301,
-        "id": "File-28ckd",
+        "id": "File-QuzYs",
         "position": {
-          "x": 2257.233450682836,
-          "y": 1747.5389618367233
+          "x": 246.3440213482861,
+          "y": 213.80494167252948
         },
         "positionAbsolute": {
-          "x": 2257.233450682836,
-          "y": 1747.5389618367233
-        },
-        "selected": false,
-        "type": "genericNode",
-        "width": 384
-      },
-      {
-        "data": {
-          "id": "OpenAIEmbeddings-YeYtt",
-          "node": {
-            "base_classes": [
-              "Embeddings"
-            ],
-            "beta": false,
-            "custom_fields": {
-              "allowed_special": null,
-              "chunk_size": null,
-              "client": null,
-              "default_headers": null,
-              "default_query": null,
-              "deployment": null,
-              "disallowed_special": null,
-              "embedding_ctx_length": null,
-              "max_retries": null,
-              "model": null,
-              "model_kwargs": null,
-              "openai_api_base": null,
-              "openai_api_key": null,
-              "openai_api_type": null,
-              "openai_api_version": null,
-              "openai_organization": null,
-              "openai_proxy": null,
-              "request_timeout": null,
-              "show_progress_bar": null,
-              "skip_empty": null,
-              "tiktoken_enable": null,
-              "tiktoken_model_name": null
-            },
-            "description": "Generate embeddings using OpenAI models.",
-            "display_name": "OpenAI Embeddings",
-            "documentation": "",
-            "field_formatters": {},
-            "field_order": [],
-            "frozen": false,
-            "icon": "OpenAI",
-            "output_types": [],
-            "outputs": [
-              {
-                "cache": true,
-                "display_name": "Embeddings",
-                "hidden": false,
-                "method": "build_embeddings",
-                "name": "embeddings",
-                "selected": "Embeddings",
-                "types": [
-                  "Embeddings"
-                ],
-                "value": "__UNDEFINED__"
-              }
-            ],
-            "template": {
-              "_type": "Component",
-              "chunk_size": {
-                "advanced": true,
-                "display_name": "Chunk Size",
-                "dynamic": false,
-                "info": "",
-                "list": false,
-                "name": "chunk_size",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "int",
-                "value": 1000
-              },
-              "client": {
-                "advanced": true,
-                "display_name": "Client",
-                "dynamic": false,
-                "info": "",
-                "input_types": [
-                  "Message",
-                  "str"
-                ],
-                "list": false,
-                "load_from_db": false,
-                "name": "client",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": ""
-              },
-              "code": {
-                "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "from langchain_openai.embeddings.base import OpenAIEmbeddings\n\nfrom langflow.base.embeddings.model import LCEmbeddingsModel\nfrom langflow.field_typing import Embeddings\nfrom langflow.io import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, SecretStrInput, TextInput\n\n\nclass OpenAIEmbeddingsComponent(LCEmbeddingsModel):\n    display_name = \"OpenAI Embeddings\"\n    description = \"Generate embeddings using OpenAI models.\"\n    icon = \"OpenAI\"\n    inputs = [\n        DictInput(\n            name=\"default_headers\",\n            display_name=\"Default Headers\",\n            advanced=True,\n            info=\"Default headers to use for the API request.\",\n        ),\n        DictInput(\n            name=\"default_query\",\n            display_name=\"Default Query\",\n            advanced=True,\n            info=\"Default query parameters to use for the API request.\",\n        ),\n        IntInput(name=\"chunk_size\", display_name=\"Chunk Size\", advanced=True, value=1000),\n        TextInput(name=\"client\", display_name=\"Client\", advanced=True),\n        TextInput(name=\"deployment\", display_name=\"Deployment\", advanced=True),\n        IntInput(name=\"embedding_ctx_length\", display_name=\"Embedding Context Length\", advanced=True, value=1536),\n        IntInput(name=\"max_retries\", display_name=\"Max Retries\", value=3, advanced=True),\n        DropdownInput(\n            name=\"model\",\n            display_name=\"Model\",\n            advanced=False,\n            options=[\n                \"text-embedding-3-small\",\n                \"text-embedding-3-large\",\n                \"text-embedding-ada-002\",\n            ],\n            value=\"text-embedding-3-small\",\n        ),\n        DictInput(name=\"model_kwargs\", display_name=\"Model Kwargs\", advanced=True),\n        SecretStrInput(name=\"openai_api_base\", display_name=\"OpenAI API Base\", advanced=True),\n        SecretStrInput(name=\"openai_api_key\", display_name=\"OpenAI API Key\"),\n        SecretStrInput(name=\"openai_api_type\", display_name=\"OpenAI API Type\", advanced=True),\n        TextInput(name=\"openai_api_version\", display_name=\"OpenAI API Version\", advanced=True),\n        TextInput(\n            name=\"openai_organization\",\n            display_name=\"OpenAI Organization\",\n            advanced=True,\n        ),\n        TextInput(name=\"openai_proxy\", display_name=\"OpenAI Proxy\", advanced=True),\n        FloatInput(name=\"request_timeout\", display_name=\"Request Timeout\", advanced=True),\n        BoolInput(name=\"show_progress_bar\", display_name=\"Show Progress Bar\", advanced=True),\n        BoolInput(name=\"skip_empty\", display_name=\"Skip Empty\", advanced=True),\n        TextInput(\n            name=\"tiktoken_model_name\",\n            display_name=\"TikToken Model Name\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"tiktoken_enable\",\n            display_name=\"TikToken Enable\",\n            advanced=True,\n            value=True,\n            info=\"If False, you must have transformers installed.\",\n        ),\n    ]\n\n    def build_embeddings(self) -> Embeddings:\n        return OpenAIEmbeddings(\n            tiktoken_enabled=self.tiktoken_enable,\n            default_headers=self.default_headers,\n            default_query=self.default_query,\n            allowed_special=\"all\",\n            disallowed_special=\"all\",\n            chunk_size=self.chunk_size,\n            deployment=self.deployment,\n            embedding_ctx_length=self.embedding_ctx_length,\n            max_retries=self.max_retries,\n            model=self.model,\n            model_kwargs=self.model_kwargs,\n            base_url=self.openai_api_base,\n            api_key=self.openai_api_key,\n            openai_api_type=self.openai_api_type,\n            api_version=self.openai_api_version,\n            organization=self.openai_organization,\n            openai_proxy=self.openai_proxy,\n            timeout=self.request_timeout or None,\n            show_progress_bar=self.show_progress_bar,\n            skip_empty=self.skip_empty,\n            tiktoken_model_name=self.tiktoken_model_name,\n        )\n"
-              },
-              "default_headers": {
-                "advanced": true,
-                "display_name": "Default Headers",
-                "dynamic": false,
-                "info": "Default headers to use for the API request.",
-                "list": false,
-                "name": "default_headers",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "dict",
-                "value": {}
-              },
-              "default_query": {
-                "advanced": true,
-                "display_name": "Default Query",
-                "dynamic": false,
-                "info": "Default query parameters to use for the API request.",
-                "list": false,
-                "name": "default_query",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "dict",
-                "value": {}
-              },
-              "deployment": {
-                "advanced": true,
-                "display_name": "Deployment",
-                "dynamic": false,
-                "info": "",
-                "input_types": [
-                  "Message",
-                  "str"
-                ],
-                "list": false,
-                "load_from_db": false,
-                "name": "deployment",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": ""
-              },
-              "embedding_ctx_length": {
-                "advanced": true,
-                "display_name": "Embedding Context Length",
-                "dynamic": false,
-                "info": "",
-                "list": false,
-                "name": "embedding_ctx_length",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "int",
-                "value": 1536
-              },
-              "max_retries": {
-                "advanced": true,
-                "display_name": "Max Retries",
-                "dynamic": false,
-                "info": "",
-                "list": false,
-                "name": "max_retries",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "int",
-                "value": 3
-              },
-              "model": {
-                "advanced": false,
-                "display_name": "Model",
-                "dynamic": false,
-                "info": "",
-                "name": "model",
-                "options": [
-                  "text-embedding-3-small",
-                  "text-embedding-3-large",
-                  "text-embedding-ada-002"
-                ],
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": "text-embedding-3-small"
-              },
-              "model_kwargs": {
-                "advanced": true,
-                "display_name": "Model Kwargs",
-                "dynamic": false,
-                "info": "",
-                "list": false,
-                "name": "model_kwargs",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "dict",
-                "value": {}
-              },
-              "openai_api_base": {
-                "advanced": true,
-                "display_name": "OpenAI API Base",
-                "dynamic": false,
-                "info": "",
-                "input_types": [],
-                "load_from_db": true,
-                "name": "openai_api_base",
-                "password": true,
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": ""
-              },
-              "openai_api_key": {
-                "advanced": false,
-                "display_name": "OpenAI API Key",
-                "dynamic": false,
-                "info": "",
-                "input_types": [],
-                "load_from_db": true,
-                "name": "openai_api_key",
-                "password": true,
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": ""
-              },
-              "openai_api_type": {
-                "advanced": true,
-                "display_name": "OpenAI API Type",
-                "dynamic": false,
-                "info": "",
-                "input_types": [],
-                "load_from_db": true,
-                "name": "openai_api_type",
-                "password": true,
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": ""
-              },
-              "openai_api_version": {
-                "advanced": true,
-                "display_name": "OpenAI API Version",
-                "dynamic": false,
-                "info": "",
-                "input_types": [
-                  "Message",
-                  "str"
-                ],
-                "list": false,
-                "load_from_db": false,
-                "name": "openai_api_version",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": ""
-              },
-              "openai_organization": {
-                "advanced": true,
-                "display_name": "OpenAI Organization",
-                "dynamic": false,
-                "info": "",
-                "input_types": [
-                  "Message",
-                  "str"
-                ],
-                "list": false,
-                "load_from_db": false,
-                "name": "openai_organization",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": ""
-              },
-              "openai_proxy": {
-                "advanced": true,
-                "display_name": "OpenAI Proxy",
-                "dynamic": false,
-                "info": "",
-                "input_types": [
-                  "Message",
-                  "str"
-                ],
-                "list": false,
-                "load_from_db": false,
-                "name": "openai_proxy",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": ""
-              },
-              "request_timeout": {
-                "advanced": true,
-                "display_name": "Request Timeout",
-                "dynamic": false,
-                "info": "",
-                "list": false,
-                "name": "request_timeout",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "float",
-                "value": ""
-              },
-              "show_progress_bar": {
-                "advanced": true,
-                "display_name": "Show Progress Bar",
-                "dynamic": false,
-                "info": "",
-                "list": false,
-                "name": "show_progress_bar",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "bool",
-                "value": false
-              },
-              "skip_empty": {
-                "advanced": true,
-                "display_name": "Skip Empty",
-                "dynamic": false,
-                "info": "",
-                "list": false,
-                "name": "skip_empty",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "bool",
-                "value": false
-              },
-              "tiktoken_enable": {
-                "advanced": true,
-                "display_name": "TikToken Enable",
-                "dynamic": false,
-                "info": "If False, you must have transformers installed.",
-                "list": false,
-                "name": "tiktoken_enable",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "bool",
-                "value": true
-              },
-              "tiktoken_model_name": {
-                "advanced": true,
-                "display_name": "TikToken Model Name",
-                "dynamic": false,
-                "info": "",
-                "input_types": [
-                  "Message",
-                  "str"
-                ],
-                "list": false,
-                "load_from_db": false,
-                "name": "tiktoken_model_name",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": ""
-              }
-            }
-          },
-          "type": "OpenAIEmbeddings"
-        },
-        "dragging": false,
-        "height": 395,
-        "id": "OpenAIEmbeddings-YeYtt",
-        "position": {
-          "x": 2781.1922529351923,
-          "y": 2206.267872396239
-        },
-        "positionAbsolute": {
-          "x": 2781.1922529351923,
-          "y": 2206.267872396239
-        },
-        "selected": false,
-        "type": "genericNode",
-        "width": 384
-      },
-      {
-        "data": {
-          "description": "Split text into chunks of a specified length.",
-          "display_name": "Recursive Character Text Splitter",
-          "id": "RecursiveCharacterTextSplitter-HVESL",
-          "node": {
-            "base_classes": [
-              "Data"
-            ],
-            "beta": false,
-            "conditional_paths": [],
-            "custom_fields": {},
-            "description": "Split text into chunks of a specified length.",
-            "display_name": "Recursive Character Text Splitter",
-            "documentation": "https://docs.langflow.org/components/text-splitters#recursivecharactertextsplitter",
-            "edited": false,
-            "field_order": [
-              "chunk_size",
-              "chunk_overlap",
-              "data_input",
-              "separators"
-            ],
-            "frozen": false,
-            "output_types": [
-              "Data"
-            ],
-            "outputs": [
-              {
-                "cache": true,
-                "display_name": "Data",
-                "hidden": false,
-                "method": "build",
-                "name": "data",
-                "selected": "Data",
-                "types": [
-                  "Data"
-                ],
-                "value": "__UNDEFINED__"
-              }
-            ],
-            "pinned": false,
-            "template": {
-              "_type": "Component",
-              "chunk_overlap": {
-                "advanced": false,
-                "display_name": "Chunk Overlap",
-                "dynamic": false,
-                "info": "The amount of overlap between chunks.",
-                "list": false,
-                "name": "chunk_overlap",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "int",
-                "value": 200
-              },
-              "chunk_size": {
-                "advanced": false,
-                "display_name": "Chunk Size",
-                "dynamic": false,
-                "info": "The maximum length of each chunk.",
-                "list": false,
-                "name": "chunk_size",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "int",
-                "value": 1000
-              },
-              "code": {
-                "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "from langchain_text_splitters import RecursiveCharacterTextSplitter\n\nfrom langflow.custom import Component\nfrom langflow.inputs.inputs import DataInput, IntInput, TextInput\nfrom langflow.schema import Data\nfrom langflow.template.field.base import Output\nfrom langflow.utils.util import build_loader_repr_from_data, unescape_string\n\n\nclass RecursiveCharacterTextSplitterComponent(Component):\n    display_name: str = \"Recursive Character Text Splitter\"\n    description: str = \"Split text into chunks of a specified length.\"\n    documentation: str = \"https://docs.langflow.org/components/text-splitters#recursivecharactertextsplitter\"\n\n    inputs = [\n        IntInput(\n            name=\"chunk_size\",\n            display_name=\"Chunk Size\",\n            info=\"The maximum length of each chunk.\",\n            value=1000,\n        ),\n        IntInput(\n            name=\"chunk_overlap\",\n            display_name=\"Chunk Overlap\",\n            info=\"The amount of overlap between chunks.\",\n            value=200,\n        ),\n        DataInput(\n            name=\"data_input\",\n            display_name=\"Input\",\n            info=\"The texts to split.\",\n            input_types=[\"Document\", \"Data\"],\n        ),\n        TextInput(\n            name=\"separators\",\n            display_name=\"Separators\",\n            info='The characters to split on.\\nIf left empty defaults to [\"\\\\n\\\\n\", \"\\\\n\", \" \", \"\"].',\n            is_list=True,\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Data\", name=\"data\", method=\"split_data\"),\n    ]\n\n    def split_data(self) -> list[Data]:\n        \"\"\"\n        Split text into chunks of a specified length.\n\n        Args:\n            separators (list[str]): The characters to split on.\n            chunk_size (int): The maximum length of each chunk.\n            chunk_overlap (int): The amount of overlap between chunks.\n\n        Returns:\n            list[str]: The chunks of text.\n        \"\"\"\n\n        if self.separators == \"\":\n            self.separators = None\n        elif self.separators:\n            # check if the separators list has escaped characters\n            # if there are escaped characters, unescape them\n            self.separators = [unescape_string(x) for x in self.separators]\n\n        # Make sure chunk_size and chunk_overlap are ints\n        if isinstance(self.chunk_size, str):\n            self.chunk_size = int(self.chunk_size)\n        if isinstance(self.chunk_overlap, str):\n            self.chunk_overlap = int(self.chunk_overlap)\n        splitter = RecursiveCharacterTextSplitter(\n            separators=self.separators,\n            chunk_size=self.chunk_size,\n            chunk_overlap=self.chunk_overlap,\n        )\n        documents = []\n        if not isinstance(self.data_input, list):\n            self.data_input = [self.data_input]\n        for _input in self.data_input:\n            if isinstance(_input, Data):\n                documents.append(_input.to_lc_document())\n            else:\n                documents.append(_input)\n        docs = splitter.split_documents(documents)\n        data = self.to_data(docs)\n        self.repr_value = build_loader_repr_from_data(data)\n        return data\n"
-              },
-              "data_input": {
-                "advanced": false,
-                "display_name": "Input",
-                "dynamic": false,
-                "info": "The texts to split.",
-                "input_types": [
-                  "Document",
-                  "Data"
-                ],
-                "list": false,
-                "name": "data_input",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "other",
-                "value": ""
-              },
-              "separators": {
-                "advanced": false,
-                "display_name": "Separators",
-                "dynamic": false,
-                "info": "The characters to split on.\nIf left empty defaults to [\"\\n\\n\", \"\\n\", \" \", \"\"].",
-                "input_types": [
-                  "Message",
-                  "str"
-                ],
-                "list": true,
-                "load_from_db": false,
-                "name": "separators",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": [
-                  "\\n"
-                ]
-              }
-            }
-          },
-          "type": "RecursiveCharacterTextSplitter"
-        },
-        "dragging": false,
-        "height": 529,
-        "id": "RecursiveCharacterTextSplitter-HVESL",
-        "position": {
-          "x": 2726.46405760335,
-          "y": 1530.1666819162674
-        },
-        "positionAbsolute": {
-          "x": 2726.46405760335,
-          "y": 1530.1666819162674
-        },
-        "selected": false,
-        "type": "genericNode",
-        "width": 384
-      },
-      {
-        "data": {
-          "description": "Implementation of Vector Store using Astra DB with search capabilities",
-          "display_name": "Astra DB Vector Store",
-          "id": "AstraDB-irvai",
-          "node": {
-            "base_classes": [
-              "Data"
-            ],
-            "beta": false,
-            "conditional_paths": [],
-            "custom_fields": {},
-            "description": "Implementation of Vector Store using Astra DB with search capabilities",
-            "display_name": "Astra DB Vector Store",
-            "documentation": "https://python.langchain.com/docs/integrations/vectorstores/astradb",
-            "edited": false,
-            "field_order": [
-              "collection_name",
-              "token",
-              "api_endpoint",
-              "vector_store_inputs",
-              "embedding",
-              "namespace",
-              "metric",
-              "batch_size",
-              "bulk_insert_batch_concurrency",
-              "bulk_insert_overwrite_concurrency",
-              "bulk_delete_concurrency",
-              "setup_mode",
-              "pre_delete_collection",
-              "metadata_indexing_include",
-              "metadata_indexing_exclude",
-              "collection_indexing_policy",
-              "add_to_vector_store",
-              "search_input",
-              "search_type",
-              "number_of_results"
-            ],
-            "frozen": false,
-            "icon": "AstraDB",
-            "output_types": [],
-            "outputs": [
-              {
-                "cache": true,
-                "display_name": "Retriever",
-                "method": "build_base_retriever",
-                "name": "base_retriever",
-                "selected": "Data",
-                "types": [
-                  "Data"
-                ],
-                "value": "__UNDEFINED__"
-              },
-              {
-                "cache": true,
-                "display_name": "Search Results",
-                "method": "search_documents",
-                "name": "search_results",
-                "selected": "Data",
-                "types": [
-                  "Data"
-                ],
-                "value": "__UNDEFINED__"
-              }
-            ],
-            "pinned": false,
-            "template": {
-              "_type": "Component",
-              "add_to_vector_store": {
-                "advanced": false,
-                "display_name": "Add to Vector Store",
-                "dynamic": false,
-                "info": "If true, the Vector Store Inputs will be added to the Vector Store.",
-                "list": false,
-                "name": "add_to_vector_store",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "bool",
-                "value": true
-              },
-              "api_endpoint": {
-                "advanced": false,
-                "display_name": "API Endpoint",
-                "dynamic": false,
-                "info": "API endpoint URL for the Astra DB service.",
-                "input_types": [],
-                "load_from_db": true,
-                "name": "api_endpoint",
-                "password": true,
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": ""
-              },
-              "batch_size": {
-                "advanced": true,
-                "display_name": "Batch Size",
-                "dynamic": false,
-                "info": "Optional number of data to process in a single batch.",
-                "list": false,
-                "name": "batch_size",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "int",
-                "value": ""
-              },
-              "bulk_delete_concurrency": {
-                "advanced": true,
-                "display_name": "Bulk Delete Concurrency",
-                "dynamic": false,
-                "info": "Optional concurrency level for bulk delete operations.",
-                "list": false,
-                "name": "bulk_delete_concurrency",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "int",
-                "value": ""
-              },
-              "bulk_insert_batch_concurrency": {
-                "advanced": true,
-                "display_name": "Bulk Insert Batch Concurrency",
-                "dynamic": false,
-                "info": "Optional concurrency level for bulk insert operations.",
-                "list": false,
-                "name": "bulk_insert_batch_concurrency",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "int",
-                "value": ""
-              },
-              "bulk_insert_overwrite_concurrency": {
-                "advanced": true,
-                "display_name": "Bulk Insert Overwrite Concurrency",
-                "dynamic": false,
-                "info": "Optional concurrency level for bulk insert operations that overwrite existing data.",
-                "list": false,
-                "name": "bulk_insert_overwrite_concurrency",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "int",
-                "value": ""
-              },
-              "code": {
-                "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "from loguru import logger\n\nfrom langflow.base.vectorstores.model import LCVectorStoreComponent\nfrom langflow.io import BoolInput, DropdownInput, HandleInput, IntInput, MultilineInput, SecretStrInput, StrInput\nfrom langflow.schema import Data\n\n\nclass AstraVectorStoreComponent(LCVectorStoreComponent):\n    display_name: str = \"Astra DB Vector Store\"\n    description: str = \"Implementation of Vector Store using Astra DB with search capabilities\"\n    documentation: str = \"https://python.langchain.com/docs/integrations/vectorstores/astradb\"\n    icon: str = \"AstraDB\"\n\n    inputs = [\n        StrInput(\n            name=\"collection_name\",\n            display_name=\"Collection Name\",\n            info=\"The name of the collection within Astra DB where the vectors will be stored.\",\n        ),\n        SecretStrInput(\n            name=\"token\",\n            display_name=\"Astra DB Application Token\",\n            info=\"Authentication token for accessing Astra DB.\",\n            value=\"ASTRA_DB_APPLICATION_TOKEN\",\n        ),\n        SecretStrInput(\n            name=\"api_endpoint\",\n            display_name=\"API Endpoint\",\n            info=\"API endpoint URL for the Astra DB service.\",\n            value=\"ASTRA_DB_API_ENDPOINT\",\n        ),\n        HandleInput(\n            name=\"vector_store_inputs\",\n            display_name=\"Vector Store Inputs\",\n            input_types=[\"Document\", \"Data\"],\n            is_list=True,\n        ),\n        HandleInput(\n            name=\"embedding\",\n            display_name=\"Embedding\",\n            input_types=[\"Embeddings\"],\n        ),\n        StrInput(\n            name=\"namespace\",\n            display_name=\"Namespace\",\n            info=\"Optional namespace within Astra DB to use for the collection.\",\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"metric\",\n            display_name=\"Metric\",\n            info=\"Optional distance metric for vector comparisons in the vector store.\",\n            options=[\"cosine\", \"dot_product\", \"euclidean\"],\n            advanced=True,\n        ),\n        IntInput(\n            name=\"batch_size\",\n            display_name=\"Batch Size\",\n            info=\"Optional number of data to process in a single batch.\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"bulk_insert_batch_concurrency\",\n            display_name=\"Bulk Insert Batch Concurrency\",\n            info=\"Optional concurrency level for bulk insert operations.\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"bulk_insert_overwrite_concurrency\",\n            display_name=\"Bulk Insert Overwrite Concurrency\",\n            info=\"Optional concurrency level for bulk insert operations that overwrite existing data.\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"bulk_delete_concurrency\",\n            display_name=\"Bulk Delete Concurrency\",\n            info=\"Optional concurrency level for bulk delete operations.\",\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"setup_mode\",\n            display_name=\"Setup Mode\",\n            info=\"Configuration mode for setting up the vector store, with options like 'Sync', 'Async', or 'Off'.\",\n            options=[\"Sync\", \"Async\", \"Off\"],\n            advanced=True,\n            value=\"Sync\",\n        ),\n        BoolInput(\n            name=\"pre_delete_collection\",\n            display_name=\"Pre Delete Collection\",\n            info=\"Boolean flag to determine whether to delete the collection before creating a new one.\",\n            advanced=True,\n        ),\n        StrInput(\n            name=\"metadata_indexing_include\",\n            display_name=\"Metadata Indexing Include\",\n            info=\"Optional list of metadata fields to include in the indexing.\",\n            advanced=True,\n        ),\n        StrInput(\n            name=\"metadata_indexing_exclude\",\n            display_name=\"Metadata Indexing Exclude\",\n            info=\"Optional list of metadata fields to exclude from the indexing.\",\n            advanced=True,\n        ),\n        StrInput(\n            name=\"collection_indexing_policy\",\n            display_name=\"Collection Indexing Policy\",\n            info=\"Optional dictionary defining the indexing policy for the collection.\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"add_to_vector_store\",\n            display_name=\"Add to Vector Store\",\n            info=\"If true, the Vector Store Inputs will be added to the Vector Store.\",\n        ),\n        MultilineInput(\n            name=\"search_input\",\n            display_name=\"Search Input\",\n        ),\n        DropdownInput(\n            name=\"search_type\",\n            display_name=\"Search Type\",\n            options=[\"Similarity\", \"MMR\"],\n            value=\"Similarity\",\n        ),\n        IntInput(\n            name=\"number_of_results\",\n            display_name=\"Number of Results\",\n            info=\"Number of results to return.\",\n            advanced=True,\n            value=4,\n        ),\n    ]\n\n    def build_vector_store(self):\n        try:\n            from langchain_astradb import AstraDBVectorStore\n            from langchain_astradb.utils.astradb import SetupMode\n        except ImportError:\n            raise ImportError(\n                \"Could not import langchain Astra DB integration package. \"\n                \"Please install it with `pip install langchain-astradb`.\"\n            )\n\n        try:\n            if not self.setup_mode:\n                self.setup_mode = self._inputs[\"setup_mode\"].options[0]\n\n            setup_mode_value = SetupMode[self.setup_mode.upper()]\n        except KeyError:\n            raise ValueError(f\"Invalid setup mode: {self.setup_mode}\")\n\n        vector_store_kwargs = {\n            \"embedding\": self.embedding,\n            \"collection_name\": self.collection_name,\n            \"token\": self.token,\n            \"api_endpoint\": self.api_endpoint,\n            \"namespace\": self.namespace or None,\n            \"metric\": self.metric or None,\n            \"batch_size\": self.batch_size or None,\n            \"bulk_insert_batch_concurrency\": self.bulk_insert_batch_concurrency or None,\n            \"bulk_insert_overwrite_concurrency\": self.bulk_insert_overwrite_concurrency or None,\n            \"bulk_delete_concurrency\": self.bulk_delete_concurrency or None,\n            \"setup_mode\": setup_mode_value,\n            \"pre_delete_collection\": self.pre_delete_collection or False,\n        }\n\n        if self.metadata_indexing_include:\n            vector_store_kwargs[\"metadata_indexing_include\"] = self.metadata_indexing_include\n        elif self.metadata_indexing_exclude:\n            vector_store_kwargs[\"metadata_indexing_exclude\"] = self.metadata_indexing_exclude\n        elif self.collection_indexing_policy:\n            vector_store_kwargs[\"collection_indexing_policy\"] = self.collection_indexing_policy\n\n        try:\n            vector_store = AstraDBVectorStore(**vector_store_kwargs)\n        except Exception as e:\n            raise ValueError(f\"Error initializing AstraDBVectorStore: {str(e)}\") from e\n\n        if self.add_to_vector_store:\n            self._add_documents_to_vector_store(vector_store)\n\n        return vector_store\n\n    def build_base_retriever(self):\n        vector_store = self.build_vector_store()\n        self.status = self._astradb_collection_to_data(vector_store.collection)\n        return vector_store\n\n    def _add_documents_to_vector_store(self, vector_store):\n        documents = []\n        for _input in self.vector_store_inputs or []:\n            if isinstance(_input, Data):\n                documents.append(_input.to_lc_document())\n            else:\n                raise ValueError(\"Vector Store Inputs must be Data objects.\")\n\n        if documents and self.embedding is not None:\n            logger.debug(f\"Adding {len(documents)} documents to the Vector Store.\")\n            try:\n                vector_store.add_documents(documents)\n            except Exception as e:\n                raise ValueError(f\"Error adding documents to AstraDBVectorStore: {str(e)}\") from e\n        else:\n            logger.debug(\"No documents to add to the Vector Store.\")\n\n    def search_documents(self):\n        vector_store = self.build_vector_store()\n\n        logger.debug(f\"Search input: {self.search_input}\")\n        logger.debug(f\"Search type: {self.search_type}\")\n        logger.debug(f\"Number of results: {self.number_of_results}\")\n\n        if self.search_input and isinstance(self.search_input, str) and self.search_input.strip():\n            try:\n                if self.search_type == \"Similarity\":\n                    docs = vector_store.similarity_search(\n                        query=self.search_input,\n                        k=self.number_of_results,\n                    )\n                elif self.search_type == \"MMR\":\n                    docs = vector_store.max_marginal_relevance_search(\n                        query=self.search_input,\n                        k=self.number_of_results,\n                    )\n                else:\n                    raise ValueError(f\"Invalid search type: {self.search_type}\")\n            except Exception as e:\n                raise ValueError(f\"Error performing search in AstraDBVectorStore: {str(e)}\") from e\n\n            logger.debug(f\"Retrieved documents: {len(docs)}\")\n\n            data = [Data.from_document(doc) for doc in docs]\n            logger.debug(f\"Converted documents to data: {len(data)}\")\n            self.status = data\n            return data\n        else:\n            logger.debug(\"No search input provided. Skipping search.\")\n            return []\n\n    def _astradb_collection_to_data(self, collection):\n        data = []\n        data_dict = collection.find()\n        if data_dict and \"data\" in data_dict:\n            data_dict = data_dict[\"data\"].get(\"documents\", [])\n\n        for item in data_dict:\n            data.append(Data(content=item[\"content\"]))\n        return data\n"
-              },
-              "collection_indexing_policy": {
-                "advanced": true,
-                "display_name": "Collection Indexing Policy",
-                "dynamic": false,
-                "info": "Optional dictionary defining the indexing policy for the collection.",
-                "list": false,
-                "load_from_db": false,
-                "name": "collection_indexing_policy",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": ""
-              },
-              "collection_name": {
-                "advanced": false,
-                "display_name": "Collection Name",
-                "dynamic": false,
-                "info": "The name of the collection within Astra DB where the vectors will be stored.",
-                "list": false,
-                "load_from_db": false,
-                "name": "collection_name",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": "langflow"
-              },
-              "embedding": {
-                "advanced": false,
-                "display_name": "Embedding",
-                "dynamic": false,
-                "info": "",
-                "input_types": [
-                  "Embeddings"
-                ],
-                "list": false,
-                "name": "embedding",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "other",
-                "value": ""
-              },
-              "metadata_indexing_exclude": {
-                "advanced": true,
-                "display_name": "Metadata Indexing Exclude",
-                "dynamic": false,
-                "info": "Optional list of metadata fields to exclude from the indexing.",
-                "list": false,
-                "load_from_db": false,
-                "name": "metadata_indexing_exclude",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": ""
-              },
-              "metadata_indexing_include": {
-                "advanced": true,
-                "display_name": "Metadata Indexing Include",
-                "dynamic": false,
-                "info": "Optional list of metadata fields to include in the indexing.",
-                "list": false,
-                "load_from_db": false,
-                "name": "metadata_indexing_include",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": ""
-              },
-              "metric": {
-                "advanced": true,
-                "display_name": "Metric",
-                "dynamic": false,
-                "info": "Optional distance metric for vector comparisons in the vector store.",
-                "name": "metric",
-                "options": [
-                  "cosine",
-                  "dot_product",
-                  "euclidean"
-                ],
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": ""
-              },
-              "namespace": {
-                "advanced": true,
-                "display_name": "Namespace",
-                "dynamic": false,
-                "info": "Optional namespace within Astra DB to use for the collection.",
-                "list": false,
-                "load_from_db": false,
-                "name": "namespace",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": ""
-              },
-              "number_of_results": {
-                "advanced": true,
-                "display_name": "Number of Results",
-                "dynamic": false,
-                "info": "Number of results to return.",
-                "list": false,
-                "name": "number_of_results",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "int",
-                "value": 4
-              },
-              "pre_delete_collection": {
-                "advanced": true,
-                "display_name": "Pre Delete Collection",
-                "dynamic": false,
-                "info": "Boolean flag to determine whether to delete the collection before creating a new one.",
-                "list": false,
-                "name": "pre_delete_collection",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "bool",
-                "value": false
-              },
-              "search_input": {
-                "advanced": false,
-                "display_name": "Search Input",
-                "dynamic": false,
-                "info": "",
-                "input_types": [
-                  "Message",
-                  "str"
-                ],
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "search_input",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": ""
-              },
-              "search_type": {
-                "advanced": false,
-                "display_name": "Search Type",
-                "dynamic": false,
-                "info": "",
-                "name": "search_type",
-                "options": [
-                  "Similarity",
-                  "MMR"
-                ],
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": "Similarity"
-              },
-              "setup_mode": {
-                "advanced": true,
-                "display_name": "Setup Mode",
-                "dynamic": false,
-                "info": "Configuration mode for setting up the vector store, with options like 'Sync', 'Async', or 'Off'.",
-                "name": "setup_mode",
-                "options": [
-                  "Sync",
-                  "Async",
-                  "Off"
-                ],
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": "Sync"
-              },
-              "token": {
-                "advanced": false,
-                "display_name": "Astra DB Application Token",
-                "dynamic": false,
-                "info": "Authentication token for accessing Astra DB.",
-                "input_types": [],
-                "load_from_db": true,
-                "name": "token",
-                "password": true,
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": ""
-              },
-              "vector_store_inputs": {
-                "advanced": false,
-                "display_name": "Vector Store Inputs",
-                "dynamic": false,
-                "info": "",
-                "input_types": [
-                  "Document",
-                  "Data"
-                ],
-                "list": true,
-                "name": "vector_store_inputs",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "other",
-                "value": ""
-              }
-            }
-          },
-          "type": "AstraDB"
-        },
-        "dragging": false,
-        "height": 917,
-        "id": "AstraDB-irvai",
-        "position": {
-          "x": 3329.7211874614477,
-          "y": 1559.774393811144
-        },
-        "positionAbsolute": {
-          "x": 3329.7211874614477,
-          "y": 1559.774393811144
-        },
-        "selected": false,
-        "type": "genericNode",
-        "width": 384
-      },
-      {
-        "data": {
-          "description": "Implementation of Vector Store using Astra DB with search capabilities",
-          "display_name": "Astra DB Vector Store",
-          "id": "AstraDB-wANQu",
-          "node": {
-            "base_classes": [
-              "Data"
-            ],
-            "beta": false,
-            "conditional_paths": [],
-            "custom_fields": {},
-            "description": "Implementation of Vector Store using Astra DB with search capabilities",
-            "display_name": "Astra DB Vector Store",
-            "documentation": "https://python.langchain.com/docs/integrations/vectorstores/astradb",
-            "edited": false,
-            "field_order": [
-              "collection_name",
-              "token",
-              "api_endpoint",
-              "vector_store_inputs",
-              "embedding",
-              "namespace",
-              "metric",
-              "batch_size",
-              "bulk_insert_batch_concurrency",
-              "bulk_insert_overwrite_concurrency",
-              "bulk_delete_concurrency",
-              "setup_mode",
-              "pre_delete_collection",
-              "metadata_indexing_include",
-              "metadata_indexing_exclude",
-              "collection_indexing_policy",
-              "add_to_vector_store",
-              "search_input",
-              "search_type",
-              "number_of_results"
-            ],
-            "frozen": false,
-            "icon": "AstraDB",
-            "output_types": [],
-            "outputs": [
-              {
-                "cache": true,
-                "display_name": "Retriever",
-                "method": "build_base_retriever",
-                "name": "base_retriever",
-                "selected": "Data",
-                "types": [
-                  "Data"
-                ],
-                "value": "__UNDEFINED__"
-              },
-              {
-                "cache": true,
-                "display_name": "Search Results",
-                "hidden": false,
-                "method": "search_documents",
-                "name": "search_results",
-                "selected": "Data",
-                "types": [
-                  "Data"
-                ],
-                "value": "__UNDEFINED__"
-              }
-            ],
-            "pinned": false,
-            "template": {
-              "_type": "Component",
-              "add_to_vector_store": {
-                "advanced": false,
-                "display_name": "Add to Vector Store",
-                "dynamic": false,
-                "info": "If true, the Vector Store Inputs will be added to the Vector Store.",
-                "list": false,
-                "name": "add_to_vector_store",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "bool",
-                "value": true
-              },
-              "api_endpoint": {
-                "advanced": false,
-                "display_name": "API Endpoint",
-                "dynamic": false,
-                "info": "API endpoint URL for the Astra DB service.",
-                "input_types": [],
-                "load_from_db": true,
-                "name": "api_endpoint",
-                "password": true,
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": ""
-              },
-              "batch_size": {
-                "advanced": true,
-                "display_name": "Batch Size",
-                "dynamic": false,
-                "info": "Optional number of data to process in a single batch.",
-                "list": false,
-                "name": "batch_size",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "int",
-                "value": ""
-              },
-              "bulk_delete_concurrency": {
-                "advanced": true,
-                "display_name": "Bulk Delete Concurrency",
-                "dynamic": false,
-                "info": "Optional concurrency level for bulk delete operations.",
-                "list": false,
-                "name": "bulk_delete_concurrency",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "int",
-                "value": ""
-              },
-              "bulk_insert_batch_concurrency": {
-                "advanced": true,
-                "display_name": "Bulk Insert Batch Concurrency",
-                "dynamic": false,
-                "info": "Optional concurrency level for bulk insert operations.",
-                "list": false,
-                "name": "bulk_insert_batch_concurrency",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "int",
-                "value": ""
-              },
-              "bulk_insert_overwrite_concurrency": {
-                "advanced": true,
-                "display_name": "Bulk Insert Overwrite Concurrency",
-                "dynamic": false,
-                "info": "Optional concurrency level for bulk insert operations that overwrite existing data.",
-                "list": false,
-                "name": "bulk_insert_overwrite_concurrency",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "int",
-                "value": ""
-              },
-              "code": {
-                "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "from loguru import logger\n\nfrom langflow.base.vectorstores.model import LCVectorStoreComponent\nfrom langflow.io import BoolInput, DropdownInput, HandleInput, IntInput, MultilineInput, SecretStrInput, StrInput\nfrom langflow.schema import Data\n\n\nclass AstraVectorStoreComponent(LCVectorStoreComponent):\n    display_name: str = \"Astra DB Vector Store\"\n    description: str = \"Implementation of Vector Store using Astra DB with search capabilities\"\n    documentation: str = \"https://python.langchain.com/docs/integrations/vectorstores/astradb\"\n    icon: str = \"AstraDB\"\n\n    inputs = [\n        StrInput(\n            name=\"collection_name\",\n            display_name=\"Collection Name\",\n            info=\"The name of the collection within Astra DB where the vectors will be stored.\",\n        ),\n        SecretStrInput(\n            name=\"token\",\n            display_name=\"Astra DB Application Token\",\n            info=\"Authentication token for accessing Astra DB.\",\n            value=\"ASTRA_DB_APPLICATION_TOKEN\",\n        ),\n        SecretStrInput(\n            name=\"api_endpoint\",\n            display_name=\"API Endpoint\",\n            info=\"API endpoint URL for the Astra DB service.\",\n            value=\"ASTRA_DB_API_ENDPOINT\",\n        ),\n        HandleInput(\n            name=\"vector_store_inputs\",\n            display_name=\"Vector Store Inputs\",\n            input_types=[\"Document\", \"Data\"],\n            is_list=True,\n        ),\n        HandleInput(\n            name=\"embedding\",\n            display_name=\"Embedding\",\n            input_types=[\"Embeddings\"],\n        ),\n        StrInput(\n            name=\"namespace\",\n            display_name=\"Namespace\",\n            info=\"Optional namespace within Astra DB to use for the collection.\",\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"metric\",\n            display_name=\"Metric\",\n            info=\"Optional distance metric for vector comparisons in the vector store.\",\n            options=[\"cosine\", \"dot_product\", \"euclidean\"],\n            advanced=True,\n        ),\n        IntInput(\n            name=\"batch_size\",\n            display_name=\"Batch Size\",\n            info=\"Optional number of data to process in a single batch.\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"bulk_insert_batch_concurrency\",\n            display_name=\"Bulk Insert Batch Concurrency\",\n            info=\"Optional concurrency level for bulk insert operations.\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"bulk_insert_overwrite_concurrency\",\n            display_name=\"Bulk Insert Overwrite Concurrency\",\n            info=\"Optional concurrency level for bulk insert operations that overwrite existing data.\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"bulk_delete_concurrency\",\n            display_name=\"Bulk Delete Concurrency\",\n            info=\"Optional concurrency level for bulk delete operations.\",\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"setup_mode\",\n            display_name=\"Setup Mode\",\n            info=\"Configuration mode for setting up the vector store, with options like 'Sync', 'Async', or 'Off'.\",\n            options=[\"Sync\", \"Async\", \"Off\"],\n            advanced=True,\n            value=\"Sync\",\n        ),\n        BoolInput(\n            name=\"pre_delete_collection\",\n            display_name=\"Pre Delete Collection\",\n            info=\"Boolean flag to determine whether to delete the collection before creating a new one.\",\n            advanced=True,\n        ),\n        StrInput(\n            name=\"metadata_indexing_include\",\n            display_name=\"Metadata Indexing Include\",\n            info=\"Optional list of metadata fields to include in the indexing.\",\n            advanced=True,\n        ),\n        StrInput(\n            name=\"metadata_indexing_exclude\",\n            display_name=\"Metadata Indexing Exclude\",\n            info=\"Optional list of metadata fields to exclude from the indexing.\",\n            advanced=True,\n        ),\n        StrInput(\n            name=\"collection_indexing_policy\",\n            display_name=\"Collection Indexing Policy\",\n            info=\"Optional dictionary defining the indexing policy for the collection.\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"add_to_vector_store\",\n            display_name=\"Add to Vector Store\",\n            info=\"If true, the Vector Store Inputs will be added to the Vector Store.\",\n        ),\n        MultilineInput(\n            name=\"search_input\",\n            display_name=\"Search Input\",\n        ),\n        DropdownInput(\n            name=\"search_type\",\n            display_name=\"Search Type\",\n            options=[\"Similarity\", \"MMR\"],\n            value=\"Similarity\",\n        ),\n        IntInput(\n            name=\"number_of_results\",\n            display_name=\"Number of Results\",\n            info=\"Number of results to return.\",\n            advanced=True,\n            value=4,\n        ),\n    ]\n\n    def build_vector_store(self):\n        try:\n            from langchain_astradb import AstraDBVectorStore\n            from langchain_astradb.utils.astradb import SetupMode\n        except ImportError:\n            raise ImportError(\n                \"Could not import langchain Astra DB integration package. \"\n                \"Please install it with `pip install langchain-astradb`.\"\n            )\n\n        try:\n            if not self.setup_mode:\n                self.setup_mode = self._inputs[\"setup_mode\"].options[0]\n\n            setup_mode_value = SetupMode[self.setup_mode.upper()]\n        except KeyError:\n            raise ValueError(f\"Invalid setup mode: {self.setup_mode}\")\n\n        vector_store_kwargs = {\n            \"embedding\": self.embedding,\n            \"collection_name\": self.collection_name,\n            \"token\": self.token,\n            \"api_endpoint\": self.api_endpoint,\n            \"namespace\": self.namespace or None,\n            \"metric\": self.metric or None,\n            \"batch_size\": self.batch_size or None,\n            \"bulk_insert_batch_concurrency\": self.bulk_insert_batch_concurrency or None,\n            \"bulk_insert_overwrite_concurrency\": self.bulk_insert_overwrite_concurrency or None,\n            \"bulk_delete_concurrency\": self.bulk_delete_concurrency or None,\n            \"setup_mode\": setup_mode_value,\n            \"pre_delete_collection\": self.pre_delete_collection or False,\n        }\n\n        if self.metadata_indexing_include:\n            vector_store_kwargs[\"metadata_indexing_include\"] = self.metadata_indexing_include\n        elif self.metadata_indexing_exclude:\n            vector_store_kwargs[\"metadata_indexing_exclude\"] = self.metadata_indexing_exclude\n        elif self.collection_indexing_policy:\n            vector_store_kwargs[\"collection_indexing_policy\"] = self.collection_indexing_policy\n\n        try:\n            vector_store = AstraDBVectorStore(**vector_store_kwargs)\n        except Exception as e:\n            raise ValueError(f\"Error initializing AstraDBVectorStore: {str(e)}\") from e\n\n        if self.add_to_vector_store:\n            self._add_documents_to_vector_store(vector_store)\n\n        return vector_store\n\n    def build_base_retriever(self):\n        vector_store = self.build_vector_store()\n        self.status = self._astradb_collection_to_data(vector_store.collection)\n        return vector_store\n\n    def _add_documents_to_vector_store(self, vector_store):\n        documents = []\n        for _input in self.vector_store_inputs or []:\n            if isinstance(_input, Data):\n                documents.append(_input.to_lc_document())\n            else:\n                raise ValueError(\"Vector Store Inputs must be Data objects.\")\n\n        if documents and self.embedding is not None:\n            logger.debug(f\"Adding {len(documents)} documents to the Vector Store.\")\n            try:\n                vector_store.add_documents(documents)\n            except Exception as e:\n                raise ValueError(f\"Error adding documents to AstraDBVectorStore: {str(e)}\") from e\n        else:\n            logger.debug(\"No documents to add to the Vector Store.\")\n\n    def search_documents(self):\n        vector_store = self.build_vector_store()\n\n        logger.debug(f\"Search input: {self.search_input}\")\n        logger.debug(f\"Search type: {self.search_type}\")\n        logger.debug(f\"Number of results: {self.number_of_results}\")\n\n        if self.search_input and isinstance(self.search_input, str) and self.search_input.strip():\n            try:\n                if self.search_type == \"Similarity\":\n                    docs = vector_store.similarity_search(\n                        query=self.search_input,\n                        k=self.number_of_results,\n                    )\n                elif self.search_type == \"MMR\":\n                    docs = vector_store.max_marginal_relevance_search(\n                        query=self.search_input,\n                        k=self.number_of_results,\n                    )\n                else:\n                    raise ValueError(f\"Invalid search type: {self.search_type}\")\n            except Exception as e:\n                raise ValueError(f\"Error performing search in AstraDBVectorStore: {str(e)}\") from e\n\n            logger.debug(f\"Retrieved documents: {len(docs)}\")\n\n            data = [Data.from_document(doc) for doc in docs]\n            logger.debug(f\"Converted documents to data: {len(data)}\")\n            self.status = data\n            return data\n        else:\n            logger.debug(\"No search input provided. Skipping search.\")\n            return []\n\n    def _astradb_collection_to_data(self, collection):\n        data = []\n        data_dict = collection.find()\n        if data_dict and \"data\" in data_dict:\n            data_dict = data_dict[\"data\"].get(\"documents\", [])\n\n        for item in data_dict:\n            data.append(Data(content=item[\"content\"]))\n        return data\n"
-              },
-              "collection_indexing_policy": {
-                "advanced": true,
-                "display_name": "Collection Indexing Policy",
-                "dynamic": false,
-                "info": "Optional dictionary defining the indexing policy for the collection.",
-                "list": false,
-                "load_from_db": false,
-                "name": "collection_indexing_policy",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": ""
-              },
-              "collection_name": {
-                "advanced": false,
-                "display_name": "Collection Name",
-                "dynamic": false,
-                "info": "The name of the collection within Astra DB where the vectors will be stored.",
-                "list": false,
-                "load_from_db": false,
-                "name": "collection_name",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": "langflow"
-              },
-              "embedding": {
-                "advanced": false,
-                "display_name": "Embedding",
-                "dynamic": false,
-                "info": "",
-                "input_types": [
-                  "Embeddings"
-                ],
-                "list": false,
-                "name": "embedding",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "other",
-                "value": ""
-              },
-              "metadata_indexing_exclude": {
-                "advanced": true,
-                "display_name": "Metadata Indexing Exclude",
-                "dynamic": false,
-                "info": "Optional list of metadata fields to exclude from the indexing.",
-                "list": false,
-                "load_from_db": false,
-                "name": "metadata_indexing_exclude",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": ""
-              },
-              "metadata_indexing_include": {
-                "advanced": true,
-                "display_name": "Metadata Indexing Include",
-                "dynamic": false,
-                "info": "Optional list of metadata fields to include in the indexing.",
-                "list": false,
-                "load_from_db": false,
-                "name": "metadata_indexing_include",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": ""
-              },
-              "metric": {
-                "advanced": true,
-                "display_name": "Metric",
-                "dynamic": false,
-                "info": "Optional distance metric for vector comparisons in the vector store.",
-                "name": "metric",
-                "options": [
-                  "cosine",
-                  "dot_product",
-                  "euclidean"
-                ],
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": ""
-              },
-              "namespace": {
-                "advanced": true,
-                "display_name": "Namespace",
-                "dynamic": false,
-                "info": "Optional namespace within Astra DB to use for the collection.",
-                "list": false,
-                "load_from_db": false,
-                "name": "namespace",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": ""
-              },
-              "number_of_results": {
-                "advanced": true,
-                "display_name": "Number of Results",
-                "dynamic": false,
-                "info": "Number of results to return.",
-                "list": false,
-                "name": "number_of_results",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "int",
-                "value": 4
-              },
-              "pre_delete_collection": {
-                "advanced": true,
-                "display_name": "Pre Delete Collection",
-                "dynamic": false,
-                "info": "Boolean flag to determine whether to delete the collection before creating a new one.",
-                "list": false,
-                "name": "pre_delete_collection",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "bool",
-                "value": false
-              },
-              "search_input": {
-                "advanced": false,
-                "display_name": "Search Input",
-                "dynamic": false,
-                "info": "",
-                "input_types": [
-                  "Message",
-                  "str"
-                ],
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "search_input",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": ""
-              },
-              "search_type": {
-                "advanced": false,
-                "display_name": "Search Type",
-                "dynamic": false,
-                "info": "",
-                "name": "search_type",
-                "options": [
-                  "Similarity",
-                  "MMR"
-                ],
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": "Similarity"
-              },
-              "setup_mode": {
-                "advanced": true,
-                "display_name": "Setup Mode",
-                "dynamic": false,
-                "info": "Configuration mode for setting up the vector store, with options like 'Sync', 'Async', or 'Off'.",
-                "name": "setup_mode",
-                "options": [
-                  "Sync",
-                  "Async",
-                  "Off"
-                ],
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": "Sync"
-              },
-              "token": {
-                "advanced": false,
-                "display_name": "Astra DB Application Token",
-                "dynamic": false,
-                "info": "Authentication token for accessing Astra DB.",
-                "input_types": [],
-                "load_from_db": true,
-                "name": "token",
-                "password": true,
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": ""
-              },
-              "vector_store_inputs": {
-                "advanced": false,
-                "display_name": "Vector Store Inputs",
-                "dynamic": false,
-                "info": "",
-                "input_types": [
-                  "Document",
-                  "Data"
-                ],
-                "list": true,
-                "name": "vector_store_inputs",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "other",
-                "value": ""
-              }
-            }
-          },
-          "type": "AstraDB"
-        },
-        "dragging": false,
-        "height": 917,
-        "id": "AstraDB-wANQu",
-        "position": {
-          "x": 1298.4611042465333,
-          "y": 160.7181472642742
-        },
-        "positionAbsolute": {
-          "x": 1298.4611042465333,
-          "y": 160.7181472642742
-        },
-        "selected": false,
-        "type": "genericNode",
-        "width": 384
-      },
-      {
-        "data": {
-          "id": "ParseData-C9tUn",
-          "node": {
-            "base_classes": [
-              "Message"
-            ],
-            "beta": false,
-            "conditional_paths": [],
-            "custom_fields": {},
-            "description": "Convert Data into plain text following a specified template.",
-            "display_name": "Parse Data",
-            "documentation": "",
-            "field_order": [
-              "data",
-              "template",
-              "sep"
-            ],
-            "frozen": false,
-            "icon": "braces",
-            "output_types": [],
-            "outputs": [
-              {
-                "cache": true,
-                "display_name": "Text",
-                "hidden": false,
-                "method": "parse_data",
-                "name": "text",
-                "selected": "Message",
-                "types": [
-                  "Message"
-                ],
-                "value": "__UNDEFINED__"
-              }
-            ],
-            "pinned": false,
-            "template": {
-              "_type": "Component",
-              "code": {
-                "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "from langflow.custom import Component\nfrom langflow.helpers.data import data_to_text\nfrom langflow.io import DataInput, MultilineInput, Output, StrInput\nfrom langflow.schema.message import Message\n\n\nclass ParseDataComponent(Component):\n    display_name = \"Parse Data\"\n    description = \"Convert Data into plain text following a specified template.\"\n    icon = \"braces\"\n\n    inputs = [\n        DataInput(name=\"data\", display_name=\"Data\", info=\"The data to convert to text.\"),\n        MultilineInput(\n            name=\"template\",\n            display_name=\"Template\",\n            info=\"The template to use for formatting the data. It can contain the keys {text}, {data} or any other key in the Data.\",\n            value=\"{text}\",\n        ),\n        StrInput(name=\"sep\", display_name=\"Separator\", advanced=True, value=\"\\n\"),\n    ]\n\n    outputs = [\n        Output(display_name=\"Text\", name=\"text\", method=\"parse_data\"),\n    ]\n\n    def parse_data(self) -> Message:\n        data = self.data if isinstance(self.data, list) else [self.data]\n        template = self.template\n\n        result_string = data_to_text(template, data, sep=self.sep)\n        self.status = result_string\n        return Message(text=result_string)\n"
-              },
-              "data": {
-                "advanced": false,
-                "display_name": "Data",
-                "dynamic": false,
-                "info": "The data to convert to text.",
-                "input_types": [
-                  "Data"
-                ],
-                "list": false,
-                "name": "data",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "other",
-                "value": ""
-              },
-              "sep": {
-                "advanced": true,
-                "display_name": "Separator",
-                "dynamic": false,
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "name": "sep",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": "---"
-              },
-              "template": {
-                "advanced": false,
-                "display_name": "Template",
-                "dynamic": false,
-                "info": "The template to use for formatting the data. It can contain the keys {text}, {data} or any other key in the Data.",
-                "input_types": [
-                  "Message",
-                  "str"
-                ],
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "template",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": "{text}"
-              }
-            }
-          },
-          "type": "ParseData"
-        },
-        "dragging": false,
-        "height": 385,
-        "id": "ParseData-C9tUn",
-        "position": {
-          "x": 1911.4866480237615,
-          "y": 566.903831987901
-        },
-        "positionAbsolute": {
-          "x": 1911.4866480237615,
-          "y": 566.903831987901
+          "x": 246.3440213482861,
+          "y": 213.80494167252948
         },
         "selected": false,
         "type": "genericNode",
@@ -3232,15 +2010,15 @@
       }
     ],
     "viewport": {
-      "x": -124.92057698887993,
-      "y": 126.80996053902413,
-      "zoom": 0.370642160653555
+      "x": -18.398681147036086,
+      "y": 91.6800868001111,
+      "zoom": 0.44443087043850965
     }
   },
   "description": "Visit https://pre-release.langflow.org/tutorials/rag-with-astradb for a detailed guide of this project.\nThis project give you both Ingestion and RAG in a single file. You'll need to visit https://astra.datastax.com/ to create an Astra DB instance, your Token and grab an API Endpoint.\nRunning this project requires you to add a file in the Files component, then define a Collection Name and click on the Play icon on the Astra DB component. \n\nAfter the ingestion ends you are ready to click on the Run button at the lower left corner and start asking questions about your data.",
   "endpoint_name": null,
-  "id": "c9e0cb46-c474-451a-8496-413f58481d92",
+  "id": "132d3eea-22e3-4dcc-8746-9f779cf4186c",
   "is_component": false,
-  "last_tested_version": "1.0.0a61",
+  "last_tested_version": "1.0.0rc0",
   "name": "Vector Store RAG"
 }
