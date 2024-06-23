@@ -73,12 +73,8 @@ class AzureChatOpenAIComponent(LCModelComponent):
             info="System message to pass to the model.",
         ),
     ]
-    outputs = [
-        Output(display_name="Text", name="text_output", method="text_response"),
-        Output(display_name="Language Model", name="model_output", method="model_response"),
-    ]
 
-    def model_response(self) -> LanguageModel:  # type: ignore[type-var]
+    def build_model(self) -> LanguageModel:  # type: ignore[type-var]
         model = self.model
         azure_endpoint = self.azure_endpoint
         azure_deployment = self.azure_deployment
