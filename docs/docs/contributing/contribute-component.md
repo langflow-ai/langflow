@@ -2,7 +2,7 @@ import ZoomableImage from "/src/theme/ZoomableImage.js";
 
 # How to Contribute Components?
 
-As of Langflow 1.0 alpha, new components are added as objects of the [CustomComponent](https://github.com/langflow-ai/langflow/blob/dev/src/backend/base/langflow/interface/custom/custom_component/custom_component.py) class and any dependencies are added to the [pyproject.toml](https://github.com/langflow-ai/langflow/blob/dev/pyproject.toml#L27) file.
+New components are added as objects of the [CustomComponent](https://github.com/langflow-ai/langflow/blob/dev/src/backend/base/langflow/interface/custom/custom_component/custom_component.py) class and any dependencies are added to the [pyproject.toml](https://github.com/langflow-ai/langflow/blob/dev/pyproject.toml#L27) file.
 
 ## Add an example component
 
