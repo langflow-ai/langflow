@@ -68,10 +68,11 @@ export default function PaginatorComponent({
             <Button
               disabled={pageIndex <= 1}
               variant="outline"
-              className="hidden p-0 lg:flex"
+              className="hidden h-8 w-8 p-0 lg:flex"
               onClick={() => {
                 paginate(size, 1);
               }}
+              size={"icon"}
             >
               <span className="sr-only">Go to first page</span>
               <IconComponent name="ChevronsLeft" className="h-4 w-4" />
@@ -84,7 +85,8 @@ export default function PaginatorComponent({
                 }
               }}
               variant="outline"
-              className="p-0"
+              className="h-8 w-8 p-0"
+              size={"icon"}
             >
               <span className="sr-only">Go to previous page</span>
               <IconComponent name="ChevronLeft" className="h-4 w-4" />
@@ -95,7 +97,8 @@ export default function PaginatorComponent({
                 paginate(size, pageIndex + 1);
               }}
               variant="outline"
-              className="p-0"
+              className="h-8 w-8 p-0"
+              size={"icon"}
             >
               <span className="sr-only">Go to next page</span>
               <IconComponent name="ChevronRight" className="h-4 w-4" />
@@ -103,7 +106,8 @@ export default function PaginatorComponent({
             <Button
               disabled={pageIndex === maxIndex}
               variant="outline"
-              className="hidden p-0 lg:flex"
+              className="hidden h-8 w-8 p-0 lg:flex"
+              size={"icon"}
               onClick={() => {
                 paginate(size, maxIndex);
               }}
