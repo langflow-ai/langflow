@@ -15,7 +15,7 @@ from langflow.schema import Data
 
 
 class AstraVectorStoreComponent(LCVectorStoreComponent):
-    display_name: str = "Astra DB Vector Store"
+    display_name: str = "Astra DB"
     description: str = "Implementation of Vector Store using Astra DB with search capabilities"
     documentation: str = "https://python.langchain.com/docs/integrations/vectorstores/astradb"
     icon: str = "AstraDB"
