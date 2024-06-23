@@ -14,7 +14,7 @@ module.exports = {
         "index",
         "getting-started/install-langflow",
         "getting-started/quickstart",
-        "getting-started/canvas",
+        "getting-started/workspace",
         "migration/possible-installation-issues",
         "getting-started/new-to-llms",
       ],
