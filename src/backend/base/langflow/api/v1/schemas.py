@@ -182,6 +182,11 @@ class CustomComponentRequest(BaseModel):
     frontend_node: Optional[dict] = None
 
 
+class CustomComponentResponse(BaseModel):
+    data: dict
+    type: str
+
+
 class UpdateCustomComponentRequest(CustomComponentRequest):
     field: str
     field_value: Optional[Union[str, int, float, bool, dict, list]] = None
