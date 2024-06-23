@@ -118,7 +118,6 @@ def update_projects_components_with_latest_component_versions(project_data, all_
                 for field_name in list(node_data["template"].keys()):
                     if field_name not in latest_template:
                         node_data["template"].pop(field_name)
-    project_data_copy = update_new_output(project_data_copy)
     log_node_changes(node_changes_log)
     return project_data_copy
 
