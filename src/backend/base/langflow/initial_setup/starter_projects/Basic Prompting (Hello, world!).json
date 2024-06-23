@@ -5,193 +5,71 @@
         "className": "",
         "data": {
           "sourceHandle": {
-            "dataType": "ChatInput",
-            "id": "ChatInput-F6inY",
-            "name": "message",
-            "output_types": ["Message"]
-          },
-          "targetHandle": {
-            "fieldName": "user_input",
-            "id": "Prompt-graFQ",
-            "inputTypes": ["Document", "Message", "Record", "Text"],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-ChatInput-F6inY{œdataTypeœ:œChatInputœ,œidœ:œChatInput-F6inYœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-graFQ{œfieldNameœ:œuser_inputœ,œidœ:œPrompt-graFQœ,œinputTypesœ:[œDocumentœ,œMessageœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "ChatInput-F6inY",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-F6inYœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "style": {
-          "stroke": "#555"
-        },
-        "target": "Prompt-graFQ",
-        "targetHandle": "{œfieldNameœ: œuser_inputœ, œidœ: œPrompt-graFQœ, œinputTypesœ: [œDocumentœ, œMessageœ, œRecordœ, œTextœ], œtypeœ: œstrœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "Prompt",
-            "id": "Prompt-graFQ",
-            "name": "prompt",
-            "output_types": ["Message"]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "OpenAIModel-5alpQ",
-            "inputTypes": ["Message"],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-Prompt-graFQ{œdataTypeœ:œPromptœ,œidœ:œPrompt-graFQœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-5alpQ{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-5alpQœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Prompt-graFQ",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-graFQœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "OpenAIModel-5alpQ",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-5alpQœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
             "dataType": "OpenAIModel",
-            "id": "OpenAIModel-5alpQ",
+            "id": "OpenAIModel-dqnxm",
             "name": "text_output",
             "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-axUHy",
+            "id": "ChatOutput-3k2BV",
             "inputTypes": ["Message", "str"],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-OpenAIModel-5alpQ{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-5alpQœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-axUHy{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-axUHyœ,œinputTypesœ:[œMessageœ,œstrœ],œtypeœ:œstrœ}",
-        "source": "OpenAIModel-5alpQ",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-5alpQœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-axUHy",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-axUHyœ, œinputTypesœ: [œMessageœ, œstrœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-OpenAIModel-dqnxm{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-dqnxmœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-3k2BV{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-3k2BVœ,œinputTypesœ:[œMessageœ,œstrœ],œtypeœ:œstrœ}",
+        "source": "OpenAIModel-dqnxm",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-dqnxmœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-3k2BV",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-3k2BVœ, œinputTypesœ: [œMessageœ, œstrœ], œtypeœ: œstrœ}"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "ChatInput",
+            "id": "ChatInput-j8yVK",
+            "name": "message",
+            "output_types": ["Message"]
+          },
+          "targetHandle": {
+            "fieldName": "user_input",
+            "id": "Prompt-669fA",
+            "inputTypes": ["Message", "Text"],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-ChatInput-j8yVK{œdataTypeœ:œChatInputœ,œidœ:œChatInput-j8yVKœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-669fA{œfieldNameœ:œuser_inputœ,œidœ:œPrompt-669fAœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "ChatInput-j8yVK",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-j8yVKœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-669fA",
+        "targetHandle": "{œfieldNameœ: œuser_inputœ, œidœ: œPrompt-669fAœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "Prompt",
+            "id": "Prompt-669fA",
+            "name": "prompt",
+            "output_types": ["Message"]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "OpenAIModel-dqnxm",
+            "inputTypes": ["Message"],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-Prompt-669fA{œdataTypeœ:œPromptœ,œidœ:œPrompt-669fAœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-dqnxm{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-dqnxmœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "Prompt-669fA",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-669fAœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "OpenAIModel-dqnxm",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-dqnxmœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "description": "Create a prompt template with dynamic variables.",
-          "display_name": "Prompt",
-          "id": "Prompt-graFQ",
-          "node": {
-            "base_classes": ["object", "str", "Text"],
-            "beta": false,
-            "custom_fields": {
-              "template": ["user_input"]
-            },
-            "description": "Create a prompt template with dynamic variables.",
-            "display_name": "Prompt",
-            "documentation": "",
-            "error": null,
-            "field_formatters": {},
-            "field_order": [],
-            "frozen": false,
-            "full_path": null,
-            "icon": "prompts",
-            "is_composition": null,
-            "is_input": null,
-            "is_output": null,
-            "name": "",
-            "output_types": [],
-            "outputs": [
-              {
-                "cache": true,
-                "display_name": "Prompt Message",
-                "hidden": false,
-                "method": "build_prompt",
-                "name": "prompt",
-                "selected": "Message",
-                "types": ["Message"],
-                "value": "__UNDEFINED__"
-              }
-            ],
-            "template": {
-              "_type": "Component",
-              "code": {
-                "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "from langflow.custom import Component\nfrom langflow.io import Output, PromptInput\nfrom langflow.schema.message import Message\n\n\nclass PromptComponent(Component):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"prompts\"\n    trace_type = \"prompt\"\n\n    inputs = [\n        PromptInput(name=\"template\", display_name=\"Template\"),\n    ]\n\n    outputs = [\n        Output(display_name=\"Prompt Message\", name=\"prompt\", method=\"build_prompt\"),\n    ]\n\n    async def build_prompt(\n        self,\n    ) -> Message:\n        prompt = await Message.from_template_and_variables(**self._attributes)\n        self.status = prompt.text\n        return prompt\n"
-              },
-              "template": {
-                "advanced": false,
-                "display_name": "Template",
-                "dynamic": false,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "input_types": ["Text"],
-                "list": false,
-                "load_from_db": false,
-                "multiline": false,
-                "name": "template",
-                "password": false,
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "prompt",
-                "value": "Answer the user as if you were a pirate.\n\nUser: {user_input}\n\nAnswer: "
-              },
-              "user_input": {
-                "advanced": false,
-                "display_name": "user_input",
-                "dynamic": false,
-                "field_type": "str",
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "input_types": ["Document", "Message", "Record", "Text"],
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "user_input",
-                "password": false,
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": ""
-              }
-            }
-          },
-          "type": "Prompt"
-        },
-        "dragging": false,
-        "height": 479,
-        "id": "Prompt-graFQ",
-        "position": {
-          "x": 53.588791333410654,
-          "y": -107.07318910019967
-        },
-        "positionAbsolute": {
-          "x": 53.588791333410654,
-          "y": -107.07318910019967
-        },
-        "selected": false,
-        "type": "genericNode",
-        "width": 384
-      },
-      {
-        "data": {
-          "id": "ChatOutput-axUHy",
+          "id": "ChatOutput-3k2BV",
           "node": {
             "base_classes": ["Record", "Text", "str", "object"],
             "beta": false,
@@ -328,8 +206,8 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "height": 357,
-        "id": "ChatOutput-axUHy",
+        "height": 309,
+        "id": "ChatOutput-3k2BV",
         "position": {
           "x": 1193.250417197867,
           "y": 71.88476890163852
@@ -344,7 +222,7 @@
       },
       {
         "data": {
-          "id": "ChatInput-F6inY",
+          "id": "ChatInput-j8yVK",
           "node": {
             "base_classes": ["object", "Record", "str", "Text"],
             "beta": false,
@@ -413,7 +291,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "hello!"
               },
               "sender": {
                 "advanced": true,
@@ -481,8 +359,8 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "height": 357,
-        "id": "ChatInput-F6inY",
+        "height": 309,
+        "id": "ChatInput-j8yVK",
         "position": {
           "x": -495.2223093083827,
           "y": -232.56998443685862
@@ -500,7 +378,7 @@
           "description": "Generates text using OpenAI LLMs.",
           "display_name": "OpenAI",
           "edited": false,
-          "id": "OpenAIModel-5alpQ",
+          "id": "OpenAIModel-dqnxm",
           "node": {
             "base_classes": ["LanguageModel", "Message"],
             "beta": false,
@@ -653,7 +531,7 @@
                 "dynamic": false,
                 "info": "The OpenAI API Key to use for the OpenAI model.",
                 "input_types": [],
-                "load_from_db": true,
+                "load_from_db": false,
                 "name": "openai_api_key",
                 "password": true,
                 "placeholder": "",
@@ -740,7 +618,7 @@
         },
         "dragging": false,
         "height": 623,
-        "id": "OpenAIModel-5alpQ",
+        "id": "OpenAIModel-dqnxm",
         "position": {
           "x": 576.388859357137,
           "y": 131.1662189663108
@@ -749,20 +627,134 @@
           "x": 576.388859357137,
           "y": 131.1662189663108
         },
+        "selected": false,
+        "type": "genericNode",
+        "width": 384
+      },
+      {
+        "data": {
+          "description": "Create a prompt template with dynamic variables.",
+          "display_name": "Prompt",
+          "id": "Prompt-669fA",
+          "node": {
+            "base_classes": ["Message"],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {
+              "template": ["user_input"]
+            },
+            "description": "Create a prompt template with dynamic variables.",
+            "display_name": "Prompt",
+            "documentation": "",
+            "edited": false,
+            "error": null,
+            "field_order": ["template"],
+            "frozen": false,
+            "full_path": null,
+            "icon": "prompts",
+            "is_composition": null,
+            "is_input": null,
+            "is_output": null,
+            "name": "",
+            "output_types": [],
+            "outputs": [
+              {
+                "cache": true,
+                "display_name": "Prompt Message",
+                "hidden": false,
+                "method": "build_prompt",
+                "name": "prompt",
+                "selected": "Message",
+                "types": ["Message"],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from langflow.base.prompts.api_utils import process_prompt_template\nfrom langflow.custom import Component\nfrom langflow.io import Output, PromptInput\nfrom langflow.schema.message import Message\nfrom langflow.template.utils import update_template_values\n\n\nclass PromptComponent(Component):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"prompts\"\n    trace_type = \"prompt\"\n\n    inputs = [\n        PromptInput(name=\"template\", display_name=\"Template\"),\n    ]\n\n    outputs = [\n        Output(display_name=\"Prompt Message\", name=\"prompt\", method=\"build_prompt\"),\n    ]\n\n    async def build_prompt(\n        self,\n    ) -> Message:\n        prompt = await Message.from_template_and_variables(**self._attributes)\n        self.status = prompt.text\n        return prompt\n\n    def post_code_processing(self, new_build_config: dict, current_build_config: dict):\n        \"\"\"\n        This function is called after the code validation is done.\n        \"\"\"\n        frontend_node = super().post_code_processing(new_build_config, current_build_config)\n        template = frontend_node[\"template\"][\"template\"][\"value\"]\n        _ = process_prompt_template(\n            template=template,\n            name=\"template\",\n            custom_fields=frontend_node[\"custom_fields\"],\n            frontend_node_template=frontend_node[\"template\"],\n        )\n        # Now that template is updated, we need to grab any values that were set in the current_build_config\n        # and update the frontend_node with those values\n        update_template_values(frontend_template=frontend_node, raw_template=current_build_config[\"template\"])\n        return frontend_node\n"
+              },
+              "template": {
+                "advanced": false,
+                "display_name": "Template",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "name": "template",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_input": true,
+                "type": "prompt",
+                "value": "Answer the user as if you were a pirate.\n\nUser: {user_input}\n\nAnswer: "
+              },
+              "user_input": {
+                "advanced": false,
+                "display_name": "user_input",
+                "dynamic": false,
+                "field_type": "str",
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "input_types": ["Message", "Text"],
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "user_input",
+                "password": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": ""
+              }
+            }
+          },
+          "type": "Prompt"
+        },
+        "dragging": false,
+        "height": 423,
+        "id": "Prompt-669fA",
+        "position": {
+          "x": 33.573076589480024,
+          "y": -103.0780954474625
+        },
+        "positionAbsolute": {
+          "x": 33.573076589480024,
+          "y": -103.0780954474625
+        },
         "selected": true,
         "type": "genericNode",
         "width": 384
       }
     ],
     "viewport": {
-      "x": 0,
-      "y": 0,
-      "zoom": 1
+      "x": 397.70356097447427,
+      "y": 260.7996290400466,
+      "zoom": 0.664116646149498
     }
   },
   "description": "This flow will get you experimenting with the basics of the UI, the Chat and the Prompt component. \n\nTry changing the Template in it to see how the model behaves. \nYou can change it to this and a Text Input into the `type_of_person` variable : \"Answer the user as if you were a pirate.\n\nUser: {user_input}\n\nAnswer: \" ",
   "endpoint_name": null,
-  "id": "a186d643-9741-4d3f-b84e-74d5ac368621",
+  "id": "a501072c-37ed-44cf-84ee-b1844d4bc3de",
   "is_component": false,
   "last_tested_version": "1.0.0a61",
   "name": "Basic Prompting (Hello, World)"
