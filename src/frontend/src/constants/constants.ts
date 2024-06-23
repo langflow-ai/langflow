@@ -102,13 +102,15 @@ export const EXPORT_DIALOG_SUBTITLE = "Export flow as JSON file.";
  * The base text for subtitle of Flow Settings (Menubar)
  * @constant
  */
-export const SETTINGS_DIALOG_SUBTITLE = "Customize workspace settings and preferences.";
+export const SETTINGS_DIALOG_SUBTITLE =
+  "Customize workspace settings and preferences.";
 
 /**
  * The base text for subtitle of Flow Logs (Menubar)
  * @constant
  */
-export const LOGS_DIALOG_SUBTITLE = "Explore detailed logs of events and transactions between components.";
+export const LOGS_DIALOG_SUBTITLE =
+  "Explore detailed logs of events and transactions between components.";
 
 /**
  * The base text for subtitle of Code Dialog (Toolbar)
