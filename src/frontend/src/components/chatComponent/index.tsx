@@ -68,7 +68,7 @@ export default function FlowToolbar(): JSX.Element {
             "relative ag-cell inline-flex h-full w-full items-center justify-center gap-[4px] bg-muted px-5 py-3 text-sm font-semibold text-foreground transition-all duration-150 ease-in-out hover:bg-background hover:bg-hover",
             !hasApiKey || !validApiKey || !hasStore
               ? "button-disable text-muted-foreground"
-              : ""
+              : "",
           )}
         >
           <ForwardedIconComponent
@@ -77,7 +77,7 @@ export default function FlowToolbar(): JSX.Element {
               "h-6 w-6",
               !hasApiKey || !validApiKey || !hasStore
                 ? "extra-side-bar-save-disable"
-                : ""
+                : "",
             )}
           />
           {t("Share")}
@@ -91,7 +91,7 @@ export default function FlowToolbar(): JSX.Element {
       hasStore,
       openShareModal,
       setOpenShareModal,
-    ]
+    ],
   );
 
   return (
@@ -147,7 +147,7 @@ export default function FlowToolbar(): JSX.Element {
                 >
                   <div
                     className={classNames(
-                      "relative inline-flex ag-cell w-full items-center justify-center gap-1 px-5 py-3 text-sm font-semibold text-foreground transition-all duration-150 ease-in-out hover:bg-hover"
+                      "relative inline-flex w-full items-center justify-center gap-1 px-5 py-3 text-sm font-semibold text-foreground transition-all duration-150 ease-in-out hover:bg-hover",
                     )}
                   >
                     <ForwardedIconComponent

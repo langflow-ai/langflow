@@ -8,7 +8,7 @@ import useFlowsManagerStore from "../../stores/flowsManagerStore";
 export default function SettingsPage(): JSX.Element {
   const pathname = location.pathname;
   const setCurrentFlowId = useFlowsManagerStore(
-    (state) => state.setCurrentFlowId
+    (state) => state.setCurrentFlowId,
   );
   useEffect(() => {
     setCurrentFlowId("");

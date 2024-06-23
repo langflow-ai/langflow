@@ -24,8 +24,7 @@ export default function TableOptions({
         <div>
           <ShadTooltip content="Reset Columns">
             <Button
-              variant="none"
-              size="none"
+              unstyled
               onClick={() => {
                 resetGrid();
               }}
@@ -35,7 +34,7 @@ export default function TableOptions({
                 name="RotateCcw"
                 strokeWidth={2}
                 className={cn(
-                  "h-5 w-5 text-primary transition-all hover:text-accent-foreground"
+                  "h-5 w-5 text-primary transition-all hover:text-accent-foreground",
                 )}
               />
             </Button>
@@ -52,12 +51,7 @@ export default function TableOptions({
                 )
               }
             >
-              <Button
-                variant="none"
-                size="none"
-                onClick={duplicateRow}
-                disabled={!hasSelection}
-              >
+              <Button unstyled onClick={duplicateRow} disabled={!hasSelection}>
                 <IconComponent
                   name="Copy"
                   className={cn("h-5 w-5 text-primary transition-all")}
@@ -77,17 +71,12 @@ export default function TableOptions({
                 )
               }
             >
-              <Button
-                variant="none"
-                size="none"
-                onClick={deleteRow}
-                disabled={!hasSelection}
-              >
+              <Button unstyled onClick={deleteRow} disabled={!hasSelection}>
                 <IconComponent
                   name="Trash2"
                   className={cn(
                     "h-5 w-5 text-primary transition-all",
-                    !hasSelection ? "" : "hover:text-status-red"
+                    !hasSelection ? "" : "hover:text-status-red",
                   )}
                 />
               </Button>

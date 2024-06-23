@@ -1,7 +1,7 @@
 from langchain.chains import LLMCheckerChain
 
 from langflow.custom import CustomComponent
-from langflow.field_typing import BaseLanguageModel, Text
+from langflow.field_typing import LanguageModel, Text
 
 
 class LLMCheckerChainComponent(CustomComponent):
@@ -21,11 +21,11 @@ class LLMCheckerChainComponent(CustomComponent):
     def build(
         self,
         input_value: Text,
-        llm: BaseLanguageModel,
+        llm: LanguageModel,
     ) -> Text:
         chain = LLMCheckerChain.from_llm(llm=llm)
         response = chain.invoke({chain.input_key: input_value})
         result = response.get(chain.output_key, "")
-        result_str = Text(result)
+        result_str = str(result)
         self.status = result_str
         return result_str

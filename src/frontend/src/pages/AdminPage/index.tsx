@@ -53,7 +53,7 @@ export default function AdminPage() {
   const { userData } = useContext(AuthContext);
   const [totalRowsCount, setTotalRowsCount] = useState(0);
   const setCurrentFlowId = useFlowsManagerStore(
-    (state) => state.setCurrentFlowId
+    (state) => state.setCurrentFlowId,
   );
 
   // set null id
@@ -114,7 +114,7 @@ export default function AdminPage() {
       setFilterUserList(userList.current);
     } else {
       const filteredList = userList.current.filter((user: Users) =>
-        user.username.toLowerCase().includes(input.toLowerCase())
+        user.username.toLowerCase().includes(input.toLowerCase()),
       );
       setFilterUserList(filteredList);
     }
@@ -331,7 +331,7 @@ export default function AdminPage() {
                                 handleDisableUser(
                                   user.is_active,
                                   user.id,
-                                  user
+                                  user,
                                 );
                               }}
                             >
@@ -363,7 +363,7 @@ export default function AdminPage() {
                                 handleSuperUserEdit(
                                   user.is_superuser,
                                   user.id,
-                                  user
+                                  user,
                                 );
                               }}
                             >

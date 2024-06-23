@@ -1,81 +1,77 @@
-from typing import Optional, Union
+from typing import List
 
-from langchain_community.vectorstores.pgvector import PGVector
-from langchain_core.embeddings import Embeddings
-from langchain_core.retrievers import BaseRetriever
-from langchain_core.vectorstores import VectorStore
+from langchain_community.vectorstores import PGVector
 
-from langflow.custom import CustomComponent
-from langflow.schema import Record
+from langflow.base.vectorstores.model import LCVectorStoreComponent
+from langflow.helpers.data import docs_to_data
+from langflow.io import HandleInput, IntInput, StrInput, SecretStrInput, DataInput, MultilineInput
+from langflow.schema import Data
 
 
-class PGVectorComponent(CustomComponent):
-    """
-    A custom component for implementing a Vector Store using PostgreSQL.
-    """
+class PGVectorStoreComponent(LCVectorStoreComponent):
+    display_name = "PGVector"
+    description = "PGVector Vector Store with search capabilities"
+    documentation = "https://python.langchain.com/v0.2/docs/integrations/vectorstores/pgvector/"
+    icon = "PGVector"
 
-    display_name: str = "PGVector"
-    description: str = "Implementation of Vector Store using PostgreSQL"
-    documentation = "https://python.langchain.com/docs/integrations/vectorstores/pgvector"
+    inputs = [
+        SecretStrInput(name="pg_server_url", display_name="PostgreSQL Server Connection String", required=True),
+        StrInput(name="collection_name", display_name="Table", required=True),
+        MultilineInput(name="search_query", display_name="Search Query"),
+        DataInput(
+            name="ingest_data",
+            display_name="Ingestion Data",
+            is_list=True,
+        ),
+        HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
+        IntInput(
+            name="number_of_results",
+            display_name="Number of Results",
+            info="Number of results to return.",
+            value=4,
+            advanced=True,
+        ),
+        HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
+    ]
 
-    def build_config(self):
-        """
-        Builds the configuration for the component.
+    def build_vector_store(self) -> PGVector:
+        return self._build_pgvector()
 
-        Returns:
-        - dict: A dictionary containing the configuration options for the component.
-        """
-        return {
-            "code": {"show": False},
-            "inputs": {"display_name": "Input", "input_types": ["Document", "Record"]},
-            "embedding": {"display_name": "Embedding"},
-            "pg_server_url": {
-                "display_name": "PostgreSQL Server Connection String",
-                "advanced": False,
-            },
-            "collection_name": {"display_name": "Table", "advanced": False},
-        }
-
-    def build(
-        self,
-        embedding: Embeddings,
-        pg_server_url: str,
-        collection_name: str,
-        inputs: Optional[Record] = None,
-    ) -> Union[VectorStore, BaseRetriever]:
-        """
-        Builds the Vector Store or BaseRetriever object.
-
-        Args:
-        - embedding (Embeddings): The embeddings to use for the Vector Store.
-        - documents (Optional[Document]): The documents to use for the Vector Store.
-        - collection_name (str): The name of the PG table.
-        - pg_server_url (str): The URL for the PG server.
-
-        Returns:
-        - VectorStore: The Vector Store object.
-        """
-
+    def _build_pgvector(self) -> PGVector:
         documents = []
-        for _input in inputs or []:
-            if isinstance(_input, Record):
+        for _input in self.ingest_data or []:
+            if isinstance(_input, Data):
                 documents.append(_input.to_lc_document())
             else:
                 documents.append(_input)
-        try:
-            if documents is None:
-                vector_store = PGVector.from_existing_index(
-                    embedding=embedding,
-                    collection_name=collection_name,
-                    connection_string=pg_server_url,
-                )
-            else:
-                vector_store = PGVector.from_documents(
-                    embedding=embedding,
-                    documents=documents,  # type: ignore
-                    collection_name=collection_name,
-                    connection_string=pg_server_url,
-                )
-        except Exception as e:
-            raise RuntimeError(f"Failed to build PGVector: {e}")
-        return vector_store
+
+        if documents:
+            pgvector = PGVector.from_documents(
+                embedding=self.embedding,
+                documents=documents,
+                collection_name=self.collection_name,
+                connection_string=self.pg_server_url,
+            )
+        else:
+            pgvector = PGVector.from_existing_index(
+                embedding=self.embedding,
+                collection_name=self.collection_name,
+                connection_string=self.pg_server_url,
+            )
+
+        return pgvector
+
+    def search_documents(self) -> List[Data]:
+        vector_store = self._build_pgvector()
+
+        if self.search_query and isinstance(self.search_query, str) and self.search_query.strip():
+            docs = vector_store.similarity_search(
+                query=self.search_query,
+                k=self.number_of_results,
+            )
+
+            data = docs_to_data(docs)
+            self.status = data
+            return data
+        else:
+            return []

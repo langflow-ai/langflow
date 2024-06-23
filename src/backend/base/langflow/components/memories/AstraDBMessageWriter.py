@@ -3,7 +3,7 @@ from typing import Optional
 from langchain_core.messages import BaseMessage
 
 from langflow.base.memory.memory import BaseMemoryComponent
-from langflow.schema.record import Record
+from langflow.schema import Data
 
 
 class AstraDBMessageWriterComponent(BaseMemoryComponent):
@@ -13,8 +13,8 @@ class AstraDBMessageWriterComponent(BaseMemoryComponent):
     def build_config(self):
         return {
             "input_value": {
-                "display_name": "Input Record",
-                "info": "Record to write to Astra DB.",
+                "display_name": "Input Data",
+                "info": "Data to write to Astra DB.",
             },
             "session_id": {
                 "display_name": "Session ID",
@@ -97,13 +97,13 @@ class AstraDBMessageWriterComponent(BaseMemoryComponent):
 
     def build(
         self,
-        input_value: Record,
+        input_value: Data,
         session_id: str,
         collection_name: str,
         token: str,
         api_endpoint: str,
         namespace: Optional[str] = None,
-    ) -> Record:
+    ) -> Data:
         try:
             from langchain_astradb.chat_message_histories import AstraDBChatMessageHistory
         except ImportError:

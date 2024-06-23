@@ -1,7 +1,7 @@
 from typing import Optional
 
 from langflow.custom import CustomComponent
-from langflow.schema import Record
+from langflow.schema import Data
 
 
 class BaseMemoryComponent(CustomComponent):
@@ -32,15 +32,15 @@ class BaseMemoryComponent(CustomComponent):
                 "info": "Order of the messages.",
                 "advanced": True,
             },
-            "record_template": {
-                "display_name": "Record Template",
+            "data_template": {
+                "display_name": "Data Template",
                 "multiline": True,
-                "info": "Template to convert Record to Text. If left empty, it will be dynamically set to the Record's text key.",
+                "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
                 "advanced": True,
             },
         }
 
-    def get_messages(self, **kwargs) -> list[Record]:
+    def get_messages(self, **kwargs) -> list[Data]:
         raise NotImplementedError
 
     def add_message(

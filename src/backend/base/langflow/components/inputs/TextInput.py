@@ -1,32 +1,26 @@
-from typing import Optional
-
 from langflow.base.io.text import TextComponent
-from langflow.field_typing import Text
+from langflow.io import Output, TextInput
+from langflow.schema.message import Message
 
 
-class TextInput(TextComponent):
+class TextInputComponent(TextComponent):
     display_name = "Text Input"
     description = "Get text inputs from the Playground."
     icon = "type"
 
-    def build_config(self):
-        return {
-            "input_value": {
-                "display_name": "Text",
-                "input_types": ["Record", "Text"],
-                "info": "Text or Record to be passed as input.",
-            },
-            "record_template": {
-                "display_name": "Record Template",
-                "multiline": True,
-                "info": "Template to convert Record to Text. If left empty, it will be dynamically set to the Record's text key.",
-                "advanced": True,
-            },
-        }
+    inputs = [
+        TextInput(
+            name="input_value",
+            display_name="Text",
+            info="Text to be passed as input.",
+        ),
+    ]
+    outputs = [
+        Output(display_name="Text", name="text", method="text_response"),
+    ]
 
-    def build(
-        self,
-        input_value: Optional[Text] = "",
-        record_template: Optional[str] = "",
-    ) -> Text:
-        return super().build(input_value=input_value, record_template=record_template)
+    def text_response(self) -> Message:
+        message = Message(
+            text=self.input_value,
+        )
+        return message

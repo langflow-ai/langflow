@@ -256,6 +256,7 @@ def build_class_constructor(compiled_class, exec_globals, class_name):
                 globals()[module_name] = module
 
         instance = exec_globals[class_name](*args, **kwargs)
+
         return instance
 
     build_custom_class.__globals__.update(exec_globals)

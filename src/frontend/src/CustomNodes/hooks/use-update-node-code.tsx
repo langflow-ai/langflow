@@ -7,7 +7,8 @@ const useUpdateNodeCode = (
   dataNode: APIClassType, // Define YourNodeType according to your data structure
   setNode: (id: string, callback: (oldNode) => any) => void,
   setIsOutdated: (value: boolean) => void,
-  updateNodeInternals: (id: string) => void
+  setIsUserEdited: (value: boolean) => void,
+  updateNodeInternals: (id: string) => void,
 ) => {
   const updateNodeCode = useCallback(
     (newNodeClass: APIClassType, code: string, name: string) => {
@@ -24,13 +25,14 @@ const useUpdateNodeCode = (
 
         newNode.data.node.template[name].value = code;
         setIsOutdated(false);
+        setIsUserEdited(false);
 
         return newNode;
       });
 
       updateNodeInternals(dataId);
     },
-    [dataId, dataNode, setNode, setIsOutdated, updateNodeInternals]
+    [dataId, dataNode, setNode, setIsOutdated, updateNodeInternals],
   );
 
   return updateNodeCode;

@@ -21,13 +21,13 @@ import StoreApiKeyFormComponent from "./components/StoreApiKeyForm";
 
 export default function GeneralPage() {
   const setCurrentFlowId = useFlowsManagerStore(
-    (state) => state.setCurrentFlowId
+    (state) => state.setCurrentFlowId,
   );
 
   const { scrollId } = useParams();
 
   const [inputState, setInputState] = useState<patchUserInputStateType>(
-    CONTROL_PATCH_USER_STATE
+    CONTROL_PATCH_USER_STATE,
   );
 
   const { autoLogin } = useContext(AuthContext);
@@ -48,7 +48,7 @@ export default function GeneralPage() {
   const { handlePatchPassword } = usePatchPassword(
     userData,
     setSuccessData,
-    setErrorData
+    setErrorData,
   );
 
   const { handleGetProfilePictures } = useGetProfilePictures(setErrorData);
@@ -57,7 +57,7 @@ export default function GeneralPage() {
     setSuccessData,
     setErrorData,
     userData,
-    setUserData
+    setUserData,
   );
 
   useScrollToElement(scrollId, setCurrentFlowId);
@@ -67,7 +67,7 @@ export default function GeneralPage() {
     setErrorData,
     setHasApiKey,
     setValidApiKey,
-    setLoadingApiKey
+    setLoadingApiKey,
   );
 
   function handleInput({

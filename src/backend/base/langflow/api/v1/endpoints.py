@@ -1,10 +1,13 @@
+from asyncio import Lock
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Annotated, List, Optional, Union
 from uuid import UUID
 
 import sqlalchemy as sa
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Request, UploadFile, status
-from langflow.api.utils import update_frontend_node_with_template_values
+from loguru import logger
+from sqlmodel import Session, select
+
 from langflow.api.v1.schemas import (
     ConfigResponse,
     CustomComponentRequest,
@@ -16,7 +19,7 @@ from langflow.api.v1.schemas import (
     UpdateCustomComponentRequest,
     UploadFileResponse,
 )
-from langflow.custom import CustomComponent
+from langflow.custom.custom_component.component import Component
 from langflow.custom.utils import build_custom_component_template
 from langflow.graph.graph.base import Graph
 from langflow.graph.schema import RunOutputs
@@ -26,30 +29,40 @@ from langflow.schema.graph import Tweaks
 from langflow.services.auth.utils import api_key_security, get_current_active_user
 from langflow.services.cache.utils import save_uploaded_file
 from langflow.services.database.models.flow import Flow
-from langflow.services.database.models.flow.utils import get_all_webhook_components_in_flow, get_flow_by_id
+from langflow.services.database.models.flow.utils import get_all_webhook_components_in_flow
 from langflow.services.database.models.user.model import User
-from langflow.services.deps import get_session, get_session_service, get_settings_service, get_task_service
+from langflow.services.deps import (
+    get_cache_service,
+    get_session,
+    get_session_service,
+    get_settings_service,
+    get_task_service,
+)
 from langflow.services.session.service import SessionService
 from langflow.services.task.service import TaskService
-from loguru import logger
-from sqlmodel import Session, select
 
 if TYPE_CHECKING:
-    from langflow.services.settings.manager import SettingsService
+    from langflow.services.cache.base import CacheService
+    from langflow.services.settings.service import SettingsService
 
 router = APIRouter(tags=["Base"])
 
 
 @router.get("/all", dependencies=[Depends(get_current_active_user)])
-def get_all(
+async def get_all(
     settings_service=Depends(get_settings_service),
+    cache_service: "CacheService" = Depends(dependency=get_cache_service),
+    force_refresh: bool = False,
 ):
-    from langflow.interface.types import get_all_types_dict
+    from langflow.interface.types import get_and_cache_all_types_dict
 
-    logger.debug("Building langchain types dict")
     try:
-        all_types_dict = get_all_types_dict(settings_service.settings.components_path)
-        return all_types_dict
+        async with Lock() as lock:
+            all_types_dict = await get_and_cache_all_types_dict(
+                settings_service=settings_service, cache_service=cache_service, force_refresh=force_refresh, lock=lock
+            )
+
+            return all_types_dict
     except Exception as exc:
         logger.exception(exc)
         raise HTTPException(status_code=500, detail=str(exc)) from exc
@@ -106,12 +119,10 @@ async def simple_run_flow(
 
 @router.post("/run/{flow_id_or_name}", response_model=RunResponse, response_model_exclude_none=True)
 async def simplified_run_flow(
-    db: Annotated[Session, Depends(get_session)],
     flow: Annotated[Flow, Depends(get_flow_by_id_or_endpoint_name)],
     input_request: SimplifiedAPIRequest = SimplifiedAPIRequest(),
     stream: bool = False,
     api_key_user: User = Depends(api_key_security),
-    session_service: SessionService = Depends(get_session_service),
 ):
     """
     Executes a specified flow by ID with input customization, performance enhancements through caching, and optional data streaming.
@@ -183,10 +194,10 @@ async def simplified_run_flow(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
 
 
-@router.post("/webhook/{flow_id}", response_model=dict, status_code=HTTPStatus.ACCEPTED)
+@router.post("/webhook/{flow_id_or_name}", response_model=dict, status_code=HTTPStatus.ACCEPTED)
 async def webhook_run_flow(
     db: Annotated[Session, Depends(get_session)],
-    flow: Annotated[Flow, Depends(get_flow_by_id)],
+    flow: Annotated[Flow, Depends(get_flow_by_id_or_endpoint_name)],
     request: Request,
     background_tasks: BackgroundTasks,
     session_service: SessionService = Depends(get_session_service),
@@ -232,7 +243,6 @@ async def webhook_run_flow(
         logger.debug("Starting background task")
         background_tasks.add_task(  # type: ignore
             simple_run_flow,
-            db=db,
             flow=flow,
             input_request=input_request,
         )
@@ -453,11 +463,11 @@ async def custom_component(
     raw_code: CustomComponentRequest,
     user: User = Depends(get_current_active_user),
 ):
-    component = CustomComponent(code=raw_code.code)
+    component = Component(code=raw_code.code)
 
-    built_frontend_node, _ = build_custom_component_template(component, user_id=user.id)
+    built_frontend_node, component_instance = build_custom_component_template(component, user_id=user.id)
 
-    built_frontend_node = update_frontend_node_with_template_values(built_frontend_node, raw_code.frontend_node)
+    built_frontend_node = component_instance.post_code_processing(built_frontend_node, raw_code.frontend_node)
     return built_frontend_node
 
 
@@ -481,7 +491,7 @@ async def custom_component_update(
 
     """
     try:
-        component = CustomComponent(code=code_request.code)
+        component = Component(code=code_request.code)
 
         component_node, cc_instance = build_custom_component_template(
             component,

@@ -2,13 +2,13 @@ import unicodedata
 import xml.etree.ElementTree as ET
 from concurrent import futures
 from pathlib import Path
-from typing import Callable, List, Optional, Text
+from typing import Callable, List, Optional
 
 import chardet
 import orjson
 import yaml
 
-from langflow.schema import Record
+from langflow.schema import Data
 
 # Types of files that can be read simply by file.read()
 # and have 100% to be completely readable
@@ -33,12 +33,7 @@ TEXT_FILE_TYPES = [
     "tsx",
 ]
 
-IMG_FILE_TYPES = [
-    "jpg",
-    "jpeg",
-    "png",
-    "bmp",
-]
+IMG_FILE_TYPES = ["jpg", "jpeg", "png", "bmp", "image"]
 
 
 def normalize_text(text):
@@ -75,30 +70,28 @@ def retrieve_file_paths(
 
     glob = "**/*" if recursive else "*"
     paths = walk_level(path_obj, depth) if depth else path_obj.glob(glob)
-    file_paths = [Text(p) for p in paths if p.is_file() and match_types(p) and is_not_hidden(p)]
+    file_paths = [str(p) for p in paths if p.is_file() and match_types(p) and is_not_hidden(p)]
 
     return file_paths
 
 
-# ! Removing unstructured dependency until
-# ! 3.12 is supported
-# def partition_file_to_record(file_path: str, silent_errors: bool) -> Optional[Record]:
-#     # Use the partition function to load the file
-#     from unstructured.partition.auto import partition  # type: ignore
+def partition_file_to_data(file_path: str, silent_errors: bool) -> Optional[Data]:
+    # Use the partition function to load the file
+    from unstructured.partition.auto import partition  # type: ignore
 
-#     try:
-#         elements = partition(file_path)
-#     except Exception as e:
-#         if not silent_errors:
-#             raise ValueError(f"Error loading file {file_path}: {e}") from e
-#         return None
+    try:
+        elements = partition(file_path)
+    except Exception as e:
+        if not silent_errors:
+            raise ValueError(f"Error loading file {file_path}: {e}") from e
+        return None
 
-#     # Create a Record
-#     text = "\n\n".join([Text(el) for el in elements])
-#     metadata = elements.metadata if hasattr(elements, "metadata") else {}
-#     metadata["file_path"] = file_path
-#     record = Record(text=text, data=metadata)
-#     return record
+    # Create a Data
+    text = "\n\n".join([str(el) for el in elements])
+    metadata = elements.metadata if hasattr(elements, "metadata") else {}
+    metadata["file_path"] = file_path
+    record = Data(text=text, data=metadata)
+    return record
 
 
 def read_text_file(file_path: str) -> str:
@@ -129,7 +122,7 @@ def parse_pdf_to_text(file_path: str) -> str:
         return "\n\n".join([page.extract_text() for page in reader.pages])
 
 
-def parse_text_file_to_record(file_path: str, silent_errors: bool) -> Optional[Record]:
+def parse_text_file_to_data(file_path: str, silent_errors: bool) -> Optional[Data]:
     try:
         if file_path.endswith(".pdf"):
             text = parse_pdf_to_text(file_path)
@@ -145,6 +138,7 @@ def parse_text_file_to_record(file_path: str, silent_errors: bool) -> Optional[R
                 text = {k: normalize_text(v) if isinstance(v, str) else v for k, v in text.items()}
             elif isinstance(text, list):
                 text = [normalize_text(item) if isinstance(item, str) else item for item in text]
+            text = orjson.dumps(text).decode("utf-8")
 
         elif file_path.endswith(".yaml") or file_path.endswith(".yml"):
             text = yaml.safe_load(text)
@@ -156,7 +150,7 @@ def parse_text_file_to_record(file_path: str, silent_errors: bool) -> Optional[R
             raise ValueError(f"Error loading file {file_path}: {e}") from e
         return None
 
-    record = Record(data={"file_path": file_path, "text": text})
+    record = Data(data={"file_path": file_path, "text": text})
     return record
 
 
@@ -167,21 +161,21 @@ def parse_text_file_to_record(file_path: str, silent_errors: bool) -> Optional[R
 #     silent_errors: bool,
 #     max_concurrency: int,
 #     use_multithreading: bool,
-# ) -> List[Optional[Record]]:
+# ) -> List[Optional[Data]]:
 #     if use_multithreading:
-#         records = parallel_load_records(file_paths, silent_errors, max_concurrency)
+#         data = parallel_load_data(file_paths, silent_errors, max_concurrency)
 #     else:
-#         records = [partition_file_to_record(file_path, silent_errors) for file_path in file_paths]
-#     records = list(filter(None, records))
-#     return records
+#         data = [partition_file_to_data(file_path, silent_errors) for file_path in file_paths]
+#     data = list(filter(None, data))
+#     return data
 
 
-def parallel_load_records(
+def parallel_load_data(
     file_paths: List[str],
     silent_errors: bool,
     max_concurrency: int,
-    load_function: Callable = parse_text_file_to_record,
-) -> List[Optional[Record]]:
+    load_function: Callable = parse_text_file_to_data,
+) -> List[Optional[Data]]:
     with futures.ThreadPoolExecutor(max_workers=max_concurrency) as executor:
         loaded_files = executor.map(
             lambda file_path: load_function(file_path, silent_errors),

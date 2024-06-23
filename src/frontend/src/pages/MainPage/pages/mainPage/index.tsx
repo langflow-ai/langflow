@@ -17,7 +17,7 @@ import { useTranslation } from "react-i18next";
 export default function HomePage(): JSX.Element {
   const uploadFlow = useFlowsManagerStore((state) => state.uploadFlow);
   const setCurrentFlowId = useFlowsManagerStore(
-    (state) => state.setCurrentFlowId
+    (state) => state.setCurrentFlowId,
   );
 
   const location = useLocation();

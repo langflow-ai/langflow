@@ -4,14 +4,14 @@ from typing import Any, List, Optional
 from pydantic import BaseModel, Field, field_serializer, model_validator
 
 from langflow.graph.utils import serialize_field
-from langflow.schema.schema import Log, StreamURL
+from langflow.schema.schema import OutputLog, StreamURL
 from langflow.utils.schemas import ChatOutputResponse, ContainsEnumMeta
 
 
 class ResultData(BaseModel):
     results: Optional[Any] = Field(default_factory=dict)
     artifacts: Optional[Any] = Field(default_factory=dict)
-    logs: Optional[List[dict]] = Field(default_factory=list)
+    outputs: Optional[dict] = Field(default_factory=dict)
     messages: Optional[list[ChatOutputResponse]] = Field(default_factory=list)
     timedelta: Optional[float] = None
     duration: Optional[str] = None
@@ -28,19 +28,21 @@ class ResultData(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def validate_model(cls, values):
-        if not values.get("logs") and values.get("artifacts"):
+        if not values.get("outputs") and values.get("artifacts"):
             # Build the log from the artifacts
-            message = values["artifacts"]
 
-            # ! Temporary fix
-            if not isinstance(message, dict):
-                message = {"message": message}
+            for key in values["artifacts"]:
+                message = values["artifacts"][key]
 
-            if "stream_url" in message and "type" in message:
-                stream_url = StreamURL(location=message["stream_url"])
-                values["logs"] = [Log(message=stream_url, type=message["type"])]
-            elif "type" in message:
-                values["logs"] = [Log(message=message, type=message["type"])]
+                # ! Temporary fix
+                if message is None:
+                    continue
+
+                if "stream_url" in message and "type" in message:
+                    stream_url = StreamURL(location=message["stream_url"])
+                    values["outputs"].update({key: OutputLog(message=stream_url, type=message["type"])})
+                elif "type" in message:
+                    values["outputs"].update({OutputLog(message=message, type=message["type"])})
         return values
 
 
@@ -51,7 +53,7 @@ class InterfaceComponentTypes(str, Enum, metaclass=ContainsEnumMeta):
     ChatOutput = "ChatOutput"
     TextInput = "TextInput"
     TextOutput = "TextOutput"
-    RecordsOutput = "RecordsOutput"
+    DataOutput = "DataOutput"
 
     def __contains__(cls, item):
         try:
@@ -63,7 +65,7 @@ class InterfaceComponentTypes(str, Enum, metaclass=ContainsEnumMeta):
 
 
 CHAT_COMPONENTS = [InterfaceComponentTypes.ChatInput, InterfaceComponentTypes.ChatOutput]
-RECORDS_COMPONENTS = [InterfaceComponentTypes.RecordsOutput]
+RECORDS_COMPONENTS = [InterfaceComponentTypes.DataOutput]
 INPUT_COMPONENTS = [
     InterfaceComponentTypes.ChatInput,
     InterfaceComponentTypes.TextInput,
@@ -71,7 +73,7 @@ INPUT_COMPONENTS = [
 OUTPUT_COMPONENTS = [
     InterfaceComponentTypes.ChatOutput,
     InterfaceComponentTypes.TextOutput,
-    InterfaceComponentTypes.RecordsOutput,
+    InterfaceComponentTypes.DataOutput,
 ]
 
 
