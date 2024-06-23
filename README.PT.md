@@ -73,7 +73,7 @@ Você também pode visualizar o Langflow no [HuggingFace Spaces](https://hugging
 
 # 🎨 Criar Fluxos
 
-Criar fluxos com Langflow é fácil. Basta arrastar componentes da barra lateral para o canvas e conectá-los para começar a construir sua aplicação.
+Criar fluxos com Langflow é fácil. Basta arrastar componentes da barra lateral para o workspace e conectá-los para começar a construir sua aplicação.
 
 Explore editando os parâmetros do prompt, agrupando componentes e construindo seus próprios componentes personalizados (Custom Components).
 
