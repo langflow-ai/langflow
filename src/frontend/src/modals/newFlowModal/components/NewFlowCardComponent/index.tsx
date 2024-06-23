@@ -7,6 +7,7 @@ import {
 } from "../../../../components/ui/card";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useFolderStore } from "../../../../stores/foldersStore";
+import { useTranslation } from "react-i18next";
 
 export default function NewFlowCardComponent() {
   const addFlow = useFlowsManagerStore((state) => state.addFlow);
@@ -14,6 +15,8 @@ export default function NewFlowCardComponent() {
   const location = useLocation();
   const folderId = location?.state?.folderId;
   const setFolderUrl = useFolderStore((state) => state.setFolderUrl);
+
+  const { t } = useTranslation();
 
   return (
     <Card
@@ -30,7 +33,7 @@ export default function NewFlowCardComponent() {
         <div className="flex h-full w-full flex-col items-center justify-center rounded-md bg-muted align-middle bg-dotted-spacing-6 bg-dotted-muted-foreground bg-dotted-radius-px"></div>
       </CardContent>
       <CardDescription className="px-6 pb-4">
-        <CardTitle className="text-lg text-primary">Blank Flow</CardTitle>
+        <CardTitle className="text-lg text-primary">{t("Blank Flow")}</CardTitle>
       </CardDescription>
     </Card>
   );

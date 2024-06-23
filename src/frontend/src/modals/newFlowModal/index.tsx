@@ -3,6 +3,7 @@ import { newFlowModalPropsType } from "../../types/components";
 import BaseModal from "../baseModal";
 import NewFlowCardComponent from "./components/NewFlowCardComponent";
 import UndrawCardComponent from "./components/undrawCards";
+import { useTranslation } from "react-i18next";
 
 export default function NewFlowModal({
   open,
@@ -16,11 +17,13 @@ export default function NewFlowModal({
     }
   });
 
+  const { t } = useTranslation();
+
   return (
     <BaseModal size="three-cards" open={open} setOpen={setOpen}>
-      <BaseModal.Header description={"Select a template below"}>
+      <BaseModal.Header description={t("Select a template below")}>
         <span className="pr-2" data-testid="modal-title">
-          Get Started
+          {t("Get Started")}
         </span>
       </BaseModal.Header>
       <BaseModal.Content>

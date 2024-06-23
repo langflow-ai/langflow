@@ -17,6 +17,7 @@ import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useFolderStore } from "../../../../stores/foldersStore";
 import { UndrawCardComponentProps } from "../../../../types/components";
 import { updateIds } from "../../../../utils/reactflowUtils";
+import { useTranslation } from "react-i18next";
 
 export default function UndrawCardComponent({
   flow,
@@ -102,6 +103,8 @@ export default function UndrawCardComponent({
     }
   }
 
+  const { t } = useTranslation();
+
   return (
     <Card
       onClick={() => {
@@ -119,7 +122,7 @@ export default function UndrawCardComponent({
         </div>
       </CardContent>
       <CardDescription className="px-6 pb-4">
-        <CardTitle className="text-lg text-primary">{flow.name}</CardTitle>
+        <CardTitle className="text-lg text-primary">{t(flow.name)}</CardTitle>
       </CardDescription>
     </Card>
   );
