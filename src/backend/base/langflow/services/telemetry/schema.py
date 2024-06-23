@@ -1,4 +1,3 @@
-from os import error
 from pydantic import BaseModel
 
 
@@ -25,7 +24,7 @@ class VersionPayload(BaseModel):
 
 class PlaygroundPayload(BaseModel):
     seconds: int
-    componentCount: int
+    componentCount: int | None = None
     success: bool
     errorMessage: str = ""
 
