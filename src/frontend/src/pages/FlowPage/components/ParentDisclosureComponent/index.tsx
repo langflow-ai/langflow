@@ -17,9 +17,13 @@ export default function ParentDisclosureComponent({
               className="parent-disclosure-arrangement"
               data-testid={testId}
             >
-              <div className="flex gap-1 items-baseline align-baseline">
+              <div className="flex items-baseline gap-1 align-baseline">
                 <span className="parent-disclosure-title">{title}</span>
-                {title==="Experimental"&& <div className="rounded-full bg-beta-background px-2 py-1 text-xs/3 font-semibold text-beta-foreground h-fit">BETA</div>}
+                {title === "Experimental" && (
+                  <div className="h-fit rounded-full bg-beta-background px-2 py-1 text-xs/3 font-semibold text-beta-foreground">
+                    BETA
+                  </div>
+                )}
               </div>
               <div className="components-disclosure-div">
                 {buttons.map((btn, index) => (
