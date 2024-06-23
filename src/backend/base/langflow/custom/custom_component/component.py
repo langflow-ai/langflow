@@ -225,12 +225,3 @@ class Component(CustomComponent):
 
     def build(self, **kwargs):
         self.set_attributes(kwargs)
-
-    def post_code_processing(self, new_build_config: dict, current_build_config: dict):
-        """
-        This function is called after the code validation is done.
-        """
-        frontend_node = update_frontend_node_with_template_values(
-            frontend_node=new_build_config, raw_frontend_node=current_build_config
-        )
-        return frontend_node
