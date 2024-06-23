@@ -50,7 +50,7 @@ class URLComponent(Component):
             r"(\.[a-zA-Z]{2,})?"  # top-level domain
             r"(:\d+)?"  # optional port
             r"(\/[^\s]*)?$",  # optional path
-            re.IGNORECASE
+            re.IGNORECASE,
         )
 
         if not url_regex.match(string):
