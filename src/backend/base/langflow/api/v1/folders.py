@@ -127,6 +127,11 @@ def update_folder(
         ).first()
         if not existing_folder:
             raise HTTPException(status_code=404, detail="Folder not found")
+        if folder.name and folder.name != existing_folder.name:
+            existing_folder.name = folder.name
+            update(Folder).where(Folder.id == folder_id).values(name=folder.name)
+            session.commit()
+            return existing_folder
         folder_data = folder.model_dump(exclude_unset=True)
         for key, value in folder_data.items():
             if key != "components" and key != "flows":
