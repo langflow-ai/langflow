@@ -8,7 +8,7 @@ from sqlmodel import Session, select
 from langflow.api.v1.flows import create_flows
 from langflow.api.v1.schemas import FlowListCreate, FlowListReadWithFolderName
 from langflow.helpers.flow import generate_unique_flow_name
-from langflow.helpers.folders import custom_sort, generate_unique_folder_name
+from langflow.helpers.folders import generate_unique_folder_name
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.database.models.flow.model import Flow, FlowCreate, FlowRead
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
@@ -90,7 +90,7 @@ def read_folders(
                 or_(Folder.user_id == current_user.id, Folder.user_id == None)  # type: ignore # noqa: E711
             )
         ).all()
-        sorted_folders = sorted(folders, key=custom_sort)
+        sorted_folders = sorted(folders, key=lambda x: x.name != DEFAULT_FOLDER_NAME)
         return sorted_folders
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -129,7 +129,8 @@ def update_folder(
         if not existing_folder:
             raise HTTPException(status_code=404, detail="Folder not found")
         if folder.name and folder.name != existing_folder.name:
-            session.exec(update(Folder).where(Folder.id == folder_id).values(name=folder.name))
+            existing_folder.name = folder.name
+            session.add(existing_folder)
             session.commit()
             session.refresh(existing_folder)
             return existing_folder
@@ -150,7 +151,7 @@ def update_folder(
         my_collection_folder = session.exec(select(Folder).where(Folder.name == DEFAULT_FOLDER_NAME)).first()
         if my_collection_folder:
             update_statement_my_collection = (
-                update(Flow).where(Flow.id.notin_(excluded_flows)).values(folder_id=my_collection_folder.id)  # type: ignore
+                update(Flow).where(Flow.id.in_(excluded_flows)).values(folder_id=my_collection_folder.id)  # type: ignore
             )
             session.exec(update_statement_my_collection)  # type: ignore
             session.commit()

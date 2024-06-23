@@ -1,3 +1,4 @@
+from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import Folder
 from sqlalchemy import select
 
@@ -21,8 +22,3 @@ def generate_unique_folder_name(folder_name, user_id, session):
         # If a folder with the name already exists, append (n) to the name and increment n
         folder_name = f"{original_name} ({n})"
         n += 1
-
-def custom_sort(folder):
-    if folder.name == "My Projects":
-        return (0, folder.name)
-    return (1, folder.name)
