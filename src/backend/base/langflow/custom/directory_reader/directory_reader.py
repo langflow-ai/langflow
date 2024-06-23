@@ -129,6 +129,10 @@ class DirectoryReader:
         file_list = []
         safe_path_obj = Path(safe_path)
         for file_path in safe_path_obj.rglob("*.py"):
+            # Check if the file is in the folder `deactivated` and if so, skip it
+            if "deactivated" in file_path.parent.name:
+                continue
+
             # The other condtion is that it should be
             # in the safe_path/[folder]/[file].py format
             # any folders below [folder] will be ignored
