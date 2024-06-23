@@ -5,9 +5,6 @@ import { cn } from "../../utils/utils";
 import HorizontalScrollFadeComponent from "../horizontalScrollFadeComponent";
 import SideBarButtonsComponent from "./components/sideBarButtons";
 import SideBarFoldersButtonsComponent from "./components/sideBarFolderButtons";
-import { addFolder } from "../../pages/MainPage/services";
-import { useNavigate } from "react-router-dom";
-import useFlowStore from "../../stores/flowStore";
 
 type SidebarNavProps = {
   items: {
@@ -15,7 +12,6 @@ type SidebarNavProps = {
     title: string;
     icon: React.ReactNode;
   }[];
-  handleOpenNewFolderModal?: () => void;
   handleChangeFolder?: (id: string) => void;
   handleEditFolder?: (item: FolderType) => void;
   handleDeleteFolder?: (item: FolderType) => void;
@@ -32,7 +28,7 @@ export default function SidebarNav({
 }: SidebarNavProps) {
   const location = useLocation();
   const pathname = location.pathname;
-  const loadingFolders = useFolderStore((state) => state.loading);
+  const loadingFolders = useFolderStore((state) => state.isLoadingFolders);
   const folders = useFolderStore((state) => state.folders);
 
   const pathValues = ["folder", "components", "flows", "all"];
@@ -41,16 +37,18 @@ export default function SidebarNav({
   return (
     <nav className={cn(className)} {...props}>
       <HorizontalScrollFadeComponent>
-        <SideBarButtonsComponent items={items} pathname={pathname} />
-
-        {!loadingFolders && folders?.length > 0 && isFolderPath && (
-          <SideBarFoldersButtonsComponent
-            folders={folders}
-            pathname={pathname}
-            handleChangeFolder={handleChangeFolder}
-            handleEditFolder={handleEditFolder}
-            handleDeleteFolder={handleDeleteFolder}
-          />
+        {items.length > 0 ? (
+          <SideBarButtonsComponent items={items} pathname={pathname} />
+        ) : (
+          !loadingFolders &&
+          folders?.length > 0 &&
+          isFolderPath && (
+            <SideBarFoldersButtonsComponent
+              pathname={pathname}
+              handleChangeFolder={handleChangeFolder}
+              handleDeleteFolder={handleDeleteFolder}
+            />
+          )
         )}
       </HorizontalScrollFadeComponent>
     </nav>

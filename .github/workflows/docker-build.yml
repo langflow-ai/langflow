@@ -19,15 +19,33 @@ on:
         options:
           - base
           - main
+env:
+  POETRY_VERSION: "1.8.2"
+  TEST_TAG: "langflowai/langflow:test"
 
 jobs:
-  docker_build:
-    name: Build Docker Image
+  setup:
     runs-on: ubuntu-latest
+    outputs:
+      tags: ${{ steps.set-vars.outputs.tags }}
+      file: ${{ steps.set-vars.outputs.file }}
     steps:
       - uses: actions/checkout@v4
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+      - name: Set Dockerfile and Tags
+        id: set-vars
+        run: |
+          if [[ "${{ inputs.release_type }}" == "base" ]]; then
+            echo "tags=langflowai/langflow:base-${{ inputs.version }}" >> $GITHUB_OUTPUT
+            echo "file=./docker/build_and_push_base.Dockerfile" >> $GITHUB_OUTPUT
+          else
+            echo "tags=langflowai/langflow:${{ inputs.version }},langflowai/langflow:1.0-alpha" >> $GITHUB_OUTPUT
+            echo "file=./docker/build_and_push.Dockerfile" >> $GITHUB_OUTPUT
+          fi
+  build:
+    runs-on: ubuntu-latest
+    needs: setup
+    steps:
+      - uses: actions/checkout@v4
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       - name: Login to Docker Hub
@@ -35,20 +53,75 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Set Dockerfile and Tags
-        id: set-vars
-        run: |
-          if [ "${{ inputs.release_type }}" == "base" ]; then
-            echo "DOCKERFILE=./docker/build_and_push_base.Dockerfile" >> $GITHUB_ENV
-            echo "TAGS=langflowai/langflow:base-${{ inputs.version }}" >> $GITHUB_ENV
-          else
-            echo "DOCKERFILE=./docker/build_and_push.Dockerfile" >> $GITHUB_ENV
-            echo "TAGS=langflowai/langflow:${{ inputs.version }},langflowai/langflow:1.0-alpha" >> $GITHUB_ENV
-          fi
-      - name: Build and push
+      - name: Build and Push Docker Image
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
-          file: ${{ env.DOCKERFILE }}
-          tags: ${{ env.TAGS }}
+          file: ${{ needs.setup.outputs.file }}
+          tags: ${{ needs.setup.outputs.tags }}
+          # provenance: false will result in a single manifest for all platforms which makes the image pullable from arm64 machines via the emulation (e.g. Apple Silicon machines)
+          provenance: false
+
+  build_components:
+    if: ${{ inputs.release_type == 'main' }}
+    runs-on: ubuntu-latest
+    needs: build
+    strategy:
+      matrix:
+        component: [backend, frontend]
+        include:
+          - component: backend
+            dockerfile: ./docker/build_and_push_backend.Dockerfile
+            tags: langflowai/langflow-backend:${{ inputs.version }},langflowai/langflow-backend:1.0-alpha
+          - component: frontend
+            dockerfile: ./docker/frontend/build_and_push_frontend.Dockerfile
+            tags: langflowai/langflow-frontend:${{ inputs.version }},langflowai/langflow-frontend:1.0-alpha
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Wait for Docker Hub to propagate (for backend)
+        run: sleep 120
+      - name: Build and push ${{ matrix.component }}
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          build-args: |
+            LANGFLOW_IMAGE=langflowai/langflow:${{ inputs.version }}
+          file: ${{ matrix.dockerfile }}
+          tags: ${{ matrix.tags }}
+          # provenance: false will result in a single manifest for all platforms which makes the image pullable from arm64 machines via the emulation (e.g. Apple Silicon machines)
+          provenance: false
+
+  restart-space:
+    name: Restart HuggingFace Spaces
+    if: ${{ inputs.release_type == 'main' }}
+    runs-on: ubuntu-latest
+    needs: build
+    strategy:
+      matrix:
+        python-version:
+          - "3.12"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python ${{ matrix.python-version }} + Poetry ${{ env.POETRY_VERSION }}
+        uses: "./.github/actions/poetry_caching"
+        with:
+          python-version: ${{ matrix.python-version }}
+          poetry-version: ${{ env.POETRY_VERSION }}
+          cache-key: ${{ runner.os }}-poetry-${{ env.POETRY_VERSION }}-${{ hashFiles('**/poetry.lock') }}
+      - name: Install Python dependencies
+        run: |
+          poetry env use ${{ matrix.python-version }}
+          poetry install
+
+      - name: Restart HuggingFace Spaces Build
+        run: |
+          poetry run python ./scripts/factory_restart_space.py --space "Langflow/Langflow-Preview" --token ${{ secrets.HUGGINGFACE_API_TOKEN }}

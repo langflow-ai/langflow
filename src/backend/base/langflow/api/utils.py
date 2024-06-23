@@ -1,9 +1,8 @@
+import uuid
 import warnings
-from pathlib import Path
 from typing import TYPE_CHECKING, Optional
 
 from fastapi import HTTPException
-from platformdirs import user_cache_dir
 from sqlmodel import Session
 
 from langflow.graph.graph.base import Graph
@@ -68,86 +67,6 @@ def build_input_keys_response(langchain_object, artifacts):
     return input_keys_response
 
 
-def update_frontend_node_with_template_values(frontend_node, raw_frontend_node):
-    """
-    Updates the given frontend node with values from the raw template data.
-
-    :param frontend_node: A dict representing a built frontend node.
-    :param raw_template_data: A dict representing raw template data.
-    :return: Updated frontend node.
-    """
-    if not is_valid_data(frontend_node, raw_frontend_node):
-        return frontend_node
-
-    # Check if the display_name is different than "CustomComponent"
-    # if so, update the display_name in the frontend_node
-    if raw_frontend_node["display_name"] != "CustomComponent":
-        frontend_node["display_name"] = raw_frontend_node["display_name"]
-
-    update_template_values(frontend_node["template"], raw_frontend_node["template"])
-
-    return frontend_node
-
-
-def raw_frontend_data_is_valid(raw_frontend_data):
-    """Check if the raw frontend data is valid for processing."""
-    return "template" in raw_frontend_data and "display_name" in raw_frontend_data
-
-
-def is_valid_data(frontend_node, raw_frontend_data):
-    """Check if the data is valid for processing."""
-
-    return frontend_node and "template" in frontend_node and raw_frontend_data_is_valid(raw_frontend_data)
-
-
-def update_template_values(frontend_template, raw_template):
-    """Updates the frontend template with values from the raw template."""
-    for key, value_dict in raw_template.items():
-        if key == "code" or not isinstance(value_dict, dict):
-            continue
-
-        update_template_field(frontend_template, key, value_dict)
-
-
-def update_template_field(frontend_template, key, value_dict):
-    """Updates a specific field in the frontend template."""
-    template_field = frontend_template.get(key)
-    if not template_field or template_field.get("type") != value_dict.get("type"):
-        return
-
-    if "value" in value_dict and value_dict["value"]:
-        template_field["value"] = value_dict["value"]
-
-    if "file_path" in value_dict and value_dict["file_path"]:
-        file_path_value = get_file_path_value(value_dict["file_path"])
-        if not file_path_value:
-            # If the file does not exist, remove the value from the template_field["value"]
-            template_field["value"] = ""
-        template_field["file_path"] = file_path_value
-
-    if "load_from_db" in value_dict and value_dict["load_from_db"]:
-        template_field["load_from_db"] = value_dict["load_from_db"]
-
-
-def get_file_path_value(file_path):
-    """Get the file path value if the file exists, else return empty string."""
-    try:
-        path = Path(file_path)
-    except TypeError:
-        return ""
-
-    # Check for safety
-    # If the path is not in the cache dir, return empty string
-    # This is to prevent access to files outside the cache dir
-    # If the path is not a file, return empty string
-    if not str(path).startswith(user_cache_dir("langflow", "langflow")):
-        return ""
-
-    if not path.exists():
-        return ""
-    return file_path
-
-
 def validate_is_component(flows: list["Flow"]):
     for flow in flows:
         if not flow.data or flow.is_component is not None:
@@ -204,16 +123,23 @@ def format_elapsed_time(elapsed_time: float) -> str:
         return f"{minutes} {minutes_unit}, {seconds} {seconds_unit}"
 
 
-async def build_and_cache_graph_from_db(
-    flow_id: str,
-    session: Session,
-    chat_service: "ChatService",
-):
+async def build_graph_from_db(flow_id: str, session: Session, chat_service: "ChatService"):
     """Build and cache the graph."""
     flow: Optional[Flow] = session.get(Flow, flow_id)
     if not flow or not flow.data:
         raise ValueError("Invalid flow ID")
-    graph = Graph.from_payload(flow.data, flow_id)
+    graph = Graph.from_payload(flow.data, flow_id, flow_name=flow.name, user_id=str(flow.user_id))
+    for vertex_id in graph._has_session_id_vertices:
+        vertex = graph.get_vertex(vertex_id)
+        if vertex is None:
+            raise ValueError(f"Vertex {vertex_id} not found")
+        if not vertex._raw_params.get("session_id"):
+            vertex.update_raw_params({"session_id": flow_id}, overwrite=True)
+
+    run_id = uuid.uuid4()
+    graph.set_run_id(run_id)
+    graph.set_run_name()
+    await graph.initialize_run()
     await chat_service.set_cache(flow_id, graph)
     return graph
 

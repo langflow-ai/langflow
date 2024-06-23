@@ -33,13 +33,11 @@ export default function Dropdown({
 
   const refButton = useRef<HTMLButtonElement>(null);
 
-  const PopoverContentDropdown = children
-    ? PopoverContent
-    : PopoverContentWithoutPortal;
-
+  const PopoverContentDropdown =
+    children || editNode ? PopoverContent : PopoverContentWithoutPortal;
   return (
     <>
-      {Object.keys(options)?.length > 0 ? (
+      {Object.keys(options ?? [])?.length > 0 ? (
         <>
           <Popover open={open} onOpenChange={children ? () => {} : setOpen}>
             {children ? (

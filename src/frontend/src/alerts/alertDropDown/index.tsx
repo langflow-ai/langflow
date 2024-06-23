@@ -16,13 +16,13 @@ export default function AlertDropdown({
 }: AlertDropdownType): JSX.Element {
   const notificationList = useAlertStore((state) => state.notificationList);
   const clearNotificationList = useAlertStore(
-    (state) => state.clearNotificationList
+    (state) => state.clearNotificationList,
   );
   const removeFromNotificationList = useAlertStore(
-    (state) => state.removeFromNotificationList
+    (state) => state.removeFromNotificationList,
   );
   const setNotificationCenter = useAlertStore(
-    (state) => state.setNotificationCenter
+    (state) => state.setNotificationCenter,
   );
 
   const [open, setOpen] = useState(false);
@@ -36,10 +36,10 @@ export default function AlertDropdown({
       }}
     >
       <PopoverTrigger>{children}</PopoverTrigger>
-      <PopoverContent className="nocopy nopan nodelete nodrag noundo flex h-[500px] w-[500px] flex-col">
+      <PopoverContent className="nocopy nowheel nopan nodelete nodrag noundo flex h-[500px] w-[500px] flex-col">
         <div className="text-md flex flex-row justify-between pl-3 font-medium text-foreground">
           Notifications
-          <div className="flex gap-3 pr-3 ">
+          <div className="flex gap-3 pr-3">
             <button
               className="text-foreground hover:text-status-red"
               onClick={() => {

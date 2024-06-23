@@ -1,0 +1,46 @@
+name: Ruff Style Check
+
+on:
+  pull_request:
+    paths:
+      - "poetry.lock"
+      - "pyproject.toml"
+      - "src/backend/**"
+      - "tests/**"
+
+env:
+  POETRY_VERSION: "1.8.2"
+
+jobs:
+  lint:
+    name: Ruff Style Check
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version:
+          - "3.12"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python ${{ matrix.python-version }} + Poetry ${{ env.POETRY_VERSION }}
+        uses: "./.github/actions/poetry_caching"
+        with:
+          python-version: ${{ matrix.python-version }}
+          poetry-version: ${{ env.POETRY_VERSION }}
+          cache-key: ${{ runner.os }}-poetry-${{ env.POETRY_VERSION }}-${{ hashFiles('**/poetry.lock') }}
+      - name: Install Python dependencies
+        run: |
+          poetry env use ${{ matrix.python-version }}
+          poetry install
+      - name: Register problem matcher
+        run: echo "::add-matcher::.github/workflows/matchers/ruff.json"
+      - name: Run Ruff
+        run: poetry run ruff check --output-format=github .
+      - name: Run Ruff format
+        run: poetry run ruff format .
+      - name: Commit changes
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: Apply Ruff formatting
+          branch: ${{ github.head_ref }}
+
+

@@ -20,8 +20,7 @@ When running as a [spot (preemptible) instance](https://cloud.google.com/compute
 
 ## Pricing (approximate)
 
-> For a more accurate breakdown of costs, please use the [**GCP Pricing Calculator**](https://cloud.google.com/products/calculator)
-> <br>
+> For a more accurate breakdown of costs, please use the [**GCP Pricing Calculator**](https://cloud.google.com/products/calculator) > <br>
 
 | Component          | Regular Cost (Hourly) | Regular Cost (Monthly) | Spot/Preemptible Cost (Hourly) | Spot/Preemptible Cost (Monthly) | Notes                                                                      |
 | ------------------ | --------------------- | ---------------------- | ------------------------------ | ------------------------------- | -------------------------------------------------------------------------- |

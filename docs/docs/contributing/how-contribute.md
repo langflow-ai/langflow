@@ -1,4 +1,4 @@
-# How to contribute?
+# How to Contribute?
 
 👋 Hello there! We welcome contributions from developers of all levels to our open-source project on [GitHub](https://github.com/langflow-ai/langflow). If you'd like to contribute, please check our contributing guidelines and help make Langflow more accessible.
 
@@ -15,7 +15,7 @@ Please do not try to push directly to this repo unless you are a maintainer.
 
 You can develop Langflow using docker compose, or locally.
 
-We provide a .vscode/launch.json file for debugging the backend in VSCode, which is a lot faster than using docker compose.
+We provide a `.vscode/launch.json` file for debugging the backend in VSCode, which is a lot faster than using docker compose.
 
 Setting up hooks:
 

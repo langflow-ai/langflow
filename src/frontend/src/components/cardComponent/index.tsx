@@ -27,8 +27,8 @@ import {
 import { Checkbox } from "../ui/checkbox";
 import { FormControl, FormField } from "../ui/form";
 import Loading from "../ui/loading";
-import { convertTestName } from "./utils/convert-test-name";
 import DragCardComponent from "./components/dragCardComponent";
+import { convertTestName } from "./utils/convert-test-name";
 
 export default function CollectionCardComponent({
   data,
@@ -217,7 +217,7 @@ export default function CollectionCardComponent({
         data-testid={`card-${convertTestName(data.name)}`}
         //TODO check color schema
         className={cn(
-          "group relative flex min-h-[11rem] flex-col justify-between overflow-hidden transition-all hover:bg-muted/50 hover:shadow-md hover:dark:bg-[#ffffff10]",
+          "group relative flex h-[11rem] flex-col justify-between overflow-hidden hover:bg-muted/50 hover:shadow-md hover:dark:bg-[#5f5f5f0e]",
           disabled ? "pointer-events-none opacity-50" : "",
           onClick ? "cursor-pointer" : "",
           isSelectedCard ? "border border-selected" : "",
@@ -262,10 +262,7 @@ export default function CollectionCardComponent({
                     )}
                     <ShadTooltip content="Likes">
                       <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <IconComponent
-                          name="Heart"
-                          className={cn("h-4 w-4 ")}
-                        />
+                        <IconComponent name="Heart" className={cn("h-4 w-4")} />
                         <span data-testid={`likes-${data.name}`}>
                           {likes_count ?? 0}
                         </span>
@@ -428,7 +425,7 @@ export default function CollectionCardComponent({
                             name="Trash2"
                             className={cn(
                               "h-5 w-5",
-                              !authorized ? " text-ring" : "",
+                              !authorized ? "text-ring" : "",
                             )}
                           />
                         </Button>
@@ -463,7 +460,7 @@ export default function CollectionCardComponent({
                             liked_by_user
                               ? "fill-destructive stroke-destructive"
                               : "",
-                            !authorized ? " text-ring" : "",
+                            !authorized ? "text-ring" : "",
                           )}
                         />
                       </Button>
@@ -501,7 +498,7 @@ export default function CollectionCardComponent({
                         }
                         className={cn(
                           loading ? "h-5 w-5 animate-spin" : "h-5 w-5",
-                          !authorized ? " text-ring" : "",
+                          !authorized ? "text-ring" : "",
                         )}
                       />
                     </Button>

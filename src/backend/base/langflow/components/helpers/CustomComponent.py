@@ -1,16 +1,24 @@
 # from langflow.field_typing import Data
-from langflow.custom import CustomComponent
-from langflow.schema import Record
+from langflow.custom import Component
+from langflow.io import Output, TextInput
+from langflow.schema import Data
 
 
-class Component(CustomComponent):
+class CustomComponent(Component):
     display_name = "Custom Component"
     description = "Use as a template to create your own component."
     documentation: str = "http://docs.langflow.org/components/custom"
     icon = "custom_components"
 
-    def build_config(self):
-        return {"param": {"display_name": "Parameter"}}
+    inputs = [
+        TextInput(name="input_value", display_name="Input Value", value="Hello, World!"),
+    ]
 
-    def build(self, param: str) -> Record:
-        return Record(data=param)
+    outputs = [
+        Output(display_name="Output", name="output", method="build_output"),
+    ]
+
+    def build_output(self) -> Data:
+        data = Data(value=self.input_value)
+        self.status = data
+        return data

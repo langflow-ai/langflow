@@ -84,7 +84,6 @@ export default function IOFileInput({ field, updateValue }: IOFileInputProps) {
       uploadFile(file, currentFlowId)
         .then((res) => res.data)
         .then((data) => {
-          console.log("File uploaded successfully");
           // Get the file name from the response
           const { file_path, flowId } = data;
           setFilePath(file_path);
@@ -137,7 +136,7 @@ export default function IOFileInput({ field, updateValue }: IOFileInputProps) {
           </>
         ) : image ? (
           <img
-            className="order-last h-12 w-12 rounded-full object-cover "
+            className="order-last h-12 w-12 rounded-full object-cover"
             src={image ?? ""}
           />
         ) : (

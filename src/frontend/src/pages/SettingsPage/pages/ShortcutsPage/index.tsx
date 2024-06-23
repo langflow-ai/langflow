@@ -1,102 +1,56 @@
-import { ColDef, ColGroupDef } from "ag-grid-community";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import ForwardedIconComponent from "../../../../components/genericIconComponent";
 import TableComponent from "../../../../components/tableComponent";
-import { Card, CardContent } from "../../../../components/ui/card";
+import { Button } from "../../../../components/ui/button";
+import { defaultShortcuts } from "../../../../constants/constants";
+import { useShortcutsStore } from "../../../../stores/shortcuts";
+import EditShortcutButton from "./EditShortcutButton";
 
 export default function ShortcutsPage() {
-  const isMac = navigator.userAgent.toUpperCase().includes("MAC");
-  const advancedShortcut = `${isMac ? "Cmd" : "Ctrl"} + Shift + A`;
-  const minizmizeShortcut = `${isMac ? "Cmd" : "Ctrl"} + Shift + Q`;
-  const codeShortcut = `${isMac ? "Cmd" : "Ctrl"} + Shift + C`;
-  const copyShortcut = `${isMac ? "Cmd" : "Ctrl"} + C`;
-  const duplicateShortcut = `${isMac ? "Cmd" : "Ctrl"} + D`;
-  const shareShortcut = `${isMac ? "Cmd" : "Ctrl"} + Shift + S`;
-  const docsShortcut = `${isMac ? "Cmd" : "Ctrl"} + Shift + D`;
-  const saveShortcut = `${isMac ? "Cmd" : "Ctrl"} + S`;
-  const deleteShortcut = `Backspace`;
-  const interactionShortcut = `${isMac ? "Cmd" : "Ctrl"} + K`;
-  const undoShortcut = `${isMac ? "Cmd" : "Ctrl"} + Z`;
-  const redoShortcut = `${isMac ? "Cmd" : "Ctrl"} + Y`;
+  const [selectedRows, setSelectedRows] = useState<string[]>([]);
+  const shortcuts = useShortcutsStore((state) => state.shortcuts);
+  const setShortcuts = useShortcutsStore((state) => state.setShortcuts);
 
   // Column Definitions: Defines the columns to be displayed.
-  const [colDefs, setColDefs] = useState<(ColDef<any> | ColGroupDef<any>)[]>([
+  const colDefs = [
     {
       headerName: "Functionality",
       field: "name",
       flex: 1,
       editable: false,
+      resizable: false,
     }, //This column will be twice as wide as the others
     {
+      headerName: "Keyboard Shortcut",
       field: "shortcut",
       flex: 2,
       editable: false,
       resizable: false,
     },
-  ]);
+  ];
 
-  const [nodesRowData, setNodesRowData] = useState([
-    {
-      name: "Advanced Settings Component",
-      shortcut: advancedShortcut,
-      resizable: false,
-    },
-    {
-      name: "Minimize Component",
-      shortcut: minizmizeShortcut,
-      resizable: false,
-    },
-    {
-      name: "Code Component",
-      shortcut: codeShortcut,
-      resizable: false,
-    },
-    {
-      name: "Copy Component",
-      shortcut: copyShortcut,
-      resizable: false,
-    },
-    {
-      name: "Duplicate Component",
-      shortcut: duplicateShortcut,
-      resizable: false,
-    },
-    {
-      name: "Share Component",
-      shortcut: shareShortcut,
-      resizable: false,
-    },
-    {
-      name: "Docs Component",
-      shortcut: docsShortcut,
-      resizable: false,
-    },
-    {
-      name: "Save Component",
-      shortcut: saveShortcut,
-      resizable: false,
-    },
-    {
-      name: "Delete Component",
-      shortcut: deleteShortcut,
-      resizable: false,
-    },
-    {
-      name: "Open Playground",
-      shortcut: interactionShortcut,
-      resizable: false,
-    },
-    {
-      name: "Undo",
-      shortcut: undoShortcut,
-      resizable: false,
-    },
-    {
-      name: "Redo",
-      shortcut: redoShortcut,
-      resizable: false,
-    },
-  ]);
+  const [nodesRowData, setNodesRowData] = useState<
+    Array<{ name: string; shortcut: string }>
+  >([]);
+
+  useEffect(() => {
+    setNodesRowData(shortcuts);
+  }, [shortcuts]);
+
+  const combinationToEdit = shortcuts.filter((s) => s.name === selectedRows[0]);
+  const [open, setOpen] = useState(false);
+  const updateUniqueShortcut = useShortcutsStore(
+    (state) => state.updateUniqueShortcut,
+  );
+
+  function handleRestore() {
+    setShortcuts(defaultShortcuts);
+    defaultShortcuts.forEach(({ name, shortcut }) => {
+      const fixedName = name.split(" ")[0].toLowerCase();
+      updateUniqueShortcut(fixedName, shortcut);
+    });
+    localStorage.removeItem("langflow-shortcuts");
+  }
 
   return (
     <div className="flex h-full w-full flex-col gap-6">
@@ -113,18 +67,50 @@ export default function ShortcutsPage() {
             Manage Shortcuts for quick access to frequently used actions.
           </p>
         </div>
+        <div>
+          <div className="align-end mb-4 flex w-full justify-end">
+            <div className="justify center flex items-center">
+              {open && (
+                <EditShortcutButton
+                  disable={selectedRows.length === 0}
+                  defaultCombination={combinationToEdit[0]?.shortcut}
+                  shortcut={selectedRows}
+                  defaultShortcuts={shortcuts}
+                  open={open}
+                  setOpen={setOpen}
+                  setSelected={setSelectedRows}
+                >
+                  <div style={{ display: "none" }} />
+                </EditShortcutButton>
+              )}
+              <Button
+                variant="primary"
+                className="ml-3"
+                onClick={handleRestore}
+              >
+                <ForwardedIconComponent name="RotateCcw" className="mr-2 w-4" />
+                Restore
+              </Button>
+            </div>
+          </div>
+        </div>
       </div>
       <div className="grid gap-6 pb-8">
-        <Card x-chunk="dashboard-04-chunk-2" className="h-full pt-4">
-          <CardContent className="h-full">
+        <div>
+          {colDefs && nodesRowData.length > 0 && (
             <TableComponent
+              suppressRowClickSelection={true}
               domLayout="autoHeight"
               pagination={false}
               columnDefs={colDefs}
               rowData={nodesRowData}
+              onCellDoubleClicked={(e) => {
+                setSelectedRows([e.data.name]);
+                setOpen(true);
+              }}
             />
-          </CardContent>
-        </Card>
+          )}
+        </div>
       </div>
     </div>
   );

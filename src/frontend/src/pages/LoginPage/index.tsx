@@ -9,6 +9,7 @@ import { CONTROL_LOGIN_STATE } from "../../constants/constants";
 import { AuthContext } from "../../contexts/authContext";
 import { onLogin } from "../../controllers/API";
 import useAlertStore from "../../stores/alertStore";
+import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { LoginType } from "../../types/api";
 import {
   inputHandlerEventType,
@@ -20,10 +21,10 @@ export default function LoginPage(): JSX.Element {
     useState<loginInputStateType>(CONTROL_LOGIN_STATE);
 
   const { password, username } = inputState;
-  const { login, isAuthenticated, setUserData, setIsAdmin } =
-    useContext(AuthContext);
+  const { login } = useContext(AuthContext);
   const navigate = useNavigate();
   const setErrorData = useAlertStore((state) => state.setErrorData);
+  const setLoading = useFlowsManagerStore((state) => state.setIsLoading);
 
   function handleInput({
     target: { name, value },
@@ -38,6 +39,9 @@ export default function LoginPage(): JSX.Element {
     };
     onLogin(user)
       .then((user) => {
+        console.log("login page");
+
+        setLoading(true);
         login(user.access_token);
         navigate("/");
       })

@@ -1,7 +1,6 @@
 import BaseModal from "../../modals/baseModal";
 import { fetchErrorComponentType } from "../../types/components";
 import IconComponent from "../genericIconComponent";
-import { Button } from "../ui/button";
 
 export default function FetchErrorComponent({
   message,
@@ -12,7 +11,14 @@ export default function FetchErrorComponent({
 }: fetchErrorComponentType) {
   return (
     <>
-      <BaseModal size="small-h-full" open={openModal} type="modal">
+      <BaseModal
+        size="small-h-full"
+        open={openModal}
+        type="modal"
+        onSubmit={() => {
+          setRetry();
+        }}
+      >
         <BaseModal.Content>
           <div role="status" className="m-auto flex flex-col items-center">
             <IconComponent
@@ -20,31 +26,14 @@ export default function FetchErrorComponent({
               name="Unplug"
             ></IconComponent>
             <br></br>
-            <span className="text-lg text-almost-medium-blue">{message}</span>
-            <span className="text-lg text-almost-medium-blue">
-              {description}
-            </span>
+            <span className="text-lg text-primary">{message}</span>
+            <span className="text-lg text-primary">{description}</span>
           </div>
         </BaseModal.Content>
 
-        <BaseModal.Footer>
-          <div className="m-auto">
-            <Button
-              disabled={isLoadingHealth}
-              onClick={() => {
-                setRetry();
-              }}
-            >
-              {isLoadingHealth ? (
-                <div>
-                  <IconComponent name={"Loader2"} className={"animate-spin"} />
-                </div>
-              ) : (
-                "Retry"
-              )}
-            </Button>
-          </div>
-        </BaseModal.Footer>
+        <BaseModal.Footer
+          submit={{ label: "Retry", loading: isLoadingHealth }}
+        />
       </BaseModal>
     </>
   );

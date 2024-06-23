@@ -29,7 +29,6 @@ export default function PlaygroundPage() {
 
   // Set flow tab id
   useEffect(() => {
-    console.log("id", id);
     if (getFlowById(id!)) {
       setCurrentFlowId(id!);
     } else {

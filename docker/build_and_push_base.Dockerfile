@@ -10,7 +10,9 @@
 # PYTHON-BASE
 # Sets up all our shared environment variables
 ################################
-FROM python:3.12-slim as python-base
+
+# use python:3.12.3-slim as the base image until https://github.com/pydantic/pydantic-core/issues/1292 gets resolved
+FROM python:3.12.3-slim as python-base
 
 # python
 ENV PYTHONUNBUFFERED=1 \

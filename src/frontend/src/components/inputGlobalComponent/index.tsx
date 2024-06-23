@@ -32,31 +32,26 @@ export default function InputGlobalComponent({
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
   useEffect(() => {
-    if (data.node?.template[name])
+    if (data)
       if (
-        globalVariablesEntries &&
-        !globalVariablesEntries.includes(data.node?.template[name].value) &&
-        data.node?.template[name].load_from_db
+        ((globalVariablesEntries &&
+          !globalVariablesEntries.includes(data.value)) ||
+          !globalVariablesEntries) &&
+        data.load_from_db
       ) {
         setTimeout(() => {
           onChange("", true);
           setDb(false);
         }, 100);
       }
-  }, [globalVariablesEntries]);
+  }, [globalVariablesEntries, data]);
 
   useEffect(() => {
-    if (
-      !data.node?.template[name].value &&
-      data.node?.template[name].display_name
-    ) {
-      if (
-        unavaliableFields[data.node?.template[name].display_name!] &&
-        !disabled
-      ) {
+    if (!data.value && data.display_name) {
+      if (unavaliableFields[data.display_name!] && !disabled) {
         setTimeout(() => {
           setDb(true);
-          onChange(unavaliableFields[data.node?.template[name].display_name!]);
+          onChange(unavaliableFields[data.display_name!]);
         }, 100);
       }
     }
@@ -68,10 +63,7 @@ export default function InputGlobalComponent({
       await deleteGlobalVariable(id)
         .then(() => {
           removeGlobalVariable(key);
-          if (
-            data?.node?.template[name].value === key &&
-            data?.node?.template[name].load_from_db
-          ) {
+          if (data?.value === key && data?.load_from_db) {
             onChange("");
             setDb(false);
           }
@@ -94,8 +86,8 @@ export default function InputGlobalComponent({
       id={"input-" + name}
       editNode={editNode}
       disabled={disabled}
-      password={data.node?.template[name].password ?? false}
-      value={data.node?.template[name].value ?? ""}
+      password={data.password ?? false}
+      value={data.value ?? ""}
       options={globalVariablesEntries}
       optionsPlaceholder={"Global Variables"}
       optionsIcon="Globe"
@@ -138,10 +130,10 @@ export default function InputGlobalComponent({
         </DeleteConfirmationModal>
       )}
       selectedOption={
-        data?.node?.template[name].load_from_db &&
+        data?.load_from_db &&
         globalVariablesEntries &&
-        globalVariablesEntries.includes(data?.node?.template[name].value ?? "")
-          ? data?.node?.template[name].value
+        globalVariablesEntries.includes(data?.value ?? "")
+          ? data?.value
           : ""
       }
       setSelectedOption={(value) => {

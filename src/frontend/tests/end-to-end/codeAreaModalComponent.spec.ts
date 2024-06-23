@@ -23,7 +23,7 @@ test("CodeAreaModalComponent", async ({ page }) => {
   await page.waitForTimeout(1000);
 
   await page.getByTestId("blank-flow").click();
-  await page.waitForTimeout(1000);
+  await page.waitForTimeout(3000);
   await page.getByTestId("extended-disclosure").click();
   await page.getByPlaceholder("Search").click();
   await page.getByPlaceholder("Search").fill("python function");
@@ -40,6 +40,7 @@ test("CodeAreaModalComponent", async ({ page }) => {
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
   await page.getByTestId("div-generic-node").click();
+
   await page.getByTestId("code-button-modal").click();
 
   const wCode =

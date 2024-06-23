@@ -1,7 +1,6 @@
 import { storeComponent } from "../../../../types/store";
 import { cn } from "../../../../utils/utils";
 import ForwardedIconComponent from "../../../genericIconComponent";
-import ShadTooltip from "../../../shadTooltipComponent";
 import { Card, CardHeader, CardTitle } from "../../../ui/card";
 
 export default function DragCardComponent({ data }: { data: storeComponent }) {

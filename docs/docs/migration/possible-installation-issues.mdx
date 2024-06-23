@@ -4,13 +4,9 @@ This is a list of possible issues that you may encounter when installing Langflo
 
 ## _`No module named 'langflow.__main__'`_
 
-### TL;DR
-
 1. Run _`python -m langflow run`_ instead of _`langflow run`_.
 2. If that doesn't work, reinstall Langflow with _`_python -m pip install langflow --pre -U`_.
 3. If that doesn't work, reinstall Langflow and its dependencies with _`python -m pip install langflow --pre -U --force-reinstall`_.
-
-### Details
 
 When you try to run Langflow using the command `langflow run`, you may encounter the following error:
 
@@ -25,24 +21,21 @@ ModuleNotFoundError: No module named 'langflow.__main__'
 There are two possible reasons for this error:
 
 1. You've installed Langflow using _`pip install langflow`_ but you already had a previous version of Langflow installed in your system.
-  In this case, you might be running the wrong executable.
-  To solve this issue, run the correct executable by running _`python -m langflow run`_ instead of _`langflow run`_.
-  If that doesn't work, try uninstalling and reinstalling Langflow with _`python -m pip install langflow --pre -U`_.
+   In this case, you might be running the wrong executable.
+   To solve this issue, run the correct executable by running _`python -m langflow run`_ instead of _`langflow run`_.
+   If that doesn't work, try uninstalling and reinstalling Langflow with _`python -m pip install langflow --pre -U`_.
 2. Some version conflicts might have occurred during the installation process.
-  Run _`python -m pip install langflow --pre -U --force-reinstall`_ to reinstall Langflow and its dependencies.
+   Run _`python -m pip install langflow --pre -U --force-reinstall`_ to reinstall Langflow and its dependencies.
 
 ## _`Something went wrong running migrations. Please, run 'langflow migration --fix'`_
 
-### TL;DR
+Clear the cache by deleting the contents of the cache folder.
 
-- Clear the cache by deleting the contents of the cache folder.
-  This folder can be found at:
-  - **Linux or WSL2 on Windows**: `home/<username>/.cache/langflow/`
-  - **MacOS**: `/Users/<username>/Library/Caches/langflow/`
+This folder can be found at:
 
-### Details
+- **Linux or WSL2 on Windows**: `home/<username>/.cache/langflow/`
+- **MacOS**: `/Users/<username>/Library/Caches/langflow/`
 
 This error can occur during Langflow upgrades when the new version can't override `langflow-pre.db` in `.cache/langflow/`. Clearing the cache removes this file but will also erase your settings.
 
 If you wish to retain your files, back them up before clearing the folder.
-

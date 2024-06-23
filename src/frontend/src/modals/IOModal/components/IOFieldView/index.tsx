@@ -2,20 +2,13 @@ import { cloneDeep } from "lodash";
 import { useState } from "react";
 import ImageViewer from "../../../../components/ImageViewer";
 import CsvOutputComponent from "../../../../components/csvOutputComponent";
+import DataOutputComponent from "../../../../components/dataOutputComponent";
 import InputListComponent from "../../../../components/inputListComponent";
 import PdfViewer from "../../../../components/pdfViewer";
-import RecordsOutputComponent from "../../../../components/recordsOutputComponent";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../../../../components/ui/select";
 import { Textarea } from "../../../../components/ui/textarea";
 import { PDFViewConstant } from "../../../../constants/constants";
 import { InputOutput } from "../../../../constants/enums";
+import TextOutputView from "../../../../shared/components/textOutputView";
 import useFlowStore from "../../../../stores/flowStore";
 import { IOFieldViewProps } from "../../../../types/components";
 import {
@@ -24,6 +17,7 @@ import {
 } from "../../../../utils/reactflowUtils";
 import IOFileInput from "./components/FileInput";
 import IoJsonInput from "./components/JSONInput";
+import CsvSelect from "./components/csvSelect";
 import IOKeyPairInput from "./components/keyPairInput";
 
 export default function IOFieldView({
@@ -51,6 +45,10 @@ export default function IOFieldView({
 
   const [errorDuplicateKey, setErrorDuplicateKey] = useState(false);
 
+  const textOutputValue =
+    (flowPool[node!.id] ?? [])[(flowPool[node!.id]?.length ?? 1) - 1]?.data
+      .results.text ?? "";
+
   function handleOutputType() {
     if (!node) return <>"No node found!"</>;
     switch (type) {
@@ -60,7 +58,7 @@ export default function IOFieldView({
             return (
               <Textarea
                 className={`w-full custom-scroll ${
-                  left ? " min-h-32" : " h-full"
+                  left ? "min-h-32" : "h-full"
                 }`}
                 placeholder={"Enter text..."}
                 value={node.data.node!.template["input_value"].value}
@@ -144,7 +142,7 @@ export default function IOFieldView({
             return (
               <Textarea
                 className={`w-full custom-scroll ${
-                  left ? " min-h-32" : " h-full"
+                  left ? "min-h-32" : "h-full"
                 }`}
                 placeholder={"Enter text..."}
                 value={node.data.node!.template["input_value"]}
@@ -163,21 +161,7 @@ export default function IOFieldView({
       case InputOutput.OUTPUT:
         switch (fieldType) {
           case "TextOutput":
-            return (
-              <Textarea
-                className={`w-full custom-scroll ${
-                  left ? " min-h-32" : " h-full"
-                }`}
-                placeholder={"Empty"}
-                // update to real value on flowPool
-                value={
-                  (flowPool[node.id] ?? [])[
-                    (flowPool[node.id]?.length ?? 1) - 1
-                  ]?.params ?? ""
-                }
-                readOnly
-              />
-            );
+            return <TextOutputView left={left} value={textOutputValue} />;
           case "PDFOutput":
             return left ? (
               <div>{PDFViewConstant}</div>
@@ -187,31 +171,10 @@ export default function IOFieldView({
           case "CSVOutput":
             return left ? (
               <>
-                <div className="flex justify-between">
-                  Expand the ouptut to see the CSV
-                </div>
-                <div className="flex items-center justify-between pt-5">
-                  <span>CSV separator </span>
-                  <Select
-                    value={node.data.node.template.separator.value}
-                    onValueChange={(e) => handleChangeSelect(e)}
-                  >
-                    <SelectTrigger className="w-[70px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        {node?.data?.node?.template?.separator?.options.map(
-                          (separator) => (
-                            <SelectItem key={separator} value={separator}>
-                              {separator}
-                            </SelectItem>
-                          ),
-                        )}
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
-                </div>
+                <CsvSelect
+                  node={node}
+                  handleChangeSelect={handleChangeSelect}
+                />
               </>
             ) : (
               <>
@@ -282,12 +245,19 @@ export default function IOFieldView({
                 />
               </>
             );
-          case "RecordsOutput":
+          case "DataOutput":
             return (
               <div className={left ? "h-56" : "h-full"}>
-                <RecordsOutputComponent
-                  flowPool={flowPoolNode}
+                <DataOutputComponent
                   pagination={!left}
+                  rows={
+                    Array.isArray(flowPoolNode?.data?.artifacts)
+                      ? flowPoolNode?.data?.artifacts?.map(
+                          (artifact) => artifact.data,
+                        ) ?? []
+                      : [flowPoolNode?.data?.artifacts]
+                  }
+                  columnMode="union"
                 />
               </div>
             );
@@ -296,14 +266,14 @@ export default function IOFieldView({
             return (
               <Textarea
                 className={`w-full custom-scroll ${
-                  left ? " min-h-32" : " h-full"
+                  left ? "min-h-32" : "h-full"
                 }`}
                 placeholder={"Empty"}
                 // update to real value on flowPool
                 value={
                   (flowPool[node.id] ?? [])[
                     (flowPool[node.id]?.length ?? 1) - 1
-                  ]?.params ?? ""
+                  ]?.data.results.result ?? ""
                 }
                 readOnly
               />

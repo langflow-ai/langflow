@@ -3,7 +3,8 @@ import Admonition from "@theme/Admonition";
 # Custom Components
 
 <Admonition type="info" label="Tip">
-  Read the [Custom Component Guidelines](../administration/custom-component) for detailed information on custom components.
+  Read the [Custom Component Tutorial](../tutorials/custom_components) for
+  detailed information on custom components.
 </Admonition>
 
 Custom components let you extend Langflow by creating reusable and configurable components from a Python script.
@@ -31,57 +32,60 @@ This class is the foundation for creating custom components. It allows users to 
 
 The following types are supported in the build method:
 
-| Supported Types                                           |
-| --------------------------------------------------------- |
-| _`str`_, _`int`_, _`float`_, _`bool`_, _`list`_, _`dict`_ |
-| _`langflow.field_typing.NestedDict`_                      |
-| _`langflow.field_typing.Prompt`_                          |
-| _`langchain.chains.base.Chain`_                           |
-| _`langchain.PromptTemplate`_                              |
+| Supported Types                                                   |
+| ----------------------------------------------------------------- |
+| _`str`_, _`int`_, _`float`_, _`bool`_, _`list`_, _`dict`_         |
+| _`langflow.field_typing.NestedDict`_                              |
+| _`langflow.field_typing.Prompt`_                                  |
+| _`langchain.chains.base.Chain`_                                   |
+| _`langchain.PromptTemplate`_                                      |
 | _`from langchain.schema.language_model import BaseLanguageModel`_ |
-| _`langchain.Tool`_                                        |
-| _`langchain.document_loaders.base.BaseLoader`_            |
-| _`langchain.schema.Document`_                             |
-| _`langchain.text_splitters.TextSplitter`_                 |
-| _`langchain.vectorstores.base.VectorStore`_               |
-| _`langchain.embeddings.base.Embeddings`_                  |
-| _`langchain.schema.BaseRetriever`_                        |
+| _`langchain.Tool`_                                                |
+| _`langchain.document_loaders.base.BaseLoader`_                    |
+| _`langchain.schema.Document`_                                     |
+| _`langchain.text_splitters.TextSplitter`_                         |
+| _`langchain.vectorstores.base.VectorStore`_                       |
+| _`langchain.embeddings.base.Embeddings`_                          |
+| _`langchain.schema.BaseRetriever`_                                |
 
 The difference between _`dict`_ and _`langflow.field_typing.NestedDict`_ is that one adds a simple key-value pair field, while the other opens a more robust dictionary editor.
 
 <Admonition type="info">
-  Use the `Prompt` type by adding **kwargs to the build method.
-  If you want to add the values of the variables to the template you defined, format the `PromptTemplate` inside the `CustomComponent` class.
+  Use the `Prompt` type by adding **kwargs to the build method. If you want to
+  add the values of the variables to the template you defined, format the
+  `PromptTemplate` inside the `CustomComponent` class.
 </Admonition>
 
 <Admonition type="info">
-  Use base Python types without a handle by default. To add handles, use the `input_types` key in the `build_config` method.
+  Use base Python types without a handle by default. To add handles, use the
+  `input_types` key in the `build_config` method.
 </Admonition>
 
 **build_config:** Defines the configuration fields of the component. This method returns a dictionary where each key represents a field name and each value defines the field's behavior.
 
 Supported keys for configuring fields:
 
-| Key                   | Description                                         |
-| --------------------- | --------------------------------------------------- |
-| `is_list`             | Boolean indicating if the field can hold multiple values. |
-| `options`             | Dropdown menu options.                              |
-| `multiline`           | Boolean indicating if a field allows multiline input. |
-| `input_types`         | Allows connection handles for string fields.        |
-| `display_name`        | Field name displayed in the UI.                     |
-| `advanced`            | Hides the field in the default UI view.             |
-| `password`            | Masks input, useful for sensitive data.             |
-| `required`            | Overrides the default behavior to make a field mandatory. |
-| `info`                | Tooltip for the field.                              |
-| `file_types`          | Accepted file types, useful for file fields.        |
-| `range_spec`          | Defines valid ranges for float fields.              |
-| `title_case`          | Boolean that controls field name capitalization.    |
-| `refresh_button`      | Adds a refresh button that updates field values.    |
-| `real_time_refresh`   | Updates the configuration as field values change.   |
-| `field_type`          | Automatically set based on the build method's type hint. |
+| Key                 | Description                                               |
+| ------------------- | --------------------------------------------------------- |
+| `is_list`           | Boolean indicating if the field can hold multiple values. |
+| `options`           | Dropdown menu options.                                    |
+| `multiline`         | Boolean indicating if a field allows multiline input.     |
+| `input_types`       | Allows connection handles for string fields.              |
+| `display_name`      | Field name displayed in the UI.                           |
+| `advanced`          | Hides the field in the default UI view.                   |
+| `password`          | Masks input, useful for sensitive data.                   |
+| `required`          | Overrides the default behavior to make a field mandatory. |
+| `info`              | Tooltip for the field.                                    |
+| `file_types`        | Accepted file types, useful for file fields.              |
+| `range_spec`        | Defines valid ranges for float fields.                    |
+| `title_case`        | Boolean that controls field name capitalization.          |
+| `refresh_button`    | Adds a refresh button that updates field values.          |
+| `real_time_refresh` | Updates the configuration as field values change.         |
+| `field_type`        | Automatically set based on the build method's type hint.  |
 
 <Admonition type="info" label="Tip">
-  Use the `update_build_config` method to dynamically update configurations based on field values.
+  Use the `update_build_config` method to dynamically update configurations
+  based on field values.
 </Admonition>
 
 ## Additional methods and attributes
@@ -99,8 +103,3 @@ The `CustomComponent` class also provides helpful methods for specific tasks (e.
 - `status`: Shows values from the `build` method, useful for debugging.
 - `field_order`: Controls the display order of fields.
 - `icon`: Sets the canvas display icon.
-
-<Admonition type="info" label="Tip">
-  Check out the [FlowRunner](../examples/flow-runner) example to understand how to call a flow from a custom component.
-</Admonition>
-

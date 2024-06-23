@@ -3,7 +3,7 @@ from typing import Optional
 from langchain.chains import LLMChain, LLMMathChain
 
 from langflow.custom import CustomComponent
-from langflow.field_typing import BaseLanguageModel, BaseMemory, Text
+from langflow.field_typing import BaseMemory, LanguageModel, Text
 
 
 class LLMMathChainComponent(CustomComponent):
@@ -27,7 +27,7 @@ class LLMMathChainComponent(CustomComponent):
     def build(
         self,
         input_value: Text,
-        llm: BaseLanguageModel,
+        llm: LanguageModel,
         llm_chain: LLMChain,
         input_key: str = "question",
         output_key: str = "answer",
@@ -42,6 +42,6 @@ class LLMMathChainComponent(CustomComponent):
         )
         response = chain.invoke({input_key: input_value})
         result = response.get(output_key)
-        result_str = Text(result)
+        result_str = str(result)
         self.status = result_str
         return result_str

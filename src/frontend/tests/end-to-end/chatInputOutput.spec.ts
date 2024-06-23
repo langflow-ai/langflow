@@ -23,32 +23,60 @@ test("chat_io_teste", async ({ page }) => {
   }
 
   const jsonContent = readFileSync(
-    "tests/end-to-end/assets/ChatTest.json",
-    "utf-8"
+    "src/frontend/tests/end-to-end/assets/ChatTest.json",
+    "utf-8",
   );
 
   await page.getByTestId("blank-flow").click();
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(3000);
+  await page.getByTestId("extended-disclosure").click();
+  await page.getByPlaceholder("Search").click();
+  await page.getByPlaceholder("Search").fill("chat output");
+  await page.waitForTimeout(1000);
 
-  // Create the DataTransfer and File
-  const dataTransfer = await page.evaluateHandle((data) => {
-    const dt = new DataTransfer();
-    // Convert the buffer to a hex array
-    const file = new File([data], "ChatTest.json", {
-      type: "application/json",
-    });
-    dt.items.add(file);
-    return dt;
-  }, jsonContent);
+  await page
+    .getByTestId("outputsChat Output")
+    .dragTo(page.locator('//*[@id="react-flow-id"]'));
+  await page.mouse.up();
+  await page.mouse.down();
 
-  // Now dispatch
-  await page.dispatchEvent(
-    '//*[@id="react-flow-id"]/div[1]/div[1]/div',
-    "drop",
-    {
-      dataTransfer,
-    }
-  );
+  await page.getByPlaceholder("Search").click();
+  await page.getByPlaceholder("Search").fill("chat input");
+  await page.waitForTimeout(1000);
+
+  await page
+    .getByTestId("inputsChat Input")
+    .dragTo(page.locator('//*[@id="react-flow-id"]'));
+  await page.mouse.up();
+  await page.mouse.down();
+
+  await page.getByTitle("fit view").click();
+  await page.getByTitle("zoom out").click();
+  await page.getByTitle("zoom out").click();
+  await page.getByTitle("zoom out").click();
+  await page.getByTitle("zoom out").click();
+  await page.getByTitle("zoom out").click();
+  await page.getByTitle("zoom out").click();
+  await page.getByTitle("zoom out").click();
+
+  // Click and hold on the first element
+  await page
+    .locator(
+      '//*[@id="react-flow-id"]/div/div[1]/div/div/div[2]/div[2]/div/div[2]/div[9]/button/div[1]',
+    )
+    .hover();
+  await page.mouse.down();
+
+  // Move to the second element
+  await page
+    .locator(
+      '//*[@id="react-flow-id"]/div/div[1]/div/div/div[2]/div[1]/div/div[2]/div[3]/div/button/div[1]',
+    )
+    .hover();
+
+  // Release the mouse
+  await page.mouse.up();
+
   await page.getByLabel("fit view").click();
   await page.getByText("Playground", { exact: true }).click();
   await page.getByPlaceholder("Send a message...").click();

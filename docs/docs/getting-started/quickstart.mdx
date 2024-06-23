@@ -10,12 +10,17 @@ This guide demonstrates how to build a basic prompt flow and modify that prompt 
 
 ## Prerequisites
 
-* [Langflow installed and running](./install-langflow.mdx)
+- [Python >=3.10](https://www.python.org/downloads/release/python-3100/) and [pip](https://pypi.org/project/pip/) or [pipx](https://pipx.pypa.io/stable/installation/)
 
-* [OpenAI API key](https://platform.openai.com)
+- [Langflow installed and running](./install-langflow)
+
+- [OpenAI API key](https://platform.openai.com)
 
 <Admonition type="info">
-  Langflow v1.0 alpha is also available in HuggingFace Spaces. [Clone the space using this link](https://huggingface.co/spaces/Langflow/Langflow-Preview?duplicate=true) to create your own Langflow workspace in minutes.
+  Langflow v1.0 alpha is also available in HuggingFace Spaces. [Clone the space
+  using this
+  link](https://huggingface.co/spaces/Langflow/Langflow-Preview?duplicate=true)
+  to create your own Langflow workspace in minutes.
 </Admonition>
 
 ## Hello World - Basic Prompting
@@ -44,25 +49,25 @@ Examine the **Prompt** component. The **Template** field instructs the LLM to `A
 This should be interesting...
 
 4. To create an environment variable for the **OpenAI** component, in the **OpenAI API Key** field, click the **Globe** button, and then click **Add New Variable**.
-    1. In the **Variable Name** field, enter `openai_api_key`.
-    2. In the **Value** field, paste your OpenAI API Key (`sk-...`).
-    3. Click **Save Variable**.
+   1. In the **Variable Name** field, enter `openai_api_key`.
+   2. In the **Value** field, paste your OpenAI API Key (`sk-...`).
+   3. Click **Save Variable**.
 
 ## Run the basic prompting flow
 
 1. Click the **Run** button.
-The **Interaction Panel** opens, where you can chat with your bot.
+   The **Interaction Panel** opens, where you can chat with your bot.
 2. Type a message and press Enter.
-And... Ahoy! 🏴‍☠️
-The bot responds in a piratical manner!
+   And... Ahoy! 🏴‍☠️
+   The bot responds in a piratical manner!
 
 ## Modify the prompt for a different result
 
 1. To modify your prompt results, in the **Prompt** template, click the **Template** field.
-The **Edit Prompt** window opens.
+   The **Edit Prompt** window opens.
 2. Change `Answer the user as if you were a pirate` to a different character, perhaps `Answer the user as if you were Harold Abelson.`
 3. Run the basic prompting flow again.
-The response will be markedly different.
+   The response will be markedly different.
 
 ## Next steps
 
@@ -72,8 +77,6 @@ By adding Langflow components to your flow, you can create all sorts of interest
 
 Here are a couple of examples:
 
-* [Memory chatbot](/starter-projects/memory-chatbot.mdx)
-* [Blog writer](/starter-projects/blog-writer.mdx)
-* [Document QA](/starter-projects/document-qa.mdx)
-
-
+- [Memory chatbot](/starter-projects/memory-chatbot)
+- [Blog writer](/starter-projects/blog-writer)
+- [Document QA](/starter-projects/document-qa)

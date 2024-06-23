@@ -1,21 +1,17 @@
-
-
 # syntax=docker/dockerfile:1
 # Keep this syntax directive! It's used to enable Docker BuildKit
 
-# Based on https://github.com/python-poetry/poetry/discussions/1879?sort=top#discussioncomment-216865
-# but I try to keep it updated (see history)
 
 ################################
-# PYTHON-BASE
-# Sets up all our shared environment variables
+# BUILDER-BASE
+# Used to build deps + create our virtual environment
 ################################
-FROM python:3.12-slim as python-base
 
-# python
-ENV PYTHONUNBUFFERED=1 \
-    # prevents python creating .pyc files
-    PYTHONDONTWRITEBYTECODE=1 \
+# 1. use python:3.12.3-slim as the base image until https://github.com/pydantic/pydantic-core/issues/1292 gets resolved
+# 2. do not add --platform=$BUILDPLATFORM because the pydantic binaries must be resolved for the final architecture
+FROM python:3.12.3-slim as builder-base
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
     \
     # pip
     PIP_DISABLE_PIP_VERSION_CHECK=on \
@@ -37,56 +33,65 @@ ENV PYTHONUNBUFFERED=1 \
     PYSETUP_PATH="/opt/pysetup" \
     VENV_PATH="/opt/pysetup/.venv"
 
-
-# prepend poetry and venv to path
-ENV PATH="$POETRY_HOME/bin:$VENV_PATH/bin:$PATH"
-
-
-################################
-# BUILDER-BASE
-# Used to build deps + create our virtual environment
-################################
-FROM python-base as builder-base
-
 RUN apt-get update \
     && apt-get install --no-install-recommends -y \
     # deps for installing poetry
     curl \
     # deps for building python deps
-    build-essential \
-    # npm
-    npm \
+    build-essential npm \
     # gcc
     gcc \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-
-
-# Now we need to copy the entire project into the image
-WORKDIR /app
-COPY pyproject.toml poetry.lock ./
-COPY src ./src
-COPY scripts ./scripts
-COPY Makefile ./
-COPY README.md ./
 RUN --mount=type=cache,target=/root/.cache \
     curl -sSL https://install.python-poetry.org | python3 -
-RUN useradd -m -u 1000 user && \
-    mkdir -p /app/langflow && \
-    chown -R user:user /app && \
-    chmod -R u+w /app/langflow
 
-# Update PATH with home/user/.local/bin
-ENV PATH="/home/user/.local/bin:${PATH}"
-RUN python -m pip install requests && cd ./scripts && python update_dependencies.py
-RUN $POETRY_HOME/bin/poetry lock
-RUN $POETRY_HOME/bin/poetry build
+WORKDIR /app
+COPY pyproject.toml poetry.lock README.md ./
+COPY src/ ./src
+COPY scripts/ ./scripts
+RUN python -m pip install requests --user && cd ./scripts && python update_dependencies.py
 
-# Copy virtual environment and built .tar.gz from builder base
+# 1. Install the dependencies using the current poetry.lock file to create reproducible builds
+# 2. Do not install dev dependencies
+# 3. Install all the extras to ensure all optionals are installed as well
+# 4. --sync to ensure nothing else is in the environment
+# 5. Build the wheel and install "langflow" package (mainly for version)
+
+# Note: moving to build and installing the wheel will make the docker images not reproducible.
+RUN $POETRY_HOME/bin/poetry lock --no-update \
+      # install current lock file with fixed dependencies versions \
+      # do not install dev dependencies \
+      && $POETRY_HOME/bin/poetry install --without dev --sync -E deploy -E couchbase -E cassio \
+      && $POETRY_HOME/bin/poetry build -f wheel \
+      && $POETRY_HOME/bin/poetry run pip install dist/*.whl
+
+################################
+# RUNTIME
+# Setup user, utilities and copy the virtual environment only
+################################
+# 1. use python:3.12.3-slim as the base image until https://github.com/pydantic/pydantic-core/issues/1292 gets resolved
+FROM python:3.12.3-slim as runtime
+
+RUN apt-get -y update \
+    && apt-get install --no-install-recommends -y \
+    curl \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+LABEL org.opencontainers.image.title=langflow
+LABEL org.opencontainers.image.authors=['Langflow']
+LABEL org.opencontainers.image.licenses=MIT
+LABEL org.opencontainers.image.url=https://github.com/langflow-ai/langflow
+LABEL org.opencontainers.image.source=https://github.com/langflow-ai/langflow
+
+RUN useradd user -u 1000 -g 0 --no-create-home --home-dir /app/data
+COPY --from=builder-base --chown=1000 /app/.venv /app/.venv
+ENV PATH="/app/.venv/bin:${PATH}"
+
 USER user
-# Install the package from the .tar.gz
-RUN python -m pip install /app/dist/*.tar.gz --user
+WORKDIR /app
 
 ENTRYPOINT ["python", "-m", "langflow", "run"]
 CMD ["--host", "0.0.0.0", "--port", "7860"]

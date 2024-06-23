@@ -22,7 +22,7 @@ test("IntComponent", async ({ page }) => {
   await page.waitForTimeout(1000);
 
   await page.getByTestId("blank-flow").click();
-  await page.waitForTimeout(1000);
+  await page.waitForTimeout(3000);
   await page.getByTestId("extended-disclosure").click();
   await page.getByPlaceholder("Search").click();
   await page.getByPlaceholder("Search").fill("openai");
@@ -39,6 +39,12 @@ test("IntComponent", async ({ page }) => {
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
+
+  await page.getByTestId("more-options-modal").click();
+  await page.getByTestId("edit-button-modal").click();
+  await page.getByTestId("showmax_tokens").click();
+
+  await page.getByText("Save Changes", { exact: true }).click();
   await page.getByTestId("int-input-max_tokens").click();
   await page
     .getByTestId("int-input-max_tokens")
@@ -92,7 +98,7 @@ test("IntComponent", async ({ page }) => {
   await page.locator('//*[@id="showopenai_api_base"]').click();
   expect(
     await page.locator('//*[@id="showopenai_api_base"]').isChecked(),
-  ).toBeFalsy();
+  ).toBeTruthy();
 
   await page.locator('//*[@id="showopenai_api_key"]').click();
   expect(
@@ -117,7 +123,7 @@ test("IntComponent", async ({ page }) => {
   await page.locator('//*[@id="showopenai_api_base"]').click();
   expect(
     await page.locator('//*[@id="showopenai_api_base"]').isChecked(),
-  ).toBeTruthy();
+  ).toBeFalsy();
 
   await page.locator('//*[@id="showopenai_api_key"]').click();
   expect(
@@ -142,7 +148,7 @@ test("IntComponent", async ({ page }) => {
   await page.locator('//*[@id="showopenai_api_base"]').click();
   expect(
     await page.locator('//*[@id="showopenai_api_base"]').isChecked(),
-  ).toBeFalsy();
+  ).toBeTruthy();
 
   await page.locator('//*[@id="showopenai_api_key"]').click();
   expect(
@@ -154,7 +160,7 @@ test("IntComponent", async ({ page }) => {
     await page.locator('//*[@id="showtemperature"]').isChecked(),
   ).toBeFalsy();
 
-  await page.locator('//*[@id="saveChangesBtn"]').click();
+  await page.getByText("Save Changes", { exact: true }).click();
 
   const plusButtonLocator = page.getByTestId("int-input-max_tokens");
   const elementCount = await plusButtonLocator?.count();
@@ -177,7 +183,7 @@ test("IntComponent", async ({ page }) => {
       expect(false).toBeTruthy();
     }
 
-    await page.locator('//*[@id="saveChangesBtn"]').click();
+    await page.getByText("Save Changes", { exact: true }).click();
     await page.getByTestId("int-input-max_tokens").click();
     await page.getByTestId("int-input-max_tokens").fill("3");
 

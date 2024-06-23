@@ -1,14 +1,13 @@
+import warnings
 from datetime import datetime, timedelta, timezone
 from typing import Annotated, Coroutine, Optional, Union
 from uuid import UUID
-import warnings
 
 from cryptography.fernet import Fernet
 from fastapi import Depends, HTTPException, Security, status
 from fastapi.security import APIKeyHeader, APIKeyQuery, OAuth2PasswordBearer
-
-
 from jose import JWTError, jwt
+from loguru import logger
 from sqlmodel import Session
 from starlette.websockets import WebSocket
 
@@ -76,11 +75,6 @@ async def get_current_user(
     if token:
         return await get_current_user_by_jwt(token, db)
     else:
-        if not query_param and not header_param:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="An API key as query or header, or a JWT token must be passed",
-            )
         user = await api_key_security(query_param, header_param, db)
         if user:
             return user
@@ -97,44 +91,59 @@ async def get_current_user_by_jwt(
 ) -> User:
     settings_service = get_settings_service()
 
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-
     if isinstance(token, Coroutine):
         token = await token
 
-    if settings_service.auth_settings.SECRET_KEY.get_secret_value() is None:
-        raise credentials_exception
+    secret_key = settings_service.auth_settings.SECRET_KEY.get_secret_value()
+    if secret_key is None:
+        logger.error("Secret key is not set in settings.")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            # Careful not to leak sensitive information
+            detail="Authentication failure: Verify authentication settings.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
     try:
-        # Ignore warning about datetime.utcnow
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-
-            payload = jwt.decode(
-                token,
-                settings_service.auth_settings.SECRET_KEY.get_secret_value(),
-                algorithms=[settings_service.auth_settings.ALGORITHM],
-            )
+            payload = jwt.decode(token, secret_key, algorithms=[settings_service.auth_settings.ALGORITHM])
         user_id: UUID = payload.get("sub")  # type: ignore
         token_type: str = payload.get("type")  # type: ignore
         if expires := payload.get("exp", None):
             expires_datetime = datetime.fromtimestamp(expires, timezone.utc)
-            # TypeError: can't compare offset-naive and offset-aware datetimes
             if datetime.now(timezone.utc) > expires_datetime:
-                raise credentials_exception
+                logger.info("Token expired for user")
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Token has expired.",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
 
-        if user_id is None or token_type:
-            raise credentials_exception
+        if user_id is None or token_type is None:
+            logger.info(f"Invalid token payload. Token type: {token_type}")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token details.",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
     except JWTError as e:
-        raise credentials_exception from e
+        logger.error(f"JWT decoding error: {e}")
+        logger.exception(e)
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        ) from e
 
-    user = get_user_by_id(db, user_id)  # type: ignore
+    user = get_user_by_id(db, user_id)
     if user is None or not user.is_active:
-        raise credentials_exception
+        logger.info("User not found or inactive.")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found or is inactive.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     return user
 
 
@@ -216,18 +225,14 @@ def create_super_user(
 
 def create_user_longterm_token(db: Session = Depends(get_session)) -> tuple[UUID, dict]:
     settings_service = get_settings_service()
-    username = settings_service.auth_settings.SUPERUSER
-    password = settings_service.auth_settings.SUPERUSER_PASSWORD
-    if not username or not password:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Missing first superuser credentials",
-        )
-    super_user = create_super_user(db=db, username=username, password=password)
 
+    username = settings_service.auth_settings.SUPERUSER
+    super_user = get_user_by_username(db, username)
+    if not super_user:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Super user hasn't been created")
     access_token_expires_longterm = timedelta(days=365)
     access_token = create_token(
-        data={"sub": str(super_user.id)},
+        data={"sub": str(super_user.id), "type": "access"},
         expires_delta=access_token_expires_longterm,
     )
 
@@ -243,7 +248,7 @@ def create_user_longterm_token(db: Session = Depends(get_session)) -> tuple[UUID
 
 def create_user_api_key(user_id: UUID) -> dict:
     access_token = create_token(
-        data={"sub": str(user_id), "role": "api_key"},
+        data={"sub": str(user_id), "type": "api_key"},
         expires_delta=timedelta(days=365 * 2),
     )
 
@@ -263,13 +268,13 @@ def create_user_tokens(user_id: UUID, db: Session = Depends(get_session), update
 
     access_token_expires = timedelta(seconds=settings_service.auth_settings.ACCESS_TOKEN_EXPIRE_SECONDS)
     access_token = create_token(
-        data={"sub": str(user_id)},
+        data={"sub": str(user_id), "type": "access"},
         expires_delta=access_token_expires,
     )
 
     refresh_token_expires = timedelta(seconds=settings_service.auth_settings.REFRESH_TOKEN_EXPIRE_SECONDS)
     refresh_token = create_token(
-        data={"sub": str(user_id), "type": "rf"},
+        data={"sub": str(user_id), "type": "refresh"},
         expires_delta=refresh_token_expires,
     )
 
@@ -298,13 +303,13 @@ def create_refresh_token(refresh_token: str, db: Session = Depends(get_session))
             )
         user_id: UUID = payload.get("sub")  # type: ignore
         token_type: str = payload.get("type")  # type: ignore
-
         if user_id is None or token_type is None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
 
         return create_user_tokens(user_id, db)
 
     except JWTError as e:
+        logger.error(f"JWT decoding error: {e}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid refresh token",
@@ -354,5 +359,4 @@ def decrypt_api_key(encrypted_api_key: str, settings_service=Depends(get_setting
     else:
         encoded_bytes = encrypted_api_key
     decrypted_key = fernet.decrypt(encoded_bytes).decode()
-    return decrypted_key
     return decrypted_key

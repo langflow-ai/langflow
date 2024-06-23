@@ -20,7 +20,7 @@ export default function PaginatorComponent({
 }: PaginatorComponentType) {
   const [size, setPageSize] = useState(pageSize);
   const [maxIndex, setMaxPageIndex] = useState(
-    Math.ceil(totalRowsCount / pageSize)
+    Math.ceil(totalRowsCount / pageSize),
   );
 
   useEffect(() => {
@@ -34,8 +34,8 @@ export default function PaginatorComponent({
         <div
           className={
             storeComponent
-              ? "flex items-center lg:space-x-8 "
-              : "flex items-center space-x-6 lg:space-x-8 "
+              ? "flex items-center lg:space-x-8"
+              : "flex items-center space-x-6 lg:space-x-8"
           }
         >
           <div className="flex items-center space-x-2">

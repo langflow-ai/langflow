@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "langflow-base"
-version = "0.0.53"
+version = "0.0.73"
 description = "A Python package with a built-in web application"
 authors = ["Langflow <contact@langflow.org>"]
 maintainers = [
@@ -28,7 +28,7 @@ langflow-base = "langflow.__main__:main"
 python = ">=3.10,<3.13"
 fastapi = "^0.111.0"
 httpx = "*"
-uvicorn = "^0.29.0"
+uvicorn = "^0.30.0"
 gunicorn = "^22.0.0"
 langchain = "~0.2.0"
 langchainhub = "~0.1.15"
@@ -52,8 +52,7 @@ docstring-parser = "^0.15"
 python-jose = "^3.3.0"
 pandas = "2.2.0"
 multiprocess = "^0.70.14"
-duckdb = "^0.10.2"
-python-socketio = "^5.11.0"
+duckdb = "^1.0.0"
 python-docx = "^1.1.0"
 jq = { version = "^1.7.0", markers = "sys_platform != 'win32'" }
 pypdf = "^4.2.0"
@@ -62,6 +61,9 @@ emoji = "^2.12.0"
 cryptography = "^42.0.5"
 asyncer = "^0.0.5"
 pyperclip = "^1.8.2"
+uncurl = "^0.0.11"
+sentry-sdk = {extras = ["fastapi", "loguru"], version = "^2.5.1"}
+chardet = "^5.2.0"
 
 
 [tool.poetry.extras]

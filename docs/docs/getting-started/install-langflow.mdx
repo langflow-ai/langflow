@@ -6,33 +6,37 @@ import Admonition from "@theme/Admonition";
 # 📦 Install Langflow
 
 <Admonition type="info">
-  Langflow v1.0 alpha is also available in HuggingFace Spaces. [Clone the space using this link](https://huggingface.co/spaces/Langflow/Langflow-Preview?duplicate=true), to create your own Langflow workspace in minutes.
+  Langflow **requires** Python version 3.10 or greater.
 </Admonition>
 
-Langflow requires [Python 3.10](https://www.python.org/downloads/release/python-3100/) and [pip](https://pypi.org/project/pip/) or [pipx](https://pipx.pypa.io/stable/installation/) to be installed on your system.
+Langflow **requires** [Python >=3.10](https://www.python.org/downloads/release/python-3100/) and [pip](https://pypi.org/project/pip/) or [pipx](https://pipx.pypa.io/stable/installation/) to be installed on your system.
 
 Install Langflow with pip:
+
 ```bash
 python -m pip install langflow -U
 ```
 
 Install Langflow with pipx:
+
 ```bash
 pipx install langflow --python python3.10 --fetch-missing-python
 ```
-Pipx can fetch the missing Python version for you with `--fetch-missing-python`, but you can also install the Python version manually.
 
+Pipx can fetch the missing Python version for you with `--fetch-missing-python`, but you can also install the Python version manually.
 
 ## Install Langflow pre-release
 
 To install a pre-release version of Langflow:
 
 pip:
+
 ```bash
 python -m pip install langflow --pre --force-reinstall
 ```
 
 pipx:
+
 ```bash
 pipx install langflow --python python3.10 --fetch-missing-python --pip-args="--pre --force-reinstall"
 ```
@@ -52,11 +56,13 @@ python -m langflow --help
 ## ⛓️ Run Langflow
 
 1. To run Langflow, enter the following command.
+
 ```bash
 python -m langflow run
 ```
 
 2. Confirm that a local Langflow instance starts by visiting `http://127.0.0.1:7860` in a Chromium-based browser.
+
 ```bash
 │ Welcome to ⛓ Langflow                             │
 │                                                   │
@@ -64,7 +70,7 @@ python -m langflow run
 │ Collaborate, and contribute at our GitHub Repo 🚀 │
 ```
 
-3. Continue on to the [Quickstart](./quickstart.mdx).
+3. Continue on to the [Quickstart](./quickstart).
 
 ## HuggingFace Spaces
 
@@ -80,7 +86,7 @@ You'll be presented with the following screen:
     light: "img/duplicate-space.png",
     dark: "img/duplicate-space.png",
   }}
-  style={{ width: "100%", margin: "20px auto" }}
+  style={{ width: "80%", maxWidth: "800px", margin: "0 auto" }}
 />
 
 Name your Space, define the visibility (Public or Private), and click on **Duplicate Space** to start the installation process. When installation is finished, you'll be redirected to the Space's main page to start using Langflow right away!

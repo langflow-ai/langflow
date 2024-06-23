@@ -146,83 +146,73 @@ export default function CodeAreaModal({
     setCode(value);
   }, [value, open]);
 
-  const handlePreventEsc = (e: React.KeyboardEvent) => {
-    if (e.key === "Escape") {
-      e.preventDefault();
-    }
-  };
-
   return (
-    <div onKeyDown={(e) => handlePreventEsc(e)}>
-      <BaseModal open={open} setOpen={setOpen}>
-        <BaseModal.Trigger>{children}</BaseModal.Trigger>
-        <BaseModal.Header description={CODE_PROMPT_DIALOG_SUBTITLE}>
-          <span className="pr-2"> {EDIT_CODE_TITLE} </span>
-          <IconComponent
-            name="prompts"
-            className="h-6 w-6 pl-1 text-primary "
-            aria-hidden="true"
-          />
-        </BaseModal.Header>
-        <BaseModal.Content>
-          <Input
-            value={code}
-            readOnly
-            className="absolute left-[500%] top-[500%]"
-            id="codeValue"
-          />
-          <div className="flex h-full w-full flex-col transition-all">
-            <div className="h-full w-full">
-              <AceEditor
-                readOnly={readonly}
-                value={code}
-                mode="python"
-                setOptions={{ fontFamily: "monospace" }}
-                height={height ?? "100%"}
-                highlightActiveLine={true}
-                showPrintMargin={false}
-                fontSize={14}
-                showGutter
-                enableLiveAutocompletion
-                theme={dark ? "twilight" : "github"}
-                name="CodeEditor"
-                onChange={(value) => {
-                  setCode(value);
-                }}
-                className="h-full w-full rounded-lg border-[1px] border-gray-300 custom-scroll dark:border-gray-600"
-              />
-            </div>
-            <div
-              className={
-                "whitespace-break-spaces transition-all delay-500" +
-                (error?.detail?.error !== undefined ? "h-2/6" : "h-0")
-              }
-            >
-              <div className="mt-1 h-full max-h-[10rem] w-full overflow-y-auto overflow-x-clip text-left custom-scroll">
-                <h1 className="text-lg text-destructive">
-                  {error?.detail?.error}
-                </h1>
-                <div className="ml-2 w-full text-sm text-status-red word-break-break-word">
-                  <span className="w-full word-break-break-word">
-                    {error?.detail?.traceback}
-                  </span>
-                </div>
+    <BaseModal open={open} setOpen={setOpen}>
+      <BaseModal.Trigger>{children}</BaseModal.Trigger>
+      <BaseModal.Header description={CODE_PROMPT_DIALOG_SUBTITLE}>
+        <span className="pr-2"> {EDIT_CODE_TITLE} </span>
+        <IconComponent
+          name="prompts"
+          className="h-6 w-6 pl-1 text-primary"
+          aria-hidden="true"
+        />
+      </BaseModal.Header>
+      <BaseModal.Content>
+        <Input
+          value={code}
+          readOnly
+          className="absolute left-[500%] top-[500%]"
+          id="codeValue"
+        />
+        <div className="flex h-full w-full flex-col transition-all">
+          <div className="h-full w-full">
+            <AceEditor
+              readOnly={readonly}
+              value={code}
+              mode="python"
+              setOptions={{ fontFamily: "monospace" }}
+              height={height ?? "100%"}
+              highlightActiveLine={true}
+              showPrintMargin={false}
+              fontSize={14}
+              showGutter
+              enableLiveAutocompletion
+              theme={dark ? "twilight" : "github"}
+              name="CodeEditor"
+              onChange={(value) => {
+                setCode(value);
+              }}
+              className="h-full w-full rounded-lg border-[1px] border-gray-300 custom-scroll dark:border-gray-600"
+            />
+          </div>
+          <div
+            className={
+              "whitespace-break-spaces transition-all delay-500" +
+              (error?.detail?.error !== undefined ? "h-2/6" : "h-0")
+            }
+          >
+            <div className="mt-5 h-full max-h-[10rem] w-full overflow-y-auto overflow-x-clip text-left custom-scroll">
+              <h1 className="text-lg text-error">{error?.detail?.error}</h1>
+              <div className="ml-2 mt-2 w-full text-sm text-destructive word-break-break-word">
+                <span className="w-full word-break-break-word">
+                  {error?.detail?.traceback}
+                </span>
               </div>
             </div>
-            <div className="flex h-fit w-full justify-end">
-              <Button
-                className="mt-3"
-                onClick={handleClick}
-                type="submit"
-                id="checkAndSaveBtn"
-                disabled={readonly}
-              >
-                Check & Save
-              </Button>
-            </div>
           </div>
-        </BaseModal.Content>
-      </BaseModal>
-    </div>
+          <div className="flex h-fit w-full justify-end">
+            <Button
+              className="mt-3"
+              onClick={handleClick}
+              type="submit"
+              id="checkAndSaveBtn"
+              disabled={readonly}
+            >
+              Check & Save
+            </Button>
+          </div>
+        </div>
+      </BaseModal.Content>
+    </BaseModal>
   );
 }

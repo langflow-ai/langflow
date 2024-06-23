@@ -1,39 +1,52 @@
 import { Transition } from "@headlessui/react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import { useHotkeys } from "react-hotkeys-hook";
 import IOModal from "../../modals/IOModal";
-import ApiModal from "../../modals/apiModal/views";
+import ApiModal from "../../modals/apiModal";
 import ShareModal from "../../modals/shareModal";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
+import { useShortcutsStore } from "../../stores/shortcuts";
 import { useStoreStore } from "../../stores/storeStore";
-import { classNames } from "../../utils/utils";
+import { classNames, isThereModal } from "../../utils/utils";
 import ForwardedIconComponent from "../genericIconComponent";
 import { Separator } from "../ui/separator";
 
 export default function FlowToolbar(): JSX.Element {
-  const [open, setOpen] = useState(false);
+  const preventDefault = true;
+  const [open, setOpen] = useState<boolean>(false);
+  const [openCodeModal, setOpenCodeModal] = useState<boolean>(false);
+  const [openShareModal, setOpenShareModal] = useState<boolean>(false);
+  function handleAPIWShortcut(e: KeyboardEvent) {
+    if (isThereModal() && !openCodeModal) return;
+    setOpenCodeModal((oldOpen) => !oldOpen);
+  }
+
+  function handleChatWShortcut(e: KeyboardEvent) {
+    if (isThereModal() && !open) return;
+    if (useFlowStore.getState().hasIO) {
+      setOpen((oldState) => !oldState);
+    }
+  }
+
+  function handleShareWShortcut(e: KeyboardEvent) {
+    if (isThereModal() && !openShareModal) return;
+    setOpenShareModal((oldState) => !oldState);
+  }
+
+  const openPlayground = useShortcutsStore((state) => state.open);
+  const api = useShortcutsStore((state) => state.api);
+  const flow = useShortcutsStore((state) => state.flow);
+
+  useHotkeys(openPlayground, handleChatWShortcut, { preventDefault });
+  useHotkeys(api, handleAPIWShortcut, { preventDefault });
+  useHotkeys(flow, handleShareWShortcut, { preventDefault });
+
   const hasIO = useFlowStore((state) => state.hasIO);
   const hasStore = useStoreStore((state) => state.hasStore);
   const validApiKey = useStoreStore((state) => state.validApiKey);
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
-
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (
-        (event.key === "K" || event.key === "k") &&
-        (event.metaKey || event.ctrlKey) &&
-        useFlowStore.getState().hasIO
-      ) {
-        event.preventDefault();
-        setOpen((oldState) => !oldState);
-      }
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, []);
 
   const prevNodesRef = useRef<any[] | undefined>();
 
@@ -43,13 +56,15 @@ export default function FlowToolbar(): JSX.Element {
         is_component={false}
         component={currentFlow!}
         disabled={!hasApiKey || !validApiKey || !hasStore}
+        open={openShareModal}
+        setOpen={setOpenShareModal}
       >
         <button
           disabled={!hasApiKey || !validApiKey || !hasStore}
           className={classNames(
-            "relative inline-flex h-full w-full items-center justify-center gap-[4px] bg-muted px-5 py-3 text-sm font-semibold text-foreground transition-all duration-150 ease-in-out hover:bg-background hover:bg-hover ",
+            "relative inline-flex h-full w-full items-center justify-center gap-[4px] bg-muted px-5 py-3 text-sm font-semibold text-foreground transition-all duration-150 ease-in-out hover:bg-background hover:bg-hover",
             !hasApiKey || !validApiKey || !hasStore
-              ? " button-disable text-muted-foreground  "
+              ? "button-disable text-muted-foreground"
               : "",
           )}
         >
@@ -66,7 +81,14 @@ export default function FlowToolbar(): JSX.Element {
         </button>
       </ShareModal>
     ),
-    [hasApiKey, validApiKey, currentFlow, hasStore],
+    [
+      hasApiKey,
+      validApiKey,
+      currentFlow,
+      hasStore,
+      openShareModal,
+      setOpenShareModal,
+    ],
   );
 
   return (
@@ -83,28 +105,28 @@ export default function FlowToolbar(): JSX.Element {
       >
         <div
           className={
-            "shadow-round-btn-shadow hover:shadow-round-btn-shadow message-button-position flex items-center justify-center gap-7 rounded-sm  border bg-muted shadow-md transition-all"
+            "shadow-round-btn-shadow hover:shadow-round-btn-shadow message-button-position flex items-center justify-center gap-7 rounded-sm border bg-muted shadow-md transition-all"
           }
         >
           <div className="flex">
-            <div className="flex h-full w-full  gap-1 rounded-sm transition-all">
+            <div className="flex h-full w-full gap-1 rounded-sm transition-all">
               {hasIO ? (
                 <IOModal open={open} setOpen={setOpen} disable={!hasIO}>
-                  <div className="relative inline-flex w-full items-center justify-center   gap-1 px-5 py-3 text-sm font-semibold transition-all duration-500 ease-in-out hover:bg-hover">
+                  <div className="relative inline-flex w-full items-center justify-center gap-1 px-5 py-3 text-sm font-semibold transition-all duration-500 ease-in-out hover:bg-hover">
                     <ForwardedIconComponent
                       name="BotMessageSquareIcon"
-                      className={" h-5 w-5 transition-all"}
+                      className={"h-5 w-5 transition-all"}
                     />
                     Playground
                   </div>
                 </IOModal>
               ) : (
                 <div
-                  className={`relative inline-flex w-full cursor-not-allowed items-center justify-center gap-1 px-5 py-3 text-sm font-semibold text-muted-foreground transition-all duration-150 ease-in-out ease-in-out`}
+                  className={`relative inline-flex w-full cursor-not-allowed items-center justify-center gap-1 px-5 py-3 text-sm font-semibold text-muted-foreground transition-all duration-150 ease-in-out`}
                 >
                   <ForwardedIconComponent
                     name="BotMessageSquareIcon"
-                    className={" h-5 w-5 transition-all"}
+                    className={"h-5 w-5 transition-all"}
                   />
                   Playground
                 </div>
@@ -115,7 +137,11 @@ export default function FlowToolbar(): JSX.Element {
             </div>
             <div className="flex cursor-pointer items-center gap-2">
               {currentFlow && currentFlow.data && (
-                <ApiModal flow={currentFlow}>
+                <ApiModal
+                  flow={currentFlow}
+                  open={openCodeModal}
+                  setOpen={setOpenCodeModal}
+                >
                   <div
                     className={classNames(
                       "relative inline-flex w-full items-center justify-center gap-1 px-5 py-3 text-sm font-semibold text-foreground transition-all duration-150 ease-in-out hover:bg-hover",
@@ -123,7 +149,7 @@ export default function FlowToolbar(): JSX.Element {
                   >
                     <ForwardedIconComponent
                       name="Code2"
-                      className={" h-5 w-5"}
+                      className={"h-5 w-5"}
                     />
                     API
                   </div>
@@ -137,8 +163,8 @@ export default function FlowToolbar(): JSX.Element {
               <div
                 className={`side-bar-button ${
                   !hasApiKey || !validApiKey || !hasStore
-                    ? " cursor-not-allowed"
-                    : " cursor-pointer"
+                    ? "cursor-not-allowed"
+                    : "cursor-pointer"
                 }`}
               >
                 {ModalMemo}

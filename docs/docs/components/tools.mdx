@@ -1,71 +1,65 @@
-import Admonition from '@theme/Admonition';
+import Admonition from "@theme/Admonition";
 
 # Tools
 
-<Admonition type="caution" icon="🚧" title="ZONE UNDER CONSTRUCTION">
-    <p>
-        Thanks for your patience as we refine our documentation. It might have some rough edges currently. Please share your feedback or report issues to help us enhance it! 🛠️📝
-    </p>
-</Admonition>
-
-### SearchApi
+## SearchApi
 
 SearchApi offers a real-time search engine results API that returns structured JSON data, including answer boxes, knowledge graphs, organic results, and more.
 
-#### Parameters
+### Parameters
 
 - **Api Key:** A unique identifier required for authentication with real-time search engines, obtainable through the [SearchApi dashboard](https://www.searchapi.io/).
 - **Engine:** Specifies the search engine used, such as Google, Google Scholar, Bing, YouTube, and YouTube transcripts. Refer to the [documentation](https://www.searchapi.io/docs/google) for a complete list of supported engines.
 - **Parameters:** Allows the selection of various parameters recognized by SearchApi. Some parameters are mandatory while others are optional.
 
-#### Output
+### Output
 
 - **Document:** The JSON response from the request.
 
-### BingSearchRun
+## BingSearchRun
 
 Bing Search, a web search engine by Microsoft, provides search results for various content types like web pages, images, videos, and news articles. It combines algorithms and human editors to deliver these results.
 
-#### Parameters
+### Parameters
 
 - **Api Wrapper:** A BingSearchAPIWrapper component that processes the search URL and subscription key.
 
-### Calculator
+## Calculator
 
 The calculator tool leverages an LLMMathChain to provide mathematical calculation capabilities, enabling the agent to perform computations as needed.
 
-#### Parameters
+### Parameters
 
 - **LLM:** The Language Model used for calculations.
 
-### GoogleSearchResults
+## GoogleSearchResults
 
 This is a wrapper around Google Search tailored for users who need precise control over the JSON data returned from the API.
 
-#### Parameters
+### Parameters
 
 - **Api Wrapper:** A GoogleSearchAPIWrapper equipped with a Google API key and CSE ID.
 
-### GoogleSearchRun
+## GoogleSearchRun
 
 This tool acts as a quick wrapper around Google Search, executing the search query and returning the snippet from the most relevant result.
 
-#### Parameters
+### Parameters
 
 - **Api Wrapper:** A GoogleSearchAPIWrapper equipped with a Google API key and CSE ID.
 
-### GoogleSerperRun
+## GoogleSerperRun
 
 A cost-effective Google Search API.
 
-#### Parameters
+### Parameters
 
 - **Api Wrapper:** A GoogleSerperAPIWrapper with the required API key and result keys.
 
-### InfoSQLDatabaseTool
+## InfoSQLDatabaseTool
 
 This tool retrieves metadata about SQL databases. It takes a comma-separated list of table names as input and outputs the schema and sample rows for those tables.
 
-#### Parameters
+### Parameters
 
 - **Db:** The SQL database to query.

@@ -10,7 +10,11 @@ import {
   CommandList,
 } from "../../../ui/command";
 import { Input } from "../../../ui/input";
-import { Popover, PopoverContentWithoutPortal } from "../../../ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverContentWithoutPortal,
+} from "../../../ui/popover";
 const CustomInputPopover = ({
   id,
   refInput,
@@ -39,6 +43,9 @@ const CustomInputPopover = ({
   showOptions,
 }) => {
   const setErrorData = useAlertStore.getState().setErrorData;
+  const PopoverContentInput = editNode
+    ? PopoverContent
+    : PopoverContentWithoutPortal;
 
   const handleInputChange = (e) => {
     if (password) {
@@ -86,9 +93,9 @@ const CustomInputPopover = ({
               (!setSelectedOption || selectedOption === "") &&
               !pwdVisible &&
               value !== ""
-              ? " text-clip password "
+              ? "text-clip password"
               : "",
-            editNode ? " input-edit-node " : "",
+            editNode ? "input-edit-node" : "",
             password && (setSelectedOption || setSelectedOptions)
               ? "pr-[62.9px]"
               : "",
@@ -107,8 +114,8 @@ const CustomInputPopover = ({
           data-testid={editNode ? id + "-edit" : id}
         />
       </PopoverAnchor>
-      <PopoverContentWithoutPortal
-        className="nocopy nopan nodelete nodrag noundo p-0"
+      <PopoverContentInput
+        className="nocopy nowheel nopan nodelete nodrag noundo p-0"
         style={{ minWidth: refInput?.current?.clientWidth ?? "200px" }}
         side="bottom"
         align="center"
@@ -184,7 +191,7 @@ const CustomInputPopover = ({
             </CommandGroup>
           </CommandList>
         </Command>
-      </PopoverContentWithoutPortal>
+      </PopoverContentInput>
     </Popover>
   );
 };

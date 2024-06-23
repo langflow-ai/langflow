@@ -1,6 +1,6 @@
 import { test } from "@playwright/test";
 
-test("shoud delete a flow", async ({ page }) => {
+test("should delete a flow", async ({ page }) => {
   await page.goto("/");
   await page.waitForTimeout(2000);
   await page.getByText("Store").nth(0).click();
@@ -11,6 +11,7 @@ test("shoud delete a flow", async ({ page }) => {
     .fill(process.env.STORE_API_KEY ?? "");
   await page.getByText("Save").last().click();
   await page.waitForTimeout(8000);
+  await page.getByText("Store").nth(0).click();
 
   await page.getByTestId("install-Website Content QA").click();
   await page.waitForTimeout(5000);
@@ -26,7 +27,7 @@ test("shoud delete a flow", async ({ page }) => {
   await page.getByText("Successfully").first().isVisible();
 });
 
-test("shoud delete a component", async ({ page }) => {
+test("should delete a component", async ({ page }) => {
   await page.goto("/");
   await page.waitForTimeout(2000);
   await page.getByText("Store").nth(0).click();

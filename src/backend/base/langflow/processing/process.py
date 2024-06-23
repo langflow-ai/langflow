@@ -1,14 +1,13 @@
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
-from loguru import logger
-from pydantic import BaseModel
-
 from langflow.graph.graph.base import Graph
 from langflow.graph.schema import RunOutputs
 from langflow.graph.vertex.base import Vertex
 from langflow.schema.graph import InputValue, Tweaks
 from langflow.schema.schema import INPUT_FIELD_NAME
-from langflow.services.session.service import SessionService
+from langflow.services.deps import get_settings_service
+from loguru import logger
+from pydantic import BaseModel
 
 if TYPE_CHECKING:
     from langflow.api.v1.schemas import InputValueRequest
@@ -26,18 +25,13 @@ async def run_graph_internal(
     session_id: Optional[str] = None,
     inputs: Optional[List["InputValueRequest"]] = None,
     outputs: Optional[List[str]] = None,
-    artifacts: Optional[Dict[str, Any]] = None,
-    session_service: Optional[SessionService] = None,
 ) -> tuple[List[RunOutputs], str]:
     """Run the graph and generate the result"""
     inputs = inputs or []
-    graph_data = graph._graph_data
-    if session_id is None and session_service is not None:
-        session_id_str = session_service.generate_key(session_id=flow_id, data_graph=graph_data)
-    elif session_id is not None:
-        session_id_str = session_id
+    if session_id is None:
+        session_id_str = flow_id
     else:
-        raise ValueError("session_id or session_service must be provided")
+        session_id_str = session_id
     components = []
     inputs_list = []
     types = []
@@ -49,16 +43,17 @@ async def run_graph_internal(
         inputs_list.append({INPUT_FIELD_NAME: input_value_request.input_value})
         types.append(input_value_request.type)
 
+    fallback_to_env_vars = get_settings_service().settings.fallback_to_env_var
+
     run_outputs = await graph.arun(
-        inputs_list,
-        components,
-        types,
-        outputs or [],
+        inputs=inputs_list,
+        inputs_components=components,
+        types=types,
+        outputs=outputs or [],
         stream=stream,
         session_id=session_id_str or "",
+        fallback_to_env_vars=fallback_to_env_vars,
     )
-    if session_id_str and session_service:
-        await session_service.update_session(session_id_str, (graph, artifacts))
     return run_outputs, session_id_str
 
 

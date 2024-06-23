@@ -15,4 +15,4 @@ class DatabaseServiceFactory(ServiceFactory):
         # Here you would have logic to create and configure a DatabaseService
         if not settings_service.settings.database_url:
             raise ValueError("No database URL provided")
-        return DatabaseService(settings_service.settings.database_url)
+        return DatabaseService(settings_service)

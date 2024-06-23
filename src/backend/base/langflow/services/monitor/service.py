@@ -1,23 +1,24 @@
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, List, Optional, Union
 
 import duckdb
+from langflow.services.base import Service
+from langflow.services.monitor.utils import add_row_to_table, drop_and_create_table_if_schema_mismatch
 from loguru import logger
 from platformdirs import user_cache_dir
 
-from langflow.services.base import Service
-from langflow.services.monitor.schema import MessageModel, TransactionModel, VertexBuildModel
-from langflow.services.monitor.utils import add_row_to_table, drop_and_create_table_if_schema_mismatch
-
 if TYPE_CHECKING:
-    from langflow.services.settings.manager import SettingsService
+    from langflow.services.settings.service import SettingsService
+    from langflow.services.monitor.schema import MessageModel, TransactionModel, VertexBuildModel
 
 
 class MonitorService(Service):
     name = "monitor_service"
 
     def __init__(self, settings_service: "SettingsService"):
+        from langflow.services.monitor.schema import MessageModel, TransactionModel, VertexBuildModel
+
         self.settings_service = settings_service
         self.base_cache_dir = Path(user_cache_dir("langflow"))
         self.db_path = self.base_cache_dir / "monitor.duckdb"
@@ -32,6 +33,10 @@ class MonitorService(Service):
         except Exception as e:
             logger.exception(f"Error initializing monitor service: {e}")
 
+    def exec_query(self, query: str, read_only: bool = False):
+        with duckdb.connect(str(self.db_path), read_only=read_only) as conn:
+            return conn.execute(query).df()
+
     def to_df(self, table_name):
         return self.load_table_as_dataframe(table_name)
 
@@ -42,7 +47,7 @@ class MonitorService(Service):
     def add_row(
         self,
         table_name: str,
-        data: Union[dict, TransactionModel, MessageModel, VertexBuildModel],
+        data: Union[dict, "TransactionModel", "MessageModel", "VertexBuildModel"],
     ):
         # Make sure the model passed matches the table
 
@@ -51,7 +56,7 @@ class MonitorService(Service):
             raise ValueError(f"Unknown table name: {table_name}")
 
         # Connect to DuckDB and add the row
-        with duckdb.connect(str(self.db_path)) as conn:
+        with duckdb.connect(str(self.db_path), read_only=False) as conn:
             add_row_to_table(conn, table_name, model, data)
 
     def load_table_as_dataframe(self, table_name):
@@ -69,7 +74,7 @@ class MonitorService(Service):
         valid: Optional[bool] = None,
         order_by: Optional[str] = "timestamp",
     ):
-        query = "SELECT index,flow_id, valid, params, data, artifacts, timestamp FROM vertex_builds"
+        query = "SELECT id, index,flow_id, valid, params, data, artifacts, timestamp FROM vertex_builds"
         conditions = []
         if flow_id:
             conditions.append(f"flow_id = '{flow_id}'")
@@ -85,7 +90,7 @@ class MonitorService(Service):
         if order_by:
             query += f" ORDER BY {order_by}"
 
-        with duckdb.connect(str(self.db_path)) as conn:
+        with duckdb.connect(str(self.db_path), read_only=True) as conn:
             df = conn.execute(query).df()
 
         return df.to_dict(orient="records")
@@ -95,16 +100,36 @@ class MonitorService(Service):
         if flow_id:
             query += f" WHERE flow_id = '{flow_id}'"
 
-        with duckdb.connect(str(self.db_path)) as conn:
+        with duckdb.connect(str(self.db_path), read_only=False) as conn:
             conn.execute(query)
 
-    def delete_messages(self, session_id: str):
+    def delete_messages_session(self, session_id: str):
         query = f"DELETE FROM messages WHERE session_id = '{session_id}'"
 
-        with duckdb.connect(str(self.db_path)) as conn:
-            conn.execute(query)
+        return self.exec_query(query, read_only=False)
 
-    def add_message(self, message: MessageModel):
+    def delete_messages(self, message_ids: Union[List[int], str]):
+        if isinstance(message_ids, list):
+            # If message_ids is a list, join the string representations of the integers
+            ids_str = ",".join(map(str, message_ids))
+        elif isinstance(message_ids, str):
+            # If message_ids is already a string, use it directly
+            ids_str = message_ids
+        else:
+            raise ValueError("message_ids must be a list of integers or a string")
+
+        query = f"DELETE FROM messages WHERE index IN ({ids_str})"
+
+        return self.exec_query(query, read_only=False)
+
+    def update_message(self, message_id: str, **kwargs):
+        query = (
+            f"""UPDATE messages SET {', '.join(f"{k} = '{v}'" for k, v in kwargs.items())} WHERE index = {message_id}"""
+        )
+
+        return self.exec_query(query, read_only=False)
+
+    def add_message(self, message: "MessageModel"):
         self.add_row("messages", message)
 
     def get_messages(
@@ -117,7 +142,7 @@ class MonitorService(Service):
         order: Optional[str] = "DESC",
         limit: Optional[int] = None,
     ):
-        query = "SELECT index, flow_id, sender_name, sender, session_id, message, artifacts, timestamp FROM messages"
+        query = "SELECT index, flow_id, sender_name, sender, session_id, text, files, timestamp FROM messages"
         conditions = []
         if sender:
             conditions.append(f"sender = '{sender}'")
@@ -138,7 +163,7 @@ class MonitorService(Service):
         if limit is not None:
             query += f" LIMIT {limit}"
 
-        with duckdb.connect(str(self.db_path)) as conn:
+        with duckdb.connect(str(self.db_path), read_only=True) as conn:
             df = conn.execute(query).df()
 
         return df
@@ -151,7 +176,9 @@ class MonitorService(Service):
         order_by: Optional[str] = "timestamp",
         flow_id: Optional[str] = None,
     ):
-        query = "SELECT index,flow_id, source, target, target_args, status, error, timestamp FROM transactions"
+        query = (
+            "SELECT index,flow_id, status, error, timestamp, vertex_id, inputs, outputs, target_id FROM transactions"
+        )
         conditions = []
         if source:
             conditions.append(f"source = '{source}'")
@@ -166,8 +193,8 @@ class MonitorService(Service):
             query += " WHERE " + " AND ".join(conditions)
 
         if order_by:
-            query += f" ORDER BY {order_by}"
-        with duckdb.connect(str(self.db_path)) as conn:
+            query += f" ORDER BY {order_by} DESC"
+        with duckdb.connect(str(self.db_path), read_only=True) as conn:
             df = conn.execute(query).df()
 
         return df.to_dict(orient="records")

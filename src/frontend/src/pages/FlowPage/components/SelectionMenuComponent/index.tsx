@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
+import { useHotkeys } from "react-hotkeys-hook";
 import { NodeToolbar } from "reactflow";
+import { Button } from "../../../../components/ui/button";
 import { GradientGroup } from "../../../../icons/GradientSparkles";
 import useFlowStore from "../../../../stores/flowStore";
 import { validateSelection } from "../../../../utils/reactflowUtils";
@@ -10,6 +12,7 @@ export default function SelectionMenu({
   lastSelection,
 }) {
   const edges = useFlowStore((state) => state.edges);
+  const unselectAll = useFlowStore((state) => state.unselectAll);
   const [disable, setDisable] = useState<boolean>(
     lastSelection && edges.length > 0
       ? validateSelection(lastSelection!, edges).length > 0
@@ -18,6 +21,8 @@ export default function SelectionMenu({
   const [isOpen, setIsOpen] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [lastNodes, setLastNodes] = useState(nodes);
+
+  useHotkeys("esc", unselectAll, { preventDefault: true });
 
   useEffect(() => {
     if (isOpen) {
@@ -58,14 +63,15 @@ export default function SelectionMenu({
         <div
           className={
             "duration-400 h-10 w-24 rounded-md border border-indigo-300 bg-background px-2.5 text-primary shadow-inner transition-all ease-in-out" +
-            (isTransitioning ? " opacity-100" : " opacity-0 ")
+            (isTransitioning ? " opacity-100" : " opacity-0")
           }
         >
-          <button
+          <Button
+            unstyled
             className={`${
               disable
                 ? "flex h-full w-full cursor-not-allowed items-center justify-between text-sm text-muted-foreground"
-                : "flex h-full w-full items-center justify-between text-sm hover:text-indigo-500"
+                : "flex h-full w-full items-center justify-between text-sm"
             }`}
             onClick={onClick}
             disabled={disable}
@@ -77,7 +83,7 @@ export default function SelectionMenu({
               disabled={disable}
             />
             Group
-          </button>
+          </Button>
         </div>
       </div>
     </NodeToolbar>

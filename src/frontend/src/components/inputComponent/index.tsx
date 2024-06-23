@@ -66,9 +66,9 @@ export default function InputComponent({
             required={required}
             className={classNames(
               password && !pwdVisible && value !== ""
-                ? " text-clip password "
+                ? "text-clip password"
                 : "",
-              editNode ? " input-edit-node " : "",
+              editNode ? "input-edit-node" : "",
               password && editNode ? "pr-8" : "",
               password && !editNode ? "pr-10" : "",
               className!,
@@ -108,6 +108,7 @@ export default function InputComponent({
               setSelectedOptions={setSelectedOptions}
               options={objectOptions}
               value={value}
+              editNode={editNode}
               autoFocus={autoFocus}
               disabled={disabled}
               setShowOptions={setShowOptions}
@@ -163,7 +164,7 @@ export default function InputComponent({
               e.stopPropagation();
             }}
             className={cn(
-              selectedOption !== ""
+              onChange && setSelectedOption && selectedOption !== ""
                 ? "text-medium-indigo"
                 : "text-muted-foreground",
               "hover:text-accent-foreground",

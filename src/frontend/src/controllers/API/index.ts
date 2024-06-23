@@ -1,13 +1,14 @@
 import { ColDef, ColGroupDef } from "ag-grid-community";
 import { AxiosRequestConfig, AxiosResponse } from "axios";
 import { Edge, Node, ReactFlowJsonObject } from "reactflow";
-import { BASE_URL_API } from "../../constants/constants";
+import { BASE_URL_API, MAX_BATCH_SIZE } from "../../constants/constants";
 import { api } from "../../controllers/API/api";
 import {
   APIObjectType,
   APITemplateType,
   Component,
   LoginType,
+  ProfilePicturesTypeAPI,
   Users,
   VertexBuildTypeAPI,
   VerticesOrderTypeAPI,
@@ -17,6 +18,7 @@ import {
 } from "../../types/api/index";
 import { UserInputType } from "../../types/components";
 import { FlowStyleType, FlowType } from "../../types/flow";
+import { Message } from "../../types/messages";
 import { StoreComponentResponse } from "../../types/store";
 import { FlowPoolType } from "../../types/zustand/flow";
 import { extractColumnsFromRows } from "../../utils/utils";
@@ -32,10 +34,13 @@ import {
 /**
  * Fetches all objects from the API endpoint.
  *
+ * @param {boolean} force_refresh - Whether to force a refresh of the data.
  * @returns {Promise<AxiosResponse<APIObjectType>>} A promise that resolves to an AxiosResponse containing all the objects.
  */
-export async function getAll(): Promise<AxiosResponse<APIObjectType>> {
-  return await api.get(`${BASE_URL_API}all`);
+export async function getAll(
+  force_refresh: boolean = true,
+): Promise<AxiosResponse<APIObjectType>> {
+  return await api.get(`${BASE_URL_API}all?force_refresh=${force_refresh}`);
 }
 
 const GITHUB_API_URL = "https://api.github.com";
@@ -122,6 +127,7 @@ export async function saveFlowToDatabase(newFlow: {
   style?: FlowStyleType;
   is_component?: boolean;
   folder_id?: string;
+  endpoint_name?: string;
 }): Promise<FlowType> {
   try {
     const response = await api.post(`${BASE_URL_API}flows/`, {
@@ -130,6 +136,7 @@ export async function saveFlowToDatabase(newFlow: {
       description: newFlow.description,
       is_component: newFlow.is_component,
       folder_id: newFlow.folder_id === "" ? null : newFlow.folder_id,
+      endpoint_name: newFlow.endpoint_name,
     });
 
     if (response.status !== 201) {
@@ -157,6 +164,7 @@ export async function updateFlowInDatabase(
       data: updatedFlow.data,
       description: updatedFlow.description,
       folder_id: updatedFlow.folder_id === "" ? null : updatedFlow.folder_id,
+      endpoint_name: updatedFlow.endpoint_name,
     });
 
     if (response?.status !== 200) {
@@ -360,6 +368,19 @@ export async function uploadFile(
   const formData = new FormData();
   formData.append("file", file);
   return await api.post(`${BASE_URL_API}files/upload/${id}`, formData);
+}
+
+export async function getProfilePictures(): Promise<ProfilePicturesTypeAPI | null> {
+  try {
+    const res = await api.get(`${BASE_URL_API}files/profile_pictures/list`);
+
+    if (res.status === 200) {
+      return res.data;
+    }
+  } catch (error) {
+    throw error;
+  }
+  return null;
 }
 
 export async function postCustomComponent(
@@ -963,11 +984,19 @@ export async function postBuildVertex(
   flowId: string,
   vertexId: string,
   input_value: string,
+  files?: string[],
 ): Promise<AxiosResponse<VertexBuildTypeAPI>> {
   // input_value is optional and is a query parameter
+  let data = {};
+  if (typeof input_value !== "undefined") {
+    data["inputs"] = { input_value: input_value };
+  }
+  if (data && files) {
+    data["files"] = files;
+  }
   return await api.post(
     `${BASE_URL_API}build/${flowId}/vertices/${vertexId}`,
-    input_value ? { inputs: { input_value: input_value } } : undefined,
+    data,
   );
 }
 
@@ -998,12 +1027,41 @@ export async function deleteFlowPool(
   return await api.delete(`${BASE_URL_API}monitor/builds`, config);
 }
 
+/**
+ * Deletes multiple flow components by their IDs.
+ * @param flowIds - An array of flow IDs to be deleted.
+ * @param token - The authorization token for the API request.
+ * @returns A promise that resolves to an array of AxiosResponse objects representing the delete responses.
+ */
 export async function multipleDeleteFlowsComponents(
   flowIds: string[],
-): Promise<AxiosResponse<any>> {
-  return await api.post(`${BASE_URL_API}flows/multiple_delete/`, {
-    flow_ids: flowIds,
-  });
+): Promise<AxiosResponse<any>[]> {
+  const batches: string[][] = [];
+
+  // Split the flowIds into batches
+  for (let i = 0; i < flowIds.length; i += MAX_BATCH_SIZE) {
+    batches.push(flowIds.slice(i, i + MAX_BATCH_SIZE));
+  }
+
+  // Function to delete a batch of flow IDs
+  const deleteBatch = async (batch: string[]): Promise<AxiosResponse<any>> => {
+    try {
+      return await api.delete(`${BASE_URL_API}flows/`, {
+        data: batch,
+      });
+    } catch (error) {
+      console.error("Error deleting flows:", error);
+      throw error;
+    }
+  };
+
+  // Execute all delete requests
+  const responses: Promise<AxiosResponse<any>>[] = batches.map((batch) =>
+    deleteBatch(batch),
+  );
+
+  // Return the responses after all requests are completed
+  return Promise.all(responses);
 }
 
 export async function getTransactionTable(
@@ -1022,16 +1080,41 @@ export async function getTransactionTable(
 }
 
 export async function getMessagesTable(
-  id: string,
   mode: "intersection" | "union",
+  id?: string,
+  excludedFields?: string[],
   params = {},
-): Promise<{ rows: Array<object>; columns: Array<ColDef | ColGroupDef> }> {
+): Promise<{ rows: Array<Message>; columns: Array<ColDef | ColGroupDef> }> {
   const config = {};
-  config["params"] = { flow_id: id };
+  if (id) {
+    config["params"] = { flow_id: id };
+  }
   if (params) {
     config["params"] = { ...config["params"], ...params };
   }
   const rows = await api.get(`${BASE_URL_API}monitor/messages`, config);
-  const columns = extractColumnsFromRows(rows.data, mode);
-  return { rows: rows.data, columns };
+
+  const rowsOrganized = rows.data;
+
+  const columns = extractColumnsFromRows(rowsOrganized, mode, excludedFields);
+  const sessions = new Set<string>();
+  rowsOrganized.forEach((row) => {
+    sessions.add(row.session_id);
+  });
+  return { rows: rowsOrganized, columns };
+}
+
+export async function deleteMessagesFn(ids: number[]) {
+  try {
+    return await api.delete(`${BASE_URL_API}monitor/messages`, {
+      data: ids,
+    });
+  } catch (error) {
+    console.error("Error deleting flows:", error);
+    throw error;
+  }
+}
+
+export async function updateMessageApi(data: Message) {
+  return await api.post(`${BASE_URL_API}monitor/messages/${data.index}`, data);
 }

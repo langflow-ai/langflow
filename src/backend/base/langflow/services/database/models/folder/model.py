@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING, List, Optional
 from uuid import UUID, uuid4
 
+from sqlalchemy import UniqueConstraint
 from sqlmodel import Field, Relationship, SQLModel
 
 from langflow.services.database.models.flow.model import FlowRead
@@ -29,6 +30,8 @@ class Folder(FolderBase, table=True):
     flows: List["Flow"] = Relationship(
         back_populates="folder", sa_relationship_kwargs={"cascade": "all, delete, delete-orphan"}
     )
+
+    __table_args__ = (UniqueConstraint("user_id", "name", name="unique_folder_name"),)
 
 
 class FolderCreate(FolderBase):

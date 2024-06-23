@@ -2,6 +2,7 @@ import hashlib
 from http import HTTPStatus
 from io import BytesIO
 from uuid import UUID
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
@@ -95,6 +96,46 @@ async def download_image(file_name: str, flow_id: UUID, storage_service: Storage
 
         file_content = await storage_service.get_file(flow_id=flow_id_str, file_name=file_name)
         return StreamingResponse(BytesIO(file_content), media_type=content_type)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/profile_pictures/{folder_name}/{file_name}")
+async def download_profile_picture(
+    folder_name: str,
+    file_name: str,
+    storage_service: StorageService = Depends(get_storage_service),
+):
+    try:
+        extension = file_name.split(".")[-1]
+        config_dir = get_storage_service().settings_service.settings.config_dir
+        config_path = Path(config_dir)  # type: ignore
+        folder_path = config_path / "profile_pictures" / folder_name
+        content_type = build_content_type_from_extension(extension)
+        file_content = await storage_service.get_file(flow_id=folder_path, file_name=file_name)  # type: ignore
+        return StreamingResponse(BytesIO(file_content), media_type=content_type)
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/profile_pictures/list")
+async def list_profile_pictures(storage_service: StorageService = Depends(get_storage_service)):
+    try:
+        config_dir = get_storage_service().settings_service.settings.config_dir
+        config_path = Path(config_dir)  # type: ignore
+
+        people_path = config_path / "profile_pictures/People"
+        space_path = config_path / "profile_pictures/Space"
+
+        people = await storage_service.list_files(flow_id=people_path)  # type: ignore
+        space = await storage_service.list_files(flow_id=space_path)  # type: ignore
+
+        files = [Path("People") / i for i in people]
+        files += [Path("Space") / i for i in space]
+
+        return {"files": files}
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

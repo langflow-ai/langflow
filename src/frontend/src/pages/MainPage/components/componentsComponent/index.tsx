@@ -1,4 +1,3 @@
-import { cloneDeep } from "lodash";
 import { useEffect, useMemo, useState } from "react";
 import { FormProvider, useForm, useWatch } from "react-hook-form";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -10,14 +9,24 @@ import { SkeletonCardComponent } from "../../../../components/skeletonCardCompon
 import { Button } from "../../../../components/ui/button";
 import DeleteConfirmationModal from "../../../../modals/deleteConfirmationModal";
 import useAlertStore from "../../../../stores/alertStore";
+import { useDarkStore } from "../../../../stores/darkStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useFolderStore } from "../../../../stores/foldersStore";
 import { FlowType } from "../../../../types/flow";
+import { downloadFlow, removeApiKeys } from "../../../../utils/reactflowUtils";
 import useFileDrop from "../../hooks/use-on-file-drop";
 import { getNameByType } from "../../utils/get-name-by-type";
 import { sortFlows } from "../../utils/sort-flows";
 import EmptyComponent from "../emptyComponent";
 import HeaderComponent from "../headerComponent";
+import useDeleteMultipleFlows from "./hooks/use-delete-multiple";
+import useDescriptionModal from "./hooks/use-description-modal";
+import useFilteredFlows from "./hooks/use-filtered-flows";
+import useDuplicateFlows from "./hooks/use-handle-duplicate";
+import useExportFlows from "./hooks/use-handle-export";
+import useSelectAll from "./hooks/use-handle-select-all";
+import useSelectOptionsChange from "./hooks/use-select-options-change";
+import useSelectedFlows from "./hooks/use-selected-flows";
 
 export default function ComponentsComponent({
   type = "all",
@@ -66,6 +75,17 @@ export default function ComponentsComponent({
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
   const getFoldersApi = useFolderStore((state) => state.getFoldersApi);
   const setFolderUrl = useFolderStore((state) => state.setFolderUrl);
+  const addFlow = useFlowsManagerStore((state) => state.addFlow);
+
+  const cardTypes = useMemo(() => {
+    if (window.location.pathname.includes("components")) {
+      return "Components";
+    }
+    if (window.location.pathname.includes("flows")) {
+      return "Flows";
+    }
+    return "Items";
+  }, [window.location]);
 
   useEffect(() => {
     setFolderUrl(folderId ?? "");
@@ -74,22 +94,7 @@ export default function ComponentsComponent({
     getFolderById(folderId ? folderId : myCollectionId);
   }, [location]);
 
-  useEffect(() => {
-    const newFlows = cloneDeep(flowsFromFolder!);
-    const filteredFlows = newFlows?.filter(
-      (f) =>
-        f.name.toLowerCase().includes(searchFlowsComponents.toLowerCase()) ||
-        f.description
-          .toLowerCase()
-          .includes(searchFlowsComponents.toLowerCase()),
-    );
-
-    if (searchFlowsComponents === "") {
-      setAllFlows(flowsFromFolder!);
-    }
-
-    setAllFlows(filteredFlows);
-  }, [searchFlowsComponents]);
+  useFilteredFlows(flowsFromFolder, searchFlowsComponents, setAllFlows);
 
   const resetFilter = () => {
     setPageIndex(1);
@@ -100,91 +105,68 @@ export default function ComponentsComponent({
   const entireFormValues = useWatch({ control });
 
   const methods = useForm();
-  const handleSelectAll = (select) => {
-    const flowsFromFolderIds = flowsFromFolder?.map((f) => f.id);
-    if (select) {
-      Object.keys(getValues()).forEach((key) => {
-        if (!flowsFromFolderIds?.includes(key)) return;
-        setValue(key, true);
-      });
-      return;
-    }
 
-    Object.keys(getValues()).forEach((key) => {
-      setValue(key, false);
-    });
-  };
+  const { handleSelectAll } = useSelectAll(
+    flowsFromFolder,
+    getValues,
+    setValue,
+  );
 
-  const handleSelectOptionsChange = () => {
-    const hasSelected = selectedFlowsComponentsCards?.length > 0;
-    if (!hasSelected) {
-      setErrorData({
-        title: "No items selected",
-        list: ["Please select items to delete"],
-      });
-      return;
-    }
-    setOpenDelete(true);
-  };
+  const { handleDuplicate } = useDuplicateFlows(
+    selectedFlowsComponentsCards,
+    addFlow,
+    allFlows,
+    resetFilter,
+    getFoldersApi,
+    folderId,
+    myCollectionId,
+    getFolderById,
+    setSuccessData,
+    setSelectedFlowsComponentsCards,
+    handleSelectAll,
+    cardTypes,
+  );
 
-  const handleDeleteMultiple = () => {
-    removeFlow(selectedFlowsComponentsCards)
-      .then(() => {
-        resetFilter();
-        getFoldersApi(true);
-        if (!folderId || folderId === myCollectionId) {
-          getFolderById(folderId ? folderId : myCollectionId);
-        }
-        setSuccessData({
-          title: "Selected items deleted successfully!",
-        });
-      })
-      .catch(() => {
-        setErrorData({
-          title: "Error deleting items",
-          list: ["Please try again"],
-        });
-      });
-  };
+  const version = useDarkStore((state) => state.version);
 
-  useEffect(() => {
-    if (!entireFormValues || Object.keys(entireFormValues).length === 0) return;
-    const selectedFlows: string[] = Object.keys(entireFormValues).filter(
-      (key) => {
-        if (entireFormValues[key] === true) {
-          return true;
-        }
-        return false;
-      },
-    );
+  const { handleExport } = useExportFlows(
+    selectedFlowsComponentsCards,
+    allFlows,
+    downloadFlow,
+    removeApiKeys,
+    version,
+    setSuccessData,
+    setSelectedFlowsComponentsCards,
+    handleSelectAll,
+    cardTypes,
+  );
 
-    setSelectedFlowsComponentsCards(selectedFlows);
-  }, [entireFormValues]);
+  const { handleSelectOptionsChange } = useSelectOptionsChange(
+    selectedFlowsComponentsCards,
+    setErrorData,
+    setOpenDelete,
+    handleDuplicate,
+    handleExport,
+  );
 
-  const getDescriptionModal = useMemo(() => {
-    const getTypeLabel = (type) => {
-      const labels = {
-        all: "item",
-        component: "component",
-        flow: "flow",
-      };
-      return labels[type] || "";
-    };
+  const { handleDeleteMultiple } = useDeleteMultipleFlows(
+    selectedFlowsComponentsCards,
+    removeFlow,
+    resetFilter,
+    getFoldersApi,
+    folderId,
+    myCollectionId,
+    getFolderById,
+    setSuccessData,
+    setErrorData,
+  );
 
-    const getPluralizedLabel = (type) => {
-      const labels = {
-        all: "items",
-        component: "components",
-        flow: "flows",
-      };
-      return labels[type] || "";
-    };
+  useSelectedFlows(entireFormValues, setSelectedFlowsComponentsCards);
 
-    if (selectedFlowsComponentsCards?.length === 1) {
-      return getTypeLabel(type);
-    }
-    return getPluralizedLabel(type);
-  }, [selectedFlowsComponentsCards, type]);
+  const descriptionModal = useDescriptionModal(
+    selectedFlowsComponentsCards,
+    type,
+  );
 
   const getTotalRowsCount = () => {
     if (type === "all") return allFlows?.length;
@@ -196,13 +178,17 @@ export default function ComponentsComponent({
 
   return (
     <>
-      {allFlows?.length > 0 && (
-        <HeaderComponent
-          handleDelete={handleSelectOptionsChange}
-          handleSelectAll={handleSelectAll}
-          disableDelete={!(selectedFlowsComponentsCards?.length > 0)}
-        />
-      )}
+      <div className="flex w-full gap-4 pb-5">
+        {allFlows?.length > 0 && (
+          <HeaderComponent
+            handleDelete={() => handleSelectOptionsChange("delete")}
+            handleSelectAll={handleSelectAll}
+            handleDuplicate={() => handleSelectOptionsChange("duplicate")}
+            handleExport={() => handleSelectOptionsChange("export")}
+            disableFunctions={!(selectedFlowsComponentsCards?.length > 0)}
+          />
+        )}
+      </div>
 
       <CardsWrapComponent
         onFileDrop={handleFileDrop}
@@ -293,7 +279,7 @@ export default function ComponentsComponent({
           open={openDelete}
           setOpen={setOpenDelete}
           onConfirm={handleDeleteMultiple}
-          description={getDescriptionModal}
+          description={descriptionModal}
         >
           <></>
         </DeleteConfirmationModal>

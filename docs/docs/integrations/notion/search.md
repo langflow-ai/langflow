@@ -36,7 +36,7 @@ To use the `NotionSearch` component in a Langflow flow, follow these steps:
 import requests
 from typing import Dict, Any, List
 from langflow.custom import CustomComponent
-from langflow.schema import Record
+from langflow.schema import Data
 
 class NotionSearch(CustomComponent):
     display_name = "Search Notion"
@@ -88,7 +88,7 @@ class NotionSearch(CustomComponent):
         query: str = "",
         filter_value: str = "page",
         sort_direction: str = "descending",
-    ) -> List[Record]:
+    ) -> List[Data]:
         try:
             url = "https://api.notion.com/v1/search"
             headers = {
@@ -113,7 +113,7 @@ class NotionSearch(CustomComponent):
             response.raise_for_status()
 
             results = response.json()
-            records = []
+            data = []
             combined_text = f"Results found: {len(results['results'])}\n\n"
             for result in results['results']:
                 result_data = {
@@ -135,27 +135,28 @@ class NotionSearch(CustomComponent):
 
                 text += f"type: {result['object']}\nlast_edited_time: {result['last_edited_time']}\n\n"
                 combined_text += text
-                records.append(Record(text=text, data=result_data))
+                data.append(Data(text=text, data=result_data))
 
             self.status = combined_text
-            return records
+            return data
 
         except Exception as e:
             self.status = f"An error occurred: {str(e)}"
-            return [Record(text=self.status, data=[])]
+            return [Data(text=self.status, data=[])]
 ```
 
 ## Example Usage
+
 <Admonition type="info" title="Example Usage">
 Here's an example of how you can use the `NotionSearch` component in a Langflow flow:
 
 <ZoomableImage
-    alt="NotionSearch Flow Example"
-    sources={{
+alt="NotionSearch Flow Example"
+sources={{
     light: "img/notion/NotionSearch_flow_example.png",
     dark: "img/notion/NotionSearch_flow_example_dark.png",
     }}
-    style={{ width: "100%", margin: "20px 0" }}
+style={{ width: "100%", margin: "20px 0" }}
 />
 
 In this example, the `NotionSearch` component is used to search for pages and databases in Notion based on the provided query and filter criteria. The retrieved data can then be processed further in the subsequent components of the flow.

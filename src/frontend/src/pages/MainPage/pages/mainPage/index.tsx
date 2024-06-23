@@ -25,15 +25,8 @@ export default function HomePage(): JSX.Element {
   const [openFolderModal, setOpenFolderModal] = useState(false);
   const [openDeleteFolderModal, setOpenDeleteFolderModal] = useState(false);
   const is_component = pathname === "/components";
-  const getFoldersApi = useFolderStore((state) => state.getFoldersApi);
   const setFolderToEdit = useFolderStore((state) => state.setFolderToEdit);
   const navigate = useNavigate();
-
-  useEffect(() => {
-    setTimeout(() => {
-      getFoldersApi();
-    }, 300);
-  }, []);
 
   useEffect(() => {
     setCurrentFlowId("");
@@ -45,7 +38,7 @@ export default function HomePage(): JSX.Element {
     is_component,
   });
 
-  const { handleDeleteFolder } = useDeleteFolder({ navigate, getFoldersApi });
+  const { handleDeleteFolder } = useDeleteFolder({ navigate });
 
   return (
     <>
@@ -67,10 +60,6 @@ export default function HomePage(): JSX.Element {
         <div className="flex h-full w-full space-y-8 md:flex-col lg:flex-row lg:space-x-8 lg:space-y-0">
           <aside className="flex h-fit w-fit flex-col space-y-6">
             <SidebarNav
-              handleOpenNewFolderModal={() => {
-                setFolderToEdit(null);
-                setOpenFolderModal(true);
-              }}
               items={[]}
               handleChangeFolder={(id: string) => {
                 navigate(`all/folder/${id}`, { state: { folderId: id } });

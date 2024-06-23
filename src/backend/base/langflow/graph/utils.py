@@ -1,9 +1,12 @@
-from typing import Any, Union
+from enum import Enum
+from typing import Any, Generator, Union
 
 from langchain_core.documents import Document
 from pydantic import BaseModel
 
 from langflow.interface.utils import extract_input_variables_from_prompt
+from langflow.schema.data import Data
+from langflow.schema.message import Message
 
 
 class UnbuiltObject:
@@ -12,6 +15,16 @@ class UnbuiltObject:
 
 class UnbuiltResult:
     pass
+
+
+class ArtifactType(str, Enum):
+    TEXT = "text"
+    RECORD = "record"
+    OBJECT = "object"
+    ARRAY = "array"
+    STREAM = "stream"
+    UNKNOWN = "unknown"
+    MESSAGE = "message"
 
 
 def validate_prompt(prompt: str):
@@ -41,6 +54,7 @@ def flatten_list(list_of_lists: list[Union[list, Any]]) -> list:
 def serialize_field(value):
     """Unified serialization function for handling both BaseModel and Document types,
     including handling lists of these types."""
+
     if isinstance(value, (list, tuple)):
         return [serialize_field(v) for v in value]
     elif isinstance(value, Document):
@@ -50,3 +64,37 @@ def serialize_field(value):
     elif isinstance(value, str):
         return {"result": value}
     return value
+
+
+def get_artifact_type(value, build_result) -> str:
+    result = ArtifactType.UNKNOWN
+    match value:
+        case Data():
+            result = ArtifactType.RECORD
+
+        case str():
+            result = ArtifactType.TEXT
+
+        case dict():
+            result = ArtifactType.OBJECT
+
+        case list():
+            result = ArtifactType.ARRAY
+
+        case Message():
+            result = ArtifactType.MESSAGE
+
+    if result == ArtifactType.UNKNOWN:
+        if isinstance(build_result, Generator):
+            result = ArtifactType.STREAM
+        elif isinstance(value, Message) and isinstance(value.text, Generator):
+            result = ArtifactType.STREAM
+
+    return result.value
+
+
+def post_process_raw(raw, artifact_type: str):
+    if artifact_type == ArtifactType.STREAM.value:
+        raw = ""
+
+    return raw

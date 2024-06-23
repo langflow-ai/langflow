@@ -31,7 +31,6 @@ export default function ExtraSidebar(): JSX.Element {
   const templates = useTypesStore((state) => state.templates);
   const getFilterEdge = useFlowStore((state) => state.getFilterEdge);
   const setFilterEdge = useFlowStore((state) => state.setFilterEdge);
-  const uploadFlow = useFlowsManagerStore((state) => state.uploadFlow);
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const hasStore = useStoreStore((state) => state.hasStore);
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
@@ -200,7 +199,7 @@ export default function ExtraSidebar(): JSX.Element {
           className={classNames(
             "extra-side-bar-buttons gap-[4px] text-sm font-semibold",
             !hasApiKey || !validApiKey || !hasStore
-              ? "button-disable  cursor-default text-muted-foreground"
+              ? "button-disable cursor-default text-muted-foreground"
               : "",
           )}
         >
@@ -261,9 +260,14 @@ export default function ExtraSidebar(): JSX.Element {
             // Set search input state
             setSearch(event.target.value);
           }}
+          autocomplete="off"
+          readonly="readonly"
+          onClick={() =>
+            document.getElementById("search").removeAttribute("readonly")
+          }
         />
         <div
-          className="search-icon "
+          className="search-icon"
           onClick={() => {
             if (search) {
               setFilterData(data);
@@ -294,7 +298,7 @@ export default function ExtraSidebar(): JSX.Element {
             Object.keys(dataFilter[SBSectionName]).length > 0 ? (
               <>
                 <DisclosureComponent
-                  openDisc={
+                  defaultOpen={
                     getFilterEdge.length !== 0 || search.length !== 0
                       ? true
                       : false
@@ -360,8 +364,8 @@ export default function ExtraSidebar(): JSX.Element {
             ),
           )}{" "}
         <ParentDisclosureComponent
-          openDisc={false}
-          key={"Advanced"}
+          defaultOpen={search.length !== 0 || getFilterEdge.length !== 0}
+          key={`${search.length !== 0}-${getFilterEdge.length !== 0}-Advanced`}
           button={{
             title: "Advanced",
             Icon: nodeIconsLucide.unknown,
@@ -376,7 +380,7 @@ export default function ExtraSidebar(): JSX.Element {
                 <>
                   <DisclosureComponent
                     isChild={false}
-                    openDisc={
+                    defaultOpen={
                       getFilterEdge.length !== 0 || search.length !== 0
                         ? true
                         : false

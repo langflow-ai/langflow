@@ -23,6 +23,7 @@ export const USER_EDIT_ERROR_ALERT = "Error on edit user";
 export const USER_ADD_ERROR_ALERT = "Error when adding new user";
 export const SIGNIN_ERROR_ALERT = "Error signing in";
 export const DEL_KEY_ERROR_ALERT = "Error on delete key";
+export const DEL_KEY_ERROR_ALERT_PLURAL = "Error on delete keys";
 export const UPLOAD_ERROR_ALERT = "Error uploading file";
 export const WRONG_FILE_ERROR_ALERT = "Invalid file type";
 export const UPLOAD_ALERT_LIST = "Please upload a JSON file";
@@ -30,6 +31,8 @@ export const INVALID_SELECTION_ERROR_ALERT = "Invalid selection";
 export const EDIT_PASSWORD_ERROR_ALERT = "Error changing password";
 export const EDIT_PASSWORD_ALERT_LIST = "Passwords do not match";
 export const SAVE_ERROR_ALERT = "Error saving changes";
+export const PROFILE_PICTURES_GET_ERROR_ALERT =
+  "Error retrieving profile pictures";
 export const SIGNUP_ERROR_ALERT = "Error signing up";
 export const APIKEY_ERROR_ALERT = "API Key Error";
 export const NOAPI_ERROR_ALERT =
@@ -54,6 +57,7 @@ export const USER_DEL_SUCCESS_ALERT = "Success! User deleted!";
 export const USER_EDIT_SUCCESS_ALERT = "Success! User edited!";
 export const USER_ADD_SUCCESS_ALERT = "Success! New user added!";
 export const DEL_KEY_SUCCESS_ALERT = "Success! Key deleted!";
+export const DEL_KEY_SUCCESS_ALERT_PLURAL = "Success! Keys deleted!";
 export const FLOW_BUILD_SUCCESS_ALERT = `Flow built successfully`;
 export const SAVE_SUCCESS_ALERT = "Changes saved successfully!";
 

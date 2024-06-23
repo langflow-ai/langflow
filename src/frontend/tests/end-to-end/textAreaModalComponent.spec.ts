@@ -21,7 +21,7 @@ test("TextAreaModalComponent", async ({ page }) => {
   }
 
   await page.getByTestId("blank-flow").click();
-  await page.waitForTimeout(1000);
+  await page.waitForTimeout(3000);
   await page.getByTestId("extended-disclosure").click();
   await page.getByPlaceholder("Search").click();
   await page.getByPlaceholder("Search").fill("prompt");
@@ -29,7 +29,7 @@ test("TextAreaModalComponent", async ({ page }) => {
   await page.waitForTimeout(1000);
 
   await page
-    .locator('//*[@id="inputsPrompt"]')
+    .locator('//*[@id="promptsPrompt"]')
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.mouse.up();
   await page.mouse.down();
