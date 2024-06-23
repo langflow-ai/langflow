@@ -123,6 +123,7 @@ will see orange <span style={{ color: "orange" }}>o</span> and purple{" "}
 />
 
 <div style={{ marginBottom: "20px" }}>
+
 In the top right corner of the component, you'll find the component status icon (![Status icon](/logos/playbutton.svg)).
 Build the flow by clicking the **![Playground icon](/logos/botmessage.svg)Playground** at the bottom right of the workspace.
 
@@ -255,7 +256,7 @@ The **curl** tab displays sample code for posting a query to your flow.
 Modify the `input_value` to change your input message.
 Copy the code and run it to post a query to your flow and get the result.
 
-```curl
+```bash
 curl -X POST \
   http://127.0.0.1:7863/api/v1/run/f2eefd80-bb91-4190-9279-0d6ffafeaac4\?stream\=false \
   -H 'Content-Type: application/json'\
