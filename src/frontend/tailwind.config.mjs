@@ -98,6 +98,7 @@ const config = {
         "success-foreground": "var(--success-foreground)",
         "beta-background": "var(--beta-background)",
         "beta-foreground": "var(--beta-foreground)",
+        "beta-foreground-soft": "var(--beta-foreground-soft)",
         "chat-bot-icon": "var(--chat-bot-icon)",
         "chat-user-icon": "var(--chat-user-icon)",
         ice: "var(--ice)",
