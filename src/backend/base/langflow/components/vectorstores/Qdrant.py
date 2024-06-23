@@ -5,7 +5,6 @@ from langchain_community.vectorstores import Qdrant
 from langflow.base.vectorstores.model import LCVectorStoreComponent
 from langflow.helpers.data import docs_to_data
 from langflow.io import (
-    BoolInput,
     DropdownInput,
     HandleInput,
     IntInput,
@@ -14,6 +13,7 @@ from langflow.io import (
     DataInput,
     MultilineInput,
 )
+
 from langflow.schema import Data
 
 
@@ -42,18 +42,13 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
         ),
         StrInput(name="content_payload_key", display_name="Content Payload Key", value="page_content", advanced=True),
         StrInput(name="metadata_payload_key", display_name="Metadata Payload Key", value="metadata", advanced=True),
-        HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
+        MultilineInput(name="search_query", display_name="Search Query"),
         DataInput(
-            name="vector_store_inputs",
-            display_name="Vector Store Inputs",
+            name="ingest_data",
+            display_name="Ingest Data",
             is_list=True,
         ),
-        BoolInput(
-            name="add_to_vector_store",
-            display_name="Add to Vector Store",
-            info="If true, the Vector Store Inputs will be added to the Vector Store.",
-        ),
-        MultilineInput(name="search_input", display_name="Search Input"),
+        HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
         IntInput(
             name="number_of_results",
             display_name="Number of Results",
@@ -85,23 +80,17 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
             "url": self.url,
         }
 
-        # Remove None values from server_kwargs
         server_kwargs = {k: v for k, v in server_kwargs.items() if v is not None}
-        if self.add_to_vector_store:
-            documents = []
-            for _input in self.vector_store_inputs or []:
-                if isinstance(_input, Data):
-                    documents.append(_input.to_lc_document())
-                else:
-                    documents.append(_input)
+        documents = []
 
-            if documents:
-                qdrant = Qdrant.from_documents(documents, embedding=self.embedding, **qdrant_kwargs)
+        for _input in self.ingest_data or []:
+            if isinstance(_input, Data):
+                documents.append(_input.to_lc_document())
             else:
-                from qdrant_client import QdrantClient
+                documents.append(_input)
 
-                client = QdrantClient(**server_kwargs)
-                qdrant = Qdrant(embedding_function=self.embedding.embed_query, client=client, **qdrant_kwargs)
+        if documents:
+            qdrant = Qdrant.from_documents(documents, embedding=self.embedding, **qdrant_kwargs)
         else:
             from qdrant_client import QdrantClient
 
@@ -113,9 +102,9 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
     def search_documents(self) -> List[Data]:
         vector_store = self._build_qdrant()
 
-        if self.search_input and isinstance(self.search_input, str) and self.search_input.strip():
+        if self.search_query and isinstance(self.search_query, str) and self.search_query.strip():
             docs = vector_store.similarity_search(
-                query=self.search_input,
+                query=self.search_query,
                 k=self.number_of_results,
             )
 

@@ -5,7 +5,6 @@ from langchain_community.vectorstores import Cassandra
 from langflow.base.vectorstores.model import LCVectorStoreComponent
 from langflow.helpers.data import docs_to_data
 from langflow.io import (
-    BoolInput,
     DropdownInput,
     HandleInput,
     IntInput,
@@ -41,7 +40,7 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
             name="keyspace",
             display_name="Keyspace",
             info="Optional key space within Astra DB. The keyspace should already be created.",
-            advanced=True,
+            advanced=False,
         ),
         IntInput(
             name="ttl_seconds",
@@ -70,18 +69,13 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
             value="Sync",
             advanced=True,
         ),
-        HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
+        MultilineInput(name="search_query", display_name="Search Query"),
         DataInput(
-            name="vector_store_inputs",
-            display_name="Vector Store Inputs",
+            name="ingest_data",
+            display_name="Ingest Data",
             is_list=True,
         ),
-        BoolInput(
-            name="add_to_vector_store",
-            display_name="Add to Vector Store",
-            info="If true, the Vector Store Inputs will be added to the Vector Store.",
-        ),
-        MultilineInput(name="search_input", display_name="Search Input"),
+        HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
         IntInput(
             name="number_of_results",
             display_name="Number of Results",
@@ -107,33 +101,25 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
             token=self.token,
         )
 
-        if self.add_to_vector_store:
-            documents = []
-            for _input in self.vector_store_inputs or []:
-                if isinstance(_input, Data):
-                    documents.append(_input.to_lc_document())
-                else:
-                    documents.append(_input)
+        documents = []
 
-            if documents:
-                table = Cassandra.from_documents(
-                    documents=documents,
-                    embedding=self.embedding,
-                    table_name=self.table_name,
-                    keyspace=self.keyspace,
-                    ttl_seconds=self.ttl_seconds,
-                    batch_size=self.batch_size,
-                    body_index_options=self.body_index_options,
-                )
+        for _input in self.ingest_data or []:
+            if isinstance(_input, Data):
+                documents.append(_input.to_lc_document())
             else:
-                table = Cassandra(
-                    embedding=self.embedding,
-                    table_name=self.table_name,
-                    keyspace=self.keyspace,
-                    ttl_seconds=self.ttl_seconds,
-                    body_index_options=self.body_index_options,
-                    setup_mode=self.setup_mode,
-                )
+                documents.append(_input)
+
+        if documents:
+            table = Cassandra.from_documents(
+                documents=documents,
+                embedding=self.embedding,
+                table_name=self.table_name,
+                keyspace=self.keyspace,
+                ttl_seconds=self.ttl_seconds,
+                batch_size=self.batch_size,
+                body_index_options=self.body_index_options,
+            )
+
         else:
             table = Cassandra(
                 embedding=self.embedding,
@@ -149,10 +135,10 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
     def search_documents(self) -> List[Data]:
         vector_store = self._build_cassandra()
 
-        if self.search_input and isinstance(self.search_input, str) and self.search_input.strip():
+        if self.search_query and isinstance(self.search_query, str) and self.search_query.strip():
             try:
                 docs = vector_store.similarity_search(
-                    query=self.search_input,
+                    query=self.search_query,
                     k=self.number_of_results,
                 )
             except KeyError as e:
