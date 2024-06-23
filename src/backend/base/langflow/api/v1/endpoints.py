@@ -3,6 +3,7 @@ from http import HTTPStatus
 from typing import TYPE_CHECKING, Annotated, List, Optional, Union
 from uuid import UUID
 
+from langflow.utils.version import get_version_info
 import sqlalchemy as sa
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Request, UploadFile, status
 from loguru import logger
@@ -445,17 +446,7 @@ async def create_upload_file(
 # get endpoint to return version of langflow
 @router.get("/version")
 def get_version():
-    try:
-        from langflow.version import __version__  # type: ignore
-
-        version = __version__
-        package = "Langflow"
-    except ImportError:
-        from importlib import metadata
-
-        version = metadata.version("langflow-base")
-        package = "Langflow Base"
-    return {"version": version, "package": package}
+    return get_version_info()
 
 
 @router.post("/custom_component", status_code=HTTPStatus.OK)
