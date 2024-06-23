@@ -17,6 +17,7 @@ from langflow.schema.schema import OutputLog
 from langflow.services.deps import get_storage_service, get_variable_service, session_scope
 from langflow.services.storage.service import StorageService
 from langflow.services.tracing.schema import Log
+from langflow.template.utils import update_frontend_node_with_template_values
 from langflow.type_extraction.type_extraction import (
     extract_inner_type_from_generic_alias,
     extract_union_types_from_generic_alias,
@@ -495,3 +496,12 @@ class CustomComponent(BaseComponent):
         self._logs.append(log)
         if self.vertex:
             self._tracing_service.add_log(trace_name=self.vertex.id, log=log)
+
+    def post_code_processing(self, new_build_config: dict, current_build_config: dict):
+        """
+        This function is called after the code validation is done.
+        """
+        frontend_node = update_frontend_node_with_template_values(
+            frontend_node=new_build_config, raw_frontend_node=current_build_config
+        )
+        return frontend_node
