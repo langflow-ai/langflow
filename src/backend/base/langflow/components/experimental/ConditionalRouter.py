@@ -1,5 +1,5 @@
 from langflow.custom import Component
-from langflow.io import BoolInput, DropdownInput, MessageInput, Output, TextInput
+from langflow.io import BoolInput, DropdownInput, MessageInput, MessageTextInput, Output
 from langflow.schema.message import Message
 
 
@@ -9,12 +9,12 @@ class ConditionalRouterComponent(Component):
     icon = "equal"
 
     inputs = [
-        TextInput(
+        MessageTextInput(
             name="input_text",
             display_name="Input Text",
             info="The primary text input for the operation.",
         ),
-        TextInput(
+        MessageTextInput(
             name="match_text",
             display_name="Match Text",
             info="The text input to compare against.",
