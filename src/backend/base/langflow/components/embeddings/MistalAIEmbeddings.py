@@ -3,7 +3,7 @@ from pydantic.v1 import SecretStr
 
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import Embeddings
-from langflow.io import DropdownInput, IntInput, Output, SecretStrInput, TextInput
+from langflow.io import DropdownInput, IntInput, MessageTextInput, Output, SecretStrInput
 
 
 class MistralAIEmbeddingsComponent(LCModelComponent):
@@ -28,7 +28,7 @@ class MistralAIEmbeddingsComponent(LCModelComponent):
         ),
         IntInput(name="max_retries", display_name="Max Retries", advanced=True, value=5),
         IntInput(name="timeout", display_name="Request Timeout", advanced=True, value=120),
-        TextInput(
+        MessageTextInput(
             name="endpoint",
             display_name="API Endpoint",
             advanced=True,

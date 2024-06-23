@@ -2,7 +2,7 @@ from langchain_community.embeddings.huggingface import HuggingFaceEmbeddings
 
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import Embeddings
-from langflow.io import BoolInput, DictInput, TextInput, Output
+from langflow.io import BoolInput, DictInput, MessageTextInput, Output
 
 
 class HuggingFaceEmbeddingsComponent(LCModelComponent):
@@ -14,10 +14,10 @@ class HuggingFaceEmbeddingsComponent(LCModelComponent):
     icon = "HuggingFace"
 
     inputs = [
-        TextInput(name="cache_folder", display_name="Cache Folder", advanced=True),
+        MessageTextInput(name="cache_folder", display_name="Cache Folder", advanced=True),
         DictInput(name="encode_kwargs", display_name="Encode Kwargs", advanced=True),
         DictInput(name="model_kwargs", display_name="Model Kwargs", advanced=True),
-        TextInput(name="model_name", display_name="Model Name", value="sentence-transformers/all-mpnet-base-v2"),
+        MessageTextInput(name="model_name", display_name="Model Name", value="sentence-transformers/all-mpnet-base-v2"),
         BoolInput(name="multi_process", display_name="Multi Process", advanced=True),
     ]
 

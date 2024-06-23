@@ -5,7 +5,7 @@ from langchain.agents.tool_calling_agent.base import create_tool_calling_agent
 from langchain_core.prompts import ChatPromptTemplate
 
 from langflow.custom import Component
-from langflow.io import BoolInput, HandleInput, Output, TextInput
+from langflow.io import BoolInput, HandleInput, MessageTextInput, Output
 from langflow.schema import Data
 from langflow.schema.message import Message
 
@@ -16,18 +16,18 @@ class ToolCallingAgentComponent(Component):
     icon = "LangChain"
 
     inputs = [
-        TextInput(
+        MessageTextInput(
             name="system_prompt",
             display_name="System Prompt",
             info="System prompt for the agent.",
             value="You are a helpful assistant",
         ),
-        TextInput(
+        MessageTextInput(
             name="input_value",
             display_name="Inputs",
             info="Input text to pass to the agent.",
         ),
-        TextInput(
+        MessageTextInput(
             name="user_prompt",
             display_name="Prompt",
             info="This prompt must contain 'input' key.",

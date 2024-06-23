@@ -8,7 +8,7 @@ from loguru import logger
 
 from langflow.base.curl.parse import parse_context
 from langflow.custom import Component
-from langflow.io import DataInput, DropdownInput, IntInput, NestedDictInput, Output, TextInput
+from langflow.io import DataInput, DropdownInput, IntInput, MessageTextInput, NestedDictInput, Output
 from langflow.schema import Data
 from langflow.schema.dotdict import dotdict
 
@@ -24,13 +24,13 @@ class APIRequestComponent(Component):
     icon = "Globe"
 
     inputs = [
-        TextInput(
+        MessageTextInput(
             name="urls",
             display_name="URLs",
             is_list=True,
             info="Enter one or more URLs, separated by commas.",
         ),
-        TextInput(
+        MessageTextInput(
             name="curl",
             display_name="Curl",
             info="Paste a curl command to populate the fields. This will fill in the dictionary fields for headers and body.",

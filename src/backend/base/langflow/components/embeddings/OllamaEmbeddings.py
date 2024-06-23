@@ -1,7 +1,8 @@
 from langchain_community.embeddings import OllamaEmbeddings
+
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import Embeddings
-from langflow.io import FloatInput, Output, TextInput
+from langflow.io import FloatInput, MessageTextInput, Output
 
 
 class OllamaEmbeddingsComponent(LCModelComponent):
@@ -11,12 +12,12 @@ class OllamaEmbeddingsComponent(LCModelComponent):
     icon = "Ollama"
 
     inputs = [
-        TextInput(
+        MessageTextInput(
             name="model",
             display_name="Ollama Model",
             value="llama2",
         ),
-        TextInput(
+        MessageTextInput(
             name="base_url",
             display_name="Ollama Base URL",
             value="http://localhost:11434",

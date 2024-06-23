@@ -1,5 +1,5 @@
 from langflow.base.io.chat import ChatComponent
-from langflow.io import DropdownInput, Output, TextInput
+from langflow.io import DropdownInput, MessageTextInput, Output
 from langflow.schema.message import Message
 
 
@@ -9,7 +9,7 @@ class ChatOutput(ChatComponent):
     icon = "ChatOutput"
 
     inputs = [
-        TextInput(
+        MessageTextInput(
             name="input_value",
             display_name="Text",
             info="Message to be passed as output.",
@@ -22,11 +22,13 @@ class ChatOutput(ChatComponent):
             advanced=True,
             info="Type of sender.",
         ),
-        TextInput(
+        MessageTextInput(
             name="sender_name", display_name="Sender Name", info="Name of the sender.", value="AI", advanced=True
         ),
-        TextInput(name="session_id", display_name="Session ID", info="Session ID for the message.", advanced=True),
-        TextInput(
+        MessageTextInput(
+            name="session_id", display_name="Session ID", info="Session ID for the message.", advanced=True
+        ),
+        MessageTextInput(
             name="data_template",
             display_name="Data Template",
             value="{text}",

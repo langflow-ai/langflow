@@ -1,7 +1,7 @@
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from langflow.custom import Component
-from langflow.inputs.inputs import DataInput, IntInput, TextInput
+from langflow.inputs.inputs import DataInput, IntInput, MessageTextInput
 from langflow.schema import Data
 from langflow.template.field.base import Output
 from langflow.utils.util import build_loader_repr_from_data, unescape_string
@@ -31,7 +31,7 @@ class RecursiveCharacterTextSplitterComponent(Component):
             info="The texts to split.",
             input_types=["Document", "Data"],
         ),
-        TextInput(
+        MessageTextInput(
             name="separators",
             display_name="Separators",
             info='The characters to split on.\nIf left empty defaults to ["\\n\\n", "\\n", " ", ""].',

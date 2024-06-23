@@ -3,7 +3,7 @@ from pydantic.v1.types import SecretStr
 
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import Embeddings
-from langflow.io import Output, SecretStrInput, TextInput
+from langflow.io import MessageTextInput, Output, SecretStrInput
 
 
 class HuggingFaceInferenceAPIEmbeddingsComponent(LCModelComponent):
@@ -14,8 +14,8 @@ class HuggingFaceInferenceAPIEmbeddingsComponent(LCModelComponent):
 
     inputs = [
         SecretStrInput(name="api_key", display_name="API Key", advanced=True),
-        TextInput(name="api_url", display_name="API URL", advanced=True, value="http://localhost:8080"),
-        TextInput(name="model_name", display_name="Model Name", value="BAAI/bge-large-en-v1.5"),
+        MessageTextInput(name="api_url", display_name="API URL", advanced=True, value="http://localhost:8080"),
+        MessageTextInput(name="model_name", display_name="Model Name", value="BAAI/bge-large-en-v1.5"),
     ]
 
     outputs = [

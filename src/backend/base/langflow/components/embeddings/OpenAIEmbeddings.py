@@ -2,7 +2,7 @@ from langchain_openai.embeddings.base import OpenAIEmbeddings
 
 from langflow.base.embeddings.model import LCEmbeddingsModel
 from langflow.field_typing import Embeddings
-from langflow.io import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, SecretStrInput, TextInput
+from langflow.io import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, MessageTextInput, SecretStrInput
 
 
 class OpenAIEmbeddingsComponent(LCEmbeddingsModel):
@@ -23,8 +23,8 @@ class OpenAIEmbeddingsComponent(LCEmbeddingsModel):
             info="Default query parameters to use for the API request.",
         ),
         IntInput(name="chunk_size", display_name="Chunk Size", advanced=True, value=1000),
-        TextInput(name="client", display_name="Client", advanced=True),
-        TextInput(name="deployment", display_name="Deployment", advanced=True),
+        MessageTextInput(name="client", display_name="Client", advanced=True),
+        MessageTextInput(name="deployment", display_name="Deployment", advanced=True),
         IntInput(name="embedding_ctx_length", display_name="Embedding Context Length", advanced=True, value=1536),
         IntInput(name="max_retries", display_name="Max Retries", value=3, advanced=True),
         DropdownInput(
@@ -42,17 +42,17 @@ class OpenAIEmbeddingsComponent(LCEmbeddingsModel):
         SecretStrInput(name="openai_api_base", display_name="OpenAI API Base", advanced=True),
         SecretStrInput(name="openai_api_key", display_name="OpenAI API Key"),
         SecretStrInput(name="openai_api_type", display_name="OpenAI API Type", advanced=True),
-        TextInput(name="openai_api_version", display_name="OpenAI API Version", advanced=True),
-        TextInput(
+        MessageTextInput(name="openai_api_version", display_name="OpenAI API Version", advanced=True),
+        MessageTextInput(
             name="openai_organization",
             display_name="OpenAI Organization",
             advanced=True,
         ),
-        TextInput(name="openai_proxy", display_name="OpenAI Proxy", advanced=True),
+        MessageTextInput(name="openai_proxy", display_name="OpenAI Proxy", advanced=True),
         FloatInput(name="request_timeout", display_name="Request Timeout", advanced=True),
         BoolInput(name="show_progress_bar", display_name="Show Progress Bar", advanced=True),
         BoolInput(name="skip_empty", display_name="Skip Empty", advanced=True),
-        TextInput(
+        MessageTextInput(
             name="tiktoken_model_name",
             display_name="TikToken Model Name",
             advanced=True,

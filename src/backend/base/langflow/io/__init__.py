@@ -8,12 +8,12 @@ from langflow.inputs import (
     HandleInput,
     IntInput,
     MessageInput,
+    MessageTextInput,
     MultilineInput,
     NestedDictInput,
     PromptInput,
     SecretStrInput,
     StrInput,
-    TextInput,
 )
 from langflow.template import Output
 
@@ -32,6 +32,6 @@ __all__ = [
     "PromptInput",
     "SecretStrInput",
     "StrInput",
-    "TextInput",
+    "MessageTextInput",
     "Output",
 ]

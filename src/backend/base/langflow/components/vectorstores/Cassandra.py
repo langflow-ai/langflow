@@ -5,13 +5,13 @@ from langchain_community.vectorstores import Cassandra
 from langflow.base.vectorstores.model import LCVectorStoreComponent
 from langflow.helpers.data import docs_to_data
 from langflow.io import (
+    DataInput,
     DropdownInput,
     HandleInput,
     IntInput,
-    SecretStrInput,
-    TextInput,
-    DataInput,
+    MessageTextInput,
     MultilineInput,
+    SecretStrInput,
 )
 from langflow.schema import Data
 
@@ -29,14 +29,14 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
             info="Authentication token for accessing Cassandra on Astra DB.",
             required=True,
         ),
-        TextInput(name="database_id", display_name="Database ID", info="The Astra database ID.", required=True),
-        TextInput(
+        MessageTextInput(name="database_id", display_name="Database ID", info="The Astra database ID.", required=True),
+        MessageTextInput(
             name="table_name",
             display_name="Table Name",
             info="The name of the table where vectors will be stored.",
             required=True,
         ),
-        TextInput(
+        MessageTextInput(
             name="keyspace",
             display_name="Keyspace",
             info="Optional key space within Astra DB. The keyspace should already be created.",
@@ -55,7 +55,7 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
             value=16,
             advanced=True,
         ),
-        TextInput(
+        MessageTextInput(
             name="body_index_options",
             display_name="Body Index Options",
             info="Optional options used to create the body index.",

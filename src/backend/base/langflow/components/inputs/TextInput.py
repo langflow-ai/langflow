@@ -1,5 +1,5 @@
 from langflow.base.io.text import TextComponent
-from langflow.io import Output, TextInput
+from langflow.io import MessageTextInput, Output
 from langflow.schema.message import Message
 
 
@@ -9,7 +9,7 @@ class TextInputComponent(TextComponent):
     icon = "type"
 
     inputs = [
-        TextInput(
+        MessageTextInput(
             name="input_value",
             display_name="Text",
             info="Text to be passed as input.",

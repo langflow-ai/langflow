@@ -4,7 +4,7 @@ from pydantic.v1 import SecretStr
 from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
-from langflow.io import BoolInput, DropdownInput, FloatInput, IntInput, Output, SecretStrInput, TextInput
+from langflow.io import BoolInput, DropdownInput, FloatInput, IntInput, MessageTextInput, Output, SecretStrInput
 
 
 class AnthropicModelComponent(LCModelComponent):
@@ -13,7 +13,7 @@ class AnthropicModelComponent(LCModelComponent):
     icon = "Anthropic"
 
     inputs = [
-        TextInput(name="input_value", display_name="Input"),
+        MessageTextInput(name="input_value", display_name="Input"),
         IntInput(
             name="max_tokens",
             display_name="Max Tokens",
@@ -39,20 +39,20 @@ class AnthropicModelComponent(LCModelComponent):
             info="Your Anthropic API key.",
         ),
         FloatInput(name="temperature", display_name="Temperature", value=0.1),
-        TextInput(
+        MessageTextInput(
             name="anthropic_api_url",
             display_name="Anthropic API URL",
             advanced=True,
             info="Endpoint of the Anthropic API. Defaults to 'https://api.anthropic.com' if not specified.",
         ),
         BoolInput(name="stream", display_name="Stream", info=STREAM_INFO_TEXT, advanced=True, value=False),
-        TextInput(
+        MessageTextInput(
             name="system_message",
             display_name="System Message",
             info="System message to pass to the model.",
             advanced=True,
         ),
-        TextInput(
+        MessageTextInput(
             name="prefill",
             display_name="Prefill",
             info="Prefill text to guide the model's response.",

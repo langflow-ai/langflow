@@ -8,12 +8,12 @@ from .inputs import (
     HandleInput,
     IntInput,
     MessageInput,
+    MessageTextInput,
     MultilineInput,
     NestedDictInput,
     PromptInput,
     SecretStrInput,
     StrInput,
-    TextInput,
 )
 
 __all__ = [
@@ -31,5 +31,5 @@ __all__ = [
     "PromptInput",
     "SecretStrInput",
     "StrInput",
-    "TextInput",
+    "MessageTextInput",
 ]

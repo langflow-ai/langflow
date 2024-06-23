@@ -116,7 +116,7 @@ class MessageInput(StrInput, InputTraceMixin):
         raise ValueError(f"Invalid value type {type(v)}")
 
 
-class TextInput(StrInput, MetadataTraceMixin, InputTraceMixin):
+class MessageTextInput(StrInput, MetadataTraceMixin, InputTraceMixin):
     """
     Represents a text input component for the Langflow system.
 
@@ -165,7 +165,7 @@ class TextInput(StrInput, MetadataTraceMixin, InputTraceMixin):
         return value
 
 
-class MultilineInput(TextInput, MultilineMixin, InputTraceMixin):
+class MultilineInput(MessageTextInput, MultilineMixin, InputTraceMixin):
     """
     Represents a multiline input field.
 
@@ -317,6 +317,6 @@ InputTypes = Union[
     PromptInput,
     SecretStrInput,
     StrInput,
-    TextInput,
+    MessageTextInput,
     MessageInput,
 ]
