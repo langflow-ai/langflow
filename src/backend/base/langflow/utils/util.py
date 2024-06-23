@@ -424,6 +424,7 @@ def update_settings(
     cache: Optional[str] = None,
     dev: bool = False,
     remove_api_keys: bool = False,
+    flows_path: Optional[Path] = None,
     components_path: Optional[Path] = None,
     store: bool = True,
 ):
@@ -449,6 +450,9 @@ def update_settings(
     if not store:
         logger.debug("Setting store to False")
         settings_service.settings.update_settings(store=False)
+    if flows_path is not None:
+        logger.debug(f"Adding flows path {flows_path}")
+        settings_service.settings.update_settings(load_flows_path=flows_path)
 
 
 def is_class_method(func, cls):

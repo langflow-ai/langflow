@@ -96,6 +96,69 @@ def run(
 
 
 @app.command()
+def serve(
+    host: str = typer.Option("127.0.0.1", help="Host to bind the server to.", envvar="LANGFLOW_HOST"),
+    workers: int = typer.Option(1, help="Number of worker processes.", envvar="LANGFLOW_WORKERS"),
+    timeout: int = typer.Option(300, help="Worker timeout in seconds.", envvar="LANGFLOW_WORKER_TIMEOUT"),
+    port: int = typer.Option(7860, help="Port to listen on.", envvar="LANGFLOW_PORT"),
+    components_path: Optional[Path] = typer.Option(
+        Path(__file__).parent / "components",
+        help="Path to the directory containing custom components.",
+        envvar="LANGFLOW_COMPONENTS_PATH",
+    ),
+    # .env file param
+    env_file: Path = typer.Option(None, help="Path to the .env file containing environment variables."),
+    log_level: str = typer.Option("critical", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"),
+    log_file: Path = typer.Option("logs/langflow.log", help="Path to the log file.", envvar="LANGFLOW_LOG_FILE"),
+    cache: Optional[str] = typer.Option(
+        envvar="LANGFLOW_LANGCHAIN_CACHE",
+        help="Type of cache to use. (InMemoryCache, SQLiteCache)",
+        default=None,
+    ),
+    dev: bool = typer.Option(False, help="Run in development mode (may contain bugs)"),
+    path: str = typer.Option(
+        None,
+        help="Path to the frontend directory containing build files. This is for development purposes only.",
+        envvar="LANGFLOW_FRONTEND_PATH",
+    ),
+    open_browser: bool = typer.Option(
+        True,
+        help="Open the browser after starting the server.",
+        envvar="LANGFLOW_OPEN_BROWSER",
+    ),
+    remove_api_keys: bool = typer.Option(
+        False,
+        help="Remove API keys from the projects saved in the database.",
+        envvar="LANGFLOW_REMOVE_API_KEYS",
+    ),
+    store: bool = typer.Option(
+        True,
+        help="Enables the store features.",
+        envvar="LANGFLOW_STORE",
+    ),
+):
+    """Serve Langflow"""
+    setup_and_run_langflow(
+        host=host,
+        workers=workers,
+        timeout=timeout,
+        port=port,
+        components_path=components_path,
+        env_file=env_file,
+        log_level=log_level,
+        log_file=log_file,
+        cache=cache,
+        dev=dev,
+        path=path,
+        open_browser=open_browser,
+        remove_api_keys=remove_api_keys,
+        backend_only=True,
+        store=store,
+        serve=True,
+    )
+
+
+@app.command()
 def superuser(
     username: str = typer.Option(..., prompt=True, help="Username for the superuser."),
     password: str = typer.Option(..., prompt=True, hide_input=True, help="Password for the superuser."),

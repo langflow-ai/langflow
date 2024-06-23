@@ -275,6 +275,18 @@ class Settings(BaseSettings):
         logger.debug(f"Components path: {value}")
         return value
 
+    @field_validator("load_flows_path", mode="before")
+    def set_load_flows_path(cls, value):
+        if os.getenv("LANGFLOW_LOAD_FLOWS_PATH"):
+            logger.debug("Setting LANGFLOW_LOAD_FLOWS_PATH to load_flows_path")
+            value = os.getenv("LANGFLOW_LOAD_FLOWS_PATH")
+
+        if not value:
+            value = None
+            logger.debug("Setting default load_flows_path to None")
+
+        return value
+
     model_config = SettingsConfigDict(validate_assignment=True, extra="ignore", env_prefix="LANGFLOW_")
 
     def update_from_yaml(self, file_path: str, dev: bool = False):

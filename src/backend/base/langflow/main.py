@@ -74,7 +74,7 @@ class JavaScriptMIMETypeMiddleware(BaseHTTPMiddleware):
         return response
 
 
-def get_lifespan(fix_migration=False, socketio_server=None, version=None):
+def get_lifespan(fix_migration=False, socketio_server=None, version=None, serve=False):
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         nest_asyncio.apply()
@@ -88,9 +88,9 @@ def get_lifespan(fix_migration=False, socketio_server=None, version=None):
             setup_llm_caching()
             LangfuseInstance.update()
             initialize_super_user_if_needed()
-            task = asyncio.create_task(get_and_cache_all_types_dict(get_settings_service(), get_cache_service()))
-            await create_or_update_starter_projects(task)
-            asyncio.create_task(get_telemetry_service().start())
+            if not serve:
+                task = asyncio.create_task(get_and_cache_all_types_dict(get_settings_service(), get_cache_service()))
+                await create_or_update_starter_projects(task)
             load_flows_from_directory()
             yield
         except Exception as exc:
@@ -104,7 +104,7 @@ def get_lifespan(fix_migration=False, socketio_server=None, version=None):
     return lifespan
 
 
-def create_app():
+def create_app(serve: bool = False):
     """Create the FastAPI app and include the router."""
     try:
         from langflow.version import __version__  # type: ignore
@@ -114,7 +114,7 @@ def create_app():
         __version__ = version("langflow-base")
 
     configure()
-    lifespan = get_lifespan(version=__version__)
+    lifespan = get_lifespan(version=__version__, serve=serve)
     app = FastAPI(lifespan=lifespan, title="Langflow", version=__version__)
     setup_sentry(app)
     origins = ["*"]
@@ -222,7 +222,7 @@ def get_static_files_dir():
     return frontend_path / "frontend"
 
 
-def setup_app(static_files_dir: Optional[Path] = None, backend_only: bool = False) -> FastAPI:
+def setup_app(static_files_dir: Optional[Path] = None, backend_only: bool = False, serve: bool = False) -> FastAPI:
     """Setup the FastAPI app."""
     # get the directory of the current file
     logger.info(f"Setting up app with static files directory {static_files_dir}")
@@ -231,7 +231,7 @@ def setup_app(static_files_dir: Optional[Path] = None, backend_only: bool = Fals
 
     if not backend_only and (not static_files_dir or not static_files_dir.exists()):
         raise RuntimeError(f"Static files directory {static_files_dir} does not exist.")
-    app = create_app()
+    app = create_app(serve)
     if not backend_only and static_files_dir is not None:
         setup_static_files(app, static_files_dir)
     return app
@@ -240,7 +240,7 @@ def setup_app(static_files_dir: Optional[Path] = None, backend_only: bool = Fals
 if __name__ == "__main__":
     import uvicorn
 
-    from langflow.__main__ import get_number_of_workers
+    from langflow.utils.cli import get_number_of_workers
 
     configure()
     uvicorn.run(
