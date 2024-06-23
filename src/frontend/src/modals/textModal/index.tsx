@@ -19,6 +19,7 @@ import TextOutputView from "../../shared/components/textOutputView";
 import { useDarkStore } from "../../stores/darkStore";
 import BaseModal from "../baseModal";
 import TextEditorArea from "./components/textEditorArea";
+import { useTranslation } from "react-i18next";
 
 export default function TextModal({
   children,
@@ -34,11 +35,13 @@ export default function TextModal({
   const [open, setOpen] = useState(false);
   const [internalValue, setInternalValue] = useState(value);
 
+  const { t } = useTranslation();
+
   return (
     <BaseModal size="medium-h-full" open={open} setOpen={setOpen}>
       <BaseModal.Trigger className="h-full">{children}</BaseModal.Trigger>
       <BaseModal.Header description={""}>
-        <span className="pr-2">View Text</span>
+        <span className="pr-2">{t("View Text")}</span>
         <IconComponent
           name="Type"
           className="h-6 w-6 pl-1 text-primary"
@@ -67,11 +70,11 @@ export default function TextModal({
                 setOpen(false);
               }}
             >
-              Save
+              {t("Save")}
             </Button>
           )}
           <Button className="flex gap-2 px-3" onClick={() => setOpen(false)}>
-            Close
+            {t("Close")}
           </Button>
         </div>
       </BaseModal.Footer>

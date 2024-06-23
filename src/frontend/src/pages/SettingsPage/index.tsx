@@ -15,8 +15,6 @@ export default function SettingsPage(): JSX.Element {
     setCurrentFlowId("");
   }, [pathname]);
 
-  const { t } = useTranslation();
-
   const sidebarNavItems = [
     {
       title: "General",
@@ -69,6 +67,9 @@ export default function SettingsPage(): JSX.Element {
       ),
     },
   ];
+
+  const { t } = useTranslation();
+
   return (
     <PageLayout
       title={t("Settings")}

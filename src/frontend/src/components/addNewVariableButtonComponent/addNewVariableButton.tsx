@@ -11,6 +11,7 @@ import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
 import sortByName from "./utils/sort-by-name";
+import { useTranslation } from "react-i18next";
 
 //TODO IMPLEMENT FORM LOGIC
 
@@ -43,6 +44,8 @@ export default function AddNewVariableButton({
   const addGlobalVariable = useGlobalVariablesStore(
     (state) => state.addGlobalVariable,
   );
+
+  const { t } = useTranslation();
 
   function handleSaveVariable() {
     let data: {
@@ -86,10 +89,10 @@ export default function AddNewVariableButton({
     >
       <BaseModal.Header
         description={
-          "This variable will be encrypted and will be available for you to use in any of your projects."
+          t("This variable will be encrypted and will be available for you to use in any of your projects.")
         }
       >
-        <span className="pr-2"> Create Variable </span>
+        <span className="pr-2"> {t("Create Variable")} </span>
         <ForwardedIconComponent
           name="Globe"
           className="h-6 w-6 pl-1 text-primary"
@@ -99,15 +102,15 @@ export default function AddNewVariableButton({
       <BaseModal.Trigger asChild={asChild}>{children}</BaseModal.Trigger>
       <BaseModal.Content>
         <div className="flex h-full w-full flex-col gap-4 align-middle">
-          <Label>Variable Name</Label>
+          <Label>{t("Variable Name")}</Label>
           <Input
             value={key}
             onChange={(e) => {
               setKey(e.target.value);
             }}
-            placeholder="Insert a name for the variable..."
+            placeholder={t("Insert a name for the variable...")}
           ></Input>
-          <Label>Type (optional)</Label>
+          <Label>{t("Type (optional)")}</Label>
           <InputComponent
             setSelectedOption={(e) => {
               setType(e);
@@ -115,10 +118,10 @@ export default function AddNewVariableButton({
             selectedOption={type}
             password={false}
             options={["Generic", "Credential"]}
-            placeholder="Choose a type for the variable..."
+            placeholder={t("Choose a type for the variable...")}
             id={"type-global-variables"}
           ></InputComponent>
-          <Label>Value</Label>
+          <Label>{t("Value")}</Label>
           {type === "Credential" ? (
             <InputComponent
               password
@@ -126,7 +129,7 @@ export default function AddNewVariableButton({
               onChange={(e) => {
                 setValue(e);
               }}
-              placeholder="Insert a value for the variable..."
+              placeholder={t("Insert a value for the variable...")}
             />
           ) : (
             <Textarea
@@ -134,24 +137,24 @@ export default function AddNewVariableButton({
               onChange={(e) => {
                 setValue(e.target.value);
               }}
-              placeholder="Insert a value for the variable..."
+              placeholder={t("Insert a value for the variable...")}
               className="w-full resize-none custom-scroll"
             />
           )}
 
-          <Label>Apply To Fields (optional)</Label>
+          <Label>{t("Apply To Fields (optional)")}</Label>
           <InputComponent
             setSelectedOptions={(value) => setFields(value)}
             selectedOptions={fields}
             options={availableFields()}
             password={false}
-            placeholder="Choose a field for the variable..."
+            placeholder={t("Choose a field for the variable...")}
             id={"apply-to-fields"}
           ></InputComponent>
         </div>
       </BaseModal.Content>
       <BaseModal.Footer
-        submit={{ label: "Save Variable", dataTestId: "save-variable-btn" }}
+        submit={{ label: t("Save Variable"), dataTestId: "save-variable-btn" }}
       />
     </BaseModal>
   );

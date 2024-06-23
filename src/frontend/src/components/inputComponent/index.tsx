@@ -7,6 +7,7 @@ import ForwardedIconComponent from "../genericIconComponent";
 import { Input } from "../ui/input";
 import CustomInputPopover from "./components/popover";
 import CustomInputPopoverObject from "./components/popoverObject";
+import { useTranslation } from "react-i18next";
 
 export default function InputComponent({
   autoFocus = false,
@@ -39,6 +40,8 @@ export default function InputComponent({
   const [pwdVisible, setPwdVisible] = useState(false);
   const refInput = useRef<HTMLInputElement>(null);
   const [showOptions, setShowOptions] = useState<boolean>(false);
+
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (disabled && value && onChange && value !== "") {
@@ -115,7 +118,7 @@ export default function InputComponent({
               required={required}
               placeholder={placeholder}
               blurOnEnter={blurOnEnter}
-              optionsPlaceholder={optionsPlaceholder}
+              optionsPlaceholder={t(optionsPlaceholder)}
               className={className}
             />
           ) : (
@@ -143,7 +146,7 @@ export default function InputComponent({
               placeholder={placeholder}
               blurOnEnter={blurOnEnter}
               options={options}
-              optionsPlaceholder={optionsPlaceholder}
+              optionsPlaceholder={t(optionsPlaceholder)}
               className={className}
             />
           )}

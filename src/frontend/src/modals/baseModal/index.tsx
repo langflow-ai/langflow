@@ -21,6 +21,7 @@ import { Button } from "../../components/ui/button";
 import { modalHeaderType } from "../../types/components";
 import { cn } from "../../utils/utils";
 import { switchCaseModalSize } from "./helpers/switch-case-size";
+import { useTranslation } from "react-i18next";
 
 type ContentProps = { children: ReactNode; overflowHidden?: boolean };
 type HeaderProps = { children: ReactNode; description: string };
@@ -89,6 +90,9 @@ const Footer: React.FC<{
     onClick?: () => void;
   };
 }> = ({ children, submit }) => {
+
+  const { t } = useTranslation();
+
   return (
     <div className="flex flex-shrink-0 flex-row-reverse">
       {submit ? (
@@ -97,7 +101,7 @@ const Footer: React.FC<{
           <div className="flex items-center gap-3">
             <DialogClose asChild>
               <Button variant="outline" type="button">
-                Cancel
+                {t("Cancel")}
               </Button>
             </DialogClose>
             <Button

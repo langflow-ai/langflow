@@ -11,6 +11,7 @@ import { Badge } from "../../../../components/ui/badge";
 import { deleteGlobalVariable } from "../../../../controllers/API";
 import useAlertStore from "../../../../stores/alertStore";
 import { useGlobalVariablesStore } from "../../../../stores/globalVariablesStore/globalVariables";
+import { useTranslation } from "react-i18next";
 
 export default function GlobalVariablesPage() {
   const globalVariablesEntries = useGlobalVariablesStore(
@@ -24,6 +25,8 @@ export default function GlobalVariablesPage() {
   );
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const getVariableId = useGlobalVariablesStore((state) => state.getVariableId);
+
+  const { t } = useTranslation();
 
   const BadgeRenderer = (props) => {
     return props.value !== "" ? (
@@ -76,12 +79,12 @@ export default function GlobalVariablesPage() {
   // Column Definitions: Defines the columns to be displayed.
   const [colDefs, setColDefs] = useState<(ColDef<any> | ColGroupDef<any>)[]>([
     {
-      headerName: "Variable Name",
+      headerName: t("Variable Name"),
       field: "name",
       flex: 2,
     }, //This column will be twice as wide as the others
     {
-      headerName: "Type",
+      headerName: t("Type"),
       field: "type",
       cellRenderer: BadgeRenderer,
       cellEditor: DropdownEditor,
@@ -98,7 +101,7 @@ export default function GlobalVariablesPage() {
     //   editable: false,
     // },
     {
-      headerName: "Apply To Fields",
+      headerName: t("Apply To Fields"),
       field: "default_fields",
       flex: 1,
       editable: false,
@@ -132,21 +135,21 @@ export default function GlobalVariablesPage() {
       <div className="flex w-full items-center justify-between gap-4 space-y-0.5">
         <div className="flex w-full flex-col">
           <h2 className="flex items-center text-lg font-semibold tracking-tight">
-            Global Variables
+            {t("Global Variables")}
             <ForwardedIconComponent
               name="Globe"
               className="ml-2 h-5 w-5 text-primary"
             />
           </h2>
           <p className="text-sm text-muted-foreground">
-            Manage global variables and assign them to fields.
+            {t("Manage global variables and assign them to fields.")}
           </p>
         </div>
         <div className="flex flex-shrink-0 items-center gap-2">
           <AddNewVariableButton asChild>
             <Button data-testid="api-key-button-store" variant="primary">
               <IconComponent name="Plus" className="w-4" />
-              Add New
+              {t("Add New")}
             </Button>
           </AddNewVariableButton>
         </div>

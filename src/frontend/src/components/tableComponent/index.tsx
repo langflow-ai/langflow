@@ -15,6 +15,7 @@ import ForwardedIconComponent from "../genericIconComponent";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import TableOptions from "./components/TableOptions";
 import resetGrid from "./utils/reset-grid-columns";
+import { useTranslation } from "react-i18next";
 
 interface TableComponentProps extends AgGridReactProps {
   columnDefs: NonNullable<AgGridReactProps["columnDefs"]>;
@@ -46,6 +47,7 @@ const TableComponent = forwardRef<
     },
     ref,
   ) => {
+    const { t } = useTranslation();
     let colDef = props.columnDefs.map((col, index) => {
       let newCol = {
         ...col,
@@ -140,8 +142,8 @@ const TableComponent = forwardRef<
               name="AlertCircle"
               className="h-5 w-5 text-primary"
             />
-            <AlertTitle>{alertTitle}</AlertTitle>
-            <AlertDescription>{alertDescription}</AlertDescription>
+            <AlertTitle>{t(alertTitle)}</AlertTitle>
+            <AlertDescription>{t(alertDescription)}</AlertDescription>
           </Alert>
         </div>
       );
