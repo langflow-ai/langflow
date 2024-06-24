@@ -1,4 +1,5 @@
 import asyncio
+import traceback
 import uuid
 from collections import defaultdict, deque
 from datetime import datetime, timezone
@@ -341,7 +342,11 @@ class Graph:
             self.increment_run_count()
         except Exception as exc:
             logger.exception(exc)
+            tb = traceback.format_exc()
+            await self.end_all_traces(error=f"{exc.__class__.__name__}: {exc}\n\n{tb}")
             raise ValueError(f"Error running graph: {exc}") from exc
+        finally:
+            await self.end_all_traces()
         # Get the outputs
         vertex_outputs = []
         for vertex in self.vertices:
