@@ -3,13 +3,13 @@ from loguru import logger
 from langflow.base.vectorstores.model import LCVectorStoreComponent
 from langflow.io import (
     BoolInput,
+    DataInput,
     DropdownInput,
     HandleInput,
     IntInput,
     MultilineInput,
     SecretStrInput,
     StrInput,
-    DataInput,
 )
 from langflow.schema import Data
 
@@ -216,7 +216,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
         else:
             logger.debug("No documents to add to the Vector Store.")
 
-    def search_documents(self):
+    def search_documents(self) -> list[Data]:
         vector_store = self.build_vector_store()
 
         logger.debug(f"Search input: {self.search_input}")
