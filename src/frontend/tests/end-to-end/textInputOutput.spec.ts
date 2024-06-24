@@ -56,22 +56,27 @@ test("TextInputOutputComponent", async ({ page }) => {
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
 
-  // Click and hold on the first element
-  await page
-    .locator(
-      '//*[@id="react-flow-id"]/div/div[1]/div/div/div[2]/div[1]/div/div[2]/div[5]/button/div[1]',
-    )
-    .hover();
-  await page.mouse.down();
+  const component1 = await page.locator(
+    '//*[@id="react-flow-id"]/div/div[1]/div/div/div[2]/div[1]',
+  );
 
-  // Move to the second element
-  await page
-    .locator(
-      '//*[@id="react-flow-id"]/div/div[1]/div/div/div[2]/div[2]/div/div[2]/div[3]/div/button/div[1]',
-    )
-    .hover();
+  const element1 = await page.locator(
+    '//*[@id="react-flow-id"]/div/div[1]/div/div/div[2]/div[1]/div/div[2]/div[5]/button/div[1]',
+  );
 
-  // Release the mouse
+  const component2 = await page.locator(
+    '//*[@id="react-flow-id"]/div/div[1]/div/div/div[2]/div[2]',
+  );
+
+  const element2 = await page.locator(
+    '//*[@id="react-flow-id"]/div/div[1]/div/div/div[2]/div[2]/div/div[2]/div[3]/div/button/div[1]',
+  );
+  // ensure component popups are not blocking
+  component1.blur();
+  component2.blur();
+  // Click and hold on the first element and move to the second element
+  await element1?.dragTo(element2);
+  // ensure the mouse button is up
   await page.mouse.up();
 
   await page.getByPlaceholder("Search").click();
