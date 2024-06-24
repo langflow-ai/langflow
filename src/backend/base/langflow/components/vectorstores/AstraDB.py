@@ -155,10 +155,18 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
         except KeyError:
             raise ValueError(f"Invalid setup mode: {self.setup_mode}")
 
-        if isinstance(self.embedding, dict):
+        if not isinstance(self.embedding, dict):
             embedding_dict = {"embedding": self.embedding}
         else:
-            embedding_dict = self.embedding.to_dict()
+            from astrapy.info import CollectionVectorServiceOptions
+            dict_options = self.embedding.get("collection_vector_service_options", {})
+            dict_options["authentication"] = {k: v for k, v in dict_options.get("authentication", {}).items() if k and v}
+            dict_options["parameters"] = {k: v for k, v in dict_options.get("parameters", {}).items() if
+                                              k and v}
+            embedding_dict = {
+                "collection_vector_service_options": CollectionVectorServiceOptions.from_dict(dict_options),
+                "collection_embedding_api_key": self.embedding.get("collection_embedding_api_key"),
+            }
         vector_store_kwargs = {
             **embedding_dict,
             "collection_name": self.collection_name,

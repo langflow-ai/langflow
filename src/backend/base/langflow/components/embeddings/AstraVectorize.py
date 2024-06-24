@@ -30,11 +30,10 @@ class AstraVectorize(Component):
         SecretStrInput(
             name="provider_api_key",
             display_name="Provider API Key",
-            info='An alternative to the Astra Authentication that let you use directly the API key of the provider.',
-            advanced=True
+            info='An alternative to the Astra Authentication that let you use directly the API key of the provider.'
         ),
         DictInput(
-            name="parameters",
+            name="model_parameters",
             display_name="Model parameters",
             info='Additional model parameters.',
             advanced=True,
@@ -47,11 +46,12 @@ class AstraVectorize(Component):
 
     def build_options(self) -> dict[str, Any]:
         return {
+            # must match exactly astra CollectionVectorServiceOptions
             "collection_vector_service_options": {
                 "provider": self.provider,
-                "model_name": self.model_name,
+                "modelName": self.model_name,
                 "authentication": self.authentication,
-                "parameters": self.parameters
+                "parameters": self.model_parameters
             },
             "collection_embedding_api_key": self.provider_api_key
         }
