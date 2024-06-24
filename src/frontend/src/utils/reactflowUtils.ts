@@ -41,6 +41,8 @@ import {
   updateEdgesHandleIdsType,
 } from "../types/utils/reactflowUtils";
 import { createRandomKey, toTitleCase } from "./utils";
+import { useTranslation } from "react-i18next";
+
 const uid = new ShortUniqueId();
 
 export function checkChatInput(nodes: Node[]) {

@@ -7,11 +7,13 @@ import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { FlowSettingsPropsType } from "../../types/components";
 import { FlowType } from "../../types/flow";
 import BaseModal from "../baseModal";
+import { useTranslation } from "react-i18next";
 
 export default function FlowSettingsModal({
   open,
   setOpen,
 }: FlowSettingsPropsType): JSX.Element {
+  const { t } = useTranslation();
   const saveFlow = useFlowsManagerStore((state) => state.saveFlow);
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const flows = useFlowsManagerStore((state) => state.flows);
@@ -61,8 +63,8 @@ export default function FlowSettingsModal({
       size="smaller-h-full"
       onSubmit={handleClick}
     >
-      <BaseModal.Header description={SETTINGS_DIALOG_SUBTITLE}>
-        <span className="pr-2">Settings</span>
+      <BaseModal.Header description={t(SETTINGS_DIALOG_SUBTITLE)}>
+        <span className="pr-2">{t("Settings")}</span>
         <IconComponent name="Settings2" className="mr-2 h-4 w-4" />
       </BaseModal.Header>
       <BaseModal.Content>
@@ -79,7 +81,7 @@ export default function FlowSettingsModal({
 
       <BaseModal.Footer
         submit={{
-          label: "Save",
+          label: t("Save"),
           disabled: nameLists.includes(name) || name === currentFlow!.name,
           dataTestId: "save-flow-settings",
           loading: isSaving,

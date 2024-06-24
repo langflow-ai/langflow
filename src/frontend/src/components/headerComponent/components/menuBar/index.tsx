@@ -187,7 +187,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
                 name="RefreshCcw"
                 className="header-menu-options"
               />
-              Refresh All
+              {t("Refresh All")}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -238,7 +238,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
               }
             >
               <IconComponent name="Square" className="h-4 w-4" />
-              <span>Stop</span>
+              <span>{t("Stop")}</span>
             </button>
           </div>
         </ShadTooltip>

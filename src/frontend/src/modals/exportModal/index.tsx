@@ -13,9 +13,11 @@ import { useDarkStore } from "../../stores/darkStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { downloadFlow, removeApiKeys } from "../../utils/reactflowUtils";
 import BaseModal from "../baseModal";
+import { useTranslation } from "react-i18next";
 
 const ExportModal = forwardRef(
   (props: { children: ReactNode }, ref): JSX.Element => {
+    const { t } = useTranslation();
     const version = useDarkStore((state) => state.version);
     const setNoticeData = useAlertStore((state) => state.setNoticeData);
     const [checked, setChecked] = useState(false);
@@ -69,8 +71,8 @@ const ExportModal = forwardRef(
         }}
       >
         <BaseModal.Trigger asChild>{props.children}</BaseModal.Trigger>
-        <BaseModal.Header description={EXPORT_DIALOG_SUBTITLE}>
-          <span className="pr-2">Export</span>
+        <BaseModal.Header description={t(EXPORT_DIALOG_SUBTITLE)}>
+          <span className="pr-2">{t("Export")}</span>
           <IconComponent
             name="Download"
             className="h-6 w-6 pl-1 text-foreground"
@@ -80,7 +82,7 @@ const ExportModal = forwardRef(
         <BaseModal.Content>
           <EditFlowSettings
             name={name}
-            description={description}
+            description={t(description)}
             setName={setName}
             setDescription={setDescription}
           />
@@ -93,15 +95,15 @@ const ExportModal = forwardRef(
               }}
             />
             <label htmlFor="terms" className="export-modal-save-api text-sm">
-              {SAVE_WITH_API_CHECKBOX}
+              {t(SAVE_WITH_API_CHECKBOX)}
             </label>
           </div>
           <span className="mt-1 text-xs text-destructive">
-            {ALERT_SAVE_WITH_API}
+            {t(ALERT_SAVE_WITH_API)}
           </span>
         </BaseModal.Content>
 
-        <BaseModal.Footer submit={{ label: "Export" }} />
+        <BaseModal.Footer submit={{ label: t("Export") }} />
       </BaseModal>
     );
   },

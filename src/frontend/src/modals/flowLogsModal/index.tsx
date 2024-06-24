@@ -6,11 +6,13 @@ import { getTransactionTable } from "../../controllers/API";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { FlowSettingsPropsType } from "../../types/components";
 import BaseModal from "../baseModal";
+import { useTranslation } from "react-i18next";
 
 export default function FlowLogsModal({
   open,
   setOpen,
 }: FlowSettingsPropsType): JSX.Element {
+  const { t } = useTranslation();
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
 
   const [columns, setColumns] = useState<Array<ColDef | ColGroupDef>>([]);
@@ -26,7 +28,7 @@ export default function FlowLogsModal({
 
   return (
     <BaseModal open={open} setOpen={setOpen} size="large">
-      <BaseModal.Header description="Inspect component executions.">
+      <BaseModal.Header description={t("Inspect component executions.")}>
         <div className="flex w-full justify-between">
           <div className="flex h-fit w-32 items-center">
             <span className="pr-2">Logs</span>
