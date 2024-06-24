@@ -37,7 +37,7 @@ class RequestCancelledMiddleware(BaseHTTPMiddleware):
         super().__init__(app)
 
     async def dispatch(self, request: Request, call_next):
-        queue = asyncio.Queue()
+        queue: asyncio.Queue = asyncio.Queue()
 
         async def message_poller(sentinel, handler_task, request):
             nonlocal queue
