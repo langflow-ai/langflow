@@ -122,13 +122,6 @@ module.exports = {
         /* Respect user preferences, such as low light mode in the evening */
         respectPrefersColorScheme: true,
       },
-      announcementBar: {
-        content:
-          '⭐️ If you like ⛓️Langflow, star it on <a target="_blank" rel="noopener noreferrer" href="https://github.com/langflow-ai/langflow">GitHub</a>! ⭐️',
-        backgroundColor: "#E8EBF1", //Mustard Yellow #D19900 #D4B20B - Salmon #E9967A
-        textColor: "#1C1E21",
-        isCloseable: false,
-      },
       zoom: {
         selector: ".markdown :not(a) > img:not(.no-zoom)",
         background: {
