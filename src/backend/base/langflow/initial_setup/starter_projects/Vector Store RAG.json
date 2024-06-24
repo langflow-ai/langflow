@@ -6,7 +6,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-vRBSi",
+            "id": "ChatInput-nER2k",
             "name": "message",
             "output_types": [
               "Message"
@@ -14,7 +14,7 @@
           },
           "targetHandle": {
             "fieldName": "search_input",
-            "id": "AstraDB-N856w",
+            "id": "AstraDB-QLZSs",
             "inputTypes": [
               "Message",
               "str"
@@ -22,19 +22,19 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-vRBSi{œdataTypeœ:œChatInputœ,œidœ:œChatInput-vRBSiœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-AstraDB-N856w{œfieldNameœ:œsearch_inputœ,œidœ:œAstraDB-N856wœ,œinputTypesœ:[œMessageœ,œstrœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-nER2k{œdataTypeœ:œChatInputœ,œidœ:œChatInput-nER2kœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-AstraDB-QLZSs{œfieldNameœ:œsearch_inputœ,œidœ:œAstraDB-QLZSsœ,œinputTypesœ:[œMessageœ,œstrœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-vRBSi",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-vRBSiœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "AstraDB-N856w",
-        "targetHandle": "{œfieldNameœ: œsearch_inputœ, œidœ: œAstraDB-N856wœ, œinputTypesœ: [œMessageœ, œstrœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-nER2k",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-nER2kœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "AstraDB-QLZSs",
+        "targetHandle": "{œfieldNameœ: œsearch_inputœ, œidœ: œAstraDB-QLZSsœ, œinputTypesœ: [œMessageœ, œstrœ], œtypeœ: œstrœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIEmbeddings",
-            "id": "OpenAIEmbeddings-ftAK3",
+            "id": "OpenAIEmbeddings-ylry8",
             "name": "embeddings",
             "output_types": [
               "Embeddings"
@@ -42,26 +42,26 @@
           },
           "targetHandle": {
             "fieldName": "embedding",
-            "id": "AstraDB-N856w",
+            "id": "AstraDB-QLZSs",
             "inputTypes": [
               "Embeddings"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-OpenAIEmbeddings-ftAK3{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-ftAK3œ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-AstraDB-N856w{œfieldNameœ:œembeddingœ,œidœ:œAstraDB-N856wœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-OpenAIEmbeddings-ylry8{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-ylry8œ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-AstraDB-QLZSs{œfieldNameœ:œembeddingœ,œidœ:œAstraDB-QLZSsœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "OpenAIEmbeddings-ftAK3",
-        "sourceHandle": "{œdataTypeœ: œOpenAIEmbeddingsœ, œidœ: œOpenAIEmbeddings-ftAK3œ, œnameœ: œembeddingsœ, œoutput_typesœ: [œEmbeddingsœ]}",
-        "target": "AstraDB-N856w",
-        "targetHandle": "{œfieldNameœ: œembeddingœ, œidœ: œAstraDB-N856wœ, œinputTypesœ: [œEmbeddingsœ], œtypeœ: œotherœ}"
+        "source": "OpenAIEmbeddings-ylry8",
+        "sourceHandle": "{œdataTypeœ: œOpenAIEmbeddingsœ, œidœ: œOpenAIEmbeddings-ylry8œ, œnameœ: œembeddingsœ, œoutput_typesœ: [œEmbeddingsœ]}",
+        "target": "AstraDB-QLZSs",
+        "targetHandle": "{œfieldNameœ: œembeddingœ, œidœ: œAstraDB-QLZSsœ, œinputTypesœ: [œEmbeddingsœ], œtypeœ: œotherœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "AstraDB",
-            "id": "AstraDB-N856w",
+            "id": "AstraDB-QLZSs",
             "name": "search_results",
             "output_types": [
               "Data"
@@ -69,26 +69,26 @@
           },
           "targetHandle": {
             "fieldName": "data",
-            "id": "ParseData-Z6n4v",
+            "id": "ParseData-yHac6",
             "inputTypes": [
               "Data"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-AstraDB-N856w{œdataTypeœ:œAstraDBœ,œidœ:œAstraDB-N856wœ,œnameœ:œsearch_resultsœ,œoutput_typesœ:[œDataœ]}-ParseData-Z6n4v{œfieldNameœ:œdataœ,œidœ:œParseData-Z6n4vœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-AstraDB-QLZSs{œdataTypeœ:œAstraDBœ,œidœ:œAstraDB-QLZSsœ,œnameœ:œsearch_resultsœ,œoutput_typesœ:[œDataœ]}-ParseData-yHac6{œfieldNameœ:œdataœ,œidœ:œParseData-yHac6œ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "AstraDB-N856w",
-        "sourceHandle": "{œdataTypeœ: œAstraDBœ, œidœ: œAstraDB-N856wœ, œnameœ: œsearch_resultsœ, œoutput_typesœ: [œDataœ]}",
-        "target": "ParseData-Z6n4v",
-        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-Z6n4vœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
+        "source": "AstraDB-QLZSs",
+        "sourceHandle": "{œdataTypeœ: œAstraDBœ, œidœ: œAstraDB-QLZSsœ, œnameœ: œsearch_resultsœ, œoutput_typesœ: [œDataœ]}",
+        "target": "ParseData-yHac6",
+        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-yHac6œ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-vRBSi",
+            "id": "ChatInput-nER2k",
             "name": "message",
             "output_types": [
               "Message"
@@ -96,7 +96,7 @@
           },
           "targetHandle": {
             "fieldName": "question",
-            "id": "Prompt-8YnFi",
+            "id": "Prompt-V2VHT",
             "inputTypes": [
               "Message",
               "Text"
@@ -104,18 +104,18 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-vRBSi{œdataTypeœ:œChatInputœ,œidœ:œChatInput-vRBSiœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-8YnFi{œfieldNameœ:œquestionœ,œidœ:œPrompt-8YnFiœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "ChatInput-vRBSi",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-vRBSiœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-8YnFi",
-        "targetHandle": "{œfieldNameœ: œquestionœ, œidœ: œPrompt-8YnFiœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-ChatInput-nER2k{œdataTypeœ:œChatInputœ,œidœ:œChatInput-nER2kœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-V2VHT{œfieldNameœ:œquestionœ,œidœ:œPrompt-V2VHTœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "ChatInput-nER2k",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-nER2kœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-V2VHT",
+        "targetHandle": "{œfieldNameœ: œquestionœ, œidœ: œPrompt-V2VHTœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "File",
-            "id": "File-Ldmqs",
+            "id": "File-OGHlE",
             "name": "data",
             "output_types": [
               "Data"
@@ -123,25 +123,25 @@
           },
           "targetHandle": {
             "fieldName": "data_inputs",
-            "id": "SplitText-bqtiX",
+            "id": "SplitText-ARuL2",
             "inputTypes": [
               "Data"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-File-Ldmqs{œdataTypeœ:œFileœ,œidœ:œFile-Ldmqsœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-SplitText-bqtiX{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-bqtiXœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
-        "source": "File-Ldmqs",
-        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-Ldmqsœ, œnameœ: œdataœ, œoutput_typesœ: [œDataœ]}",
-        "target": "SplitText-bqtiX",
-        "targetHandle": "{œfieldNameœ: œdata_inputsœ, œidœ: œSplitText-bqtiXœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-File-OGHlE{œdataTypeœ:œFileœ,œidœ:œFile-OGHlEœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-SplitText-ARuL2{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-ARuL2œ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "source": "File-OGHlE",
+        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-OGHlEœ, œnameœ: œdataœ, œoutput_typesœ: [œDataœ]}",
+        "target": "SplitText-ARuL2",
+        "targetHandle": "{œfieldNameœ: œdata_inputsœ, œidœ: œSplitText-ARuL2œ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "SplitText",
-            "id": "SplitText-bqtiX",
+            "id": "SplitText-ARuL2",
             "name": "chunks",
             "output_types": [
               "Data"
@@ -149,7 +149,7 @@
           },
           "targetHandle": {
             "fieldName": "vector_store_inputs",
-            "id": "AstraDB-N856w",
+            "id": "AstraDB-QLZSs",
             "inputTypes": [
               "Document",
               "Data"
@@ -157,18 +157,18 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-SplitText-bqtiX{œdataTypeœ:œSplitTextœ,œidœ:œSplitText-bqtiXœ,œnameœ:œchunksœ,œoutput_typesœ:[œDataœ]}-AstraDB-N856w{œfieldNameœ:œvector_store_inputsœ,œidœ:œAstraDB-N856wœ,œinputTypesœ:[œDocumentœ,œDataœ],œtypeœ:œotherœ}",
-        "source": "SplitText-bqtiX",
-        "sourceHandle": "{œdataTypeœ: œSplitTextœ, œidœ: œSplitText-bqtiXœ, œnameœ: œchunksœ, œoutput_typesœ: [œDataœ]}",
-        "target": "AstraDB-N856w",
-        "targetHandle": "{œfieldNameœ: œvector_store_inputsœ, œidœ: œAstraDB-N856wœ, œinputTypesœ: [œDocumentœ, œDataœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-SplitText-ARuL2{œdataTypeœ:œSplitTextœ,œidœ:œSplitText-ARuL2œ,œnameœ:œchunksœ,œoutput_typesœ:[œDataœ]}-AstraDB-QLZSs{œfieldNameœ:œvector_store_inputsœ,œidœ:œAstraDB-QLZSsœ,œinputTypesœ:[œDocumentœ,œDataœ],œtypeœ:œotherœ}",
+        "source": "SplitText-ARuL2",
+        "sourceHandle": "{œdataTypeœ: œSplitTextœ, œidœ: œSplitText-ARuL2œ, œnameœ: œchunksœ, œoutput_typesœ: [œDataœ]}",
+        "target": "AstraDB-QLZSs",
+        "targetHandle": "{œfieldNameœ: œvector_store_inputsœ, œidœ: œAstraDB-QLZSsœ, œinputTypesœ: [œDocumentœ, œDataœ], œtypeœ: œotherœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "ParseData",
-            "id": "ParseData-Z6n4v",
+            "id": "ParseData-yHac6",
             "name": "text",
             "output_types": [
               "Message"
@@ -176,7 +176,7 @@
           },
           "targetHandle": {
             "fieldName": "context",
-            "id": "Prompt-8YnFi",
+            "id": "Prompt-V2VHT",
             "inputTypes": [
               "Message",
               "Text"
@@ -184,18 +184,18 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ParseData-Z6n4v{œdataTypeœ:œParseDataœ,œidœ:œParseData-Z6n4vœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-8YnFi{œfieldNameœ:œcontextœ,œidœ:œPrompt-8YnFiœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "ParseData-Z6n4v",
-        "sourceHandle": "{œdataTypeœ: œParseDataœ, œidœ: œParseData-Z6n4vœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-8YnFi",
-        "targetHandle": "{œfieldNameœ: œcontextœ, œidœ: œPrompt-8YnFiœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-ParseData-yHac6{œdataTypeœ:œParseDataœ,œidœ:œParseData-yHac6œ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-V2VHT{œfieldNameœ:œcontextœ,œidœ:œPrompt-V2VHTœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "ParseData-yHac6",
+        "sourceHandle": "{œdataTypeœ: œParseDataœ, œidœ: œParseData-yHac6œ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-V2VHT",
+        "targetHandle": "{œfieldNameœ: œcontextœ, œidœ: œPrompt-V2VHTœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-8YnFi",
+            "id": "Prompt-V2VHT",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -203,25 +203,25 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "OpenAIModel-bxsF9",
+            "id": "OpenAIModel-Tm5Ht",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-8YnFi{œdataTypeœ:œPromptœ,œidœ:œPrompt-8YnFiœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-bxsF9{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-bxsF9œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Prompt-8YnFi",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-8YnFiœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "OpenAIModel-bxsF9",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-bxsF9œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-Prompt-V2VHT{œdataTypeœ:œPromptœ,œidœ:œPrompt-V2VHTœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-Tm5Ht{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-Tm5Htœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "Prompt-V2VHT",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-V2VHTœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "OpenAIModel-Tm5Ht",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-Tm5Htœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIModel",
-            "id": "OpenAIModel-bxsF9",
+            "id": "OpenAIModel-Tm5Ht",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -229,18 +229,18 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-FNGr5",
+            "id": "ChatOutput-ywruU",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-OpenAIModel-bxsF9{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-bxsF9œ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-FNGr5{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-FNGr5œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "OpenAIModel-bxsF9",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-bxsF9œ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-FNGr5",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-FNGr5œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-OpenAIModel-Tm5Ht{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-Tm5Htœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-ywruU{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-ywruUœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "OpenAIModel-Tm5Ht",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-Tm5Htœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-ywruU",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-ywruUœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
@@ -249,7 +249,7 @@
           "description": "Get chat inputs from the Playground.",
           "display_name": "Chat Input",
           "edited": false,
-          "id": "ChatInput-vRBSi",
+          "id": "ChatInput-nER2k",
           "node": {
             "base_classes": [
               "Message"
@@ -275,6 +275,7 @@
               {
                 "cache": true,
                 "display_name": "Message",
+                "hidden": false,
                 "method": "message_response",
                 "name": "message",
                 "selected": "Message",
@@ -431,7 +432,7 @@
         },
         "dragging": false,
         "height": 309,
-        "id": "ChatInput-vRBSi",
+        "id": "ChatInput-nER2k",
         "position": {
           "x": 682.002772470747,
           "y": 253.67030039648512
@@ -446,7 +447,7 @@
       },
       {
         "data": {
-          "id": "OpenAIEmbeddings-ftAK3",
+          "id": "OpenAIEmbeddings-ylry8",
           "node": {
             "base_classes": [
               "Embeddings"
@@ -844,7 +845,7 @@
         },
         "dragging": false,
         "height": 393,
-        "id": "OpenAIEmbeddings-ftAK3",
+        "id": "OpenAIEmbeddings-ylry8",
         "position": {
           "x": 672.1192980997866,
           "y": 786.6985113716086
@@ -862,7 +863,7 @@
           "description": "Generates text using OpenAI LLMs.",
           "display_name": "OpenAI",
           "edited": false,
-          "id": "OpenAIModel-bxsF9",
+          "id": "OpenAIModel-Tm5Ht",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -1001,7 +1002,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "gpt-3.5-turbo"
+                "value": "gpt-4-turbo"
               },
               "openai_api_base": {
                 "advanced": true,
@@ -1111,7 +1112,7 @@
         },
         "dragging": false,
         "height": 623,
-        "id": "OpenAIModel-bxsF9",
+        "id": "OpenAIModel-Tm5Ht",
         "position": {
           "x": 3243.967394111999,
           "y": 392.861541437184
@@ -1129,7 +1130,7 @@
           "description": "Display a chat message in the Playground.",
           "display_name": "Chat Output",
           "edited": false,
-          "id": "ChatOutput-FNGr5",
+          "id": "ChatOutput-ywruU",
           "node": {
             "base_classes": [
               "Message"
@@ -1289,7 +1290,7 @@
         },
         "dragging": false,
         "height": 309,
-        "id": "ChatOutput-FNGr5",
+        "id": "ChatOutput-ywruU",
         "position": {
           "x": 3788.786948642587,
           "y": 608.4077159222614
@@ -1298,13 +1299,13 @@
           "x": 3788.786948642587,
           "y": 608.4077159222614
         },
-        "selected": false,
+        "selected": true,
         "type": "genericNode",
         "width": 384
       },
       {
         "data": {
-          "id": "File-Ldmqs",
+          "id": "File-OGHlE",
           "node": {
             "base_classes": [
               "Record"
@@ -1411,7 +1412,7 @@
         },
         "dragging": false,
         "height": 301,
-        "id": "File-Ldmqs",
+        "id": "File-OGHlE",
         "position": {
           "x": -583.277913381927,
           "y": 433.34221812460396
@@ -1428,7 +1429,7 @@
         "data": {
           "description": "Implementation of Vector Store using Astra DB with search capabilities",
           "display_name": "Astra DB Vector Store",
-          "id": "AstraDB-N856w",
+          "id": "AstraDB-QLZSs",
           "node": {
             "base_classes": [
               "Data"
@@ -1830,7 +1831,7 @@
         },
         "dragging": false,
         "height": 917,
-        "id": "AstraDB-N856w",
+        "id": "AstraDB-QLZSs",
         "position": {
           "x": 1298.4611042465333,
           "y": 160.7181472642742
@@ -1845,7 +1846,7 @@
       },
       {
         "data": {
-          "id": "ParseData-Z6n4v",
+          "id": "ParseData-yHac6",
           "node": {
             "base_classes": [
               "Message"
@@ -1957,7 +1958,7 @@
         },
         "dragging": false,
         "height": 385,
-        "id": "ParseData-Z6n4v",
+        "id": "ParseData-yHac6",
         "position": {
           "x": 1911.4866480237615,
           "y": 566.903831987901
@@ -1974,7 +1975,7 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-8YnFi",
+          "id": "Prompt-V2VHT",
           "node": {
             "base_classes": [
               "Message"
@@ -2107,7 +2108,7 @@
         },
         "dragging": false,
         "height": 517,
-        "id": "Prompt-8YnFi",
+        "id": "Prompt-V2VHT",
         "position": {
           "x": 2537.8054430938064,
           "y": 442.35183727527414
@@ -2122,7 +2123,7 @@
       },
       {
         "data": {
-          "id": "SplitText-bqtiX",
+          "id": "SplitText-ARuL2",
           "node": {
             "base_classes": [
               "Data"
@@ -2252,7 +2253,7 @@
         },
         "dragging": false,
         "height": 557,
-        "id": "SplitText-bqtiX",
+        "id": "SplitText-ARuL2",
         "position": {
           "x": 21.318397393309283,
           "y": 273.27771123167287
@@ -2274,7 +2275,7 @@
   },
   "description": "Visit https://docs.langflow.org/tutorials/rag-with-astradb for a detailed guide of this project.\nThis project give you both Ingestion and RAG in a single file. You'll need to visit https://astra.datastax.com/ to create an Astra DB instance, your Token and grab an API Endpoint.\nRunning this project requires you to add a file in the Files component, then define a Collection Name and click on the Play icon on the Astra DB component. \n\nAfter the ingestion ends you are ready to click on the Run button at the lower left corner and start asking questions about your data.",
   "endpoint_name": null,
-  "id": "0e6c631a-1975-417b-a3f7-c23f97dbf0c7",
+  "id": "7f5d5057-2371-4796-a398-f0236b963d1f",
   "is_component": false,
   "last_tested_version": "1.0.0rc1",
   "name": "Vector Store RAG"
