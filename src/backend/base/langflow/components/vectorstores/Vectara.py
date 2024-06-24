@@ -1,11 +1,11 @@
-from typing import List, TYPE_CHECKING
+from typing import TYPE_CHECKING, List
 
 from langchain_community.vectorstores import Vectara
 from loguru import logger
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent
 from langflow.helpers.data import docs_to_data
-from langflow.io import HandleInput, IntInput, SecretStrInput, StrInput, TextInput
+from langflow.io import HandleInput, IntInput, MessageTextInput, SecretStrInput, StrInput
 from langflow.schema import Data
 
 if TYPE_CHECKING:
@@ -37,7 +37,7 @@ class VectaraVectorStoreComponent(LCVectorStoreComponent):
             input_types=["Document", "Data"],
             is_list=True,
         ),
-        TextInput(
+        MessageTextInput(
             name="search_query",
             display_name="Search Query",
         ),
