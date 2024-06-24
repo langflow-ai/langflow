@@ -15,6 +15,11 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
     inputs = [
         MessageInput(name="input_value", display_name="Input"),
         SecretStrInput(name="endpoint_url", display_name="Endpoint URL", password=True),
+        StrInput(
+            name="model_id",
+            display_name="Model Id",
+            info="Id field of endpoint_url response.",
+        ),
         DropdownInput(
             name="task",
             display_name="Task",
@@ -29,11 +34,6 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
             info="System message to pass to the model.",
             advanced=True,
         ),
-    ]
-
-    outputs = [
-        Output(display_name="Text", name="text_output", method="text_response"),
-        Output(display_name="Language Model", name="model_output", method="build_model"),
     ]
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
@@ -52,5 +52,5 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
         except Exception as e:
             raise ValueError("Could not connect to HuggingFace Endpoints API.") from e
 
-        output = ChatHuggingFace(llm=llm)
+        output = ChatHuggingFace(llm=llm, model_id=self.model_id)
         return output  # type: ignore
