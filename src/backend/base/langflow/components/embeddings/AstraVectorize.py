@@ -1,41 +1,7 @@
-from typing import Optional, Dict, Any
-
-from langflow.custom import CustomComponent
-
+from typing import Any
 from langflow.custom import Component
-from base.langflow.inputs import TextInput
-from base.langflow.template.field.base import Output
-#
-#
-# class AstraVectorize(Component):
-#     display_name = "Astra Vectorize"
-#     description = "Configuration options for Astra Vectorize server-side embeddings."
-#     documentation = "..."
-#     icon = "AstraDB" # TODO: New icon?
-#
-#     inputs = [
-#         TextInput(
-#             name="provider",
-#             display_name="Provider",
-#         )
-#     ]
-#     outputs = [
-#         Output(display_name="Vectorize_configuration", name="embeddings", method="build"),
-#     ]
-#
-#     def build(
-#         self,
-#     ) -> Dict[str, Any]:
-#         return {
-#             "provider": self.provider
-#         }
-
-
-from langflow.custom import Component
-from langflow.inputs.inputs import DataInput, IntInput, TextInput, DictInput, SecretStrInput
-from langflow.schema import Data
+from langflow.inputs.inputs import DictInput, SecretStrInput, StrInput
 from langflow.template.field.base import Output
-from langflow.utils.util import build_loader_repr_from_data, unescape_string
 
 
 class AstraVectorize(Component):
@@ -45,15 +11,15 @@ class AstraVectorize(Component):
     icon = "AstraDB"
 
     inputs = [
-        TextInput(
+        StrInput(
             name="provider",
             display_name="Provider name",
-            info='The provider to use.',
+            info='The embedding provider to use.',
         ),
-        TextInput(
+        StrInput(
             name="model_name",
             display_name="Model name",
-            info='The model to use.',
+            info='The embedding model to use.',
         ),
         DictInput(
             name="authentication",
@@ -63,20 +29,20 @@ class AstraVectorize(Component):
         ),
         SecretStrInput(
             name="provider_api_key",
-            display_name="Provider API Key to authenticate to the external service",
+            display_name="Provider API Key",
             info='An alternative to the Astra Authentication that let you use directly the API key of the provider.',
             advanced=True
         ),
         DictInput(
             name="parameters",
-            display_name="Additional model parameters",
+            display_name="Model parameters",
             info='Additional model parameters.',
             advanced=True,
             is_list=True
         ),
     ]
     outputs = [
-        Output(display_name="Configuration", name="config", method="build", types=["dict"]),
+        Output(display_name="Vectorize", name="config", method="build", types=["dict"]),
     ]
 
     def build(self) -> dict[str, Any]:
