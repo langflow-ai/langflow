@@ -2579,13 +2579,13 @@ protobuf = ">=3.19.5,<3.20.0 || >3.20.0,<3.20.1 || >3.20.1,<4.21.0 || >4.21.0,<4
 
 [[package]]
 name = "google-api-core"
-version = "2.19.0"
+version = "2.19.1"
 description = "Google API client core library"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "google-api-core-2.19.0.tar.gz", hash = "sha256:cf1b7c2694047886d2af1128a03ae99e391108a08804f87cfd35970e49c9cd10"},
-    {file = "google_api_core-2.19.0-py3-none-any.whl", hash = "sha256:8661eec4078c35428fd3f69a2c7ee29e342896b70f01d1a1cbcb334372dd6251"},
+    {file = "google-api-core-2.19.1.tar.gz", hash = "sha256:f4695f1e3650b316a795108a76a1c416e6afb036199d1c1f1f110916df479ffd"},
+    {file = "google_api_core-2.19.1-py3-none-any.whl", hash = "sha256:f12a9b8309b5e21d92483bbd47ce2c445861ec7d269ef6784ecc0ea8c1fa6125"},
 ]
 
 [package.dependencies]
@@ -2600,7 +2600,7 @@ grpcio-status = [
     {version = ">=1.49.1,<2.0.dev0", optional = true, markers = "python_version >= \"3.11\" and extra == \"grpc\""},
 ]
 proto-plus = ">=1.22.3,<2.0.0dev"
-protobuf = ">=3.19.5,<3.20.0 || >3.20.0,<3.20.1 || >3.20.1,<4.21.0 || >4.21.0,<4.21.1 || >4.21.1,<4.21.2 || >4.21.2,<4.21.3 || >4.21.3,<4.21.4 || >4.21.4,<4.21.5 || >4.21.5,<5.0.0.dev0"
+protobuf = ">=3.19.5,<3.20.0 || >3.20.0,<3.20.1 || >3.20.1,<4.21.0 || >4.21.0,<4.21.1 || >4.21.1,<4.21.2 || >4.21.2,<4.21.3 || >4.21.3,<4.21.4 || >4.21.4,<4.21.5 || >4.21.5,<6.0.0.dev0"
 requests = ">=2.18.0,<3.0.0.dev0"
 
 [package.extras]
@@ -2936,18 +2936,18 @@ requests = "*"
 
 [[package]]
 name = "googleapis-common-protos"
-version = "1.63.1"
+version = "1.63.2"
 description = "Common protobufs used in Google APIs"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "googleapis-common-protos-1.63.1.tar.gz", hash = "sha256:c6442f7a0a6b2a80369457d79e6672bb7dcbaab88e0848302497e3ec80780a6a"},
-    {file = "googleapis_common_protos-1.63.1-py2.py3-none-any.whl", hash = "sha256:0e1c2cdfcbc354b76e4a211a35ea35d6926a835cba1377073c4861db904a1877"},
+    {file = "googleapis-common-protos-1.63.2.tar.gz", hash = "sha256:27c5abdffc4911f28101e635de1533fb4cfd2c37fbaa9174587c799fac90aa87"},
+    {file = "googleapis_common_protos-1.63.2-py2.py3-none-any.whl", hash = "sha256:27a2499c7e8aff199665b22741997e485eccc8645aa9176c7c988e6fae507945"},
 ]
 
 [package.dependencies]
 grpcio = {version = ">=1.44.0,<2.0.0.dev0", optional = true, markers = "extra == \"grpc\""}
-protobuf = ">=3.19.5,<3.20.0 || >3.20.0,<3.20.1 || >3.20.1,<4.21.1 || >4.21.1,<4.21.2 || >4.21.2,<4.21.3 || >4.21.3,<4.21.4 || >4.21.4,<4.21.5 || >4.21.5,<6.0.0.dev0"
+protobuf = ">=3.20.2,<4.21.1 || >4.21.1,<4.21.2 || >4.21.2,<4.21.3 || >4.21.3,<4.21.4 || >4.21.4,<4.21.5 || >4.21.5,<6.0.0.dev0"
 
 [package.extras]
 grpc = ["grpcio (>=1.44.0,<2.0.0.dev0)"]
@@ -3070,19 +3070,19 @@ typing-extensions = ">=4.7,<5"
 
 [[package]]
 name = "grpc-google-iam-v1"
-version = "0.13.0"
+version = "0.13.1"
 description = "IAM API client library"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "grpc-google-iam-v1-0.13.0.tar.gz", hash = "sha256:fad318608b9e093258fbf12529180f400d1c44453698a33509cc6ecf005b294e"},
-    {file = "grpc_google_iam_v1-0.13.0-py2.py3-none-any.whl", hash = "sha256:53902e2af7de8df8c1bd91373d9be55b0743ec267a7428ea638db3775becae89"},
+    {file = "grpc-google-iam-v1-0.13.1.tar.gz", hash = "sha256:3ff4b2fd9d990965e410965253c0da6f66205d5a8291c4c31c6ebecca18a9001"},
+    {file = "grpc_google_iam_v1-0.13.1-py2.py3-none-any.whl", hash = "sha256:c3e86151a981811f30d5e7330f271cee53e73bb87755e88cc3b6f0c7b5fe374e"},
 ]
 
 [package.dependencies]
 googleapis-common-protos = {version = ">=1.56.0,<2.0.0dev", extras = ["grpc"]}
 grpcio = ">=1.44.0,<2.0.0dev"
-protobuf = ">=3.19.5,<3.20.0 || >3.20.0,<3.20.1 || >3.20.1,<4.21.1 || >4.21.1,<4.21.2 || >4.21.2,<4.21.3 || >4.21.3,<4.21.4 || >4.21.4,<4.21.5 || >4.21.5,<5.0.0dev"
+protobuf = ">=3.20.2,<4.21.1 || >4.21.1,<4.21.2 || >4.21.2,<4.21.3 || >4.21.3,<4.21.4 || >4.21.4,<4.21.5 || >4.21.5,<6.0.0dev"
 
 [[package]]
 name = "grpcio"
@@ -4442,7 +4442,7 @@ six = "*"
 
 [[package]]
 name = "langflow-base"
-version = "0.0.76"
+version = "0.0.78"
 description = "A Python package with a built-in web application"
 optional = false
 python-versions = ">=3.10,<3.13"
@@ -7016,13 +7016,13 @@ typing-extensions = ">=4.6.0,<4.7.0 || >4.7.0"
 
 [[package]]
 name = "pydantic-settings"
-version = "2.3.3"
+version = "2.3.4"
 description = "Settings management using Pydantic"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "pydantic_settings-2.3.3-py3-none-any.whl", hash = "sha256:e4ed62ad851670975ec11285141db888fd24947f9440bd4380d7d8788d4965de"},
-    {file = "pydantic_settings-2.3.3.tar.gz", hash = "sha256:87fda838b64b5039b970cd47c3e8a1ee460ce136278ff672980af21516f6e6ce"},
+    {file = "pydantic_settings-2.3.4-py3-none-any.whl", hash = "sha256:11ad8bacb68a045f00e4f862c7a718c8a9ec766aa8fd4c32e39a0594b207b53a"},
+    {file = "pydantic_settings-2.3.4.tar.gz", hash = "sha256:c5802e3d62b78e82522319bbc9b8f8ffb28ad1c988a99311d04f2a6051fca0a7"},
 ]
 
 [package.dependencies]
@@ -8783,13 +8783,13 @@ files = [
 
 [[package]]
 name = "tenacity"
-version = "8.4.1"
+version = "8.4.2"
 description = "Retry code until it succeeds"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "tenacity-8.4.1-py3-none-any.whl", hash = "sha256:28522e692eda3e1b8f5e99c51464efcc0b9fc86933da92415168bc1c4e2308fa"},
-    {file = "tenacity-8.4.1.tar.gz", hash = "sha256:54b1412b878ddf7e1f1577cd49527bad8cdef32421bd599beac0c6c3f10582fd"},
+    {file = "tenacity-8.4.2-py3-none-any.whl", hash = "sha256:9e6f7cf7da729125c7437222f8a522279751cdfbe6b67bfe64f75d3a348661b2"},
+    {file = "tenacity-8.4.2.tar.gz", hash = "sha256:cd80a53a79336edba8489e767f729e4f391c896956b57140b5d7511a64bbd3ef"},
 ]
 
 [package.extras]
@@ -9541,13 +9541,13 @@ six = "*"
 
 [[package]]
 name = "unstructured"
-version = "0.14.7"
+version = "0.14.8"
 description = "A library that prepares raw documents for downstream ML tasks."
 optional = false
 python-versions = "<3.13,>=3.9.0"
 files = [
-    {file = "unstructured-0.14.7-py3-none-any.whl", hash = "sha256:78e029eb2dd3dc792989af2133cb5472e6a17a501cf415cd8c095f1a88763738"},
-    {file = "unstructured-0.14.7.tar.gz", hash = "sha256:219f6ae8a8c5a23e5e6944d3a78d1c7f162ee01e7c6034afe2e5052eef679918"},
+    {file = "unstructured-0.14.8-py3-none-any.whl", hash = "sha256:eb97a0754d9f1a90134af45e4ee2e17f12aced57fda4f73ca4875090fef396a5"},
+    {file = "unstructured-0.14.8.tar.gz", hash = "sha256:2a39fd2e92a986c45f9686b1115cce56a022d2600a1aae67b8e09eb0373d85b3"},
 ]
 
 [package.dependencies]
@@ -9576,7 +9576,7 @@ wrapt = "*"
 
 [package.extras]
 airtable = ["pyairtable"]
-all-docs = ["effdet", "google-cloud-vision", "markdown", "networkx", "onnx", "openpyxl", "pandas", "pdf2image", "pdfminer.six", "pikepdf", "pillow-heif", "pypandoc", "pypdf", "pytesseract", "python-docx (>=1.1.2)", "python-oxmsg", "python-pptx (<=0.6.23)", "unstructured-inference (==0.7.35)", "unstructured.pytesseract (>=0.3.12)", "xlrd"]
+all-docs = ["effdet", "google-cloud-vision", "markdown", "networkx", "onnx", "openpyxl", "pandas", "pdf2image", "pdfminer.six", "pikepdf", "pillow-heif", "pypandoc", "pypdf", "pytesseract", "python-docx (>=1.1.2)", "python-oxmsg", "python-pptx (<=0.6.23)", "unstructured-inference (==0.7.36)", "unstructured.pytesseract (>=0.3.12)", "xlrd"]
 astra = ["astrapy"]
 azure = ["adlfs", "fsspec"]
 azure-cognitive-search = ["azure-search-documents"]
@@ -9605,9 +9605,10 @@ gitlab = ["python-gitlab"]
 google-drive = ["google-api-python-client"]
 hubspot = ["hubspot-api-client", "urllib3"]
 huggingface = ["langdetect", "sacremoses", "sentencepiece", "torch", "transformers"]
-image = ["effdet", "google-cloud-vision", "onnx", "pdf2image", "pdfminer.six", "pikepdf", "pillow-heif", "pypdf", "pytesseract", "unstructured-inference (==0.7.35)", "unstructured.pytesseract (>=0.3.12)"]
+image = ["effdet", "google-cloud-vision", "onnx", "pdf2image", "pdfminer.six", "pikepdf", "pillow-heif", "pypdf", "pytesseract", "unstructured-inference (==0.7.36)", "unstructured.pytesseract (>=0.3.12)"]
 jira = ["atlassian-python-api"]
-local-inference = ["effdet", "google-cloud-vision", "markdown", "networkx", "onnx", "openpyxl", "pandas", "pdf2image", "pdfminer.six", "pikepdf", "pillow-heif", "pypandoc", "pypdf", "pytesseract", "python-docx (>=1.1.2)", "python-oxmsg", "python-pptx (<=0.6.23)", "unstructured-inference (==0.7.35)", "unstructured.pytesseract (>=0.3.12)", "xlrd"]
+kafka = ["confluent-kafka"]
+local-inference = ["effdet", "google-cloud-vision", "markdown", "networkx", "onnx", "openpyxl", "pandas", "pdf2image", "pdfminer.six", "pikepdf", "pillow-heif", "pypandoc", "pypdf", "pytesseract", "python-docx (>=1.1.2)", "python-oxmsg", "python-pptx (<=0.6.23)", "unstructured-inference (==0.7.36)", "unstructured.pytesseract (>=0.3.12)", "xlrd"]
 md = ["markdown"]
 mongodb = ["pymongo"]
 msg = ["python-oxmsg"]
@@ -9619,7 +9620,7 @@ opensearch = ["opensearch-py"]
 org = ["pypandoc"]
 outlook = ["Office365-REST-Python-Client", "msal"]
 paddleocr = ["unstructured.paddleocr (==2.6.1.3)"]
-pdf = ["effdet", "google-cloud-vision", "onnx", "pdf2image", "pdfminer.six", "pikepdf", "pillow-heif", "pypdf", "pytesseract", "unstructured-inference (==0.7.35)", "unstructured.pytesseract (>=0.3.12)"]
+pdf = ["effdet", "google-cloud-vision", "onnx", "pdf2image", "pdfminer.six", "pikepdf", "pillow-heif", "pypdf", "pytesseract", "unstructured-inference (==0.7.36)", "unstructured.pytesseract (>=0.3.12)"]
 pinecone = ["pinecone-client (>=3.7.1)"]
 postgres = ["psycopg2-binary"]
 ppt = ["python-pptx (<=0.6.23)"]
