@@ -5,6 +5,10 @@ import Admonition from "@theme/Admonition";
 
 # 🌟 RAG with Astra DB
 
+<Admonition type="warning" title="warning">
+This page may contain outdated information. It will be updated as soon as possible.
+</Admonition>
+
 This guide will walk you through how to build a RAG (Retrieval Augmented Generation) application using **Astra DB** and **Langflow**.
 
 [Astra DB](https://www.datastax.com/products/datastax-astra?utm_source=langflow-pre-release&utm_medium=referral&utm_campaign=langflow-announcement&utm_content=astradb) is a cloud-native database built on Apache Cassandra that is optimized for the cloud. It is a fully managed database-as-a-service that simplifies operations and reduces costs. Astra DB is built on the same technology that powers the largest Cassandra deployments in the world.
@@ -20,10 +24,9 @@ In this guide, we will use Astra DB as a vector store to store and retrieve the 
 TLDR;
 
 - [Create a free Astra DB account](https://astra.datastax.com/signup?utm_source=langflow-pre-release&utm_medium=referral&utm_campaign=langflow-announcement&utm_content=create-a-free-astra-db-account)
-- Duplicate our [Langflow 1.0 Space](https://huggingface.co/spaces/Langflow/Langflow-Preview?duplicate=true)
 - Create a new database, get a **Token** and the **API Endpoint**
-- Click on the **New Project** button and look for Vector Store RAG. This will create a new project with the necessary components
-- Import the project into Langflow by dropping it on the Canvas or My Collection page
+- Start Langflow and click on the **New Project** button and look for Vector Store RAG. This will create a new project with the necessary components
+- Import the project into Langflow by dropping it on the Workspace or My Collection page
 - Update the **Token** and **API Endpoint** in the **Astra DB** components
 - Update the OpenAI API key in the **OpenAI** components
 - Run the ingestion flow which is the one that uses the **Astra DB** component

@@ -8,6 +8,10 @@ import Admonition from "@theme/Admonition";
 
 # Custom Components
 
+<Admonition type="warning" title="warning">
+This page may contain outdated information. It will be updated as soon as possible.
+</Admonition>
+
 In Langflow, a Custom Component is a special component type that allows users to extend the platform's functionality by creating their own reusable and configurable components.
 
 A Custom Component is created from a user-defined Python script that uses the _`CustomComponent`_ class provided by the Langflow library. These components can be as simple as a basic function that takes and returns a string or as complex as a combination of multiple sub-components and API calls.
@@ -196,7 +200,7 @@ Let's create a custom component that processes a document (_`langchain.schema.Do
 
 ### Pick a display name
 
-To start, let's choose a name for our component by adding a _`display_name`_ attribute. This name will appear on the canvas. The name of the class is not relevant, but let's call it _`DocumentProcessor`_.
+To start, let's choose a name for our component by adding a _`display_name`_ attribute. This name will appear on the workspace. The name of the class is not relevant, but let's call it _`DocumentProcessor`_.
 
 ```python
 from langflow.custom import CustomComponent
@@ -267,7 +271,7 @@ class DocumentProcessor(CustomComponent):
 
 Here, the build method takes two input parameters: _`document`_, representing the input document to be processed, and _`function`_, a string representing the selected text transformation to be applied (either "Uppercase," "Lowercase," or "Titlecase"). The method processes the text content of the input Document based on the selected function.
 
-The attribute _`repr_value`_ is used to display the result of the component on the canvas. It is optional and can be used to display any string value.
+The attribute _`repr_value`_ is used to display the result of the component on the workspace. It is optional and can be used to display any string value.
 
 The return type is _`Document`_.
 
@@ -399,6 +403,6 @@ Langflow will attempt to load all of the components found in the specified direc
 
 ### Interact with Custom Components
 
-Once your custom components have been loaded successfully, they will appear in Langflow's sidebar. From there, you can add them to your Langflow canvas for use. However, please note that components with errors will not be available for addition to the canvas. Always ensure your code is error-free before attempting to load components.
+Once your custom components have been loaded successfully, they will appear in Langflow's sidebar. From there, you can add them to your Langflow workspace for use. However, please note that components with errors will not be available for addition to the workspace. Always ensure your code is error-free before attempting to load components.
 
 Remember, creating custom components allows you to extend the functionality of Langflow to better suit your unique needs. Happy coding!

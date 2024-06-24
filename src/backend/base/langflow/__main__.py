@@ -140,12 +140,12 @@ def run(
     )
     # create path object if path is provided
     static_files_dir: Optional[Path] = Path(path) if path else None
+    settings_service = get_settings_service()
+    settings_service.set("backend_only", backend_only)
     app = setup_app(static_files_dir=static_files_dir, backend_only=backend_only)
     # check if port is being used
     if is_port_in_use(port, host):
         port = get_free_port(port)
-
-    settings_service = get_settings_service()
 
     settings_service.set("worker_timeout", timeout)
 
@@ -381,10 +381,11 @@ def print_banner(host: str, port: int):
     styled_package_name = stylize_text(package_name, package_name, any("pre-release" in notice for notice in notices))
 
     title = f"[bold]Welcome to :chains: {styled_package_name}[/bold]\n"
-    info_text = "Collaborate, and contribute at our [bold][link=https://github.com/langflow-ai/langflow]GitHub Repo[/link][/bold] :rocket:"
+    info_text = "Collaborate, and contribute at our [bold][link=https://github.com/langflow-ai/langflow]GitHub Repo[/link][/bold] :star2:"
+    telemetry_text = "We collect anonymous usage data to improve Langflow.\nYou can opt-out by setting [bold]DO_NOT_TRACK=true[/bold] in your environment."
     access_link = f"Access [link=http://{host}:{port}]http://{host}:{port}[/link]"
 
-    panel_content = "\n\n".join([title, *styled_notices, info_text, access_link])
+    panel_content = "\n\n".join([title, *styled_notices, info_text, telemetry_text, access_link])
     panel = Panel(panel_content, box=box.ROUNDED, border_style="blue", expand=False)
     rprint(panel)
 
