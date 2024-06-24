@@ -123,6 +123,7 @@ module.exports = {
       items: [
         "deployment/docker",
         "deployment/backend-only",
+        "deployment/kubernetes",
         "deployment/gcp-deployment",
       ],
     },
@@ -131,6 +132,7 @@ module.exports = {
       label: "Contributing",
       collapsed: false,
       items: [
+        "contributing/telemetry",
         "contributing/how-contribute",
         "contributing/github-issues",
         "contributing/community",

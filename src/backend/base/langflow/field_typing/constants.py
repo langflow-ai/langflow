@@ -1,4 +1,4 @@
-from typing import Callable, Dict, TypeAlias, TypeVar, Union
+from typing import Callable, Dict, Text, TypeAlias, TypeVar, Union
 
 from langchain.agents.agent import AgentExecutor
 from langchain.chains.base import Chain
@@ -25,7 +25,6 @@ Retriever = TypeVar(
     BaseRetriever,
     VectorStoreRetriever,
 )
-Text: TypeAlias = Message
 
 
 class Object:

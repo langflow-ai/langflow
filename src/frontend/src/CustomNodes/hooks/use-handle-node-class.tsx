@@ -7,7 +7,7 @@ const useHandleNodeClass = (
   setNode,
   updateNodeInternals,
 ) => {
-  const handleNodeClass = (newNodeClass, code) => {
+  const handleNodeClass = (newNodeClass, code, type?: string) => {
     if (!data.node) return;
     if (data.node!.template[name].value !== code) {
       takeSnapshot();
@@ -22,7 +22,9 @@ const useHandleNodeClass = (
         description: newNodeClass.description ?? data.node!.description,
         display_name: newNodeClass.display_name ?? data.node!.display_name,
       };
-
+      if (type) {
+        newNode.data.node.template[name].type = type;
+      }
       newNode.data.node.template[name].value = code;
 
       return newNode;

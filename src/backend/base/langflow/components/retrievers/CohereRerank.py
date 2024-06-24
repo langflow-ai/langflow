@@ -5,7 +5,7 @@ from langchain_cohere import CohereRerank
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent
 from langflow.field_typing import Retriever
-from langflow.io import DropdownInput, HandleInput, IntInput, MultilineInput, SecretStrInput, TextInput
+from langflow.io import DropdownInput, HandleInput, IntInput, MessageTextInput, MultilineInput, SecretStrInput
 from langflow.schema import Data
 
 
@@ -32,7 +32,7 @@ class CohereRerankComponent(LCVectorStoreComponent):
         ),
         SecretStrInput(name="api_key", display_name="API Key"),
         IntInput(name="top_n", display_name="Top N", value=3),
-        TextInput(name="user_agent", display_name="User Agent", value="langflow", advanced=True),
+        MessageTextInput(name="user_agent", display_name="User Agent", value="langflow", advanced=True),
         HandleInput(name="retriever", display_name="Retriever", input_types=["Retriever"]),
     ]
 
