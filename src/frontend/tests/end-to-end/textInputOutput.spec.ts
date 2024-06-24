@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
+import { focusElementsOnBoard, offsetElements } from "../custom_component_full";
 
 test("TextInputOutputComponent", async ({ page }) => {
   if (!process.env.CI) {
@@ -71,11 +72,24 @@ test("TextInputOutputComponent", async ({ page }) => {
   const element2 = await page.locator(
     '//*[@id="react-flow-id"]/div/div[1]/div/div/div[2]/div[2]/div/div[2]/div[3]/div/button/div[1]',
   );
-  // ensure component popups are not blocking
+
+  await offsetElements({
+    sourceElement: component1,
+    targetElement: component2,
+    page,
+  });
+
+  await focusElementsOnBoard({
+    page,
+  });
+
+  // ensure elements popups are not blocking
   component1.blur();
   component2.blur();
+
   // Click and hold on the first element and move to the second element
   await element1?.dragTo(element2);
+
   // ensure the mouse button is up
   await page.mouse.up();
 
