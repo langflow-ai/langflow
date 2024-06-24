@@ -18,3 +18,37 @@ export type StoreComponentResponse = {
   authorized: boolean;
   results: storeComponent[];
 };
+
+export type shortcutsStoreType = {
+  updateUniqueShortcut: (name: string, combination: string) => void;
+  output: string;
+  play: string;
+  flow: string;
+  group: string;
+  cut: string;
+  paste: string;
+  api: string;
+  open: string;
+  undo: string;
+  redo: string;
+  advanced: string;
+  minimize: string;
+  code: string;
+  copy: string;
+  duplicate: string;
+  component: string;
+  docs: string;
+  save: string;
+  delete: string;
+  update: string;
+  download: string;
+  freeze: string;
+  shortcuts: Array<{
+    name: string;
+    shortcut: string;
+  }>;
+  setShortcuts: (
+    newShortcuts: Array<{ name: string; shortcut: string }>,
+  ) => void;
+  getShortcutsFromStorage: () => void;
+};

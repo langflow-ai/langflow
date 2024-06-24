@@ -3,7 +3,7 @@
   "configurations": [
     {
       "name": "Debug Backend",
-      "type": "python",
+      "type": "debugpy",
       "request": "launch",
       "module": "uvicorn",
       "args": [
@@ -13,15 +13,39 @@
         "7860",
         "--reload",
         "--log-level",
-        "debug"
+        "debug",
+        "--loop",
+        "asyncio",
+        "--reload-include",
+        "src/backend/*"
       ],
       "jinja": true,
-      "justMyCode": true,
+      "justMyCode": false,
+      "env": {
+        "LANGFLOW_LOG_LEVEL": "debug"
+      },
+      "envFile": "${workspaceFolder}/.env"
+    },
+    {
+      "name": "Debug CLI",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "langflow",
+      "args": [
+        "run",
+        "--path",
+        "${workspaceFolder}/src/backend/base/langflow/frontend"
+      ],
+      "jinja": true,
+      "justMyCode": false,
+      "env": {
+        "LANGFLOW_LOG_LEVEL": "debug"
+      },
       "envFile": "${workspaceFolder}/.env"
     },
     {
       "name": "Python: Remote Attach",
-      "type": "python",
+      "type": "debugpy",
       "request": "attach",
       "justMyCode": true,
       "connect": {
@@ -43,7 +67,7 @@
     },
     {
       "name": "Python: Debug Tests",
-      "type": "python",
+      "type": "debugpy",
       "request": "launch",
       "program": "${file}",
       "purpose": ["debug-test"],

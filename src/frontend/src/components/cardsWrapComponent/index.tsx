@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import IconComponent from "../../components/genericIconComponent";
+import { cn } from "../../utils/utils";
 
 export default function CardsWrapComponent({
   onFileDrop,
@@ -11,6 +12,23 @@ export default function CardsWrapComponent({
   dragMessage?: string;
 }) {
   const [isDragging, setIsDragging] = useState(false);
+  useEffect(() => {
+    // Function to handle visibility change
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        // Reset hover state or perform any necessary actions when the tab becomes visible again
+        setIsDragging(false);
+      }
+    };
+
+    // Add event listener for visibility change
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    // Cleanup event listener on component unmount
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
 
   const dragOver = (e) => {
     e.preventDefault();
@@ -43,12 +61,12 @@ export default function CardsWrapComponent({
       onDragEnter={dragEnter}
       onDragLeave={dragLeave}
       onDrop={onDrop}
-      className={
-        "h-full w-full " +
-        (isDragging
-          ? "mb-24 flex flex-col items-center justify-center gap-4 text-2xl font-light"
-          : "")
-      }
+      className={cn(
+        "h-full w-full",
+        isDragging
+          ? "mb-36 flex flex-col items-center justify-center gap-4 text-2xl font-light"
+          : "",
+      )}
     >
       {isDragging ? (
         <>

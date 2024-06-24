@@ -1,10 +1,10 @@
 import { cloneDeep } from "lodash";
 import { useContext, useEffect, useRef, useState } from "react";
-import PaginatorComponent from "../../components/PaginatorComponent";
-import ShadTooltip from "../../components/ShadTooltipComponent";
 import IconComponent from "../../components/genericIconComponent";
 import Header from "../../components/headerComponent";
 import LoadingComponent from "../../components/loadingComponent";
+import PaginatorComponent from "../../components/paginatorComponent";
+import ShadTooltip from "../../components/shadTooltipComponent";
 import { Button } from "../../components/ui/button";
 import { CheckBoxDiv } from "../../components/ui/checkbox";
 import { Input } from "../../components/ui/input";
@@ -17,6 +17,14 @@ import {
   TableRow,
 } from "../../components/ui/table";
 import {
+  USER_ADD_ERROR_ALERT,
+  USER_ADD_SUCCESS_ALERT,
+  USER_DEL_ERROR_ALERT,
+  USER_DEL_SUCCESS_ALERT,
+  USER_EDIT_ERROR_ALERT,
+  USER_EDIT_SUCCESS_ALERT,
+} from "../../constants/alerts_constants";
+import {
   ADMIN_HEADER_DESCRIPTION,
   ADMIN_HEADER_TITLE,
 } from "../../constants/constants";
@@ -27,8 +35,8 @@ import {
   getUsersPage,
   updateUser,
 } from "../../controllers/API";
-import ConfirmationModal from "../../modals/ConfirmationModal";
-import UserManagementModal from "../../modals/UserManagementModal";
+import ConfirmationModal from "../../modals/confirmationModal";
+import UserManagementModal from "../../modals/userManagementModal";
 import useAlertStore from "../../stores/alertStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { Users } from "../../types/api";
@@ -45,7 +53,7 @@ export default function AdminPage() {
   const { userData } = useContext(AuthContext);
   const [totalRowsCount, setTotalRowsCount] = useState(0);
   const setCurrentFlowId = useFlowsManagerStore(
-    (state) => state.setCurrentFlowId
+    (state) => state.setCurrentFlowId,
   );
 
   // set null id
@@ -106,7 +114,7 @@ export default function AdminPage() {
       setFilterUserList(userList.current);
     } else {
       const filteredList = userList.current.filter((user: Users) =>
-        user.username.toLowerCase().includes(input.toLowerCase())
+        user.username.toLowerCase().includes(input.toLowerCase()),
       );
       setFilterUserList(filteredList);
     }
@@ -117,12 +125,12 @@ export default function AdminPage() {
       .then((res) => {
         resetFilter();
         setSuccessData({
-          title: "Success! User deleted!",
+          title: USER_DEL_SUCCESS_ALERT,
         });
       })
       .catch((error) => {
         setErrorData({
-          title: "Error on delete user",
+          title: USER_DEL_ERROR_ALERT,
           list: [error["response"]["data"]["detail"]],
         });
       });
@@ -133,12 +141,12 @@ export default function AdminPage() {
       .then((res) => {
         resetFilter();
         setSuccessData({
-          title: "Success! User edited!",
+          title: USER_EDIT_SUCCESS_ALERT,
         });
       })
       .catch((error) => {
         setErrorData({
-          title: "Error on edit user",
+          title: USER_EDIT_ERROR_ALERT,
           list: [error["response"]["data"]["detail"]],
         });
       });
@@ -152,12 +160,12 @@ export default function AdminPage() {
       .then((res) => {
         resetFilter();
         setSuccessData({
-          title: "Success! User edited!",
+          title: USER_EDIT_SUCCESS_ALERT,
         });
       })
       .catch((error) => {
         setErrorData({
-          title: "Error on edit user",
+          title: USER_EDIT_ERROR_ALERT,
           list: [error["response"]["data"]["detail"]],
         });
       });
@@ -170,12 +178,12 @@ export default function AdminPage() {
       .then((res) => {
         resetFilter();
         setSuccessData({
-          title: "Success! User edited!",
+          title: USER_EDIT_SUCCESS_ALERT,
         });
       })
       .catch((error) => {
         setErrorData({
-          title: "Error on edit user",
+          title: USER_EDIT_ERROR_ALERT,
           list: [error["response"]["data"]["detail"]],
         });
       });
@@ -190,13 +198,13 @@ export default function AdminPage() {
         }).then((res) => {
           resetFilter();
           setSuccessData({
-            title: "Success! New user added!",
+            title: USER_ADD_SUCCESS_ALERT,
           });
         });
       })
       .catch((error) => {
         setErrorData({
-          title: "Error when adding new user",
+          title: USER_ADD_ERROR_ALERT,
           list: [error.response.data.detail],
         });
       });
@@ -276,7 +284,7 @@ export default function AdminPage() {
                   (loadingUsers ? " border-0" : "")
                 }
               >
-                <Table className={"table-fixed outline-1 "}>
+                <Table className={"table-fixed outline-1"}>
                   <TableHeader
                     className={
                       loadingUsers ? "hidden" : "table-fixed bg-muted outline-1"
@@ -289,7 +297,7 @@ export default function AdminPage() {
                       <TableHead className="h-10">Superuser</TableHead>
                       <TableHead className="h-10">Created At</TableHead>
                       <TableHead className="h-10">Updated At</TableHead>
-                      <TableHead className="h-10 w-[100px]  text-right"></TableHead>
+                      <TableHead className="h-10 w-[100px] text-right"></TableHead>
                     </TableRow>
                   </TableHeader>
                   {!loadingUsers && (
@@ -323,7 +331,7 @@ export default function AdminPage() {
                                 handleDisableUser(
                                   user.is_active,
                                   user.id,
-                                  user
+                                  user,
                                 );
                               }}
                             >
@@ -355,7 +363,7 @@ export default function AdminPage() {
                                 handleSuperUserEdit(
                                   user.is_superuser,
                                   user.id,
-                                  user
+                                  user,
                                 );
                               }}
                             >
@@ -372,7 +380,7 @@ export default function AdminPage() {
                               </ConfirmationModal.Trigger>
                             </ConfirmationModal>
                           </TableCell>
-                          <TableCell className="truncate py-2 ">
+                          <TableCell className="truncate py-2">
                             {
                               new Date(user.create_at!)
                                 .toISOString()

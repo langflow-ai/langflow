@@ -1,0 +1,96 @@
+[tool.poetry]
+name = "langflow-base"
+version = "0.0.76"
+description = "A Python package with a built-in web application"
+authors = ["Langflow <contact@langflow.org>"]
+maintainers = [
+    "Carlos Coelho <carlos@langflow.org>",
+    "Cristhian Zanforlin <cristhian.lousa@gmail.com>",
+    "Gabriel Almeida <gabriel@langflow.org>",
+    "Igor Carvalho <igorr.ackerman@gmail.com>",
+    "Lucas Eduoli <lucaseduoli@gmail.com>",
+    "Otávio Anovazzi <otavio2204@gmail.com>",
+    "Rodrigo Nader <rodrigo@langflow.org>",
+]
+repository = "https://github.com/langflow-ai/langflow"
+license = "MIT"
+readme = "README.md"
+keywords = ["nlp", "langchain", "openai", "gpt", "gui"]
+packages = [{ include = "langflow" }, { include = "langflow/py.typed" }]
+include = ["pyproject.toml", "README.md", "langflow/**/*"]
+documentation = "https://docs.langflow.org"
+
+
+[tool.poetry.scripts]
+langflow-base = "langflow.__main__:main"
+
+[tool.poetry.dependencies]
+python = ">=3.10,<3.13"
+fastapi = "^0.111.0"
+httpx = "*"
+uvicorn = "^0.30.0"
+gunicorn = "^22.0.0"
+langchain = "~0.2.0"
+langchainhub = "~0.1.15"
+sqlmodel = "^0.0.18"
+loguru = "^0.7.1"
+rich = "^13.7.0"
+langchain-experimental = "*"
+pydantic = "^2.7.0"
+pydantic-settings = "^2.2.0"
+websockets = "*"
+typer = "^0.12.0"
+cachetools = "^5.3.1"
+platformdirs = "^4.2.0"
+python-multipart = "^0.0.7"
+orjson = "3.10.0"
+alembic = "^1.13.0"
+passlib = "^1.7.4"
+bcrypt = "4.0.1"
+pillow = "^10.2.0"
+docstring-parser = "^0.15"
+python-jose = "^3.3.0"
+pandas = "2.2.0"
+multiprocess = "^0.70.14"
+duckdb = "^1.0.0"
+python-docx = "^1.1.0"
+jq = { version = "^1.7.0", markers = "sys_platform != 'win32'" }
+pypdf = "^4.2.0"
+nest-asyncio = "^1.6.0"
+emoji = "^2.12.0"
+cryptography = "^42.0.5"
+asyncer = "^0.0.5"
+pyperclip = "^1.8.2"
+uncurl = "^0.0.11"
+sentry-sdk = {extras = ["fastapi", "loguru"], version = "^2.5.1"}
+chardet = "^5.2.0"
+
+
+[tool.poetry.extras]
+deploy = ["celery", "redis", "flower"]
+local = ["llama-cpp-python", "sentence-transformers", "ctransformers"]
+all = ["deploy", "local"]
+
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-ra"
+testpaths = ["tests", "integration"]
+console_output_style = "progress"
+filterwarnings = ["ignore::DeprecationWarning"]
+log_cli = true
+markers = ["async_test"]
+
+[tool.mypy]
+namespace_packages = true
+mypy_path = "langflow"
+ignore_missing_imports = true
+
+
+[tool.ruff]
+exclude = ["src/backend/langflow/alembic/*"]
+line-length = 120
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

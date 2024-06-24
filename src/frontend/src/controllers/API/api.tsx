@@ -1,10 +1,12 @@
 import axios, { AxiosError, AxiosInstance } from "axios";
 import { useContext, useEffect } from "react";
 import { Cookies } from "react-cookie";
-import { useNavigate } from "react-router-dom";
 import { renewAccessToken } from ".";
+import { BuildStatus } from "../../constants/enums";
 import { AuthContext } from "../../contexts/authContext";
 import useAlertStore from "../../stores/alertStore";
+import useFlowStore from "../../stores/flowStore";
+import { checkDuplicateRequestAndStoreRequest } from "./helpers/check-duplicate-requests";
 
 // Create a new Axios instance
 const api: AxiosInstance = axios.create({
@@ -15,62 +17,45 @@ function ApiInterceptor() {
   const setErrorData = useAlertStore((state) => state.setErrorData);
   let { accessToken, login, logout, authenticationErrorCount, autoLogin } =
     useContext(AuthContext);
-  const navigate = useNavigate();
   const cookies = new Cookies();
 
   useEffect(() => {
     const interceptor = api.interceptors.response.use(
       (response) => response,
       async (error: AxiosError) => {
-        if (error.response?.status === 401) {
-          const accessToken = cookies.get("access_token_lf");
-          if (accessToken && !autoLogin) {
-            authenticationErrorCount = authenticationErrorCount + 1;
-            if (authenticationErrorCount > 3) {
-              authenticationErrorCount = 0;
-              logout();
+        if (
+          error?.response?.status === 403 ||
+          error?.response?.status === 401
+        ) {
+          if (!autoLogin) {
+            if (error?.config?.url?.includes("github")) {
+              return Promise.reject(error);
             }
-            try {
-              const res = await renewAccessToken();
-              if (res?.data?.access_token && res?.data?.refresh_token) {
-                login(res?.data?.access_token);
-              }
-              if (error?.config?.headers) {
-                delete error.config.headers["Authorization"];
-                error.config.headers["Authorization"] = `Bearer ${cookies.get(
-                  "access_token_lf"
-                )}`;
-                const response = await axios.request(error.config);
-                return response;
-              }
-            } catch (error) {
-              if (axios.isAxiosError(error) && error.response?.status === 401) {
-                logout();
-              } else {
-                console.error(error);
-                logout();
-              }
+            const stillRefresh = checkErrorCount();
+            if (!stillRefresh) {
+              return Promise.reject(error);
             }
-          }
+            const acceptedRequest = await tryToRenewAccessToken(error);
 
-          if (!accessToken && error?.config?.url?.includes("login")) {
-            return Promise.reject(error);
-          } else {
-            logout();
+            const accessToken = cookies.get("access_token_lf");
+
+            if (!accessToken && error?.config?.url?.includes("login")) {
+              return Promise.reject(error);
+            }
+
+            return acceptedRequest;
           }
-        } else {
-          // if (URL_EXCLUDED_FROM_ERROR_RETRIES.includes(error.config?.url)) {
-          return Promise.reject(error);
-          // }
         }
-      }
+        await clearBuildVerticesState(error);
+        return Promise.reject(error);
+      },
     );
 
     const isAuthorizedURL = (url) => {
       const authorizedDomains = [
-        "https://raw.githubusercontent.com/logspace-ai/langflow_examples/main/examples",
-        "https://api.github.com/repos/logspace-ai/langflow_examples/contents/examples",
-        "https://api.github.com/repos/logspace-ai/langflow",
+        "https://raw.githubusercontent.com/langflow-ai/langflow_examples/main/examples",
+        "https://api.github.com/repos/langflow-ai/langflow_examples/contents/examples",
+        "https://api.github.com/repos/langflow-ai/langflow",
         "auto_login",
       ];
 
@@ -80,10 +65,10 @@ function ApiInterceptor() {
         const parsedURL = new URL(url);
 
         const isDomainAllowed = authorizedDomains.some(
-          (domain) => parsedURL.origin === new URL(domain).origin
+          (domain) => parsedURL.origin === new URL(domain).origin,
         );
         const isEndpointAllowed = authorizedEndpoints.some((endpoint) =>
-          parsedURL.pathname.includes(endpoint)
+          parsedURL.pathname.includes(endpoint),
         );
 
         return isDomainAllowed || isEndpointAllowed;
@@ -96,16 +81,28 @@ function ApiInterceptor() {
     // Request interceptor to add access token to every request
     const requestInterceptor = api.interceptors.request.use(
       (config) => {
+        const checkRequest = checkDuplicateRequestAndStoreRequest(config);
+
+        const controller = new AbortController();
+
+        if (!checkRequest) {
+          controller.abort("Duplicate Request");
+          console.error("Duplicate Request");
+        }
+
         const accessToken = cookies.get("access_token_lf");
         if (accessToken && !isAuthorizedURL(config?.url)) {
           config.headers["Authorization"] = `Bearer ${accessToken}`;
         }
 
-        return config;
+        return {
+          ...config,
+          signal: controller.signal,
+        };
       },
       (error) => {
         return Promise.reject(error);
-      }
+      },
     );
 
     return () => {
@@ -114,6 +111,50 @@ function ApiInterceptor() {
       api.interceptors.request.eject(requestInterceptor);
     };
   }, [accessToken, setErrorData]);
+
+  function checkErrorCount() {
+    authenticationErrorCount = authenticationErrorCount + 1;
+
+    if (authenticationErrorCount > 3) {
+      authenticationErrorCount = 0;
+      logout();
+      return false;
+    }
+
+    return true;
+  }
+
+  async function tryToRenewAccessToken(error: AxiosError) {
+    try {
+      if (window.location.pathname.includes("/login")) return;
+      const res = await renewAccessToken();
+      if (res?.data?.access_token && res?.data?.refresh_token) {
+        login(res?.data?.access_token);
+      }
+      if (error?.config?.headers) {
+        delete error.config.headers["Authorization"];
+        error.config.headers["Authorization"] = `Bearer ${cookies.get(
+          "access_token_lf",
+        )}`;
+        const response = await axios.request(error.config);
+        return response;
+      }
+    } catch (error) {
+      clearBuildVerticesState(error);
+      logout();
+      return Promise.reject("Authentication error");
+    }
+  }
+
+  async function clearBuildVerticesState(error) {
+    if (error?.response?.status === 500) {
+      const vertices = useFlowStore.getState().verticesBuild;
+      useFlowStore
+        .getState()
+        .updateBuildStatus(vertices?.verticesIds ?? [], BuildStatus.BUILT);
+      useFlowStore.getState().setIsBuilding(false);
+    }
+  }
 
   return null;
 }

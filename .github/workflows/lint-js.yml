@@ -1,0 +1,52 @@
+name: Lint Frontend
+
+on:
+  pull_request:
+    paths:
+      - "src/frontend/**"
+
+env:
+  NODE_VERSION: "21"
+
+jobs:
+  run-linters:
+    name: Run Prettier
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        id: setup-node
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Cache Node.js dependencies
+        uses: actions/cache@v4
+        id: npm-cache
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('src/frontend/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Install Node.js dependencies
+        run: |
+          cd src/frontend
+          npm install
+        if: ${{ steps.setup-node.outputs.cache-hit != 'true' }}
+
+      - name: Run Prettier
+        run: |
+          cd src/frontend
+          npm run format
+      - name: Commit changes
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: Apply Prettier formatting
+          branch: ${{ github.head_ref }}
+

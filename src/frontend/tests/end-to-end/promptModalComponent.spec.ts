@@ -1,32 +1,51 @@
 import { expect, test } from "@playwright/test";
 
 test("PromptTemplateComponent", async ({ page }) => {
-  await page.goto("http://localhost:3000/");
+  await page.goto("/");
   await page.waitForTimeout(2000);
 
-  await page.locator('//*[@id="new-project-btn"]').click();
-  await page.waitForTimeout(2000);
+  let modalCount = 0;
+  try {
+    const modalTitleElement = await page?.getByTestId("modal-title");
+    if (modalTitleElement) {
+      modalCount = await modalTitleElement.count();
+    }
+  } catch (error) {
+    modalCount = 0;
+  }
 
+  while (modalCount === 0) {
+    await page.getByText("New Project", { exact: true }).click();
+    await page.waitForTimeout(5000);
+    modalCount = await page.getByTestId("modal-title")?.count();
+  }
+
+  await page.getByTestId("blank-flow").click();
+  await page.waitForTimeout(3000);
+  await page.getByTestId("extended-disclosure").click();
   await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("promptTemplate");
+  await page.getByPlaceholder("Search").fill("prompt");
 
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(1000);
 
   await page
-    .locator('//*[@id="promptsPromptTemplate"]')
+    .locator('//*[@id="promptsPrompt"]')
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.mouse.up();
   await page.mouse.down();
+  await page.getByTitle("fit view").click();
+  await page.getByTitle("zoom out").click();
+  await page.getByTitle("zoom out").click();
+  await page.getByTitle("zoom out").click();
+  await page.getByTestId("prompt-input-template").click();
 
-  await page.getByTestId("prompt-input-0").click();
-
-  // await page.getByTestId("edit-prompt-sanitized").click();
-  // await page.getByTestId("modal-title").click();
   await page
-    .getByTestId("modal-prompt-input-0")
+    .getByTestId("modal-prompt-input-template")
     .fill("{prompt} example {prompt1}");
 
-  let value = await page.getByTestId("modal-prompt-input-0").inputValue();
+  let value = await page
+    .getByTestId("modal-prompt-input-template")
+    .inputValue();
 
   if (value != "{prompt} example {prompt1}") {
     expect(false).toBeTruthy();
@@ -45,34 +64,40 @@ test("PromptTemplateComponent", async ({ page }) => {
   await page.getByTestId("genericModalBtnSave").click();
 
   await page.getByTestId("div-textarea-prompt").click();
-  await page.getByTestId("text-area-modal").fill("prompt_value_!@#!@#");
+  await page.getByTestId("textarea-prompt").fill("prompt_value_!@#!@#");
 
-  value = await page.getByTestId("text-area-modal").inputValue();
+  value = await page.getByTestId("textarea-prompt").inputValue();
 
   if (value != "prompt_value_!@#!@#") {
     expect(false).toBeTruthy();
   }
 
-  await page.getByTestId("genericModalBtnSave").click();
+  await page.getByTestId("more-options-modal").click();
+
+  await page.getByTestId("save-button-modal").click();
+
+  const replace = await page.getByTestId("replace-button").isVisible();
+
+  if (replace) {
+    await page.getByTestId("replace-button").click();
+  }
 
   await page.getByTestId("div-textarea-prompt1").click();
   await page
-    .getByTestId("text-area-modal")
+    .getByTestId("textarea-prompt1")
     .fill("prompt_name_test_123123!@#!@#");
 
-  value = await page.getByTestId("text-area-modal").inputValue();
+  value = await page.getByTestId("textarea-prompt1").inputValue();
 
   if (value != "prompt_name_test_123123!@#!@#") {
     expect(false).toBeTruthy();
   }
 
-  value = await page.getByTestId("text-area-modal").inputValue();
+  value = await page.getByTestId("textarea-prompt1").inputValue();
 
   if (value != "prompt_name_test_123123!@#!@#") {
     expect(false).toBeTruthy();
   }
-
-  await page.getByTestId("genericModalBtnSave").click();
 
   await page.getByTestId("more-options-modal").click();
   await page.getByTestId("edit-button-modal").click();
@@ -115,7 +140,7 @@ test("PromptTemplateComponent", async ({ page }) => {
 
   await page.locator('//*[@id="showtemplate"]').click();
   expect(
-    await page.locator('//*[@id="showtemplate"]').isChecked()
+    await page.locator('//*[@id="showtemplate"]').isChecked(),
   ).toBeTruthy();
 
   await page.locator('//*[@id="showprompt"]').click();
@@ -135,13 +160,13 @@ test("PromptTemplateComponent", async ({ page }) => {
 
   await page.locator('//*[@id="showtemplate"]').click();
   expect(
-    await page.locator('//*[@id="showtemplate"]').isChecked()
+    await page.locator('//*[@id="showtemplate"]').isChecked(),
   ).toBeTruthy();
 
   await page.locator('//*[@id="showprompt"]').click();
   expect(await page.locator('//*[@id="showprompt"]').isChecked()).toBeTruthy();
 
-  await page.locator('//*[@id="saveChangesBtn"]').click();
+  await page.getByText("Save Changes", { exact: true }).click();
 
   await page.getByTestId("more-options-modal").click();
   await page.getByTestId("edit-button-modal").click();

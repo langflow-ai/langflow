@@ -1,0 +1,279 @@
+import ThemedImage from "@theme/ThemedImage";
+import useBaseUrl from "@docusaurus/useBaseUrl";
+import ZoomableImage from "/src/theme/ZoomableImage.js";
+import ReactPlayer from "react-player";
+import Admonition from "@theme/Admonition";
+
+# 🎨 Langflow Workspace
+
+<Admonition type="warning" title="warning">
+This page may contain outdated information. It will be updated as soon as possible.
+</Admonition>
+
+## The Langflow Workspace Interface
+
+The **Langflow Workspace** is where you assemble new flows and create AIs by connecting and running components. To get started, click on **New Project**. You can either build a flow from scratch (Blank Flow) or choose from pre-built starter examples.
+
+### Sidebar Menu
+
+Located on the left, this menu includes several collapsible sections that categorize the different types of pre-built components available in Langflow.
+
+### Workspace Area
+
+The large central area where users can visually assemble and connect components to create flows.
+
+## Top Navigation Bar
+
+- **Project Options**: Indicates the name of the current project or document. Clicking here allows users to rename the project or access project settings.
+- **My Collection**: Provides access to saved or user-defined collections of components or flows.
+- **Store**: Opens the component store where users can browse and add new components to their workspace.
+
+In the top navigation bar, the dropdown menu labeled with the project name offers several management and customization options for the current flow in the Langflow Workspace.
+
+<ZoomableImage
+  alt="Options Dropdown"
+  sources={{
+    light: useBaseUrl("img/menu-options.png"),
+    dark: useBaseUrl("img/menu-options.png"),
+  }}
+  style={{ width: "100%", margin: "20px auto" }}
+/>
+
+- **New**: Create a new flow from scratch.
+
+- **Settings**: Adjust settings specific to the current flow, such as its Name, Description, and Endpoint Name.
+
+- **Logs**: View logs for the current project, including execution history, errors, and other runtime events.
+
+- **Import**: Import a flow or component from a JSON file into the Workspace.
+
+- **Export**: Export the current flow as a JSON file.
+
+- **Undo (⌘Z)**: Revert the last action taken in the project.
+
+- **Redo (⌘Y)**: Reapply a previously undone action.
+
+- **Refresh All**: Refresh all components and delete cache.
+
+## Control Panel
+
+- **Playground**: Button that executes the current flow in the workspace.
+- **API**: Provides API access details and integration options for the current flow.
+- **Share**: Allows users to share their AI with others.
+
+## Flows & Components
+
+A [flow](#flow) is a pipeline of components connected together in the Langflow Workspace.
+
+A [component](#component) is a single building block within a flow. It has inputs, outputs, and parameters that define its functionality.
+
+For example, the **OpenAI Model** is a **component** of the **Basic Prompting** flow.
+
+## Flow
+
+A **Flow** is a sequence of components that are connected to perform a series of operations or tasks. Each flow is essentially a pipeline where data functions travel through various components, each modifying or analyzing the data according to its specific functionality.
+
+For example, the [Basic Prompting](../starter-projects/basic-prompting) flow is a pipeline of four components:
+
+<ZoomableImage
+  alt="Basic Prompting Flow"
+  sources={{
+    light: useBaseUrl("img/basic-prompting.png"),
+    dark: useBaseUrl("img/basic-prompting.png"),
+  }}
+  style={{ width: "100%", maxWidth: "800px", margin: "20px auto" }}
+/>
+
+{" "}
+
+In this flow, the **OpenAI Model** receives input (left side) and produces output (right side) - in this case, receiving input from the **Chat Input** and **Prompt** components and passing the output to the **Chat Output** component.
+
+## Component
+
+Components are the building blocks of flows. They consist of inputs, outputs, and parameters that define their functionality. These elements provide a convenient and straightforward way to compose LLM-based applications. Learn more about components and how they work below.
+
+<div style={{ marginBottom: "20px" }}>
+  During the flow creation process, you will notice handles (colored circles)
+  attached to one or both sides of a component. These handles use distinct
+  colors to indicate the types of inputs and outputs that can be interconnected.
+  Hover over a handle to see connection details.
+</div>
+
+{" "}
+
+<ZoomableImage
+  alt="Single Component"
+  sources={{
+    light: useBaseUrl("img/single-component.png"),
+    dark: useBaseUrl("img/single-component.png"),
+  }}
+  style={{ width: "100%", margin: "20px auto" }}
+/>
+
+{/* <div style={{ marginBottom: "20px" }}> */}
+
+On the top right corner of the component, you'll find the a play button to run a component. Once it runs, a status icon appears and you can hover over that to visualize success or error messages.
+
+Start interacting with your AI by clicking the **![Playground icon](/logos/botmessage.svg)Playground** at the bottom right of the workspace.
+
+### Output Preview
+
+Langflow includes an output visualizer for components that opens a pop-up screen. This allows you to easily inspect and monitor transmissions between components, providing instant feedback on your workflows.
+
+<ZoomableImage
+  alt="Single Component"
+  sources={{
+    light: useBaseUrl("img/inspect-output.png"),
+    dark: useBaseUrl("img/inspect-output.png"),
+  }}
+  style={{ width: "60%", margin: "20px auto" }}
+/>
+
+### Component Menu
+
+Each component is a little unique, but they will all have a menu bar on top that looks something like this.
+
+<ZoomableImage
+  alt="Component Menu"
+  sources={{
+    light: useBaseUrl("img/component-menu.png"),
+    dark: useBaseUrl("img/component-menu.png"),
+  }}
+  style={{ width: "70%", margin: "10px auto" }}
+/>
+
+It consists of options such as:
+
+**Code** - displays component's Python code. You can modify the code and save it.
+
+**Advanced** - See and adjust all parameters of a component.
+
+**Freeze** - After a component runs, lock its previous output state to prevent it from re-running.
+
+Click **All** (the "..." button) to see all options.
+
+<div
+  style={{ marginBottom: "20px", display: "flex", justifyContent: "center" }}
+>
+  <ReactPlayer playing controls url="/videos/langflow_parameters.mp4" />
+</div>
+
+### Advanced Settings
+
+Langflow components can be edited by clicking the **Advanced Settings** button.
+
+<div
+  style={{
+    marginBottom: "30px",
+    marginTop: "30px",
+    display: "flex",
+    justifyContent: "center",
+  }}
+>
+  <ReactPlayer playing controls url="/videos/langflow_parameters.mp4" />
+</div>
+
+Hide parameters with the **SHOW** button to reduce complexity and keep the workspace clean and intuitive for experimentation.
+
+You can also double-click a component's name and description to modify those. Component descriptions accept markdown syntax.
+
+### Group Components
+
+Multiple components can be grouped into a single component for reuse. This is useful when combining large flows into single components (like RAG with a vector database, for example) and saving space.
+
+1. Hold **Shift** and drag to select components.
+2. Select **Group**.
+3. The components merge into a single component.
+4. Double click name and description to change them.
+5. Save your grouped component to in the sidebar for later use!
+
+### Update component version
+
+A component's state is stored in a database, while sidebar components are like starter templates.
+
+As soon as you drag a component from the sidebar to the workspace, the two components are no longer in parity.
+
+The component will keep the version number it was initilized to the workspace with. Click the **Update Component** icon (exclamation mark) to bring the component up to the `latest` version. This will change the code of the component in place so you can validate that the component was updated by checking its Python code before and after updating it.
+
+<ZoomableImage
+  alt="Update Component"
+  sources={{
+    light: useBaseUrl("img/component-update.png"),
+    dark: useBaseUrl("img/component-update.png"),
+  }}
+  style={{ width: "80%", margin: "20px auto" }}
+/>
+
+## Playground
+
+Run your AI by clicking the **![Playground icon](/logos/botmessage.svg)Playground** button.
+
+For more, see [Playground](../administration/playground).
+
+## API
+
+{/* rsn */}
+The **API** session presents code templates for integrating your flow into external applications.
+
+{/* Modify parameters in the **Tweaks** window, click **Copy Code** or **Download** buttons, and paste your code where you want to use it. */}
+
+<ZoomableImage
+  alt="Docusaurus themed image"
+  sources={{
+    light: useBaseUrl("img/api-window.png"),
+    dark: useBaseUrl("img/api-window.png"),
+  }}
+  style={{ width: "60%", margin: "20px auto" }}
+/>
+
+### cURL
+
+The **cURL** tab displays sample code for posting a query to your flow.
+Modify the `input_value` to change your input message.
+Copy the code and run it to post a query to your flow and get the result.
+
+```bash
+curl -X POST \
+  http://127.0.0.1:7863/api/v1/run/f2eefd80-bb91-4190-9279-0d6ffafeaac4\?stream\=false \
+  -H 'Content-Type: application/json'\
+  -d '{"input_value": "is anybody there?",
+  "output_type": "chat",
+  "input_type": "chat",
+  "tweaks": {
+  "Prompt-uxBqP": {},
+  "OpenAIModel-k39HS": {},
+  "ChatOutput-njtka": {},
+  "ChatInput-P3fgL": {}
+}}'
+```
+
+Result:
+
+```
+{"session_id":"f2eefd80-bb91-4190-9279-0d6ffafeaac4:53856a772b8e1cfcb3dd2e71576b5215399e95bae318d3c02101c81b7c252da3","outputs":[{"inputs":{"input_value":"is anybody there?"},"outputs":[{"results":{"result":"Arrr, me hearties! Aye, this be Captain [Your Name] speakin'. What be ye needin', matey?"},"artifacts":{"message":"Arrr, me hearties! Aye, this be Captain [Your Name] speakin'. What be ye needin', matey?","sender":"Machine","sender_name":"AI"},"messages":[{"message":"Arrr, me hearties! Aye, this be Captain [Your Name] speakin'. What be ye needin', matey?","sender":"Machine","sender_name":"AI","component_id":"ChatOutput-njtka"}],"component_display_name":"Chat Output","component_id":"ChatOutput-njtka"}]}]}%
+```
+
+### Python API
+
+The **Python API** tab displays code to interact with your flow using the Python HTTP requests library.
+
+### Python Code
+
+The **Python Code** tab displays code to interact with your flow's `.json` file using the Langflow runtime.
+
+### Chat Widget HTML
+
+The **Chat Widget HTML** tab displays code that can be inserted in the `<body>` of your HTML to interact with your flow.
+For more, see the [Chat widget documentation](../administration/chat-widget).
+
+### Tweaks
+
+The **Tweaks** tab displays the available parameters for your flow.
+Modifying the parameters changes the code parameters across all windows.
+For example, changing the **Chat Input** component's `input_value` will change that value across all API calls.
+
+<div
+  style={{ marginBottom: "20px", display: "flex", justifyContent: "center" }}
+>
+  <ReactPlayer playing controls url="/videos/langflow_api.mp4" />
+</div>

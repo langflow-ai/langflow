@@ -1,0 +1,38 @@
+import ThemedImage from "@theme/ThemedImage";
+import useBaseUrl from "@docusaurus/useBaseUrl";
+import ZoomableImage from "/src/theme/ZoomableImage.js";
+import Admonition from "@theme/Admonition";
+
+# Chat Memory
+
+<Admonition type="warning" title="warning">
+This page may contain outdated information. It will be updated as soon as possible.
+</Admonition>
+
+Langflow allows every chat message to be stored, and a single flow can have multiple memory sessions. This enables you to create multiple “memories” for agents to store and recall specific information as needed. You can edit and remove previous messages to inspect and validate a model’s response behavior. Control, explore, and manage conversation histories to get your models acting just right.
+
+The **Chat Memory** component retrieves message histories by session ID. Users can change the session ID in the advanced settings, with the default session ID set to match the flow ID. These memories are accessible and manageable directly from the Playground; modifications to them directly affect the behavior of chatbot responses. Users can remove or edit previous messages to manipulate and explore model responses further.
+
+<ZoomableImage
+  alt="Docusaurus themed image"
+  sources={{
+    light: "img/chat-memory-component.png",
+    dark: "img/chat-memory-component.png",
+  }}
+  style={{ width: "40%", margin: "20px auto" }}
+/>
+
+By default, chat conversations store Message objects categorized by session ID. A a single flow can host multiple session IDs, and different flows can also share the same session ID.
+
+Memories can be visualized and managed directly from the Playground. Modifying these memories will influence the behavior of the chatbot responses, as long as an agent uses them. Here you have the ability to remove or edit previous messages, allowing them to manipulate and explore how these changes affect model responses.
+
+<ZoomableImage
+  alt="Docusaurus themed image"
+  sources={{
+    light: "img/playground-memories.png",
+    dark: "img/playground-memories.png",
+  }}
+  style={{ width: "40%", margin: "20px auto" }}
+/>
+
+You can also display all messages stored across every flow in your workspace by going to **Settings** > **Messages**.

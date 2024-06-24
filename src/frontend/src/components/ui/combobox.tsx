@@ -65,7 +65,7 @@ export function Combobox({
                     "mr-2 h-4 w-4",
                     value.includes(framework.value)
                       ? "opacity-100"
-                      : "opacity-0"
+                      : "opacity-0",
                   )}
                 />
                 {framework.label}

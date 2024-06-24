@@ -7,5 +7,8 @@ export type TypesStoreType = {
   setTemplates: (newState: {}) => void;
   data: APIDataType;
   setData: (newState: {}) => void;
-  getTypes: () => Promise<void>;
+  getTypes: (force_refresh?: boolean) => Promise<void>;
+  ComponentFields: Set<string>;
+  setComponentFields: (fields: Set<string>) => void;
+  addComponentField: (field: string) => void;
 };

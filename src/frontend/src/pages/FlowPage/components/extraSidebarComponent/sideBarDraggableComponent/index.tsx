@@ -37,12 +37,13 @@ export const SidebarDraggableComponent = forwardRef(
       onDragStart: DragEventHandler<HTMLDivElement>;
       official: boolean;
     },
-    ref
+    ref,
   ) => {
     const [open, setOpen] = useState(false);
     const deleteComponent = useFlowsManagerStore(
-      (state) => state.deleteComponent
+      (state) => state.deleteComponent,
     );
+
     const version = useDarkStore((state) => state.version);
     const [cursorPos, setCursorPos] = useState({ x: 0, y: 0 });
     const popoverRef = useRef<HTMLDivElement>(null);
@@ -66,8 +67,8 @@ export const SidebarDraggableComponent = forwardRef(
           downloadNode(
             createFlowComponent(
               { id: getNodeId(type), type, node: apiClass },
-              version
-            )
+              version,
+            ),
           );
           break;
         case "delete":
@@ -103,7 +104,7 @@ export const SidebarDraggableComponent = forwardRef(
             onDragStart={onDragStart}
             onDragEnd={() => {
               document.body.removeChild(
-                document.getElementsByClassName("cursor-grabbing")[0]
+                document.getElementsByClassName("cursor-grabbing")[0],
               );
             }}
           >
@@ -116,7 +117,7 @@ export const SidebarDraggableComponent = forwardRef(
               <div ref={popoverRef}>
                 <IconComponent
                   name="Menu"
-                  className="side-bar-components-icon "
+                  className="side-bar-components-icon"
                 />
                 <SelectTrigger></SelectTrigger>
                 <SelectContent
@@ -156,7 +157,7 @@ export const SidebarDraggableComponent = forwardRef(
         </div>
       </Select>
     );
-  }
+  },
 );
 
 export default SidebarDraggableComponent;

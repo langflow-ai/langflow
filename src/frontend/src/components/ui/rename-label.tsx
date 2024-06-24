@@ -28,6 +28,9 @@ export default function RenameLabel(props) {
       }
     }
     resizeInput();
+    return () => {
+      if (isRename) document.removeEventListener("keydown", () => {});
+    };
   }, [isRename]);
 
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -58,7 +61,7 @@ export default function RenameLabel(props) {
           onInput={resizeInput}
           className={cn(
             "nopan nodelete nodrag noundo nocopy rounded-md bg-transparent px-2 outline-ring hover:outline focus:border-none focus:outline active:outline",
-            props.className
+            props.className,
           )}
           onBlur={() => {
             setIsRename(false);

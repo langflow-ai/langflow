@@ -1,0 +1,14 @@
+fail_fast: true
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.1.0
+    hooks:
+      - id: check-case-conflict
+      - id: end-of-file-fixer
+        # python, js and ts only
+        files: \.(py|js|ts)$
+      - id: mixed-line-ending
+        files: \.(py|js|ts)$
+        args:
+          - --fix=lf
+      - id: trailing-whitespace

@@ -3,9 +3,9 @@ services:
   - type: web
     name: langflow
     runtime: docker
-    dockerfilePath: ./Dockerfile
-    repo: https://github.com/logspace-ai/langflow
-    branch: main
+    dockerfilePath: ./docker/render.pre-release.Dockerfile
+    repo: https://github.com/langflow-ai/langflow
+    branch: dev
     healthCheckPath: /health
     autoDeploy: false
     envVars:

@@ -1,139 +1,134 @@
-import { Listbox, Transition } from "@headlessui/react";
-import { Fragment, useEffect, useState } from "react";
+import { PopoverAnchor } from "@radix-ui/react-popover";
+import { useRef, useState } from "react";
 import { DropDownComponentType } from "../../types/components";
-import { classNames } from "../../utils/utils";
-import IconComponent from "../genericIconComponent";
+import { cn } from "../../utils/utils";
+import { default as ForwardedIconComponent } from "../genericIconComponent";
+import { Button } from "../ui/button";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "../ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverContentWithoutPortal,
+  PopoverTrigger,
+} from "../ui/popover";
 
 export default function Dropdown({
+  disabled,
+  isLoading,
   value,
   options,
   onSelect,
   editNode = false,
-  numberOfOptions = 0,
-  apiModal = false,
   id = "",
+  children,
 }: DropDownComponentType): JSX.Element {
-  let [internalValue, setInternalValue] = useState(
-    value === "" || !value ? "Choose an option" : value
-  );
+  const [open, setOpen] = useState(children ? true : false);
 
-  useEffect(() => {
-    setInternalValue(value === "" || !value ? "Choose an option" : value);
-  }, [value]);
+  const refButton = useRef<HTMLButtonElement>(null);
 
+  const PopoverContentDropdown =
+    children || editNode ? PopoverContent : PopoverContentWithoutPortal;
   return (
     <>
-      {Object.keys(options)?.length > 0 ? (
+      {Object.keys(options ?? [])?.length > 0 ? (
         <>
-          <Listbox
-            value={internalValue}
-            onChange={(value) => {
-              setInternalValue(value);
-              onSelect(value);
-            }}
-          >
-            {({ open }) => (
-              <>
-                <div className={"relative mt-1"}>
-                  <Listbox.Button
-                    data-test={`${id ?? ""}`}
-                    className={
-                      editNode
-                        ? "dropdown-component-outline"
-                        : "dropdown-component-false-outline"
-                    }
-                  >
-                    <span
-                      className="dropdown-component-display"
-                      data-testid={`${id ?? ""}-display`}
-                    >
-                      {internalValue}
-                    </span>
-                    <span className={"dropdown-component-arrow"}>
-                      <IconComponent
-                        name="ChevronsUpDown"
-                        className="dropdown-component-arrow-color"
-                        aria-hidden="true"
-                      />
-                    </span>
-                  </Listbox.Button>
+          <Popover open={open} onOpenChange={children ? () => {} : setOpen}>
+            {children ? (
+              <PopoverAnchor>{children}</PopoverAnchor>
+            ) : (
+              <PopoverTrigger asChild>
+                <Button
+                  disabled={disabled}
+                  variant="primary"
+                  size="xs"
+                  role="combobox"
+                  ref={refButton}
+                  aria-expanded={open}
+                  data-testid={`${id ?? ""}`}
+                  className={cn(
+                    editNode
+                      ? "dropdown-component-outline"
+                      : "dropdown-component-false-outline",
+                    "w-full justify-between font-normal",
+                    editNode ? "input-edit-node" : "py-2",
+                  )}
+                >
+                  <span data-testid={`value-dropdown-` + id}>
+                    {value &&
+                    value !== "" &&
+                    options.find((option) => option === value)
+                      ? options.find((option) => option === value)
+                      : "Choose an option..."}
+                  </span>
 
-                  <Transition
-                    show={open}
-                    as={Fragment}
-                    leave="transition ease-in duration-100"
-                    leaveFrom="opacity-100"
-                    leaveTo="opacity-0"
-                  >
-                    <Listbox.Options
-                      className={classNames(
-                        editNode
-                          ? "dropdown-component-true-options nowheel custom-scroll"
-                          : "dropdown-component-false-options nowheel custom-scroll",
-                        apiModal ? "mb-2 w-[250px]" : "absolute w-full"
-                      )}
-                    >
-                      {options?.map((option, id) => (
-                        <Listbox.Option
-                          key={id}
-                          className={({ active }) =>
-                            classNames(
-                              active ? " bg-accent" : "",
-                              editNode
-                                ? "dropdown-component-false-option"
-                                : "dropdown-component-true-option"
-                            )
-                          }
-                          value={option}
-                        >
-                          {({ selected, active }) => (
-                            <>
-                              <span
-                                className={classNames(
-                                  selected ? "font-semibold" : "font-normal",
-                                  "block truncate "
-                                )}
-                                data-testid={`${option}-${id ?? ""}-option`}
-                              >
-                                {option}
-                              </span>
-
-                              {selected ? (
-                                <span
-                                  className={classNames(
-                                    active ? "text-background " : "",
-                                    "dropdown-component-choosal"
-                                  )}
-                                >
-                                  <IconComponent
-                                    name="Check"
-                                    className={
-                                      active
-                                        ? "dropdown-component-check-icon"
-                                        : "dropdown-component-check-icon"
-                                    }
-                                    aria-hidden="true"
-                                  />
-                                </span>
-                              ) : null}
-                            </>
-                          )}
-                        </Listbox.Option>
-                      ))}
-                    </Listbox.Options>
-                  </Transition>
-                </div>
-              </>
+                  <ForwardedIconComponent
+                    name="ChevronsUpDown"
+                    className="ml-2 h-4 w-4 shrink-0 opacity-50"
+                  />
+                </Button>
+              </PopoverTrigger>
             )}
-          </Listbox>
+            <PopoverContentDropdown
+              side="bottom"
+              avoidCollisions={!!children}
+              className="nocopy nowheel nopan nodelete nodrag noundo p-0"
+              style={
+                children
+                  ? {}
+                  : { minWidth: refButton?.current?.clientWidth ?? "200px" }
+              }
+            >
+              <Command>
+                <CommandInput placeholder="Search options..." className="h-9" />
+                <CommandList>
+                  <CommandEmpty>No values found.</CommandEmpty>
+                  <CommandGroup defaultChecked={false}>
+                    {options?.map((option, id) => (
+                      <CommandItem
+                        key={id}
+                        value={option}
+                        onSelect={(currentValue) => {
+                          onSelect(currentValue);
+                          setOpen(false);
+                        }}
+                        data-testid={`${option}-${id ?? ""}-option`}
+                      >
+                        {option}
+                        <ForwardedIconComponent
+                          name="Check"
+                          className={cn(
+                            "ml-auto h-4 w-4 text-primary",
+                            value === option ? "opacity-100" : "opacity-0",
+                          )}
+                        />
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContentDropdown>
+          </Popover>
         </>
       ) : (
         <>
-          <div>
-            <span className="text-sm italic">
-              No parameters are available for display.
-            </span>
-          </div>
+          {(!isLoading && (
+            <div>
+              <span className="text-sm italic">
+                No parameters are available for display.
+              </span>
+            </div>
+          )) || (
+            <div>
+              <span className="text-sm italic">Loading...</span>
+            </div>
+          )}
         </>
       )}
     </>
