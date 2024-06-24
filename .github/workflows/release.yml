@@ -1,5 +1,5 @@
 name: Langflow Release
-run-name: Langflow (${{inputs.release_type}}) Release by @${{ github.actor }}
+run-name: Langflow Release by @${{ github.actor }}
 
 on:
   workflow_dispatch:
