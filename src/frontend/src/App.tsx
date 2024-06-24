@@ -103,13 +103,6 @@ export default function App() {
       if (isAuthenticated) {
         try {
           await setupAxiosDefaults();
-
-          const res = await getGlobalVariables();
-          setGlobalVariables(res);
-
-          checkHasStore();
-          fetchApiData();
-
           resolve();
         } catch (error) {
           console.error("Failed to fetch data:", error);
