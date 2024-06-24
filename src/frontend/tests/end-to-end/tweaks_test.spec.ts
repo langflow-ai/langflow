@@ -109,8 +109,9 @@ test("check if tweaks are updating when someothing on the flow changes", async (
     .fill("persist_directory_123123123!@#$&*(&%$@");
 
   const focusElementsOnBoard = async ({ page }) => {
+    await page.waitForSelector("text=API", { timeout: 30000 });
     const focusElements = await page.getByText("API", { exact: true }).first();
-    focusElements.click();
+    await focusElements.click();
   };
 
   await focusElementsOnBoard({ page });

@@ -63,10 +63,14 @@ test("should interact with global variables", async ({ page }) => {
   await page.getByText(randomName).isVisible();
 
   const focusElementsOnBoard = async ({ page }) => {
+    await page.waitForSelector(
+      '[aria-label="Press Space to toggle all rows selection (unchecked)"]',
+      { timeout: 30000 },
+    );
     const focusElements = await page
       .getByLabel("Press Space to toggle all rows selection (unchecked)")
-      .nth(0);
-    focusElements.click();
+      .first();
+    await focusElements.click();
   };
 
   await focusElementsOnBoard({ page });

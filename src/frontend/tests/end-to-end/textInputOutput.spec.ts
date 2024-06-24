@@ -29,7 +29,9 @@ test("TextInputOutputComponent", async ({ page }) => {
   await page.waitForTimeout(1000);
 
   await page.getByTestId("blank-flow").click();
-  await page.waitForTimeout(3000);
+  await page.waitForSelector('[data-testid="extended-disclosure"]', {
+    timeout: 30000,
+  });
 
   const focusElementsOnBoard = async ({ page }) => {
     const focusElements = await page.getByTestId("extended-disclosure");

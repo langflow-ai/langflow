@@ -29,8 +29,9 @@ test("user should be able to see multiple edges and interact with them", async (
   await page.getByText("Search Results", { exact: true }).first().isVisible();
 
   const focusElementsOnBoard = async ({ page }) => {
-    const focusElements = await await page.getByTitle("fit view");
-    focusElements.click();
+    await page.waitForSelector('[title="fit view"]', { timeout: 30000 });
+    const focusElements = await page.getByTitle("fit view");
+    await focusElements.click();
   };
 
   await focusElementsOnBoard({ page });
