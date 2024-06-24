@@ -1,3 +1,8 @@
+<div align="center" style="padding: 10px; border: 1px solid #ccc; background-color: #f9f9f9; border-radius: 10px; margin-bottom: 20px;">
+    <h2 style="margin: 0; font-size: 24px; color: #333;">Langflow 1.0 is OUT! 🎉</h2>
+    <p style="margin: 5px 0 0 0; font-size: 16px; color: #666;">Read all about it <a href="https://medium.com/p/73d3bdce8440" style="text-decoration: underline; color: #1a73e8;">here</a>!</p>
+</div>
+
 <!-- markdownlint-disable MD030 -->
 
 # [![Langflow](./docs/static/img/hero.png)](https://www.langflow.org)

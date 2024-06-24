@@ -7,6 +7,8 @@ on:
       - "pyproject.toml"
       - "src/backend/**"
       - "tests/**"
+  merge_group:
+    branches: [dev]
 
 env:
   POETRY_VERSION: "1.8.2"

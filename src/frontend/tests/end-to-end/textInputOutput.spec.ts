@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
-import { focusElementsOnBoard, offsetElements } from "../custom_component_full";
+import { focusElementsOnBoard, offsetElements } from "../reactflowE2ETestUtils";
 
 test("TextInputOutputComponent", async ({ page }) => {
   if (!process.env.CI) {
