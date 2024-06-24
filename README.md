@@ -62,10 +62,6 @@ You can install Langflow with pip:
 
 ```shell
 # Make sure you have >=Python 3.10 installed on your system.
-# Install the pre-release version (recommended for the latest updates)
-python -m pip install langflow --pre --force-reinstall
-
-# or stable version
 python -m pip install langflow -U
 ```
 
