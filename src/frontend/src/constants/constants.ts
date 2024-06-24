@@ -571,6 +571,8 @@ export const BASE_URL_API = "/api/v1/";
 
 export const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:7860/";
 
+export const LANGFLOW_DEFAULT_LOCALE = process.env.LANGFLOW_DEFAULT_LOCALE || 'en'
+
 /**
  * URLs excluded from error retries.
  * @constant
