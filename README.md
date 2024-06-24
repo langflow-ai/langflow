@@ -42,6 +42,7 @@
 
 # 📝 Content
 
+- [](#)
 - [📝 Content](#-content)
 - [📦 Get Started](#-get-started)
 - [🎨 Create Flows](#-create-flows)
@@ -49,6 +50,7 @@
   - [Deploy Langflow on Google Cloud Platform](#deploy-langflow-on-google-cloud-platform)
   - [Deploy on Railway](#deploy-on-railway)
   - [Deploy on Render](#deploy-on-render)
+  - [Deploy on Kubernetes](#deploy-on-kubernetes)
 - [🖥️ Command Line Interface (CLI)](#️-command-line-interface-cli)
   - [Usage](#usage)
     - [Environment Variables](#environment-variables)
