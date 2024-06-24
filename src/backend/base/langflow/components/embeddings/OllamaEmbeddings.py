@@ -25,7 +25,7 @@ class OllamaEmbeddingsComponent(LCModelComponent):
         FloatInput(
             name="temperature",
             display_name="Model Temperature",
-            value=1.0,
+            value=0.1,
             advanced=True,
         ),
     ]
