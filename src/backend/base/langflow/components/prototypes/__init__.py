@@ -24,6 +24,8 @@ from .RunFlow import RunFlowComponent
 from .RunnableExecutor import RunnableExecComponent
 from .SQLExecutor import SQLExecutorComponent
 from .SubFlow import SubFlowComponent
+from .CreateData import CreateDataComponent
+from .UpdateData import UpdateDataComponent
 
 __all__ = [
     "ConditionalRouterComponent",
@@ -36,4 +38,6 @@ __all__ = [
     "RunnableExecComponent",
     "SQLExecutorComponent",
     "SubFlowComponent",
+    "CreateDataComponent",
+    "UpdateDataComponent",
 ]
