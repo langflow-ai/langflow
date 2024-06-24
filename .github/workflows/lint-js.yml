@@ -4,6 +4,8 @@ on:
   pull_request:
     paths:
       - "src/frontend/**"
+  merge_group:
+    branches: [dev]
 
 env:
   NODE_VERSION: "21"
