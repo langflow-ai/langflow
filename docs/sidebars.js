@@ -148,6 +148,7 @@ module.exports = {
         {
           type: "category",
           label: "Notion",
+          className: "margin-top-0",
           items: [
             "integrations/notion/intro",
             "integrations/notion/setup",
