@@ -11,9 +11,7 @@ This guide demonstrates how to build a basic flow and modify the prompt for diff
 ## Prerequisites
 
 - [Python >=3.10](https://www.python.org/downloads/release/python-3100/) and [pip](https://pypi.org/project/pip/) or [pipx](https://pipx.pypa.io/stable/installation/)
-
 - [Langflow installed and running](./install-langflow)
-
 - [OpenAI API key](https://platform.openai.com)
 
 ## Hello World - Basic Prompting
@@ -25,48 +23,84 @@ Prompts serve as the inputs to a large language model (LLM), acting as the inter
 <br />
 
 1. From the Langflow dashboard, click **New Project**.
-2. Select **Basic Prompting**.
-
-<br />
 
 <ZoomableImage
-  alt="Quickstart Guide Screenshot"
+  alt="Quickstart New Project modal"
   sources={{
-    light: "img/quickstart.png",
-    dark: "img/quickstart.png",
+    light: "/img/new-project.png",
+    dark: "/img/new-project.png",
   }}
   style={{ width: "80%", margin: "20px auto" }}
 />
 
-This flow allows you to chat with the **OpenAI** model by using a **Prompt** to send instructions.
+2. Select **Basic Prompting**.
+3. The **Basic Prompting** flow is created.
 
+<ZoomableImage
+  alt="Docusaurus themed image"
+  sources={{
+    light: "img/basic-prompting.png",
+    dark: "img/basic-prompting.png",
+  }}
+  style={{ width: "80%", margin: "20px auto" }}
+/>
+
+This flow allows you to chat with the **OpenAI** component via a **Prompt** component.
 Examine the **Prompt** component. The **Template** field instructs the LLM to `Answer the user as if you were a pirate.`
 This should be interesting...
 
-To use the **OpenAI** component, you have two options for providing your OpenAI API Key: directly passing it to the component or creating an environment variable. For better security and manageability, creating an environment variable is recommended. Here's how to set it up:
+<ZoomableImage
+  alt="Prompt Component"
+  sources={{
+    light: "img/prompt-component.png",
+    dark: "img/prompt-component.png",
+  }}
+  style={{ width: "80%", margin: "20px auto" }}
+/>
 
-In the **OpenAI API Key** field, click the **Globe** button to access environment variables, and then click **Add New Variable**.
+4. To create an environment variable for the **OpenAI** component, in the **OpenAI API Key** field, click the **Globe** button, and then click **Add New Variable**.
+   1. In the **Variable Name** field, enter `openai_api_key`.
+   2. In the **Value** field, paste your OpenAI API Key (`sk-...`).
+   3. Click **Save Variable**.
 
-1.  In the **Variable Name** field, enter `openai_api_key`.
-2.  In the **Value** field, paste your OpenAI API Key (`sk-...`).
-3.  Click **Save Variable**.
+<ZoomableImage
+  alt="Open AI Key"
+  sources={{
+    light: "img/open-ai-key.png",
+    dark: "img/open-ai-key.png",
+  }}
+  style={{ width: "80%", margin: "20px auto" }}
+/>
 
-By creating an environment variable, you keep your API key secure and make it easier to manage across different components or projects.
+## Run
 
-## Run the basic prompting flow
-
-1. Click the **Playground** button. This where you can interact with your bot.
-2. Type any message and press Enter.
-   And... Ahoy! 🏴‍☠️
-   The bot responds in a piratical manner!
+1. Click the **Playground** button on the control panel (bottom right side of the workspace). This is where you can interact with your AI.
+2. Type a message and press Enter. The bot should respond in a markedly piratical manner!
 
 ## Modify the prompt for a different result
 
-1. To modify your prompt results, in the **Prompt** template, click the **Template** field.
-   The **Edit Prompt** window opens.
-2. Change `Answer the user as if you were a pirate` to a different character, perhaps `Answer the user as if you were Harold Abelson.`
-3. Run the basic prompting flow again.
-   The response will be markedly different.
+1. To modify your prompt results, in the **Prompt** template, click the **Template** field. The **Edit Prompt** window opens.
+2. Change `Answer the user as if you were a pirate` to a different character, perhaps `Answer the user as if you were Hermione Granger.`
+
+<ZoomableImage
+  alt="Changed Prompt"
+  sources={{
+    light: "img/altered-prompt.png",
+    dark: "img/altered-prompt.png",
+  }}
+  style={{ width: "80%", margin: "20px auto" }}
+/>
+
+1. Run the workflow again. The response will be markedly different.
+
+<ZoomableImage
+  alt="Playground with Changed Prompt"
+  sources={{
+    light: "img/playground-changed-prompt.png",
+    dark: "img/playground-changed-prompt.png",
+  }}
+  style={{ width: "80%", margin: "20px auto" }}
+/>
 
 ## Next steps
 
