@@ -1,12 +1,14 @@
-from typing import List, Dict
+from typing import Dict, List, cast
+
+from langchain.agents import AgentExecutor, BaseSingleActionAgent
 from langchain.agents.tool_calling_agent.base import create_tool_calling_agent
-from langchain_core.prompts import ChatPromptTemplate
-from langchain.agents import AgentExecutor
 from langchain_core.messages import BaseMessage
-from langflow.schema.message import Message
+from langchain_core.prompts import ChatPromptTemplate
+
 from langflow.custom import Component
-from langflow.io import HandleInput, BoolInput, Output, MessageTextInput
+from langflow.io import BoolInput, HandleInput, MessageTextInput, Output
 from langflow.schema import Data
+from langflow.schema.message import Message
 
 
 class ToolCallingAgentComponent(Component):
@@ -80,7 +82,7 @@ class ToolCallingAgentComponent(Component):
         agent = create_tool_calling_agent(self.llm, self.tools, prompt)
 
         runnable = AgentExecutor.from_agent_and_tools(
-            agent=agent,
+            agent=cast(BaseSingleActionAgent, agent),
             tools=self.tools,
             verbose=True,
             handle_parsing_errors=self.handle_parsing_errors,
