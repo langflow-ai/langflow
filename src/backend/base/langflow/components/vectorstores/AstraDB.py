@@ -106,7 +106,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
         ),
         HandleInput(
             name="embedding",
-            display_name="Embedding",
+            display_name="Embedding or Astra Vectorize",
             input_types=["Embeddings", "dict"],
         ),
         StrInput(
