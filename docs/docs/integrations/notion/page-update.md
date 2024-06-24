@@ -5,6 +5,10 @@ import ZoomableImage from "/src/theme/ZoomableImage.js";
 
 # Page Update
 
+<Admonition type="warning" title="warning">
+This page may contain outdated information. It will be updated as soon as possible.
+</Admonition>
+
 The `NotionPageUpdate` component updates the properties of a Notion page. It provides a convenient way to integrate updating Notion page properties into your Langflow workflows.
 
 [Notion Reference](https://developers.notion.com/reference/patch-page)
