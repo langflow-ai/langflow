@@ -42,10 +42,10 @@ class AstraVectorize(Component):
         ),
     ]
     outputs = [
-        Output(display_name="Vectorize", name="config", method="build", types=["dict"]),
+        Output(display_name="Vectorize", name="config", method="build_options", types=["dict"]),
     ]
 
-    def build(self) -> dict[str, Any]:
+    def build_options(self) -> dict[str, Any]:
         return {
             "collection_vector_service_options": {
                 "provider": self.provider,

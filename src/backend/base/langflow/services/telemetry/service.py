@@ -29,7 +29,7 @@ class TelemetryService(Service):
         super().__init__()
         self.settings_service = settings_service
         self.base_url = settings_service.settings.telemetry_base_url
-        self.telemetry_queue = asyncio.Queue()
+        self.telemetry_queue: asyncio.Queue = asyncio.Queue()
         self.client = httpx.AsyncClient(timeout=None)
         self.running = False
         self.package = get_version_info()["package"]
