@@ -30,7 +30,7 @@ class GoogleGenerativeAIComponent(LCModelComponent):
             name="model",
             display_name="Model",
             info="The name of the model to use.",
-            options=["gemini-1.5-pro", "gemini-1.5-flash"],
+            options=["gemini-1.5-pro", "gemini-1.5-flash", "gemini-1.0-pro", "gemini-1.0-pro-vision"],
             value="gemini-1.5-pro",
         ),
         SecretStrInput(
