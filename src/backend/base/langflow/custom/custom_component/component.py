@@ -10,7 +10,6 @@ from langflow.schema.artifact import get_artifact_type, post_process_raw
 from langflow.schema.data import Data
 from langflow.schema.message import Message
 from langflow.template.field.base import UNDEFINED, Output
-from langflow.template.utils import update_frontend_node_with_template_values
 
 from .custom_component import CustomComponent
 

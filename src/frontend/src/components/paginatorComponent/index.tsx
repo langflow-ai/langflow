@@ -75,6 +75,7 @@ export default function PaginatorComponent({
               onClick={() => {
                 paginate(size, 1);
               }}
+              size={"icon"}
             >
               <span className="sr-only">{t("Go to first page")}</span>
               <IconComponent name="ChevronsLeft" className="h-4 w-4" />
@@ -88,6 +89,7 @@ export default function PaginatorComponent({
               }}
               variant="outline"
               className="h-8 w-8 p-0"
+              size={"icon"}
             >
               <span className="sr-only">{t("Go to previous page")}</span>
               <IconComponent name="ChevronLeft" className="h-4 w-4" />
@@ -99,6 +101,7 @@ export default function PaginatorComponent({
               }}
               variant="outline"
               className="h-8 w-8 p-0"
+              size={"icon"}
             >
               <span className="sr-only">{t("Go to next page")}</span>
               <IconComponent name="ChevronRight" className="h-4 w-4" />
@@ -107,6 +110,7 @@ export default function PaginatorComponent({
               disabled={pageIndex === maxIndex}
               variant="outline"
               className="hidden h-8 w-8 p-0 lg:flex"
+              size={"icon"}
               onClick={() => {
                 paginate(size, maxIndex);
               }}

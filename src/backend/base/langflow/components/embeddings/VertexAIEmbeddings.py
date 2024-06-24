@@ -1,6 +1,6 @@
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import Embeddings
-from langflow.io import BoolInput, DictInput, FileInput, FloatInput, IntInput, Output, TextInput
+from langflow.io import BoolInput, DictInput, FileInput, FloatInput, IntInput, MessageTextInput, Output
 
 
 class VertexAIEmbeddingsComponent(LCModelComponent):
@@ -20,7 +20,7 @@ class VertexAIEmbeddingsComponent(LCModelComponent):
             display_name="Instance",
             advanced=True,
         ),
-        TextInput(
+        MessageTextInput(
             name="location",
             display_name="Location",
             value="us-central1",
@@ -37,7 +37,7 @@ class VertexAIEmbeddingsComponent(LCModelComponent):
             value=6,
             advanced=True,
         ),
-        TextInput(
+        MessageTextInput(
             name="model_name",
             display_name="Model Name",
             value="textembedding-gecko",
@@ -48,7 +48,7 @@ class VertexAIEmbeddingsComponent(LCModelComponent):
             value=1,
             advanced=True,
         ),
-        TextInput(
+        MessageTextInput(
             name="project",
             display_name="Project",
             advanced=True,
@@ -59,7 +59,7 @@ class VertexAIEmbeddingsComponent(LCModelComponent):
             value=5,
             advanced=True,
         ),
-        TextInput(
+        MessageTextInput(
             name="stop",
             display_name="Stop",
             advanced=True,

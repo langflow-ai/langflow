@@ -1,11 +1,11 @@
 from langflow.custom import Component
-from langflow.inputs.inputs import IntInput, TextInput
+from langflow.inputs.inputs import IntInput, MessageTextInput
 from langflow.template.field.base import Output
 
 
 class MultipleOutputsComponent(Component):
     inputs = [
-        TextInput(display_name="Input", name="input"),
+        MessageTextInput(display_name="Input", name="input"),
         IntInput(display_name="Number", name="number"),
     ]
     outputs = [

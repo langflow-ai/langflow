@@ -188,7 +188,7 @@ export default function ChatMessage({
                           />
                         ) : (
                           <Markdown
-                            remarkPlugins={[remarkGfm, remarkMath]}
+                            remarkPlugins={[remarkGfm]}
                             rehypePlugins={[rehypeMathjax]}
                             className={cn(
                               "markdown prose flex flex-col word-break-break-word dark:prose-invert",
@@ -207,18 +207,19 @@ export default function ChatMessage({
                                 children,
                                 ...props
                               }) => {
-                                if ((children as string)!.length) {
-                                  if (children![0] === "▍") {
-                                    return (
-                                      <span className="form-modal-markdown-span">
-                                        ▍
-                                      </span>
-                                    );
+                                if (typeof children === "string") {
+                                  if ((children as string)!.length) {
+                                    if (children![0] === "▍") {
+                                      return (
+                                        <span className="form-modal-markdown-span">
+                                          ▍
+                                        </span>
+                                      );
+                                    }
+                                    children![0] = (
+                                      children![0] as string
+                                    ).replace("`▍`", "▍");
                                   }
-
-                                  children![0] = (
-                                    children![0] as string
-                                  ).replace("`▍`", "▍");
                                 }
 
                                 const match = /language-(\w+)/.exec(

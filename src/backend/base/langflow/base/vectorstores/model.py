@@ -73,13 +73,16 @@ class LCVectorStoreComponent(Component):
         """
         raise NotImplementedError("build_vector_store method must be implemented.")
 
-    def build_base_retriever(self) -> Retriever:
+    def build_base_retriever(self) -> Retriever:  # type: ignore[type-var]
         """
         Builds the BaseRetriever object.
         """
         vector_store = self.build_vector_store()
         if hasattr(vector_store, "as_retriever"):
-            return vector_store.as_retriever()
+            retriever = vector_store.as_retriever()
+            if self.status is None:
+                self.status = "Retriever built successfully."
+            return retriever
         else:
             raise ValueError(f"Vector Store {vector_store.__class__.__name__} does not have an as_retriever method.")
 

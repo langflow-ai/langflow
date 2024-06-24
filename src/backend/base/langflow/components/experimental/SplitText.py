@@ -1,8 +1,9 @@
 from typing import List
 
 from langchain_text_splitters import CharacterTextSplitter
+
 from langflow.custom import Component
-from langflow.io import HandleInput, IntInput, Output, TextInput
+from langflow.io import HandleInput, IntInput, MessageTextInput, Output
 from langflow.schema import Data
 from langflow.utils.util import unescape_string
 
@@ -32,7 +33,7 @@ class SplitTextComponent(Component):
             info="The maximum number of characters in each chunk.",
             value=1000,
         ),
-        TextInput(
+        MessageTextInput(
             name="separator",
             display_name="Separator",
             info="The character to split on. Defaults to newline.",
