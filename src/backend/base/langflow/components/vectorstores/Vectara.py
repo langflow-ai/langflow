@@ -5,11 +5,12 @@ from loguru import logger
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent
 from langflow.helpers.data import docs_to_data
-from langflow.io import HandleInput, IntInput, Output, SecretStrInput, StrInput, TextInput
+from langflow.io import HandleInput, IntInput, SecretStrInput, StrInput, TextInput
 from langflow.schema import Data
 
 if TYPE_CHECKING:
     from langchain_community.vectorstores import Vectara
+
 
 class VectaraVectorStoreComponent(LCVectorStoreComponent):
     """
@@ -56,9 +57,7 @@ class VectaraVectorStoreComponent(LCVectorStoreComponent):
         try:
             from langchain_community.vectorstores import Vectara
         except ImportError:
-            raise ImportError(
-                "Could not import Vectara. Please install it with `pip install langchain-community`."
-            )
+            raise ImportError("Could not import Vectara. Please install it with `pip install langchain-community`.")
 
         vectara = Vectara(
             vectara_customer_id=self.vectara_customer_id,
