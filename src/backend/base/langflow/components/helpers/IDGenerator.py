@@ -1,5 +1,5 @@
 import uuid
-from typing import Optional, Any,
+from typing import Any, Optional
 
 from langflow.custom import CustomComponent
 from langflow.schema.dotdict import dotdict
@@ -10,10 +10,7 @@ class UUIDGeneratorComponent(CustomComponent):
     description = "Generates a unique ID."
 
     def update_build_config(  # type: ignore
-        self,
-        build_config: dotdict,
-        field_value: Any,
-        field_name: Optional[str] = None,
+        self, build_config: dotdict, field_value: Any, field_name: Optional[str] = None
     ):
         if field_name == "unique_id":
             build_config[field_name]["value"] = str(uuid.uuid4())

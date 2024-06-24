@@ -1,4 +1,4 @@
-µfrom .ConditionalRouter import ConditionalRouterComponent
+from .ConditionalRouter import ConditionalRouterComponent
 from .FlowTool import FlowToolComponent
 from .Listen import ListenComponent
 from .Notify import NotifyComponent

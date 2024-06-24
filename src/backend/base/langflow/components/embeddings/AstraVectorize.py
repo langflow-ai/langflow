@@ -1,6 +1,6 @@
 from typing import Any
 from langflow.custom import Component
-from langflow.inputs.inputs import DictInput, SecretStrInput, StrInput, MessageTextInput
+from langflow.inputs.inputs import DictInput, SecretStrInput, MessageTextInput
 from langflow.template.field.base import Output
 
 
@@ -14,30 +14,30 @@ class AstraVectorize(Component):
         MessageTextInput(
             name="provider",
             display_name="Provider name",
-            info='The embedding provider to use.',
+            info="The embedding provider to use.",
         ),
         MessageTextInput(
             name="model_name",
             display_name="Model name",
-            info='The embedding model to use.',
+            info="The embedding model to use.",
         ),
         DictInput(
             name="authentication",
             display_name="Authentication",
-            info='Authentication parameters. Use the Astra Portal to add the embedding provider integration to your Astra organization.',
-            is_list=True
+            info="Authentication parameters. Use the Astra Portal to add the embedding provider integration to your Astra organization.",
+            is_list=True,
         ),
         SecretStrInput(
             name="provider_api_key",
             display_name="Provider API Key",
-            info='An alternative to the Astra Authentication that let you use directly the API key of the provider.'
+            info="An alternative to the Astra Authentication that let you use directly the API key of the provider.",
         ),
         DictInput(
             name="model_parameters",
             display_name="Model parameters",
-            info='Additional model parameters.',
+            info="Additional model parameters.",
             advanced=True,
-            is_list=True
+            is_list=True,
         ),
     ]
     outputs = [
@@ -51,7 +51,7 @@ class AstraVectorize(Component):
                 "provider": self.provider,
                 "modelName": self.model_name,
                 "authentication": self.authentication,
-                "parameters": self.model_parameters
+                "parameters": self.model_parameters,
             },
-            "collection_embedding_api_key": self.provider_api_key
+            "collection_embedding_api_key": self.provider_api_key,
         }
