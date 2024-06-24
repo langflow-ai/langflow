@@ -41,22 +41,55 @@ This flow allows you to chat with the **OpenAI** component via a **Prompt** comp
 Examine the **Prompt** component. The **Template** field instructs the LLM to `Answer the user as if you were a pirate.`
 This should be interesting...
 
+<ZoomableImage
+  alt="Prompt Component"
+  sources={{
+    light: "img/prompt-component.png",
+    dark: "img/prompt-component.png",
+  }}
+  style={{ width: "80%", margin: "20px auto" }}
+/>
+
 4. To create an environment variable for the **OpenAI** component, in the **OpenAI API Key** field, click the **Globe** button, and then click **Add New Variable**.
    1. In the **Variable Name** field, enter `openai_api_key`.
    2. In the **Value** field, paste your OpenAI API Key (`sk-...`).
    3. Click **Save Variable**.
 
-## Run the basic prompting flow
+<ZoomableImage
+  alt="Open AI Key"
+  sources={{
+    light: "img/open-ai-key.png",
+    dark: "img/open-ai-key.png",
+  }}
+  style={{ width: "80%", margin: "20px auto" }}
+/>
 
-1. Click the **Run** button.
-   The **Interaction Panel** opens, where you can converse with your bot.
-2. Type a message and press Enter.
-   The bot responds in a markedly piratical manner!
+## Run
+
+1. Click the **Playground** button on the control panel (bottom right side of the workspace). This is where you can interact with your AI.
+2. Type a message and press Enter. The bot should respond in a markedly piratical manner!
 
 ## Modify the prompt for a different result
 
-1. To modify your prompt results, in the **Prompt** template, click the **Template** field.
-   The **Edit Prompt** window opens.
-2. Change `Answer the user as if you were a pirate` to a different character, perhaps `Answer the user as if you were Harold Abelson.`
-3. Run the basic prompting flow again.
-   The response will be markedly different.
+1. To modify your prompt results, in the **Prompt** template, click the **Template** field. The **Edit Prompt** window opens.
+2. Change `Answer the user as if you were a pirate` to a different character, perhaps `Answer the user as if you were Hermione Granger.`
+
+<ZoomableImage
+  alt="Changed Prompt"
+  sources={{
+    light: "img/altered-prompt.png",
+    dark: "img/altered-prompt.png",
+  }}
+  style={{ width: "80%", margin: "20px auto" }}
+/>
+
+1. Run the workflow again. The response will be markedly different.
+
+<ZoomableImage
+  alt="Playground with Changed Prompt"
+  sources={{
+    light: "img/playground-changed-prompt.png",
+    dark: "img/playground-changed-prompt.png",
+  }}
+  style={{ width: "80%", margin: "20px auto" }}
+/>
