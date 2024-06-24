@@ -4,11 +4,11 @@ import ZoomableImage from "/src/theme/ZoomableImage.js";
 import ReactPlayer from "react-player";
 import Admonition from "@theme/Admonition";
 
-# 🖥️ Langflow Workspace
+# 🎨 Langflow Workspace
 
 ## The Langflow Workspace Interface
 
-The Langflow Workspace interface is designed to facilitate the creation, management, and execution of flows. It features a minimalistic design with various menus and options that are accessible for building and customizing a chatbot.
+The **Langflow Workspace** is where you assemble new flows and create AIs by connecting and running components. To get started, click on **New Project**. You can either build a flow from scratch (Blank Flow) or choose from pre-built starter examples.
 
 ### Sidebar Menu
 
@@ -27,43 +27,35 @@ The large central area where users can visually assemble and connect components 
 In the top navigation bar, the dropdown menu labeled with the project name offers several management and customization options for the current flow in the Langflow Workspace.
 
 <ZoomableImage
-  alt="Docusaurus themed image"
+  alt="Options Dropdown"
   sources={{
-    light: useBaseUrl("img/topnav.png"),
-    dark: useBaseUrl("img/topnav.png"),
+    light: useBaseUrl("img/menu-options.png"),
+    dark: useBaseUrl("img/menu-options.png"),
   }}
-  style={{ width: "40%", margin: "20px auto" }}
+  style={{ width: "100%", margin: "20px auto" }}
 />
 
-* **New**: Create a new flow from scratch.
+- **New**: Create a new flow from scratch.
 
-* **Settings**: Adjust settings specific to the current flow, such as its Name, Description, and Endpoint Name.
+- **Settings**: Adjust settings specific to the current flow, such as its Name, Description, and Endpoint Name.
 
-* **Logs**: View logs for the current project, including execution history, errors, and other runtime events.
+- **Logs**: View logs for the current project, including execution history, errors, and other runtime events.
 
-* **Import**: Import a flow or component from a JSON file into the Workspace.
+- **Import**: Import a flow or component from a JSON file into the Workspace.
 
-* **Export**: Export the current flow as a JSON file.
+- **Export**: Export the current flow as a JSON file.
 
-* **Undo (⌘Z)**: Revert the last action taken in the project.
+- **Undo (⌘Z)**: Revert the last action taken in the project.
 
-* **Redo (⌘Y)**: Reapply a previously undone action.
+- **Redo (⌘Y)**: Reapply a previously undone action.
 
-* **Refresh All**: Refresh all components and data within the Workspace.
+- **Refresh All**: Refresh all components and delete cache.
 
 ## Control Panel
 
-- **Star**: Located in the top-right corner, allowing users to star or favorite the project for easy access.
 - **Playground**: Button that executes the current flow in the workspace.
 - **API**: Provides API access details and integration options for the current flow.
-- **Share**: Allows users to share their project or flow with others, providing options for collaboration and review.
-
-## Utility Buttons
-
-- **Plus (+)**: Located at the bottom of the sidebar, used to add new components to the workspace.
-- **Settings (gear icon)**: Provides access to settings for the Langflow Workspace, where users can customize their experience or manage account settings.
-
-The **Langflow Workspace** is where you assemble new flows by connecting components and run them. To get started, click on **New Project**. You can either build a flow from scratch (Blank Flow) or choose from pre-built starter examples.
+- **Share**: Allows users to share their AI with others.
 
 ## Flows & Components
 
@@ -85,14 +77,16 @@ For example, the [Basic Prompting](../starter-projects/basic-prompting) flow is 
     light: useBaseUrl("img/basic-prompting.png"),
     dark: useBaseUrl("img/basic-prompting.png"),
   }}
-  style={{ width: "100%", maxWidth: "800px", margin: "0 auto" }}
+  style={{ width: "100%", maxWidth: "800px", margin: "20px auto" }}
 />
+
+{" "}
 
 In this flow, the **OpenAI Model** receives input (left side) and produces output (right side) - in this case, receiving input from the **Chat Input** and **Prompt** components and passing the output to the **Chat Output** component.
 
 ## Component
 
-Components are the building blocks of flows. They consist of inputs, outputs, and parameters that define their functionality. These elements provide a convenient and straightforward way to compose LLM-based applications. Learn more about components and how they work in the [Components Section](../components).
+Components are the building blocks of flows. They consist of inputs, outputs, and parameters that define their functionality. These elements provide a convenient and straightforward way to compose LLM-based applications. Learn more about components and how they work below.
 
 <div style={{ marginBottom: "20px" }}>
   During the flow creation process, you will notice handles (colored circles)
@@ -101,125 +95,101 @@ Components are the building blocks of flows. They consist of inputs, outputs, an
   Hover over a handle to see connection details.
 </div>
 
-<div style={{ marginBottom: "20px" }}>
-For example, if you select a <code>ConversationChain</code> component, you
-will see orange <span style={{ color: "orange" }}>o</span> and purple{" "}
-
-  <span style={{ color: "purple" }}>o</span> input handles. They indicate that
-  this component accepts an LLM and a Memory component as inputs. The red
-  asterisk <span style={{ color: "red" }}>*</span> means that at least one input
-  of that type is required.
-</div>
-
 {" "}
 
 <ZoomableImage
-  alt="Docusaurus themed image"
+  alt="Single Component"
   sources={{
-    light: useBaseUrl("img/single-component-light.png"),
-    dark: useBaseUrl("img/single-component-dark.png"),
+    light: useBaseUrl("img/single-component.png"),
+    dark: useBaseUrl("img/single-component.png"),
   }}
-  style={{ width: "40%", margin: "20px auto" }}
+  style={{ width: "100%", margin: "20px auto" }}
 />
 
 <div style={{ marginBottom: "20px" }}>
 
-In the top right corner of the component, you'll find the component status icon (![Status icon](/logos/playbutton.svg)).
+{/\* On the top right corner of the component, you'll find the component status icon (![Status icon](/logos/playbutton.svg)).
 Build the flow by clicking the **![Playground icon](/logos/botmessage.svg)Playground** at the bottom right of the workspace.
 
 Once the validation is complete, the status of each validated component should turn green (![Status icon](/logos/greencheck.svg)).
-To debug, hover over the component status to see the outputs.
+To debug, hover over the component status to see the outputs. \*/}
 
 </div>
 
-### Multiple outputs
+{/\* ### Multiple outputs
 
-A component can have multiple outputs. For example, this one Chat Input component routes through three prompt chains, and returns three different responses to a single question in the Playground.
-
-<ZoomableImage
-  alt="Docusaurus themed image"
-  sources={{
-    light: useBaseUrl("img/multiple-outputs.png"),
-    dark: useBaseUrl("img/multiple-outputs.png"),
-  }}
-  style={{ width: "40%", margin: "20px auto" }}
-/>
+A component can have multiple outputs. For example, this one Chat Input component routes through three prompt chains, and returns three different responses to a single question in the Playground. \*/}
 
 ### Output Preview
 
-Langflow now includes an output visualizer for components that opens a pop-up screen. This allows you to easily inspect and monitor transmissions between components, providing instant feedback on your workflows.
+Langflow includes an output visualizer for components that opens a pop-up screen. This allows you to easily inspect and monitor transmissions between components, providing instant feedback on your workflows.
 
-### Component Parameters
+<ZoomableImage
+  alt="Single Component"
+  sources={{
+    light: useBaseUrl("img/inspect-output.png"),
+    dark: useBaseUrl("img/inspect-output.png"),
+  }}
+  style={{ width: "60%", margin: "20px auto" }}
+/>
 
-Langflow components can be edited by clicking the component settings button.
+### Component Menu
+
+Each component is a little unique, but they will all have a menu bar on top that looks something like this.
+
+<ZoomableImage
+  alt="Component Menu"
+  sources={{
+    light: useBaseUrl("img/component-menu.png"),
+    dark: useBaseUrl("img/component-menu.png"),
+  }}
+  style={{ width: "70%", margin: "10px auto" }}
+/>
+
+It consists of options such as:
+
+**Code** - displays component's Python code. You can modify the code and save it.
+
+**Advanced** - See and adjust all parameters of a component.
+
+**Freeze** - After a component runs, lock its previous output state to prevent it from re-running.
+
+Click **All** (the "..." button) to see all options.
 
 <div
   style={{ marginBottom: "20px", display: "flex", justifyContent: "center" }}
+>
+  <ReactPlayer playing controls url="/videos/langflow_parameters.mp4" />
+</div>
+
+### Advanced Settings
+
+Langflow components can be edited by clicking the **Advanced Settings** button.
+
+<div
+  style={{
+    marginBottom: "30px",
+    marginTop: "30px",
+    display: "flex",
+    justifyContent: "center",
+  }}
 >
   <ReactPlayer playing controls url="/videos/langflow_parameters.mp4" />
 </div>
 
 Hide parameters with the **SHOW** button to reduce complexity and keep the workspace clean and intuitive for experimentation.
 
-Double-click the component name to rename it.
+You can also double-click a component's name and description to modify those. Component descriptions accept markdown syntax.
 
-### Component menu
+### Group Components
 
-Each component is a little unique, but they will all have a menu bar on top that looks something like this.
-The menu options are **Code**, **Advanced Settings**, **Freeze**, and **More**.
+Multiple components can be grouped into a single component for reuse. This is useful when combining large flows into single components (like RAG with a vector database, for example) and saving space.
 
-<ZoomableImage
-  alt="Docusaurus themed image"
-  sources={{
-    light: useBaseUrl("img/chat-input-light.png"),
-    dark: useBaseUrl("img/chat-input-dark.png"),
-  }}
-  style={{ width: "40%", margin: "20px auto" }}
-/>
-
-### Code menu
-
-The **Code** button displays your component's Python code.
-You can modify the code and save it.
-
-### Advanced Settings
-
-Modify the parameters of your component.
-
-#### Freeze
-
-After a component runs, lock its previous output state to prevent it from re-running.
-
-This avoids spending tokens when consistent output is expected.
-
-#### More
-
-**Code** - Modify your component's Python code.
-**Advanced** - modify the parameters of your component.
-
-<div
-  style={{ marginBottom: "20px", display: "flex", justifyContent: "center" }}
->
-  <ReactPlayer playing controls url="/videos/langflow_parameters.mp4" />
-</div>
-
-**Copy** - copy your component.
-
-**Share** - share your component to the Langflow store.
-
-**Docs** - view documentation for your component.
-
-**Delete** - delete your component.
-
-### Group multiple components
-
-Components without input or output nodes can be grouped into a single component for reuse.
-This is useful for combining large flows into single components (like RAG with a vector database, for example) and saving space.
-
-1. Hold **Shift** and drag to select the **Prompt** and **OpenAI** components.
+1. Hold **Shift** and drag to select components.
 2. Select **Group**.
 3. The components merge into a single component.
-4. To save the new component, select **Save**. It can now be reused from the **Saved** components folder.
+4. Double click name and description to change them.
+5. Save your grouped component to in the sidebar for later use!
 
 ### Update component version
 
@@ -227,19 +197,29 @@ A component's state is stored in a database, while sidebar components are like s
 
 As soon as you drag a component from the sidebar to the workspace, the two components are no longer in parity.
 
-The component will keep the version number it was initilized to the workspace with. Click the **Update Component** icon to bring the component up to the `latest` version.
+The component will keep the version number it was initilized to the workspace with. Click the **Update Component** icon (exclamation mark) to bring the component up to the `latest` version. This will change the code of the component in place so you can validate that the component was updated by checking its Python code before and after updating it.
+
+<ZoomableImage
+  alt="Update Component"
+  sources={{
+    light: useBaseUrl("img/component-update.png"),
+    dark: useBaseUrl("img/component-update.png"),
+  }}
+  style={{ width: "80%", margin: "20px auto" }}
+/>
 
 ## Playground
 
-Run your flow by clicking the **![Playground icon](/logos/botmessage.svg)Playground** button.
+Run your AI by clicking the **![Playground icon](/logos/botmessage.svg)Playground** button.
 
 For more, see [Playground](../administration/playground).
 
 ## API
 
-The **API** button opens the API window, where Langflow presents code for integrating your flow into external applications.
+{/* rsn */}
+The **API** session presents code templates for integrating your flow into external applications.
 
-Modify the call's parameters in the **Tweaks** window, click the **Copy Code** or **Download** buttons, and paste your code where you want to use it.
+{/* Modify parameters in the **Tweaks** window, click **Copy Code** or **Download** buttons, and paste your code where you want to use it. */}
 
 <ZoomableImage
   alt="Docusaurus themed image"
@@ -250,9 +230,9 @@ Modify the call's parameters in the **Tweaks** window, click the **Copy Code** o
   style={{ width: "60%", margin: "20px auto" }}
 />
 
-### curl
+### cURL
 
-The **curl** tab displays sample code for posting a query to your flow.
+The **cURL** tab displays sample code for posting a query to your flow.
 Modify the `input_value` to change your input message.
 Copy the code and run it to post a query to your flow and get the result.
 
