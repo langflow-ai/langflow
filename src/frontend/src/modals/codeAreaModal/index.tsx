@@ -102,9 +102,9 @@ export default function CodeAreaModal({
   function processDynamicField() {
     postCustomComponent(code, nodeClass!)
       .then((apiReturn) => {
-        const { data } = apiReturn;
-        if (data) {
-          setNodeClass(data, code);
+        const { data, type } = apiReturn.data;
+        if (data && type) {
+          setNodeClass(data, code, type);
           setError({ detail: { error: undefined, traceback: undefined } });
           setOpen(false);
         }
