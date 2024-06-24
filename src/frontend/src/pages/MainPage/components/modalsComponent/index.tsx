@@ -5,6 +5,7 @@ import DeleteConfirmationModal from "../../../../modals/deleteConfirmationModal"
 import FoldersModal from "../../../../modals/foldersModal";
 import NewFlowModal from "../../../../modals/newFlowModal";
 import { cn } from "../../../../utils/utils";
+import { useTranslation } from "react-i18next";
 
 interface ModalsProps {
   openModal: boolean;
@@ -40,7 +41,7 @@ const ModalsComponent = ({
         }}
         description="folder"
         note={
-          "Deleting the selected folder will remove all associated flows and components."
+          useTranslation().t("Deleting the selected folder will remove all associated flows and components.")
         }
       >
         <Button variant="ghost" size="icon" className={"whitespace-nowrap"}>

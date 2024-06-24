@@ -15,6 +15,8 @@ import {
   PopoverContent,
   PopoverContentWithoutPortal,
 } from "../../../ui/popover";
+import { useTranslation } from "react-i18next";
+
 const CustomInputPopover = ({
   id,
   refInput,
@@ -42,6 +44,7 @@ const CustomInputPopover = ({
   handleKeyDown,
   showOptions,
 }) => {
+  const { t } = useTranslation();
   const setErrorData = useAlertStore.getState().setErrorData;
   const PopoverContentInput = editNode
     ? PopoverContent
@@ -105,7 +108,7 @@ const CustomInputPopover = ({
               : "",
             className!,
           )}
-          placeholder={password && editNode ? "Key" : placeholder}
+          placeholder={password && editNode ? t("Key") : t(placeholder)}
           onChange={handleInputChange}
           onKeyDown={(e) => {
             handleKeyDown(e);

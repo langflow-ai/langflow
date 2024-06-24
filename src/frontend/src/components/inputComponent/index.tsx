@@ -76,7 +76,7 @@ export default function InputComponent({
               password && !editNode ? "pr-10" : "",
               className!,
             )}
-            placeholder={password && editNode ? "Key" : placeholder}
+            placeholder={password && editNode ? t("Key") : t(placeholder)}
             onChange={(e) => {
               if (onChangeFolderName) {
                 return onChangeFolderName(e);
@@ -116,7 +116,7 @@ export default function InputComponent({
               disabled={disabled}
               setShowOptions={setShowOptions}
               required={required}
-              placeholder={placeholder}
+              placeholder={t(placeholder)}
               blurOnEnter={blurOnEnter}
               optionsPlaceholder={t(optionsPlaceholder)}
               className={className}
@@ -143,7 +143,7 @@ export default function InputComponent({
               password={password}
               pwdVisible={pwdVisible}
               editNode={editNode}
-              placeholder={placeholder}
+              placeholder={t(placeholder)}
               blurOnEnter={blurOnEnter}
               options={options}
               optionsPlaceholder={t(optionsPlaceholder)}

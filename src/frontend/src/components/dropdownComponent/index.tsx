@@ -18,6 +18,7 @@ import {
   PopoverContentWithoutPortal,
   PopoverTrigger,
 } from "../ui/popover";
+import { useTranslation } from "react-i18next";
 
 export default function Dropdown({
   disabled,
@@ -29,6 +30,7 @@ export default function Dropdown({
   id = "",
   children,
 }: DropDownComponentType): JSX.Element {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(children ? true : false);
 
   const refButton = useRef<HTMLButtonElement>(null);
@@ -65,7 +67,7 @@ export default function Dropdown({
                     value !== "" &&
                     options.find((option) => option === value)
                       ? options.find((option) => option === value)
-                      : "Choose an option..."}
+                      : t("Choose an option...")}
                   </span>
 
                   <ForwardedIconComponent
@@ -86,7 +88,7 @@ export default function Dropdown({
               }
             >
               <Command>
-                <CommandInput placeholder="Search options..." className="h-9" />
+                <CommandInput placeholder={t("Search options...")} className="h-9" />
                 <CommandList>
                   <CommandEmpty>No values found.</CommandEmpty>
                   <CommandGroup defaultChecked={false}>
@@ -121,12 +123,12 @@ export default function Dropdown({
           {(!isLoading && (
             <div>
               <span className="text-sm italic">
-                No parameters are available for display.
+                {t("No parameters are available for display.")}
               </span>
             </div>
           )) || (
             <div>
-              <span className="text-sm italic">Loading...</span>
+              <span className="text-sm italic">t("Loading...")</span>
             </div>
           )}
         </>

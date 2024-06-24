@@ -26,6 +26,7 @@ import { useDarkStore } from "../../stores/darkStore";
 import { CodeErrorDataTypeAPI } from "../../types/api";
 import { codeAreaModalPropsType } from "../../types/components";
 import BaseModal from "../baseModal";
+import { useTranslation } from "react-i18next";
 
 export default function CodeAreaModal({
   value,
@@ -38,6 +39,7 @@ export default function CodeAreaModal({
   open: myOpen,
   setOpen: mySetOpen,
 }: codeAreaModalPropsType): JSX.Element {
+  const { t } = useTranslation();
   const [code, setCode] = useState(value);
   const [open, setOpen] =
     mySetOpen !== undefined && myOpen !== undefined
@@ -149,8 +151,8 @@ export default function CodeAreaModal({
   return (
     <BaseModal open={open} setOpen={setOpen}>
       <BaseModal.Trigger>{children}</BaseModal.Trigger>
-      <BaseModal.Header description={CODE_PROMPT_DIALOG_SUBTITLE}>
-        <span className="pr-2"> {EDIT_CODE_TITLE} </span>
+      <BaseModal.Header description={t(CODE_PROMPT_DIALOG_SUBTITLE)}>
+        <span className="pr-2"> {t(EDIT_CODE_TITLE)} </span>
         <IconComponent
           name="prompts"
           className="h-6 w-6 pl-1 text-primary"
@@ -208,7 +210,7 @@ export default function CodeAreaModal({
               id="checkAndSaveBtn"
               disabled={readonly}
             >
-              Check & Save
+              {t("Check & Save")}
             </Button>
           </div>
         </div>

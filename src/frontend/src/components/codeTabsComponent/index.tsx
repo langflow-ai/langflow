@@ -45,6 +45,7 @@ import ShadTooltip from "../shadTooltipComponent";
 import { Button } from "../ui/button";
 import { Label } from "../ui/label";
 import { Switch } from "../ui/switch";
+import { useTranslation } from "react-i18next";
 
 export default function CodeTabsComponent({
   flow,
@@ -57,6 +58,7 @@ export default function CodeTabsComponent({
   activeTweaks,
   allowExport = false,
 }: codeTabsPropsType) {
+  const { t } = useTranslation();
   const [isCopied, setIsCopied] = useState<Boolean>(false);
   const [data, setData] = useState(flow ? flow["data"]!["nodes"] : null);
   const dark = useDarkStore((state) => state.dark);
@@ -116,7 +118,7 @@ export default function CodeTabsComponent({
                 key={index}
                 value={index.toString()}
               >
-                {tab.name}
+                {t(tab.name)}
               </TabsTrigger>
             ))}
           </TabsList>
@@ -142,7 +144,7 @@ export default function CodeTabsComponent({
                 )}
                 htmlFor="tweaks-switch"
               >
-                Tweaks
+                {t("Tweaks")}
               </Label>
             </div>
           )}
@@ -177,7 +179,7 @@ export default function CodeTabsComponent({
               {tab.description && (
                 <div
                   className="mb-2 w-full text-left text-sm"
-                  dangerouslySetInnerHTML={{ __html: tab.description }}
+                  dangerouslySetInnerHTML={{ __html: t(tab.description) }}
                 ></div>
               )}
               <SyntaxHighlighter
@@ -216,10 +218,10 @@ export default function CodeTabsComponent({
                               <TableHeader className="h-10 border-input text-xs font-medium text-ring">
                                 <TableRow className="">
                                   <TableHead className="h-7 text-center">
-                                    PARAM
+                                    {t("PARAM")}
                                   </TableHead>
                                   <TableHead className="h-7 p-0 text-center">
-                                    VALUE
+                                    {t("VALUE")}
                                   </TableHead>
                                 </TableRow>
                               </TableHeader>

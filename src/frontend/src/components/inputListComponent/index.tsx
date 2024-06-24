@@ -6,6 +6,7 @@ import { classNames, cn } from "../../utils/utils";
 import IconComponent from "../genericIconComponent";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
+import { useTranslation } from "react-i18next";
 
 export default function InputListComponent({
   value,
@@ -15,6 +16,7 @@ export default function InputListComponent({
   componentName,
   playgroundDisabled,
 }: InputListComponentType): JSX.Element {
+  const { t } = useTranslation();
   useEffect(() => {
     if (disabled && value.length > 0 && value[0] !== "") {
       onChange([""]);
@@ -43,7 +45,7 @@ export default function InputListComponent({
               type="text"
               value={singleValue}
               className={editNode ? "input-edit-node" : ""}
-              placeholder="Type something..."
+              placeholder={t("Type something...")}
               onChange={(event) => {
                 let newInputList = _.cloneDeep(value);
                 newInputList[idx] = event.target.value;

@@ -19,6 +19,7 @@ import IOFileInput from "./components/FileInput";
 import IoJsonInput from "./components/JSONInput";
 import CsvSelect from "./components/csvSelect";
 import IOKeyPairInput from "./components/keyPairInput";
+import { useTranslation } from "react-i18next";
 
 export default function IOFieldView({
   type,
@@ -26,6 +27,7 @@ export default function IOFieldView({
   fieldId,
   left,
 }: IOFieldViewProps): JSX.Element | undefined {
+  const { t } = useTranslation();
   const nodes = useFlowStore((state) => state.nodes);
   const setNode = useFlowStore((state) => state.setNode);
   const flowPool = useFlowStore((state) => state.flowPool);
@@ -268,7 +270,7 @@ export default function IOFieldView({
                 className={`w-full custom-scroll ${
                   left ? "min-h-32" : "h-full"
                 }`}
-                placeholder={"Empty"}
+                placeholder={t("Empty")}
                 // update to real value on flowPool
                 value={
                   (flowPool[node.id] ?? [])[

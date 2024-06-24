@@ -9,6 +9,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "../../components/ui/dialog";
+import { useTranslation } from "react-i18next";
 
 export default function DeleteConfirmationModal({
   children,
@@ -27,6 +28,7 @@ export default function DeleteConfirmationModal({
   setOpen?: (open: boolean) => void;
   note?: string;
 }) {
+  const { t } = useTranslation();
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild={asChild} tabIndex={-1}>
@@ -36,7 +38,7 @@ export default function DeleteConfirmationModal({
         <DialogHeader>
           <DialogTitle>
             <div className="flex items-center">
-              <span className="pr-2">Delete</span>
+              <span className="pr-2">{t("Delete")}</span>
               <Trash2
                 className="h-6 w-6 pl-1 text-foreground"
                 strokeWidth={1.5}
@@ -45,15 +47,15 @@ export default function DeleteConfirmationModal({
           </DialogTitle>
         </DialogHeader>
         <span>
-          Are you sure you want to delete the selected{" "}
-          {description ?? "component"}?<br></br>
+          {t("Are you sure you want to delete the selected")}{" "}
+          {t(description ?? "component")}?<br></br>
           {note && (
             <>
               {note}
               <br></br>
             </>
           )}
-          Note: This action is irreversible.
+          {t("Note: This action is irreversible.")}
         </span>
         <DialogFooter>
           <DialogClose asChild>
@@ -62,7 +64,7 @@ export default function DeleteConfirmationModal({
               className="mr-1"
               variant="outline"
             >
-              Cancel
+              {t("Cancel")}
             </Button>
           </DialogClose>
           <DialogClose asChild>
@@ -73,7 +75,7 @@ export default function DeleteConfirmationModal({
                 onConfirm(e);
               }}
             >
-              Delete
+              {t("Delete")}
             </Button>
           </DialogClose>
         </DialogFooter>

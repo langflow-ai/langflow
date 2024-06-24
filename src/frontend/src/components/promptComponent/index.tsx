@@ -5,6 +5,7 @@ import GenericModal from "../../modals/genericModal";
 import { PromptAreaComponentType } from "../../types/components";
 import IconComponent from "../genericIconComponent";
 import { Button } from "../ui/button";
+import { useTranslation } from "react-i18next";
 
 export default function PromptAreaComponent({
   field_name,
@@ -17,6 +18,7 @@ export default function PromptAreaComponent({
   id = "",
   readonly = false,
 }: PromptAreaComponentType): JSX.Element {
+  const { t } = useTranslation();
   useEffect(() => {
     if (disabled && value !== "") {
       onChange("", true);
@@ -49,7 +51,7 @@ export default function PromptAreaComponent({
                     " primary-input text-muted-foreground"
               }
             >
-              {value !== "" ? value : "Type your prompt here..."}
+              {value !== "" ? value : t("Type your prompt here...")}
             </span>
             {!editNode && (
               <IconComponent

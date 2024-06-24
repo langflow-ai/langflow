@@ -5,6 +5,7 @@ import {
   handleOnlyIntegerInput,
 } from "../../utils/reactflowUtils";
 import { Input } from "../ui/input";
+import { useTranslation } from "react-i18next";
 
 export default function IntComponent({
   value,
@@ -14,6 +15,7 @@ export default function IntComponent({
   editNode = false,
   id = "",
 }: IntComponentType): JSX.Element {
+  const { t } = useTranslation();
   const min = -Infinity;
 
   // Clear component state
@@ -43,7 +45,7 @@ export default function IntComponent({
         value={value ?? ""}
         className={editNode ? "input-edit-node" : ""}
         disabled={disabled}
-        placeholder={editNode ? "Integer number" : "Type an integer number"}
+        placeholder={editNode ? t("Integer number") : t("Type an integer number")}
         onChange={(event) => {
           onChange(event.target.value);
         }}

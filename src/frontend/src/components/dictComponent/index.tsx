@@ -4,6 +4,7 @@ import { DictComponentType } from "../../types/components";
 import DictAreaModal from "../../modals/dictAreaModal";
 import { classNames } from "../../utils/utils";
 import { Input } from "../ui/input";
+import { useTranslation } from "react-i18next";
 
 export default function DictComponent({
   value = [],
@@ -13,7 +14,7 @@ export default function DictComponent({
   id = "",
 }: DictComponentType): JSX.Element {
   // Create a reference to the value
-
+  const { t } = useTranslation();
   useEffect(() => {
     if (disabled) {
       onChange({});
@@ -44,7 +45,7 @@ export default function DictComponent({
                   ? "input-edit-node input-disable pointer-events-none cursor-pointer"
                   : "input-disable pointer-events-none cursor-pointer"
               }
-              placeholder={disabled ? "" : "Click to edit your dictionary..."}
+              placeholder={disabled ? "" : t("Click to edit your dictionary...")}
               data-testid="dict-input"
             />
           </DictAreaModal>

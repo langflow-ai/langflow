@@ -13,6 +13,7 @@ import IconComponent from "../../components/genericIconComponent";
 import { CODE_DICT_DIALOG_SUBTITLE } from "../../constants/constants";
 import { useDarkStore } from "../../stores/darkStore";
 import BaseModal from "../baseModal";
+import { useTranslation } from "react-i18next";
 
 export default function DictAreaModal({
   children,
@@ -25,6 +26,7 @@ export default function DictAreaModal({
   value: Object;
   disabled?: boolean;
 }): JSX.Element {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const isDark = useDarkStore((state) => state.dark);
   const [myValue, setMyValue] = useState(value);
@@ -50,10 +52,10 @@ export default function DictAreaModal({
     >
       <BaseModal.Trigger className="h-full">{children}</BaseModal.Trigger>
       <BaseModal.Header
-        description={onChange ? CODE_DICT_DIALOG_SUBTITLE : null}
+        description={onChange ? t(CODE_DICT_DIALOG_SUBTITLE) : null}
       >
         <span className="pr-2">
-          {onChange ? "Edit Dictionary" : "View Dictionary"}
+          {onChange ? t("Edit Dictionary") : t("View Dictionary")}
         </span>
         <IconComponent
           name="BookMarked"

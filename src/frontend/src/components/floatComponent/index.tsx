@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { FloatComponentType } from "../../types/components";
 import { handleKeyDown } from "../../utils/reactflowUtils";
 import { Input } from "../ui/input";
+import { useTranslation } from "react-i18next";
 
 export default function FloatComponent({
   value,
@@ -10,6 +11,7 @@ export default function FloatComponent({
   rangeSpec,
   editNode = false,
 }: FloatComponentType): JSX.Element {
+  const { t } = useTranslation();
   const step = rangeSpec?.step ?? 0.1;
   const min = rangeSpec?.min ?? -2;
   const max = rangeSpec?.max ?? 2;
@@ -41,8 +43,8 @@ export default function FloatComponent({
         className={editNode ? "input-edit-node" : ""}
         placeholder={
           editNode
-            ? `Enter a value between ${min} and ${max}`
-            : `Enter a value between ${min} and ${max}`
+            ? `${t("Enter a value between")} ${min} ${t("and")} ${max}`
+            : `${t("Enter a value between")} ${min} ${t("and")} ${max}`
         }
         onChange={(event) => {
           onChange(event.target.value);

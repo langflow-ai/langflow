@@ -25,6 +25,7 @@ import BaseModal from "../baseModal";
 import ConfirmationModal from "../confirmationModal";
 import ExportModal from "../exportModal";
 import getTagsIds from "./utils/get-tags-ids";
+import { useTranslation } from "react-i18next";
 
 export default function ShareModal({
   component,
@@ -41,6 +42,7 @@ export default function ShareModal({
   setOpen?: (open: boolean) => void;
   disabled?: boolean;
 }): JSX.Element {
+  const { t } = useTranslation();
   const version = useDarkStore((state) => state.version);
   const hasStore = useStoreStore((state) => state.hasStore);
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
@@ -220,11 +222,11 @@ export default function ShareModal({
           {children ? children : <></>}
         </BaseModal.Trigger>
         <BaseModal.Header
-          description={`Publish ${
+          description={t(`Publish ${
             is_component ? "your component" : "workflow"
-          } to the Langflow Store.`}
+          } to the Langflow Store.`)}
         >
-          <span className="pr-2">Share</span>
+          <span className="pr-2">{t("Share")}</span>
           <IconComponent
             name="Share3"
             className="-m-0.5 h-6 w-6 text-foreground"
@@ -254,18 +256,17 @@ export default function ShareModal({
               data-testid="public-checkbox"
             />
             <label htmlFor="public" className="export-modal-save-api text-sm">
-              Set {nameComponent} status to public
+              {t(`Set ${nameComponent} status to public`)}
             </label>
           </div>
           <span className="text-xs text-destructive">
-            <b>Attention:</b> API keys in specified fields are automatically
-            removed upon sharing.
+            <b>{t("Attention")}:</b> {t("API keys in specified fields are automatically removed upon sharing.")}
           </span>
         </BaseModal.Content>
 
         <BaseModal.Footer
           submit={{
-            label: `Share ${is_component ? " Component" : " Flow"}`,
+            label: `${t("Share")} ${t(is_component ? "Component" : "Flow")}`,
             loading: loadingNames,
           }}
         >
@@ -296,7 +297,7 @@ export default function ShareModal({
                 }}
               >
                 <IconComponent name="Download" className="h-4 w-4" />
-                Export
+                {t("Export")}
               </Button>
             )}
           </>

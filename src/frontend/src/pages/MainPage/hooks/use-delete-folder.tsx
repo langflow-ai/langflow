@@ -1,6 +1,7 @@
 import useAlertStore from "../../../stores/alertStore";
 import { useFolderStore } from "../../../stores/foldersStore";
 import { deleteFolder, getFolderById } from "../services";
+import { useTranslation } from "react-i18next";
 
 const useDeleteFolder = ({ navigate }) => {
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
@@ -9,11 +10,12 @@ const useDeleteFolder = ({ navigate }) => {
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
   const getFoldersApi = useFolderStore((state) => state.getFoldersApi);
 
+  const { t } = useTranslation();
   const handleDeleteFolder = () => {
     deleteFolder(folderToEdit?.id!)
       .then(() => {
         setSuccessData({
-          title: "Folder deleted successfully.",
+          title: t("Folder deleted successfully."),
         });
         getFolderById(myCollectionId!);
         getFoldersApi(true);
@@ -22,7 +24,7 @@ const useDeleteFolder = ({ navigate }) => {
       .catch((err) => {
         console.error(err);
         setErrorData({
-          title: "Error deleting folder.",
+          title: t("Error deleting folder."),
         });
       });
   };

@@ -27,6 +27,7 @@ import { handleKeyDown } from "../../utils/reactflowUtils";
 import { classNames } from "../../utils/utils";
 import BaseModal from "../baseModal";
 import varHighlightHTML from "./utils/var-highlight-html";
+import { useTranslation } from "react-i18next";
 
 export default function GenericModal({
   field_name = "",
@@ -42,6 +43,7 @@ export default function GenericModal({
   id = "",
   readonly = false,
 }: genericModalPropsType): JSX.Element {
+  const { t } = useTranslation();
   const [myButtonText] = useState(buttonText);
   const [myModalTitle] = useState(modalTitle);
   const [modalOpen, setModalOpen] = useState(false);
@@ -190,10 +192,10 @@ export default function GenericModal({
         description={(() => {
           switch (myModalTitle) {
             case "Edit Text":
-              return TEXT_DIALOG_SUBTITLE;
+              return t(TEXT_DIALOG_SUBTITLE);
 
             case "Edit Prompt":
-              return PROMPT_DIALOG_SUBTITLE;
+              return t(PROMPT_DIALOG_SUBTITLE);
 
             default:
               return null;
@@ -201,7 +203,7 @@ export default function GenericModal({
         })()}
       >
         <span className="pr-2" data-testid="modal-title">
-          {myModalTitle}
+          {t(myModalTitle)}
         </span>
         <IconComponent
           name={myModalTitle === "Edit Prompt" ? "TerminalSquare" : "FileText"}
@@ -226,7 +228,7 @@ export default function GenericModal({
                 setInputValue(event.target.value);
                 checkVariables(event.target.value);
               }}
-              placeholder={EDIT_TEXT_PLACEHOLDER}
+              placeholder={t(EDIT_TEXT_PLACEHOLDER)}
               onKeyDown={(e) => {
                 handleKeyDown(e, inputValue, "");
               }}
@@ -248,7 +250,7 @@ export default function GenericModal({
               onChange={(event) => {
                 setInputValue(event.target.value);
               }}
-              placeholder={EDIT_TEXT_PLACEHOLDER}
+              placeholder={t(EDIT_TEXT_PLACEHOLDER)}
               onKeyDown={(e) => {
                 handleKeyDown(e, value, "");
               }}
@@ -276,7 +278,7 @@ export default function GenericModal({
                       className="flex h-4 w-4 text-primary"
                     />
                     <span className="text-md font-semibold text-primary">
-                      Prompt Variables:
+                      {t("Prompt Variables")}:
                     </span>
 
                     {Array.from(wordsHighlight).map((word, index) => (
@@ -304,8 +306,7 @@ export default function GenericModal({
                   </div>
                 </div>
                 <span className="mt-2 text-xs text-muted-foreground">
-                  Prompt variables can be created with any chosen name inside
-                  curly brackets, e.g. {"{variable_name}"}
+                  {t("Prompt variables can be created with any chosen name inside curly brackets, e.g. ")}{"{variable_name}"}
                 </span>
               </div>
             )}
@@ -330,7 +331,7 @@ export default function GenericModal({
             }}
             type="submit"
           >
-            {myButtonText}
+            {t(myButtonText)}
           </Button>
         </div>
       </BaseModal.Footer>
