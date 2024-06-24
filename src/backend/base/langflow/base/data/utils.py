@@ -2,7 +2,7 @@ import unicodedata
 import xml.etree.ElementTree as ET
 from concurrent import futures
 from pathlib import Path
-from typing import Callable, List, Optional, Text
+from typing import Callable, List, Optional
 
 import chardet
 import orjson
@@ -70,30 +70,28 @@ def retrieve_file_paths(
 
     glob = "**/*" if recursive else "*"
     paths = walk_level(path_obj, depth) if depth else path_obj.glob(glob)
-    file_paths = [Text(p) for p in paths if p.is_file() and match_types(p) and is_not_hidden(p)]
+    file_paths = [str(p) for p in paths if p.is_file() and match_types(p) and is_not_hidden(p)]
 
     return file_paths
 
 
-# ! Removing unstructured dependency until
-# ! 3.12 is supported
-# def partition_file_to_data(file_path: str, silent_errors: bool) -> Optional[Data]:
-#     # Use the partition function to load the file
-#     from unstructured.partition.auto import partition  # type: ignore
+def partition_file_to_data(file_path: str, silent_errors: bool) -> Optional[Data]:
+    # Use the partition function to load the file
+    from unstructured.partition.auto import partition  # type: ignore
 
-#     try:
-#         elements = partition(file_path)
-#     except Exception as e:
-#         if not silent_errors:
-#             raise ValueError(f"Error loading file {file_path}: {e}") from e
-#         return None
+    try:
+        elements = partition(file_path)
+    except Exception as e:
+        if not silent_errors:
+            raise ValueError(f"Error loading file {file_path}: {e}") from e
+        return None
 
-#     # Create a Data
-#     text = "\n\n".join([Text(el) for el in elements])
-#     metadata = elements.metadata if hasattr(elements, "metadata") else {}
-#     metadata["file_path"] = file_path
-#     record = Data(text=text, data=metadata)
-#     return record
+    # Create a Data
+    text = "\n\n".join([str(el) for el in elements])
+    metadata = elements.metadata if hasattr(elements, "metadata") else {}
+    metadata["file_path"] = file_path
+    record = Data(text=text, data=metadata)
+    return record
 
 
 def read_text_file(file_path: str) -> str:

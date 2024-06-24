@@ -98,56 +98,57 @@ export const limitScrollFieldsModal = 10;
  * @constant
  */
 export const EXPORT_DIALOG_SUBTITLE = "Export flow as JSON file.";
-
 /**
  * The base text for subtitle of Flow Settings (Menubar)
  * @constant
  */
-export const SETTINGS_DIALOG_SUBTITLE = "Edit details about your project.";
+export const SETTINGS_DIALOG_SUBTITLE =
+  "Customize workspace settings and preferences.";
 
 /**
  * The base text for subtitle of Flow Logs (Menubar)
  * @constant
  */
-export const LOGS_DIALOG_SUBTITLE = "Check out information about your flow.";
+export const LOGS_DIALOG_SUBTITLE =
+  "Explore detailed logs of events and transactions between components.";
 
 /**
  * The base text for subtitle of Code Dialog (Toolbar)
  * @constant
  */
 export const CODE_DIALOG_SUBTITLE =
-  "Export your flow to use it with this code.";
+  "Export your flow to integrate it using this code.";
 
 /**
  * The base text for subtitle of Chat Form
  * @constant
  */
 export const CHAT_FORM_DIALOG_SUBTITLE =
-  "Set up the input variables defined in prompt templates. Interact with agents and chains.";
+  "Interact with your AI. Monitor inputs, outputs and memories.";
 
 /**
  * The base text for subtitle of Edit Node Dialog
  * @constant
  */
 export const EDIT_DIALOG_SUBTITLE =
-  "Adjust the configurations of your component. Define parameter visibility for the canvas view. Remember to save once you’re finished.";
+  "Adjust component's settings and define parameter visibility. Remember to save your changes.";
 
 /**
  * The base text for subtitle of Code Dialog
  * @constant
  */
 export const CODE_PROMPT_DIALOG_SUBTITLE =
-  "Edit your Python code. This code snippet accepts module import and a single function definition. Make sure that your function returns a string.";
+  "Edit your Python code snippet. Refer to the Langflow documentation for more information on how to write your own component.";
 
 export const CODE_DICT_DIALOG_SUBTITLE =
-  "Edit your dictionary. This dialog allows you to create your own customized dictionary. You can add as many key-value pairs as you want. While in edit mode, you can enter ({}) or ([]), and this will result in adding a new object or array.";
+  "Customize your dictionary, adding or editing key-value pairs as needed. Supports adding new objects {} or arrays [].";
 
 /**
  * The base text for subtitle of Prompt Dialog
  * @constant
  */
 export const PROMPT_DIALOG_SUBTITLE =
-  "Create your prompt. Prompts can help guide the behavior of a Language Model.";
+  "Create your prompt. Prompts can help guide the behavior of a Language Model. Use curly brackets {} to introduce variables.";
 
 export const CHAT_CANNOT_OPEN_TITLE = "Chat Cannot Open";
 
@@ -162,14 +163,14 @@ export const FLOW_NOT_BUILT_DESCRIPTION =
  * The base text for subtitle of Text Dialog
  * @constant
  */
-export const TEXT_DIALOG_SUBTITLE = "Edit your text.";
+export const TEXT_DIALOG_SUBTITLE = "Edit text content.";
 
 /**
  * The base text for subtitle of Import Dialog
  * @constant
  */
 export const IMPORT_DIALOG_SUBTITLE =
-  "Upload a JSON file or select from the available community examples.";
+  "Import flows from a JSON file or choose from pre-existing examples.";
 
 /**
  * The text that shows when a tooltip is empty

@@ -1,18 +1,25 @@
 from typing import List
 
-from langchain_core.retrievers import BaseRetriever
 from langchain_pinecone import Pinecone
 
-from langflow.custom import Component
+from langflow.base.vectorstores.model import LCVectorStoreComponent
 from langflow.helpers.data import docs_to_data
-from langflow.io import BoolInput, DropdownInput, HandleInput, IntInput, Output, SecretStrInput, StrInput
+from langflow.io import (
+    DropdownInput,
+    HandleInput,
+    IntInput,
+    StrInput,
+    SecretStrInput,
+    DataInput,
+    MultilineInput,
+)
 from langflow.schema import Data
 
 
-class PineconeVectorStoreComponent(Component):
+class PineconeVectorStoreComponent(LCVectorStoreComponent):
     display_name = "Pinecone"
     description = "Pinecone Vector Store with search capabilities"
-    documentation = "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/pinecone"
+    documentation = "https://python.langchain.com/v0.2/docs/integrations/vectorstores/pinecone/"
     icon = "Pinecone"
 
     inputs = [
@@ -26,7 +33,6 @@ class PineconeVectorStoreComponent(Component):
             advanced=True,
         ),
         SecretStrInput(name="pinecone_api_key", display_name="Pinecone API Key", required=True),
-        HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
         StrInput(
             name="text_key",
             display_name="Text Key",
@@ -34,18 +40,13 @@ class PineconeVectorStoreComponent(Component):
             value="text",
             advanced=True,
         ),
-        HandleInput(
-            name="vector_store_inputs",
-            display_name="Vector Store Inputs",
-            input_types=["Document", "Data"],
+        MultilineInput(name="search_query", display_name="Search Query"),
+        DataInput(
+            name="ingest_data",
+            display_name="Ingest Data",
             is_list=True,
         ),
-        BoolInput(
-            name="add_to_vector_store",
-            display_name="Add to Vector Store",
-            info="If true, the Vector Store Inputs will be added to the Vector Store.",
-        ),
-        StrInput(name="search_input", display_name="Search Input"),
+        HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
         IntInput(
             name="number_of_results",
             display_name="Number of Results",
@@ -53,17 +54,6 @@ class PineconeVectorStoreComponent(Component):
             value=4,
             advanced=True,
         ),
-    ]
-
-    outputs = [
-        Output(display_name="Vector Store", name="vector_store", method="build_vector_store", output_type=Pinecone),
-        Output(
-            display_name="Base Retriever",
-            name="base_retriever",
-            method="build_base_retriever",
-            output_type=BaseRetriever,
-        ),
-        Output(display_name="Search Results", name="search_results", method="search_documents"),
     ]
 
     def build_vector_store(self) -> Pinecone:
@@ -85,25 +75,24 @@ class PineconeVectorStoreComponent(Component):
             pinecone_api_key=self.pinecone_api_key,
         )
 
-        if self.add_to_vector_store:
-            documents = []
-            for _input in self.vector_store_inputs or []:
-                if isinstance(_input, Data):
-                    documents.append(_input.to_lc_document())
-                else:
-                    documents.append(_input)
+        documents = []
+        for _input in self.ingest_data or []:
+            if isinstance(_input, Data):
+                documents.append(_input.to_lc_document())
+            else:
+                documents.append(_input)
 
-            if documents:
-                pinecone.add_documents(documents)
+        if documents:
+            pinecone.add_documents(documents)
 
         return pinecone
 
     def search_documents(self) -> List[Data]:
         vector_store = self._build_pinecone()
 
-        if self.search_input and isinstance(self.search_input, str) and self.search_input.strip():
+        if self.search_query and isinstance(self.search_query, str) and self.search_query.strip():
             docs = vector_store.similarity_search(
-                query=self.search_input,
+                query=self.search_query,
                 k=self.number_of_results,
             )
 

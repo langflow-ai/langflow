@@ -13,14 +13,16 @@ from .input_mixin import (
     DropDownMixin,
     FieldTypes,
     FileMixin,
+    InputTraceMixin,
     ListableInputMixin,
+    MetadataTraceMixin,
     MultilineMixin,
     RangeMixin,
     SerializableFieldTypes,
 )
 
 
-class HandleInput(BaseInputMixin, ListableInputMixin):
+class HandleInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin):
     """
     Represents an Input that has a Handle to a specific type (e.g. BaseLanguageModel, BaseRetriever, etc.)
 
@@ -35,7 +37,7 @@ class HandleInput(BaseInputMixin, ListableInputMixin):
     field_type: Optional[SerializableFieldTypes] = FieldTypes.OTHER
 
 
-class DataInput(HandleInput):
+class DataInput(HandleInput, InputTraceMixin):
     """
     Represents an Input that has a Handle that receives a Data object.
 
@@ -46,12 +48,12 @@ class DataInput(HandleInput):
     input_types: list[str] = ["Data"]
 
 
-class PromptInput(BaseInputMixin, ListableInputMixin):
+class PromptInput(BaseInputMixin, ListableInputMixin, InputTraceMixin):
     field_type: Optional[SerializableFieldTypes] = FieldTypes.PROMPT
 
 
 # Applying mixins to a specific input type
-class StrInput(BaseInputMixin, ListableInputMixin, DatabaseLoadMixin):
+class StrInput(BaseInputMixin, ListableInputMixin, DatabaseLoadMixin, MetadataTraceMixin):
     field_type: Optional[SerializableFieldTypes] = FieldTypes.TEXT
     load_from_db: CoalesceBool = False
     """Defines if the field will allow the user to open a text editor. Default is False."""
@@ -101,7 +103,7 @@ class StrInput(BaseInputMixin, ListableInputMixin, DatabaseLoadMixin):
         return value
 
 
-class MessageInput(StrInput):
+class MessageInput(StrInput, InputTraceMixin):
     input_types: list[str] = ["Message"]
 
     @staticmethod
@@ -114,7 +116,7 @@ class MessageInput(StrInput):
         raise ValueError(f"Invalid value type {type(v)}")
 
 
-class TextInput(StrInput):
+class MessageTextInput(StrInput, MetadataTraceMixin, InputTraceMixin):
     """
     Represents a text input component for the Langflow system.
 
@@ -163,7 +165,7 @@ class TextInput(StrInput):
         return value
 
 
-class MultilineInput(TextInput, MultilineMixin):
+class MultilineInput(MessageTextInput, MultilineMixin, InputTraceMixin):
     """
     Represents a multiline input field.
 
@@ -194,7 +196,7 @@ class SecretStrInput(BaseInputMixin, DatabaseLoadMixin):
     load_from_db: CoalesceBool = True
 
 
-class IntInput(BaseInputMixin, ListableInputMixin, RangeMixin):
+class IntInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMixin):
     """
     Represents an integer field.
 
@@ -208,7 +210,7 @@ class IntInput(BaseInputMixin, ListableInputMixin, RangeMixin):
     field_type: Optional[SerializableFieldTypes] = FieldTypes.INTEGER
 
 
-class FloatInput(BaseInputMixin, ListableInputMixin, RangeMixin):
+class FloatInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMixin):
     """
     Represents a float field.
 
@@ -222,7 +224,7 @@ class FloatInput(BaseInputMixin, ListableInputMixin, RangeMixin):
     field_type: Optional[SerializableFieldTypes] = FieldTypes.FLOAT
 
 
-class BoolInput(BaseInputMixin, ListableInputMixin):
+class BoolInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin):
     """
     Represents a boolean field.
 
@@ -238,7 +240,7 @@ class BoolInput(BaseInputMixin, ListableInputMixin):
     value: CoalesceBool = False
 
 
-class NestedDictInput(BaseInputMixin, ListableInputMixin):
+class NestedDictInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin, InputTraceMixin):
     """
     Represents a nested dictionary field.
 
@@ -254,7 +256,7 @@ class NestedDictInput(BaseInputMixin, ListableInputMixin):
     value: Optional[dict] = {}
 
 
-class DictInput(BaseInputMixin, ListableInputMixin):
+class DictInput(BaseInputMixin, ListableInputMixin, InputTraceMixin):
     """
     Represents a dictionary field.
 
@@ -270,7 +272,7 @@ class DictInput(BaseInputMixin, ListableInputMixin):
     value: Optional[dict] = {}
 
 
-class DropdownInput(BaseInputMixin, DropDownMixin):
+class DropdownInput(BaseInputMixin, DropDownMixin, MetadataTraceMixin):
     """
     Represents a dropdown input field.
 
@@ -287,7 +289,7 @@ class DropdownInput(BaseInputMixin, DropDownMixin):
     options: list[str] = Field(default_factory=list)
 
 
-class FileInput(BaseInputMixin, ListableInputMixin, FileMixin):
+class FileInput(BaseInputMixin, ListableInputMixin, FileMixin, MetadataTraceMixin):
     """
     Represents a file field.
 
@@ -315,6 +317,6 @@ InputTypes = Union[
     PromptInput,
     SecretStrInput,
     StrInput,
-    TextInput,
+    MessageTextInput,
     MessageInput,
 ]

@@ -73,6 +73,10 @@ class Settings(BaseSettings):
     max_overflow: int = 20
     """The number of connections to allow that can be opened beyond the pool size. If not provided, the default is 10."""
     cache_type: str = "async"
+
+    """The store can be 'db' or 'kubernetes'."""
+    variable_store: str = "db"
+
     remove_api_keys: bool = False
     components_path: List[str] = []
     langchain_cache: str = "InMemoryCache"
@@ -126,7 +130,7 @@ class Settings(BaseSettings):
     @classmethod
     def set_user_agent(cls, value):
         if not value:
-            value = "langflow"
+            value = "Langflow"
         import os
 
         os.environ["USER_AGENT"] = value

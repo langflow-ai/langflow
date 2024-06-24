@@ -50,6 +50,6 @@ def post_process_raw(raw, artifact_type: str):
     if artifact_type == ArtifactType.STREAM.value:
         raw = ""
     elif artifact_type == ArtifactType.UNKNOWN.value:
-        raw = str(raw)
+        raw = "Built Successfully ✨"
 
     return raw

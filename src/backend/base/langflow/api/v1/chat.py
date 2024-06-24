@@ -25,7 +25,8 @@ from langflow.api.v1.schemas import (
     VerticesOrderResponse,
 )
 from langflow.exceptions.component import ComponentBuildException
-from langflow.schema.schema import Log
+from langflow.graph.graph.base import Graph
+from langflow.schema.schema import OutputLog
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.chat.service import ChatService
 from langflow.services.deps import get_chat_service, get_session, get_session_service
@@ -108,11 +109,9 @@ async def retrieve_vertices_order(
         # Now vertices is a list of lists
         # We need to get the id of each vertex
         # and return the same structure but only with the ids
-        run_id = uuid.uuid4()
-        graph.set_run_id(run_id)
         vertices_to_run = list(graph.vertices_to_run) + get_top_level_vertices(graph, graph.vertices_to_run)
         await chat_service.set_cache(str(flow_id), graph)
-        return VerticesOrderResponse(ids=first_layer, run_id=run_id, vertices_to_run=vertices_to_run)
+        return VerticesOrderResponse(ids=first_layer, run_id=graph._run_id, vertices_to_run=vertices_to_run)
 
     except Exception as exc:
         if "stream or streaming set to True" in str(exc):
@@ -159,11 +158,12 @@ async def build_vertex(
         if not cache:
             # If there's no cache
             logger.warning(f"No cache found for {flow_id_str}. Building graph starting at {vertex_id}")
-            graph = await build_graph_from_db(
+            graph: "Graph" = await build_graph_from_db(
                 flow_id=flow_id_str, session=next(get_session()), chat_service=chat_service
             )
         else:
             graph = cache.get("result")
+            await graph.initialize_run()
         vertex = graph.get_vertex(vertex_id)
 
         try:
@@ -201,9 +201,10 @@ async def build_vertex(
             message = {"errorMessage": params, "stackTrace": tb}
             valid = False
             output_label = vertex.outputs[0]["name"] if vertex.outputs else "output"
-            logs = {output_label: Log(message=message, type="error")}
-            result_data_response = ResultDataResponse(results={}, logs=logs)
+            outputs = {output_label: OutputLog(message=message, type="error")}
+            result_data_response = ResultDataResponse(results={}, outputs=outputs)
             artifacts = {}
+            background_tasks.add_task(graph.end_all_traces, error=message["errorMessage"])
             # If there's an error building the vertex
             # we need to clear the cache
             await chat_service.clear_cache(flow_id_str)
@@ -239,6 +240,9 @@ async def build_vertex(
         # vertices from next_vertices_ids
         if graph.stop_vertex and graph.stop_vertex in next_runnable_vertices:
             next_runnable_vertices = [graph.stop_vertex]
+
+        if not next_runnable_vertices:
+            background_tasks.add_task(graph.end_all_traces)
 
         build_response = VertexBuildResponse(
             inactivated_vertices=inactivated_vertices,

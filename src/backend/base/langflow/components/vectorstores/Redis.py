@@ -1,14 +1,15 @@
-from typing import Optional, cast
+from typing import List
 
 from langchain_community.vectorstores.redis import Redis
-from langchain_core.embeddings import Embeddings
 
-from langflow.custom import CustomComponent
-from langflow.field_typing import VectorStore
+from langflow.base.vectorstores.model import LCVectorStoreComponent
+from langflow.helpers.data import docs_to_data
+from langflow.io import HandleInput, IntInput, StrInput, SecretStrInput, DataInput, MultilineInput
 from langflow.schema import Data
+from langchain.text_splitter import CharacterTextSplitter
 
 
-class RedisVectorStoreComponent(CustomComponent):
+class RedisVectorStoreComponent(LCVectorStoreComponent):
     """
     A custom component for implementing a Vector Store using Redis.
     """
@@ -17,67 +18,76 @@ class RedisVectorStoreComponent(CustomComponent):
     description: str = "Implementation of Vector Store using Redis"
     documentation = "https://python.langchain.com/docs/integrations/vectorstores/redis"
 
-    def build_config(self):
-        """
-        Builds the configuration for the component.
+    inputs = [
+        SecretStrInput(name="redis_server_url", display_name="Redis Server Connection String", required=True),
+        StrInput(
+            name="redis_index_name",
+            display_name="Redis Index",
+        ),
+        StrInput(name="code", display_name="Code", advanced=True),
+        StrInput(
+            name="schema",
+            display_name="Schema",
+        ),
+        MultilineInput(name="search_query", display_name="Search Query"),
+        DataInput(
+            name="ingest_data",
+            display_name="Ingest Data",
+            is_list=True,
+        ),
+        IntInput(
+            name="number_of_results",
+            display_name="Number of Results",
+            info="Number of results to return.",
+            value=4,
+            advanced=True,
+        ),
+        HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
+    ]
 
-        Returns:
-        - dict: A dictionary containing the configuration options for the component.
-        """
-        return {
-            "index_name": {"display_name": "Index Name", "value": "your_index"},
-            "code": {"show": False, "display_name": "Code"},
-            "inputs": {"display_name": "Input", "input_types": ["Document", "Data"]},
-            "embedding": {"display_name": "Embedding"},
-            "schema": {"display_name": "Schema", "file_types": [".yaml"]},
-            "redis_server_url": {
-                "display_name": "Redis Server Connection String",
-                "advanced": False,
-            },
-            "redis_index_name": {"display_name": "Redis Index", "advanced": False},
-        }
-
-    def build(
-        self,
-        embedding: Embeddings,
-        redis_server_url: str,
-        redis_index_name: str,
-        schema: Optional[str] = None,
-        inputs: Optional[Data] = None,
-    ) -> VectorStore:
-        """
-        Builds the Vector Store or BaseRetriever object.
-
-        Args:
-        - embedding (Embeddings): The embeddings to use for the Vector Store.
-        - documents (Optional[Document]): The documents to use for the Vector Store.
-        - redis_index_name (str): The name of the Redis index.
-        - redis_server_url (str): The URL for the Redis server.
-
-        Returns:
-        - VectorStore: The Vector Store object.
-        """
+    def build_vector_store(self) -> Redis:
         documents = []
-        for _input in inputs or []:
+
+        for _input in self.ingest_data or []:
             if isinstance(_input, Data):
                 documents.append(_input.to_lc_document())
             else:
                 documents.append(_input)
+        with open("docuemnts.txt", "w") as f:
+            f.write(str(documents))
+
         if not documents:
-            if schema is None:
+            if self.schema is None:
                 raise ValueError("If no documents are provided, a schema must be provided.")
             redis_vs = Redis.from_existing_index(
-                embedding=embedding,
-                index_name=redis_index_name,
-                schema=schema,
+                embedding=self.embedding,
+                index_name=self.redis_index_name,
+                schema=self.schema,
                 key_prefix=None,
-                redis_url=redis_server_url,
+                redis_url=self.redis_server_url,
             )
         else:
+            text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=0)
+            docs = text_splitter.split_documents(documents)
             redis_vs = Redis.from_documents(
-                documents=documents,  # type: ignore
-                embedding=embedding,
-                redis_url=redis_server_url,
-                index_name=redis_index_name,
+                documents=docs,
+                embedding=self.embedding,
+                redis_url=self.redis_server_url,
+                index_name=self.redis_index_name,
             )
-        return cast(VectorStore, redis_vs)
+        return redis_vs
+
+    def search_documents(self) -> List[Data]:
+        vector_store = self.build_vector_store()
+
+        if self.search_query and isinstance(self.search_query, str) and self.search_query.strip():
+            docs = vector_store.similarity_search(
+                query=self.search_query,
+                k=self.number_of_results,
+            )
+
+            data = docs_to_data(docs)
+            self.status = data
+            return data
+        else:
+            return []

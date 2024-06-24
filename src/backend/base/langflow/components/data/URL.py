@@ -3,7 +3,7 @@ import re
 from langchain_community.document_loaders.web_base import WebBaseLoader
 
 from langflow.custom import Component
-from langflow.io import Output, TextInput
+from langflow.io import MessageTextInput, Output
 from langflow.schema import Data
 
 
@@ -13,7 +13,7 @@ class URLComponent(Component):
     icon = "layout-template"
 
     inputs = [
-        TextInput(
+        MessageTextInput(
             name="urls",
             display_name="URLs",
             info="Enter one or more URLs, separated by commas.",
@@ -44,14 +44,16 @@ class URLComponent(Component):
 
         # Basic URL validation regex
         url_regex = re.compile(
-            r"^(http://|https://)?"  # http:// or https://
-            r"(([a-zA-Z0-9\.-]+)"  # domain
-            r"(\.[a-zA-Z]{2,}))"  # top-level domain
-            r"(:[0-9]{1,5})?"  # optional port
-            r"(\/.*)?$"  # optional path
+            r"^(https?:\/\/)?"  # optional protocol
+            r"(www\.)?"  # optional www
+            r"([a-zA-Z0-9.-]+)"  # domain
+            r"(\.[a-zA-Z]{2,})?"  # top-level domain
+            r"(:\d+)?"  # optional port
+            r"(\/[^\s]*)?$",  # optional path
+            re.IGNORECASE,
         )
 
-        if not re.match(url_regex, string):
+        if not url_regex.match(string):
             raise ValueError(f"Invalid URL: {string}")
 
         return string

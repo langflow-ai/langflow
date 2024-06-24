@@ -58,9 +58,10 @@ jobs:
         with:
           context: .
           push: true
-          platforms: "linux/amd64"
           file: ${{ needs.setup.outputs.file }}
           tags: ${{ needs.setup.outputs.tags }}
+          # provenance: false will result in a single manifest for all platforms which makes the image pullable from arm64 machines via the emulation (e.g. Apple Silicon machines)
+          provenance: false
 
   build_components:
     if: ${{ inputs.release_type == 'main' }}
@@ -92,11 +93,12 @@ jobs:
         with:
           context: .
           push: true
-          platforms: "linux/amd64"
           build-args: |
             LANGFLOW_IMAGE=langflowai/langflow:${{ inputs.version }}
           file: ${{ matrix.dockerfile }}
           tags: ${{ matrix.tags }}
+          # provenance: false will result in a single manifest for all platforms which makes the image pullable from arm64 machines via the emulation (e.g. Apple Silicon machines)
+          provenance: false
 
   restart-space:
     name: Restart HuggingFace Spaces

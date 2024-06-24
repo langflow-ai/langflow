@@ -3,6 +3,7 @@ import "ag-grid-community/styles/ag-theme-quartz.css"; // Optional Theme applied
 import { AgGridReact, AgGridReactProps } from "ag-grid-react";
 import cloneDeep from "lodash";
 import { ElementRef, forwardRef, useRef, useState } from "react";
+import { boolean } from "zod";
 import {
   DEFAULT_TABLE_ALERT_MSG,
   DEFAULT_TABLE_ALERT_TITLE,
@@ -20,7 +21,14 @@ interface TableComponentProps extends AgGridReactProps {
   rowData: NonNullable<AgGridReactProps["rowData"]>;
   alertTitle?: string;
   alertDescription?: string;
-  editable?: boolean | string[];
+  editable?:
+    | boolean
+    | string[]
+    | {
+        field: string;
+        onUpdate: (value: any) => void;
+        editableCell: boolean;
+      }[];
   pagination?: boolean;
   onDelete?: () => void;
   onDuplicate?: () => void;
@@ -53,12 +61,32 @@ const TableComponent = forwardRef<
       if (
         (typeof props.editable === "boolean" && props.editable) ||
         (Array.isArray(props.editable) &&
-          props.editable.includes(newCol.headerName ?? ""))
+          props.editable.every((field) => typeof field === "string") &&
+          (props.editable as Array<string>).includes(newCol.headerName ?? ""))
       ) {
         newCol = {
           ...newCol,
           editable: true,
         };
+      }
+      if (
+        Array.isArray(props.editable) &&
+        props.editable.every((field) => typeof field === "object")
+      ) {
+        const field = (
+          props.editable as Array<{
+            field: string;
+            onUpdate: (value: any) => void;
+            editableCell: boolean;
+          }>
+        ).find((field) => field.field === newCol.headerName);
+        if (field) {
+          newCol = {
+            ...newCol,
+            editable: field.editableCell,
+            onCellValueChanged: (e) => field.onUpdate(e),
+          };
+        }
       }
       return newCol;
     });

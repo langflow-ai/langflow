@@ -13,6 +13,11 @@ export type CustomFieldsType = {
   [key: string]: Array<string>;
 };
 
+export type CustomComponentRequest = {
+  data: APIClassType;
+  type: string;
+};
+
 export type APIClassType = {
   base_classes?: Array<string>;
   description: string;
@@ -186,7 +191,7 @@ export type ErrorLogType = {
   stackTrace: string;
 };
 
-export type LogType = {
+export type OutputLogType = {
   message: any | ErrorLogType;
   type: string;
 };
@@ -195,7 +200,7 @@ export type LogType = {
 // it has results, artifacts, timedelta, duration
 export type VertexDataTypeAPI = {
   results: { [key: string]: string };
-  logs: { [key: string]: LogType };
+  outputs: { [key: string]: OutputLogType };
   messages: ChatOutputType[] | ChatInputType[];
   inactive?: boolean;
   timedelta?: number;

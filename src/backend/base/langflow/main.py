@@ -6,7 +6,6 @@ from typing import Optional
 from urllib.parse import urlencode
 
 import nest_asyncio  # type: ignore
-import socketio  # type: ignore
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -31,6 +30,39 @@ from langflow.utils.logger import configure
 
 # Ignore Pydantic deprecation warnings from Langchain
 warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
+
+
+class RequestCancelledMiddleware:
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        # Let's make a shared queue for the request messages
+        queue = asyncio.Queue()
+
+        async def message_poller(sentinel, handler_task):
+            nonlocal queue
+            while True:
+                message = await receive()
+                if message["type"] == "http.disconnect":
+                    handler_task.cancel()
+                    return sentinel  # Break the loop
+
+                # Puts the message in the queue
+                await queue.put(message)
+
+        sentinel = object()
+        handler_task = asyncio.create_task(self.app(scope, queue.get, send))
+        asyncio.create_task(message_poller(sentinel, handler_task))
+
+        try:
+            return await handler_task
+        except asyncio.CancelledError:
+            pass
 
 
 class JavaScriptMIMETypeMiddleware(BaseHTTPMiddleware):
@@ -84,8 +116,7 @@ def create_app():
         __version__ = version("langflow-base")
 
     configure()
-    socketio_server = socketio.AsyncServer(async_mode="asgi", cors_allowed_origins="*", logger=True)
-    lifespan = get_lifespan(socketio_server=socketio_server, version=__version__)
+    lifespan = get_lifespan(version=__version__)
     app = FastAPI(lifespan=lifespan, title="Langflow", version=__version__)
     setup_sentry(app)
     origins = ["*"]
@@ -98,6 +129,7 @@ def create_app():
         allow_headers=["*"],
     )
     app.add_middleware(JavaScriptMIMETypeMiddleware)
+    app.add_middleware(RequestCancelledMiddleware)
 
     @app.middleware("http")
     async def flatten_query_string_lists(request: Request, call_next):
@@ -115,13 +147,6 @@ def create_app():
 
     app.include_router(router)
 
-    app = mount_socketio(app, socketio_server)
-
-    return app
-
-
-def mount_socketio(app: FastAPI, socketio_server: socketio.AsyncServer):
-    app.mount("/sio", socketio.ASGIApp(socketio_server, socketio_path=""))
     return app
 
 

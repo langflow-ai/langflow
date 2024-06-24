@@ -4,7 +4,6 @@ import pytest
 from langchain_core.documents import Document
 from langflow.components.memories.AstraDBMessageReader import AstraDBMessageReaderComponent
 from langflow.components.memories.AstraDBMessageWriter import AstraDBMessageWriterComponent
-from langflow.components.vectorsearch.AstraDBSearch import AstraDBSearchComponent
 from langflow.components.vectorstores.AstraDB import AstraVectorStoreComponent
 from langflow.schema.data import Data
 
@@ -56,6 +55,7 @@ def test_astra_setup(astra_fixture):
         collection_name=COLLECTION,
         embedding=embedding,
     )
+    component.build_vector_store()
 
 
 @pytest.mark.skipif(
@@ -78,10 +78,11 @@ def test_astra_embeds_and_search(astra_fixture):
         collection_name=SEARCH_COLLECTION,
         embedding=embedding,
         inputs=records,
+        add_to_vector_store=True,
     )
+    component.build_vector_store()
 
-    component = AstraDBSearchComponent()
-    records = component.build(
+    component.build(
         token=application_token,
         api_endpoint=api_endpoint,
         collection_name=SEARCH_COLLECTION,
@@ -89,6 +90,7 @@ def test_astra_embeds_and_search(astra_fixture):
         input_value="test1",
         number_of_results=1,
     )
+    records = component.search_documents()
 
     assert len(records) == 1
 
