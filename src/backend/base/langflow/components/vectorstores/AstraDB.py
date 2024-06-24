@@ -159,10 +159,12 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             embedding_dict = {"embedding": self.embedding}
         else:
             from astrapy.info import CollectionVectorServiceOptions
+
             dict_options = self.embedding.get("collection_vector_service_options", {})
-            dict_options["authentication"] = {k: v for k, v in dict_options.get("authentication", {}).items() if k and v}
-            dict_options["parameters"] = {k: v for k, v in dict_options.get("parameters", {}).items() if
-                                              k and v}
+            dict_options["authentication"] = {
+                k: v for k, v in dict_options.get("authentication", {}).items() if k and v
+            }
+            dict_options["parameters"] = {k: v for k, v in dict_options.get("parameters", {}).items() if k and v}
             embedding_dict = {
                 "collection_vector_service_options": CollectionVectorServiceOptions.from_dict(dict_options),
                 "collection_embedding_api_key": self.embedding.get("collection_embedding_api_key"),
