@@ -22,7 +22,12 @@ test("ToggleComponent", async ({ page }) => {
 
   await page.getByTestId("blank-flow").click();
   await page.waitForTimeout(3000);
-  await page.getByTestId("extended-disclosure").click();
+  const focusElementsOnBoard = async ({ page }) => {
+    const focusElements = await page.getByTestId("extended-disclosure");
+    focusElements.click();
+  };
+
+  await focusElementsOnBoard({ page });
   await page.getByPlaceholder("Search").click();
   await page.getByPlaceholder("Search").fill("directory");
 
