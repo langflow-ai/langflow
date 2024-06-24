@@ -3,8 +3,6 @@
     <p style="margin: 5px 0 0 0; font-size: 16px; color: #666;">Read all about it <a href="https://medium.com/p/73d3bdce8440" style="text-decoration: underline; color: #1a73e8;">here</a>!</p>
 </div>
 
-
-https://astra.datastax.com/signup?type=langflow
 <!-- markdownlint-disable MD030 -->
 
 # [![Langflow](./docs/static/img/hero.png)](https://www.langflow.org)
