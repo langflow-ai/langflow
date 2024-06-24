@@ -1,6 +1,6 @@
 from typing import Any
 from langflow.custom import Component
-from langflow.inputs.inputs import DictInput, SecretStrInput, StrInput
+from langflow.inputs.inputs import DictInput, SecretStrInput, StrInput, MessageTextInput
 from langflow.template.field.base import Output
 
 
@@ -11,12 +11,12 @@ class AstraVectorize(Component):
     icon = "AstraDB"
 
     inputs = [
-        StrInput(
+        MessageTextInput(
             name="provider",
             display_name="Provider name",
             info='The embedding provider to use.',
         ),
-        StrInput(
+        MessageTextInput(
             name="model_name",
             display_name="Model name",
             info='The embedding model to use.',
