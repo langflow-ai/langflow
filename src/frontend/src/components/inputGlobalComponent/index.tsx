@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { Controller } from "react-hook-form";
 import { deleteGlobalVariable } from "../../controllers/API";
 import DeleteConfirmationModal from "../../modals/deleteConfirmationModal";
 import useAlertStore from "../../stores/alertStore";
@@ -13,7 +14,6 @@ import { CommandItem } from "../ui/command";
 export default function InputGlobalComponent({
   disabled,
   onChange,
-  setDb,
   name,
   data,
   editNode = false,
@@ -32,30 +32,19 @@ export default function InputGlobalComponent({
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
   useEffect(() => {
-    if (data)
-      if (
-        ((globalVariablesEntries &&
-          !globalVariablesEntries.includes(data.value)) ||
-          !globalVariablesEntries) &&
-        data.load_from_db
+    if (data && globalVariablesEntries && unavaliableFields)
+      if (data.load_from_db && !globalVariablesEntries.includes(data.value)) {
+        onChange("", false, true);
+      } else if (
+        !data.load_from_db &&
+        (!data.value || data.value === "") &&
+        unavaliableFields[data.display_name!] &&
+        !disabled &&
+        data.display_name
       ) {
-        setTimeout(() => {
-          onChange("", true);
-          setDb(false);
-        }, 100);
+        onChange(unavaliableFields[data.display_name!], true, true);
       }
-  }, [globalVariablesEntries, data]);
-
-  useEffect(() => {
-    if (!data.value && data.display_name) {
-      if (unavaliableFields[data.display_name!] && !disabled) {
-        setTimeout(() => {
-          setDb(true);
-          onChange(unavaliableFields[data.display_name!]);
-        }, 100);
-      }
-    }
-  }, [unavaliableFields]);
+  }, [globalVariablesEntries, unavaliableFields, data, disabled]);
 
   async function handleDelete(key: string) {
     const id = getVariableId(key);
@@ -64,8 +53,7 @@ export default function InputGlobalComponent({
         .then(() => {
           removeGlobalVariable(key);
           if (data?.value === key && data?.load_from_db) {
-            onChange("");
-            setDb(false);
+            onChange("", false);
           }
         })
         .catch(() => {
@@ -137,12 +125,10 @@ export default function InputGlobalComponent({
           : ""
       }
       setSelectedOption={(value) => {
-        onChange(value);
-        setDb(value !== "" ? true : false);
+        onChange(value, value !== "" ? true : false);
       }}
       onChange={(value, skipSnapshot) => {
-        onChange(value, skipSnapshot);
-        setDb(false);
+        onChange(value, false, skipSnapshot);
       }}
     />
   );
