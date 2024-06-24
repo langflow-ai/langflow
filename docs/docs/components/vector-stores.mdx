@@ -2,6 +2,10 @@ import Admonition from "@theme/Admonition";
 
 # Vector Stores
 
+<Admonition type="warning" title="warning">
+This page may contain outdated information. It will be updated as soon as possible.
+</Admonition>
+
 ### Astra DB
 
 The `Astra DB` initializes a vector store using Astra DB from Data. It creates Astra DB-based vector indexes to efficiently store and retrieve documents.
@@ -9,7 +13,7 @@ The `Astra DB` initializes a vector store using Astra DB from Data. It creates A
 **Parameters:**
 
 - **Input:** Documents or Data for input.
-- **Embedding:** Embedding model Astra DB uses.
+- **Embedding or Astra vectorize:** External or server-side model Astra DB uses.
 - **Collection Name:** Name of the Astra DB collection.
 - **Token:** Authentication token for Astra DB.
 - **API Endpoint:** API endpoint for Astra DB.
@@ -40,7 +44,7 @@ The `Astra DB` initializes a vector store using Astra DB from Data. It creates A
 
 - **Search Type:** Type of search, such as Similarity or MMR.
 - **Input Value:** Value to search for.
-- **Embedding:** Embedding model Astra DB uses.
+- **Embedding or Astra vectorize:** External or server-side model Astra DB uses.
 - **Collection Name:** Name of the Astra DB collection.
 - **Token:** Authentication token for Astra DB.
 - **API Endpoint:** API endpoint for Astra DB.

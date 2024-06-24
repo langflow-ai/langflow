@@ -3,13 +3,13 @@ from loguru import logger
 from langflow.base.vectorstores.model import LCVectorStoreComponent
 from langflow.io import (
     BoolInput,
+    DataInput,
     DropdownInput,
     HandleInput,
     IntInput,
     MultilineInput,
     SecretStrInput,
     StrInput,
-    DataInput,
 )
 from langflow.schema import Data
 
@@ -106,8 +106,8 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
         ),
         HandleInput(
             name="embedding",
-            display_name="Embedding",
-            input_types=["Embeddings"],
+            display_name="Embedding or Astra Vectorize",
+            input_types=["Embeddings", "dict"],
         ),
         StrInput(
             name="metadata_indexing_exclude",
@@ -155,8 +155,22 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
         except KeyError:
             raise ValueError(f"Invalid setup mode: {self.setup_mode}")
 
+        if not isinstance(self.embedding, dict):
+            embedding_dict = {"embedding": self.embedding}
+        else:
+            from astrapy.info import CollectionVectorServiceOptions
+
+            dict_options = self.embedding.get("collection_vector_service_options", {})
+            dict_options["authentication"] = {
+                k: v for k, v in dict_options.get("authentication", {}).items() if k and v
+            }
+            dict_options["parameters"] = {k: v for k, v in dict_options.get("parameters", {}).items() if k and v}
+            embedding_dict = {
+                "collection_vector_service_options": CollectionVectorServiceOptions.from_dict(dict_options),
+                "collection_embedding_api_key": self.embedding.get("collection_embedding_api_key"),
+            }
         vector_store_kwargs = {
-            "embedding": self.embedding,
+            **embedding_dict,
             "collection_name": self.collection_name,
             "token": self.token,
             "api_endpoint": self.api_endpoint,
@@ -182,6 +196,10 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
         except Exception as e:
             raise ValueError(f"Error initializing AstraDBVectorStore: {str(e)}") from e
 
+        if hasattr(self, "ingest_data") and self.ingest_data:
+            logger.debug("Ingesting data into the Vector Store.")
+            self._add_documents_to_vector_store(vector_store)
+
         self.status = self._astradb_collection_to_data(vector_store.collection)
         return vector_store
 
@@ -202,7 +220,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
         else:
             logger.debug("No documents to add to the Vector Store.")
 
-    def search_documents(self):
+    def search_documents(self) -> list[Data]:
         vector_store = self.build_vector_store()
 
         logger.debug(f"Search input: {self.search_input}")

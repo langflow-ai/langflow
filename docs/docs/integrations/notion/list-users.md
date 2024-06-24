@@ -5,6 +5,10 @@ import ZoomableImage from "/src/theme/ZoomableImage.js";
 
 # User List
 
+<Admonition type="warning" title="warning">
+This page may contain outdated information. It will be updated as soon as possible.
+</Admonition>
+
 The `NotionUserList` component retrieves users from Notion. It provides a convenient way to integrate Notion user data into your Langflow workflows.
 
 [Notion Reference](https://developers.notion.com/reference/get-users)

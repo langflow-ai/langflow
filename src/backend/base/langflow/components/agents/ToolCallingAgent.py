@@ -1,4 +1,4 @@
-from typing import List, cast
+from typing import Dict, List, cast
 
 from langchain.agents import AgentExecutor, BaseSingleActionAgent
 from langchain.agents.tool_calling_agent.base import create_tool_calling_agent
@@ -14,6 +14,7 @@ class ToolCallingAgentComponent(Component):
     display_name: str = "Tool Calling Agent"
     description: str = "Agent that uses tools. Only models that are compatible with function calling are supported."
     icon = "LangChain"
+    beta = True
 
     inputs = [
         MessageTextInput(
@@ -85,7 +86,7 @@ class ToolCallingAgentComponent(Component):
             verbose=True,
             handle_parsing_errors=self.handle_parsing_errors,
         )
-        input_dict: dict[str, str | list[dict[str, str]]] = {"input": self.input_value}
+        input_dict: dict[str, str | list[Dict[str, str]]] = {"input": self.input_value}
         if hasattr(self, "memory") and self.memory:
             input_dict["chat_history"] = self.convert_chat_history(self.memory)
         result = await runnable.ainvoke(input_dict)
@@ -98,7 +99,7 @@ class ToolCallingAgentComponent(Component):
 
         return Message(text=result_string)
 
-    def convert_chat_history(self, chat_history: List[Data]) -> List[dict[str, str]]:
+    def convert_chat_history(self, chat_history: List[Data]) -> List[Dict[str, str]]:
         messages = []
         for item in chat_history:
             role = "user" if item.sender == "User" else "assistant"
