@@ -9,6 +9,7 @@ import Robot from "../../../../../assets/robot.png";
 import CodeTabsComponent from "../../../../../components/codeTabsComponent";
 import IconComponent from "../../../../../components/genericIconComponent";
 import SanitizedHTMLWrapper from "../../../../../components/sanitizedHTMLWrapper";
+import { EMPTY_INPUT_SEND_MESSAGE } from "../../../../../constants/constants";
 import useAlertStore from "../../../../../stores/alertStore";
 import useFlowStore from "../../../../../stores/flowStore";
 import { chatMessagePropsType } from "../../../../../types/components";
@@ -115,19 +116,19 @@ export default function ChatMessage({
       <div
         className={classNames(
           "form-modal-chat-position",
-          chat.isSend ? "" : " "
+          chat.isSend ? "" : " ",
         )}
       >
         <div
           className={classNames(
-            "mr-3 mt-1 flex w-24 flex-col items-center gap-1 overflow-hidden px-3 pb-3"
+            "mr-3 mt-1 flex w-24 flex-col items-center gap-1 overflow-hidden px-3 pb-3",
           )}
         >
           <div className="flex flex-col items-center gap-1">
             <div
               className={cn(
                 "relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-md p-5 text-2xl",
-                !chat.isSend ? "bg-chat-bot-icon" : "bg-chat-user-icon"
+                !chat.isSend ? "bg-chat-bot-icon" : "bg-chat-user-icon",
               )}
             >
               <img
@@ -185,9 +186,14 @@ export default function ChatMessage({
                           />
                         ) : (
                           <Markdown
-                            remarkPlugins={[remarkGfm, remarkMath]}
+                            remarkPlugins={[remarkGfm]}
                             rehypePlugins={[rehypeMathjax]}
-                            className="markdown prose flex flex-col text-primary word-break-break-word dark:prose-invert"
+                            className={cn(
+                              "markdown prose flex flex-col word-break-break-word dark:prose-invert",
+                              chatMessage === ""
+                                ? "text-chat-trigger-disabled"
+                                : "text-primary",
+                            )}
                             components={{
                               pre({ node, ...props }) {
                                 return <>{props.children}</>;
@@ -199,23 +205,23 @@ export default function ChatMessage({
                                 children,
                                 ...props
                               }) => {
-                                if (children.length) {
-                                  if (children[0] === "▍") {
-                                    return (
-                                      <span className="form-modal-markdown-span">
-                                        ▍
-                                      </span>
-                                    );
+                                if (typeof children === "string") {
+                                  if ((children as string)!.length) {
+                                    if (children![0] === "▍") {
+                                      return (
+                                        <span className="form-modal-markdown-span">
+                                          ▍
+                                        </span>
+                                      );
+                                    }
+                                    children![0] = (
+                                      children![0] as string
+                                    ).replace("`▍`", "▍");
                                   }
-
-                                  children[0] = (children[0] as string).replace(
-                                    "`▍`",
-                                    "▍"
-                                  );
                                 }
 
                                 const match = /language-(\w+)/.exec(
-                                  className || ""
+                                  className || "",
                                 );
 
                                 return !inline ? (
@@ -230,7 +236,7 @@ export default function ChatMessage({
                                         language: (match && match[1]) || "",
                                         code: String(children).replace(
                                           /\n$/,
-                                          ""
+                                          "",
                                         ),
                                       },
                                     ]}
@@ -245,10 +251,12 @@ export default function ChatMessage({
                               },
                             }}
                           >
-                            {chatMessage}
+                            {chatMessage === ""
+                              ? EMPTY_INPUT_SEND_MESSAGE
+                              : chatMessage}
                           </Markdown>
                         ),
-                      [chat.message, chatMessage]
+                      [chat.message, chatMessage],
                     )}
                   </div>
                 </div>
@@ -274,7 +282,16 @@ export default function ChatMessage({
                     }
                   />
                 </button>
-                <span className="prose text-primary word-break-break-word dark:prose-invert">
+                <span
+                  className={cn(
+                    "prose word-break-break-word dark:prose-invert",
+                    chatMessage !== ""
+                      ? EMPTY_INPUT_SEND_MESSAGE
+                      : chatMessage
+                        ? "text-primary"
+                        : "text-chat-trigger-disabled",
+                  )}
+                >
                   {promptOpen
                     ? template?.split("\n")?.map((line, index) => {
                         const regex = /{([^}]+)}/g;
@@ -291,7 +308,7 @@ export default function ChatMessage({
                             parts.push(
                               <span className="chat-message-highlight">
                                 {chat.message[match[1]]}
-                              </span>
+                              </span>,
                             );
                           }
 
@@ -304,18 +321,24 @@ export default function ChatMessage({
                         }
                         return <p>{parts}</p>;
                       })
-                    : chatMessage}
+                    : chatMessage === ""
+                      ? EMPTY_INPUT_SEND_MESSAGE
+                      : chatMessage}
                 </span>
               </>
             ) : (
               <div className="flex flex-col">
                 <span
-                  className="prose text-primary word-break-break-word dark:prose-invert"
+                  className={`prose word-break-break-word dark:prose-invert ${
+                    chatMessage === ""
+                      ? "text-chat-trigger-disabled"
+                      : "text-primary"
+                  }`}
                   data-testid={
                     "chat-message-" + chat.sender_name + "-" + chatMessage
                   }
                 >
-                  {chatMessage}
+                  {chatMessage === "" ? EMPTY_INPUT_SEND_MESSAGE : chatMessage}
                 </span>
                 {chat.files && (
                   <div className="my-2 flex flex-col gap-5">

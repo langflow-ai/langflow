@@ -40,7 +40,7 @@ export default function ShortcutsPage() {
   const combinationToEdit = shortcuts.filter((s) => s.name === selectedRows[0]);
   const [open, setOpen] = useState(false);
   const updateUniqueShortcut = useShortcutsStore(
-    (state) => state.updateUniqueShortcut
+    (state) => state.updateUniqueShortcut,
   );
 
   function handleRestore() {

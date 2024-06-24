@@ -18,6 +18,7 @@ import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useShortcutsStore } from "../../../../stores/shortcuts";
+import { useTypesStore } from "../../../../stores/typesStore";
 import { cn } from "../../../../utils/utils";
 import IconComponent from "../../../genericIconComponent";
 import ShadTooltip from "../../../shadTooltipComponent";
@@ -29,6 +30,11 @@ export const MenuBar = ({}: {}): JSX.Element => {
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const setLockChat = useFlowStore((state) => state.setLockChat);
+  const setIsBuilding = useFlowStore((state) => state.setIsBuilding);
+  const revertBuiltStatusFromBuilding = useFlowStore(
+    (state) => state.revertBuiltStatusFromBuilding,
+  );
   const undo = useFlowsManagerStore((state) => state.undo);
   const redo = useFlowsManagerStore((state) => state.redo);
   const saveLoading = useFlowsManagerStore((state) => state.saveLoading);
@@ -37,6 +43,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
   const uploadFlow = useFlowsManagerStore((state) => state.uploadFlow);
   const navigate = useNavigate();
   const isBuilding = useFlowStore((state) => state.isBuilding);
+  const getTypes = useTypesStore((state) => state.getTypes);
 
   function handleAddFlow() {
     try {
@@ -46,6 +53,12 @@ export const MenuBar = ({}: {}): JSX.Element => {
     } catch (err) {
       setErrorData(err as { title: string; list?: Array<string> });
     }
+  }
+
+  function handleReloadComponents() {
+    getTypes(true).then(() => {
+      setSuccessData({ title: "Components reloaded successfully" });
+    });
   }
 
   function printByBuildStatus() {
@@ -113,7 +126,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
                       title: UPLOAD_ERROR_ALERT,
                       list: [error],
                     });
-                  }
+                  },
                 );
               }}
             >
@@ -161,6 +174,18 @@ export const MenuBar = ({}: {}): JSX.Element => {
                 }
               />
             </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => {
+                handleReloadComponents();
+              }}
+              className="cursor-pointer"
+            >
+              <IconComponent
+                name="RefreshCcw"
+                className="header-menu-options"
+              />
+              Refresh All
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
         <FlowSettingsModal
@@ -182,15 +207,36 @@ export const MenuBar = ({}: {}): JSX.Element => {
           side="bottom"
           styleClasses="cursor-default"
         >
-          <div className="flex cursor-default items-center gap-1.5 text-sm text-muted-foreground">
-            <IconComponent
-              name={isBuilding || saveLoading ? "Loader2" : "CheckCircle2"}
-              className={cn(
-                "h-4 w-4",
-                isBuilding || saveLoading ? "animate-spin" : "animate-wiggle"
-              )}
-            />
-            {printByBuildStatus()}
+          <div className="flex cursor-default items-center gap-2 text-sm text-muted-foreground transition-all">
+            <div className="flex cursor-default items-center gap-1.5 text-sm text-muted-foreground transition-all">
+              <IconComponent
+                name={isBuilding || saveLoading ? "Loader2" : "CheckCircle2"}
+                className={cn(
+                  "h-4 w-4",
+                  isBuilding || saveLoading ? "animate-spin" : "animate-wiggle",
+                )}
+              />
+              <div>{printByBuildStatus()}</div>
+            </div>
+            <button
+              disabled={!isBuilding}
+              onClick={(_) => {
+                if (isBuilding) {
+                  setIsBuilding(false);
+                  revertBuiltStatusFromBuilding();
+                  setLockChat(false);
+                  window.stop();
+                }
+              }}
+              className={
+                isBuilding
+                  ? "flex items-center gap-1.5 text-status-red opacity-100 transition-all"
+                  : "opacity-0"
+              }
+            >
+              <IconComponent name="Square" className="h-4 w-4" />
+              <span>Stop</span>
+            </button>
           </div>
         </ShadTooltip>
       )}

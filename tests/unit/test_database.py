@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session
 
 from langflow.api.v1.schemas import FlowListCreate
-from langflow.initial_setup.setup import load_starter_projects
+from langflow.initial_setup.setup import load_starter_projects, load_flows_from_directory
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.flow import Flow, FlowCreate, FlowUpdate
 from langflow.services.database.utils import session_getter
@@ -271,7 +271,11 @@ def test_read_only_starter_projects(client: TestClient, active_user, logged_in_h
 
 @pytest.mark.load_flows
 def test_load_flows(client: TestClient, load_flows_dir):
-    client.get("/api/v1/auto_login")
+    response = client.get("api/v1/flows/c54f9130-f2fa-4a3e-b22a-3856d946351b")
+    assert response.status_code == 200
+    assert response.json()["name"] == "BasicExample"
+    # re-run to ensure updates work well
+    load_flows_from_directory()
     response = client.get("api/v1/flows/c54f9130-f2fa-4a3e-b22a-3856d946351b")
     assert response.status_code == 200
     assert response.json()["name"] == "BasicExample"

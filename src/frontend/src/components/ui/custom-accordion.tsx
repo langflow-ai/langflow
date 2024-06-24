@@ -24,7 +24,7 @@ const AccordionTrigger = React.forwardRef<
       <div
         className={cn(
           "flex flex-1 cursor-pointer items-center justify-between border-[1px] py-2 text-sm font-medium data-[state=closed]:rounded-md data-[state=open]:rounded-t-md data-[state=open]:border-b-0 data-[state=open]:bg-muted [&[data-state=open]>svg]:rotate-180",
-          className
+          className,
         )}
       >
         {children}
@@ -43,7 +43,7 @@ const AccordionContent = React.forwardRef<
     ref={ref}
     className={cn(
       "data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down overflow-hidden border-[1px] text-sm data-[state=open]:rounded-b-md data-[state=open]:border-t-0 data-[state=open]:bg-muted",
-      className
+      className,
     )}
     {...props}
   >

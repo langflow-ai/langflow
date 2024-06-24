@@ -45,7 +45,7 @@ def normalize_newlines(multiline_text):
 def parse_curl_command(curl_command):
     tokens = shlex.split(normalize_newlines(curl_command))
     tokens = [token for token in tokens if token and token != " "]
-    if "curl" not in tokens[0]:
+    if tokens and "curl" not in tokens[0]:
         raise ValueError("Invalid curl command")
     args_template = {
         "command": None,
@@ -112,6 +112,10 @@ def parse_curl_command(curl_command):
 
 def parse_context(curl_command):
     method = "get"
+    if not curl_command:
+        return ParsedContext(
+            method=method, url="", data=None, headers={}, cookies={}, verify=True, auth=None, proxy=None
+        )
 
     parsed_args: ParsedArgs = parse_curl_command(curl_command)
 

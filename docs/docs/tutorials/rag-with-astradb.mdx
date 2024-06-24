@@ -130,10 +130,10 @@ The RAG flow is a bit more complex. It consists of:
 
 - **Chat Input** component that defines where to put the user input coming from the Playground
 - **OpenAI Embeddings** component that generates embeddings from the user input
-- **Astra DB Search** component that retrieves the most relevant Records from the Astra DB database
-- **Text Output** component that turns the Records into Text by concatenating them and also displays it in the Playground
+- **Astra DB Search** component that retrieves the most relevant Data from the Astra DB database
+- **Text Output** component that turns the Data into Text by concatenating them and also displays it in the Playground
   - One interesting point you'll see here is that this component is named `Extracted Chunks`, and that is how it will appear in the Playground
-- **Prompt** component that takes in the user input and the retrieved Records as text and builds a prompt for the OpenAI model
+- **Prompt** component that takes in the user input and the retrieved Data as text and builds a prompt for the OpenAI model
 - **OpenAI** component that generates a response to the prompt
 - **Chat Output** component that displays the response in the Playground
 
@@ -170,7 +170,7 @@ Because this flow has a **Chat Input** and a **Text Output** component, the Pane
   style={{ width: "80%", margin: "20px auto" }}
 />
 
-Once we interact with it we get a response and the Extracted Chunks section is updated with the retrieved records.
+Once we interact with it we get a response and the Extracted Chunks section is updated with the retrieved Data.
 
 <ZoomableImage
   alt="Docusaurus themed image"
@@ -186,7 +186,4 @@ And that's it! You have successfully ran a RAG application using Astra DB and La
 # Conclusion
 
 In this guide, we have learned how to run a RAG application using Astra DB and Langflow.
-We have seen how to create an Astra DB database, import the Astra DB RAG Flows project into Langflow, and run the ingestion and RAG flows.import ThemedImage from "@theme/ThemedImage";
-import useBaseUrl from "@docusaurus/useBaseUrl";
-import ZoomableImage from "/src/theme/ZoomableImage.js";
-import Admonition from "@theme/Admonition";
+We have seen how to create an Astra DB database, import the Astra DB RAG Flows project into Langflow, and run the ingestion and RAG flows.

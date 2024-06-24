@@ -8,7 +8,9 @@ import { Badge } from "../../../ui/badge";
 
 export default function TableAutoCellRender({
   value,
-}: CustomCellRendererProps | { value: any }) {
+  setValue,
+  colDef,
+}: CustomCellRendererProps) {
   function getCellType() {
     switch (typeof value) {
       case "object":
@@ -30,10 +32,10 @@ export default function TableAutoCellRender({
               variant="outline"
               size="sq"
               className={cn(
-                "min-w-min bg-success-background text-success-foreground hover:bg-success-background"
+                "h-[18px] w-full justify-center bg-success-background text-success-foreground hover:bg-success-background",
               )}
             >
-              Success
+              {value}
             </Badge>
           );
         } else if (value === "failure") {
@@ -42,14 +44,20 @@ export default function TableAutoCellRender({
               variant="outline"
               size="sq"
               className={cn(
-                "min-w-min bg-error-background text-error-foreground hover:bg-error-background"
+                "h-[18px] w-full justify-center bg-error-background text-error-foreground hover:bg-error-background",
               )}
             >
-              Failure
+              {value}
             </Badge>
           );
         } else {
-          return <StringReader string={value} />;
+          return (
+            <StringReader
+              editable={!!colDef?.onCellValueChanged}
+              setValue={setValue!}
+              string={value}
+            />
+          );
         }
       case "number":
         return <NumberReader number={value} />;
@@ -59,7 +67,7 @@ export default function TableAutoCellRender({
   }
 
   return (
-    <div className="group flex h-full w-full items-center truncate align-middle">
+    <div className="group flex h-full w-full truncate text-align-last-left">
       {getCellType()}
     </div>
   );

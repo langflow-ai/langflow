@@ -23,7 +23,7 @@ test("curl_api_generation", async ({ page, context }) => {
   await page.getByRole("tab", { name: "cURL" }).click();
   await page.getByTestId("icon-Copy").last().click();
   const handle = await page.evaluateHandle(() =>
-    navigator.clipboard.readText()
+    navigator.clipboard.readText(),
   );
   const clipboardContent = await handle.jsonValue();
   expect(clipboardContent.length).toBeGreaterThan(0);

@@ -1,13 +1,18 @@
+import time
+from asyncio import Lock
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Annotated, List, Optional, Union
 from uuid import UUID
 
 import sqlalchemy as sa
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Request, UploadFile, status
-from langflow.api.utils import update_frontend_node_with_template_values
+from loguru import logger
+from sqlmodel import Session, select
+
 from langflow.api.v1.schemas import (
     ConfigResponse,
     CustomComponentRequest,
+    CustomComponentResponse,
     InputValueRequest,
     ProcessResponse,
     RunResponse,
@@ -16,7 +21,7 @@ from langflow.api.v1.schemas import (
     UpdateCustomComponentRequest,
     UploadFileResponse,
 )
-from langflow.custom import CustomComponent
+from langflow.custom.custom_component.component import Component
 from langflow.custom.utils import build_custom_component_template
 from langflow.graph.graph.base import Graph
 from langflow.graph.schema import RunOutputs
@@ -26,30 +31,44 @@ from langflow.schema.graph import Tweaks
 from langflow.services.auth.utils import api_key_security, get_current_active_user
 from langflow.services.cache.utils import save_uploaded_file
 from langflow.services.database.models.flow import Flow
-from langflow.services.database.models.flow.utils import get_all_webhook_components_in_flow, get_flow_by_id
+from langflow.services.database.models.flow.utils import get_all_webhook_components_in_flow
 from langflow.services.database.models.user.model import User
-from langflow.services.deps import get_session, get_session_service, get_settings_service, get_task_service
+from langflow.services.deps import (
+    get_cache_service,
+    get_session,
+    get_session_service,
+    get_settings_service,
+    get_task_service,
+    get_telemetry_service,
+)
 from langflow.services.session.service import SessionService
 from langflow.services.task.service import TaskService
-from loguru import logger
-from sqlmodel import Session, select
+from langflow.services.telemetry.schema import RunPayload
+from langflow.services.telemetry.service import TelemetryService
+from langflow.utils.version import get_version_info
 
 if TYPE_CHECKING:
-    from langflow.services.settings.manager import SettingsService
+    from langflow.services.cache.base import CacheService
+    from langflow.services.settings.service import SettingsService
 
 router = APIRouter(tags=["Base"])
 
 
 @router.get("/all", dependencies=[Depends(get_current_active_user)])
-def get_all(
+async def get_all(
     settings_service=Depends(get_settings_service),
+    cache_service: "CacheService" = Depends(dependency=get_cache_service),
+    force_refresh: bool = False,
 ):
-    from langflow.interface.types import get_all_types_dict
+    from langflow.interface.types import get_and_cache_all_types_dict
 
-    logger.debug("Building langchain types dict")
     try:
-        all_types_dict = get_all_types_dict(settings_service.settings.components_path)
-        return all_types_dict
+        async with Lock() as lock:
+            all_types_dict = await get_and_cache_all_types_dict(
+                settings_service=settings_service, cache_service=cache_service, force_refresh=force_refresh, lock=lock
+            )
+
+            return all_types_dict
     except Exception as exc:
         logger.exception(exc)
         raise HTTPException(status_code=500, detail=str(exc)) from exc
@@ -69,7 +88,7 @@ async def simple_run_flow(
             raise ValueError(f"Flow {flow_id_str} has no data")
         graph_data = flow.data.copy()
         graph_data = process_tweaks(graph_data, input_request.tweaks or {}, stream=stream)
-        graph = Graph.from_payload(graph_data, flow_id=flow_id_str, user_id=str(user_id))
+        graph = Graph.from_payload(graph_data, flow_id=flow_id_str, user_id=str(user_id), flow_name=flow.name)
         inputs = [
             InputValueRequest(components=[], input_value=input_request.input_value, type=input_request.input_type)
         ]
@@ -106,12 +125,12 @@ async def simple_run_flow(
 
 @router.post("/run/{flow_id_or_name}", response_model=RunResponse, response_model_exclude_none=True)
 async def simplified_run_flow(
-    db: Annotated[Session, Depends(get_session)],
+    background_tasks: BackgroundTasks,
     flow: Annotated[Flow, Depends(get_flow_by_id_or_endpoint_name)],
     input_request: SimplifiedAPIRequest = SimplifiedAPIRequest(),
     stream: bool = False,
     api_key_user: User = Depends(api_key_security),
-    session_service: SessionService = Depends(get_session_service),
+    telemetry_service: "TelemetryService" = Depends(get_telemetry_service),
 ):
     """
     Executes a specified flow by ID with input customization, performance enhancements through caching, and optional data streaming.
@@ -161,15 +180,27 @@ async def simplified_run_flow(
 
     This endpoint provides a powerful interface for executing flows with enhanced flexibility and efficiency, supporting a wide range of applications by allowing for dynamic input and output configuration along with performance optimizations through session management and caching.
     """
+    start_time = time.perf_counter()
     try:
-        return await simple_run_flow(
+        result = await simple_run_flow(
             flow=flow,
             input_request=input_request,
             stream=stream,
             api_key_user=api_key_user,
         )
+        end_time = time.perf_counter()
+        background_tasks.add_task(
+            telemetry_service.log_package_run,
+            RunPayload(IsWebhook=False, seconds=int(end_time - start_time), success=True, errorMessage=""),
+        )
+        return result
 
     except ValueError as exc:
+        end_time = time.perf_counter()
+        background_tasks.add_task(
+            telemetry_service.log_package_run,
+            RunPayload(IsWebhook=False, seconds=int(end_time - start_time), success=False, errorMessage=str(exc)),
+        )
         if "badly formed hexadecimal UUID string" in str(exc):
             # This means the Flow ID is not a valid UUID which means it can't find the flow
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
@@ -180,16 +211,19 @@ async def simplified_run_flow(
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
     except Exception as exc:
         logger.exception(exc)
+        background_tasks.add_task(
+            telemetry_service.log_package_run,
+            RunPayload(IsWebhook=False, seconds=int(end_time - start_time), success=False, errorMessage=str(exc)),
+        )
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
 
 
-@router.post("/webhook/{flow_id}", response_model=dict, status_code=HTTPStatus.ACCEPTED)
+@router.post("/webhook/{flow_id_or_name}", response_model=dict, status_code=HTTPStatus.ACCEPTED)
 async def webhook_run_flow(
-    db: Annotated[Session, Depends(get_session)],
-    flow: Annotated[Flow, Depends(get_flow_by_id)],
+    flow: Annotated[Flow, Depends(get_flow_by_id_or_endpoint_name)],
     request: Request,
     background_tasks: BackgroundTasks,
-    session_service: SessionService = Depends(get_session_service),
+    telemetry_service: "TelemetryService" = Depends(get_telemetry_service),
 ):
     """
     Run a flow using a webhook request.
@@ -208,6 +242,7 @@ async def webhook_run_flow(
         HTTPException: If the flow is not found or if there is an error processing the request.
     """
     try:
+        start_time = time.perf_counter()
         logger.debug("Received webhook request")
         data = await request.body()
         if not data:
@@ -232,12 +267,21 @@ async def webhook_run_flow(
         logger.debug("Starting background task")
         background_tasks.add_task(  # type: ignore
             simple_run_flow,
-            db=db,
             flow=flow,
             input_request=input_request,
         )
+        background_tasks.add_task(
+            telemetry_service.log_package_run,
+            RunPayload(IsWebhook=True, seconds=int(time.perf_counter() - start_time), success=True, errorMessage=""),
+        )
         return {"message": "Task started in the background", "status": "in progress"}
     except Exception as exc:
+        background_tasks.add_task(
+            telemetry_service.log_package_run,
+            RunPayload(
+                IsWebhook=True, seconds=int(time.perf_counter() - start_time), success=False, errorMessage=str(exc)
+            ),
+        )
         if "Flow ID is required" in str(exc) or "Request body is empty" in str(exc):
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         logger.exception(exc)
@@ -435,30 +479,20 @@ async def create_upload_file(
 # get endpoint to return version of langflow
 @router.get("/version")
 def get_version():
-    try:
-        from langflow.version import __version__  # type: ignore
-
-        version = __version__
-        package = "Langflow"
-    except ImportError:
-        from importlib import metadata
-
-        version = metadata.version("langflow-base")
-        package = "Langflow Base"
-    return {"version": version, "package": package}
+    return get_version_info()
 
 
-@router.post("/custom_component", status_code=HTTPStatus.OK)
+@router.post("/custom_component", status_code=HTTPStatus.OK, response_model=CustomComponentResponse)
 async def custom_component(
     raw_code: CustomComponentRequest,
     user: User = Depends(get_current_active_user),
 ):
-    component = CustomComponent(code=raw_code.code)
+    component = Component(code=raw_code.code)
 
-    built_frontend_node, _ = build_custom_component_template(component, user_id=user.id)
-
-    built_frontend_node = update_frontend_node_with_template_values(built_frontend_node, raw_code.frontend_node)
-    return built_frontend_node
+    built_frontend_node, component_instance = build_custom_component_template(component, user_id=user.id)
+    if raw_code.frontend_node is not None:
+        built_frontend_node = component_instance.post_code_processing(built_frontend_node, raw_code.frontend_node)
+    return CustomComponentResponse(data=built_frontend_node, type=component_instance.__class__.__name__)
 
 
 @router.post("/custom_component/update", status_code=HTTPStatus.OK)
@@ -481,7 +515,7 @@ async def custom_component_update(
 
     """
     try:
-        component = CustomComponent(code=code_request.code)
+        component = Component(code=code_request.code)
 
         component_node, cc_instance = build_custom_component_template(
             component,

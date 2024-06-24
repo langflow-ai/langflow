@@ -31,7 +31,7 @@ const SideBarFoldersButtonsComponent = ({
   const [foldersNames, setFoldersNames] = useState({});
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
   const [editFolders, setEditFolderName] = useState(
-    folders.map((obj) => ({ name: obj.name, edit: false }))
+    folders.map((obj) => ({ name: obj.name, edit: false })),
   );
   const uploadFolder = useFolderStore((state) => state.uploadFolder);
   const currentFolder = pathname.split("/");
@@ -52,13 +52,13 @@ const SideBarFoldersButtonsComponent = ({
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
 
-  const handleFolderChange = (folderId: string) => {
+  const handleFolderChange = () => {
     getFolderById(folderId);
   };
 
   const { dragOver, dragEnter, dragLeave, onDrop } = useFileDrop(
     folderId,
-    handleFolderChange
+    handleFolderChange,
   );
 
   const handleUploadFlowsToFolder = () => {
@@ -86,7 +86,7 @@ const SideBarFoldersButtonsComponent = ({
     addFolder({ name: "New Folder", parent_id: null, description: "" }).then(
       (res) => {
         refreshFolders();
-      }
+      },
     );
   }
 
@@ -103,6 +103,50 @@ const SideBarFoldersButtonsComponent = ({
   useEffect(() => {
     folders.map((obj) => ({ name: obj.name, edit: false }));
   }, [folders]);
+
+  const handleEditNameFolder = async (item) => {
+    const newEditFolders = editFolders.map((obj) => {
+      if (obj.name === item.name) {
+        return { name: item.name, edit: false };
+      }
+      return { name: obj.name, edit: false };
+    });
+    setEditFolderName(newEditFolders);
+    if (foldersNames[item.name].trim() !== "") {
+      setFoldersNames((old) => ({
+        ...old,
+        [item.name]: foldersNames[item.name],
+      }));
+      const body = {
+        ...item,
+        name: foldersNames[item.name],
+        flows: item.flows?.length > 0 ? item.flows : [],
+        components: item.components?.length > 0 ? item.components : [],
+      };
+      const updatedFolder = await updateFolder(body, item.id!);
+
+      const updatedFolderIndex = folders.findIndex(
+        (f) => f.id === updatedFolder.id,
+      );
+
+      const updateFolders = [...folders];
+      updateFolders[updatedFolderIndex] = updatedFolder;
+
+      setFolders(updateFolders);
+      setFoldersNames({});
+      setEditFolderName(
+        folders.map((obj) => ({
+          name: obj.name,
+          edit: false,
+        })),
+      );
+    } else {
+      setFoldersNames((old) => ({
+        ...old,
+        [item.name]: item.name,
+      }));
+    }
+  };
 
   return (
     <>
@@ -132,7 +176,7 @@ const SideBarFoldersButtonsComponent = ({
         <>
           {folders.map((item, index) => {
             const editFolderName = editFolders?.filter(
-              (folder) => folder.name === item.name
+              (folder) => folder.name === item.name,
             )[0];
             return (
               <div
@@ -148,7 +192,7 @@ const SideBarFoldersButtonsComponent = ({
                     ? "border border-border bg-muted hover:bg-muted"
                     : "border hover:bg-transparent lg:border-transparent lg:hover:border-border",
                   "group flex w-full shrink-0 cursor-pointer gap-2 opacity-100 lg:min-w-full",
-                  folderIdDragging === item.id! ? "bg-border" : ""
+                  folderIdDragging === item.id! ? "bg-border" : "",
                 )}
                 onClick={() => handleChangeFolder!(item.id!)}
               >
@@ -190,11 +234,11 @@ const SideBarFoldersButtonsComponent = ({
                     event.stopPropagation();
                     event.preventDefault();
                   }}
-                  className="flex w-full items-center gap-4"
+                  className="flex w-full items-center gap-2"
                 >
                   <IconComponent
                     name={"folder"}
-                    className="w-4 flex-shrink-0 justify-start stroke-[1.5] opacity-100"
+                    className="mr-2 w-4 flex-shrink-0 justify-start stroke-[1.5] opacity-100"
                   />
                   {editFolderName?.edit ? (
                     <div>
@@ -218,7 +262,7 @@ const SideBarFoldersButtonsComponent = ({
                               folders.map((obj) => ({
                                 name: obj.name,
                                 edit: false,
-                              }))
+                              })),
                             );
                           }
                           if (e.key === "Enter") {
@@ -228,47 +272,10 @@ const SideBarFoldersButtonsComponent = ({
                         }}
                         autoFocus={true}
                         onBlur={async () => {
-                          const newEditFolders = editFolders.map((obj) => {
-                            if (obj.name === item.name) {
-                              return { name: item.name, edit: false };
-                            }
-                            return { name: obj.name, edit: false };
-                          });
-                          setEditFolderName(newEditFolders);
-                          if (foldersNames[item.name].trim() !== "") {
-                            setFoldersNames((old) => ({
-                              ...old,
-                              [item.name]: foldersNames[item.name],
-                            }));
-                            const body = {
-                              ...item,
-                              name: foldersNames[item.name],
-                              flows: item.flows?.length > 0 ? item.flows : [],
-                              components:
-                                item.components?.length > 0
-                                  ? item.components
-                                  : [],
-                            };
-                            const updatedFolder = await updateFolder(
-                              body,
-                              item.id!
-                            );
-                            const updateFolders = folders.filter(
-                              (f) => f.name !== item.name
-                            );
-                            setFolders([...updateFolders, updatedFolder]);
-                            setFoldersNames({});
-                            setEditFolderName(
-                              folders.map((obj) => ({
-                                name: obj.name,
-                                edit: false,
-                              }))
-                            );
+                          if (refInput.current?.value !== item.name) {
+                            handleEditNameFolder(item);
                           } else {
-                            setFoldersNames((old) => ({
-                              ...old,
-                              [item.name]: item.name,
-                            }));
+                            editFolderName.edit = false;
                           }
                         }}
                         value={foldersNames[item.name]}
@@ -290,10 +297,11 @@ const SideBarFoldersButtonsComponent = ({
                         e.preventDefault();
                       }}
                       variant={"ghost"}
+                      size={"icon"}
                     >
                       <IconComponent
                         name={"trash"}
-                        className="w-4 stroke-[1.5]"
+                        className="w-4 stroke-[1.5] p-0"
                       />
                     </Button>
                   )}
@@ -304,8 +312,7 @@ const SideBarFoldersButtonsComponent = ({
                       e.stopPropagation();
                       e.preventDefault();
                     }}
-                    size="none"
-                    variant="none"
+                    unstyled
                   >
                     <IconComponent
                       name={"Download"}

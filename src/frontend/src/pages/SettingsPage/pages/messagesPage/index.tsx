@@ -8,6 +8,7 @@ import { useState } from "react";
 import TableComponent from "../../../../components/tableComponent";
 import useAlertStore from "../../../../stores/alertStore";
 import { useMessagesStore } from "../../../../stores/messagesStore";
+import { messagesSorter } from "../../../../utils/utils";
 import HeaderMessagesComponent from "./components/headerMessages";
 import useMessagesTable from "./hooks/use-messages-table";
 import useRemoveMessages from "./hooks/use-remove-messages";
@@ -26,7 +27,7 @@ export default function MessagesPage() {
     setSelectedRows,
     setSuccessData,
     setErrorData,
-    selectedRows
+    selectedRows,
   );
 
   const { handleUpdate } = useUpdateMessage(setSuccessData, setErrorData);
@@ -46,10 +47,7 @@ export default function MessagesPage() {
 
   return (
     <div className="flex h-full w-full flex-col justify-between gap-6">
-      <HeaderMessagesComponent
-        selectedRows={selectedRows}
-        handleRemoveMessages={handleRemoveMessages}
-      />
+      <HeaderMessagesComponent />
 
       <div className="flex h-full w-full flex-col justify-between">
         <TableComponent
@@ -59,17 +57,23 @@ export default function MessagesPage() {
           onCellEditRequest={(event) => {
             handleUpdateMessage(event);
           }}
-          editable={["Sender Name", "Message"]}
+          editable={[
+            {
+              field: "text",
+              onUpdate: handleUpdateMessage,
+              editableCell: false,
+            },
+          ]}
           overlayNoRowsTemplate="No data available"
           onSelectionChanged={(event: SelectionChangedEvent) => {
             setSelectedRows(
-              event.api.getSelectedRows().map((row) => row.index)
+              event.api.getSelectedRows().map((row) => row.index),
             );
           }}
           rowSelection="multiple"
           suppressRowClickSelection={true}
           pagination={true}
-          columnDefs={columns}
+          columnDefs={columns.sort(messagesSorter)}
           rowData={messages}
         />
       </div>

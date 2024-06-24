@@ -1,89 +1,103 @@
-from typing import List, Optional, Union
+from typing import List
 
-from langchain_community.vectorstores.upstash import UpstashVectorStore
-from langchain_core.embeddings import Embeddings
-from langchain_core.retrievers import BaseRetriever
-from langchain_core.vectorstores import VectorStore
+from langchain_community.vectorstores import UpstashVectorStore
 
-from langflow.custom import CustomComponent
-from langflow.schema import Record
+from langflow.base.vectorstores.model import LCVectorStoreComponent
+from langflow.helpers.data import docs_to_data
+from langflow.io import HandleInput, IntInput, StrInput, SecretStrInput, DataInput, MultilineInput
+from langflow.schema import Data
 
 
-class UpstashVectorStoreComponent(CustomComponent):
-    """
-    A custom component for implementing a Vector Store using Upstash.
-    """
+class UpstashVectorStoreComponent(LCVectorStoreComponent):
+    display_name = "Upstash"
+    description = "Upstash Vector Store with search capabilities"
+    documentation = "https://python.langchain.com/v0.2/docs/integrations/vectorstores/upstash/"
+    icon = "Upstash"
 
-    display_name: str = "Upstash"
-    description: str = "Create and Utilize an Upstash Vector Store"
+    inputs = [
+        StrInput(name="index_url", display_name="Index URL", info="The URL of the Upstash index.", required=True),
+        SecretStrInput(
+            name="index_token", display_name="Index Token", info="The token for the Upstash index.", required=True
+        ),
+        StrInput(
+            name="text_key",
+            display_name="Text Key",
+            info="The key in the record to use as text.",
+            value="text",
+            advanced=True,
+        ),
+        MultilineInput(name="search_query", display_name="Search Query"),
+        DataInput(
+            name="ingest_data",
+            display_name="Ingest Data",
+            is_list=True,
+        ),
+        HandleInput(
+            name="embedding",
+            display_name="Embedding",
+            input_types=["Embeddings"],
+            info="To use Upstash's embeddings, don't provide an embedding.",
+        ),
+        IntInput(
+            name="number_of_results",
+            display_name="Number of Results",
+            info="Number of results to return.",
+            value=4,
+            advanced=True,
+        ),
+    ]
 
-    def build_config(self):
-        """
-        Builds the configuration for the component.
+    def build_vector_store(self) -> UpstashVectorStore:
+        return self._build_upstash()
 
-        Returns:
-        - dict: A dictionary containing the configuration options for the component.
-        """
-        return {
-            "inputs": {"display_name": "Input", "input_types": ["Document", "Record"]},
-            "embedding": {
-                "display_name": "Embedding",
-                "input_types": ["Embeddings"],
-                "info": "To use Upstash's embeddings, don't provide an embedding.",
-            },
-            "index_url": {
-                "display_name": "Index URL",
-                "info": "The URL of the Upstash index.",
-            },
-            "index_token": {
-                "display_name": "Index Token",
-                "info": "The token for the Upstash index.",
-            },
-            "text_key": {
-                "display_name": "Text Key",
-                "info": "The key in the record to use as text.",
-                "advanced": True,
-            },
-        }
+    def _build_upstash(self) -> UpstashVectorStore:
+        use_upstash_embedding = self.embedding is None
 
-    def build(
-        self,
-        inputs: Optional[List[Record]] = None,
-        text_key: str = "text",
-        index_url: Optional[str] = None,
-        index_token: Optional[str] = None,
-        embedding: Optional[Embeddings] = None,
-    ) -> Union[VectorStore, BaseRetriever]:
         documents = []
-        for _input in inputs or []:
-            if isinstance(_input, Record):
+        for _input in self.ingest_data or []:
+            if isinstance(_input, Data):
                 documents.append(_input.to_lc_document())
             else:
                 documents.append(_input)
 
-        use_upstash_embedding = embedding is None
-        if not documents:
-            upstash_vs = UpstashVectorStore(
-                embedding=embedding or use_upstash_embedding,
-                text_key=text_key,
-                index_url=index_url,
-                index_token=index_token,
-            )
-        else:
+        if documents:
             if use_upstash_embedding:
                 upstash_vs = UpstashVectorStore(
                     embedding=use_upstash_embedding,
-                    text_key=text_key,
-                    index_url=index_url,
-                    index_token=index_token,
+                    text_key=self.text_key,
+                    index_url=self.index_url,
+                    index_token=self.index_token,
                 )
                 upstash_vs.add_documents(documents)
-            elif embedding:
+            else:
                 upstash_vs = UpstashVectorStore.from_documents(
-                    documents=documents,  # type: ignore
-                    embedding=embedding,
-                    text_key=text_key,
-                    index_url=index_url,
-                    index_token=index_token,
+                    documents=documents,
+                    embedding=self.embedding,
+                    text_key=self.text_key,
+                    index_url=self.index_url,
+                    index_token=self.index_token,
                 )
+        else:
+            upstash_vs = UpstashVectorStore(
+                embedding=self.embedding or use_upstash_embedding,
+                text_key=self.text_key,
+                index_url=self.index_url,
+                index_token=self.index_token,
+            )
+
         return upstash_vs
+
+    def search_documents(self) -> List[Data]:
+        vector_store = self._build_upstash()
+
+        if self.search_query and isinstance(self.search_query, str) and self.search_query.strip():
+            docs = vector_store.similarity_search(
+                query=self.search_query,
+                k=self.number_of_results,
+            )
+
+            data = docs_to_data(docs)
+            self.status = data
+            return data
+        else:
+            return []

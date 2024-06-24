@@ -54,10 +54,10 @@ function ConfirmationModal({
   }, [modalOpen]);
 
   const triggerChild = React.Children.toArray(children).find(
-    (child) => (child as React.ReactElement).type === Trigger
+    (child) => (child as React.ReactElement).type === Trigger,
   );
   const ContentChild = React.Children.toArray(children).find(
-    (child) => (child as React.ReactElement).type === Content
+    (child) => (child as React.ReactElement).type === Content,
   );
 
   return (

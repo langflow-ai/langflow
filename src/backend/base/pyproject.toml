@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "langflow-base"
-version = "0.0.72"
+version = "0.0.75"
 description = "A Python package with a built-in web application"
 authors = ["Langflow <contact@langflow.org>"]
 maintainers = [
@@ -53,7 +53,6 @@ python-jose = "^3.3.0"
 pandas = "2.2.0"
 multiprocess = "^0.70.14"
 duckdb = "^1.0.0"
-python-socketio = "^5.11.0"
 python-docx = "^1.1.0"
 jq = { version = "^1.7.0", markers = "sys_platform != 'win32'" }
 pypdf = "^4.2.0"

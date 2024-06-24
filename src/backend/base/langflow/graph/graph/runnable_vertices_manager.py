@@ -1,6 +1,6 @@
 import asyncio
 from collections import defaultdict
-from typing import TYPE_CHECKING, Awaitable, Callable, List
+from typing import TYPE_CHECKING, Callable, List, Coroutine
 
 if TYPE_CHECKING:
     from langflow.graph.graph.base import Graph
@@ -12,6 +12,33 @@ class RunnableVerticesManager:
         self.run_map = defaultdict(list)  # Tracks successors of each vertex
         self.run_predecessors = defaultdict(set)  # Tracks predecessors for each vertex
         self.vertices_to_run = set()  # Set of vertices that are ready to run
+
+    def to_dict(self) -> dict:
+        return {
+            "run_map": self.run_map,
+            "run_predecessors": self.run_predecessors,
+            "vertices_to_run": self.vertices_to_run,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "RunnableVerticesManager":
+        instance = cls()
+        instance.run_map = data["run_map"]
+        instance.run_predecessors = data["run_predecessors"]
+        instance.vertices_to_run = data["vertices_to_run"]
+        return instance
+
+    def __getstate__(self) -> object:
+        return {
+            "run_map": self.run_map,
+            "run_predecessors": self.run_predecessors,
+            "vertices_to_run": self.vertices_to_run,
+        }
+
+    def __setstate__(self, state: dict) -> None:
+        self.run_map = state["run_map"]
+        self.run_predecessors = state["run_predecessors"]
+        self.vertices_to_run = state["vertices_to_run"]
 
     def is_vertex_runnable(self, vertex_id: str) -> bool:
         """Determines if a vertex is runnable."""
@@ -56,20 +83,20 @@ class RunnableVerticesManager:
     async def get_next_runnable_vertices(
         self,
         lock: asyncio.Lock,
-        set_cache_coro: Callable[["Graph", asyncio.Lock], Awaitable[None]],
+        set_cache_coro: Callable[["Graph", asyncio.Lock], Coroutine],
         graph: "Graph",
         vertex: "Vertex",
         cache: bool = True,
-    ):
+    ) -> List[str]:
         """
         Retrieves the next runnable vertices in the graph for a given vertex.
 
         Args:
-            graph (Graph): The graph object representing the flow.
-            vertex (Vertex): The current vertex.
-            vertex_id (str): The ID of the current vertex.
-            chat_service (ChatService): The chat service object.
-            flow_id (str): The ID of the flow.
+            lock (asyncio.Lock): The lock object to be used for synchronization.
+            set_cache_coro (Callable): The coroutine function to set the cache.
+            graph (Graph): The graph object containing the vertices.
+            vertex (Vertex): The vertex object for which the next runnable vertices are to be retrieved.
+            cache (bool, optional): A flag to indicate if the cache should be updated. Defaults to True.
 
         Returns:
             list: A list of IDs of the next runnable vertices.
@@ -85,11 +112,14 @@ class RunnableVerticesManager:
                 next_runnable_vertices = direct_successors_ready
 
             for v_id in set(next_runnable_vertices):  # Use set to avoid duplicates
-                self.update_vertex_run_state(v_id, is_runnable=False)
-                self.remove_from_predecessors(v_id)
+                self.remove_vertex_from_runnables(v_id)
             if cache:
                 await set_cache_coro(data=graph, lock=lock)  # type: ignore
         return next_runnable_vertices
+
+    def remove_vertex_from_runnables(self, v_id):
+        self.update_vertex_run_state(v_id, is_runnable=False)
+        self.remove_from_predecessors(v_id)
 
     @staticmethod
     def get_top_level_vertices(graph, vertices_ids):

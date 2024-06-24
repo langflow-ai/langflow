@@ -48,7 +48,7 @@ export function TagsSelector({
               className={cn(
                 selectedTags.some((category) => category === tag.name)
                   ? "min-w-min bg-beta-foreground text-background hover:bg-beta-foreground"
-                  : ""
+                  : "",
               )}
             >
               {tag.name}

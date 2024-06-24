@@ -1,5 +1,5 @@
+import DataOutputComponent from "../../../../../../components/dataOutputComponent";
 import ForwardedIconComponent from "../../../../../../components/genericIconComponent";
-import RecordsOutputComponent from "../../../../../../components/recordsOutputComponent";
 import {
   Alert,
   AlertDescription,
@@ -9,41 +9,46 @@ import { Case } from "../../../../../../shared/components/caseComponent";
 import TextOutputView from "../../../../../../shared/components/textOutputView";
 import useFlowStore from "../../../../../../stores/flowStore";
 import ErrorOutput from "./components";
-
-export default function SwitchOutputView(nodeId): JSX.Element {
-  const nodeIdentity = nodeId.nodeId;
-
-  const nodes = useFlowStore((state) => state.nodes);
+// Define the props type
+interface SwitchOutputViewProps {
+  nodeId: string;
+  outputName: string;
+}
+const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
+  nodeId,
+  outputName,
+}) => {
   const flowPool = useFlowStore((state) => state.flowPool);
-  const node = nodes.find((node) => node?.id === nodeIdentity);
-
-  const flowPoolNode = (flowPool[nodeIdentity] ?? [])[
-    (flowPool[nodeIdentity]?.length ?? 1) - 1
+  const flowPoolNode = (flowPool[nodeId] ?? [])[
+    (flowPool[nodeId]?.length ?? 1) - 1
   ];
-
-  const results = flowPoolNode?.data?.logs[0] ?? "";
+  let results = flowPoolNode?.data?.outputs[outputName] ?? "";
+  if (Array.isArray(results)) {
+    return;
+  }
   const resultType = results?.type;
   let resultMessage = results?.message;
-  const RECORD_TYPES = ["record", "object", "array", "message"];
-  if (resultMessage.raw) {
+  const RECORD_TYPES = ["data", "object", "array", "message"];
+  if (resultMessage?.raw) {
     resultMessage = resultMessage.raw;
   }
-
   return (
     <>
       <Case condition={!resultType || resultType === "unknown"}>
         <div>NO OUTPUT</div>
       </Case>
-      <Case condition={resultType === "ValueError"}>
-        <ErrorOutput value={resultMessage}></ErrorOutput>
+      <Case condition={resultType === "error" || resultType === "ValueError"}>
+        <ErrorOutput
+          value={`${resultMessage.errorMessage}\n\n${resultMessage.stackTrace}`}
+        ></ErrorOutput>
       </Case>
 
-      <Case condition={node && resultType === "text"}>
+      <Case condition={resultType === "text"}>
         <TextOutputView left={false} value={resultMessage} />
       </Case>
 
       <Case condition={RECORD_TYPES.includes(resultType)}>
-        <RecordsOutputComponent
+        <DataOutputComponent
           rows={
             Array.isArray(resultMessage)
               ? (resultMessage as Array<any>).every((item) => item.data)
@@ -74,4 +79,6 @@ export default function SwitchOutputView(nodeId): JSX.Element {
       </Case>
     </>
   );
-}
+};
+
+export default SwitchOutputView;

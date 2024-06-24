@@ -40,6 +40,7 @@ module.exports = {
         "administration/login",
         "administration/cli",
         "administration/playground",
+        "administration/settings",
         "administration/global-env",
         "administration/chat-widget",
       ],
@@ -126,6 +127,7 @@ module.exports = {
       label: "Contributing",
       collapsed: false,
       items: [
+        "contributing/telemetry",
         "contributing/how-contribute",
         "contributing/github-issues",
         "contributing/community",

@@ -1,4 +1,4 @@
 from .dotdict import dotdict
-from .record import Record
+from .data import Data
 
-__all__ = ["Record", "dotdict"]
+__all__ = ["Data", "dotdict"]

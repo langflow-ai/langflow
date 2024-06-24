@@ -3,7 +3,7 @@ from typing import Optional
 from langchain.retrievers import MultiQueryRetriever
 
 from langflow.custom import CustomComponent
-from langflow.field_typing import BaseLanguageModel, BaseRetriever, PromptTemplate, Text
+from langflow.field_typing import BaseRetriever, LanguageModel, PromptTemplate, Text
 
 
 class MultiQueryRetrieverComponent(CustomComponent):
@@ -39,7 +39,7 @@ class MultiQueryRetrieverComponent(CustomComponent):
 
     def build(
         self,
-        llm: BaseLanguageModel,
+        llm: LanguageModel,
         retriever: BaseRetriever,
         prompt: Optional[Text] = None,
         parser_key: str = "lines",

@@ -7,10 +7,11 @@ const useUpdateNodeCode = (
   dataNode: APIClassType, // Define YourNodeType according to your data structure
   setNode: (id: string, callback: (oldNode) => any) => void,
   setIsOutdated: (value: boolean) => void,
-  updateNodeInternals: (id: string) => void
+  setIsUserEdited: (value: boolean) => void,
+  updateNodeInternals: (id: string) => void,
 ) => {
   const updateNodeCode = useCallback(
-    (newNodeClass: APIClassType, code: string, name: string) => {
+    (newNodeClass: APIClassType, code: string, name: string, type: string) => {
       setNode(dataId, (oldNode) => {
         let newNode = cloneDeep(oldNode);
 
@@ -21,16 +22,20 @@ const useUpdateNodeCode = (
           display_name: newNodeClass.display_name ?? dataNode.display_name,
           edited: false,
         };
+        if (type) {
+          newNode.data.type = type;
+        }
 
         newNode.data.node.template[name].value = code;
         setIsOutdated(false);
+        setIsUserEdited(false);
 
         return newNode;
       });
 
       updateNodeInternals(dataId);
     },
-    [dataId, dataNode, setNode, setIsOutdated, updateNodeInternals]
+    [dataId, dataNode, setNode, setIsOutdated, updateNodeInternals],
   );
 
   return updateNodeCode;
