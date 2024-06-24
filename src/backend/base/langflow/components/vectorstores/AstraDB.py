@@ -196,6 +196,10 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
         except Exception as e:
             raise ValueError(f"Error initializing AstraDBVectorStore: {str(e)}") from e
 
+        if hasattr(self, "ingest_data") and self.ingest_data:
+            logger.debug("Ingesting data into the Vector Store.")
+            self._add_documents_to_vector_store(vector_store)
+
         self.status = self._astradb_collection_to_data(vector_store.collection)
         return vector_store
 
