@@ -86,7 +86,7 @@ class TracingService(Service):
             await self.start()
             self._initialize_langsmith_tracer()
         except Exception as e:
-            logger.error(f"Error initializing tracers: {e}")
+            logger.debug(f"Error initializing tracers: {e}")
 
     def _initialize_langsmith_tracer(self):
         project_name = os.getenv("LANGCHAIN_PROJECT", "Langflow")
@@ -188,15 +188,19 @@ class LangSmithTracer:
         self.trace_type = trace_type
         self.project_name = project_name
         self.trace_id = trace_id
-        self._run_tree = RunTree(
-            project_name=self.project_name,
-            name=self.trace_name,
-            run_type=self.trace_type,
-            id=self.trace_id,
-        )
-        self._run_tree.add_event({"name": "Start", "time": datetime.now(timezone.utc).isoformat()})
-        self._children: dict[str, RunTree] = {}
-        self._ready = self.setup_langsmith()
+        try:
+            self._run_tree = RunTree(
+                project_name=self.project_name,
+                name=self.trace_name,
+                run_type=self.trace_type,
+                id=self.trace_id,
+            )
+            self._run_tree.add_event({"name": "Start", "time": datetime.now(timezone.utc).isoformat()})
+            self._children: dict[str, RunTree] = {}
+            self._ready = self.setup_langsmith()
+        except Exception as e:
+            logger.debug(f"Error setting up LangSmith tracer: {e}")
+            self._ready = False
 
     @property
     def ready(self):
