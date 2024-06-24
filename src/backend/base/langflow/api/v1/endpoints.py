@@ -88,7 +88,7 @@ async def simple_run_flow(
             raise ValueError(f"Flow {flow_id_str} has no data")
         graph_data = flow.data.copy()
         graph_data = process_tweaks(graph_data, input_request.tweaks or {}, stream=stream)
-        graph = Graph.from_payload(graph_data, flow_id=flow_id_str, user_id=str(user_id))
+        graph = Graph.from_payload(graph_data, flow_id=flow_id_str, user_id=str(user_id), flow_name=flow.name)
         inputs = [
             InputValueRequest(components=[], input_value=input_request.input_value, type=input_request.input_type)
         ]
