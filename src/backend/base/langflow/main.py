@@ -6,7 +6,7 @@ from typing import Optional
 from urllib.parse import urlencode
 
 import nest_asyncio  # type: ignore
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -32,22 +32,17 @@ from langflow.utils.logger import configure
 warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
 
 
-class RequestCancelledMiddleware:
+class RequestCancelledMiddleware(BaseHTTPMiddleware):
     def __init__(self, app):
-        self.app = app
+        super().__init__(app)
 
-    async def __call__(self, scope, receive, send):
-        if scope["type"] != "http":
-            await self.app(scope, receive, send)
-            return
+    async def dispatch(self, request: Request, call_next):
+        queue: asyncio.Queue = asyncio.Queue()
 
-        # Let's make a shared queue for the request messages
-        queue = asyncio.Queue()
-
-        async def message_poller(sentinel, handler_task):
+        async def message_poller(sentinel, handler_task, request):
             nonlocal queue
             while True:
-                message = await receive()
+                message = await request.receive
                 if message["type"] == "http.disconnect":
                     handler_task.cancel()
                     return sentinel  # Break the loop
@@ -56,13 +51,14 @@ class RequestCancelledMiddleware:
                 await queue.put(message)
 
         sentinel = object()
-        handler_task = asyncio.create_task(self.app(scope, queue.get, send))
-        asyncio.create_task(message_poller(sentinel, handler_task))
+        handler_task = asyncio.create_task(call_next(request))
+        asyncio.create_task(message_poller(sentinel, handler_task, request))
 
         try:
-            return await handler_task
+            response = await handler_task
+            return response
         except asyncio.CancelledError:
-            pass
+            return Response("Request was cancelled", status_code=499)
 
 
 class JavaScriptMIMETypeMiddleware(BaseHTTPMiddleware):
