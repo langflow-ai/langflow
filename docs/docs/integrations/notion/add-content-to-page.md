@@ -5,6 +5,10 @@ import ZoomableImage from "/src/theme/ZoomableImage.js";
 
 # Add Content To Page
 
+<Admonition type="warning" title="warning">
+This page may contain outdated information. It will be updated as soon as possible.
+</Admonition>
+
 The `AddContentToPage` component converts markdown text to Notion blocks and appends them to a Notion page.
 
 [Notion Reference](https://developers.notion.com/reference/patch-block-children)
