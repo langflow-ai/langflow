@@ -5,7 +5,7 @@ export const StoreGuard = ({ children }) => {
   const hasStore = useStoreStore((state) => state.hasStore);
 
   if (!hasStore) {
-    return <Navigate to="/flows" replace />;
+    return <Navigate to="/all" replace />;
   }
 
   return children;

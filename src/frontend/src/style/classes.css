@@ -55,16 +55,110 @@ select:-webkit-autofill:focus {
   width: 8px;
 }
 
+.ag-cell {
+  display: block;
+  width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ag-cell-focus {
+  border-radius: 0.375rem;
+  border: 1px solid #94a3b8 !important;
+  background-color: transparent !important;
+  text-align: left;
+  font-size: 0.875rem;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important;
+  outline: none !important;
+  outline-color: transparent !important;
+}
+
+.ag-cell-focus:focus {
+  border-color: #94a3b8 !important;
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05) !important;
+  background-color: transparent !important;
+  outline: none !important;
+  outline-color: transparent !important;
+}
+
+input .ag-cell-edit-input {
+  border: 1px solid transparent !important;
+  outline: none !important;
+  outline-color: transparent !important;
+}
+
+input[class^="ag-"]:not([type]),
+input[class^="ag-"][type="text"],
+input[class^="ag-"][type="number"],
+input[class^="ag-"][type="tel"],
+input[class^="ag-"][type="date"],
+input[class^="ag-"][type="datetime-local"],
+textarea[class^="ag-"] {
+  border: 1px solid transparent !important;
+  outline: none !important;
+  outline-color: transparent !important;
+  -webkit-box-shadow: none !important; /* Safari and older Chrome versions */
+  -moz-box-shadow: none !important; /* Older Firefox versions */
+  box-shadow: none !important; /* Standard syntax */
+}
+
+input[class^="ag-"][type="text"]:focus,
+input[class^="ag-"][type="number"]:focus,
+input[class^="ag-"][type="tel"]:focus,
+input[class^="ag-"][type="date"]:focus,
+input[class^="ag-"][type="datetime-local"]:focus,
+textarea[class^="ag-"]:focus {
+  border: 1px solid transparent !important;
+  outline-color: transparent !important;
+  outline: none !important;
+  -webkit-box-shadow: none !important; /* Safari and older Chrome versions */
+  -moz-box-shadow: none !important; /* Older Firefox versions */
+  box-shadow: none !important; /* Standard syntax */
+}
+
 .ace_scrollbar::-webkit-scrollbar-track {
-  background-color: #f1f1f1;
+  background-color: hsl(var(--muted));
 }
 
 .ace_scrollbar::-webkit-scrollbar-thumb {
-  background-color: #ccc;
+  background-color: hsl(var(--border));
   border-radius: 999px;
 }
 
 .ace_scrollbar::-webkit-scrollbar-thumb:hover {
-  background-color: #bbb;
+  background-color: hsl(var(--ring));
   border-radius: 999px;
+}
+
+.json-view-playground-white-left {
+  background-color: #fff !important;
+  height: fit-content !important;
+}
+
+.json-view-playground-dark {
+  background-color: #141924 !important;
+  height: fit-content !important;
+}
+
+.json-view-playground-white {
+  background-color: #f8fafc !important;
+  height: fit-content !important;
+}
+
+.json-view-playground-dark-left {
+  background-color: #0c101a !important;
+  height: fit-content !important;
+}
+
+.json-view-white {
+  background-color: #f8fafc !important;
+}
+
+.json-view-dark {
+  background-color: #141924 !important;
+}
+
+.react-flow__node.dragging * {
+  cursor: grabbing !important;
 }

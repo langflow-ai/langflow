@@ -35,7 +35,7 @@ fi
 # Create a firewall rule to allow IAP traffic
 firewall_iap_exists=$(gcloud compute firewall-rules list --filter="name=allow-iap" --format="value(name)")
 if [[ -z "$firewall_iap_exists" ]]; then
-    gcloud compute firewall-rules create allow-iap --network $VPC_NAME --allow tcp:80,tcp:443,tcp:22,:tcp:3389 --source-ranges 35.235.240.0/20 --direction INGRESS
+    gcloud compute firewall-rules create allow-iap --network $VPC_NAME --allow tcp:80,tcp:443,tcp:22,tcp:3389 --source-ranges 35.235.240.0/20 --direction INGRESS
 fi
 
 # Define the startup script as a multiline Bash here-doc
@@ -48,8 +48,10 @@ apt -y upgrade
 
 # Install Python 3 pip, Langflow, and Nginx
 apt -y install python3-pip
-pip install langflow
-langflow --host 0.0.0.0 --port 7860
+pip3 install pip -U
+apt -y update
+pip3 install langflow
+langflow run --host 0.0.0.0 --port 7860
 EOF
 )
 

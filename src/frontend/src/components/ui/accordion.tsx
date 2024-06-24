@@ -4,6 +4,7 @@ import * as AccordionPrimitive from "@radix-ui/react-accordion";
 import { ChevronDownIcon } from "@radix-ui/react-icons";
 import * as React from "react";
 import { cn } from "../../utils/utils";
+import ShadTooltip from "../shadTooltipComponent";
 
 const Accordion = AccordionPrimitive.Root;
 
@@ -22,17 +23,33 @@ AccordionItem.displayName = "AccordionItem";
 const AccordionTrigger = React.forwardRef<
   React.ElementRef<typeof AccordionPrimitive.Trigger>,
   React.ComponentPropsWithoutRef<typeof AccordionPrimitive.Trigger>
->(({ className, children, ...props }, ref) => (
+>(({ className, children, disabled, ...props }, ref) => (
   <AccordionPrimitive.Header className="flex">
-    <AccordionPrimitive.Trigger asChild ref={ref} {...props}>
+    <AccordionPrimitive.Trigger
+      disabled={disabled}
+      asChild
+      ref={ref}
+      {...props}
+    >
       <div
         className={cn(
           "flex flex-1 cursor-pointer items-center justify-between py-4 text-sm font-medium transition-all [&[data-state=open]>svg]:rotate-180",
-          className
+          className,
         )}
       >
         {children}
-        <ChevronDownIcon className="h-4 w-4 text-muted-foreground transition-transform duration-200" />
+        <ShadTooltip
+          styleClasses="z-50"
+          content={disabled ? "Empty" : "Open"}
+          side="top"
+        >
+          <ChevronDownIcon
+            className={cn(
+              "h-4 w-4 font-bold transition-transform duration-200",
+              disabled ? "text-muted-foreground" : "text-primary",
+            )}
+          />
+        </ShadTooltip>
       </div>
     </AccordionPrimitive.Trigger>
   </AccordionPrimitive.Header>
@@ -47,7 +64,7 @@ const AccordionContent = React.forwardRef<
     ref={ref}
     className={cn(
       "data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down overflow-hidden text-sm",
-      className
+      className,
     )}
     {...props}
   >

@@ -1,4 +1,4 @@
-FROM logspace/backend_build as backend_build
+FROM langflowai/backend_build as backend_build
 
 FROM python:3.10-slim
 WORKDIR /app

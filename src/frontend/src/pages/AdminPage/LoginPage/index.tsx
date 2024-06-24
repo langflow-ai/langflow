@@ -2,6 +2,7 @@ import { useContext, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
+import { SIGNIN_ERROR_ALERT } from "../../../constants/alerts_constants";
 import { CONTROL_LOGIN_STATE } from "../../../constants/constants";
 import { AuthContext } from "../../../contexts/authContext";
 import { onLogin } from "../../../controllers/API";
@@ -18,6 +19,7 @@ export default function LoginAdminPage() {
   const [inputState, setInputState] =
     useState<loginInputStateType>(CONTROL_LOGIN_STATE);
   const { login, isAuthenticated, setUserData } = useContext(AuthContext);
+  const setLoading = useAlertStore((state) => state.setLoading);
 
   const { password, username } = inputState;
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -34,12 +36,16 @@ export default function LoginAdminPage() {
     };
     onLogin(user)
       .then((user) => {
+        console.log("admin page");
+
+        setLoading(true);
+
         login(user.access_token);
         navigate("/admin/");
       })
       .catch((error) => {
         setErrorData({
-          title: "Error signing in",
+          title: SIGNIN_ERROR_ALERT,
           list: [error["response"]["data"]["detail"]],
         });
       });
