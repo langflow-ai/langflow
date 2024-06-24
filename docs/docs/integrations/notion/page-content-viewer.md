@@ -5,6 +5,10 @@ import ZoomableImage from "/src/theme/ZoomableImage.js";
 
 # Page Content
 
+<Admonition type="warning" title="warning">
+This page may contain outdated information. It will be updated as soon as possible.
+</Admonition>
+
 The `NotionPageContent` component retrieves the content of a Notion page as plain text. It provides a convenient way to integrate Notion page content into your Langflow workflows.
 
 [Notion Reference](https://developers.notion.com/reference/get-page)

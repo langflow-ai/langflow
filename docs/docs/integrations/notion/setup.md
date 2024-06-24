@@ -2,6 +2,10 @@ import Admonition from "@theme/Admonition";
 
 # Setting up a Notion App
 
+<Admonition type="warning" title="warning">
+This page may contain outdated information. It will be updated as soon as possible.
+</Admonition>
+
 To use Notion components in Langflow, you first need to create a Notion integration and configure it with the necessary capabilities. This guide will walk you through the process of setting up a Notion integration and granting it access to your Notion databases.
 
 ## Prerequisites

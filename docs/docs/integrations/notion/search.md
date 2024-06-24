@@ -5,6 +5,10 @@ import ZoomableImage from "/src/theme/ZoomableImage.js";
 
 # Notion Search
 
+<Admonition type="warning" title="warning">
+This page may contain outdated information. It will be updated as soon as possible.
+</Admonition>
+
 The `NotionSearch` component is designed to search all pages and databases that have been shared with an integration in Notion. It provides a convenient way to integrate Notion search capabilities into your Langflow workflows.
 
 [Notion Reference](https://developers.notion.com/reference/search)

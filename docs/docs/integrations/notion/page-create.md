@@ -5,6 +5,10 @@ import ZoomableImage from "/src/theme/ZoomableImage.js";
 
 # Page Create
 
+<Admonition type="warning" title="warning">
+This page may contain outdated information. It will be updated as soon as possible.
+</Admonition>
+
 The `NotionPageCreator` component creates pages in a Notion database. It provides a convenient way to integrate Notion page creation into your Langflow workflows.
 
 [Notion Reference](https://developers.notion.com/reference/patch-block-children)
