@@ -141,6 +141,7 @@ module.exports = {
       label: "Integrations",
       collapsed: false,
       items: [
+        "integrations/langsmith/intro",
         {
           type: "category",
           label: "Notion",
@@ -157,6 +158,13 @@ module.exports = {
             "integrations/notion/page-content-viewer",
           ],
         },
+        // {
+        //   type: "category",
+        //   label: "LangSmith",
+        //   items: [
+        //     ,
+        //   ],
+        // },
       ],
     },
   ],
