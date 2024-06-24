@@ -2,7 +2,7 @@ from langchain_community.embeddings.cohere import CohereEmbeddings
 
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import Embeddings
-from langflow.io import DropdownInput, FloatInput, IntInput, Output, SecretStrInput, TextInput
+from langflow.io import DropdownInput, FloatInput, IntInput, MessageTextInput, Output, SecretStrInput
 
 
 class CohereEmbeddingsComponent(LCModelComponent):
@@ -23,9 +23,9 @@ class CohereEmbeddingsComponent(LCModelComponent):
             ],
             value="embed-english-v2.0",
         ),
-        TextInput(name="truncate", display_name="Truncate", advanced=True),
+        MessageTextInput(name="truncate", display_name="Truncate", advanced=True),
         IntInput(name="max_retries", display_name="Max Retries", value=3, advanced=True),
-        TextInput(name="user_agent", display_name="User Agent", advanced=True, value="langchain"),
+        MessageTextInput(name="user_agent", display_name="User Agent", advanced=True, value="langchain"),
         FloatInput(name="request_timeout", display_name="Request Timeout", advanced=True),
     ]
 

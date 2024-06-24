@@ -7,6 +7,7 @@ import {
   APIObjectType,
   APITemplateType,
   Component,
+  CustomComponentRequest,
   LoginType,
   ProfilePicturesTypeAPI,
   Users,
@@ -324,7 +325,14 @@ export async function getVersion() {
  * @returns {Promise<AxiosResponse<any>>} A promise that resolves to an AxiosResponse containing the health status.
  */
 export async function getHealth() {
-  return await api.get("/health"); // Health is the only endpoint that doesn't require /api/v1
+  return await api.get("/health").catch((e) => {
+    if (e.code === "ECONNABORTED") {
+      console.log("request cancelled");
+    } else {
+      // raise error to be caught by the caller
+      throw e;
+    }
+  }); // Health is the only endpoint that doesn't require /api/v1
 }
 
 /**
@@ -386,7 +394,7 @@ export async function getProfilePictures(): Promise<ProfilePicturesTypeAPI | nul
 export async function postCustomComponent(
   code: string,
   apiClass: APIClassType,
-): Promise<AxiosResponse<APIClassType>> {
+): Promise<AxiosResponse<CustomComponentRequest>> {
   // let template = apiClass.template;
   return await api.post(`${BASE_URL_API}custom_component`, {
     code,

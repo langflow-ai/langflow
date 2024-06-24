@@ -1,6 +1,12 @@
 import { Textarea } from "../../../components/ui/textarea";
 
-const TextOutputView = ({ left, value }) => {
+const TextOutputView = ({
+  left,
+  value,
+}: {
+  left: boolean | undefined;
+  value: any;
+}) => {
   if (typeof value === "object" && Object.keys(value).includes("text")) {
     value = value.text;
   }
@@ -8,9 +14,9 @@ const TextOutputView = ({ left, value }) => {
     <Textarea
       className={`w-full custom-scroll ${left ? "min-h-32" : "h-full"}`}
       placeholder={"Empty"}
+      readOnly
       // update to real value on flowPool
       value={value}
-      readOnly
     />
   );
 };

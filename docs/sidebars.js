@@ -14,8 +14,8 @@ module.exports = {
         "index",
         "getting-started/install-langflow",
         "getting-started/quickstart",
-        "getting-started/canvas",
-        "migration/possible-installation-issues",
+        "getting-started/workspace",
+        "getting-started/possible-installation-issues",
         "getting-started/new-to-llms",
       ],
     },
@@ -40,13 +40,17 @@ module.exports = {
         "administration/login",
         "administration/cli",
         "administration/playground",
+        "administration/memories",
+        "administration/logs",
+        "administration/collections-projects",
+        "administration/settings",
         "administration/global-env",
         "administration/chat-widget",
       ],
     },
     {
       type: "category",
-      label: "Core Components",
+      label: "Components",
       collapsed: false,
       items: [
         "components/inputs-and-outputs",
@@ -59,46 +63,48 @@ module.exports = {
         "components/custom",
       ],
     },
-    {
-      type: "category",
-      label: "Extended Components",
-      collapsed: true,
-      items: [
-        "components/agents",
-        "components/chains",
-        "components/experimental",
-        "components/utilities",
-        "components/model_specs",
-        "components/retrievers",
-        "components/text-splitters",
-        "components/toolkits",
-        "components/tools",
-      ],
-    },
-    {
-      type: "category",
-      label: "Example Components",
-      collapsed: true,
-      items: [
-        "examples/chat-memory",
-        "examples/combine-text",
-        "examples/create-record",
-        "examples/pass",
-        "examples/store-message",
-        "examples/sub-flow",
-        "examples/text-operator",
-      ],
-    },
-    {
-      type: "category",
-      label: "Migration",
-      collapsed: false,
-      items: [
-        "migration/possible-installation-issues",
-        "migration/migrating-to-one-point-zero",
-        "migration/compatibility",
-      ],
-    },
+    // RSN - Check if we need this
+    // {
+    //   type: "category",
+    //   label: "Extended Components",
+    //   collapsed: true,
+    //   items: [
+    //     "components/agents",
+    //     "components/chains",
+    //     "components/experimental",
+    //     "components/utilities",
+    //     "components/model_specs",
+    //     "components/retrievers",
+    //     "components/text-splitters",
+    //     "components/toolkits",
+    //     "components/tools",
+    //   ],
+    // },
+    // RSN - Check if we need this
+    // {
+    //   type: "category",
+    //   label: "Example Components",
+    //   collapsed: true,
+    //   items: [
+    //     "examples/chat-memory",
+    //     "examples/combine-text",
+    //     "examples/create-record",
+    //     "examples/pass",
+    //     "examples/store-message",
+    //     "examples/sub-flow",
+    //     "examples/text-operator",
+    //   ],
+    // },
+    // RSN - Check if we need this
+    // {
+    //   type: "category",
+    //   label: "Migration",
+    //   collapsed: false,
+    //   items: [
+    //     "migration/migrating-to-one-point-zero",
+    //     "migration/compatibility",
+    //   ],
+    // },
     {
       type: "category",
       label: "Tutorials",
@@ -117,6 +123,7 @@ module.exports = {
       items: [
         "deployment/docker",
         "deployment/backend-only",
+        "deployment/kubernetes",
         "deployment/gcp-deployment",
       ],
     },
@@ -125,6 +132,7 @@ module.exports = {
       label: "Contributing",
       collapsed: false,
       items: [
+        "contributing/telemetry",
         "contributing/how-contribute",
         "contributing/github-issues",
         "contributing/community",
@@ -136,6 +144,7 @@ module.exports = {
       label: "Integrations",
       collapsed: false,
       items: [
+        "integrations/langsmith/intro",
         {
           type: "category",
           label: "Notion",
@@ -152,6 +161,13 @@ module.exports = {
             "integrations/notion/page-content-viewer",
           ],
         },
+        // {
+        //   type: "category",
+        //   label: "LangSmith",
+        //   items: [
+        //     ,
+        //   ],
+        // },
       ],
     },
   ],

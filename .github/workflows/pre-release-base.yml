@@ -69,11 +69,12 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Build and push
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           push: true
           file: ./docker/build_and_push_base.Dockerfile
-          platforms: "linux/amd64,linux/arm64/v8"
           tags: |
             langflowai/langflow:base-${{ needs.release.outputs.version }}
+          # provenance: false will result in a single manifest for all platforms which makes the image pullable from arm64 machines via the emulation (e.g. Apple Silicon machines)
+          provenance: false

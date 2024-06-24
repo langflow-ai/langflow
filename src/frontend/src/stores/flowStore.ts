@@ -27,6 +27,7 @@ import { FlowStoreType, VertexLayerElementType } from "../types/zustand/flow";
 import { buildVertices } from "../utils/buildUtils";
 import {
   checkChatInput,
+  checkOldComponents,
   cleanEdges,
   getHandleId,
   getNodeId,
@@ -43,6 +44,10 @@ import useFlowsManagerStore from "./flowsManagerStore";
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
 const useFlowStore = create<FlowStoreType>((set, get) => ({
   onFlowPage: false,
+  lockChat: false,
+  setLockChat: (lockChat) => {
+    set({ lockChat });
+  },
   setOnFlowPage: (FlowPage) => set({ onFlowPage: FlowPage }),
   flowState: undefined,
   flowBuildStatus: {},
@@ -235,6 +240,14 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         list: ["You can only have one ChatInput component in the flow"],
       });
       return;
+    }
+    if (selection.nodes) {
+      if (checkOldComponents({ nodes: selection.nodes ?? [] })) {
+        useAlertStore.getState().setNoticeData({
+          title:
+            "Components created before Langflow 1.0 may be unstable. Ensure components are up to date.",
+        });
+      }
     }
     let minimumX = Infinity;
     let minimumY = Infinity;

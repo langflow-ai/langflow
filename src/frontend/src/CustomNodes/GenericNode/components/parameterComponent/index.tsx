@@ -632,7 +632,7 @@ export default function ParameterComponent({
               editNode={false}
               value={
                 !data.node!.template[name]?.value ||
-                data.node!.template[name]?.value?.toString() === "{}"
+                !Object.keys(data.node!.template[name]?.value || {}).length
                   ? {}
                   : data.node!.template[name]?.value
               }
@@ -648,8 +648,8 @@ export default function ParameterComponent({
               disabled={disabled}
               editNode={false}
               value={
-                data.node!.template[name]?.value?.length === 0 ||
-                !data.node!.template[name]?.value
+                !data.node!.template[name]?.value ||
+                !Object.keys(data.node!.template[name]?.value || {}).length
                   ? [{ "": "" }]
                   : convertObjToArray(data.node!.template[name]?.value, type!)
               }

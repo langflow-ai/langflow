@@ -1,12 +1,21 @@
 from loguru import logger
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent
-from langflow.io import BoolInput, DropdownInput, HandleInput, IntInput, MultilineInput, SecretStrInput, StrInput
+from langflow.io import (
+    BoolInput,
+    DataInput,
+    DropdownInput,
+    HandleInput,
+    IntInput,
+    MultilineInput,
+    SecretStrInput,
+    StrInput,
+)
 from langflow.schema import Data
 
 
 class AstraVectorStoreComponent(LCVectorStoreComponent):
-    display_name: str = "Astra DB Vector Store"
+    display_name: str = "Astra DB"
     description: str = "Implementation of Vector Store using Astra DB with search capabilities"
     documentation: str = "https://python.langchain.com/docs/integrations/vectorstores/astradb"
     icon: str = "AstraDB"
@@ -29,16 +38,14 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             info="API endpoint URL for the Astra DB service.",
             value="ASTRA_DB_API_ENDPOINT",
         ),
-        HandleInput(
-            name="vector_store_inputs",
-            display_name="Vector Store Inputs",
-            input_types=["Document", "Data"],
-            is_list=True,
+        MultilineInput(
+            name="search_input",
+            display_name="Search Input",
         ),
-        HandleInput(
-            name="embedding",
-            display_name="Embedding",
-            input_types=["Embeddings"],
+        DataInput(
+            name="ingest_data",
+            display_name="Ingest Data",
+            is_list=True,
         ),
         StrInput(
             name="namespace",
@@ -97,6 +104,11 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             info="Optional list of metadata fields to include in the indexing.",
             advanced=True,
         ),
+        HandleInput(
+            name="embedding",
+            display_name="Embedding or Astra Vectorize",
+            input_types=["Embeddings", "dict"],
+        ),
         StrInput(
             name="metadata_indexing_exclude",
             display_name="Metadata Indexing Exclude",
@@ -109,20 +121,12 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             info="Optional dictionary defining the indexing policy for the collection.",
             advanced=True,
         ),
-        BoolInput(
-            name="add_to_vector_store",
-            display_name="Add to Vector Store",
-            info="If true, the Vector Store Inputs will be added to the Vector Store.",
-        ),
-        MultilineInput(
-            name="search_input",
-            display_name="Search Input",
-        ),
         DropdownInput(
             name="search_type",
             display_name="Search Type",
             options=["Similarity", "MMR"],
             value="Similarity",
+            advanced=True,
         ),
         IntInput(
             name="number_of_results",
@@ -151,8 +155,22 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
         except KeyError:
             raise ValueError(f"Invalid setup mode: {self.setup_mode}")
 
+        if not isinstance(self.embedding, dict):
+            embedding_dict = {"embedding": self.embedding}
+        else:
+            from astrapy.info import CollectionVectorServiceOptions
+
+            dict_options = self.embedding.get("collection_vector_service_options", {})
+            dict_options["authentication"] = {
+                k: v for k, v in dict_options.get("authentication", {}).items() if k and v
+            }
+            dict_options["parameters"] = {k: v for k, v in dict_options.get("parameters", {}).items() if k and v}
+            embedding_dict = {
+                "collection_vector_service_options": CollectionVectorServiceOptions.from_dict(dict_options),
+                "collection_embedding_api_key": self.embedding.get("collection_embedding_api_key"),
+            }
         vector_store_kwargs = {
-            "embedding": self.embedding,
+            **embedding_dict,
             "collection_name": self.collection_name,
             "token": self.token,
             "api_endpoint": self.api_endpoint,
@@ -178,7 +196,8 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
         except Exception as e:
             raise ValueError(f"Error initializing AstraDBVectorStore: {str(e)}") from e
 
-        if self.add_to_vector_store:
+        if hasattr(self, "ingest_data") and self.ingest_data:
+            logger.debug("Ingesting data into the Vector Store.")
             self._add_documents_to_vector_store(vector_store)
 
         self.status = self._astradb_collection_to_data(vector_store.collection)
@@ -186,7 +205,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
 
     def _add_documents_to_vector_store(self, vector_store):
         documents = []
-        for _input in self.vector_store_inputs or []:
+        for _input in self.ingest_data or []:
             if isinstance(_input, Data):
                 documents.append(_input.to_lc_document())
             else:
@@ -201,7 +220,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
         else:
             logger.debug("No documents to add to the Vector Store.")
 
-    def search_documents(self):
+    def search_documents(self) -> list[Data]:
         vector_store = self.build_vector_store()
 
         logger.debug(f"Search input: {self.search_input}")

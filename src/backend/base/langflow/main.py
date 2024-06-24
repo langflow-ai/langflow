@@ -6,8 +6,7 @@ from typing import Optional
 from urllib.parse import urlencode
 
 import nest_asyncio  # type: ignore
-import socketio  # type: ignore
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -24,13 +23,42 @@ from langflow.initial_setup.setup import (
 )
 from langflow.interface.types import get_and_cache_all_types_dict
 from langflow.interface.utils import setup_llm_caching
-from langflow.services.deps import get_cache_service, get_settings_service
+from langflow.services.deps import get_cache_service, get_settings_service, get_telemetry_service
 from langflow.services.plugins.langfuse_plugin import LangfuseInstance
 from langflow.services.utils import initialize_services, teardown_services
 from langflow.utils.logger import configure
 
 # Ignore Pydantic deprecation warnings from Langchain
 warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
+
+
+class RequestCancelledMiddleware(BaseHTTPMiddleware):
+    def __init__(self, app):
+        super().__init__(app)
+
+    async def dispatch(self, request: Request, call_next):
+        queue: asyncio.Queue = asyncio.Queue()
+
+        async def message_poller(sentinel, handler_task, request):
+            nonlocal queue
+            while True:
+                message = await request.receive()
+                if message["type"] == "http.disconnect":
+                    handler_task.cancel()
+                    return sentinel  # Break the loop
+
+                # Puts the message in the queue
+                await queue.put(message)
+
+        sentinel = object()
+        handler_task = asyncio.create_task(call_next(request))
+        asyncio.create_task(message_poller(sentinel, handler_task, request))
+
+        try:
+            response = await handler_task
+            return response
+        except asyncio.CancelledError:
+            return Response("Request was cancelled", status_code=499)
 
 
 class JavaScriptMIMETypeMiddleware(BaseHTTPMiddleware):
@@ -61,6 +89,7 @@ def get_lifespan(fix_migration=False, socketio_server=None, version=None):
             initialize_super_user_if_needed()
             task = asyncio.create_task(get_and_cache_all_types_dict(get_settings_service(), get_cache_service()))
             await create_or_update_starter_projects(task)
+            asyncio.create_task(get_telemetry_service().start())
             load_flows_from_directory()
             yield
         except Exception as exc:
@@ -84,8 +113,7 @@ def create_app():
         __version__ = version("langflow-base")
 
     configure()
-    socketio_server = socketio.AsyncServer(async_mode="asgi", cors_allowed_origins="*", logger=True)
-    lifespan = get_lifespan(socketio_server=socketio_server, version=__version__)
+    lifespan = get_lifespan(version=__version__)
     app = FastAPI(lifespan=lifespan, title="Langflow", version=__version__)
     setup_sentry(app)
     origins = ["*"]
@@ -98,6 +126,7 @@ def create_app():
         allow_headers=["*"],
     )
     app.add_middleware(JavaScriptMIMETypeMiddleware)
+    app.add_middleware(RequestCancelledMiddleware)
 
     @app.middleware("http")
     async def flatten_query_string_lists(request: Request, call_next):
@@ -115,13 +144,6 @@ def create_app():
 
     app.include_router(router)
 
-    app = mount_socketio(app, socketio_server)
-
-    return app
-
-
-def mount_socketio(app: FastAPI, socketio_server: socketio.AsyncServer):
-    app.mount("/sio", socketio.ASGIApp(socketio_server, socketio_path=""))
     return app
 
 

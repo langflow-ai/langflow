@@ -42,6 +42,6 @@ class LLMMathChainComponent(CustomComponent):
         )
         response = chain.invoke({input_key: input_value})
         result = response.get(output_key)
-        result_str = Text(result)
+        result_str = str(result)
         self.status = result_str
         return result_str

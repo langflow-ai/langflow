@@ -6,6 +6,10 @@ import Admonition from "@theme/Admonition";
 
 # Document QA
 
+<Admonition type="warning" title="warning">
+This page may contain outdated information. It will be updated as soon as possible.
+</Admonition>
+
 Build a question-and-answer chatbot with a document loaded from local memory.
 
 ## Prerequisites
@@ -13,13 +17,6 @@ Build a question-and-answer chatbot with a document loaded from local memory.
 - [Langflow installed and running](../getting-started/install-langflow)
 
 - [OpenAI API key created](https://platform.openai.com)
-
-<Admonition type="info">
-  Langflow v1.0 alpha is also available in HuggingFace Spaces. [Clone the space
-  using this
-  link](https://huggingface.co/spaces/Langflow/Langflow-Preview?duplicate=true)
-  to create your own Langflow workspace in minutes.
-</Admonition>
 
 ## Create the Document QA project
 
@@ -67,8 +64,4 @@ Including a file with the prompt gives the **OpenAI** component context it may n
 The issue occurred during the execution of migrations in the application. Specifically, an error was raised by the Alembic library, indicating that new upgrade operations were detected that had not been accounted for in the existing migration scripts. The operation in question involved modifying the nullable property of a column (apikey, created_at) in the database, with details about the existing type (DATETIME()), existing server default, and other properties.
 ```
 
-This result indicates that the bot received the loaded document and understood the context surrounding the vague question. It also correctly identified the issue in the error log, and followed up with appropriate troubleshooting suggestions. Nice!import ThemedImage from "@theme/ThemedImage";
-import useBaseUrl from "@docusaurus/useBaseUrl";
-import ZoomableImage from "/src/theme/ZoomableImage.js";
-import ReactPlayer from "react-player";
-import Admonition from "@theme/Admonition";
+This result indicates that the bot received the loaded document and understood the context surrounding the vague question. It also correctly identified the issue in the error log, and followed up with appropriate troubleshooting suggestions. Nice!

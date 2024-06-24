@@ -260,6 +260,11 @@ export default function ExtraSidebar(): JSX.Element {
             // Set search input state
             setSearch(event.target.value);
           }}
+          autocomplete="off"
+          readonly="readonly"
+          onClick={() =>
+            document.getElementById("search").removeAttribute("readonly")
+          }
         />
         <div
           className="search-icon"
@@ -283,7 +288,7 @@ export default function ExtraSidebar(): JSX.Element {
       <div className="side-bar-components-div-arrangement">
         <div className="parent-disclosure-arrangement">
           <div className="flex items-center gap-4 align-middle">
-            <span className="parent-disclosure-title">Basic Components</span>
+            <span className="parent-disclosure-title">Components</span>
           </div>
         </div>
         {Object.keys(dataFilter)
@@ -362,7 +367,7 @@ export default function ExtraSidebar(): JSX.Element {
           defaultOpen={search.length !== 0 || getFilterEdge.length !== 0}
           key={`${search.length !== 0}-${getFilterEdge.length !== 0}-Advanced`}
           button={{
-            title: "Advanced",
+            title: "Experimental",
             Icon: nodeIconsLucide.unknown,
           }}
           testId="extended-disclosure"

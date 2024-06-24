@@ -12,10 +12,12 @@ from langflow.helpers.flow import list_flows, load_flow, run_flow
 from langflow.schema import Data
 from langflow.schema.artifact import get_artifact_type
 from langflow.schema.dotdict import dotdict
-from langflow.schema.message import Message
-from langflow.schema.schema import Log
+from langflow.schema.log import LoggableType
+from langflow.schema.schema import OutputLog
 from langflow.services.deps import get_storage_service, get_variable_service, session_scope
 from langflow.services.storage.service import StorageService
+from langflow.services.tracing.schema import Log
+from langflow.template.utils import update_frontend_node_with_template_values
 from langflow.type_extraction.type_extraction import (
     extract_inner_type_from_generic_alias,
     extract_union_types_from_generic_alias,
@@ -26,9 +28,7 @@ if TYPE_CHECKING:
     from langflow.graph.graph.base import Graph
     from langflow.graph.vertex.base import Vertex
     from langflow.services.storage.service import StorageService
-
-
-LoggableType = Union[str, dict, list, int, float, bool, None, Data, Message]
+    from langflow.services.tracing.service import TracingService
 
 
 class CustomComponent(BaseComponent):
@@ -81,7 +81,9 @@ class CustomComponent(BaseComponent):
     status: Optional[Any] = None
     """The status of the component. This is displayed on the frontend. Defaults to None."""
     _flows_data: Optional[List[Data]] = None
+    _outputs: List[OutputLog] = []
     _logs: List[Log] = []
+    _tracing_service: "TracingService"
 
     def update_state(self, name: str, value: Any):
         if not self.vertex:
@@ -479,12 +481,27 @@ class CustomComponent(BaseComponent):
         """
         raise NotImplementedError
 
-    def log(self, message: LoggableType | list[LoggableType]):
+    def log(self, message: LoggableType | list[LoggableType], name: str | None = None):
         """
         Logs a message.
 
         Args:
             message (LoggableType | list[LoggableType]): The message to log.
         """
-        log = Log(message=message, type=get_artifact_type(message))
+        if name is None:
+            name = self.display_name if self.display_name else self.__class__.__name__
+        if hasattr(message, "model_dump") and isinstance(message, BaseModel):
+            message = message.model_dump()
+        log = Log(message=message, type=get_artifact_type(message), name=name)
         self._logs.append(log)
+        if self.vertex:
+            self._tracing_service.add_log(trace_name=self.vertex.id, log=log)
+
+    def post_code_processing(self, new_build_config: dict, current_build_config: dict):
+        """
+        This function is called after the code validation is done.
+        """
+        frontend_node = update_frontend_node_with_template_values(
+            frontend_node=new_build_config, raw_frontend_node=current_build_config
+        )
+        return frontend_node

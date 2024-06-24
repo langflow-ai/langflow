@@ -1,7 +1,12 @@
 import Admonition from "@theme/Admonition";
 import ZoomableImage from "/src/theme/ZoomableImage.js";
+import useBaseUrl from "@docusaurus/useBaseUrl";
 
 # Inputs and Outputs
+
+<Admonition type="warning" title="warning">
+This page may contain outdated information. It will be updated as soon as possible.
+</Admonition>
 
 Inputs and Outputs are a category of components that are used to define where data comes in and out of your flow.
 They also dynamically change the Playground and can be renamed to facilitate building and maintaining your flows.
@@ -48,8 +53,8 @@ One significant capability of the Chat Input component is its ability to transfo
 <ZoomableImage
   alt="Docusaurus themed image"
   sources={{
-    light: "img/playground-chat.png",
-    dark: "img/playground-chat.png",
+    light: useBaseUrl("img/playground-chat.png"),
+    dark: useBaseUrl("img/playground-chat.png"),
   }}
   style={{ width: "100%", maxWidth: "800px", margin: "0 auto" }}
 />
@@ -154,5 +159,4 @@ The `PromptTemplate` component enables users to create prompts and define variab
 
 After defining a variable in the prompt template, it acts as its own component input. See [Prompt Customization](../administration/prompt-customization) for more details.
 
-- **template:** The template used to format an individual request.import Admonition from "@theme/Admonition";
-  import ZoomableImage from "/src/theme/ZoomableImage.js";
+- **template:** The template used to format an individual request.

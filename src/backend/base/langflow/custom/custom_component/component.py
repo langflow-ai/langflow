@@ -1,5 +1,5 @@
 import inspect
-from typing import TYPE_CHECKING, Any, AsyncIterator, Callable, ClassVar, Generator, Iterator, List, Optional, Union
+from typing import Any, AsyncIterator, Callable, ClassVar, Generator, Iterator, List, Optional, Union
 from uuid import UUID
 
 import yaml
@@ -12,9 +12,6 @@ from langflow.schema.message import Message
 from langflow.template.field.base import UNDEFINED, Output
 
 from .custom_component import CustomComponent
-
-if TYPE_CHECKING:
-    from langflow.graph.vertex.base import Vertex
 
 
 def recursive_serialize_or_str(obj):
@@ -47,6 +44,8 @@ class Component(CustomComponent):
         self._inputs: dict[str, InputTypes] = {}
         self._results: dict[str, Any] = {}
         self._attributes: dict[str, Any] = {}
+        if not hasattr(self, "trace_type"):
+            self.trace_type = "chain"
         if self.inputs is not None:
             self.map_inputs(self.inputs)
 
@@ -56,12 +55,6 @@ class Component(CustomComponent):
         if "_inputs" in self.__dict__ and name in self.__dict__["_inputs"]:
             return self.__dict__["_inputs"][name].value
         raise AttributeError(f"{name} not found in {self.__class__.__name__}")
-
-    # def __getattribute__(self, name: str) -> Any:
-    #     try:
-    #         return super().__getattribute__(name)
-    #     except AttributeError:
-    #         return self.__getattr__(name)
 
     def map_inputs(self, inputs: List[InputTypes]):
         self.inputs = inputs
@@ -105,15 +98,44 @@ class Component(CustomComponent):
         for output in self.outputs:
             setattr(self, output.name, output)
 
-    async def build_results(self, vertex: "Vertex"):
+    def get_trace_as_inputs(self):
+        predefined_inputs = {
+            input_.name: input_.value
+            for input_ in self.inputs
+            if hasattr(input_, "trace_as_input") and input_.trace_as_input
+        }
+        # Dynamic inputs
+        dynamic_inputs = {key: value for key, value in self._attributes.items() if key not in predefined_inputs}
+        return {**predefined_inputs, **dynamic_inputs}
+
+    def get_trace_as_metadata(self):
+        return {
+            input_.name: input_.value
+            for input_ in self.inputs
+            if hasattr(input_, "trace_as_metadata") and input_.trace_as_metadata
+        }
+
+    async def build_results(self):
+        inputs = self.get_trace_as_inputs()
+        metadata = self.get_trace_as_metadata()
+        async with self._tracing_service.trace_context(
+            f"{self.display_name} ({self.vertex.id})", self.trace_type, inputs, metadata
+        ):
+            _results, _artifacts = await self._build_results()
+            trace_name = self._tracing_service.run_name
+            self._tracing_service.set_outputs(trace_name, _results)
+
+        return _results, _artifacts
+
+    async def _build_results(self):
         _results = {}
         _artifacts = {}
         if hasattr(self, "outputs"):
-            self._set_outputs(vertex.outputs)
+            self._set_outputs(self.vertex.outputs)
             for output in self.outputs:
                 # Build the output if it's connected to some other vertex
                 # or if it's not connected to any vertex
-                if not vertex.outgoing_edges or output.name in vertex.edges_source_names:
+                if not self.vertex.outgoing_edges or output.name in self.vertex.edges_source_names:
                     if output.method is None:
                         raise ValueError(f"Output {output.name} does not have a method defined.")
                     method: Callable = getattr(self, output.method)
@@ -124,8 +146,12 @@ class Component(CustomComponent):
                         # If the method is asynchronous, we need to await it
                         if inspect.iscoroutinefunction(method):
                             result = await result
-                        if isinstance(result, Message) and result.flow_id is None and vertex.graph.flow_id is not None:
-                            result.set_flow_id(vertex.graph.flow_id)
+                        if (
+                            isinstance(result, Message)
+                            and result.flow_id is None
+                            and self.vertex.graph.flow_id is not None
+                        ):
+                            result.set_flow_id(self.vertex.graph.flow_id)
                         _results[output.name] = result
                         output.value = result
                         custom_repr = self.custom_repr()
@@ -155,6 +181,9 @@ class Component(CustomComponent):
                         _artifacts[output.name] = artifact
         self._artifacts = _artifacts
         self._results = _results
+        if self._tracing_service:
+            trace_name = self._tracing_service.run_name
+            self._tracing_service.set_outputs(trace_name, _results)
         return _results, _artifacts
 
     def custom_repr(self):
@@ -192,5 +221,6 @@ class Component(CustomComponent):
             return [field.name for field in inputs]
         except KeyError:
             return []
-            return []
-            return []
+
+    def build(self, **kwargs):
+        self.set_attributes(kwargs)

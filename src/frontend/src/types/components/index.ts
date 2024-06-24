@@ -595,7 +595,11 @@ export type codeAreaModalPropsType = {
   setOpenModal?: (bool: boolean) => void;
   value: string;
   nodeClass: APIClassType | undefined;
-  setNodeClass: (Class: APIClassType, code?: string) => void | undefined;
+  setNodeClass: (
+    Class: APIClassType,
+    code?: string,
+    type?: string,
+  ) => void | undefined;
   children: ReactNode;
   dynamic?: boolean;
   readonly?: boolean;
@@ -732,7 +736,7 @@ export type Log = {
 export type validationStatusType = {
   id: string;
   data: object | any;
-  logs: Log[];
+  outputs: Log[];
   progress?: number;
   valid: boolean;
   duration?: string;

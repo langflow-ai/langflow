@@ -1,7 +1,8 @@
 from langchain_community.embeddings import BedrockEmbeddings
+
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import Embeddings
-from langflow.io import DropdownInput, Output, TextInput
+from langflow.io import DropdownInput, MessageTextInput, Output
 
 
 class AmazonBedrockEmbeddingsComponent(LCModelComponent):
@@ -17,15 +18,15 @@ class AmazonBedrockEmbeddingsComponent(LCModelComponent):
             options=["amazon.titan-embed-text-v1"],
             value="amazon.titan-embed-text-v1",
         ),
-        TextInput(
+        MessageTextInput(
             name="credentials_profile_name",
             display_name="Credentials Profile Name",
         ),
-        TextInput(
+        MessageTextInput(
             name="endpoint_url",
             display_name="Bedrock Endpoint URL",
         ),
-        TextInput(
+        MessageTextInput(
             name="region_name",
             display_name="AWS Region",
         ),
