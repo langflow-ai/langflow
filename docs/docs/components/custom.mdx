@@ -38,7 +38,7 @@ class ExampleComponent(Component):
     icon = "icon-name"
 
     inputs = [
-        TextInput(
+        MessageTextInput(
             name="input_text",
             display_name="Input Text",
             info="Text input for the component.",
@@ -102,7 +102,7 @@ icon = "icon-name"
 
 ```python
 inputs = [
-    TextInput(
+    MessageTextInput(
         name="input_text",
         display_name="Input Text",
         info="Text input for the component.",
@@ -162,7 +162,7 @@ These methods trigger `self.stop` to block the transmission for the selected out
 
 ```python
 from langflow.custom import Component
-from langflow.inputs import TextInput, DropdownInput, BoolInput
+from langflow.inputs import MessageTextInput, DropdownInput, BoolInput
 from langflow.template import Output
 from langflow.field_typing import Text
 
@@ -172,12 +172,12 @@ class ConditionalRouterComponent(Component):
     icon = "router"
 
     inputs = [
-        TextInput(
+        MessageTextInput(
             name="input_value",
             display_name="Input Value",
             info="Value to be evaluated.",
         ),
-        TextInput(
+        MessageTextInput(
             name="comparison_value",
             display_name="Comparison Value",
             info="Value to compare against.",
