@@ -2,7 +2,6 @@ from typing import Dict, List, cast
 
 from langchain.agents import AgentExecutor, BaseSingleActionAgent
 from langchain.agents.tool_calling_agent.base import create_tool_calling_agent
-from langchain_core.messages import BaseMessage
 from langchain_core.prompts import ChatPromptTemplate
 
 from langflow.custom import Component
