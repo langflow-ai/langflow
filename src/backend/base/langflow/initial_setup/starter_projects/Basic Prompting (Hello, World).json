@@ -6,7 +6,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-74jnA",
+            "id": "ChatInput-kMZti",
             "name": "message",
             "output_types": [
               "Message"
@@ -14,7 +14,7 @@
           },
           "targetHandle": {
             "fieldName": "user_input",
-            "id": "Prompt-fpHnR",
+            "id": "Prompt-p1yTM",
             "inputTypes": [
               "Message",
               "Text"
@@ -22,18 +22,18 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-74jnA{œdataTypeœ:œChatInputœ,œidœ:œChatInput-74jnAœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-fpHnR{œfieldNameœ:œuser_inputœ,œidœ:œPrompt-fpHnRœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "ChatInput-74jnA",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-74jnAœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-fpHnR",
-        "targetHandle": "{œfieldNameœ: œuser_inputœ, œidœ: œPrompt-fpHnRœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-ChatInput-kMZti{œdataTypeœ:œChatInputœ,œidœ:œChatInput-kMZtiœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-p1yTM{œfieldNameœ:œuser_inputœ,œidœ:œPrompt-p1yTMœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "ChatInput-kMZti",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-kMZtiœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-p1yTM",
+        "targetHandle": "{œfieldNameœ: œuser_inputœ, œidœ: œPrompt-p1yTMœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-fpHnR",
+            "id": "Prompt-p1yTM",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -41,25 +41,25 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "OpenAIModel-ehSar",
+            "id": "OpenAIModel-wC7mR",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-fpHnR{œdataTypeœ:œPromptœ,œidœ:œPrompt-fpHnRœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-ehSar{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-ehSarœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Prompt-fpHnR",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-fpHnRœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "OpenAIModel-ehSar",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-ehSarœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-Prompt-p1yTM{œdataTypeœ:œPromptœ,œidœ:œPrompt-p1yTMœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-wC7mR{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-wC7mRœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "Prompt-p1yTM",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-p1yTMœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "OpenAIModel-wC7mR",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-wC7mRœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIModel",
-            "id": "OpenAIModel-ehSar",
+            "id": "OpenAIModel-wC7mR",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -67,18 +67,18 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-KLLro",
+            "id": "ChatOutput-xh9wX",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-OpenAIModel-ehSar{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-ehSarœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-KLLro{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-KLLroœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "OpenAIModel-ehSar",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-ehSarœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-KLLro",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-KLLroœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-OpenAIModel-wC7mR{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-wC7mRœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-xh9wX{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-xh9wXœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "OpenAIModel-wC7mR",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-wC7mRœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-xh9wX",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-xh9wXœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
@@ -87,7 +87,7 @@
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
           "edited": false,
-          "id": "Prompt-fpHnR",
+          "id": "Prompt-p1yTM",
           "node": {
             "base_classes": [
               "Message"
@@ -189,7 +189,7 @@
         },
         "dragging": false,
         "height": 422,
-        "id": "Prompt-fpHnR",
+        "id": "Prompt-p1yTM",
         "position": {
           "x": 43.70859256635981,
           "y": 1115.5304359666682
@@ -207,7 +207,7 @@
           "description": "Get chat inputs from the Playground.",
           "display_name": "Chat Input",
           "edited": false,
-          "id": "ChatInput-74jnA",
+          "id": "ChatInput-kMZti",
           "node": {
             "base_classes": [
               "Message"
@@ -390,7 +390,7 @@
         },
         "dragging": false,
         "height": 308,
-        "id": "ChatInput-74jnA",
+        "id": "ChatInput-kMZti",
         "position": {
           "x": -521.3324537445985,
           "y": 1089.7620993695407
@@ -408,7 +408,7 @@
           "description": "Generates text using OpenAI LLMs.",
           "display_name": "OpenAI",
           "edited": false,
-          "id": "OpenAIModel-ehSar",
+          "id": "OpenAIModel-wC7mR",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -552,7 +552,7 @@
                 "title_case": false,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "gpt-3.5-turbo"
+                "value": "gpt-4-turbo"
               },
               "openai_api_base": {
                 "advanced": true,
@@ -668,7 +668,7 @@
         },
         "dragging": false,
         "height": 621,
-        "id": "OpenAIModel-ehSar",
+        "id": "OpenAIModel-wC7mR",
         "position": {
           "x": 584.9288140250019,
           "y": 1149.0790574268922
@@ -686,7 +686,7 @@
           "description": "Display a chat message in the Playground.",
           "display_name": "Chat Output",
           "edited": false,
-          "id": "ChatOutput-KLLro",
+          "id": "ChatOutput-xh9wX",
           "node": {
             "base_classes": [
               "Message"
@@ -846,7 +846,7 @@
         },
         "dragging": false,
         "height": 308,
-        "id": "ChatOutput-KLLro",
+        "id": "ChatOutput-xh9wX",
         "position": {
           "x": 1157.3374592784412,
           "y": 1160.9424490383622
@@ -868,7 +868,7 @@
   },
   "description": "This flow will get you experimenting with the basics of the UI, the Chat and the Prompt component. \n\nTry changing the Template in it to see how the model behaves. \nYou can change it to this and a Text Input into the `type_of_person` variable : \"Answer the user as if you were a pirate.\n\nUser: {user_input}\n\nAnswer: \" ",
   "endpoint_name": null,
-  "id": "81759149-1e58-4190-b4a4-48a96cf49734",
+  "id": "65f25afc-1467-4f26-9e8a-d24792e76628",
   "is_component": false,
   "last_tested_version": "1.0.0rc1",
   "name": "Basic Prompting (Hello, World)"
