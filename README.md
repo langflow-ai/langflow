@@ -105,7 +105,6 @@ Alternatively, click the **"Open in Cloud Shell"** button below to launch Google
 
 Use this template to deploy Langflow 1.0 on Railway:
 
-
 [![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/JMXEWp?referralCode=MnPSdg)
 
 ## Deploy on Render
