@@ -38,12 +38,11 @@ const EditNodeModal = forwardRef(
         !myData.current.node!.template[n]?.advanced;
     }
 
-    const handleOnNewValue = (newValue: any, key: string) => {
+    const handleOnNewValue = (newValue: any, key: string, setDb?: boolean) => {
       myData.current.node!.template[key].value = newValue;
-    };
-
-    const handleOnChangeDb = (newValue: boolean, key: string) => {
-      myData.current.node!.template[key].load_from_db = newValue;
+      if(setDb){
+        myData.current.node!.template[key].load_from_db = newValue;
+      }
     };
 
     const rowData = useRowData(data, open);
@@ -51,7 +50,6 @@ const EditNodeModal = forwardRef(
     const columnDefs: ColDef[] = useColumnDefs(
       data,
       handleOnNewValue,
-      handleOnChangeDb,
       changeAdvanced,
       open,
     );
