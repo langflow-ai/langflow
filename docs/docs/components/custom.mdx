@@ -4,7 +4,7 @@ import ZoomableImage from "/src/theme/ZoomableImage.js";
 import ReactPlayer from "react-player";
 import Admonition from "@theme/Admonition";
 
-# Creating Custom Components in Langflow
+# Custom Components
 
 Build custom components in Langflow for various data processing and transformation tasks.
 
@@ -152,7 +152,7 @@ def process_data(self) -> Data:
 
 This example demonstrates a more complex component that routes data based on a condition.
 
-Notice that this component has two outputs associated with the methods  `true_response` and `false_response`.
+Notice that this component has two outputs associated with the methods `true_response` and `false_response`.
 
 These methods trigger `self.stop` to block the transmission for the selected output, allowing for logic operations to be implemented visually.
 
@@ -221,5 +221,3 @@ class ConditionalRouterComponent(Component):
 By following these steps and examples, you can create custom components in Langflow tailored to your specific needs. The modular structure of Custom Components allows for flexible and reusable components that can be easily integrated into your workflows.
 
 ---
-
-

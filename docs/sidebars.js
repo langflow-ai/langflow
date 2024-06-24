@@ -50,7 +50,7 @@ module.exports = {
     },
     {
       type: "category",
-      label: "Core Components",
+      label: "Components",
       collapsed: false,
       items: [
         "components/inputs-and-outputs",
@@ -63,45 +63,48 @@ module.exports = {
         "components/custom",
       ],
     },
-    {
-      type: "category",
-      label: "Extended Components",
-      collapsed: true,
-      items: [
-        "components/agents",
-        "components/chains",
-        "components/experimental",
-        "components/utilities",
-        "components/model_specs",
-        "components/retrievers",
-        "components/text-splitters",
-        "components/toolkits",
-        "components/tools",
-      ],
-    },
-    {
-      type: "category",
-      label: "Example Components",
-      collapsed: true,
-      items: [
-        "examples/chat-memory",
-        "examples/combine-text",
-        "examples/create-record",
-        "examples/pass",
-        "examples/store-message",
-        "examples/sub-flow",
-        "examples/text-operator",
-      ],
-    },
-    {
-      type: "category",
-      label: "Migration",
-      collapsed: false,
-      items: [
-        "migration/migrating-to-one-point-zero",
-        "migration/compatibility",
-      ],
-    },
+    // RSN - Check if we need this
+    // {
+    //   type: "category",
+    //   label: "Extended Components",
+    //   collapsed: true,
+    //   items: [
+    //     "components/agents",
+    //     "components/chains",
+    //     "components/experimental",
+    //     "components/utilities",
+    //     "components/model_specs",
+    //     "components/retrievers",
+    //     "components/text-splitters",
+    //     "components/toolkits",
+    //     "components/tools",
+    //   ],
+    // },
+    // RSN - Check if we need this
+    // {
+    //   type: "category",
+    //   label: "Example Components",
+    //   collapsed: true,
+    //   items: [
+    //     "examples/chat-memory",
+    //     "examples/combine-text",
+    //     "examples/create-record",
+    //     "examples/pass",
+    //     "examples/store-message",
+    //     "examples/sub-flow",
+    //     "examples/text-operator",
+    //   ],
+    // },
+    // RSN - Check if we need this
+    // {
+    //   type: "category",
+    //   label: "Migration",
+    //   collapsed: false,
+    //   items: [
+    //     "migration/migrating-to-one-point-zero",
+    //     "migration/compatibility",
+    //   ],
+    // },
     {
       type: "category",
       label: "Tutorials",
