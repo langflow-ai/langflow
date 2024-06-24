@@ -42,7 +42,7 @@ class RequestCancelledMiddleware(BaseHTTPMiddleware):
         async def message_poller(sentinel, handler_task, request):
             nonlocal queue
             while True:
-                message = await request.receive
+                message = await request.receive()
                 if message["type"] == "http.disconnect":
                     handler_task.cancel()
                     return sentinel  # Break the loop
