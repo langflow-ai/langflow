@@ -1,13 +1,17 @@
 import { createContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Cookies from "universal-cookie";
-import { getGlobalVariables, getLoggedUser, requestLogout } from "../controllers/API";
+import {
+  getGlobalVariables,
+  getLoggedUser,
+  requestLogout,
+} from "../controllers/API";
 import useAlertStore from "../stores/alertStore";
 import { useFolderStore } from "../stores/foldersStore";
-import { Users } from "../types/api";
-import { AuthContextType } from "../types/contexts/auth";
 import { useGlobalVariablesStore } from "../stores/globalVariablesStore/globalVariables";
 import { useStoreStore } from "../stores/storeStore";
+import { Users } from "../types/api";
+import { AuthContextType } from "../types/contexts/auth";
 
 const initialValue: AuthContextType = {
   isAdmin: false,
