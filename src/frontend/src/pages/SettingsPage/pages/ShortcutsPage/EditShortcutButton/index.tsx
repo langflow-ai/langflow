@@ -6,6 +6,7 @@ import { Button } from "../../../../../components/ui/button";
 import BaseModal from "../../../../../modals/baseModal";
 import { useShortcutsStore } from "../../../../../stores/shortcuts";
 import { toTitleCase } from "../../../../../utils/utils";
+import { useTranslation } from "react-i18next";
 
 export default function EditShortcutButton({
   children,
@@ -26,6 +27,7 @@ export default function EditShortcutButton({
   disable?: boolean;
   setSelected: (selected: string[]) => void;
 }): JSX.Element {
+  const { t } = useTranslation();
   let shortcutInitialValue =
     defaultShortcuts.length > 0
       ? defaultShortcuts.find(
@@ -150,8 +152,8 @@ export default function EditShortcutButton({
 
   return (
     <BaseModal open={open} setOpen={setOpen} size="x-small" disable={disable}>
-      <BaseModal.Header description={"Recording your keyboard"}>
-        <span className="pr-2"> Key Combination </span>
+      <BaseModal.Header description={t("Recording your keyboard")}>
+        <span className="pr-2"> {t("Key Combination")} </span>
         <ForwardedIconComponent
           name="Keyboard"
           className="h-6 w-6 pl-1 text-primary"
@@ -170,14 +172,14 @@ export default function EditShortcutButton({
       </BaseModal.Content>
       <BaseModal.Footer>
         <Button variant={"default"} onClick={editCombination}>
-          Apply
+          {t("Apply")}
         </Button>
         <Button
           className="mr-5"
           variant={"destructive"}
           onClick={() => setKey(null)}
         >
-          Reset
+          {t("Reset")}
         </Button>
       </BaseModal.Footer>
     </BaseModal>
