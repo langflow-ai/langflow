@@ -240,3 +240,7 @@ body {
 .ch-scrollycoding-step-content {
   min-height: 70px;
 }
+
+.theme-doc-sidebar-item-category.theme-doc-sidebar-item-category-level-2.menu__list-item:not(:first-child) {
+  margin-top: 0.25rem!important;
+}
