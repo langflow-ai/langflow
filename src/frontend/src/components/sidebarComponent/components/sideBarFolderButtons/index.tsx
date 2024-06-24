@@ -272,7 +272,11 @@ const SideBarFoldersButtonsComponent = ({
                         }}
                         autoFocus={true}
                         onBlur={async () => {
-                          handleEditNameFolder(item);
+                          if (refInput.current?.value !== item.name) {
+                            handleEditNameFolder(item);
+                          } else {
+                            editFolderName.edit = false;
+                          }
                         }}
                         value={foldersNames[item.name]}
                         id={`input-folder-${item.name}`}
