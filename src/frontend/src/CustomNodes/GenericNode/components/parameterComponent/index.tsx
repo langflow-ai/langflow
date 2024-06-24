@@ -650,7 +650,7 @@ export default function ParameterComponent({
               value={
                 !data.node!.template[name]?.value ||
                 !Object.keys(data.node!.template[name]?.value || {}).length
-                  ? [{"":""}]
+                  ? [{ "": "" }]
                   : convertObjToArray(data.node!.template[name]?.value, type!)
               }
               duplicateKey={errorDuplicateKey}
