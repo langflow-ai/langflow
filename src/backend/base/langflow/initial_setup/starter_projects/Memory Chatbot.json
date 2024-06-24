@@ -6,7 +6,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Memory",
-            "id": "Memory-Kt0An",
+            "id": "Memory-A4OPp",
             "name": "messages_text",
             "output_types": [
               "Message"
@@ -14,7 +14,7 @@
           },
           "targetHandle": {
             "fieldName": "context",
-            "id": "Prompt-kXGJN",
+            "id": "Prompt-xhlQ7",
             "inputTypes": [
               "Message",
               "Text"
@@ -22,18 +22,18 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Memory-Kt0An{œdataTypeœ:œMemoryœ,œidœ:œMemory-Kt0Anœ,œnameœ:œmessages_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-kXGJN{œfieldNameœ:œcontextœ,œidœ:œPrompt-kXGJNœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "Memory-Kt0An",
-        "sourceHandle": "{œdataTypeœ: œMemoryœ, œidœ: œMemory-Kt0Anœ, œnameœ: œmessages_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-kXGJN",
-        "targetHandle": "{œfieldNameœ: œcontextœ, œidœ: œPrompt-kXGJNœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-Memory-A4OPp{œdataTypeœ:œMemoryœ,œidœ:œMemory-A4OPpœ,œnameœ:œmessages_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-xhlQ7{œfieldNameœ:œcontextœ,œidœ:œPrompt-xhlQ7œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "Memory-A4OPp",
+        "sourceHandle": "{œdataTypeœ: œMemoryœ, œidœ: œMemory-A4OPpœ, œnameœ: œmessages_textœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-xhlQ7",
+        "targetHandle": "{œfieldNameœ: œcontextœ, œidœ: œPrompt-xhlQ7œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-krw2d",
+            "id": "ChatInput-ENTF8",
             "name": "message",
             "output_types": [
               "Message"
@@ -41,7 +41,7 @@
           },
           "targetHandle": {
             "fieldName": "user_message",
-            "id": "Prompt-kXGJN",
+            "id": "Prompt-xhlQ7",
             "inputTypes": [
               "Message",
               "Text"
@@ -49,18 +49,18 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-krw2d{œdataTypeœ:œChatInputœ,œidœ:œChatInput-krw2dœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-kXGJN{œfieldNameœ:œuser_messageœ,œidœ:œPrompt-kXGJNœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "ChatInput-krw2d",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-krw2dœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-kXGJN",
-        "targetHandle": "{œfieldNameœ: œuser_messageœ, œidœ: œPrompt-kXGJNœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-ChatInput-ENTF8{œdataTypeœ:œChatInputœ,œidœ:œChatInput-ENTF8œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-xhlQ7{œfieldNameœ:œuser_messageœ,œidœ:œPrompt-xhlQ7œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "ChatInput-ENTF8",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-ENTF8œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-xhlQ7",
+        "targetHandle": "{œfieldNameœ: œuser_messageœ, œidœ: œPrompt-xhlQ7œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-kXGJN",
+            "id": "Prompt-xhlQ7",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -68,25 +68,25 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "OpenAIModel-GAzmc",
+            "id": "OpenAIModel-ZBIVC",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-kXGJN{œdataTypeœ:œPromptœ,œidœ:œPrompt-kXGJNœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-GAzmc{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-GAzmcœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Prompt-kXGJN",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-kXGJNœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "OpenAIModel-GAzmc",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-GAzmcœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-Prompt-xhlQ7{œdataTypeœ:œPromptœ,œidœ:œPrompt-xhlQ7œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-ZBIVC{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-ZBIVCœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "Prompt-xhlQ7",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-xhlQ7œ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "OpenAIModel-ZBIVC",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-ZBIVCœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIModel",
-            "id": "OpenAIModel-GAzmc",
+            "id": "OpenAIModel-ZBIVC",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -94,18 +94,18 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-Q4j7S",
+            "id": "ChatOutput-e8ruq",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-OpenAIModel-GAzmc{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-GAzmcœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-Q4j7S{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-Q4j7Sœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "OpenAIModel-GAzmc",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-GAzmcœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-Q4j7S",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-Q4j7Sœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-OpenAIModel-ZBIVC{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-ZBIVCœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-e8ruq{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-e8ruqœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "OpenAIModel-ZBIVC",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-ZBIVCœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-e8ruq",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-e8ruqœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
@@ -114,7 +114,7 @@
           "description": "Retrieves stored chat messages.",
           "display_name": "Memory",
           "edited": false,
-          "id": "Memory-Kt0An",
+          "id": "Memory-A4OPp",
           "node": {
             "base_classes": [
               "Data",
@@ -294,7 +294,7 @@
         },
         "dragging": false,
         "height": 267,
-        "id": "Memory-Kt0An",
+        "id": "Memory-A4OPp",
         "position": {
           "x": 1258.8089948698466,
           "y": 547.1243849102437
@@ -312,7 +312,7 @@
           "description": "Get chat inputs from the Playground.",
           "display_name": "Chat Input",
           "edited": false,
-          "id": "ChatInput-krw2d",
+          "id": "ChatInput-ENTF8",
           "node": {
             "base_classes": [
               "Message"
@@ -495,7 +495,7 @@
         },
         "dragging": true,
         "height": 309,
-        "id": "ChatInput-krw2d",
+        "id": "ChatInput-ENTF8",
         "position": {
           "x": 1261.3748612945249,
           "y": 912.733279525042
@@ -504,7 +504,7 @@
           "x": 1261.3748612945249,
           "y": 912.733279525042
         },
-        "selected": true,
+        "selected": false,
         "type": "genericNode",
         "width": 384
       },
@@ -513,7 +513,7 @@
           "description": "Generates text using OpenAI LLMs.",
           "display_name": "OpenAI",
           "edited": false,
-          "id": "OpenAIModel-GAzmc",
+          "id": "OpenAIModel-ZBIVC",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -652,7 +652,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "gpt-3.5-turbo"
+                "value": "gpt-4-turbo"
               },
               "openai_api_base": {
                 "advanced": true,
@@ -762,7 +762,7 @@
         },
         "dragging": false,
         "height": 622,
-        "id": "OpenAIModel-GAzmc",
+        "id": "OpenAIModel-ZBIVC",
         "position": {
           "x": 2495.6628431453228,
           "y": 669.9567653609598
@@ -780,7 +780,7 @@
           "description": "Display a chat message in the Playground.",
           "display_name": "Chat Output",
           "edited": false,
-          "id": "ChatOutput-Q4j7S",
+          "id": "ChatOutput-e8ruq",
           "node": {
             "base_classes": [
               "Message"
@@ -940,7 +940,7 @@
         },
         "dragging": false,
         "height": 308,
-        "id": "ChatOutput-Q4j7S",
+        "id": "ChatOutput-e8ruq",
         "position": {
           "x": 3028.2686266398873,
           "y": 888.0854888768531
@@ -957,7 +957,7 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-kXGJN",
+          "id": "Prompt-xhlQ7",
           "node": {
             "base_classes": [
               "Message"
@@ -1090,7 +1090,7 @@
         },
         "dragging": false,
         "height": 517,
-        "id": "Prompt-kXGJN",
+        "id": "Prompt-xhlQ7",
         "position": {
           "x": 1879.4280156201567,
           "y": 674.3958274263156
@@ -1112,7 +1112,7 @@
   },
   "description": "This project can be used as a starting point for building a Chat experience with user specific memory. You can set a different Session ID to start a new message history.",
   "endpoint_name": null,
-  "id": "b4832b74-d12c-4c00-94e9-4d873abf56eb",
+  "id": "909c382d-d215-4d50-91b3-dcb6f3ffd93c",
   "is_component": false,
   "last_tested_version": "1.0.0rc1",
   "name": "Memory Chatbot"

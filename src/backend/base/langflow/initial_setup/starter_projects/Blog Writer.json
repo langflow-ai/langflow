@@ -6,7 +6,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "TextInput",
-            "id": "TextInput-3mewH",
+            "id": "TextInput-TDpSd",
             "name": "text",
             "output_types": [
               "Message"
@@ -14,7 +14,7 @@
           },
           "targetHandle": {
             "fieldName": "instructions",
-            "id": "Prompt-wvJkv",
+            "id": "Prompt-kfWwQ",
             "inputTypes": [
               "Message",
               "Text"
@@ -22,18 +22,18 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-TextInput-3mewH{œdataTypeœ:œTextInputœ,œidœ:œTextInput-3mewHœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-wvJkv{œfieldNameœ:œinstructionsœ,œidœ:œPrompt-wvJkvœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "TextInput-3mewH",
-        "sourceHandle": "{œdataTypeœ: œTextInputœ, œidœ: œTextInput-3mewHœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-wvJkv",
-        "targetHandle": "{œfieldNameœ: œinstructionsœ, œidœ: œPrompt-wvJkvœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-TextInput-TDpSd{œdataTypeœ:œTextInputœ,œidœ:œTextInput-TDpSdœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-kfWwQ{œfieldNameœ:œinstructionsœ,œidœ:œPrompt-kfWwQœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "TextInput-TDpSd",
+        "sourceHandle": "{œdataTypeœ: œTextInputœ, œidœ: œTextInput-TDpSdœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-kfWwQ",
+        "targetHandle": "{œfieldNameœ: œinstructionsœ, œidœ: œPrompt-kfWwQœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "URL",
-            "id": "URL-SvoqQ",
+            "id": "URL-hivMA",
             "name": "data",
             "output_types": [
               "Data"
@@ -41,25 +41,25 @@
           },
           "targetHandle": {
             "fieldName": "data",
-            "id": "ParseData-9nIVB",
+            "id": "ParseData-O4Tzh",
             "inputTypes": [
               "Data"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-URL-SvoqQ{œdataTypeœ:œURLœ,œidœ:œURL-SvoqQœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-ParseData-9nIVB{œfieldNameœ:œdataœ,œidœ:œParseData-9nIVBœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
-        "source": "URL-SvoqQ",
-        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-SvoqQœ, œnameœ: œdataœ, œoutput_typesœ: [œDataœ]}",
-        "target": "ParseData-9nIVB",
-        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-9nIVBœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-URL-hivMA{œdataTypeœ:œURLœ,œidœ:œURL-hivMAœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-ParseData-O4Tzh{œfieldNameœ:œdataœ,œidœ:œParseData-O4Tzhœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "source": "URL-hivMA",
+        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-hivMAœ, œnameœ: œdataœ, œoutput_typesœ: [œDataœ]}",
+        "target": "ParseData-O4Tzh",
+        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-O4Tzhœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "ParseData",
-            "id": "ParseData-9nIVB",
+            "id": "ParseData-O4Tzh",
             "name": "text",
             "output_types": [
               "Message"
@@ -67,7 +67,7 @@
           },
           "targetHandle": {
             "fieldName": "references",
-            "id": "Prompt-wvJkv",
+            "id": "Prompt-kfWwQ",
             "inputTypes": [
               "Message",
               "Text"
@@ -75,18 +75,18 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ParseData-9nIVB{œdataTypeœ:œParseDataœ,œidœ:œParseData-9nIVBœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-wvJkv{œfieldNameœ:œreferencesœ,œidœ:œPrompt-wvJkvœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "ParseData-9nIVB",
-        "sourceHandle": "{œdataTypeœ: œParseDataœ, œidœ: œParseData-9nIVBœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-wvJkv",
-        "targetHandle": "{œfieldNameœ: œreferencesœ, œidœ: œPrompt-wvJkvœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-ParseData-O4Tzh{œdataTypeœ:œParseDataœ,œidœ:œParseData-O4Tzhœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-kfWwQ{œfieldNameœ:œreferencesœ,œidœ:œPrompt-kfWwQœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "ParseData-O4Tzh",
+        "sourceHandle": "{œdataTypeœ: œParseDataœ, œidœ: œParseData-O4Tzhœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-kfWwQ",
+        "targetHandle": "{œfieldNameœ: œreferencesœ, œidœ: œPrompt-kfWwQœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-wvJkv",
+            "id": "Prompt-kfWwQ",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -94,25 +94,25 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "OpenAIModel-2W259",
+            "id": "OpenAIModel-hVXLt",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-wvJkv{œdataTypeœ:œPromptœ,œidœ:œPrompt-wvJkvœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-2W259{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-2W259œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Prompt-wvJkv",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-wvJkvœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "OpenAIModel-2W259",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-2W259œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-Prompt-kfWwQ{œdataTypeœ:œPromptœ,œidœ:œPrompt-kfWwQœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-hVXLt{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-hVXLtœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "Prompt-kfWwQ",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-kfWwQœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "OpenAIModel-hVXLt",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-hVXLtœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIModel",
-            "id": "OpenAIModel-2W259",
+            "id": "OpenAIModel-hVXLt",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -120,18 +120,18 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-1cGBh",
+            "id": "ChatOutput-HrMHH",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-OpenAIModel-2W259{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-2W259œ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-1cGBh{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-1cGBhœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "OpenAIModel-2W259",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-2W259œ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-1cGBh",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-1cGBhœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-OpenAIModel-hVXLt{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-hVXLtœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-HrMHH{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-HrMHHœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "OpenAIModel-hVXLt",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-hVXLtœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-HrMHH",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-HrMHHœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
@@ -140,7 +140,7 @@
           "description": "Get text inputs from the Playground.",
           "display_name": "Instructions",
           "edited": false,
-          "id": "TextInput-3mewH",
+          "id": "TextInput-TDpSd",
           "node": {
             "base_classes": [
               "Message"
@@ -217,7 +217,7 @@
         },
         "dragging": false,
         "height": 309,
-        "id": "TextInput-3mewH",
+        "id": "TextInput-TDpSd",
         "position": {
           "x": 735.806436564132,
           "y": 346.40301122327935
@@ -232,7 +232,7 @@
       },
       {
         "data": {
-          "id": "ParseData-9nIVB",
+          "id": "ParseData-O4Tzh",
           "node": {
             "base_classes": [
               "Message"
@@ -339,7 +339,7 @@
         },
         "dragging": false,
         "height": 377,
-        "id": "ParseData-9nIVB",
+        "id": "ParseData-O4Tzh",
         "position": {
           "x": 759.575501198118,
           "y": 760.6953079067359
@@ -357,7 +357,7 @@
           "description": "Generates text using OpenAI LLMs.",
           "display_name": "OpenAI",
           "edited": false,
-          "id": "OpenAIModel-2W259",
+          "id": "OpenAIModel-hVXLt",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -496,7 +496,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "gpt-3.5-turbo"
+                "value": "gpt-4-turbo"
               },
               "openai_api_base": {
                 "advanced": true,
@@ -606,7 +606,7 @@
         },
         "dragging": false,
         "height": 699,
-        "id": "OpenAIModel-2W259",
+        "id": "OpenAIModel-hVXLt",
         "position": {
           "x": 1918.8991680862073,
           "y": 459.92681406971394
@@ -624,7 +624,7 @@
           "description": "Display a chat message in the Playground.",
           "display_name": "Chat Output",
           "edited": false,
-          "id": "ChatOutput-1cGBh",
+          "id": "ChatOutput-HrMHH",
           "node": {
             "base_classes": [
               "Message"
@@ -784,7 +784,7 @@
         },
         "dragging": false,
         "height": 309,
-        "id": "ChatOutput-1cGBh",
+        "id": "ChatOutput-HrMHH",
         "position": {
           "x": 2473.1294450647747,
           "y": 668.8159913425238
@@ -801,7 +801,7 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-wvJkv",
+          "id": "Prompt-kfWwQ",
           "node": {
             "base_classes": [
               "Message"
@@ -934,7 +934,7 @@
         },
         "dragging": false,
         "height": 517,
-        "id": "Prompt-wvJkv",
+        "id": "Prompt-kfWwQ",
         "position": {
           "x": 1288.0925694176524,
           "y": 519.4286147510747
@@ -949,7 +949,7 @@
       },
       {
         "data": {
-          "id": "URL-SvoqQ",
+          "id": "URL-hivMA",
           "node": {
             "base_classes": [
               "Data"
@@ -1030,7 +1030,7 @@
           "type": "URL"
         },
         "height": 359,
-        "id": "URL-SvoqQ",
+        "id": "URL-hivMA",
         "position": {
           "x": 247.90599789054627,
           "y": 514.1589932671732
@@ -1048,7 +1048,7 @@
   },
   "description": "This flow can be used to create a blog post following instructions from the user, using two other blogs as reference.",
   "endpoint_name": null,
-  "id": "7d35f945-f4ad-4d83-bdd8-3a11ddf6fc44",
+  "id": "26f5bcac-db01-4696-87dc-f7b38afc74ee",
   "is_component": false,
   "last_tested_version": "1.0.0rc1",
   "name": "Blog Writer"

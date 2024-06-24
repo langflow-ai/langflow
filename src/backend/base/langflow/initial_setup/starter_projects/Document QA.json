@@ -6,7 +6,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "File",
-            "id": "File-mzZHT",
+            "id": "File-31fJd",
             "name": "data",
             "output_types": [
               "Data"
@@ -14,25 +14,25 @@
           },
           "targetHandle": {
             "fieldName": "data",
-            "id": "ParseData-SAHub",
+            "id": "ParseData-rLcoq",
             "inputTypes": [
               "Data"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-File-mzZHT{œdataTypeœ:œFileœ,œidœ:œFile-mzZHTœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-ParseData-SAHub{œfieldNameœ:œdataœ,œidœ:œParseData-SAHubœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
-        "source": "File-mzZHT",
-        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-mzZHTœ, œnameœ: œdataœ, œoutput_typesœ: [œDataœ]}",
-        "target": "ParseData-SAHub",
-        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-SAHubœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-File-31fJd{œdataTypeœ:œFileœ,œidœ:œFile-31fJdœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-ParseData-rLcoq{œfieldNameœ:œdataœ,œidœ:œParseData-rLcoqœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "source": "File-31fJd",
+        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-31fJdœ, œnameœ: œdataœ, œoutput_typesœ: [œDataœ]}",
+        "target": "ParseData-rLcoq",
+        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-rLcoqœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "ParseData",
-            "id": "ParseData-SAHub",
+            "id": "ParseData-rLcoq",
             "name": "text",
             "output_types": [
               "Message"
@@ -40,7 +40,7 @@
           },
           "targetHandle": {
             "fieldName": "Document",
-            "id": "Prompt-XHWTr",
+            "id": "Prompt-L1GxH",
             "inputTypes": [
               "Message",
               "Text"
@@ -48,18 +48,18 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ParseData-SAHub{œdataTypeœ:œParseDataœ,œidœ:œParseData-SAHubœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-XHWTr{œfieldNameœ:œDocumentœ,œidœ:œPrompt-XHWTrœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "ParseData-SAHub",
-        "sourceHandle": "{œdataTypeœ: œParseDataœ, œidœ: œParseData-SAHubœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-XHWTr",
-        "targetHandle": "{œfieldNameœ: œDocumentœ, œidœ: œPrompt-XHWTrœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-ParseData-rLcoq{œdataTypeœ:œParseDataœ,œidœ:œParseData-rLcoqœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-L1GxH{œfieldNameœ:œDocumentœ,œidœ:œPrompt-L1GxHœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "ParseData-rLcoq",
+        "sourceHandle": "{œdataTypeœ: œParseDataœ, œidœ: œParseData-rLcoqœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-L1GxH",
+        "targetHandle": "{œfieldNameœ: œDocumentœ, œidœ: œPrompt-L1GxHœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-tDiAG",
+            "id": "ChatInput-RuLDX",
             "name": "message",
             "output_types": [
               "Message"
@@ -67,7 +67,7 @@
           },
           "targetHandle": {
             "fieldName": "Question",
-            "id": "Prompt-XHWTr",
+            "id": "Prompt-L1GxH",
             "inputTypes": [
               "Message",
               "Text"
@@ -75,18 +75,18 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-tDiAG{œdataTypeœ:œChatInputœ,œidœ:œChatInput-tDiAGœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-XHWTr{œfieldNameœ:œQuestionœ,œidœ:œPrompt-XHWTrœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "ChatInput-tDiAG",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-tDiAGœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-XHWTr",
-        "targetHandle": "{œfieldNameœ: œQuestionœ, œidœ: œPrompt-XHWTrœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-ChatInput-RuLDX{œdataTypeœ:œChatInputœ,œidœ:œChatInput-RuLDXœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-L1GxH{œfieldNameœ:œQuestionœ,œidœ:œPrompt-L1GxHœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "ChatInput-RuLDX",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-RuLDXœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-L1GxH",
+        "targetHandle": "{œfieldNameœ: œQuestionœ, œidœ: œPrompt-L1GxHœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-XHWTr",
+            "id": "Prompt-L1GxH",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -94,25 +94,25 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "OpenAIModel-HJR46",
+            "id": "OpenAIModel-4ptCk",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-XHWTr{œdataTypeœ:œPromptœ,œidœ:œPrompt-XHWTrœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-HJR46{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-HJR46œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Prompt-XHWTr",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-XHWTrœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "OpenAIModel-HJR46",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-HJR46œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-Prompt-L1GxH{œdataTypeœ:œPromptœ,œidœ:œPrompt-L1GxHœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-4ptCk{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-4ptCkœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "Prompt-L1GxH",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-L1GxHœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "OpenAIModel-4ptCk",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-4ptCkœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIModel",
-            "id": "OpenAIModel-HJR46",
+            "id": "OpenAIModel-4ptCk",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -120,18 +120,18 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-ob8F7",
+            "id": "ChatOutput-DYHPP",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-OpenAIModel-HJR46{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-HJR46œ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-ob8F7{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-ob8F7œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "OpenAIModel-HJR46",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-HJR46œ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-ob8F7",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-ob8F7œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-OpenAIModel-4ptCk{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-4ptCkœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-DYHPP{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-DYHPPœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "OpenAIModel-4ptCk",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-4ptCkœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-DYHPP",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-DYHPPœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
@@ -140,7 +140,7 @@
           "description": "Get chat inputs from the Playground.",
           "display_name": "Chat Input",
           "edited": false,
-          "id": "ChatInput-tDiAG",
+          "id": "ChatInput-RuLDX",
           "node": {
             "base_classes": [
               "Message"
@@ -323,7 +323,7 @@
         },
         "dragging": false,
         "height": 309,
-        "id": "ChatInput-tDiAG",
+        "id": "ChatInput-RuLDX",
         "position": {
           "x": -201.55524461361745,
           "y": 411.67283602771283
@@ -341,7 +341,7 @@
           "description": "Display a chat message in the Playground.",
           "display_name": "Chat Output",
           "edited": false,
-          "id": "ChatOutput-ob8F7",
+          "id": "ChatOutput-DYHPP",
           "node": {
             "base_classes": [
               "Message"
@@ -501,7 +501,7 @@
         },
         "dragging": false,
         "height": 308,
-        "id": "ChatOutput-ob8F7",
+        "id": "ChatOutput-DYHPP",
         "position": {
           "x": 1733.3012915204283,
           "y": 168.76098809939327
@@ -518,7 +518,7 @@
         "data": {
           "description": "A generic file loader.",
           "display_name": "File",
-          "id": "File-mzZHT",
+          "id": "File-31fJd",
           "node": {
             "base_classes": [
               "Data"
@@ -627,7 +627,7 @@
         },
         "dragging": false,
         "height": 301,
-        "id": "File-mzZHT",
+        "id": "File-31fJd",
         "position": {
           "x": -423.1448900251602,
           "y": -230.83411538932458
@@ -645,7 +645,7 @@
           "description": "Generates text using OpenAI LLMs.",
           "display_name": "OpenAI",
           "edited": false,
-          "id": "OpenAIModel-HJR46",
+          "id": "OpenAIModel-4ptCk",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -784,7 +784,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "gpt-3.5-turbo"
+                "value": "gpt-4-turbo"
               },
               "openai_api_base": {
                 "advanced": true,
@@ -894,7 +894,7 @@
         },
         "dragging": false,
         "height": 622,
-        "id": "OpenAIModel-HJR46",
+        "id": "OpenAIModel-4ptCk",
         "position": {
           "x": 1205.1434354219589,
           "y": -39.953851445891985
@@ -911,7 +911,7 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-XHWTr",
+          "id": "Prompt-L1GxH",
           "node": {
             "base_classes": [
               "Message"
@@ -1044,7 +1044,7 @@
         },
         "dragging": false,
         "height": 517,
-        "id": "Prompt-XHWTr",
+        "id": "Prompt-L1GxH",
         "position": {
           "x": 641.7559080574213,
           "y": 96.74239207995313
@@ -1059,7 +1059,7 @@
       },
       {
         "data": {
-          "id": "ParseData-SAHub",
+          "id": "ParseData-rLcoq",
           "node": {
             "base_classes": [
               "Message"
@@ -1176,7 +1176,7 @@
         },
         "dragging": false,
         "height": 385,
-        "id": "ParseData-SAHub",
+        "id": "ParseData-rLcoq",
         "position": {
           "x": 122.60847618765547,
           "y": -109.41723790443038
@@ -1198,7 +1198,7 @@
   },
   "description": "This flow integrates PDF reading with a language model to answer document-specific questions. Ideal for small-scale texts, it facilitates direct queries with immediate insights.",
   "endpoint_name": null,
-  "id": "69331d5f-fd14-4ea4-be1f-fd3a8c370562",
+  "id": "ebaa8c25-5d89-4f31-a945-3804be72ac58",
   "is_component": false,
   "last_tested_version": "1.0.0rc1",
   "name": "Document QA"
