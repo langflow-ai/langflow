@@ -2,38 +2,10 @@
   "data": {
     "edges": [
       {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "TextInput",
-            "id": "TextInput-TDpSd",
-            "name": "text",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "instructions",
-            "id": "Prompt-kfWwQ",
-            "inputTypes": [
-              "Message",
-              "Text"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-TextInput-TDpSd{œdataTypeœ:œTextInputœ,œidœ:œTextInput-TDpSdœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-kfWwQ{œfieldNameœ:œinstructionsœ,œidœ:œPrompt-kfWwQœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "TextInput-TDpSd",
-        "sourceHandle": "{œdataTypeœ: œTextInputœ, œidœ: œTextInput-TDpSdœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-kfWwQ",
-        "targetHandle": "{œfieldNameœ: œinstructionsœ, œidœ: œPrompt-kfWwQœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
-      },
-      {
-        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "URL",
-            "id": "URL-hivMA",
+            "id": "URL-k9NkE",
             "name": "data",
             "output_types": [
               "Data"
@@ -41,25 +13,24 @@
           },
           "targetHandle": {
             "fieldName": "data",
-            "id": "ParseData-O4Tzh",
+            "id": "ParseData-EwWXd",
             "inputTypes": [
               "Data"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-URL-hivMA{œdataTypeœ:œURLœ,œidœ:œURL-hivMAœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-ParseData-O4Tzh{œfieldNameœ:œdataœ,œidœ:œParseData-O4Tzhœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
-        "source": "URL-hivMA",
-        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-hivMAœ, œnameœ: œdataœ, œoutput_typesœ: [œDataœ]}",
-        "target": "ParseData-O4Tzh",
-        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-O4Tzhœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-URL-k9NkE{œdataTypeœ:œURLœ,œidœ:œURL-k9NkEœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-ParseData-EwWXd{œfieldNameœ:œdataœ,œidœ:œParseData-EwWXdœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "source": "URL-k9NkE",
+        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-k9NkEœ, œnameœ: œdataœ, œoutput_typesœ: [œDataœ]}",
+        "target": "ParseData-EwWXd",
+        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-EwWXdœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
       },
       {
-        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "ParseData",
-            "id": "ParseData-O4Tzh",
+            "id": "ParseData-EwWXd",
             "name": "text",
             "output_types": [
               "Message"
@@ -67,7 +38,7 @@
           },
           "targetHandle": {
             "fieldName": "references",
-            "id": "Prompt-kfWwQ",
+            "id": "Prompt-B9Mq6",
             "inputTypes": [
               "Message",
               "Text"
@@ -75,18 +46,43 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ParseData-O4Tzh{œdataTypeœ:œParseDataœ,œidœ:œParseData-O4Tzhœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-kfWwQ{œfieldNameœ:œreferencesœ,œidœ:œPrompt-kfWwQœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "ParseData-O4Tzh",
-        "sourceHandle": "{œdataTypeœ: œParseDataœ, œidœ: œParseData-O4Tzhœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-kfWwQ",
-        "targetHandle": "{œfieldNameœ: œreferencesœ, œidœ: œPrompt-kfWwQœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-ParseData-EwWXd{œdataTypeœ:œParseDataœ,œidœ:œParseData-EwWXdœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-B9Mq6{œfieldNameœ:œreferencesœ,œidœ:œPrompt-B9Mq6œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "ParseData-EwWXd",
+        "sourceHandle": "{œdataTypeœ: œParseDataœ, œidœ: œParseData-EwWXdœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-B9Mq6",
+        "targetHandle": "{œfieldNameœ: œreferencesœ, œidœ: œPrompt-B9Mq6œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
-        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "TextInput",
+            "id": "TextInput-uf6ij",
+            "name": "text",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "instructions",
+            "id": "Prompt-B9Mq6",
+            "inputTypes": [
+              "Message",
+              "Text"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-TextInput-uf6ij{œdataTypeœ:œTextInputœ,œidœ:œTextInput-uf6ijœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-B9Mq6{œfieldNameœ:œinstructionsœ,œidœ:œPrompt-B9Mq6œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "TextInput-uf6ij",
+        "sourceHandle": "{œdataTypeœ: œTextInputœ, œidœ: œTextInput-uf6ijœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-B9Mq6",
+        "targetHandle": "{œfieldNameœ: œinstructionsœ, œidœ: œPrompt-B9Mq6œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+      },
+      {
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-kfWwQ",
+            "id": "Prompt-B9Mq6",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -94,25 +90,24 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "OpenAIModel-hVXLt",
+            "id": "OpenAIModel-X9ukk",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-kfWwQ{œdataTypeœ:œPromptœ,œidœ:œPrompt-kfWwQœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-hVXLt{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-hVXLtœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Prompt-kfWwQ",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-kfWwQœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "OpenAIModel-hVXLt",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-hVXLtœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-Prompt-B9Mq6{œdataTypeœ:œPromptœ,œidœ:œPrompt-B9Mq6œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-X9ukk{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-X9ukkœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "Prompt-B9Mq6",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-B9Mq6œ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "OpenAIModel-X9ukk",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-X9ukkœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
-        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIModel",
-            "id": "OpenAIModel-hVXLt",
+            "id": "OpenAIModel-X9ukk",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -120,54 +115,51 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-HrMHH",
+            "id": "ChatOutput-5r5Iw",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-OpenAIModel-hVXLt{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-hVXLtœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-HrMHH{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-HrMHHœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "OpenAIModel-hVXLt",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-hVXLtœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-HrMHH",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-HrMHHœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-OpenAIModel-X9ukk{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-X9ukkœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-5r5Iw{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-5r5Iwœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "OpenAIModel-X9ukk",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-X9ukkœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-5r5Iw",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-5r5Iwœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "description": "Get text inputs from the Playground.",
-          "display_name": "Instructions",
-          "edited": false,
-          "id": "TextInput-TDpSd",
+          "id": "URL-k9NkE",
           "node": {
             "base_classes": [
-              "Message"
+              "Data"
             ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
-            "description": "Get text inputs from the Playground.",
-            "display_name": "Instructions",
+            "description": "Fetch content from one or more URLs.",
+            "display_name": "URL",
             "documentation": "",
-            "edited": true,
+            "edited": false,
             "field_order": [
-              "input_value"
+              "urls"
             ],
             "frozen": false,
-            "icon": "type",
+            "icon": "layout-template",
             "output_types": [],
             "outputs": [
               {
                 "cache": true,
-                "display_name": "Text",
+                "display_name": "Data",
                 "hidden": false,
-                "method": "text_response",
-                "name": "text",
-                "selected": "Message",
+                "method": "fetch_content",
+                "name": "data",
+                "selected": "Data",
                 "types": [
-                  "Message"
+                  "Data"
                 ],
                 "value": "__UNDEFINED__"
               }
@@ -191,40 +183,45 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langflow.base.io.text import TextComponent\nfrom langflow.io import Output, MessageTextInput\nfrom langflow.schema.message import Message\n\n\nclass TextInputComponent(TextComponent):\n    display_name = \"Text Input\"\n    description = \"Get text inputs from the Playground.\"\n    icon = \"type\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            info=\"Text to be passed as input.\",\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Text\", name=\"text\", method=\"text_response\"),\n    ]\n\n    def text_response(self) -> Message:\n        message = Message(\n            text=self.input_value,\n        )\n        return message\n"
+                "value": "import re\n\nfrom langchain_community.document_loaders.web_base import WebBaseLoader\n\nfrom langflow.custom import Component\nfrom langflow.io import MessageTextInput, Output\nfrom langflow.schema import Data\n\n\nclass URLComponent(Component):\n    display_name = \"URL\"\n    description = \"Fetch content from one or more URLs.\"\n    icon = \"layout-template\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"urls\",\n            display_name=\"URLs\",\n            info=\"Enter one or more URLs, separated by commas.\",\n            is_list=True,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Data\", name=\"data\", method=\"fetch_content\"),\n    ]\n\n    def ensure_url(self, string: str) -> str:\n        \"\"\"\n        Ensures the given string is a URL by adding 'http://' if it doesn't start with 'http://' or 'https://'.\n        Raises an error if the string is not a valid URL.\n\n        Parameters:\n            string (str): The string to be checked and possibly modified.\n\n        Returns:\n            str: The modified string that is ensured to be a URL.\n\n        Raises:\n            ValueError: If the string is not a valid URL.\n        \"\"\"\n        if not string.startswith((\"http://\", \"https://\")):\n            string = \"http://\" + string\n\n        # Basic URL validation regex\n        url_regex = re.compile(\n            r\"^(https?:\\/\\/)?\"  # optional protocol\n            r\"(www\\.)?\"  # optional www\n            r\"([a-zA-Z0-9.-]+)\"  # domain\n            r\"(\\.[a-zA-Z]{2,})?\"  # top-level domain\n            r\"(:\\d+)?\"  # optional port\n            r\"(\\/[^\\s]*)?$\",  # optional path\n            re.IGNORECASE,\n        )\n\n        if not url_regex.match(string):\n            raise ValueError(f\"Invalid URL: {string}\")\n\n        return string\n\n    def fetch_content(self) -> list[Data]:\n        urls = [self.ensure_url(url.strip()) for url in self.urls if url.strip()]\n        loader = WebBaseLoader(web_paths=urls, encoding=\"utf-8\")\n        docs = loader.load()\n        data = [Data(text=doc.page_content, **doc.metadata) for doc in docs]\n        self.status = data\n        return data\n"
               },
-              "input_value": {
+              "urls": {
                 "advanced": false,
-                "display_name": "Text",
+                "display_name": "URLs",
                 "dynamic": false,
-                "info": "Text to be passed as input.",
+                "info": "Enter one or more URLs, separated by commas.",
                 "input_types": [
                   "Message"
                 ],
-                "list": false,
+                "list": true,
                 "load_from_db": false,
-                "name": "input_value",
+                "name": "urls",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
                 "type": "str",
-                "value": "Use the references above for style to write a new blog/tutorial about Langflow and AI. Suggest non-covered topics."
+                "value": [
+                  "langflow.org/",
+                  "docs.langflow.org/"
+                ]
               }
             }
           },
-          "type": "TextInput"
+          "type": "URL"
         },
         "dragging": false,
-        "height": 309,
-        "id": "TextInput-TDpSd",
+        "height": 358,
+        "id": "URL-k9NkE",
         "position": {
-          "x": 735.806436564132,
-          "y": 346.40301122327935
+          "x": 220.79156431407534,
+          "y": 498.8186168722667
         },
         "positionAbsolute": {
-          "x": 735.806436564132,
-          "y": 346.40301122327935
+          "x": 220.79156431407534,
+          "y": 498.8186168722667
         },
         "selected": false,
         "type": "genericNode",
@@ -232,7 +229,7 @@
       },
       {
         "data": {
-          "id": "ParseData-O4Tzh",
+          "id": "ParseData-EwWXd",
           "node": {
             "base_classes": [
               "Message"
@@ -243,6 +240,7 @@
             "description": "Convert Data into plain text following a specified template.",
             "display_name": "Parse Data",
             "documentation": "",
+            "edited": false,
             "field_order": [
               "data",
               "template",
@@ -300,6 +298,8 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
                 "type": "other",
                 "value": ""
               },
@@ -310,26 +310,33 @@
                 "info": "",
                 "list": false,
                 "load_from_db": false,
-                "multiline": true,
                 "name": "sep",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "trace_as_metadata": true,
                 "type": "str",
-                "value": "---"
+                "value": "\n"
               },
               "template": {
                 "advanced": false,
                 "display_name": "Template",
                 "dynamic": false,
                 "info": "The template to use for formatting the data. It can contain the keys {text}, {data} or any other key in the Data.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "load_from_db": false,
                 "multiline": true,
                 "name": "template",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
                 "type": "str",
                 "value": "{text}"
               }
@@ -338,15 +345,15 @@
           "type": "ParseData"
         },
         "dragging": false,
-        "height": 377,
-        "id": "ParseData-O4Tzh",
+        "height": 384,
+        "id": "ParseData-EwWXd",
         "position": {
-          "x": 759.575501198118,
-          "y": 760.6953079067359
+          "x": 754.3607306709101,
+          "y": 736.8516961537598
         },
         "positionAbsolute": {
-          "x": 759.575501198118,
-          "y": 760.6953079067359
+          "x": 754.3607306709101,
+          "y": 736.8516961537598
         },
         "selected": false,
         "type": "genericNode",
@@ -354,10 +361,251 @@
       },
       {
         "data": {
-          "description": "Generates text using OpenAI LLMs.",
-          "display_name": "OpenAI",
-          "edited": false,
-          "id": "OpenAIModel-hVXLt",
+          "description": "Create a prompt template with dynamic variables.",
+          "display_name": "Prompt",
+          "id": "Prompt-B9Mq6",
+          "node": {
+            "base_classes": [
+              "Message"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {
+              "template": [
+                "references",
+                "instructions"
+              ]
+            },
+            "description": "Create a prompt template with dynamic variables.",
+            "display_name": "Prompt",
+            "documentation": "",
+            "edited": false,
+            "error": null,
+            "field_order": [
+              "template"
+            ],
+            "frozen": false,
+            "full_path": null,
+            "icon": "prompts",
+            "is_composition": null,
+            "is_input": null,
+            "is_output": null,
+            "name": "",
+            "output_types": [],
+            "outputs": [
+              {
+                "cache": true,
+                "display_name": "Prompt Message",
+                "hidden": false,
+                "method": "build_prompt",
+                "name": "prompt",
+                "selected": "Message",
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from langflow.base.prompts.api_utils import process_prompt_template\nfrom langflow.custom import Component\nfrom langflow.io import Output, PromptInput\nfrom langflow.schema.message import Message\nfrom langflow.template.utils import update_template_values\n\n\nclass PromptComponent(Component):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"prompts\"\n    trace_type = \"prompt\"\n\n    inputs = [\n        PromptInput(name=\"template\", display_name=\"Template\"),\n    ]\n\n    outputs = [\n        Output(display_name=\"Prompt Message\", name=\"prompt\", method=\"build_prompt\"),\n    ]\n\n    async def build_prompt(\n        self,\n    ) -> Message:\n        prompt = await Message.from_template_and_variables(**self._attributes)\n        self.status = prompt.text\n        return prompt\n\n    def post_code_processing(self, new_build_config: dict, current_build_config: dict):\n        \"\"\"\n        This function is called after the code validation is done.\n        \"\"\"\n        frontend_node = super().post_code_processing(new_build_config, current_build_config)\n        template = frontend_node[\"template\"][\"template\"][\"value\"]\n        _ = process_prompt_template(\n            template=template,\n            name=\"template\",\n            custom_fields=frontend_node[\"custom_fields\"],\n            frontend_node_template=frontend_node[\"template\"],\n        )\n        # Now that template is updated, we need to grab any values that were set in the current_build_config\n        # and update the frontend_node with those values\n        update_template_values(frontend_template=frontend_node, raw_template=current_build_config[\"template\"])\n        return frontend_node\n"
+              },
+              "instructions": {
+                "advanced": false,
+                "display_name": "instructions",
+                "dynamic": false,
+                "field_type": "str",
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "input_types": [
+                  "Message",
+                  "Text"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "instructions",
+                "password": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": ""
+              },
+              "references": {
+                "advanced": false,
+                "display_name": "references",
+                "dynamic": false,
+                "field_type": "str",
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "input_types": [
+                  "Message",
+                  "Text"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "references",
+                "password": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": ""
+              },
+              "template": {
+                "advanced": false,
+                "display_name": "Template",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "name": "template",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_input": true,
+                "type": "prompt",
+                "value": "Reference 1:\n\n{references}\n\n---\n\n{instructions}\n\nBlog: \n\n"
+              }
+            }
+          },
+          "type": "Prompt"
+        },
+        "dragging": false,
+        "height": 515,
+        "id": "Prompt-B9Mq6",
+        "position": {
+          "x": 1368.0633591447076,
+          "y": 467.19448061224284
+        },
+        "positionAbsolute": {
+          "x": 1368.0633591447076,
+          "y": 467.19448061224284
+        },
+        "selected": false,
+        "type": "genericNode",
+        "width": 384
+      },
+      {
+        "data": {
+          "id": "TextInput-uf6ij",
+          "node": {
+            "base_classes": [
+              "Message"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Get text inputs from the Playground.",
+            "display_name": "Instructions",
+            "documentation": "",
+            "edited": false,
+            "field_order": [
+              "input_value"
+            ],
+            "frozen": false,
+            "icon": "type",
+            "output_types": [],
+            "outputs": [
+              {
+                "cache": true,
+                "display_name": "Text",
+                "hidden": false,
+                "method": "text_response",
+                "name": "text",
+                "selected": "Message",
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from langflow.base.io.text import TextComponent\nfrom langflow.io import MessageTextInput, Output\nfrom langflow.schema.message import Message\n\n\nclass TextInputComponent(TextComponent):\n    display_name = \"Text Input\"\n    description = \"Get text inputs from the Playground.\"\n    icon = \"type\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            info=\"Text to be passed as input.\",\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Text\", name=\"text\", method=\"text_response\"),\n    ]\n\n    def text_response(self) -> Message:\n        message = Message(\n            text=self.input_value,\n        )\n        return message\n"
+              },
+              "input_value": {
+                "advanced": false,
+                "display_name": "Text",
+                "dynamic": false,
+                "info": "Text to be passed as input.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "name": "input_value",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "Use the references above for style to write a new blog/tutorial about Langflow and AI. Suggest non-covered topics."
+              }
+            }
+          },
+          "type": "TextInput"
+        },
+        "dragging": false,
+        "height": 308,
+        "id": "TextInput-uf6ij",
+        "position": {
+          "x": 743.7338453293725,
+          "y": 301.58775454952183
+        },
+        "positionAbsolute": {
+          "x": 743.7338453293725,
+          "y": 301.58775454952183
+        },
+        "selected": false,
+        "type": "genericNode",
+        "width": 384
+      },
+      {
+        "data": {
+          "id": "OpenAIModel-X9ukk",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -369,7 +617,7 @@
             "description": "Generates text using OpenAI LLMs.",
             "display_name": "OpenAI",
             "documentation": "",
-            "edited": true,
+            "edited": false,
             "field_order": [
               "input_value",
               "max_tokens",
@@ -447,6 +695,8 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
                 "type": "str",
                 "value": ""
               },
@@ -461,6 +711,7 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "trace_as_metadata": true,
                 "type": "int",
                 "value": ""
               },
@@ -475,6 +726,7 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "trace_as_input": true,
                 "type": "dict",
                 "value": {}
               },
@@ -495,6 +747,7 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "trace_as_metadata": true,
                 "type": "str",
                 "value": "gpt-4-turbo"
               },
@@ -510,6 +763,7 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "trace_as_metadata": true,
                 "type": "str",
                 "value": ""
               },
@@ -540,6 +794,7 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "trace_as_input": true,
                 "type": "dict",
                 "value": {}
               },
@@ -554,11 +809,12 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "trace_as_metadata": true,
                 "type": "int",
                 "value": 1
               },
               "stream": {
-                "advanced": false,
+                "advanced": true,
                 "display_name": "Stream",
                 "dynamic": false,
                 "info": "Stream the response from the model. Streaming works only in Chat.",
@@ -568,8 +824,9 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "trace_as_metadata": true,
                 "type": "bool",
-                "value": true
+                "value": false
               },
               "system_message": {
                 "advanced": true,
@@ -583,6 +840,7 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "trace_as_metadata": true,
                 "type": "str",
                 "value": ""
               },
@@ -597,6 +855,7 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "trace_as_metadata": true,
                 "type": "float",
                 "value": 0.1
               }
@@ -605,26 +864,23 @@
           "type": "OpenAIModel"
         },
         "dragging": false,
-        "height": 699,
-        "id": "OpenAIModel-hVXLt",
+        "height": 621,
+        "id": "OpenAIModel-X9ukk",
         "position": {
-          "x": 1918.8991680862073,
-          "y": 459.92681406971394
+          "x": 1899.407626221589,
+          "y": 395.9013619556682
         },
         "positionAbsolute": {
-          "x": 1918.8991680862073,
-          "y": 459.92681406971394
+          "x": 1899.407626221589,
+          "y": 395.9013619556682
         },
-        "selected": true,
+        "selected": false,
         "type": "genericNode",
         "width": 384
       },
       {
         "data": {
-          "description": "Display a chat message in the Playground.",
-          "display_name": "Chat Output",
-          "edited": false,
-          "id": "ChatOutput-HrMHH",
+          "id": "ChatOutput-5r5Iw",
           "node": {
             "base_classes": [
               "Message"
@@ -635,7 +891,7 @@
             "description": "Display a chat message in the Playground.",
             "display_name": "Chat Output",
             "documentation": "",
-            "edited": true,
+            "edited": false,
             "field_order": [
               "input_value",
               "sender",
@@ -783,257 +1039,15 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "height": 309,
-        "id": "ChatOutput-HrMHH",
+        "height": 308,
+        "id": "ChatOutput-5r5Iw",
         "position": {
-          "x": 2473.1294450647747,
-          "y": 668.8159913425238
+          "x": 2449.3489426461606,
+          "y": 571.2449700910389
         },
         "positionAbsolute": {
-          "x": 2473.1294450647747,
-          "y": 668.8159913425238
-        },
-        "selected": false,
-        "type": "genericNode",
-        "width": 384
-      },
-      {
-        "data": {
-          "description": "Create a prompt template with dynamic variables.",
-          "display_name": "Prompt",
-          "id": "Prompt-kfWwQ",
-          "node": {
-            "base_classes": [
-              "Message"
-            ],
-            "beta": false,
-            "conditional_paths": [],
-            "custom_fields": {
-              "template": [
-                "references",
-                "instructions"
-              ]
-            },
-            "description": "Create a prompt template with dynamic variables.",
-            "display_name": "Prompt",
-            "documentation": "",
-            "edited": false,
-            "error": null,
-            "field_order": [
-              "template"
-            ],
-            "frozen": false,
-            "full_path": null,
-            "icon": "prompts",
-            "is_composition": null,
-            "is_input": null,
-            "is_output": null,
-            "name": "",
-            "output_types": [],
-            "outputs": [
-              {
-                "cache": true,
-                "display_name": "Prompt Message",
-                "hidden": false,
-                "method": "build_prompt",
-                "name": "prompt",
-                "selected": "Message",
-                "types": [
-                  "Message"
-                ],
-                "value": "__UNDEFINED__"
-              }
-            ],
-            "pinned": false,
-            "template": {
-              "_type": "Component",
-              "code": {
-                "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "from langflow.base.prompts.api_utils import process_prompt_template\nfrom langflow.custom import Component\nfrom langflow.io import Output, PromptInput\nfrom langflow.schema.message import Message\nfrom langflow.template.utils import update_template_values\n\n\nclass PromptComponent(Component):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"prompts\"\n    trace_type = \"prompt\"\n\n    inputs = [\n        PromptInput(name=\"template\", display_name=\"Template\"),\n    ]\n\n    outputs = [\n        Output(display_name=\"Prompt Message\", name=\"prompt\", method=\"build_prompt\"),\n    ]\n\n    async def build_prompt(\n        self,\n    ) -> Message:\n        prompt = await Message.from_template_and_variables(**self._attributes)\n        self.status = prompt.text\n        return prompt\n\n    def post_code_processing(self, new_build_config: dict, current_build_config: dict):\n        \"\"\"\n        This function is called after the code validation is done.\n        \"\"\"\n        frontend_node = super().post_code_processing(new_build_config, current_build_config)\n        template = frontend_node[\"template\"][\"template\"][\"value\"]\n        _ = process_prompt_template(\n            template=template,\n            name=\"template\",\n            custom_fields=frontend_node[\"custom_fields\"],\n            frontend_node_template=frontend_node[\"template\"],\n        )\n        # Now that template is updated, we need to grab any values that were set in the current_build_config\n        # and update the frontend_node with those values\n        update_template_values(frontend_template=frontend_node, raw_template=current_build_config[\"template\"])\n        return frontend_node\n"
-              },
-              "instructions": {
-                "advanced": false,
-                "display_name": "instructions",
-                "dynamic": false,
-                "field_type": "str",
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "input_types": [
-                  "Message",
-                  "Text"
-                ],
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "instructions",
-                "password": false,
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": ""
-              },
-              "references": {
-                "advanced": false,
-                "display_name": "references",
-                "dynamic": false,
-                "field_type": "str",
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "input_types": [
-                  "Message",
-                  "Text"
-                ],
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "references",
-                "password": false,
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": ""
-              },
-              "template": {
-                "advanced": false,
-                "display_name": "Template",
-                "dynamic": false,
-                "info": "",
-                "list": false,
-                "name": "template",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_input": true,
-                "type": "prompt",
-                "value": "Reference 1:\n\n{references}\n\n---\n\n{instructions}\n\nBlog: \n\n"
-              }
-            }
-          },
-          "type": "Prompt"
-        },
-        "dragging": false,
-        "height": 517,
-        "id": "Prompt-kfWwQ",
-        "position": {
-          "x": 1288.0925694176524,
-          "y": 519.4286147510747
-        },
-        "positionAbsolute": {
-          "x": 1288.0925694176524,
-          "y": 519.4286147510747
-        },
-        "selected": false,
-        "type": "genericNode",
-        "width": 384
-      },
-      {
-        "data": {
-          "id": "URL-hivMA",
-          "node": {
-            "base_classes": [
-              "Data"
-            ],
-            "beta": false,
-            "conditional_paths": [],
-            "custom_fields": {},
-            "description": "Fetch content from one or more URLs.",
-            "display_name": "URL",
-            "documentation": "",
-            "edited": false,
-            "field_order": [
-              "urls"
-            ],
-            "frozen": false,
-            "icon": "layout-template",
-            "output_types": [],
-            "outputs": [
-              {
-                "cache": true,
-                "display_name": "Data",
-                "hidden": false,
-                "method": "fetch_content",
-                "name": "data",
-                "selected": "Data",
-                "types": [
-                  "Data"
-                ],
-                "value": "__UNDEFINED__"
-              }
-            ],
-            "pinned": false,
-            "template": {
-              "_type": "Component",
-              "code": {
-                "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "import re\n\nfrom langchain_community.document_loaders.web_base import WebBaseLoader\n\nfrom langflow.custom import Component\nfrom langflow.io import MessageTextInput, Output\nfrom langflow.schema import Data\n\n\nclass URLComponent(Component):\n    display_name = \"URL\"\n    description = \"Fetch content from one or more URLs.\"\n    icon = \"layout-template\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"urls\",\n            display_name=\"URLs\",\n            info=\"Enter one or more URLs, separated by commas.\",\n            is_list=True,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Data\", name=\"data\", method=\"fetch_content\"),\n    ]\n\n    def ensure_url(self, string: str) -> str:\n        \"\"\"\n        Ensures the given string is a URL by adding 'http://' if it doesn't start with 'http://' or 'https://'.\n        Raises an error if the string is not a valid URL.\n\n        Parameters:\n            string (str): The string to be checked and possibly modified.\n\n        Returns:\n            str: The modified string that is ensured to be a URL.\n\n        Raises:\n            ValueError: If the string is not a valid URL.\n        \"\"\"\n        if not string.startswith((\"http://\", \"https://\")):\n            string = \"http://\" + string\n\n        # Basic URL validation regex\n        url_regex = re.compile(\n            r\"^(https?:\\/\\/)?\"  # optional protocol\n            r\"(www\\.)?\"  # optional www\n            r\"([a-zA-Z0-9.-]+)\"  # domain\n            r\"(\\.[a-zA-Z]{2,})?\"  # top-level domain\n            r\"(:\\d+)?\"  # optional port\n            r\"(\\/[^\\s]*)?$\",  # optional path\n            re.IGNORECASE,\n        )\n\n        if not url_regex.match(string):\n            raise ValueError(f\"Invalid URL: {string}\")\n\n        return string\n\n    def fetch_content(self) -> list[Data]:\n        urls = [self.ensure_url(url.strip()) for url in self.urls if url.strip()]\n        loader = WebBaseLoader(web_paths=urls, encoding=\"utf-8\")\n        docs = loader.load()\n        data = [Data(text=doc.page_content, **doc.metadata) for doc in docs]\n        self.status = data\n        return data\n"
-              },
-              "urls": {
-                "advanced": false,
-                "display_name": "URLs",
-                "dynamic": false,
-                "info": "Enter one or more URLs, separated by commas.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": true,
-                "load_from_db": false,
-                "name": "urls",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": [
-                  "langflow.org",
-                  "docs.langflow.org/"
-                ]
-              }
-            }
-          },
-          "type": "URL"
-        },
-        "height": 359,
-        "id": "URL-hivMA",
-        "position": {
-          "x": 247.90599789054627,
-          "y": 514.1589932671732
+          "x": 2449.3489426461606,
+          "y": 571.2449700910389
         },
         "selected": false,
         "type": "genericNode",
@@ -1041,14 +1055,14 @@
       }
     ],
     "viewport": {
-      "x": -75.20072339134504,
-      "y": -30.25319522994951,
-      "zoom": 0.4742390893506119
+      "x": -63.94787944982488,
+      "y": -16.004163894553585,
+      "zoom": 0.47423908935061165
     }
   },
   "description": "This flow can be used to create a blog post following instructions from the user, using two other blogs as reference.",
   "endpoint_name": null,
-  "id": "26f5bcac-db01-4696-87dc-f7b38afc74ee",
+  "id": "13da3150-95b9-4d81-9ad2-f635dcdce7ab",
   "is_component": false,
   "last_tested_version": "1.0.0rc1",
   "name": "Blog Writer"
