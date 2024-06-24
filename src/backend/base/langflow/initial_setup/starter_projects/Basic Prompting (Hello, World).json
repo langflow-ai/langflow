@@ -2,11 +2,10 @@
   "data": {
     "edges": [
       {
-        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-cIXVH",
+            "id": "ChatInput-pxptT",
             "name": "message",
             "output_types": [
               "Message"
@@ -14,7 +13,7 @@
           },
           "targetHandle": {
             "fieldName": "user_input",
-            "id": "Prompt-Ejl8w",
+            "id": "Prompt-1S5SU",
             "inputTypes": [
               "Message",
               "Text"
@@ -22,18 +21,17 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-cIXVH{œdataTypeœ:œChatInputœ,œidœ:œChatInput-cIXVHœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-Ejl8w{œfieldNameœ:œuser_inputœ,œidœ:œPrompt-Ejl8wœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "ChatInput-cIXVH",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-cIXVHœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-Ejl8w",
-        "targetHandle": "{œfieldNameœ: œuser_inputœ, œidœ: œPrompt-Ejl8wœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-ChatInput-pxptT{œdataTypeœ:œChatInputœ,œidœ:œChatInput-pxptTœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-1S5SU{œfieldNameœ:œuser_inputœ,œidœ:œPrompt-1S5SUœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "ChatInput-pxptT",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-pxptTœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-1S5SU",
+        "targetHandle": "{œfieldNameœ: œuser_inputœ, œidœ: œPrompt-1S5SUœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
-        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-Ejl8w",
+            "id": "Prompt-1S5SU",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -41,25 +39,24 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "OpenAIModel-FAF7r",
+            "id": "OpenAIModel-nJXWj",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-Ejl8w{œdataTypeœ:œPromptœ,œidœ:œPrompt-Ejl8wœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-FAF7r{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-FAF7rœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Prompt-Ejl8w",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-Ejl8wœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "OpenAIModel-FAF7r",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-FAF7rœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-Prompt-1S5SU{œdataTypeœ:œPromptœ,œidœ:œPrompt-1S5SUœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-nJXWj{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-nJXWjœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "Prompt-1S5SU",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-1S5SUœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "OpenAIModel-nJXWj",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-nJXWjœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
-        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIModel",
-            "id": "OpenAIModel-FAF7r",
+            "id": "OpenAIModel-nJXWj",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -67,147 +64,24 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-riTzX",
+            "id": "ChatOutput-XP4bj",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-OpenAIModel-FAF7r{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-FAF7rœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-riTzX{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-riTzXœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "OpenAIModel-FAF7r",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-FAF7rœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-riTzX",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-riTzXœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-OpenAIModel-nJXWj{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-nJXWjœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-XP4bj{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-XP4bjœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "OpenAIModel-nJXWj",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-nJXWjœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-XP4bj",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-XP4bjœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "description": "Create a prompt template with dynamic variables.",
-          "display_name": "Prompt",
-          "edited": false,
-          "id": "Prompt-Ejl8w",
-          "node": {
-            "base_classes": [
-              "Message"
-            ],
-            "beta": false,
-            "conditional_paths": [],
-            "custom_fields": {
-              "template": [
-                "user_input"
-              ]
-            },
-            "description": "Create a prompt template with dynamic variables.",
-            "display_name": "Prompt",
-            "documentation": "",
-            "edited": true,
-            "field_order": [
-              "template"
-            ],
-            "frozen": false,
-            "icon": "prompts",
-            "output_types": [],
-            "outputs": [
-              {
-                "cache": true,
-                "display_name": "Prompt Message",
-                "hidden": false,
-                "method": "build_prompt",
-                "name": "prompt",
-                "selected": "Message",
-                "types": [
-                  "Message"
-                ],
-                "value": "__UNDEFINED__"
-              }
-            ],
-            "pinned": false,
-            "template": {
-              "_type": "Component",
-              "code": {
-                "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "from langflow.base.prompts.api_utils import process_prompt_template\nfrom langflow.custom import Component\nfrom langflow.io import Output, PromptInput\nfrom langflow.schema.message import Message\nfrom langflow.template.utils import update_template_values\n\n\nclass PromptComponent(Component):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"prompts\"\n    trace_type = \"prompt\"\n\n    inputs = [\n        PromptInput(name=\"template\", display_name=\"Template\"),\n    ]\n\n    outputs = [\n        Output(display_name=\"Prompt Message\", name=\"prompt\", method=\"build_prompt\"),\n    ]\n\n    async def build_prompt(\n        self,\n    ) -> Message:\n        prompt = await Message.from_template_and_variables(**self._attributes)\n        self.status = prompt.text\n        return prompt\n\n    def post_code_processing(self, new_build_config: dict, current_build_config: dict):\n        \"\"\"\n        This function is called after the code validation is done.\n        \"\"\"\n        frontend_node = super().post_code_processing(new_build_config, current_build_config)\n        template = frontend_node[\"template\"][\"template\"][\"value\"]\n        _ = process_prompt_template(\n            template=template,\n            name=\"template\",\n            custom_fields=frontend_node[\"custom_fields\"],\n            frontend_node_template=frontend_node[\"template\"],\n        )\n        # Now that template is updated, we need to grab any values that were set in the current_build_config\n        # and update the frontend_node with those values\n        update_template_values(frontend_template=frontend_node, raw_template=current_build_config[\"template\"])\n        return frontend_node\n"
-              },
-              "template": {
-                "advanced": false,
-                "display_name": "Template",
-                "dynamic": false,
-                "info": "",
-                "list": false,
-                "name": "template",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_input": true,
-                "type": "prompt",
-                "value": "Answer the user as if you were a pirate.\n\nUser: {user_input}\n\nAnswer: "
-              },
-              "user_input": {
-                "advanced": false,
-                "display_name": "user_input",
-                "dynamic": false,
-                "field_type": "str",
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "input_types": [
-                  "Message",
-                  "Text"
-                ],
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "user_input",
-                "password": false,
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": ""
-              }
-            }
-          },
-          "type": "Prompt"
-        },
-        "dragging": false,
-        "height": 422,
-        "id": "Prompt-Ejl8w",
-        "position": {
-          "x": 43.70859256635981,
-          "y": 1115.5304359666682
-        },
-        "positionAbsolute": {
-          "x": 43.70859256635981,
-          "y": 1115.5304359666682
-        },
-        "selected": false,
-        "type": "genericNode",
-        "width": 384
-      },
-      {
-        "data": {
-          "description": "Get chat inputs from the Playground.",
-          "display_name": "Chat Input",
-          "edited": false,
-          "id": "ChatInput-cIXVH",
+          "id": "ChatInput-pxptT",
           "node": {
             "base_classes": [
               "Message"
@@ -218,7 +92,7 @@
             "description": "Get chat inputs from the Playground.",
             "display_name": "Chat Input",
             "documentation": "",
-            "edited": true,
+            "edited": false,
             "field_order": [
               "input_value",
               "sender",
@@ -262,7 +136,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langflow.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.io import DropdownInput, FileInput, MultilineInput, Output, TextInput\nfrom langflow.schema.message import Message\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    icon = \"ChatInput\"\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            value=\"\",\n            info=\"Message to be passed as input.\",\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[\"Machine\", \"User\"],\n            value=\"User\",\n            info=\"Type of sender.\",\n            advanced=True,\n        ),\n        TextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=\"User\",\n            advanced=True,\n        ),\n        TextInput(name=\"session_id\", display_name=\"Session ID\", info=\"Session ID for the message.\", advanced=True),\n        FileInput(\n            name=\"files\",\n            display_name=\"Files\",\n            file_types=TEXT_FILE_TYPES + IMG_FILE_TYPES,\n            info=\"Files to be sent with the message.\",\n            advanced=True,\n            is_list=True,\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    def message_response(self) -> Message:\n        message = Message(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n            files=self.files,\n        )\n        if self.session_id and isinstance(message, Message) and isinstance(message.text, str):\n            self.store_message(message)\n            self.message.value = message\n\n        self.status = message\n        return message\n"
+                "value": "from langflow.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.io import DropdownInput, FileInput, MessageTextInput, MultilineInput, Output\nfrom langflow.schema.message import Message\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    icon = \"ChatInput\"\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            value=\"\",\n            info=\"Message to be passed as input.\",\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[\"Machine\", \"User\"],\n            value=\"User\",\n            info=\"Type of sender.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=\"User\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\", display_name=\"Session ID\", info=\"Session ID for the message.\", advanced=True\n        ),\n        FileInput(\n            name=\"files\",\n            display_name=\"Files\",\n            file_types=TEXT_FILE_TYPES + IMG_FILE_TYPES,\n            info=\"Files to be sent with the message.\",\n            advanced=True,\n            is_list=True,\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    def message_response(self) -> Message:\n        message = Message(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n            files=self.files,\n        )\n        if self.session_id and isinstance(message, Message) and isinstance(message.text, str):\n            self.store_message(message)\n            self.message.value = message\n\n        self.status = message\n        return message\n"
               },
               "files": {
                 "advanced": true,
@@ -390,14 +264,14 @@
         },
         "dragging": false,
         "height": 308,
-        "id": "ChatInput-cIXVH",
+        "id": "ChatInput-pxptT",
         "position": {
-          "x": -521.3324537445985,
-          "y": 1089.7620993695407
+          "x": -493.6459512396177,
+          "y": 1083.200545525551
         },
         "positionAbsolute": {
-          "x": -521.3324537445985,
-          "y": 1089.7620993695407
+          "x": -493.6459512396177,
+          "y": 1083.200545525551
         },
         "selected": false,
         "type": "genericNode",
@@ -405,10 +279,132 @@
       },
       {
         "data": {
-          "description": "Generates text using OpenAI LLMs.",
-          "display_name": "OpenAI",
-          "edited": false,
-          "id": "OpenAIModel-FAF7r",
+          "description": "Create a prompt template with dynamic variables.",
+          "display_name": "Prompt",
+          "id": "Prompt-1S5SU",
+          "node": {
+            "base_classes": [
+              "Message"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {
+              "template": [
+                "user_input"
+              ]
+            },
+            "description": "Create a prompt template with dynamic variables.",
+            "display_name": "Prompt",
+            "documentation": "",
+            "edited": false,
+            "error": null,
+            "field_order": [
+              "template"
+            ],
+            "frozen": false,
+            "full_path": null,
+            "icon": "prompts",
+            "is_composition": null,
+            "is_input": null,
+            "is_output": null,
+            "name": "",
+            "output_types": [],
+            "outputs": [
+              {
+                "cache": true,
+                "display_name": "Prompt Message",
+                "hidden": false,
+                "method": "build_prompt",
+                "name": "prompt",
+                "selected": "Message",
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from langflow.base.prompts.api_utils import process_prompt_template\nfrom langflow.custom import Component\nfrom langflow.io import Output, PromptInput\nfrom langflow.schema.message import Message\nfrom langflow.template.utils import update_template_values\n\n\nclass PromptComponent(Component):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"prompts\"\n    trace_type = \"prompt\"\n\n    inputs = [\n        PromptInput(name=\"template\", display_name=\"Template\"),\n    ]\n\n    outputs = [\n        Output(display_name=\"Prompt Message\", name=\"prompt\", method=\"build_prompt\"),\n    ]\n\n    async def build_prompt(\n        self,\n    ) -> Message:\n        prompt = await Message.from_template_and_variables(**self._attributes)\n        self.status = prompt.text\n        return prompt\n\n    def post_code_processing(self, new_build_config: dict, current_build_config: dict):\n        \"\"\"\n        This function is called after the code validation is done.\n        \"\"\"\n        frontend_node = super().post_code_processing(new_build_config, current_build_config)\n        template = frontend_node[\"template\"][\"template\"][\"value\"]\n        _ = process_prompt_template(\n            template=template,\n            name=\"template\",\n            custom_fields=frontend_node[\"custom_fields\"],\n            frontend_node_template=frontend_node[\"template\"],\n        )\n        # Now that template is updated, we need to grab any values that were set in the current_build_config\n        # and update the frontend_node with those values\n        update_template_values(frontend_template=frontend_node, raw_template=current_build_config[\"template\"])\n        return frontend_node\n"
+              },
+              "template": {
+                "advanced": false,
+                "display_name": "Template",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "name": "template",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_input": true,
+                "type": "prompt",
+                "value": "Answer the user as if you were a pirate.\n\nUser: {user_input}\n\nAnswer: "
+              },
+              "user_input": {
+                "advanced": false,
+                "display_name": "user_input",
+                "dynamic": false,
+                "field_type": "str",
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "input_types": [
+                  "Message",
+                  "Text"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "user_input",
+                "password": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": ""
+              }
+            }
+          },
+          "type": "Prompt"
+        },
+        "dragging": false,
+        "height": 422,
+        "id": "Prompt-1S5SU",
+        "position": {
+          "x": 56.354011530798516,
+          "y": 1157.2005405164796
+        },
+        "positionAbsolute": {
+          "x": 56.354011530798516,
+          "y": 1157.2005405164796
+        },
+        "selected": false,
+        "type": "genericNode",
+        "width": 384
+      },
+      {
+        "data": {
+          "id": "OpenAIModel-nJXWj",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -420,7 +416,7 @@
             "description": "Generates text using OpenAI LLMs.",
             "display_name": "OpenAI",
             "documentation": "",
-            "edited": true,
+            "edited": false,
             "field_order": [
               "input_value",
               "max_tokens",
@@ -668,14 +664,14 @@
         },
         "dragging": false,
         "height": 621,
-        "id": "OpenAIModel-FAF7r",
+        "id": "OpenAIModel-nJXWj",
         "position": {
-          "x": 584.9288140250019,
-          "y": 1149.0790574268922
+          "x": 624.3539730827923,
+          "y": 1053.2005475562555
         },
         "positionAbsolute": {
-          "x": 584.9288140250019,
-          "y": 1149.0790574268922
+          "x": 624.3539730827923,
+          "y": 1053.2005475562555
         },
         "selected": false,
         "type": "genericNode",
@@ -683,10 +679,7 @@
       },
       {
         "data": {
-          "description": "Display a chat message in the Playground.",
-          "display_name": "Chat Output",
-          "edited": false,
-          "id": "ChatOutput-riTzX",
+          "id": "ChatOutput-XP4bj",
           "node": {
             "base_classes": [
               "Message"
@@ -697,7 +690,7 @@
             "description": "Display a chat message in the Playground.",
             "display_name": "Chat Output",
             "documentation": "",
-            "edited": true,
+            "edited": false,
             "field_order": [
               "input_value",
               "sender",
@@ -740,7 +733,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langflow.base.io.chat import ChatComponent\nfrom langflow.io import DropdownInput, Output, TextInput\nfrom langflow.schema.message import Message\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    icon = \"ChatOutput\"\n\n    inputs = [\n        TextInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            info=\"Message to be passed as output.\",\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[\"Machine\", \"User\"],\n            value=\"Machine\",\n            advanced=True,\n            info=\"Type of sender.\",\n        ),\n        TextInput(\n            name=\"sender_name\", display_name=\"Sender Name\", info=\"Name of the sender.\", value=\"AI\", advanced=True\n        ),\n        TextInput(name=\"session_id\", display_name=\"Session ID\", info=\"Session ID for the message.\", advanced=True),\n        TextInput(\n            name=\"data_template\",\n            display_name=\"Data Template\",\n            value=\"{text}\",\n            advanced=True,\n            info=\"Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.\",\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    def message_response(self) -> Message:\n        message = Message(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n        )\n        if self.session_id and isinstance(message, Message) and isinstance(message.text, str):\n            self.store_message(message)\n            self.message.value = message\n\n        self.status = message\n        return message\n"
+                "value": "from langflow.base.io.chat import ChatComponent\nfrom langflow.io import DropdownInput, MessageTextInput, Output\nfrom langflow.schema.message import Message\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    icon = \"ChatOutput\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            info=\"Message to be passed as output.\",\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[\"Machine\", \"User\"],\n            value=\"Machine\",\n            advanced=True,\n            info=\"Type of sender.\",\n        ),\n        MessageTextInput(\n            name=\"sender_name\", display_name=\"Sender Name\", info=\"Name of the sender.\", value=\"AI\", advanced=True\n        ),\n        MessageTextInput(\n            name=\"session_id\", display_name=\"Session ID\", info=\"Session ID for the message.\", advanced=True\n        ),\n        MessageTextInput(\n            name=\"data_template\",\n            display_name=\"Data Template\",\n            value=\"{text}\",\n            advanced=True,\n            info=\"Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.\",\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    def message_response(self) -> Message:\n        message = Message(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n        )\n        if self.session_id and isinstance(message, Message) and isinstance(message.text, str):\n            self.store_message(message)\n            self.message.value = message\n\n        self.status = message\n        return message\n"
               },
               "data_template": {
                 "advanced": true,
@@ -846,14 +839,14 @@
         },
         "dragging": false,
         "height": 308,
-        "id": "ChatOutput-riTzX",
+        "id": "ChatOutput-XP4bj",
         "position": {
-          "x": 1157.3374592784412,
-          "y": 1160.9424490383622
+          "x": 1219.477374823274,
+          "y": 1200.950216973985
         },
         "positionAbsolute": {
-          "x": 1157.3374592784412,
-          "y": 1160.9424490383622
+          "x": 1219.477374823274,
+          "y": 1200.950216973985
         },
         "selected": false,
         "type": "genericNode",
@@ -861,14 +854,14 @@
       }
     ],
     "viewport": {
-      "x": 382.9033026612555,
-      "y": -365.74767124549675,
-      "zoom": 0.5000000338450783
+      "x": 392.1085223509972,
+      "y": -327.49805229761307,
+      "zoom": 0.5000000676901589
     }
   },
   "description": "This flow will get you experimenting with the basics of the UI, the Chat and the Prompt component. \n\nTry changing the Template in it to see how the model behaves. \nYou can change it to this and a Text Input into the `type_of_person` variable : \"Answer the user as if you were a pirate.\n\nUser: {user_input}\n\nAnswer: \" ",
   "endpoint_name": null,
-  "id": "52f28cee-19d7-48c4-ac36-12a6cc32206b",
+  "id": "f652abdc-7ef2-4e52-a00b-847b7aa32cee",
   "is_component": false,
   "last_tested_version": "1.0.0rc1",
   "name": "Basic Prompting (Hello, World)"
