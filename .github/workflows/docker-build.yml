@@ -8,6 +8,11 @@ on:
       release_type:
         required: true
         type: string
+      pre_release:
+        required: false
+        type: boolean
+        default: true
+
   workflow_dispatch:
     inputs:
       version:
@@ -19,6 +24,10 @@ on:
         options:
           - base
           - main
+      pre_release:
+        required: false
+        type: boolean
+        default: true
 env:
   POETRY_VERSION: "1.8.2"
   TEST_TAG: "langflowai/langflow:test"
@@ -35,10 +44,14 @@ jobs:
         id: set-vars
         run: |
           if [[ "${{ inputs.release_type }}" == "base" ]]; then
-            echo "tags=langflowai/langflow:base-${{ inputs.version }}" >> $GITHUB_OUTPUT
+            echo "tags=langflowai/langflow:base-${{ inputs.version }},langflowai/langflow:base-latest" >> $GITHUB_OUTPUT
             echo "file=./docker/build_and_push_base.Dockerfile" >> $GITHUB_OUTPUT
           else
-            echo "tags=langflowai/langflow:${{ inputs.version }},langflowai/langflow:1.0-alpha" >> $GITHUB_OUTPUT
+            if [[ "${{ inputs.pre_release }}" == "true" ]]; then
+              echo "tags=langflowai/langflow:${{ inputs.version }}" >> $GITHUB_OUTPUT
+            else
+              echo "tags=langflowai/langflow:${{ inputs.version }},langflowai/langflow:latest" >> $GITHUB_OUTPUT
+            fi
             echo "file=./docker/build_and_push.Dockerfile" >> $GITHUB_OUTPUT
           fi
   build:

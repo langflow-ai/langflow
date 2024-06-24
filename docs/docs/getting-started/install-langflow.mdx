@@ -5,11 +5,16 @@ import Admonition from "@theme/Admonition";
 
 # 📦 Install Langflow
 
-<Admonition type="info">
-  Langflow **requires** Python version 3.10 or greater.
+<Admonition type="warning" title="warning">
+This page may contain outdated information. It will be updated as soon as possible.
 </Admonition>
 
-Langflow **requires** [Python >=3.10](https://www.python.org/downloads/release/python-3100/) and [pip](https://pypi.org/project/pip/) or [pipx](https://pipx.pypa.io/stable/installation/) to be installed on your system.
+<Admonition type="info">
+  Langflow **requires** Python version 3.10 or greater and
+  [pip](https://pypi.org/project/pip/) or
+  [pipx](https://pipx.pypa.io/stable/installation/) to be installed on your
+  system.
+</Admonition>
 
 Install Langflow with pip:
 
@@ -23,25 +28,7 @@ Install Langflow with pipx:
 pipx install langflow --python python3.10 --fetch-missing-python
 ```
 
-Pipx can fetch the missing Python version for you with `--fetch-missing-python`, but you can also install the Python version manually.
-
-## Install Langflow pre-release
-
-To install a pre-release version of Langflow:
-
-pip:
-
-```bash
-python -m pip install langflow --pre --force-reinstall
-```
-
-pipx:
-
-```bash
-pipx install langflow --python python3.10 --fetch-missing-python --pip-args="--pre --force-reinstall"
-```
-
-Use `--force-reinstall` to ensure you have the latest version of Langflow and its dependencies.
+Pipx can fetch the missing Python version for you with `--fetch-missing-python`, but you can also install the Python version manually. Use `--force-reinstall` to ensure you have the latest version of Langflow and its dependencies.
 
 ## Having a problem?
 
@@ -63,25 +50,30 @@ python -m langflow run
 
 2. Confirm that a local Langflow instance starts by visiting `http://127.0.0.1:7860` in a Chromium-based browser.
 
-```bash
-│ Welcome to ⛓ Langflow                             │
-│                                                   │
-│ Access http://127.0.0.1:7860                      │
-│ Collaborate, and contribute at our GitHub Repo 🚀 │
-```
+<ZoomableImage
+  alt="Instructions for duplicating Langflow space on HuggingFace"
+  sources={{
+    light: "img/welcome-to-langflow.png",
+    dark: "img/welcome-to-langflow.png",
+  }}
+  style={{ width: "80%", maxWidth: "800px", margin: "0 auto" }}
+/>
 
 3. Continue on to the [Quickstart](./quickstart).
 
 ## HuggingFace Spaces
 
-HuggingFace provides a great alternative for running Langflow in their Spaces environment. This means you can run Langflow without any local installation required.
+HuggingFace provides a great alternative for running Langflow in their Spaces environment. This means you can run Langflow in the cloud without any local installation required. Here's how you can get Langflow up and running on HuggingFace Spaces:
 
-In a Chromium-based browser, go to the [Langflow Space](https://huggingface.co/spaces/Langflow/Langflow?duplicate=true) or [Langflow v1.0 alpha Preview Space](https://huggingface.co/spaces/Langflow/Langflow-Preview?duplicate=true).
+1. **Access Langflow Space**: Open a Chromium-based browser and navigate to the [Langflow Space](https://huggingface.co/spaces/Langflow/Langflow?duplicate=true). This link directs you to a pre-configured environment for Langflow.
 
-You'll be presented with the following screen:
+2. **Duplicate the Space**: You'll encounter an option to duplicate the Langflow space. This step involves a few simple decisions:
+   - **Naming Your Space**: Assign a unique name to your new Space.
+   - **Visibility Settings**: Choose between Public or Private visibility for your Space.
+   - After setting these parameters, click on **Duplicate Space** to initiate the setup.
 
 <ZoomableImage
-  alt="Docusaurus themed image"
+  alt="Instructions for duplicating Langflow space on HuggingFace"
   sources={{
     light: "img/duplicate-space.png",
     dark: "img/duplicate-space.png",
@@ -89,4 +81,6 @@ You'll be presented with the following screen:
   style={{ width: "80%", maxWidth: "800px", margin: "0 auto" }}
 />
 
-Name your Space, define the visibility (Public or Private), and click on **Duplicate Space** to start the installation process. When installation is finished, you'll be redirected to the Space's main page to start using Langflow right away!
+3. **Complete Installation**: The duplication and setup process begins immediately after you click **Duplicate Space**. Once completed, you will be automatically redirected to the main page of your new Space.
+
+4. **Start Exploring Langflow**: With the setup complete, Langflow is now ready for use in your Space and you can start exploring its features and capabilities right away!

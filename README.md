@@ -74,7 +74,7 @@ You can also preview Langflow in [HuggingFace Spaces](https://huggingface.co/spa
 
 # 🎨 Create Flows
 
-Creating flows with Langflow is easy. Simply drag components from the sidebar onto the canvas and connect them to start building your application.
+Creating flows with Langflow is easy. Simply drag components from the sidebar onto the workspace and connect them to start building your application.
 
 Explore by editing prompt parameters, grouping components into a single high-level component, and building your own Custom Components.
 
@@ -113,6 +113,10 @@ Or this one to deploy Langflow 0.6.x:
 <a href="https://render.com/deploy?repo=https://github.com/langflow-ai/langflow/tree/dev">
 <img src="https://render.com/images/deploy-to-render-button.svg" alt="Deploy to Render" />
 </a>
+
+## Deploy on Kubernetes
+
+Follow our step-by-step guide to deploy [Langflow on Kubernetes](https://github.com/langflow-ai/langflow/blob/dev/docs/docs/deployment/kubernetes.md).
 
 # 🖥️ Command Line Interface (CLI)
 

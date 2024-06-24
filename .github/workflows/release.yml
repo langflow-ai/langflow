@@ -1,21 +1,36 @@
-name: release
-
+name: Langflow Release
+run-name: Langflow (${{inputs.release_type}}) Release by @${{ github.actor }}
 on:
-  pull_request:
-    types:
-      - closed
-    branches:
-      - main
-    paths:
-      - "pyproject.toml"
+  workflow_dispatch:
+    inputs:
+      release_package:
+        description: "Release package"
+        required: true
+        type: boolean
+        default: false
+      release_type:
+        description: "Type of release (base or main)"
+        required: true
+        type: choice
+        options:
+          - base
+          - main
+      pre_release:
+        description: "Pre-release"
+        required: false
+        type: boolean
+        default: true
 
 env:
   POETRY_VERSION: "1.8.2"
 
 jobs:
-  if_release:
-    if: ${{ (github.event.pull_request.merged == true) && contains(github.event.pull_request.labels.*.name, 'Release') }}
+  release:
+    name: Release Langflow
+    if: inputs.release_package == true
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.check-version.outputs.version }}
     steps:
       - uses: actions/checkout@v4
       - name: Install poetry
@@ -25,64 +40,89 @@ jobs:
         with:
           python-version: "3.10"
           cache: "poetry"
-      - name: Build project for distribution
-        run: make build
+      - name: Set up Nodejs 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
       - name: Check Version
         id: check-version
         run: |
-          echo version=$(poetry version --short) >> $GITHUB_OUTPUT
+          if [ "${{ inputs.release_type }}" == "base" ]; then
+            version=$(cd src/backend/base && poetry version --short)
+            last_released_version=$(curl -s "https://pypi.org/pypi/langflow-base/json" | jq -r '.releases | keys | .[]' | sort -V | tail -n 1)
+          else
+            version=$(poetry version --short)
+            last_released_version=$(curl -s "https://pypi.org/pypi/langflow/json" | jq -r '.releases | keys | .[]' | sort -V | tail -n 1)
+          fi
+          if [ "$version" = "$last_released_version" ]; then
+            echo "Version $version is already released. Skipping release."
+            exit 1
+          else
+            echo version=$version >> $GITHUB_OUTPUT
+          fi
+      - name: Build project for distribution
+        run: |
+          if [ "${{ inputs.release_type }}" == "base" ]; then
+            make build base=true
+          else
+            make build main=true
+          fi
+      - name: Test CLI
+        run: |
+          if [ "${{ inputs.release_type }}" == "base" ]; then
+            python -m pip install src/backend/base/dist/*.whl
+          else
+            python -m pip install dist/*.whl
+          fi
+          python -m langflow run --host 127.0.0.1 --port 7860 &
+          SERVER_PID=$!
+          # Wait for the server to start
+          timeout 120 bash -c 'until curl -f http://127.0.0.1:7860/health; do sleep 2; done' || (echo "Server did not start in time" && kill $SERVER_PID && exit 1)
+          # Terminate the server
+          kill $SERVER_PID || (echo "Failed to terminate the server" && exit 1)
+          sleep 10 # give the server some time to terminate
+          # Check if the server is still running
+          if kill -0 $SERVER_PID 2>/dev/null; then
+            echo "Failed to terminate the server"
+            exit 1
+          else
+            echo "Server terminated successfully"
+          fi
       - name: Publish to PyPI
         env:
           POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_API_TOKEN }}
         run: |
-          poetry publish
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-        id: qemu
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
+          if [ "${{ inputs.release_type }}" == "base" ]; then
+            make publish base=true
+          else
+            make publish main=true
+          fi
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Build and push
-        uses: docker/build-push-action@v5
+          name: dist${{ inputs.release_type }}
+          path: ${{ inputs.release_type == 'base' && 'src/backend/base/dist' || 'dist' }}
+
+  call_docker_build:
+    name: Call Docker Build Workflow
+    needs: release
+    uses: langflow-ai/langflow/.github/workflows/docker-build.yml@main
+    with:
+      version: ${{ needs.release.outputs.version }}
+      release_type: ${{ inputs.release_type }}
+      pre_release: ${{ inputs.pre_release }}
+    secrets: inherit
+
+  create_release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: [release]
+    if: ${{ inputs.release_type == 'main' }}
+    steps:
+      - uses: actions/download-artifact@v4
         with:
-          context: .
-          push: true
-          file: ./docker/build_and_push.Dockerfile
-          # provenance: false will result in a single manifest for all platforms which makes the image pullable from arm64 machines via the emulation (e.g. Apple Silicon machines)
-          provenance: false
-          tags: |
-            langflowai/langflow:${{ steps.check-version.outputs.version }}
-            langflowai/langflow:latest
-      - name: Wait for Docker Hub to propagate
-        run: sleep 120
-      - name: Build and push (backend)
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: true
-          file: ./docker/build_and_push_backend.Dockerfile
-          # provenance: false will result in a single manifest for all platforms which makes the image pullable from arm64 machines via the emulation (e.g. Apple Silicon machines)
-          provenance: false
-          build-args: |
-            LANGFLOW_IMAGE=langflowai/langflow:${{ steps.check-version.outputs.version }}
-          tags: |
-            langflowai/langflow-backend:${{ steps.check-version.outputs.version }}
-            langflowai/langflow-backend:latest
-      - name: Build and push (frontend)
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: true
-          file: ./docker/frontend/build_and_push_frontend.Dockerfile
-          # provenance: false will result in a single manifest for all platforms which makes the image pullable from arm64 machines via the emulation (e.g. Apple Silicon machines)
-          provenance: false
-          tags: |
-            langflowai/langflow-frontend:${{ steps.check-version.outputs.version }}
-            langflowai/langflow-frontend:latest
+          name: dist${{ inputs.release_type }}
+          path: dist
       - name: Create Release
         uses: ncipollo/release-action@v1
         with:
@@ -90,5 +130,6 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           draft: false
           generateReleaseNotes: true
-          tag: v${{ steps.check-version.outputs.version }}
-          commit: main
+          prerelease: false
+          tag: v${{ needs.release.outputs.version }}
+          commit: dev

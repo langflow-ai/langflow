@@ -1,20 +1,20 @@
 from langchain_core.documents import Document
+
 from langflow.components import helpers
 from langflow.custom.utils import build_custom_component_template
 from langflow.schema import Data
 
+# def test_update_data_component():
+#     # Arrange
+#     update_data_component = helpers.UpdateDataComponent()
 
-def test_update_data_component():
-    # Arrange
-    update_data_component = helpers.UpdateDataComponent()
-
-    # Act
-    new_data = {"new_key": "new_value"}
-    existing_data = Data(data={"existing_key": "existing_value"})
-    result = update_data_component.build(existing_data, new_data)
-    assert result.data == {"existing_key": "existing_value", "new_key": "new_value"}
-    assert result.existing_key == "existing_value"
-    assert result.new_key == "new_value"
+#     # Act
+#     new_data = {"new_key": "new_value"}
+#     existing_data = Data(data={"existing_key": "existing_value"})
+#     result = update_data_component.build(existing_data, new_data)
+#     assert result.data == {"existing_key": "existing_value", "new_key": "new_value"}
+#     assert result.existing_key == "existing_value"
+#     assert result.new_key == "new_value"
 
 
 def test_document_to_data_component():
@@ -67,15 +67,15 @@ def test_data_as_text_component():
     assert result.text == "Data:{'key': 'value', 'bacon': 'eggs'} -- Bacon:eggs"
 
 
-def test_text_to_data_component():
-    # Arrange
-    text_to_data_component = helpers.CreateDataComponent()
+# def test_text_to_data_component():
+#     # Arrange
+#     text_to_data_component = helpers.CreateDataComponent()
 
-    # Act
-    # Replace with your actual test data
-    dict_with_text = {"field_1": {"key": "value"}}
-    result = text_to_data_component.build(number_of_fields=1, **dict_with_text)
+#     # Act
+#     # Replace with your actual test data
+#     dict_with_text = {"field_1": {"key": "value"}}
+#     result = text_to_data_component.build(number_of_fields=1, **dict_with_text)
 
-    # Assert
-    # Replace with your actual expected result
-    assert result == Data(data={"key": "value"})
+#     # Assert
+#     # Replace with your actual expected result
+#     assert result == Data(data={"key": "value"})

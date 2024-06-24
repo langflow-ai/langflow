@@ -16,6 +16,7 @@ class FlowToolComponent(CustomComponent):
     description = "Construct a Tool from a function that runs the loaded Flow."
     field_order = ["flow_name", "name", "description", "return_direct"]
     trace_type = "tool"
+    beta = True
 
     def get_flow_names(self) -> List[str]:
         flow_datas = self.list_flows()

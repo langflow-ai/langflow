@@ -9,6 +9,7 @@ class PassComponent(CustomComponent):
     display_name = "Pass"
     description = "A pass-through component that forwards the second input while ignoring the first, used for controlling workflow direction."
     field_order = ["ignored_input", "forwarded_input"]
+    beta = True
 
     def build_config(self) -> dict:
         return {

@@ -5,6 +5,10 @@ import Admonition from "@theme/Admonition";
 
 # 🌟 RAG with Astra DB
 
+<Admonition type="warning" title="warning">
+This page may contain outdated information. It will be updated as soon as possible.
+</Admonition>
+
 This guide will walk you through how to build a RAG (Retrieval Augmented Generation) application using **Astra DB** and **Langflow**.
 
 [Astra DB](https://www.datastax.com/products/datastax-astra?utm_source=langflow-pre-release&utm_medium=referral&utm_campaign=langflow-announcement&utm_content=astradb) is a cloud-native database built on Apache Cassandra that is optimized for the cloud. It is a fully managed database-as-a-service that simplifies operations and reduces costs. Astra DB is built on the same technology that powers the largest Cassandra deployments in the world.
@@ -19,10 +23,9 @@ In this guide, we will use Astra DB as a vector store to store and retrieve the 
 TLDR;
 
 - [Create a free Astra DB account](https://astra.datastax.com/signup?utm_source=langflow-pre-release&utm_medium=referral&utm_campaign=langflow-announcement&utm_content=create-a-free-astra-db-account)
-- Duplicate our [Langflow 1.0 Space](https://huggingface.co/spaces/Langflow/Langflow-Preview?duplicate=true)
 - Create a new database, get a **Token** and the **API Endpoint**
-- Click on the **New Project** button and look for Vector Store RAG. This will create a new project with the necessary components
-- Import the project into Langflow by dropping it on the Canvas or My Collection page
+- Start Langflow and click on the **New Project** button and look for Vector Store RAG. This will create a new project with the necessary components
+- Import the project into Langflow by dropping it on the Workspace or My Collection page
 - Update the **Token** and **API Endpoint** in the **Astra DB** components
 - Update the OpenAI API key in the **OpenAI** components
 - Run the ingestion flow which is the one that uses the **Astra DB** component
@@ -71,16 +74,12 @@ Once your database is initialized, to the right of the page, you will see the _D
 
 Now we are all set to start building our RAG application using Astra DB and Langflow.
 
-## (Optional) Duplicate the Langflow 1.0 HuggingFace Space
-
-If you haven't already, now is the time to launch Langflow. To make things easier, you can duplicate our [Langflow 1.0 Space](https://huggingface.co/spaces/Langflow/Langflow-Preview?duplicate=true) which sets up a Langflow instance just for you.
-
 ## Open the Vector Store RAG Project
 
 To get started, click on the **New Project** button and look for the **Vector Store RAG** project. This will open a starter project with the necessary components to run a RAG application using Astra DB.
 
 <ZoomableImage
-  alt="Docusaurus themed image"
+  alt="Drag-and-drop"
   sources={{
     light: "img/drag-and-drop-flow.png",
     dark: "img/drag-and-drop-flow.png",
@@ -100,7 +99,7 @@ The ingestion flow consists of:
 - **Astra DB** component that stores the text chunks in the Astra DB database
 
 <ZoomableImage
-  alt="Docusaurus themed image"
+  alt="Astra Ingestion"
   sources={{
     light: "img/astra-ingestion-flow.png",
     dark: "img/astra-ingestion-flow.png",
@@ -122,7 +121,7 @@ Now, let's update the **Astra DB** and **Astra DB Search** components with the *
 And run it! This will ingest the Text data from your file into the Astra DB database.
 
 <ZoomableImage
-  alt="Docusaurus themed image"
+  alt="Astra Run"
   sources={{
     light: "img/astra-ingestion-run.png",
     dark: "img/astra-ingestion-run.png",
@@ -155,7 +154,7 @@ The RAG flow is a bit more complex. It consists of:
 To run it all we have to do is click on the ⚡ _Run_ button and start interacting with your RAG application.
 
 <ZoomableImage
-  alt="Docusaurus themed image"
+  alt="Astra RAG"
   sources={{
     light: "img/astra-rag-flow-run.png",
     dark: "img/astra-rag-flow-run.png",
@@ -168,7 +167,7 @@ This opens the Playground where you can chat your data.
 Because this flow has a **Chat Input** and a **Text Output** component, the Panel displays a chat input at the bottom and the Extracted Chunks section on the left.
 
 <ZoomableImage
-  alt="Docusaurus themed image"
+  alt="Playground"
   sources={{
     light: "img/astra-rag-flow-interaction-panel.png",
     dark: "img/astra-rag-flow-interaction-panel.png",
@@ -179,7 +178,7 @@ Because this flow has a **Chat Input** and a **Text Output** component, the Pane
 Once we interact with it we get a response and the Extracted Chunks section is updated with the retrieved data.
 
 <ZoomableImage
-  alt="Docusaurus themed image"
+  alt="Astra Playground"
   sources={{
     light: "img/astra-rag-flow-interaction-panel-interaction.png",
     dark: "img/astra-rag-flow-interaction-panel-interaction.png",

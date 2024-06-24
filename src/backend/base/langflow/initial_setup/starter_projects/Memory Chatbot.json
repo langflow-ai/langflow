@@ -6,7 +6,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Memory",
-            "id": "Memory-rvcL5",
+            "id": "Memory-A4OPp",
             "name": "messages_text",
             "output_types": [
               "Message"
@@ -14,28 +14,26 @@
           },
           "targetHandle": {
             "fieldName": "context",
-            "id": "Prompt-VuDd0",
+            "id": "Prompt-xhlQ7",
             "inputTypes": [
-              "Document",
               "Message",
-              "Record",
               "Text"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Memory-rvcL5{œdataTypeœ:œMemoryœ,œidœ:œMemory-rvcL5œ,œnameœ:œmessages_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-VuDd0{œfieldNameœ:œcontextœ,œidœ:œPrompt-VuDd0œ,œinputTypesœ:[œDocumentœ,œMessageœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "Memory-rvcL5",
-        "sourceHandle": "{œdataTypeœ: œMemoryœ, œidœ: œMemory-rvcL5œ, œnameœ: œmessages_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-VuDd0",
-        "targetHandle": "{œfieldNameœ: œcontextœ, œidœ: œPrompt-VuDd0œ, œinputTypesœ: [œDocumentœ, œMessageœ, œRecordœ, œTextœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-Memory-A4OPp{œdataTypeœ:œMemoryœ,œidœ:œMemory-A4OPpœ,œnameœ:œmessages_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-xhlQ7{œfieldNameœ:œcontextœ,œidœ:œPrompt-xhlQ7œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "Memory-A4OPp",
+        "sourceHandle": "{œdataTypeœ: œMemoryœ, œidœ: œMemory-A4OPpœ, œnameœ: œmessages_textœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-xhlQ7",
+        "targetHandle": "{œfieldNameœ: œcontextœ, œidœ: œPrompt-xhlQ7œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-9iFsd",
+            "id": "ChatInput-ENTF8",
             "name": "message",
             "output_types": [
               "Message"
@@ -43,28 +41,26 @@
           },
           "targetHandle": {
             "fieldName": "user_message",
-            "id": "Prompt-VuDd0",
+            "id": "Prompt-xhlQ7",
             "inputTypes": [
-              "Document",
               "Message",
-              "Record",
               "Text"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-9iFsd{œdataTypeœ:œChatInputœ,œidœ:œChatInput-9iFsdœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-VuDd0{œfieldNameœ:œuser_messageœ,œidœ:œPrompt-VuDd0œ,œinputTypesœ:[œDocumentœ,œMessageœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "ChatInput-9iFsd",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-9iFsdœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-VuDd0",
-        "targetHandle": "{œfieldNameœ: œuser_messageœ, œidœ: œPrompt-VuDd0œ, œinputTypesœ: [œDocumentœ, œMessageœ, œRecordœ, œTextœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-ChatInput-ENTF8{œdataTypeœ:œChatInputœ,œidœ:œChatInput-ENTF8œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-xhlQ7{œfieldNameœ:œuser_messageœ,œidœ:œPrompt-xhlQ7œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "ChatInput-ENTF8",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-ENTF8œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-xhlQ7",
+        "targetHandle": "{œfieldNameœ: œuser_messageœ, œidœ: œPrompt-xhlQ7œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-VuDd0",
+            "id": "Prompt-xhlQ7",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -72,25 +68,25 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "OpenAIModel-uVOc5",
+            "id": "OpenAIModel-ZBIVC",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-VuDd0{œdataTypeœ:œPromptœ,œidœ:œPrompt-VuDd0œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-uVOc5{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-uVOc5œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Prompt-VuDd0",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-VuDd0œ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "OpenAIModel-uVOc5",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-uVOc5œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-Prompt-xhlQ7{œdataTypeœ:œPromptœ,œidœ:œPrompt-xhlQ7œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-ZBIVC{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-ZBIVCœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "Prompt-xhlQ7",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-xhlQ7œ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "OpenAIModel-ZBIVC",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-ZBIVCœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIModel",
-            "id": "OpenAIModel-uVOc5",
+            "id": "OpenAIModel-ZBIVC",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -98,186 +94,27 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-R7jsA",
+            "id": "ChatOutput-e8ruq",
             "inputTypes": [
-              "Message",
-              "str"
+              "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-OpenAIModel-uVOc5{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-uVOc5œ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-R7jsA{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-R7jsAœ,œinputTypesœ:[œMessageœ,œstrœ],œtypeœ:œstrœ}",
-        "source": "OpenAIModel-uVOc5",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-uVOc5œ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-R7jsA",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-R7jsAœ, œinputTypesœ: [œMessageœ, œstrœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-OpenAIModel-ZBIVC{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-ZBIVCœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-e8ruq{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-e8ruqœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "OpenAIModel-ZBIVC",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-ZBIVCœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-e8ruq",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-e8ruqœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "description": "A component for creating prompt templates using dynamic variables.",
-          "display_name": "Prompt",
-          "id": "Prompt-VuDd0",
-          "node": {
-            "base_classes": [
-              "Text",
-              "str",
-              "object"
-            ],
-            "beta": false,
-            "custom_fields": {
-              "template": [
-                "context",
-                "user_message"
-              ]
-            },
-            "description": "Create a prompt template with dynamic variables.",
-            "display_name": "Prompt",
-            "documentation": "",
-            "error": null,
-            "field_formatters": {},
-            "field_order": [],
-            "frozen": false,
-            "full_path": null,
-            "icon": "prompts",
-            "is_composition": null,
-            "is_input": null,
-            "is_output": null,
-            "name": "",
-            "output_types": [],
-            "outputs": [
-              {
-                "cache": true,
-                "display_name": "Prompt Message",
-                "method": "build_prompt",
-                "name": "prompt",
-                "selected": "Message",
-                "types": [
-                  "Message"
-                ],
-                "value": "__UNDEFINED__"
-              }
-            ],
-            "template": {
-              "_type": "Component",
-              "code": {
-                "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "from langflow.custom import Component\nfrom langflow.io import Output, PromptInput\nfrom langflow.schema.message import Message\n\n\nclass PromptComponent(Component):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"prompts\"\n    trace_type = \"prompt\"\n\n    inputs = [\n        PromptInput(name=\"template\", display_name=\"Template\"),\n    ]\n\n    outputs = [\n        Output(display_name=\"Prompt Message\", name=\"prompt\", method=\"build_prompt\"),\n    ]\n\n    async def build_prompt(\n        self,\n    ) -> Message:\n        prompt = await Message.from_template_and_variables(**self._attributes)\n        self.status = prompt.text\n        return prompt\n"
-              },
-              "context": {
-                "advanced": false,
-                "display_name": "context",
-                "dynamic": false,
-                "field_type": "str",
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "input_types": [
-                  "Document",
-                  "Message",
-                  "Record",
-                  "Text"
-                ],
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "context",
-                "password": false,
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": ""
-              },
-              "template": {
-                "advanced": false,
-                "display_name": "Template",
-                "dynamic": false,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "input_types": [
-                  "Text"
-                ],
-                "list": false,
-                "load_from_db": false,
-                "multiline": false,
-                "name": "template",
-                "password": false,
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "prompt",
-                "value": "{context}\n\nUser: {user_message}\nAI: "
-              },
-              "user_message": {
-                "advanced": false,
-                "display_name": "user_message",
-                "dynamic": false,
-                "field_type": "str",
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "input_types": [
-                  "Document",
-                  "Message",
-                  "Record",
-                  "Text"
-                ],
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "user_message",
-                "password": false,
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": ""
-              }
-            }
-          },
-          "type": "Prompt"
-        },
-        "dragging": false,
-        "height": 525,
-        "id": "Prompt-VuDd0",
-        "position": {
-          "x": 1900.7563740044732,
-          "y": 755.4337191022057
-        },
-        "positionAbsolute": {
-          "x": 1900.7563740044732,
-          "y": 755.4337191022057
-        },
-        "selected": false,
-        "type": "genericNode",
-        "width": 384
-      },
-      {
-        "data": {
           "description": "Retrieves stored chat messages.",
           "display_name": "Memory",
           "edited": false,
-          "id": "Memory-rvcL5",
+          "id": "Memory-A4OPp",
           "node": {
             "base_classes": [
               "Data",
@@ -316,6 +153,7 @@
               {
                 "cache": true,
                 "display_name": "Messages (Text)",
+                "hidden": false,
                 "method": "retrieve_messages_as_text",
                 "name": "messages_text",
                 "selected": "Message",
@@ -456,7 +294,7 @@
         },
         "dragging": false,
         "height": 267,
-        "id": "Memory-rvcL5",
+        "id": "Memory-A4OPp",
         "position": {
           "x": 1258.8089948698466,
           "y": 547.1243849102437
@@ -471,7 +309,10 @@
       },
       {
         "data": {
-          "id": "ChatInput-9iFsd",
+          "description": "Get chat inputs from the Playground.",
+          "display_name": "Chat Input",
+          "edited": false,
+          "id": "ChatInput-ENTF8",
           "node": {
             "base_classes": [
               "Message"
@@ -482,6 +323,7 @@
             "description": "Get chat inputs from the Playground.",
             "display_name": "Chat Input",
             "documentation": "",
+            "edited": true,
             "field_order": [
               "input_value",
               "sender",
@@ -496,6 +338,7 @@
               {
                 "cache": true,
                 "display_name": "Message",
+                "hidden": false,
                 "method": "message_response",
                 "name": "message",
                 "selected": "Message",
@@ -524,7 +367,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langflow.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.io import DropdownInput, FileInput, MultilineInput, Output, MessageTextInput\nfrom langflow.schema.message import Message\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    icon = \"ChatInput\"\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            value=\"\",\n            info=\"Message to be passed as input.\",\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[\"Machine\", \"User\"],\n            value=\"User\",\n            info=\"Type of sender.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=\"User\",\n            advanced=True,\n        ),\n        MessageTextInput(name=\"session_id\", display_name=\"Session ID\", info=\"Session ID for the message.\", advanced=True),\n        FileInput(\n            name=\"files\",\n            display_name=\"Files\",\n            file_types=TEXT_FILE_TYPES + IMG_FILE_TYPES,\n            info=\"Files to be sent with the message.\",\n            advanced=True,\n            is_list=True,\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    def message_response(self) -> Message:\n        message = Message(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n            files=self.files,\n        )\n        if self.session_id and isinstance(message, Message) and isinstance(message.text, str):\n            self.store_message(message)\n            self.message.value = message\n\n        self.status = message\n        return message\n"
+                "value": "from langflow.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.io import DropdownInput, FileInput, MessageTextInput, MultilineInput, Output\nfrom langflow.schema.message import Message\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    icon = \"ChatInput\"\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            value=\"\",\n            info=\"Message to be passed as input.\",\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[\"Machine\", \"User\"],\n            value=\"User\",\n            info=\"Type of sender.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=\"User\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\", display_name=\"Session ID\", info=\"Session ID for the message.\", advanced=True\n        ),\n        FileInput(\n            name=\"files\",\n            display_name=\"Files\",\n            file_types=TEXT_FILE_TYPES + IMG_FILE_TYPES,\n            info=\"Files to be sent with the message.\",\n            advanced=True,\n            is_list=True,\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    def message_response(self) -> Message:\n        message = Message(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n            files=self.files,\n        )\n        if self.session_id and isinstance(message, Message) and isinstance(message.text, str):\n            self.store_message(message)\n            self.message.value = message\n\n        self.status = message\n        return message\n"
               },
               "files": {
                 "advanced": true,
@@ -563,6 +406,7 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "trace_as_metadata": true,
                 "type": "file",
                 "value": ""
               },
@@ -572,8 +416,7 @@
                 "dynamic": false,
                 "info": "Message to be passed as input.",
                 "input_types": [
-                  "Message",
-                  "str"
+                  "Message"
                 ],
                 "list": false,
                 "load_from_db": false,
@@ -583,6 +426,8 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
                 "type": "str",
                 "value": ""
               },
@@ -600,6 +445,7 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "trace_as_metadata": true,
                 "type": "str",
                 "value": "User"
               },
@@ -609,17 +455,17 @@
                 "dynamic": false,
                 "info": "Name of the sender.",
                 "input_types": [
-                  "Message",
-                  "str"
+                  "Message"
                 ],
                 "list": false,
                 "load_from_db": false,
-                "multiline": true,
                 "name": "sender_name",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
                 "type": "str",
                 "value": "User"
               },
@@ -629,17 +475,17 @@
                 "dynamic": false,
                 "info": "Session ID for the message.",
                 "input_types": [
-                  "Message",
-                  "str"
+                  "Message"
                 ],
                 "list": false,
                 "load_from_db": false,
-                "multiline": true,
                 "name": "session_id",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
                 "type": "str",
                 "value": ""
               }
@@ -647,15 +493,15 @@
           },
           "type": "ChatInput"
         },
-        "dragging": false,
+        "dragging": true,
         "height": 309,
-        "id": "ChatInput-9iFsd",
+        "id": "ChatInput-ENTF8",
         "position": {
-          "x": 1246.4850995457527,
+          "x": 1261.3748612945249,
           "y": 912.733279525042
         },
         "positionAbsolute": {
-          "x": 1246.4850995457527,
+          "x": 1261.3748612945249,
           "y": 912.733279525042
         },
         "selected": false,
@@ -667,7 +513,7 @@
           "description": "Generates text using OpenAI LLMs.",
           "display_name": "OpenAI",
           "edited": false,
-          "id": "OpenAIModel-uVOc5",
+          "id": "OpenAIModel-ZBIVC",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -700,6 +546,7 @@
               {
                 "cache": true,
                 "display_name": "Text",
+                "hidden": false,
                 "method": "text_response",
                 "name": "text_output",
                 "selected": "Message",
@@ -828,7 +675,7 @@
                 "dynamic": false,
                 "info": "The OpenAI API Key to use for the OpenAI model.",
                 "input_types": [],
-                "load_from_db": true,
+                "load_from_db": false,
                 "name": "openai_api_key",
                 "password": true,
                 "placeholder": "",
@@ -914,15 +761,15 @@
           "type": "OpenAIModel"
         },
         "dragging": false,
-        "height": 623,
-        "id": "OpenAIModel-uVOc5",
+        "height": 622,
+        "id": "OpenAIModel-ZBIVC",
         "position": {
           "x": 2495.6628431453228,
-          "y": 668.0955451423632
+          "y": 669.9567653609598
         },
         "positionAbsolute": {
           "x": 2495.6628431453228,
-          "y": 668.0955451423632
+          "y": 669.9567653609598
         },
         "selected": false,
         "type": "genericNode",
@@ -930,7 +777,10 @@
       },
       {
         "data": {
-          "id": "ChatOutput-R7jsA",
+          "description": "Display a chat message in the Playground.",
+          "display_name": "Chat Output",
+          "edited": false,
+          "id": "ChatOutput-e8ruq",
           "node": {
             "base_classes": [
               "Message"
@@ -941,6 +791,7 @@
             "description": "Display a chat message in the Playground.",
             "display_name": "Chat Output",
             "documentation": "",
+            "edited": true,
             "field_order": [
               "input_value",
               "sender",
@@ -983,7 +834,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langflow.base.io.chat import ChatComponent\nfrom langflow.io import DropdownInput, Output, MessageTextInput\nfrom langflow.schema.message import Message\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    icon = \"ChatOutput\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            info=\"Message to be passed as output.\",\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[\"Machine\", \"User\"],\n            value=\"Machine\",\n            advanced=True,\n            info=\"Type of sender.\",\n        ),\n        MessageTextInput(\n            name=\"sender_name\", display_name=\"Sender Name\", info=\"Name of the sender.\", value=\"AI\", advanced=True\n        ),\n        MessageTextInput(name=\"session_id\", display_name=\"Session ID\", info=\"Session ID for the message.\", advanced=True),\n        MessageTextInput(\n            name=\"data_template\",\n            display_name=\"Data Template\",\n            value=\"{text}\",\n            advanced=True,\n            info=\"Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.\",\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    def message_response(self) -> Message:\n        message = Message(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n        )\n        if self.session_id and isinstance(message, Message) and isinstance(message.text, str):\n            self.store_message(message)\n            self.message.value = message\n\n        self.status = message\n        return message\n"
+                "value": "from langflow.base.io.chat import ChatComponent\nfrom langflow.io import DropdownInput, MessageTextInput, Output\nfrom langflow.schema.message import Message\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    icon = \"ChatOutput\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            info=\"Message to be passed as output.\",\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[\"Machine\", \"User\"],\n            value=\"Machine\",\n            advanced=True,\n            info=\"Type of sender.\",\n        ),\n        MessageTextInput(\n            name=\"sender_name\", display_name=\"Sender Name\", info=\"Name of the sender.\", value=\"AI\", advanced=True\n        ),\n        MessageTextInput(\n            name=\"session_id\", display_name=\"Session ID\", info=\"Session ID for the message.\", advanced=True\n        ),\n        MessageTextInput(\n            name=\"data_template\",\n            display_name=\"Data Template\",\n            value=\"{text}\",\n            advanced=True,\n            info=\"Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.\",\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    def message_response(self) -> Message:\n        message = Message(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n        )\n        if self.session_id and isinstance(message, Message) and isinstance(message.text, str):\n            self.store_message(message)\n            self.message.value = message\n\n        self.status = message\n        return message\n"
               },
               "data_template": {
                 "advanced": true,
@@ -991,17 +842,17 @@
                 "dynamic": false,
                 "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
                 "input_types": [
-                  "Message",
-                  "str"
+                  "Message"
                 ],
                 "list": false,
                 "load_from_db": false,
-                "multiline": true,
                 "name": "data_template",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
                 "type": "str",
                 "value": "{text}"
               },
@@ -1011,17 +862,17 @@
                 "dynamic": false,
                 "info": "Message to be passed as output.",
                 "input_types": [
-                  "Message",
-                  "str"
+                  "Message"
                 ],
                 "list": false,
                 "load_from_db": false,
-                "multiline": true,
                 "name": "input_value",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
                 "type": "str",
                 "value": ""
               },
@@ -1039,6 +890,7 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "trace_as_metadata": true,
                 "type": "str",
                 "value": "Machine"
               },
@@ -1048,17 +900,17 @@
                 "dynamic": false,
                 "info": "Name of the sender.",
                 "input_types": [
-                  "Message",
-                  "str"
+                  "Message"
                 ],
                 "list": false,
                 "load_from_db": false,
-                "multiline": true,
                 "name": "sender_name",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
                 "type": "str",
                 "value": "AI"
               },
@@ -1068,13 +920,163 @@
                 "dynamic": false,
                 "info": "Session ID for the message.",
                 "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "name": "session_id",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              }
+            }
+          },
+          "type": "ChatOutput"
+        },
+        "dragging": false,
+        "height": 308,
+        "id": "ChatOutput-e8ruq",
+        "position": {
+          "x": 3028.2686266398873,
+          "y": 888.0854888768531
+        },
+        "positionAbsolute": {
+          "x": 3028.2686266398873,
+          "y": 888.0854888768531
+        },
+        "selected": false,
+        "type": "genericNode",
+        "width": 384
+      },
+      {
+        "data": {
+          "description": "Create a prompt template with dynamic variables.",
+          "display_name": "Prompt",
+          "id": "Prompt-xhlQ7",
+          "node": {
+            "base_classes": [
+              "Message"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {
+              "template": [
+                "context",
+                "user_message"
+              ]
+            },
+            "description": "Create a prompt template with dynamic variables.",
+            "display_name": "Prompt",
+            "documentation": "",
+            "edited": false,
+            "error": null,
+            "field_order": [
+              "template"
+            ],
+            "frozen": false,
+            "full_path": null,
+            "icon": "prompts",
+            "is_composition": null,
+            "is_input": null,
+            "is_output": null,
+            "name": "",
+            "output_types": [],
+            "outputs": [
+              {
+                "cache": true,
+                "display_name": "Prompt Message",
+                "hidden": false,
+                "method": "build_prompt",
+                "name": "prompt",
+                "selected": "Message",
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from langflow.base.prompts.api_utils import process_prompt_template\nfrom langflow.custom import Component\nfrom langflow.io import Output, PromptInput\nfrom langflow.schema.message import Message\nfrom langflow.template.utils import update_template_values\n\n\nclass PromptComponent(Component):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"prompts\"\n    trace_type = \"prompt\"\n\n    inputs = [\n        PromptInput(name=\"template\", display_name=\"Template\"),\n    ]\n\n    outputs = [\n        Output(display_name=\"Prompt Message\", name=\"prompt\", method=\"build_prompt\"),\n    ]\n\n    async def build_prompt(\n        self,\n    ) -> Message:\n        prompt = await Message.from_template_and_variables(**self._attributes)\n        self.status = prompt.text\n        return prompt\n\n    def post_code_processing(self, new_build_config: dict, current_build_config: dict):\n        \"\"\"\n        This function is called after the code validation is done.\n        \"\"\"\n        frontend_node = super().post_code_processing(new_build_config, current_build_config)\n        template = frontend_node[\"template\"][\"template\"][\"value\"]\n        _ = process_prompt_template(\n            template=template,\n            name=\"template\",\n            custom_fields=frontend_node[\"custom_fields\"],\n            frontend_node_template=frontend_node[\"template\"],\n        )\n        # Now that template is updated, we need to grab any values that were set in the current_build_config\n        # and update the frontend_node with those values\n        update_template_values(frontend_template=frontend_node, raw_template=current_build_config[\"template\"])\n        return frontend_node\n"
+              },
+              "context": {
+                "advanced": false,
+                "display_name": "context",
+                "dynamic": false,
+                "field_type": "str",
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "input_types": [
                   "Message",
-                  "str"
+                  "Text"
                 ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
-                "name": "session_id",
+                "name": "context",
+                "password": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": ""
+              },
+              "template": {
+                "advanced": false,
+                "display_name": "Template",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "name": "template",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_input": true,
+                "type": "prompt",
+                "value": "{context}\n\nUser: {user_message}\nAI: "
+              },
+              "user_message": {
+                "advanced": false,
+                "display_name": "user_message",
+                "dynamic": false,
+                "field_type": "str",
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "input_types": [
+                  "Message",
+                  "Text"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "user_message",
+                "password": false,
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -1084,18 +1086,18 @@
               }
             }
           },
-          "type": "ChatOutput"
+          "type": "Prompt"
         },
         "dragging": false,
-        "height": 309,
-        "id": "ChatOutput-R7jsA",
+        "height": 517,
+        "id": "Prompt-xhlQ7",
         "position": {
-          "x": 3129.987101578166,
-          "y": 888.0854888768531
+          "x": 1879.4280156201567,
+          "y": 674.3958274263156
         },
         "positionAbsolute": {
-          "x": 3129.987101578166,
-          "y": 888.0854888768531
+          "x": 1879.4280156201567,
+          "y": 674.3958274263156
         },
         "selected": false,
         "type": "genericNode",
@@ -1103,15 +1105,15 @@
       }
     ],
     "viewport": {
-      "x": -527.2609043386433,
-      "y": 33.26280492099636,
-      "zoom": 0.48650433790103115
+      "x": -592.532107710133,
+      "y": -149.32118023592653,
+      "zoom": 0.5372819347267049
     }
   },
   "description": "This project can be used as a starting point for building a Chat experience with user specific memory. You can set a different Session ID to start a new message history.",
   "endpoint_name": null,
-  "id": "4e88f957-1541-4760-8a03-6132d4b14090",
+  "id": "909c382d-d215-4d50-91b3-dcb6f3ffd93c",
   "is_component": false,
-  "last_tested_version": "1.0.0a61",
+  "last_tested_version": "1.0.0rc1",
   "name": "Memory Chatbot"
 }
