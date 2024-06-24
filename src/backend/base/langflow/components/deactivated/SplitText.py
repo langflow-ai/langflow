@@ -3,7 +3,7 @@ from typing import List
 from langchain_text_splitters import CharacterTextSplitter
 
 from langflow.custom import Component
-from langflow.io import HandleInput, IntInput, Output
+from langflow.io import HandleInput, IntInput, MessageTextInput, Output
 from langflow.schema import Data
 from langflow.utils.util import unescape_string
 
