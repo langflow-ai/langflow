@@ -48,7 +48,7 @@ jobs:
             echo "file=./docker/build_and_push_base.Dockerfile" >> $GITHUB_OUTPUT
           else
             if [[ "${{ inputs.pre_release }}" == "true" ]]; then
-              echo "tags=langflowai/langflow:${{ inputs.version }}-alpha,langflowai/langflow:alpha" >> $GITHUB_OUTPUT
+              echo "tags=langflowai/langflow:${{ inputs.version }}" >> $GITHUB_OUTPUT
             else
               echo "tags=langflowai/langflow:${{ inputs.version }},langflowai/langflow:latest" >> $GITHUB_OUTPUT
             fi
