@@ -16,7 +16,7 @@
   "dependencies": {
     "@babel/preset-react": "^7.22.3",
     "@code-hike/mdx": "^0.9.0",
-    "@docusaurus/core": "^3.2.0",
+    "@docusaurus/core": "^3.4.0",
     "@docusaurus/plugin-google-gtag": "^3.2.0",
     "@docusaurus/plugin-ideal-image": "^3.2.0",
     "@docusaurus/preset-classic": "^3.2.0",
@@ -32,7 +32,7 @@
     "docusaurus-plugin-image-zoom": "^0.1.4",
     "docusaurus-theme-mdx-v2": "^0.1.2",
     "jquery": "^3.7.0",
-    "medium-zoom": "^1.0.8",
+    "medium-zoom": "^1.1.0",
     "node-fetch": "^3.3.1",
     "path-browserify": "^1.0.1",
     "postcss": "^8.4.31",
@@ -51,7 +51,6 @@
     "@docusaurus/module-type-aliases": "^3.2.0",
     "css-loader": "^6.8.1",
     "docusaurus-node-polyfills": "^1.0.0",
-    "node-sass": "^9.0.0",
     "sass": "^1.62.1",
     "ts-loader": "^9.4.3"
   },
