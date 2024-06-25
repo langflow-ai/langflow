@@ -8,15 +8,16 @@ import useAlertStore from "../../stores/alertStore";
 import { APITemplateType, ResponseErrorTypeAPI } from "../../types/api";
 import { NodeDataType } from "../../types/flow";
 
-type debounce = {
-
-};
+type debounce = {};
 
 const useHandleOnNewValue = (
   data: NodeDataType,
   name: string,
   takeSnapshot: () => void,
-  handleUpdateValues: (name: string, data: NodeDataType) => Promise<APITemplateType | void>,
+  handleUpdateValues: (
+    name: string,
+    data: NodeDataType,
+  ) => Promise<APITemplateType | void>,
   debouncedHandleUpdateValues: (name: string, data: NodeDataType) => void,
   setNode: (id: string, update: Node | ((oldState: Node) => Node)) => void,
   setIsLoading: (loading: boolean | ((old: boolean) => boolean)) => void,

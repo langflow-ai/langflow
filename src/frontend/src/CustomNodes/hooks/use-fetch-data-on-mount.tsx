@@ -12,7 +12,10 @@ import { NodeDataType } from "../../types/flow";
 const useFetchDataOnMount = (
   data: NodeDataType,
   name: string,
-  handleUpdateValues: (name: string, data: NodeDataType) => Promise<APITemplateType | void>,
+  handleUpdateValues: (
+    name: string,
+    data: NodeDataType,
+  ) => Promise<APITemplateType | void>,
   setNode: (id: string, update: Node | ((oldState: Node) => Node)) => void,
   setIsLoading: (loading: boolean | ((old: boolean) => boolean)) => void,
 ) => {

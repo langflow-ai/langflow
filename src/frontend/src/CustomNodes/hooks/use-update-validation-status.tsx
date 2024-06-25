@@ -5,7 +5,9 @@ import { FlowPoolType } from "../../types/zustand/flow";
 const useUpdateValidationStatus = (
   dataId: string,
   flowPool: FlowPoolType,
-  setValidationStatus: React.Dispatch<React.SetStateAction<VertexBuildTypeAPI | null>>
+  setValidationStatus: React.Dispatch<
+    React.SetStateAction<VertexBuildTypeAPI | null>
+  >,
 ) => {
   useEffect(() => {
     const relevantData =
