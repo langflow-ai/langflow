@@ -56,11 +56,16 @@ coverage: ## run the tests and generate a coverage report
 
 # allow passing arguments to pytest
 unit_tests:
-	poetry run pytest --ignore=tests/integration --instafail -ra -n auto -m "not api_key_required" $(args)
+	poetry run pytest \
+		--ignore=tests/integration \
+		--instafail -ra -n auto -m "not api_key_required" \
+		$(args)
 
 
 integration_tests:
-	poetry run pytest tests/integration --instafail -ra -n auto $(args)
+	poetry run pytest tests/integration \
+		--instafail -ra -n auto \
+		$(args)
 
 format: ## run code formatters
 	poetry run ruff check . --fix
@@ -129,9 +134,20 @@ start:
 	@echo 'Running the CLI'
 
 ifeq ($(open_browser),false)
-	@make install_backend && poetry run langflow run --path $(path) --log-level $(log_level) --host $(host) --port $(port) --env-file $(env) --no-open-browser
+	@make install_backend && poetry run langflow run \
+		--path $(path) \
+		--log-level $(log_level) \
+		--host $(host) \
+		--port $(port) \
+		--env-file $(env) \
+		--no-open-browser
 else
-	@make install_backend && poetry run langflow run --path $(path) --log-level $(log_level) --host $(host) --port $(port) --env-file $(env)
+	@make install_backend && poetry run langflow run \
+		--path $(path) \
+		--log-level $(log_level) \
+		--host $(host) \
+		--port $(port) \
+		--env-file $(env)
 endif
 
 
@@ -169,10 +185,24 @@ backend: ## run the backend in development mode
 	@kill -9 $$(lsof -t -i:7860)
 ifdef login
 	@echo "Running backend autologin is $(login)";
-	LANGFLOW_AUTO_LOGIN=$(login) poetry run uvicorn --factory langflow.main:create_app --host 0.0.0.0 --port 7860 --reload --env-file .env --loop asyncio --workers $(workers)
+	LANGFLOW_AUTO_LOGIN=$(login) poetry run uvicorn \
+		--factory langflow.main:create_app \
+		--host 0.0.0.0 \
+		--port 7860 \
+		--reload \
+		--env-file .env \
+		--loop asyncio \
+		--workers $(workers)
 else
 	@echo "Running backend respecting the .env file";
-	poetry run uvicorn --factory langflow.main:create_app --host 0.0.0.0 --port 7860 --reload --env-file .env  --loop asyncio --workers $(workers)
+	poetry run uvicorn \
+		--factory langflow.main:create_app \
+		--host 0.0.0.0 \
+		--port 7860 \
+		--reload \
+		--env-file .env \
+		--loop asyncio \
+		--workers $(workers)
 endif
 
 
