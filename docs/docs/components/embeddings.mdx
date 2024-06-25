@@ -1,4 +1,10 @@
+import Admonition from "@theme/Admonition";
+
 # Embeddings
+
+<Admonition type="warning" title="warning">
+This page may contain outdated information. It will be updated as soon as possible.
+</Admonition>
 
 ## Amazon Bedrock Embeddings
 
@@ -10,6 +16,18 @@ Used to load embedding models from [Amazon Bedrock](https://aws.amazon.com/bedro
 | `model_id`                 | `str`    | ID of the model to call, e.g., `amazon.titan-embed-text-v1`. This is equivalent to the `modelId` property in the `list-foundation-models` API.      |             |
 | `endpoint_url`             | `str`    | URL to set a specific service endpoint other than the default AWS endpoint.                                                                         |             |
 | `region_name`              | `str`    | AWS region to use, e.g., `us-west-2`. Falls back to `AWS_DEFAULT_REGION` environment variable or region specified in ~/.aws/config if not provided. |             |
+
+## Astra vectorize
+
+Used to generate server-side embeddings using [DataStax Astra](https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html).
+
+| **Parameter**      | **Type** | **Description**                                                                                                       | **Default** |
+|--------------------|----------|-----------------------------------------------------------------------------------------------------------------------|-------------|
+| `provider`         | `str`    | The embedding provider to use.                                                                                        |             |
+| `model_name`       | `str`    | The embedding model to use.                                                                                           |             |
+| `authentication`   | `dict`   | Authentication parameters. Use the Astra Portal to add the embedding provider integration to your Astra organization. |             |
+| `provider_api_key` | `str`    | An alternative to the Astra Authentication that let you use directly the API key of the provider.                     |             |
+| `model_parameters` | `dict`   | Additional model parameters.                                                                                          |             |
 
 ## Cohere Embeddings
 

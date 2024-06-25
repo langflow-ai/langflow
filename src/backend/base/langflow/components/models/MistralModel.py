@@ -49,7 +49,7 @@ class MistralAIModelComponent(LCModelComponent):
             info="The Mistral API Key to use for the Mistral model.",
             advanced=False,
         ),
-        FloatInput(name="temperature", display_name="Temperature", advanced=False, value=0.1),
+        FloatInput(name="temperature", display_name="Temperature", advanced=False, value=0.5),
         BoolInput(name="stream", display_name="Stream", info=STREAM_INFO_TEXT, advanced=True),
         StrInput(
             name="system_message",
@@ -57,10 +57,10 @@ class MistralAIModelComponent(LCModelComponent):
             info="System message to pass to the model.",
             advanced=True,
         ),
-        IntInput(name="max_retries", display_name="Max Retries", advanced=True),
-        IntInput(name="timeout", display_name="Timeout", advanced=True),
-        IntInput(name="max_concurrent_requests", display_name="Max Concurrent Requests", advanced=True),
-        FloatInput(name="top_p", display_name="Top P", advanced=True),
+        IntInput(name="max_retries", display_name="Max Retries", advanced=True, value=5),
+        IntInput(name="timeout", display_name="Timeout", advanced=True, value=60),
+        IntInput(name="max_concurrent_requests", display_name="Max Concurrent Requests", advanced=True, value=3),
+        FloatInput(name="top_p", display_name="Top P", advanced=True, value=1),
         IntInput(name="random_seed", display_name="Random Seed", value=1, advanced=True),
         BoolInput(name="safe_mode", display_name="Safe Mode", advanced=True),
     ]
