@@ -7,7 +7,7 @@ from sqlalchemy import delete
 from sqlmodel import Session, col, select
 
 from langflow.schema.message import Message
-from langflow.services.database.models.message.model import MessageTable
+from langflow.services.database.models.message.model import MessageRead, MessageTable
 from langflow.services.deps import session_scope
 
 
@@ -75,7 +75,7 @@ def add_messages(messages: Message | list[Message], flow_id: Optional[str] = Non
             messages_models.append(MessageTable.from_message(msg, flow_id=flow_id))
         with session_scope() as session:
             messages_models = add_messagetables(messages_models, session)
-        return messages_models
+        return [Message(**message.model_dump()) for message in messages_models]
     except Exception as e:
         logger.exception(e)
         raise e
@@ -90,7 +90,7 @@ def add_messagetables(messages: list[MessageTable], session: Session):
         except Exception as e:
             logger.exception(e)
             raise e
-    return [Message(**message.model_dump()) for message in messages]
+    return [MessageRead.model_validate(message, from_attributes=True) for message in messages]
 
 
 def delete_messages(session_id: str):
