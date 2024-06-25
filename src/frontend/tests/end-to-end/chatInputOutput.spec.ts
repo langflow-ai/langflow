@@ -23,7 +23,7 @@ test("chat_io_teste", async ({ page }) => {
   }
 
   const jsonContent = readFileSync(
-    "src/frontend/tests/end-to-end/assets/ChatTest.json",
+    "tests/end-to-end/assets/ChatTest.json",
     "utf-8",
   );
 
