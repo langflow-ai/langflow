@@ -59,10 +59,6 @@ class AnthropicModelComponent(LCModelComponent):
             advanced=True,
         ),
     ]
-    outputs = [
-        Output(display_name="Text", name="text_output", method="text_response"),
-        Output(display_name="Language Model", name="model_output", method="build_model"),
-    ]
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
         model = self.model

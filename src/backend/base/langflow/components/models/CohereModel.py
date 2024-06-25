@@ -32,10 +32,6 @@ class CohereComponent(LCModelComponent):
             advanced=True,
         ),
     ]
-    outputs = [
-        Output(display_name="Text", name="text_output", method="text_response"),
-        Output(display_name="Language Model", name="model_output", method="build_model"),
-    ]
 
     def build_model(self) -> LanguageModel | BaseChatModel:
         cohere_api_key = self.cohere_api_key
