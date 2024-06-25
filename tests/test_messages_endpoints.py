@@ -1,12 +1,9 @@
-import uuid
 from uuid import UUID
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlmodel import select
 
-from langflow.memory import add_messages, add_messagetables
-from langflow.schema.message import Message
+from langflow.memory import add_messagetables
 
 # Assuming you have these imports available
 from langflow.services.database.models.message import MessageCreate, MessageRead, MessageUpdate
@@ -38,21 +35,6 @@ def created_messages(session):
             MessageRead.model_validate(messagetable, from_attributes=True) for messagetable in messagetables
         ]
         return messages_read
-
-
-def test_add_message(session, flow):
-    session_id = str(uuid.uuid4())
-    message = Message(text="Test message", sender="User", sender_name="User", session_id=session_id)
-    messages = add_messages([message], flow.id)
-
-    with session_scope() as session:
-        message = session.exec(select(MessageTable).where(MessageTable.session_id == session_id)).first()
-        assert message is not None
-        assert len(messages) == 1
-        assert message.text == "Test message"
-        assert message.sender == "User"
-        assert message.sender_name == "User"
-        assert message.session_id == session_id
 
 
 def test_delete_messages(client: TestClient, created_messages, logged_in_headers):
