@@ -28,9 +28,28 @@ const ZoomableImage = ({ alt, sources, style }) => {
     };
   }, [isFullscreen]);
 
+  const [aspectRatio, setAspectRatio] = useState(null);
+
+  useEffect(() => {
+    const img = new Image();
+    img.src = sources.light;
+
+    img.onload = () => {
+      const width = img.width;
+      const height = img.height;
+      const ratio = width / height;
+      setAspectRatio(ratio);
+    };
+
+    img.onerror = (error) => {
+      console.error("Error loading image:", error);
+    };
+  }, [sources.light]);
+
   // Default style
   const defaultStyle = {
-    width: "50%",
+    width: "80%",
+    aspectRatio: aspectRatio ? aspectRatio : "16/9",
     margin: "0 auto",
     display: "flex",
     justifyContent: "center",
