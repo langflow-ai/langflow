@@ -116,11 +116,29 @@ async def simple_run_flow(
         return RunResponse(outputs=task_result, session_id=session_id)
 
     except sa.exc.StatementError as exc:
-        # StatementError('(builtins.ValueError) badly formed hexadecimal UUID string')
-        if "badly formed hexadecimal UUID string" in str(exc):
-            logger.error(f"Flow ID {flow_id_str} is not a valid UUID")
-            # This means the Flow ID is not a valid UUID which means it can't find the flow
-            raise ValueError(str(exc)) from exc
+        raise ValueError(str(exc)) from exc
+
+
+async def simple_run_flow_task(
+    flow: Flow,
+    input_request: SimplifiedAPIRequest,
+    stream: bool = False,
+    api_key_user: Optional[User] = None,
+):
+    """
+    Run a flow task as a BackgroundTask, therefore it should not throw exceptions.
+    """
+    try:
+        result = await simple_run_flow(
+            flow=flow,
+            input_request=input_request,
+            stream=stream,
+            api_key_user=api_key_user,
+        )
+        return result
+
+    except Exception as exc:
+        logger.exception(f"Error running flow {flow.id} task: {exc}")
 
 
 @router.post("/run/{flow_id_or_name}", response_model=RunResponse, response_model_exclude_none=True)
@@ -266,7 +284,7 @@ async def webhook_run_flow(
         )
         logger.debug("Starting background task")
         background_tasks.add_task(  # type: ignore
-            simple_run_flow,
+            simple_run_flow_task,
             flow=flow,
             input_request=input_request,
         )

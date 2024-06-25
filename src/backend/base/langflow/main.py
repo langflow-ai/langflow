@@ -37,28 +37,26 @@ class RequestCancelledMiddleware(BaseHTTPMiddleware):
         super().__init__(app)
 
     async def dispatch(self, request: Request, call_next):
-        queue: asyncio.Queue = asyncio.Queue()
-
-        async def message_poller(sentinel, handler_task, request):
-            nonlocal queue
-            while True:
-                message = await request.receive()
-                if message["type"] == "http.disconnect":
-                    handler_task.cancel()
-                    return sentinel  # Break the loop
-
-                # Puts the message in the queue
-                await queue.put(message)
-
         sentinel = object()
-        handler_task = asyncio.create_task(call_next(request))
-        asyncio.create_task(message_poller(sentinel, handler_task, request))
 
-        try:
-            response = await handler_task
-            return response
-        except asyncio.CancelledError:
+        async def cancel_handler():
+            while True:
+                if await request.is_disconnected():
+                    return sentinel
+                await asyncio.sleep(0.1)
+
+        handler_task = asyncio.create_task(call_next(request))
+        cancel_task = asyncio.create_task(cancel_handler())
+
+        done, pending = await asyncio.wait([handler_task, cancel_task], return_when=asyncio.FIRST_COMPLETED)
+
+        for task in pending:
+            task.cancel()
+
+        if cancel_task in done:
             return Response("Request was cancelled", status_code=499)
+        else:
+            return await handler_task
 
 
 class JavaScriptMIMETypeMiddleware(BaseHTTPMiddleware):
@@ -126,7 +124,8 @@ def create_app():
         allow_headers=["*"],
     )
     app.add_middleware(JavaScriptMIMETypeMiddleware)
-    app.add_middleware(RequestCancelledMiddleware)
+    # ! Deactivating this until we find a better solution
+    # app.add_middleware(RequestCancelledMiddleware)
 
     @app.middleware("http")
     async def flatten_query_string_lists(request: Request, call_next):

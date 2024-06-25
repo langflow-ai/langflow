@@ -34,14 +34,12 @@
       "args": [
         "run",
         "--path",
-        "${workspaceFolder}/src/backend/base/langflow/frontend"
+        "${workspaceFolder}/src/backend/base/langflow/frontend",
+        "--env-file",
+        "${workspaceFolder}/.env"
       ],
       "jinja": true,
-      "justMyCode": false,
-      "env": {
-        "LANGFLOW_LOG_LEVEL": "debug"
-      },
-      "envFile": "${workspaceFolder}/.env"
+      "justMyCode": false
     },
     {
       "name": "Python: Remote Attach",
