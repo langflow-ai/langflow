@@ -1,6 +1,7 @@
 import json
 from datetime import datetime, timezone
 from typing import Any, Optional
+from uuid import UUID
 
 from pydantic import BaseModel, Field, field_serializer, field_validator
 
@@ -81,8 +82,8 @@ class TransactionModelResponse(DefaultModel):
 
 
 class MessageModel(DefaultModel):
-    index: Optional[int] = Field(default=None)
-    flow_id: Optional[str] = Field(default=None, alias="flow_id")
+    id: Optional[str | UUID] = Field(default=None)
+    flow_id: Optional[UUID] = Field(default=None)
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     sender: str
     sender_name: str
@@ -127,16 +128,7 @@ class MessageModel(DefaultModel):
 
 
 class MessageModelResponse(MessageModel):
-    index: Optional[int] = Field(default=None)
-
-    @field_validator("index", mode="before")
-    def validate_id(cls, v):
-        if isinstance(v, float):
-            try:
-                return int(v)
-            except ValueError:
-                return None
-        return v
+    pass
 
 
 class MessageModelRequest(MessageModel):
