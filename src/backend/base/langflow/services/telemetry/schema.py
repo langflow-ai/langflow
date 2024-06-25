@@ -2,10 +2,10 @@ from pydantic import BaseModel
 
 
 class RunPayload(BaseModel):
-    IsWebhook: bool = False
-    seconds: int
-    success: bool
-    errorMessage: str = ""
+    runIsWebhook: bool = False
+    runSeconds: int
+    runSuccess: bool
+    runErrorMessage: str = ""
 
 
 class ShutdownPayload(BaseModel):
@@ -23,14 +23,14 @@ class VersionPayload(BaseModel):
 
 
 class PlaygroundPayload(BaseModel):
-    seconds: int
-    componentCount: int | None = None
-    success: bool
-    errorMessage: str = ""
+    playgroundSeconds: int
+    playgroundComponentCount: int | None = None
+    playgroundSuccess: bool
+    playgroundErrorMessage: str = ""
 
 
 class ComponentPayload(BaseModel):
-    name: str
-    seconds: int
-    success: bool
-    errorMessage: str
+    componentName: str
+    componentSeconds: int
+    componentSuccess: bool
+    componentErrorMessage: str
