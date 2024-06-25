@@ -1,26 +1,21 @@
 name: Python tests
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "poetry.lock"
-      - "pyproject.toml"
-      - "src/backend/**"
   pull_request:
-    branches: [dev]
+    types: [opened, synchronize, reopened]
+    branches: [dev, main]
     paths:
       - "poetry.lock"
       - "pyproject.toml"
       - "src/backend/**"
   merge_group:
-    branches: [dev]
-
+    types: [checks_requested]
 env:
   POETRY_VERSION: "1.8.2"
 
 jobs:
   build:
+    name: Run Unit Tests
     runs-on: ubuntu-latest
     strategy:
       matrix:
