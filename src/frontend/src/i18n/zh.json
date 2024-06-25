@@ -84,6 +84,7 @@
   "Sign Out": "注销",
   "Playground": "验证",
   "API": "API",
+  "Retry": "重试",
   "Share": "分享",
   "Set up the input variables defined in prompt templates. Interact with agents and chains.": "在提示词模板中设置定义的输入变量，然后与智能体进行交互验证。",
   "Default Session": "缺省会话",
@@ -277,5 +278,9 @@
   "Save with my API keys": "保存我的密钥",
   "Caution: Unchecking this box only removes API keys from fields specifically designated for API keys.": "注意：取消此选项仅从专门用于API密钥的字段中删除API密钥。",
   "items": "条目",
-  "Interact with your AI. Monitor inputs, outputs and memories.": "与您的AI进行互动。监控输入、输出和记忆。"
+  "Interact with your AI. Monitor inputs, outputs and memories.": "与您的AI进行互动。监控输入、输出和记忆。",
+  "Error pasting components": "添加组件失败",
+  "You can only have one ChatInput component in the flow": "流程中只能有一个ChatInput组件",
+  "Couldn't establish a connection.": "无法建立连接。",
+  "Check if everything is working properly and try again.": "检查一切是否正常，然后重试。"
 }
