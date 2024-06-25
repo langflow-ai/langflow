@@ -65,12 +65,6 @@ const EditNodeModal = forwardRef(
       }
     }, [gridApi, open]);
 
-    //    useEffect(() => {
-    //      return () => {
-    //        setOpenWDoubleClick(false);
-    //      };
-    //    }, []);
-
     return (
       <BaseModal key={data.id} open={open} setOpen={setOpen}>
         <BaseModal.Trigger>

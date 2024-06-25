@@ -44,24 +44,40 @@ test("LLMChain - Tooltip", async ({ page }) => {
     )
     .hover()
     .then(async () => {
-      await expect(page.getByTestId("tooltip-Chains").first()).toBeVisible();
       await expect(
-        page.getByTestId("tooltip-Model Specs").first(),
+        page.getByTestId("available-output-chains").first(),
       ).toBeVisible();
       await expect(
-        page.getByTestId("tooltip-Vector Search").first(),
+        page.getByTestId("available-output-textsplitters").first(),
       ).toBeVisible();
       await expect(
-        page.getByTestId("tooltip-Text Splitters").first(),
+        page.getByTestId("available-output-retrievers").first(),
       ).toBeVisible();
       await expect(
-        page.getByTestId("tooltip-Retrievers").first(),
+        page.getByTestId("available-output-prototypes").first(),
       ).toBeVisible();
-      await expect(page.getByTestId("tooltip-Tools").first()).toBeVisible();
-      await expect(page.getByTestId("tooltip-Memories").first()).toBeVisible();
-      await expect(page.getByTestId("tooltip-Agents").first()).toBeVisible();
-      await expect(page.getByTestId("tooltip-Helpers").first()).toBeVisible();
-      await expect(page.getByTestId("tooltip-Utilities").first()).toBeVisible();
+      await expect(
+        page.getByTestId("available-output-tools").first(),
+      ).toBeVisible();
+      await expect(
+        page.getByTestId("available-output-memories").first(),
+      ).toBeVisible();
+      await expect(
+        page.getByTestId("available-output-toolkits").first(),
+      ).toBeVisible();
+      await expect(
+        page.getByTestId("available-output-chains").first(),
+      ).toBeVisible();
+      await expect(
+        page.getByTestId("available-output-agents").first(),
+      ).toBeVisible();
+      await expect(
+        page.getByTestId("available-output-helpers").first(),
+      ).toBeVisible();
+      await expect(
+        page.getByTestId("available-output-langchain_utilities").first(),
+      ).toBeVisible();
+
       await page.getByTestId("icon-X").click();
       await page.waitForTimeout(500);
     });
@@ -77,11 +93,9 @@ test("LLMChain - Tooltip", async ({ page }) => {
     .hover()
     .then(async () => {
       await expect(
-        page.getByTestId("tooltip-Model Specs").first(),
+        page.getByTestId("available-input-models").first(),
       ).toBeVisible();
       await page.waitForTimeout(2000);
-
-      await expect(page.getByTestId("tooltip-Models").first()).toBeVisible();
 
       await page.getByTestId("icon-Search").click();
 
@@ -100,12 +114,18 @@ test("LLMChain - Tooltip", async ({ page }) => {
     .then(async () => {
       await page.waitForTimeout(2000);
 
-      await expect(page.getByTestId("tooltip-Chains").first()).toBeVisible();
       await expect(
-        page.getByTestId("tooltip-Experimental").first(),
+        page.getByTestId("available-input-chains").first(),
       ).toBeVisible();
-      await expect(page.getByTestId("tooltip-Agents").first()).toBeVisible();
-      await expect(page.getByTestId("tooltip-Helpers").first()).toBeVisible();
+      await expect(
+        page.getByTestId("available-input-prototypes").first(),
+      ).toBeVisible();
+      await expect(
+        page.getByTestId("available-input-agents").first(),
+      ).toBeVisible();
+      await expect(
+        page.getByTestId("available-input-helpers").first(),
+      ).toBeVisible();
 
       await page.waitForTimeout(500);
     });
@@ -176,26 +196,30 @@ test("LLMChain - Filter", async ({ page }) => {
     )
     .click();
 
-  await expect(page.getByTestId("disclosure-model specs")).toBeVisible();
-  await expect(page.getByTestId("model_specsAnthropic").first()).toBeVisible();
-  await expect(page.getByTestId("model_specsAmazon Bedrock")).toBeVisible();
-  await expect(page.getByTestId("model_specsAzureChatOpenAI")).toBeVisible();
-  await expect(page.getByTestId("model_specsChatLiteLLM")).toBeVisible();
-  await expect(page.getByTestId("model_specsChatOllama")).toBeVisible();
-  await expect(page.getByTestId("model_specsChatOpenAI")).toBeVisible();
-  await expect(page.getByTestId("model_specsChatVertexAI")).toBeVisible();
+  await expect(page.getByTestId("disclosure-models")).toBeVisible();
   await expect(
-    page.getByTestId("model_specsGoogle Generative AI"),
+    page.getByTestId("modelsGoogle Generative AI").first(),
+  ).toBeVisible();
+  await expect(page.getByTestId("chainsLLMChain").first()).toBeVisible();
+  await expect(
+    page.getByTestId("langchain_utilitiesSearchApi").first(),
   ).toBeVisible();
   await expect(
-    page.getByTestId("model_specsHugging Face Inference API"),
+    page.getByTestId("memoriesAstra DB Message Reader").first(),
   ).toBeVisible();
-  await expect(page.getByTestId("model_specsOllama")).toBeVisible();
   await expect(
-    page.getByTestId("model_specsQianfanChatEndpoint"),
+    page.getByTestId("prototypesFlow as Tool").first(),
   ).toBeVisible();
-  await expect(page.getByTestId("model_specsQianfanLLMEndpoint")).toBeVisible();
-  await expect(page.getByTestId("model_specsVertexAI")).toBeVisible();
+  await expect(
+    page.getByTestId("retrieversAmazon Kendra Retriever").first(),
+  ).toBeVisible();
+  await expect(
+    page.getByTestId("textsplittersCharacterTextSplitter").first(),
+  ).toBeVisible();
+  await expect(
+    page.getByTestId("toolkitsVectorStoreInfo").first(),
+  ).toBeVisible();
+  await expect(page.getByTestId("toolsSearchApi").first()).toBeVisible();
 
   await page.getByPlaceholder("Search").click();
 
@@ -219,7 +243,6 @@ test("LLMChain - Filter", async ({ page }) => {
     .click();
 
   await expect(page.getByTestId("disclosure-models")).toBeVisible();
-  await expect(page.getByTestId("disclosure-model specs")).toBeVisible();
 
   await page
     .locator(
@@ -227,10 +250,8 @@ test("LLMChain - Filter", async ({ page }) => {
     )
     .click();
 
-  await expect(page.getByTestId("disclosure-saved")).toBeVisible();
-
   await expect(page.getByTestId("disclosure-helpers")).toBeVisible();
   await expect(page.getByTestId("disclosure-agents")).toBeVisible();
   await expect(page.getByTestId("disclosure-chains")).toBeVisible();
-  await expect(page.getByTestId("disclosure-experimental")).toBeVisible();
+  await expect(page.getByTestId("disclosure-prototypes")).toBeVisible();
 });

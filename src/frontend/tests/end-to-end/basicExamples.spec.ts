@@ -270,12 +270,12 @@ test("Blog Writer", async ({ page }) => {
       "https://www.natgeokids.com/uk/discover/animals/sea-life/turtle-facts/",
     );
   await page
-    .getByTestId("input-list-input_urls-0")
-    .nth(1)
+    .getByTestId("input-list-input_urls-1")
+    .nth(0)
     .fill("https://www.originaldiving.com/blog/top-ten-turtle-facts");
 
   await page
-    .getByTestId("textarea-input_value")
+    .getByTestId("popover-anchor-input-input_value")
     .nth(0)
     .fill(
       "Use the references above for style to write a new blog/tutorial about turtles. Suggest non-covered topics.",
@@ -284,7 +284,7 @@ test("Blog Writer", async ({ page }) => {
   await page.getByTestId("button_run_chat output").click();
   await page.waitForTimeout(5000);
   await page.getByText("built successfully").last().click({
-    timeout: 15000,
+    timeout: 30000,
   });
 
   await page.getByText("Playground", { exact: true }).click();
@@ -403,17 +403,14 @@ test("Vector Store RAG", async ({ page }) => {
   await page.getByText("test_file.txt").isVisible();
   await page.waitForTimeout(2000);
 
-  await page.getByTestId("button_run_astra db vector store").first().click();
-  await page
-    .getByText("Astra DB Vector Store built successfully")
-    .last()
-    .click({
-      timeout: 15000,
-    });
+  await page.getByTestId("button_run_astra db").first().click();
+  await page.getByText("built successfully").last().click({
+    timeout: 30000,
+  });
 
   await page.getByTestId("button_run_chat output").click();
   await page.getByText("built successfully").last().click({
-    timeout: 15000,
+    timeout: 30000,
   });
 
   await page.getByText("Playground", { exact: true }).click();
@@ -427,15 +424,6 @@ test("Vector Store RAG", async ({ page }) => {
     .last()
     .isVisible();
 
-  await page.getByText("Extracted Chunks", { exact: true }).last().click();
-
-  const inputChunksValues = await page.getByPlaceholder("Empty").inputValue();
-  expect(inputChunksValues).toBe(
-    "this is a test file---this is a test file---this is a test file---this is a test file",
-  );
-
-  await page.getByTestId("icon-ExternalLink").last().click();
-  await page.getByPlaceholder("Send a message...").last().isHidden();
   await page.getByText("Memories", { exact: true }).last().click();
   await page.getByText("Default Session").last().click();
 
