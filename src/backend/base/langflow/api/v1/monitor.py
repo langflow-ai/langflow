@@ -1,4 +1,5 @@
 from typing import List, Optional
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import delete
@@ -84,12 +85,14 @@ async def delete_messages(
 
 @router.post("/messages/{message_id}", response_model=MessageRead)
 async def update_message(
-    message_id: int,
+    message_id: UUID,
     message: MessageUpdate,
     session: Session = Depends(get_session),
 ):
     try:
         db_message = session.get(MessageTable, message_id)
+        if not db_message:
+            raise HTTPException(status_code=404, detail="Message not found")
         message_dict = message.model_dump(exclude_unset=True)
         db_message.sqlmodel_update(message_dict)
         session.add(db_message)
