@@ -24,7 +24,7 @@ export default function FlowSettingsModal({
   const [name, setName] = useState(currentFlow!.name);
   const [description, setDescription] = useState(currentFlow!.description);
   const [endpoint_name, setEndpointName] = useState(
-    currentFlow!.endpoint_name ?? "",
+    currentFlow!.endpoint_name
   );
   const [isSaving, setIsSaving] = useState(false);
   const [disableSave, setDisableSave] = useState(true);
@@ -32,7 +32,7 @@ export default function FlowSettingsModal({
     setIsSaving(true);
     currentFlow!.name = name;
     currentFlow!.description = description;
-    currentFlow!.endpoint_name = endpoint_name;
+    currentFlow!.endpoint_name = (endpoint_name && endpoint_name.length > 0) ? endpoint_name : undefined;
     saveFlow(currentFlow!)
       ?.then(() => {
         setOpen(false);
@@ -64,7 +64,7 @@ export default function FlowSettingsModal({
       (!nameLists.includes(name) && currentFlow?.name !== name) ||
       currentFlow?.description !== description ||
       ((currentFlow?.endpoint_name ?? "" !== endpoint_name) &&
-        isEndpointNameValid(endpoint_name, 50))
+        isEndpointNameValid(endpoint_name??"", 50))
     ) {
       setDisableSave(false);
     } else {
