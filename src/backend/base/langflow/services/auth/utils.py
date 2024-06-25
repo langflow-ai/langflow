@@ -164,15 +164,15 @@ async def get_current_user_for_websocket(
 
 def get_current_active_user(current_user: Annotated[User, Depends(get_current_user)]):
     if not current_user.is_active:
-        raise HTTPException(status_code=400, detail="Inactive user")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Inactive user")
     return current_user
 
 
 def get_current_active_superuser(current_user: Annotated[User, Depends(get_current_user)]) -> User:
     if not current_user.is_active:
-        raise HTTPException(status_code=401, detail="Inactive user")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Inactive user")
     if not current_user.is_superuser:
-        raise HTTPException(status_code=400, detail="The user doesn't have enough privileges")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="The user doesn't have enough privileges")
     return current_user
 
 
@@ -324,8 +324,8 @@ def authenticate_user(username: str, password: str, db: Session = Depends(get_se
 
     if not user.is_active:
         if not user.last_login_at:
-            raise HTTPException(status_code=400, detail="Waiting for approval")
-        raise HTTPException(status_code=400, detail="Inactive user")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Waiting for approval")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Inactive user")
 
     return user if verify_password(password, user.password) else None
 
