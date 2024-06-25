@@ -1121,7 +1121,7 @@ export function updateProxyIdsOnOutputs(
   outputs: OutputFieldType[] | undefined,
   idsMap: { [key: string]: string },
 ) {
-  if(!outputs) return;
+  if (!outputs) return;
   outputs.forEach((output) => {
     if (output.proxy && idsMap[output.proxy.id]) {
       output.proxy.id = idsMap[output.proxy.id];
