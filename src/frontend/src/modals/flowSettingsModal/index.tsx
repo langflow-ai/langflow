@@ -23,7 +23,7 @@ export default function FlowSettingsModal({
 
   const [name, setName] = useState(currentFlow!.name);
   const [description, setDescription] = useState(currentFlow!.description);
-  const [endpoint_name, setEndpointName] = useState(currentFlow!.endpoint_name);
+  const [endpoint_name, setEndpointName] = useState(currentFlow!.endpoint_name??"");
   const [isSaving, setIsSaving] = useState(false);
   const [disableSave, setDisableSave] = useState(true);
   function handleClick(): void {
@@ -31,7 +31,7 @@ export default function FlowSettingsModal({
     currentFlow!.name = name;
     currentFlow!.description = description;
     currentFlow!.endpoint_name =
-      endpoint_name && endpoint_name.length > 0 ? endpoint_name : undefined;
+      endpoint_name && endpoint_name.length > 0 ? endpoint_name : null;
     saveFlow(currentFlow!)
       ?.then(() => {
         setOpen(false);
@@ -58,11 +58,10 @@ export default function FlowSettingsModal({
   }, [flows]);
 
   useEffect(() => {
-    console.log(disableSave);
     if (
       (!nameLists.includes(name) && currentFlow?.name !== name) ||
       currentFlow?.description !== description ||
-      ((currentFlow?.endpoint_name ?? "" !== endpoint_name) &&
+      ((currentFlow?.endpoint_name??"") !== endpoint_name &&
         isEndpointNameValid(endpoint_name ?? "", 50))
     ) {
       setDisableSave(false);

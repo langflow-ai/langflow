@@ -7,7 +7,7 @@ export type FlowType = {
   id: string;
   data: ReactFlowJsonObject | null;
   description: string;
-  endpoint_name?: string;
+  endpoint_name?: string|null;
   style?: FlowStyleType;
   is_component?: boolean;
   last_tested_version?: string;
