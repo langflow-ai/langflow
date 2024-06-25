@@ -4,7 +4,7 @@ import sys
 import time
 import warnings
 from pathlib import Path
-from typing import Optional
+from typing import Any, Callable, Optional
 
 import click
 import httpx
@@ -133,7 +133,7 @@ def run(
         env_vars = dotenv_values(env_file)
 
         # Define a mapping of environment variables to their corresponding variables and types
-        env_var_mapping = {
+        env_var_mapping: dict[str, tuple[str, type | Callable[[Any], bool]]] = {
             "LANGFLOW_HOST": ("host", str),
             "LANGFLOW_PORT": ("port", int),
             "LANGFLOW_WORKERS": ("workers", int),
