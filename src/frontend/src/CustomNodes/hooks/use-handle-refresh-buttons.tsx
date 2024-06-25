@@ -1,4 +1,5 @@
 import { cloneDeep } from "lodash";
+import { Node } from "reactflow";
 import {
   ERROR_UPDATING_COMPONENT,
   TITLE_ERROR_UPDATING_COMPONENT,
@@ -7,7 +8,10 @@ import useAlertStore from "../../stores/alertStore";
 import { ResponseErrorDetailAPI } from "../../types/api";
 import { handleUpdateValues } from "../../utils/parameterUtils";
 
-const useHandleRefreshButtonPress = (setIsLoading, setNode) => {
+const useHandleRefreshButtonPress = (
+  setIsLoading: (loading: boolean | ((old: boolean) => boolean)) => void,
+  setNode: (id: string, update: Node | ((oldState: Node) => Node)) => void,
+) => {
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
   const handleRefreshButtonPress = async (name, data) => {

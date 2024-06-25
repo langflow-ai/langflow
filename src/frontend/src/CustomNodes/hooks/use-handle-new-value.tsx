@@ -1,19 +1,25 @@
 import { cloneDeep } from "lodash";
+import { Node } from "reactflow";
 import {
   ERROR_UPDATING_COMPONENT,
   TITLE_ERROR_UPDATING_COMPONENT,
 } from "../../constants/constants";
 import useAlertStore from "../../stores/alertStore";
-import { ResponseErrorTypeAPI } from "../../types/api";
+import { APITemplateType, ResponseErrorTypeAPI } from "../../types/api";
+import { NodeDataType } from "../../types/flow";
+
+type debounce = {
+
+};
 
 const useHandleOnNewValue = (
-  data,
-  name,
-  takeSnapshot,
-  handleUpdateValues,
-  debouncedHandleUpdateValues,
-  setNode,
-  setIsLoading,
+  data: NodeDataType,
+  name: string,
+  takeSnapshot: () => void,
+  handleUpdateValues: (name: string, data: NodeDataType) => Promise<APITemplateType | void>,
+  debouncedHandleUpdateValues: (name: string, data: NodeDataType) => void,
+  setNode: (id: string, update: Node | ((oldState: Node) => Node)) => void,
+  setIsLoading: (loading: boolean | ((old: boolean) => boolean)) => void,
 ) => {
   const setErrorData = useAlertStore((state) => state.setErrorData);
 

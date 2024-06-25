@@ -1,6 +1,12 @@
 import { useEffect } from "react";
+import { VertexBuildTypeAPI } from "../../types/api";
+import { FlowPoolType } from "../../types/zustand/flow";
 
-const useUpdateValidationStatus = (dataId, flowPool, setValidationStatus) => {
+const useUpdateValidationStatus = (
+  dataId: string,
+  flowPool: FlowPoolType,
+  setValidationStatus: React.Dispatch<React.SetStateAction<VertexBuildTypeAPI | null>>
+) => {
   useEffect(() => {
     const relevantData =
       flowPool[dataId] && flowPool[dataId]?.length > 0

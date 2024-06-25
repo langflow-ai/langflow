@@ -1,11 +1,13 @@
 import { cloneDeep } from "lodash";
+import { Node, UpdateNodeInternals } from "reactflow";
+import { NodeDataType } from "../../types/flow";
 
 const useHandleNodeClass = (
-  data,
-  name,
-  takeSnapshot,
-  setNode,
-  updateNodeInternals,
+  data: NodeDataType,
+  name: string,
+  takeSnapshot: () => void,
+  setNode: (id: string, update: Node | ((oldState: Node) => Node)) => void,
+  updateNodeInternals: UpdateNodeInternals,
 ) => {
   const handleNodeClass = (newNodeClass, code, type?: string) => {
     if (!data.node) return;

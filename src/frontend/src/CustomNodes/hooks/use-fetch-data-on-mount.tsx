@@ -1,18 +1,20 @@
 import { cloneDeep } from "lodash";
 import { useEffect } from "react";
+import { Node } from "reactflow";
 import {
   ERROR_UPDATING_COMPONENT,
   TITLE_ERROR_UPDATING_COMPONENT,
 } from "../../constants/constants";
 import useAlertStore from "../../stores/alertStore";
-import { ResponseErrorDetailAPI } from "../../types/api";
+import { APITemplateType, ResponseErrorDetailAPI } from "../../types/api";
+import { NodeDataType } from "../../types/flow";
 
 const useFetchDataOnMount = (
-  data,
-  name,
-  handleUpdateValues,
-  setNode,
-  setIsLoading,
+  data: NodeDataType,
+  name: string,
+  handleUpdateValues: (name: string, data: NodeDataType) => Promise<APITemplateType | void>,
+  setNode: (id: string, update: Node | ((oldState: Node) => Node)) => void,
+  setIsLoading: (loading: boolean | ((old: boolean) => boolean)) => void,
 ) => {
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
