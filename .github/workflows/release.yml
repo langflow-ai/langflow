@@ -14,11 +14,7 @@ on:
         required: false
         type: boolean
         default: true
-      branch:
-        description: "Branch to release from"
-        required: true
-        type: string
-        default: "main"
+
 
 env:
   POETRY_VERSION: "1.8.2"
@@ -180,4 +176,4 @@ jobs:
           generateReleaseNotes: true
           prerelease: ${{ inputs.pre_release }}
           tag: v${{ needs.release-main.outputs.version }}
-          commit: ${{ inputs.branch }}
+          commit: ${{ github.ref }}
