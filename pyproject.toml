@@ -92,6 +92,7 @@ unstructured = {extras = ["docx", "md", "pptx"], version = "^0.14.4"}
 langchain-aws = "^0.1.6"
 langchain-mongodb = "^0.1.6"
 kubernetes = "^30.1.0"
+firecrawl-py = "^0.0.16"
 
 
 [tool.poetry.group.dev.dependencies]
