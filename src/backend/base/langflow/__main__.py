@@ -4,12 +4,12 @@ import sys
 import time
 import warnings
 from pathlib import Path
-from typing import Optional
+from typing import Any, Callable, Optional
 
 import click
 import httpx
 import typer
-from dotenv import load_dotenv
+from dotenv import dotenv_values, load_dotenv
 from multiprocess import Process, cpu_count  # type: ignore
 from packaging import version as pkg_version
 from rich import box
@@ -130,6 +130,29 @@ def run(
 
     if env_file:
         load_dotenv(env_file, override=True)
+        env_vars = dotenv_values(env_file)
+
+        # Define a mapping of environment variables to their corresponding variables and types
+        env_var_mapping: dict[str, tuple[str, type | Callable[[Any], bool]]] = {
+            "LANGFLOW_HOST": ("host", str),
+            "LANGFLOW_PORT": ("port", int),
+            "LANGFLOW_WORKERS": ("workers", int),
+            "LANGFLOW_WORKER_TIMEOUT": ("timeout", int),
+            "LANGFLOW_COMPONENTS_PATH": ("components_path", Path),
+            "LANGFLOW_LOG_LEVEL": ("log_level", str),
+            "LANGFLOW_LOG_FILE": ("log_file", Path),
+            "LANGFLOW_LANGCHAIN_CACHE": ("cache", str),
+            "LANGFLOW_FRONTEND_PATH": ("path", str),
+            "LANGFLOW_OPEN_BROWSER": ("open_browser", lambda x: x.lower() == "true"),
+            "LANGFLOW_REMOVE_API_KEYS": ("remove_api_keys", lambda x: x.lower() == "true"),
+            "LANGFLOW_BACKEND_ONLY": ("backend_only", lambda x: x.lower() == "true"),
+            "LANGFLOW_STORE": ("store", lambda x: x.lower() == "true"),
+        }
+
+        # Update variables based on environment variables
+        for env_var, (var_name, var_type) in env_var_mapping.items():
+            if env_var in env_vars:
+                locals()[var_name] = var_type(env_vars[env_var])
 
     update_settings(
         dev=dev,
