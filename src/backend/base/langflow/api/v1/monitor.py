@@ -114,7 +114,7 @@ async def delete_messages_session(
     session: Session = Depends(get_session),
 ):
     try:
-        session.exec(
+        session.exec(  # type: ignore
             delete(MessageTable)
             .where(col(MessageTable.session_id) == session_id)
             .execution_options(synchronize_session="fetch")
