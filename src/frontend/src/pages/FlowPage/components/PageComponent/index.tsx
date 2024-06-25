@@ -188,7 +188,7 @@ export default function Page({
   }, []);
 
   function handleUndo(e: KeyboardEvent) {
-    if (!isWrappedWithClass(e, "noundo")) {
+    if (!isWrappedWithClass(e, "noflow")) {
       e.preventDefault();
       (e as unknown as Event).stopImmediatePropagation();
       undo();
@@ -196,7 +196,7 @@ export default function Page({
   }
 
   function handleRedo(e: KeyboardEvent) {
-    if (!isWrappedWithClass(e, "noundo")) {
+    if (!isWrappedWithClass(e, "noflow")) {
       e.preventDefault();
       (e as unknown as Event).stopImmediatePropagation();
       redo();
@@ -228,7 +228,7 @@ export default function Page({
   }
 
   function handleCopy(e: KeyboardEvent) {
-    if (!isWrappedWithClass(e, "nocopy")) {
+    if (!isWrappedWithClass(e, "noflow")) {
       e.preventDefault();
       (e as unknown as Event).stopImmediatePropagation();
       if (window.getSelection()?.toString().length === 0 && lastSelection) {
@@ -238,7 +238,7 @@ export default function Page({
   }
 
   function handleCut(e: KeyboardEvent) {
-    if (!isWrappedWithClass(e, "nocopy")) {
+    if (!isWrappedWithClass(e, "noflow")) {
       e.preventDefault();
       (e as unknown as Event).stopImmediatePropagation();
       if (window.getSelection()?.toString().length === 0 && lastSelection) {
@@ -248,7 +248,7 @@ export default function Page({
   }
 
   function handlePaste(e: KeyboardEvent) {
-    if (!isWrappedWithClass(e, "nocopy")) {
+    if (!isWrappedWithClass(e, "noflow")) {
       e.preventDefault();
       (e as unknown as Event).stopImmediatePropagation();
       if (

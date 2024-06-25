@@ -11,7 +11,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
         data-testid=""
         type={type}
         className={cn(
-          "nopan nodelete nodrag noundo nocopy primary-input",
+          "nopan nodelete nodrag  noflow primary-input",
           className,
         )}
         ref={ref}

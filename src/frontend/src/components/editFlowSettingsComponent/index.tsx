@@ -77,7 +77,7 @@ export const EditFlowSettings: React.FC<InputProps> = ({
         </div>
         {setName ? (
           <Input
-            className="nopan nodelete nodrag noundo nocopy mt-2 font-normal"
+            className="nopan nodelete nodrag  noflow mt-2 font-normal"
             onChange={handleNameChange}
             type="text"
             name="name"
@@ -137,7 +137,7 @@ export const EditFlowSettings: React.FC<InputProps> = ({
             )}
           </div>
           <Input
-            className="nopan nodelete nodrag noundo nocopy mt-2 font-normal"
+            className="nopan nodelete nodrag  noflow mt-2 font-normal"
             onChange={handleEndpointNameChange}
             type="text"
             name="endpoint_name"
