@@ -127,6 +127,7 @@ dictdiffer = "^0.9.0"
 [tool.poetry.extras]
 deploy = ["celery", "redis", "flower"]
 couchbase = ["couchbase"]
+huggingface = ["huggingface-hub", "sentence-transformers", "ctransformers"]
 cassio = ["cassio"]
 local = ["llama-cpp-python", "sentence-transformers", "ctransformers"]
 
