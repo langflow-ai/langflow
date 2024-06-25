@@ -12,10 +12,6 @@ import { useGlobalVariablesStore } from "../stores/globalVariablesStore/globalVa
 import { useStoreStore } from "../stores/storeStore";
 import { Users } from "../types/api";
 import { AuthContextType } from "../types/contexts/auth";
-import { useGlobalVariablesStore } from "../stores/globalVariablesStore/globalVariables";
-import { useStoreStore } from "../stores/storeStore";
-import { Users } from "../types/api";
-import { AuthContextType } from "../types/contexts/auth";
 
 const initialValue: AuthContextType = {
   isAdmin: false,
