@@ -49,8 +49,8 @@ def create_flow(
             if flows:
                 extract_number = re.compile(r"\((\d+)\)$")
                 numbers = []
-                for flow in flows:
-                    result = extract_number.search(flow.name)
+                for _flow in flows:
+                    result = extract_number.search(_flow.name)
                     if result:
                         numbers.append(int(result.groups(1)[0]))
                 if numbers:
