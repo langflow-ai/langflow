@@ -148,6 +148,7 @@ export default function NodeToolbarComponent({
   }
 
   function handleFreeze(e: KeyboardEvent) {
+    if (isThereModal()) return;
     e.preventDefault();
     if (data.node?.flow) return;
     setNode(data.id, (old) => ({
@@ -180,7 +181,7 @@ export default function NodeToolbarComponent({
   useHotkeys(save, handleSaveWShortcut, { preventDefault });
   useHotkeys(docs, handleDocsWShortcut, { preventDefault });
   useHotkeys(download, handleDownloadWShortcut, { preventDefault });
-  useHotkeys(freeze, handleFreeze, { preventDefault });
+  useHotkeys(freeze, handleFreeze);
 
   const isMinimal = numberOfHandles <= 1 && numberOfOutputHandles <= 1;
   const isGroup = data.node?.flow ? true : false;
