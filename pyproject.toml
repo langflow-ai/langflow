@@ -152,6 +152,28 @@ log_cli = true
 markers = ["async_test", "api_key_required"]
 
 
+[tool.coverage.run]
+command_line = """
+    -m pytest
+    --cov --cov-report=term --cov-report=html
+    --instafail -ra -n auto -m "not api_key_required"
+    tests/unit
+"""
+source = ["src/backend/base/langflow/"]
+omit = ["*/alembic/*", "tests/*", "*/__init__.py"]
+
+
+[tool.coverage.report]
+sort = "Stmts"
+skip_empty = true
+show_missing = false
+ignore_errors = true
+
+
+[tool.coverage.html]
+directory = "coverage"
+
+
 [tool.ruff]
 exclude = ["src/backend/langflow/alembic/*"]
 line-length = 120
