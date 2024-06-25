@@ -48,6 +48,11 @@ test("user must interact with chat with Input/Output", async ({ page }) => {
   await page.getByPlaceholder("Send a message...").fill("Hello, how are you?");
   await page.getByTestId("icon-LucideSend").click();
   let valueUser = await page.getByTestId("sender_name_user").textContent();
+
+  await page.waitForSelector('[data-testid="sender_name_ai"]', {
+    timeout: 30000,
+  });
+
   let valueAI = await page.getByTestId("sender_name_ai").textContent();
 
   expect(valueUser).toBe("User");
@@ -152,6 +157,10 @@ test("user must be able to see output inspection", async ({ page }) => {
 
   await page.waitForTimeout(5000);
 
+  await page.waitForSelector('[data-testid="icon-ScanEye"]', {
+    timeout: 30000,
+  });
+
   await page.getByTestId("icon-ScanEye").nth(4).click();
 
   await page.getByText("Sender", { exact: true }).isVisible();
@@ -243,6 +252,11 @@ test("user must be able to send an image on chat", async ({ page }) => {
   await page.getByText("chain.png").isVisible();
 
   await page.getByText("Close", { exact: true }).click();
+
+  await page.waitForSelector('[data-testid="icon-ScanEye"]', {
+    timeout: 30000,
+  });
+
   await page.getByTestId("icon-ScanEye").nth(4).click();
   await page.getByText("Restart").isHidden();
 });
