@@ -209,7 +209,7 @@ async def simplified_run_flow(
         end_time = time.perf_counter()
         background_tasks.add_task(
             telemetry_service.log_package_run,
-            RunPayload(IsWebhook=False, seconds=int(end_time - start_time), success=True, errorMessage=""),
+            RunPayload(runIsWebhook=False, runSeconds=int(end_time - start_time), runSuccess=True, runErrorMessage=""),
         )
         return result
 
@@ -217,7 +217,9 @@ async def simplified_run_flow(
         end_time = time.perf_counter()
         background_tasks.add_task(
             telemetry_service.log_package_run,
-            RunPayload(IsWebhook=False, seconds=int(end_time - start_time), success=False, errorMessage=str(exc)),
+            RunPayload(
+                runIsWebhook=False, runSeconds=int(end_time - start_time), runSuccess=False, runErrorMessage=str(exc)
+            ),
         )
         if "badly formed hexadecimal UUID string" in str(exc):
             # This means the Flow ID is not a valid UUID which means it can't find the flow
@@ -231,7 +233,9 @@ async def simplified_run_flow(
         logger.exception(exc)
         background_tasks.add_task(
             telemetry_service.log_package_run,
-            RunPayload(IsWebhook=False, seconds=int(end_time - start_time), success=False, errorMessage=str(exc)),
+            RunPayload(
+                runIsWebhook=False, runSeconds=int(end_time - start_time), runSuccess=False, runErrorMessage=str(exc)
+            ),
         )
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
 
@@ -290,14 +294,19 @@ async def webhook_run_flow(
         )
         background_tasks.add_task(
             telemetry_service.log_package_run,
-            RunPayload(IsWebhook=True, seconds=int(time.perf_counter() - start_time), success=True, errorMessage=""),
+            RunPayload(
+                runIsWebhook=True, runSeconds=int(time.perf_counter() - start_time), runSuccess=True, runErrorMessage=""
+            ),
         )
         return {"message": "Task started in the background", "status": "in progress"}
     except Exception as exc:
         background_tasks.add_task(
             telemetry_service.log_package_run,
             RunPayload(
-                IsWebhook=True, seconds=int(time.perf_counter() - start_time), success=False, errorMessage=str(exc)
+                runIsWebhook=True,
+                runSeconds=int(time.perf_counter() - start_time),
+                runSuccess=False,
+                runErrorMessage=str(exc),
             ),
         )
         if "Flow ID is required" in str(exc) or "Request body is empty" in str(exc):
