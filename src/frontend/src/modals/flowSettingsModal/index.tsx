@@ -6,6 +6,7 @@ import useAlertStore from "../../stores/alertStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { FlowSettingsPropsType } from "../../types/components";
 import { FlowType } from "../../types/flow";
+import { isEndpointNameValid } from "../../utils/utils";
 import BaseModal from "../baseModal";
 
 export default function FlowSettingsModal({
@@ -22,8 +23,11 @@ export default function FlowSettingsModal({
 
   const [name, setName] = useState(currentFlow!.name);
   const [description, setDescription] = useState(currentFlow!.description);
-  const [endpoint_name, setEndpointName] = useState(currentFlow!.endpoint_name);
+  const [endpoint_name, setEndpointName] = useState(
+    currentFlow!.endpoint_name ?? "",
+  );
   const [isSaving, setIsSaving] = useState(false);
+  const [disableSave, setDisableSave] = useState(true);
   function handleClick(): void {
     setIsSaving(true);
     currentFlow!.name = name;
@@ -54,6 +58,19 @@ export default function FlowSettingsModal({
     setNameList(tempNameList.filter((name) => name !== currentFlow!.name));
   }, [flows]);
 
+  useEffect(() => {
+    console.log(disableSave);
+    if (
+      (!nameLists.includes(name) && currentFlow?.name !== name) ||
+      currentFlow?.description !== description ||
+      ((currentFlow?.endpoint_name ?? "" !== endpoint_name) &&
+        isEndpointNameValid(endpoint_name, 50))
+    ) {
+      setDisableSave(false);
+    } else {
+      setDisableSave(true);
+    }
+  }, [nameLists, currentFlow, description, endpoint_name, name]);
   return (
     <BaseModal
       open={open}
@@ -80,8 +97,8 @@ export default function FlowSettingsModal({
       <BaseModal.Footer
         submit={{
           label: "Save",
-          disabled: nameLists.includes(name) || name === currentFlow!.name,
           dataTestId: "save-flow-settings",
+          disabled: disableSave,
           loading: isSaving,
         }}
       />
