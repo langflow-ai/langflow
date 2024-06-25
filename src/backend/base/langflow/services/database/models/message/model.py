@@ -23,14 +23,16 @@ class MessageBase(SQLModel):
         if message.text is None or not message.sender or not message.sender_name:
             raise ValueError("The message does not have the required fields (text, sender, sender_name).")
         if isinstance(message.timestamp, str):
-            message.timestamp = datetime.fromisoformat(message.timestamp)
+            timestamp = datetime.fromisoformat(message.timestamp)
+        else:
+            timestamp = message.timestamp
         return cls(
             sender=message.sender,
             sender_name=message.sender_name,
             text=message.text,
             session_id=message.session_id,
             files=message.files or [],
-            timestamp=message.timestamp,
+            timestamp=timestamp,
             flow_id=flow_id,
         )
 
