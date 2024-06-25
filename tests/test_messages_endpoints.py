@@ -30,11 +30,9 @@ def created_messages(session):
             MessageCreate(text="Test message 3", sender="User", sender_name="User", session_id="session_id2"),
         ]
         messagetables = [MessageTable.model_validate(message, from_attributes=True) for message in messages]
-        messagetables = add_messagetables(messagetables, session)
-        messages_read = [
-            MessageRead.model_validate(messagetable, from_attributes=True) for messagetable in messagetables
-        ]
-        return messages_read
+        message_list = add_messagetables(messagetables, session)
+
+        return message_list
 
 
 def test_delete_messages(client: TestClient, created_messages, logged_in_headers):
