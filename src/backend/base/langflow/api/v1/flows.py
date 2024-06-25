@@ -215,9 +215,7 @@ def update_flow(
         # so we need to check if the name is unique with `like` operator
         # if we find a flow with the same name, we add a number to the end of the name
         # based on the highest number found
-        flow_from_db = session.exec(
-            select(Flow).where(Flow.id == flow_id, Flow.user_id == current_user.id)
-        ).first()
+        flow_from_db = session.exec(select(Flow).where(Flow.id == flow_id, Flow.user_id == current_user.id)).first()
         if flow_from_db:
             flows = session.exec(
                 select(Flow).where(Flow.name.like(f"{flow.name} (%")).where(Flow.user_id == current_user.id)  # type: ignore
