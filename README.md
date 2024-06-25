@@ -42,6 +42,7 @@
 
 # 📝 Content
 
+- [](#)
 - [📝 Content](#-content)
 - [📦 Get Started](#-get-started)
 - [🎨 Create Flows](#-create-flows)
@@ -49,6 +50,7 @@
   - [Deploy Langflow on Google Cloud Platform](#deploy-langflow-on-google-cloud-platform)
   - [Deploy on Railway](#deploy-on-railway)
   - [Deploy on Render](#deploy-on-render)
+  - [Deploy on Kubernetes](#deploy-on-kubernetes)
 - [🖥️ Command Line Interface (CLI)](#️-command-line-interface-cli)
   - [Usage](#usage)
     - [Environment Variables](#environment-variables)
@@ -62,10 +64,6 @@ You can install Langflow with pip:
 
 ```shell
 # Make sure you have >=Python 3.10 installed on your system.
-# Install the pre-release version (recommended for the latest updates)
-python -m pip install langflow --pre --force-reinstall
-
-# or stable version
 python -m pip install langflow -U
 ```
 
@@ -105,11 +103,7 @@ Alternatively, click the **"Open in Cloud Shell"** button below to launch Google
 
 ## Deploy on Railway
 
-Use this template to deploy Langflow 1.0 Preview on Railway:
-
-[![Deploy 1.0 Preview on Railway](https://railway.app/button.svg)](https://railway.app/template/UsJ1uB?referralCode=MnPSdg)
-
-Or this one to deploy Langflow 0.6.x:
+Use this template to deploy Langflow 1.0 on Railway:
 
 [![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/JMXEWp?referralCode=MnPSdg)
 
