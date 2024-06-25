@@ -121,9 +121,9 @@ async def retrieve_vertices_order(
         background_tasks.add_task(
             telemetry_service.log_package_playground,
             PlaygroundPayload(
-                seconds=int(time.perf_counter() - start_time),
-                componentCount=components_count,
-                success=True,
+                playgroundSeconds=int(time.perf_counter() - start_time),
+                playgroundComponentCount=components_count,
+                playgroundSuccess=True,
             ),
         )
         return VerticesOrderResponse(ids=first_layer, run_id=graph._run_id, vertices_to_run=vertices_to_run)
@@ -131,10 +131,10 @@ async def retrieve_vertices_order(
         background_tasks.add_task(
             telemetry_service.log_package_playground,
             PlaygroundPayload(
-                seconds=int(time.perf_counter() - start_time),
-                componentCount=components_count,
-                success=False,
-                errorMessage=str(exc),
+                playgroundSeconds=int(time.perf_counter() - start_time),
+                playgroundComponentCount=components_count,
+                playgroundSuccess=False,
+                playgroundErrorMessage=str(exc),
             ),
         )
         if "stream or streaming set to True" in str(exc):
@@ -280,10 +280,10 @@ async def build_vertex(
         background_tasks.add_task(
             telemetry_service.log_package_component,
             ComponentPayload(
-                name=vertex_id,
-                seconds=int(time.perf_counter() - start_time),
-                success=valid,
-                errorMessage=params,
+                componentName=vertex_id,
+                componentSeconds=int(time.perf_counter() - start_time),
+                componentSuccess=valid,
+                componentErrorMessage=params,
             ),
         )
         return build_response
@@ -291,10 +291,10 @@ async def build_vertex(
         background_tasks.add_task(
             telemetry_service.log_package_component,
             ComponentPayload(
-                name=vertex_id,
-                seconds=int(time.perf_counter() - start_time),
-                success=False,
-                errorMessage=str(exc),
+                componentName=vertex_id,
+                componentSeconds=int(time.perf_counter() - start_time),
+                componentSuccess=False,
+                componentErrorMessage=str(exc),
             ),
         )
         logger.error(f"Error building Component:\n\n{exc}")
