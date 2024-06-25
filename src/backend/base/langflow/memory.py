@@ -2,6 +2,7 @@ import warnings
 from typing import List, Optional
 
 from loguru import logger
+from sqlmodel import Session
 
 from langflow.schema.message import Message
 from langflow.services.database.models.message.model import MessageTable
@@ -75,20 +76,23 @@ def add_messages(messages: Message | list[Message], flow_id: Optional[str] = Non
         for msg in messages:
             messages_models.append(MessageTable.from_message(msg, flow_id=flow_id))
         with session_scope() as session:
-            for message_model in messages_models:
-                try:
-                    session.add(message_model)
-                    session.commit()
-                    session.refresh(message_model)
-                except Exception as e:
-                    logger.error(f"Error adding message to monitor service: {e}")
-                    logger.exception(e)
-                    raise e
-
+            messages_models = add_messagetables(messages_models, session)
         return messages_models
     except Exception as e:
         logger.exception(e)
         raise e
+
+
+def add_messagetables(messages: list[MessageTable], session: Session):
+    for message in messages:
+        try:
+            session.add(message)
+            session.commit()
+            session.refresh(message)
+        except Exception as e:
+            logger.exception(e)
+            raise e
+    return messages
 
 
 def delete_messages(session_id: str):
