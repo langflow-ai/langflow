@@ -57,7 +57,7 @@ test("add folder by drag and drop", async ({ page }) => {
   await page.waitForTimeout(2000);
 
   const jsonContent = readFileSync(
-    "src/frontend/tests/end-to-end/assets/collection.json",
+    "tests/end-to-end/assets/collection.json",
     "utf-8",
   );
 
