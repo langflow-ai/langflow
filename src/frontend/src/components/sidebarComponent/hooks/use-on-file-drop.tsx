@@ -9,7 +9,7 @@ import useFlowsManagerStore from "../../../stores/flowsManagerStore";
 import { useFolderStore } from "../../../stores/foldersStore";
 import { addVersionToDuplicates } from "../../../utils/reactflowUtils";
 
-const useFileDrop = (folderId, folderChangeCallback) => {
+const useFileDrop = (folderId: string, folderChangeCallback: (id?: string) => void) => {
   const setFolderDragging = useFolderStore((state) => state.setFolderDragging);
   const setFolderIdDragging = useFolderStore(
     (state) => state.setFolderIdDragging,

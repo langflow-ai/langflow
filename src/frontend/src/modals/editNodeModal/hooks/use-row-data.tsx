@@ -1,8 +1,9 @@
 import { useMemo } from "react";
 import { LANGFLOW_SUPPORTED_TYPES } from "../../../constants/constants";
 import { TemplateVariableType } from "../../../types/api";
+import { NodeDataType } from "../../../types/flow";
 
-const useRowData = (myData, open) => {
+const useRowData = (myData: NodeDataType, open: boolean) => {
   const rowData = useMemo(() => {
     return Object.keys(myData.node!.template)
       .filter((key: string) => {
