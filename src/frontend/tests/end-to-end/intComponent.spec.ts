@@ -30,7 +30,7 @@ test("IntComponent", async ({ page }) => {
   await page.waitForTimeout(1000);
 
   await page
-    .getByTestId("model_specsChatOpenAI")
+    .getByTestId("modelsOpenAI")
     .first()
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.mouse.up();
@@ -65,7 +65,7 @@ test("IntComponent", async ({ page }) => {
     expect(false).toBeTruthy();
   }
 
-  await page.getByTestId("title-ChatOpenAI").click();
+  await page.getByTestId("title-OpenAI").click();
   await page.getByTitle("fit view").click();
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();

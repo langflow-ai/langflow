@@ -30,7 +30,7 @@ test("KeypairListComponent", async ({ page }) => {
   await page.waitForTimeout(1000);
 
   await page
-    .getByTestId("model_specsAmazon Bedrock")
+    .getByTestId("modelsAmazon Bedrock")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.mouse.up();
   await page.mouse.down();
@@ -38,6 +38,14 @@ test("KeypairListComponent", async ({ page }) => {
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
+
+  await page.getByTestId("more-options-modal").click();
+  await page.getByTestId("edit-button-modal").click();
+
+  await page.getByTestId("showmodel_kwargs").click();
+  expect(await page.getByTestId("showmodel_kwargs").isChecked()).toBeTruthy();
+  await page.getByText("Save Changes", { exact: true }).click();
+
   await page.locator('//*[@id="keypair0"]').click();
   await page.locator('//*[@id="keypair0"]').fill("testtesttesttest");
   await page.locator('//*[@id="keypair100"]').click();

@@ -17,7 +17,14 @@ test("should delete a flow", async ({ page }) => {
   await page.waitForTimeout(5000);
   await page.getByText("My Collection").nth(0).click();
   await page.getByText("Website Content QA").first().isVisible();
+
+  await page.getByLabel("checkbox-component").last().waitFor({
+    state: "visible",
+    timeout: 30000, // Timeout of 30 seconds
+  });
+
   await page.getByLabel("checkbox-component").first().click();
+
   await page.getByTestId("icon-Trash2").click();
   await page
     .getByText("Are you sure you want to delete the selected component?")
@@ -36,6 +43,12 @@ test("should delete a component", async ({ page }) => {
   await page.getByText("My Collection").nth(0).click();
   await page.getByText("Components").first().click();
   await page.getByText("Basic RAG").first().isVisible();
+
+  await page.getByLabel("checkbox-component").last().waitFor({
+    state: "visible",
+    timeout: 30000, // Timeout of 30 seconds
+  });
+
   await page.getByLabel("checkbox-component").first().click();
   await page.getByTestId("icon-Trash2").click();
   await page
