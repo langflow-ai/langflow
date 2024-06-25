@@ -171,6 +171,7 @@ import { CouchbaseIcon } from "../icons/Couchbase";
 import { ElasticsearchIcon } from "../icons/ElasticsearchStore";
 import { EvernoteIcon } from "../icons/Evernote";
 import { FBIcon } from "../icons/FacebookMessenger";
+import { FirecrawlIcon } from "../icons/Firecrawl";
 import { GitBookIcon } from "../icons/GitBook";
 import { GoogleIcon } from "../icons/Google";
 import { GoogleGenerativeAIIcon } from "../icons/GoogleGenerativeAI";
@@ -363,6 +364,8 @@ export const nodeIconsLucide: iconsType = {
   CohereEmbeddings: CohereIcon,
   EverNoteLoader: EvernoteIcon,
   FacebookChatLoader: FBIcon,
+  FirecrawlCrawlApi: FirecrawlIcon,
+  FirecrawlScrapeApi: FirecrawlIcon,
   GitbookLoader: GitBookIcon,
   GoogleSearchAPIWrapper: GoogleIcon,
   GoogleSearchResults: GoogleIcon,
