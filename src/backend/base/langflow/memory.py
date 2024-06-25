@@ -7,7 +7,7 @@ from sqlalchemy import delete
 from sqlmodel import Session, col, select
 
 from langflow.schema.message import Message
-from langflow.services.database.models.message.model import MessageRead, MessageTable
+from langflow.services.database.models.message.model import MessageTable
 from langflow.services.deps import session_scope
 
 
@@ -33,6 +33,7 @@ def get_messages(
     Returns:
         List[Data]: A list of Data objects representing the retrieved messages.
     """
+    messages_read: list[Message] = []
     with session_scope() as session:
         stmt = select(MessageTable)
         if sender:
@@ -52,22 +53,9 @@ def get_messages(
         if limit:
             stmt = stmt.limit(limit)
         messages = session.exec(stmt)
-        messages_read = [MessageRead.model_validate(d, from_attributes=True) for d in messages]
+        messages_read = [Message(**d.model_dump()) for d in messages]
 
-    messages: list[Message] = []
-
-    for msg_read in messages_read:
-        msg = Message(
-            text=msg_read.text,
-            sender=msg_read.sender,
-            session_id=msg_read.session_id,
-            sender_name=msg_read.sender_name,
-            timestamp=msg_read.timestamp,
-        )
-
-        messages.append(msg)
-
-    return messages
+    return messages_read
 
 
 def add_messages(messages: Message | list[Message], flow_id: Optional[str] = None):
@@ -102,7 +90,7 @@ def add_messagetables(messages: list[MessageTable], session: Session):
         except Exception as e:
             logger.exception(e)
             raise e
-    return messages
+    return [Message(**message.model_dump()) for message in messages]
 
 
 def delete_messages(session_id: str):
