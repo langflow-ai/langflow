@@ -1,9 +1,19 @@
 import { createContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Cookies from "universal-cookie";
-import { getLoggedUser, requestLogout } from "../controllers/API";
+import {
+  getGlobalVariables,
+  getLoggedUser,
+  requestLogout,
+} from "../controllers/API";
 import useAlertStore from "../stores/alertStore";
 import { useFolderStore } from "../stores/foldersStore";
+import { useGlobalVariablesStore } from "../stores/globalVariablesStore/globalVariables";
+import { useStoreStore } from "../stores/storeStore";
+import { Users } from "../types/api";
+import { AuthContextType } from "../types/contexts/auth";
+import { useGlobalVariablesStore } from "../stores/globalVariablesStore/globalVariables";
+import { useStoreStore } from "../stores/storeStore";
 import { Users } from "../types/api";
 import { AuthContextType } from "../types/contexts/auth";
 
@@ -45,6 +55,11 @@ export function AuthProvider({ children }): React.ReactElement {
   );
 
   const getFoldersApi = useFolderStore((state) => state.getFoldersApi);
+  const setGlobalVariables = useGlobalVariablesStore(
+    (state) => state.setGlobalVariables,
+  );
+  const checkHasStore = useStoreStore((state) => state.checkHasStore);
+  const fetchApiData = useStoreStore((state) => state.fetchApiData);
 
   useEffect(() => {
     const storedAccessToken = cookies.get("access_token_lf");
@@ -66,8 +81,11 @@ export function AuthProvider({ children }): React.ReactElement {
         setUserData(user);
         const isSuperUser = user!.is_superuser;
         setIsAdmin(isSuperUser);
-
         getFoldersApi(true, true);
+        const res = await getGlobalVariables();
+        setGlobalVariables(res);
+        checkHasStore();
+        fetchApiData();
       })
       .catch((error) => {
         setLoading(false);

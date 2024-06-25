@@ -6,7 +6,7 @@ from typing import Optional
 from urllib.parse import urlencode
 
 import nest_asyncio  # type: ignore
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -32,37 +32,31 @@ from langflow.utils.logger import configure
 warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
 
 
-class RequestCancelledMiddleware:
+class RequestCancelledMiddleware(BaseHTTPMiddleware):
     def __init__(self, app):
-        self.app = app
+        super().__init__(app)
 
-    async def __call__(self, scope, receive, send):
-        if scope["type"] != "http":
-            await self.app(scope, receive, send)
-            return
-
-        # Let's make a shared queue for the request messages
-        queue = asyncio.Queue()
-
-        async def message_poller(sentinel, handler_task):
-            nonlocal queue
-            while True:
-                message = await receive()
-                if message["type"] == "http.disconnect":
-                    handler_task.cancel()
-                    return sentinel  # Break the loop
-
-                # Puts the message in the queue
-                await queue.put(message)
-
+    async def dispatch(self, request: Request, call_next):
         sentinel = object()
-        handler_task = asyncio.create_task(self.app(scope, queue.get, send))
-        asyncio.create_task(message_poller(sentinel, handler_task))
 
-        try:
+        async def cancel_handler():
+            while True:
+                if await request.is_disconnected():
+                    return sentinel
+                await asyncio.sleep(0.1)
+
+        handler_task = asyncio.create_task(call_next(request))
+        cancel_task = asyncio.create_task(cancel_handler())
+
+        done, pending = await asyncio.wait([handler_task, cancel_task], return_when=asyncio.FIRST_COMPLETED)
+
+        for task in pending:
+            task.cancel()
+
+        if cancel_task in done:
+            return Response("Request was cancelled", status_code=499)
+        else:
             return await handler_task
-        except asyncio.CancelledError:
-            pass
 
 
 class JavaScriptMIMETypeMiddleware(BaseHTTPMiddleware):
@@ -130,7 +124,8 @@ def create_app():
         allow_headers=["*"],
     )
     app.add_middleware(JavaScriptMIMETypeMiddleware)
-    app.add_middleware(RequestCancelledMiddleware)
+    # ! Deactivating this until we find a better solution
+    # app.add_middleware(RequestCancelledMiddleware)
 
     @app.middleware("http")
     async def flatten_query_string_lists(request: Request, call_next):

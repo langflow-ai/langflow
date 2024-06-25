@@ -1,9 +1,13 @@
 name: Run Frontend Tests
 
 on:
-  pull_request:
-    paths:
-      - "src/frontend/**"
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "Branch to run tests on"
+        required: true
+        type: string
+
 
 env:
   POETRY_VERSION: "1.8.2"
@@ -15,6 +19,7 @@ env:
 
 jobs:
   setup-and-test:
+    name: Run Frontend Tests on branch ${{ inputs.branch }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -24,6 +29,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -88,7 +95,7 @@ jobs:
       - name: Run Playwright Tests
         run: |
           cd src/frontend
-          npx playwright test --shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --workers 2
+          npx playwright test --trace on --shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --workers 2
 
       - name: Upload blob report to GitHub Actions Artifacts
         if: always()

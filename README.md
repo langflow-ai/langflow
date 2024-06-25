@@ -42,6 +42,7 @@
 
 # 📝 Content
 
+- [](#)
 - [📝 Content](#-content)
 - [📦 Get Started](#-get-started)
 - [🎨 Create Flows](#-create-flows)
@@ -49,6 +50,7 @@
   - [Deploy Langflow on Google Cloud Platform](#deploy-langflow-on-google-cloud-platform)
   - [Deploy on Railway](#deploy-on-railway)
   - [Deploy on Render](#deploy-on-render)
+  - [Deploy on Kubernetes](#deploy-on-kubernetes)
 - [🖥️ Command Line Interface (CLI)](#️-command-line-interface-cli)
   - [Usage](#usage)
     - [Environment Variables](#environment-variables)
@@ -102,7 +104,6 @@ Alternatively, click the **"Open in Cloud Shell"** button below to launch Google
 ## Deploy on Railway
 
 Use this template to deploy Langflow 1.0 on Railway:
-
 
 [![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/JMXEWp?referralCode=MnPSdg)
 
