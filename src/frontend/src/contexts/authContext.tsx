@@ -8,13 +8,10 @@ import {
 } from "../controllers/API";
 import useAlertStore from "../stores/alertStore";
 import { useFolderStore } from "../stores/foldersStore";
-import {
-  useGlobalVariablesStore,
-  useGlobalVariablesStore,
-} from "../stores/globalVariablesStore/globalVariables";
-import { useStoreStore, useStoreStore } from "../stores/storeStore";
-import { Users, Users } from "../types/api";
-import { AuthContextType, AuthContextType } from "../types/contexts/auth";
+import { useGlobalVariablesStore } from "../stores/globalVariablesStore/globalVariables";
+import { useStoreStore } from "../stores/storeStore";
+import { Users } from "../types/api";
+import { AuthContextType } from "../types/contexts/auth";
 
 const initialValue: AuthContextType = {
   isAdmin: false,
