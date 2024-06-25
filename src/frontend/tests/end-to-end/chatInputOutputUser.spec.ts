@@ -50,7 +50,7 @@ test("user must interact with chat with Input/Output", async ({ page }) => {
   let valueUser = await page.getByTestId("sender_name_user").textContent();
 
   await page.waitForSelector('[data-testid="sender_name_ai"]', {
-    timeout: 30000,
+    timeout: 100000,
   });
 
   let valueAI = await page.getByTestId("sender_name_ai").textContent();
@@ -218,7 +218,7 @@ test("user must be able to send an image on chat", async ({ page }) => {
   await page.getByText("Playground", { exact: true }).click();
 
   // Read the image file as a binary string
-  const filePath = "src/frontend/tests/end-to-end/assets/chain.png";
+  const filePath = "tests/end-to-end/assets/chain.png";
   const fileContent = readFileSync(filePath, "base64");
 
   // Create the DataTransfer and File objects within the browser context

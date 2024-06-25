@@ -18,7 +18,7 @@ test("should delete a flow", async ({ page }) => {
   await page.getByText("My Collection").nth(0).click();
   await page.getByText("Website Content QA").first().isVisible();
 
-  await page.getByLabel("checkbox-component").waitFor({
+  await page.getByLabel("checkbox-component").last().waitFor({
     state: "visible",
     timeout: 30000, // Timeout of 30 seconds
   });
@@ -44,7 +44,7 @@ test("should delete a component", async ({ page }) => {
   await page.getByText("Components").first().click();
   await page.getByText("Basic RAG").first().isVisible();
 
-  await page.getByLabel("checkbox-component").waitFor({
+  await page.getByLabel("checkbox-component").last().waitFor({
     state: "visible",
     timeout: 30000, // Timeout of 30 seconds
   });

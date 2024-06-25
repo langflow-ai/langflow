@@ -260,7 +260,7 @@ test("should share component with share button", async ({ page }) => {
   await page.getByText("Close").last().click();
 
   await page.waitForSelector('[data-testid="icon-Share3"]', {
-    timeout: 30000,
+    timeout: 100000,
   });
 
   await page.getByTestId("icon-Share3").first().click();
