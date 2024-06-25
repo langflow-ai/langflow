@@ -48,14 +48,21 @@ test("user must interact with chat with Input/Output", async ({ page }) => {
   await page.getByPlaceholder("Send a message...").fill("Hello, how are you?");
   await page.getByTestId("icon-LucideSend").click();
   let valueUser = await page.getByTestId("sender_name_user").textContent();
+
+  await page.waitForSelector('[data-testid="sender_name_ai"]', {
+    timeout: 100000,
+  });
+
   let valueAI = await page.getByTestId("sender_name_ai").textContent();
 
   expect(valueUser).toBe("User");
   expect(valueAI).toBe("AI");
 
+  await page.keyboard.press("Escape");
+
   await page
     .getByTestId("textarea-input_value")
-    .nth(1)
+    .nth(0)
     .fill(
       "testtesttesttesttesttestte;.;.,;,.;,.;.,;,..,;;;;;;;;;;;;;;;;;;;;;,;.;,.;,.,;.,;.;.,~~çççççççççççççççççççççççççççççççççççççççisdajfdasiopjfaodisjhvoicxjiovjcxizopjviopasjioasfhjaiohf23432432432423423sttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttestççççççççççççççççççççççççççççççççç,.,.,.,.,.,.,.,.,.,.,.,.,.,.,.,.,!",
     );
@@ -73,11 +80,11 @@ test("user must interact with chat with Input/Output", async ({ page }) => {
   await page.getByText("Save Changes", { exact: true }).click();
 
   await page
-    .getByTestId("textarea-sender_name")
+    .getByTestId("popover-anchor-input-sender_name")
     .nth(1)
     .fill("TestSenderNameUser");
   await page
-    .getByTestId("textarea-sender_name")
+    .getByTestId("popover-anchor-input-sender_name")
     .nth(0)
     .fill("TestSenderNameAI");
 
@@ -150,6 +157,10 @@ test("user must be able to see output inspection", async ({ page }) => {
 
   await page.waitForTimeout(5000);
 
+  await page.waitForSelector('[data-testid="icon-ScanEye"]', {
+    timeout: 30000,
+  });
+
   await page.getByTestId("icon-ScanEye").nth(4).click();
 
   await page.getByText("Sender", { exact: true }).isVisible();
@@ -206,25 +217,34 @@ test("user must be able to send an image on chat", async ({ page }) => {
 
   await page.getByText("Playground", { exact: true }).click();
 
-  const jsonContent = readFileSync(
-    "src/frontend/tests/end-to-end/assets/chain.png",
-    "utf-8",
+  // Read the image file as a binary string
+  const filePath = "tests/end-to-end/assets/chain.png";
+  const fileContent = readFileSync(filePath, "base64");
+
+  // Create the DataTransfer and File objects within the browser context
+  const dataTransfer = await page.evaluateHandle(
+    ({ fileContent }) => {
+      const dt = new DataTransfer();
+      const byteCharacters = atob(fileContent);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const file = new File([byteArray], "chain.png", { type: "image/png" });
+      dt.items.add(file);
+      return dt;
+    },
+    { fileContent },
   );
 
-  // Create the DataTransfer and File
-  const dataTransfer = await page.evaluateHandle((data) => {
-    const dt = new DataTransfer();
-    // Convert the buffer to a hex array
-    const file = new File([data], "chain.png", {
-      type: "application/json",
-    });
-    dt.items.add(file);
-    return dt;
-  }, jsonContent);
-
+  // Locate the target element
   const element = await page.getByPlaceholder("Send a message...");
 
+  // Dispatch the drop event on the target element
   await element.dispatchEvent("drop", { dataTransfer });
+
+  await page.waitForTimeout(4000);
 
   await page.getByText("chain.png").isVisible();
   await page.getByTestId("icon-LucideSend").click();
@@ -232,6 +252,11 @@ test("user must be able to send an image on chat", async ({ page }) => {
   await page.getByText("chain.png").isVisible();
 
   await page.getByText("Close", { exact: true }).click();
+
+  await page.waitForSelector('[data-testid="icon-ScanEye"]', {
+    timeout: 30000,
+  });
+
   await page.getByTestId("icon-ScanEye").nth(4).click();
   await page.getByText("Restart").isHidden();
 });
