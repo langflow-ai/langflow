@@ -1,6 +1,6 @@
 import json
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, Field, field_serializer, field_validator
@@ -81,8 +81,7 @@ class TransactionModelResponse(DefaultModel):
         return v
 
 
-class DeprecatedMessageModel(DefaultModel):
-    index: int | None = Field(default=None)
+class DuckDbMessageModel(DefaultModel):
     flow_id: str | None = Field(default=None, alias="flow_id")
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     sender: str
