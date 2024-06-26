@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 from typing import Annotated, Any, AsyncIterator, Iterator, List, Optional
+from uuid import UUID
 
 from fastapi.encoders import jsonable_encoder
 from langchain_core.load import load
@@ -31,7 +32,14 @@ class Message(Data):
     timestamp: Annotated[str, BeforeValidator(_timestamp_to_str)] = Field(
         default=datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
     )
-    flow_id: Optional[str] = None
+    flow_id: Optional[str | UUID] = None
+
+    @field_validator("flow_id", mode="before")
+    @classmethod
+    def validate_flow_id(cls, value):
+        if isinstance(value, UUID):
+            value = str(value)
+        return value
 
     @field_validator("files", mode="before")
     @classmethod

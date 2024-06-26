@@ -2,10 +2,10 @@ import { deleteMessagesFn } from "../../../../../controllers/API";
 import { useMessagesStore } from "../../../../../stores/messagesStore";
 
 const useRemoveMessages = (
-  setSelectedRows,
-  setSuccessData,
-  setErrorData,
-  selectedRows,
+  setSelectedRows: (data: number[]) => void,
+  setSuccessData: (data: { title: string }) => void,
+  setErrorData: (data: { title: string }) => void,
+  selectedRows: number[],
 ) => {
   const deleteMessages = useMessagesStore((state) => state.removeMessages);
 
