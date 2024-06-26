@@ -3,7 +3,7 @@
 import re
 import warnings
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Dict, Optional
+from typing import TYPE_CHECKING, Dict, List, Optional
 from uuid import UUID, uuid4
 
 import emoji
@@ -17,6 +17,7 @@ from langflow.schema import Data
 
 if TYPE_CHECKING:
     from langflow.services.database.models.folder import Folder
+    from langflow.services.database.models.message import MessageTable
     from langflow.services.database.models.user import User
 
 
@@ -141,6 +142,7 @@ class Flow(FlowBase, table=True):
     user: "User" = Relationship(back_populates="flows")
     folder_id: Optional[UUID] = Field(default=None, foreign_key="folder.id", nullable=True, index=True)
     folder: Optional["Folder"] = Relationship(back_populates="flows")
+    messages: List["MessageTable"] = Relationship(back_populates="flow")
 
     def to_data(self):
         serialized = self.model_dump()
