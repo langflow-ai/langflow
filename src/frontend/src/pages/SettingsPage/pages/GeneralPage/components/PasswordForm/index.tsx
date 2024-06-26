@@ -10,6 +10,8 @@ import {
   CardTitle,
 } from "../../../../../../components/ui/card";
 
+import { useTranslation } from "react-i18next";
+
 type PasswordFormComponentProps = {
   password: string;
   cnfPassword: string;
@@ -26,6 +28,7 @@ const PasswordFormComponent = ({
   handleInput,
   handlePatchPassword,
 }: PasswordFormComponentProps) => {
+  const { t } = useTranslation();
   return (
     <>
       <Form.Root
@@ -36,9 +39,9 @@ const PasswordFormComponent = ({
       >
         <Card x-chunk="dashboard-04-chunk-2">
           <CardHeader>
-            <CardTitle>Password</CardTitle>
+            <CardTitle>{t("Password")}</CardTitle>
             <CardDescription>
-              Type your new password and confirm it.
+              {t("Type your new password and confirm it.")}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -52,11 +55,11 @@ const PasswordFormComponent = ({
                   value={password}
                   isForm
                   password={true}
-                  placeholder="Password"
+                  placeholder={t("Password")}
                   className="w-full"
                 />
                 <Form.Message match="valueMissing" className="field-invalid">
-                  Please enter your password
+                  {t("Please enter your password")}
                 </Form.Message>
               </Form.Field>
               <Form.Field name="cnfPassword" className="w-full">
@@ -70,12 +73,12 @@ const PasswordFormComponent = ({
                   value={cnfPassword}
                   isForm
                   password={true}
-                  placeholder="Confirm Password"
+                  placeholder={t("Confirm Password")}
                   className="w-full"
                 />
 
                 <Form.Message className="field-invalid" match="valueMissing">
-                  Please confirm your password
+                  {t("Please confirm your password")}
                 </Form.Message>
               </Form.Field>
             </div>

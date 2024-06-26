@@ -423,6 +423,7 @@
   "Success! New user added!": "新用户添加成功！",
   "Error signing in": "登录出错",
   "Password": "密码",
+  "Confirm Password": "确认密码",
   "Login": "登录",
 
   "Success! Key deleted!": "密钥删除成功！",
@@ -441,25 +442,6 @@
   "Account created! Await admin activation.": "账户已创建！请等待管理员激活。",
   "Sign up to Langflow": "注册Langflow",
 
-  "Chain the Words, Master Language!": "链接单词，掌握语言！",
-  "Language Architect at Work!": "语言建筑师在工作！",
-  "Empowering Language Engineering.": "赋能语言工程。",
-  "Craft Language Connections Here.": "在这里打造语言连接。",
-  "Create, Connect, Converse.": "创建，连接，对话。",
-  "Smart Chains, Smarter Conversations.": "智能链，更智能对话。",
-  "Bridging Prompts for Brilliance.": "为辉煌架起桥梁。",
-  "Language Models, Unleashed.": "语言模型，释放。",
-  "Your Hub for Text Generation.": "您的文本生成中心。",
-  "Promptly Ingenious!": "及时的天才！",
-  "Building Linguistic Labyrinths.": "构建语言迷宫。",
-  "Langflow: Create, Chain, Communicate.": "Langflow：创建，链接，交流。",
-  "Connect the Dots, Craft Language.": "连接点，打造语言。",
-  "Interactive Language Weaving.": "交互式语言编织。",
-  "Generate, Innovate, Communicate.": "生成，创新，交流。",
-  "Conversation Catalyst Engine.": "对话催化剂引擎。",
-  "Language Chainlink Master.": "语言链环大师。",
-  "Design Dialogues with Langflow.": "用Langflow设计对话。",
-  "Nurture NLP Nodes Here.": "在这里培育NLP节点。",
-  "Conversational Cartography Unlocked.": "解锁对话地图绘制。",
-  "Design, Develop, Dialogize.": "设计，开发，对话。"
+  "Type your new password and confirm it.": "输入新密码并确认"
+
 }
