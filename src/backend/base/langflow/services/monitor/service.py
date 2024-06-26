@@ -18,14 +18,14 @@ class MonitorService(Service):
     name = "monitor_service"
 
     def __init__(self, settings_service: "SettingsService"):
-        from langflow.services.monitor.schema import MessageModel, TransactionModel, VertexBuildModel
+        from langflow.services.monitor.schema import DeprecatedMessageModel, TransactionModel, VertexBuildModel
 
         self.settings_service = settings_service
         self.base_cache_dir = Path(user_cache_dir("langflow"))
         self.db_path = self.base_cache_dir / "monitor.duckdb"
-        self.table_map: dict[str, type[TransactionModel | MessageModel | VertexBuildModel]] = {
+        self.table_map: dict[str, type[TransactionModel | DeprecatedMessageModel | VertexBuildModel]] = {
             "transactions": TransactionModel,
-            "messages": MessageModel,
+            "messages": DeprecatedMessageModel,
             "vertex_builds": VertexBuildModel,
         }
 
@@ -68,12 +68,48 @@ class MonitorService(Service):
     def get_timestamp():
         return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
+    def get_messages(
+        self,
+        flow_id: str | None = None,
+        sender: str | None = None,
+        sender_name: str | None = None,
+        session_id: str | None = None,
+        order_by: str | None = "timestamp",
+        order: str | None = "DESC",
+        limit: int | None = None,
+    ):
+        query = "SELECT index, flow_id, sender_name, sender, session_id, text, files, timestamp FROM messages"
+        conditions = []
+        if sender:
+            conditions.append(f"sender = '{sender}'")
+        if sender_name:
+            conditions.append(f"sender_name = '{sender_name}'")
+        if session_id:
+            conditions.append(f"session_id = '{session_id}'")
+        if flow_id:
+            conditions.append(f"flow_id = '{flow_id}'")
+
+        if conditions:
+            query += " WHERE " + " AND ".join(conditions)
+
+        if order_by and order:
+            # Make sure the order is from newest to oldest
+            query += f" ORDER BY {order_by} {order.upper()}"
+
+        if limit is not None:
+            query += f" LIMIT {limit}"
+
+        with duckdb.connect(str(self.db_path), read_only=True) as conn:
+            df = conn.execute(query).df()
+
+        return df
+
     def get_vertex_builds(
         self,
-        flow_id: Optional[str] = None,
-        vertex_id: Optional[str] = None,
-        valid: Optional[bool] = None,
-        order_by: Optional[str] = "timestamp",
+        flow_id: str | None = None,
+        vertex_id: str | None = None,
+        valid: bool | None = None,
+        order_by: str | None = "timestamp",
     ):
         query = "SELECT id, index,flow_id, valid, params, data, artifacts, timestamp FROM vertex_builds"
         conditions = []
@@ -96,7 +132,7 @@ class MonitorService(Service):
 
         return df.to_dict(orient="records")
 
-    def delete_vertex_builds(self, flow_id: Optional[str] = None):
+    def delete_vertex_builds(self, flow_id: str | None = None):
         query = "DELETE FROM vertex_builds"
         if flow_id:
             query += f" WHERE flow_id = '{flow_id}'"
@@ -109,7 +145,7 @@ class MonitorService(Service):
 
         return self.exec_query(query, read_only=False)
 
-    def delete_messages(self, message_ids: Union[List[int], str]):
+    def delete_messages(self, message_ids: list[int] | str):
         if isinstance(message_ids, list):
             # If message_ids is a list, join the string representations of the integers
             ids_str = ",".join(map(str, message_ids))
@@ -132,11 +168,11 @@ class MonitorService(Service):
 
     def get_transactions(
         self,
-        source: Optional[str] = None,
-        target: Optional[str] = None,
-        status: Optional[str] = None,
-        order_by: Optional[str] = "timestamp",
-        flow_id: Optional[str] = None,
+        source: str | None = None,
+        target: str | None = None,
+        status: str | None = None,
+        order_by: str | None = "timestamp",
+        flow_id: str | None = None,
     ):
         query = (
             "SELECT index,flow_id, status, error, timestamp, vertex_id, inputs, outputs, target_id FROM transactions"
