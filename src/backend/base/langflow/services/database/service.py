@@ -211,7 +211,6 @@ class DatabaseService(Service):
             migrate_messages_from_monitor_service_to_database(session)
         except Exception as exc:
             logger.error(f"Error migrating messages from monitor service to database: {exc}")
-            raise RuntimeError("Error migrating messages from monitor service to database") from exc
 
         if fix:
             self.try_downgrade_upgrade_until_success(alembic_cfg)
