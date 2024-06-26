@@ -1444,7 +1444,7 @@ class Graph:
 
     def is_vertex_runnable(self, vertex_id: str) -> bool:
         """Returns whether a vertex is runnable."""
-        return self.run_manager.is_vertex_runnable(vertex_id)
+        return self.run_manager.is_vertex_runnable(vertex_id, self.inactivated_vertices)
 
     def build_run_map(self):
         """
@@ -1464,7 +1464,7 @@ class Graph:
         This checks the direct predecessors of each successor to identify any that are
         immediately runnable, expanding the search to ensure progress can be made.
         """
-        return self.run_manager.find_runnable_predecessors_for_successors(vertex_id)
+        return self.run_manager.find_runnable_predecessors_for_successors(vertex_id, self.inactivated_vertices)
 
     def remove_from_predecessors(self, vertex_id: str):
         self.run_manager.remove_from_predecessors(vertex_id)
