@@ -6,8 +6,26 @@ from alembic.util.exc import CommandError
 from loguru import logger
 from sqlmodel import Session, text
 
+from langflow.services.deps import get_monitor_service
+
 if TYPE_CHECKING:
     from langflow.services.database.service import DatabaseService
+
+
+def migrate_messages_from_monitor_service_to_database(session):
+    from langflow.schema.message import Message
+    from langflow.services.database.models.message import MessageTable
+
+    monitor_service = get_monitor_service()
+    messages_df = monitor_service.get_messages()
+    if not messages_df.empty:
+        messages_ids = []
+        for message in messages_df.to_dict(orient="records"):
+            messages_ids.append(message["index"])
+            message = Message(**message)
+            session.add(MessageTable.from_message(message))
+        session.commit()
+        monitor_service.delete_messages(messages_ids)
 
 
 def initialize_database(fix_migration: bool = False):
