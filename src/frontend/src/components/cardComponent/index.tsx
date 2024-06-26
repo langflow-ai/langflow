@@ -28,6 +28,11 @@ import { Checkbox } from "../ui/checkbox";
 import { FormControl, FormField } from "../ui/form";
 import Loading from "../ui/loading";
 import DragCardComponent from "./components/dragCardComponent";
+import useDataEffect from "./hooks/use-data-effect";
+import useInstallComponent from "./hooks/use-handle-install";
+import useLikeComponent from "./hooks/use-handle-like";
+import useDragStart from "./hooks/use-on-drag-start";
+import usePlaygroundEffect from "./hooks/use-playground-effect";
 import { convertTestName } from "./utils/convert-test-name";
 
 export default function CollectionCardComponent({
@@ -59,11 +64,9 @@ export default function CollectionCardComponent({
   const isStore = false;
   const [loading, setLoading] = useState(false);
   const [loadingLike, setLoadingLike] = useState(false);
-  const [liked_by_user, setLiked_by_user] = useState(
-    data?.liked_by_user ?? false,
-  );
-  const [likes_count, setLikes_count] = useState(data?.liked_by_count ?? 0);
-  const [downloads_count, setDownloads_count] = useState(
+  const [likedByUser, setLikedByUser] = useState(data?.liked_by_user ?? false);
+  const [likesCount, setLikesCount] = useState(data?.liked_by_count ?? 0);
+  const [downloadsCount, setDownloadsCount] = useState(
     data?.downloads_count ?? 0,
   );
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
@@ -99,115 +102,45 @@ export default function CollectionCardComponent({
     return inputs.length > 0 || outputs.length > 0;
   }
 
-  useEffect(() => {
-    if (currentFlowId && playground) {
-      if (openPlayground) {
-        setNodes(currentFlow?.data?.nodes ?? [], true);
-        setEdges(currentFlow?.data?.edges ?? [], true);
-      } else {
-        setNodes([], true);
-        setEdges([], true);
-      }
-      cleanFlowPool();
-    }
-  }, [openPlayground]);
+  usePlaygroundEffect(
+    currentFlowId,
+    playground!,
+    openPlayground,
+    currentFlow,
+    setNodes,
+    setEdges,
+    cleanFlowPool,
+  );
 
-  useEffect(() => {
-    if (data) {
-      setLiked_by_user(data?.liked_by_user ?? false);
-      setLikes_count(data?.liked_by_count ?? 0);
-      setDownloads_count(data?.downloads_count ?? 0);
-    }
-  }, [data, data.liked_by_count, data.liked_by_user, data.downloads_count]);
+  useDataEffect(data, setLikedByUser, setLikesCount, setDownloadsCount);
 
-  function handleInstall() {
-    const temp = downloads_count;
-    setDownloads_count((old) => Number(old) + 1);
-    setLoading(true);
-    getComponent(data.id)
-      .then((res) => {
-        const newFlow = cloneFLowWithParent(res, res.id, data.is_component);
-        addFlow(true, newFlow)
-          .then((id) => {
-            setSuccessData({
-              title: `${name} ${
-                isStore ? "Downloaded" : "Installed"
-              } Successfully.`,
-            });
-            setLoading(false);
-          })
-          .catch((error) => {
-            setLoading(false);
-            setErrorData({
-              title: `Error ${
-                isStore ? "downloading" : "installing"
-              } the ${name}`,
-              list: [error["response"]["data"]["detail"]],
-            });
-          });
-      })
-      .catch((err) => {
-        setLoading(false);
-        setErrorData({
-          title: `Error ${isStore ? "downloading" : "installing"} the ${name}`,
-          list: [err["response"]["data"]["detail"]],
-        });
-        setDownloads_count(temp);
-      });
-  }
+  const { handleInstall } = useInstallComponent(
+    data,
+    name,
+    isStore,
+    downloadsCount,
+    setDownloadsCount,
+    setLoading,
+    setSuccessData,
+    setErrorData,
+  );
 
-  function handleLike() {
-    setLoadingLike(true);
-    if (liked_by_user !== undefined || liked_by_user !== null) {
-      const temp = liked_by_user;
-      const tempNum = likes_count;
-      setLiked_by_user((prev) => !prev);
-      if (!temp) {
-        setLikes_count((prev) => Number(prev) + 1);
-      } else {
-        setLikes_count((prev) => Number(prev) - 1);
-      }
-      postLikeComponent(data.id)
-        .then((response) => {
-          setLoadingLike(false);
-          setLikes_count(response.data.likes_count);
-          setLiked_by_user(response.data.liked_by_user);
-        })
-        .catch((error) => {
-          setLoadingLike(false);
-          setLikes_count(tempNum);
-          setLiked_by_user(temp);
-          if (error.response.status === 403) {
-            setValidApiKey(false);
-          } else {
-            console.error(error);
-            setErrorData({
-              title: `Error liking ${name}.`,
-              list: [error["response"]["data"]["detail"]],
-            });
-          }
-        });
-    }
-  }
+  const { handleLike } = useLikeComponent(
+    data,
+    name,
+    setLoadingLike,
+    likedByUser,
+    likesCount,
+    setLikedByUser,
+    setLikesCount,
+    setValidApiKey,
+    setErrorData,
+  );
 
   const isSelectedCard =
     selectedFlowsComponentsCards?.includes(data?.id) ?? false;
 
-  function onDragStart(event: React.DragEvent<any>) {
-    let image: JSX.Element = <DragCardComponent data={data} />; // <== whatever you want here
-
-    var ghost = document.createElement("div");
-    ghost.style.transform = "translate(-10000px, -10000px)";
-    ghost.style.position = "absolute";
-    document.body.appendChild(ghost);
-    event.dataTransfer.setDragImage(ghost, 0, 0);
-    const root = createRoot(ghost);
-    root.render(image);
-    const flow = getFlowById(data.id);
-    if (flow) {
-      event.dataTransfer.setData("flow", JSON.stringify(data));
-    }
-  }
+  const { onDragStart } = useDragStart(data);
 
   return (
     <>
@@ -264,7 +197,7 @@ export default function CollectionCardComponent({
                       <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
                         <IconComponent name="Heart" className={cn("h-4 w-4")} />
                         <span data-testid={`likes-${data.name}`}>
-                          {likes_count ?? 0}
+                          {likesCount ?? 0}
                         </span>
                       </span>
                     </ShadTooltip>
@@ -275,7 +208,7 @@ export default function CollectionCardComponent({
                           className="h-4 w-4"
                         />
                         <span data-testid={`downloads-${data.name}`}>
-                          {downloads_count ?? 0}
+                          {downloadsCount ?? 0}
                         </span>
                       </span>
                     </ShadTooltip>
@@ -324,20 +257,7 @@ export default function CollectionCardComponent({
                   )}
                 </span>
               )}
-              <div className="flex w-full flex-1 flex-wrap gap-2">
-                {/* {data.tags &&
-                  data.tags.length > 0 &&
-                  data.tags.map((tag, index) => (
-                    <Badge
-                      key={index}
-                      variant="outline"
-                      size="xq"
-                      className="text-muted-foreground"
-                    >
-                      {tag.name}
-                    </Badge>
-                  ))} */}
-              </div>
+              <div className="flex w-full flex-1 flex-wrap gap-2"></div>
             </div>
 
             <CardDescription className="pb-2 pt-2">
@@ -457,7 +377,7 @@ export default function CollectionCardComponent({
                           name="Heart"
                           className={cn(
                             "h-5 w-5",
-                            liked_by_user
+                            likedByUser
                               ? "fill-destructive stroke-destructive"
                               : "",
                             !authorized ? "text-ring" : "",
