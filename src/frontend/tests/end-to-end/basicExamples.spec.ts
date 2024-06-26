@@ -41,6 +41,9 @@ test("Basic Prompting (Hello, World)", async ({ page }) => {
     .getByTestId("popover-anchor-input-openai_api_key")
     .fill(process.env.OPENAI_API_KEY ?? "");
 
+  await page.getByTestId("dropdown-model_name").click();
+  await page.getByText("gpt-4o", { exact: true }).click();
+
   await page.getByTestId("button_run_chat output").click();
   await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
@@ -120,6 +123,9 @@ test("Memory Chatbot", async ({ page }) => {
   await page
     .getByTestId("popover-anchor-input-openai_api_key")
     .fill(process.env.OPENAI_API_KEY ?? "");
+
+  await page.getByTestId("dropdown-model_name").click();
+  await page.getByText("gpt-4o", { exact: true }).click();
 
   await page.getByTestId("button_run_chat output").click();
   await page.waitForSelector("text=built successfully", { timeout: 30000 });
@@ -211,6 +217,9 @@ test("Document QA", async ({ page }) => {
     .getByTestId("popover-anchor-input-openai_api_key")
     .fill(process.env.OPENAI_API_KEY ?? "");
 
+  await page.getByTestId("dropdown-model_name").click();
+  await page.getByText("gpt-4o", { exact: true }).click();
+
   const fileChooserPromise = page.waitForEvent("filechooser");
   await page.getByTestId("icon-FileSearch2").click();
   const fileChooser = await fileChooserPromise;
@@ -300,6 +309,9 @@ test("Blog Writer", async ({ page }) => {
   await page
     .getByTestId("popover-anchor-input-openai_api_key")
     .fill(process.env.OPENAI_API_KEY ?? "");
+
+  await page.getByTestId("dropdown-model_name").click();
+  await page.getByText("gpt-4o", { exact: true }).click();
 
   await page
     .getByTestId("input-list-input_urls-0")

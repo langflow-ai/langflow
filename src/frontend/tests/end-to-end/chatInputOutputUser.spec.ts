@@ -46,6 +46,10 @@ test("user must interact with chat with Input/Output", async ({ page }) => {
   await page
     .getByTestId("popover-anchor-input-openai_api_key")
     .fill(process.env.OPENAI_API_KEY ?? "");
+
+  await page.getByTestId("dropdown-model_name").click();
+  await page.getByText("gpt-4o", { exact: true }).click();
+
   await page.getByText("Playground", { exact: true }).click();
 
   await page.waitForSelector('[data-testid="input-chat-playground"]', {
@@ -162,6 +166,9 @@ test("user must be able to see output inspection", async ({ page }) => {
     .getByTestId("popover-anchor-input-openai_api_key")
     .fill(process.env.OPENAI_API_KEY ?? "");
 
+  await page.getByTestId("dropdown-model_name").click();
+  await page.getByText("gpt-4o", { exact: true }).click();
+
   await page.getByTestId("button_run_chat output").last().click();
 
   await page.waitForTimeout(5000);
@@ -220,6 +227,9 @@ test("user must be able to send an image on chat", async ({ page }) => {
   await page
     .getByTestId("popover-anchor-input-openai_api_key")
     .fill(process.env.OPENAI_API_KEY ?? "");
+
+  await page.getByTestId("dropdown-model_name").click();
+  await page.getByText("gpt-4o", { exact: true }).click();
 
   await page.getByText("Chat Input", { exact: true }).click();
   await page.getByTestId("more-options-modal").click();
