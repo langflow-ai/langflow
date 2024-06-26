@@ -18,11 +18,7 @@ export default function NewFlowCardComponent() {
   return (
     <Card
       onClick={() => {
-        console.error("flow.data", "new flow");
-        console.error("flow.data", "new flow");
         addFlow(true).then((id) => {
-          console.error("flow.data", id);
-          console.error("flow.data", id);
           setFolderUrl(folderId ?? "");
           navigate(`/flow/${id}${folderId ? `/folder/${folderId}` : ""}`);
         });
