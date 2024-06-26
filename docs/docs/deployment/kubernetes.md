@@ -1,10 +1,4 @@
-import Admonition from "@theme/Admonition";
-
 # Kubernetes
-
-<Admonition type="warning" title="warning">
-This page may contain outdated information. It will be updated as soon as possible.
-</Admonition>
 
 This guide will help you get LangFlow up and running in Kubernetes cluster, including the following steps:
 
