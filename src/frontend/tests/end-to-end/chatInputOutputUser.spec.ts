@@ -29,7 +29,9 @@ test("user must interact with chat with Input/Output", async ({ page }) => {
   }
 
   await page.getByRole("heading", { name: "Basic Prompting" }).click();
-  await page.waitForTimeout(1000);
+  await page.waitForSelector('[title="fit view"]', {
+    timeout: 100000,
+  });
 
   await page.getByTitle("fit view").click();
   await page.getByTitle("zoom out").click();
@@ -45,7 +47,12 @@ test("user must interact with chat with Input/Output", async ({ page }) => {
     .getByTestId("popover-anchor-input-openai_api_key")
     .fill(process.env.OPENAI_API_KEY ?? "");
   await page.getByText("Playground", { exact: true }).click();
-  await page.getByPlaceholder("Send a message...").fill("Hello, how are you?");
+
+  await page.waitForSelector('[data-testid="input-chat-playground"]', {
+    timeout: 100000,
+  });
+
+  await page.getByTestId("input-chat-playground").fill("Hello, how are you?");
   await page.getByTestId("icon-LucideSend").click();
   let valueUser = await page.getByTestId("sender_name_user").textContent();
 
@@ -137,7 +144,9 @@ test("user must be able to see output inspection", async ({ page }) => {
   }
 
   await page.getByRole("heading", { name: "Basic Prompting" }).click();
-  await page.waitForTimeout(1000);
+  await page.waitForSelector('[title="fit view"]', {
+    timeout: 100000,
+  });
 
   await page.getByTitle("fit view").click();
   await page.getByTitle("zoom out").click();
@@ -194,7 +203,9 @@ test("user must be able to send an image on chat", async ({ page }) => {
   }
 
   await page.getByRole("heading", { name: "Basic Prompting" }).click();
-  await page.waitForTimeout(1000);
+  await page.waitForSelector('[title="fit view"]', {
+    timeout: 100000,
+  });
 
   await page.getByTitle("fit view").click();
   await page.getByTitle("zoom out").click();
@@ -239,7 +250,7 @@ test("user must be able to send an image on chat", async ({ page }) => {
   );
 
   // Locate the target element
-  const element = await page.getByPlaceholder("Send a message...");
+  const element = await page.getByTestId("input-chat-playground");
 
   // Dispatch the drop event on the target element
   await element.dispatchEvent("drop", { dataTransfer });

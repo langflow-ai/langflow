@@ -46,6 +46,11 @@ test("LangflowShortcuts", async ({ page }) => {
   await page.mouse.down();
 
   await page.locator('//*[@id="react-flow-id"]/div/div[2]/button[3]').click();
+
+  await page.waitForSelector('[title="fit view"]', {
+    timeout: 100000,
+  });
+
   await page.getByTitle("fit view").click();
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
