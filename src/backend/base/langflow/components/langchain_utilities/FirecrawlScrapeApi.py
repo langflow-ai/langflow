@@ -2,8 +2,6 @@ from typing import Optional
 from firecrawl.firecrawl import FirecrawlApp
 from langflow.custom import CustomComponent
 from langflow.schema import Data
-from langflow.services.database.models.base import orjson_dumps
-import json
 
 class FirecrawlScrapeApi(CustomComponent):
     display_name: str = "FirecrawlScrapeApi"
