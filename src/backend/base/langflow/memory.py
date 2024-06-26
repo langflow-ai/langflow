@@ -1,5 +1,4 @@
 import warnings
-from typing import List, Optional
 from uuid import UUID
 
 from loguru import logger
@@ -8,17 +7,18 @@ from sqlmodel import Session, col, select
 
 from langflow.schema.message import Message
 from langflow.services.database.models.message.model import MessageRead, MessageTable
+from langflow.services.database.utils import migrate_messages_from_monitor_service_to_database
 from langflow.services.deps import session_scope
 
 
 def get_messages(
-    sender: Optional[str] = None,
-    sender_name: Optional[str] = None,
-    session_id: Optional[str] = None,
-    order_by: Optional[str] = "timestamp",
-    order: Optional[str] = "DESC",
-    flow_id: Optional[UUID] = None,
-    limit: Optional[int] = None,
+    sender: str | None = None,
+    sender_name: str | None = None,
+    session_id: str | None = None,
+    order_by: str | None = "timestamp",
+    order: str | None = "DESC",
+    flow_id: UUID | None = None,
+    limit: int | None = None,
 ):
     """
     Retrieves messages from the monitor service based on the provided filters.
@@ -33,6 +33,7 @@ def get_messages(
     Returns:
         List[Data]: A list of Data objects representing the retrieved messages.
     """
+    migrate_messages_from_monitor_service_to_database()
     messages_read: list[Message] = []
     with session_scope() as session:
         stmt = select(MessageTable)
@@ -58,7 +59,7 @@ def get_messages(
     return messages_read
 
 
-def add_messages(messages: Message | list[Message], flow_id: Optional[str] = None):
+def add_messages(messages: Message | list[Message], flow_id: str | None = None):
     """
     Add a message to the monitor service.
     """
@@ -111,8 +112,8 @@ def delete_messages(session_id: str):
 
 def store_message(
     message: Message,
-    flow_id: Optional[str] = None,
-) -> List[Message]:
+    flow_id: str | None = None,
+) -> list[Message]:
     """
     Stores a message in the memory.
 
