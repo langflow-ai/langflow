@@ -1208,6 +1208,7 @@ class Graph:
         except ValueError:
             stop_or_start_vertex = self.get_root_of_group_node(vertex_id)
             stack = [stop_or_start_vertex.id]
+            vertex_id = stop_or_start_vertex.id
         stop_predecessors = [pre.id for pre in stop_or_start_vertex.predecessors]
         # DFS to collect all vertices that can reach the specified vertex
         while stack:
