@@ -108,7 +108,13 @@ test("check if tweaks are updating when someothing on the flow changes", async (
     .getByTestId("popover-anchor-input-persist_directory")
     .fill("persist_directory_123123123!@#$&*(&%$@");
 
-  await page.getByText("API", { exact: true }).first().click();
+  const focusElementsOnBoard = async ({ page }) => {
+    await page.waitForSelector("text=API", { timeout: 30000 });
+    const focusElements = await page.getByText("API", { exact: true }).first();
+    await focusElements.click();
+  };
+
+  await focusElementsOnBoard({ page });
 
   await page.getByText("Tweaks").nth(1).click();
 

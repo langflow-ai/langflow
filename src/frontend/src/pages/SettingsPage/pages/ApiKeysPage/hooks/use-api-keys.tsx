@@ -1,7 +1,13 @@
 import { getApiKey } from "../../../../../controllers/API";
+import { Users } from "../../../../../types/api";
 import { useTranslation } from "react-i18next";
 
-const useApiKeys = (userData, setLoadingKeys, keysList, setUserId) => {
+const useApiKeys = (
+  userData: Users | null,
+  setLoadingKeys: (load: boolean) => void,
+  keysList: React.MutableRefObject<never[]>,
+  setUserId: (userId: string) => void,
+) => {
   const { t } = useTranslation();
   const fetchApiKeys = () => {
     setLoadingKeys(true);

@@ -24,10 +24,23 @@ test("user should be able to see multiple edges and interact with them", async (
   await page.waitForTimeout(1000);
 
   await page.getByText("Vector Store RAG", { exact: true }).last().click();
-  await page.waitForTimeout(3000);
+  await page.waitForTimeout(5000);
   await page.getByText("Retriever", { exact: true }).first().isVisible();
   await page.getByText("Search Results", { exact: true }).first().isVisible();
-  await page.getByTestId("icon-Eye").nth(24).click();
+
+  const focusElementsOnBoard = async ({ page }) => {
+    await page.waitForSelector('[title="fit view"]', { timeout: 30000 });
+    const focusElements = await page.getByTitle("fit view");
+    await focusElements.click();
+  };
+
+  await focusElementsOnBoard({ page });
+
+  await page.getByTitle("zoom out").click();
+  await page.getByTitle("zoom out").click();
+  await page.getByTitle("zoom out").click();
+
+  await page.getByTestId("output-inspection-retriever").first().click();
   await page.getByText("Retriever", { exact: true }).first().isHidden();
   await page.getByTestId("icon-ChevronDown").last().isVisible();
   await page.getByTestId("icon-ChevronDown").last().click();

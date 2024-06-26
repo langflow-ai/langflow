@@ -239,7 +239,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
               }
             >
               <IconComponent name="Square" className="h-4 w-4" />
-              <span>{t(Stop)}</span>
+              <span>t("Stop")</span>
             </button> */}
           </div>
         </ShadTooltip>

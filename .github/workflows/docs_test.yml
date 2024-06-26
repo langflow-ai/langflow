@@ -1,21 +1,20 @@
-name: Lint Frontend
+name: Test Docs Build
 
 on:
   pull_request:
     paths:
-      - "src/frontend/**"
+      - "docs/**"
   merge_group:
-    branches: [dev]
+    types: [checks_requested]
 
 env:
   NODE_VERSION: "21"
 
+
 jobs:
-  run-linters:
-    name: Run Prettier
+  test-docs-build:
+    name: Test Docs Build
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
 
     steps:
       - name: Checkout code
@@ -32,19 +31,17 @@ jobs:
         id: npm-cache
         with:
           path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('src/frontend/package-lock.json') }}
+          key: ${{ runner.os }}-node-${{ hashFiles('docs/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-node-
 
       - name: Install Node.js dependencies
         run: |
-          cd src/frontend
+          cd docs
           npm install
         if: ${{ steps.setup-node.outputs.cache-hit != 'true' }}
 
-      - name: Run Prettier
+      - name: Build Docs
         run: |
-          cd src/frontend
-          npm run check-format
-
-
+          cd docs
+          npm run build
