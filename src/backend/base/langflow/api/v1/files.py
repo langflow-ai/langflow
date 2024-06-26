@@ -131,8 +131,8 @@ async def list_profile_pictures(storage_service: StorageService = Depends(get_st
         people = await storage_service.list_files(flow_id=people_path)  # type: ignore
         space = await storage_service.list_files(flow_id=space_path)  # type: ignore
 
-        files = [Path("People") / i for i in people]
-        files += [Path("Space") / i for i in space]
+        files = [f"People/{i}" for i in people]
+        files += [f"Space/{i}" for i in space]
 
         return {"files": files}
 
