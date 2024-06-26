@@ -33,7 +33,8 @@ def get_messages(
     Returns:
         List[Data]: A list of Data objects representing the retrieved messages.
     """
-    migrate_messages_from_monitor_service_to_database()
+    with session_scope() as session:
+        migrate_messages_from_monitor_service_to_database(session)
     messages_read: list[Message] = []
     with session_scope() as session:
         stmt = select(MessageTable)
