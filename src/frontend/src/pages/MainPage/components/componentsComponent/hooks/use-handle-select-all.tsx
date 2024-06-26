@@ -1,6 +1,11 @@
 import { useCallback } from "react";
+import { FlowType } from "../../../../../types/flow";
 
-const useSelectAll = (flowsFromFolder, getValues, setValue) => {
+const useSelectAll = (
+  flowsFromFolder: FlowType[],
+  getValues: () => Record<string, boolean>,
+  setValue: (key: string, value: boolean) => void,
+) => {
   const handleSelectAll = useCallback(
     (select) => {
       const flowsFromFolderIds = flowsFromFolder?.map((f) => f.id);
