@@ -8,7 +8,7 @@ export type MessagesStoreType = {
   removeMessage: (message: Message) => void;
   updateMessage: (message: Message) => void;
   clearMessages: () => void;
-  removeMessages: (ids: number[]) => void;
+  removeMessages: (ids: string[]) => void;
   columns: Array<ColDef | ColGroupDef>;
   setColumns: (columns: Array<ColDef | ColGroupDef>) => void;
   deleteSession: (id: string) => void;
