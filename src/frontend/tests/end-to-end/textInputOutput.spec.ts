@@ -166,8 +166,9 @@ test("TextInputOutputComponent", async ({ page }) => {
     .fill(process.env.OPENAI_API_KEY ?? "");
 
   await page.getByTestId("dropdown-model_name").click();
-  await page.getByText("gpt-4o", { exact: true }).click();
+  await page.getByTestId("gpt-4o-0-option").click();
 
+  await page.waitForTimeout(2000);
   await page.getByText("Playground", { exact: true }).click();
   await page.getByText("Run Flow", { exact: true }).click();
 
