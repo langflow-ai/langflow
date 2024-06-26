@@ -35,16 +35,20 @@ def created_messages(session):
         return messages_read
 
 
-def test_get_messages(session):
-    add_messages(Message(text="Test message 1", sender="User", sender_name="User", session_id="session_id2"))
-    add_messages(Message(text="Test message 2", sender="User", sender_name="User", session_id="session_id2"))
+def test_get_messages():
+    add_messages(
+        [
+            Message(text="Test message 1", sender="User", sender_name="User", session_id="session_id2"),
+            Message(text="Test message 2", sender="User", sender_name="User", session_id="session_id2"),
+        ]
+    )
     messages = get_messages(sender="User", session_id="session_id2", limit=2)
     assert len(messages) == 2
     assert messages[0].text == "Test message 1"
     assert messages[1].text == "Test message 2"
 
 
-def test_add_messages(session):
+def test_add_messages():
     message = Message(text="New Test message", sender="User", sender_name="User", session_id="new_session_id")
     messages = add_messages(message)
     assert len(messages) == 1
@@ -65,7 +69,7 @@ def test_delete_messages(session):
     assert len(messages) == 0
 
 
-def test_store_message(session):
+def test_store_message():
     message = Message(text="Stored message", sender="User", sender_name="User", session_id="stored_session_id")
     stored_messages = store_message(message)
     assert len(stored_messages) == 1
