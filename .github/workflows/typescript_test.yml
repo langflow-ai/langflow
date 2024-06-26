@@ -8,7 +8,6 @@ on:
         required: true
         type: string
 
-
 env:
   POETRY_VERSION: "1.8.2"
   NODE_VERSION: "21"
@@ -95,28 +94,27 @@ jobs:
       - name: Run Playwright Tests
         run: |
           cd src/frontend
-          npx playwright test --trace on --shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --workers 2
+          npx playwright test --shard=${{ matrix.shardIndex }}/${{ matrix.shardTotal }}
 
       - name: Upload blob report to GitHub Actions Artifacts
-        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: blob-report-${{ matrix.shardIndex }}
-          path: src/frontend/blob-report
+          path: blob-report
           retention-days: 1
 
   merge-reports:
-    needs: setup-and-test
-    runs-on: ubuntu-latest
-    if: always()
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    if: ${{ !cancelled() }}
+    needs: [setup-and-test]
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
+      - name: Install dependencies
+        run: npm ci
 
       - name: Download blob reports from GitHub Actions Artifacts
         uses: actions/download-artifact@v4
@@ -126,8 +124,7 @@ jobs:
           merge-multiple: true
 
       - name: Merge into HTML Report
-        run: |
-          npx playwright merge-reports --reporter html ./all-blob-reports
+        run: npx playwright merge-reports --reporter html ./all-blob-reports
 
       - name: Upload HTML report
         uses: actions/upload-artifact@v4
