@@ -68,6 +68,7 @@ class DirectoryComponent(Component):
 
     def load_directory(self) -> List[Optional[Data]]:
         path = self.path
+        types = self.types.split() if self.types else []
         depth = self.depth
         max_concurrency = self.max_concurrency
         load_hidden = self.load_hidden
@@ -77,6 +78,10 @@ class DirectoryComponent(Component):
 
         resolved_path = self.resolve_path(path)
         file_paths = retrieve_file_paths(resolved_path, load_hidden, recursive, depth)
+
+        if types:
+            file_paths = [fp for fp in file_paths if any(fp.endswith(ext) for ext in types)]
+
         loaded_data = []
 
         if use_multithreading:
