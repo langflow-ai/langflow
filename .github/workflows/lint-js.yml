@@ -5,7 +5,7 @@ on:
     paths:
       - "src/frontend/**"
   merge_group:
-    branches: [dev]
+    types: [checks_requested]
 
 env:
   NODE_VERSION: "21"
