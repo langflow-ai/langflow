@@ -83,6 +83,10 @@ test("erase button should clear the chat messages", async ({ page }) => {
   await page
     .getByTestId("popover-anchor-input-openai_api_key")
     .fill(process.env.OPENAI_API_KEY ?? "");
+
+  await page.getByTestId("dropdown-model_name").click();
+  await page.getByText("gpt-4o", { exact: true }).click();
+
   await page.getByText("Playground", { exact: true }).click();
 
   await page.waitForSelector('[data-testid="input-chat-playground"]', {
