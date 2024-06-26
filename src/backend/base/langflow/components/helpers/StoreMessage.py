@@ -11,12 +11,7 @@ class StoreMessageComponent(Component):
     icon = "save"
 
     inputs = [
-        MessageInput(
-            name="message",
-            display_name="Message",
-            info="The chat message to be stored.",
-            required=True
-        ),
+        MessageInput(name="message", display_name="Message", info="The chat message to be stored.", required=True),
         StrInput(
             name="sender",
             display_name="Sender",
@@ -25,11 +20,7 @@ class StoreMessageComponent(Component):
             advanced=True,
         ),
         StrInput(
-            name="sender_name",
-            display_name="Sender Name",
-            info="The name of the sender.",
-            value="AI",
-            advanced=True
+            name="sender_name", display_name="Sender Name", info="The name of the sender.", value="AI", advanced=True
         ),
         StrInput(
             name="session_id",
