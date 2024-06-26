@@ -25,6 +25,8 @@ jobs:
       matrix:
         shardIndex: [1, 2, 3, 4, 5]
         shardTotal: [5]
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
