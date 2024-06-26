@@ -4,6 +4,7 @@ from langflow.custom import CustomComponent
 from langflow.schema import Data
 import uuid
 
+
 class FirecrawlCrawlApi(CustomComponent):
     display_name: str = "FirecrawlCrawlApi"
     description: str = "Firecrawl Crawl API."
@@ -53,12 +54,12 @@ class FirecrawlCrawlApi(CustomComponent):
         idempotency_key: Optional[str] = None,
     ) -> Data:
         if crawlerOptions:
-            crawler_options_dict = crawlerOptions.__dict__['data']['text']
+            crawler_options_dict = crawlerOptions.__dict__["data"]["text"]
         else:
             crawler_options_dict = {}
 
         if pageOptions:
-            page_options_dict = pageOptions.__dict__['data']['text']
+            page_options_dict = pageOptions.__dict__["data"]["text"]
         else:
             page_options_dict = {}
 
@@ -74,7 +75,7 @@ class FirecrawlCrawlApi(CustomComponent):
             },
             True,
             int(timeout / 1000),
-            idempotency_key
+            idempotency_key,
         )
 
         records = Data(data={"results": crawl_result})
