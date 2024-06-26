@@ -119,7 +119,11 @@ class LCModelComponent(Component):
         return status_message
 
     def get_chat_result(
-        self, runnable: LanguageModel, stream: bool, input_value: str | Message, system_message: Optional[str] = None
+        self,
+        runnable: LanguageModel,
+        stream: bool,
+        input_value: str | Message,
+        system_message: Optional[str] = None,
     ):
         messages: list[Union[BaseMessage]] = []
         if not input_value and not system_message:
