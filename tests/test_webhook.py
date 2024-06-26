@@ -26,3 +26,15 @@ def test_webhook_endpoint(client, added_webhook_test):
     response = client.post(endpoint, json=payload)
     assert response.status_code == 202
     assert not file_path.exists()
+
+
+def test_webhook_with_random_payload(client, added_webhook_test):
+    endpoint_name = added_webhook_test["endpoint_name"]
+    endpoint = f"api/v1/webhook/{endpoint_name}"
+    # Just test that "Random Payload" returns 202
+    # returns 202
+    response = client.post(
+        endpoint,
+        json="Random Payload",
+    )
+    assert response.status_code == 202
