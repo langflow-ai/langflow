@@ -1,6 +1,6 @@
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, List, Optional, Union
+from typing import TYPE_CHECKING, Union
 
 import duckdb
 from loguru import logger
@@ -18,14 +18,14 @@ class MonitorService(Service):
     name = "monitor_service"
 
     def __init__(self, settings_service: "SettingsService"):
-        from langflow.services.monitor.schema import DeprecatedMessageModel, TransactionModel, VertexBuildModel
+        from langflow.services.monitor.schema import DuckDbMessageModel, TransactionModel, VertexBuildModel
 
         self.settings_service = settings_service
         self.base_cache_dir = Path(user_cache_dir("langflow"))
         self.db_path = self.base_cache_dir / "monitor.duckdb"
-        self.table_map: dict[str, type[TransactionModel | DeprecatedMessageModel | VertexBuildModel]] = {
+        self.table_map: dict[str, type[TransactionModel | DuckDbMessageModel | VertexBuildModel]] = {
             "transactions": TransactionModel,
-            "messages": DeprecatedMessageModel,
+            "messages": DuckDbMessageModel,
             "vertex_builds": VertexBuildModel,
         }
 
