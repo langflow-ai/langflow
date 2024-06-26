@@ -10,7 +10,7 @@ from langflow.services.base import Service
 from langflow.services.monitor.utils import add_row_to_table, drop_and_create_table_if_schema_mismatch
 
 if TYPE_CHECKING:
-    from langflow.services.monitor.schema import MessageModel, TransactionModel, VertexBuildModel
+    from langflow.services.monitor.schema import DuckDbMessageModel, TransactionModel, VertexBuildModel
     from langflow.services.settings.service import SettingsService
 
 
@@ -48,7 +48,7 @@ class MonitorService(Service):
     def add_row(
         self,
         table_name: str,
-        data: Union[dict, "TransactionModel", "MessageModel", "VertexBuildModel"],
+        data: Union[dict, "TransactionModel", "DuckDbMessageModel", "VertexBuildModel"],
     ):
         # Make sure the model passed matches the table
 
