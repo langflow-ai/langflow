@@ -38,7 +38,7 @@ export default function FlowSettingsModal({
       })
       .catch((err) => {
         useAlertStore.getState().setErrorData({
-          title: "Error while saving changes",
+          title: t("Error while saving changes"),
           list: [err?.response?.data.detail ?? ""],
         });
         console.error(err);

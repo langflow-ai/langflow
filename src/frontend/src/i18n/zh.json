@@ -442,6 +442,7 @@
   "Account created! Await admin activation.": "账户已创建！请等待管理员激活。",
   "Sign up to Langflow": "注册Langflow",
 
-  "Type your new password and confirm it.": "输入新密码并确认"
+  "Type your new password and confirm it.": "输入新密码并确认",
+  "Error while saving changes": "保存更改时出错"
 
 }
