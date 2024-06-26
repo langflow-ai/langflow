@@ -34,6 +34,8 @@ class MessageBase(SQLModel):
             timestamp = datetime.fromisoformat(message.timestamp)
         else:
             timestamp = message.timestamp
+        if not flow_id and message.flow_id:
+            flow_id = message.flow_id
         return cls(
             sender=message.sender,
             sender_name=message.sender_name,
