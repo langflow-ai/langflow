@@ -28,7 +28,7 @@ def migrate_messages_from_monitor_service_to_database(session: Session) -> bool:
     original_messages: List[Dict] = messages_df.to_dict(orient="records")
 
     db_messages = session.exec(select(MessageTable)).all()
-    db_messages = [msg[0] for msg in db_messages]
+    db_messages = [msg[0] for msg in db_messages]  # type: ignore
     db_msg_dict = {(msg.text, msg.timestamp.isoformat(), str(msg.flow_id, msg.session_id)): msg for msg in db_messages}
     # Filter out messages that already exist in the database
     original_messages_filtered = []
