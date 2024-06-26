@@ -1,11 +1,14 @@
 import warnings
 from typing import List, Optional
+from uuid import UUID
 
 from loguru import logger
+from sqlalchemy import delete
+from sqlmodel import Session, col, select
 
 from langflow.schema.message import Message
-from langflow.services.deps import get_monitor_service
-from langflow.services.monitor.schema import MessageModel
+from langflow.services.database.models.message.model import MessageRead, MessageTable
+from langflow.services.deps import session_scope
 
 
 def get_messages(
@@ -14,6 +17,7 @@ def get_messages(
     session_id: Optional[str] = None,
     order_by: Optional[str] = "timestamp",
     order: Optional[str] = "DESC",
+    flow_id: Optional[UUID] = None,
     limit: Optional[int] = None,
 ):
     """
@@ -29,34 +33,29 @@ def get_messages(
     Returns:
         List[Data]: A list of Data objects representing the retrieved messages.
     """
-    monitor_service = get_monitor_service()
-    messages_df = monitor_service.get_messages(
-        sender=sender,
-        sender_name=sender_name,
-        session_id=session_id,
-        order_by=order_by,
-        limit=limit,
-        order=order,
-    )
+    messages_read: list[Message] = []
+    with session_scope() as session:
+        stmt = select(MessageTable)
+        if sender:
+            stmt = stmt.where(MessageTable.sender == sender)
+        if sender_name:
+            stmt = stmt.where(MessageTable.sender_name == sender_name)
+        if session_id:
+            stmt = stmt.where(MessageTable.session_id == session_id)
+        if flow_id:
+            stmt = stmt.where(MessageTable.flow_id == flow_id)
+        if order_by:
+            if order == "DESC":
+                col = getattr(MessageTable, order_by).desc()
+            else:
+                col = getattr(MessageTable, order_by).asc()
+            stmt = stmt.order_by(col)
+        if limit:
+            stmt = stmt.limit(limit)
+        messages = session.exec(stmt)
+        messages_read = [Message(**d.model_dump()) for d in messages]
 
-    messages: list[Message] = []
-    # messages_df has a timestamp
-    # it gets the last 5 messages, for example
-    # but now they are ordered from most recent to least recent
-    # so we need to reverse the order
-    messages_df = messages_df[::-1] if order == "DESC" else messages_df
-    for row in messages_df.itertuples():
-        msg = Message(
-            text=row.text,
-            sender=row.sender,
-            session_id=row.session_id,
-            sender_name=row.sender_name,
-            timestamp=row.timestamp,
-        )
-
-        messages.append(msg)
-
-    return messages
+    return messages_read
 
 
 def add_messages(messages: Message | list[Message], flow_id: Optional[str] = None):
@@ -64,7 +63,6 @@ def add_messages(messages: Message | list[Message], flow_id: Optional[str] = Non
     Add a message to the monitor service.
     """
     try:
-        monitor_service = get_monitor_service()
         if not isinstance(messages, list):
             messages = [messages]
 
@@ -72,23 +70,27 @@ def add_messages(messages: Message | list[Message], flow_id: Optional[str] = Non
             types = ", ".join([str(type(message)) for message in messages])
             raise ValueError(f"The messages must be instances of Message. Found: {types}")
 
-        messages_models: list[MessageModel] = []
+        messages_models: list[MessageTable] = []
         for msg in messages:
-            if not msg.timestamp:
-                msg.timestamp = monitor_service.get_timestamp()
-            messages_models.append(MessageModel.from_message(msg, flow_id=flow_id))
-
-        for message_model in messages_models:
-            try:
-                monitor_service.add_message(message_model)
-            except Exception as e:
-                logger.error(f"Error adding message to monitor service: {e}")
-                logger.exception(e)
-                raise e
-        return messages_models
+            messages_models.append(MessageTable.from_message(msg, flow_id=flow_id))
+        with session_scope() as session:
+            messages_models = add_messagetables(messages_models, session)
+        return [Message(**message.model_dump()) for message in messages_models]
     except Exception as e:
         logger.exception(e)
         raise e
+
+
+def add_messagetables(messages: list[MessageTable], session: Session):
+    for message in messages:
+        try:
+            session.add(message)
+            session.commit()
+            session.refresh(message)
+        except Exception as e:
+            logger.exception(e)
+            raise e
+    return [MessageRead.model_validate(message, from_attributes=True) for message in messages]
 
 
 def delete_messages(session_id: str):
@@ -98,8 +100,13 @@ def delete_messages(session_id: str):
     Args:
         session_id (str): The session ID associated with the messages to delete.
     """
-    monitor_service = get_monitor_service()
-    monitor_service.delete_messages_session(session_id)
+    with session_scope() as session:
+        session.exec(
+            delete(MessageTable)
+            .where(col(MessageTable.session_id) == session_id)
+            .execution_options(synchronize_session="fetch")
+        )
+        session.commit()
 
 
 def store_message(
