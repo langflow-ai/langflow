@@ -69,37 +69,36 @@ test("TextInputOutputComponent", async ({ page }) => {
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
 
-  await page
-    .locator(
-      '//*[@id="react-flow-id"]/div/div[1]/div/div/div[2]/div[1]/div/div[2]/div[5]/button/div[1]',
-    )
-    .waitFor({
-      state: "visible",
-      timeout: 30000,
-    });
+  const component1 = await page.locator(
+    '//*[@id="react-flow-id"]/div/div[1]/div/div/div[2]/div[1]',
+  );
 
-  await page
-    .locator(
-      '//*[@id="react-flow-id"]/div/div[1]/div/div/div[2]/div[1]/div/div[2]/div[5]/button/div[1]',
-    )
-    .hover();
+  const element1 = await page.locator(
+    '//*[@id="react-flow-id"]/div/div[1]/div/div/div[2]/div[1]/div/div[2]/div[5]/button/div[1]',
+  );
+
+  const component2 = await page.locator(
+    '//*[@id="react-flow-id"]/div/div[1]/div/div/div[2]/div[2]',
+  );
+
+  const element2 = await page.locator(
+    '//*[@id="react-flow-id"]/div/div[1]/div/div/div[2]/div[2]/div/div[2]/div[3]/div/button/div[1]',
+  );
+
+  // ensure elements popups are not blocking
+  component1.blur();
+  component2.blur();
+
+  // Click and hold on the first element and move to the second element
+  await element1?.dragTo(element2);
+
+  await page.mouse.up();
+
+  await element1.hover();
   await page.mouse.down();
 
-  await page
-    .locator(
-      '//*[@id="react-flow-id"]/div/div[1]/div/div/div[2]/div[2]/div/div[2]/div[3]/div/button/div[1]',
-    )
-    .waitFor({
-      state: "visible",
-      timeout: 30000,
-    });
-
   // Move to the second element
-  await page
-    .locator(
-      '//*[@id="react-flow-id"]/div/div[1]/div/div/div[2]/div[2]/div/div[2]/div[3]/div/button/div[1]',
-    )
-    .hover();
+  await component2.hover();
 
   // Release the mouse
   await page.mouse.up();
@@ -122,38 +121,32 @@ test("TextInputOutputComponent", async ({ page }) => {
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
 
-  await page
-    .locator(
-      '//*[@id="react-flow-id"]/div/div[1]/div/div/div[2]/div[2]/div/div[2]/div[15]/button/div[1]',
-    )
-    .waitFor({
-      state: "visible",
-      timeout: 30000,
-    });
+  const component3 = await page.locator(
+    '//*[@id="react-flow-id"]/div/div[1]/div[1]/div/div[2]/div[3]',
+  );
 
-  // Click and hold on the first element
-  await page
-    .locator(
-      '//*[@id="react-flow-id"]/div/div[1]/div/div/div[2]/div[2]/div/div[2]/div[15]/button/div[1]',
-    )
-    .hover();
+  const element3 = await page.locator(
+    '//*[@id="react-flow-id"]/div/div[1]/div/div/div[2]/div[3]/div/div[2]/div[3]/div/button/div[1]',
+  );
+
+  const element4 = await page.locator(
+    '//*[@id="react-flow-id"]/div/div[1]/div/div/div[2]/div[2]/div/div[2]/div[15]/button/div[1]',
+  );
+
+  // ensure elements popups are not blocking
+  component2.blur();
+  component3.blur();
+
+  // Click and hold on the first element and move to the second element
+  await element4?.dragTo(element3);
+
+  await page.mouse.up();
+
+  await element4.hover();
   await page.mouse.down();
 
-  await page
-    .locator(
-      '//*[@id="react-flow-id"]/div/div[1]/div/div/div[2]/div[3]/div/div[2]/div[3]/div/button/div[1]',
-    )
-    .waitFor({
-      state: "visible",
-      timeout: 30000,
-    });
-
   // Move to the second element
-  await page
-    .locator(
-      '//*[@id="react-flow-id"]/div/div[1]/div/div/div[2]/div[3]/div/div[2]/div[3]/div/button/div[1]',
-    )
-    .hover();
+  await element3.hover();
 
   // Release the mouse
   await page.mouse.up();

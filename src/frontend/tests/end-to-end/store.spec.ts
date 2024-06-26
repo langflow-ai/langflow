@@ -259,11 +259,11 @@ test("should share component with share button", async ({ page }) => {
   await page.getByText("Save").last().click();
   await page.getByText("Close").last().click();
 
-  await page.waitForSelector('[data-testid="icon-Share3"]', {
+  await page.waitForSelector('[data-testid="shared-button-flow"]', {
     timeout: 100000,
   });
 
-  await page.getByTestId("icon-Share3").first().click();
+  await page.getByTestId("shared-button-flow").first().click();
   await page.getByText("Name:").isVisible();
   await page.getByText("Description:").isVisible();
   await page.getByText("Set workflow status to public").isVisible();
