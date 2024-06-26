@@ -24,18 +24,20 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
     icon = "Cassandra"
 
     inputs = [
-        MessageTextInput(name="database_ref",
-                         display_name="Contact Points / Astra Database ID",
-                         info="Contact points for the database (or AstraDB database ID)",
-                         required=True),
-        MessageTextInput(name="username",
-                         display_name="Username",
-                         info="Username for the database (leave empty for AstraDB)."),
+        MessageTextInput(
+            name="database_ref",
+            display_name="Contact Points / Astra Database ID",
+            info="Contact points for the database (or AstraDB database ID)",
+            required=True,
+        ),
+        MessageTextInput(
+            name="username", display_name="Username", info="Username for the database (leave empty for AstraDB)."
+        ),
         SecretStrInput(
             name="token",
             display_name="Password / AstraDB Token",
             info="User password for the database (or AstraDB token).",
-            required=True
+            required=True,
         ),
         MessageTextInput(
             name="keyspace",
@@ -81,7 +83,7 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
             display_name="Cluster arguments",
             info="Optional dictionary of additional keyword arguments for the Cassandra cluster.",
             advanced=True,
-            is_list=True
+            is_list=True,
         ),
         MultilineInput(name="search_query", display_name="Search Query"),
         DataInput(
