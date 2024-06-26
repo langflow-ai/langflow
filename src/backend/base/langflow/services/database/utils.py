@@ -42,7 +42,8 @@ def migrate_messages_from_monitor_service_to_database(session: Session) -> bool:
     try:
         # Bulk insert messages
         session.bulk_insert_mappings(
-            MessageTable, [MessageTable.from_message(Message(**msg)).model_dump() for msg in original_messages_filtered]
+            MessageTable,
+            [MessageTable.from_message(Message(**msg)).model_dump() for msg in original_messages_filtered],  # type: ignore
         )
         session.commit()
     except Exception as e:
