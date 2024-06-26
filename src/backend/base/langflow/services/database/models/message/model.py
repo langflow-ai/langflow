@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, List, Optional
 from uuid import UUID, uuid4
 
+from pydantic import field_validator
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
 if TYPE_CHECKING:
@@ -16,6 +17,13 @@ class MessageBase(SQLModel):
     session_id: str
     text: str
     files: list[str] = Field(default_factory=list)
+
+    @field_validator("files", mode="before")
+    @classmethod
+    def validate_files(cls, value):
+        if not value:
+            value = []
+        return value
 
     @classmethod
     def from_message(cls, message: "Message", flow_id: str | None = None):
