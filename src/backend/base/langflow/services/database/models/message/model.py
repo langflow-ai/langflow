@@ -54,6 +54,15 @@ class MessageTable(MessageBase, table=True):
     flow: "Flow" = Relationship(back_populates="messages")
     files: List[str] = Field(sa_column=Column(JSON))
 
+    @field_validator("flow_id", mode="before")
+    @classmethod
+    def validate_flow_id(cls, value):
+        if value is None:
+            return value
+        if isinstance(value, str):
+            value = UUID(value)
+        return value
+
     # Needed for Column(JSON)
     class Config:
         arbitrary_types_allowed = True
