@@ -5,8 +5,13 @@ import {
   SAVE_SUCCESS_ALERT,
 } from "../../../../constants/alerts_constants";
 import { resetPassword } from "../../../../controllers/API";
+import { Users } from "../../../../types/api";
 
-const usePatchPassword = (userData, setSuccessData, setErrorData) => {
+const usePatchPassword = (
+  userData: Users | null,
+  setSuccessData: (data: { title: string; list?: string[] }) => void,
+  setErrorData: (data: { title: string; list: string[] }) => void,
+) => {
   const handlePatchPassword = async (password, cnfPassword, handleInput) => {
     if (password !== cnfPassword) {
       setErrorData({
@@ -16,7 +21,7 @@ const usePatchPassword = (userData, setSuccessData, setErrorData) => {
       return;
     }
     try {
-      if (password !== "") await resetPassword(userData.id, { password });
+      if (password !== "") await resetPassword(userData!.id, { password });
       handleInput({ target: { name: "password", value: "" } });
       handleInput({ target: { name: "cnfPassword", value: "" } });
       setSuccessData({ title: SAVE_SUCCESS_ALERT });
