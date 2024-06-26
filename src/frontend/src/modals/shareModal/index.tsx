@@ -130,7 +130,7 @@ export default function ShareModal({
         successShare,
         (err) => {
           setErrorData({
-            title: "Error sharing " + is_component ? "component" : "flow",
+            title: "Error sharing " + (is_component ? "component" : "flow"),
             list: [err["response"]["data"]["detail"]],
           });
         },

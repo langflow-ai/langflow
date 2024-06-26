@@ -3,10 +3,10 @@ import { useMessagesStore } from "../../../../../stores/messagesStore";
 import { useTranslation } from "react-i18next";
 
 const useRemoveMessages = (
-  setSelectedRows: (data: number[]) => void,
+  setSelectedRows: (data: string[]) => void,
   setSuccessData: (data: { title: string }) => void,
   setErrorData: (data: { title: string }) => void,
-  selectedRows: number[],
+  selectedRows: string[],
 ) => {
 
   const { t } = useTranslation();

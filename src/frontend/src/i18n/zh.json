@@ -443,6 +443,8 @@
   "Sign up to Langflow": "注册Langflow",
 
   "Type your new password and confirm it.": "输入新密码并确认",
-  "Error while saving changes": "保存更改时出错"
+  "Error while saving changes": "保存更改时出错",
+
+  "Invalid endpoint name. Use only letters, numbers, hyphens, and underscores ({{maxLength}} characters max).": "无效的端点名称。只能使用字毽、数字、连字符和下划线（最多{{maxLength}}个字符）。"
 
 }

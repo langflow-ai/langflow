@@ -463,3 +463,11 @@ export const logTypeIsError = (
     return isErrorLog(outputs);
   }
 };
+
+export function isEndpointNameValid(name: string, maxLength: number): boolean {
+  return (
+    (/^[a-zA-Z0-9_-]+$/.test(name) && name.length <= maxLength) ||
+    // empty is also valid
+    name.length === 0
+  );
+}

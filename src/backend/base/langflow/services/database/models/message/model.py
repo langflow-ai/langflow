@@ -26,7 +26,7 @@ class MessageBase(SQLModel):
         return value
 
     @classmethod
-    def from_message(cls, message: "Message", flow_id: str | None = None):
+    def from_message(cls, message: "Message", flow_id: str | UUID | None = None):
         # first check if the record has all the required fields
         if message.text is None or not message.sender or not message.sender_name:
             raise ValueError("The message does not have the required fields (text, sender, sender_name).")
@@ -34,6 +34,8 @@ class MessageBase(SQLModel):
             timestamp = datetime.fromisoformat(message.timestamp)
         else:
             timestamp = message.timestamp
+        if not flow_id and message.flow_id:
+            flow_id = message.flow_id
         return cls(
             sender=message.sender,
             sender_name=message.sender_name,
@@ -51,6 +53,15 @@ class MessageTable(MessageBase, table=True):
     flow_id: Optional[UUID] = Field(default=None, foreign_key="flow.id")
     flow: "Flow" = Relationship(back_populates="messages")
     files: List[str] = Field(sa_column=Column(JSON))
+
+    @field_validator("flow_id", mode="before")
+    @classmethod
+    def validate_flow_id(cls, value):
+        if value is None:
+            return value
+        if isinstance(value, str):
+            value = UUID(value)
+        return value
 
     # Needed for Column(JSON)
     class Config:

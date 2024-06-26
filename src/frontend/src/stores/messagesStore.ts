@@ -29,7 +29,7 @@ export const useMessagesStore = create<MessagesStoreType>((set, get) => ({
   updateMessage: (message) => {
     set(() => ({
       messages: get().messages.map((msg) =>
-        msg.index === message.index ? message : msg,
+        msg.id === message.id ? message : msg,
       ),
     }));
   },
@@ -41,7 +41,7 @@ export const useMessagesStore = create<MessagesStoreType>((set, get) => ({
       try {
         set((state) => {
           const updatedMessages = state.messages.filter(
-            (msg) => !ids.includes(msg.index),
+            (msg) => !ids.includes(msg.id),
           );
           get().setMessages(updatedMessages);
           resolve(updatedMessages);
