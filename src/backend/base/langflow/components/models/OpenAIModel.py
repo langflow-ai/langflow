@@ -34,6 +34,12 @@ class OpenAIModelComponent(LCModelComponent):
             info="The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
         ),
         DictInput(name="model_kwargs", display_name="Model Kwargs", advanced=True),
+        BoolInput(
+            name="json_mode",
+            display_name="JSON Mode",
+            advanced=True,
+            info="If True, it will output JSON regardless of passing a schema.",
+        ),
         DictInput(
             name="output_schema",
             is_list=True,
@@ -84,7 +90,7 @@ class OpenAIModelComponent(LCModelComponent):
         max_tokens = self.max_tokens
         model_kwargs = self.model_kwargs or {}
         openai_api_base = self.openai_api_base or "https://api.openai.com/v1"
-        json_mode = bool(output_schema_dict)
+        json_mode = bool(output_schema_dict) or self.json_mode
         seed = self.seed
         model_kwargs["seed"] = seed
 
@@ -101,7 +107,10 @@ class OpenAIModelComponent(LCModelComponent):
             temperature=temperature or 0.1,
         )
         if json_mode:
-            output = output.with_structured_output(schema=output_schema_dict, method="json_mode")  # type: ignore
+            if output_schema_dict:
+                output = output.with_structured_output(schema=output_schema_dict, method="json_mode")  # type: ignore
+            else:
+                output = output.bind(response_format={"type": "json_object"})
 
         return output
 
