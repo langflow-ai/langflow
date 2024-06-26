@@ -105,8 +105,12 @@ export default function UndrawCardComponent({
   return (
     <Card
       onClick={() => {
+        console.error("flow.data", flow.data);
+        console.error("flow.data", flow);
+
         updateIds(flow.data!);
         addFlow(true, flow).then((id) => {
+          console.error("flow.data", flow);
           setFolderUrl(folderId ?? "");
           navigate(`/flow/${id}${folderId ? `/folder/${folderId}` : ""}`);
         });
