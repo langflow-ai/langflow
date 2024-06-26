@@ -22,7 +22,6 @@ test("Basic Prompting (Hello, World)", async ({ page }) => {
   }
 
   await page.getByRole("heading", { name: "Basic Prompting" }).click();
-  await page.waitForTimeout(1000);
 
   await page.waitForSelector('[title="fit view"]', {
     timeout: 100000,
@@ -43,7 +42,8 @@ test("Basic Prompting (Hello, World)", async ({ page }) => {
     .fill(process.env.OPENAI_API_KEY ?? "");
 
   await page.getByTestId("button_run_chat output").click();
-  await page.waitForTimeout(1000);
+  await page.waitForSelector("text=built successfully", { timeout: 30000 });
+
   await page.getByText("built successfully").last().click({
     timeout: 15000,
   });
@@ -53,8 +53,13 @@ test("Basic Prompting (Hello, World)", async ({ page }) => {
     .getByText("No input message provided.", { exact: true })
     .last()
     .isVisible();
+
+  await page.waitForSelector('[data-testid="input-chat-playground"]', {
+    timeout: 100000,
+  });
+
   await page
-    .getByPlaceholder("Send a message...")
+    .getByTestId("input-chat-playground")
     .last()
     .fill("Say hello as a pirate");
   await page.getByTestId("icon-LucideSend").last().click();
@@ -72,7 +77,11 @@ test("Basic Prompting (Hello, World)", async ({ page }) => {
 
   await page.getByRole("gridcell").last().isVisible();
   await page.getByTestId("icon-Trash2").first().click();
-  await page.getByPlaceholder("Send a message...").last().isVisible();
+  await page.waitForSelector('[data-testid="input-chat-playground"]', {
+    timeout: 100000,
+  });
+
+  await page.getByTestId("input-chat-playground").last().isVisible();
 });
 
 test("Memory Chatbot", async ({ page }) => {
@@ -113,28 +122,40 @@ test("Memory Chatbot", async ({ page }) => {
     .fill(process.env.OPENAI_API_KEY ?? "");
 
   await page.getByTestId("button_run_chat output").click();
-  await page.waitForTimeout(1000);
+  await page.waitForSelector("text=built successfully", { timeout: 30000 });
+
   await page.getByText("built successfully").last().click({
     timeout: 15000,
   });
 
   await page.getByText("Playground", { exact: true }).click();
+
   await page
     .getByText("No input message provided.", { exact: true })
     .last()
     .isVisible();
+
+  await page.waitForSelector('[data-testid="input-chat-playground"]', {
+    timeout: 100000,
+  });
+
   await page
-    .getByPlaceholder("Send a message...")
+    .getByTestId("input-chat-playground")
     .last()
     .fill("Remember that I'm a lion");
   await page.getByTestId("icon-LucideSend").last().click();
-  await page.waitForTimeout(3000);
+
+  await page.waitForSelector('[data-testid="input-chat-playground"]', {
+    timeout: 100000,
+  });
+
   await page
-    .getByPlaceholder("Send a message...")
+    .getByTestId("input-chat-playground")
     .last()
     .fill("try reproduce the sound I made in words");
   await page.getByTestId("icon-LucideSend").last().click();
-  await page.waitForTimeout(3000);
+
+  await page.waitForSelector("text=roar", { timeout: 30000 });
   await page.getByText("roar").last().isVisible();
   await page.getByText("Default Session").last().click();
 
@@ -147,7 +168,10 @@ test("Memory Chatbot", async ({ page }) => {
 
   await page.getByRole("gridcell").last().isVisible();
   await page.getByTestId("icon-Trash2").first().click();
-  await page.getByPlaceholder("Send a message...").last().isVisible();
+  await page.waitForSelector('[data-testid="input-chat-playground"]', {
+    timeout: 100000,
+  });
+  await page.getByTestId("input-chat-playground").last().isVisible();
 });
 
 test("Document QA", async ({ page }) => {
@@ -196,6 +220,8 @@ test("Document QA", async ({ page }) => {
   await page.waitForTimeout(2000);
 
   await page.getByTestId("button_run_chat output").click();
+  await page.waitForSelector("text=built successfully", { timeout: 30000 });
+
   await page.getByText("built successfully").last().click({
     timeout: 15000,
   });
@@ -206,8 +232,11 @@ test("Document QA", async ({ page }) => {
     .last()
     .isVisible();
 
+  await page.waitForSelector('[data-testid="input-chat-playground"]', {
+    timeout: 100000,
+  });
   await page
-    .getByPlaceholder("Send a message...")
+    .getByTestId("input-chat-playground")
     .last()
     .fill("whats the text in the file?");
   await page.getByTestId("icon-LucideSend").last().click();
@@ -227,7 +256,12 @@ test("Document QA", async ({ page }) => {
 
   await page.getByRole("gridcell").last().isVisible();
   await page.getByTestId("icon-Trash2").first().click();
-  await page.getByPlaceholder("Send a message...").last().isVisible();
+
+  await page.waitForSelector('[data-testid="input-chat-playground"]', {
+    timeout: 100000,
+  });
+
+  await page.getByTestId("input-chat-playground").last().isVisible();
 });
 
 test("Blog Writer", async ({ page }) => {
@@ -354,7 +388,9 @@ test("Vector Store RAG", async ({ page }) => {
   }
 
   await page.getByRole("heading", { name: "Vector Store RAG" }).click();
-  await page.waitForTimeout(1000);
+  await page.waitForSelector('[title="fit view"]', {
+    timeout: 100000,
+  });
 
   await page.getByTitle("fit view").click();
   await page.getByTitle("zoom out").click();
@@ -411,18 +447,26 @@ test("Vector Store RAG", async ({ page }) => {
   await page.waitForTimeout(2000);
 
   await page.getByTestId("button_run_astra db").first().click();
+  await page.waitForSelector("text=built successfully", { timeout: 30000 });
+
   await page.getByText("built successfully").last().click({
     timeout: 30000,
   });
 
   await page.getByTestId("button_run_chat output").click();
+  await page.waitForSelector("text=built successfully", { timeout: 30000 });
+
   await page.getByText("built successfully").last().click({
     timeout: 30000,
   });
 
   await page.getByText("Playground", { exact: true }).click();
 
-  await page.getByPlaceholder("Send a message...").last().fill("hello");
+  await page.waitForSelector('[data-testid="input-chat-playground"]', {
+    timeout: 100000,
+  });
+
+  await page.getByTestId("input-chat-playground").last().fill("hello");
 
   await page.getByTestId("icon-LucideSend").last().click();
 
@@ -443,5 +487,10 @@ test("Vector Store RAG", async ({ page }) => {
 
   await page.getByRole("gridcell").last().isVisible();
   await page.getByTestId("icon-Trash2").first().click();
-  await page.getByPlaceholder("Send a message...").last().isVisible();
+
+  await page.waitForSelector('[data-testid="input-chat-playground"]', {
+    timeout: 100000,
+  });
+
+  await page.getByTestId("input-chat-playground").last().isVisible();
 });

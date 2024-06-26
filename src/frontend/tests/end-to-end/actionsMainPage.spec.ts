@@ -89,6 +89,10 @@ test("search components", async ({ page }) => {
   }
   await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
+  await page.waitForSelector('[title="fit view"]', {
+    timeout: 100000,
+  });
+
   await page.getByTitle("fit view").click();
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
@@ -157,6 +161,11 @@ test("user should be able to download a flow or a component", async ({
   }
 
   await page.getByRole("heading", { name: "Basic Prompting" }).click();
+
+  await page.waitForSelector('[title="fit view"]', {
+    timeout: 100000,
+  });
+
   await page.getByTitle("fit view").click();
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
@@ -234,6 +243,9 @@ test("user should be able to duplicate a flow or a component", async ({
   }
 
   await page.getByRole("heading", { name: "Basic Prompting" }).click();
+  await page.waitForSelector('[title="fit view"]', {
+    timeout: 100000,
+  });
 
   await page.getByTitle("fit view").click();
   await page.getByTitle("zoom out").click();

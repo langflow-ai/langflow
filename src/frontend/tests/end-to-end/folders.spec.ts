@@ -43,7 +43,9 @@ test("CRUD folders", async ({ page }) => {
   const element = await page.getByTestId("input-folder");
   await element.fill("new folder test name");
 
-  await page.getByText("My Projects").last().click();
+  await page.getByText("My Projects").last().click({
+    force: true,
+  });
 
   await page.getByText("new folder test name").last().waitFor({
     state: "visible",
