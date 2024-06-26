@@ -1,6 +1,9 @@
 import { useEffect } from "react";
 
-const useScrollToElement = (scrollId, setCurrentFlowId) => {
+const useScrollToElement = (
+  scrollId: string | null | undefined,
+  setCurrentFlowId: (currentFlowId: string) => void,
+) => {
   useEffect(() => {
     const element = document.getElementById(scrollId ?? "null");
     if (element) {
