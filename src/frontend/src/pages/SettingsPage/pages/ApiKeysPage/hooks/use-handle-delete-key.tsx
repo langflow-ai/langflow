@@ -7,10 +7,10 @@ import {
 import { deleteApiKey } from "../../../../../controllers/API";
 
 const useDeleteApiKeys = (
-  selectedRows,
-  resetFilter,
-  setSuccessData,
-  setErrorData,
+  selectedRows: string[],
+  resetFilter: () => void,
+  setSuccessData: (data: { title: string }) => void,
+  setErrorData: (data: { title: string; list: string[] }) => void,
 ) => {
   const handleDeleteKey = () => {
     Promise.all(selectedRows.map((selectedRow) => deleteApiKey(selectedRow)))

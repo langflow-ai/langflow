@@ -3,14 +3,15 @@ from pathlib import Path
 from typing import TYPE_CHECKING, List, Optional, Union
 
 import duckdb
-from langflow.services.base import Service
-from langflow.services.monitor.utils import add_row_to_table, drop_and_create_table_if_schema_mismatch
 from loguru import logger
 from platformdirs import user_cache_dir
 
+from langflow.services.base import Service
+from langflow.services.monitor.utils import add_row_to_table, drop_and_create_table_if_schema_mismatch
+
 if TYPE_CHECKING:
-    from langflow.services.settings.service import SettingsService
     from langflow.services.monitor.schema import MessageModel, TransactionModel, VertexBuildModel
+    from langflow.services.settings.service import SettingsService
 
 
 class MonitorService(Service):
@@ -128,45 +129,6 @@ class MonitorService(Service):
         )
 
         return self.exec_query(query, read_only=False)
-
-    def add_message(self, message: "MessageModel"):
-        self.add_row("messages", message)
-
-    def get_messages(
-        self,
-        flow_id: Optional[str] = None,
-        sender: Optional[str] = None,
-        sender_name: Optional[str] = None,
-        session_id: Optional[str] = None,
-        order_by: Optional[str] = "timestamp",
-        order: Optional[str] = "DESC",
-        limit: Optional[int] = None,
-    ):
-        query = "SELECT index, flow_id, sender_name, sender, session_id, text, files, timestamp FROM messages"
-        conditions = []
-        if sender:
-            conditions.append(f"sender = '{sender}'")
-        if sender_name:
-            conditions.append(f"sender_name = '{sender_name}'")
-        if session_id:
-            conditions.append(f"session_id = '{session_id}'")
-        if flow_id:
-            conditions.append(f"flow_id = '{flow_id}'")
-
-        if conditions:
-            query += " WHERE " + " AND ".join(conditions)
-
-        if order_by and order:
-            # Make sure the order is from newest to oldest
-            query += f" ORDER BY {order_by} {order.upper()}"
-
-        if limit is not None:
-            query += f" LIMIT {limit}"
-
-        with duckdb.connect(str(self.db_path), read_only=True) as conn:
-            df = conn.execute(query).df()
-
-        return df
 
     def get_transactions(
         self,

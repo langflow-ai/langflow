@@ -5,15 +5,16 @@ import {
 } from "../../constants/constants";
 import useAlertStore from "../../stores/alertStore";
 import { ResponseErrorTypeAPI } from "../../types/api";
+import { NodeDataType } from "../../types/flow";
 
 const useHandleOnNewValue = (
-  data,
-  name,
-  takeSnapshot,
-  handleUpdateValues,
-  debouncedHandleUpdateValues,
-  setNode,
-  setIsLoading,
+  data: NodeDataType,
+  name: string,
+  takeSnapshot: () => void,
+  handleUpdateValues: (name: string, data: NodeDataType) => Promise<any>,
+  debouncedHandleUpdateValues: any,
+  setNode: (id: string, callback: (oldNode: any) => any) => void,
+  setIsLoading: (value: boolean) => void,
 ) => {
   const setErrorData = useAlertStore((state) => state.setErrorData);
 

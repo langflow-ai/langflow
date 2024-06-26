@@ -96,7 +96,7 @@ class CustomComponent(BaseComponent):
     def stop(self, output_name: str | None = None):
         if not output_name and self.vertex and len(self.vertex.outputs) == 1:
             output_name = self.vertex.outputs[0]["name"]
-        else:
+        elif not output_name:
             raise ValueError("You must specify an output name to call stop")
         if not self.vertex:
             raise ValueError("Vertex is not set")
