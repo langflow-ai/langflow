@@ -1,6 +1,12 @@
 import { getApiKey } from "../../../../../controllers/API";
+import { Users } from "../../../../../types/api";
 
-const useApiKeys = (userData, setLoadingKeys, keysList, setUserId) => {
+const useApiKeys = (
+  userData: Users | null,
+  setLoadingKeys: (load: boolean) => void,
+  keysList: React.MutableRefObject<never[]>,
+  setUserId: (userId: string) => void,
+) => {
   const fetchApiKeys = () => {
     setLoadingKeys(true);
     getApiKey()
