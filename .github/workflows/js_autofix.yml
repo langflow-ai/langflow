@@ -1,0 +1,50 @@
+name: autofix.ci
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, auto_merge_enabled, auto_merge_disabled]
+    paths:
+      - "src/frontend/**"
+  push:
+    branches: [ "main" ]
+    paths:
+      - "src/frontend/**"
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: "21"
+jobs:
+  autofix:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        id: setup-node
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Cache Node.js dependencies
+        uses: actions/cache@v4
+        id: npm-cache
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('src/frontend/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Install Node.js dependencies
+        run: |
+          cd src/frontend
+          npm ci
+        if: ${{ steps.setup-node.outputs.cache-hit != 'true' }}
+      - name: Run Prettier
+        run: |
+          cd src/frontend
+          npm run format
+
+      - uses: autofix-ci/action@dd55f44df8f7cdb7a6bf74c78677eb8acd40cd0a
