@@ -146,7 +146,7 @@ ignore-regex = '.*(Stati Uniti|Tense=Pres).*'
 minversion = "6.0"
 testpaths = ["tests", "integration"]
 console_output_style = "progress"
-filterwarnings = ["ignore::DeprecationWarning"]
+filterwarnings = ["ignore::DeprecationWarning", "ignore::ResourceWarning"]
 log_cli = true
 markers = ["async_test", "api_key_required"]
 
