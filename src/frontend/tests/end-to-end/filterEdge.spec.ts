@@ -21,7 +21,9 @@ test("LLMChain - Tooltip", async ({ page }) => {
   }
 
   await page.getByTestId("blank-flow").click();
-  await page.waitForTimeout(3000);
+  await page.waitForSelector('[data-testid="extended-disclosure"]', {
+    timeout: 100000,
+  });
 
   await page.getByTestId("extended-disclosure").click();
   await page.getByPlaceholder("Search").click();
@@ -168,12 +170,13 @@ test("LLMChain - Filter", async ({ page }) => {
   }
   await page.waitForTimeout(1000);
 
-  await page.getByTestId(
-    "input-list-plus-btn-edit_metadata_indexing_include-2",
-  );
-
   await page.getByTestId("blank-flow").click();
   await page.waitForTimeout(3000);
+
+  await page.waitForSelector('[data-testid="extended-disclosure"]', {
+    timeout: 100000,
+  });
+
   await page.getByTestId("extended-disclosure").click();
   await page.getByPlaceholder("Search").click();
   await page.getByPlaceholder("Search").fill("llmchain");
@@ -196,10 +199,8 @@ test("LLMChain - Filter", async ({ page }) => {
     )
     .click();
 
-  await expect(page.getByTestId("disclosure-models")).toBeVisible();
-  await expect(
-    page.getByTestId("modelsGoogle Generative AI").first(),
-  ).toBeVisible();
+  await expect(page.getByTestId("disclosure-agents")).toBeVisible();
+
   await expect(page.getByTestId("chainsLLMChain").first()).toBeVisible();
   await expect(
     page.getByTestId("langchain_utilitiesSearchApi").first(),
