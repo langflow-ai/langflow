@@ -82,7 +82,7 @@ class TransactionModelResponse(DefaultModel):
 
 
 class DuckDbMessageModel(DefaultModel):
-    index: int
+    index: int | None = Field(default=None, alias="index")
     flow_id: str | None = Field(default=None, alias="flow_id")
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     sender: str
