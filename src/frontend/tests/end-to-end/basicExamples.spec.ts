@@ -24,6 +24,10 @@ test("Basic Prompting (Hello, World)", async ({ page }) => {
   await page.getByRole("heading", { name: "Basic Prompting" }).click();
   await page.waitForTimeout(1000);
 
+  await page.waitForSelector('[title="fit view"]', {
+    timeout: 100000,
+  });
+
   await page.getByTitle("fit view").click();
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
@@ -283,6 +287,9 @@ test("Blog Writer", async ({ page }) => {
 
   await page.getByTestId("button_run_chat output").click();
   await page.waitForTimeout(5000);
+
+  await page.waitForSelector("text=built successfully", { timeout: 30000 });
+
   await page.getByText("built successfully").last().click({
     timeout: 30000,
   });

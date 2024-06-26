@@ -28,7 +28,11 @@ test("chat_io_teste", async ({ page }) => {
   );
 
   await page.getByTestId("blank-flow").click();
-  await page.waitForTimeout(3000);
+
+  await page.waitForSelector('[data-testid="extended-disclosure"]', {
+    timeout: 100000,
+  });
+
   await page.getByTestId("extended-disclosure").click();
   await page.getByPlaceholder("Search").click();
   await page.getByPlaceholder("Search").fill("chat output");
