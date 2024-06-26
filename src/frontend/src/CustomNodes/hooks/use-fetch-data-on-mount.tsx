@@ -7,6 +7,7 @@ import {
 import useAlertStore from "../../stores/alertStore";
 import { ResponseErrorDetailAPI } from "../../types/api";
 import { NodeDataType } from "../../types/flow";
+import { useTranslation } from "react-i18next";
 
 const useFetchDataOnMount = (
   data: NodeDataType,
@@ -15,6 +16,7 @@ const useFetchDataOnMount = (
   setNode: (id: string, callback: (oldNode: any) => any) => void,
   setIsLoading: (value: boolean) => void,
 ) => {
+  const { t } = useTranslation();
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
   useEffect(() => {
@@ -43,9 +45,9 @@ const useFetchDataOnMount = (
           let responseError = error as ResponseErrorDetailAPI;
 
           setErrorData({
-            title: TITLE_ERROR_UPDATING_COMPONENT,
+            title: t(TITLE_ERROR_UPDATING_COMPONENT),
             list: [
-              responseError?.response?.data?.detail ?? ERROR_UPDATING_COMPONENT,
+              responseError?.response?.data?.detail ?? t(ERROR_UPDATING_COMPONENT),
             ],
           });
         }

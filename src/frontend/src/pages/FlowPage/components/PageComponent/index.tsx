@@ -47,6 +47,7 @@ import ConnectionLineComponent from "../ConnectionLineComponent";
 import SelectionMenu from "../SelectionMenuComponent";
 import getRandomName from "./utils/get-random-name";
 import isWrappedWithClass from "./utils/is-wrapped-with-class";
+import { useTranslation } from "react-i18next";
 
 const nodeTypes = {
   genericNode: GenericNode,
@@ -59,6 +60,7 @@ export default function Page({
   flow: FlowType;
   view?: boolean;
 }): JSX.Element {
+  const { t } = useTranslation();
   const uploadFlow = useFlowsManagerStore((state) => state.uploadFlow);
   const autoSaveCurrentFlow = useFlowsManagerStore(
     (state) => state.autoSaveCurrentFlow,
@@ -143,7 +145,7 @@ export default function Page({
       // ]);
     } else {
       setErrorData({
-        title: INVALID_SELECTION_ERROR_ALERT,
+        title: t(INVALID_SELECTION_ERROR_ALERT),
         list: validateSelection(lastSelection!, edges),
       });
     }
@@ -385,14 +387,14 @@ export default function Page({
             position: position,
           }).catch((error) => {
             setErrorData({
-              title: UPLOAD_ERROR_ALERT,
+              title: t(UPLOAD_ERROR_ALERT),
               list: [error],
             });
           });
         } else {
           setErrorData({
-            title: WRONG_FILE_ERROR_ALERT,
-            list: [UPLOAD_ALERT_LIST],
+            title: t(WRONG_FILE_ERROR_ALERT),
+            list: [t(UPLOAD_ALERT_LIST)],
           });
         }
       }

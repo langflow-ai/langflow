@@ -53,6 +53,7 @@ import OutputComponent from "../OutputComponent";
 import HandleRenderComponent from "../handleRenderComponent";
 import OutputModal from "../outputModal";
 import { TEXT_FIELD_TYPES } from "./constants";
+import { useTranslation } from "react-i18next";
 
 export default function ParameterComponent({
   left,
@@ -73,6 +74,7 @@ export default function ParameterComponent({
   selected,
   outputProxy,
 }: ParameterComponentType): JSX.Element {
+  const { t } = useTranslation();
   const ref = useRef<HTMLDivElement>(null);
   const infoHtml = useRef<HTMLDivElement & ReactNode>(null);
   const nodes = useFlowStore((state) => state.nodes);
@@ -323,9 +325,9 @@ export default function ParameterComponent({
                   content={
                     displayOutputPreview
                       ? unknownOutput
-                        ? "Output can't be displayed"
-                        : "Inspect Output"
-                      : "Please build the component first"
+                        ? t("Output can't be displayed")
+                        : t("Inspect Output")
+                      : t("Please build the component first")
                   }
                 >
                   <Button

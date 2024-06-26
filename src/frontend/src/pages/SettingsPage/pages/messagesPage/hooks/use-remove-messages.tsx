@@ -1,5 +1,6 @@
 import { deleteMessagesFn } from "../../../../../controllers/API";
 import { useMessagesStore } from "../../../../../stores/messagesStore";
+import { useTranslation } from "react-i18next";
 
 const useRemoveMessages = (
   setSelectedRows: (data: number[]) => void,
@@ -7,6 +8,9 @@ const useRemoveMessages = (
   setErrorData: (data: { title: string }) => void,
   selectedRows: number[],
 ) => {
+
+  const { t } = useTranslation();
+
   const deleteMessages = useMessagesStore((state) => state.removeMessages);
 
   const handleRemoveMessages = async () => {
@@ -15,11 +19,11 @@ const useRemoveMessages = (
       deleteMessages(selectedRows);
       setSelectedRows([]);
       setSuccessData({
-        title: "Messages deleted successfully.",
+        title: t("Messages deleted successfully."),
       });
     } catch (error) {
       setErrorData({
-        title: "Error deleting messages.",
+        title: t("Error deleting messages."),
       });
     }
   };

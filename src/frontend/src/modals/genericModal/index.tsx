@@ -156,24 +156,24 @@ export default function GenericModal({
           }
           if (!inputVariables || inputVariables.length === 0) {
             setNoticeData({
-              title: TEMP_NOTICE_ALERT,
+              title: t(TEMP_NOTICE_ALERT),
             });
           } else {
             setSuccessData({
-              title: PROMPT_SUCCESS_ALERT,
+              title: t(PROMPT_SUCCESS_ALERT),
             });
           }
         } else {
           setIsEdit(true);
           setErrorData({
-            title: BUG_ALERT,
+            title: t(BUG_ALERT),
           });
         }
       })
       .catch((error) => {
         setIsEdit(true);
         return setErrorData({
-          title: PROMPT_ERROR_ALERT,
+          title: t(PROMPT_ERROR_ALERT),
           list: [error.response.data.detail ?? ""],
         });
       });

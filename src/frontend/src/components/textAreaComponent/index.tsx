@@ -43,7 +43,7 @@ export default function TextAreaComponent({
         <GenericModal
           type={TypeModal.TEXT}
           buttonText={t("Finish Editing")}
-          modalTitle={EDIT_TEXT_MODAL_TITLE}
+          modalTitle={t(EDIT_TEXT_MODAL_TITLE)}
           value={value}
           setValue={(value: string) => {
             onChange(value);

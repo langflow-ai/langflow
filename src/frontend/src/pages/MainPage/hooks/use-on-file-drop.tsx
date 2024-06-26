@@ -6,8 +6,10 @@ import {
 } from "../../../constants/alerts_constants";
 import useAlertStore from "../../../stores/alertStore";
 import { useFolderStore } from "../../../stores/foldersStore";
+import { useTranslation } from "react-i18next";
 
 const useFileDrop = (uploadFlow, type) => {
+  const { t } = useTranslation();
   const location = useLocation();
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -51,8 +53,8 @@ const useFileDrop = (uploadFlow, type) => {
         reader.readAsText(file);
       } else {
         setErrorData({
-          title: WRONG_FILE_ERROR_ALERT,
-          list: [UPLOAD_ALERT_LIST],
+          title: t(WRONG_FILE_ERROR_ALERT),
+          list: [t(UPLOAD_ALERT_LIST)],
         });
       }
     }

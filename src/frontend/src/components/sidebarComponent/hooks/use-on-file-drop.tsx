@@ -8,11 +8,13 @@ import useAlertStore from "../../../stores/alertStore";
 import useFlowsManagerStore from "../../../stores/flowsManagerStore";
 import { useFolderStore } from "../../../stores/foldersStore";
 import { addVersionToDuplicates } from "../../../utils/reactflowUtils";
+import { useTranslation } from "react-i18next";
 
 const useFileDrop = (
   folderId: string,
   folderChangeCallback: (folderId: string) => void,
 ) => {
+  const { t } = useTranslation();
   const setFolderDragging = useFolderStore((state) => state.setFolderDragging);
   const setFolderIdDragging = useFolderStore(
     (state) => state.setFolderIdDragging,
@@ -35,8 +37,8 @@ const useFileDrop = (
           uploadFormData(firstFile);
         } else {
           setErrorData({
-            title: WRONG_FILE_ERROR_ALERT,
-            list: [UPLOAD_ALERT_LIST],
+            title: t(WRONG_FILE_ERROR_ALERT),
+            list: [t(UPLOAD_ALERT_LIST)],
           });
         }
       }

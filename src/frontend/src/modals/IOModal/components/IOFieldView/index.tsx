@@ -166,7 +166,7 @@ export default function IOFieldView({
             return <TextOutputView left={left} value={textOutputValue} />;
           case "PDFOutput":
             return left ? (
-              <div>{PDFViewConstant}</div>
+              <div>{t(PDFViewConstant)}</div>
             ) : (
               <PdfViewer pdf={flowPoolNode?.params ?? ""} />
             );

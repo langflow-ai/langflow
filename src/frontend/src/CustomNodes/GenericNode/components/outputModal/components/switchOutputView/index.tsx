@@ -9,6 +9,8 @@ import { Case } from "../../../../../../shared/components/caseComponent";
 import TextOutputView from "../../../../../../shared/components/textOutputView";
 import useFlowStore from "../../../../../../stores/flowStore";
 import ErrorOutput from "./components";
+import { useTranslation } from "react-i18next";
+
 // Define the props type
 interface SwitchOutputViewProps {
   nodeId: string;
@@ -18,6 +20,7 @@ const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
   nodeId,
   outputName,
 }) => {
+  const { t } = useTranslation();
   const flowPool = useFlowStore((state) => state.flowPool);
   const flowPoolNode = (flowPool[nodeId] ?? [])[
     (flowPool[nodeId]?.length ?? 1) - 1
@@ -35,7 +38,7 @@ const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
   return (
     <>
       <Case condition={!resultType || resultType === "unknown"}>
-        <div>NO OUTPUT</div>
+        <div>{t("NO OUTPUT")}</div>
       </Case>
       <Case condition={resultType === "error" || resultType === "ValueError"}>
         <ErrorOutput
@@ -68,10 +71,10 @@ const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
               name="AlertCircle"
               className="h-5 w-5 text-primary"
             />
-            <AlertTitle>{"Streaming is not supported"}</AlertTitle>
+            <AlertTitle>{t("Streaming is not supported")}</AlertTitle>
             <AlertDescription>
               {
-                "Use the playground to interact with components that stream data"
+                t("Use the playground to interact with components that stream data")
               }
             </AlertDescription>
           </Alert>

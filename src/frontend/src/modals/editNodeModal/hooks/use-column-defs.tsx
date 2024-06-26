@@ -3,6 +3,7 @@ import { useMemo } from "react";
 import TableNodeCellRender from "../../../components/tableComponent/components/tableNodeCellRender";
 import TableToggleCellRender from "../../../components/tableComponent/components/tableToggleCellRender";
 import { NodeDataType } from "../../../types/flow";
+import { useTranslation } from "react-i18next";
 
 const useColumnDefs = (
   myData: NodeDataType,
@@ -11,10 +12,11 @@ const useColumnDefs = (
   changeAdvanced: (n: string) => void,
   open: boolean,
 ) => {
+  const { t } = useTranslation();
   const columnDefs: ColDef[] = useMemo(
     () => [
       {
-        headerName: "Field Name",
+        headerName: t("Field Name"),
         field: "display_name",
         valueGetter: (params) => {
           const templateParam = params.data;
@@ -31,7 +33,7 @@ const useColumnDefs = (
         cellClass: "no-border",
       },
       {
-        headerName: "Description",
+        headerName: t("Description"),
         field: "info",
         tooltipField: "info",
         wrapText: true,
@@ -41,7 +43,7 @@ const useColumnDefs = (
         cellClass: "no-border",
       },
       {
-        headerName: "Value",
+        headerName: t("Value"),
         field: "value",
         cellRenderer: TableNodeCellRender,
         valueGetter: (params: ValueGetterParams) => {
@@ -59,7 +61,7 @@ const useColumnDefs = (
         cellClass: "no-border",
       },
       {
-        headerName: "Show",
+        headerName: t("Show"),
         field: "advanced",
         cellRenderer: TableToggleCellRender,
         valueGetter: (params: ValueGetterParams) => {

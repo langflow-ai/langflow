@@ -9,6 +9,7 @@ import {
 import useAlertStore from "../../../../../../stores/alertStore";
 import { UploadFileTypeAPI } from "../../../../../../types/api";
 import useFileUpload from "./use-file-upload";
+import { useTranslation } from "react-i18next";
 
 const useUpload = (
   uploadFile: (
@@ -19,6 +20,7 @@ const useUpload = (
   setFiles: any,
   lockChat: boolean,
 ) => {
+  const { t } = useTranslation();
   const setErrorData = useAlertStore((state) => state.setErrorData);
   useEffect(() => {
     const handlePaste = (event: ClipboardEvent): void => {
@@ -39,8 +41,8 @@ const useUpload = (
               !ALLOWED_IMAGE_INPUT_EXTENSIONS.includes(fileExtension)
             ) {
               setErrorData({
-                title: "Error uploading file",
-                list: [FS_ERROR_TEXT, SN_ERROR_TEXT],
+                title: t("Error uploading file"),
+                list: [t(FS_ERROR_TEXT), SN_ERROR_TEXT],
               });
               return;
             }

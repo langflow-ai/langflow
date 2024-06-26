@@ -6,17 +6,19 @@ import {
 } from "../../../../constants/alerts_constants";
 import { resetPassword } from "../../../../controllers/API";
 import { Users } from "../../../../types/api";
+import { useTranslation } from "react-i18next";
 
 const usePatchPassword = (
   userData: Users | null,
   setSuccessData: (data: { title: string; list?: string[] }) => void,
   setErrorData: (data: { title: string; list: string[] }) => void,
 ) => {
+  const { t } = useTranslation();
   const handlePatchPassword = async (password, cnfPassword, handleInput) => {
     if (password !== cnfPassword) {
       setErrorData({
-        title: EDIT_PASSWORD_ERROR_ALERT,
-        list: [EDIT_PASSWORD_ALERT_LIST],
+        title: t(EDIT_PASSWORD_ERROR_ALERT),
+        list: [t(EDIT_PASSWORD_ALERT_LIST)],
       });
       return;
     }
@@ -24,10 +26,10 @@ const usePatchPassword = (
       if (password !== "") await resetPassword(userData!.id, { password });
       handleInput({ target: { name: "password", value: "" } });
       handleInput({ target: { name: "cnfPassword", value: "" } });
-      setSuccessData({ title: SAVE_SUCCESS_ALERT });
+      setSuccessData({ title: t(SAVE_SUCCESS_ALERT) });
     } catch (error) {
       setErrorData({
-        title: SAVE_ERROR_ALERT,
+        title: t(SAVE_ERROR_ALERT),
         list: [(error as any)?.response?.data?.detail],
       });
     }

@@ -47,7 +47,7 @@ const StoreApiKeyFormComponent = ({
             <CardTitle>{t("Store API Key")}</CardTitle>
             <CardDescription>
               {t(hasApiKey && !validApiKey
-                ? INVALID_API_KEY
+                ? t(INVALID_API_KEY)
                 : !hasApiKey
                   ? NO_API_KEY
                   : "") + t(INSERT_API_KEY)}

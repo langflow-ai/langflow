@@ -40,6 +40,7 @@ import { getInputsAndOutputs } from "../utils/storeUtils";
 import useAlertStore from "./alertStore";
 import { useDarkStore } from "./darkStore";
 import useFlowsManagerStore from "./flowsManagerStore";
+import { getI18n } from "react-i18next";
 
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
 const useFlowStore = create<FlowStoreType>((set, get) => ({
@@ -231,13 +232,14 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     );
   },
   paste: (selection, position) => {
+    const { t } = getI18n();
     if (
       selection.nodes.some((node) => node.data.type === "ChatInput") &&
       checkChatInput(get().nodes)
     ) {
       useAlertStore.getState().setErrorData({
-        title: "Error pasting components",
-        list: ["You can only have one ChatInput component in the flow"],
+        title: t("Error pasting components"),
+        list: [t("You can only have one ChatInput component in the flow")],
       });
       return;
     }
@@ -245,7 +247,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       if (checkOldComponents({ nodes: selection.nodes ?? [] })) {
         useAlertStore.getState().setNoticeData({
           title:
-            "Components created before Langflow 1.0 may be unstable. Ensure components are up to date.",
+            t("Components created before Langflow 1.0 may be unstable. Ensure components are up to date."),
         });
       }
     }
@@ -449,6 +451,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     silent?: boolean;
     setLockChat?: (lock: boolean) => void;
   }) => {
+    const { t } = getI18n();
     get().setIsBuilding(true);
     const currentFlow = useFlowsManagerStore.getState().currentFlow;
     const setSuccessData = useAlertStore.getState().setSuccessData;
@@ -463,7 +466,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       const errors = errorsObjs.map((obj) => obj.errors).flat();
       if (errors.length > 0) {
         setErrorData({
-          title: MISSED_ERROR_ALERT,
+          title: t(MISSED_ERROR_ALERT),
           list: errors,
         });
         get().setIsBuilding(false);
@@ -554,7 +557,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       setLockChat,
       onGetOrderSuccess: () => {
         if (!silent) {
-          setNoticeData({ title: "Running components" });
+          setNoticeData({ title: t("Running components") });
         }
       },
       onBuildComplete: (allNodesValid) => {
@@ -566,8 +569,8 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
                 ? `${
                     get().nodes.find((node) => node.id === nodeId)?.data.node
                       ?.display_name
-                  } built successfully`
-                : FLOW_BUILD_SUCCESS_ALERT,
+                  } ${t("built successfully")}`
+                : t(FLOW_BUILD_SUCCESS_ALERT),
             });
           }
         }

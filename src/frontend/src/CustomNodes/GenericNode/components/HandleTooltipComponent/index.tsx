@@ -4,6 +4,7 @@ import { useTypesStore } from "../../../../stores/typesStore";
 import { NodeType } from "../../../../types/flow";
 import { groupByFamily } from "../../../../utils/utils";
 import TooltipRenderComponent from "../tooltipRenderComponent";
+import { useTranslation } from "react-i18next";
 
 export default function HandleTooltips({
   left,
@@ -13,6 +14,8 @@ export default function HandleTooltips({
   nodes: NodeType[];
   tooltipTitle: string;
 }) {
+  const { t } = useTranslation();
+
   const myData = useTypesStore((state) => state.data);
   const nodes = useFlowStore((state) => state.nodes);
 
@@ -25,6 +28,6 @@ export default function HandleTooltips({
     });
   } else {
     //@ts-ignore
-    return <span data-testid={`empty-tooltip-filter`}>{TOOLTIP_EMPTY}</span>;
+    return <span data-testid={`empty-tooltip-filter`}>{t(TOOLTIP_EMPTY)}</span>;
   }
 }

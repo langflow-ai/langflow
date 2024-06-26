@@ -74,13 +74,13 @@ export default function StorePage(): JSX.Element {
       if (!hasApiKey) {
         setErrorData({
           title: t(APIKEY_ERROR_ALERT),
-          list: [NOAPI_ERROR_ALERT],
+          list: [t(NOAPI_ERROR_ALERT)],
         });
         setLoading(false);
       } else if (!validApiKey) {
         setErrorData({
           title: t(APIKEY_ERROR_ALERT),
-          list: [INVALID_API_ERROR_ALERT],
+          list: [t(INVALID_API_ERROR_ALERT)],
         });
       }
     }

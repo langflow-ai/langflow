@@ -6,6 +6,7 @@ import {
 import useAlertStore from "../../stores/alertStore";
 import { ResponseErrorTypeAPI } from "../../types/api";
 import { NodeDataType } from "../../types/flow";
+import { useTranslation } from "react-i18next";
 
 const useHandleOnNewValue = (
   data: NodeDataType,
@@ -16,6 +17,7 @@ const useHandleOnNewValue = (
   setNode: (id: string, callback: (oldNode: any) => any) => void,
   setIsLoading: (value: boolean) => void,
 ) => {
+  const { t } = useTranslation();
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
   const handleOnNewValue = async (newValue, skipSnapshot = false) => {
@@ -47,10 +49,10 @@ const useHandleOnNewValue = (
       } catch (error) {
         let responseError = error as ResponseErrorTypeAPI;
         setErrorData({
-          title: TITLE_ERROR_UPDATING_COMPONENT,
+          title: t(TITLE_ERROR_UPDATING_COMPONENT),
           list: [
             responseError?.response?.data?.detail.error ??
-              ERROR_UPDATING_COMPONENT,
+              t(ERROR_UPDATING_COMPONENT),
           ],
         });
       }

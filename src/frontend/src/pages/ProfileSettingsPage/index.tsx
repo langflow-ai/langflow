@@ -22,10 +22,13 @@ import {
 } from "../../types/components";
 import { gradients } from "../../utils/styleUtils";
 import GradientChooserComponent from "../SettingsPage/pages/GeneralPage/components/ProfilePictureForm/components/profilePictureChooserComponent";
+import { useTranslation } from "react-i18next";
 export default function ProfileSettingsPage(): JSX.Element {
   const setCurrentFlowId = useFlowsManagerStore(
     (state) => state.setCurrentFlowId,
   );
+
+  const { t } = useTranslation();
 
   const [inputState, setInputState] = useState<patchUserInputStateType>(
     CONTROL_PATCH_USER_STATE,
@@ -43,8 +46,8 @@ export default function ProfileSettingsPage(): JSX.Element {
   async function handlePatchUser() {
     if (password !== cnfPassword) {
       setErrorData({
-        title: EDIT_PASSWORD_ERROR_ALERT,
-        list: [EDIT_PASSWORD_ALERT_LIST],
+        title: t(EDIT_PASSWORD_ERROR_ALERT),
+        list: [t(EDIT_PASSWORD_ALERT_LIST)],
       });
       return;
     }
@@ -60,10 +63,10 @@ export default function ProfileSettingsPage(): JSX.Element {
       }
       handleInput({ target: { name: "password", value: "" } });
       handleInput({ target: { name: "cnfPassword", value: "" } });
-      setSuccessData({ title: SAVE_SUCCESS_ALERT });
+      setSuccessData({ title: t(SAVE_SUCCESS_ALERT) });
     } catch (error) {
       setErrorData({
-        title: SAVE_ERROR_ALERT,
+        title: t(SAVE_ERROR_ALERT),
         list: [(error as any).response.data.detail],
       });
     }

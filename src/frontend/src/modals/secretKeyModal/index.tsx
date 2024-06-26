@@ -43,7 +43,7 @@ export default function SecretKeyModal({
       inputRef?.current?.focus();
       inputRef?.current?.select();
       setSuccessData({
-        title: COPIED_NOTICE_ALERT,
+        title: t(COPIED_NOTICE_ALERT),
       });
       setTextCopied(false);
 

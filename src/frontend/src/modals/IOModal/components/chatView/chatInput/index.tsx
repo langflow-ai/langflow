@@ -18,6 +18,8 @@ import useAutoResizeTextArea from "./hooks/use-auto-resize-text-area";
 import useFocusOnUnlock from "./hooks/use-focus-unlock";
 import useHandleFileChange from "./hooks/use-handle-file-change";
 import useUpload from "./hooks/use-upload";
+import { useTranslation } from "react-i18next";
+
 export default function ChatInput({
   lockChat,
   chatValue,
@@ -29,6 +31,7 @@ export default function ChatInput({
   setFiles,
   isDragging,
 }: ChatInputType): JSX.Element {
+  const { t } = useTranslation();
   const [repeat, setRepeat] = useState(1);
   const saveLoading = useFlowsManagerStore((state) => state.saveLoading);
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
@@ -75,8 +78,8 @@ export default function ChatInput({
           saveLoading={saveLoading}
           chatValue={chatValue}
           setChatValue={setChatValue}
-          CHAT_INPUT_PLACEHOLDER={CHAT_INPUT_PLACEHOLDER}
-          CHAT_INPUT_PLACEHOLDER_SEND={CHAT_INPUT_PLACEHOLDER_SEND}
+          CHAT_INPUT_PLACEHOLDER={t(CHAT_INPUT_PLACEHOLDER)}
+          CHAT_INPUT_PLACEHOLDER_SEND={t(CHAT_INPUT_PLACEHOLDER_SEND)}
           inputRef={inputRef}
           setInputFocus={setInputFocus}
           files={files}

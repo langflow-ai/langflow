@@ -1,6 +1,7 @@
 import { XYPosition } from "reactflow";
 import { CONSOLE_ERROR_MSG } from "../../../constants/alerts_constants";
 import useAlertStore from "../../../stores/alertStore";
+import { useTranslation } from "react-i18next";
 
 const useDropdownOptions = ({
   uploadFlow,
@@ -21,6 +22,7 @@ const useDropdownOptions = ({
   navigate: (url: string) => void;
   is_component: boolean;
 }) => {
+  const { t } = useTranslation();
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const handleImportFromJSON = () => {
@@ -36,7 +38,7 @@ const useDropdownOptions = ({
       })
       .catch((error) => {
         setErrorData({
-          title: CONSOLE_ERROR_MSG,
+          title: t(CONSOLE_ERROR_MSG),
           list: [error],
         });
       });
@@ -44,7 +46,7 @@ const useDropdownOptions = ({
 
   const dropdownOptions = [
     {
-      name: "Import from JSON",
+      name: t("Import from JSON"),
       onBtnClick: handleImportFromJSON,
     },
   ];

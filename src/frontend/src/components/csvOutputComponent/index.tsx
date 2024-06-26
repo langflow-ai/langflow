@@ -13,6 +13,7 @@ import ForwardedIconComponent from "../genericIconComponent";
 import TableComponent from "../tableComponent";
 import Loading from "../ui/loading";
 import { convertCSVToData } from "./helpers/convert-data-function";
+import { useTranslation } from "react-i18next";
 
 function CsvOutputComponent({
   csvNode,
@@ -21,6 +22,9 @@ function CsvOutputComponent({
   csvNode: NodeType;
   flowPool: VertexBuildTypeAPI;
 }) {
+
+  const { t } = useTranslation();
+
   const csvNodeArtifacts = flowPool?.data?.artifacts?.repr;
   const jsonString = csvNodeArtifacts?.replace(/'/g, '"');
   let file = null;
@@ -35,11 +39,11 @@ function CsvOutputComponent({
       <div className="align-center flex h-full w-full flex-col items-center justify-center gap-5">
         <div className="align-center flex w-full justify-center gap-2">
           <ForwardedIconComponent name="Table" />
-          {CSVViewErrorTitle}
+          {t(CSVViewErrorTitle)}
         </div>
         <div className="align-center flex w-full justify-center">
           <div className="langflow-chat-desc align-center flex justify-center px-6 py-8">
-            <div className="langflow-chat-desc-span">{CSVError}</div>
+            <div className="langflow-chat-desc-span">{t(CSVError)}</div>
           </div>
         </div>
       </div>
@@ -86,11 +90,11 @@ function CsvOutputComponent({
         <div className="align-center flex h-full w-full flex-col items-center justify-center gap-5">
           <div className="align-center flex w-full justify-center gap-2">
             <ForwardedIconComponent name="Table" />
-            {CSVViewErrorTitle}
+            {t(CSVViewErrorTitle)}
           </div>
           <div className="align-center flex w-full justify-center">
             <div className="langflow-chat-desc align-center flex justify-center px-6 py-8">
-              <div className="langflow-chat-desc-span">{CSVNoDataError}</div>
+              <div className="langflow-chat-desc-span">{t(CSVNoDataError)}</div>
             </div>
           </div>
         </div>
@@ -99,11 +103,11 @@ function CsvOutputComponent({
         <div className="align-center flex h-full w-full flex-col items-center justify-center gap-5">
           <div className="align-center flex w-full justify-center gap-2">
             <ForwardedIconComponent name="Table" />
-            {CSVViewErrorTitle}
+            {t(CSVViewErrorTitle)}
           </div>
           <div className="align-center flex w-full justify-center">
             <div className="langflow-chat-desc align-center flex justify-center px-6 py-8">
-              <div className="langflow-chat-desc-span">{CSVError}</div>
+              <div className="langflow-chat-desc-span">{t(CSVError)}</div>
             </div>
           </div>
         </div>

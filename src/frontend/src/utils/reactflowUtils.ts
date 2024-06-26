@@ -41,7 +41,7 @@ import {
   updateEdgesHandleIdsType,
 } from "../types/utils/reactflowUtils";
 import { createRandomKey, toTitleCase } from "./utils";
-import { useTranslation } from "react-i18next";
+import { getI18n } from "react-i18next";
 
 const uid = new ShortUniqueId();
 
@@ -1272,7 +1272,8 @@ export function getGroupStatus(
   flow: FlowType,
   ssData: { [key: string]: { valid: boolean; params: string } },
 ) {
-  let status = { valid: true, params: SUCCESS_BUILD };
+  const { t } = getI18n();
+  let status = { valid: true, params: t(SUCCESS_BUILD) };
   const { nodes } = flow.data!;
   const ids = nodes.map((n: NodeType) => n.data.id);
   ids.forEach((id) => {
@@ -1450,9 +1451,10 @@ export const createNewFlow = (
   flow: FlowType,
   folderId: string,
 ) => {
+  const { t } = getI18n();
   return {
-    description: flow?.description ?? getRandomDescription(),
-    name: flow?.name ? flow.name : "Untitled document",
+    description: flow?.description ?? t(getRandomDescription()),
+    name: flow?.name ? flow.name : t("Untitled document"),
     data: flowData,
     id: "",
     is_component: flow?.is_component ?? false,

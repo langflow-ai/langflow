@@ -44,6 +44,7 @@ import useValidationStatusString from "../hooks/use-validation-status-string";
 import getFieldTitle from "../utils/get-field-title";
 import sortFields from "../utils/sort-fields";
 import ParameterComponent from "./components/parameterComponent";
+import { useTranslation } from "react-i18next";
 
 export default function GenericNode({
   data,
@@ -55,6 +56,7 @@ export default function GenericNode({
   xPos?: number;
   yPos?: number;
 }): JSX.Element {
+  const { t } = useTranslation();
   const preventDefault = true;
   const types = useTypesStore((state) => state.types);
   const templates = useTypesStore((state) => state.templates);
@@ -164,8 +166,8 @@ export default function GenericNode({
     setErrorData({
       title: `Error in component ${data.node!.display_name}`,
       list: [
-        `The component ${data.node!.display_name} has no template.`,
-        `Please contact the developer of the component to fix this issue.`,
+        `${t("The component")} ${data.node!.display_name} ${t("has no template.")}`,
+        `${t("Please contact the developer of the component to fix this issue.")}`,
       ],
     });
     takeSnapshot();
@@ -240,10 +242,10 @@ export default function GenericNode({
         })
         .catch((err) => {
           setErrorData({
-            title: "Error updating Compoenent code",
+            title: t("Error updating Compoenent code"),
             list: [
-              "There was an error updating the Component.",
-              "If the error persists, please report it on our Discord or GitHub.",
+              t("There was an error updating the Component."),
+              t("If the error persists, please report it on our Discord or GitHub."),
             ],
           });
           setLoadingUpdate(false);
@@ -447,7 +449,7 @@ export default function GenericNode({
                         </div>
                       </ShadTooltip>
                       {isOutdated && !isUserEdited && (
-                        <ShadTooltip content={TOOLTIP_OUTDATED_NODE}>
+                        <ShadTooltip content={t(TOOLTIP_OUTDATED_NODE)}>
                           <Button
                             onClick={handleUpdateCode}
                             unstyled
@@ -536,11 +538,11 @@ export default function GenericNode({
                   <ShadTooltip
                     content={
                       buildStatus === BuildStatus.BUILDING ? (
-                        <span> {STATUS_BUILDING} </span>
+                        <span> {t(STATUS_BUILDING)} </span>
                       ) : buildStatus === BuildStatus.INACTIVE ? (
-                        <span> {STATUS_INACTIVE} </span>
+                        <span> {t(STATUS_INACTIVE)} </span>
                       ) : !validationStatus ? (
-                        <span className="flex">{STATUS_BUILD}</span>
+                        <span className="flex">{t(STATUS_BUILD)}</span>
                       ) : (
                         <div className="max-h-100 p-2">
                           <div className="max-h-80 overflow-auto">
@@ -551,7 +553,7 @@ export default function GenericNode({
                             )}
                             {lastRunTime && (
                               <div className="justify-left flex font-normal text-muted-foreground">
-                                <div>{RUN_TIMESTAMP_PREFIX}</div>
+                                <div>{t(RUN_TIMESTAMP_PREFIX)}</div>
                                 <div className="ml-1 text-status-blue">
                                   {lastRunTime}
                                 </div>
@@ -673,7 +675,7 @@ export default function GenericNode({
                   }}
                 >
                   {(data.node?.description === "" || !data.node?.description) &&
-                  nameEditable ? (
+                  nameEditable ? t(
                     "Double Click to Edit Description"
                   ) : (
                     <Markdown className="markdown prose flex flex-col text-primary word-break-break-word dark:prose-invert">

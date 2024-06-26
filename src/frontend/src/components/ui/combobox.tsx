@@ -12,6 +12,7 @@ import {
   CommandItem,
 } from "./command";
 import { Popover, PopoverContent, PopoverTrigger } from "./popover";
+import { useTranslation } from "react-i18next";
 
 export function Combobox({
   items,
@@ -27,6 +28,8 @@ export function Combobox({
     onChange(value);
   }, [value]);
 
+  const { t } = useTranslation();
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -38,13 +41,13 @@ export function Combobox({
         >
           {value
             ? items.find((framework) => value.includes(framework.value))?.label
-            : "Select filter..."}
+            : t("Select filter...")}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[200px] p-0">
         <Command>
-          <CommandInput placeholder="Search filters..." />
+          <CommandInput placeholder={t("Search filters...")} />
           <CommandEmpty>No filters found.</CommandEmpty>
           <CommandGroup>
             {items.map((framework) => (

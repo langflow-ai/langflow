@@ -5,6 +5,7 @@ import {
 } from "../../../../constants/alerts_constants";
 import { AuthContext } from "../../../../contexts/authContext";
 import { addApiKeyStore } from "../../../../controllers/API";
+import { useTranslation } from "react-i18next";
 
 const useSaveKey = (
   setSuccessData: (data: { title: string }) => void,
@@ -13,6 +14,9 @@ const useSaveKey = (
   setValidApiKey: (validApiKey: boolean) => void,
   setLoadingApiKey: (loadingApiKey: boolean) => void,
 ) => {
+
+  const { t } = useTranslation();
+
   const { storeApiKey } = useContext(AuthContext);
 
   const handleSaveKey = (apikey, handleInput) => {
@@ -20,7 +24,7 @@ const useSaveKey = (
       setLoadingApiKey(true);
       addApiKeyStore(apikey).then(
         () => {
-          setSuccessData({ title: API_SUCCESS_ALERT });
+          setSuccessData({ title: t(API_SUCCESS_ALERT) });
           storeApiKey(apikey);
           setHasApiKey(true);
           setValidApiKey(true);
@@ -29,7 +33,7 @@ const useSaveKey = (
         },
         (error) => {
           setErrorData({
-            title: API_ERROR_ALERT,
+            title: t(API_ERROR_ALERT),
             list: [error.response.data.detail],
           });
           setHasApiKey(false);

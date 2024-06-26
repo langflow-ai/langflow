@@ -254,7 +254,7 @@ export default function ChatMessage({
                             }}
                           >
                             {chatMessage === ""
-                              ? EMPTY_INPUT_SEND_MESSAGE
+                              ? t(EMPTY_INPUT_SEND_MESSAGE)
                               : chatMessage}
                           </Markdown>
                         ),
@@ -288,7 +288,7 @@ export default function ChatMessage({
                   className={cn(
                     "prose word-break-break-word dark:prose-invert",
                     chatMessage !== ""
-                      ? EMPTY_INPUT_SEND_MESSAGE
+                      ? t(EMPTY_INPUT_SEND_MESSAGE)
                       : chatMessage
                         ? "text-primary"
                         : "text-chat-trigger-disabled",
@@ -324,7 +324,7 @@ export default function ChatMessage({
                         return <p>{parts}</p>;
                       })
                     : chatMessage === ""
-                      ? EMPTY_INPUT_SEND_MESSAGE
+                      ? t(EMPTY_INPUT_SEND_MESSAGE)
                       : chatMessage}
                 </span>
               </>
@@ -340,7 +340,7 @@ export default function ChatMessage({
                     "chat-message-" + chat.sender_name + "-" + chatMessage
                   }
                 >
-                  {chatMessage === "" ? EMPTY_INPUT_SEND_MESSAGE : chatMessage}
+                  {chatMessage === "" ? t(EMPTY_INPUT_SEND_MESSAGE) : chatMessage}
                 </span>
                 {chat.files && (
                   <div className="my-2 flex flex-col gap-5">

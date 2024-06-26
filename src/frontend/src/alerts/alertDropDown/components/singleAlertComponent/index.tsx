@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import IconComponent from "../../../../components/genericIconComponent";
 import { SingleAlertComponentType } from "../../../../types/alerts";
+import { useTranslation } from "react-i18next";
 
 export default function SingleAlert({
   dropItem,
@@ -10,7 +11,7 @@ export default function SingleAlert({
 }: SingleAlertComponentType): JSX.Element {
   const [show, setShow] = useState(true);
   const type = dropItem.type;
-
+  const { t } = useTranslation();
   return (
     <Transition
       className="nocopy nowheel nopan nodelete nodrag noundo relative"
@@ -97,7 +98,7 @@ export default function SingleAlert({
                   to={dropItem.link}
                   className="whitespace-nowrap font-medium text-info-foreground hover:text-accent-foreground"
                 >
-                  Details
+                  {t("Details")}
                 </Link>
               ) : (
                 <></>

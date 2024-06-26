@@ -5,6 +5,7 @@ import {
   SN_ERROR_TEXT,
 } from "../../../../../../constants/constants";
 import useFileUpload from "./use-file-upload";
+import { useTranslation } from "react-i18next";
 
 const useDragAndDrop = (
   setIsDragging: (value: boolean) => void,
@@ -48,6 +49,7 @@ const useDragAndDrop = (
 };
 
 const handleFiles = (files, setFiles, currentFlowId, setErrorData) => {
+  const { t } = useTranslation();
   if (files) {
     const file = files?.[0];
     const fileExtension = file.name.split(".").pop()?.toLowerCase();
@@ -57,8 +59,8 @@ const handleFiles = (files, setFiles, currentFlowId, setErrorData) => {
     ) {
       console.log("Error uploading file");
       setErrorData({
-        title: "Error uploading file",
-        list: [FS_ERROR_TEXT, SN_ERROR_TEXT],
+        title: t("Error uploading file"),
+        list: [t(FS_ERROR_TEXT), SN_ERROR_TEXT],
       });
       return;
     }

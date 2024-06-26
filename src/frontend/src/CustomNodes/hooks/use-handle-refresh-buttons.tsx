@@ -6,11 +6,15 @@ import {
 import useAlertStore from "../../stores/alertStore";
 import { ResponseErrorDetailAPI } from "../../types/api";
 import { handleUpdateValues } from "../../utils/parameterUtils";
+import { useTranslation } from "react-i18next";
 
 const useHandleRefreshButtonPress = (
   setIsLoading: (value: boolean) => void,
   setNode: (id: string, callback: (oldNode: any) => any) => void,
 ) => {
+
+  const { t } = useTranslation();
+
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
   const handleRefreshButtonPress = async (name, data) => {
@@ -32,9 +36,9 @@ const useHandleRefreshButtonPress = (
       let responseError = error as ResponseErrorDetailAPI;
 
       setErrorData({
-        title: TITLE_ERROR_UPDATING_COMPONENT,
+        title: t(TITLE_ERROR_UPDATING_COMPONENT),
         list: [
-          responseError?.response?.data?.detail ?? ERROR_UPDATING_COMPONENT,
+          responseError?.response?.data?.detail ?? t(ERROR_UPDATING_COMPONENT),
         ],
       });
     }

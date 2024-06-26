@@ -12,8 +12,10 @@ import {
   inputHandlerEventType,
   loginInputStateType,
 } from "../../../types/components";
+import { useTranslation } from "react-i18next";
 
 export default function LoginAdminPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   const [inputState, setInputState] =
@@ -45,7 +47,7 @@ export default function LoginAdminPage() {
       })
       .catch((error) => {
         setErrorData({
-          title: SIGNIN_ERROR_ALERT,
+          title: t(SIGNIN_ERROR_ALERT),
           list: [error["response"]["data"]["detail"]],
         });
       });
@@ -61,7 +63,7 @@ export default function LoginAdminPage() {
             handleInput({ target: { name: "username", value } });
           }}
           className="bg-background"
-          placeholder="Username"
+          placeholder={t("Username")}
         />
         <Input
           type="password"
@@ -69,7 +71,7 @@ export default function LoginAdminPage() {
             handleInput({ target: { name: "password", value } });
           }}
           className="bg-background"
-          placeholder="Password"
+          placeholder={t("Password")}
         />
         <Button
           onClick={() => {
@@ -78,7 +80,7 @@ export default function LoginAdminPage() {
           variant="default"
           className="w-full"
         >
-          Login
+          {t("Login")}
         </Button>
       </div>
     </div>

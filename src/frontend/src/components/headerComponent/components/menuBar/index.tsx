@@ -126,7 +126,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
                 uploadFlow({ newProject: false, isComponent: false }).catch(
                   (error) => {
                     setErrorData({
-                      title: UPLOAD_ERROR_ALERT,
+                      title: t(UPLOAD_ERROR_ALERT),
                       list: [error],
                     });
                   },
@@ -200,7 +200,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
       {(currentFlow.updated_at || saveLoading) && (
         <ShadTooltip
           content={
-            SAVED_HOVER +
+            t(SAVED_HOVER) +
             new Date(currentFlow.updated_at ?? "").toLocaleString("en-US", {
               hour: "numeric",
               minute: "numeric",

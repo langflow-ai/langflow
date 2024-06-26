@@ -51,7 +51,7 @@ const ExportModal = forwardRef(
               description,
             );
             setNoticeData({
-              title: API_WARNING_NOTICE_ALERT,
+              title: t(API_WARNING_NOTICE_ALERT),
             });
           } else
             downloadFlow(

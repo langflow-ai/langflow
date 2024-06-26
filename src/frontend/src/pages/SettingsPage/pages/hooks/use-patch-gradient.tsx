@@ -4,6 +4,7 @@ import {
   SAVE_SUCCESS_ALERT,
 } from "../../../../constants/alerts_constants";
 import { updateUser } from "../../../../controllers/API";
+import { useTranslation } from "react-i18next";
 
 const usePatchGradient = (
   setSuccessData,
@@ -11,6 +12,7 @@ const usePatchGradient = (
   currentUserData,
   setUserData,
 ) => {
+  const { t } = useTranslation();
   const handlePatchGradient = async (gradient) => {
     try {
       if (gradient !== "") {
@@ -19,10 +21,10 @@ const usePatchGradient = (
         newUserData.profile_image = gradient;
         setUserData(newUserData);
       }
-      setSuccessData({ title: SAVE_SUCCESS_ALERT });
+      setSuccessData({ title: t(SAVE_SUCCESS_ALERT) });
     } catch (error) {
       setErrorData({
-        title: SAVE_ERROR_ALERT,
+        title: t(SAVE_ERROR_ALERT),
         list: [(error as any)?.response?.data?.detail],
       });
     }

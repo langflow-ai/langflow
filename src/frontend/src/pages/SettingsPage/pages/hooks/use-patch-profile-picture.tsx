@@ -5,6 +5,7 @@ import {
 } from "../../../../constants/alerts_constants";
 import { updateUser } from "../../../../controllers/API";
 import { Users } from "../../../../types/api";
+import { useTranslation } from "react-i18next";
 
 const usePatchProfilePicture = (
   setSuccessData: (data: { title: string; list?: string[] }) => void,
@@ -12,6 +13,7 @@ const usePatchProfilePicture = (
   currentUserData: Users | null,
   setUserData: (data: any) => void,
 ) => {
+  const { t } = useTranslation();
   const handlePatchProfilePicture = async (profile_picture) => {
     try {
       if (profile_picture !== "") {
@@ -22,10 +24,10 @@ const usePatchProfilePicture = (
         newUserData!.profile_image = profile_picture;
         setUserData(newUserData);
       }
-      setSuccessData({ title: SAVE_SUCCESS_ALERT });
+      setSuccessData({ title: t(SAVE_SUCCESS_ALERT) });
     } catch (error) {
       setErrorData({
-        title: SAVE_ERROR_ALERT,
+        title: t(SAVE_ERROR_ALERT),
         list: [(error as any)?.response?.data?.detail],
       });
     }

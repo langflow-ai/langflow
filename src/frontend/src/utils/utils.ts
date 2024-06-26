@@ -368,7 +368,7 @@ export function extractColumnsFromRows(
         headerName: key,
         field: key,
         cellRenderer: TableAutoCellRender,
-        filter: true,
+        filter: false,
       };
     }
     for (const row of rows) {
@@ -385,7 +385,7 @@ export function extractColumnsFromRows(
         columnsKeys[key] = {
           headerName: key,
           field: key,
-          filter: true,
+          filter: false,
           cellRenderer: TableAutoCellRender,
           suppressAutoSize: true,
           tooltipField: key,

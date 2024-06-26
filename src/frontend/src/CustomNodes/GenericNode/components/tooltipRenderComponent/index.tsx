@@ -9,17 +9,18 @@ import {
   nodeNames,
 } from "../../../../utils/styleUtils";
 import { classNames } from "../../../../utils/utils";
+import { useTranslation } from "react-i18next";
 
 const TooltipRenderComponent = ({ item, index, left }) => {
   const Icon = nodeIconsLucide[item.family] ?? nodeIconsLucide["unknown"];
-
+  const { t } = useTranslation();
   return (
     <div
       key={index}
       data-testid={`available-${left ? "input" : "output"}-${item.family}`}
     >
       {index === 0 && (
-        <span>{left ? INPUT_HANDLER_HOVER : OUTPUT_HANDLER_HOVER}</span>
+        <span>{left ? t(INPUT_HANDLER_HOVER) : t(OUTPUT_HANDLER_HOVER)}</span>
       )}
       <span
         key={index}

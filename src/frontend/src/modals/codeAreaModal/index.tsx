@@ -69,7 +69,7 @@ export default function CodeAreaModal({
           let funcErrors = apiReturn.data.function.errors;
           if (funcErrors.length === 0 && importsErrors.length === 0) {
             setSuccessData({
-              title: CODE_SUCCESS_ALERT,
+              title: t(CODE_SUCCESS_ALERT),
             });
             setOpen(false);
             setValue(code);
@@ -77,26 +77,26 @@ export default function CodeAreaModal({
           } else {
             if (funcErrors.length !== 0) {
               setErrorData({
-                title: FUNC_ERROR_ALERT,
+                title: t(FUNC_ERROR_ALERT),
                 list: funcErrors,
               });
             }
             if (importsErrors.length !== 0) {
               setErrorData({
-                title: IMPORT_ERROR_ALERT,
+                title: t(IMPORT_ERROR_ALERT),
                 list: importsErrors,
               });
             }
           }
         } else {
           setErrorData({
-            title: BUG_ALERT,
+            title: t(BUG_ALERT),
           });
         }
       })
       .catch((_) => {
         setErrorData({
-          title: CODE_ERROR_ALERT,
+          title: t(CODE_ERROR_ALERT),
         });
       });
   }

@@ -5,12 +5,14 @@ import { IMGViewErrorMSG, IMGViewErrorTitle } from "../../constants/constants";
 import useAlertStore from "../../stores/alertStore";
 import ForwardedIconComponent from "../genericIconComponent";
 import { Separator } from "../ui/separator";
+import { useTranslation } from "react-i18next";
 
 export default function ImageViewer({ image }) {
+  const { t } = useTranslation();
   const viewerRef = useRef(null);
   const [errorDownloading, setErrordownloading] = useState(false);
   const setErrorList = useAlertStore((state) => state.setErrorData);
-  const [initialMsg, setInicialMsg] = useState("Please build your flow");
+  const [initialMsg, setInicialMsg] = useState(t("Please build your flow"));
 
   useEffect(() => {
     try {
@@ -75,7 +77,7 @@ export default function ImageViewer({ image }) {
         saveAs(blob, "image.jpg");
       })
       .catch((error) => {
-        setErrorList({ title: "There was an error downloading your image" });
+        setErrorList({ title: t("There was an error downloading your image") });
         console.error("Error downloading image:", error);
       });
   }
@@ -84,11 +86,11 @@ export default function ImageViewer({ image }) {
     <div className="align-center flex h-full w-full flex-col justify-center gap-5 rounded-md border border-border bg-muted">
       <div className="align-center flex justify-center gap-2">
         <ForwardedIconComponent name="Image" />
-        {IMGViewErrorTitle}
+        {t(IMGViewErrorTitle)}
       </div>
       <div className="align-center flex justify-center">
         <div className="langflow-chat-desc align-center flex justify-center">
-          <div className="langflow-chat-desc-span">{IMGViewErrorMSG}</div>
+          <div className="langflow-chat-desc-span">{t(IMGViewErrorMSG)}</div>
         </div>
       </div>
     </div>

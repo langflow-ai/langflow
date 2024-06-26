@@ -3,6 +3,7 @@ import { getComponent } from "../../../controllers/API";
 import useFlowsManagerStore from "../../../stores/flowsManagerStore";
 import { storeComponent } from "../../../types/store";
 import cloneFlowWithParent from "../../../utils/storeUtils";
+import { useTranslation } from "react-i18next";
 
 const useInstallComponent = (
   data: storeComponent,
@@ -14,6 +15,9 @@ const useInstallComponent = (
   setSuccessData: (value: { title: string }) => void,
   setErrorData: (value: { title: string; list: string[] }) => void,
 ) => {
+
+  const { t } = useTranslation();
+
   const addFlow = useFlowsManagerStore((state) => state.addFlow);
 
   const handleInstall = () => {
@@ -27,14 +31,20 @@ const useInstallComponent = (
         addFlow(true, newFlow)
           .then((id) => {
             setSuccessData({
-              title: `${name} ${isStore ? "Downloaded" : "Installed"} Successfully.`,
+              title: `${t("{{name}} {{action}} Successfully.", {
+                action: isStore ? t("Downloaded") : t("Installed"),
+                name: name
+              })}`
             });
             setLoading(false);
           })
           .catch((error) => {
             setLoading(false);
             setErrorData({
-              title: `Error ${isStore ? "downloading" : "installing"} the ${name}`,
+              title: `${t("Error {{action}} the {{name}}", {
+                action: isStore ? t("downloading") : t("installing"),
+                name: name
+              })}`,
               list: [error.response.data.detail],
             });
           });
@@ -42,7 +52,10 @@ const useInstallComponent = (
       .catch((err) => {
         setLoading(false);
         setErrorData({
-          title: `Error ${isStore ? "downloading" : "installing"} the ${name}`,
+          title:  `${t("Error {{action}} the {{name}}", {
+            action: isStore ? t("downloading") : t("installing"),
+            name: name
+          })}`,
           list: [err.response.data.detail],
         });
         setDownloadsCount(temp);

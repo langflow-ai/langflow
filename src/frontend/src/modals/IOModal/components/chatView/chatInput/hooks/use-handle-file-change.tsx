@@ -6,12 +6,14 @@ import {
 } from "../../../../../../constants/constants";
 import useAlertStore from "../../../../../../stores/alertStore";
 import useFileUpload from "./use-file-upload";
+import { useTranslation } from "react-i18next";
 
 export const useHandleFileChange = (setFiles, currentFlowId) => {
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const handleFileChange = async (
     event: React.ChangeEvent<HTMLInputElement>,
   ) => {
+    const { t } = useTranslation();
     const fileInput = event.target;
     const file = fileInput.files?.[0];
     if (file) {
@@ -22,8 +24,8 @@ export const useHandleFileChange = (setFiles, currentFlowId) => {
         !ALLOWED_IMAGE_INPUT_EXTENSIONS.includes(fileExtension)
       ) {
         setErrorData({
-          title: "Error uploading file",
-          list: [FS_ERROR_TEXT, SN_ERROR_TEXT],
+          title: t("Error uploading file"),
+          list: [t(FS_ERROR_TEXT), SN_ERROR_TEXT],
         });
         return;
       }
