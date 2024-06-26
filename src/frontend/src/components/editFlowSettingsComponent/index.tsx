@@ -107,14 +107,14 @@ export const EditFlowSettings: React.FC<InputProps> = ({
             }}
           />
         ) : (
-          <span
+          <div
             className={cn(
-              "font-normal text-muted-foreground word-break-break-word",
+              "max-h-[250px] overflow-auto font-normal text-muted-foreground word-break-break-word",
               description === "" ? "font-light italic" : "",
             )}
           >
             {description === "" ? "No description" : description}
-          </span>
+          </div>
         )}
       </Label>
       {setEndpointName && (
