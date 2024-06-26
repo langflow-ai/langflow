@@ -2,6 +2,11 @@ import { expect, test } from "@playwright/test";
 import path from "path";
 
 test("Basic Prompting (Hello, World)", async ({ page }) => {
+  if (!process?.env?.OPENAI_API_KEY) {
+    //You must set the OPENAI_API_KEY on .env file to run this test
+    expect(false).toBe(true);
+  }
+
   await page.goto("/");
   await page.waitForTimeout(2000);
 
@@ -31,11 +36,6 @@ test("Basic Prompting (Hello, World)", async ({ page }) => {
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
-
-  if (!process.env.OPENAI_API_KEY) {
-    //You must set the OPENAI_API_KEY on .env file to run this test
-    expect(false).toBe(true);
-  }
 
   await page
     .getByTestId("popover-anchor-input-openai_api_key")
@@ -90,6 +90,11 @@ test("Basic Prompting (Hello, World)", async ({ page }) => {
 });
 
 test("Memory Chatbot", async ({ page }) => {
+  if (!process?.env?.OPENAI_API_KEY) {
+    //You must set the OPENAI_API_KEY on .env file to run this test
+    expect(false).toBe(true);
+  }
+
   await page.goto("/");
   await page.waitForTimeout(2000);
 
@@ -116,11 +121,6 @@ test("Memory Chatbot", async ({ page }) => {
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
-
-  if (!process.env.OPENAI_API_KEY) {
-    //You must set the OPENAI_API_KEY on .env file to run this test
-    expect(false).toBe(true);
-  }
 
   await page
     .getByTestId("popover-anchor-input-openai_api_key")
@@ -185,6 +185,11 @@ test("Memory Chatbot", async ({ page }) => {
 });
 
 test("Document QA", async ({ page }) => {
+  if (!process?.env?.OPENAI_API_KEY) {
+    //You must set the OPENAI_API_KEY on .env file to run this test
+    expect(false).toBe(true);
+  }
+
   await page.goto("/");
   await page.waitForTimeout(2000);
 
@@ -211,11 +216,6 @@ test("Document QA", async ({ page }) => {
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
-
-  if (!process.env.OPENAI_API_KEY) {
-    //You must set the OPENAI_API_KEY on .env file to run this test
-    expect(false).toBe(true);
-  }
 
   await page
     .getByTestId("popover-anchor-input-openai_api_key")
@@ -279,6 +279,11 @@ test("Document QA", async ({ page }) => {
 });
 
 test("Blog Writer", async ({ page }) => {
+  if (!process?.env?.OPENAI_API_KEY) {
+    //You must set the OPENAI_API_KEY on .env file to run this test
+    expect(false).toBe(true);
+  }
+
   await page.goto("/");
   await page.waitForTimeout(2000);
 
@@ -305,11 +310,6 @@ test("Blog Writer", async ({ page }) => {
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
-
-  if (!process.env.OPENAI_API_KEY) {
-    //You must set the OPENAI_API_KEY on .env file to run this test
-    expect(false).toBe(true);
-  }
 
   await page
     .getByTestId("popover-anchor-input-openai_api_key")
