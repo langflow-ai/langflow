@@ -248,8 +248,6 @@ export default function ParameterComponent({
     }
   }, [disabledOutput]);
 
-  console.log(data);
-
   return !showNode ? (
     left && LANGFLOW_SUPPORTED_TYPES.has(type ?? "") && !optionalHandle ? (
       <></>
