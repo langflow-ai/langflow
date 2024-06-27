@@ -182,7 +182,7 @@ class TracingService(Service):
 
 
 class LangSmithTracer(BaseTracer):
-    def __init__(self, trace_name: str, trace_type: str, project_name: str, trace_id: str):
+    def __init__(self, trace_name: str, trace_type: str, project_name: str, trace_id: UUID):
         from langsmith.run_trees import RunTree
 
         self.trace_name = trace_name
@@ -293,7 +293,7 @@ class LangSmithTracer(BaseTracer):
         inputs: dict[str, Any],
         outputs: Dict[str, Any],
         error: str | None = None,
-        metadata: Optional[dict[str, Any]] = None,
+        metadata: dict[str, Any] | None = None,
     ):
         self._run_tree.add_metadata({"inputs": inputs, "metadata": metadata or {}})
         self._run_tree.end(outputs=outputs, error=error)
