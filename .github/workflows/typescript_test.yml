@@ -8,7 +8,6 @@ on:
         required: true
         type: string
 
-
 env:
   POETRY_VERSION: "1.8.2"
   NODE_VERSION: "21"
@@ -24,8 +23,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shardIndex: [1, 2, 3, 4]
-        shardTotal: [4]
+        shardIndex: [1, 2, 3, 4, 5, 6, 7, 8]
+        shardTotal: [8]
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      STORE_API_KEY: ${{ secrets.STORE_API_KEY }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
