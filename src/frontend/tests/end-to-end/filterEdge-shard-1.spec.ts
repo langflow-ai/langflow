@@ -21,13 +21,14 @@ test("LLMChain - Filter", async ({ page }) => {
   }
   await page.waitForTimeout(1000);
 
+  await page.getByTestId(
+    "input-list-plus-btn-edit_metadata_indexing_include-2",
+  );
+
   await page.getByTestId("blank-flow").click();
-  await page.waitForTimeout(3000);
-
   await page.waitForSelector('[data-testid="extended-disclosure"]', {
-    timeout: 100000,
+    timeout: 30000,
   });
-
   await page.getByTestId("extended-disclosure").click();
   await page.getByPlaceholder("Search").click();
   await page.getByPlaceholder("Search").fill("llmchain");
@@ -44,13 +45,33 @@ test("LLMChain - Filter", async ({ page }) => {
   await page.getByTitle("zoom out").click();
   await page.waitForTimeout(500);
 
-  await page
-    .locator(
-      '//*[@id="react-flow-id"]/div/div[1]/div[1]/div/div[2]/div/div/div[2]/div[7]/button/div[1]',
-    )
-    .click();
+  let visibleElementHandle;
 
+  const llmChainOutputElements = await page
+    .getByTestId("handle-llmchain-shownode-text-right")
+    .all();
+
+  for (const element of llmChainOutputElements) {
+    if (await element.isVisible()) {
+      visibleElementHandle = element;
+      break;
+    }
+  }
+
+  await visibleElementHandle.click({
+    force: true,
+  });
+
+  await expect(page.getByTestId("disclosure-helpers")).toBeVisible();
   await expect(page.getByTestId("disclosure-agents")).toBeVisible();
+  await expect(page.getByTestId("disclosure-chains")).toBeVisible();
+  await expect(page.getByTestId("disclosure-utilities")).toBeVisible();
+  await expect(page.getByTestId("disclosure-memories")).toBeVisible();
+  await expect(page.getByTestId("disclosure-prototypes")).toBeVisible();
+  await expect(page.getByTestId("disclosure-retrievers")).toBeVisible();
+  await expect(page.getByTestId("disclosure-text splitters")).toBeVisible();
+  await expect(page.getByTestId("disclosure-toolkits")).toBeVisible();
+  await expect(page.getByTestId("disclosure-tools")).toBeVisible();
 
   await expect(page.getByTestId("chainsLLMChain").first()).toBeVisible();
   await expect(
@@ -88,19 +109,37 @@ test("LLMChain - Filter", async ({ page }) => {
   await expect(page.getByTestId("model_specsChatOpenAI")).not.toBeVisible();
   await expect(page.getByTestId("model_specsChatVertexAI")).not.toBeVisible();
 
-  await page
-    .locator(
-      '//*[@id="react-flow-id"]/div/div[1]/div[1]/div/div[2]/div/div/div[2]/div[4]/div/button/div[1]',
-    )
-    .click();
+  const llmChainInputElements1 = await page
+    .getByTestId("handle-llmchain-shownode-llm-left")
+    .all();
+
+  for (const element of llmChainInputElements1) {
+    if (await element.isVisible()) {
+      visibleElementHandle = element;
+      break;
+    }
+  }
+
+  await visibleElementHandle.blur();
+
+  await visibleElementHandle.click({
+    force: true,
+  });
 
   await expect(page.getByTestId("disclosure-models")).toBeVisible();
 
-  await page
-    .locator(
-      '//*[@id="react-flow-id"]/div/div[1]/div[1]/div/div[2]/div/div/div[2]/div[3]/div/button/div[1]',
-    )
-    .click();
+  const llmChainInputElements0 = await page
+    .getByTestId("handle-llmchain-shownode-template-left")
+    .all();
+
+  for (const element of llmChainInputElements0) {
+    if (await element.isVisible()) {
+      visibleElementHandle = element;
+      break;
+    }
+  }
+
+  await visibleElementHandle.click();
 
   await expect(page.getByTestId("disclosure-helpers")).toBeVisible();
   await expect(page.getByTestId("disclosure-agents")).toBeVisible();
