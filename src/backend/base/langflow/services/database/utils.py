@@ -18,8 +18,12 @@ def migrate_messages_from_monitor_service_to_database(session: Session) -> bool:
     from langflow.schema.message import Message
     from langflow.services.database.models.message import MessageTable
 
-    monitor_service = get_monitor_service()
-    messages_df = monitor_service.get_messages()
+    try:
+        monitor_service = get_monitor_service()
+        messages_df = monitor_service.get_messages()
+    except Exception as e:
+        logger.error(f"Error retrieving messages from monitor service: {e}")
+        return False
 
     if messages_df.empty:
         logger.info("No messages to migrate.")
