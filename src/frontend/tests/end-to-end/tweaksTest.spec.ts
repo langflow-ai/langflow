@@ -79,7 +79,10 @@ test("check if tweaks are updating when someothing on the flow changes", async (
     await page.waitForTimeout(5000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
-  await page.waitForTimeout(1000);
+
+  await page.waitForSelector('[data-testid="blank-flow"]', {
+    timeout: 30000,
+  });
 
   await page.getByTestId("blank-flow").click();
   await page.waitForSelector('[data-testid="extended-disclosure"]', {

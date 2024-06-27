@@ -21,6 +21,7 @@ export default function HandleRenderComponent({
   colors,
   setFilterEdge,
   showNode,
+  testIdComplement,
 }: {
   left: boolean;
   nodes: any;
@@ -33,7 +34,10 @@ export default function HandleRenderComponent({
   colors: string[];
   setFilterEdge: any;
   showNode: any;
+  testIdComplement?: string;
 }) {
+  console.log(myData);
+
   return (
     <Button
       unstyled
