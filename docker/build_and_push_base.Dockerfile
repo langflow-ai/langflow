@@ -95,6 +95,7 @@ USER user
 # Install the package from the .tar.gz
 RUN python -m pip install /app/src/backend/base/dist/*.tar.gz --user
 
+ENV LANGFLOW_HOST=0.0.0.0
+ENV LANGFLOW_PORT=7860
 
 ENTRYPOINT ["python", "-m", "langflow", "run"]
-CMD ["--host", "0.0.0.0", "--port", "7860"]
