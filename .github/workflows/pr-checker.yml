@@ -8,6 +8,7 @@ jobs:
   pr-checker:
     name: Check PR description
     runs-on: [ubuntu-latest]
+    if: github.repository == 'langflow-ai/langflow'
     steps:
       - name: Run PR title check
         uses: transferwise/actions-pr-checker@v3

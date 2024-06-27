@@ -13,6 +13,8 @@ env:
 jobs:
   run-linters:
     name: Run Prettier
+    # do not run on personal forks since we don't have permissions to push
+    if: github.repository == 'langflow-ai/langflow'
     runs-on: ubuntu-latest
     permissions:
       contents: write
