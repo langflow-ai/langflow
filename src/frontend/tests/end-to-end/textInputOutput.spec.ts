@@ -118,8 +118,6 @@ test("TextInputOutputComponent", async ({ page }) => {
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
 
-
-
   const component3 = await page.locator(
     '//*[@id="react-flow-id"]/div/div[1]/div[1]/div/div[2]/div[3]',
   );
@@ -135,7 +133,6 @@ test("TextInputOutputComponent", async ({ page }) => {
   // ensure elements popups are not blocking
   component2.blur();
   component3.blur();
-
 
   await page.mouse.up();
 
