@@ -248,6 +248,8 @@ export default function ParameterComponent({
     }
   }, [disabledOutput]);
 
+  console.log(data);
+
   return !showNode ? (
     left && LANGFLOW_SUPPORTED_TYPES.has(type ?? "") && !optionalHandle ? (
       <></>
@@ -264,6 +266,7 @@ export default function ParameterComponent({
         colors={colors}
         setFilterEdge={setFilterEdge}
         showNode={showNode}
+        testIdComplement={`${data?.type?.toLowerCase()}-noshownode`}
       />
     )
   ) : (
@@ -390,6 +393,7 @@ export default function ParameterComponent({
             colors={colors}
             setFilterEdge={setFilterEdge}
             showNode={showNode}
+            testIdComplement={`${data?.type?.toLowerCase()}-shownode`}
           />
         )}
 

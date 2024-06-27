@@ -19,8 +19,9 @@ test("flowSettings", async ({ page }) => {
     await page.waitForTimeout(5000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
-  await page.waitForTimeout(1000);
-
+  await page.waitForSelector('[data-testid="blank-flow"]', {
+    timeout: 30000,
+  });
   await page.getByTestId("blank-flow").click();
   await page.waitForTimeout(1000);
 

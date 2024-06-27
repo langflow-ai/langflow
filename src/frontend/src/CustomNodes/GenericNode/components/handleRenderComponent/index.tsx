@@ -21,6 +21,7 @@ export default function HandleRenderComponent({
   colors,
   setFilterEdge,
   showNode,
+  testIdComplement,
 }: {
   left: boolean;
   nodes: any;
@@ -33,7 +34,10 @@ export default function HandleRenderComponent({
   colors: string[];
   setFilterEdge: any;
   showNode: any;
+  testIdComplement?: string;
 }) {
+  console.log(myData);
+
   return (
     <Button
       unstyled
@@ -52,7 +56,7 @@ export default function HandleRenderComponent({
         side={left ? "left" : "right"}
       >
         <Handle
-          data-test-id={`handle-${title.toLowerCase()}-${
+          data-testid={`handle-${testIdComplement}-${title.toLowerCase()}-${
             !showNode ? (left ? "target" : "source") : left ? "left" : "right"
           }`}
           type={left ? "target" : "source"}
