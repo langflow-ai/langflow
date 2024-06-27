@@ -4,10 +4,6 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
     branches: [dev, main]
-    paths:
-      - "poetry.lock"
-      - "pyproject.toml"
-      - "src/backend/**"
   merge_group:
     types: [checks_requested]
 env:
