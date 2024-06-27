@@ -1,12 +1,7 @@
 name: Ruff Style Check
 
 on:
-  pull_request:
-    paths:
-      - "poetry.lock"
-      - "pyproject.toml"
-      - "src/backend/**"
-      - "tests/**"
+  pull_request: {}
   merge_group:
     branches: [dev]
 
