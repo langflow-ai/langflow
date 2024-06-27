@@ -229,6 +229,7 @@ export default function CollectionCardComponent({
                       render={({ field }) => (
                         <FormControl>
                           <Checkbox
+                            data-testid={`checkbox-component`}
                             aria-label="checkbox-component"
                             checked={field.value}
                             onCheckedChange={field.onChange}
