@@ -4427,6 +4427,22 @@ numpy = ">=1,<2"
 pymongo = ">=4.6.1,<5.0"
 
 [[package]]
+name = "langchain-nvidia-ai-endpoints"
+version = "0.1.2"
+description = "An integration package connecting NVIDIA AI Endpoints and LangChain"
+optional = false
+python-versions = "<4.0,>=3.8.1"
+files = [
+    {file = "langchain_nvidia_ai_endpoints-0.1.2-py3-none-any.whl", hash = "sha256:cf40deea1aa6ba642b8e8d5071244536c550effc4d107c794fed14666ef0a468"},
+    {file = "langchain_nvidia_ai_endpoints-0.1.2.tar.gz", hash = "sha256:ffba5e8c09dfe77cc9cfa25d9ba17cda2685b7d73ca38816ba712b1efd762fdd"},
+]
+
+[package.dependencies]
+aiohttp = ">=3.9.1,<4.0.0"
+langchain-core = ">=0.1.27,<0.3"
+pillow = ">=10.0.0,<11.0.0"
+
+[[package]]
 name = "langchain-openai"
 version = "0.1.14"
 description = "An integration package connecting OpenAI and LangChain"
@@ -10781,4 +10797,4 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-content-hash = "24b3a62badaf9279bcca4897fb5491e571b2dccd72f431e0a0bfef11c24f2245"
+content-hash = "411c93b2d763ef6a2c16f0662b2d2a70a3414045efa806c71212f82a247d0b49"
