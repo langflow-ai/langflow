@@ -445,6 +445,14 @@
   "Type your new password and confirm it.": "输入新密码并确认",
   "Error while saving changes": "保存更改时出错",
 
-  "Invalid endpoint name. Use only letters, numbers, hyphens, and underscores ({{maxLength}} characters max).": "无效的端点名称。只能使用字毽、数字、连字符和下划线（最多{{maxLength}}个字符）。"
+  "Invalid endpoint name. Use only letters, numbers, hyphens, and underscores ({{maxLength}} characters max).": "无效的端点名称。只能使用字毽、数字、连字符和下划线（最多{{maxLength}}个字符）。",
 
+  "It seems {{name}} already exists. Do you want to replace it with the current?": "{{name}}已存在，您要用当前内容替换吗？",
+  "Error sharing {{name}}": "分享{{name}}时出错",
+  "{{name}} shared successfully!": "{{name}}分享成功！",
+  "Share {{name}}": "分享{{name}}",
+  "Publish {{name}} to the Langflow Store.": "发布{{name}}到Langflow仓库。",
+  "your component": "组件",
+  "workflow": "流程",
+  "Flow": "流程"
 }

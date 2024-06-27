@@ -580,7 +580,7 @@
     @apply flex justify-end px-2;
   }
   .header-end-display {
-    @apply ml-auto mr-2 flex items-center gap-5;
+    @apply ml-auto mr-2 flex items-center gap-5 mr-10;
   }
   .header-github-link-box {
     @apply inline-flex h-9 items-center justify-center rounded-md border border-input px-3 pr-0 shadow-sm;

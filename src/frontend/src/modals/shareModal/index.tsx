@@ -121,7 +121,9 @@ export default function ShareModal({
         saveFlow(flow!, true);
       }
       setSuccessData({
-        title: `${is_component ? "Component" : "Flow"} shared successfully!`,
+        title: t("{{name}} shared successfully!", {
+          name: is_component ? "Component" : "Flow"
+        }),
       });
     }
 
@@ -130,7 +132,9 @@ export default function ShareModal({
         successShare,
         (err) => {
           setErrorData({
-            title: "Error sharing " + (is_component ? "component" : "flow"),
+            title: t("Error sharing {{name}}", {
+              name: is_component ? "component" : "flow"
+            }),
             list: [err["response"]["data"]["detail"]],
           });
         },
@@ -143,7 +147,9 @@ export default function ShareModal({
         unavaliableNames.find((e) => e.name === name)!.id,
       ).then(successShare, (err) => {
         setErrorData({
-          title: "Error sharing " + is_component ? "component" : "flow",
+          title: t("Error sharing {{name}}", {
+            name: is_component ? "component" : "flow"
+          }),
           list: [err["response"]["data"]["detail"]],
         });
       });
@@ -180,12 +186,13 @@ export default function ShareModal({
         >
           <ConfirmationModal.Content>
             <span>
-              It seems {name} already exists. Do you want to replace it with the
-              current?
+              {t("It seems {{name}} already exists. Do you want to replace it with the current?", {
+                name: name
+              })}
             </span>
             <br></br>
             <span className="text-xs text-destructive">
-              Note: This action is irreversible.
+              {t("Note: This action is irreversible.")}
             </span>
           </ConfirmationModal.Content>
         </ConfirmationModal>
@@ -222,9 +229,9 @@ export default function ShareModal({
           {children ? children : <></>}
         </BaseModal.Trigger>
         <BaseModal.Header
-          description={t(`Publish ${
-            is_component ? "your component" : "workflow"
-          } to the Langflow Store.`)}
+          description={t(`Publish {{name}} to the Langflow Store.`, {
+            name: is_component ? t("your component") : t("workflow")
+          })}
         >
           <span className="pr-2">{t("Share")}</span>
           <IconComponent
@@ -266,7 +273,9 @@ export default function ShareModal({
 
         <BaseModal.Footer
           submit={{
-            label: `${t("Share")} ${t(is_component ? "Component" : "Flow")}`,
+            label: t("Share {{name}}", {
+              name: is_component ? t("Component") : t("Flow")
+            }),
             loading: loadingNames,
           }}
         >
@@ -282,7 +291,7 @@ export default function ShareModal({
                   }}
                 >
                   <IconComponent name="Download" className="h-4 w-4" />
-                  Export
+                  {t("Export")}
                 </Button>
               </ExportModal>
             )}

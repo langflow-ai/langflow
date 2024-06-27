@@ -84,7 +84,11 @@ export default function Header(): JSX.Element {
     LOCATIONS_TO_RETURN.some((path) => location.pathname.includes(path)) &&
     visitedFlowPathBefore();
 
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+
+  const changeLanguage = (lang) => {
+    i18n.changeLanguage(lang);
+  }
 
   return (
     <div className="header-arrangement">
@@ -194,6 +198,32 @@ export default function Header(): JSX.Element {
               />
             </div>
           </AlertDropdown>
+
+          <>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className="extra-side-bar-save-disable"
+              >
+                <IconComponent name="Languages" className="side-bar-button-size" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="mr-1 mt-1 min-w-40">
+              <DropdownMenuItem
+                className="cursor-pointer gap-2"
+                onClick={() => {changeLanguage("zh")}}
+              >
+                中文
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="cursor-pointer gap-2"
+                onClick={() => {changeLanguage("en")}}
+              >
+                English
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          </>
 
           <>
             <Separator orientation="vertical" />

@@ -14,9 +14,13 @@ const resources = {
   }
 }
 
+function getDefaultLanguage() {
+  return navigator.language.includes("zh") ? "zh" : "en";
+}
+
 i18n.use(initReactI18next).init({
   resources,
-  lng: "zh",
+  lng: getDefaultLanguage(),
   fallbackLng: "en",
   interpolation: {
     escapeValue: false,
