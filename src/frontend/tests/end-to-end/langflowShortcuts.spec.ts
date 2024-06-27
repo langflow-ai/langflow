@@ -3,16 +3,6 @@ import uaParser from "ua-parser-js";
 test("LangflowShortcuts", async ({ page }) => {
   await page.goto("/");
 
-  const getUA = await page.evaluate(() => navigator.userAgent);
-  const userAgentInfo = uaParser(getUA);
-  let control = "Control";
-
-  if (userAgentInfo.os.name.includes("Mac")) {
-    control = "Meta";
-  }
-
-  await page.waitForTimeout(1000);
-
   let modalCount = 0;
   try {
     const modalTitleElement = await page?.getByTestId("modal-title");
@@ -28,6 +18,15 @@ test("LangflowShortcuts", async ({ page }) => {
     await page.waitForTimeout(5000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
+
+  const getUA = await page.evaluate(() => navigator.userAgent);
+  const userAgentInfo = uaParser(getUA);
+  let control = "Control";
+
+  if (userAgentInfo.os.name.includes("Mac")) {
+    control = "Meta";
+  }
+
   await page.waitForSelector('[data-testid="blank-flow"]', {
     timeout: 30000,
   });
