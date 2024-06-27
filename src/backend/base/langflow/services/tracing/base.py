@@ -16,5 +16,10 @@ class BaseTracer(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def end(self, outputs: Dict[str, Any], error: str | None = None):
+    def end(
+        self,
+        outputs: Dict[str, Any],
+        error: str | None = None,
+        metadata: dict[str, Any] | None = None,
+    ):
         raise NotImplementedError
