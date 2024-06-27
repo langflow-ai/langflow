@@ -26,8 +26,9 @@ test("TextInputOutputComponent", async ({ page }) => {
     modalCount = await page.getByTestId("modal-title")?.count();
   }
 
-  await page.waitForTimeout(1000);
-
+  await page.waitForSelector('[data-testid="blank-flow"]', {
+    timeout: 30000,
+  });
   await page.getByTestId("blank-flow").click();
   await page.waitForSelector('[data-testid="extended-disclosure"]', {
     timeout: 30000,
@@ -69,33 +70,45 @@ test("TextInputOutputComponent", async ({ page }) => {
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
 
-  const component1 = await page.locator(
-    '//*[@id="react-flow-id"]/div/div[1]/div/div/div[2]/div[1]',
-  );
+  let visibleElementHandle;
 
-  const element1 = await page.locator(
-    '//*[@id="react-flow-id"]/div/div[1]/div/div/div[2]/div[1]/div/div[2]/div[5]/button/div[1]',
-  );
+  const elementsTextInputOutput = await page
+    .getByTestId("handle-textinput-shownode-text-right")
+    .all();
 
-  const component2 = await page.locator(
-    '//*[@id="react-flow-id"]/div/div[1]/div/div/div[2]/div[2]',
-  );
+  for (const element of elementsTextInputOutput) {
+    if (await element.isVisible()) {
+      visibleElementHandle = element;
+      break;
+    }
+  }
 
-  const element2 = await page.locator(
-    '//*[@id="react-flow-id"]/div/div[1]/div/div/div[2]/div[2]/div/div[2]/div[3]/div/button/div[1]',
-  );
+  await visibleElementHandle.waitFor({
+    state: "visible",
+    timeout: 30000,
+  });
 
-  // ensure elements popups are not blocking
-  component1.blur();
-  component2.blur();
-
-  await page.mouse.up();
-
-  await element1.hover();
+  await visibleElementHandle.hover();
   await page.mouse.down();
 
+  const elementsOpenAiInput = await page.getByTestId(
+    "handle-openaimodel-shownode-input-left",
+  );
+
+  for (const element of elementsTextInputOutput) {
+    if (await element.isVisible()) {
+      visibleElementHandle = element;
+      break;
+    }
+  }
+
+  await visibleElementHandle.waitFor({
+    state: "visible",
+    timeout: 30000,
+  });
+
   // Move to the second element
-  await element2.hover();
+  await visibleElementHandle.hover();
 
   // Release the mouse
   await page.mouse.up();
@@ -120,29 +133,44 @@ test("TextInputOutputComponent", async ({ page }) => {
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
 
-  const component3 = await page.locator(
-    '//*[@id="react-flow-id"]/div/div[1]/div[1]/div/div[2]/div[3]',
-  );
+  const elementsOpenAiOutput = await page
+    .getByTestId("handle-openaimodel-shownode-text-right")
+    .all();
 
-  const element3 = await page.locator(
-    '//*[@id="react-flow-id"]/div/div[1]/div/div/div[2]/div[3]/div/div[2]/div[3]/div/button/div[1]',
-  );
+  for (const element of elementsOpenAiOutput) {
+    if (await element.isVisible()) {
+      visibleElementHandle = element;
+      break;
+    }
+  }
 
-  const element4 = await page.locator(
-    '//*[@id="react-flow-id"]/div/div[1]/div[1]/div/div[2]/div[2]/div/div[2]/div[16]/button/div[1]',
-  );
+  await visibleElementHandle.waitFor({
+    state: "visible",
+    timeout: 30000,
+  });
 
-  // ensure elements popups are not blocking
-  component2.blur();
-  component3.blur();
-
-  await page.mouse.up();
-
-  await element4.hover();
+  // Click and hold on the first element
+  await visibleElementHandle.hover();
   await page.mouse.down();
 
+  const elementTextOutputInput = await page
+    .getByTestId("handle-textoutput-shownode-text-left")
+    .all();
+
+  for (const element of elementTextOutputInput) {
+    if (await element.isVisible()) {
+      visibleElementHandle = element;
+      break;
+    }
+  }
+
+  await visibleElementHandle.waitFor({
+    state: "visible",
+    timeout: 30000,
+  });
+
   // Move to the second element
-  await element3.hover();
+  await visibleElementHandle.hover();
 
   // Release the mouse
   await page.mouse.up();
