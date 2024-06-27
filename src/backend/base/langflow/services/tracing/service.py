@@ -12,7 +12,7 @@ from loguru import logger
 
 from langflow.schema.data import Data
 from langflow.services.base import Service
-from langflow.services.tracing.base import BaseTrace
+from langflow.services.tracing.base import BaseTracer
 from langflow.services.tracing.schema import Log
 
 if TYPE_CHECKING:
@@ -181,7 +181,7 @@ class TracingService(Service):
         self.outputs_metadata[trace_name] |= output_metadata or {}
 
 
-class LangSmithTracer(BaseTrace):
+class LangSmithTracer(BaseTracer):
     def __init__(self, trace_name: str, trace_type: str, project_name: str, trace_id: str):
         from langsmith.run_trees import RunTree
 
