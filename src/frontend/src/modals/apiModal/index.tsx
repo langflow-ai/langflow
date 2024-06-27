@@ -18,16 +18,16 @@ import { buildContent } from "./utils/build-content";
 import { buildTweaks } from "./utils/build-tweaks";
 import { checkCanBuildTweakObject } from "./utils/check-can-build-tweak-object";
 import { getChangesType } from "./utils/get-changes-types";
+import getCodesObj from "./utils/get-codes-obj";
 import { getCurlRunCode, getCurlWebhookCode } from "./utils/get-curl-code";
 import getJsApiCode from "./utils/get-js-api-code";
 import { getNodesWithDefaultValue } from "./utils/get-nodes-with-default-value";
 import getPythonApiCode from "./utils/get-python-api-code";
 import getPythonCode from "./utils/get-python-code";
+import getTabsOrder from "./utils/get-tabs-order";
 import { getValue } from "./utils/get-value";
 import getWidgetCode from "./utils/get-widget-code";
 import { createTabsArray } from "./utils/tabs-array";
-import getTabsOrder from "./utils/get-tabs-order";
-import getCodesObj from "./utils/get-codes-obj";
 
 const ApiModal = forwardRef(
   (
@@ -222,17 +222,19 @@ const ApiModal = forwardRef(
         pythonApiCode,
         jsApiCode,
         pythonCode,
-        widgetCode
-      })
+        widgetCode,
+      });
       const tabsOrder = getTabsOrder(includeWebhook, isThereTweaks);
       if (tabs && tabs?.length > 0) {
         tabs.forEach((tab, idx) => {
           const order = tabsOrder[idx];
           if (order && order.toLowerCase() === tab.name.toLowerCase()) {
-            const codeToFind = codesObj.find(c => c.name.toLowerCase() === tab.name.toLowerCase());
+            const codeToFind = codesObj.find(
+              (c) => c.name.toLowerCase() === tab.name.toLowerCase(),
+            );
             tab.code = codeToFind?.code;
           }
-        })
+        });
       }
     };
 

@@ -1,11 +1,10 @@
-export function 
-createTabsArray(
+export function createTabsArray(
   codes,
   includeWebhookCurl = false,
   includeTweaks = false,
 ) {
   // console.log(includeTweaks)
-  console.log(includeWebhookCurl)
+  console.log(includeWebhookCurl);
   const tabs = [
     {
       name: "Run cURL",
