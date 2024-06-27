@@ -36,8 +36,6 @@ export default function HandleRenderComponent({
   showNode: any;
   testIdComplement?: string;
 }) {
-  console.log(myData);
-
   return (
     <Button
       unstyled
