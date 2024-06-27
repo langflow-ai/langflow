@@ -1,9 +1,9 @@
 "use client";
 
+import { forwardRef, useEffect, useRef, useState } from "react";
+import { CheckIcon, ChevronDown, XCircle, XIcon } from "lucide-react";
 import { VariantProps, cva } from "class-variance-authority";
 import isEqual from "lodash.isequal";
-import { CheckIcon, ChevronDown, XCircle, XIcon } from "lucide-react";
-import { forwardRef, useEffect, useRef, useState } from "react";
 
 import useMergeRefs, {
   isRefObject,
@@ -41,7 +41,7 @@ const MultiSelectBadgeWrapper = ({
 }) => {
   const badgeRef = useRef<HTMLDivElement>(null);
 
-  const handleDelete = (event: React.MouseEvent<SVGSVGElement, MouseEvent>) => {
+  const handleDelete = (event: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
     event.stopPropagation();
     onDelete({ value });
   };
@@ -63,10 +63,10 @@ const MultiSelectBadgeWrapper = ({
         style={{
           minHeight: `${badgeRef?.current?.clientHeight}px`,
         }}
+        onClick={handleDelete}
       >
         <XCircle
           className="h-4 min-h-4 w-4 min-w-4 cursor-pointer"
-          onClick={handleDelete}
           style={{
             minHeight: `${badgeRef?.current?.clientHeight}px`,
           }}
