@@ -488,11 +488,14 @@ class CustomComponent(BaseComponent):
         Args:
             message (LoggableType | list[LoggableType]): The message to log.
         """
-        if name is None:
+        if name is None and self.display_name:
             name = self.display_name
+        else:
+            name = self.__class__.__name__
         log = Log(message=message, type=get_artifact_type(message), name=name)
         self._logs.append(log)
-        self.tracing_service.add_log(trace_name=self.vertex.id, log=log)
+        if self.tracing_service and self.vertex:
+            self.tracing_service.add_log(trace_name=self.vertex.id, log=log)
 
     def post_code_processing(self, new_build_config: dict, current_build_config: dict):
         """
