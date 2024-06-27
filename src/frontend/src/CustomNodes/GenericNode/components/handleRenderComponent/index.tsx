@@ -52,7 +52,7 @@ export default function HandleRenderComponent({
         side={left ? "left" : "right"}
       >
         <Handle
-          data-test-id={`handle-${title.toLowerCase()}-${
+          data-testid={`handle-${title.toLowerCase()}-${
             !showNode ? (left ? "target" : "source") : left ? "left" : "right"
           }`}
           type={left ? "target" : "source"}
