@@ -64,6 +64,7 @@ pyperclip = "^1.8.2"
 uncurl = "^0.0.11"
 sentry-sdk = {extras = ["fastapi", "loguru"], version = "^2.5.1"}
 chardet = "^5.2.0"
+firecrawl-py = "^0.0.16"
 
 
 [tool.poetry.extras]

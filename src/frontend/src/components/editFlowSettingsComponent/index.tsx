@@ -4,7 +4,7 @@ import { Label } from "../../components/ui/label";
 import { Textarea } from "../../components/ui/textarea";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { InputProps } from "../../types/components";
-import { cn } from "../../utils/utils";
+import { cn, isEndpointNameValid } from "../../utils/utils";
 
 export const EditFlowSettings: React.FC<InputProps> = ({
   name,
@@ -17,7 +17,7 @@ export const EditFlowSettings: React.FC<InputProps> = ({
   setEndpointName,
 }: InputProps): JSX.Element => {
   const [isMaxLength, setIsMaxLength] = useState(false);
-  const [isEndpointNameValid, setIsEndpointNameValid] = useState(true);
+  const [validEndpointName, setValidEndpointName] = useState(true);
   const [isInvalidName, setIsInvalidName] = useState(false);
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
 
@@ -34,10 +34,6 @@ export const EditFlowSettings: React.FC<InputProps> = ({
         invalid = true;
         break;
       }
-      if (value === currentFlow?.name) {
-        invalid = true;
-        break;
-      }
       invalid = false;
     }
     setIsInvalidName(invalid);
@@ -51,12 +47,8 @@ export const EditFlowSettings: React.FC<InputProps> = ({
   const handleEndpointNameChange = (event: ChangeEvent<HTMLInputElement>) => {
     // Validate the endpoint name
     // use this regex r'^[a-zA-Z0-9_-]+$'
-    const isValid =
-      (/^[a-zA-Z0-9_-]+$/.test(event.target.value) &&
-        event.target.value.length <= maxLength) ||
-      // empty is also valid
-      event.target.value.length === 0;
-    setIsEndpointNameValid(isValid);
+    const isValid = isEndpointNameValid(event.target.value, maxLength);
+    setValidEndpointName(isValid);
     setEndpointName!(event.target.value);
   };
 
@@ -115,21 +107,21 @@ export const EditFlowSettings: React.FC<InputProps> = ({
             }}
           />
         ) : (
-          <span
+          <div
             className={cn(
-              "font-normal text-muted-foreground word-break-break-word",
+              "max-h-[250px] overflow-auto font-normal text-muted-foreground word-break-break-word",
               description === "" ? "font-light italic" : "",
             )}
           >
             {description === "" ? "No description" : description}
-          </span>
+          </div>
         )}
       </Label>
       {setEndpointName && (
         <Label>
           <div className="edit-flow-arrangement mt-3">
             <span className="font-medium">Endpoint Name</span>
-            {!isEndpointNameValid && (
+            {!validEndpointName && (
               <span className="edit-flow-span">
                 Invalid endpoint name. Use only letters, numbers, hyphens, and
                 underscores ({maxLength} characters max).

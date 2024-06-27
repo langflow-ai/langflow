@@ -21,7 +21,7 @@ export default function MessagesPage() {
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
 
-  const [selectedRows, setSelectedRows] = useState<number[]>([]);
+  const [selectedRows, setSelectedRows] = useState<string[]>([]);
 
   const { handleRemoveMessages } = useRemoveMessages(
     setSelectedRows,
