@@ -23,7 +23,7 @@
     "tests/end-to-end/actionsMainPage.spec.ts",
     "tests/end-to-end/auto_login.spec.ts",
     "tests/end-to-end/chatInputOutput.spec.ts",
-    "tests/end-to-end/chatInputOutputUser.spec.ts",
+    "tests/end-to-end/chatInputOutputUser - Interact.spec.ts",
     "tests/end-to-end/codeAreaModalComponent.spec.ts",
     "tests/end-to-end/curl_api_generation.spec.ts",
     "tests/end-to-end/deleteComponentFlows.spec.ts",
@@ -51,6 +51,7 @@
     "tests/end-to-end/toggleComponent.spec.ts",
     "tests/end-to-end/tweaks_test.spec.ts",
     "tests/end-to-end/twoEdges.spec.ts",
-    "tests/end-to-end/userSettings.spec.ts"
-, "tests/end-to-end/store.spec.ts"  ]
+    "tests/end-to-end/userSettings.spec.ts",
+    "tests/end-to-end/store.spec.ts"
+  ]
 }
