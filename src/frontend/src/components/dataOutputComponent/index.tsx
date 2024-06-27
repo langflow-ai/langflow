@@ -14,7 +14,7 @@ function DataOutputComponent({
   columnMode?: "intersection" | "union";
 }) {
   // If the rows are not an array of objects, convert them to an array of objects
-  if(rows.some((row) => typeof row !== "object")) {
+  if (rows.some((row) => typeof row !== "object")) {
     rows = rows.map((row) => ({ data: row }));
   }
 
