@@ -38,6 +38,10 @@ test("GlobalVariables", async ({ page }) => {
   await page.mouse.up();
   await page.mouse.down();
 
+  await page.waitForSelector('[title="fit view"]', {
+    timeout: 100000,
+  });
+
   await page.getByTitle("fit view").click();
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();

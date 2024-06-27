@@ -50,6 +50,10 @@ test("chat_io_teste", async ({ page }) => {
   await page.mouse.up();
   await page.mouse.down();
 
+  await page.waitForSelector('[title="fit view"]', {
+    timeout: 100000,
+  });
+
   await page.getByTitle("fit view").click();
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
@@ -96,8 +100,11 @@ test("chat_io_teste", async ({ page }) => {
 
   await page.getByLabel("fit view").click();
   await page.getByText("Playground", { exact: true }).click();
-  await page.getByPlaceholder("Send a message...").click();
-  await page.getByPlaceholder("Send a message...").fill("teste");
+  await page.waitForSelector('[data-testid="input-chat-playground"]', {
+    timeout: 100000,
+  });
+  await page.getByTestId("input-chat-playground").click();
+  await page.getByTestId("input-chat-playground").fill("teste");
   await page.getByRole("button").nth(1).click();
   const chat_output = page.getByTestId("chat-message-AI-teste");
   const chat_input = page.getByTestId("chat-message-User-teste");

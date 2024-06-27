@@ -61,6 +61,10 @@ test("TextInputOutputComponent", async ({ page }) => {
   await page.mouse.up();
   await page.mouse.down();
 
+  await page.waitForSelector('[title="fit view"]', {
+    timeout: 100000,
+  });
+
   await page.getByTitle("fit view").click();
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
@@ -118,7 +122,13 @@ test("TextInputOutputComponent", async ({ page }) => {
   await page.mouse.up();
   await page.mouse.down();
 
-  await page.getByTitle("fit view").click();
+  await page.waitForSelector('[title="fit view"]', {
+    timeout: 100000,
+  });
+
+  await page.getByTitle("zoom out").click();
+  await page.getByTitle("zoom out").click();
+  await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
@@ -178,6 +188,11 @@ test("TextInputOutputComponent", async ({ page }) => {
   await page
     .getByTestId("popover-anchor-input-openai_api_key")
     .fill(process.env.OPENAI_API_KEY ?? "");
+
+  await page.getByTestId("dropdown-model_name").click();
+  await page.getByTestId("gpt-4o-0-option").click();
+
+  await page.waitForTimeout(2000);
   await page.getByText("Playground", { exact: true }).click();
   await page.getByText("Run Flow", { exact: true }).click();
 
