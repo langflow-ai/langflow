@@ -1,12 +1,8 @@
 name: Run Frontend Tests
 
 on:
-  workflow_dispatch:
-    inputs:
-      branch:
-        description: "Branch to run tests on"
-        required: true
-        type: string
+  pull_request:
+  merge_group:
 
 env:
   POETRY_VERSION: "1.8.2"
