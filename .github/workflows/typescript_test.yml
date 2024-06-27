@@ -27,6 +27,7 @@ jobs:
         shardTotal: [7]
     env:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      STORE_API_KEY: ${{ secrets.STORE_API_KEY }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
