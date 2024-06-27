@@ -95,6 +95,11 @@ test("erase button should clear the chat messages", async ({ page }) => {
   });
 
   await page.getByTestId("input-chat-playground").fill("Hello, how are you?");
+
+  await page.waitForSelector('[data-testid="icon-LucideSend"]', {
+    timeout: 100000,
+  });
+
   await page.getByTestId("icon-LucideSend").click();
   let valueUser = await page.getByTestId("sender_name_user").textContent();
 
