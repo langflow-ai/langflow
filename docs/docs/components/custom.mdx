@@ -1,105 +1,227 @@
+import ThemedImage from "@theme/ThemedImage";
+import useBaseUrl from "@docusaurus/useBaseUrl";
+import ZoomableImage from "/src/theme/ZoomableImage.js";
+import ReactPlayer from "react-player";
 import Admonition from "@theme/Admonition";
 
 # Custom Components
 
-<Admonition type="info" label="Tip">
-  Read the [Custom Component Tutorial](../tutorials/custom_components) for
-  detailed information on custom components.
+<Admonition type="warning" title="warning">
+This page may contain outdated information. It will be updated as soon as possible.
 </Admonition>
 
-Custom components let you extend Langflow by creating reusable and configurable components from a Python script.
+Build custom components in Langflow for various data processing and transformation tasks.
 
-## Usage
+This guide provides a comprehensive overview of how to create custom components using Langflow.
 
-To create a custom component:
+## Basic Structure of a Custom Component
 
-1. Define a class that inherits from `langflow.CustomComponent`.
-2. Implement a `build` method in your class.
-3. Use type annotations in the `build` method to define component fields.
-4. Optionally, use the `build_config` method to customize field appearance and behavior.
+A custom component in Langflow typically includes the following parts:
 
-**Parameters**
+1. **Class Definition**: Inherits from the `Component` class.
+2. **Component Metadata**: Defines display name, description, and icon.
+3. **Inputs and Outputs**: Specifies the inputs and outputs for the component.
+4. **Processing Logic**: Implements the logic for processing data within the component.
 
-- **Code:** The Python code that defines the component.
+A custom component in Python looks like this:
 
-## CustomComponent Class
+```python
+from langflow.custom import Component
+from langflow.inputs import MessageTextInput, IntInput, BoolInput, DropdownInput, HandleInput
+from langflow.template import Output
+from langflow.schema import Data, Message
+from typing import List, Optional
 
-This class is the foundation for creating custom components. It allows users to create new, configurable components tailored to their needs.
+class ExampleComponent(Component):
+    display_name = "Example Component"
+    description = "A template for creating custom components."
+    icon = "icon-name"
 
-### Methods
+    inputs = [
+        MessageTextInput(
+            name="input_text",
+            display_name="Input Text",
+            info="Text input for the component.",
+        ),
+        IntInput(
+            name="input_number",
+            display_name="Input Number",
+            info="Numeric input for the component.",
+        ),
+        BoolInput(
+            name="input_boolean",
+            display_name="Input Boolean",
+            info="Boolean input for the component.",
+        ),
+        DropdownInput(
+            name="input_choice",
+            display_name="Input Choice",
+            options=["Option1", "Option2", "Option3"],
+            info="Dropdown input for the component.",
+        ),
+    ]
 
-**build:** This method is essential in a `CustomComponent` class. It defines the component's functionality and how it processes input data. The build method is invoked when you click the **Build** button on the canvas.
+    outputs = [
+        Output(display_name="Output Data", name="output_data", method="process_data"),
+    ]
 
-The following types are supported in the build method:
+    def process_data(self) -> Data:
+        input_text = self.input_text
+        input_number = self.input_number
+        input_boolean = self.input_boolean
+        input_choice = self.input_choice
 
-| Supported Types                                                   |
-| ----------------------------------------------------------------- |
-| _`str`_, _`int`_, _`float`_, _`bool`_, _`list`_, _`dict`_         |
-| _`langflow.field_typing.NestedDict`_                              |
-| _`langflow.field_typing.Prompt`_                                  |
-| _`langchain.chains.base.Chain`_                                   |
-| _`langchain.PromptTemplate`_                                      |
-| _`from langchain.schema.language_model import BaseLanguageModel`_ |
-| _`langchain.Tool`_                                                |
-| _`langchain.document_loaders.base.BaseLoader`_                    |
-| _`langchain.schema.Document`_                                     |
-| _`langchain.text_splitters.TextSplitter`_                         |
-| _`langchain.vectorstores.base.VectorStore`_                       |
-| _`langchain.embeddings.base.Embeddings`_                          |
-| _`langchain.schema.BaseRetriever`_                                |
+        # Implement your processing logic here
+        result = f"Processed: {input_text}, {input_number}, {input_boolean}, {input_choice}"
 
-The difference between _`dict`_ and _`langflow.field_typing.NestedDict`_ is that one adds a simple key-value pair field, while the other opens a more robust dictionary editor.
+        self.status = result
+        return Data(data={"result": result})
 
-<Admonition type="info">
-  Use the `Prompt` type by adding **kwargs to the build method. If you want to
-  add the values of the variables to the template you defined, format the
-  `PromptTemplate` inside the `CustomComponent` class.
-</Admonition>
+```
 
-<Admonition type="info">
-  Use base Python types without a handle by default. To add handles, use the
-  `input_types` key in the `build_config` method.
-</Admonition>
+## Create a Custom Component Step-by-Step
 
-**build_config:** Defines the configuration fields of the component. This method returns a dictionary where each key represents a field name and each value defines the field's behavior.
+1. Create a class that inherits from the `Component` class.
 
-Supported keys for configuring fields:
+```python
+class ExampleComponent(Component):
+    # Class content
+```
 
-| Key                 | Description                                               |
-| ------------------- | --------------------------------------------------------- |
-| `is_list`           | Boolean indicating if the field can hold multiple values. |
-| `options`           | Dropdown menu options.                                    |
-| `multiline`         | Boolean indicating if a field allows multiline input.     |
-| `input_types`       | Allows connection handles for string fields.              |
-| `display_name`      | Field name displayed in the UI.                           |
-| `advanced`          | Hides the field in the default UI view.                   |
-| `password`          | Masks input, useful for sensitive data.                   |
-| `required`          | Overrides the default behavior to make a field mandatory. |
-| `info`              | Tooltip for the field.                                    |
-| `file_types`        | Accepted file types, useful for file fields.              |
-| `range_spec`        | Defines valid ranges for float fields.                    |
-| `title_case`        | Boolean that controls field name capitalization.          |
-| `refresh_button`    | Adds a refresh button that updates field values.          |
-| `real_time_refresh` | Updates the configuration as field values change.         |
-| `field_type`        | Automatically set based on the build method's type hint.  |
+2. Define metadata such as `display_name`, `description`, and `icon`.
 
-<Admonition type="info" label="Tip">
-  Use the `update_build_config` method to dynamically update configurations
-  based on field values.
-</Admonition>
+```python
+display_name = "Example Component"
+description = "A template for creating custom components."
+icon = "icon-name"
+```
 
-## Additional methods and attributes
+3. Define the inputs and outputs for the component using the `inputs` and `outputs` lists.
 
-The `CustomComponent` class also provides helpful methods for specific tasks (e.g., to load and use other flows from the Langflow platform):
+**Inputs** can be of various types such as `TextInput`, `IntInput`, `BoolInput`, `DropdownInput`, etc.
 
-### Methods
+```python
+inputs = [
+    MessageTextInput(
+        name="input_text",
+        display_name="Input Text",
+        info="Text input for the component.",
+    ),
+    IntInput(
+        name="input_number",
+        display_name="Input Number",
+        info="Numeric input for the component.",
+    ),
+    BoolInput(
+        name="input_boolean",
+        display_name="Input Boolean",
+        info="Boolean input for the component.",
+    ),
+    DropdownInput(
+        name="input_choice",
+        display_name="Input Choice",
+        options=["Option1", "Option2", "Option3"],
+        info="Dropdown input for the component.",
+    ),
+]
 
-- `list_flows`: Lists available flows.
-- `get_flow`: Retrieves a specific flow by name or ID.
-- `load_flow`: Loads a flow by ID.
+```
 
-### Attributes
+**Outputs** define the output methods for the component.
 
-- `status`: Shows values from the `build` method, useful for debugging.
-- `field_order`: Controls the display order of fields.
-- `icon`: Sets the canvas display icon.
+```python
+outputs = [
+    Output(display_name="Output Data", name="output_data", method="process_data"),
+]
+```
+
+4. Implement the logic for processing data within the component. Define methods for processing data and returning results.
+
+```python
+def process_data(self) -> Data:
+    input_text = self.input_text
+    input_number = self.input_number
+    input_boolean = self.input_boolean
+    input_choice = self.input_choice
+
+    # Implement your processing logic here
+    result = f"Processed: {input_text}, {input_number}, {input_boolean}, {input_choice}"
+
+    self.status = result
+    return Data(data={"result": result})
+
+```
+
+## Advanced Example: Create a Conditional Router Component
+
+This example demonstrates a more complex component that routes data based on a condition.
+
+Notice that this component has two outputs associated with the methods `true_response` and `false_response`.
+
+These methods trigger `self.stop` to block the transmission for the selected output, allowing for logic operations to be implemented visually.
+
+```python
+from langflow.custom import Component
+from langflow.inputs import MessageTextInput, DropdownInput, BoolInput
+from langflow.template import Output
+from langflow.field_typing import Text
+
+class ConditionalRouterComponent(Component):
+    display_name = "Conditional Router"
+    description = "Routes input based on a specified condition."
+    icon = "router"
+
+    inputs = [
+        MessageTextInput(
+            name="input_value",
+            display_name="Input Value",
+            info="Value to be evaluated.",
+        ),
+        MessageTextInput(
+            name="comparison_value",
+            display_name="Comparison Value",
+            info="Value to compare against.",
+        ),
+        DropdownInput(
+            name="operator",
+            display_name="Operator",
+            options=["equals", "not equals", "contains"],
+            info="Comparison operator.",
+        ),
+    ]
+
+    outputs = [
+        Output(display_name="True Output", name="true_output", method="true_response"),
+        Output(display_name="False Output", name="false_response", method="false_response"),
+    ]
+
+    def evaluate_condition(self, input_value: str, comparison_value: str, operator: str) -> bool:
+        if operator == "equals":
+            return input_value == comparison_value
+        elif operator == "not equals":
+            return input_value != comparison_value
+        elif operator == "contains":
+            return comparison_value in input_value
+        return False
+
+    def true_response(self) -> Text:
+        if self.evaluate_condition(self.input_value, self.comparison_value, self.operator):
+            self.stop("false_response")
+            return self.input_value
+        else:
+            self.stop("true_response")
+            return ""
+
+    def false_response(self) -> Text:
+        if not self.evaluate_condition(self.input_value, self.comparison_value, self.operator):
+            self.stop("true_response")
+            return self.input_value
+        else:
+            self.stop("false_response")
+            return ""
+
+```
+
+By following these steps and examples, you can create custom components in Langflow tailored to your specific needs. The modular structure of Custom Components allows for flexible and reusable components that can be easily integrated into your workflows.
+
+---

@@ -1,0 +1,105 @@
+import ThemedImage from "@theme/ThemedImage";
+import useBaseUrl from "@docusaurus/useBaseUrl";
+import ZoomableImage from "/src/theme/ZoomableImage.js";
+import ReactPlayer from "react-player";
+import Admonition from "@theme/Admonition";
+
+# Collections and Projects
+
+<Admonition type="warning" title="warning">
+This page may contain outdated information. It will be updated as soon as possible.
+</Admonition>
+
+My Collection is a space in Langflow where users can manage, organize, and access their flows and components.
+Flows and components are displayed as individual cards that provide relevant information.
+
+<ZoomableImage
+  alt="Docusaurus themed image"
+  sources={{
+    light: useBaseUrl("img/my-collection.png"),
+    dark: useBaseUrl("img/my-collection.png"),
+  }}
+  style={{ width: "30%", margin: "20px auto" }}
+/>
+
+* **Folders**: Users can organize their projects into folders. Default folders include "My Projects" and the ability to create new folders. Hover over a folder to access options to download or delete it.
+
+* **Search Bar** Enables users to quickly search through their flows and components.
+
+* **Select All**: This feature allows users to select all projects displayed on the page for batch actions like moving, deleting, or exporting.
+
+Click on a flow card to open it in Langflow Workspace or use the **Playground Button** for direct access to execute and interact with the flow’s chatbot interface.
+
+## Collections
+
+Components created or imported by the user are also displayed in **My Collection** and can be directly removed from here.
+
+A collection is a snapshot of flows available in a database.
+
+Collections can be downloaded to local storage and uploaded for future use.
+
+<div
+  style={{ marginBottom: "20px", display: "flex", justifyContent: "center" }}
+>
+  <ReactPlayer playing controls url="/videos/langflow_collection.mp4" />
+</div>
+
+## Project
+
+A **Project** can be a flow or a component. To view your saved projects, select **My Collection**.
+
+Your **Projects** are displayed.
+
+Click the **![Playground icon](/logos/botmessage.svg) Playground** button to run a flow from the **My Collection** screen.
+
+In the top left corner of the screen are options for **Download Collection**, **Upload Collection**, and **New Project**.
+
+Select **Download Collection** to save your project to your local machine. This downloads all flows and components as a `.json` file.
+
+Select **Upload Collection** to upload a flow or component `.json` file from your local machine.
+
+Select **New Project** to create a new project. In addition to a blank workspace, [starter projects](../starter-projects/basic-prompting) are also available.
+
+## Project options menu
+
+To see options for your project, in the upper left corner of the workspace, select the dropdown menu.
+
+<ZoomableImage
+  alt="Docusaurus themed image"
+  sources={{
+    light: useBaseUrl("img/project-options-menu-light.png"),
+    dark: useBaseUrl("img/project-options-menu-dark.png"),
+  }}
+  style={{ width: "30%", margin: "20px auto" }}
+/>
+
+* **New** - Start a new project.
+
+* **Duplicate** - Duplicate the current flow as a new project.
+
+* **Settings** - Modify the project's **Name** or **Description**.
+
+* **Import** - Upload a flow `.json` file from your local machine.
+
+* **Export** - Download your current project to your local machine as a `.json` file.
+
+* **Undo** or **Redo** - Undo or redo your last action.
+
+## Project folders
+
+Multiple projects can be stored in **folders**.
+
+Folders allow you to categorize flows and components into manageable groups. This makes it easier to find and access specific projects quickly.
+
+**My Projects** is a default folder where all new projects and components are initially stored unless specified otherwise. Users can create custom folders to better organize their work according to specific needs.
+
+Hovering over a folder in Langflow provides options to either remove or download the entire folder, allowing you to keep an offline copy or migrate projects between environments
+
+Create new folders with the **New folder** button. One folder can store multiple projects (as the default My Projects folder does).
+
+You can download folders of projects as a single JSON file, and upload files and flows to your folder.
+
+Click the **Trash** icon to delete a folder.
+
+
+

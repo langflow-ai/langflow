@@ -6,13 +6,20 @@ import Admonition from "@theme/Admonition";
 
 # Playground
 
-In Langflow 1.0 alpha, the **Playground** replaces the **Interaction Panel**.
+<Admonition type="warning" title="warning">
+This page may contain outdated information. It will be updated as soon as possible.
+</Admonition>
 
-The **Playground** provides an interface for interacting with flows without opening them in the flow editor.
+<Admonition type="info">
+  From the **My Collection** page, click the Playground button in one of your flow cards.
+  It will directly open up a window with that project's Playground, without even showing the flow (this also works for flows hosted on the Langflow Store!).
+</Admonition>
+
+The **Playground** is a dynamic interface designed for real-time interaction with agents, allowing users to access and manage memories and monitor the inputs and outputs. Here, users can directly prototype and experiment with their configured components or AI models, making adjustments and observing different outcomes in real-time.
 
 It even works for flows hosted on the Langflow store!
 
-As long as you have a flow's environment variables set, you can run it by clicking the **Playground** button.
+As long as you have a flow properly working, you can interact with it by clicking the Playground button.
 
 1. From your **Collections** page, click the **![Playground icon](/logos/botmessage.svg)Playground** in one of your flows.
    The **Playground** window opens.
@@ -36,7 +43,7 @@ As long as you have a flow's environment variables set, you can run it by clicki
 
 ## Playground I/O
 
-The Playground's appearance changes depending on what components are in your canvas.
+The Playground's window arrangement changes depending on what components are being used.
 
 Adding or removing any of the below components modifies your Playground so you can monitor the inputs and outputs.
 
@@ -59,3 +66,4 @@ Langflow allows every chat message to be stored, and a single flow can have mult
 
 You can edit and remove previous messages to inspect and validate a model’s response behavior.
 
+For more information, see [Memories](./memories).

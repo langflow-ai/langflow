@@ -1,3 +1,8 @@
+<div align="center" style="padding: 10px; border: 1px solid #ccc; background-color: #f9f9f9; border-radius: 10px; margin-bottom: 20px;">
+    <h2 style="margin: 0; font-size: 24px; color: #333;">Langflow 1.0 is OUT! 🎉</h2>
+    <p style="margin: 5px 0 0 0; font-size: 16px; color: #666;">Read all about it <a href="https://medium.com/p/73d3bdce8440" style="text-decoration: underline; color: #1a73e8;">here</a>!</p>
+</div>
+
 <!-- markdownlint-disable MD030 -->
 
 # [![Langflow](./docs/static/img/hero.png)](https://www.langflow.org)
@@ -37,6 +42,7 @@
 
 # 📝 Content
 
+- [](#)
 - [📝 Content](#-content)
 - [📦 Get Started](#-get-started)
 - [🎨 Create Flows](#-create-flows)
@@ -44,6 +50,7 @@
   - [Deploy Langflow on Google Cloud Platform](#deploy-langflow-on-google-cloud-platform)
   - [Deploy on Railway](#deploy-on-railway)
   - [Deploy on Render](#deploy-on-render)
+  - [Deploy on Kubernetes](#deploy-on-kubernetes)
 - [🖥️ Command Line Interface (CLI)](#️-command-line-interface-cli)
   - [Usage](#usage)
     - [Environment Variables](#environment-variables)
@@ -57,10 +64,6 @@ You can install Langflow with pip:
 
 ```shell
 # Make sure you have >=Python 3.10 installed on your system.
-# Install the pre-release version (recommended for the latest updates)
-python -m pip install langflow --pre --force-reinstall
-
-# or stable version
 python -m pip install langflow -U
 ```
 
@@ -74,7 +77,7 @@ You can also preview Langflow in [HuggingFace Spaces](https://huggingface.co/spa
 
 # 🎨 Create Flows
 
-Creating flows with Langflow is easy. Simply drag components from the sidebar onto the canvas and connect them to start building your application.
+Creating flows with Langflow is easy. Simply drag components from the sidebar onto the workspace and connect them to start building your application.
 
 Explore by editing prompt parameters, grouping components into a single high-level component, and building your own Custom Components.
 
@@ -100,11 +103,7 @@ Alternatively, click the **"Open in Cloud Shell"** button below to launch Google
 
 ## Deploy on Railway
 
-Use this template to deploy Langflow 1.0 Preview on Railway:
-
-[![Deploy 1.0 Preview on Railway](https://railway.app/button.svg)](https://railway.app/template/UsJ1uB?referralCode=MnPSdg)
-
-Or this one to deploy Langflow 0.6.x:
+Use this template to deploy Langflow 1.0 on Railway:
 
 [![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/JMXEWp?referralCode=MnPSdg)
 

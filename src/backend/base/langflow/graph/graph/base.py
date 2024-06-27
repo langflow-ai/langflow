@@ -343,10 +343,10 @@ class Graph:
         except Exception as exc:
             logger.exception(exc)
             tb = traceback.format_exc()
-            await self.end_all_traces(error=f"{exc.__class__.__name__}: {exc}\n\n{tb}")
+            asyncio.create_task(self.end_all_traces(error=f"{exc.__class__.__name__}: {exc}\n\n{tb}"))
             raise ValueError(f"Error running graph: {exc}") from exc
         finally:
-            await self.end_all_traces()
+            asyncio.create_task(self.end_all_traces())
         # Get the outputs
         vertex_outputs = []
         for vertex in self.vertices:
@@ -1208,6 +1208,7 @@ class Graph:
         except ValueError:
             stop_or_start_vertex = self.get_root_of_group_node(vertex_id)
             stack = [stop_or_start_vertex.id]
+            vertex_id = stop_or_start_vertex.id
         stop_predecessors = [pre.id for pre in stop_or_start_vertex.predecessors]
         # DFS to collect all vertices that can reach the specified vertex
         while stack:
@@ -1443,7 +1444,7 @@ class Graph:
 
     def is_vertex_runnable(self, vertex_id: str) -> bool:
         """Returns whether a vertex is runnable."""
-        return self.run_manager.is_vertex_runnable(vertex_id)
+        return self.run_manager.is_vertex_runnable(vertex_id, self.inactivated_vertices)
 
     def build_run_map(self):
         """
@@ -1463,7 +1464,7 @@ class Graph:
         This checks the direct predecessors of each successor to identify any that are
         immediately runnable, expanding the search to ensure progress can be made.
         """
-        return self.run_manager.find_runnable_predecessors_for_successors(vertex_id)
+        return self.run_manager.find_runnable_predecessors_for_successors(vertex_id, self.inactivated_vertices)
 
     def remove_from_predecessors(self, vertex_id: str):
         self.run_manager.remove_from_predecessors(vertex_id)

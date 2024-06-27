@@ -2,11 +2,10 @@ name: Run Frontend Tests
 
 on:
   pull_request:
-    paths:
-      - "src/frontend/**"
+  merge_group:
 
 env:
-  POETRY_VERSION: "1.8.2"
+  POETRY_VERSION: "1.8.3"
   NODE_VERSION: "21"
   PYTHON_VERSION: "3.12"
   # Define the directory where Playwright browsers will be installed.
@@ -15,12 +14,16 @@ env:
 
 jobs:
   setup-and-test:
+    name: Run Playwright Tests
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        shardIndex: [1, 2, 3, 4]
-        shardTotal: [4]
+        shardIndex: [1, 2, 3, 4, 5, 6, 7, 8]
+        shardTotal: [8]
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      STORE_API_KEY: ${{ secrets.STORE_API_KEY }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -45,14 +48,15 @@ jobs:
           cd src/frontend
           npm ci
         if: ${{ steps.setup-node.outputs.cache-hit != 'true' }}
-
-      - name: Cache playwright binaries
-        uses: actions/cache@v4
+      - name: Get Playwright version
+        run: echo "PLAYWRIGHT_VERSION=$(jq '.devDependencies["@playwright/test"]' src/frontend/package.json -r)" >> $GITHUB_ENV
+      - name:  Cache Playwright binaries
         id: playwright-cache
+        uses: actions/cache@v4
         with:
-          path: |
-            ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ hashFiles('src/frontend/package-lock.json') }}
+          path: ~/.cache/ms-playwright
+          key: playwright-browsers-${{ runner.os }}-${{ env.PLAYWRIGHT_VERSION }}
+
       - name: Install Frontend dependencies
         run: |
           cd src/frontend
@@ -88,7 +92,7 @@ jobs:
       - name: Run Playwright Tests
         run: |
           cd src/frontend
-          npx playwright test --shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --workers 2
+          npx playwright test --trace on --shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --workers 2
 
       - name: Upload blob report to GitHub Actions Artifacts
         if: always()
