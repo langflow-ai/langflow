@@ -5,6 +5,10 @@ import ZoomableImage from "/src/theme/ZoomableImage.js";
 
 # Introduction to Notion in Langflow
 
+<Admonition type="warning" title="warning">
+This page may contain outdated information. It will be updated as soon as possible.
+</Admonition>
+
 The Notion integration in Langflow enables seamless connectivity with Notion databases, pages, and users, facilitating automation and improving productivity.
 
 <ZoomableImage

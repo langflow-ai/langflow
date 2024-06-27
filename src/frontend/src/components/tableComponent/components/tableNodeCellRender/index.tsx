@@ -153,7 +153,7 @@ export default function TableNodeCellRender({
               disabled={disabled}
               editNode={true}
               value={
-                templateValue?.length === 0 || !templateValue
+                Object.keys(templateValue)?.length === 0 || !templateValue
                   ? [{ "": "" }]
                   : convertObjToArray(templateValue, templateData.type)
               }

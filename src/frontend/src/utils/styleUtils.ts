@@ -171,6 +171,7 @@ import { CouchbaseIcon } from "../icons/Couchbase";
 import { ElasticsearchIcon } from "../icons/ElasticsearchStore";
 import { EvernoteIcon } from "../icons/Evernote";
 import { FBIcon } from "../icons/FacebookMessenger";
+import { FirecrawlIcon } from "../icons/Firecrawl";
 import { GitBookIcon } from "../icons/GitBook";
 import { GoogleIcon } from "../icons/Google";
 import { GoogleGenerativeAIIcon } from "../icons/GoogleGenerativeAI";
@@ -269,7 +270,7 @@ export const nodeColors: { [char: string]: string } = {
   toolkits: "#DB2C2C",
   wrappers: "#E6277A",
   helpers: "#31A3CC",
-  experimental: "#E6277A",
+  prototypes: "#E6277A",
   langchain_utilities: "#31A3CC",
   output_parsers: "#E6A627",
   // custom_components: "#ab11ab",
@@ -310,7 +311,7 @@ export const nodeNames: { [char: string]: string } = {
   textsplitters: "Text Splitters",
   retrievers: "Retrievers",
   helpers: "Helpers",
-  experimental: "Experimental",
+  prototypes: "Prototypes",
   langchain_utilities: "Utilities",
   output_parsers: "Output Parsers",
   custom_components: "Custom",
@@ -363,6 +364,8 @@ export const nodeIconsLucide: iconsType = {
   CohereEmbeddings: CohereIcon,
   EverNoteLoader: EvernoteIcon,
   FacebookChatLoader: FBIcon,
+  FirecrawlCrawlApi: FirecrawlIcon,
+  FirecrawlScrapeApi: FirecrawlIcon,
   GitbookLoader: GitBookIcon,
   GoogleSearchAPIWrapper: GoogleIcon,
   GoogleSearchResults: GoogleIcon,
@@ -422,7 +425,7 @@ export const nodeIconsLucide: iconsType = {
   wrappers: Gift,
   helpers: Wand2,
   ScanEye,
-  experimental: FlaskConical,
+  prototypes: FlaskConical,
   langchain_utilities: PocketKnife,
   WolframAlphaAPIWrapper: SvgWolfram,
   output_parsers: Compass,

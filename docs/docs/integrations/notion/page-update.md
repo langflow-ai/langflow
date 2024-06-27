@@ -5,6 +5,10 @@ import ZoomableImage from "/src/theme/ZoomableImage.js";
 
 # Page Update
 
+<Admonition type="warning" title="warning">
+This page may contain outdated information. It will be updated as soon as possible.
+</Admonition>
+
 The `NotionPageUpdate` component updates the properties of a Notion page. It provides a convenient way to integrate updating Notion page properties into your Langflow workflows.
 
 [Notion Reference](https://developers.notion.com/reference/patch-page)
@@ -13,7 +17,7 @@ The `NotionPageUpdate` component updates the properties of a Notion page. It pro
 
 To use the `NotionPageUpdate` component in your Langflow flow:
 
-1. Drag and drop the `NotionPageUpdate` component onto the canvas.
+1. Drag and drop the `NotionPageUpdate` component onto the workspace.
 2. Double-click the component to open its configuration.
 3. Provide the required parameters as defined in the component's `build_config` method.
 4. Connect the component to other nodes in your flow as needed.
