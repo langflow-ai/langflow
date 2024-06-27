@@ -309,7 +309,7 @@
   "Error pasting components": "添加组件失败",
   "You can only have one ChatInput component in the flow": "流程中只能有一个ChatInput组件",
   "Couldn't establish a connection.": "无法建立连接。",
-  "Check if everything is working properly and try again.": "检查一切是否正常，然后重试。",
+  "Check if everything is working properly and try again.": "检查本地网络或服务端是否正常，然后重试。",
   "Details": "详情",
   "Components created before Langflow 1.0 may be unstable. Ensure components are up to date.": "在版本1.0之前创建的组件可能不稳定，请确保组件是最新的。",
   "Please contact the developer of the component to fix this issue.": "请联系组件开发者解决此问题。",
