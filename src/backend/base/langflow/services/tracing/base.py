@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Any, Dict
+from uuid import UUID
 
 
 class BaseTracer(ABC):
@@ -12,11 +13,13 @@ class BaseTracer(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def add_trace(self, trace_name: str, trace_type: str, inputs: Dict[str, Any], metadata: Dict[str, Any] = None):
+    def add_trace(
+        self, trace_name: str, trace_type: str, inputs: Dict[str, Any], metadata: Dict[str, Any] | None = None
+    ):
         raise NotImplementedError
 
     @abstractmethod
-    def end_trace(self, trace_name: str, outputs: Dict[str, Any] = None, error: str = None):
+    def end_trace(self, trace_name: str, outputs: Dict[str, Any] | None = None, error: str | None = None):
         raise NotImplementedError
 
     @abstractmethod
