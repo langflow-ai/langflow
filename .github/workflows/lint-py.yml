@@ -3,11 +3,6 @@ name: Lint Python
 on:
   pull_request:
     types: [opened, synchronize, reopened]
-    paths:
-      - "poetry.lock"
-      - "pyproject.toml"
-      - "src/backend/**"
-      - "tests/**"
   merge_group:
     types: [checks_requested]
 env:
