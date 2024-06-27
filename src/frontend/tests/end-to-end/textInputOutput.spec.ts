@@ -113,7 +113,9 @@ test("TextInputOutputComponent", async ({ page }) => {
     timeout: 100000,
   });
 
-  await page.getByTitle("fit view").click();
+  await page.getByTitle("zoom out").click();
+  await page.getByTitle("zoom out").click();
+  await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
@@ -127,7 +129,7 @@ test("TextInputOutputComponent", async ({ page }) => {
   );
 
   const element4 = await page.locator(
-    '//*[@id="react-flow-id"]/div/div[1]/div/div/div[2]/div[2]/div/div[2]/div[15]/button/div[1]',
+    '//*[@id="react-flow-id"]/div/div[1]/div[1]/div/div[2]/div[2]/div/div[2]/div[16]/button/div[1]',
   );
 
   // ensure elements popups are not blocking
