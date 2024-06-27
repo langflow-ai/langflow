@@ -4,7 +4,7 @@ from langchain_community.vectorstores import Cassandra
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent
 from langflow.helpers.data import docs_to_data
-from langflow.inputs import DictInput
+from langflow.inputs import DictInput, FloatInput, BoolInput
 from langflow.io import (
     DataInput,
     DropdownInput,
@@ -24,18 +24,20 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
     icon = "Cassandra"
 
     inputs = [
-        MessageTextInput(name="database_ref",
-                         display_name="Contact Points / Astra Database ID",
-                         info="Contact points for the database (or AstraDB database ID)",
-                         required=True),
-        MessageTextInput(name="username",
-                         display_name="Username",
-                         info="Username for the database (leave empty for AstraDB)."),
+        MessageTextInput(
+            name="database_ref",
+            display_name="Contact Points / Astra Database ID",
+            info="Contact points for the database (or AstraDB database ID)",
+            required=True,
+        ),
+        MessageTextInput(
+            name="username", display_name="Username", info="Username for the database (leave empty for AstraDB)."
+        ),
         SecretStrInput(
             name="token",
             display_name="Password / AstraDB Token",
             info="User password for the database (or AstraDB token).",
-            required=True
+            required=True,
         ),
         MessageTextInput(
             name="keyspace",
@@ -62,12 +64,6 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
             value=16,
             advanced=True,
         ),
-        MessageTextInput(
-            name="body_index_options",
-            display_name="Body Index Options",
-            info="Optional options used to create the body index.",
-            advanced=True,
-        ),
         DropdownInput(
             name="setup_mode",
             display_name="Setup Mode",
@@ -81,7 +77,7 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
             display_name="Cluster arguments",
             info="Optional dictionary of additional keyword arguments for the Cassandra cluster.",
             advanced=True,
-            is_list=True
+            is_list=True,
         ),
         MultilineInput(name="search_query", display_name="Search Query"),
         DataInput(
@@ -95,6 +91,41 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
             display_name="Number of Results",
             info="Number of results to return.",
             value=4,
+            advanced=True,
+        ),
+        DropdownInput(
+            name="search_type",
+            display_name="Search Type",
+            info="Search type to use",
+            options=["Similarity", "Similarity with score threshold", "MMR (Max Marginal Relevance)"],
+            value="Similarity",
+            advanced=True,
+        ),
+        FloatInput(
+            name="search_score_threshold",
+            display_name="Search Score Threshold",
+            info="Minimum similarity score threshold for search results. (when using 'Similarity with score threshold')",
+            value=0,
+            advanced=True,
+        ),
+        DictInput(
+            name="search_filter",
+            display_name="Search Metadata Filter",
+            info="Optional dictionary of filters to apply to the search query.",
+            advanced=True,
+            is_list=True,
+        ),
+        MessageTextInput(
+            name="body_search",
+            display_name="Search Body",
+            info="Document textual search terms to apply to the search query.",
+            advanced=True,
+        ),
+        BoolInput(
+            name="enable_body_search",
+            display_name="Enable Body Search",
+            info="Flag to enable body search. This must be enabled BEFORE the table is created.",
+            value=False,
             advanced=True,
         ),
     ]
@@ -148,6 +179,11 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
             else:
                 documents.append(_input)
 
+        if self.enable_body_search:
+            body_index_options = [("index_analyzer", "STANDARD")]
+        else:
+            body_index_options = None
+
         if documents:
             table = Cassandra.from_documents(
                 documents=documents,
@@ -156,7 +192,7 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
                 keyspace=self.keyspace,
                 ttl_seconds=self.ttl_seconds,
                 batch_size=self.batch_size,
-                body_index_options=self.body_index_options,
+                body_index_options=body_index_options,
             )
 
         else:
@@ -165,21 +201,29 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
                 table_name=self.table_name,
                 keyspace=self.keyspace,
                 ttl_seconds=self.ttl_seconds,
-                body_index_options=self.body_index_options,
+                body_index_options=body_index_options,
                 setup_mode=self.setup_mode,
             )
 
         return table
+
+    def _map_search_type(self):
+        if self.search_type == "Similarity with score threshold":
+            return "similarity_score_threshold"
+        elif self.search_type == "MMR (Max Marginal Relevance)":
+            return "mmr"
+        else:
+            return "similarity"
 
     def search_documents(self) -> List[Data]:
         vector_store = self._build_cassandra()
 
         if self.search_query and isinstance(self.search_query, str) and self.search_query.strip():
             try:
-                docs = vector_store.similarity_search(
-                    query=self.search_query,
-                    k=self.number_of_results,
-                )
+                search_type = self._map_search_type()
+                search_args = self._build_search_args()
+
+                docs = vector_store.search(query=self.search_query, search_type=search_type, **search_args)
             except KeyError as e:
                 if "content" in str(e):
                     raise ValueError(
@@ -193,3 +237,26 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
             return data
         else:
             return []
+
+    def _build_search_args(self):
+        args = {
+            "k": self.number_of_results,
+            "score_threshold": self.search_score_threshold,
+        }
+
+        if self.search_filter:
+            clean_filter = {k: v for k, v in self.search_filter.items() if k and v}
+            if len(clean_filter) > 0:
+                args["filter"] = clean_filter
+        if self.body_search:
+            if not self.enable_body_search:
+                raise ValueError("You should enable body search when creating the table to search the body field.")
+            args["body_search"] = self.body_search
+        return args
+
+    def get_retriever_kwargs(self):
+        search_args = self._build_search_args()
+        return {
+            "search_type": self._map_search_type(),
+            "search_kwargs": search_args,
+        }
