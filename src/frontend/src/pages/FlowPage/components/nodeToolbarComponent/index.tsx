@@ -31,8 +31,8 @@ import {
   updateFlowPosition,
 } from "../../../../utils/reactflowUtils";
 import { classNames, cn, isThereModal } from "../../../../utils/utils";
-import ToolbarSelectItem from "./toolbarSelectItem";
 import isWrappedWithClass from "../PageComponent/utils/is-wrapped-with-class";
+import ToolbarSelectItem from "./toolbarSelectItem";
 
 export default function NodeToolbarComponent({
   data,
@@ -419,7 +419,7 @@ export default function NodeToolbarComponent({
 
   return (
     <>
-      <div className="w-26 noflow nowheel nopan nodelete nodrag  h-10">
+      <div className="w-26 noflow nowheel nopan nodelete nodrag h-10">
         <span className="isolate inline-flex rounded-md shadow-sm">
           {hasCode && (
             <ShadTooltip

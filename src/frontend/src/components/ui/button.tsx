@@ -78,7 +78,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           className={
             !unstyled
               ? buttonVariants({ variant, size, className })
-              : cn(className, "noflow nowheel nopan nodelete nodrag ")
+              : cn(className, "noflow nowheel nopan nodelete nodrag")
           }
           disabled={loading || disabled}
           {...(asChild ? {} : { type: type || "button" })}

@@ -9,7 +9,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
     return (
       <textarea
         className={cn(
-          "nopan nodelete nodrag  noflow textarea-primary",
+          "nopan nodelete nodrag noflow textarea-primary",
           className,
         )}
         ref={ref}

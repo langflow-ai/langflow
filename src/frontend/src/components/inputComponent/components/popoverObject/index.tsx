@@ -89,7 +89,7 @@ const CustomInputPopoverObject = ({
         />
       </PopoverAnchor>
       <PopoverContentInput
-        className="noflow nowheel nopan nodelete nodrag  p-0"
+        className="noflow nowheel nopan nodelete nodrag p-0"
         style={{ minWidth: refInput?.current?.clientWidth ?? "200px" }}
         side="bottom"
         align="center"
