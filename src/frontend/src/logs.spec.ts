@@ -33,6 +33,11 @@ test("should able to see and interact with logs", async ({ page }) => {
   await page
     .getByTestId("popover-anchor-input-openai_api_key")
     .fill(process.env.OPENAI_API_KEY ?? "");
+
+  await page.getByTestId("dropdown-model_name").click();
+  await page.getByTestId("gpt-4o-0-option").click();
+
+  await page.waitForTimeout(2000);
   await page.getByTestId("button_run_chat output").first().click();
 
   await page.waitForTimeout(2000);

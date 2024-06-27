@@ -43,6 +43,10 @@ test("ToggleComponent", async ({ page }) => {
   await page.mouse.up();
   await page.mouse.down();
 
+  await page.waitForSelector('[title="fit view"]', {
+    timeout: 100000,
+  });
+
   await page.getByTitle("fit view").click();
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
@@ -60,6 +64,10 @@ test("ToggleComponent", async ({ page }) => {
 
   await page.getByText("Save Changes", { exact: true }).click();
 
+  await page.waitForSelector('[title="fit view"]', {
+    timeout: 100000,
+  });
+
   await page.getByTitle("fit view").click();
 
   await page.getByTestId("toggle-load_hidden").click();
@@ -78,6 +86,10 @@ test("ToggleComponent", async ({ page }) => {
   expect(await page.getByTestId("toggle-load_hidden").isChecked()).toBeTruthy();
 
   await page.getByTestId("div-generic-node").click();
+
+  await page.waitForSelector('[title="fit view"]', {
+    timeout: 100000,
+  });
 
   await page.getByTitle("fit view").click();
   await page.getByTitle("zoom out").click();
