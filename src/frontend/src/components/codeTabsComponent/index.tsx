@@ -173,9 +173,9 @@ export default function CodeTabsComponent({
 
       {tabs.map((tab, idx) => (
         <TabsContent
-        value={idx.toString()}
-        className="api-modal-tabs-content overflow-hidden"
-        key={idx} // Remember to add a unique key prop
+          value={idx.toString()}
+          className="api-modal-tabs-content overflow-hidden"
+          key={idx} // Remember to add a unique key prop
         >
           {tabsOrder[idx].toLowerCase() !== "tweaks" ? (
             <div className="flex h-full w-full flex-col">
