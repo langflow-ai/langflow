@@ -14,7 +14,7 @@ env:
 
 jobs:
   setup-and-test:
-    name: Run Frontend Tests on branch ${{ inputs.branch }}
+    name: Run Playwright Tests
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -27,8 +27,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.branch }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -50,14 +48,15 @@ jobs:
           cd src/frontend
           npm ci
         if: ${{ steps.setup-node.outputs.cache-hit != 'true' }}
-
-      - name: Cache playwright binaries
-        uses: actions/cache@v4
+      - name: Get Playwright version
+        run: echo "PLAYWRIGHT_VERSION=$(jq '.devDependencies["@playwright/test"]' src/frontend/package.json -r)" >> $GITHUB_ENV
+      - name:  Cache Playwright binaries
         id: playwright-cache
+        uses: actions/cache@v4
         with:
-          path: |
-            ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ hashFiles('src/frontend/package-lock.json') }}
+          path: ~/.cache/ms-playwright
+          key: playwright-browsers-${{ runner.os }}-${{ env.PLAYWRIGHT_VERSION }}
+
       - name: Install Frontend dependencies
         run: |
           cd src/frontend
