@@ -35,14 +35,8 @@ jobs:
           poetry install
       - name: Register problem matcher
         run: echo "::add-matcher::.github/workflows/matchers/ruff.json"
-      - name: Run Ruff
+      - name: Run Ruff Check
         run: poetry run ruff check --output-format=github .
-      - name: Run Ruff format
-        run: poetry run ruff format .
-      - name: Commit changes
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: Apply Ruff formatting
-          branch: ${{ github.head_ref }}
+
 
 
