@@ -48,6 +48,7 @@ const TextAreaWrapper = ({
 
   return (
     <Textarea
+      data-testid="input-chat-playground"
       onFocus={(e) => {
         setInputFocus(true);
         e.target.style.borderTopWidth = "0";
