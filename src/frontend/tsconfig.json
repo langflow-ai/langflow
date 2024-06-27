@@ -52,5 +52,5 @@
     "tests/end-to-end/tweaks_test.spec.ts",
     "tests/end-to-end/twoEdges.spec.ts",
     "tests/end-to-end/userSettings.spec.ts"
-  ]
+, "tests/end-to-end/store.spec.ts"  ]
 }
