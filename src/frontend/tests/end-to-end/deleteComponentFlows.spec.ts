@@ -9,13 +9,27 @@ test("should delete a flow", async ({ page }) => {
   await page
     .getByPlaceholder("Insert your API Key", { exact: true })
     .fill(process.env.STORE_API_KEY ?? "");
+
+  await page.waitForSelector("text=Save", { timeout: 30000 });
+
   await page.getByText("Save").last().click();
-  await page.waitForTimeout(8000);
+
+  await page.waitForSelector("text=Store", { timeout: 30000 });
+
   await page.getByText("Store").nth(0).click();
 
+  await page.waitForSelector('[data-testid="install-Website Content QA"]', {
+    timeout: 100000,
+  });
+
   await page.getByTestId("install-Website Content QA").click();
-  await page.waitForTimeout(5000);
+
+  await page.waitForSelector("text=My Collection", { timeout: 30000 });
+
   await page.getByText("My Collection").nth(0).click();
+
+  await page.waitForSelector("text=Website Content QA", { timeout: 30000 });
+
   await page.getByText("Website Content QA").first().isVisible();
 
   await page.getByLabel("checkbox-component").last().waitFor({
@@ -23,7 +37,11 @@ test("should delete a flow", async ({ page }) => {
     timeout: 30000, // Timeout of 30 seconds
   });
 
-  await page.getByLabel("checkbox-component").first().click();
+  await page.waitForSelector('[data-testid="checkbox-component"]', {
+    timeout: 100000,
+  });
+
+  await page.getByTestId("checkbox-component").first().click();
 
   await page.getByTestId("icon-Trash2").click();
   await page

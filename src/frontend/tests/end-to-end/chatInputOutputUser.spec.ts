@@ -58,6 +58,11 @@ test("user must interact with chat with Input/Output", async ({ page }) => {
   });
 
   await page.getByTestId("input-chat-playground").fill("Hello, how are you?");
+
+  await page.waitForSelector('[data-testid="icon-LucideSend"]', {
+    timeout: 100000,
+  });
+
   await page.getByTestId("icon-LucideSend").click();
   let valueUser = await page.getByTestId("sender_name_user").textContent();
 
@@ -79,6 +84,11 @@ test("user must interact with chat with Input/Output", async ({ page }) => {
       "testtesttesttesttesttestte;.;.,;,.;,.;.,;,..,;;;;;;;;;;;;;;;;;;;;;,;.;,.;,.,;.,;.;.,~~çççççççççççççççççççççççççççççççççççççççisdajfdasiopjfaodisjhvoicxjiovjcxizopjviopasjioasfhjaiohf23432432432423423sttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttestççççççççççççççççççççççççççççççççç,.,.,.,.,.,.,.,.,.,.,.,.,.,.,.,.,!",
     );
   await page.getByText("Playground", { exact: true }).last().click();
+
+  await page.waitForSelector('[data-testid="icon-LucideSend"]', {
+    timeout: 100000,
+  });
+
   await page.getByTestId("icon-LucideSend").click();
   await page.getByText("Close", { exact: true }).click();
   await page.getByText("Chat Input", { exact: true }).click();
@@ -101,6 +111,11 @@ test("user must interact with chat with Input/Output", async ({ page }) => {
     .fill("TestSenderNameAI");
 
   await page.getByText("Playground", { exact: true }).last().click();
+
+  await page.waitForSelector('[data-testid="icon-LucideSend"]', {
+    timeout: 100000,
+  });
+
   await page.getByTestId("icon-LucideSend").click();
 
   valueUser = await page
@@ -233,7 +248,8 @@ test("user must be able to send an image on chat", async ({ page }) => {
   await page.getByTestId("dropdown-model_name").click();
   await page.getByTestId("gpt-4o-0-option").click();
 
-  await page.waitForTimeout(2000);
+  await page.waitForSelector("text=Chat Input", { timeout: 30000 });
+
   await page.getByText("Chat Input", { exact: true }).click();
   await page.getByTestId("more-options-modal").click();
   await page.getByTestId("edit-button-modal").click();
@@ -242,7 +258,7 @@ test("user must be able to send an image on chat", async ({ page }) => {
   await page.getByText("Playground", { exact: true }).click();
 
   // Read the image file as a binary string
-  const filePath = "tests/end-to-end/assets/chain.png";
+  const filePath = "src/frontend/tests/end-to-end/assets/chain.png";
   const fileContent = readFileSync(filePath, "base64");
 
   // Create the DataTransfer and File objects within the browser context
@@ -268,11 +284,14 @@ test("user must be able to send an image on chat", async ({ page }) => {
   // Dispatch the drop event on the target element
   await element.dispatchEvent("drop", { dataTransfer });
 
-  await page.waitForTimeout(4000);
+  await page.waitForSelector('[data-testid="icon-LucideSend"]', {
+    timeout: 100000,
+  });
 
-  await page.getByText("chain.png").isVisible();
   await page.getByTestId("icon-LucideSend").click();
-  await page.waitForTimeout(2000);
+
+  await page.waitForSelector("text=chain.png", { timeout: 30000 });
+
   await page.getByText("chain.png").isVisible();
 
   await page.getByText("Close", { exact: true }).click();
@@ -282,5 +301,6 @@ test("user must be able to send an image on chat", async ({ page }) => {
   });
 
   await page.getByTestId("icon-ScanEye").nth(4).click();
+
   await page.getByText("Restart").isHidden();
 });

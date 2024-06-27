@@ -163,6 +163,11 @@ test("Memory Chatbot", async ({ page }) => {
     .getByTestId("input-chat-playground")
     .last()
     .fill("try reproduce the sound I made in words");
+
+  await page.waitForSelector('[data-testid="icon-LucideSend"]', {
+    timeout: 100000,
+  });
+
   await page.getByTestId("icon-LucideSend").last().click();
 
   await page.waitForSelector("text=roar", { timeout: 30000 });
