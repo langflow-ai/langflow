@@ -1,6 +1,8 @@
 from loguru import logger
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent
+from langflow.helpers import docs_to_data
+from langflow.inputs import FloatInput, DictInput
 from langflow.io import (
     BoolInput,
     DataInput,
@@ -124,19 +126,34 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             info="Optional dictionary defining the indexing policy for the collection.",
             advanced=True,
         ),
-        DropdownInput(
-            name="search_type",
-            display_name="Search Type",
-            options=["Similarity", "MMR"],
-            value="Similarity",
-            advanced=True,
-        ),
         IntInput(
             name="number_of_results",
             display_name="Number of Results",
             info="Number of results to return.",
             advanced=True,
             value=4,
+        ),
+        DropdownInput(
+            name="search_type",
+            display_name="Search Type",
+            info="Search type to use",
+            options=["Similarity", "Similarity with score threshold", "MMR (Max Marginal Relevance)"],
+            value="Similarity",
+            advanced=True,
+        ),
+        FloatInput(
+            name="search_score_threshold",
+            display_name="Search Score Threshold",
+            info="Minimum similarity score threshold for search results. (when using 'Similarity with score threshold')",
+            value=0,
+            advanced=True,
+        ),
+        DictInput(
+            name="search_filter",
+            display_name="Search Metadata Filter",
+            info="Optional dictionary of filters to apply to the search query.",
+            advanced=True,
+            is_list=True,
         ),
     ]
 
@@ -225,6 +242,14 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
         else:
             logger.debug("No documents to add to the Vector Store.")
 
+    def _map_search_type(self):
+        if self.search_type == "Similarity with score threshold":
+            return "similarity_score_threshold"
+        elif self.search_type == "MMR (Max Marginal Relevance)":
+            return "mmr"
+        else:
+            return "similarity"
+
     def search_documents(self) -> list[Data]:
         vector_store = self._build_vector_store_no_ingest()
 
@@ -234,27 +259,38 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
 
         if self.search_input and isinstance(self.search_input, str) and self.search_input.strip():
             try:
-                if self.search_type == "Similarity":
-                    docs = vector_store.similarity_search(
-                        query=self.search_input,
-                        k=self.number_of_results,
-                    )
-                elif self.search_type == "MMR":
-                    docs = vector_store.max_marginal_relevance_search(
-                        query=self.search_input,
-                        k=self.number_of_results,
-                    )
-                else:
-                    raise ValueError(f"Invalid search type: {self.search_type}")
+                search_type = self._map_search_type()
+                search_args = self._build_search_args()
+
+                docs = vector_store.search(query=self.search_input, search_type=search_type, **search_args)
             except Exception as e:
                 raise ValueError(f"Error performing search in AstraDBVectorStore: {str(e)}") from e
 
             logger.debug(f"Retrieved documents: {len(docs)}")
 
-            data = [Data.from_document(doc) for doc in docs]
+            data = docs_to_data(docs)
             logger.debug(f"Converted documents to data: {len(data)}")
             self.status = data
             return data
         else:
             logger.debug("No search input provided. Skipping search.")
             return []
+
+    def _build_search_args(self):
+        args = {
+            "k": self.number_of_results,
+            "score_threshold": self.search_score_threshold,
+        }
+
+        if self.search_filter:
+            clean_filter = {k: v for k, v in self.search_filter.items() if k and v}
+            if len(clean_filter) > 0:
+                args["filter"] = clean_filter
+        return args
+
+    def get_retriever_kwargs(self):
+        search_args = self._build_search_args()
+        return {
+            "search_type": self._map_search_type(),
+            "search_kwargs": search_args,
+        }
