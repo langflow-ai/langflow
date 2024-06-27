@@ -33,6 +33,5 @@ export default function getCodesObj({
       name: "chat widget html",
       code: widgetCode,
     },
-    
   ]
 }
