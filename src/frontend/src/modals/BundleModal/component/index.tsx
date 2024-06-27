@@ -43,10 +43,6 @@ export const FolderForms = ({
     if (folderToEdit) {
       setValue("name", folderToEdit.name);
       setValue("description", folderToEdit.description);
-      console.log(folderToEdit);
-
-      // setSelectedComponents(folderToEdit.components);
-      // setSelectedFlows(folderToEdit.flows);
       return;
     }
     setValue("name", "");
