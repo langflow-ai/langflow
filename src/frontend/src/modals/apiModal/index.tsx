@@ -43,7 +43,7 @@ const ApiModal = forwardRef(
       setOpen?: (a: boolean | ((o?: boolean) => boolean)) => void;
     },
     ref,
-    ) => {
+  ) => {
     const tweaksCode = buildTweaks(flow);
     const tweak = useTweaksStore((state) => state.tweak);
     const addTweaks = useTweaksStore((state) => state.setTweak);
