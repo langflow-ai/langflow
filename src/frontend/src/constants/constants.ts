@@ -863,3 +863,5 @@ export const TITLE_ERROR_UPDATING_COMPONENT =
   "Error while updating the Component";
 
 export const EMPTY_INPUT_SEND_MESSAGE = "No input message provided.";
+
+export const TABS_ORDER = ["run curl", "python api", "js api", "python code", "chat widget html"]
