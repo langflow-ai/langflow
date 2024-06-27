@@ -25,6 +25,7 @@ class BaseTracer(ABC):
     @abstractmethod
     def end(
         self,
+        inputs: dict[str, Any],
         outputs: Dict[str, Any],
         error: str | None = None,
         metadata: dict[str, Any] | None = None,
