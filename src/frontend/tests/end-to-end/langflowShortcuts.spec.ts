@@ -2,13 +2,6 @@ import { expect, test } from "@playwright/test";
 import uaParser from "ua-parser-js";
 test("LangflowShortcuts", async ({ page }) => {
   await page.goto("/");
-  const getUA = await page.evaluate(() => navigator.userAgent);
-  const userAgentInfo = uaParser(getUA);
-  let control = "Control";
-
-  if (userAgentInfo.os.name.includes("Mac")) {
-    control = "Meta";
-  }
 
   await page.waitForTimeout(1000);
 
@@ -28,8 +21,18 @@ test("LangflowShortcuts", async ({ page }) => {
     modalCount = await page.getByTestId("modal-title")?.count();
   }
 
+  const getUA = await page.evaluate(() => navigator.userAgent);
+  const userAgentInfo = uaParser(getUA);
+  let control = "Control";
+
+  if (userAgentInfo.os.name.includes("Mac")) {
+    control = "Meta";
+  }
+
   await page.getByTestId("blank-flow").click();
-  await page.waitForTimeout(3000);
+  await page.waitForSelector('[data-testid="extended-disclosure"]', {
+    timeout: 100000,
+  });
   await page.getByTestId("extended-disclosure").click();
   await page.getByPlaceholder("Search").click();
   await page.getByPlaceholder("Search").fill("ollama");
@@ -43,6 +46,11 @@ test("LangflowShortcuts", async ({ page }) => {
   await page.mouse.down();
 
   await page.locator('//*[@id="react-flow-id"]/div/div[2]/button[3]').click();
+
+  await page.waitForSelector('[title="fit view"]', {
+    timeout: 100000,
+  });
+
   await page.getByTitle("fit view").click();
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
