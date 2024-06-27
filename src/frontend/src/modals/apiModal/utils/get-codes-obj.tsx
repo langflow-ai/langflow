@@ -1,4 +1,7 @@
-import { getCodesObjProps, getCodesObjReturn } from "../../../types/utils/functions";
+import {
+  getCodesObjProps,
+  getCodesObjReturn,
+} from "../../../types/utils/functions";
 
 export default function getCodesObj({
   runCurlCode,
@@ -33,5 +36,5 @@ export default function getCodesObj({
       name: "chat widget html",
       code: widgetCode,
     },
-  ]
+  ];
 }
