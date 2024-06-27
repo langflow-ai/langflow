@@ -1,5 +1,5 @@
-from datetime import datetime, timezone
 import re
+from datetime import datetime, timezone
 from typing import List
 from uuid import UUID
 
@@ -49,8 +49,8 @@ def create_flow(
             if flows:
                 extract_number = re.compile(r"\((\d+)\)$")
                 numbers = []
-                for flow in flows:
-                    result = extract_number.search(flow.name)
+                for _flow in flows:
+                    result = extract_number.search(_flow.name)
                     if result:
                         numbers.append(int(result.groups(1)[0]))
                 if numbers:
@@ -211,8 +211,7 @@ def update_flow(
         if settings_service.settings.remove_api_keys:
             flow_data = remove_api_keys(flow_data)
         for key, value in flow_data.items():
-            if value is not None:
-                setattr(db_flow, key, value)
+            setattr(db_flow, key, value)
         webhook_component = get_webhook_component_in_flow(db_flow.data)
         db_flow.webhook = webhook_component is not None
         db_flow.updated_at = datetime.now(timezone.utc)

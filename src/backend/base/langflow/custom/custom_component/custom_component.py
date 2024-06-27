@@ -83,7 +83,7 @@ class CustomComponent(BaseComponent):
     _flows_data: Optional[List[Data]] = None
     _outputs: List[OutputLog] = []
     _logs: List[Log] = []
-    _tracing_service: "TracingService"
+    tracing_service: Optional["TracingService"] = None
 
     def update_state(self, name: str, value: Any):
         if not self.vertex:
@@ -96,7 +96,7 @@ class CustomComponent(BaseComponent):
     def stop(self, output_name: str | None = None):
         if not output_name and self.vertex and len(self.vertex.outputs) == 1:
             output_name = self.vertex.outputs[0]["name"]
-        else:
+        elif not output_name:
             raise ValueError("You must specify an output name to call stop")
         if not self.vertex:
             raise ValueError("Vertex is not set")
@@ -488,14 +488,14 @@ class CustomComponent(BaseComponent):
         Args:
             message (LoggableType | list[LoggableType]): The message to log.
         """
-        if name is None:
-            name = self.display_name if self.display_name else self.__class__.__name__
-        if hasattr(message, "model_dump") and isinstance(message, BaseModel):
-            message = message.model_dump()
+        if name is None and self.display_name:
+            name = self.display_name
+        else:
+            name = self.__class__.__name__
         log = Log(message=message, type=get_artifact_type(message), name=name)
         self._logs.append(log)
-        if self.vertex:
-            self._tracing_service.add_log(trace_name=self.vertex.id, log=log)
+        if self.tracing_service and self.vertex:
+            self.tracing_service.add_log(trace_name=self.vertex.id, log=log)
 
     def post_code_processing(self, new_build_config: dict, current_build_config: dict):
         """

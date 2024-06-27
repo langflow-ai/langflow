@@ -20,10 +20,13 @@ test("should be able to upload a file", async ({ page }) => {
     await page.waitForTimeout(5000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
-  await page.waitForTimeout(1000);
-
+  await page.waitForSelector('[data-testid="blank-flow"]', {
+    timeout: 30000,
+  });
   await page.getByTestId("blank-flow").click();
-  await page.waitForTimeout(3000);
+  await page.waitForSelector('[data-testid="extended-disclosure"]', {
+    timeout: 30000,
+  });
 
   await page.getByTestId("extended-disclosure").click();
   await page.getByPlaceholder("Search").click();
@@ -75,38 +78,70 @@ test("should be able to upload a file", async ({ page }) => {
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
 
+  let visibleElementHandle;
+
+  const elementsFile = await page
+    .getByTestId("handle-file-shownode-data-right")
+    .all();
+
+  for (const element of elementsFile) {
+    if (await element.isVisible()) {
+      visibleElementHandle = element;
+      break;
+    }
+  }
+
   // Click and hold on the first element
-  await page
-    .locator(
-      '//*[@id="react-flow-id"]/div/div[1]/div[1]/div/div[2]/div[1]/div/div[2]/div[6]/button/div[1]',
-    )
-    .hover();
+  await visibleElementHandle.hover();
   await page.mouse.down();
 
   // Move to the second element
-  await page
-    .locator(
-      '//*[@id="react-flow-id"]/div/div[1]/div[1]/div/div[2]/div[3]/div/div[2]/div[4]/div/button/div[1]',
-    )
-    .hover();
+
+  const parseDataElement = await page
+    .getByTestId("handle-parsedata-shownode-data-left")
+    .all();
+
+  for (const element of parseDataElement) {
+    if (await element.isVisible()) {
+      visibleElementHandle = element;
+      break;
+    }
+  }
+
+  await visibleElementHandle.hover();
 
   // Release the mouse
   await page.mouse.up();
 
   // Click and hold on the first element
-  await page
-    .locator(
-      '//*[@id="react-flow-id"]/div/div[1]/div[1]/div/div[2]/div[3]/div/div[2]/div[7]/button/div[1]',
-    )
-    .hover();
+
+  const parseDataOutputElement = await page
+    .getByTestId("handle-parsedata-shownode-text-right")
+    .all();
+
+  for (const element of parseDataOutputElement) {
+    if (await element.isVisible()) {
+      visibleElementHandle = element;
+      break;
+    }
+  }
+
+  await visibleElementHandle.hover();
   await page.mouse.down();
 
   // Move to the second element
-  await page
-    .locator(
-      '//*[@id="react-flow-id"]/div/div[1]/div[1]/div/div[2]/div[2]/div/div[2]/div[3]/div/button/div[1]',
-    )
-    .hover();
+  const textOutputElement = await page
+    .getByTestId("handle-textoutput-shownode-text-left")
+    .all();
+
+  for (const element of textOutputElement) {
+    if (await element.isVisible()) {
+      visibleElementHandle = element;
+      break;
+    }
+  }
+
+  await visibleElementHandle.hover();
 
   // Release the mouse
   await page.mouse.up();

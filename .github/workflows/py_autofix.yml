@@ -1,0 +1,29 @@
+name: autofix.ci
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, auto_merge_enabled, auto_merge_disabled]
+    paths:
+      - "poetry.lock"
+      - "pyproject.toml"
+      - "src/backend/**"
+      - "tests/**"
+env:
+  POETRY_VERSION: "1.8.2"
+
+jobs:
+  lint:
+    name: Run Mypy
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version:
+          - "3.12"
+          - "3.11"
+          - "3.10"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: install-pinned/ruff@6b463d795ce39011cc004438ae507ae56235e12a
+      - run: ruff --fix-only .
+      - run: ruff format .
+
+      - uses: autofix-ci/action@dd55f44df8f7cdb7a6bf74c78677eb8acd40cd0a

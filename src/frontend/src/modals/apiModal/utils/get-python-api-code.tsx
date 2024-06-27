@@ -10,7 +10,7 @@ export default function getPythonApiCode(
   flowId: string,
   isAuth: boolean,
   tweaksBuildedObject: any[],
-  endpointName?: string,
+  endpointName?: string | null,
 ): string {
   let tweaksString = "{}";
   if (tweaksBuildedObject && tweaksBuildedObject.length > 0) {
