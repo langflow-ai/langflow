@@ -29,6 +29,7 @@ import { useDarkStore } from "./darkStore";
 import useFlowStore from "./flowStore";
 import { useFolderStore } from "./foldersStore";
 import { useTypesStore } from "./typesStore";
+import { AxiosError } from "axios";
 
 let saveTimeoutId: NodeJS.Timeout | null = null;
 
