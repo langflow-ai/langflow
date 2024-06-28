@@ -23,28 +23,17 @@ export default function InputGlobalComponent({
   );
 
   const getVariableId = useGlobalVariablesStore((state) => state.getVariableId);
-  const unavaliableFields = useGlobalVariablesStore(
-    (state) => state.unavaliableFields,
-  );
   const removeGlobalVariable = useGlobalVariablesStore(
     (state) => state.removeGlobalVariable,
   );
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
   useEffect(() => {
-    if (data && globalVariablesEntries && unavaliableFields)
+    if (data && globalVariablesEntries)
       if (data.load_from_db && !globalVariablesEntries.includes(data.value)) {
         onChange("", false, true);
-      } else if (
-        !data.load_from_db &&
-        (!data.value || data.value === "") &&
-        unavaliableFields[data.display_name!] &&
-        !disabled &&
-        data.display_name
-      ) {
-        onChange(unavaliableFields[data.display_name!], true, true);
       }
-  }, [globalVariablesEntries, unavaliableFields, data, disabled]);
+  }, [globalVariablesEntries, data, disabled]);
 
   async function handleDelete(key: string) {
     const id = getVariableId(key);
