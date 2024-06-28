@@ -147,7 +147,7 @@ export default function CodeTabsComponent({
             </div>
           )}
 
-          {Number(activeTab) < 6 && (
+          {Number(activeTab) < 5 && (
             <>
               <Button
                 variant="ghost"
@@ -172,7 +172,7 @@ export default function CodeTabsComponent({
           className="api-modal-tabs-content overflow-hidden"
           key={idx} // Remember to add a unique key prop
         >
-          {idx < 6 ? (
+          {idx < 5 ? (
             <div className="flex h-full w-full flex-col">
               {tab.description && (
                 <div
