@@ -34,7 +34,7 @@
     "tests/end-to-end/floatComponent.spec.ts",
     "tests/end-to-end/flowPage.spec.ts",
     "tests/end-to-end/flowSettings.spec.ts",
-    "tests/end-to-end/generalBugs.spec.ts",
+    "tests/end-to-end/generalBugs-shard-0.spec.ts",
     "tests/end-to-end/globalVariables.spec.ts",
     "tests/end-to-end/group.spec.ts",
     "tests/end-to-end/folders.spec.ts",
