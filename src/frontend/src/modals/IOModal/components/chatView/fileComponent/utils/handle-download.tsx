@@ -17,9 +17,7 @@ export default async function handleDownload({
   try {
     isDownloading = true;
 
-    const response = await fetch(
-      `${BASE_URL_API}files/download/${content}`,
-    );
+    const response = await fetch(`${BASE_URL_API}files/download/${content}`);
     if (!response.ok) {
       throw new Error("Network response was not ok");
     }

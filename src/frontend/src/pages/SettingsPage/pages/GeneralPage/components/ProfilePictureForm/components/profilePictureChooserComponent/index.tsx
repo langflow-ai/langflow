@@ -1,9 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "../../../../../../../../components/ui/button";
 import Loading from "../../../../../../../../components/ui/loading";
-import {
-  BASE_URL_API,
-} from "../../../../../../../../constants/constants";
+import { BASE_URL_API } from "../../../../../../../../constants/constants";
 import { useDarkStore } from "../../../../../../../../stores/darkStore";
 import { cn } from "../../../../../../../../utils/utils";
 import usePreloadImages from "./hooks/use-preload-images";
