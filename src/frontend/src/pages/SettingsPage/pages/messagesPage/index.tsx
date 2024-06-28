@@ -4,6 +4,7 @@ import {
   ColGroupDef,
   SelectionChangedEvent,
 } from "ag-grid-community";
+import { cloneDeep } from "lodash";
 import { useState } from "react";
 import TableComponent from "../../../../components/tableComponent";
 import useAlertStore from "../../../../stores/alertStore";
@@ -13,7 +14,6 @@ import HeaderMessagesComponent from "./components/headerMessages";
 import useMessagesTable from "./hooks/use-messages-table";
 import useRemoveMessages from "./hooks/use-remove-messages";
 import useUpdateMessage from "./hooks/use-updateMessage";
-import { cloneDeep } from "lodash";
 
 export default function MessagesPage() {
   const [columns, setColumns] = useState<Array<ColDef | ColGroupDef>>([]);
