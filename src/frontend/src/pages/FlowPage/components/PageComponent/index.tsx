@@ -228,7 +228,7 @@ export default function Page({
   }
 
   function handleCopy(e: KeyboardEvent) {
-    if (!isWrappedWithClass(e, "nocopy")) {
+    if (!isWrappedWithClass(e, "nocopy") && isWrappedWithClass(e, "react-flow__node")) {
       e.preventDefault();
       (e as unknown as Event).stopImmediatePropagation();
       if (window.getSelection()?.toString().length === 0 && lastSelection) {
