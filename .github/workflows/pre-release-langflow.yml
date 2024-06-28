@@ -75,7 +75,7 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Build and push
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           push: true
@@ -86,7 +86,7 @@ jobs:
             langflowai/langflow:${{ needs.release.outputs.version }}
             langflowai/langflow:1.0-alpha
       - name: Build and push (frontend)
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           push: true
@@ -99,7 +99,7 @@ jobs:
       - name: Wait for Docker Hub to propagate
         run: sleep 120
       - name: Build and push (backend)
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           push: true

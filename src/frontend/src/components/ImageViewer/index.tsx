@@ -6,7 +6,7 @@ import useAlertStore from "../../stores/alertStore";
 import ForwardedIconComponent from "../genericIconComponent";
 import { Separator } from "../ui/separator";
 
-export default function ImageViewer({ image }) {
+export default function ImageViewer({ image }: { image: string }) {
   const viewerRef = useRef(null);
   const [errorDownloading, setErrordownloading] = useState(false);
   const setErrorList = useAlertStore((state) => state.setErrorData);

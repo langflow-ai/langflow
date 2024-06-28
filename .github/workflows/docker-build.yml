@@ -11,7 +11,7 @@ on:
       pre_release:
         required: false
         type: boolean
-        default: true
+        default: false
 
   workflow_dispatch:
     inputs:
@@ -67,7 +67,7 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Build and Push Docker Image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           push: true
@@ -86,10 +86,10 @@ jobs:
         include:
           - component: backend
             dockerfile: ./docker/build_and_push_backend.Dockerfile
-            tags: langflowai/langflow-backend:${{ inputs.version }},langflowai/langflow-backend:1.0-alpha
+            tags: ${{ inputs.pre_release == 'true' && format('langflowai/langflow-backend:{0}', inputs.version) || format('langflowai/langflow-backend:{0},langflowai/langflow-backend:latest', inputs.version) }}
           - component: frontend
             dockerfile: ./docker/frontend/build_and_push_frontend.Dockerfile
-            tags: langflowai/langflow-frontend:${{ inputs.version }},langflowai/langflow-frontend:1.0-alpha
+            tags: ${{ inputs.pre_release == 'true' && format('langflowai/langflow-frontend:{0}', inputs.version) || format('langflowai/langflow-frontend:{0},langflowai/langflow-frontend:latest', inputs.version) }}
     steps:
       - uses: actions/checkout@v4
       - name: Set up Docker Buildx
@@ -102,7 +102,7 @@ jobs:
       - name: Wait for Docker Hub to propagate (for backend)
         run: sleep 120
       - name: Build and push ${{ matrix.component }}
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           push: true

@@ -19,10 +19,20 @@ test("ToggleComponent", async ({ page }) => {
     await page.waitForTimeout(5000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
-
+  await page.waitForSelector('[data-testid="blank-flow"]', {
+    timeout: 30000,
+  });
   await page.getByTestId("blank-flow").click();
-  await page.waitForTimeout(3000);
-  await page.getByTestId("extended-disclosure").click();
+
+  await page.waitForSelector('[data-testid="extended-disclosure"]', {
+    timeout: 30000,
+  });
+  const focusElementsOnBoard = async ({ page }) => {
+    const focusElements = await page.getByTestId("extended-disclosure");
+    focusElements.click();
+  };
+
+  await focusElementsOnBoard({ page });
   await page.getByPlaceholder("Search").click();
   await page.getByPlaceholder("Search").fill("directory");
 
@@ -32,6 +42,10 @@ test("ToggleComponent", async ({ page }) => {
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.mouse.up();
   await page.mouse.down();
+
+  await page.waitForSelector('[title="fit view"]', {
+    timeout: 100000,
+  });
 
   await page.getByTitle("fit view").click();
   await page.getByTitle("zoom out").click();
@@ -50,6 +64,10 @@ test("ToggleComponent", async ({ page }) => {
 
   await page.getByText("Save Changes", { exact: true }).click();
 
+  await page.waitForSelector('[title="fit view"]', {
+    timeout: 100000,
+  });
+
   await page.getByTitle("fit view").click();
 
   await page.getByTestId("toggle-load_hidden").click();
@@ -68,6 +86,10 @@ test("ToggleComponent", async ({ page }) => {
   expect(await page.getByTestId("toggle-load_hidden").isChecked()).toBeTruthy();
 
   await page.getByTestId("div-generic-node").click();
+
+  await page.waitForSelector('[title="fit view"]', {
+    timeout: 100000,
+  });
 
   await page.getByTitle("fit view").click();
   await page.getByTitle("zoom out").click();

@@ -21,14 +21,16 @@ test("InputListComponent", async ({ page }) => {
   }
 
   await page.getByTestId("blank-flow").click();
-  await page.waitForTimeout(3000);
+  await page.waitForSelector('[data-testid="extended-disclosure"]', {
+    timeout: 30000,
+  });
   await page.getByTestId("extended-disclosure").click();
   await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("astradb");
+  await page.getByPlaceholder("Search").fill("url");
 
   await page.waitForTimeout(1000);
   await page
-    .getByTestId("vectorsearchAstra DB Search")
+    .getByTestId("dataURL")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.mouse.up();
   await page.mouse.down();
@@ -36,95 +38,71 @@ test("InputListComponent", async ({ page }) => {
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
+
+  await page.getByTestId("input-list-input_urls-0").fill("test test test test");
+
+  await page.getByTestId("input-list-plus-btn_urls-0").click();
+
+  await page.getByTestId("input-list-plus-btn_urls-0").click();
+
+  await page
+    .getByTestId("input-list-input_urls-1")
+    .fill("test1 test1 test1 test1");
+
+  await page
+    .getByTestId("input-list-input_urls-2")
+    .fill("test2 test2 test2 test2");
+
   await page.getByTestId("div-generic-node").click();
   await page.getByTestId("more-options-modal").click();
   await page.getByTestId("edit-button-modal").click();
 
-  expect(
-    await page.getByTestId("showmetadata_indexing_exclude").isChecked(),
-  ).toBeFalsy();
-  await page.getByTestId("showmetadata_indexing_exclude").click();
-  expect(
-    await page.getByTestId("showmetadata_indexing_exclude").isChecked(),
-  ).toBeTruthy();
-
-  expect(
-    await page.getByTestId("showmetadata_indexing_include").isChecked(),
-  ).toBeFalsy();
-  await page.getByTestId("showmetadata_indexing_include").click();
-  expect(
-    await page.getByTestId("showmetadata_indexing_include").isChecked(),
-  ).toBeTruthy();
-
-  await page
-    .getByTestId("input-list-input-edit_metadata_indexing_include-0")
-    .fill("test test test test");
-
-  await page
-    .getByTestId("input-list-plus-btn-edit_metadata_indexing_include-0")
-    .click();
-
-  await page
-    .getByTestId("input-list-input-edit_metadata_indexing_include-1")
-    .fill("test1 test1 test1 test1");
-
-  await page.getByText("Save Changes", { exact: true }).click();
-
-  await page
-    .getByTestId("input-list-input_metadata_indexing_include-0")
-    .fill("test test test test");
-
   const value0 = await page
-    .getByTestId("input-list-input_metadata_indexing_include-0")
+    .getByTestId("input-list-input-edit_urls-0")
     .inputValue();
   const value1 = await page
-    .getByTestId("input-list-input_metadata_indexing_include-1")
+    .getByTestId("input-list-input-edit_urls-1")
+    .inputValue();
+
+  const value2 = await page
+    .getByTestId("input-list-input-edit_urls-2")
     .inputValue();
 
   if (
     value0 !== "test test test test" ||
-    value1 !== "test1 test1 test1 test1"
+    value1 !== "test1 test1 test1 test1" ||
+    value2 !== "test2 test2 test2 test2"
   ) {
     expect(false).toBeTruthy();
   }
 
-  await page
-    .getByTestId("input-list-minus-btn_metadata_indexing_include-1")
-    .click();
+  await page.getByTestId("input-list-minus-btn-edit_urls-1").click();
 
   const plusButtonLocator = page.getByTestId(
-    "input-list-plus-btn_metadata_indexing_include-1",
+    "input-list-minus-btn-edit_urls-1",
   );
   const elementCount = await plusButtonLocator?.count();
 
-  if (elementCount > 0) {
+  if (elementCount > 1) {
     expect(false).toBeTruthy();
   }
 
-  await page
-    .getByTestId("input-list-plus-btn_metadata_indexing_include-0")
-    .click();
-  await page
-    .getByTestId("input-list-plus-btn_metadata_indexing_include-0")
-    .click();
-  await page
-    .getByTestId("input-list-plus-btn_metadata_indexing_include-0")
-    .click();
-  await page
-    .getByTestId("input-list-plus-btn_metadata_indexing_include-0")
-    .click();
+  await page.getByText("Save Changes", { exact: true }).click();
 
+  await page.getByTestId("input-list-minus-btn_urls-2").isHidden();
+
+  await page.getByTestId("input-list-plus-btn_urls-0").click();
+  await page.getByTestId("input-list-plus-btn_urls-0").click();
+
+  await page.getByTestId("input-list-input_urls-0").fill("test test test test");
   await page
-    .getByTestId("input-list-input_metadata_indexing_include-0")
-    .fill("test test test test");
-  await page
-    .getByTestId("input-list-input_metadata_indexing_include-1")
+    .getByTestId("input-list-input_urls-1")
     .fill("test1 test1 test1 test1");
   await page
-    .getByTestId("input-list-input_metadata_indexing_include-2")
+    .getByTestId("input-list-input_urls-2")
     .fill("test2 test2 test2 test2");
   await page
-    .getByTestId("input-list-input_metadata_indexing_include-3")
+    .getByTestId("input-list-input_urls-3")
     .fill("test3 test3 test3 test3");
 
   await page.getByTestId("div-generic-node").click();
@@ -132,16 +110,16 @@ test("InputListComponent", async ({ page }) => {
   await page.getByTestId("edit-button-modal").click();
 
   const value0Edit = await page
-    .getByTestId("input-list-input-edit_metadata_indexing_include-0")
+    .getByTestId("input-list-input-edit_urls-0")
     .inputValue();
   const value1Edit = await page
-    .getByTestId("input-list-input-edit_metadata_indexing_include-1")
+    .getByTestId("input-list-input-edit_urls-1")
     .inputValue();
   const value2Edit = await page
-    .getByTestId("input-list-input-edit_metadata_indexing_include-2")
+    .getByTestId("input-list-input-edit_urls-2")
     .inputValue();
   const value3Edit = await page
-    .getByTestId("input-list-input-edit_metadata_indexing_include-3")
+    .getByTestId("input-list-input-edit_urls-3")
     .inputValue();
 
   if (
@@ -153,23 +131,17 @@ test("InputListComponent", async ({ page }) => {
     expect(false).toBeTruthy();
   }
 
-  await page
-    .getByTestId("input-list-minus-btn-edit_metadata_indexing_include-1")
-    .click();
-  await page
-    .getByTestId("input-list-minus-btn-edit_metadata_indexing_include-1")
-    .click();
-  await page
-    .getByTestId("input-list-minus-btn-edit_metadata_indexing_include-1")
-    .click();
+  await page.getByTestId("input-list-minus-btn-edit_urls-1").click();
+  await page.getByTestId("input-list-minus-btn-edit_urls-1").click();
+  await page.getByTestId("input-list-minus-btn-edit_urls-1").click();
 
   const plusButtonLocatorEdit0 = await page.getByTestId(
-    "input-list-plus-btn-edit_metadata_indexing_include-0",
+    "input-list-plus-btn-edit_urls-0",
   );
   const elementCountEdit0 = await plusButtonLocatorEdit0?.count();
 
   const plusButtonLocatorEdit2 = await page.getByTestId(
-    "input-list-plus-btn-edit_metadata_indexing_include-2",
+    "input-list-plus-btn-edit_urls-1",
   );
   const elementCountEdit2 = await plusButtonLocatorEdit2?.count();
 
@@ -178,13 +150,13 @@ test("InputListComponent", async ({ page }) => {
   }
 
   const minusButtonLocatorEdit1 = await page.getByTestId(
-    "input-list-minus-btn-edit_metadata_indexing_include-1",
+    "input-list-minus-btn-edit_urls-1",
   );
 
   const elementCountMinusEdit1 = await minusButtonLocatorEdit1?.count();
 
   const minusButtonLocatorEdit2 = await page.getByTestId(
-    "input-list-minus-btn-edit_metadata_indexing_include-2",
+    "input-list-minus-btn-edit_urls-2",
   );
 
   const elementCountMinusEdit2 = await minusButtonLocatorEdit2?.count();

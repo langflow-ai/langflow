@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "langflow"
-version = "1.0.1"
+version = "1.0.5"
 description = "A Python package with a built-in web application"
 authors = ["Langflow <contact@langflow.org>"]
 maintainers = [
@@ -92,6 +92,7 @@ unstructured = {extras = ["docx", "md", "pptx"], version = "^0.14.4"}
 langchain-aws = "^0.1.6"
 langchain-mongodb = "^0.1.6"
 kubernetes = "^30.1.0"
+firecrawl-py = "^0.0.16"
 
 
 [tool.poetry.group.dev.dependencies]
@@ -146,9 +147,31 @@ ignore-regex = '.*(Stati Uniti|Tense=Pres).*'
 minversion = "6.0"
 testpaths = ["tests", "integration"]
 console_output_style = "progress"
-filterwarnings = ["ignore::DeprecationWarning"]
+filterwarnings = ["ignore::DeprecationWarning", "ignore::ResourceWarning"]
 log_cli = true
 markers = ["async_test", "api_key_required"]
+
+
+[tool.coverage.run]
+command_line = """
+    -m pytest
+    --cov --cov-report=term --cov-report=html
+    --instafail -ra -n auto -m "not api_key_required"
+    tests/unit
+"""
+source = ["src/backend/base/langflow/"]
+omit = ["*/alembic/*", "tests/*", "*/__init__.py"]
+
+
+[tool.coverage.report]
+sort = "Stmts"
+skip_empty = true
+show_missing = false
+ignore_errors = true
+
+
+[tool.coverage.html]
+directory = "coverage"
 
 
 [tool.ruff]

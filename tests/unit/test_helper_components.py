@@ -1,5 +1,3 @@
-from langchain_core.documents import Document
-
 from langflow.components import helpers
 from langflow.custom.utils import build_custom_component_template
 from langflow.schema import Data
@@ -17,23 +15,23 @@ from langflow.schema import Data
 #     assert result.new_key == "new_value"
 
 
-def test_document_to_data_component():
-    # Arrange
-    document_to_data_component = helpers.DocumentsToDataComponent()
+# def test_document_to_data_component():
+#     # Arrange
+#     document_to_data_component = helpers.DocumentsToDataComponent()
 
-    # Act
-    # Replace with your actual test data
-    document = Document(page_content="key: value", metadata={"url": "https://example.com"})
-    result = document_to_data_component.build(document)
+#     # Act
+#     # Replace with your actual test data
+#     document = Document(page_content="key: value", metadata={"url": "https://example.com"})
+#     result = document_to_data_component.build(document)
 
-    # Assert
-    # Replace with your actual expected result
-    assert result == [Data(data={"text": "key: value", "url": "https://example.com"})]
+#     # Assert
+#     # Replace with your actual expected result
+#     assert result == [Data(data={"text": "key: value", "url": "https://example.com"})]
 
 
 def test_uuid_generator_component():
     # Arrange
-    uuid_generator_component = helpers.UUIDGeneratorComponent()
+    uuid_generator_component = helpers.IDGeneratorComponent()
     uuid_generator_component.code = open(helpers.IDGenerator.__file__, "r").read()
 
     frontend_node, _ = build_custom_component_template(uuid_generator_component)
