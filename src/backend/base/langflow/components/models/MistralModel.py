@@ -65,12 +65,7 @@ class MistralAIModelComponent(LCModelComponent):
         BoolInput(name="safe_mode", display_name="Safe Mode", advanced=True),
     ]
 
-    outputs = [
-        Output(display_name="Text", name="text_output", method="text_response"),
-        Output(display_name="Language Model", name="model_output", method="build_model"),
-    ]
-
-    def build_model(self) -> LanguageModel:  # type: ignore[type-var]
+    def build_model(self) -> LanguageModel:
         mistral_api_key = self.mistral_api_key
         temperature = self.temperature
         model_name = self.model_name
