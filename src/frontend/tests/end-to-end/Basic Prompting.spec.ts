@@ -1,5 +1,4 @@
 import { expect, test } from "@playwright/test";
-import path from "path";
 
 test("Basic Prompting (Hello, World)", async ({ page }) => {
   if (!process?.env?.OPENAI_API_KEY) {
@@ -67,10 +66,18 @@ test("Basic Prompting (Hello, World)", async ({ page }) => {
     .getByTestId("input-chat-playground")
     .last()
     .fill("Say hello as a pirate");
-  await page.getByTestId("icon-LucideSend").last().click();
-  await page.waitForTimeout(3000);
 
-  await page.getByText("Ahoy").last().isVisible();
+  await page.waitForSelector('[data-testid="icon-LucideSend"]', {
+    timeout: 100000,
+  });
+
+  await page.getByTestId("icon-LucideSend").last().click();
+
+  await page.waitForSelector("text=matey", {
+    timeout: 100000,
+  });
+
+  await page.getByText("matey").last().isVisible();
   await page.getByText("Default Session").last().click();
 
   await page.getByText("timestamp", { exact: true }).last().isVisible();
