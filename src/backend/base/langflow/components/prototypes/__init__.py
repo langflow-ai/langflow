@@ -16,8 +16,7 @@ __all__ = [
     "FlowToolComponent",
     "ListenComponent",
     "NotifyComponent",
-    "PassMessageComponent"
-    "PythonFunctionComponent",
+    "PassMessageComponent" "PythonFunctionComponent",
     "RunFlowComponent",
     "RunnableExecComponent",
     "SQLExecutorComponent",
