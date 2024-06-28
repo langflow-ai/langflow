@@ -50,7 +50,7 @@ jobs:
         if: ${{ steps.setup-node.outputs.cache-hit != 'true' }}
       - name: Get Playwright version
         run: echo "PLAYWRIGHT_VERSION=$(jq '.devDependencies["@playwright/test"]' src/frontend/package.json -r)" >> $GITHUB_ENV
-      - name:  Cache Playwright binaries
+      - name: Cache Playwright binaries
         id: playwright-cache
         uses: actions/cache@v4
         with:
