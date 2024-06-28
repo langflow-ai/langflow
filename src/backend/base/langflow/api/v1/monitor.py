@@ -80,7 +80,11 @@ async def delete_messages(
     current_user: User = Depends(get_current_active_user),
 ):
     try:
-        session.exec(select(MessageTable).where(MessageTable.id.in_(message_ids)))  # type: ignore
+        session.exec(
+            delete(MessageTable).where(col(MessageTable.id).in_(message_ids))
+            .execution_options(synchronize_session="fetch")
+        )  # type: ignore
+        session.commit()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
