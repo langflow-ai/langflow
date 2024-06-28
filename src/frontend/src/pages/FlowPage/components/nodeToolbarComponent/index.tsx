@@ -386,7 +386,7 @@ export default function NodeToolbarComponent({
     });
   };
 
-  const handleNodeClass = (newNodeClass: APIClassType, code?: string): void => {
+  const handleNodeClass = (newNodeClass: APIClassType, code?: string, type?: string): void => {
     if (!data.node) return;
     if (data.node!.template[name].value !== code) {
       takeSnapshot();
@@ -401,6 +401,10 @@ export default function NodeToolbarComponent({
         description: newNodeClass.description ?? data.node!.description,
         display_name: newNodeClass.display_name ?? data.node!.display_name,
       };
+
+      if (type) {
+        newNode.data.type = type;
+      }
 
       newNode.data.node.template[name].value = code;
 

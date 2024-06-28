@@ -179,8 +179,8 @@ export default function ParameterComponent({
     handleOnNewValueHook(newValue, skipSnapshot);
   };
 
-  const handleNodeClass = (newNodeClass: APIClassType, code?: string): void => {
-    handleNodeClassHook(newNodeClass, code);
+  const handleNodeClass = (newNodeClass: APIClassType, code?: string, type?: string): void => {
+    handleNodeClassHook(newNodeClass, code, type);
   };
 
   useEffect(() => {
