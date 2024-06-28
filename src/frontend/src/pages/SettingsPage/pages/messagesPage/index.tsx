@@ -13,6 +13,7 @@ import HeaderMessagesComponent from "./components/headerMessages";
 import useMessagesTable from "./hooks/use-messages-table";
 import useRemoveMessages from "./hooks/use-remove-messages";
 import useUpdateMessage from "./hooks/use-updateMessage";
+import { cloneDeep } from "lodash";
 
 export default function MessagesPage() {
   const [columns, setColumns] = useState<Array<ColDef | ColGroupDef>>([]);
@@ -37,7 +38,7 @@ export default function MessagesPage() {
   function handleUpdateMessage(event: CellEditRequestEvent<any, string>) {
     const newValue = event.newValue;
     const field = event.column.getColId();
-    const row = event.data;
+    const row = cloneDeep(event.data);
     const data = {
       ...row,
       [field]: newValue,
