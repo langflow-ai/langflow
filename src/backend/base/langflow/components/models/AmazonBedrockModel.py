@@ -4,7 +4,7 @@ from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
 from langflow.inputs import MessageTextInput
-from langflow.io import BoolInput, DictInput, DropdownInput, MessageInput, Output, StrInput
+from langflow.io import BoolInput, DictInput, DropdownInput, MessageInput, Output
 
 
 class AmazonBedrockComponent(LCModelComponent):
@@ -83,7 +83,7 @@ class AmazonBedrockComponent(LCModelComponent):
                 region_name=region_name,
                 model_kwargs=model_kwargs,
                 endpoint_url=endpoint_url,
-                streaming=stream
+                streaming=stream,
             )
         except Exception as e:
             raise ValueError("Could not connect to AmazonBedrock API.") from e
