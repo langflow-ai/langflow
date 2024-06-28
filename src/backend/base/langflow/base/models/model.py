@@ -1,5 +1,6 @@
 import json
 import warnings
+from abc import abstractmethod
 from typing import Optional, Union
 
 from langchain_core.language_models.llms import LLM
@@ -160,3 +161,9 @@ class LCModelComponent(Component):
             if message := self._get_exception_message(e):
                 raise ValueError(message) from e
             raise e
+
+    @abstractmethod
+    def build_model(self) -> LanguageModel:
+        """
+        Implement this method to build the model.
+        """
