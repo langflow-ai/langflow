@@ -17,10 +17,11 @@ const useUpdateNodeCode = (
 
         newNode.data = {
           ...newNode.data,
-          node: { edited: false, ...newNodeClass },
+          node: { ...newNodeClass, edited: false },
           description: newNodeClass.description ?? dataNode.description,
           display_name: newNodeClass.display_name ?? dataNode.display_name,
         };
+        console.log(newNode)
         if (type) {
           newNode.data.type = type;
         }
@@ -29,6 +30,7 @@ const useUpdateNodeCode = (
         setIsOutdated(false);
         setIsUserEdited(false);
 
+        console.log(newNode);
         return newNode;
       });
 
