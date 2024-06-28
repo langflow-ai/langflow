@@ -6,7 +6,7 @@ type Message = {
   sender_name: string;
   session_id: string;
   timestamp: string;
-  files:Array<string>;
+  files: Array<string>;
   id: string;
 };
 
