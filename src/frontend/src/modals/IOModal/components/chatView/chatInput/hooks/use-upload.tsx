@@ -9,7 +9,7 @@ import {
 import useAlertStore from "../../../../../../stores/alertStore";
 import { UploadFileTypeAPI } from "../../../../../../types/api";
 import useFileUpload from "./use-file-upload";
-import { useTranslation } from "react-i18next";
+import { getI18n } from "react-i18next";
 
 const useUpload = (
   uploadFile: (
@@ -20,7 +20,7 @@ const useUpload = (
   setFiles: any,
   lockChat: boolean,
 ) => {
-  const { t } = useTranslation();
+  const { t } = getI18n();
   const setErrorData = useAlertStore((state) => state.setErrorData);
   useEffect(() => {
     const handlePaste = (event: ClipboardEvent): void => {

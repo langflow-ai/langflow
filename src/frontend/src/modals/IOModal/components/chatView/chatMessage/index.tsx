@@ -65,7 +65,7 @@ export default function ChatMessage({
         setStreamUrl(undefined);
         if (JSON.parse(event.data)?.error) {
           setErrorData({
-            title: "Error on Streaming",
+            title: t("Error on Streaming"),
             list: [JSON.parse(event.data)?.error],
           });
         }
@@ -74,8 +74,8 @@ export default function ChatMessage({
       };
       eventSource.current.addEventListener("close", (event) => {
         setStreamUrl(undefined); // Update state to reflect the stream is closed
-        eventSource.current?.close();
         setIsStreaming(false);
+        eventSource.current?.close();
         resolve(true);
       });
     });
@@ -87,7 +87,7 @@ export default function ChatMessage({
       streamChunks(streamUrl)
         .then(() => {
           setLockChat(false);
-          if (updateChat) {
+          if (!!updateChat) {
             updateChat(chat, chatMessageRef.current);
           }
         })
@@ -145,7 +145,7 @@ export default function ChatMessage({
                 "sender_name_" + chat.sender_name?.toLocaleLowerCase()
               }
             >
-              {t(chat.sender_name)}
+              {t(chat.sender_name??"Bot")}
             </span>
           </div>
         </div>
@@ -275,7 +275,7 @@ export default function ChatMessage({
                     setPromptOpen((old) => !old);
                   }}
                 >
-                  Display Prompt
+                  {t("Display Prompt")}
                   <IconComponent
                     name="ChevronDown"
                     className={

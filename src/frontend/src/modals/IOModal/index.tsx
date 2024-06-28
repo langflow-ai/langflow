@@ -34,6 +34,8 @@ export default function IOModal({
   setOpen,
   disable,
 }: IOModalPropsType): JSX.Element {
+  const { t } = useTranslation();
+
   const allNodes = useFlowStore((state) => state.nodes);
   const setMessages = useMessagesStore((state) => state.setMessages);
   const inputs = useFlowStore((state) => state.inputs).filter(
@@ -168,8 +170,6 @@ export default function IOModal({
     setSessions(Array.from(sessions));
     sessions;
   }, [messages]);
-
-  const { t } = useTranslation();
 
   return (
     <BaseModal

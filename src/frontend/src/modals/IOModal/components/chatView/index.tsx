@@ -91,8 +91,8 @@ export default function ChatView({
           console.error(e);
           return {
             isSend: false,
-            message: "Error parsing message",
-            sender_name: "Error",
+            message: t("Error parsing message"),
+            sender_name: t("Error"),
             componentId: output.id,
           };
         }
@@ -146,8 +146,8 @@ export default function ChatView({
     chat.message = message;
     updateFlowPool(chat.componentId, {
       message,
-      sender_name: t(chat.sender_name ?? "Bot"),
-      sender: t(chat.isSend ? "User" : "Machine"),
+      sender_name: chat.sender_name ?? "Bot",
+      sender: chat.isSend ? "User" : "Machine",
     });
   }
   const [files, setFiles] = useState<FilePreviewType[]>([]);

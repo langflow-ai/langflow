@@ -28,6 +28,7 @@ export default function IOFieldView({
   left,
 }: IOFieldViewProps): JSX.Element | undefined {
   const { t } = useTranslation();
+
   const nodes = useFlowStore((state) => state.nodes);
   const setNode = useFlowStore((state) => state.setNode);
   const flowPool = useFlowStore((state) => state.flowPool);
@@ -52,7 +53,7 @@ export default function IOFieldView({
       .results.text ?? "";
 
   function handleOutputType() {
-    if (!node) return <>"No node found!"</>;
+    if (!node) return <>{t("No node found!")}</>;
     switch (type) {
       case InputOutput.INPUT:
         switch (fieldType) {
@@ -62,7 +63,7 @@ export default function IOFieldView({
                 className={`w-full custom-scroll ${
                   left ? "min-h-32" : "h-full"
                 }`}
-                placeholder={"Enter text..."}
+                placeholder={t("Enter text...")}
                 value={node.data.node!.template["input_value"].value}
                 onChange={(e) => {
                   e.target.value;
@@ -146,7 +147,7 @@ export default function IOFieldView({
                 className={`w-full custom-scroll ${
                   left ? "min-h-32" : "h-full"
                 }`}
-                placeholder={"Enter text..."}
+                placeholder={t("Enter text...")}
                 value={node.data.node!.template["input_value"]}
                 onChange={(e) => {
                   e.target.value;
@@ -185,7 +186,7 @@ export default function IOFieldView({
             );
           case "ImageOutput":
             return left ? (
-              <div>Expand the view to see the image</div>
+              <div>{t("Expand the view to see the image")}</div>
             ) : (
               <ImageViewer
                 image={

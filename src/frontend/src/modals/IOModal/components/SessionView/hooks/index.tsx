@@ -1,9 +1,9 @@
 import { deleteMessagesFn } from "../../../../../controllers/API";
 import { useMessagesStore } from "../../../../../stores/messagesStore";
-import { useTranslation } from "react-i18next";
+import { getI18n } from "react-i18next";
 
 const useRemoveSession = (setSuccessData, setErrorData) => {
-  const { t } = useTranslation();
+  const { t } = getI18n();
   const deleteSession = useMessagesStore((state) => state.deleteSession);
   const messages = useMessagesStore((state) => state.messages);
 

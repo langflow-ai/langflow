@@ -46,7 +46,7 @@ const TooltipRenderComponent = ({ item, index, left }) => {
           className="ps-2 text-xs text-foreground"
           data-testid={`tooltip-${nodeNames[item.family] ?? "Other"}`}
         >
-          {nodeNames[item.family] ?? "Other"}{" "}
+          {t(nodeNames[item.family] ?? "Other")}{" "}
           {item?.display_name && item?.display_name?.length > 0 ? (
             <span
               className="text-xs"

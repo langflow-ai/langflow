@@ -6,14 +6,14 @@ import {
 } from "../../../../../../constants/constants";
 import useAlertStore from "../../../../../../stores/alertStore";
 import useFileUpload from "./use-file-upload";
-import { useTranslation } from "react-i18next";
+import { getI18n } from "react-i18next";
 
 export const useHandleFileChange = (setFiles, currentFlowId) => {
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const handleFileChange = async (
     event: React.ChangeEvent<HTMLInputElement>,
   ) => {
-    const { t } = useTranslation();
+    const { t } = getI18n();
     const fileInput = event.target;
     const file = fileInput.files?.[0];
     if (file) {

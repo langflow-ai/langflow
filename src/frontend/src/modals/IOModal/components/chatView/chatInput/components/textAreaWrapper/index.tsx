@@ -17,6 +17,8 @@ const TextAreaWrapper = ({
   files,
   isDragging,
 }) => {
+  const { t } = useTranslation();
+
   const getPlaceholderText = (
     isDragging: boolean,
     noInput: boolean,
@@ -43,8 +45,6 @@ const TextAreaWrapper = ({
       : "rounded-md border-t border-border focus:ring-0 focus:border-2 focus:border-ring";
 
   const additionalClassNames = "form-modal-lockchat pl-14";
-
-  const { t } = useTranslation();
 
   return (
     <Textarea

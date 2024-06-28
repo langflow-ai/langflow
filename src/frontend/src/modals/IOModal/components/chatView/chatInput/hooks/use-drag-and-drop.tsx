@@ -5,7 +5,7 @@ import {
   SN_ERROR_TEXT,
 } from "../../../../../../constants/constants";
 import useFileUpload from "./use-file-upload";
-import { useTranslation } from "react-i18next";
+import { getI18n } from "react-i18next";
 
 const useDragAndDrop = (
   setIsDragging: (value: boolean) => void,
@@ -13,6 +13,8 @@ const useDragAndDrop = (
   currentFlowId: string,
   setErrorData: (value: any) => void,
 ) => {
+  const { t } = getI18n();
+
   const dragOver = (e) => {
     e.preventDefault();
     if (e.dataTransfer.types.some((type) => type === "Files")) {
@@ -35,7 +37,7 @@ const useDragAndDrop = (
   const onDrop = (e) => {
     e.preventDefault();
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      handleFiles(e.dataTransfer.files, setFiles, currentFlowId, setErrorData);
+      handleFiles(e.dataTransfer.files, setFiles, currentFlowId, setErrorData, t);
       e.dataTransfer.clearData();
     }
     setIsDragging(false);
@@ -48,8 +50,7 @@ const useDragAndDrop = (
   };
 };
 
-const handleFiles = (files, setFiles, currentFlowId, setErrorData) => {
-  const { t } = useTranslation();
+const handleFiles = (files, setFiles, currentFlowId, setErrorData, t) => {
   if (files) {
     const file = files?.[0];
     const fileExtension = file.name.split(".").pop()?.toLowerCase();
