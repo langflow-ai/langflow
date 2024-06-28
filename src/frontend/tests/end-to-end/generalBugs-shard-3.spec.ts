@@ -1,14 +1,8 @@
 import { expect, test } from "@playwright/test";
-import * as dotenv from "dotenv";
-import path from "path";
 
-test("should delete rows from table message", async ({ page }) => {
-  if (!process?.env?.OPENAI_API_KEY) {
-    //You must set the OPENAI_API_KEY on .env file to run this test
-    expect(false).toBe(true);
-  }
-
+test("should copy code from playground modal", async ({ page }) => {
   await page.goto("/");
+  await page.locator("span").filter({ hasText: "My Collection" }).isVisible();
   await page.waitForTimeout(2000);
 
   let modalCount = 0;
@@ -27,7 +21,54 @@ test("should delete rows from table message", async ({ page }) => {
     modalCount = await page.getByTestId("modal-title")?.count();
   }
 
-  await page.getByRole("heading", { name: "Basic Prompting" }).click();
+  await page.waitForSelector('[data-testid="blank-flow"]', {
+    timeout: 30000,
+  });
+
+  await page.getByTestId("blank-flow").click();
+  await page.waitForSelector('[data-testid="extended-disclosure"]', {
+    timeout: 30000,
+  });
+  await page.getByTestId("extended-disclosure").click();
+  await page.getByPlaceholder("Search").click();
+  await page.getByPlaceholder("Search").fill("chat output");
+  await page.waitForTimeout(1000);
+
+  await page
+    .getByTestId("outputsChat Output")
+    .dragTo(page.locator('//*[@id="react-flow-id"]'));
+  await page.mouse.up();
+  await page.mouse.down();
+
+  await page.getByTitle("fit view").click();
+  await page.getByTitle("zoom out").click();
+  await page.getByTitle("zoom out").click();
+  await page.getByTitle("zoom out").click();
+
+  await page.getByPlaceholder("Search").click();
+  await page.getByPlaceholder("Search").fill("chat input");
+  await page.waitForTimeout(1000);
+
+  await page
+    .getByTestId("inputsChat Input")
+    .dragTo(page.locator('//*[@id="react-flow-id"]'));
+  await page.mouse.up();
+  await page.mouse.down();
+
+  await page.getByPlaceholder("Search").click();
+  await page.getByPlaceholder("Search").fill("openai");
+  await page.waitForTimeout(1000);
+
+  await page.getByTitle("fit view").click();
+  await page.getByTitle("zoom out").click();
+  await page.getByTitle("zoom out").click();
+  await page.getByTitle("zoom out").click();
+
+  await page
+    .getByTestId("modelsOpenAI")
+    .dragTo(page.locator('//*[@id="react-flow-id"]'));
+  await page.mouse.up();
+  await page.mouse.down();
 
   await page.waitForSelector('[title="fit view"]', {
     timeout: 100000,
@@ -37,53 +78,104 @@ test("should delete rows from table message", async ({ page }) => {
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
+  await page.getByTitle("zoom out").click();
+
+  if (!process?.env?.OPENAI_API_KEY) {
+    //You must set the OPENAI_API_KEY on .env file to run this test
+    expect(false).toBe(true);
+  }
 
   await page
     .getByTestId("popover-anchor-input-openai_api_key")
     .fill(process.env.OPENAI_API_KEY ?? "");
 
-  await page.getByTestId("dropdown-model_name").click();
-  await page.getByTestId("gpt-4o-0-option").click();
+  const elementsChatInput = await page
+    .locator('[data-testid="handle-chatinput-shownode-message-right"]')
+    .all();
 
-  await page.waitForTimeout(2000);
+  let visibleElementHandle;
 
-  await page.getByTestId("button_run_chat output").click();
-  await page.waitForSelector("text=built successfully", { timeout: 30000 });
+  for (const element of elementsChatInput) {
+    if (await element.isVisible()) {
+      visibleElementHandle = element;
+      break;
+    }
+  }
 
-  await page.getByText("built successfully").last().click({
-    timeout: 15000,
-  });
+  // Click and hold on the first element
+  await visibleElementHandle.hover();
+  await page.mouse.down();
 
+  const elementsOpenAiInput = await page
+    .locator('[data-testid="handle-openaimodel-shownode-input-left"]')
+    .all();
+
+  for (const element of elementsOpenAiInput) {
+    if (await element.isVisible()) {
+      visibleElementHandle = element;
+      break;
+    }
+  }
+
+  await visibleElementHandle.hover();
+  await page.mouse.up();
+
+  const elementsOpenAiOutput = await page
+    .locator('[data-testid="handle-openaimodel-shownode-text-right"]')
+    .all();
+
+  for (const element of elementsOpenAiOutput) {
+    if (await element.isVisible()) {
+      visibleElementHandle = element;
+      break;
+    }
+  }
+
+  // Click and hold on the first element
+  await visibleElementHandle.hover();
+  await page.mouse.down();
+
+  // Move to the second element
+  const elementsChatOutput = await page
+    .getByTestId("handle-chatoutput-shownode-text-left")
+    .all();
+
+  for (const element of elementsChatOutput) {
+    if (await element.isVisible()) {
+      visibleElementHandle = element;
+      break;
+    }
+  }
+
+  await visibleElementHandle.hover();
+  await page.mouse.up();
+
+  await page.getByLabel("fit view").click();
   await page.getByText("Playground", { exact: true }).click();
-  await page
-    .getByText("No input message provided.", { exact: true })
-    .last()
-    .isVisible();
-
   await page.waitForSelector('[data-testid="input-chat-playground"]', {
     timeout: 100000,
   });
-
+  await page.getByTestId("input-chat-playground").click();
   await page
     .getByTestId("input-chat-playground")
-    .last()
-    .fill("Say hello as a pirate");
-  await page.getByTestId("icon-LucideSend").last().click();
+    .fill("Could you provide a Python example for a 'Hello, World!' program?");
 
-  await page.waitForSelector("text=matey", {
+  await page.waitForSelector('[data-testid="icon-LucideSend"]', {
     timeout: 100000,
   });
 
-  await page.getByText("Close").last().click();
-  await page.getByTestId("user-profile-settings").last().click();
-  await page.getByText("Settings").last().click();
-  await page.getByText("Messages").last().click();
+  await page.getByTestId("icon-LucideSend").click();
 
-  const label = "Press Space to toggle all rows selection (unchecked)";
-  await page.getByLabel(label).first().click();
+  await page.getByRole("tab", { name: "python" }).isVisible({
+    timeout: 100000,
+  });
 
-  await page.getByTestId("icon-Trash2").first().click();
+  await page.getByTestId("icon-Copy").first().click();
 
-  await page.waitForSelector("text=No Data Available", { timeout: 30000 });
-  await page.getByText("No Data Available").isVisible();
+  const handle = await page.evaluateHandle(() =>
+    navigator.clipboard.readText(),
+  );
+  const clipboardContent = await handle.jsonValue();
+  expect(clipboardContent.length).toBeGreaterThan(0);
+  expect(clipboardContent).toContain("Hello");
 });
