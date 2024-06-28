@@ -518,7 +518,7 @@ export default function IOModal({
       {!haveChat ? (
         <BaseModal.Footer
           submit={{
-            label: "Run Flow",
+            label: t("Run Flow"),
             icon: (
               <IconComponent
                 name={isBuilding ? "Loader2" : "Zap"}

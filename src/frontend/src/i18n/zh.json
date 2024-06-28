@@ -454,5 +454,6 @@
   "Publish {{name}} to the Langflow Store.": "发布{{name}}到Langflow仓库。",
   "your component": "组件",
   "workflow": "流程",
-  "Flow": "流程"
+  "Flow": "流程",
+  "Run Flow": "运行"
 }
