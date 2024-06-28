@@ -1,6 +1,10 @@
 import { nodeColors } from "../../utils/styleUtils";
 
-export function getNodeInputColors(input_types, type, types) {
+export function getNodeInputColors(
+  input_types: string[] | undefined,
+  type: string | undefined,
+  types: { [char: string]: string },
+) {
   // Helper function to get the color based on type
   const getColorByType = (type) => nodeColors[type] ?? nodeColors.unknown;
 
