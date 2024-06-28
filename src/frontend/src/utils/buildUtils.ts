@@ -99,7 +99,9 @@ export async function updateVerticesOrder(
     const runId = orderResponse.data.run_id;
     const verticesToRun = orderResponse.data.vertices_to_run;
 
-    useFlowStore.getState().updateBuildStatus(verticesToRun, BuildStatus.TO_BUILD)
+    useFlowStore
+      .getState()
+      .updateBuildStatus(verticesToRun, BuildStatus.TO_BUILD);
 
     const verticesIds = orderResponse.data.ids;
     useFlowStore.getState().updateVerticesBuild({
