@@ -20,10 +20,10 @@
   "include": [
     "src",
     "tests/end-to-end/saveComponents.spec.ts",
-    "tests/end-to-end/actionsMainPage.spec.ts",
+    "tests/end-to-end/actionsMainPage-shard-1.spec.ts",
     "tests/end-to-end/auto_login.spec.ts",
     "tests/end-to-end/chatInputOutput.spec.ts",
-    "tests/end-to-end/chatInputOutputUser - Interact.spec.ts",
+    "tests/end-to-end/chatInputOutputUser-shard-2.spec.ts",
     "tests/end-to-end/codeAreaModalComponent.spec.ts",
     "tests/end-to-end/curlApiGeneration.spec.ts",
     "tests/end-to-end/deleteComponentFlows.spec.ts",

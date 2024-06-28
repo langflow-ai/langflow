@@ -66,8 +66,6 @@ export default function ChatView({
       )
       .map((output, index) => {
         try {
-          console.log("output:", output);
-
           const messageOutput = output.data.message;
           const hasMessageValue =
             messageOutput?.message ||

@@ -266,6 +266,7 @@ export default function ParameterComponent({
         colors={colors}
         setFilterEdge={setFilterEdge}
         showNode={showNode}
+        testIdComplement={`${data?.type?.toLowerCase()}-noshownode`}
       />
     )
   ) : (
@@ -392,6 +393,7 @@ export default function ParameterComponent({
             colors={colors}
             setFilterEdge={setFilterEdge}
             showNode={showNode}
+            testIdComplement={`${data?.type?.toLowerCase()}-shownode`}
           />
         )}
 
