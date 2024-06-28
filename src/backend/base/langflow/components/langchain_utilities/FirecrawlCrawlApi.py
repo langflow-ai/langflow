@@ -52,7 +52,7 @@ class FirecrawlCrawlApi(CustomComponent):
         idempotency_key: Optional[str] = None,
     ) -> Data:
         try:
-            from firecrawl.firecrawl import FirecrawlApp
+            from firecrawl.firecrawl import FirecrawlApp # type: ignore
         except ImportError:
             raise ImportError(
                 "Could not import firecrawl package. "

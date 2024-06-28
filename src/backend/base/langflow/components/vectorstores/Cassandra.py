@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 from langchain_community.vectorstores import Cassandra
 
@@ -136,9 +136,7 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
                 password=self.token,
                 cluster_kwargs=self.cluster_kwargs,
             )
-
-        if not self.ttl_seconds:
-            self.ttl_seconds = None
+        ttl_seconds: Optional[int] = self.ttl_seconds
 
         documents = []
 
@@ -154,7 +152,7 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
                 embedding=self.embedding,
                 table_name=self.table_name,
                 keyspace=self.keyspace,
-                ttl_seconds=self.ttl_seconds,
+                ttl_seconds=ttl_seconds,
                 batch_size=self.batch_size,
                 body_index_options=self.body_index_options,
             )
@@ -164,7 +162,7 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
                 embedding=self.embedding,
                 table_name=self.table_name,
                 keyspace=self.keyspace,
-                ttl_seconds=self.ttl_seconds,
+                ttl_seconds=ttl_seconds,
                 body_index_options=self.body_index_options,
                 setup_mode=self.setup_mode,
             )
