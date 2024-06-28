@@ -33,7 +33,7 @@ export default function InputGlobalComponent({
       if (data.load_from_db && !globalVariablesEntries.includes(data.value)) {
         onChange("", false, true);
       }
-  }, [globalVariablesEntries, data, disabled]);
+  }, [globalVariablesEntries]);
 
   async function handleDelete(key: string) {
     const id = getVariableId(key);
