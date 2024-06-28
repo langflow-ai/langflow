@@ -3,6 +3,7 @@ from langflow.inputs import StrInput
 from langflow.schema import Data
 from langflow.template import Output
 
+
 class CreateListComponent(Component):
     display_name = "Create List"
     description = "Creates a list of texts."
