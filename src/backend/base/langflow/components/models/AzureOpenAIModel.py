@@ -1,11 +1,10 @@
 from langchain_openai import AzureChatOpenAI
-from pydantic.v1 import SecretStr
 
 from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
 from langflow.inputs import MessageTextInput
-from langflow.io import BoolInput, DropdownInput, FloatInput, IntInput, MessageInput, Output, SecretStrInput, StrInput
+from langflow.io import BoolInput, DropdownInput, FloatInput, IntInput, MessageInput, SecretStrInput, StrInput
 
 
 class AzureChatOpenAIComponent(LCModelComponent):
@@ -32,7 +31,7 @@ class AzureChatOpenAIComponent(LCModelComponent):
             name="azure_endpoint",
             display_name="Azure Endpoint",
             info="Your Azure endpoint, including the resource. Example: `https://example-resource.azure.openai.com/`",
-            required=True
+            required=True,
         ),
         MessageTextInput(name="azure_deployment", display_name="Deployment Name", required=True),
         SecretStrInput(name="api_key", display_name="API Key"),
