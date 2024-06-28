@@ -1124,7 +1124,7 @@ export async function deleteMessagesFn(ids: string[]) {
 }
 
 export async function updateMessageApi(data: Message) {
-  if(data.files && typeof data.files === 'string'){
+  if (data.files && typeof data.files === "string") {
     data.files = JSON.parse(data.files);
   }
   return await api.put(`${BASE_URL_API}monitor/messages/${data.id}`, data);
