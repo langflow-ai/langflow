@@ -5,7 +5,7 @@ from langflow.custom import CustomComponent
 from langflow.schema.dotdict import dotdict
 
 
-class UUIDGeneratorComponent(CustomComponent):
+class IDGeneratorComponent(CustomComponent):
     display_name = "ID Generator"
     description = "Generates a unique ID."
 
