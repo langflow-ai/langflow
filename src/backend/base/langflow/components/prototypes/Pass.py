@@ -3,7 +3,6 @@ from langflow.io import MessageInput
 from langflow.schema.message import Message
 from langflow.template import Output
 
-
 class PassMessageComponent(Component):
     display_name = "Pass"
     description = "Forwards the input message, unchanged."
@@ -19,7 +18,7 @@ class PassMessageComponent(Component):
             name="ignored_message",
             display_name="Ignored Message",
             info="A second message to be ignored. Used as a workaround for continuity.",
-            advanced=True,
+            advanced=True
         ),
     ]
 
