@@ -3,6 +3,7 @@ from langchain_aws import ChatBedrock
 from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
+from langflow.inputs import MessageTextInput
 from langflow.io import BoolInput, DictInput, DropdownInput, MessageInput, Output, StrInput
 
 
@@ -51,12 +52,11 @@ class AmazonBedrockComponent(LCModelComponent):
             ],
             value="anthropic.claude-3-haiku-20240307-v1:0",
         ),
-        StrInput(name="credentials_profile_name", display_name="Credentials Profile Name"),
-        StrInput(name="region_name", display_name="Region Name"),
-        DictInput(name="model_kwargs", display_name="Model Kwargs", advanced=True),
-        StrInput(name="endpoint_url", display_name="Endpoint URL"),
-        BoolInput(name="cache", display_name="Cache"),
-        StrInput(
+        MessageTextInput(name="credentials_profile_name", display_name="Credentials Profile Name"),
+        MessageTextInput(name="region_name", display_name="Region Name", value="us-east-1"),
+        DictInput(name="model_kwargs", display_name="Model Kwargs", advanced=True, is_list=True),
+        MessageTextInput(name="endpoint_url", display_name="Endpoint URL", advanced=True),
+        MessageTextInput(
             name="system_message",
             display_name="System Message",
             info="System message to pass to the model.",
@@ -75,7 +75,6 @@ class AmazonBedrockComponent(LCModelComponent):
         region_name = self.region_name
         model_kwargs = self.model_kwargs
         endpoint_url = self.endpoint_url
-        cache = self.cache
         stream = self.stream
         try:
             output = ChatBedrock(  # type: ignore
@@ -84,8 +83,7 @@ class AmazonBedrockComponent(LCModelComponent):
                 region_name=region_name,
                 model_kwargs=model_kwargs,
                 endpoint_url=endpoint_url,
-                streaming=stream,
-                cache=cache,
+                streaming=stream
             )
         except Exception as e:
             raise ValueError("Could not connect to AmazonBedrock API.") from e
