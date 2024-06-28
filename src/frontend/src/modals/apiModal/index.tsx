@@ -44,11 +44,12 @@ const ApiModal = forwardRef(
     },
     ref,
   ) => {
+    const tweaksCode = buildTweaks(flow);
     const tweak = useTweaksStore((state) => state.tweak);
     const addTweaks = useTweaksStore((state) => state.setTweak);
     const setTweaksList = useTweaksStore((state) => state.setTweaksList);
     const tweaksList = useTweaksStore((state) => state.tweaksList);
-
+    const isThereTweaks = Object.keys(tweaksCode).length > 0;
     const [activeTweaks, setActiveTweaks] = useState(false);
     const { autoLogin } = useContext(AuthContext);
     const [open, setOpen] =
@@ -82,7 +83,6 @@ const ApiModal = forwardRef(
     const pythonCode = getPythonCode(flow?.name, tweak);
     const widgetCode = getWidgetCode(flow?.id, flow?.name, autoLogin);
     const includeWebhook = flow.webhook;
-    const tweaksCode = buildTweaks(flow);
     const codesArray = [
       runCurlCode,
       webhookCurlCode,
@@ -121,7 +121,7 @@ const ApiModal = forwardRef(
 
       filterNodes();
 
-      if (Object.keys(tweaksCode).length > 0) {
+      if (isThereTweaks) {
         setActiveTab("0");
         setTabs(createTabsArray(codesArray, includeWebhook, true));
       } else {
@@ -215,7 +215,6 @@ const ApiModal = forwardRef(
       );
       const pythonCode = getPythonCode(flow?.name, cloneTweak);
       const widgetCode = getWidgetCode(flow?.id, flow?.name, autoLogin);
-      const isThereTweaks = Object.keys(tweaksCode).length > 0;
       const codesObj = getCodesObj({
         runCurlCode,
         webhookCurlCode,
@@ -251,6 +250,8 @@ const ApiModal = forwardRef(
         </BaseModal.Header>
         <BaseModal.Content overflowHidden>
           <CodeTabsComponent
+            isThereTweaks={isThereTweaks}
+            isThereWH={includeWebhook ?? false}
             flow={flow}
             tabs={tabs!}
             activeTab={activeTab}
