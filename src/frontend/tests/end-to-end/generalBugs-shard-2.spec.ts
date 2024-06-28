@@ -1,8 +1,6 @@
 import { expect, test } from "@playwright/test";
-import * as dotenv from "dotenv";
-import path from "path";
 
-test("should use webhook component on tweaks", async ({ page }) => {
+test("should use webhook component on API", async ({ page }) => {
   if (!process?.env?.OPENAI_API_KEY) {
     //You must set the OPENAI_API_KEY on .env file to run this test
     expect(false).toBe(true);
@@ -44,13 +42,31 @@ test("should use webhook component on tweaks", async ({ page }) => {
   await page.mouse.up();
   await page.mouse.down();
 
+  await page.waitForSelector('[title="fit view"]', {
+    timeout: 100000,
+  });
+
+  await page.getByTitle("fit view").click();
+  await page.getByTitle("zoom out").click();
+  await page.getByTitle("zoom out").click();
+  await page.getByTitle("zoom out").click();
+
+  await page.waitForTimeout(2000);
+  await page.getByText("API", { exact: true }).click();
+
   await page.getByText("Webhook cURL", { exact: true }).click();
   await page.getByRole("tab", { name: "Webhook cURL" }).click();
+
+  await page.getByTestId("icon-Copy").last().click();
 
   const handle = await page.evaluateHandle(() =>
     navigator.clipboard.readText(),
   );
   const clipboardContent = await handle.jsonValue();
   expect(clipboardContent.length).toBeGreaterThan(0);
+  expect(clipboardContent).toContain("curl -X POST");
+  expect(clipboardContent).toContain("webhook");
   await page.getByRole("tab", { name: "Tweaks" }).click();
+  // await page.getByText("Webhook Input").isVisible();
+  // await page.getByText("Webhook Input").click();
 });
