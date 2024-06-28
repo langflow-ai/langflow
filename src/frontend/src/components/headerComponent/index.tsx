@@ -48,9 +48,10 @@ export default function Header(): JSX.Element {
 
   const routeHistory = useLocationStore((state) => state.routeHistory);
 
-  const profileImageUrl = `${BASE_URL_API}files/profile_pictures/${
-    userData?.profile_image ?? "Space/046-rocket.svg"
-                      }` ?? profileCircle
+  const profileImageUrl =
+    `${BASE_URL_API}files/profile_pictures/${
+      userData?.profile_image ?? "Space/046-rocket.svg"
+    }` ?? profileCircle;
   async function checkForChanges(): Promise<void> {
     if (nodes.length === 0) {
       await removeFlow(id!);
