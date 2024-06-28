@@ -1,6 +1,12 @@
+import { OutputFieldType } from "../../types/api";
+import { NodeDataType } from "../../types/flow";
 import { nodeColors } from "../../utils/styleUtils";
 
-export function getNodeOutputColors(output, data, types): string[] {
+export function getNodeOutputColors(
+  output: OutputFieldType,
+  data: NodeDataType,
+  types: { [char: string]: string },
+): string[] {
   // Helper function to get the color based on type
   const getColorByType = (type) => nodeColors[type] ?? nodeColors.unknown;
 
