@@ -68,10 +68,10 @@ class SpiderTool(CustomComponent):
             "info": "Timeout for the request in seconds.",
             "advanced": True,
         },
-        "return_embeddings": {
-            "display_name": "Return Embeddings",
+        "metadata": {
+            "display_name": "Metadata",
             "field_type": "bool",
-            "info": "Include OpenAI embeddings for title and description.",
+            "info": "Include metadata in the response.",
             "advanced": True,
         },
         "params": {
@@ -92,7 +92,7 @@ class SpiderTool(CustomComponent):
         whitelist: Optional[str] = None,
         use_readability: Optional[bool] = False,
         request_timeout: Optional[int] = 30,
-        return_embeddings: Optional[bool] = False,
+        metadata: Optional[bool] = False,
         params: Optional[Data] = None,
     ) -> Data:
         if params:
@@ -105,7 +105,7 @@ class SpiderTool(CustomComponent):
                 "whitelist": whitelist,
                 "use_readability": use_readability,
                 "request_timeout": request_timeout,
-                "return_embeddings": return_embeddings,
+                "metadata": metadata,
                 "return_format": "markdown",
             }
 
@@ -121,5 +121,8 @@ class SpiderTool(CustomComponent):
         except Exception as e:
             raise Exception(f"Error: {str(e)}")
 
-        records = Data(data={"results": result})
+        records = []
+
+        for record in result:
+            records.append(Data(data={"content": record["content"], "url": record["url"]}))
         return records
