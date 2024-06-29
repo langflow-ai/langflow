@@ -3,95 +3,87 @@ from spider.spider import Spider
 from langflow.custom import CustomComponent
 from langflow.schema import Data
 from langflow.base.langchain_utilities.spider_constants import MODES
-from langflow.inputs import (
-    SecretStrInput,
-    StrInput,
-    DropdownInput,
-    IntInput,
-    BoolInput,
-    DictInput,
-    DataInput,
-)
-
 
 class SpiderTool(CustomComponent):
     display_name: str = "Spider Web Crawler & Scraper"
-    description: str = "Spider API."
+    description: str = "Spider API for web crawling and scraping."
     output_types: list[str] = ["Document"]
     documentation: str = "https://spider.cloud/docs/api"
-    icon: str = "Spider"
 
-    inputs = [
-        SecretStrInput(
-            name="spider_api_key",
-            display_name="Spider API Key",
-            info="The Spider API Key",
-            advanced=False,
-            value="SPIDER_API_KEY",
-            required=True,
-        ),
-        StrInput(
-            name="url",
-            display_name="URL",
-            advanced=False,
-            info="The URL to scrape or crawl",
-        ),
-        DropdownInput(
-            name="mode", display_name="Mode", advanced=False, options=MODES, value=MODES[0]
-        ),
-        IntInput(
-            name="limit",
-            display_name="Limit",
-            advanced=True,
-            info="The maximum amount of pages allowed to crawl per website. Remove the value or set it to 0 to crawl all pages.",
-        ),
-        IntInput(
-            name="depth",
-            display_name="Depth",
-            advanced=True,
-            info="The crawl limit for maximum depth. If 0, no limit will be applied.",
-        ),
-        StrInput(
-            name="blacklist",
-            display_name="Blacklist",
-            advanced=True,
-            info="Blacklist a set of paths that you do not want to crawl. You can use Regex patterns to help with the list. For example: /login, /blog/*",
-        ),
-        StrInput(
-            name="whitelist",
-            display_name="Whitelist",
-            advanced=True,
-            info="Whitelist a set of paths that you want to crawl, ignoring all other routes that do not match the patterns. You can use regex patterns to help with the list. For example: /blog/*",
-        ),
-        BoolInput(
-            name="use_readability",
-            display_name="Use Readability",
-            advanced=True,
-            info="Use readability to pre-process the content for reading. This may drastically improve the content for LLM usage.",
-        ),
-        IntInput(
-            name="request_timeout",
-            display_name="Request Timeout",
-            advanced=True,
-            info="Include OpenAI embeddings for title and description. The default is false.",
-        ),
-        BoolInput(
-            name="return_embeddings",
-            display_name="Return Embeddings",
-            advanced=True,
-            info="Return embeddings",
-        ),
-        DataInput(
-            name="params",
-            display_name="Params",
-            advanced=True,
-            info="Additional parameters to pass to the API. If provided, the other inputs will be ignored. You can see the full list of parameters in the Spider documentation.",
-        )
-    ]
+    field_config = {
+        "spider_api_key": {
+            "display_name": "Spider API Key",
+            "field_type": "str",
+            "required": True,
+            "password": True,
+            "info": "The Spider API Key",
+        },
+        "url": {
+            "display_name": "URL",
+            "field_type": "str",
+            "required": True,
+            "info": "The URL to scrape or crawl",
+        },
+        "mode": {
+            "display_name": "Mode",
+            "field_type": "str",
+            "required": True,
+            "options": MODES,
+            "default": MODES[0],
+            "info": "The mode of operation: scrape or crawl",
+        },
+        "limit": {
+            "display_name": "Limit",
+            "field_type": "int",
+            "info": "The maximum amount of pages allowed to crawl per website. Set to 0 to crawl all pages.",
+            "advanced": True,
+        },
+        "depth": {
+            "display_name": "Depth",
+            "field_type": "int",
+            "info": "The crawl limit for maximum depth. If 0, no limit will be applied.",
+            "advanced": True,
+        },
+        "blacklist": {
+            "display_name": "Blacklist",
+            "field_type": "str",
+            "info": "Blacklist paths that you do not want to crawl. Use Regex patterns.",
+            "advanced": True,
+        },
+        "whitelist": {
+            "display_name": "Whitelist",
+            "field_type": "str",
+            "info": "Whitelist paths that you want to crawl, ignoring all other routes. Use Regex patterns.",
+            "advanced": True,
+        },
+        "use_readability": {
+            "display_name": "Use Readability",
+            "field_type": "bool",
+            "info": "Use readability to pre-process the content for reading.",
+            "advanced": True,
+        },
+        "request_timeout": {
+            "display_name": "Request Timeout",
+            "field_type": "int",
+            "info": "Timeout for the request in seconds.",
+            "advanced": True,
+        },
+        "return_embeddings": {
+            "display_name": "Return Embeddings",
+            "field_type": "bool",
+            "info": "Include OpenAI embeddings for title and description.",
+            "advanced": True,
+        },
+        "params": {
+            "display_name": "Additional Parameters",
+            "field_type": "dict",
+            "info": "Additional parameters to pass to the API. If provided, other inputs will be ignored.",
+        },
+    }
 
     def build(
         self,
-        api_key: str,
+        spider_api_key: str,
         url: str,
         mode: str,
         limit: Optional[int] = 0,
@@ -104,7 +96,7 @@ class SpiderTool(CustomComponent):
         params: Optional[Data] = None,
     ) -> Data:
         if params:
-            parameters = params.data
+            parameters = params.__dict__['data']
         else:
             parameters = {
                 "limit": limit,
@@ -117,13 +109,17 @@ class SpiderTool(CustomComponent):
                 "return_format": "markdown",
             }
 
-        app = Spider(api_key=api_key)
+        app = Spider(api_key=spider_api_key)
         try:
             if mode == "scrape":
-                crawl_result = app.scrape_url(url, parameters)
+                parameters["limit"] = 1
+                result = app.scrape_url(url, parameters)
             elif mode == "crawl":
-                crawl_result = app.crawl_url(url, parameters)
+                result = app.crawl_url(url, parameters)
+            else:
+                raise ValueError(f"Invalid mode: {mode}. Must be 'scrape' or 'crawl'.")
         except Exception as e:
             raise Exception(f"Error: {str(e)}")
-        records = Data(data={"results": crawl_result})
+
+        records = Data(data={"results": result})
         return records
