@@ -5,6 +5,7 @@ from langflow.custom import CustomComponent
 from langflow.schema import Data
 
 
+
 class FirecrawlCrawlApi(CustomComponent):
     display_name: str = "FirecrawlCrawlApi"
     description: str = "Firecrawl Crawl API."

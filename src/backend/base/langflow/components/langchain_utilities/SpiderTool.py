@@ -12,6 +12,7 @@ from langflow.inputs import (
     DictInput,
 )
 
+
 class SpiderTool(Component):
     display_name: str = "Spider Web Crawler & Scraper"
     description: str = "Spider API for web crawling and scraping."
@@ -104,7 +105,7 @@ class SpiderTool(Component):
         params: Optional[Data] = None,
     ) -> Data:
         if params:
-            parameters = params.__dict__['data']
+            parameters = params.__dict__["data"]
         else:
             parameters = {
                 "limit": limit,
