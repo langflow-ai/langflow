@@ -9,12 +9,10 @@ from langflow.inputs import (
     DropdownInput,
     IntInput,
     BoolInput,
-    DictInput
+    DictInput,
+    DataInput,
 )
-import uuid
 
-
-print(dir(Spider))
 
 class SpiderTool(CustomComponent):
     display_name: str = "Spider Web Crawler & Scraper"
@@ -83,7 +81,7 @@ class SpiderTool(CustomComponent):
             advanced=True,
             info="Return embeddings",
         ),
-        DictInput(
+        DataInput(
             name="params",
             display_name="Params",
             advanced=True,
