@@ -210,6 +210,7 @@ import { RedisIcon } from "../icons/Redis";
 import { SearxIcon } from "../icons/Searx";
 import { ShareIcon } from "../icons/Share";
 import { Share2Icon } from "../icons/Share2";
+import { SpiderIcon } from "../icons/Spider";
 import SvgSlackIcon from "../icons/Slack/SlackIcon";
 import { Streamlit } from "../icons/Streamlit";
 import { UpstashSvgIcon } from "../icons/Upstash";
@@ -412,6 +413,7 @@ export const nodeIconsLucide: iconsType = {
   Weaviate: WeaviateIcon,
   Searx: SearxIcon,
   SlackDirectoryLoader: SvgSlackIcon,
+  SpiderTool: SpiderIcon,
   SupabaseVectorStore: SupabaseIcon,
   Supabase: SupabaseIcon,
   VertexAI: VertexAIIcon,
