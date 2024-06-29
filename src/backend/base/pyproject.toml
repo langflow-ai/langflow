@@ -77,6 +77,10 @@ setuptools = ">=70"
 nanoid = "^2.0.0"
 filelock = "^3.15.4"
 grandalf = "^0.8.0"
+crewai = "^0.36.0"
+spider-client = "^0.0.27"
+
+
 [tool.poetry.extras]
 deploy = ["celery", "redis", "flower"]
 local = ["llama-cpp-python", "sentence-transformers", "ctransformers"]
