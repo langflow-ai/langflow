@@ -11,10 +11,15 @@ function DataOutputComponent({
   columnMode = "union",
 }: {
   pagination: boolean;
-  rows: any;
+  rows: any[];
   columnMode?: "intersection" | "union";
 }) {
   const { t } = useTranslation();
+  // If the rows are not an array of objects, convert them to an array of objects
+  if (rows.some((row) => typeof row !== "object")) {
+    rows = rows.map((row) => ({ data: row }));
+  }
+
   const columns = extractColumnsFromRows(rows, columnMode);
 
   const columnDefs = columns.map((col, idx) => ({

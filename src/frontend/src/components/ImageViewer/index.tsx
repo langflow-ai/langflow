@@ -7,7 +7,7 @@ import ForwardedIconComponent from "../genericIconComponent";
 import { Separator } from "../ui/separator";
 import { useTranslation } from "react-i18next";
 
-export default function ImageViewer({ image }) {
+export default function ImageViewer({ image }: { image: string }) {
   const { t } = useTranslation();
   const viewerRef = useRef(null);
   const [errorDownloading, setErrordownloading] = useState(false);
