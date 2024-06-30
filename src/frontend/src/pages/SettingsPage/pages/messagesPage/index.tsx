@@ -67,9 +67,7 @@ export default function MessagesPage() {
           ]}
           overlayNoRowsTemplate="No data available"
           onSelectionChanged={(event: SelectionChangedEvent) => {
-            setSelectedRows(
-              event.api.getSelectedRows().map((row) => row.index),
-            );
+            setSelectedRows(event.api.getSelectedRows().map((row) => row.id));
           }}
           rowSelection="multiple"
           suppressRowClickSelection={true}

@@ -91,10 +91,6 @@ test("TextInputOutputComponent", async ({ page }) => {
   await visibleElementHandle.hover();
   await page.mouse.down();
 
-  const elementsOpenAiInput = await page.getByTestId(
-    "handle-openaimodel-shownode-input-left",
-  );
-
   for (const element of elementsTextInputOutput) {
     if (await element.isVisible()) {
       visibleElementHandle = element;

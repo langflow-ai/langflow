@@ -52,7 +52,6 @@ export default function SessionView({ rows }: { rows: Array<any> }) {
       ]}
       overlayNoRowsTemplate="No data available"
       onSelectionChanged={(event: SelectionChangedEvent) => {
-        console.log(event.api.getSelectedRows());
         setSelectedRows(event.api.getSelectedRows().map((row) => row.id));
       }}
       rowSelection="multiple"
