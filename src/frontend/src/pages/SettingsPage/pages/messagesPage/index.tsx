@@ -4,6 +4,7 @@ import {
   ColGroupDef,
   SelectionChangedEvent,
 } from "ag-grid-community";
+import { cloneDeep } from "lodash";
 import { useState } from "react";
 import TableComponent from "../../../../components/tableComponent";
 import useAlertStore from "../../../../stores/alertStore";
@@ -37,7 +38,7 @@ export default function MessagesPage() {
   function handleUpdateMessage(event: CellEditRequestEvent<any, string>) {
     const newValue = event.newValue;
     const field = event.column.getColId();
-    const row = event.data;
+    const row = cloneDeep(event.data);
     const data = {
       ...row,
       [field]: newValue,
