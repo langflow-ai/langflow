@@ -694,6 +694,8 @@ type codeTabsFuncTempType = {
 };
 
 export type codeTabsPropsType = {
+  isThereTweaks?: boolean;
+  isThereWH?: boolean;
   flow?: FlowType;
   tabs: Array<tabsArrayType>;
   activeTab: string;

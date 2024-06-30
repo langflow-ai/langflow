@@ -1117,6 +1117,18 @@ export function updateProxyIdsOnTemplate(
   });
 }
 
+export function updateProxyIdsOnOutputs(
+  outputs: OutputFieldType[] | undefined,
+  idsMap: { [key: string]: string },
+) {
+  if (!outputs) return;
+  outputs.forEach((output) => {
+    if (output.proxy && idsMap[output.proxy.id]) {
+      output.proxy.id = idsMap[output.proxy.id];
+    }
+  });
+}
+
 export function updateEdgesIds(
   edges: Edge[],
   idsMap: { [key: string]: string },
@@ -1504,6 +1516,7 @@ export function updateGroupRecursion(
     let newFlow = groupNode.data.node!.flow;
     const idsMap = updateIds(newFlow.data!);
     updateProxyIdsOnTemplate(groupNode.data.node!.template, idsMap);
+    updateProxyIdsOnOutputs(groupNode.data.node.outputs, idsMap);
     let flowEdges = edges;
     updateEdgesIds(flowEdges, idsMap);
   }
