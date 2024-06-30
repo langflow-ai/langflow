@@ -80,6 +80,10 @@ test("user must be able to send an image on chat", async ({ page }) => {
     { fileContent },
   );
 
+  await page.waitForSelector('[data-testid="input-chat-playground"]', {
+    timeout: 100000,
+  });
+
   // Locate the target element
   const element = await page.getByTestId("input-chat-playground");
 
