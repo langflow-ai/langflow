@@ -4,8 +4,8 @@ on:
   workflow_dispatch:
     inputs:
       branch:
-        description: "Branch to run tests on"
-        required: true
+        description: "(Optional) Branch to checkout"
+        required: false
         type: string
   pull_request:
   merge_group:
@@ -33,6 +33,10 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          # If branch is passed as input, checkout that branch
+          # else checkout the default branch
+          ref: ${{ github.event.inputs.branch || github.ref }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
