@@ -189,7 +189,7 @@ export default function ParameterComponent({
     // @ts-ignore
     infoHtml.current = (
       <div className="h-full w-full break-words">
-        {info.split("\n").map((line, index) => (
+        {t(info).split("\n").map((line, index) => (
           <p key={index} className="block">
             {line}
           </p>
@@ -211,10 +211,10 @@ export default function ParameterComponent({
         }
         nodeId={data.id}
         frozen={data.node?.frozen}
-        name={title ?? type}
+        name={t(title) ?? type}
       />
     ) : (
-      <span>{title}</span>
+      <span>{t(title)}</span>
     );
   }
 

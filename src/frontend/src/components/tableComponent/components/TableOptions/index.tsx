@@ -22,7 +22,7 @@ export default function TableOptions({
     <div className={cn("absolute bottom-3 left-6")}>
       <div className="flex items-center gap-3">
         <div>
-          <ShadTooltip content="Reset Columns">
+          <ShadTooltip content={t("Reset Columns")}>
             <Button
               unstyled
               onClick={() => {

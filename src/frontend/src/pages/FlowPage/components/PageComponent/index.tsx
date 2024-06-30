@@ -178,7 +178,7 @@ export default function Page({
     if (checkOldComponents({ nodes: flow?.data?.nodes ?? [] })) {
       setNoticeData({
         title:
-          "Components created before Langflow 1.0 may be unstable. Ensure components are up to date.",
+          t("Components created before Langflow 1.0 may be unstable. Ensure components are up to date."),
       });
     }
   }, []);

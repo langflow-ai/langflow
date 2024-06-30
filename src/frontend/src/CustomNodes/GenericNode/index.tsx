@@ -164,10 +164,12 @@ export default function GenericNode({
 
   if (!data.node!.template) {
     setErrorData({
-      title: `Error in component ${data.node!.display_name}`,
+      title: t("Error in component {{name}}", {
+        name: data.node!.display_name
+      }),
       list: [
-        `${t("The component")} ${data.node!.display_name} ${t("has no template.")}`,
-        `${t("Please contact the developer of the component to fix this issue.")}`,
+        t("The component {{name}} has no template.", { name: data.node!.display_name }),
+        t("Please contact the developer of the component to fix this issue."),
       ],
     });
     takeSnapshot();

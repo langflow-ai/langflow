@@ -13,8 +13,11 @@ import HeaderMessagesComponent from "./components/headerMessages";
 import useMessagesTable from "./hooks/use-messages-table";
 import useRemoveMessages from "./hooks/use-remove-messages";
 import useUpdateMessage from "./hooks/use-updateMessage";
+import { useTranslation } from "react-i18next";
 
 export default function MessagesPage() {
+  const { t } = useTranslation();
+
   const [columns, setColumns] = useState<Array<ColDef | ColGroupDef>>([]);
   const messages = useMessagesStore((state) => state.messages);
 
@@ -64,10 +67,10 @@ export default function MessagesPage() {
               editableCell: false,
             },
           ]}
-          overlayNoRowsTemplate="No data available"
+          overlayNoRowsTemplate={t("No data available")}
           onSelectionChanged={(event: SelectionChangedEvent) => {
             setSelectedRows(
-              event.api.getSelectedRows().map((row) => row.index),
+              event.api.getSelectedRows().map((row) => row.id),
             );
           }}
           rowSelection="multiple"

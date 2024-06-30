@@ -15,7 +15,9 @@ import {
   getNodeId,
 } from "../../../../../utils/reactflowUtils";
 import { removeCountFromString } from "../../../../../utils/utils";
+import { useTranslation } from "react-i18next";
 
+// 侧边栏拖拽组件
 export const SidebarDraggableComponent = forwardRef(
   (
     {
@@ -39,6 +41,7 @@ export const SidebarDraggableComponent = forwardRef(
     },
     ref,
   ) => {
+    const { t } = useTranslation();
     const [open, setOpen] = useState(false);
     const deleteComponent = useFlowsManagerStore(
       (state) => state.deleteComponent,
@@ -113,7 +116,7 @@ export const SidebarDraggableComponent = forwardRef(
               id={sectionName + display_name}
               className="side-bar-components-div-form"
             >
-              <span className="side-bar-components-text">{display_name}</span>
+              <span className="side-bar-components-text">{t(display_name)}</span>
               <div ref={popoverRef}>
                 <IconComponent
                   name="Menu"
@@ -136,7 +139,7 @@ export const SidebarDraggableComponent = forwardRef(
                         name="Download"
                         className="relative top-0.5 mr-2 h-4 w-4"
                       />{" "}
-                      Download{" "}
+                      {t("Download")}{" "}
                     </div>{" "}
                   </SelectItem>
                   {!official && (
@@ -146,7 +149,7 @@ export const SidebarDraggableComponent = forwardRef(
                           name="Trash2"
                           className="relative top-0.5 mr-2 h-4 w-4"
                         />{" "}
-                        Delete{" "}
+                        {t("Delete")}{" "}
                       </div>{" "}
                     </SelectItem>
                   )}

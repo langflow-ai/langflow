@@ -78,7 +78,7 @@ export default function DictAreaModal({
           />
         </div>
       </BaseModal.Content>
-      <BaseModal.Footer submit={onChange ? { label: "Save" } : undefined} />
+      <BaseModal.Footer submit={onChange ? { label: t("Save") } : undefined} />
     </BaseModal>
   );
 }
