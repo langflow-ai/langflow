@@ -70,7 +70,7 @@ class ConditionalRouterComponent(Component):
             return self.message
         else:
             self.stop("true_result")
-            return None
+            return None  # type: ignore
 
     def false_response(self) -> Message:
         result = self.evaluate_condition(self.input_text, self.match_text, self.operator, self.case_sensitive)
@@ -79,4 +79,4 @@ class ConditionalRouterComponent(Component):
             return self.message
         else:
             self.stop("false_result")
-            return None
+            return None  # type: ignore
