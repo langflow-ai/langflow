@@ -123,7 +123,11 @@ export type TextAreaComponentType = {
   nodeClass?: APIClassType;
   setNodeClass?: (value: APIClassType) => void;
   disabled: boolean;
-  onChange: (value: string[] | string, dbValue?: boolean, skipSnapshot?: boolean) => void;
+  onChange: (
+    value: string[] | string,
+    dbValue?: boolean,
+    skipSnapshot?: boolean,
+  ) => void;
   value: string;
   editNode?: boolean;
   id?: string;
@@ -145,7 +149,11 @@ export type PromptAreaComponentType = {
   nodeClass?: APIClassType;
   setNodeClass?: (value: APIClassType, code?: string) => void;
   disabled: boolean;
-  onChange: (value: string[] | string, dbValue?: boolean, skipSnapshot?: boolean) => void;
+  onChange: (
+    value: string[] | string,
+    dbValue?: boolean,
+    skipSnapshot?: boolean,
+  ) => void;
   value: string;
   readonly?: boolean;
   editNode?: boolean;
@@ -155,7 +163,11 @@ export type PromptAreaComponentType = {
 export type CodeAreaComponentType = {
   setOpenModal?: (bool: boolean) => void;
   disabled: boolean;
-  onChange: (value: string[] | string, dbValue?: boolean, skipSnapshot?: boolean) => void;
+  onChange: (
+    value: string[] | string,
+    dbValue?: boolean,
+    skipSnapshot?: boolean,
+  ) => void;
   value: string;
   editNode?: boolean;
   nodeClass?: APIClassType;
@@ -170,7 +182,11 @@ export type CodeAreaComponentType = {
 export type FileComponentType = {
   IOInputProps?;
   disabled: boolean;
-  onChange: (value: string[] | string, dbValue?: boolean, skipSnapshot?: boolean) => void;
+  onChange: (
+    value: string[] | string,
+    dbValue?: boolean,
+    skipSnapshot?: boolean,
+  ) => void;
   value: string;
   fileTypes: Array<string>;
   onFileChange: (value: string) => void;

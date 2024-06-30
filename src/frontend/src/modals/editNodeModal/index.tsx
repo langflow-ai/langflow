@@ -38,7 +38,7 @@ const EditNodeModal = forwardRef(
 
     const handleOnNewValue = (newValue: any, key: string, setDb?: boolean) => {
       myData.current.node!.template[key].value = newValue;
-      if(setDb){
+      if (setDb) {
         myData.current.node!.template[key].load_from_db = newValue;
       }
     };
