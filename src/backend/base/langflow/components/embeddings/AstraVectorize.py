@@ -31,37 +31,38 @@ class AstraVectorize(Component):
     inputs = [
         DropdownInput(
             name="provider",
-            display_name="Provider name",
+            display_name="Provider",
             options=VECTORIZE_PROVIDERS_MAPPING.keys(),
             value="",
         ),
         MessageTextInput(
             name="model_name",
-            display_name="Model name",
+            display_name="Model",
             info=f"The embedding model to use for the selected provider. Each provider has a different set of models "
                  f"available (full list at https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html):\n\n{VECTORIZE_MODELS_STR}",
             required=True
         ),
-        MessageTextInput(
-            name="api_key_name",
-            display_name="API Key name",
-            info="The name of the embeddings provider API key stored on Astra. If set, it will override the 'ProviderKey' in the authentication parameters."
-        ),
         DictInput(
             name="authentication",
-            display_name="Authentication parameters",
+            display_name="Authentication Parameters",
             is_list=True,
+            advanced=True,
+        ),
+        MessageTextInput(
+            name="api_key_name",
+            display_name="Provider API Key Name",
+            info="The name of the embeddings provider API key stored on Astra. If set, it will override the 'ProviderKey' in the authentication parameters.",
             advanced=True,
         ),
         SecretStrInput(
             name="provider_api_key",
             display_name="Provider API Key",
-            info="An alternative to the Astra Authentication that let you use directly the API key of the provider.",
+            info="An alternative to the Astra Authentication that allows the use of an API key from the provider. This can be used when vectorize is configured for the collection, but no corresponding secret is stored within Astra's key management system.",
             advanced=True,
         ),
         DictInput(
             name="model_parameters",
-            display_name="Model parameters",
+            display_name="Model Parameters",
             advanced=True,
             is_list=True,
         ),
