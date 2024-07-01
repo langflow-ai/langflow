@@ -1,5 +1,4 @@
 import { expect, test } from "@playwright/test";
-import { readFileSync } from "fs";
 
 test("chat_io_teste", async ({ page }) => {
   await page.goto("/");
@@ -22,13 +21,14 @@ test("chat_io_teste", async ({ page }) => {
     modalCount = await page.getByTestId("modal-title")?.count();
   }
 
-  const jsonContent = readFileSync(
-    "tests/end-to-end/assets/ChatTest.json",
-    "utf-8",
-  );
+  await page.waitForSelector('[data-testid="blank-flow"]', {
+    timeout: 30000,
+  });
 
   await page.getByTestId("blank-flow").click();
-  await page.waitForTimeout(3000);
+  await page.waitForSelector('[data-testid="extended-disclosure"]', {
+    timeout: 30000,
+  });
   await page.getByTestId("extended-disclosure").click();
   await page.getByPlaceholder("Search").click();
   await page.getByPlaceholder("Search").fill("chat output");
@@ -50,6 +50,10 @@ test("chat_io_teste", async ({ page }) => {
   await page.mouse.up();
   await page.mouse.down();
 
+  await page.waitForSelector('[title="fit view"]', {
+    timeout: 100000,
+  });
+
   await page.getByTitle("fit view").click();
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
@@ -59,28 +63,48 @@ test("chat_io_teste", async ({ page }) => {
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
 
+  const elementsChatInput = await page
+    .locator('[data-testid="handle-chatinput-shownode-message-right"]')
+    .all();
+
+  let visibleElementHandle;
+
+  for (const element of elementsChatInput) {
+    if (await element.isVisible()) {
+      visibleElementHandle = element;
+      break;
+    }
+  }
+
   // Click and hold on the first element
-  await page
-    .locator(
-      '//*[@id="react-flow-id"]/div/div[1]/div/div/div[2]/div[2]/div/div[2]/div[9]/button/div[1]',
-    )
-    .hover();
+  await visibleElementHandle.hover();
   await page.mouse.down();
 
   // Move to the second element
-  await page
-    .locator(
-      '//*[@id="react-flow-id"]/div/div[1]/div/div/div[2]/div[1]/div/div[2]/div[3]/div/button/div[1]',
-    )
-    .hover();
+
+  const elementsChatOutput = await page
+    .getByTestId("handle-chatoutput-shownode-text-left")
+    .all();
+
+  for (const element of elementsChatOutput) {
+    if (await element.isVisible()) {
+      visibleElementHandle = element;
+      break;
+    }
+  }
+
+  await visibleElementHandle.hover();
 
   // Release the mouse
   await page.mouse.up();
 
   await page.getByLabel("fit view").click();
   await page.getByText("Playground", { exact: true }).click();
-  await page.getByPlaceholder("Send a message...").click();
-  await page.getByPlaceholder("Send a message...").fill("teste");
+  await page.waitForSelector('[data-testid="input-chat-playground"]', {
+    timeout: 100000,
+  });
+  await page.getByTestId("input-chat-playground").click();
+  await page.getByTestId("input-chat-playground").fill("teste");
   await page.getByRole("button").nth(1).click();
   const chat_output = page.getByTestId("chat-message-AI-teste");
   const chat_input = page.getByTestId("chat-message-User-teste");

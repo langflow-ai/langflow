@@ -17,7 +17,7 @@ export default function SessionView({ rows }: { rows: Array<any> }) {
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
 
-  const [selectedRows, setSelectedRows] = useState<number[]>([]);
+  const [selectedRows, setSelectedRows] = useState<string[]>([]);
 
   const { handleRemoveMessages } = useRemoveMessages(
     setSelectedRows,
@@ -52,7 +52,7 @@ export default function SessionView({ rows }: { rows: Array<any> }) {
       ]}
       overlayNoRowsTemplate="No data available"
       onSelectionChanged={(event: SelectionChangedEvent) => {
-        setSelectedRows(event.api.getSelectedRows().map((row) => row.index));
+        setSelectedRows(event.api.getSelectedRows().map((row) => row.id));
       }}
       rowSelection="multiple"
       suppressRowClickSelection={true}

@@ -5,7 +5,7 @@ on:
     paths:
       - "src/frontend/**"
   merge_group:
-    branches: [dev]
+    types: [checks_requested]
 
 env:
   NODE_VERSION: "21"
@@ -45,10 +45,6 @@ jobs:
       - name: Run Prettier
         run: |
           cd src/frontend
-          npm run format
-      - name: Commit changes
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: Apply Prettier formatting
-          branch: ${{ github.head_ref }}
+          npm run check-format
+
 
