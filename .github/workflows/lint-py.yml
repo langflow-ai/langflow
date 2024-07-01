@@ -3,8 +3,6 @@ name: Lint Python
 on:
   pull_request:
     types: [opened, synchronize, reopened]
-  merge_group:
-    types: [checks_requested]
 env:
   POETRY_VERSION: "1.8.2"
 
