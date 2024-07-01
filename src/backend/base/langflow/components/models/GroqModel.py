@@ -68,7 +68,7 @@ class GroqModel(LCModelComponent):
         ),
     ]
 
-    def build_model(self) -> LanguageModel:
+    def build_model(self) -> LanguageModel:  # type: ignore[type-var]
         groq_api_key = self.groq_api_key
         model_name = self.model_name
         max_tokens = self.max_tokens
@@ -87,4 +87,4 @@ class GroqModel(LCModelComponent):
             streaming=stream,
         )
 
-        return output
+        return output  # type: ignore

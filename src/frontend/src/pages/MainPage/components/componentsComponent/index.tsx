@@ -19,6 +19,7 @@ import { getNameByType } from "../../utils/get-name-by-type";
 import { sortFlows } from "../../utils/sort-flows";
 import EmptyComponent from "../emptyComponent";
 import HeaderComponent from "../headerComponent";
+import CollectionCard from "./components/collectionCard";
 import useDeleteMultipleFlows from "./hooks/use-delete-multiple";
 import useDescriptionModal from "./hooks/use-description-modal";
 import useFilteredFlows from "./hooks/use-filtered-flows";
@@ -61,7 +62,6 @@ export default function ComponentsComponent({
   const [handleFileDrop] = useFileDrop(uploadFlow, type)!;
   const [pageSize, setPageSize] = useState(20);
   const [pageIndex, setPageIndex] = useState(1);
-  const navigate = useNavigate();
   const location = useLocation();
   const all: FlowType[] = sortFlows(allFlows, type);
   const start = (pageIndex - 1) * pageSize;
@@ -94,7 +94,7 @@ export default function ComponentsComponent({
     getFolderById(folderId ? folderId : myCollectionId);
   }, [location]);
 
-  useFilteredFlows(flowsFromFolder, searchFlowsComponents, setAllFlows);
+  useFilteredFlows(flowsFromFolder!, searchFlowsComponents, setAllFlows);
 
   const resetFilter = () => {
     setPageIndex(1);
@@ -107,7 +107,7 @@ export default function ComponentsComponent({
   const methods = useForm();
 
   const { handleSelectAll } = useSelectAll(
-    flowsFromFolder,
+    flowsFromFolder!,
     getValues,
     setValue,
   );
@@ -119,7 +119,7 @@ export default function ComponentsComponent({
     resetFilter,
     getFoldersApi,
     folderId,
-    myCollectionId,
+    myCollectionId!,
     getFolderById,
     setSuccessData,
     setSelectedFlowsComponentsCards,
@@ -155,7 +155,7 @@ export default function ComponentsComponent({
     resetFilter,
     getFoldersApi,
     folderId,
-    myCollectionId,
+    myCollectionId!,
     getFolderById,
     setSuccessData,
     setErrorData,
@@ -205,43 +205,10 @@ export default function ComponentsComponent({
                     {data?.map((item) => (
                       <FormProvider {...methods} key={item.id}>
                         <form>
-                          <CollectionCardComponent
-                            is_component={type === "component"}
-                            data={{
-                              is_component: item.is_component ?? false,
-                              ...item,
-                            }}
-                            disabled={isLoading}
-                            data-testid={"edit-flow-button-" + item.id}
-                            button={
-                              !item.is_component ? (
-                                <Link to={"/flow/" + item.id}>
-                                  <Button
-                                    tabIndex={-1}
-                                    variant="outline"
-                                    size="sm"
-                                    className="whitespace-nowrap"
-                                    data-testid={"edit-flow-button-" + item.id}
-                                  >
-                                    <IconComponent
-                                      name="ExternalLink"
-                                      className="main-page-nav-button select-none"
-                                    />
-                                    Edit Flow
-                                  </Button>
-                                </Link>
-                              ) : (
-                                <></>
-                              )
-                            }
-                            onClick={
-                              !item.is_component
-                                ? () => {
-                                    navigate("/flow/" + item.id);
-                                  }
-                                : undefined
-                            }
-                            playground={!item.is_component}
+                          <CollectionCard
+                            item={item}
+                            type={type}
+                            isLoading={isLoading}
                             control={control}
                           />
                         </form>

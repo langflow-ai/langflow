@@ -4,7 +4,7 @@ import { isErrorLog } from "../../types/utils/typeCheckingUtils";
 
 const useValidationStatusString = (
   validationStatus: VertexBuildTypeAPI | null,
-  setValidationString,
+  setValidationString: (value: any) => void,
 ) => {
   useEffect(() => {
     if (validationStatus && validationStatus.data?.outputs) {

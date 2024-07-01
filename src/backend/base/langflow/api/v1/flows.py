@@ -1,3 +1,4 @@
+import re
 from datetime import datetime, timezone
 from typing import List
 from uuid import UUID
@@ -46,8 +47,14 @@ def create_flow(
                 select(Flow).where(Flow.name.like(f"{flow.name} (%")).where(Flow.user_id == current_user.id)  # type: ignore
             ).all()
             if flows:
-                numbers = [int(flow.name.split("(")[1].split(")")[0]) for flow in flows]
-                flow.name = f"{flow.name} ({max(numbers) + 1})"
+                extract_number = re.compile(r"\((\d+)\)$")
+                numbers = []
+                for _flow in flows:
+                    result = extract_number.search(_flow.name)
+                    if result:
+                        numbers.append(int(result.groups(1)[0]))
+                if numbers:
+                    flow.name = f"{flow.name} ({max(numbers) + 1})"
             else:
                 flow.name = f"{flow.name} (1)"
         # Now check if the endpoint is unique
@@ -204,27 +211,10 @@ def update_flow(
         if settings_service.settings.remove_api_keys:
             flow_data = remove_api_keys(flow_data)
         for key, value in flow_data.items():
-            if value is not None:
-                setattr(db_flow, key, value)
+            setattr(db_flow, key, value)
         webhook_component = get_webhook_component_in_flow(db_flow.data)
         db_flow.webhook = webhook_component is not None
         db_flow.updated_at = datetime.now(timezone.utc)
-
-        # First check if the flow.name is unique
-        # there might be flows with name like: "MyFlow", "MyFlow (1)", "MyFlow (2)"
-        # so we need to check if the name is unique with `like` operator
-        # if we find a flow with the same name, we add a number to the end of the name
-        # based on the highest number found
-        flow_from_db = session.exec(select(Flow).where(Flow.id == flow_id, Flow.user_id == current_user.id)).first()
-        if flow_from_db:
-            flows = session.exec(
-                select(Flow).where(Flow.name.like(f"{flow.name} (%")).where(Flow.user_id == current_user.id)  # type: ignore
-            ).all()
-            if flows:
-                numbers = [int(flow.name.split("(")[1].split(")")[0]) for flow in flows]
-                flow.name = f"{flow.name} ({max(numbers) + 1})"
-            else:
-                flow.name = f"{flow.name} (1)"
 
         if db_flow.folder_id is None:
             default_folder = session.exec(select(Folder).where(Folder.name == DEFAULT_FOLDER_NAME)).first()

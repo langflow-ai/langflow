@@ -93,5 +93,7 @@ ENV PATH="/app/.venv/bin:${PATH}"
 USER user
 WORKDIR /app
 
+ENV LANGFLOW_HOST=0.0.0.0
+ENV LANGFLOW_PORT=7860
+
 ENTRYPOINT ["python", "-m", "langflow", "run"]
-CMD ["--host", "0.0.0.0", "--port", "7860"]

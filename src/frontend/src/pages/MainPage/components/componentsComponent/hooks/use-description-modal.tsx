@@ -1,6 +1,9 @@
 import { useMemo } from "react";
 
-const useDescriptionModal = (selectedFlowsComponentsCards, type) => {
+const useDescriptionModal = (
+  selectedFlowsComponentsCards: string[] | undefined,
+  type: string | undefined,
+) => {
   const getDescriptionModal = useMemo(() => {
     const getTypeLabel = (type) => {
       const labels = {

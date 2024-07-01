@@ -1112,7 +1112,7 @@ export async function getMessagesTable(
   return { rows: rowsOrganized, columns };
 }
 
-export async function deleteMessagesFn(ids: number[]) {
+export async function deleteMessagesFn(ids: string[]) {
   try {
     return await api.delete(`${BASE_URL_API}monitor/messages`, {
       data: ids,
@@ -1124,5 +1124,8 @@ export async function deleteMessagesFn(ids: number[]) {
 }
 
 export async function updateMessageApi(data: Message) {
-  return await api.post(`${BASE_URL_API}monitor/messages/${data.index}`, data);
+  if (data.files && typeof data.files === "string") {
+    data.files = JSON.parse(data.files);
+  }
+  return await api.put(`${BASE_URL_API}monitor/messages/${data.id}`, data);
 }

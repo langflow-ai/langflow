@@ -48,7 +48,7 @@ class ChatVertexAIComponent(LCModelComponent):
         ),
     ]
 
-    def build_model(self) -> LanguageModel:
+    def build_model(self) -> LanguageModel:  # type: ignore[type-var]
         credentials = self.credentials
         location = self.location
         max_output_tokens = self.max_output_tokens
@@ -71,4 +71,4 @@ class ChatVertexAIComponent(LCModelComponent):
             verbose=verbose,
         )
 
-        return output
+        return output  # type: ignore

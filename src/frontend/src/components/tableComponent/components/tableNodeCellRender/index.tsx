@@ -24,30 +24,19 @@ import ToggleShadComponent from "../../../toggleShadComponent";
 
 export default function TableNodeCellRender({
   node: { data },
-  value: {
-    value,
-    nodeClass,
-    handleOnNewValue: handleOnNewValueNode,
-    handleOnChangeDb: handleOnChangeDbNode,
-  },
+  value: { value, nodeClass, handleOnNewValue: handleOnNewValueNode },
 }: CustomCellRendererProps) {
-  const handleOnNewValue = (newValue: any, name: string) => {
-    handleOnNewValueNode(newValue, name);
+  const handleOnNewValue = (newValue: any, name: string, dbValue?: boolean) => {
+    handleOnNewValueNode(newValue, name, dbValue);
     setTemplateData((old) => {
       let newData = cloneDeep(old);
       newData.value = newValue;
+      if (dbValue) {
+        newData.load_from_db = newValue;
+      }
       return newData;
     });
     setTemplateValue(newValue);
-  };
-
-  const handleOnChangeDb = (newValue: boolean, name: string) => {
-    handleOnChangeDbNode(newValue, name);
-    setTemplateData((old) => {
-      let newData = cloneDeep(old);
-      newData.load_from_db = newValue;
-      return newData;
-    });
   };
 
   const [templateValue, setTemplateValue] = useState(value);
@@ -106,10 +95,9 @@ export default function TableNodeCellRender({
             <InputGlobalComponent
               disabled={disabled}
               editNode={true}
-              onChange={(value) => handleOnNewValue(value, templateData.key)}
-              setDb={(value) => {
-                handleOnChangeDb(value, templateData.key);
-              }}
+              onChange={(value, dbValue, snapshot) =>
+                handleOnNewValue(value, templateData.key, dbValue)
+              }
               name={templateData.key}
               data={templateData}
             />
