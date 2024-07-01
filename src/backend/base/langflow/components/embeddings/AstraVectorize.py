@@ -13,20 +13,39 @@ class AstraVectorize(Component):
     VECTORIZE_PROVIDERS_MAPPING = {
         "Azure OpenAI": ["azureOpenAI", ["text-embedding-3-small", "text-embedding-3-large", "text-embedding-ada-002"]],
         "Hugging Face - Dedicated": ["huggingfaceDedicated", ["endpoint-defined-model"]],
-        "Hugging Face - Serverless": ["huggingface",
-                                      ["sentence-transformers/all-MiniLM-L6-v2", "intfloat/multilingual-e5-large",
-                                       "intfloat/multilingual-e5-large-instruct", "BAAI/bge-small-en-v1.5",
-                                       "BAAI/bge-base-en-v1.5", "BAAI/bge-large-en-v1.5"]],
-        "Jina AI": ["jinaAI", ["jina-embeddings-v2-base-en", "jina-embeddings-v2-base-de", "jina-embeddings-v2-base-es",
-                               "jina-embeddings-v2-base-code", "jina-embeddings-v2-base-zh"]],
+        "Hugging Face - Serverless": [
+            "huggingface",
+            [
+                "sentence-transformers/all-MiniLM-L6-v2",
+                "intfloat/multilingual-e5-large",
+                "intfloat/multilingual-e5-large-instruct",
+                "BAAI/bge-small-en-v1.5",
+                "BAAI/bge-base-en-v1.5",
+                "BAAI/bge-large-en-v1.5",
+            ],
+        ],
+        "Jina AI": [
+            "jinaAI",
+            [
+                "jina-embeddings-v2-base-en",
+                "jina-embeddings-v2-base-de",
+                "jina-embeddings-v2-base-es",
+                "jina-embeddings-v2-base-code",
+                "jina-embeddings-v2-base-zh",
+            ],
+        ],
         "Mistral AI": ["mistral", ["mistral-embed"]],
         "NVIDIA": ["nvidia", ["NV-Embed-QA"]],
         "OpenAI": ["openai", ["text-embedding-3-small", "text-embedding-3-large", "text-embedding-ada-002"]],
         "Upstage": ["upstageAI", ["solar-embedding-1-large"]],
-        "Voyage AI": ["voyageAI",
-                      ["voyage-large-2-instruct", "voyage-law-2", "voyage-code-2", "voyage-large-2", "voyage-2"]]
+        "Voyage AI": [
+            "voyageAI",
+            ["voyage-large-2-instruct", "voyage-law-2", "voyage-code-2", "voyage-large-2", "voyage-2"],
+        ],
     }
-    VECTORIZE_MODELS_STR = "\n\n".join([provider + ": " + (', '.join(models[1])) for provider, models in VECTORIZE_PROVIDERS_MAPPING.items()])
+    VECTORIZE_MODELS_STR = "\n\n".join(
+        [provider + ": " + (", ".join(models[1])) for provider, models in VECTORIZE_PROVIDERS_MAPPING.items()]
+    )
 
     inputs = [
         DropdownInput(
@@ -39,13 +58,13 @@ class AstraVectorize(Component):
             name="model_name",
             display_name="Model name",
             info=f"The embedding model to use for the selected provider. Each provider has a different set of models "
-                 f"available (full list at https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html):\n\n{VECTORIZE_MODELS_STR}",
-            required=True
+            f"available (full list at https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html):\n\n{VECTORIZE_MODELS_STR}",
+            required=True,
         ),
         MessageTextInput(
             name="api_key_name",
             display_name="API Key name",
-            info="The name of the embeddings provider API key stored on Astra. If set, it will override the 'ProviderKey' in the authentication parameters."
+            info="The name of the embeddings provider API key stored on Astra. If set, it will override the 'ProviderKey' in the authentication parameters.",
         ),
         DictInput(
             name="authentication",
