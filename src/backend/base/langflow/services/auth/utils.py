@@ -1,3 +1,5 @@
+import base64
+import random
 import warnings
 from datetime import datetime, timedelta, timezone
 from typing import Annotated, Coroutine, Optional, Union
@@ -330,17 +332,25 @@ def authenticate_user(username: str, password: str, db: Session = Depends(get_se
     return user if verify_password(password, user.password) else None
 
 
-def add_padding(s):
-    # Calculate the number of padding characters needed
-    padding_needed = 4 - len(s) % 4
-    return s + "=" * padding_needed
+def ensure_valid_key(s: str) -> bytes:
+    # If the key is too short, we'll use it as a seed to generate a valid key
+    if len(s) < 32:
+        # Use the input as a seed for the random number generator
+        random.seed(s)
+        # Generate 32 random bytes
+        key = bytes(random.getrandbits(8) for _ in range(32))
+    else:
+        # If the key is long enough, use the first 32 bytes
+        key = s[:32].encode()
+
+    # Ensure the key is URL-safe base64-encoded
+    return base64.urlsafe_b64encode(key)
 
 
 def get_fernet(settings_service=Depends(get_settings_service)):
     SECRET_KEY = settings_service.auth_settings.SECRET_KEY.get_secret_value()
-    # It's important that your secret key is 32 url-safe base64-encoded byte
-    padded_secret_key = add_padding(SECRET_KEY)
-    fernet = Fernet(padded_secret_key)
+    valid_key = ensure_valid_key(SECRET_KEY)
+    fernet = Fernet(valid_key)
     return fernet
 
 
