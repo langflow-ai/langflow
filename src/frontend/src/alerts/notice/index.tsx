@@ -36,7 +36,7 @@ export default function NoticeAlert({
           setShow(false);
           removeAlert(id);
         }}
-        className="nocopy nowheel nopan nodelete nodrag noundo mt-6 w-96 rounded-md bg-info-background p-4 shadow-xl"
+        className="noflow nowheel nopan nodelete nodrag mt-6 w-96 rounded-md bg-info-background p-4 shadow-xl"
       >
         <div className="flex">
           <div className="flex-shrink-0 cursor-help">
