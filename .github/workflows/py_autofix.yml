@@ -22,7 +22,7 @@ jobs:
           - "3.10"
     steps:
       - uses: actions/checkout@v4
-      - uses: install-pinned/ruff@6b463d795ce39011cc004438ae507ae56235e12a
+      - uses: install-pinned/ruff@b52a71f70b28264686d57d1efef1ba845b9cec6c
       - run: ruff --fix-only .
       - run: ruff format .
 
