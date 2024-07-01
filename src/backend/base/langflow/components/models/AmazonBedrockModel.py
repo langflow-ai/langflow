@@ -69,7 +69,7 @@ class AmazonBedrockComponent(LCModelComponent):
         Output(display_name="Language Model", name="model_output", method="build_model"),
     ]
 
-    def build_model(self) -> LanguageModel:
+    def build_model(self) -> LanguageModel:  # type: ignore[type-var]
         model_id = self.model_id
         credentials_profile_name = self.credentials_profile_name
         region_name = self.region_name
@@ -89,4 +89,4 @@ class AmazonBedrockComponent(LCModelComponent):
             )
         except Exception as e:
             raise ValueError("Could not connect to AmazonBedrock API.") from e
-        return output
+        return output  # type: ignore
