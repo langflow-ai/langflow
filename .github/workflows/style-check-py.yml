@@ -1,9 +1,8 @@
 name: Ruff Style Check
 
 on:
-  pull_request: {}
-  merge_group:
-    branches: [dev]
+  pull_request:
+    types: [opened, synchronize, reopened]
 
 env:
   POETRY_VERSION: "1.8.2"
