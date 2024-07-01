@@ -43,7 +43,7 @@ class FirecrawlScrapeApi(CustomComponent):
         self,
         api_key: str,
         url: str,
-        timeout: Optional[int] = 10000,
+        timeout: int = 10000,
         pageOptions: Optional[Data] = None,
         extractorOptions: Optional[Data] = None,
     ) -> Data:
