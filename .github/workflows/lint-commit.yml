@@ -1,0 +1,14 @@
+name: Lint Commit Messages
+on: [pull_request]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  commitlint:
+    name: Check conventional commits
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: wagoid/commitlint-github-action@v6
