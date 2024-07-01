@@ -4,13 +4,14 @@ on:
   workflow_dispatch:
     inputs:
       branch:
-        description: "Branch to run tests on"
-        required: true
+        description: "(Optional) Branch to checkout"
+        required: false
         type: string
-
+  pull_request:
+  merge_group:
 
 env:
-  POETRY_VERSION: "1.8.2"
+  POETRY_VERSION: "1.8.3"
   NODE_VERSION: "21"
   PYTHON_VERSION: "3.12"
   # Define the directory where Playwright browsers will be installed.
@@ -19,18 +20,23 @@ env:
 
 jobs:
   setup-and-test:
-    name: Run Frontend Tests on branch ${{ inputs.branch }}
+    name: Run Playwright Tests
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        shardIndex: [1, 2, 3, 4]
-        shardTotal: [4]
+        shardIndex: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        shardTotal: [10]
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      STORE_API_KEY: ${{ secrets.STORE_API_KEY }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.branch }}
+          # If branch is passed as input, checkout that branch
+          # else checkout the default branch
+          ref: ${{ github.event.inputs.branch || github.ref }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -52,14 +58,15 @@ jobs:
           cd src/frontend
           npm ci
         if: ${{ steps.setup-node.outputs.cache-hit != 'true' }}
-
-      - name: Cache playwright binaries
-        uses: actions/cache@v4
+      - name: Get Playwright version
+        run: echo "PLAYWRIGHT_VERSION=$(jq '.devDependencies["@playwright/test"]' src/frontend/package.json -r)" >> $GITHUB_ENV
+      - name: Cache Playwright binaries
         id: playwright-cache
+        uses: actions/cache@v4
         with:
-          path: |
-            ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ hashFiles('src/frontend/package-lock.json') }}
+          path: ~/.cache/ms-playwright
+          key: playwright-browsers-${{ runner.os }}-${{ env.PLAYWRIGHT_VERSION }}
+
       - name: Install Frontend dependencies
         run: |
           cd src/frontend

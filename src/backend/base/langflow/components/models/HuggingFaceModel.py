@@ -36,7 +36,7 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
         Output(display_name="Language Model", name="model_output", method="build_model"),
     ]
 
-    def build_model(self) -> LanguageModel:
+    def build_model(self) -> LanguageModel:  # type: ignore[type-var]
         endpoint_url = self.endpoint_url
         task = self.task
         huggingfacehub_api_token = self.huggingfacehub_api_token
@@ -53,4 +53,4 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
             raise ValueError("Could not connect to HuggingFace Endpoints API.") from e
 
         output = ChatHuggingFace(llm=llm)
-        return output
+        return output  # type: ignore

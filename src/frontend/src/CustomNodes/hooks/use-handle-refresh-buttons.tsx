@@ -7,7 +7,10 @@ import useAlertStore from "../../stores/alertStore";
 import { ResponseErrorDetailAPI } from "../../types/api";
 import { handleUpdateValues } from "../../utils/parameterUtils";
 
-const useHandleRefreshButtonPress = (setIsLoading, setNode) => {
+const useHandleRefreshButtonPress = (
+  setIsLoading: (value: boolean) => void,
+  setNode: (id: string, callback: (oldNode: any) => any) => void,
+) => {
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
   const handleRefreshButtonPress = async (name, data) => {

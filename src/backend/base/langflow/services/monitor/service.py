@@ -1,30 +1,31 @@
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, List, Optional, Union
+from typing import TYPE_CHECKING, Union
 
 import duckdb
-from langflow.services.base import Service
-from langflow.services.monitor.utils import add_row_to_table, drop_and_create_table_if_schema_mismatch
 from loguru import logger
 from platformdirs import user_cache_dir
 
+from langflow.services.base import Service
+from langflow.services.monitor.utils import add_row_to_table, drop_and_create_table_if_schema_mismatch
+
 if TYPE_CHECKING:
+    from langflow.services.monitor.schema import DuckDbMessageModel, TransactionModel, VertexBuildModel
     from langflow.services.settings.service import SettingsService
-    from langflow.services.monitor.schema import MessageModel, TransactionModel, VertexBuildModel
 
 
 class MonitorService(Service):
     name = "monitor_service"
 
     def __init__(self, settings_service: "SettingsService"):
-        from langflow.services.monitor.schema import MessageModel, TransactionModel, VertexBuildModel
+        from langflow.services.monitor.schema import DuckDbMessageModel, TransactionModel, VertexBuildModel
 
         self.settings_service = settings_service
         self.base_cache_dir = Path(user_cache_dir("langflow"))
         self.db_path = self.base_cache_dir / "monitor.duckdb"
-        self.table_map: dict[str, type[TransactionModel | MessageModel | VertexBuildModel]] = {
+        self.table_map: dict[str, type[TransactionModel | DuckDbMessageModel | VertexBuildModel]] = {
             "transactions": TransactionModel,
-            "messages": MessageModel,
+            "messages": DuckDbMessageModel,
             "vertex_builds": VertexBuildModel,
         }
 
@@ -47,7 +48,7 @@ class MonitorService(Service):
     def add_row(
         self,
         table_name: str,
-        data: Union[dict, "TransactionModel", "MessageModel", "VertexBuildModel"],
+        data: Union[dict, "TransactionModel", "DuckDbMessageModel", "VertexBuildModel"],
     ):
         # Make sure the model passed matches the table
 
@@ -67,80 +68,15 @@ class MonitorService(Service):
     def get_timestamp():
         return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    def get_vertex_builds(
-        self,
-        flow_id: Optional[str] = None,
-        vertex_id: Optional[str] = None,
-        valid: Optional[bool] = None,
-        order_by: Optional[str] = "timestamp",
-    ):
-        query = "SELECT id, index,flow_id, valid, params, data, artifacts, timestamp FROM vertex_builds"
-        conditions = []
-        if flow_id:
-            conditions.append(f"flow_id = '{flow_id}'")
-        if vertex_id:
-            conditions.append(f"id = '{vertex_id}'")
-        if valid is not None:  # Check for None because valid is a boolean
-            valid_str = "true" if valid else "false"
-            conditions.append(f"valid = {valid_str}")
-
-        if conditions:
-            query += " WHERE " + " AND ".join(conditions)
-
-        if order_by:
-            query += f" ORDER BY {order_by}"
-
-        with duckdb.connect(str(self.db_path), read_only=True) as conn:
-            df = conn.execute(query).df()
-
-        return df.to_dict(orient="records")
-
-    def delete_vertex_builds(self, flow_id: Optional[str] = None):
-        query = "DELETE FROM vertex_builds"
-        if flow_id:
-            query += f" WHERE flow_id = '{flow_id}'"
-
-        with duckdb.connect(str(self.db_path), read_only=False) as conn:
-            conn.execute(query)
-
-    def delete_messages_session(self, session_id: str):
-        query = f"DELETE FROM messages WHERE session_id = '{session_id}'"
-
-        return self.exec_query(query, read_only=False)
-
-    def delete_messages(self, message_ids: Union[List[int], str]):
-        if isinstance(message_ids, list):
-            # If message_ids is a list, join the string representations of the integers
-            ids_str = ",".join(map(str, message_ids))
-        elif isinstance(message_ids, str):
-            # If message_ids is already a string, use it directly
-            ids_str = message_ids
-        else:
-            raise ValueError("message_ids must be a list of integers or a string")
-
-        query = f"DELETE FROM messages WHERE index IN ({ids_str})"
-
-        return self.exec_query(query, read_only=False)
-
-    def update_message(self, message_id: str, **kwargs):
-        query = (
-            f"""UPDATE messages SET {', '.join(f"{k} = '{v}'" for k, v in kwargs.items())} WHERE index = {message_id}"""
-        )
-
-        return self.exec_query(query, read_only=False)
-
-    def add_message(self, message: "MessageModel"):
-        self.add_row("messages", message)
-
     def get_messages(
         self,
-        flow_id: Optional[str] = None,
-        sender: Optional[str] = None,
-        sender_name: Optional[str] = None,
-        session_id: Optional[str] = None,
-        order_by: Optional[str] = "timestamp",
-        order: Optional[str] = "DESC",
-        limit: Optional[int] = None,
+        flow_id: str | None = None,
+        sender: str | None = None,
+        sender_name: str | None = None,
+        session_id: str | None = None,
+        order_by: str | None = "timestamp",
+        order: str | None = "DESC",
+        limit: int | None = None,
     ):
         query = "SELECT index, flow_id, sender_name, sender, session_id, text, files, timestamp FROM messages"
         conditions = []
@@ -168,13 +104,75 @@ class MonitorService(Service):
 
         return df
 
+    def get_vertex_builds(
+        self,
+        flow_id: str | None = None,
+        vertex_id: str | None = None,
+        valid: bool | None = None,
+        order_by: str | None = "timestamp",
+    ):
+        query = "SELECT id, index,flow_id, valid, params, data, artifacts, timestamp FROM vertex_builds"
+        conditions = []
+        if flow_id:
+            conditions.append(f"flow_id = '{flow_id}'")
+        if vertex_id:
+            conditions.append(f"id = '{vertex_id}'")
+        if valid is not None:  # Check for None because valid is a boolean
+            valid_str = "true" if valid else "false"
+            conditions.append(f"valid = {valid_str}")
+
+        if conditions:
+            query += " WHERE " + " AND ".join(conditions)
+
+        if order_by:
+            query += f" ORDER BY {order_by}"
+
+        with duckdb.connect(str(self.db_path), read_only=True) as conn:
+            df = conn.execute(query).df()
+
+        return df.to_dict(orient="records")
+
+    def delete_vertex_builds(self, flow_id: str | None = None):
+        query = "DELETE FROM vertex_builds"
+        if flow_id:
+            query += f" WHERE flow_id = '{flow_id}'"
+
+        with duckdb.connect(str(self.db_path), read_only=False) as conn:
+            conn.execute(query)
+
+    def delete_messages_session(self, session_id: str):
+        query = f"DELETE FROM messages WHERE session_id = '{session_id}'"
+
+        return self.exec_query(query, read_only=False)
+
+    def delete_messages(self, message_ids: list[int] | str):
+        if isinstance(message_ids, list):
+            # If message_ids is a list, join the string representations of the integers
+            ids_str = ",".join(map(str, message_ids))
+        elif isinstance(message_ids, str):
+            # If message_ids is already a string, use it directly
+            ids_str = message_ids
+        else:
+            raise ValueError("message_ids must be a list of integers or a string")
+
+        query = f"DELETE FROM messages WHERE index IN ({ids_str})"
+
+        return self.exec_query(query, read_only=False)
+
+    def update_message(self, message_id: str, **kwargs):
+        query = (
+            f"""UPDATE messages SET {', '.join(f"{k} = '{v}'" for k, v in kwargs.items())} WHERE index = {message_id}"""
+        )
+
+        return self.exec_query(query, read_only=False)
+
     def get_transactions(
         self,
-        source: Optional[str] = None,
-        target: Optional[str] = None,
-        status: Optional[str] = None,
-        order_by: Optional[str] = "timestamp",
-        flow_id: Optional[str] = None,
+        source: str | None = None,
+        target: str | None = None,
+        status: str | None = None,
+        order_by: str | None = "timestamp",
+        flow_id: str | None = None,
     ):
         query = (
             "SELECT index,flow_id, status, error, timestamp, vertex_id, inputs, outputs, target_id FROM transactions"
