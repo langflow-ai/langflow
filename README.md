@@ -94,6 +94,9 @@ results = run_flow_from_json("path/to/flow.json", input_value="Hello, World!")
 ## DataStax Langflow
 DataStax Langflow is a hosted version of Langflow integrated with [AstraDB](https://www.datastax.com/products/datastax-astra). Be up and running in minutes with no installation or setup required. [Sign up for free](https://langflow.datastax.com).
 
+## Deploy Langflow on Hugging Face Spaces
+You can also preview Langflow in [HuggingFace Spaces](https://huggingface.co/spaces/Langflow/Langflow-Preview). [Clone the space using this link](https://huggingface.co/spaces/Langflow/Langflow-Preview?duplicate=true) to create your own Langflow workspace in minutes.
+
 ## Deploy Langflow on Google Cloud Platform
 
 Follow our step-by-step guide to deploy Langflow on Google Cloud Platform (GCP) using Google Cloud Shell. The guide is available in the [**Langflow in Google Cloud Platform**](https://github.com/langflow-ai/langflow/blob/dev/docs/docs/deployment/gcp-deployment.md) document.
@@ -118,8 +121,6 @@ Use this template to deploy Langflow 1.0 on Railway:
 
 Follow our step-by-step guide to deploy [Langflow on Kubernetes](https://github.com/langflow-ai/langflow/blob/dev/docs/docs/deployment/kubernetes.md).
 
-## Deploy Langflow on Hugging Face Spaces
-You can also preview Langflow in [HuggingFace Spaces](https://huggingface.co/spaces/Langflow/Langflow-Preview). [Clone the space using this link](https://huggingface.co/spaces/Langflow/Langflow-Preview?duplicate=true) to create your own Langflow workspace in minutes.
 
 # 🖥️ Command Line Interface (CLI)
 
