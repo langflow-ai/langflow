@@ -2,10 +2,11 @@
   "data": {
     "edges": [
       {
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-c4xn9",
+            "id": "ChatInput-tuEeg",
             "name": "message",
             "output_types": [
               "Message"
@@ -13,50 +14,25 @@
           },
           "targetHandle": {
             "fieldName": "search_input",
-            "id": "AstraDB-7nAHJ",
+            "id": "AstraDB-xVF1f",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-c4xn9{œdataTypeœ:œChatInputœ,œidœ:œChatInput-c4xn9œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-AstraDB-7nAHJ{œfieldNameœ:œsearch_inputœ,œidœ:œAstraDB-7nAHJœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "ChatInput-c4xn9",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-c4xn9œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "AstraDB-7nAHJ",
-        "targetHandle": "{œfieldNameœ: œsearch_inputœ, œidœ: œAstraDB-7nAHJœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-ChatInput-tuEeg{œdataTypeœ:œChatInputœ,œidœ:œChatInput-tuEegœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-AstraDB-xVF1f{œfieldNameœ:œsearch_inputœ,œidœ:œAstraDB-xVF1fœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "ChatInput-tuEeg",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-tuEegœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "AstraDB-xVF1f",
+        "targetHandle": "{œfieldNameœ: œsearch_inputœ, œidœ: œAstraDB-xVF1fœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
-        "data": {
-          "sourceHandle": {
-            "dataType": "OpenAIEmbeddings",
-            "id": "OpenAIEmbeddings-BKXc6",
-            "name": "embeddings",
-            "output_types": [
-              "Embeddings"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "embedding",
-            "id": "AstraDB-7nAHJ",
-            "inputTypes": [
-              "Embeddings",
-              "dict"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-OpenAIEmbeddings-BKXc6{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-BKXc6œ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-AstraDB-7nAHJ{œfieldNameœ:œembeddingœ,œidœ:œAstraDB-7nAHJœ,œinputTypesœ:[œEmbeddingsœ,œdictœ],œtypeœ:œotherœ}",
-        "source": "OpenAIEmbeddings-BKXc6",
-        "sourceHandle": "{œdataTypeœ: œOpenAIEmbeddingsœ, œidœ: œOpenAIEmbeddings-BKXc6œ, œnameœ: œembeddingsœ, œoutput_typesœ: [œEmbeddingsœ]}",
-        "target": "AstraDB-7nAHJ",
-        "targetHandle": "{œfieldNameœ: œembeddingœ, œidœ: œAstraDB-7nAHJœ, œinputTypesœ: [œEmbeddingsœ, œdictœ], œtypeœ: œotherœ}"
-      },
-      {
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "AstraDB",
-            "id": "AstraDB-7nAHJ",
+            "id": "AstraDB-xVF1f",
             "name": "search_results",
             "output_types": [
               "Data"
@@ -64,24 +40,25 @@
           },
           "targetHandle": {
             "fieldName": "data",
-            "id": "ParseData-d61Q0",
+            "id": "ParseData-ZG3Aa",
             "inputTypes": [
               "Data"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-AstraDB-7nAHJ{œdataTypeœ:œAstraDBœ,œidœ:œAstraDB-7nAHJœ,œnameœ:œsearch_resultsœ,œoutput_typesœ:[œDataœ]}-ParseData-d61Q0{œfieldNameœ:œdataœ,œidœ:œParseData-d61Q0œ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
-        "source": "AstraDB-7nAHJ",
-        "sourceHandle": "{œdataTypeœ: œAstraDBœ, œidœ: œAstraDB-7nAHJœ, œnameœ: œsearch_resultsœ, œoutput_typesœ: [œDataœ]}",
-        "target": "ParseData-d61Q0",
-        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-d61Q0œ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-AstraDB-xVF1f{œdataTypeœ:œAstraDBœ,œidœ:œAstraDB-xVF1fœ,œnameœ:œsearch_resultsœ,œoutput_typesœ:[œDataœ]}-ParseData-ZG3Aa{œfieldNameœ:œdataœ,œidœ:œParseData-ZG3Aaœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "source": "AstraDB-xVF1f",
+        "sourceHandle": "{œdataTypeœ: œAstraDBœ, œidœ: œAstraDB-xVF1fœ, œnameœ: œsearch_resultsœ, œoutput_typesœ: [œDataœ]}",
+        "target": "ParseData-ZG3Aa",
+        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-ZG3Aaœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
       },
       {
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "ParseData",
-            "id": "ParseData-d61Q0",
+            "id": "ParseData-ZG3Aa",
             "name": "text",
             "output_types": [
               "Message"
@@ -89,7 +66,7 @@
           },
           "targetHandle": {
             "fieldName": "context",
-            "id": "Prompt-vqAlG",
+            "id": "Prompt-0Hp9v",
             "inputTypes": [
               "Message",
               "Text"
@@ -97,17 +74,18 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ParseData-d61Q0{œdataTypeœ:œParseDataœ,œidœ:œParseData-d61Q0œ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-vqAlG{œfieldNameœ:œcontextœ,œidœ:œPrompt-vqAlGœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "ParseData-d61Q0",
-        "sourceHandle": "{œdataTypeœ: œParseDataœ, œidœ: œParseData-d61Q0œ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-vqAlG",
-        "targetHandle": "{œfieldNameœ: œcontextœ, œidœ: œPrompt-vqAlGœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-ParseData-ZG3Aa{œdataTypeœ:œParseDataœ,œidœ:œParseData-ZG3Aaœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-0Hp9v{œfieldNameœ:œcontextœ,œidœ:œPrompt-0Hp9vœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "ParseData-ZG3Aa",
+        "sourceHandle": "{œdataTypeœ: œParseDataœ, œidœ: œParseData-ZG3Aaœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-0Hp9v",
+        "targetHandle": "{œfieldNameœ: œcontextœ, œidœ: œPrompt-0Hp9vœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-c4xn9",
+            "id": "ChatInput-tuEeg",
             "name": "message",
             "output_types": [
               "Message"
@@ -115,7 +93,7 @@
           },
           "targetHandle": {
             "fieldName": "question",
-            "id": "Prompt-vqAlG",
+            "id": "Prompt-0Hp9v",
             "inputTypes": [
               "Message",
               "Text"
@@ -123,17 +101,18 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-c4xn9{œdataTypeœ:œChatInputœ,œidœ:œChatInput-c4xn9œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-vqAlG{œfieldNameœ:œquestionœ,œidœ:œPrompt-vqAlGœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "ChatInput-c4xn9",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-c4xn9œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-vqAlG",
-        "targetHandle": "{œfieldNameœ: œquestionœ, œidœ: œPrompt-vqAlGœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-ChatInput-tuEeg{œdataTypeœ:œChatInputœ,œidœ:œChatInput-tuEegœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-0Hp9v{œfieldNameœ:œquestionœ,œidœ:œPrompt-0Hp9vœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "ChatInput-tuEeg",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-tuEegœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-0Hp9v",
+        "targetHandle": "{œfieldNameœ: œquestionœ, œidœ: œPrompt-0Hp9vœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-vqAlG",
+            "id": "Prompt-0Hp9v",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -141,49 +120,25 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "OpenAIModel-ybL3k",
+            "id": "OpenAIModel-BQXFs",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-vqAlG{œdataTypeœ:œPromptœ,œidœ:œPrompt-vqAlGœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-ybL3k{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-ybL3kœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Prompt-vqAlG",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-vqAlGœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "OpenAIModel-ybL3k",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-ybL3kœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-Prompt-0Hp9v{œdataTypeœ:œPromptœ,œidœ:œPrompt-0Hp9vœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-BQXFs{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-BQXFsœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "Prompt-0Hp9v",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-0Hp9vœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "OpenAIModel-BQXFs",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-BQXFsœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
-        "data": {
-          "sourceHandle": {
-            "dataType": "OpenAIModel",
-            "id": "OpenAIModel-ybL3k",
-            "name": "text_output",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "ChatOutput-BpzuD",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-OpenAIModel-ybL3k{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-ybL3kœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-BpzuD{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-BpzuDœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "OpenAIModel-ybL3k",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-ybL3kœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-BpzuD",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-BpzuDœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "File",
-            "id": "File-bf6wn",
+            "id": "File-BTJVJ",
             "name": "data",
             "output_types": [
               "Data"
@@ -191,24 +146,25 @@
           },
           "targetHandle": {
             "fieldName": "data_inputs",
-            "id": "SplitText-52wBo",
+            "id": "SplitText-RkdZ3",
             "inputTypes": [
               "Data"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-File-bf6wn{œdataTypeœ:œFileœ,œidœ:œFile-bf6wnœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-SplitText-52wBo{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-52wBoœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
-        "source": "File-bf6wn",
-        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-bf6wnœ, œnameœ: œdataœ, œoutput_typesœ: [œDataœ]}",
-        "target": "SplitText-52wBo",
-        "targetHandle": "{œfieldNameœ: œdata_inputsœ, œidœ: œSplitText-52wBoœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-File-BTJVJ{œdataTypeœ:œFileœ,œidœ:œFile-BTJVJœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-SplitText-RkdZ3{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-RkdZ3œ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "source": "File-BTJVJ",
+        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-BTJVJœ, œnameœ: œdataœ, œoutput_typesœ: [œDataœ]}",
+        "target": "SplitText-RkdZ3",
+        "targetHandle": "{œfieldNameœ: œdata_inputsœ, œidœ: œSplitText-RkdZ3œ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
       },
       {
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "SplitText",
-            "id": "SplitText-52wBo",
+            "id": "SplitText-RkdZ3",
             "name": "chunks",
             "output_types": [
               "Data"
@@ -216,24 +172,49 @@
           },
           "targetHandle": {
             "fieldName": "ingest_data",
-            "id": "AstraDB-vyd5U",
+            "id": "AstraDB-XXizY",
             "inputTypes": [
               "Data"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-SplitText-52wBo{œdataTypeœ:œSplitTextœ,œidœ:œSplitText-52wBoœ,œnameœ:œchunksœ,œoutput_typesœ:[œDataœ]}-AstraDB-vyd5U{œfieldNameœ:œingest_dataœ,œidœ:œAstraDB-vyd5Uœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
-        "source": "SplitText-52wBo",
-        "sourceHandle": "{œdataTypeœ: œSplitTextœ, œidœ: œSplitText-52wBoœ, œnameœ: œchunksœ, œoutput_typesœ: [œDataœ]}",
-        "target": "AstraDB-vyd5U",
-        "targetHandle": "{œfieldNameœ: œingest_dataœ, œidœ: œAstraDB-vyd5Uœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-SplitText-RkdZ3{œdataTypeœ:œSplitTextœ,œidœ:œSplitText-RkdZ3œ,œnameœ:œchunksœ,œoutput_typesœ:[œDataœ]}-AstraDB-XXizY{œfieldNameœ:œingest_dataœ,œidœ:œAstraDB-XXizYœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "source": "SplitText-RkdZ3",
+        "sourceHandle": "{œdataTypeœ: œSplitTextœ, œidœ: œSplitText-RkdZ3œ, œnameœ: œchunksœ, œoutput_typesœ: [œDataœ]}",
+        "target": "AstraDB-XXizY",
+        "targetHandle": "{œfieldNameœ: œingest_dataœ, œidœ: œAstraDB-XXizYœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "OpenAIModelComponent",
+            "id": "OpenAIModel-BQXFs",
+            "name": "text_output",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "ChatOutput-fDyGT",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-OpenAIModel-BQXFs{œdataTypeœ:œOpenAIModelComponentœ,œidœ:œOpenAIModel-BQXFsœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-fDyGT{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-fDyGTœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "OpenAIModel-BQXFs",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelComponentœ, œidœ: œOpenAIModel-BQXFsœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-fDyGT",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-fDyGTœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIEmbeddings",
-            "id": "OpenAIEmbeddings-sRZMc",
+            "id": "OpenAIEmbeddings-fpOKp",
             "name": "embeddings",
             "output_types": [
               "Embeddings"
@@ -241,7 +222,7 @@
           },
           "targetHandle": {
             "fieldName": "embedding",
-            "id": "AstraDB-vyd5U",
+            "id": "AstraDB-XXizY",
             "inputTypes": [
               "Embeddings",
               "dict"
@@ -249,17 +230,43 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-OpenAIEmbeddings-sRZMc{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-sRZMcœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-AstraDB-vyd5U{œfieldNameœ:œembeddingœ,œidœ:œAstraDB-vyd5Uœ,œinputTypesœ:[œEmbeddingsœ,œdictœ],œtypeœ:œotherœ}",
-        "source": "OpenAIEmbeddings-sRZMc",
-        "sourceHandle": "{œdataTypeœ: œOpenAIEmbeddingsœ, œidœ: œOpenAIEmbeddings-sRZMcœ, œnameœ: œembeddingsœ, œoutput_typesœ: [œEmbeddingsœ]}",
-        "target": "AstraDB-vyd5U",
-        "targetHandle": "{œfieldNameœ: œembeddingœ, œidœ: œAstraDB-vyd5Uœ, œinputTypesœ: [œEmbeddingsœ, œdictœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-OpenAIEmbeddings-fpOKp{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-fpOKpœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-AstraDB-XXizY{œfieldNameœ:œembeddingœ,œidœ:œAstraDB-XXizYœ,œinputTypesœ:[œEmbeddingsœ,œdictœ],œtypeœ:œotherœ}",
+        "source": "OpenAIEmbeddings-fpOKp",
+        "sourceHandle": "{œdataTypeœ: œOpenAIEmbeddingsœ, œidœ: œOpenAIEmbeddings-fpOKpœ, œnameœ: œembeddingsœ, œoutput_typesœ: [œEmbeddingsœ]}",
+        "target": "AstraDB-XXizY",
+        "targetHandle": "{œfieldNameœ: œembeddingœ, œidœ: œAstraDB-XXizYœ, œinputTypesœ: [œEmbeddingsœ, œdictœ], œtypeœ: œotherœ}"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "OpenAIEmbeddings",
+            "id": "OpenAIEmbeddings-lCQlU",
+            "name": "embeddings",
+            "output_types": [
+              "Embeddings"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "embedding",
+            "id": "AstraDB-xVF1f",
+            "inputTypes": [
+              "Embeddings",
+              "dict"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-OpenAIEmbeddings-lCQlU{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-lCQlUœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-AstraDB-xVF1f{œfieldNameœ:œembeddingœ,œidœ:œAstraDB-xVF1fœ,œinputTypesœ:[œEmbeddingsœ,œdictœ],œtypeœ:œotherœ}",
+        "source": "OpenAIEmbeddings-lCQlU",
+        "sourceHandle": "{œdataTypeœ: œOpenAIEmbeddingsœ, œidœ: œOpenAIEmbeddings-lCQlUœ, œnameœ: œembeddingsœ, œoutput_typesœ: [œEmbeddingsœ]}",
+        "target": "AstraDB-xVF1f",
+        "targetHandle": "{œfieldNameœ: œembeddingœ, œidœ: œAstraDB-xVF1fœ, œinputTypesœ: [œEmbeddingsœ, œdictœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ChatInput-c4xn9",
+          "id": "ChatInput-tuEeg",
           "node": {
             "base_classes": [
               "Message"
@@ -442,7 +449,7 @@
         },
         "dragging": false,
         "height": 308,
-        "id": "ChatInput-c4xn9",
+        "id": "ChatInput-tuEeg",
         "position": {
           "x": 642.3545710150049,
           "y": 220.22556606238678
@@ -457,7 +464,7 @@
       },
       {
         "data": {
-          "id": "AstraDB-7nAHJ",
+          "id": "AstraDB-xVF1f",
           "node": {
             "base_classes": [
               "Data",
@@ -863,7 +870,7 @@
         },
         "dragging": false,
         "height": 753,
-        "id": "AstraDB-7nAHJ",
+        "id": "AstraDB-xVF1f",
         "position": {
           "x": 1246.0381406498648,
           "y": 333.25157075413966
@@ -878,437 +885,7 @@
       },
       {
         "data": {
-          "id": "OpenAIEmbeddings-BKXc6",
-          "node": {
-            "base_classes": [
-              "Embeddings"
-            ],
-            "beta": false,
-            "conditional_paths": [],
-            "custom_fields": {},
-            "description": "Generate embeddings using OpenAI models.",
-            "display_name": "OpenAI Embeddings",
-            "documentation": "",
-            "edited": false,
-            "field_order": [
-              "default_headers",
-              "default_query",
-              "chunk_size",
-              "client",
-              "deployment",
-              "embedding_ctx_length",
-              "max_retries",
-              "model",
-              "model_kwargs",
-              "openai_api_base",
-              "openai_api_key",
-              "openai_api_type",
-              "openai_api_version",
-              "openai_organization",
-              "openai_proxy",
-              "request_timeout",
-              "show_progress_bar",
-              "skip_empty",
-              "tiktoken_model_name",
-              "tiktoken_enable"
-            ],
-            "frozen": false,
-            "icon": "OpenAI",
-            "output_types": [],
-            "outputs": [
-              {
-                "cache": true,
-                "display_name": "Embeddings",
-                "hidden": false,
-                "method": "build_embeddings",
-                "name": "embeddings",
-                "selected": "Embeddings",
-                "types": [
-                  "Embeddings"
-                ],
-                "value": "__UNDEFINED__"
-              }
-            ],
-            "pinned": false,
-            "template": {
-              "_type": "Component",
-              "chunk_size": {
-                "advanced": true,
-                "display_name": "Chunk Size",
-                "dynamic": false,
-                "info": "",
-                "list": false,
-                "name": "chunk_size",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "int",
-                "value": 1000
-              },
-              "client": {
-                "advanced": true,
-                "display_name": "Client",
-                "dynamic": false,
-                "info": "",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "load_from_db": false,
-                "name": "client",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "code": {
-                "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "from langchain_openai.embeddings.base import OpenAIEmbeddings\n\nfrom langflow.base.embeddings.model import LCEmbeddingsModel\nfrom langflow.field_typing import Embeddings\nfrom langflow.io import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, MessageTextInput, SecretStrInput\n\n\nclass OpenAIEmbeddingsComponent(LCEmbeddingsModel):\n    display_name = \"OpenAI Embeddings\"\n    description = \"Generate embeddings using OpenAI models.\"\n    icon = \"OpenAI\"\n    inputs = [\n        DictInput(\n            name=\"default_headers\",\n            display_name=\"Default Headers\",\n            advanced=True,\n            info=\"Default headers to use for the API request.\",\n        ),\n        DictInput(\n            name=\"default_query\",\n            display_name=\"Default Query\",\n            advanced=True,\n            info=\"Default query parameters to use for the API request.\",\n        ),\n        IntInput(name=\"chunk_size\", display_name=\"Chunk Size\", advanced=True, value=1000),\n        MessageTextInput(name=\"client\", display_name=\"Client\", advanced=True),\n        MessageTextInput(name=\"deployment\", display_name=\"Deployment\", advanced=True),\n        IntInput(name=\"embedding_ctx_length\", display_name=\"Embedding Context Length\", advanced=True, value=1536),\n        IntInput(name=\"max_retries\", display_name=\"Max Retries\", value=3, advanced=True),\n        DropdownInput(\n            name=\"model\",\n            display_name=\"Model\",\n            advanced=False,\n            options=[\n                \"text-embedding-3-small\",\n                \"text-embedding-3-large\",\n                \"text-embedding-ada-002\",\n            ],\n            value=\"text-embedding-3-small\",\n        ),\n        DictInput(name=\"model_kwargs\", display_name=\"Model Kwargs\", advanced=True),\n        SecretStrInput(name=\"openai_api_base\", display_name=\"OpenAI API Base\", advanced=True),\n        SecretStrInput(name=\"openai_api_key\", display_name=\"OpenAI API Key\"),\n        SecretStrInput(name=\"openai_api_type\", display_name=\"OpenAI API Type\", advanced=True),\n        MessageTextInput(name=\"openai_api_version\", display_name=\"OpenAI API Version\", advanced=True),\n        MessageTextInput(\n            name=\"openai_organization\",\n            display_name=\"OpenAI Organization\",\n            advanced=True,\n        ),\n        MessageTextInput(name=\"openai_proxy\", display_name=\"OpenAI Proxy\", advanced=True),\n        FloatInput(name=\"request_timeout\", display_name=\"Request Timeout\", advanced=True),\n        BoolInput(name=\"show_progress_bar\", display_name=\"Show Progress Bar\", advanced=True),\n        BoolInput(name=\"skip_empty\", display_name=\"Skip Empty\", advanced=True),\n        MessageTextInput(\n            name=\"tiktoken_model_name\",\n            display_name=\"TikToken Model Name\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"tiktoken_enable\",\n            display_name=\"TikToken Enable\",\n            advanced=True,\n            value=True,\n            info=\"If False, you must have transformers installed.\",\n        ),\n    ]\n\n    def build_embeddings(self) -> Embeddings:\n        return OpenAIEmbeddings(\n            tiktoken_enabled=self.tiktoken_enable,\n            default_headers=self.default_headers,\n            default_query=self.default_query,\n            allowed_special=\"all\",\n            disallowed_special=\"all\",\n            chunk_size=self.chunk_size,\n            deployment=self.deployment,\n            embedding_ctx_length=self.embedding_ctx_length,\n            max_retries=self.max_retries,\n            model=self.model,\n            model_kwargs=self.model_kwargs,\n            base_url=self.openai_api_base,\n            api_key=self.openai_api_key,\n            openai_api_type=self.openai_api_type,\n            api_version=self.openai_api_version,\n            organization=self.openai_organization,\n            openai_proxy=self.openai_proxy,\n            timeout=self.request_timeout or None,\n            show_progress_bar=self.show_progress_bar,\n            skip_empty=self.skip_empty,\n            tiktoken_model_name=self.tiktoken_model_name,\n        )\n"
-              },
-              "default_headers": {
-                "advanced": true,
-                "display_name": "Default Headers",
-                "dynamic": false,
-                "info": "Default headers to use for the API request.",
-                "list": false,
-                "name": "default_headers",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_input": true,
-                "type": "dict",
-                "value": {}
-              },
-              "default_query": {
-                "advanced": true,
-                "display_name": "Default Query",
-                "dynamic": false,
-                "info": "Default query parameters to use for the API request.",
-                "list": false,
-                "name": "default_query",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_input": true,
-                "type": "dict",
-                "value": {}
-              },
-              "deployment": {
-                "advanced": true,
-                "display_name": "Deployment",
-                "dynamic": false,
-                "info": "",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "load_from_db": false,
-                "name": "deployment",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "embedding_ctx_length": {
-                "advanced": true,
-                "display_name": "Embedding Context Length",
-                "dynamic": false,
-                "info": "",
-                "list": false,
-                "name": "embedding_ctx_length",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "int",
-                "value": 1536
-              },
-              "max_retries": {
-                "advanced": true,
-                "display_name": "Max Retries",
-                "dynamic": false,
-                "info": "",
-                "list": false,
-                "name": "max_retries",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "int",
-                "value": 3
-              },
-              "model": {
-                "advanced": false,
-                "display_name": "Model",
-                "dynamic": false,
-                "info": "",
-                "name": "model",
-                "options": [
-                  "text-embedding-3-small",
-                  "text-embedding-3-large",
-                  "text-embedding-ada-002"
-                ],
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "text-embedding-3-small"
-              },
-              "model_kwargs": {
-                "advanced": true,
-                "display_name": "Model Kwargs",
-                "dynamic": false,
-                "info": "",
-                "list": false,
-                "name": "model_kwargs",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_input": true,
-                "type": "dict",
-                "value": {}
-              },
-              "openai_api_base": {
-                "advanced": true,
-                "display_name": "OpenAI API Base",
-                "dynamic": false,
-                "info": "",
-                "input_types": [],
-                "load_from_db": true,
-                "name": "openai_api_base",
-                "password": true,
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": ""
-              },
-              "openai_api_key": {
-                "advanced": false,
-                "display_name": "OpenAI API Key",
-                "dynamic": false,
-                "info": "",
-                "input_types": [],
-                "load_from_db": false,
-                "name": "openai_api_key",
-                "password": true,
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": ""
-              },
-              "openai_api_type": {
-                "advanced": true,
-                "display_name": "OpenAI API Type",
-                "dynamic": false,
-                "info": "",
-                "input_types": [],
-                "load_from_db": true,
-                "name": "openai_api_type",
-                "password": true,
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": ""
-              },
-              "openai_api_version": {
-                "advanced": true,
-                "display_name": "OpenAI API Version",
-                "dynamic": false,
-                "info": "",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "load_from_db": false,
-                "name": "openai_api_version",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "openai_organization": {
-                "advanced": true,
-                "display_name": "OpenAI Organization",
-                "dynamic": false,
-                "info": "",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "load_from_db": false,
-                "name": "openai_organization",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "openai_proxy": {
-                "advanced": true,
-                "display_name": "OpenAI Proxy",
-                "dynamic": false,
-                "info": "",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "load_from_db": false,
-                "name": "openai_proxy",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "request_timeout": {
-                "advanced": true,
-                "display_name": "Request Timeout",
-                "dynamic": false,
-                "info": "",
-                "list": false,
-                "name": "request_timeout",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "float",
-                "value": ""
-              },
-              "show_progress_bar": {
-                "advanced": true,
-                "display_name": "Show Progress Bar",
-                "dynamic": false,
-                "info": "",
-                "list": false,
-                "name": "show_progress_bar",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": false
-              },
-              "skip_empty": {
-                "advanced": true,
-                "display_name": "Skip Empty",
-                "dynamic": false,
-                "info": "",
-                "list": false,
-                "name": "skip_empty",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": false
-              },
-              "tiktoken_enable": {
-                "advanced": true,
-                "display_name": "TikToken Enable",
-                "dynamic": false,
-                "info": "If False, you must have transformers installed.",
-                "list": false,
-                "name": "tiktoken_enable",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": true
-              },
-              "tiktoken_model_name": {
-                "advanced": true,
-                "display_name": "TikToken Model Name",
-                "dynamic": false,
-                "info": "",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "load_from_db": false,
-                "name": "tiktoken_model_name",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              }
-            }
-          },
-          "type": "OpenAIEmbeddings"
-        },
-        "dragging": false,
-        "height": 394,
-        "id": "OpenAIEmbeddings-BKXc6",
-        "position": {
-          "x": 603.2488770584523,
-          "y": 661.6162066128852
-        },
-        "positionAbsolute": {
-          "x": 603.2488770584523,
-          "y": 661.6162066128852
-        },
-        "selected": false,
-        "type": "genericNode",
-        "width": 384
-      },
-      {
-        "data": {
-          "id": "ParseData-d61Q0",
+          "id": "ParseData-ZG3Aa",
           "node": {
             "base_classes": [
               "Message"
@@ -1425,7 +1002,7 @@
         },
         "dragging": false,
         "height": 384,
-        "id": "ParseData-d61Q0",
+        "id": "ParseData-ZG3Aa",
         "position": {
           "x": 1854.1518317915907,
           "y": 459.3386924128532
@@ -1442,7 +1019,7 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-vqAlG",
+          "id": "Prompt-0Hp9v",
           "node": {
             "base_classes": [
               "Message"
@@ -1575,7 +1152,7 @@
         },
         "dragging": false,
         "height": 515,
-        "id": "Prompt-vqAlG",
+        "id": "Prompt-0Hp9v",
         "position": {
           "x": 2486.0988668404975,
           "y": 496.5120474157301
@@ -1590,7 +1167,10 @@
       },
       {
         "data": {
-          "id": "OpenAIModel-ybL3k",
+          "description": "Generates text using OpenAI LLMs.",
+          "display_name": "OpenAI",
+          "edited": false,
+          "id": "OpenAIModel-BQXFs",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -1602,11 +1182,12 @@
             "description": "Generates text using OpenAI LLMs.",
             "display_name": "OpenAI",
             "documentation": "",
-            "edited": false,
+            "edited": true,
             "field_order": [
               "input_value",
               "max_tokens",
               "model_kwargs",
+              "json_mode",
               "output_schema",
               "model_name",
               "openai_api_base",
@@ -1663,7 +1244,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "import operator\nfrom functools import reduce\n\nfrom langchain_openai import ChatOpenAI\nfrom pydantic.v1 import SecretStr\n\nfrom langflow.base.constants import STREAM_INFO_TEXT\nfrom langflow.base.models.model import LCModelComponent\nfrom langflow.base.models.openai_constants import MODEL_NAMES\nfrom langflow.field_typing import LanguageModel\nfrom langflow.inputs import (\n    BoolInput,\n    DictInput,\n    DropdownInput,\n    FloatInput,\n    IntInput,\n    MessageInput,\n    SecretStrInput,\n    StrInput,\n)\n\n\nclass OpenAIModelComponent(LCModelComponent):\n    display_name = \"OpenAI\"\n    description = \"Generates text using OpenAI LLMs.\"\n    icon = \"OpenAI\"\n\n    inputs = [\n        MessageInput(name=\"input_value\", display_name=\"Input\"),\n        IntInput(\n            name=\"max_tokens\",\n            display_name=\"Max Tokens\",\n            advanced=True,\n            info=\"The maximum number of tokens to generate. Set to 0 for unlimited tokens.\",\n        ),\n        DictInput(name=\"model_kwargs\", display_name=\"Model Kwargs\", advanced=True),\n        DictInput(\n            name=\"output_schema\",\n            is_list=True,\n            display_name=\"Schema\",\n            advanced=True,\n            info=\"The schema for the Output of the model. You must pass the word JSON in the prompt. If left blank, JSON mode will be disabled.\",\n        ),\n        DropdownInput(\n            name=\"model_name\", display_name=\"Model Name\", advanced=False, options=MODEL_NAMES, value=MODEL_NAMES[0]\n        ),\n        StrInput(\n            name=\"openai_api_base\",\n            display_name=\"OpenAI API Base\",\n            advanced=True,\n            info=\"The base URL of the OpenAI API. Defaults to https://api.openai.com/v1. You can change this to use other APIs like JinaChat, LocalAI and Prem.\",\n        ),\n        SecretStrInput(\n            name=\"openai_api_key\",\n            display_name=\"OpenAI API Key\",\n            info=\"The OpenAI API Key to use for the OpenAI model.\",\n            advanced=False,\n            value=\"OPENAI_API_KEY\",\n        ),\n        FloatInput(name=\"temperature\", display_name=\"Temperature\", value=0.1),\n        BoolInput(name=\"stream\", display_name=\"Stream\", info=STREAM_INFO_TEXT, advanced=True),\n        StrInput(\n            name=\"system_message\",\n            display_name=\"System Message\",\n            info=\"System message to pass to the model.\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"seed\",\n            display_name=\"Seed\",\n            info=\"The seed controls the reproducibility of the job.\",\n            advanced=True,\n            value=1,\n        ),\n    ]\n\n    def build_model(self) -> LanguageModel:\n        # self.output_schea is a list of dictionaries\n        # let's convert it to a dictionary\n        output_schema_dict: dict[str, str] = reduce(operator.ior, self.output_schema or {}, {})\n        openai_api_key = self.openai_api_key\n        temperature = self.temperature\n        model_name: str = self.model_name\n        max_tokens = self.max_tokens\n        model_kwargs = self.model_kwargs or {}\n        openai_api_base = self.openai_api_base or \"https://api.openai.com/v1\"\n        json_mode = bool(output_schema_dict)\n        seed = self.seed\n        model_kwargs[\"seed\"] = seed\n\n        if openai_api_key:\n            api_key = SecretStr(openai_api_key)\n        else:\n            api_key = None\n        output = ChatOpenAI(\n            max_tokens=max_tokens or None,\n            model_kwargs=model_kwargs,\n            model=model_name,\n            base_url=openai_api_base,\n            api_key=api_key,\n            temperature=temperature or 0.1,\n        )\n        if json_mode:\n            output = output.with_structured_output(schema=output_schema_dict, method=\"json_mode\")  # type: ignore\n\n        return output\n\n    def _get_exception_message(self, e: Exception):\n        \"\"\"\n        Get a message from an OpenAI exception.\n\n        Args:\n            exception (Exception): The exception to get the message from.\n\n        Returns:\n            str: The message from the exception.\n        \"\"\"\n\n        try:\n            from openai import BadRequestError\n        except ImportError:\n            return\n        if isinstance(e, BadRequestError):\n            message = e.body.get(\"message\")  # type: ignore\n            if message:\n                return message\n        return\n"
+                "value": "import operator\nfrom functools import reduce\n\nfrom langchain_openai import ChatOpenAI\nfrom pydantic.v1 import SecretStr\n\nfrom langflow.base.constants import STREAM_INFO_TEXT\nfrom langflow.base.models.model import LCModelComponent\nfrom langflow.base.models.openai_constants import MODEL_NAMES\nfrom langflow.field_typing import LanguageModel\nfrom langflow.inputs import (\n    BoolInput,\n    DictInput,\n    DropdownInput,\n    FloatInput,\n    IntInput,\n    MessageInput,\n    SecretStrInput,\n    StrInput,\n)\n\n\nclass OpenAIModelComponent(LCModelComponent):\n    display_name = \"OpenAI\"\n    description = \"Generates text using OpenAI LLMs.\"\n    icon = \"OpenAI\"\n\n    inputs = [\n        MessageInput(name=\"input_value\", display_name=\"Input\"),\n        IntInput(\n            name=\"max_tokens\",\n            display_name=\"Max Tokens\",\n            advanced=True,\n            info=\"The maximum number of tokens to generate. Set to 0 for unlimited tokens.\",\n        ),\n        DictInput(name=\"model_kwargs\", display_name=\"Model Kwargs\", advanced=True),\n        BoolInput(\n            name=\"json_mode\",\n            display_name=\"JSON Mode\",\n            advanced=True,\n            info=\"If True, it will output JSON regardless of passing a schema.\",\n        ),\n        DictInput(\n            name=\"output_schema\",\n            is_list=True,\n            display_name=\"Schema\",\n            advanced=True,\n            info=\"The schema for the Output of the model. You must pass the word JSON in the prompt. If left blank, JSON mode will be disabled.\",\n        ),\n        DropdownInput(\n            name=\"model_name\", display_name=\"Model Name\", advanced=False, options=MODEL_NAMES, value=MODEL_NAMES[0]\n        ),\n        StrInput(\n            name=\"openai_api_base\",\n            display_name=\"OpenAI API Base\",\n            advanced=True,\n            info=\"The base URL of the OpenAI API. Defaults to https://api.openai.com/v1. You can change this to use other APIs like JinaChat, LocalAI and Prem.\",\n        ),\n        SecretStrInput(\n            name=\"openai_api_key\",\n            display_name=\"OpenAI API Key\",\n            info=\"The OpenAI API Key to use for the OpenAI model.\",\n            advanced=False,\n            value=\"OPENAI_API_KEY\",\n        ),\n        FloatInput(name=\"temperature\", display_name=\"Temperature\", value=0.1),\n        BoolInput(name=\"stream\", display_name=\"Stream\", info=STREAM_INFO_TEXT, advanced=True),\n        StrInput(\n            name=\"system_message\",\n            display_name=\"System Message\",\n            info=\"System message to pass to the model.\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"seed\",\n            display_name=\"Seed\",\n            info=\"The seed controls the reproducibility of the job.\",\n            advanced=True,\n            value=1,\n        ),\n    ]\n\n    def build_model(self) -> LanguageModel:\n        # self.output_schea is a list of dictionaries\n        # let's convert it to a dictionary\n        output_schema_dict: dict[str, str] = reduce(operator.ior, self.output_schema or {}, {})\n        openai_api_key = self.openai_api_key\n        temperature = self.temperature\n        model_name: str = self.model_name\n        max_tokens = self.max_tokens\n        model_kwargs = self.model_kwargs or {}\n        openai_api_base = self.openai_api_base or \"https://api.openai.com/v1\"\n        json_mode = bool(output_schema_dict) or self.json_mode\n        seed = self.seed\n        model_kwargs[\"seed\"] = seed\n\n        if openai_api_key:\n            api_key = SecretStr(openai_api_key)\n        else:\n            api_key = None\n        output = ChatOpenAI(\n            max_tokens=max_tokens or None,\n            model_kwargs=model_kwargs,\n            model=model_name,\n            base_url=openai_api_base,\n            api_key=api_key,\n            temperature=temperature or 0.1,\n        )\n        if json_mode:\n            if output_schema_dict:\n                output = output.with_structured_output(schema=output_schema_dict, method=\"json_mode\")  # type: ignore\n            else:\n                output = output.bind(response_format={\"type\": \"json_object\"})  # type: ignore\n\n        return output\n\n    def _get_exception_message(self, e: Exception):\n        \"\"\"\n        Get a message from an OpenAI exception.\n\n        Args:\n            exception (Exception): The exception to get the message from.\n\n        Returns:\n            str: The message from the exception.\n        \"\"\"\n\n        try:\n            from openai import BadRequestError\n        except ImportError:\n            return\n        if isinstance(e, BadRequestError):\n            message = e.body.get(\"message\")  # type: ignore\n            if message:\n                return message\n        return\n"
               },
               "input_value": {
                 "advanced": false,
@@ -1684,6 +1265,21 @@
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": ""
+              },
+              "json_mode": {
+                "advanced": true,
+                "display_name": "JSON Mode",
+                "dynamic": false,
+                "info": "If True, it will output JSON regardless of passing a schema.",
+                "list": false,
+                "name": "json_mode",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
               },
               "max_tokens": {
                 "advanced": true,
@@ -1758,7 +1354,7 @@
                 "dynamic": false,
                 "info": "The OpenAI API Key to use for the OpenAI model.",
                 "input_types": [],
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "openai_api_key",
                 "password": true,
                 "placeholder": "",
@@ -1766,7 +1362,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "OPENAI_API_KEY"
               },
               "output_schema": {
                 "advanced": true,
@@ -1846,11 +1442,11 @@
               }
             }
           },
-          "type": "OpenAIModel"
+          "type": "OpenAIModelComponent"
         },
         "dragging": false,
         "height": 621,
-        "id": "OpenAIModel-ybL3k",
+        "id": "OpenAIModel-BQXFs",
         "position": {
           "x": 3145.6693008609222,
           "y": 374.23955005474204
@@ -1865,7 +1461,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-BpzuD",
+          "id": "ChatOutput-fDyGT",
           "node": {
             "base_classes": [
               "Message"
@@ -2025,7 +1621,7 @@
         },
         "dragging": false,
         "height": 308,
-        "id": "ChatOutput-BpzuD",
+        "id": "ChatOutput-fDyGT",
         "position": {
           "x": 3769.242086248817,
           "y": 585.3403837062634
@@ -2040,7 +1636,7 @@
       },
       {
         "data": {
-          "id": "SplitText-52wBo",
+          "id": "SplitText-RkdZ3",
           "node": {
             "base_classes": [
               "Data"
@@ -2170,7 +1766,7 @@
         },
         "dragging": false,
         "height": 527,
-        "id": "SplitText-52wBo",
+        "id": "SplitText-RkdZ3",
         "position": {
           "x": 2044.2799160989089,
           "y": 1185.3130355818519
@@ -2185,7 +1781,7 @@
       },
       {
         "data": {
-          "id": "File-bf6wn",
+          "id": "File-BTJVJ",
           "node": {
             "base_classes": [
               "Data"
@@ -2296,7 +1892,7 @@
         },
         "dragging": false,
         "height": 300,
-        "id": "File-bf6wn",
+        "id": "File-BTJVJ",
         "position": {
           "x": 1418.981990122179,
           "y": 1539.3825691184466
@@ -2311,7 +1907,7 @@
       },
       {
         "data": {
-          "id": "AstraDB-vyd5U",
+          "id": "AstraDB-XXizY",
           "node": {
             "base_classes": [
               "Data",
@@ -2716,7 +2312,7 @@
         },
         "dragging": false,
         "height": 753,
-        "id": "AstraDB-vyd5U",
+        "id": "AstraDB-XXizY",
         "position": {
           "x": 2676.4816074350247,
           "y": 1269.304067004569
@@ -2731,7 +2327,7 @@
       },
       {
         "data": {
-          "id": "OpenAIEmbeddings-sRZMc",
+          "id": "OpenAIEmbeddings-fpOKp",
           "node": {
             "base_classes": [
               "Embeddings"
@@ -2836,7 +2432,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langchain_openai.embeddings.base import OpenAIEmbeddings\n\nfrom langflow.base.embeddings.model import LCEmbeddingsModel\nfrom langflow.field_typing import Embeddings\nfrom langflow.io import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, MessageTextInput, SecretStrInput\n\n\nclass OpenAIEmbeddingsComponent(LCEmbeddingsModel):\n    display_name = \"OpenAI Embeddings\"\n    description = \"Generate embeddings using OpenAI models.\"\n    icon = \"OpenAI\"\n    inputs = [\n        DictInput(\n            name=\"default_headers\",\n            display_name=\"Default Headers\",\n            advanced=True,\n            info=\"Default headers to use for the API request.\",\n        ),\n        DictInput(\n            name=\"default_query\",\n            display_name=\"Default Query\",\n            advanced=True,\n            info=\"Default query parameters to use for the API request.\",\n        ),\n        IntInput(name=\"chunk_size\", display_name=\"Chunk Size\", advanced=True, value=1000),\n        MessageTextInput(name=\"client\", display_name=\"Client\", advanced=True),\n        MessageTextInput(name=\"deployment\", display_name=\"Deployment\", advanced=True),\n        IntInput(name=\"embedding_ctx_length\", display_name=\"Embedding Context Length\", advanced=True, value=1536),\n        IntInput(name=\"max_retries\", display_name=\"Max Retries\", value=3, advanced=True),\n        DropdownInput(\n            name=\"model\",\n            display_name=\"Model\",\n            advanced=False,\n            options=[\n                \"text-embedding-3-small\",\n                \"text-embedding-3-large\",\n                \"text-embedding-ada-002\",\n            ],\n            value=\"text-embedding-3-small\",\n        ),\n        DictInput(name=\"model_kwargs\", display_name=\"Model Kwargs\", advanced=True),\n        SecretStrInput(name=\"openai_api_base\", display_name=\"OpenAI API Base\", advanced=True),\n        SecretStrInput(name=\"openai_api_key\", display_name=\"OpenAI API Key\"),\n        SecretStrInput(name=\"openai_api_type\", display_name=\"OpenAI API Type\", advanced=True),\n        MessageTextInput(name=\"openai_api_version\", display_name=\"OpenAI API Version\", advanced=True),\n        MessageTextInput(\n            name=\"openai_organization\",\n            display_name=\"OpenAI Organization\",\n            advanced=True,\n        ),\n        MessageTextInput(name=\"openai_proxy\", display_name=\"OpenAI Proxy\", advanced=True),\n        FloatInput(name=\"request_timeout\", display_name=\"Request Timeout\", advanced=True),\n        BoolInput(name=\"show_progress_bar\", display_name=\"Show Progress Bar\", advanced=True),\n        BoolInput(name=\"skip_empty\", display_name=\"Skip Empty\", advanced=True),\n        MessageTextInput(\n            name=\"tiktoken_model_name\",\n            display_name=\"TikToken Model Name\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"tiktoken_enable\",\n            display_name=\"TikToken Enable\",\n            advanced=True,\n            value=True,\n            info=\"If False, you must have transformers installed.\",\n        ),\n    ]\n\n    def build_embeddings(self) -> Embeddings:\n        return OpenAIEmbeddings(\n            tiktoken_enabled=self.tiktoken_enable,\n            default_headers=self.default_headers,\n            default_query=self.default_query,\n            allowed_special=\"all\",\n            disallowed_special=\"all\",\n            chunk_size=self.chunk_size,\n            deployment=self.deployment,\n            embedding_ctx_length=self.embedding_ctx_length,\n            max_retries=self.max_retries,\n            model=self.model,\n            model_kwargs=self.model_kwargs,\n            base_url=self.openai_api_base,\n            api_key=self.openai_api_key,\n            openai_api_type=self.openai_api_type,\n            api_version=self.openai_api_version,\n            organization=self.openai_organization,\n            openai_proxy=self.openai_proxy,\n            timeout=self.request_timeout or None,\n            show_progress_bar=self.show_progress_bar,\n            skip_empty=self.skip_empty,\n            tiktoken_model_name=self.tiktoken_model_name,\n        )\n"
+                "value": "from langchain_openai.embeddings.base import OpenAIEmbeddings\n\nfrom langflow.base.embeddings.model import LCEmbeddingsModel\nfrom langflow.field_typing import Embeddings\nfrom langflow.io import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, MessageTextInput, SecretStrInput\n\n\nclass OpenAIEmbeddingsComponent(LCEmbeddingsModel):\n    display_name = \"OpenAI Embeddings\"\n    description = \"Generate embeddings using OpenAI models.\"\n    icon = \"OpenAI\"\n    inputs = [\n        DictInput(\n            name=\"default_headers\",\n            display_name=\"Default Headers\",\n            advanced=True,\n            info=\"Default headers to use for the API request.\",\n        ),\n        DictInput(\n            name=\"default_query\",\n            display_name=\"Default Query\",\n            advanced=True,\n            info=\"Default query parameters to use for the API request.\",\n        ),\n        IntInput(name=\"chunk_size\", display_name=\"Chunk Size\", advanced=True, value=1000),\n        MessageTextInput(name=\"client\", display_name=\"Client\", advanced=True),\n        MessageTextInput(name=\"deployment\", display_name=\"Deployment\", advanced=True),\n        IntInput(name=\"embedding_ctx_length\", display_name=\"Embedding Context Length\", advanced=True, value=1536),\n        IntInput(name=\"max_retries\", display_name=\"Max Retries\", value=3, advanced=True),\n        DropdownInput(\n            name=\"model\",\n            display_name=\"Model\",\n            advanced=False,\n            options=[\n                \"text-embedding-3-small\",\n                \"text-embedding-3-large\",\n                \"text-embedding-ada-002\",\n            ],\n            value=\"text-embedding-3-small\",\n        ),\n        DictInput(name=\"model_kwargs\", display_name=\"Model Kwargs\", advanced=True),\n        SecretStrInput(name=\"openai_api_base\", display_name=\"OpenAI API Base\", advanced=True),\n        SecretStrInput(name=\"openai_api_key\", display_name=\"OpenAI API Key\", value=\"OPENAI_API_KEY\"),\n        SecretStrInput(name=\"openai_api_type\", display_name=\"OpenAI API Type\", advanced=True),\n        MessageTextInput(name=\"openai_api_version\", display_name=\"OpenAI API Version\", advanced=True),\n        MessageTextInput(\n            name=\"openai_organization\",\n            display_name=\"OpenAI Organization\",\n            advanced=True,\n        ),\n        MessageTextInput(name=\"openai_proxy\", display_name=\"OpenAI Proxy\", advanced=True),\n        FloatInput(name=\"request_timeout\", display_name=\"Request Timeout\", advanced=True),\n        BoolInput(name=\"show_progress_bar\", display_name=\"Show Progress Bar\", advanced=True),\n        BoolInput(name=\"skip_empty\", display_name=\"Skip Empty\", advanced=True),\n        MessageTextInput(\n            name=\"tiktoken_model_name\",\n            display_name=\"TikToken Model Name\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"tiktoken_enable\",\n            display_name=\"TikToken Enable\",\n            advanced=True,\n            value=True,\n            info=\"If False, you must have transformers installed.\",\n        ),\n    ]\n\n    def build_embeddings(self) -> Embeddings:\n        return OpenAIEmbeddings(\n            tiktoken_enabled=self.tiktoken_enable,\n            default_headers=self.default_headers,\n            default_query=self.default_query,\n            allowed_special=\"all\",\n            disallowed_special=\"all\",\n            chunk_size=self.chunk_size,\n            deployment=self.deployment,\n            embedding_ctx_length=self.embedding_ctx_length,\n            max_retries=self.max_retries,\n            model=self.model,\n            model_kwargs=self.model_kwargs,\n            base_url=self.openai_api_base,\n            api_key=self.openai_api_key,\n            openai_api_type=self.openai_api_type,\n            api_version=self.openai_api_version,\n            organization=self.openai_organization,\n            openai_proxy=self.openai_proxy,\n            timeout=self.request_timeout or None,\n            show_progress_bar=self.show_progress_bar,\n            skip_empty=self.skip_empty,\n            tiktoken_model_name=self.tiktoken_model_name,\n        )\n"
               },
               "default_headers": {
                 "advanced": true,
@@ -2958,7 +2554,7 @@
                 "dynamic": false,
                 "info": "",
                 "input_types": [],
-                "load_from_db": true,
+                "load_from_db": false,
                 "name": "openai_api_base",
                 "password": true,
                 "placeholder": "",
@@ -2974,7 +2570,7 @@
                 "dynamic": false,
                 "info": "",
                 "input_types": [],
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "openai_api_key",
                 "password": true,
                 "placeholder": "",
@@ -2982,7 +2578,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "OPENAI_API_KEY"
               },
               "openai_api_type": {
                 "advanced": true,
@@ -2990,7 +2586,7 @@
                 "dynamic": false,
                 "info": "",
                 "input_types": [],
-                "load_from_db": true,
+                "load_from_db": false,
                 "name": "openai_api_type",
                 "password": true,
                 "placeholder": "",
@@ -3146,14 +2742,444 @@
         },
         "dragging": false,
         "height": 394,
-        "id": "OpenAIEmbeddings-sRZMc",
+        "id": "OpenAIEmbeddings-fpOKp",
         "position": {
-          "x": 2050.0569098721217,
-          "y": 1823.5240486490072
+          "x": 2044.683126356786,
+          "y": 1785.2283494456522
         },
         "positionAbsolute": {
-          "x": 2050.0569098721217,
-          "y": 1823.5240486490072
+          "x": 2044.683126356786,
+          "y": 1785.2283494456522
+        },
+        "selected": false,
+        "type": "genericNode",
+        "width": 384
+      },
+      {
+        "data": {
+          "id": "OpenAIEmbeddings-lCQlU",
+          "node": {
+            "base_classes": [
+              "Embeddings"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Generate embeddings using OpenAI models.",
+            "display_name": "OpenAI Embeddings",
+            "documentation": "",
+            "edited": false,
+            "field_order": [
+              "default_headers",
+              "default_query",
+              "chunk_size",
+              "client",
+              "deployment",
+              "embedding_ctx_length",
+              "max_retries",
+              "model",
+              "model_kwargs",
+              "openai_api_base",
+              "openai_api_key",
+              "openai_api_type",
+              "openai_api_version",
+              "openai_organization",
+              "openai_proxy",
+              "request_timeout",
+              "show_progress_bar",
+              "skip_empty",
+              "tiktoken_model_name",
+              "tiktoken_enable"
+            ],
+            "frozen": false,
+            "icon": "OpenAI",
+            "output_types": [],
+            "outputs": [
+              {
+                "cache": true,
+                "display_name": "Embeddings",
+                "hidden": false,
+                "method": "build_embeddings",
+                "name": "embeddings",
+                "selected": "Embeddings",
+                "types": [
+                  "Embeddings"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "chunk_size": {
+                "advanced": true,
+                "display_name": "Chunk Size",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "name": "chunk_size",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "int",
+                "value": 1000
+              },
+              "client": {
+                "advanced": true,
+                "display_name": "Client",
+                "dynamic": false,
+                "info": "",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "name": "client",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from langchain_openai.embeddings.base import OpenAIEmbeddings\n\nfrom langflow.base.embeddings.model import LCEmbeddingsModel\nfrom langflow.field_typing import Embeddings\nfrom langflow.io import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, MessageTextInput, SecretStrInput\n\n\nclass OpenAIEmbeddingsComponent(LCEmbeddingsModel):\n    display_name = \"OpenAI Embeddings\"\n    description = \"Generate embeddings using OpenAI models.\"\n    icon = \"OpenAI\"\n    inputs = [\n        DictInput(\n            name=\"default_headers\",\n            display_name=\"Default Headers\",\n            advanced=True,\n            info=\"Default headers to use for the API request.\",\n        ),\n        DictInput(\n            name=\"default_query\",\n            display_name=\"Default Query\",\n            advanced=True,\n            info=\"Default query parameters to use for the API request.\",\n        ),\n        IntInput(name=\"chunk_size\", display_name=\"Chunk Size\", advanced=True, value=1000),\n        MessageTextInput(name=\"client\", display_name=\"Client\", advanced=True),\n        MessageTextInput(name=\"deployment\", display_name=\"Deployment\", advanced=True),\n        IntInput(name=\"embedding_ctx_length\", display_name=\"Embedding Context Length\", advanced=True, value=1536),\n        IntInput(name=\"max_retries\", display_name=\"Max Retries\", value=3, advanced=True),\n        DropdownInput(\n            name=\"model\",\n            display_name=\"Model\",\n            advanced=False,\n            options=[\n                \"text-embedding-3-small\",\n                \"text-embedding-3-large\",\n                \"text-embedding-ada-002\",\n            ],\n            value=\"text-embedding-3-small\",\n        ),\n        DictInput(name=\"model_kwargs\", display_name=\"Model Kwargs\", advanced=True),\n        SecretStrInput(name=\"openai_api_base\", display_name=\"OpenAI API Base\", advanced=True),\n        SecretStrInput(name=\"openai_api_key\", display_name=\"OpenAI API Key\", value=\"OPENAI_API_KEY\"),\n        SecretStrInput(name=\"openai_api_type\", display_name=\"OpenAI API Type\", advanced=True),\n        MessageTextInput(name=\"openai_api_version\", display_name=\"OpenAI API Version\", advanced=True),\n        MessageTextInput(\n            name=\"openai_organization\",\n            display_name=\"OpenAI Organization\",\n            advanced=True,\n        ),\n        MessageTextInput(name=\"openai_proxy\", display_name=\"OpenAI Proxy\", advanced=True),\n        FloatInput(name=\"request_timeout\", display_name=\"Request Timeout\", advanced=True),\n        BoolInput(name=\"show_progress_bar\", display_name=\"Show Progress Bar\", advanced=True),\n        BoolInput(name=\"skip_empty\", display_name=\"Skip Empty\", advanced=True),\n        MessageTextInput(\n            name=\"tiktoken_model_name\",\n            display_name=\"TikToken Model Name\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"tiktoken_enable\",\n            display_name=\"TikToken Enable\",\n            advanced=True,\n            value=True,\n            info=\"If False, you must have transformers installed.\",\n        ),\n    ]\n\n    def build_embeddings(self) -> Embeddings:\n        return OpenAIEmbeddings(\n            tiktoken_enabled=self.tiktoken_enable,\n            default_headers=self.default_headers,\n            default_query=self.default_query,\n            allowed_special=\"all\",\n            disallowed_special=\"all\",\n            chunk_size=self.chunk_size,\n            deployment=self.deployment,\n            embedding_ctx_length=self.embedding_ctx_length,\n            max_retries=self.max_retries,\n            model=self.model,\n            model_kwargs=self.model_kwargs,\n            base_url=self.openai_api_base,\n            api_key=self.openai_api_key,\n            openai_api_type=self.openai_api_type,\n            api_version=self.openai_api_version,\n            organization=self.openai_organization,\n            openai_proxy=self.openai_proxy,\n            timeout=self.request_timeout or None,\n            show_progress_bar=self.show_progress_bar,\n            skip_empty=self.skip_empty,\n            tiktoken_model_name=self.tiktoken_model_name,\n        )\n"
+              },
+              "default_headers": {
+                "advanced": true,
+                "display_name": "Default Headers",
+                "dynamic": false,
+                "info": "Default headers to use for the API request.",
+                "list": false,
+                "name": "default_headers",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_input": true,
+                "type": "dict",
+                "value": {}
+              },
+              "default_query": {
+                "advanced": true,
+                "display_name": "Default Query",
+                "dynamic": false,
+                "info": "Default query parameters to use for the API request.",
+                "list": false,
+                "name": "default_query",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_input": true,
+                "type": "dict",
+                "value": {}
+              },
+              "deployment": {
+                "advanced": true,
+                "display_name": "Deployment",
+                "dynamic": false,
+                "info": "",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "name": "deployment",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "embedding_ctx_length": {
+                "advanced": true,
+                "display_name": "Embedding Context Length",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "name": "embedding_ctx_length",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "int",
+                "value": 1536
+              },
+              "max_retries": {
+                "advanced": true,
+                "display_name": "Max Retries",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "name": "max_retries",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "int",
+                "value": 3
+              },
+              "model": {
+                "advanced": false,
+                "display_name": "Model",
+                "dynamic": false,
+                "info": "",
+                "name": "model",
+                "options": [
+                  "text-embedding-3-small",
+                  "text-embedding-3-large",
+                  "text-embedding-ada-002"
+                ],
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "text-embedding-3-small"
+              },
+              "model_kwargs": {
+                "advanced": true,
+                "display_name": "Model Kwargs",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "name": "model_kwargs",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_input": true,
+                "type": "dict",
+                "value": {}
+              },
+              "openai_api_base": {
+                "advanced": true,
+                "display_name": "OpenAI API Base",
+                "dynamic": false,
+                "info": "",
+                "input_types": [],
+                "load_from_db": false,
+                "name": "openai_api_base",
+                "password": true,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": ""
+              },
+              "openai_api_key": {
+                "advanced": false,
+                "display_name": "OpenAI API Key",
+                "dynamic": false,
+                "info": "",
+                "input_types": [],
+                "load_from_db": true,
+                "name": "openai_api_key",
+                "password": true,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": "OPENAI_API_KEY"
+              },
+              "openai_api_type": {
+                "advanced": true,
+                "display_name": "OpenAI API Type",
+                "dynamic": false,
+                "info": "",
+                "input_types": [],
+                "load_from_db": false,
+                "name": "openai_api_type",
+                "password": true,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": ""
+              },
+              "openai_api_version": {
+                "advanced": true,
+                "display_name": "OpenAI API Version",
+                "dynamic": false,
+                "info": "",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "name": "openai_api_version",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "openai_organization": {
+                "advanced": true,
+                "display_name": "OpenAI Organization",
+                "dynamic": false,
+                "info": "",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "name": "openai_organization",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "openai_proxy": {
+                "advanced": true,
+                "display_name": "OpenAI Proxy",
+                "dynamic": false,
+                "info": "",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "name": "openai_proxy",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "request_timeout": {
+                "advanced": true,
+                "display_name": "Request Timeout",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "name": "request_timeout",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "float",
+                "value": ""
+              },
+              "show_progress_bar": {
+                "advanced": true,
+                "display_name": "Show Progress Bar",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "name": "show_progress_bar",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
+              },
+              "skip_empty": {
+                "advanced": true,
+                "display_name": "Skip Empty",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "name": "skip_empty",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
+              },
+              "tiktoken_enable": {
+                "advanced": true,
+                "display_name": "TikToken Enable",
+                "dynamic": false,
+                "info": "If False, you must have transformers installed.",
+                "list": false,
+                "name": "tiktoken_enable",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": true
+              },
+              "tiktoken_model_name": {
+                "advanced": true,
+                "display_name": "TikToken Model Name",
+                "dynamic": false,
+                "info": "",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "name": "tiktoken_model_name",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              }
+            }
+          },
+          "type": "OpenAIEmbeddings"
+        },
+        "dragging": false,
+        "height": 394,
+        "id": "OpenAIEmbeddings-lCQlU",
+        "position": {
+          "x": 628.9252513328779,
+          "y": 648.6750537749285
+        },
+        "positionAbsolute": {
+          "x": 628.9252513328779,
+          "y": 648.6750537749285
         },
         "selected": false,
         "type": "genericNode",
@@ -3161,15 +3187,15 @@
       }
     ],
     "viewport": {
-      "x": -108.04801490857153,
-      "y": -44.38043074355511,
-      "zoom": 0.32281188532359256
+      "x": -110.08684771034166,
+      "y": -46.27017080984389,
+      "zoom": 0.3228119071747796
     }
   },
   "description": "Visit https://docs.langflow.org/tutorials/rag-with-astradb for a detailed guide of this project.\nThis project give you both Ingestion and RAG in a single file. You'll need to visit https://astra.datastax.com/ to create an Astra DB instance, your Token and grab an API Endpoint.\nRunning this project requires you to add a file in the Files component, then define a Collection Name and click on the Play icon on the Astra DB component. \n\nAfter the ingestion ends you are ready to click on the Run button at the lower left corner and start asking questions about your data.",
   "endpoint_name": null,
-  "id": "7804e4a4-8e16-45e0-88ab-ed6248daa0eb",
+  "id": "f1a53ec2-49e2-4029-b8a8-1a73079f9653",
   "is_component": false,
-  "last_tested_version": "1.0.0rc1",
+  "last_tested_version": "1.0.5",
   "name": "Vector Store RAG"
 }

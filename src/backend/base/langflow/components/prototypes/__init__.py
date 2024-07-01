@@ -2,7 +2,7 @@ from .ConditionalRouter import ConditionalRouterComponent
 from .FlowTool import FlowToolComponent
 from .Listen import ListenComponent
 from .Notify import NotifyComponent
-from .Pass import PassComponent
+from .Pass import PassMessageComponent
 from .PythonFunction import PythonFunctionComponent
 from .RunFlow import RunFlowComponent
 from .RunnableExecutor import RunnableExecComponent
@@ -16,7 +16,7 @@ __all__ = [
     "FlowToolComponent",
     "ListenComponent",
     "NotifyComponent",
-    "PassComponent",
+    "PassMessageComponent",
     "PythonFunctionComponent",
     "RunFlowComponent",
     "RunnableExecComponent",
