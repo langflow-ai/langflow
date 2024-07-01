@@ -351,7 +351,7 @@ FALSE Examples:
 
 
 User: {user_message}
-AI: 
+AI:
 
     `);
 
