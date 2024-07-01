@@ -4,7 +4,7 @@ from pydantic.v1 import SecretStr
 from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing.constants import LanguageModel
-from langflow.io import BoolInput, DropdownInput, FloatInput, MessageTextInput, Output, SecretStrInput
+from langflow.io import BoolInput, DropdownInput, FloatInput, MessageTextInput, SecretStrInput
 
 
 class QianfanChatEndpointComponent(LCModelComponent):

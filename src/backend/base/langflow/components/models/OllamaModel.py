@@ -6,7 +6,7 @@ from langchain_community.chat_models import ChatOllama
 from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
-from langflow.io import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, MessageInput, Output, StrInput
+from langflow.io import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, MessageInput, StrInput
 
 
 class ChatOllamaComponent(LCModelComponent):

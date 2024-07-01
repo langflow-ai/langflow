@@ -4,7 +4,7 @@ from pydantic.v1 import SecretStr
 from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
-from langflow.io import BoolInput, DropdownInput, FloatInput, IntInput, MessageInput, Output, SecretStrInput, StrInput
+from langflow.io import BoolInput, DropdownInput, FloatInput, IntInput, MessageInput, SecretStrInput, StrInput
 
 
 class AzureChatOpenAIComponent(LCModelComponent):
