@@ -7,10 +7,10 @@ import {
 import useFileUpload from "./use-file-upload";
 
 const useDragAndDrop = (
-  setIsDragging,
-  setFiles,
-  currentFlowId,
-  setErrorData,
+  setIsDragging: (value: boolean) => void,
+  setFiles: (value: any) => void,
+  currentFlowId: string,
+  setErrorData: (value: any) => void,
 ) => {
   const dragOver = (e) => {
     e.preventDefault();

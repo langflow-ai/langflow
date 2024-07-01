@@ -4,21 +4,22 @@ import {
   SAVE_SUCCESS_ALERT,
 } from "../../../../constants/alerts_constants";
 import { updateUser } from "../../../../controllers/API";
+import { Users } from "../../../../types/api";
 
 const usePatchProfilePicture = (
-  setSuccessData,
-  setErrorData,
-  currentUserData,
-  setUserData,
+  setSuccessData: (data: { title: string; list?: string[] }) => void,
+  setErrorData: (data: { title: string; list: string[] }) => void,
+  currentUserData: Users | null,
+  setUserData: (data: any) => void,
 ) => {
   const handlePatchProfilePicture = async (profile_picture) => {
     try {
       if (profile_picture !== "") {
-        await updateUser(currentUserData.id, {
+        await updateUser(currentUserData!.id, {
           profile_image: profile_picture,
         });
         let newUserData = cloneDeep(currentUserData);
-        newUserData.profile_image = profile_picture;
+        newUserData!.profile_image = profile_picture;
         setUserData(newUserData);
       }
       setSuccessData({ title: SAVE_SUCCESS_ALERT });
