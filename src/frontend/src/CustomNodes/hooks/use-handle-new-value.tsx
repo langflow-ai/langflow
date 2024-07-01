@@ -18,7 +18,7 @@ const useHandleOnNewValue = (
 ) => {
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
-  const handleOnNewValue = async (newValue, skipSnapshot = false) => {
+  const handleOnNewValue = async (newValue, dbValue, skipSnapshot = false) => {
     const nodeTemplate = data.node!.template[name];
     const currentValue = nodeTemplate.value;
 
@@ -62,6 +62,10 @@ const useHandleOnNewValue = (
       newNode.data = {
         ...newNode.data,
       };
+
+      if (dbValue) {
+        newNode.data.node.template[name].load_from_db = dbValue;
+      }
 
       if (data.node?.template[name].real_time_refresh && newTemplate) {
         newNode.data.node.template = newTemplate;

@@ -4,12 +4,12 @@ import getUnavailableFields from "./utils/get-unavailable-fields";
 
 export const useGlobalVariablesStore = create<GlobalVariablesStore>(
   (set, get) => ({
-    unavaliableFields: {},
+    unavaliableFields: undefined,
     setUnavaliableFields: (fields) => {
       set({ unavaliableFields: fields });
     },
     removeUnavaliableField: (field) => {
-      const newFields = get().unavaliableFields;
+      const newFields = get().unavaliableFields || {};
       delete newFields[field];
       set({ unavaliableFields: newFields });
     },
@@ -18,7 +18,7 @@ export const useGlobalVariablesStore = create<GlobalVariablesStore>(
     setGlobalVariables: (variables) => {
       set({
         globalVariables: variables,
-        globalVariablesEntries: Object.keys(variables),
+        globalVariablesEntries: Object.keys(variables) || [],
         unavaliableFields: getUnavailableFields(variables),
       });
     },
@@ -27,7 +27,7 @@ export const useGlobalVariablesStore = create<GlobalVariablesStore>(
       const newVariables = { ...get().globalVariables, [name]: data };
       set({
         globalVariables: newVariables,
-        globalVariablesEntries: Object.keys(newVariables),
+        globalVariablesEntries: Object.keys(newVariables) || [],
         unavaliableFields: getUnavailableFields(newVariables),
       });
     },
@@ -38,7 +38,7 @@ export const useGlobalVariablesStore = create<GlobalVariablesStore>(
       delete newVariables[name];
       set({
         globalVariables: newVariables,
-        globalVariablesEntries: Object.keys(newVariables),
+        globalVariablesEntries: Object.keys(newVariables) || [],
         unavaliableFields: getUnavailableFields(newVariables),
       });
     },

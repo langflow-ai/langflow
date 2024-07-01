@@ -29,7 +29,9 @@ export default function AddNewVariableButton({
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const componentFields = useTypesStore((state) => state.ComponentFields);
   const unavaliableFields = new Set(
-    Object.keys(useGlobalVariablesStore((state) => state.unavaliableFields)),
+    Object.keys(
+      useGlobalVariablesStore((state) => state.unavaliableFields) ?? {},
+    ),
   );
 
   const availableFields = () => {
