@@ -1,15 +1,15 @@
 import { useCallback } from "react";
 
 const useSelectOptionsChange = (
-  selectedFlowsComponentsCards,
-  setErrorData,
-  setOpenDelete,
-  handleDuplicate,
-  handleExport,
+  selectedFlowsComponentsCards: string[] | undefined,
+  setErrorData: (data: { title: string; list: string[] }) => void,
+  setOpenDelete: (value: boolean) => void,
+  handleDuplicate: () => void,
+  handleExport: () => void,
 ) => {
   const handleSelectOptionsChange = useCallback(
     (action) => {
-      const hasSelected = selectedFlowsComponentsCards?.length > 0;
+      const hasSelected = selectedFlowsComponentsCards?.length! > 0;
       if (!hasSelected) {
         setErrorData({
           title: "No items selected",

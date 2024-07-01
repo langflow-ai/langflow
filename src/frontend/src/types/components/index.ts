@@ -91,8 +91,7 @@ export type InputListComponentType = {
 
 export type InputGlobalComponentType = {
   disabled: boolean;
-  onChange: (value: string, snapshot?: boolean) => void;
-  setDb: (value: boolean) => void;
+  onChange: (value: string, dbValue: boolean, snapshot?: boolean) => void;
   name: string;
   data: InputFieldType;
   editNode?: boolean;
@@ -124,7 +123,11 @@ export type TextAreaComponentType = {
   nodeClass?: APIClassType;
   setNodeClass?: (value: APIClassType) => void;
   disabled: boolean;
-  onChange: (value: string[] | string, skipSnapshot?: boolean) => void;
+  onChange: (
+    value: string[] | string,
+    dbValue?: boolean,
+    skipSnapshot?: boolean,
+  ) => void;
   value: string;
   editNode?: boolean;
   id?: string;
@@ -146,7 +149,11 @@ export type PromptAreaComponentType = {
   nodeClass?: APIClassType;
   setNodeClass?: (value: APIClassType, code?: string) => void;
   disabled: boolean;
-  onChange: (value: string[] | string, skipSnapshot?: boolean) => void;
+  onChange: (
+    value: string[] | string,
+    dbValue?: boolean,
+    skipSnapshot?: boolean,
+  ) => void;
   value: string;
   readonly?: boolean;
   editNode?: boolean;
@@ -156,7 +163,11 @@ export type PromptAreaComponentType = {
 export type CodeAreaComponentType = {
   setOpenModal?: (bool: boolean) => void;
   disabled: boolean;
-  onChange: (value: string[] | string, skipSnapshot?: boolean) => void;
+  onChange: (
+    value: string[] | string,
+    dbValue?: boolean,
+    skipSnapshot?: boolean,
+  ) => void;
   value: string;
   editNode?: boolean;
   nodeClass?: APIClassType;
@@ -171,7 +182,11 @@ export type CodeAreaComponentType = {
 export type FileComponentType = {
   IOInputProps?;
   disabled: boolean;
-  onChange: (value: string[] | string, skipSnapshot?: boolean) => void;
+  onChange: (
+    value: string[] | string,
+    dbValue?: boolean,
+    skipSnapshot?: boolean,
+  ) => void;
   value: string;
   fileTypes: Array<string>;
   onFileChange: (value: string) => void;
@@ -204,7 +219,7 @@ export type IntComponentType = {
   value: string;
   disabled?: boolean;
   rangeSpec: RangeSpecType;
-  onChange: (value: string, skipSnapshot?: boolean) => void;
+  onChange: (value: string, dbValue?: boolean, skipSnapshot?: boolean) => void;
   editNode?: boolean;
   id?: string;
 };
@@ -212,7 +227,7 @@ export type IntComponentType = {
 export type FloatComponentType = {
   value: string;
   disabled?: boolean;
-  onChange: (value: string, skipSnapshot?: boolean) => void;
+  onChange: (value: string, dbValue?: boolean, skipSnapshot?: boolean) => void;
   rangeSpec: RangeSpecType;
   editNode?: boolean;
   id?: string;
@@ -303,7 +318,7 @@ export type IconComponentProps = {
 export type InputProps = {
   name: string | null;
   description: string | null;
-  endpointName?: string;
+  endpointName?: string | null;
   maxLength?: number;
   setName?: (name: string) => void;
   setDescription?: (description: string) => void;
@@ -695,6 +710,8 @@ type codeTabsFuncTempType = {
 };
 
 export type codeTabsPropsType = {
+  isThereTweaks?: boolean;
+  isThereWH?: boolean;
   flow?: FlowType;
   tabs: Array<tabsArrayType>;
   activeTab: string;

@@ -26,6 +26,7 @@ import {
   TabsTrigger,
 } from "../../components/ui/tabs";
 import { LANGFLOW_SUPPORTED_TYPES } from "../../constants/constants";
+import getTabsOrder from "../../modals/apiModal/utils/get-tabs-order";
 import { Case } from "../../shared/components/caseComponent";
 import { useDarkStore } from "../../stores/darkStore";
 import useFlowStore from "../../stores/flowStore";
@@ -56,6 +57,8 @@ export default function CodeTabsComponent({
   setActiveTweaks,
   activeTweaks,
   allowExport = false,
+  isThereTweaks = false,
+  isThereWH = false,
 }: codeTabsPropsType) {
   const [isCopied, setIsCopied] = useState<Boolean>(false);
   const [data, setData] = useState(flow ? flow["data"]!["nodes"] : null);
@@ -92,6 +95,8 @@ export default function CodeTabsComponent({
   const type = (node, templateParam) => {
     return node.data.node.template[templateParam].type;
   };
+
+  const tabsOrder = getTabsOrder(isThereWH, isThereTweaks);
 
   return (
     <Tabs
@@ -172,7 +177,7 @@ export default function CodeTabsComponent({
           className="api-modal-tabs-content overflow-hidden"
           key={idx} // Remember to add a unique key prop
         >
-          {idx < 5 ? (
+          {tabsOrder[idx].toLowerCase() !== "tweaks" ? (
             <div className="flex h-full w-full flex-col">
               {tab.description && (
                 <div
@@ -188,7 +193,7 @@ export default function CodeTabsComponent({
                 {tab.code}
               </SyntaxHighlighter>
             </div>
-          ) : idx === 5 ? (
+          ) : tabsOrder[idx].toLowerCase() === "tweaks" ? (
             <>
               <div className="api-modal-according-display">
                 <div

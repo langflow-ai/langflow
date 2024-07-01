@@ -4,6 +4,7 @@ import {
   ColGroupDef,
   SelectionChangedEvent,
 } from "ag-grid-community";
+import { cloneDeep } from "lodash";
 import { useState } from "react";
 import TableComponent from "../../../../components/tableComponent";
 import useAlertStore from "../../../../stores/alertStore";
@@ -21,7 +22,7 @@ export default function MessagesPage() {
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
 
-  const [selectedRows, setSelectedRows] = useState<number[]>([]);
+  const [selectedRows, setSelectedRows] = useState<string[]>([]);
 
   const { handleRemoveMessages } = useRemoveMessages(
     setSelectedRows,
@@ -37,7 +38,7 @@ export default function MessagesPage() {
   function handleUpdateMessage(event: CellEditRequestEvent<any, string>) {
     const newValue = event.newValue;
     const field = event.column.getColId();
-    const row = event.data;
+    const row = cloneDeep(event.data);
     const data = {
       ...row,
       [field]: newValue,
@@ -66,9 +67,7 @@ export default function MessagesPage() {
           ]}
           overlayNoRowsTemplate="No data available"
           onSelectionChanged={(event: SelectionChangedEvent) => {
-            setSelectedRows(
-              event.api.getSelectedRows().map((row) => row.index),
-            );
+            setSelectedRows(event.api.getSelectedRows().map((row) => row.id));
           }}
           rowSelection="multiple"
           suppressRowClickSelection={true}
