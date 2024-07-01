@@ -168,7 +168,6 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
                 cluster_kwargs=self.cluster_kwargs,
             )
 
-
         if not self.ttl_seconds:  # type: ignore
             self.ttl_seconds = None
         documents = []
