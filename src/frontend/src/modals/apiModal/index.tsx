@@ -18,11 +18,13 @@ import { buildContent } from "./utils/build-content";
 import { buildTweaks } from "./utils/build-tweaks";
 import { checkCanBuildTweakObject } from "./utils/check-can-build-tweak-object";
 import { getChangesType } from "./utils/get-changes-types";
+import getCodesObj from "./utils/get-codes-obj";
 import { getCurlRunCode, getCurlWebhookCode } from "./utils/get-curl-code";
 import getJsApiCode from "./utils/get-js-api-code";
 import { getNodesWithDefaultValue } from "./utils/get-nodes-with-default-value";
 import getPythonApiCode from "./utils/get-python-api-code";
 import getPythonCode from "./utils/get-python-code";
+import getTabsOrder from "./utils/get-tabs-order";
 import { getValue } from "./utils/get-value";
 import getWidgetCode from "./utils/get-widget-code";
 import { createTabsArray } from "./utils/tabs-array";
@@ -42,11 +44,12 @@ const ApiModal = forwardRef(
     },
     ref,
   ) => {
+    const tweaksCode = buildTweaks(flow);
     const tweak = useTweaksStore((state) => state.tweak);
     const addTweaks = useTweaksStore((state) => state.setTweak);
     const setTweaksList = useTweaksStore((state) => state.setTweaksList);
     const tweaksList = useTweaksStore((state) => state.tweaksList);
-
+    const isThereTweaks = Object.keys(tweaksCode).length > 0;
     const [activeTweaks, setActiveTweaks] = useState(false);
     const { autoLogin } = useContext(AuthContext);
     const [open, setOpen] =
@@ -80,7 +83,6 @@ const ApiModal = forwardRef(
     const pythonCode = getPythonCode(flow?.name, tweak);
     const widgetCode = getWidgetCode(flow?.id, flow?.name, autoLogin);
     const includeWebhook = flow.webhook;
-    const tweaksCode = buildTweaks(flow);
     const codesArray = [
       runCurlCode,
       webhookCurlCode,
@@ -119,7 +121,7 @@ const ApiModal = forwardRef(
 
       filterNodes();
 
-      if (Object.keys(tweaksCode).length > 0) {
+      if (isThereTweaks) {
         setActiveTab("0");
         setTabs(createTabsArray(codesArray, includeWebhook, true));
       } else {
@@ -213,21 +215,25 @@ const ApiModal = forwardRef(
       );
       const pythonCode = getPythonCode(flow?.name, cloneTweak);
       const widgetCode = getWidgetCode(flow?.id, flow?.name, autoLogin);
+      const codesObj = getCodesObj({
+        runCurlCode,
+        webhookCurlCode,
+        pythonApiCode,
+        jsApiCode,
+        pythonCode,
+        widgetCode,
+      });
+      const tabsOrder = getTabsOrder(includeWebhook, isThereTweaks);
       if (tabs && tabs?.length > 0) {
-        let i = 0;
-        tabs![i].code = runCurlCode;
-        i++;
-        if (includeWebhook) {
-          tabs![i].code = webhookCurlCode;
-          i++;
-        }
-        tabs![i].code = pythonApiCode;
-        i++;
-        tabs![i].code = jsApiCode;
-        i++;
-        tabs![i].code = pythonCode;
-        i++;
-        tabs![i].code = widgetCode;
+        tabs.forEach((tab, idx) => {
+          const order = tabsOrder[idx];
+          if (order && order.toLowerCase() === tab.name.toLowerCase()) {
+            const codeToFind = codesObj.find(
+              (c) => c.name.toLowerCase() === tab.name.toLowerCase(),
+            );
+            tab.code = codeToFind?.code;
+          }
+        });
       }
     };
 
@@ -244,6 +250,8 @@ const ApiModal = forwardRef(
         </BaseModal.Header>
         <BaseModal.Content overflowHidden>
           <CodeTabsComponent
+            isThereTweaks={isThereTweaks}
+            isThereWH={includeWebhook ?? false}
             flow={flow}
             tabs={tabs!}
             activeTab={activeTab}
