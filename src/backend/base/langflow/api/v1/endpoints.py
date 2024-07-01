@@ -276,15 +276,15 @@ async def webhook_run_flow(
         # get all webhook components in the flow
         webhook_components = get_all_webhook_components_in_flow(flow.data)
         tweaks = {}
-        data_dict = await request.json()
+
         for component in webhook_components:
             tweaks[component["id"]] = {"data": data.decode() if isinstance(data, bytes) else data}
         input_request = SimplifiedAPIRequest(
-            input_value=data_dict.get("input_value", ""),
-            input_type=data_dict.get("input_type", "chat"),
-            output_type=data_dict.get("output_type", "chat"),
+            input_value="",
+            input_type="chat",
+            output_type="chat",
             tweaks=tweaks,
-            session_id=data_dict.get("session_id"),
+            session_id=None,
         )
         logger.debug("Starting background task")
         background_tasks.add_task(  # type: ignore

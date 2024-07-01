@@ -25,7 +25,7 @@ export type GlobalVariablesStore = {
   ) => void;
   removeGlobalVariable: (name: string) => Promise<void>;
   getVariableId: (name: string) => string | undefined;
-  unavaliableFields: { [name: string]: string };
+  unavaliableFields: { [name: string]: string } | undefined;
   setUnavaliableFields: (fields: { [name: string]: string }) => void;
   removeUnavaliableField: (field: string) => void;
 };
