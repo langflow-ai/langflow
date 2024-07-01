@@ -78,7 +78,7 @@ class AzureChatOpenAIComponent(LCModelComponent):
         Output(display_name="Language Model", name="model_output", method="model_response"),
     ]
 
-    def model_response(self) -> LanguageModel:
+    def model_response(self) -> LanguageModel:  # type: ignore[type-var]
         model = self.model
         azure_endpoint = self.azure_endpoint
         azure_deployment = self.azure_deployment
@@ -107,4 +107,4 @@ class AzureChatOpenAIComponent(LCModelComponent):
         except Exception as e:
             raise ValueError("Could not connect to AzureOpenAI API.") from e
 
-        return output
+        return output  # type: ignore
