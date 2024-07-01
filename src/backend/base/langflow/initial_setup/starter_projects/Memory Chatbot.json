@@ -2,10 +2,11 @@
   "data": {
     "edges": [
       {
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "Memory",
-            "id": "Memory-uy2TA",
+            "id": "Memory-VIq7F",
             "name": "messages_text",
             "output_types": [
               "Message"
@@ -13,7 +14,7 @@
           },
           "targetHandle": {
             "fieldName": "context",
-            "id": "Prompt-m9rUs",
+            "id": "Prompt-gEaWL",
             "inputTypes": [
               "Message",
               "Text"
@@ -21,17 +22,18 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Memory-uy2TA{œdataTypeœ:œMemoryœ,œidœ:œMemory-uy2TAœ,œnameœ:œmessages_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-m9rUs{œfieldNameœ:œcontextœ,œidœ:œPrompt-m9rUsœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "Memory-uy2TA",
-        "sourceHandle": "{œdataTypeœ: œMemoryœ, œidœ: œMemory-uy2TAœ, œnameœ: œmessages_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-m9rUs",
-        "targetHandle": "{œfieldNameœ: œcontextœ, œidœ: œPrompt-m9rUsœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-Memory-VIq7F{œdataTypeœ:œMemoryœ,œidœ:œMemory-VIq7Fœ,œnameœ:œmessages_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-gEaWL{œfieldNameœ:œcontextœ,œidœ:œPrompt-gEaWLœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "Memory-VIq7F",
+        "sourceHandle": "{œdataTypeœ: œMemoryœ, œidœ: œMemory-VIq7Fœ, œnameœ: œmessages_textœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-gEaWL",
+        "targetHandle": "{œfieldNameœ: œcontextœ, œidœ: œPrompt-gEaWLœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-hSTqh",
+            "id": "ChatInput-gIy9N",
             "name": "message",
             "output_types": [
               "Message"
@@ -39,7 +41,7 @@
           },
           "targetHandle": {
             "fieldName": "user_message",
-            "id": "Prompt-m9rUs",
+            "id": "Prompt-gEaWL",
             "inputTypes": [
               "Message",
               "Text"
@@ -47,17 +49,18 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-hSTqh{œdataTypeœ:œChatInputœ,œidœ:œChatInput-hSTqhœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-m9rUs{œfieldNameœ:œuser_messageœ,œidœ:œPrompt-m9rUsœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "ChatInput-hSTqh",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-hSTqhœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-m9rUs",
-        "targetHandle": "{œfieldNameœ: œuser_messageœ, œidœ: œPrompt-m9rUsœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-ChatInput-gIy9N{œdataTypeœ:œChatInputœ,œidœ:œChatInput-gIy9Nœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-gEaWL{œfieldNameœ:œuser_messageœ,œidœ:œPrompt-gEaWLœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "ChatInput-gIy9N",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-gIy9Nœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-gEaWL",
+        "targetHandle": "{œfieldNameœ: œuser_messageœ, œidœ: œPrompt-gEaWLœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-m9rUs",
+            "id": "Prompt-gEaWL",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -65,24 +68,24 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "OpenAIModel-WmUtU",
+            "id": "OpenAIModel-uNcAU",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-m9rUs{œdataTypeœ:œPromptœ,œidœ:œPrompt-m9rUsœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-WmUtU{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-WmUtUœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Prompt-m9rUs",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-m9rUsœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "OpenAIModel-WmUtU",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-WmUtUœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-Prompt-gEaWL{œdataTypeœ:œPromptœ,œidœ:œPrompt-gEaWLœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-uNcAU{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-uNcAUœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "Prompt-gEaWL",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-gEaWLœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "OpenAIModel-uNcAU",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-uNcAUœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "data": {
           "sourceHandle": {
-            "dataType": "OpenAIModel",
-            "id": "OpenAIModel-WmUtU",
+            "dataType": "OpenAIModelComponent",
+            "id": "OpenAIModel-uNcAU",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -90,24 +93,24 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-LIvGN",
+            "id": "ChatOutput-KtSB9",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-OpenAIModel-WmUtU{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-WmUtUœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-LIvGN{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-LIvGNœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "OpenAIModel-WmUtU",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-WmUtUœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-LIvGN",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-LIvGNœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-OpenAIModel-uNcAU{œdataTypeœ:œOpenAIModelComponentœ,œidœ:œOpenAIModel-uNcAUœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-KtSB9{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-KtSB9œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "OpenAIModel-uNcAU",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelComponentœ, œidœ: œOpenAIModel-uNcAUœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-KtSB9",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-KtSB9œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "Memory-uy2TA",
+          "id": "Memory-VIq7F",
           "node": {
             "base_classes": [
               "Data",
@@ -296,7 +299,7 @@
         },
         "dragging": false,
         "height": 266,
-        "id": "Memory-uy2TA",
+        "id": "Memory-VIq7F",
         "position": {
           "x": 1264.7588980556088,
           "y": 506.6868269980502
@@ -313,7 +316,7 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-m9rUs",
+          "id": "Prompt-gEaWL",
           "node": {
             "base_classes": [
               "Message"
@@ -446,7 +449,7 @@
         },
         "dragging": false,
         "height": 515,
-        "id": "Prompt-m9rUs",
+        "id": "Prompt-gEaWL",
         "position": {
           "x": 1880.8227904110583,
           "y": 625.8049209882275
@@ -461,7 +464,7 @@
       },
       {
         "data": {
-          "id": "ChatInput-hSTqh",
+          "id": "ChatInput-gIy9N",
           "node": {
             "base_classes": [
               "Message"
@@ -644,7 +647,7 @@
         },
         "dragging": false,
         "height": 308,
-        "id": "ChatInput-hSTqh",
+        "id": "ChatInput-gIy9N",
         "position": {
           "x": 1275.9262193671882,
           "y": 836.1228056896347
@@ -659,7 +662,10 @@
       },
       {
         "data": {
-          "id": "OpenAIModel-WmUtU",
+          "description": "Generates text using OpenAI LLMs.",
+          "display_name": "OpenAI",
+          "edited": false,
+          "id": "OpenAIModel-uNcAU",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -671,11 +677,12 @@
             "description": "Generates text using OpenAI LLMs.",
             "display_name": "OpenAI",
             "documentation": "",
-            "edited": false,
+            "edited": true,
             "field_order": [
               "input_value",
               "max_tokens",
               "model_kwargs",
+              "json_mode",
               "output_schema",
               "model_name",
               "openai_api_base",
@@ -732,7 +739,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "import operator\nfrom functools import reduce\n\nfrom langchain_openai import ChatOpenAI\nfrom pydantic.v1 import SecretStr\n\nfrom langflow.base.constants import STREAM_INFO_TEXT\nfrom langflow.base.models.model import LCModelComponent\nfrom langflow.base.models.openai_constants import MODEL_NAMES\nfrom langflow.field_typing import LanguageModel\nfrom langflow.inputs import (\n    BoolInput,\n    DictInput,\n    DropdownInput,\n    FloatInput,\n    IntInput,\n    MessageInput,\n    SecretStrInput,\n    StrInput,\n)\n\n\nclass OpenAIModelComponent(LCModelComponent):\n    display_name = \"OpenAI\"\n    description = \"Generates text using OpenAI LLMs.\"\n    icon = \"OpenAI\"\n\n    inputs = [\n        MessageInput(name=\"input_value\", display_name=\"Input\"),\n        IntInput(\n            name=\"max_tokens\",\n            display_name=\"Max Tokens\",\n            advanced=True,\n            info=\"The maximum number of tokens to generate. Set to 0 for unlimited tokens.\",\n        ),\n        DictInput(name=\"model_kwargs\", display_name=\"Model Kwargs\", advanced=True),\n        DictInput(\n            name=\"output_schema\",\n            is_list=True,\n            display_name=\"Schema\",\n            advanced=True,\n            info=\"The schema for the Output of the model. You must pass the word JSON in the prompt. If left blank, JSON mode will be disabled.\",\n        ),\n        DropdownInput(\n            name=\"model_name\", display_name=\"Model Name\", advanced=False, options=MODEL_NAMES, value=MODEL_NAMES[0]\n        ),\n        StrInput(\n            name=\"openai_api_base\",\n            display_name=\"OpenAI API Base\",\n            advanced=True,\n            info=\"The base URL of the OpenAI API. Defaults to https://api.openai.com/v1. You can change this to use other APIs like JinaChat, LocalAI and Prem.\",\n        ),\n        SecretStrInput(\n            name=\"openai_api_key\",\n            display_name=\"OpenAI API Key\",\n            info=\"The OpenAI API Key to use for the OpenAI model.\",\n            advanced=False,\n            value=\"OPENAI_API_KEY\",\n        ),\n        FloatInput(name=\"temperature\", display_name=\"Temperature\", value=0.1),\n        BoolInput(name=\"stream\", display_name=\"Stream\", info=STREAM_INFO_TEXT, advanced=True),\n        StrInput(\n            name=\"system_message\",\n            display_name=\"System Message\",\n            info=\"System message to pass to the model.\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"seed\",\n            display_name=\"Seed\",\n            info=\"The seed controls the reproducibility of the job.\",\n            advanced=True,\n            value=1,\n        ),\n    ]\n\n    def build_model(self) -> LanguageModel:\n        # self.output_schea is a list of dictionaries\n        # let's convert it to a dictionary\n        output_schema_dict: dict[str, str] = reduce(operator.ior, self.output_schema or {}, {})\n        openai_api_key = self.openai_api_key\n        temperature = self.temperature\n        model_name: str = self.model_name\n        max_tokens = self.max_tokens\n        model_kwargs = self.model_kwargs or {}\n        openai_api_base = self.openai_api_base or \"https://api.openai.com/v1\"\n        json_mode = bool(output_schema_dict)\n        seed = self.seed\n        model_kwargs[\"seed\"] = seed\n\n        if openai_api_key:\n            api_key = SecretStr(openai_api_key)\n        else:\n            api_key = None\n        output = ChatOpenAI(\n            max_tokens=max_tokens or None,\n            model_kwargs=model_kwargs,\n            model=model_name,\n            base_url=openai_api_base,\n            api_key=api_key,\n            temperature=temperature or 0.1,\n        )\n        if json_mode:\n            output = output.with_structured_output(schema=output_schema_dict, method=\"json_mode\")  # type: ignore\n\n        return output\n\n    def _get_exception_message(self, e: Exception):\n        \"\"\"\n        Get a message from an OpenAI exception.\n\n        Args:\n            exception (Exception): The exception to get the message from.\n\n        Returns:\n            str: The message from the exception.\n        \"\"\"\n\n        try:\n            from openai import BadRequestError\n        except ImportError:\n            return\n        if isinstance(e, BadRequestError):\n            message = e.body.get(\"message\")  # type: ignore\n            if message:\n                return message\n        return\n"
+                "value": "import operator\nfrom functools import reduce\n\nfrom langchain_openai import ChatOpenAI\nfrom pydantic.v1 import SecretStr\n\nfrom langflow.base.constants import STREAM_INFO_TEXT\nfrom langflow.base.models.model import LCModelComponent\nfrom langflow.base.models.openai_constants import MODEL_NAMES\nfrom langflow.field_typing import LanguageModel\nfrom langflow.inputs import (\n    BoolInput,\n    DictInput,\n    DropdownInput,\n    FloatInput,\n    IntInput,\n    MessageInput,\n    SecretStrInput,\n    StrInput,\n)\n\n\nclass OpenAIModelComponent(LCModelComponent):\n    display_name = \"OpenAI\"\n    description = \"Generates text using OpenAI LLMs.\"\n    icon = \"OpenAI\"\n\n    inputs = [\n        MessageInput(name=\"input_value\", display_name=\"Input\"),\n        IntInput(\n            name=\"max_tokens\",\n            display_name=\"Max Tokens\",\n            advanced=True,\n            info=\"The maximum number of tokens to generate. Set to 0 for unlimited tokens.\",\n        ),\n        DictInput(name=\"model_kwargs\", display_name=\"Model Kwargs\", advanced=True),\n        BoolInput(\n            name=\"json_mode\",\n            display_name=\"JSON Mode\",\n            advanced=True,\n            info=\"If True, it will output JSON regardless of passing a schema.\",\n        ),\n        DictInput(\n            name=\"output_schema\",\n            is_list=True,\n            display_name=\"Schema\",\n            advanced=True,\n            info=\"The schema for the Output of the model. You must pass the word JSON in the prompt. If left blank, JSON mode will be disabled.\",\n        ),\n        DropdownInput(\n            name=\"model_name\", display_name=\"Model Name\", advanced=False, options=MODEL_NAMES, value=MODEL_NAMES[0]\n        ),\n        StrInput(\n            name=\"openai_api_base\",\n            display_name=\"OpenAI API Base\",\n            advanced=True,\n            info=\"The base URL of the OpenAI API. Defaults to https://api.openai.com/v1. You can change this to use other APIs like JinaChat, LocalAI and Prem.\",\n        ),\n        SecretStrInput(\n            name=\"openai_api_key\",\n            display_name=\"OpenAI API Key\",\n            info=\"The OpenAI API Key to use for the OpenAI model.\",\n            advanced=False,\n            value=\"OPENAI_API_KEY\",\n        ),\n        FloatInput(name=\"temperature\", display_name=\"Temperature\", value=0.1),\n        BoolInput(name=\"stream\", display_name=\"Stream\", info=STREAM_INFO_TEXT, advanced=True),\n        StrInput(\n            name=\"system_message\",\n            display_name=\"System Message\",\n            info=\"System message to pass to the model.\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"seed\",\n            display_name=\"Seed\",\n            info=\"The seed controls the reproducibility of the job.\",\n            advanced=True,\n            value=1,\n        ),\n    ]\n\n    def build_model(self) -> LanguageModel:\n        # self.output_schea is a list of dictionaries\n        # let's convert it to a dictionary\n        output_schema_dict: dict[str, str] = reduce(operator.ior, self.output_schema or {}, {})\n        openai_api_key = self.openai_api_key\n        temperature = self.temperature\n        model_name: str = self.model_name\n        max_tokens = self.max_tokens\n        model_kwargs = self.model_kwargs or {}\n        openai_api_base = self.openai_api_base or \"https://api.openai.com/v1\"\n        json_mode = bool(output_schema_dict) or self.json_mode\n        seed = self.seed\n        model_kwargs[\"seed\"] = seed\n\n        if openai_api_key:\n            api_key = SecretStr(openai_api_key)\n        else:\n            api_key = None\n        output = ChatOpenAI(\n            max_tokens=max_tokens or None,\n            model_kwargs=model_kwargs,\n            model=model_name,\n            base_url=openai_api_base,\n            api_key=api_key,\n            temperature=temperature or 0.1,\n        )\n        if json_mode:\n            if output_schema_dict:\n                output = output.with_structured_output(schema=output_schema_dict, method=\"json_mode\")  # type: ignore\n            else:\n                output = output.bind(response_format={\"type\": \"json_object\"})  # type: ignore\n\n        return output\n\n    def _get_exception_message(self, e: Exception):\n        \"\"\"\n        Get a message from an OpenAI exception.\n\n        Args:\n            exception (Exception): The exception to get the message from.\n\n        Returns:\n            str: The message from the exception.\n        \"\"\"\n\n        try:\n            from openai import BadRequestError\n        except ImportError:\n            return\n        if isinstance(e, BadRequestError):\n            message = e.body.get(\"message\")  # type: ignore\n            if message:\n                return message\n        return\n"
               },
               "input_value": {
                 "advanced": false,
@@ -753,6 +760,21 @@
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": ""
+              },
+              "json_mode": {
+                "advanced": true,
+                "display_name": "JSON Mode",
+                "dynamic": false,
+                "info": "If True, it will output JSON regardless of passing a schema.",
+                "list": false,
+                "name": "json_mode",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
               },
               "max_tokens": {
                 "advanced": true,
@@ -827,7 +849,7 @@
                 "dynamic": false,
                 "info": "The OpenAI API Key to use for the OpenAI model.",
                 "input_types": [],
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "openai_api_key",
                 "password": true,
                 "placeholder": "",
@@ -835,7 +857,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "OPENAI_API_KEY"
               },
               "output_schema": {
                 "advanced": true,
@@ -915,11 +937,11 @@
               }
             }
           },
-          "type": "OpenAIModel"
+          "type": "OpenAIModelComponent"
         },
         "dragging": false,
         "height": 621,
-        "id": "OpenAIModel-WmUtU",
+        "id": "OpenAIModel-uNcAU",
         "position": {
           "x": 2428.0215346784357,
           "y": 569.9683144303319
@@ -934,7 +956,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-LIvGN",
+          "id": "ChatOutput-KtSB9",
           "node": {
             "base_classes": [
               "Message"
@@ -1094,7 +1116,7 @@
         },
         "dragging": false,
         "height": 308,
-        "id": "ChatOutput-LIvGN",
+        "id": "ChatOutput-KtSB9",
         "position": {
           "x": 2988.248820475989,
           "y": 705.837390387878
@@ -1116,8 +1138,8 @@
   },
   "description": "This project can be used as a starting point for building a Chat experience with user specific memory. You can set a different Session ID to start a new message history.",
   "endpoint_name": null,
-  "id": "2a47bc35-69ca-4d8b-9895-2a7fab222b9f",
+  "id": "16c029a0-0d89-4c36-8a8c-e5410206df38",
   "is_component": false,
-  "last_tested_version": "1.0.0rc1",
+  "last_tested_version": "1.0.5",
   "name": "Memory Chatbot"
 }

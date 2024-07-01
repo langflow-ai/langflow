@@ -229,6 +229,7 @@ export default function CollectionCardComponent({
                       render={({ field }) => (
                         <FormControl>
                           <Checkbox
+                            data-testid={`checkbox-component`}
                             aria-label="checkbox-component"
                             checked={field.value}
                             onCheckedChange={field.onChange}
@@ -261,7 +262,15 @@ export default function CollectionCardComponent({
             </div>
 
             <CardDescription className="pb-2 pt-2">
-              <div className="truncate-doubleline">{data.description}</div>
+              <div
+                className={
+                  data?.metadata !== undefined
+                    ? "truncate"
+                    : "truncate-doubleline"
+                }
+              >
+                {data.description}
+              </div>
             </CardDescription>
           </CardHeader>
         </div>
