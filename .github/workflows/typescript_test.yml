@@ -7,6 +7,8 @@ on:
         description: "Branch to run tests on"
         required: true
         type: string
+  pull_request:
+  merge_group:
 
 
 env:
