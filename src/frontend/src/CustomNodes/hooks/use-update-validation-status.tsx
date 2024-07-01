@@ -1,6 +1,11 @@
 import { useEffect } from "react";
+import { FlowPoolType } from "../../types/zustand/flow";
 
-const useUpdateValidationStatus = (dataId, flowPool, setValidationStatus) => {
+const useUpdateValidationStatus = (
+  dataId: string,
+  flowPool: FlowPoolType,
+  setValidationStatus: (value: any) => void,
+) => {
   useEffect(() => {
     const relevantData =
       flowPool[dataId] && flowPool[dataId]?.length > 0

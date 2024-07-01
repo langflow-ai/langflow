@@ -2,7 +2,7 @@ import useAlertStore from "../../../stores/alertStore";
 import { useFolderStore } from "../../../stores/foldersStore";
 import { deleteFolder, getFolderById } from "../services";
 
-const useDeleteFolder = ({ navigate }) => {
+const useDeleteFolder = ({ navigate }: { navigate: (url: string) => void }) => {
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const folderToEdit = useFolderStore((state) => state.folderToEdit);

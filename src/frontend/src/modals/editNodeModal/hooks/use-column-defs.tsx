@@ -2,11 +2,11 @@ import { ColDef, ValueGetterParams } from "ag-grid-community";
 import { useMemo } from "react";
 import TableNodeCellRender from "../../../components/tableComponent/components/tableNodeCellRender";
 import TableToggleCellRender from "../../../components/tableComponent/components/tableToggleCellRender";
+import { NodeDataType } from "../../../types/flow";
 
 const useColumnDefs = (
-  myData: any,
-  handleOnNewValue: (newValue: any, name: string) => void,
-  handleOnChangeDb: (value: boolean, key: string) => void,
+  myData: NodeDataType,
+  handleOnNewValue: (newValue: any, name: string, setDb?: boolean) => void,
   changeAdvanced: (n: string) => void,
   open: boolean,
 ) => {
@@ -48,7 +48,6 @@ const useColumnDefs = (
             value: params.data.value,
             nodeClass: myData.node,
             handleOnNewValue: handleOnNewValue,
-            handleOnChangeDb: handleOnChangeDb,
           };
         },
         minWidth: 340,

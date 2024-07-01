@@ -7,11 +7,11 @@ import { AuthContext } from "../../../../contexts/authContext";
 import { addApiKeyStore } from "../../../../controllers/API";
 
 const useSaveKey = (
-  setSuccessData,
-  setErrorData,
-  setHasApiKey,
-  setValidApiKey,
-  setLoadingApiKey,
+  setSuccessData: (data: { title: string }) => void,
+  setErrorData: (data: { title: string; list: string[] }) => void,
+  setHasApiKey: (hasApiKey: boolean) => void,
+  setValidApiKey: (validApiKey: boolean) => void,
+  setLoadingApiKey: (loadingApiKey: boolean) => void,
 ) => {
   const { storeApiKey } = useContext(AuthContext);
 

@@ -1,8 +1,10 @@
 import { useEffect } from "react";
 
 const useSelectedFlows = (
-  entireFormValues,
-  setSelectedFlowsComponentsCards,
+  entireFormValues: Record<string, boolean> | undefined,
+  setSelectedFlowsComponentsCards: (
+    selectedFlowsComponentsCards: string[],
+  ) => void,
 ) => {
   useEffect(() => {
     if (!entireFormValues || Object.keys(entireFormValues).length === 0) return;

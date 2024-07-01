@@ -10,7 +10,7 @@ const useRemoveSession = (setSuccessData, setErrorData) => {
       await deleteMessagesFn(
         messages
           .filter((msg) => msg.session_id === session_id)
-          .map((msg) => msg.index),
+          .map((msg) => msg.id),
       );
       deleteSession(session_id);
       setSuccessData({

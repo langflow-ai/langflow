@@ -1,9 +1,13 @@
 import { useNavigate } from "react-router-dom";
+import { FolderType } from "../../../pages/MainPage/entities";
 import { addFolder, updateFolder } from "../../../pages/MainPage/services";
 import useAlertStore from "../../../stores/alertStore";
 import { useFolderStore } from "../../../stores/foldersStore";
 
-const useFolderSubmit = (setOpen, folderToEdit) => {
+const useFolderSubmit = (
+  setOpen: (a: boolean) => void,
+  folderToEdit: FolderType | null,
+) => {
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const getFoldersApi = useFolderStore((state) => state.getFoldersApi);

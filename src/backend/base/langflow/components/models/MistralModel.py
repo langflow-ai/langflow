@@ -70,7 +70,7 @@ class MistralAIModelComponent(LCModelComponent):
         Output(display_name="Language Model", name="model_output", method="build_model"),
     ]
 
-    def build_model(self) -> LanguageModel:
+    def build_model(self) -> LanguageModel:  # type: ignore[type-var]
         mistral_api_key = self.mistral_api_key
         temperature = self.temperature
         model_name = self.model_name
@@ -102,4 +102,4 @@ class MistralAIModelComponent(LCModelComponent):
             safe_mode=safe_mode,
         )
 
-        return output
+        return output  # type: ignore

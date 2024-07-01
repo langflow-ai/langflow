@@ -1,8 +1,11 @@
+import { ColDef, ColGroupDef } from "ag-grid-community";
 import { useEffect } from "react";
 import { getMessagesTable } from "../../../../../controllers/API";
 import { useMessagesStore } from "../../../../../stores/messagesStore";
 
-const useMessagesTable = (setColumns) => {
+const useMessagesTable = (
+  setColumns: (data: Array<ColDef | ColGroupDef>) => void,
+) => {
   const setMessages = useMessagesStore((state) => state.setMessages);
   useEffect(() => {
     const fetchData = async () => {
