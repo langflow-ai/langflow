@@ -428,11 +428,11 @@ def create_component_template(component):
 
     component_extractor = Component(code=component_code)
 
-    component_template, _ = build_custom_component_template(component_extractor)
+    component_template, component_instance = build_custom_component_template(component_extractor)
     if not component_template["output_types"] and component_output_types:
         component_template["output_types"] = component_output_types
 
-    return component_template
+    return component_template, component_instance
 
 
 def build_custom_components(components_paths: List[str]):
@@ -543,8 +543,8 @@ def sanitize_field_config(field_config: Union[Dict, Input]):
 
 def build_component(component):
     """Build a single component."""
-    component_name = determine_component_name(component)
-    component_template = create_component_template(component)
+    component_template, component_instance = create_component_template(component)
+    component_name = type(component_instance).__name__
 
     return component_name, component_template
 
