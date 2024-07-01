@@ -3,8 +3,6 @@ import uaParser from "ua-parser-js";
 test("LangflowShortcuts", async ({ page }) => {
   await page.goto("/");
 
-  await page.waitForTimeout(1000);
-
   let modalCount = 0;
   try {
     const modalTitleElement = await page?.getByTestId("modal-title");
@@ -29,10 +27,15 @@ test("LangflowShortcuts", async ({ page }) => {
     control = "Meta";
   }
 
-  await page.getByTestId("blank-flow").click();
-  await page.waitForSelector('[data-testid="extended-disclosure"]', {
-    timeout: 100000,
+  await page.waitForSelector('[data-testid="blank-flow"]', {
+    timeout: 30000,
   });
+  await page.getByTestId("blank-flow").click();
+
+  await page.waitForSelector('[data-testid="extended-disclosure"]', {
+    timeout: 30000,
+  });
+
   await page.getByTestId("extended-disclosure").click();
   await page.getByPlaceholder("Search").click();
   await page.getByPlaceholder("Search").fill("ollama");

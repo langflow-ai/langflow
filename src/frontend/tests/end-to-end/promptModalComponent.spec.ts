@@ -24,7 +24,7 @@ test("PromptTemplateComponent", async ({ page }) => {
   });
   await page.getByTestId("blank-flow").click();
   await page.waitForSelector('[data-testid="extended-disclosure"]', {
-    timeout: 100000,
+    timeout: 30000,
   });
   await page.getByTestId("extended-disclosure").click();
   await page.getByPlaceholder("Search").click();
