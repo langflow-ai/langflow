@@ -10,6 +10,7 @@ on:
   pull_request:
   merge_group:
 
+
 env:
   POETRY_VERSION: "1.8.3"
   NODE_VERSION: "21"
