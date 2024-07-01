@@ -2,15 +2,6 @@ import { expect, test } from "@playwright/test";
 import uaParser from "ua-parser-js";
 test("LangflowShortcuts", async ({ page }) => {
   await page.goto("/");
-  const getUA = await page.evaluate(() => navigator.userAgent);
-  const userAgentInfo = uaParser(getUA);
-  let control = "Control";
-
-  if (userAgentInfo.os.name.includes("Mac")) {
-    control = "Meta";
-  }
-
-  await page.waitForTimeout(1000);
 
   let modalCount = 0;
   try {
@@ -28,8 +19,23 @@ test("LangflowShortcuts", async ({ page }) => {
     modalCount = await page.getByTestId("modal-title")?.count();
   }
 
+  const getUA = await page.evaluate(() => navigator.userAgent);
+  const userAgentInfo = uaParser(getUA);
+  let control = "Control";
+
+  if (userAgentInfo.os.name.includes("Mac")) {
+    control = "Meta";
+  }
+
+  await page.waitForSelector('[data-testid="blank-flow"]', {
+    timeout: 30000,
+  });
   await page.getByTestId("blank-flow").click();
-  await page.waitForTimeout(3000);
+
+  await page.waitForSelector('[data-testid="extended-disclosure"]', {
+    timeout: 30000,
+  });
+
   await page.getByTestId("extended-disclosure").click();
   await page.getByPlaceholder("Search").click();
   await page.getByPlaceholder("Search").fill("ollama");
@@ -43,6 +49,11 @@ test("LangflowShortcuts", async ({ page }) => {
   await page.mouse.down();
 
   await page.locator('//*[@id="react-flow-id"]/div/div[2]/button[3]').click();
+
+  await page.waitForSelector('[title="fit view"]', {
+    timeout: 100000,
+  });
+
   await page.getByTitle("fit view").click();
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
@@ -59,11 +70,9 @@ test("LangflowShortcuts", async ({ page }) => {
     expect(false).toBeTruthy();
   }
 
-  await page
-    .locator(
-      '//*[@id="react-flow-id"]/div[1]/div[1]/div[1]/div/div[2]/div[2]/div/div[1]/div/div[1]/div/div/div[1]',
-    )
-    .click();
+  const ollamaTitleElement = await page.getByTestId("title-Ollama").last();
+
+  await ollamaTitleElement.click();
   await page.keyboard.press("Backspace");
 
   numberOfNodes = await page.getByTestId("title-Ollama")?.count();
@@ -82,11 +91,7 @@ test("LangflowShortcuts", async ({ page }) => {
     expect(false).toBeTruthy();
   }
 
-  await page
-    .locator(
-      '//*[@id="react-flow-id"]/div[1]/div[1]/div[1]/div/div[2]/div[2]/div/div[1]/div/div[1]/div/div/div[1]',
-    )
-    .click();
+  await ollamaTitleElement.click();
   await page.keyboard.press("Backspace");
 
   await page.getByTestId("title-Ollama").click();

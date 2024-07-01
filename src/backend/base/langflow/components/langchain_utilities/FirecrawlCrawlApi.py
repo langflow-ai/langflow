@@ -1,7 +1,9 @@
+import uuid
 from typing import Optional
+
 from langflow.custom import CustomComponent
 from langflow.schema import Data
-import uuid
+
 
 
 class FirecrawlCrawlApi(CustomComponent):
@@ -56,7 +58,7 @@ class FirecrawlCrawlApi(CustomComponent):
             from firecrawl.firecrawl import FirecrawlApp  # type: ignore
         except ImportError:
             raise ImportError(
-                "Could not import firecrawl package. " "Please install it with `pip install firecrawl-py`."
+                "Could not import firecrawl integration package. " "Please install it with `pip install firecrawl-py`."
             )
         if crawlerOptions:
             crawler_options_dict = crawlerOptions.__dict__["data"]["text"]
