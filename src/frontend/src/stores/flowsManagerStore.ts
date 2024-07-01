@@ -1,3 +1,4 @@
+import { AxiosError } from "axios";
 import { cloneDeep } from "lodash";
 import pDebounce from "p-debounce";
 import { Edge, Node, Viewport, XYPosition } from "reactflow";
@@ -23,11 +24,13 @@ import {
   extractFieldsFromComponenents,
   processDataFromFlow,
   processFlows,
+  updateGroupRecursion,
 } from "../utils/reactflowUtils";
 import useAlertStore from "./alertStore";
 import { useDarkStore } from "./darkStore";
 import useFlowStore from "./flowStore";
 import { useFolderStore } from "./foldersStore";
+import { useGlobalVariablesStore } from "./globalVariablesStore/globalVariables";
 import { useTypesStore } from "./typesStore";
 
 let saveTimeoutId: NodeJS.Timeout | null = null;
@@ -202,6 +205,14 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
     let flowData = flow
       ? processDataFromFlow(flow)
       : { nodes: [], edges: [], viewport: { zoom: 1, x: 0, y: 0 } };
+    flowData?.nodes.forEach((node) => {
+      updateGroupRecursion(
+        node,
+        flowData?.edges,
+        useGlobalVariablesStore.getState().unavaliableFields,
+        useGlobalVariablesStore.getState().globalVariablesEntries,
+      );
+    });
     if (newProject) {
       // Create a new flow with a default name if no flow is provided.
       const folder_id = useFolderStore.getState().folderUrl;
