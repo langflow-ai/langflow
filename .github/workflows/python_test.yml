@@ -3,9 +3,7 @@ name: Python tests
 on:
   pull_request:
     types: [opened, synchronize, reopened]
-    branches: [dev, main]
-  merge_group:
-    types: [checks_requested]
+    branches: [main]
 env:
   POETRY_VERSION: "1.8.2"
 
