@@ -174,9 +174,10 @@ export default function ParameterComponent({
 
   const handleOnNewValue = async (
     newValue: string | string[] | boolean | Object[],
+    dbValue?: boolean,
     skipSnapshot: boolean | undefined = false,
   ): Promise<void> => {
-    handleOnNewValueHook(newValue, skipSnapshot);
+    handleOnNewValueHook(newValue, dbValue, skipSnapshot);
   };
 
   const handleNodeClass = (newNodeClass: APIClassType, code?: string): void => {
@@ -470,16 +471,6 @@ export default function ParameterComponent({
                   <InputGlobalComponent
                     disabled={disabled}
                     onChange={handleOnNewValue}
-                    setDb={(value) => {
-                      setNode(data.id, (oldNode) => {
-                        let newNode = cloneDeep(oldNode);
-                        newNode.data = {
-                          ...newNode.data,
-                        };
-                        newNode.data.node.template[name].load_from_db = value;
-                        return newNode;
-                      });
-                    }}
                     name={name}
                     data={data.node?.template[name]!}
                   />

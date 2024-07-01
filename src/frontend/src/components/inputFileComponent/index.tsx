@@ -27,7 +27,7 @@ export default function InputFileComponent({
   useEffect(() => {
     if (disabled && value !== "") {
       setMyValue("");
-      onChange("", true);
+      onChange("", undefined, true);
       onFileChange("");
     }
   }, [disabled, onChange]);
