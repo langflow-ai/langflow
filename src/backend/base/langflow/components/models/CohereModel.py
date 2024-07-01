@@ -51,4 +51,4 @@ class CohereComponent(LCModelComponent):
             cohere_api_key=api_key,
         )
 
-        return output
+        return output  # type: ignore

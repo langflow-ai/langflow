@@ -223,7 +223,7 @@ class ChatOllamaComponent(LCModelComponent):
         Output(display_name="Language Model", name="model_output", method="build_model"),
     ]
 
-    def build_model(self) -> LanguageModel:
+    def build_model(self) -> LanguageModel:  # type: ignore[type-var]
         # Mapping mirostat settings to their corresponding values
         mirostat_options = {"Mirostat": 1, "Mirostat 2.0": 2}
 
@@ -272,4 +272,4 @@ class ChatOllamaComponent(LCModelComponent):
         except Exception as e:
             raise ValueError("Could not initialize Ollama LLM.") from e
 
-        return output
+        return output  # type: ignore

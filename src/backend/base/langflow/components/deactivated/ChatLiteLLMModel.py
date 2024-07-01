@@ -127,7 +127,7 @@ class ChatLiteLLMModelComponent(LCModelComponent):
         Output(display_name="Language Model", name="model_output", method="build_model"),
     ]
 
-    def build_model(self) -> LanguageModel:
+    def build_model(self) -> LanguageModel:  # type: ignore[type-var]
         try:
             import litellm  # type: ignore
 
@@ -176,5 +176,4 @@ class ChatLiteLLMModelComponent(LCModelComponent):
             openrouter_api_key=api_keys["openrouter_api_key"],
         )
 
-        return output
-        return output
+        return output  # type: ignore
