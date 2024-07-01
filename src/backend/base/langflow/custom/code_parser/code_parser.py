@@ -329,8 +329,6 @@ class CodeParser:
         """
         Extracts "classes" from the code, including inheritance and init methods.
         """
-        if node.name in ["CustomComponent", "Component", "BaseComponent"]:
-            return
         bases = self.get_base_classes()
         nodes = []
         for base in bases:

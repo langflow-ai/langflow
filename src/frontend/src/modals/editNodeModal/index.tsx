@@ -16,13 +16,11 @@ const EditNodeModal = forwardRef(
       nodeLength,
       open,
       setOpen,
-      //      setOpenWDoubleClick,
       data,
     }: {
       nodeLength: number;
       open: boolean;
       setOpen: (open: boolean) => void;
-      //      setOpenWDoubleClick: (open: boolean) => void;
       data: NodeDataType;
     },
     ref,
@@ -38,12 +36,11 @@ const EditNodeModal = forwardRef(
         !myData.current.node!.template[n]?.advanced;
     }
 
-    const handleOnNewValue = (newValue: any, key: string) => {
+    const handleOnNewValue = (newValue: any, key: string, setDb?: boolean) => {
       myData.current.node!.template[key].value = newValue;
-    };
-
-    const handleOnChangeDb = (newValue: boolean, key: string) => {
-      myData.current.node!.template[key].load_from_db = newValue;
+      if (setDb) {
+        myData.current.node!.template[key].load_from_db = newValue;
+      }
     };
 
     const rowData = useRowData(data, open);
@@ -51,7 +48,6 @@ const EditNodeModal = forwardRef(
     const columnDefs: ColDef[] = useColumnDefs(
       data,
       handleOnNewValue,
-      handleOnChangeDb,
       changeAdvanced,
       open,
     );
@@ -71,7 +67,7 @@ const EditNodeModal = forwardRef(
           <></>
         </BaseModal.Trigger>
         <BaseModal.Header description={data.node?.description!}>
-          <span className="pr-2">{data.type}</span>
+          <span className="pr-2">{data.node?.display_name ?? data.type}</span>
           <div>
             <Badge size="sm" variant={isDark ? "gray" : "secondary"}>
               ID: {data.id}
