@@ -64,7 +64,7 @@ class AnthropicModelComponent(LCModelComponent):
         Output(display_name="Language Model", name="model_output", method="build_model"),
     ]
 
-    def build_model(self) -> LanguageModel:
+    def build_model(self) -> LanguageModel:  # type: ignore[type-var]
         model = self.model
         anthropic_api_key = self.anthropic_api_key
         max_tokens = self.max_tokens
@@ -83,7 +83,7 @@ class AnthropicModelComponent(LCModelComponent):
         except Exception as e:
             raise ValueError("Could not connect to Anthropic API.") from e
 
-        return output
+        return output  # type: ignore
 
     def _get_exception_message(self, exception: Exception) -> str | None:
         """

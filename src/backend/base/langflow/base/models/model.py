@@ -143,13 +143,13 @@ class LCModelComponent(Component):
                 messages.append(HumanMessage(content=input_value))
         inputs: Union[list, dict] = messages or {}
         try:
-            runnable = runnable.with_config(
-                {"run_name": self.display_name, "project_name": self._tracing_service.project_name}
+            runnable = runnable.with_config(  # type: ignore
+                {"run_name": self.display_name, "project_name": self._tracing_service.project_name}  # type: ignore
             )
             if stream:
-                return runnable.stream(inputs)
+                return runnable.stream(inputs)  # type: ignore
             else:
-                message = runnable.invoke(inputs)
+                message = runnable.invoke(inputs)  # type: ignore
                 result = message.content if hasattr(message, "content") else message
                 if isinstance(message, AIMessage):
                     status_message = self.build_status_message(message)

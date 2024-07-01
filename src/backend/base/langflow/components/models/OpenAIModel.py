@@ -80,8 +80,8 @@ class OpenAIModelComponent(LCModelComponent):
         ),
     ]
 
-    def build_model(self) -> LanguageModel:
-        # self.output_schea is a list of dictionaries
+    def build_model(self) -> LanguageModel:  # type: ignore[type-var]
+        # self.output_schea is a list of dictionarie s
         # let's convert it to a dictionary
         output_schema_dict: dict[str, str] = reduce(operator.ior, self.output_schema or {}, {})
         openai_api_key = self.openai_api_key
@@ -112,7 +112,7 @@ class OpenAIModelComponent(LCModelComponent):
             else:
                 output = output.bind(response_format={"type": "json_object"})  # type: ignore
 
-        return output
+        return output  # type: ignore
 
     def _get_exception_message(self, e: Exception):
         """
