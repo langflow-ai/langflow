@@ -6,8 +6,7 @@ import { NodeDataType } from "../../../types/flow";
 
 const useColumnDefs = (
   myData: NodeDataType,
-  handleOnNewValue: (newValue: any, name: string) => void,
-  handleOnChangeDb: (value: boolean, key: string) => void,
+  handleOnNewValue: (newValue: any, name: string, setDb?: boolean) => void,
   changeAdvanced: (n: string) => void,
   open: boolean,
 ) => {
@@ -49,7 +48,6 @@ const useColumnDefs = (
             value: params.data.value,
             nodeClass: myData.node,
             handleOnNewValue: handleOnNewValue,
-            handleOnChangeDb: handleOnChangeDb,
           };
         },
         minWidth: 340,

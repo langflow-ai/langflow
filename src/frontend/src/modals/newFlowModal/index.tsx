@@ -10,12 +10,6 @@ export default function NewFlowModal({
 }: newFlowModalPropsType): JSX.Element {
   const examples = useFlowsManagerStore((state) => state.examples);
 
-  examples?.forEach((example) => {
-    if (example.name === "Blog Writter") {
-      example.name = "Blog Writer";
-    }
-  });
-
   return (
     <BaseModal size="three-cards" open={open} setOpen={setOpen}>
       <BaseModal.Header description={"Select a template below"}>
