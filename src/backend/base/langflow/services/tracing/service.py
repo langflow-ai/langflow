@@ -71,8 +71,9 @@ class TracingService(Service):
             # check the qeue is empty
             if not self.logs_queue.empty():
                 await self.logs_queue.join()
-            self.worker_task.cancel()
-            self.worker_task = None
+            if self.worker_task:
+                self.worker_task.cancel()
+                self.worker_task = None
 
         except Exception as e:
             logger.error(f"Error stopping tracing service: {e}")
