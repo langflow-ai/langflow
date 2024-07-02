@@ -20,8 +20,17 @@ env:
   POETRY_VERSION: "1.8.2"
 
 jobs:
+  test_frontend:
+    name: Call Typescript Test Workflow
+    uses: langflow-ai/langflow/.github/workflows/typescript_test.yml@main
+
+  test_backend:
+    name: Call Python Test Workflow
+    uses: langflow-ai/langflow/.github/workflows/python_test.yml@main
+
   release-base:
     name: Release Langflow Base
+    needs: [test_backend, test_frontend]
     if: inputs.release_package == true
     runs-on: ubuntu-latest
     outputs:
@@ -82,7 +91,7 @@ jobs:
   release-main:
     name: Release Langflow Main
     if: inputs.release_package == true
-    needs: release-base
+    needs: [release-base]
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.check-version.outputs.version }}

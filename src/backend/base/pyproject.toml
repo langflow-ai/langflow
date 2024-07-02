@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "langflow-base"
-version = "0.0.81"
+version = "0.0.82"
 description = "A Python package with a built-in web application"
 authors = ["Langflow <contact@langflow.org>"]
 maintainers = [
@@ -35,7 +35,7 @@ langchainhub = "~0.1.15"
 sqlmodel = "^0.0.18"
 loguru = "^0.7.1"
 rich = "^13.7.0"
-langchain-experimental = "*"
+langchain-experimental = "^0.0.61"
 pydantic = "^2.7.0"
 pydantic-settings = "^2.2.0"
 websockets = "*"
