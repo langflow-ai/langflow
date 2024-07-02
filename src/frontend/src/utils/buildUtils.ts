@@ -7,6 +7,7 @@ import useFlowStore from "../stores/flowStore";
 import { VertexBuildTypeAPI } from "../types/api";
 import { isErrorLogType } from "../types/utils/typeCheckingUtils";
 import { VertexLayerElementType } from "../types/zustand/flow";
+import { getI18n } from "react-i18next";
 
 type BuildVerticesParams = {
   setLockChat?: (lock: boolean) => void;
@@ -272,6 +273,7 @@ async function buildVertex({
   buildResults: boolean[];
   stopBuild: () => void;
 }) {
+  const { t } = getI18n();
   try {
     const buildRes = await postBuildVertex(flowId, id, input_value, files);
 
@@ -293,7 +295,7 @@ async function buildVertex({
           return [outputs.message.errorMessage];
         });
         onBuildError!(
-          "Error Building Component",
+          t("Error Building Component"),
           errorMessages,
           verticesIds.map((id) => ({ id })),
         );
@@ -307,10 +309,10 @@ async function buildVertex({
   } catch (error) {
     console.error(error);
     onBuildError!(
-      "Error Building Component",
+      t("Error Building Component"),
       [
         (error as AxiosError<any>).response?.data?.detail ??
-          "An unexpected error occurred while building the Component. Please try again.",
+          t("An unexpected error occurred while building the Component. Please try again."),
       ],
       verticesIds.map((id) => ({ id })),
     );

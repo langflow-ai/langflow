@@ -5,6 +5,7 @@ import { cloneDeep } from "lodash";
 import { classNames } from "../../utils/utils";
 import IconComponent from "../genericIconComponent";
 import { Input } from "../ui/input";
+import { useTranslation } from "react-i18next";
 
 export default function KeypairListComponent({
   value,
@@ -19,6 +20,8 @@ export default function KeypairListComponent({
       onChange([{ "": "" }]);
     }
   }, [disabled]);
+
+  const { t } = useTranslation();
 
   const myValue = Array.isArray(value) ? value : [value];
 
@@ -64,7 +67,7 @@ export default function KeypairListComponent({
                   editNode ? "input-edit-node" : "",
                   duplicateKey ? "input-invalid" : "",
                 )}
-                placeholder="Type key..."
+                placeholder={t("Type key...")}
                 onChange={(event) => handleChangeKey(event, index)}
               />
 
@@ -83,7 +86,7 @@ export default function KeypairListComponent({
                 disabled={disabled}
                 value={obj[key]}
                 className={editNode ? "input-edit-node" : ""}
-                placeholder="Type a value..."
+                placeholder={t("Type a value...")}
                 onChange={(event) => handleChangeValue(event, index)}
               />
 

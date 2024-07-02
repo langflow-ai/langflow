@@ -128,7 +128,7 @@ export default function Dropdown({
             </div>
           )) || (
             <div>
-              <span className="text-sm italic">t("Loading...")</span>
+              <span className="text-sm italic">{t("Loading...")}</span>
             </div>
           )}
         </>

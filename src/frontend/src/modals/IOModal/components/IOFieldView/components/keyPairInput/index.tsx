@@ -3,6 +3,7 @@ import { useRef } from "react";
 import IconComponent from "../../../../../../components/genericIconComponent";
 import { Input } from "../../../../../../components/ui/input";
 import { classNames } from "../../../../../../utils/utils";
+import { useTranslation } from "react-i18next";
 
 export type IOKeyPairInputProps = {
   value: any;
@@ -19,6 +20,7 @@ const IOKeyPairInput = ({
   isList = true,
   isInputField,
 }: IOKeyPairInputProps) => {
+  const { t } = useTranslation();
   const checkValueType = (value) => {
     return Array.isArray(value) ? value : [value];
   };
@@ -51,7 +53,7 @@ const IOKeyPairInput = ({
                   type="text"
                   value={key.trim()}
                   className={classNames(duplicateKey ? "input-invalid" : "")}
-                  placeholder="Type key..."
+                  placeholder={t("Type key...")}
                   onChange={(event) => handleChangeKey(event, index)}
                   disabled={!isInputField}
                 />
@@ -59,7 +61,7 @@ const IOKeyPairInput = ({
                 <Input
                   type="text"
                   value={obj[key]}
-                  placeholder="Type a value..."
+                  placeholder={t("Type a value...")}
                   onChange={(event) =>
                     handleChangeValue(event.target.value, index)
                   }

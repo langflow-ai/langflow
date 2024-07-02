@@ -365,6 +365,10 @@ export default function Page({
         );
 
         const newId = getNodeId(data.type);
+        if (data.node) {
+          data.node.display_name = t(data.node.display_name);
+          data.node.description = t(data.node.description);
+        }
 
         const newNode: NodeType = {
           id: newId,
