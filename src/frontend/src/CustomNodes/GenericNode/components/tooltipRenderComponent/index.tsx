@@ -59,12 +59,12 @@ const TooltipRenderComponent = ({ item, index, left }) => {
                     <React.Fragment key={el + name}>
                       <span>
                         {index === item.display_name.split(", ").length - 1
-                          ? el
-                          : (el += `, `)}
+                          ? t(el)
+                          : (el = t(el) + `, `)}
                       </span>
                     </React.Fragment>
                   ))
-                : item.display_name}
+                : t(item.display_name)}
             </span>
           ) : (
             <span className="text-xs" data-testid={`tooltip-${item?.type}`}>
@@ -75,12 +75,12 @@ const TooltipRenderComponent = ({ item, index, left }) => {
                     <React.Fragment key={el + name}>
                       <span>
                         {index === item.type.split(", ").length - 1
-                          ? el
-                          : (el += `, `)}
+                          ? t(el)
+                          : (el = t(el) + `, `)}
                       </span>
                     </React.Fragment>
                   ))
-                : item.type}
+                : t(item.type)}
             </span>
           )}
         </span>
