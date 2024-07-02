@@ -25,18 +25,21 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             name="collection_name",
             display_name="Collection Name",
             info="The name of the collection within Astra DB where the vectors will be stored.",
+            required=True,
         ),
         SecretStrInput(
             name="token",
             display_name="Astra DB Application Token",
             info="Authentication token for accessing Astra DB.",
             value="ASTRA_DB_APPLICATION_TOKEN",
+            required=True,
         ),
         SecretStrInput(
             name="api_endpoint",
             display_name="API Endpoint",
             info="API endpoint URL for the Astra DB service.",
             value="ASTRA_DB_API_ENDPOINT",
+            required=True,
         ),
         MultilineInput(
             name="search_input",
