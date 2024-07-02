@@ -17,9 +17,12 @@ export default function FlowLogsModal({
   const [columns, setColumns] = useState<Array<ColDef | ColGroupDef>>([]);
   const [rows, setRows] = useState<any>([]);
 
-  const { data, isLoading,refetch } = useGetTransactionsQuery({
-    id: currentFlowId,
-  },"TableUnion");
+  const { data, isLoading, refetch } = useGetTransactionsQuery(
+    {
+      id: currentFlowId,
+    },
+    "TableUnion",
+  );
 
   useEffect(() => {
     if (data) {
@@ -27,7 +30,7 @@ export default function FlowLogsModal({
       setColumns(columns.map((col) => ({ ...col, editable: true })));
       setRows(rows);
     }
-    if(open) refetch();
+    if (open) refetch();
   }, [data, open, isLoading]);
 
   return (

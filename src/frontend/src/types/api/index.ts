@@ -226,11 +226,9 @@ export type ResponseErrorDetailAPI = {
   response: { data: { detail: string } };
 };
 
-
-
 export type QueryFunctionType<T, R> = (
   props: T,
-  onFetch?: ((data: R) => void)|string
+  onFetch?: ((data: R) => void) | string,
 ) => {
   data: R | undefined;
   isLoading: boolean;

@@ -1,9 +1,9 @@
 import { ColDef, ColGroupDef } from "ag-grid-community";
+import { QueryFunctionType } from "../../../../types/api";
 import { extractColumnsFromRows } from "../../../../utils/utils";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
-import { QueryFunctionType } from "../../../../types/api";
 
 interface TransactionsQueryParams {
   id: string;
@@ -15,10 +15,10 @@ interface TransactionsResponse {
   columns: Array<ColDef | ColGroupDef>;
 }
 
-export const useGetTransactionsQuery: QueryFunctionType<TransactionsQueryParams,(TransactionsResponse)>= (
-  { id, params },
-  onFetch,
-) => {
+export const useGetTransactionsQuery: QueryFunctionType<
+  TransactionsQueryParams,
+  TransactionsResponse
+> = ({ id, params }, onFetch) => {
   const { query } = UseRequestProcessor();
 
   const responseFn = (data: any) => {
