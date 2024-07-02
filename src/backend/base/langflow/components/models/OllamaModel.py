@@ -6,7 +6,7 @@ from langchain_community.chat_models import ChatOllama
 from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
-from langflow.io import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, MessageInput, Output, StrInput
+from langflow.io import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, MessageInput, StrInput
 
 
 class ChatOllamaComponent(LCModelComponent):
@@ -217,10 +217,6 @@ class ChatOllamaComponent(LCModelComponent):
             info="System message to pass to the model.",
             advanced=True,
         ),
-    ]
-    outputs = [
-        Output(display_name="Text", name="text_output", method="text_response"),
-        Output(display_name="Language Model", name="model_output", method="build_model"),
     ]
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
