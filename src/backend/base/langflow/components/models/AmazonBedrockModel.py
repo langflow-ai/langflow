@@ -3,7 +3,7 @@ from langchain_aws import ChatBedrock
 from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
-from langflow.io import BoolInput, DictInput, DropdownInput, MessageInput, Output, StrInput
+from langflow.io import BoolInput, DictInput, DropdownInput, MessageInput, StrInput
 
 
 class AmazonBedrockComponent(LCModelComponent):
@@ -63,10 +63,6 @@ class AmazonBedrockComponent(LCModelComponent):
             advanced=True,
         ),
         BoolInput(name="stream", display_name="Stream", info=STREAM_INFO_TEXT, advanced=True),
-    ]
-    outputs = [
-        Output(display_name="Text", name="text_output", method="text_response"),
-        Output(display_name="Language Model", name="model_output", method="build_model"),
     ]
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
