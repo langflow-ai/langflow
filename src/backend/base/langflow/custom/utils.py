@@ -388,6 +388,17 @@ def build_custom_component_template(
 ) -> Tuple[Dict[str, Any], CustomComponent | Component]:
     """Build a custom component template"""
     try:
+        if not hasattr(custom_component, "template_config"):
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": (
+                        "Please check if you are importing Component correctly."
+                        " It should be `from langflow.custom import Component`"
+                    ),
+                    "traceback": traceback.format_exc(),
+                },
+            )
         if "inputs" in custom_component.template_config:
             return build_custom_component_template_from_inputs(custom_component, user_id=user_id)
         frontend_node = CustomComponentFrontendNode(**custom_component.template_config)
