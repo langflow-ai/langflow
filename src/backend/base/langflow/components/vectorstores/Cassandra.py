@@ -102,9 +102,9 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
     ]
 
     def build_vector_store(self) -> Cassandra:
-        return self._build_cassandra()
+        return self._build_cassandra(ingest=True)
 
-    def _build_cassandra(self) -> Cassandra:
+    def _build_cassandra(self, ingest: bool) -> Cassandra:
         try:
             import cassio
         except ImportError:
@@ -142,11 +142,12 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
 
         documents = []
 
-        for _input in self.ingest_data or []:
-            if isinstance(_input, Data):
-                documents.append(_input.to_lc_document())
-            else:
-                documents.append(_input)
+        if ingest:
+            for _input in self.ingest_data or []:
+                if isinstance(_input, Data):
+                    documents.append(_input.to_lc_document())
+                else:
+                    documents.append(_input)
 
         if documents:
             table = Cassandra.from_documents(
@@ -172,7 +173,7 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
         return table
 
     def search_documents(self) -> List[Data]:
-        vector_store = self._build_cassandra()
+        vector_store = self._build_cassandra(ingest=False)
 
         if self.search_query and isinstance(self.search_query, str) and self.search_query.strip():
             try:
