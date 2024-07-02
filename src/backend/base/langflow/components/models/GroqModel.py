@@ -85,6 +85,7 @@ class GroqModel(LCModelComponent):
             n=n or 1,
             api_key=SecretStr(groq_api_key),
             streaming=stream,
+            stop_sequences=None,
         )
 
         return output  # type: ignore
