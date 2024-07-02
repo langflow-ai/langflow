@@ -5,10 +5,6 @@ on:
     types: [opened, synchronize, reopened, auto_merge_enabled]
     paths:
       - "src/frontend/**"
-  push:
-    branches: [ "main" ]
-    paths:
-      - "src/frontend/**"
 
 permissions:
   contents: read
