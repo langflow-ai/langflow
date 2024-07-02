@@ -85,6 +85,10 @@ class CustomComponent(BaseComponent):
     _logs: List[Log] = []
     tracing_service: Optional["TracingService"] = None
 
+    @property
+    def trace_name(self):
+        return f"{self.display_name} ({self.vertex.id})"
+
     def update_state(self, name: str, value: Any):
         if not self.vertex:
             raise ValueError("Vertex is not set")
