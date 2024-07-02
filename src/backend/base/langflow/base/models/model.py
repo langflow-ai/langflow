@@ -145,7 +145,7 @@ class LCModelComponent(Component):
         inputs: Union[list, dict] = messages or {}
         try:
             runnable = runnable.with_config(  # type: ignore
-                {"run_name": self.display_name, "project_name": self._tracing_service.project_name}  # type: ignore
+                {"run_name": self.display_name, "project_name": self.tracing_service.project_name}  # type: ignore
             )
             if stream:
                 return runnable.stream(inputs)  # type: ignore
@@ -167,7 +167,7 @@ class LCModelComponent(Component):
             raise e
 
     @abstractmethod
-    def build_model(self) -> LanguageModel:
+    def build_model(self) -> LanguageModel:  # type: ignore[type-var]
         """
         Implement this method to build the model.
         """
