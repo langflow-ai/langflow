@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import IconComponent from "../../components/genericIconComponent";
 import TableComponent from "../../components/tableComponent";
 import { getTransactionTable } from "../../controllers/API";
+import useGetTransactionsQuery from "../../controllers/API/queries/transactions/use-get-transactions";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { FlowSettingsPropsType } from "../../types/components";
 import BaseModal from "../baseModal";
@@ -16,13 +17,18 @@ export default function FlowLogsModal({
   const [columns, setColumns] = useState<Array<ColDef | ColGroupDef>>([]);
   const [rows, setRows] = useState<any>([]);
 
+  const { data, isLoading } = useGetTransactionsQuery({
+    id: currentFlowId,
+    mode: "union",
+  });
+
   useEffect(() => {
-    getTransactionTable(currentFlowId, "union").then((data) => {
+    if (data) {
       const { columns, rows } = data;
       setColumns(columns.map((col) => ({ ...col, editable: true })));
       setRows(rows);
-    });
-  }, [open]);
+    }
+  }, [data, open, isLoading]);
 
   return (
     <BaseModal open={open} setOpen={setOpen} size="large">

@@ -26,6 +26,7 @@
     "@tabler/icons-react": "^3.6.0",
     "@tailwindcss/forms": "^0.5.7",
     "@tailwindcss/line-clamp": "^0.4.4",
+    "@tanstack/react-query": "^5.49.2",
     "@types/axios": "^0.14.0",
     "ace-builds": "^1.35.0",
     "ag-grid-community": "^31.3.2",
