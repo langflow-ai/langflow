@@ -191,7 +191,7 @@ class Component(CustomComponent):
         self._artifacts = _artifacts
         self._results = _results
         if self.tracing_service:
-            self.tracing_service.set_outputs(self._trace_name, _results)
+            self.tracing_service.set_outputs(self.trace_name, _results)
         return _results, _artifacts
 
     def custom_repr(self):
