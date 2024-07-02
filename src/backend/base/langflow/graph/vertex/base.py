@@ -281,7 +281,9 @@ class Vertex:
                         # to the vertex that is the source of the edge
                         param_dict = template_dict[param_key]["value"]
                         if param_dict:
-                            params[param_key] = {key: self.graph.get_vertex(edge.source_id) for key in param_dict.keys()}
+                            params[param_key] = {
+                                key: self.graph.get_vertex(edge.source_id) for key in param_dict.keys()
+                            }
                         else:
                             params[param_key] = self.graph.get_vertex(edge.source_id)
                     else:

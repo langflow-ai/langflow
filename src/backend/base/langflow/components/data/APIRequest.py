@@ -111,7 +111,7 @@ class APIRequestComponent(Component):
         if method not in ["GET", "POST", "PATCH", "PUT", "DELETE"]:
             raise ValueError(f"Unsupported method: {method}")
 
-        if(isinstance(body, str)):
+        if isinstance(body, str):
             try:
                 body = json.loads(body)
             except Exception as e:
