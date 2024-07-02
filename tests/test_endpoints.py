@@ -427,7 +427,6 @@ def test_build_vertex_invalid_vertex_id(client, added_flow_with_prompt_and_histo
 
 
 @pytest.mark.api_key_required
-
 def test_successful_run_no_payload(client, starter_project, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = starter_project["id"]
@@ -457,7 +456,6 @@ def test_successful_run_no_payload(client, starter_project, created_api_key):
 
 
 @pytest.mark.api_key_required
-
 def test_successful_run_with_output_type_text(client, starter_project, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = starter_project["id"]
@@ -489,7 +487,6 @@ def test_successful_run_with_output_type_text(client, starter_project, created_a
 
 
 @pytest.mark.api_key_required
-
 def test_successful_run_with_output_type_any(client, starter_project, created_api_key):
     # This one should have both the ChatOutput and TextOutput components
     headers = {"x-api-key": created_api_key.api_key}
@@ -522,7 +519,6 @@ def test_successful_run_with_output_type_any(client, starter_project, created_ap
 
 
 @pytest.mark.api_key_required
-
 def test_successful_run_with_output_type_debug(client, starter_project, created_api_key):
     # This one should return outputs for all components
     # Let's just check the amount of outputs(there should be 7)
