@@ -34,7 +34,7 @@ export default function SuccessAlert({
           setShow(false);
           removeAlert(id);
         }}
-        className="success-alert nocopy nowheel nopan nodelete nodrag noundo"
+        className="success-alert noflow nowheel nopan nodelete nodrag"
       >
         <div className="flex">
           <div className="flex-shrink-0">
