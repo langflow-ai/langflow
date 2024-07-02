@@ -48,7 +48,6 @@ export function checkChatInput(nodes: Node[]) {
 }
 
 export function cleanEdges(nodes: NodeType[], edges: Edge[]) {
-  console.log("cleanEdges", nodes, edges);
   let newEdges = cloneDeep(edges);
   edges.forEach((edge) => {
     // check if the source and target node still exists
@@ -93,8 +92,6 @@ export function cleanEdges(nodes: NodeType[], edges: Edge[]) {
           output_types: outputTypes,
           dataType: sourceNode.data.type,
         };
-        console.log("id", id);
-        console.log("parsedSourceHandle", parsedSourceHandle);
         if (scapedJSONStringfy(id) !== sourceHandle) {
           newEdges = newEdges.filter((e) => e.id !== edge.id);
         }
@@ -387,7 +384,6 @@ export function updateEdgesHandleIds({
   edges,
   nodes,
 }: updateEdgesHandleIdsType): Edge[] {
-  console.log("updateEdgesHandleIds");
   let newEdges = cloneDeep(edges);
   newEdges.forEach((edge) => {
     const sourceNodeId = edge.source;
@@ -766,9 +762,7 @@ export function reconnectEdges(groupNode: NodeType, excludedEdges: Edge[]) {
     }
     if (nodes.some((node) => node.id === edge.target)) {
       const targetNode = nodes.find((node) => node.id === edge.target)!;
-      console.log("targetNode", targetNode);
       const targetHandle: targetHandleType = scapeJSONParse(edge.targetHandle!);
-      console.log("targetHandle", targetHandle);
       const proxy = { id: targetNode.id, field: targetHandle.fieldName };
       let newTargetHandle: targetHandleType = cloneDeep(targetHandle);
       newTargetHandle.id = groupNode.id;
@@ -1039,8 +1033,6 @@ function generateNodeOutputs(flow: FlowType) {
       const nodeOutputs = node.data.node.outputs;
       nodeOutputs.forEach((output) => {
         //filter outputs that are not connected
-        console.log(output);
-        console.log(edges);
         if (
           !edges.some(
             (edge) =>
