@@ -32,7 +32,7 @@ class CohereComponent(LCModelComponent):
         ),
     ]
 
-    def build_model(self) -> LanguageModel:  # type: ignore
+    def build_model(self) -> LanguageModel:  # type: ignore[type-var]
         cohere_api_key = self.cohere_api_key
         temperature = self.temperature
 

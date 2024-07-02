@@ -1,11 +1,10 @@
 from typing import Optional
-
+from langchain_core.vectorstores import VectorStore
 from loguru import logger
 
-from langchain_core.vectorstores import VectorStore
 from langflow.base.vectorstores.model import LCVectorStoreComponent
 from langflow.helpers import docs_to_data
-from langflow.inputs import FloatInput, DictInput
+from langflow.inputs import DictInput, FloatInput
 from langflow.io import (
     BoolInput,
     DataInput,
@@ -25,7 +24,8 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
     documentation: str = "https://python.langchain.com/docs/integrations/vectorstores/astradb"
     icon: str = "AstraDB"
 
-    _cached_vectorstore: Optional[VectorStore] = None
+    _cached_vectorstore: VectorStore | None = None
+
 
     inputs = [
         StrInput(
