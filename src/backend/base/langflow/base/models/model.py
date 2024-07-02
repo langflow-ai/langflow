@@ -167,7 +167,7 @@ class LCModelComponent(Component):
             raise e
 
     @abstractmethod
-    def build_model(self) -> LanguageModel:
+    def build_model(self) -> LanguageModel:  # type: ignore
         """
         Implement this method to build the model.
         """

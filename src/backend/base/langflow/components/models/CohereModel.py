@@ -33,7 +33,7 @@ class CohereComponent(LCModelComponent):
         ),
     ]
 
-    def build_model(self) -> LanguageModel | BaseChatModel:
+    def build_model(self) -> LanguageModel:
         cohere_api_key = self.cohere_api_key
         temperature = self.temperature
 

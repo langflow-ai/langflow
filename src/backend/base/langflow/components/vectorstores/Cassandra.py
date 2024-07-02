@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 from langchain_community.vectorstores import Cassandra
 
@@ -24,7 +24,7 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
     documentation = "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/cassandra"
     icon = "Cassandra"
 
-    _cached_vectorstore: Cassandra = None
+    _cached_vectorstore: Optional[Cassandra] = None
 
     inputs = [
         MessageTextInput(
