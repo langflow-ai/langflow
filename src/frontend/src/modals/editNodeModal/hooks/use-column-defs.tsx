@@ -21,7 +21,7 @@ const useColumnDefs = (
           const templateParam = params.data;
           return (
             (templateParam.display_name
-              ? templateParam.display_name
+              ? t(templateParam.display_name)
               : templateParam.name) ?? params.data.key
           );
         },
@@ -34,7 +34,14 @@ const useColumnDefs = (
       {
         headerName: t("Description"),
         field: "info",
-        tooltipField: "info",
+        valueGetter: (params) => {
+          const templateParam = params.data;
+          return templateParam.info ? t(templateParam.info) : "";
+        },
+        tooltipValueGetter: (params) => {
+          const templateParam = params.data;
+          return templateParam.info ? t(templateParam.info) : "";
+        },
         wrapText: true,
         autoHeight: true,
         flex: 2,

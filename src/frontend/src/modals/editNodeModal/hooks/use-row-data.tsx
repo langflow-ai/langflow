@@ -1,8 +1,10 @@
 import { useMemo } from "react";
 import { LANGFLOW_SUPPORTED_TYPES } from "../../../constants/constants";
 import { NodeDataType } from "../../../types/flow";
+import { getI18n } from "react-i18next";
 
 const useRowData = (myData: NodeDataType, open: boolean) => {
+  const { t } = getI18n();
   const rowData = useMemo(() => {
     return Object.keys(myData.node!.template)
       .filter((key: string) => {
