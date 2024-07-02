@@ -10,7 +10,7 @@ env:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ !contains(github.workflow, 'Release')}}
 
 jobs:
   build:
