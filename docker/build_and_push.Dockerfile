@@ -96,4 +96,4 @@ WORKDIR /app
 ENV LANGFLOW_HOST=0.0.0.0
 ENV LANGFLOW_PORT=7860
 
-ENTRYPOINT ["python", "-m", "langflow", "run"]
+CMD ["python", "-m", "langflow", "run"]
