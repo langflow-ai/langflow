@@ -3,6 +3,7 @@ version: "3.8"
 services:
   langflow:
     image: langflowai/langflow:latest
+    user: root
     ports:
       - "7860:7860"
     depends_on:

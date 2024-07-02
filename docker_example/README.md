@@ -35,7 +35,7 @@ The Docker Compose configuration spins up two services: `langflow` and `postgres
 
 ### LangFlow Service
 
-The `langflow` service uses the `langflowai/langflow:latest` Docker image and exposes port 7860. It depends on the `postgres` service.
+The `langflow` service uses the `langflowai/langflow:latest` Docker image and exposes port 7860. It depends on the `postgres` service. To ensure the service has the necessary permissions to create and access files in `/var/lib/langflow`, it is run as the root user.
 
 Environment variables:
 
@@ -63,3 +63,7 @@ Volumes:
 ## Switching to a Specific LangFlow Version
 
 If you want to use a specific version of LangFlow, you can modify the `image` field under the `langflow` service in the Docker Compose file. For example, to use version 1.0-alpha, change `langflowai/langflow:latest` to `langflowai/langflow:1.0-alpha`.
+
+## Running as Root User
+
+The Docker Compose configuration specifies that the `langflow` service runs as the root user. This is necessary to avoid permission issues when accessing or creating files in directories owned by root or another user inside the container. While running containers as root can have security implications, it is a common practice for overcoming permission issues in development environments. Ensure to follow best practices for securing your Docker containers in production environments.
