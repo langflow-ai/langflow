@@ -254,7 +254,7 @@ export default function ExtraSidebar(): JSX.Element {
           name="search"
           id="search"
           placeholder="Search"
-          className="nopan nodelete nodrag noundo nocopy input-search"
+          className="nopan nodelete nodrag noflow input-search"
           onChange={(event) => {
             handleSearchInput(event.target.value);
             // Set search input state

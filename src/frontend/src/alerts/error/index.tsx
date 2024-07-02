@@ -40,7 +40,7 @@ export default function ErrorAlert({
             removeAlert(id);
           }, 500);
         }}
-        className="error-build-message nocopy nowheel nopan nodelete nodrag noundo"
+        className="error-build-message noflow nowheel nopan nodelete nodrag"
       >
         <div className="flex">
           <div className="flex-shrink-0">
