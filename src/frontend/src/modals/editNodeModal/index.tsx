@@ -3,6 +3,7 @@ import { forwardRef, useState } from "react";
 import { useUpdateNodeInternals } from "reactflow";
 import TableComponent from "../../components/tableComponent";
 import { Badge } from "../../components/ui/badge";
+import { Button } from "../../components/ui/button";
 import { useDarkStore } from "../../stores/darkStore";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
@@ -106,6 +107,11 @@ const EditNodeModal = forwardRef(
             </div>
           </div>
         </BaseModal.Content>
+        <BaseModal.Footer>
+          <div className="flex w-full justify-end gap-2 pt-2">
+            <Button onClick={() => setOpen(false)}>Close</Button>
+          </div>
+        </BaseModal.Footer>
       </BaseModal>
     );
   },
