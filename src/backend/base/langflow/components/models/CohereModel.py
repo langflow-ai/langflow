@@ -1,5 +1,4 @@
 from langchain_cohere import ChatCohere
-from langchain_core.language_models.chat_models import BaseChatModel
 from pydantic.v1 import SecretStr
 
 from langflow.base.constants import STREAM_INFO_TEXT

@@ -50,4 +50,3 @@ class PromptValidationResponse(BaseModel):
     input_variables: list
     # object return for tweak call
     frontend_node: Optional[FrontendNodeRequest] = None
-
