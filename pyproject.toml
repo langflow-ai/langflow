@@ -93,6 +93,7 @@ langchain-aws = "^0.1.6"
 langchain-mongodb = "^0.1.6"
 kubernetes = "^30.1.0"
 firecrawl-py = "^0.0.16"
+spider-client = "^0.0.27"
 
 
 [tool.poetry.group.dev.dependencies]
