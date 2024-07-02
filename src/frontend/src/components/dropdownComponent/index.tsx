@@ -78,7 +78,7 @@ export default function Dropdown({
             <PopoverContentDropdown
               side="bottom"
               avoidCollisions={!!children}
-              className="nocopy nowheel nopan nodelete nodrag noundo p-0"
+              className="noflow nowheel nopan nodelete nodrag p-0"
               style={
                 children
                   ? {}
