@@ -1,10 +1,11 @@
 from typing import List
 
 from langchain_community.vectorstores import Cassandra
+from loguru import logger
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent
 from langflow.helpers.data import docs_to_data
-from langflow.inputs import DictInput, FloatInput, BoolInput
+from langflow.inputs import BoolInput, DictInput, FloatInput
 from langflow.io import (
     DataInput,
     DropdownInput,
@@ -15,7 +16,6 @@ from langflow.io import (
     SecretStrInput,
 )
 from langflow.schema import Data
-from loguru import logger
 
 
 class CassandraVectorStoreComponent(LCVectorStoreComponent):
@@ -24,7 +24,7 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
     documentation = "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/cassandra"
     icon = "Cassandra"
 
-    _cached_vectorstore: Cassandra = None
+    _cached_vectorstore: Cassandra | None = None
 
     inputs = [
         MessageTextInput(

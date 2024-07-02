@@ -85,6 +85,10 @@ class CustomComponent(BaseComponent):
     _logs: List[Log] = []
     tracing_service: Optional["TracingService"] = None
 
+    @property
+    def trace_name(self):
+        return f"{self.display_name} ({self.vertex.id})"
+
     def update_state(self, name: str, value: Any):
         if not self.vertex:
             raise ValueError("Vertex is not set")
@@ -131,6 +135,7 @@ class CustomComponent(BaseComponent):
             **data: Additional keyword arguments to initialize the custom component.
         """
         self.cache = TTLCache(maxsize=1024, ttl=60)
+        self._logs = []
         super().__init__(**data)
 
     @staticmethod
@@ -481,21 +486,19 @@ class CustomComponent(BaseComponent):
         """
         raise NotImplementedError
 
-    def log(self, message: LoggableType | list[LoggableType], name: str | None = None):
+    def log(self, message: LoggableType | list[LoggableType], name: Optional[str] = None):
         """
         Logs a message.
 
         Args:
             message (LoggableType | list[LoggableType]): The message to log.
         """
-        if name is None and self.display_name:
-            name = self.display_name
-        else:
-            name = self.__class__.__name__
+        if name is None:
+            name = f"Log {len(self._logs) + 1}"
         log = Log(message=message, type=get_artifact_type(message), name=name)
         self._logs.append(log)
         if self.tracing_service and self.vertex:
-            self.tracing_service.add_log(trace_name=self.vertex.id, log=log)
+            self.tracing_service.add_log(trace_name=self.trace_name, log=log)
 
     def post_code_processing(self, new_build_config: dict, current_build_config: dict):
         """
