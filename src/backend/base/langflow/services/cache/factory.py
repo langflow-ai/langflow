@@ -29,9 +29,9 @@ class CacheServiceFactory(ServiceFactory):
                 logger.debug("Redis cache is connected")
                 return redis_cache
             logger.warning("Redis cache is not connected, falling back to in-memory cache")
-            return AsyncInMemoryCache()
+            return AsyncInMemoryCache(expiration_time=settings_service.settings.redis_cache_expire)
 
         elif settings_service.settings.cache_type == "memory":
-            return ThreadingInMemoryCache()
+            return ThreadingInMemoryCache(expiration_time=settings_service.settings.cache_expire)
         elif settings_service.settings.cache_type == "async":
-            return AsyncInMemoryCache()
+            return AsyncInMemoryCache(expiration_time=settings_service.settings.cache_expire)
