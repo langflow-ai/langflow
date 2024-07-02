@@ -10,13 +10,6 @@ export default function NewFlowModal({
   setOpen,
 }: newFlowModalPropsType): JSX.Element {
   const examples = useFlowsManagerStore((state) => state.examples);
-
-  examples?.forEach((example) => {
-    if (example.name === "Blog Writter") {
-      example.name = "Blog Writer";
-    }
-  });
-
   const { t } = useTranslation();
 
   return (

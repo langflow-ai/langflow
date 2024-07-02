@@ -21,7 +21,7 @@ export default function PromptAreaComponent({
   const { t } = useTranslation();
   useEffect(() => {
     if (disabled && value !== "") {
-      onChange("", true);
+      onChange("", undefined, true);
     }
   }, [disabled]);
 
