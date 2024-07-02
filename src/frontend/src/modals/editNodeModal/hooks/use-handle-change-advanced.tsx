@@ -14,8 +14,8 @@ const useHandleChangeAdvanced = (
     setNode(data.id, (oldNode) => {
       let newNode = cloneDeep(oldNode);
 
-      newNode.data.template[name].advanced =
-        !newNode.data.template[name].advanced;
+      newNode.data.node.template[name].advanced =
+        !newNode.data.node.template[name].advanced;
 
       return newNode;
     });
