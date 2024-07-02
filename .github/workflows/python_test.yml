@@ -2,10 +2,14 @@ name: Python tests
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [opened, synchronize, reopened, auto_merge_enabled]
     branches: [main]
 env:
   POETRY_VERSION: "1.8.2"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:

@@ -2,11 +2,7 @@ name: autofix.ci
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, auto_merge_enabled, auto_merge_disabled]
-    paths:
-      - "src/frontend/**"
-  push:
-    branches: [ "main" ]
+    types: [opened, synchronize, reopened, auto_merge_enabled]
     paths:
       - "src/frontend/**"
 
