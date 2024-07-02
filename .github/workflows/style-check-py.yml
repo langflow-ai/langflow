@@ -1,9 +1,12 @@
 name: Ruff Style Check
 
 on:
-  pull_request: {}
-  merge_group:
-    branches: [dev]
+  pull_request:
+    types: [opened, synchronize, reopened, auto_merge_enabled]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   POETRY_VERSION: "1.8.2"

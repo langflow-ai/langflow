@@ -2,11 +2,13 @@ name: Lint Python
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
-  merge_group:
-    types: [checks_requested]
+    types: [opened, synchronize, reopened, auto_merge_enabled]
 env:
   POETRY_VERSION: "1.8.2"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   lint:
