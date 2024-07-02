@@ -35,6 +35,3 @@ jobs:
         run: echo "::add-matcher::.github/workflows/matchers/ruff.json"
       - name: Run Ruff Check
         run: poetry run ruff check --output-format=github .
-
-
-

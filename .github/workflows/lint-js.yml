@@ -48,5 +48,3 @@ jobs:
         run: |
           cd src/frontend
           npm run check-format
-
-

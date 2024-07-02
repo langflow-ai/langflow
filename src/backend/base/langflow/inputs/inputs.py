@@ -253,7 +253,7 @@ class NestedDictInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin, In
     """
 
     field_type: Optional[SerializableFieldTypes] = FieldTypes.NESTED_DICT
-    value: Optional[dict] = {}
+    value: Optional[dict | Data] = {}
 
 
 class DictInput(BaseInputMixin, ListableInputMixin, InputTraceMixin):
