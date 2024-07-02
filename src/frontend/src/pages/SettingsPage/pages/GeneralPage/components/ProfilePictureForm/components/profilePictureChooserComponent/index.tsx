@@ -1,10 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "../../../../../../../../components/ui/button";
 import Loading from "../../../../../../../../components/ui/loading";
-import {
-  BACKEND_URL,
-  BASE_URL_API,
-} from "../../../../../../../../constants/constants";
+import { BASE_URL_API } from "../../../../../../../../constants/constants";
 import { useDarkStore } from "../../../../../../../../stores/darkStore";
 import { cn } from "../../../../../../../../utils/utils";
 import usePreloadImages from "./hooks/use-preload-images";
@@ -55,10 +52,7 @@ export default function ProfilePictureChooserComponent({
                   >
                     <img
                       key={idx}
-                      src={`${BACKEND_URL.slice(
-                        0,
-                        BACKEND_URL.length - 1,
-                      )}${BASE_URL_API}files/profile_pictures/${
+                      src={`${BASE_URL_API}files/profile_pictures/${
                         folder + "/" + path
                       }`}
                       style={{
