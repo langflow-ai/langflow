@@ -1,6 +1,7 @@
 name: Python tests
 
 on:
+  workflow_call:
   pull_request:
     types: [opened, synchronize, reopened, auto_merge_enabled]
     branches: [main]
