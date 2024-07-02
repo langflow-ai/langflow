@@ -31,9 +31,22 @@ class DatabaseVariableService(VariableService, Service):
             for var in self.settings_service.settings.variables_to_get_from_environment:
                 if var in os.environ:
                     logger.debug(f"Creating {var} variable from environment.")
-                    if not session.exec(
+
+                    if found_variable := session.exec(
                         select(Variable).where(Variable.user_id == user_id, Variable.name == var)
                     ).first():
+                        # Update it
+                        value = os.environ[var]
+                        if isinstance(value, str):
+                            value = value.strip()
+                        # If the secret_key changes the stored value could be invalid
+                        # so we need to re-encrypt it
+                        encrypted = auth_utils.encrypt_api_key(value, settings_service=self.settings_service)
+                        found_variable.value = encrypted
+                        session.add(found_variable)
+                        session.commit()
+                    else:
+                        # Create it
                         try:
                             value = os.environ[var]
                             if isinstance(value, str):
