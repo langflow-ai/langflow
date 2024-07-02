@@ -31,7 +31,7 @@ export default function TableNodeCellRender({
     setTemplateData((old) => {
       let newData = cloneDeep(old);
       newData.value = newValue;
-      if (dbValue) {
+      if (dbValue !== undefined) {
         newData.load_from_db = newValue;
       }
       return newData;
