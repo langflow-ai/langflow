@@ -1,6 +1,7 @@
 name: Run Frontend Tests
 
 on:
+  workflow_call:
   workflow_dispatch:
     inputs:
       branch:
