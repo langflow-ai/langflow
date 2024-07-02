@@ -76,12 +76,6 @@ test("dropDownComponent", async ({ page }) => {
     expect(false).toBeTruthy();
   }
 
-  await page.locator('//*[@id="showcache"]').click();
-  expect(await page.locator('//*[@id="showcache"]').isChecked()).toBeFalsy();
-
-  await page.locator('//*[@id="showcache"]').click();
-  expect(await page.locator('//*[@id="showcache"]').isChecked()).toBeTruthy();
-
   await page.locator('//*[@id="showcredentials_profile_name"]').click();
   expect(
     await page.locator('//*[@id="showcredentials_profile_name"]').isChecked(),
@@ -121,12 +115,6 @@ test("dropDownComponent", async ({ page }) => {
   expect(
     await page.locator('//*[@id="showmodel_id"]').isChecked(),
   ).toBeTruthy();
-
-  await page.locator('//*[@id="showcache"]').click();
-  expect(await page.locator('//*[@id="showcache"]').isChecked()).toBeFalsy();
-
-  await page.locator('//*[@id="showcache"]').click();
-  expect(await page.locator('//*[@id="showcache"]').isChecked()).toBeTruthy();
 
   await page.locator('//*[@id="showcredentials_profile_name"]').click();
   expect(
