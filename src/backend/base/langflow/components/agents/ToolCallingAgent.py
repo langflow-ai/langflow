@@ -95,7 +95,7 @@ class ToolCallingAgentComponent(Component):
             raise ValueError("Output key not found in result. Tried 'output'.")
 
         results = result["output"]
-        if isinstance(result, list):
+        if isinstance(results, list):
             result_string = "\n".join([r["text"] for r in results if "text" in r and r.get("type") == "text"])
         else:
             result_string = results
