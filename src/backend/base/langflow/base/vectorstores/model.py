@@ -79,7 +79,7 @@ class LCVectorStoreComponent(Component):
         """
         vector_store = self.build_vector_store()
         if hasattr(vector_store, "as_retriever"):
-            retriever = vector_store.as_retriever()
+            retriever = vector_store.as_retriever(**self.get_retriever_kwargs())
             if self.status is None:
                 self.status = "Retriever built successfully."
             return retriever
@@ -106,3 +106,9 @@ class LCVectorStoreComponent(Component):
         )
         self.status = search_results
         return search_results
+
+    def get_retriever_kwargs(self):
+        """
+        Get the retriever kwargs. Implementations can override this method to provide custom retriever kwargs.
+        """
+        return {}
