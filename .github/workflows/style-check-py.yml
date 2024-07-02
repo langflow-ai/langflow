@@ -2,7 +2,7 @@ name: Ruff Style Check
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [opened, synchronize, reopened, auto_merge_enabled]
 
 env:
   POETRY_VERSION: "1.8.2"
