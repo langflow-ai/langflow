@@ -1,5 +1,4 @@
 from langchain_cohere import ChatCohere
-from langchain_core.language_models.chat_models import BaseChatModel
 from pydantic.v1 import SecretStr
 
 from langflow.base.constants import STREAM_INFO_TEXT
@@ -33,7 +32,7 @@ class CohereComponent(LCModelComponent):
         ),
     ]
 
-    def build_model(self) -> LanguageModel | BaseChatModel:
+    def build_model(self) -> LanguageModel:  # type: ignore[type-var]
         cohere_api_key = self.cohere_api_key
         temperature = self.temperature
 

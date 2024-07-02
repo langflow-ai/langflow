@@ -1,29 +1,46 @@
 from typing import Any
 
-from langflow.custom import CustomComponent
+from langflow.custom import Component
+from langflow.inputs.inputs import IntInput, MessageTextInput
+from langflow.io import Output
+
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.schema import Data
 from langflow.schema.dotdict import dotdict
 from langflow.template.field.base import Input
 
 
-class CreateDataComponent(CustomComponent):
-    display_name = "Create Data"
-    description = "Dynamically create a Data with a specified number of fields."
-    field_order = ["number_of_fields", "text_key"]
+class CreateDataComponent(Component):
+    display_name: str = "Create Data"
+    description: str = "Dynamically create a Data with a specified number of fields."
+
+    inputs = [
+        IntInput(
+            name="number_of_fields",
+            display_name="Number of Fields",
+            info="Number of fields to be added to the record.",
+            real_time_refresh=True,
+            range_spec=RangeSpec(min=1, max=15, step=1, step_type="int"),
+        ),
+        MessageTextInput(name="text_key", display_name="Text Key", info="Key to be used as text.", advanced=True),
+    ]
+
+    outputs = [
+        Output(display_name="Data", name="data", method="build_data"),
+    ]
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
         if field_name == "number_of_fields":
             default_keys = ["code", "_type", "number_of_fields", "text_key"]
             try:
                 field_value_int = int(field_value)
-            except TypeError:
+            except ValueError:
                 return build_config
             existing_fields = {}
             if field_value_int > 15:
                 build_config["number_of_fields"]["value"] = 15
                 raise ValueError("Number of fields cannot exceed 15. Try using a Component to combine two Data.")
-            if len(build_config) > len(default_keys) + field_value_int:
+            if len(build_config) > len(default_keys):
                 # back up the existing template fields
                 for key in build_config.copy():
                     if key not in default_keys:
@@ -47,22 +64,7 @@ class CreateDataComponent(CustomComponent):
             build_config["number_of_fields"]["value"] = field_value_int
         return build_config
 
-    def build_config(self):
-        return {
-            "number_of_fields": {
-                "display_name": "Number of Fields",
-                "info": "Number of fields to be added to the record.",
-                "real_time_refresh": True,
-                "rangeSpec": RangeSpec(min=1, max=15, step=1, step_type="int"),
-            },
-            "text_key": {
-                "display_name": "Text Key",
-                "info": "Key to be used as text.",
-                "advanced": True,
-            },
-        }
-
-    def build(
+    async def build_data(
         self,
         number_of_fields: int = 0,
         text_key: str = "text",
@@ -79,3 +81,14 @@ class CreateDataComponent(CustomComponent):
         return_data = Data(data=data, text_key=text_key)
         self.status = return_data
         return return_data
+
+    def post_code_processing(self, new_build_config: dict, current_build_config: dict):
+        """
+        This function is called after the code validation is done.
+        """
+        frontend_node = super().post_code_processing(new_build_config, current_build_config)
+        new_build_config = self.update_build_config(
+            frontend_node["template"], frontend_node["template"]["number_of_fields"]["value"], "number_of_fields"
+        )
+        frontend_node = super().post_code_processing(new_build_config, current_build_config)
+        return frontend_node
