@@ -4,7 +4,7 @@ from langchain_community.llms.huggingface_endpoint import HuggingFaceEndpoint
 from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
-from langflow.io import BoolInput, DictInput, DropdownInput, MessageInput, Output, SecretStrInput, StrInput
+from langflow.io import BoolInput, DictInput, DropdownInput, MessageInput, SecretStrInput, StrInput
 
 
 class HuggingFaceEndpointsComponent(LCModelComponent):
@@ -30,7 +30,6 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
             advanced=True,
         ),
     ]
-
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
         endpoint_url = self.endpoint_url
