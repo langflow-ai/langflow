@@ -63,7 +63,7 @@ const useHandleOnNewValue = (
         ...newNode.data,
       };
 
-      if (dbValue) {
+      if (dbValue !== undefined) {
         newNode.data.node.template[name].load_from_db = dbValue;
       }
 
