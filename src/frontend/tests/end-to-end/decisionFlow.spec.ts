@@ -1,6 +1,10 @@
 import { expect, test } from "@playwright/test";
 
 test("should create a flow with decision", async ({ page }) => {
+  test.skip(
+    !process?.env?.OPENAI_API_KEY,
+    "OPENAI_API_KEY required to run this test",
+  );
   await page.goto("/");
   await page.locator("span").filter({ hasText: "My Collection" }).isVisible();
   await page.waitForTimeout(2000);
@@ -535,11 +539,6 @@ AI:
   await page.mouse.up();
 
   await page.locator('//*[@id="react-flow-id"]').hover();
-
-  if (!process.env.OPENAI_API_KEY) {
-    //You must set the OPENAI_API_KEY on .env file to run this test
-    expect(false).toBe(true);
-  }
 
   await page
     .getByTestId("popover-anchor-input-openai_api_key")

@@ -37,7 +37,7 @@ jobs:
           poetry install
       - name: Run unit tests
         run: |
-          make unit_tests args="-n auto"
+          make unit_tests
       - name: Test CLI
         run: |
           poetry run python -m langflow run --host 127.0.0.1 --port 7860 --backend-only &

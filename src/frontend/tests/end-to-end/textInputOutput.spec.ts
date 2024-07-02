@@ -6,6 +6,10 @@ test("TextInputOutputComponent", async ({ page }) => {
   if (!process.env.CI) {
     dotenv.config({ path: path.resolve(__dirname, "../../.env") });
   }
+  test.skip(
+    !process?.env?.OPENAI_API_KEY,
+    "OPENAI_API_KEY required to run this test",
+  );
 
   await page.goto("/");
   await page.waitForTimeout(2000);
@@ -170,11 +174,6 @@ test("TextInputOutputComponent", async ({ page }) => {
 
   // Release the mouse
   await page.mouse.up();
-
-  if (!process.env.OPENAI_API_KEY) {
-    //You must set the OPENAI_API_KEY on .env file to run this test
-    expect(false).toBe(true);
-  }
 
   await page
     .getByTestId("popover-anchor-input-input_value")

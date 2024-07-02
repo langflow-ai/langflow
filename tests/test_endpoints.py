@@ -426,6 +426,7 @@ def test_build_vertex_invalid_vertex_id(client, added_flow_with_prompt_and_histo
     assert response.status_code == 500
 
 
+@pytest.mark.api_key_required
 def test_successful_run_no_payload(client, starter_project, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = starter_project["id"]
@@ -454,6 +455,7 @@ def test_successful_run_no_payload(client, starter_project, created_api_key):
     assert all([result is not None for result in inner_results]), (outputs_dict, output_results_has_results)
 
 
+@pytest.mark.api_key_required
 def test_successful_run_with_output_type_text(client, starter_project, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = starter_project["id"]
@@ -484,6 +486,7 @@ def test_successful_run_with_output_type_text(client, starter_project, created_a
     assert all([key in result for result in inner_results for key in expected_keys]), outputs_dict
 
 
+@pytest.mark.api_key_required
 def test_successful_run_with_output_type_any(client, starter_project, created_api_key):
     # This one should have both the ChatOutput and TextOutput components
     headers = {"x-api-key": created_api_key.api_key}
@@ -515,6 +518,7 @@ def test_successful_run_with_output_type_any(client, starter_project, created_ap
     assert all([key in result for result in inner_results for key in expected_keys]), outputs_dict
 
 
+@pytest.mark.api_key_required
 def test_successful_run_with_output_type_debug(client, starter_project, created_api_key):
     # This one should return outputs for all components
     # Let's just check the amount of outputs(there should be 7)
@@ -540,6 +544,7 @@ def test_successful_run_with_output_type_debug(client, starter_project, created_
     assert len(outputs_dict.get("outputs")) == 4
 
 
+@pytest.mark.api_key_required
 # To test input_type wel'l just set it with output_type debug and check if the value is correct
 def test_successful_run_with_input_type_text(client, starter_project, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
@@ -572,6 +577,7 @@ def test_successful_run_with_input_type_text(client, starter_project, created_ap
 
 
 # Now do the same for "chat" input type
+@pytest.mark.api_key_required
 def test_successful_run_with_input_type_chat(client, starter_project, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = starter_project["id"]
@@ -604,6 +610,7 @@ def test_successful_run_with_input_type_chat(client, starter_project, created_ap
     ), chat_input_outputs
 
 
+@pytest.mark.api_key_required
 def test_successful_run_with_input_type_any(client, starter_project, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = starter_project["id"]
