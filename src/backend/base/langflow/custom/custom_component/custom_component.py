@@ -485,21 +485,17 @@ class CustomComponent(BaseComponent):
         """
         raise NotImplementedError
 
-    def log(self, message: LoggableType | list[LoggableType], name: str | None = None):
+    def log(self, message: LoggableType | list[LoggableType]):
         """
         Logs a message.
 
         Args:
             message (LoggableType | list[LoggableType]): The message to log.
         """
-        if name is None and self.display_name:
-            name = self.display_name
-        else:
-            name = self.__class__.__name__
-        log = Log(message=message, type=get_artifact_type(message), name=name)
+        log = Log(message=message, type=get_artifact_type(message), name=self.trace_name)
         self._logs.append(log)
         if self.tracing_service and self.vertex:
-            self.tracing_service.add_log(trace_name=self.vertex.id, log=log)
+            self.tracing_service.add_log(trace_name=self.trace_name, log=log)
 
     def post_code_processing(self, new_build_config: dict, current_build_config: dict):
         """
