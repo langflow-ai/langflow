@@ -5,7 +5,6 @@ import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import AlertDropdown from "../../alerts/alertDropDown";
 import profileCircle from "../../assets/profile-circle.png";
 import {
-  BACKEND_URL,
   BASE_URL_API,
   LOCATIONS_TO_RETURN,
   USER_PROJECTS_HEADER,
@@ -50,11 +49,9 @@ export default function Header(): JSX.Element {
   const routeHistory = useLocationStore((state) => state.routeHistory);
 
   const profileImageUrl =
-    `${BACKEND_URL.slice(
-      0,
-      BACKEND_URL.length - 1,
-    )}${BASE_URL_API}files/profile_pictures/${userData?.profile_image}` ??
-    profileCircle;
+    `${BASE_URL_API}files/profile_pictures/${
+      userData?.profile_image ?? "Space/046-rocket.svg"
+    }` ?? profileCircle;
   async function checkForChanges(): Promise<void> {
     if (nodes.length === 0) {
       await removeFlow(id!);
@@ -202,14 +199,7 @@ export default function Header(): JSX.Element {
                   className="shrink-0"
                 >
                   <img
-                    src={
-                      `${BACKEND_URL.slice(
-                        0,
-                        BACKEND_URL.length - 1,
-                      )}${BASE_URL_API}files/profile_pictures/${
-                        userData?.profile_image ?? "Space/046-rocket.svg"
-                      }` ?? profileCircle
-                    }
+                    src={profileImageUrl}
                     className="h-7 w-7 shrink-0 focus-visible:outline-0"
                   />
                 </Button>
@@ -220,14 +210,7 @@ export default function Header(): JSX.Element {
                     <DropdownMenuLabel>
                       <div className="flex items-center gap-3">
                         <img
-                          src={
-                            `${BACKEND_URL.slice(
-                              0,
-                              BACKEND_URL.length - 1,
-                            )}${BASE_URL_API}files/profile_pictures/${
-                              userData?.profile_image ?? "Space/046-rocket.svg"
-                            }` ?? profileCircle
-                          }
+                          src={profileImageUrl}
                           className="h-5 w-5 focus-visible:outline-0"
                         />
 
