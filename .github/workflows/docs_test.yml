@@ -4,8 +4,6 @@ on:
   pull_request:
     paths:
       - "docs/**"
-  merge_group:
-    types: [checks_requested]
 
 env:
   NODE_VERSION: "21"
