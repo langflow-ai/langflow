@@ -65,7 +65,7 @@ class MistralAIModelComponent(LCModelComponent):
         BoolInput(name="safe_mode", display_name="Safe Mode", advanced=True),
     ]
 
-    def build_model(self) -> LanguageModel:
+    def build_model(self) -> LanguageModel: # type: ignore[type-var]
         mistral_api_key = self.mistral_api_key
         temperature = self.temperature
         model_name = self.model_name

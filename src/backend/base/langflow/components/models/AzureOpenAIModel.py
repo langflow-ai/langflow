@@ -57,7 +57,7 @@ class AzureChatOpenAIComponent(LCModelComponent):
         ),
     ]
 
-    def build_model(self) -> LanguageModel:
+    def build_model(self) -> LanguageModel: # type: ignore[type-var]
         azure_endpoint = self.azure_endpoint
         azure_deployment = self.azure_deployment
         api_version = self.api_version
