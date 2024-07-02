@@ -34,7 +34,7 @@ class TracingService(Service):
         self.run_id: UUID | None = None
         self.project_name = None
         self._tracers: dict[str, LangSmithTracer] = {}
-        self._logs: dict[str, list[Log]] = defaultdict(list)
+        self._logs: dict[str, list[Log | dict[Any, Any]]] = defaultdict(list)
         self.logs_queue: asyncio.Queue = asyncio.Queue()
         self.running = False
         self.worker_task = None
@@ -288,7 +288,8 @@ class LangSmithTracer(BaseTracer):
         metadata: dict[str, Any] | None = None,
     ):
         self._run_tree.add_metadata({"inputs": inputs})
-        self._run_tree.add_metadata(metadata)
+        if metadata:
+            self._run_tree.add_metadata(metadata)
         self._run_tree.end(outputs=outputs, error=error)
         self._run_tree.post()
         wait_for_all_tracers()
