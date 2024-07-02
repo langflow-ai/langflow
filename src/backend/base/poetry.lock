@@ -1247,18 +1247,18 @@ tenacity = ">=8.1.0,<8.4.0 || >8.4.0,<9.0.0"
 
 [[package]]
 name = "langchain-experimental"
-version = "0.0.62"
+version = "0.0.61"
 description = "Building applications with LLMs through composability"
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
-    {file = "langchain_experimental-0.0.62-py3-none-any.whl", hash = "sha256:9240f9e3490e819976f20a37863970036e7baacb7104b9eb6833d19ab6d518c9"},
-    {file = "langchain_experimental-0.0.62.tar.gz", hash = "sha256:9737fbc8429d24457ea4d368e3c9ba9ed1cace0564fb5f1a96a3027a588bd0ac"},
+    {file = "langchain_experimental-0.0.61-py3-none-any.whl", hash = "sha256:f9c516f528f55919743bd56fe1689a53bf74ae7f8902d64b9d8aebc61249cbe2"},
+    {file = "langchain_experimental-0.0.61.tar.gz", hash = "sha256:e9538efb994be5db3045cc582cddb9787c8299c86ffeee9d3779b7f58eef2226"},
 ]
 
 [package.dependencies]
-langchain-community = ">=0.2.6,<0.3.0"
-langchain-core = ">=0.2.10,<0.3.0"
+langchain-community = ">=0.2.5,<0.3.0"
+langchain-core = ">=0.2.7,<0.3.0"
 
 [[package]]
 name = "langchain-text-splitters"
@@ -3266,4 +3266,4 @@ local = []
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-content-hash = "7e46144d27c633214f00e73e496c0e4d56db1fb47032a21861677ec275b79d86"
+content-hash = "ae44ed3656118556da57c0e242a83e0f51ed100a4d949d115292fc929b4d4293"
