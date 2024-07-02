@@ -13,6 +13,7 @@ class AzureChatOpenAIComponent(LCModelComponent):
     documentation: str = "https://python.langchain.com/docs/integrations/llms/azure_openai"
     beta = False
     icon = "Azure"
+    name = 'AzureOpenAIModel'
 
     AZURE_OPENAI_MODELS = [
         "gpt-35-turbo",

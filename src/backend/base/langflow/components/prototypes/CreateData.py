@@ -10,6 +10,7 @@ from langflow.template.field.base import Input
 class CreateDataComponent(CustomComponent):
     display_name = "Create Data"
     description = "Dynamically create a Data with a specified number of fields."
+    name = 'CreateData'
     field_order = ["number_of_fields", "text_key"]
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):

@@ -12,6 +12,7 @@ class GroqModel(LCModelComponent):
     display_name: str = "Groq"
     description: str = "Generate text using Groq."
     icon = "Groq"
+    name = 'GroqModel'
 
     inputs = [
         SecretStrInput(

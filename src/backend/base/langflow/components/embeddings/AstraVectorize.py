@@ -9,6 +9,7 @@ class AstraVectorize(Component):
     description: str = "Configuration options for Astra Vectorize server-side embeddings."
     documentation: str = "https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html"
     icon = "AstraDB"
+    name = 'AstraVectorize'
 
     VECTORIZE_PROVIDERS_MAPPING = {
         "Azure OpenAI": ["azureOpenAI", ["text-embedding-3-small", "text-embedding-3-large", "text-embedding-ada-002"]],
