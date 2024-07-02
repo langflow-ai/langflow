@@ -1,4 +1,3 @@
-from typing import Optional
 from langchain_core.vectorstores import VectorStore
 from loguru import logger
 
@@ -25,7 +24,6 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
     icon: str = "AstraDB"
 
     _cached_vectorstore: VectorStore | None = None
-
 
     inputs = [
         StrInput(

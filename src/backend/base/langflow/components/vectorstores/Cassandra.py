@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List
 
 from langchain_community.vectorstores import Cassandra
 from loguru import logger
@@ -23,7 +23,6 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
     description = "Cassandra Vector Store with search capabilities"
     documentation = "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/cassandra"
     icon = "Cassandra"
-
 
     _cached_vectorstore: Cassandra | None = None
 
