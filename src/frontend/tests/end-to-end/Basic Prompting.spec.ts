@@ -1,7 +1,10 @@
 import { expect, test } from "@playwright/test";
 
 test("Basic Prompting (Hello, World)", async ({ page }) => {
-  test.skip(!process?.env?.OPENAI_API_KEY, "OPENAI_API_KEY required to run this test")
+  test.skip(
+    !process?.env?.OPENAI_API_KEY,
+    "OPENAI_API_KEY required to run this test",
+  );
 
   await page.goto("/");
   await page.waitForTimeout(2000);

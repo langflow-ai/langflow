@@ -46,7 +46,10 @@ test("erase button should clear the chat messages", async ({ page }) => {
   if (!process.env.CI) {
     dotenv.config({ path: path.resolve(__dirname, "../../.env") });
   }
-  test.skip(!process?.env?.OPENAI_API_KEY, "OPENAI_API_KEY required to run this test")
+  test.skip(
+    !process?.env?.OPENAI_API_KEY,
+    "OPENAI_API_KEY required to run this test",
+  );
 
   await page.goto("/");
 
@@ -75,7 +78,6 @@ test("erase button should clear the chat messages", async ({ page }) => {
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
-
 
   await page
     .getByTestId("popover-anchor-input-openai_api_key")

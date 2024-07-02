@@ -1,7 +1,10 @@
 import { expect, test } from "@playwright/test";
 
 test("should create a flow with decision", async ({ page }) => {
-  test.skip(!process?.env?.OPENAI_API_KEY, "OPENAI_API_KEY required to run this test")
+  test.skip(
+    !process?.env?.OPENAI_API_KEY,
+    "OPENAI_API_KEY required to run this test",
+  );
   await page.goto("/");
   await page.locator("span").filter({ hasText: "My Collection" }).isVisible();
   await page.waitForTimeout(2000);

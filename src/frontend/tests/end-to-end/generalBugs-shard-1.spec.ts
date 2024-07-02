@@ -3,7 +3,10 @@ import * as dotenv from "dotenv";
 import path from "path";
 
 test("should delete rows from table message", async ({ page }) => {
-  test.skip(!process?.env?.OPENAI_API_KEY, "OPENAI_API_KEY required to run this test")
+  test.skip(
+    !process?.env?.OPENAI_API_KEY,
+    "OPENAI_API_KEY required to run this test",
+  );
 
   await page.goto("/");
   await page.waitForTimeout(2000);
