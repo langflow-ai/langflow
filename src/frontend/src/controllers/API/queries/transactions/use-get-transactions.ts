@@ -3,10 +3,10 @@ import { extractColumnsFromRows } from "../../../../utils/utils";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
+import { QueryFunctionType } from "../../../../types/api";
 
 interface TransactionsQueryParams {
   id: string;
-  mode: "intersection" | "union";
   params?: Record<string, unknown>;
 }
 
@@ -15,19 +15,30 @@ interface TransactionsResponse {
   columns: Array<ColDef | ColGroupDef>;
 }
 
-export const useGetTransactionsQuery = ({
-  id,
-  mode,
-  params = {},
-}: TransactionsQueryParams) => {
+export const useGetTransactionsQuery: QueryFunctionType<TransactionsQueryParams,(TransactionsResponse)>= (
+  { id, params },
+  onFetch,
+) => {
   const { query } = UseRequestProcessor();
 
-  const responseFn = async (data) => {
-    const columns = extractColumnsFromRows(data.data, mode);
-    return { rows: data.data, columns };
+  const responseFn = (data: any) => {
+    if (!onFetch) return data;
+    if (typeof onFetch === "function") return onFetch(data);
+    switch (onFetch) {
+      case "TableUnion": {
+        const columns = extractColumnsFromRows(data.data, "union");
+        return { rows: data.data, columns };
+      }
+      case "TableIntersection": {
+        const columns = extractColumnsFromRows(data.data, "intersection");
+        return { rows: data.data, columns };
+      }
+      default:
+        return data;
+    }
   };
 
-  const getTransactionsFn = async (id, mode, params = {}) => {
+  const getTransactionsFn = async (id: string, params = {}) => {
     const config = {};
     config["params"] = { flow_id: id };
     if (params) {
@@ -43,8 +54,8 @@ export const useGetTransactionsQuery = ({
   const { data, isLoading, isError, refetch } = query(
     ["useGetTransactionsQuery"],
     async () => {
-      const rows = await getTransactionsFn(id, mode, params);
-      return await responseFn(rows);
+      const rows = await getTransactionsFn(id, params);
+      return responseFn(rows);
     },
     {
       keepPreviousData: true,
