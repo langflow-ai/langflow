@@ -1,5 +1,6 @@
 from loguru import logger
 
+from langchain_core.vectorstores import VectorStore
 from langflow.base.vectorstores.model import LCVectorStoreComponent
 from langflow.helpers import docs_to_data
 from langflow.inputs import FloatInput, DictInput
@@ -21,6 +22,8 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
     description: str = "Implementation of Vector Store using Astra DB with search capabilities"
     documentation: str = "https://python.langchain.com/docs/integrations/vectorstores/astradb"
     icon: str = "AstraDB"
+
+    _cached_vectorstore: VectorStore = None
 
     inputs = [
         StrInput(
@@ -158,6 +161,8 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
     ]
 
     def _build_vector_store_no_ingest(self):
+        if self._cached_vectorstore:
+            return self._cached_vectorstore
         try:
             from langchain_astradb import AstraDBVectorStore
             from langchain_astradb.utils.astradb import SetupMode
@@ -216,13 +221,13 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
         except Exception as e:
             raise ValueError(f"Error initializing AstraDBVectorStore: {str(e)}") from e
 
+        self._cached_vectorstore = vector_store
+
         return vector_store
 
     def build_vector_store(self):
         vector_store = self._build_vector_store_no_ingest()
-        if hasattr(self, "ingest_data") and self.ingest_data:
-            logger.debug("Ingesting data into the Vector Store.")
-            self._add_documents_to_vector_store(vector_store)
+        self._add_documents_to_vector_store(vector_store)
         return vector_store
 
     def _add_documents_to_vector_store(self, vector_store):
@@ -233,7 +238,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             else:
                 raise ValueError("Vector Store Inputs must be Data objects.")
 
-        if documents and self.embedding is not None:
+        if documents:
             logger.debug(f"Adding {len(documents)} documents to the Vector Store.")
             try:
                 vector_store.add_documents(documents)
@@ -252,6 +257,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
 
     def search_documents(self) -> list[Data]:
         vector_store = self._build_vector_store_no_ingest()
+        self._add_documents_to_vector_store(vector_store)
 
         logger.debug(f"Search input: {self.search_input}")
         logger.debug(f"Search type: {self.search_type}")

@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List
 
 from langchain_community.vectorstores import Cassandra
 
@@ -15,6 +15,7 @@ from langflow.io import (
     SecretStrInput,
 )
 from langflow.schema import Data
+from loguru import logger
 
 
 class CassandraVectorStoreComponent(LCVectorStoreComponent):
@@ -22,6 +23,8 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
     description = "Cassandra Vector Store with search capabilities"
     documentation = "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/cassandra"
     icon = "Cassandra"
+
+    _cached_vectorstore: Cassandra = None
 
     inputs = [
         MessageTextInput(
@@ -131,11 +134,14 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
     ]
 
     def build_vector_store(self) -> Cassandra:
-        return self._build_cassandra(ingest=True)
+        return self._build_cassandra()
 
-    def _build_cassandra(self, ingest: bool) -> Cassandra:
+    def _build_cassandra(self) -> Cassandra:
+        if self._cached_vectorstore:
+            return self._cached_vectorstore
         try:
             import cassio
+            from langchain_community.utilities.cassandra import SetupMode
         except ImportError:
             raise ImportError(
                 "Could not import cassio integration package. " "Please install it with `pip install cassio`."
@@ -167,43 +173,48 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
                 password=self.token,
                 cluster_kwargs=self.cluster_kwargs,
             )
-        ttl_seconds: Optional[int] = self.ttl_seconds
-
         documents = []
 
-        if ingest:
-            for _input in self.ingest_data or []:
-                if isinstance(_input, Data):
-                    documents.append(_input.to_lc_document())
-                else:
-                    documents.append(_input)
+        for _input in self.ingest_data or []:
+            if isinstance(_input, Data):
+                documents.append(_input.to_lc_document())
+            else:
+                documents.append(_input)
 
         if self.enable_body_search:
             body_index_options = [("index_analyzer", "STANDARD")]
         else:
             body_index_options = None
 
+        if self.setup_mode == "Off":
+            setup_mode = SetupMode.OFF
+        elif self.setup_mode == "Sync":
+            setup_mode = SetupMode.SYNC
+        else:
+            setup_mode = SetupMode.ASYNC
+
         if documents:
+            logger.debug(f"Adding {len(documents)} documents to the Vector Store.")
             table = Cassandra.from_documents(
                 documents=documents,
                 embedding=self.embedding,
                 table_name=self.table_name,
                 keyspace=self.keyspace,
-                ttl_seconds=ttl_seconds,
+                ttl_seconds=self.ttl_seconds or None,
                 batch_size=self.batch_size,
                 body_index_options=body_index_options,
             )
-
         else:
+            logger.debug("No documents to add to the Vector Store.")
             table = Cassandra(
                 embedding=self.embedding,
                 table_name=self.table_name,
                 keyspace=self.keyspace,
-                ttl_seconds=ttl_seconds,
+                ttl_seconds=self.ttl_seconds or None,
                 body_index_options=body_index_options,
-                setup_mode=self.setup_mode,
+                setup_mode=setup_mode,
             )
-
+        self._cached_vectorstore = table
         return table
 
     def _map_search_type(self):
@@ -215,12 +226,18 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
             return "similarity"
 
     def search_documents(self) -> List[Data]:
-        vector_store = self._build_cassandra(ingest=False)
+        vector_store = self._build_cassandra()
+
+        logger.debug(f"Search input: {self.search_query}")
+        logger.debug(f"Search type: {self.search_type}")
+        logger.debug(f"Number of results: {self.number_of_results}")
 
         if self.search_query and isinstance(self.search_query, str) and self.search_query.strip():
             try:
                 search_type = self._map_search_type()
                 search_args = self._build_search_args()
+
+                logger.debug(f"Search args: {str(search_args)}")
 
                 docs = vector_store.search(query=self.search_query, search_type=search_type, **search_args)
             except KeyError as e:
@@ -230,6 +247,8 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
                     )
                 else:
                     raise e
+
+            logger.debug(f"Retrieved documents: {len(docs)}")
 
             data = docs_to_data(docs)
             self.status = data
