@@ -80,10 +80,7 @@ test("should copy code from playground modal", async ({ page }) => {
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
 
-  if (!process?.env?.OPENAI_API_KEY) {
-    //You must set the OPENAI_API_KEY on .env file to run this test
-    expect(false).toBe(true);
-  }
+  test.skip(!process?.env?.OPENAI_API_KEY, "OPENAI_API_KEY required to run this test")
 
   await page
     .getByTestId("popover-anchor-input-openai_api_key")
