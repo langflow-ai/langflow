@@ -1,6 +1,7 @@
 name: Python tests
 
 on:
+  workflow_call:
   pull_request:
     types: [opened, synchronize, reopened, auto_merge_enabled]
     branches: [main]
@@ -9,7 +10,7 @@ env:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ !contains(github.workflow, 'Release')}}
 
 jobs:
   build:
@@ -37,7 +38,7 @@ jobs:
           poetry install
       - name: Run unit tests
         run: |
-          make unit_tests args="-n auto"
+          make unit_tests
       - name: Test CLI
         run: |
           poetry run python -m langflow run --host 127.0.0.1 --port 7860 --backend-only &
