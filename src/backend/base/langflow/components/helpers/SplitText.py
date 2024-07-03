@@ -12,7 +12,7 @@ class SplitTextComponent(Component):
     display_name: str = "Split Text"
     description: str = "Split text into chunks based on specified criteria."
     icon = "scissors-line-dashed"
-    name = 'SplitText'
+    name = "SplitText"
 
     inputs = [
         HandleInput(

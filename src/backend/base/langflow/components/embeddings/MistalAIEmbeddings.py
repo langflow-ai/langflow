@@ -10,7 +10,7 @@ class MistralAIEmbeddingsComponent(LCModelComponent):
     display_name = "MistralAI Embeddings"
     description = "Generate embeddings using MistralAI models."
     icon = "MistralAI"
-    name = 'MistalAIEmbeddings'
+    name = "MistalAIEmbeddings"
 
     inputs = [
         DropdownInput(

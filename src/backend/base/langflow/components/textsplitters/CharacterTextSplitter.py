@@ -10,7 +10,7 @@ from langflow.utils.util import unescape_string
 class CharacterTextSplitterComponent(CustomComponent):
     display_name = "CharacterTextSplitter"
     description = "Splitting text that looks at characters."
-    name = 'CharacterTextSplitter'
+    name = "CharacterTextSplitter"
 
     def build_config(self):
         return {

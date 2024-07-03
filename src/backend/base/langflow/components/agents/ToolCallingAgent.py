@@ -15,7 +15,7 @@ class ToolCallingAgentComponent(Component):
     description: str = "Agent that uses tools. Only models that are compatible with function calling are supported."
     icon = "LangChain"
     beta = True
-    name = 'ToolCallingAgent'
+    name = "ToolCallingAgent"
 
     inputs = [
         MessageTextInput(

@@ -7,7 +7,7 @@ class TextInputComponent(TextComponent):
     display_name = "Text Input"
     description = "Get text inputs from the Playground."
     icon = "type"
-    name = 'TextInput'
+    name = "TextInput"
 
     inputs = [
         MessageTextInput(

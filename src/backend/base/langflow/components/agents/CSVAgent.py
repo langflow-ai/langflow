@@ -8,7 +8,7 @@ class CSVAgentComponent(CustomComponent):
     display_name = "CSVAgent"
     description = "Construct a CSV agent from a CSV and tools."
     documentation = "https://python.langchain.com/docs/modules/agents/toolkits/csv"
-    name = 'CSVAgent'
+    name = "CSVAgent"
 
     def build_config(self):
         return {

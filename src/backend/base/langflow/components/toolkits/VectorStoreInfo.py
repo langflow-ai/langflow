@@ -7,7 +7,7 @@ from langflow.custom import CustomComponent
 class VectorStoreInfoComponent(CustomComponent):
     display_name = "VectorStoreInfo"
     description = "Information about a VectorStore"
-    name = 'VectorStoreInfo'
+    name = "VectorStoreInfo"
 
     def build_config(self):
         return {

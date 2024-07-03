@@ -8,7 +8,7 @@ class ParseDataComponent(Component):
     display_name = "Parse Data"
     description = "Convert Data into plain text following a specified template."
     icon = "braces"
-    name = 'ParseData'
+    name = "ParseData"
 
     inputs = [
         DataInput(name="data", display_name="Data", info="The data to convert to text."),

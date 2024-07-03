@@ -10,7 +10,7 @@ from langflow.field_typing import BaseMemory, LanguageModel, Text
 class LLMChainComponent(CustomComponent):
     display_name = "LLMChain"
     description = "Chain to run queries against LLMs"
-    name = 'LLMChain'
+    name = "LLMChain"
 
     def build_config(self):
         return {

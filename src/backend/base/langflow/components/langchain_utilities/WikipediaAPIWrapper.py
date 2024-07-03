@@ -12,7 +12,7 @@ from langflow.custom import CustomComponent
 class WikipediaAPIWrapperComponent(CustomComponent):
     display_name = "WikipediaAPIWrapper"
     description = "Wrapper around WikipediaAPI."
-    name = 'WikipediaAPIWrapper'
+    name = "WikipediaAPIWrapper"
 
     def build_config(self):
         return {}

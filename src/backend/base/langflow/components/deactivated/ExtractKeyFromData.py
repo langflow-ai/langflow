@@ -6,7 +6,7 @@ class ExtractKeyFromDataComponent(CustomComponent):
     display_name = "Extract Key From Data"
     description = "Extracts a key from a data."
     beta: bool = True
-    name = 'ExtractKeyFromData'
+    name = "ExtractKeyFromData"
 
     field_config = {
         "data": {"display_name": "Data"},

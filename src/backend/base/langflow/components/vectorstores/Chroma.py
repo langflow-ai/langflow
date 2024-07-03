@@ -22,7 +22,7 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
     display_name: str = "Chroma DB"
     description: str = "Chroma Vector Store with search capabilities"
     documentation = "https://python.langchain.com/docs/integrations/vectorstores/chroma"
-    name = 'Chroma'
+    name = "Chroma"
     icon = "Chroma"
 
     inputs = [

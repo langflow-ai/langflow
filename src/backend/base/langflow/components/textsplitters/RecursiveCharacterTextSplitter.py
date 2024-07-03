@@ -11,7 +11,7 @@ class RecursiveCharacterTextSplitterComponent(Component):
     display_name: str = "Recursive Character Text Splitter"
     description: str = "Split text into chunks of a specified length."
     documentation: str = "https://docs.langflow.org/components/text-splitters#recursivecharactertextsplitter"
-    name = 'RecursiveCharacterTextSplitter'
+    name = "RecursiveCharacterTextSplitter"
 
     inputs = [
         IntInput(

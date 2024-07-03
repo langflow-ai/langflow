@@ -20,7 +20,7 @@ class PineconeVectorStoreComponent(LCVectorStoreComponent):
     display_name = "Pinecone"
     description = "Pinecone Vector Store with search capabilities"
     documentation = "https://python.langchain.com/v0.2/docs/integrations/vectorstores/pinecone/"
-    name = 'Pinecone'
+    name = "Pinecone"
     icon = "Pinecone"
 
     inputs = [

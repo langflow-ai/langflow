@@ -8,7 +8,7 @@ from langflow.custom import CustomComponent
 class SearxSearchWrapperComponent(CustomComponent):
     display_name = "SearxSearchWrapper"
     description = "Wrapper for Searx API."
-    name = 'SearxSearchWrapper'
+    name = "SearxSearchWrapper"
 
     def build_config(self):
         return {

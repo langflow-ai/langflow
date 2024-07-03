@@ -11,7 +11,7 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
     display_name: str = "Hugging Face API"
     description: str = "Generate text using Hugging Face Inference APIs."
     icon = "HuggingFace"
-    name = 'HuggingFaceModel'
+    name = "HuggingFaceModel"
 
     inputs = [
         MessageInput(name="input_value", display_name="Input"),

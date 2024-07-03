@@ -24,7 +24,7 @@ class OpenAIModelComponent(LCModelComponent):
     display_name = "OpenAI"
     description = "Generates text using OpenAI LLMs."
     icon = "OpenAI"
-    name = 'OpenAIModel'
+    name = "OpenAIModel"
 
     inputs = [
         MessageInput(name="input_value", display_name="Input"),

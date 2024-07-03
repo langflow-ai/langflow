@@ -15,7 +15,6 @@ from langflow.custom.custom_component.component import Component
 from langflow.custom.directory_reader.utils import (
     abuild_custom_component_list_from_path,
     build_custom_component_list_from_path,
-    determine_component_name,
     merge_nested_dicts_with_renaming,
 )
 from langflow.custom.eval import eval_custom_component_code
@@ -568,6 +567,6 @@ def get_function(code):
 
 def get_instance_name(instance):
     name = instance.__class__.__name__
-    if hasattr(instance, 'name') and instance.name:
+    if hasattr(instance, "name") and instance.name:
         name = instance.name
     return name

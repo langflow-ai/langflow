@@ -7,7 +7,7 @@ from langflow.schema import Data
 class FirecrawlScrapeApi(CustomComponent):
     display_name: str = "FirecrawlScrapeApi"
     description: str = "Firecrawl Scrape API."
-    name = 'FirecrawlScrapeApi'
+    name = "FirecrawlScrapeApi"
 
     output_types: list[str] = ["Document"]
     documentation: str = "https://docs.firecrawl.dev/api-reference/endpoint/scrape"

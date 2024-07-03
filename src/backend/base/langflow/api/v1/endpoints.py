@@ -524,7 +524,6 @@ async def custom_component(
     return CustomComponentResponse(data=built_frontend_node, type=_type)
 
 
-
 @router.post("/custom_component/update", status_code=HTTPStatus.OK)
 async def custom_component_update(
     code_request: UpdateCustomComponentRequest,

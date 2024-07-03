@@ -8,7 +8,7 @@ from langflow.custom import CustomComponent
 class SerpAPIWrapperComponent(CustomComponent):
     display_name = "SerpAPIWrapper"
     description = "Wrapper around SerpAPI"
-    name = 'SerpAPIWrapper'
+    name = "SerpAPIWrapper"
 
     def build_config(self):
         return {

@@ -13,7 +13,7 @@ from langflow.template.field.base import Input
 class CreateDataComponent(Component):
     display_name: str = "Create Data"
     description: str = "Dynamically create a Data with a specified number of fields."
-    name: str = 'CreateData'
+    name: str = "CreateData"
 
     inputs = [
         IntInput(

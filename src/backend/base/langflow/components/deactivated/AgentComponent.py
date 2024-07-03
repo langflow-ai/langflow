@@ -23,7 +23,7 @@ class AgentComponent(LCAgentComponent):
         "memory",
         "input_value",
     ]
-    name = 'AgentComponent'
+    name = "AgentComponent"
 
     def build_config(self):
         return {

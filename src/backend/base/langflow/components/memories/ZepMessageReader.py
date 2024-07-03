@@ -10,7 +10,7 @@ from langflow.schema import Data
 class ZepMessageReaderComponent(BaseMemoryComponent):
     display_name = "Zep Message Reader"
     description = "Retrieves stored chat messages from Zep."
-    name = 'ZepMessageReader'
+    name = "ZepMessageReader"
 
     def build_config(self):
         return {

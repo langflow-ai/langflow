@@ -7,7 +7,7 @@ class SelectivePassThroughComponent(Component):
     display_name = "Selective Pass Through"
     description = "Passes the specified value if a specified condition is met."
     icon = "filter"
-    name = 'SelectivePassThrough'
+    name = "SelectivePassThrough"
 
     inputs = [
         MessageTextInput(

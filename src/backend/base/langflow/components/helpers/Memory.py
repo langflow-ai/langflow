@@ -10,7 +10,7 @@ class MemoryComponent(Component):
     display_name = "Chat Memory"
     description = "Retrieves stored chat messages."
     icon = "message-square-more"
-    name = 'Memory'
+    name = "Memory"
 
     inputs = [
         DropdownInput(

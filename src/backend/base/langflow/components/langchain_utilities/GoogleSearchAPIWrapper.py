@@ -8,7 +8,7 @@ from langflow.custom import CustomComponent
 class GoogleSearchAPIWrapperComponent(CustomComponent):
     display_name = "GoogleSearchAPIWrapper"
     description = "Wrapper for Google Search API."
-    name = 'GoogleSearchAPIWrapper'
+    name = "GoogleSearchAPIWrapper"
 
     def build_config(self):
         return {

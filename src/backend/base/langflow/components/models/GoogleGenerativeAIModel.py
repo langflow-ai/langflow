@@ -10,7 +10,7 @@ class GoogleGenerativeAIComponent(LCModelComponent):
     display_name = "Google Generative AI"
     description = "Generate text using Google Generative AI."
     icon = "GoogleGenerativeAI"
-    name = 'GoogleGenerativeAIModel'
+    name = "GoogleGenerativeAIModel"
 
     inputs = [
         MessageInput(name="input_value", display_name="Input"),

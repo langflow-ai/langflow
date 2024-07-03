@@ -8,7 +8,7 @@ class ChatInput(ChatComponent):
     display_name = "Chat Input"
     description = "Get chat inputs from the Playground."
     icon = "ChatInput"
-    name = 'ChatInput'
+    name = "ChatInput"
 
     inputs = [
         MultilineInput(

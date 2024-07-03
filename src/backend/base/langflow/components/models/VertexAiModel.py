@@ -10,7 +10,7 @@ class ChatVertexAIComponent(LCModelComponent):
     display_name = "Vertex AI"
     description = "Generate text using Vertex AI LLMs."
     icon = "VertexAI"
-    name = 'VertexAiModel'
+    name = "VertexAiModel"
 
     inputs = [
         MessageInput(name="input_value", display_name="Input"),
