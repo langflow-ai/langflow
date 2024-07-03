@@ -51,7 +51,7 @@ test("IntComponent", async ({ page }) => {
   await page.getByTestId("edit-button-modal").click();
   await page.getByTestId("showmax_tokens").click();
 
-  await page.getByText("Save Changes", { exact: true }).click();
+  await page.getByText("Close").last().click();
   await page.getByTestId("int-input-max_tokens").click();
   await page
     .getByTestId("int-input-max_tokens")
@@ -172,7 +172,7 @@ test("IntComponent", async ({ page }) => {
     await page.locator('//*[@id="showtemperature"]').isChecked(),
   ).toBeFalsy();
 
-  await page.getByText("Save Changes", { exact: true }).click();
+  await page.getByText("Close").last().click();
 
   const plusButtonLocator = page.getByTestId("int-input-max_tokens");
   const elementCount = await plusButtonLocator?.count();
@@ -195,7 +195,7 @@ test("IntComponent", async ({ page }) => {
       expect(false).toBeTruthy();
     }
 
-    await page.getByText("Save Changes", { exact: true }).click();
+    await page.getByText("Close").last().click();
     await page.getByTestId("int-input-max_tokens").click();
     await page.getByTestId("int-input-max_tokens").fill("3");
 

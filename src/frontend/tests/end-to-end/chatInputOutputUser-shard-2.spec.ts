@@ -93,12 +93,12 @@ test("user must interact with chat with Input/Output", async ({ page }) => {
   await page.getByText("Chat Input", { exact: true }).click();
   await page.getByTestId("advanced-button-modal").click();
   await page.getByTestId("showsender_name").click();
-  await page.getByText("Save Changes", { exact: true }).click();
+  await page.getByText("Close").last().click();
 
   await page.getByText("Chat Output", { exact: true }).click();
   await page.getByTestId("advanced-button-modal").click();
   await page.getByTestId("showsender_name").click();
-  await page.getByText("Save Changes", { exact: true }).click();
+  await page.getByText("Close").last().click();
 
   await page
     .getByTestId("popover-anchor-input-sender_name")

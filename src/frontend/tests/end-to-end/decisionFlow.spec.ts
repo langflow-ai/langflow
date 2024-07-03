@@ -472,7 +472,7 @@ AI:
     .getByTestId("popover-anchor-input-input_message-edit")
     .nth(0)
     .fill("You're Happy! 🤪");
-  await page.getByText("Save Changes").click();
+  await page.getByText("Close").last().click();
 
   await page.getByTitle("zoom in").click();
   await page.getByTitle("zoom in").click();
@@ -495,7 +495,7 @@ AI:
     .getByTestId("popover-anchor-input-input_message-edit")
     .nth(0)
     .fill("You're Sad! 🥲");
-  await page.getByText("Save Changes").click();
+  await page.getByText("Close").last().click();
 
   await page.getByTitle("fit view").click({
     force: true,

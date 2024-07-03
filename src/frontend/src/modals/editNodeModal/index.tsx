@@ -1,13 +1,23 @@
-import { ColDef, GridApi } from "ag-grid-community";
-import { cloneDeep } from "lodash";
-import { forwardRef, useEffect, useRef, useState } from "react";
+import { ColDef } from "ag-grid-community";
+import { forwardRef, useState } from "react";
+import { useUpdateNodeInternals } from "reactflow";
 import TableComponent from "../../components/tableComponent";
 import { Badge } from "../../components/ui/badge";
+import { Button } from "../../components/ui/button";
 import { useDarkStore } from "../../stores/darkStore";
 import useFlowStore from "../../stores/flowStore";
+import useFlowsManagerStore from "../../stores/flowsManagerStore";
+import { APIClassType } from "../../types/api";
 import { NodeDataType } from "../../types/flow";
+import {
+  debouncedHandleUpdateValues,
+  handleUpdateValues,
+} from "../../utils/parameterUtils";
 import BaseModal from "../baseModal";
 import useColumnDefs from "./hooks/use-column-defs";
+import useHandleChangeAdvanced from "./hooks/use-handle-change-advanced";
+import useHandleOnNewValue from "./hooks/use-handle-new-value";
+import useHandleNodeClass from "./hooks/use-handle-node-class";
 import useRowData from "./hooks/use-row-data";
 
 const EditNodeModal = forwardRef(
@@ -25,41 +35,50 @@ const EditNodeModal = forwardRef(
     },
     ref,
   ) => {
-    const myData = useRef(cloneDeep(data));
-
     const isDark = useDarkStore((state) => state.dark);
-
     const setNode = useFlowStore((state) => state.setNode);
+    const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
+    const updateNodeInternals = useUpdateNodeInternals();
 
-    function changeAdvanced(n) {
-      myData.current.node!.template[n].advanced =
-        !myData.current.node!.template[n]?.advanced;
-    }
-
-    const handleOnNewValue = (newValue: any, key: string, setDb?: boolean) => {
-      myData.current.node!.template[key].value = newValue;
-      if (setDb) {
-        myData.current.node!.template[key].load_from_db = newValue;
-      }
-    };
-
-    const rowData = useRowData(data, open);
-
-    const columnDefs: ColDef[] = useColumnDefs(
+    const { handleOnNewValue: handleOnNewValueHook } = useHandleOnNewValue(
       data,
-      handleOnNewValue,
-      changeAdvanced,
-      open,
+      takeSnapshot,
+      handleUpdateValues,
+      debouncedHandleUpdateValues,
+      setNode,
     );
 
-    const [gridApi, setGridApi] = useState<GridApi | null>(null);
+    const { handleNodeClass: handleNodeClassHook } = useHandleNodeClass(
+      data,
+      takeSnapshot,
+      setNode,
+      updateNodeInternals,
+    );
 
-    useEffect(() => {
-      if (gridApi && open) {
-        myData.current = cloneDeep(data);
-        gridApi.refreshCells();
-      }
-    }, [gridApi, open]);
+    const [nodeClass, setNodeClass] = useState<APIClassType>(data.node!);
+
+    const handleNodeClass = (
+      newNodeClass: APIClassType,
+      name: string,
+      code: string,
+      type?: string,
+    ) => {
+      handleNodeClassHook(newNodeClass, name, code, type);
+      setNodeClass(newNodeClass);
+    };
+
+    const { handleChangeAdvanced: handleChangeAdvancedHook } =
+      useHandleChangeAdvanced(data, takeSnapshot, setNode, updateNodeInternals);
+
+    const rowData = useRowData(data, nodeClass, open);
+
+    const columnDefs: ColDef[] = useColumnDefs(
+      nodeClass,
+      handleOnNewValueHook,
+      handleNodeClass,
+      handleChangeAdvancedHook,
+      open,
+    );
 
     return (
       <BaseModal key={data.id} open={open} setOpen={setOpen}>
@@ -80,9 +99,6 @@ const EditNodeModal = forwardRef(
               {nodeLength > 0 && (
                 <TableComponent
                   key={"editNode"}
-                  onGridReady={(params) => {
-                    setGridApi(params.api);
-                  }}
                   tooltipShowDelay={0.5}
                   columnDefs={columnDefs}
                   rowData={rowData}
@@ -91,22 +107,11 @@ const EditNodeModal = forwardRef(
             </div>
           </div>
         </BaseModal.Content>
-
-        <BaseModal.Footer
-          submit={{
-            label: "Save Changes",
-            onClick: () => {
-              setNode(data.id, (old) => ({
-                ...old,
-                data: {
-                  ...old.data,
-                  node: myData.current.node,
-                },
-              }));
-              setOpen(false);
-            },
-          }}
-        />
+        <BaseModal.Footer>
+          <div className="flex w-full justify-end gap-2 pt-2">
+            <Button onClick={() => setOpen(false)}>Close</Button>
+          </div>
+        </BaseModal.Footer>
       </BaseModal>
     );
   },

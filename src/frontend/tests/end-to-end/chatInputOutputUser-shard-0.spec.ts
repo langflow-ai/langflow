@@ -54,7 +54,7 @@ test("user must be able to send an image on chat", async ({ page }) => {
   await page.getByText("Chat Input", { exact: true }).click();
   await page.getByTestId("more-options-modal").click();
   await page.getByTestId("edit-button-modal").click();
-  await page.getByText("Save Changes").click();
+  await page.getByText("Close").last().click();
 
   await page.getByText("Playground", { exact: true }).click();
 

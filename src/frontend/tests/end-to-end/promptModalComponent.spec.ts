@@ -182,7 +182,7 @@ test("PromptTemplateComponent", async ({ page }) => {
   await page.locator('//*[@id="showprompt"]').click();
   expect(await page.locator('//*[@id="showprompt"]').isChecked()).toBeTruthy();
 
-  await page.getByText("Save Changes", { exact: true }).click();
+  await page.getByText("Close").last().click();
 
   await page.getByTestId("more-options-modal").click();
   await page.getByTestId("edit-button-modal").click();
