@@ -243,3 +243,6 @@ export type MutationFunctionType = (
   mutationFn: MutationFunction<any,any>,
   options?: Omit<UseMutationOptions, 'mutationFn'| "mutationKey">
 ) => UseMutationResult<any, any, any, any>;
+
+
+export type useMutationFunctionType = ()=>{}

@@ -58,7 +58,7 @@ export const GeneralPage = () => {
 
   useScrollToElement(scrollId, setCurrentFlowId);
 
-  const { mutation } = usePostAddApiKey({
+  const { mutate } = usePostAddApiKey({
     callbackSuccess: () => {
       handleInput({ target: { name: "apikey", value: "" } });
     },
@@ -66,7 +66,7 @@ export const GeneralPage = () => {
 
   const handleSaveKey = (apikey: string) => {
     if (apikey) {
-      mutation.mutate({ key: apikey });
+      mutate({ key: apikey });
     }
   };
 
