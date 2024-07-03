@@ -1,7 +1,7 @@
 import { Edge, Node, Viewport } from "reactflow";
 import { ChatInputType, ChatOutputType } from "../chat";
 import { FlowType } from "../flow";
-import { UndefinedInitialDataOptions, UseMutationOptions, UseMutationResult, UseQueryResult } from "@tanstack/react-query";
+import { MutationFunction, UndefinedInitialDataOptions, UseMutationOptions, UseMutationResult, UseQueryResult } from "@tanstack/react-query";
 //kind and class are just representative names to represent the actual structure of the object received by the API
 export type APIDataType = { [key: string]: APIKindType };
 export type APIObjectType = { [key: string]: APIKindType };
@@ -240,6 +240,6 @@ export type QueryFunctionType = (
 
 export type MutationFunctionType = (
   mutationKey:UseMutationOptions["mutationKey"],
-  mutationFn: UseMutationOptions["mutationFn"],
+  mutationFn: MutationFunction<any,any>,
   options?: Omit<UseMutationOptions, 'mutationFn'| "mutationKey">
 ) => UseMutationResult<any, any, any, any>;
