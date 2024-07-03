@@ -1,21 +1,22 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { QueryFunctionType } from "../../../types/api";
 
-export function UseRequestProcessor(): any {
+export function UseRequestProcessor(): {query:QueryFunctionType, mutate: any} {
   const queryClient = useQueryClient();
 
-  function query(key: any, queryFunction: any, options = {}) {
+  function query(queryKey, queryFn, options = {}) {
     return useQuery({
-      queryKey: key,
-      queryFn: queryFunction,
+      queryKey,
+      queryFn,
       ...options,
     });
   }
 
-  function mutate(key: any, mutationFunction: any, options = {}): any {
+  function mutate(mutationKey: any, mutationFn: any, options = {}): any {
     return useMutation({
-      mutationKey: key,
-      mutationFn: mutationFunction,
-      onSettled: () => queryClient.invalidateQueries(key),
+      mutationKey,
+      mutationFn,
+      onSettled: () => queryClient.invalidateQueries(mutationKey),
       ...options,
     });
   }

@@ -1,6 +1,7 @@
 import { Edge, Node, Viewport } from "reactflow";
 import { ChatInputType, ChatOutputType } from "../chat";
 import { FlowType } from "../flow";
+import { UndefinedInitialDataOptions, UseQueryResult } from "@tanstack/react-query";
 //kind and class are just representative names to represent the actual structure of the object received by the API
 export type APIDataType = { [key: string]: APIKindType };
 export type APIObjectType = { [key: string]: APIKindType };
@@ -226,12 +227,13 @@ export type ResponseErrorDetailAPI = {
   response: { data: { detail: string } };
 };
 
-export type QueryFunctionType<T, R> = (
+export type useQueryFunctionType<T, R> = (
   props: T,
   onFetch?: ((data: R) => void) | string,
-) => {
-  data: R | undefined;
-  isLoading: boolean;
-  isError: boolean;
-  refetch: () => void;
-};
+) => UseQueryResult<R>
+
+export type QueryFunctionType = (
+  queryKey:UndefinedInitialDataOptions["queryKey"],
+  queryFn:UndefinedInitialDataOptions["queryFn"],
+  options?:Omit<UndefinedInitialDataOptions, 'queryKey' | 'queryFn'>
+)=>UseQueryResult<any>

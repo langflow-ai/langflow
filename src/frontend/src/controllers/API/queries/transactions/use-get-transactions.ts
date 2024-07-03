@@ -1,9 +1,10 @@
 import { ColDef, ColGroupDef } from "ag-grid-community";
-import { QueryFunctionType } from "../../../../types/api";
+import { useQueryFunctionType } from "../../../../types/api";
 import { extractColumnsFromRows } from "../../../../utils/utils";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
+import { keepPreviousData } from "@tanstack/react-query";
 
 interface TransactionsQueryParams {
   id: string;
@@ -15,7 +16,7 @@ interface TransactionsResponse {
   columns: Array<ColDef | ColGroupDef>;
 }
 
-export const useGetTransactionsQuery: QueryFunctionType<
+export const useGetTransactionsQuery: useQueryFunctionType<
   TransactionsQueryParams,
   TransactionsResponse
 > = ({ id, params }, onFetch) => {
@@ -51,23 +52,18 @@ export const useGetTransactionsQuery: QueryFunctionType<
     );
   };
 
-  const { data, isLoading, isError, refetch } = query(
+  const queryResult = query(
     ["useGetTransactionsQuery"],
     async () => {
       const rows = await getTransactionsFn(id, params);
       return responseFn(rows);
     },
     {
-      keepPreviousData: true,
+      placeholderData:keepPreviousData
     },
   );
 
-  return {
-    data,
-    isLoading,
-    isError,
-    refetch,
-  };
+  return queryResult;
 };
 
 export default useGetTransactionsQuery;
