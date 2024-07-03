@@ -9,6 +9,7 @@ class StoreMessageComponent(Component):
     display_name = "Store Message"
     description = "Stores a chat message or text."
     icon = "save"
+    name = "StoreMessage"
 
     inputs = [
         MessageInput(name="message", display_name="Message", info="The chat message to be stored.", required=True),

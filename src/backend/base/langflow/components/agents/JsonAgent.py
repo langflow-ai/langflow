@@ -9,6 +9,7 @@ from langflow.field_typing import LanguageModel
 class JsonAgentComponent(CustomComponent):
     display_name = "JsonAgent"
     description = "Construct a json agent from an LLM and tools."
+    name = "JsonAgent"
 
     def build_config(self):
         return {

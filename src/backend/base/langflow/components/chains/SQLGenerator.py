@@ -12,6 +12,7 @@ from langflow.field_typing import LanguageModel, Text
 class SQLGeneratorComponent(CustomComponent):
     display_name = "Natural Language to SQL"
     description = "Generate SQL from natural language."
+    name = "SQLGenerator"
 
     def build_config(self):
         return {
