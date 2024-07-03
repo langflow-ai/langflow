@@ -9,6 +9,7 @@ from langflow.field_typing import BaseMemory, LanguageModel, Text
 class ConversationChainComponent(CustomComponent):
     display_name = "ConversationChain"
     description = "Chain to have a conversation and load context from memory."
+    name = "ConversationChain"
 
     def build_config(self):
         return {

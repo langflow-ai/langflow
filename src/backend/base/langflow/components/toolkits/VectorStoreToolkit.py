@@ -9,6 +9,7 @@ from langflow.field_typing import LanguageModel, Tool
 class VectorStoreToolkitComponent(CustomComponent):
     display_name = "VectorStoreToolkit"
     description = "Toolkit for interacting with a Vector Store."
+    name = "VectorStoreToolkit"
 
     def build_config(self):
         return {
