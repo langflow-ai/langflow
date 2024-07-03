@@ -1239,9 +1239,11 @@ class Graph:
                 elif current_id not in stop_predecessors:
                     # If the current vertex is not the target vertex, we should add all its successors
                     # to the stack if they are not in visited
-                    for successor in current_vertex.successors:
-                        if successor.id not in visited:
-                            stack.append(successor.id)
+                    if is_start:
+                        # If we are starting from the beginning, we should add all successors
+                        for successor in current_vertex.successors:
+                            if successor.id not in visited:
+                                stack.append(successor.id)
 
         # Filter the original graph's vertices and edges to keep only those in `visited`
         vertices_to_keep = [self.get_vertex(vid) for vid in visited]
