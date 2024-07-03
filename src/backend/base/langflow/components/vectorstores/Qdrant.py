@@ -20,8 +20,7 @@ from langflow.schema import Data
 class QdrantVectorStoreComponent(LCVectorStoreComponent):
     display_name = "Qdrant"
     description = "Qdrant Vector Store with search capabilities"
-    documentation = "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/qdrant"
-    name = "Qdrant"
+    documentation = "<link url='https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/qdrant'>Webpage description not available.</link>"
     icon = "Qdrant"
 
     inputs = [
@@ -66,19 +65,18 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
         qdrant_kwargs = {
             "collection_name": self.collection_name,
             "content_payload_key": self.content_payload_key,
-            "distance_func": self.distance_func,
             "metadata_payload_key": self.metadata_payload_key,
         }
 
         server_kwargs = {
-            "host": self.host,
-            "port": self.port,
-            "grpc_port": self.grpc_port,
+            "host": self.host if self.host else None,
+            "port": int(self.port),  # Ensure port is an integer
+            "grpc_port": int(self.grpc_port),  # Ensure grpc_port is an integer
             "api_key": self.api_key,
             "prefix": self.prefix,
-            "timeout": self.timeout,
-            "path": self.path,
-            "url": self.url,
+            "timeout": int(self.timeout) if self.timeout else None,  # Ensure timeout is an integer
+            "path": self.path if self.path else None,
+            "url": self.url if self.url else None,
         }
 
         server_kwargs = {k: v for k, v in server_kwargs.items() if v is not None}
@@ -90,13 +88,18 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
             else:
                 documents.append(_input)
 
+        from langchain.embeddings.base import Embeddings  # Ensure this import is correct
+        embedding = self.embedding
+        if not isinstance(embedding, Embeddings):
+            raise ValueError("Invalid embedding object")
+
         if documents:
-            qdrant = Qdrant.from_documents(documents, embedding=self.embedding, **qdrant_kwargs)
+            qdrant = Qdrant.from_documents(documents, embedding=embedding, **qdrant_kwargs)
         else:
             from qdrant_client import QdrantClient
 
             client = QdrantClient(**server_kwargs)
-            qdrant = Qdrant(embedding_function=self.embedding.embed_query, client=client, **qdrant_kwargs)
+            qdrant = Qdrant(embeddings=embedding.embed_query, client=client, **qdrant_kwargs)
 
         return qdrant
 
