@@ -33,8 +33,10 @@ jobs:
                 - "src/backend/**.py"
                 - "pyproject.toml"
                 - "poetry.lock"
-                - "tests/**"
                 - "**/python_test.yml"
+              tests:
+                - "tests/**"
+                - "src/frontend/tests/**"
               frontend:
                 - "src/frontend/**"
                 - "**/typescript_test.yml"
@@ -44,23 +46,24 @@ jobs:
     test-backend:
         needs: path-filter
         name: Run Backend Tests
-        if: ${{ needs.path-filter.outputs.python == 'true' }}
+        if: ${{ needs.path-filter.outputs.python == 'true' || needs.path-filter.outputs.tests == 'true' }}
         uses: ./.github/workflows/python_test.yml
 
 
     test-frontend:
+        if: ${{ needs.path-filter.outputs.python == 'true' || needs.path-filter.outputs.frontend == 'true' || needs.path-filter.outputs.tests == 'true' }}
         name: Run Frontend Tests
         uses: ./.github/workflows/typescript_test.yml
 
     lint-frontend:
         needs: path-filter
-        if: ${{ needs.path-filter.outputs.frontend == 'true' }}
+        if: ${{ needs.path-filter.outputs.frontend == 'true' || needs.path-filter.outputs.tests == 'true' }}
         name: Lint Frontend
         uses: ./.github/workflows/lint-js.yml
 
     lint-backend:
         needs: path-filter
-        if: ${{ needs.path-filter.outputs.python == 'true' }}
+        if: ${{ needs.path-filter.outputs.python == 'true' || needs.path-filter.outputs.tests == 'true' }}
         name: Lint Backend
         uses: ./.github/workflows/lint-py.yml
         # Run only if there are python files changed
