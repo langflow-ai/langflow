@@ -8,8 +8,6 @@ on:
         description: "(Optional) Branch to checkout"
         required: false
         type: string
-  pull_request:
-    types: [opened, synchronize, reopened, auto_merge_enabled]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
