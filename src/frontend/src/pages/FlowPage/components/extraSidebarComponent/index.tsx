@@ -461,7 +461,7 @@ export default function ExtraSidebar(): JSX.Element {
                           />
 
                           <span className="components-disclosure-title">
-                            Discover More
+                            {t("Discover More")}
                           </span>
                         </div>
                         <div className="components-disclosure-div">

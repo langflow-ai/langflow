@@ -1190,6 +1190,36 @@
   "VectorStoreToolkit": "向量存储工具包",
   "Toolkit for interacting with a Vector Store.": "用于与向量存储交互的工具包。",
 
+  "Python REPL Tool": "Python交互式运行工具",
+  "A tool for running Python code in a REPL environment.": "在交互式解释器环境中运行Python代码的工具。",
+  "A description of the tool.": "工具描述。",
+  "A list of modules to import globally, e.g. ['math', 'numpy'].": "要全局导入的模块列表，例如['math', 'numpy']。",
+  "Global Imports": "全局导入",
+
+  "PythonCodeTool": "Python代码工具",
+  "structuredtool dataclass code to tool": "结构化数据类代码工具",
+  "Tool Code": "工具代码",
+  "Enter the dataclass code.": "输入数据类代码。",
+  "Tool Name": "工具名称",
+  "Enter the name of the tool.": "输入工具名称。",
+  "Provide a brief description of what the tool does.": "提供工具的简要描述。",
+  "Return Directly": "直接返回",
+  "Should the tool return the function output directly?": "工具是否应直接返回函数输出？",
+  "Tool Function": "工具函数",
+  "Select the function for additional expressions.": "选择函数以获取更多表达式。",
+  "Tool Class": "工具类",
+  "Select the class for additional expressions.": "选择类以获取更多表达式。",
+
+  "RetrieverTool": "检索器工具",
+  "Tool for interacting with retriever": "用于与检索器交互的工具",
+  "Retriever to interact with": "要交互的检索器",
+  "Name of the tool": "工具名称",
+  "Description of the tool": "工具描述",
+
+  "SearchApi Tool": "SearchApi工具",
+
+  "Discover More": "探索更多",
+
   "VectorStoreInfo": "向量存储信息",
   "Information about a VectorStore": "关于向量存储的信息",
   "VectorStore": "向量存储"
