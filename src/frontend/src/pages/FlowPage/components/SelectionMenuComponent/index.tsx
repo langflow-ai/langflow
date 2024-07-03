@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { NodeToolbar } from "reactflow";
+import ShadTooltip from "../../../../components/shadTooltipComponent";
 import { Button } from "../../../../components/ui/button";
 import { GradientGroup } from "../../../../icons/GradientSparkles";
 import useFlowStore from "../../../../stores/flowStore";
@@ -18,6 +19,7 @@ export default function SelectionMenu({
       ? validateSelection(lastSelection!, edges).length > 0
       : false,
   );
+  const [errors, setErrors] = useState<string[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [lastNodes, setLastNodes] = useState(nodes);
@@ -26,6 +28,7 @@ export default function SelectionMenu({
 
   useEffect(() => {
     if (isOpen) {
+      setErrors(validateSelection(lastSelection!, edges));
       return setDisable(validateSelection(lastSelection!, edges).length > 0);
     }
     setDisable(false);
@@ -66,24 +69,47 @@ export default function SelectionMenu({
             (isTransitioning ? " opacity-100" : " opacity-0")
           }
         >
-          <Button
-            unstyled
-            className={`${
-              disable
-                ? "flex h-full w-full cursor-not-allowed items-center justify-between text-sm text-muted-foreground"
-                : "flex h-full w-full items-center justify-between text-sm"
-            }`}
-            onClick={onClick}
-            disabled={disable}
-          >
-            <GradientGroup
-              strokeWidth={1.5}
-              size={22}
-              className="text-primary"
+          {errors.length > 0 ? (
+            <ShadTooltip content={errors[0]} side={"top"}>
+              <Button
+                unstyled
+                className={`${
+                  disable
+                    ? "flex h-full w-full cursor-not-allowed items-center justify-between text-sm text-muted-foreground"
+                    : "flex h-full w-full items-center justify-between text-sm"
+                }`}
+                onClick={onClick}
+                disabled={disable}
+              >
+                <GradientGroup
+                  strokeWidth={1.5}
+                  size={22}
+                  className="text-primary"
+                  disabled={disable}
+                />
+                Group
+              </Button>
+            </ShadTooltip>
+          ) : (
+            <Button
+              unstyled
+              className={`${
+                disable
+                  ? "flex h-full w-full cursor-not-allowed items-center justify-between text-sm text-muted-foreground"
+                  : "flex h-full w-full items-center justify-between text-sm"
+              }`}
+              onClick={onClick}
               disabled={disable}
-            />
-            Group
-          </Button>
+            >
+              <GradientGroup
+                strokeWidth={1.5}
+                size={22}
+                className="text-primary"
+                disabled={disable}
+              />
+              Group
+            </Button>
+          )}
         </div>
       </div>
     </NodeToolbar>

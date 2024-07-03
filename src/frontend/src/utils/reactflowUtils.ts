@@ -857,9 +857,7 @@ export function validateSelection(
         isOutputNode(node.data as NodeDataType),
     )
   ) {
-    errorsArray.push(
-      "Please select only nodes that are not input or output nodes",
-    );
+    errorsArray.push("Select non-input/output nodes only");
   }
   //check if there are two or more nodes with free outputs
   if (
@@ -867,7 +865,7 @@ export function validateSelection(
       (n) => !clonedSelection.edges.some((e) => e.source === n.id),
     ).length > 1
   ) {
-    errorsArray.push("Please select only one node with free outputs");
+    errorsArray.push("Select only one node with free outputs");
   }
 
   // check if there is any node that does not have any connection
@@ -878,7 +876,7 @@ export function validateSelection(
         !clonedSelection.edges.some((edge) => edge.source === node.id),
     )
   ) {
-    errorsArray.push("Please select only nodes that are connected");
+    errorsArray.push("Select only connected nodes");
   }
   return errorsArray;
 }
