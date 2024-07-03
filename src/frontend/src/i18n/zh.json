@@ -1051,6 +1051,20 @@
   "A vector store retriever": "向量存储检索器",
   "VectorStoreRetriever": "向量存储检索器",
 
+  "CharacterTextSplitter": "文本分割器",
+  "Splitting text that looks at characters.": "根据字符串进行文本分割。",
+
+  "Language Recursive Text Splitter": "语言递归文本分割器",
+  "Split text into chunks of a specified length based on language.": "根据语言将文本分割为指定长度的块。",
+  "Separator Type": "分隔符类型",
+  "The type of separator to use.": "要使用的分隔符类型。",
+  "Separators": "分隔符",
+  "The characters to split on.": "要分割的字符串。",
+
+  "Recursive Character Text Splitter": "递归字符文本分割器",
+  "Split text into chunks of a specified length.": "将文本分割为指定长度的块。",
+  "The characters to split on.\nIf left empty defaults to [\"\\n\\n\", \"\\n\", \" \", \"\"].": "要分割的字符串。\n如果留空，则默认为[\"\\n\\n\", \"\\n\", \" \", \"\"]。",
+
   "Template": "模板",
   "context": "内容",
   "Text": "文本",
