@@ -12,6 +12,7 @@ import InputGlobalComponent from "../../../../components/inputGlobalComponent";
 import InputListComponent from "../../../../components/inputListComponent";
 import IntComponent from "../../../../components/intComponent";
 import KeypairListComponent from "../../../../components/keypairListComponent";
+import { MultiSelect } from "../../../../components/multiselectComponent";
 import PromptAreaComponent from "../../../../components/promptComponent";
 import ShadTooltip from "../../../../components/shadTooltipComponent";
 import TextAreaComponent from "../../../../components/textAreaComponent";
@@ -552,6 +553,23 @@ export default function ParameterComponent({
                 />
               </div>
             )}
+          </div>
+        </Case>
+        <Case
+          condition={
+            type === "str" &&
+            !!data.node?.template[name]?.options &&
+            !!data.node?.template[name]?.list
+          }
+        >
+          <div className="mt-2 flex w-full items-center">
+            <MultiSelect
+              disabled={disabled}
+              options={data?.node?.template?.[name]?.options || []}
+              value={data?.node?.template?.[name]?.value || []}
+              id={"multiselect-" + name}
+              onValueChange={handleOnNewValue}
+            />
           </div>
         </Case>
 
