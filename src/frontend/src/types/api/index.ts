@@ -1,7 +1,13 @@
+import {
+  MutationFunction,
+  UndefinedInitialDataOptions,
+  UseMutationOptions,
+  UseMutationResult,
+  UseQueryResult,
+} from "@tanstack/react-query";
 import { Edge, Node, Viewport } from "reactflow";
 import { ChatInputType, ChatOutputType } from "../chat";
 import { FlowType } from "../flow";
-import { MutationFunction, UndefinedInitialDataOptions, UseMutationOptions, UseMutationResult, UseQueryResult } from "@tanstack/react-query";
 //kind and class are just representative names to represent the actual structure of the object received by the API
 export type APIDataType = { [key: string]: APIKindType };
 export type APIObjectType = { [key: string]: APIKindType };
@@ -230,19 +236,18 @@ export type ResponseErrorDetailAPI = {
 export type useQueryFunctionType<T, R> = (
   props: T,
   onFetch?: ((data: R) => void) | string,
-) => UseQueryResult<R>
+) => UseQueryResult<R>;
 
 export type QueryFunctionType = (
-  queryKey:UndefinedInitialDataOptions["queryKey"],
-  queryFn:UndefinedInitialDataOptions["queryFn"],
-  options?:Omit<UndefinedInitialDataOptions, 'queryKey' | 'queryFn'>
-)=>UseQueryResult<any>
+  queryKey: UndefinedInitialDataOptions["queryKey"],
+  queryFn: UndefinedInitialDataOptions["queryFn"],
+  options?: Omit<UndefinedInitialDataOptions, "queryKey" | "queryFn">,
+) => UseQueryResult<any>;
 
 export type MutationFunctionType = (
-  mutationKey:UseMutationOptions["mutationKey"],
-  mutationFn: MutationFunction<any,any>,
-  options?: Omit<UseMutationOptions, 'mutationFn'| "mutationKey">
+  mutationKey: UseMutationOptions["mutationKey"],
+  mutationFn: MutationFunction<any, any>,
+  options?: Omit<UseMutationOptions, "mutationFn" | "mutationKey">,
 ) => UseMutationResult<any, any, any, any>;
 
-
-export type useMutationFunctionType = ()=>{}
+export type useMutationFunctionType = () => {};
