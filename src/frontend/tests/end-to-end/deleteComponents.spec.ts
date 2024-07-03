@@ -1,6 +1,11 @@
 import { test } from "@playwright/test";
 
-test("should add API-KEY", async ({ page }) => {
+test("should delete a component", async ({ page }) => {
+  test.skip(
+    !process?.env?.STORE_API_KEY,
+    "STORE_API_KEY required to run this test",
+  );
+
   await page.goto("/");
   await page.waitForTimeout(1000);
 
@@ -25,12 +30,6 @@ test("should add API-KEY", async ({ page }) => {
   await page.waitForTimeout(2000);
   await page.getByText("Success! Your API Key has been saved.").isVisible();
 
-  await page.waitForTimeout(2000);
-  await page.getByText("API Key Error").isHidden();
-});
-
-test("should delete a component", async ({ page }) => {
-  await page.goto("/");
   await page.waitForTimeout(2000);
   await page.getByText("Store").nth(0).click();
   await page.getByTestId("install-Basic RAG").click();
