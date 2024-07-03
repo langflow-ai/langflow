@@ -721,7 +721,6 @@ export const PRIORITY_SIDEBAR_ORDER = [
   "models",
   "helpers",
   "vectorstores",
-  "vectorsearch",
   "embeddings",
 ];
 export const NATIVE_CATEGORIES = [
@@ -734,6 +733,16 @@ export const NATIVE_CATEGORIES = [
   "helpers",
   "experimental",
   "agents",
+  "vectorstores",
+  "retrievers",
+  "embeddings",
+  "chains",
+  "tools",
+  "memories",
+  "textsplitters",
+  "toolkits",
+  "prototypes",
+  "langchain_utilities",
 ];
 
 export const AUTHORIZED_DUPLICATE_REQUESTS = [
