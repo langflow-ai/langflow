@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { QueryFunctionType } from "../../../types/api";
+import { MutationFunctionType, QueryFunctionType } from "../../../types/api";
 
-export function UseRequestProcessor(): {query:QueryFunctionType, mutate: any} {
+export function UseRequestProcessor(): {query:QueryFunctionType, mutate: MutationFunctionType} {
   const queryClient = useQueryClient();
 
   function query(queryKey, queryFn, options = {}) {
@@ -12,7 +12,7 @@ export function UseRequestProcessor(): {query:QueryFunctionType, mutate: any} {
     });
   }
 
-  function mutate(mutationKey: any, mutationFn: any, options = {}): any {
+  function mutate(mutationKey, mutationFn, options = {}) {
     return useMutation({
       mutationKey,
       mutationFn,

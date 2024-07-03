@@ -66,11 +66,5 @@ export function usePostAddApiKey({
     },
   );
 
-  return {
-    mutation,
-    isLoading: mutation.isLoading,
-    isError: mutation.isError,
-    isPending: mutation.isPending,
-    isSuccess: mutation.isSuccess,
-  };
+  return mutation;
 }
