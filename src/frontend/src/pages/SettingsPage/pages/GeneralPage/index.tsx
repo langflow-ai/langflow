@@ -1,7 +1,8 @@
-import { useContext, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { CONTROL_PATCH_USER_STATE } from "../../../../constants/constants";
 import { AuthContext } from "../../../../contexts/authContext";
+import { usePostAddApiKey } from "../../../../controllers/API/queries/apiKey";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useStoreStore } from "../../../../stores/storeStore";
@@ -11,7 +12,6 @@ import {
 } from "../../../../types/components";
 import usePatchPassword from "../hooks/use-patch-password";
 import usePatchProfilePicture from "../hooks/use-patch-profile-picture";
-import useSaveKey from "../hooks/use-save-key";
 import useScrollToElement from "../hooks/use-scroll-to-element";
 import GeneralPageHeaderComponent from "./components/GeneralPageHeader";
 import PasswordFormComponent from "./components/PasswordForm";
@@ -19,7 +19,7 @@ import ProfilePictureFormComponent from "./components/ProfilePictureForm";
 import useGetProfilePictures from "./components/ProfilePictureForm/components/profilePictureChooserComponent/hooks/use-get-profile-pictures";
 import StoreApiKeyFormComponent from "./components/StoreApiKeyForm";
 
-export default function GeneralPage() {
+export const GeneralPage = () => {
   const setCurrentFlowId = useFlowsManagerStore(
     (state) => state.setCurrentFlowId,
   );
@@ -36,13 +36,9 @@ export default function GeneralPage() {
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const { userData, setUserData } = useContext(AuthContext);
   const hasStore = useStoreStore((state) => state.hasStore);
-
   const validApiKey = useStoreStore((state) => state.validApiKey);
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
-  const setHasApiKey = useStoreStore((state) => state.updateHasApiKey);
   const loadingApiKey = useStoreStore((state) => state.loadingApiKey);
-  const setValidApiKey = useStoreStore((state) => state.updateValidApiKey);
-  const setLoadingApiKey = useStoreStore((state) => state.updateLoadingApiKey);
   const { password, cnfPassword, profilePicture, apikey } = inputState;
 
   const { handlePatchPassword } = usePatchPassword(
@@ -62,13 +58,17 @@ export default function GeneralPage() {
 
   useScrollToElement(scrollId, setCurrentFlowId);
 
-  const { handleSaveKey } = useSaveKey(
-    setSuccessData,
-    setErrorData,
-    setHasApiKey,
-    setValidApiKey,
-    setLoadingApiKey,
-  );
+  const { mutation } = usePostAddApiKey({
+    callbackSuccess: () => {
+      handleInput({ target: { name: "apikey", value: "" } });
+    },
+  });
+
+  const handleSaveKey = (apikey: string) => {
+    if (apikey) {
+      mutation.mutate({ key: apikey });
+    }
+  };
 
   function handleInput({
     target: { name, value },
@@ -110,4 +110,6 @@ export default function GeneralPage() {
       </div>
     </div>
   );
-}
+};
+
+export default GeneralPage;
