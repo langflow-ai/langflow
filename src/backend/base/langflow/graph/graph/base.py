@@ -1230,7 +1230,7 @@ class Graph:
                             stack.append(successor.id)
                         else:
                             excluded.add(successor.id)
-                        all_successors = get_successors(successor)
+                        all_successors = get_successors(successor, recursive=False)
                         for successor in all_successors:
                             if is_start:
                                 stack.append(successor.id)
