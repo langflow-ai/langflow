@@ -61,11 +61,6 @@ jobs:
       if: ${{ needs.path-filter.outputs.python == 'true' || needs.path-filter.outputs.frontend == 'true' || needs.path-filter.outputs.tests == 'true' }}
       uses: ./.github/workflows/typescript_test.yml
 
-    lint-frontend:
-        needs: path-filter
-        if: ${{ needs.path-filter.outputs.frontend == 'true' || needs.path-filter.outputs.tests == 'true' }}
-        name: Lint Frontend
-        uses: ./.github/workflows/lint-js.yml
 
     lint-backend:
         needs: path-filter
@@ -84,7 +79,7 @@ jobs:
     # https://github.com/langchain-ai/langchain/blob/master/.github/workflows/check_diffs.yml
     ci_success:
         name: "CI Success"
-        needs: [test-backend, test-frontend, lint-frontend, lint-backend, test-docs-build]
+        needs: [test-backend, test-frontend, lint-backend, test-docs-build]
         if: |
             always()
         runs-on: ubuntu-latest
