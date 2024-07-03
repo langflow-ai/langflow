@@ -15,7 +15,12 @@
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
-    "noImplicitAny": false
+    "noImplicitAny": false,
+    "paths": {
+      "@/*": ["*"],
+      "@queries/*": ["controllers/API/queries/*"]
+    },
+    "baseUrl": "src"
   },
   "include": [
     "src",

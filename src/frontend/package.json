@@ -26,6 +26,7 @@
     "@tabler/icons-react": "^3.6.0",
     "@tailwindcss/forms": "^0.5.7",
     "@tailwindcss/line-clamp": "^0.4.4",
+    "@tanstack/react-query": "^5.49.2",
     "@types/axios": "^0.14.0",
     "ace-builds": "^1.35.0",
     "ag-grid-community": "^31.3.2",
@@ -73,6 +74,7 @@
     "tailwindcss-animate": "^1.0.7",
     "uuid": "^10.0.0",
     "vite-plugin-svgr": "^4.2.0",
+    "vite-tsconfig-paths": "^4.3.2",
     "web-vitals": "^4.1.1",
     "zod": "^3.23.8",
     "zustand": "^4.5.2"
