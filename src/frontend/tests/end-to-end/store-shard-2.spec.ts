@@ -67,7 +67,7 @@ test("should share component with share button", async ({ page }) => {
   await page.waitForTimeout(2000);
   await page.getByText("Success! Your API Key has been saved.").isVisible();
 
-  await page.goto("/");
+  await page.getByText("My Collection").click();
   await page.waitForTimeout(2000);
 
   let modalCount = 0;
