@@ -9,7 +9,6 @@ on:
         required: false
         type: string
 
-
 env:
   POETRY_VERSION: "1.8.3"
   NODE_VERSION: "21"
@@ -25,8 +24,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shardIndex: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-        shardTotal: [10]
+        shardIndex: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
+        shardTotal: [14]
     env:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       STORE_API_KEY: ${{ secrets.STORE_API_KEY }}
