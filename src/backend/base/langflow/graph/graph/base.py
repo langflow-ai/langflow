@@ -335,14 +335,18 @@ class Graph:
             logger.exception(exc)
 
         try:
-            start_component_id = next(
-                (
-                    vertex_id
-                    for vertex_id in self._is_input_vertices
-                    if any(val in vertex_id.lower() for val in ["chat", "webhook"])
-                ),
-                None,
+            start_component_id = None
+            webhook_component_id = next(
+                (vertex_id for vertex_id in self._is_input_vertices if "webhook" in vertex_id.lower()), None
             )
+            if not webhook_component_id:
+                chat_component_id = next(
+                    (vertex_id for vertex_id in self._is_input_vertices if "chat" in vertex_id.lower()), None
+                )
+                start_component_id = chat_component_id
+            else:
+                start_component_id = webhook_component_id
+
             await self.process(start_component_id=start_component_id, fallback_to_env_vars=fallback_to_env_vars)
             self.increment_run_count()
         except Exception as exc:
