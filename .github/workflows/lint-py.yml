@@ -11,9 +11,6 @@ on:
 env:
   POETRY_VERSION: "1.8.2"
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
 
 jobs:
   lint:
