@@ -7,6 +7,10 @@ test("user must be able to send an image on chat", async ({ page }) => {
   if (!process.env.CI) {
     dotenv.config({ path: path.resolve(__dirname, "../../.env") });
   }
+  test.skip(
+    !process?.env?.OPENAI_API_KEY,
+    "OPENAI_API_KEY required to run this test",
+  );
 
   await page.goto("/");
 
@@ -38,11 +42,6 @@ test("user must be able to send an image on chat", async ({ page }) => {
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
 
-  if (!process.env.OPENAI_API_KEY) {
-    //You must set the OPENAI_API_KEY on .env file to run this test
-    expect(false).toBe(true);
-  }
-
   await page
     .getByTestId("popover-anchor-input-openai_api_key")
     .fill(process.env.OPENAI_API_KEY ?? "");
@@ -55,7 +54,7 @@ test("user must be able to send an image on chat", async ({ page }) => {
   await page.getByText("Chat Input", { exact: true }).click();
   await page.getByTestId("more-options-modal").click();
   await page.getByTestId("edit-button-modal").click();
-  await page.getByText("Save Changes").click();
+  await page.getByText("Close").last().click();
 
   await page.getByText("Playground", { exact: true }).click();
 

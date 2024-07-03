@@ -44,7 +44,7 @@ export default function OutputComponent({
 
   // ! DEACTIVATED UNTIL BETTER IMPLEMENTATION
   // return (
-  //   <div className="nocopy nopan nodelete nodrag noundo flex items-center gap-2">
+  //   <div className="noflow nopan nodelete nodrag  flex items-center gap-2">
   //     <DropdownMenu>
   //       <DropdownMenuTrigger asChild>
   //         <Button

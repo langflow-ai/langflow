@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "langflow"
-version = "1.0.5"
+version = "1.0.6"
 description = "A Python package with a built-in web application"
 authors = ["Langflow <contact@langflow.org>"]
 maintainers = [
@@ -30,7 +30,7 @@ langflow-base = { path = "./src/backend/base", develop = true }
 beautifulsoup4 = "^4.12.2"
 google-search-results = "^2.4.1"
 google-api-python-client = "^2.130.0"
-huggingface-hub = { version = "^0.20.0", extras = ["inference"] }
+huggingface-hub = { version = "^0.22.0", extras = ["inference"] }
 llama-cpp-python = { version = "~0.2.0", optional = true }
 networkx = "^3.1"
 fake-useragent = "^1.5.0"
