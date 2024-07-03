@@ -15,7 +15,7 @@ from pydantic import PydanticDeprecatedSince20
 from rich import print as rprint
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from langflow.api import router
+from langflow.api import router, health_check_router
 from langflow.initial_setup.setup import (
     create_or_update_starter_projects,
     initialize_super_user_if_needed,
@@ -137,11 +137,8 @@ def create_app():
 
         return await call_next(request)
 
-    @app.get("/health")
-    def health():
-        return {"status": "ok"}
-
     app.include_router(router)
+    app.include_router(health_check_router)
 
     return app
 
