@@ -21,7 +21,7 @@
   "Utilities": "实用工具",
   "Memories": "记忆体",
   "Model Specs": "模型规格",
-  "Retrievers": "查询器",
+  "Retrievers": "检索器",
   "Finish Editing": "完成编辑",
   "Text Splitters": "文本分割",
   "Toolkits": "工具包",
@@ -1012,6 +1012,44 @@
   "New Data": "新数据",
   "The record to update.": "更新记录。",
   "The new data to update the record with.": "使用新数据更新记录。",
+
+  "Amazon Kendra Retriever": "Amazon Kendra检索器",
+  "Retriever that uses the Amazon Kendra API.": "使用Amazon Kendra API的检索器。",
+  "Index ID": "索引ID",
+  "Attribute Filter": "属性过滤器",
+  "User Context": "用户上下文",
+
+  "Cohere Rerank": "Cohere重排",
+  "Rerank documents using the Cohere API and a retriever.": "使用Cohere API和检索器重排文档。",
+  "User Agent": "用户代理",
+  "Top N": "返回限制",
+
+  "Metal Retriever": "Metal检索器",
+  "Retriever that uses the Metal API.": "使用Metal API的检索器。",
+  "Client ID": "客户端ID",
+
+  "MultiQueryRetriever": "多查询检索器",
+  "Initialize from llm using default template.": "使用缺省模板从LLM初始化。",
+  "Parser Key": "分析器主键",
+
+  "Self Query Retriever": "自查询检索器",
+  "Retriever that uses a vector store and an LLM to generate the vector store queries.": "通过向量存储与LLM生成向量存储查询进行检索。",
+  "Query to be passed as input.": "使用查询传递输入。",
+  "Metadata Field Info": "元数据字段信息",
+  "Metadata Field Info to be passed as input.": "使用元数据字段信息传递输入。",
+  "Document Content Description": "文档内容描述",
+  "Document Content Description to be passed as input.": "使用文档内容描述传递输入。",
+  "LLM to be passed as input.": "大模型传递输入",
+
+  "Vectara Self Query Retriever for Vectara Vector Store": "Vectara自查询检索器",
+  "Implementation of Vectara Self Query Retriever": "Vectara自查询检索器的实现",
+  "Input Vectara Vectore Store": "输入Vectara向量存储",
+  "For self query retriever": "用于自查询检索器",
+  "Each metadata field info is a string in the form of key value pair dictionary containing additional search metadata.\nExample input: {\"name\":\"speech\",\"description\":\"what name of the speech\",\"type\":\"string or list[string]\"}.\nThe keys should remain constant(name, description, type)": "每个元数据字段信息都是一个字符串，格式为键值对字典，包含额外的搜索元数据。\n示例输入：{\"name\":\"speech\",\"description\":\"what name of the speech\",\"type\":\"string or list[string]\"。\n关键字应保持不变（name, description, type）",
+
+  "VectorStore Retriever": "向量存储检索器",
+  "A vector store retriever": "向量存储检索器",
+  "VectorStoreRetriever": "向量存储检索器",
 
   "Template": "模板",
   "context": "内容",
