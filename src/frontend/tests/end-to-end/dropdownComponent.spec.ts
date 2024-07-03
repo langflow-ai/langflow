@@ -144,7 +144,7 @@ test("dropDownComponent", async ({ page }) => {
     expect(false).toBeTruthy();
   }
 
-  await page.getByText("Save Changes", { exact: true }).click();
+  await page.getByText("Close").last().click();
 
   value = await page.getByTestId("dropdown-model_id").innerText();
   if (value !== "cohere.embed-multilingual-v3") {
