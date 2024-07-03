@@ -117,6 +117,7 @@ class APIRequestComponent(Component):
             except Exception as e:
                 logger.error(f"Error decoding JSON data: {e}")
                 body = None
+                raise ValueError(f"Error decoding JSON data: {e}")
 
         data = body if body else None
 
