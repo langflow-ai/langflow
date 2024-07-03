@@ -20,8 +20,13 @@ env:
   POETRY_VERSION: "1.8.2"
 
 jobs:
+  ci:
+    name: CI
+    uses: ./.github/workflows/ci.yml
+
   release-base:
     name: Release Langflow Base
+    needs: [ci]
     if: inputs.release_package == true
     runs-on: ubuntu-latest
     outputs:
@@ -82,7 +87,7 @@ jobs:
   release-main:
     name: Release Langflow Main
     if: inputs.release_package == true
-    needs: release-base
+    needs: [release-base]
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.check-version.outputs.version }}

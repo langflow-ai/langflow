@@ -60,7 +60,7 @@ test("LangflowShortcuts", async ({ page }) => {
   await page.getByTitle("zoom out").click();
   await page.getByTestId("generic-node-title-arrangement").click();
   await page.keyboard.press(`${control}+Shift+A`);
-  await page.getByText("Save Changes", { exact: true }).click();
+  await page.getByText("Close").last().click();
 
   await page.getByTestId("generic-node-title-arrangement").click();
   await page.keyboard.press(`${control}+d`);
