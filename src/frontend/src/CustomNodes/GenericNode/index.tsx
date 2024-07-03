@@ -563,7 +563,7 @@ export default function GenericNode({
                             )}
                           </div>
                           <div className="justify-left flex font-normal text-muted-foreground">
-                            <div>Duration:</div>
+                            <div>{t("Duration")}:</div>
                             <div className="ml-1 text-status-blue">
                               {validationStatus?.data.duration}
                             </div>

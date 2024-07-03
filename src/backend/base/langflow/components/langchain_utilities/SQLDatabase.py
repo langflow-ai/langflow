@@ -13,8 +13,8 @@ class SQLDatabaseComponent(CustomComponent):
         }
 
     def clean_up_uri(self, uri: str) -> str:
-        if uri.startswith("postgresql://"):
-            uri = uri.replace("postgresql://", "postgres://")
+        if uri.startswith("postgres://"):
+            uri = uri.replace("postgres://", "postgresql://")
         return uri.strip()
 
     def build(self, uri: str) -> SQLDatabase:
