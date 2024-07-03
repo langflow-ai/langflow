@@ -7,7 +7,9 @@ test("should delete rows from table message", async ({ page }) => {
     !process?.env?.OPENAI_API_KEY,
     "OPENAI_API_KEY required to run this test",
   );
-
+  if (!process.env.CI) {
+    dotenv.config({ path: path.resolve(__dirname, "../../.env") });
+  }
   await page.goto("/");
   await page.waitForTimeout(2000);
 
