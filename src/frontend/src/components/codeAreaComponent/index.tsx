@@ -3,6 +3,7 @@ import CodeAreaModal from "../../modals/codeAreaModal";
 import { CodeAreaComponentType } from "../../types/components";
 
 import IconComponent from "../genericIconComponent";
+import { useTranslation } from "react-i18next";
 
 export default function CodeAreaComponent({
   value,
@@ -17,6 +18,7 @@ export default function CodeAreaComponent({
   open,
   setOpen,
 }: CodeAreaComponentType) {
+  const { t } = useTranslation();
   const [myValue, setMyValue] = useState(
     typeof value == "string" ? value : JSON.stringify(value),
   );
@@ -57,7 +59,7 @@ export default function CodeAreaComponent({
                   " primary-input text-muted-foreground"
             }
           >
-            {myValue !== "" ? myValue : "Type something..."}
+            {myValue !== "" ? myValue : t("Type something...")}
           </span>
           {!editNode && (
             <IconComponent

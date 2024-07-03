@@ -22,7 +22,7 @@ const useColumnDefs = (
           return (
             (templateParam.display_name
               ? t(templateParam.display_name)
-              : templateParam.name) ?? params.data.key
+              : t(templateParam.name)) ?? params.data.key
           );
         },
         wrapText: true,

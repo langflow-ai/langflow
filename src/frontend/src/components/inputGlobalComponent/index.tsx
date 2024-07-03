@@ -10,6 +10,7 @@ import AddNewVariableButton from "../addNewVariableButtonComponent/addNewVariabl
 import ForwardedIconComponent from "../genericIconComponent";
 import InputComponent from "../inputComponent";
 import { CommandItem } from "../ui/command";
+import { useTranslation } from "react-i18next";
 
 export default function InputGlobalComponent({
   disabled,
@@ -18,6 +19,8 @@ export default function InputGlobalComponent({
   data,
   editNode = false,
 }: InputGlobalComponentType): JSX.Element {
+  const { t } = useTranslation();
+
   const globalVariablesEntries = useGlobalVariablesStore(
     (state) => state.globalVariablesEntries,
   );
@@ -76,7 +79,7 @@ export default function InputGlobalComponent({
               className={cn("mr-2 h-4 w-4 text-primary")}
               aria-hidden="true"
             />
-            <span>Add New Variable</span>
+            <span>{t("Add New Variable")}</span>
           </CommandItem>
         </AddNewVariableButton>
       }
