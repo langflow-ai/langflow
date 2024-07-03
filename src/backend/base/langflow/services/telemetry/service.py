@@ -123,8 +123,10 @@ class TelemetryService(Service):
         try:
             self.running = False
             await self.flush()
-            self.worker_task.cancel()
             if self.worker_task:
+                self.worker_task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
                 await self.worker_task
+            await self.client.aclose()
         except Exception as e:
             logger.error(f"Error stopping tracing service: {e}")
