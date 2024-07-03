@@ -63,8 +63,12 @@ class TelemetryService(Service):
                 logger.error(f"Failed to send telemetry data: {response.status_code} {response.text}")
             else:
                 logger.debug("Telemetry data sent successfully.")
+        except httpx.HTTPStatusError as e:
+            logger.error(f"HTTP error occurred: {e}")
+        except httpx.RequestError as e:
+            logger.error(f"Request error occurred: {e}")
         except Exception as e:
-            logger.error(f"Failed to send telemetry data due to: {e}")
+            logger.error(f"Unexpected error occurred: {e}")
 
     async def log_package_run(self, payload: RunPayload):
         await self.telemetry_queue.put((self.send_telemetry_data, payload, "run"))
