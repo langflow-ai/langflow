@@ -336,7 +336,12 @@ class Graph:
 
         try:
             start_component_id = next(
-                (vertex_id for vertex_id in self._is_input_vertices if "chat" in vertex_id.lower()), None
+                (
+                    vertex_id
+                    for vertex_id in self._is_input_vertices
+                    if any(val in vertex_id.lower() for val in ["chat", "webhook"])
+                ),
+                None,
             )
             await self.process(start_component_id=start_component_id, fallback_to_env_vars=fallback_to_env_vars)
             self.increment_run_count()
