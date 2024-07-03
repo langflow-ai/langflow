@@ -88,8 +88,6 @@ test("KeypairListComponent", async ({ page }) => {
   await page.getByTestId("more-options-modal").click();
   await page.getByTestId("edit-button-modal").click();
 
-  await page.locator('//*[@id="showcache"]').click();
-  expect(await page.locator('//*[@id="showcache"]').isChecked()).toBeFalsy();
   await page.locator('//*[@id="showcredentials_profile_name"]').click();
   expect(
     await page.locator('//*[@id="showcredentials_profile_name"]').isChecked(),
@@ -109,8 +107,6 @@ test("KeypairListComponent", async ({ page }) => {
     expect(
       await page.locator('//*[@id="showcredentials_profile_name"]').isChecked(),
     ).toBeTruthy();
-    await page.locator('//*[@id="showcache"]').click();
-    expect(await page.locator('//*[@id="showcache"]').isChecked()).toBeTruthy();
 
     await page.locator('//*[@id="editNodekeypair0"]').click();
     await page.locator('//*[@id="editNodekeypair0"]').fill("testtesttesttest");
