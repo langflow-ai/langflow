@@ -1,9 +1,8 @@
+import { useGetTransactionsQuery } from "@/controllers/API/queries/transactions";
 import { ColDef, ColGroupDef } from "ag-grid-community";
 import { useEffect, useState } from "react";
 import IconComponent from "../../components/genericIconComponent";
 import TableComponent from "../../components/tableComponent";
-import { getTransactionTable } from "../../controllers/API";
-import useGetTransactionsQuery from "../../controllers/API/queries/transactions/use-get-transactions";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { FlowSettingsPropsType } from "../../types/components";
 import BaseModal from "../baseModal";

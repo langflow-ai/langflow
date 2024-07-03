@@ -1,10 +1,10 @@
+import { keepPreviousData } from "@tanstack/react-query";
 import { ColDef, ColGroupDef } from "ag-grid-community";
 import { useQueryFunctionType } from "../../../../types/api";
 import { extractColumnsFromRows } from "../../../../utils/utils";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
-import { keepPreviousData } from "@tanstack/react-query";
 
 interface TransactionsQueryParams {
   id: string;
@@ -59,11 +59,9 @@ export const useGetTransactionsQuery: useQueryFunctionType<
       return responseFn(rows);
     },
     {
-      placeholderData:keepPreviousData
+      placeholderData: keepPreviousData,
     },
   );
 
   return queryResult;
 };
-
-export default useGetTransactionsQuery;

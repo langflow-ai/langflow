@@ -11,21 +11,14 @@ interface IPostAddApiKey {
 }
 
 interface UsePostAddApiKeyParams {
-  callbackSuccess?: () => void;
-  callbackError?: () => void;
+  callbackSuccess?: (data) => void;
+  callbackError?: (err) => void;
 }
 
-export function usePostAddApiKey({
+export const usePostAddApiKey = ({
   callbackSuccess = () => {},
   callbackError = () => {},
-}: UsePostAddApiKeyParams) {
-  const setSuccessData = useAlertStore((state) => state.setSuccessData);
-  const setErrorData = useAlertStore((state) => state.setErrorData);
-  const { storeApiKey } = useContext(AuthContext);
-  const setHasApiKey = useStoreStore((state) => state.updateHasApiKey);
-  const setValidApiKey = useStoreStore((state) => state.updateValidApiKey);
-  const setLoadingApiKey = useStoreStore((state) => state.updateLoadingApiKey);
-
+}: UsePostAddApiKeyParams) => {
   const { mutate } = UseRequestProcessor();
 
   const postAddApiKeyFn = async (payload: IPostAddApiKey) => {
@@ -41,30 +34,18 @@ export function usePostAddApiKey({
       return res.data;
     },
     {
-      onError: () => {
-        setErrorData({
-          title: "API key save error",
-          list: [(mutation.error as any)?.response?.data?.detail],
-        });
-        setHasApiKey(false);
-        setValidApiKey(false);
-        setLoadingApiKey(false);
+      onError: (err) => {
         if (callbackError) {
-          callbackError();
+          callbackError(err);
         }
       },
       onSuccess: (data) => {
-        setSuccessData({ title: "API key saved successfully" });
-        storeApiKey(data);
-        setHasApiKey(true);
-        setValidApiKey(true);
-        setLoadingApiKey(false);
         if (callbackSuccess) {
-          callbackSuccess();
+          callbackSuccess(data);
         }
       },
     },
   );
 
   return mutation;
-}
+};
