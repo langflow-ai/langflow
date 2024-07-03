@@ -1165,5 +1165,32 @@
   "The chat message to be stored": "要存储的对话消息",
   "Session ID": "会话ID",
   "The session ID of the chat." : "对话的会话ID。",
-  "Stored Messages": "已存储消息"
+  "Stored Messages": "已存储消息",
+
+  "Metaphor": "Metaphor工具",
+  "Metaphor Toolkit": "Metaphor工具包",
+  "Metaphor API Key": "API密钥",
+  "search_num_results": "返回结果数",
+  "similar_num_results": "相似结果数",
+  "use_autoprompt": "自动提示",
+  "Tool": "工具",
+  "BaseToolkit": "基础工具包",
+
+  "OpenAPIToolkit": "OpenAPI工具包",
+  "Toolkit for interacting with an OpenAPI API.": "用于与OpenAPI API交互的工具包。",
+  "JSON Agent": "JSON助手",
+  "Text Requests Wrapper": "文本请求包装器",
+  "llm": "大模型",
+  "path": "路径",
+  "allow_dangerous_requests": "是否允许危险请求",
+
+  "VectorStoreRouterToolkit": "向量存储路由工具包",
+  "Toolkit for routing between Vector Stores.": "用于在向量存储之间路由的工具包。",
+
+  "VectorStoreToolkit": "向量存储工具包",
+  "Toolkit for interacting with a Vector Store.": "用于与向量存储交互的工具包。",
+
+  "VectorStoreInfo": "向量存储信息",
+  "Information about a VectorStore": "关于向量存储的信息",
+  "VectorStore": "向量存储"
 }
