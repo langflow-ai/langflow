@@ -335,6 +335,7 @@ class Graph:
             logger.exception(exc)
 
         try:
+            # Prioritize the webhook component if it exists
             start_component_id = None
             webhook_component_id = next(
                 (vertex_id for vertex_id in self._is_input_vertices if "webhook" in vertex_id.lower()), None
