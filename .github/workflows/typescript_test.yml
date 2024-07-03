@@ -8,12 +8,7 @@ on:
         description: "(Optional) Branch to checkout"
         required: false
         type: string
-  pull_request:
-    types: [opened, synchronize, reopened, auto_merge_enabled]
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ !contains(github.workflow, 'Release')}}
 
 env:
   POETRY_VERSION: "1.8.3"
@@ -120,7 +115,6 @@ jobs:
   merge-reports:
     needs: setup-and-test
     runs-on: ubuntu-latest
-    if: always()
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
