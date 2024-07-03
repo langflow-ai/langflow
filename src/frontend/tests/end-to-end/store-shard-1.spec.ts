@@ -103,7 +103,10 @@ test("should find a searched Component on Store", async ({ page }) => {
   await page.waitForTimeout(1000);
 
   await page.getByTestId("button-store").click();
-  await page.waitForTimeout(1000);
+
+  await page.waitForSelector('[data-testid="search-store-input"]', {
+    timeout: 100000,
+  });
 
   await page.getByTestId("search-store-input").fill("File Loader");
   await page.getByTestId("search-store-button").click();
