@@ -10,6 +10,7 @@ from langflow.custom import CustomComponent
 class VectorStoreRouterAgentComponent(CustomComponent):
     display_name = "VectorStoreRouterAgent"
     description = "Construct an agent from a Vector Store Router."
+    name = "VectorStoreRouterAgent"
 
     def build_config(self):
         return {

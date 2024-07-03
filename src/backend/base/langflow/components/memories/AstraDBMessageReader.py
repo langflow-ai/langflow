@@ -7,6 +7,7 @@ from langflow.schema import Data
 class AstraDBMessageReaderComponent(BaseMemoryComponent):
     display_name = "Astra DB Message Reader"
     description = "Retrieves stored chat messages from Astra DB."
+    name = "AstraDBMessageReader"
 
     def build_config(self):
         return {

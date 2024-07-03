@@ -10,6 +10,7 @@ from langflow.field_typing import Retriever
 class MetalRetrieverComponent(CustomComponent):
     display_name: str = "Metal Retriever"
     description: str = "Retriever that uses the Metal API."
+    name = "MetalRetriever"
 
     def build_config(self):
         return {

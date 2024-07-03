@@ -10,6 +10,7 @@ class LLMMathChainComponent(CustomComponent):
     display_name = "LLMMathChain"
     description = "Chain that interprets a prompt and executes python code to do math."
     documentation = "https://python.langchain.com/docs/modules/chains/additional/llm_math"
+    name = "LLMMathChain"
 
     def build_config(self):
         return {

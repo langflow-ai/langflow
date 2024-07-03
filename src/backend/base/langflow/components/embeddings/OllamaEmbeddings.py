@@ -10,6 +10,7 @@ class OllamaEmbeddingsComponent(LCModelComponent):
     description: str = "Generate embeddings using Ollama models."
     documentation = "https://python.langchain.com/docs/integrations/text_embedding/ollama"
     icon = "Ollama"
+    name = "OllamaEmbeddings"
 
     inputs = [
         MessageTextInput(

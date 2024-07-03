@@ -8,6 +8,7 @@ from langflow.schema.dotdict import dotdict
 class IDGeneratorComponent(CustomComponent):
     display_name = "ID Generator"
     description = "Generates a unique ID."
+    name = "IDGenerator"
 
     def update_build_config(  # type: ignore
         self, build_config: dotdict, field_value: Any, field_name: Optional[str] = None

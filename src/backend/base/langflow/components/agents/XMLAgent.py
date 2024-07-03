@@ -11,6 +11,7 @@ from langflow.schema import Data
 class XMLAgentComponent(LCAgentComponent):
     display_name = "XMLAgent"
     description = "Construct an XML agent from an LLM and tools."
+    name = "XMLAgent"
 
     def build_config(self):
         return {

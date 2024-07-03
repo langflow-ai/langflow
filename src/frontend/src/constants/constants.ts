@@ -1,6 +1,7 @@
 // src/constants/constants.ts
 
 import { languageMap } from "../types/components";
+import { nodeNames } from "../utils/styleUtils";
 
 /**
  * invalid characters for flow name
@@ -722,27 +723,6 @@ export const PRIORITY_SIDEBAR_ORDER = [
   "helpers",
   "vectorstores",
   "embeddings",
-];
-export const NATIVE_CATEGORIES = [
-  "inputs",
-  "outputs",
-  "prompts",
-  "data",
-  "prompt",
-  "models",
-  "helpers",
-  "experimental",
-  "agents",
-  "vectorstores",
-  "retrievers",
-  "embeddings",
-  "chains",
-  "tools",
-  "memories",
-  "textsplitters",
-  "toolkits",
-  "prototypes",
-  "langchain_utilities",
 ];
 
 export const AUTHORIZED_DUPLICATE_REQUESTS = [

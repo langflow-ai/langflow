@@ -6,6 +6,7 @@ from langflow.schema.message import Message
 class StoreMessageComponent(CustomComponent):
     display_name = "Store Message"
     description = "Stores a chat message."
+    name = "StoreMessage"
 
     def build_config(self):
         return {

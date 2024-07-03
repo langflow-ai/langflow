@@ -20,6 +20,7 @@ class VectaraVectorStoreComponent(LCVectorStoreComponent):
     display_name: str = "Vectara"
     description: str = "Vectara Vector Store with search capabilities"
     documentation = "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/vectara"
+    name = "Vectara"
     icon = "Vectara"
 
     inputs = [

@@ -9,6 +9,8 @@ class CohereEmbeddingsComponent(LCModelComponent):
     display_name = "Cohere Embeddings"
     description = "Generate embeddings using Cohere models."
     icon = "Cohere"
+    name = "CohereEmbeddings"
+
     inputs = [
         SecretStrInput(name="cohere_api_key", display_name="Cohere API Key"),
         DropdownInput(

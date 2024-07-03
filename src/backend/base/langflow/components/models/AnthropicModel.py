@@ -11,6 +11,7 @@ class AnthropicModelComponent(LCModelComponent):
     display_name = "Anthropic"
     description = "Generate text using Anthropic Chat&Completion LLMs with prefill support."
     icon = "Anthropic"
+    name = "AnthropicModel"
 
     inputs = [
         MessageTextInput(name="input_value", display_name="Input"),

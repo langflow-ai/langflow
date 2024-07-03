@@ -22,6 +22,7 @@ class APIRequestComponent(Component):
         "**Note:** Check advanced options for more settings."
     )
     icon = "Globe"
+    name = "APIRequest"
 
     inputs = [
         MessageTextInput(

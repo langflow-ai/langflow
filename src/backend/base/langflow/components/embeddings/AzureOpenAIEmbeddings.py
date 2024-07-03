@@ -11,6 +11,7 @@ class AzureOpenAIEmbeddingsComponent(LCModelComponent):
     description: str = "Generate embeddings using Azure OpenAI models."
     documentation: str = "https://python.langchain.com/docs/integrations/text_embedding/azureopenai"
     icon = "Azure"
+    name = "AzureOpenAIEmbeddings"
 
     API_VERSION_OPTIONS = [
         "2022-12-01",

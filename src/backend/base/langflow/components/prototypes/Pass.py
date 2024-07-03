@@ -7,6 +7,7 @@ from langflow.template import Output
 class PassMessageComponent(Component):
     display_name = "Pass"
     description = "Forwards the input message, unchanged."
+    name = "Pass"
     icon = "arrow-right"
 
     inputs = [

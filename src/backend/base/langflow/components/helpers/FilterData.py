@@ -10,6 +10,7 @@ class FilterDataComponent(Component):
     description = "Filters a Data object based on a list of keys."
     icon = "filter"
     beta = True
+    name = "FilterData"
 
     inputs = [
         DataInput(

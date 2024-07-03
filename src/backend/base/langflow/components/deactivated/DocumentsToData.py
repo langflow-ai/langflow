@@ -10,6 +10,7 @@ class DocumentsToDataComponent(CustomComponent):
     display_name = "Documents ⇢ Data"
     description = "Convert LangChain Documents into Data."
     icon = "LangChain"
+    name = "DocumentsToData"
 
     field_config = {
         "documents": {"display_name": "Documents"},

@@ -7,6 +7,7 @@ from langflow.field_typing import VectorStore
 class VectoStoreRetrieverComponent(CustomComponent):
     display_name = "VectorStore Retriever"
     description = "A vector store retriever"
+    name = "VectorStoreRetriever"
 
     def build_config(self):
         return {

@@ -10,6 +10,7 @@ class FileComponent(Component):
     display_name = "File"
     description = "A generic file loader."
     icon = "file-text"
+    name = "File"
 
     inputs = [
         FileInput(

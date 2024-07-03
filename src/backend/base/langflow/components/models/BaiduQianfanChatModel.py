@@ -12,6 +12,7 @@ class QianfanChatEndpointComponent(LCModelComponent):
     description: str = "Generate text using Baidu Qianfan LLMs."
     documentation: str = "https://python.langchain.com/docs/integrations/chat/baidu_qianfan_endpoint"
     icon = "BaiduQianfan"
+    name = "BaiduQianfanChatModel"
 
     inputs = [
         MessageTextInput(

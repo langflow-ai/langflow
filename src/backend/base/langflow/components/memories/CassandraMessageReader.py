@@ -9,6 +9,7 @@ from langflow.schema.data import Data
 class CassandraMessageReaderComponent(BaseMemoryComponent):
     display_name = "Cassandra Message Reader"
     description = "Retrieves stored chat messages from a Cassandra table on Astra DB."
+    name = "CassandraMessageReader"
 
     def build_config(self):
         return {

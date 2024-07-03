@@ -12,6 +12,7 @@ from langflow.schema.message import Message
 class SelfQueryRetrieverComponent(CustomComponent):
     display_name: str = "Self Query Retriever"
     description: str = "Retriever that uses a vector store and an LLM to generate the vector store queries."
+    name = "SelfQueryRetriever"
     icon = "LangChain"
 
     def build_config(self):

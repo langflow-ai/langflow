@@ -7,6 +7,7 @@ from langflow.field_typing import BaseRetriever, Tool
 class RetrieverToolComponent(CustomComponent):
     display_name = "RetrieverTool"
     description = "Tool for interacting with retriever"
+    name = "RetrieverTool"
 
     def build_config(self):
         return {

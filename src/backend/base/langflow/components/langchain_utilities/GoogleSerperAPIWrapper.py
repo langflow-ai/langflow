@@ -10,6 +10,7 @@ from langflow.custom import CustomComponent
 class GoogleSerperAPIWrapperComponent(CustomComponent):
     display_name = "GoogleSerperAPIWrapper"
     description = "Wrapper around the Serper.dev Google Search API."
+    name = "GoogleSerperAPIWrapper"
 
     def build_config(self) -> Dict[str, Dict]:
         return {

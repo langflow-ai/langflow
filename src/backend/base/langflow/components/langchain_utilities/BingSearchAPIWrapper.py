@@ -9,6 +9,7 @@ from langflow.custom import CustomComponent
 class BingSearchAPIWrapperComponent(CustomComponent):
     display_name = "BingSearchAPIWrapper"
     description = "Wrapper for Bing Search API."
+    name = "BingSearchAPIWrapper"
 
     def build_config(self):
         return {

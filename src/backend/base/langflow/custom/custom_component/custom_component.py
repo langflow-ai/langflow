@@ -36,6 +36,7 @@ class CustomComponent(BaseComponent):
     Represents a custom component in Langflow.
 
     Attributes:
+        name (Optional[str]): This attribute helps the frontend apply styles to known components.
         display_name (Optional[str]): The display name of the custom component.
         description (Optional[str]): The description of the custom component.
         code (Optional[str]): The code of the custom component.
@@ -49,6 +50,8 @@ class CustomComponent(BaseComponent):
         _tree (Optional[dict]): The code tree of the custom component.
     """
 
+    name: Optional[str] = None
+    """The name of the component used to styles. Defaults to None."""
     display_name: Optional[str] = None
     """The display name of the component. Defaults to None."""
     description: Optional[str] = None

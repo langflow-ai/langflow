@@ -10,6 +10,7 @@ from langflow.schema.data import Data
 class CassandraMessageWriterComponent(BaseMemoryComponent):
     display_name = "Cassandra Message Writer"
     description = "Writes a message to a Cassandra table on Astra DB."
+    name = "CassandraMessageWriter"
 
     def build_config(self):
         return {

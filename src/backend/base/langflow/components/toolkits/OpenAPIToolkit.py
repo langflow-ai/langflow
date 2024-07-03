@@ -12,6 +12,7 @@ from langflow.field_typing import LanguageModel
 class OpenAPIToolkitComponent(CustomComponent):
     display_name = "OpenAPIToolkit"
     description = "Toolkit for interacting with an OpenAPI API."
+    name = "OpenAPIToolkit"
 
     def build_config(self):
         return {

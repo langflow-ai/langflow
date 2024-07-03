@@ -7,6 +7,7 @@ from langflow.field_typing import Text
 class RunnableExecComponent(CustomComponent):
     description = "Execute a runnable. It will try to guess the input and output keys."
     display_name = "Runnable Executor"
+    name = "RunnableExecutor"
     beta: bool = True
     field_order = [
         "input_key",

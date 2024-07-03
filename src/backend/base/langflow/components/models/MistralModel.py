@@ -11,6 +11,7 @@ class MistralAIModelComponent(LCModelComponent):
     display_name = "MistralAI"
     description = "Generates text using MistralAI LLMs."
     icon = "MistralAI"
+    name = "MistralModel"
 
     inputs = [
         MessageInput(name="input_value", display_name="Input"),

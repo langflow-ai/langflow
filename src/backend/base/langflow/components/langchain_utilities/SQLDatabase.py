@@ -6,6 +6,7 @@ from langflow.custom import CustomComponent
 class SQLDatabaseComponent(CustomComponent):
     display_name = "SQLDatabase"
     description = "SQL Database"
+    name = "SQLDatabase"
 
     def build_config(self):
         return {

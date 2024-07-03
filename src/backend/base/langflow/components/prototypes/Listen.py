@@ -5,6 +5,7 @@ from langflow.schema import Data
 class ListenComponent(CustomComponent):
     display_name = "Listen"
     description = "A component to listen for a notification."
+    name = "Listen"
     beta: bool = True
 
     def build_config(self):

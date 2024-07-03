@@ -5,6 +5,7 @@ from langflow.schema import Data
 class UpdateDataComponent(CustomComponent):
     display_name = "Update Data"
     description = "Update Data with text-based key/value pairs, similar to updating a Python dictionary."
+    name = "UpdateData"
 
     def build_config(self):
         return {

@@ -17,6 +17,7 @@ class FaissVectorStoreComponent(LCVectorStoreComponent):
     display_name: str = "FAISS"
     description: str = "FAISS Vector Store with search capabilities"
     documentation = "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/faiss"
+    name = "FAISS"
     icon = "FAISS"
 
     inputs = [

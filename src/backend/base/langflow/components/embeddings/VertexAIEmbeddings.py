@@ -7,6 +7,7 @@ class VertexAIEmbeddingsComponent(LCModelComponent):
     display_name = "VertexAI Embeddings"
     description = "Generate embeddings using Google Cloud VertexAI models."
     icon = "VertexAI"
+    name = "VertexAIEmbeddings"
 
     inputs = [
         FileInput(

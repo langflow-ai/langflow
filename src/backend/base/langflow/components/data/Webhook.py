@@ -8,6 +8,7 @@ from langflow.schema import Data
 class WebhookComponent(Component):
     display_name = "Webhook Input"
     description = "Defines a webhook input for the flow."
+    name = "Webhook"
 
     inputs = [
         MultilineInput(
