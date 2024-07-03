@@ -75,7 +75,6 @@ export default function TableNodeCellRender({
           handleOnNewValue,
         });
 
-
       case "NestedDict":
         return (
           <DictComponent
