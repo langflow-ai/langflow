@@ -42,7 +42,10 @@ test("user should be able to download a flow or a component", async ({
   if (await page.getByTestId("replace-button").isVisible()) {
     await page.getByTestId("replace-button").click();
   }
-  await page.waitForTimeout(3000);
+
+  await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
+    timeout: 100000,
+  });
 
   await page.getByTestId("icon-ChevronLeft").last().click();
   await page.getByRole("checkbox").nth(1).click();
@@ -123,8 +126,10 @@ test("user should be able to duplicate a flow or a component", async ({
   if (await page.getByTestId("replace-button").isVisible()) {
     await page.getByTestId("replace-button").click();
   }
-  await page.waitForTimeout(3000);
 
+  await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
+    timeout: 100000,
+  });
   await page.getByTestId("icon-ChevronLeft").last().click();
   await page.getByRole("checkbox").nth(1).click();
 
