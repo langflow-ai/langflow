@@ -1,6 +1,6 @@
 import { useEffect } from "react";
-import { NATIVE_CATEGORIES } from "../../constants/constants";
 import { NodeDataType } from "../../types/flow";
+import { nodeNames } from "../../utils/styleUtils";
 
 const useCheckCodeValidity = (
   data: NodeDataType,
@@ -14,7 +14,7 @@ const useCheckCodeValidity = (
     // first check if data.type in NATIVE_CATEGORIES
     // if not return
     if (
-      !NATIVE_CATEGORIES.includes(types[data.type]) ||
+      !Object.keys(nodeNames).includes(types[data.type]) ||
       !data.node?.template?.code?.value
     )
       return;

@@ -9,6 +9,7 @@ from langflow.schema import Data
 class AstraDBMessageWriterComponent(BaseMemoryComponent):
     display_name = "Astra DB Message Writer"
     description = "Writes a message to Astra DB."
+    name = "AstraDBMessageWriter"
 
     def build_config(self):
         return {

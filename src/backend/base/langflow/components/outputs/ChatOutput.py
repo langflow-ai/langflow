@@ -7,6 +7,7 @@ class ChatOutput(ChatComponent):
     display_name = "Chat Output"
     description = "Display a chat message in the Playground."
     icon = "ChatOutput"
+    name = "ChatOutput"
 
     inputs = [
         MessageTextInput(
