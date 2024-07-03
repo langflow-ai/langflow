@@ -87,7 +87,7 @@ test("InputListComponent", async ({ page }) => {
     expect(false).toBeTruthy();
   }
 
-  await page.getByText("Save Changes", { exact: true }).click();
+  await page.getByText("Close").last().click();
 
   await page.getByTestId("input-list-minus-btn_urls-2").isHidden();
 
