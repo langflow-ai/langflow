@@ -1,33 +1,27 @@
-import { useContext } from "react";
-import { AuthContext } from "../../../../contexts/authContext";
-import useAlertStore from "../../../../stores/alertStore";
-import { useStoreStore } from "../../../../stores/storeStore";
+import { UseMutationResult } from "@tanstack/react-query";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
+import { useMutationFunctionType } from "@/types/api";
 
 interface IPostAddApiKey {
   key: string;
 }
 
-interface UsePostAddApiKeyParams {
-  callbackSuccess?: (data) => void;
-  callbackError?: (err) => void;
-}
-
-export const usePostAddApiKey = ({
-  callbackSuccess = () => {},
-  callbackError = () => {},
-}: UsePostAddApiKeyParams) => {
+// add types for error handling and success
+export const usePostAddApiKey:useMutationFunctionType<IPostAddApiKey> = ({
+  callbackSuccess,
+  callbackError,
+}) => {
   const { mutate } = UseRequestProcessor();
 
-  const postAddApiKeyFn = async (payload: IPostAddApiKey) => {
+  const postAddApiKeyFn = async (payload: IPostAddApiKey):Promise<any> => {
     return await api.post<any>(`${getURL("API_KEY")}/store`, {
       api_key: payload.key,
     });
   };
 
-  const mutation = mutate(
+  const mutation:UseMutationResult<any,any,IPostAddApiKey> = mutate(
     ["usePostAddApiKey"],
     async (payload: IPostAddApiKey) => {
       const res = await postAddApiKeyFn(payload);
