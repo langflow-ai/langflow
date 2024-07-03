@@ -10,6 +10,10 @@ on:
         type: string
   pull_request:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
     path-filter:
         name: Filter Paths
@@ -18,6 +22,7 @@ jobs:
             python: ${{ steps.filter.outputs.python }}
             frontend: ${{ steps.filter.outputs.frontend }}
             docs: ${{ steps.filter.outputs.docs }}
+            tests: ${{ steps.filter.outputs.tests }}
         steps:
         - name: Checkout code
           uses: actions/checkout@v4
@@ -51,9 +56,10 @@ jobs:
 
 
     test-frontend:
-        if: ${{ needs.path-filter.outputs.python == 'true' || needs.path-filter.outputs.frontend == 'true' || needs.path-filter.outputs.tests == 'true' }}
-        name: Run Frontend Tests
-        uses: ./.github/workflows/typescript_test.yml
+      needs: path-filter
+      name: Run Frontend Tests
+      if: ${{ needs.path-filter.outputs.python == 'true' || needs.path-filter.outputs.frontend == 'true' || needs.path-filter.outputs.tests == 'true' }}
+      uses: ./.github/workflows/typescript_test.yml
 
     lint-frontend:
         needs: path-filter
