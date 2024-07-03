@@ -857,9 +857,7 @@ export function validateSelection(
         isOutputNode(node.data as NodeDataType),
     )
   ) {
-    errorsArray.push(
-      "Select non-input/output nodes only",
-    );
+    errorsArray.push("Select non-input/output nodes only");
   }
   //check if there are two or more nodes with free outputs
   if (

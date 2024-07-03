@@ -28,7 +28,7 @@ export default function SelectionMenu({
 
   useEffect(() => {
     if (isOpen) {
-      setErrors(validateSelection(lastSelection!, edges))
+      setErrors(validateSelection(lastSelection!, edges));
       return setDisable(validateSelection(lastSelection!, edges).length > 0);
     }
     setDisable(false);
@@ -70,24 +70,24 @@ export default function SelectionMenu({
           }
         >
           {errors.length > 0 ? (
-            <ShadTooltip content={errors[0]} side={'top'}>
+            <ShadTooltip content={errors[0]} side={"top"}>
               <Button
                 unstyled
                 className={`${
-                disable
-                  ? "flex h-full w-full cursor-not-allowed items-center justify-between text-sm text-muted-foreground"
-                  : "flex h-full w-full items-center justify-between text-sm"
+                  disable
+                    ? "flex h-full w-full cursor-not-allowed items-center justify-between text-sm text-muted-foreground"
+                    : "flex h-full w-full items-center justify-between text-sm"
                 }`}
                 onClick={onClick}
                 disabled={disable}
               >
-              <GradientGroup
-                strokeWidth={1.5}
-                size={22}
-                className="text-primary"
-                disabled={disable}
-              />
-              Group
+                <GradientGroup
+                  strokeWidth={1.5}
+                  size={22}
+                  className="text-primary"
+                  disabled={disable}
+                />
+                Group
               </Button>
             </ShadTooltip>
           ) : (
