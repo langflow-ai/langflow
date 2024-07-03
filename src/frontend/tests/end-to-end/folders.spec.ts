@@ -118,6 +118,10 @@ test("change flow folder", async ({ page }) => {
   }
   await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
+  await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
+    timeout: 100000,
+  });
+
   await page.getByTestId("icon-ChevronLeft").first().click();
 
   await page.getByText("My Collection").nth(2).isVisible();

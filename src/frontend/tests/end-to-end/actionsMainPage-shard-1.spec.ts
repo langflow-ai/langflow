@@ -21,6 +21,10 @@ test("select and delete all", async ({ page }) => {
   }
   await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
+  await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
+    timeout: 100000,
+  });
+
   await page.getByTestId("icon-ChevronLeft").first().click();
 
   await page.getByText("Select All").click();
@@ -53,14 +57,28 @@ test("search flows", async ({ page }) => {
   }
   await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
+  await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
+    timeout: 100000,
+  });
+
   await page.getByTestId("icon-ChevronLeft").first().click();
 
   await page.getByText("Select All").isVisible();
   await page.getByText("New Project", { exact: true }).click();
   await page.getByRole("heading", { name: "Memory Chatbot" }).click();
+
+  await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
+    timeout: 100000,
+  });
+
   await page.getByTestId("icon-ChevronLeft").first().click();
   await page.getByText("New Project", { exact: true }).click();
   await page.getByRole("heading", { name: "Document QA" }).click();
+
+  await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
+    timeout: 100000,
+  });
+
   await page.getByTestId("icon-ChevronLeft").first().click();
   await page.getByPlaceholder("Search flows").fill("Memory Chatbot");
   await page.getByText("Memory Chatbot", { exact: true }).isVisible();
@@ -124,6 +142,11 @@ test("search components", async ({ page }) => {
 
   await page.getByTestId("icon-SaveAll").first().click();
   await page.keyboard.press("Escape");
+
+  await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
+    timeout: 100000,
+  });
+
   await page.getByTestId("icon-ChevronLeft").first().click();
 
   await page
