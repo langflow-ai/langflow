@@ -554,3 +554,10 @@ def get_function(code):
     function_name = validate.extract_function_name(code)
 
     return validate.create_function(code, function_name)
+
+
+def get_instance_name(instance):
+    name = instance.__class__.__name__
+    if hasattr(instance, 'name') and instance.name:
+        name = instance.name
+    return name
