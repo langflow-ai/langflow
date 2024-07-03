@@ -180,7 +180,11 @@ export default function ParameterComponent({
     handleOnNewValueHook(newValue, dbValue, skipSnapshot);
   };
 
-  const handleNodeClass = (newNodeClass: APIClassType, code?: string, type?: string): void => {
+  const handleNodeClass = (
+    newNodeClass: APIClassType,
+    code?: string,
+    type?: string,
+  ): void => {
     handleNodeClassHook(newNodeClass, code, type);
   };
 

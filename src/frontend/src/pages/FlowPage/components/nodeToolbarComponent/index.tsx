@@ -390,7 +390,11 @@ export default function NodeToolbarComponent({
     });
   };
 
-  const handleNodeClass = (newNodeClass: APIClassType, code?: string, type?: string): void => {
+  const handleNodeClass = (
+    newNodeClass: APIClassType,
+    code?: string,
+    type?: string,
+  ): void => {
     if (!data.node) return;
     if (data.node!.template[name].value !== code) {
       takeSnapshot();
