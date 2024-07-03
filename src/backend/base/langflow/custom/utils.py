@@ -544,8 +544,7 @@ def sanitize_field_config(field_config: Union[Dict, Input]):
 def build_component(component):
     """Build a single component."""
     component_template, component_instance = create_component_template(component)
-    component_name = type(component_instance).__name__
-
+    component_name = get_instance_name(component_instance)
     return component_name, component_template
 
 
