@@ -89,6 +89,7 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
                 documents.append(_input)
 
         from langchain.embeddings.base import Embeddings  # Ensure this import is correct
+
         embedding = self.embedding
         if not isinstance(embedding, Embeddings):
             raise ValueError("Invalid embedding object")
