@@ -37,6 +37,7 @@ jobs:
                 - "**/python_test.yml"
               frontend:
                 - "src/frontend/**"
+                - **/typescript_test.yml
               docs:
                 - "docs/**"
 
