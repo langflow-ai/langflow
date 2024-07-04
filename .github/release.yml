@@ -7,7 +7,7 @@ changelog:
     - title: ✨ New Features
       description: New features and enhancements
       labels:
-        - feature
+        - enhancement
     - title: 🐛 Bug Fixes
       description: Bug fixes and patches
       labels:
@@ -15,7 +15,7 @@ changelog:
     - title: 📝 Documentation Updates
       description: Changes to documentation
       labels:
-        - docs
+        - documentation
     - title: 🛠 Maintenance Tasks
       description: Maintenance tasks and housekeeping
       labels:
@@ -23,7 +23,7 @@ changelog:
         - refactor
         - style
         - performance
-        - ci
+        - build
     - title: ✅ Tests
       description: Changes to tests
       labels:
