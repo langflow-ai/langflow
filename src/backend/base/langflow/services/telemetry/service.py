@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import os
 import platform
 from datetime import datetime, timezone
@@ -30,7 +31,7 @@ class TelemetryService(Service):
         self.settings_service = settings_service
         self.base_url = settings_service.settings.telemetry_base_url
         self.telemetry_queue: asyncio.Queue = asyncio.Queue()
-        self.client = httpx.AsyncClient(timeout=None)
+        self.client = httpx.AsyncClient(timeout=10.0)  # Set a reasonable timeout
         self.running = False
         self.package = get_version_info()["package"]
 
@@ -63,8 +64,12 @@ class TelemetryService(Service):
                 logger.error(f"Failed to send telemetry data: {response.status_code} {response.text}")
             else:
                 logger.debug("Telemetry data sent successfully.")
+        except httpx.HTTPStatusError as e:
+            logger.error(f"HTTP error occurred: {e}")
+        except httpx.RequestError as e:
+            logger.error(f"Request error occurred: {e}")
         except Exception as e:
-            logger.error(f"Failed to send telemetry data due to: {e}")
+            logger.error(f"Unexpected error occurred: {e}")
 
     async def log_package_run(self, payload: RunPayload):
         await self.telemetry_queue.put((self.send_telemetry_data, payload, "run"))
@@ -119,8 +124,10 @@ class TelemetryService(Service):
         try:
             self.running = False
             await self.flush()
-            self.worker_task.cancel()
             if self.worker_task:
-                await self.worker_task
+                self.worker_task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await self.worker_task
+            await self.client.aclose()
         except Exception as e:
             logger.error(f"Error stopping tracing service: {e}")

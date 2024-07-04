@@ -7,7 +7,6 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, Dict, Optional
 from uuid import UUID
 
-from langchain.callbacks.tracers.langchain import wait_for_all_tracers
 from loguru import logger
 
 from langflow.schema.data import Data
@@ -292,5 +291,4 @@ class LangSmithTracer(BaseTracer):
             self._run_tree.add_metadata(metadata)
         self._run_tree.end(outputs=outputs, error=error)
         self._run_tree.post()
-        wait_for_all_tracers()
         self._run_link = self._run_tree.get_url()
