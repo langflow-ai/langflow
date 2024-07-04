@@ -254,6 +254,6 @@ export type useMutationFunctionType<Variables, Data = any, Error = any> = ({
   callbackError,
   callbackSuccess,
 }: {
-  callbackSuccess: (data: Data) => void;
+  callbackSuccess: (data: Data, payload?: any) => void;
   callbackError: (err: Error) => void;
 }) => UseMutationResult<Data, Error, Variables>;

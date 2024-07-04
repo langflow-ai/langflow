@@ -4,7 +4,7 @@ import {
   FS_ERROR_TEXT,
   SN_ERROR_TEXT,
 } from "../../../../../../constants/constants";
-import useFileUpload from "./use-file-upload";
+// import useFileUpload from "./use-file-upload";
 
 const useDragAndDrop = (
   setIsDragging: (value: boolean) => void,
@@ -72,7 +72,7 @@ const handleFiles = (files, setFiles, currentFlowId, setErrorData) => {
       { file: blob, loading: true, error: false, id, type },
     ]);
 
-    useFileUpload(blob, currentFlowId, setFiles, id);
+    // useFileUpload(blob, currentFlowId, setFiles, id);
   }
 };
 export default useDragAndDrop;
