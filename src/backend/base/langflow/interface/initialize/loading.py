@@ -1,5 +1,4 @@
 import inspect
-import json
 import os
 import warnings
 from typing import TYPE_CHECKING, Any, Type
@@ -57,9 +56,7 @@ async def build_component_and_get_results(
 ):
     params_copy = params.copy()
     # Remove code from params
-    class_object: Type["CustomComponent" | "Component"] = eval_custom_component_code(
-        params_copy.pop("code")
-    )
+    class_object: Type["CustomComponent" | "Component"] = eval_custom_component_code(params_copy.pop("code"))
     custom_component: "CustomComponent" | "Component" = class_object(
         user_id=user_id,
         parameters=params_copy,
@@ -71,16 +68,10 @@ async def build_component_and_get_results(
     )
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
-        if base_type == "custom_components" and isinstance(
-            custom_component, CustomComponent
-        ):
-            return await build_custom_component(
-                params=params_copy, custom_component=custom_component
-            )
+        if base_type == "custom_components" and isinstance(custom_component, CustomComponent):
+            return await build_custom_component(params=params_copy, custom_component=custom_component)
         elif base_type == "component" and isinstance(custom_component, Component):
-            return await build_component(
-                params=params_copy, custom_component=custom_component
-            )
+            return await build_component(params=params_copy, custom_component=custom_component)
         else:
             raise ValueError(f"Base type {base_type} not found.")
 
@@ -135,17 +126,11 @@ def update_params_with_load_from_db_fields(
                 if fallback_to_env_vars and key is None:
                     var = os.getenv(params[field])
                     if var is None:
-                        raise ValueError(
-                            f"Environment variable {params[field]} is not set."
-                        )
+                        raise ValueError(f"Environment variable {params[field]} is not set.")
                     key = var
-                    logger.info(
-                        f"Using environment variable {params[field]} for {field}"
-                    )
+                    logger.info(f"Using environment variable {params[field]} for {field}")
                 if key is None:
-                    logger.warning(
-                        f"Could not get value for {field}. Setting it to None."
-                    )
+                    logger.warning(f"Could not get value for {field}. Setting it to None.")
 
                 params[field] = key
 
@@ -153,9 +138,7 @@ def update_params_with_load_from_db_fields(
                 raise exc
 
             except Exception as exc:
-                logger.error(
-                    f"Failed to get value for {field} from custom component. Setting it to None. Error: {exc}"
-                )
+                logger.error(f"Failed to get value for {field} from custom component. Setting it to None. Error: {exc}")
 
                 params[field] = None
 
@@ -211,12 +194,8 @@ async def build_custom_component(params: dict, custom_component: "CustomComponen
     artifact = {"repr": custom_repr, "raw": raw, "type": artifact_type}
 
     if custom_component.vertex is not None:
-        custom_component._artifacts = {
-            custom_component.vertex.outputs[0].get("name"): artifact
-        }
-        custom_component._results = {
-            custom_component.vertex.outputs[0].get("name"): build_result
-        }
+        custom_component._artifacts = {custom_component.vertex.outputs[0].get("name"): artifact}
+        custom_component._results = {custom_component.vertex.outputs[0].get("name"): build_result}
         return custom_component, build_result, artifact
 
     raise ValueError("Custom component does not have a vertex")
