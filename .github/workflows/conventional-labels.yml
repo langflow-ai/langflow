@@ -3,7 +3,7 @@
 name: Label PRs with Conventional Commits
 on:
   pull_request_target:
-    types: [ opened, edited , reopened]
+    types: [ opened, edited , reopened, auto_merge_enabled]
 
 jobs:
   validate-pr:
@@ -22,7 +22,7 @@ jobs:
     needs: validate-pr
     name: Label PR
     runs-on: ubuntu-latest
-    if: ${{ github.event.pull_request.user.type != 'Bot' && needs.validate-pr.outputs.validate_output == 'true' }}
+    if: ${{ github.event.pull_request.user.type != 'Bot'}}
     steps:
       - uses: bcoe/conventional-release-labels@v1
         with:
