@@ -1,13 +1,10 @@
 import { keepPreviousData } from "@tanstack/react-query";
-import { ColDef, ColGroupDef } from "ag-grid-community";
 import { useQueryFunctionType } from "../../../../types/api";
-import { extractColumnsFromRows } from "../../../../utils/utils";
 import { api } from "../../api";
-import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
 
 
-interface TransactionsResponse {
+interface getHealthResponse {
   status:string,
   chat: string,
   db: string,
@@ -17,11 +14,11 @@ interface TransactionsResponse {
 
 export const useGetHealthQuery: useQueryFunctionType<
   undefined,
-  TransactionsResponse
+  getHealthResponse
 > = (_, onFetch) => {
   const { query } = UseRequestProcessor();
 
-  const responseFn = (data: TransactionsResponse) => {
+  const responseFn = (data: getHealthResponse) => {
     if (!onFetch) return data;
     if (typeof onFetch === "function") return onFetch(data);
     switch (onFetch) {
