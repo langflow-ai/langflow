@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List
 
 from langflow.base.data.utils import parallel_load_data, parse_text_file_to_data, retrieve_file_paths
 from langflow.custom import Component
@@ -67,7 +67,7 @@ class DirectoryComponent(Component):
         Output(display_name="Data", name="data", method="load_directory"),
     ]
 
-    def load_directory(self) -> List[Optional[Data]]:
+    def load_directory(self) -> List[Data]:
         path = self.path
         types = self.types or []
         depth = self.depth
