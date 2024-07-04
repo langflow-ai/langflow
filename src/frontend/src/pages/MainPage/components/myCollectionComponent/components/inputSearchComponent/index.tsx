@@ -22,14 +22,8 @@ const InputSearchComponent = ({
 }: InputSearchComponentProps) => {
   const pagePath = window.location.pathname;
   const allFlows = useFlowsManagerStore((state) => state.allFlows);
-  const searchFlowsComponents = useFlowsManagerStore(
-    (state) => state.searchFlowsComponents,
-  );
 
-  const disableInputSearch =
-    loading ||
-    !allFlows ||
-    (allFlows?.length === 0 && searchFlowsComponents === "");
+  const disableInputSearch = loading || !allFlows;
 
   const getSearchPlaceholder = () => {
     if (pagePath.includes("flows")) {
