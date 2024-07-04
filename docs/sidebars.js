@@ -161,6 +161,17 @@ module.exports = {
             "integrations/notion/page-content-viewer",
           ],
         },
+        {
+          type: "category",
+          label: "CrewAI",
+          items: [
+            "integrations/crewai/intro",
+            "integrations/crewai/setup",
+            "integrations/crewai/agent",
+            "integrations/crewai/task",
+            "integrations/crewai/crew",
+          ],
+        },
         // {
         //   type: "category",
         //   label: "LangSmith",
