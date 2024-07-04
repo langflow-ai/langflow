@@ -9,6 +9,7 @@ import { UseRequestProcessor } from "../../services/request-processor";
 interface TransactionsQueryParams {
   id: string;
   params?: Record<string, unknown>;
+  fetchType: string;
 }
 
 interface TransactionsResponse {
@@ -19,20 +20,19 @@ interface TransactionsResponse {
 export const useGetTransactionsQuery: useQueryFunctionType<
   TransactionsQueryParams,
   TransactionsResponse
-> = ({ id, params }, onFetch) => {
+> = (params, options?) => {
+  // Function body remains unchanged
   const { query } = UseRequestProcessor();
 
-  const responseFn = (data: any) => {
-    if (!onFetch) return data;
-    if (typeof onFetch === "function") return onFetch(data);
-    switch (onFetch) {
+  const responseFn = (data: object[], fetchType: string) => {
+    switch (fetchType) {
       case "TableUnion": {
-        const columns = extractColumnsFromRows(data.data, "union");
-        return { rows: data.data, columns };
+        const columns = extractColumnsFromRows(data, "union");
+        return { rows: data, columns };
       }
       case "TableIntersection": {
-        const columns = extractColumnsFromRows(data.data, "intersection");
-        return { rows: data.data, columns };
+        const columns = extractColumnsFromRows(data, "intersection");
+        return { rows: data, columns };
       }
       default:
         return data;
@@ -40,22 +40,21 @@ export const useGetTransactionsQuery: useQueryFunctionType<
   };
 
   const getTransactionsFn = async () => {
+    if (!params) return;
     const config = {};
-    config["params"] = { flow_id: id };
-    if (params) {
-      config["params"] = { ...config["params"], ...params };
+    config["params"] = { flow_id: params.id };
+    if (params.params) {
+      config["params"] = { ...config["params"], ...params.params };
     }
 
-    const rows = await api.get<TransactionsResponse>(
-      `${getURL("TRANSACTIONS")}`,
-      config,
-    );
+    const result = await api.get<object[]>(`${getURL("TRANSACTIONS")}`, config);
 
-    return responseFn(rows);
+    return responseFn(result.data, params.fetchType);
   };
 
   const queryResult = query(["useGetTransactionsQuery"], getTransactionsFn, {
     placeholderData: keepPreviousData,
+    ...options,
   });
 
   return queryResult;
