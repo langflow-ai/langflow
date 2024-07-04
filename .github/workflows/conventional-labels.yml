@@ -27,4 +27,4 @@ jobs:
       - name: label
         uses: action-runner/conventional-labeler@2.0.0
         with:
-          access_token: ${{ secrets.GITHUB_TOKEN }}
+          type_labels: '{"feat": "enhancement","fix": "bug","docs": "documentation","style": "style","refactor": "refactor","perf": "performance","test": "test","chore": "chore","build": "build"}'
