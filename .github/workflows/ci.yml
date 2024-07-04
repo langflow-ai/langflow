@@ -8,15 +8,17 @@ on:
         description: "(Optional) Branch to checkout"
         required: false
         type: string
-    openai_api_key:
-      description: "OpenAI API Key"
-      required: false
-      type: string
-    store_api_key:
-      description: "Store API Key"
-      required: false
-      type: string
+      openai_api_key:
+        description: "OpenAI API Key"
+        required: false
+        type: string
+      store_api_key:
+        description: "Store API Key"
+        required: false
+        type: string
   pull_request:
+
+
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -67,9 +69,9 @@ jobs:
     name: Run Frontend Tests
     if: ${{ needs.path-filter.outputs.python == 'true' || needs.path-filter.outputs.frontend == 'true' || needs.path-filter.outputs.tests == 'true' }}
     uses: ./.github/workflows/typescript_test.yml
-    env:
-      OPENAI_API_KEY: ${{ inputs.openai_api_key || secrets.OPENAI_API_KEY }}
-      STORE_API_KEY: ${{ inputs.store_api_key || secrets.STORE_API_KEY }}
+    secrets:
+      OPENAI_API_KEY: "${{ secrets.OPENAI_API_KEY }}"
+      STORE_API_KEY: "${{ secrets.STORE_API_KEY }}"
 
   lint-backend:
     needs: path-filter
