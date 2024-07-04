@@ -29,8 +29,7 @@ export const useGetTransactionsQuery: useQueryFunctionType<
     if (mode) {
       const columns = extractColumnsFromRows(data, mode, excludedColumns);
       return { rows: data, columns };
-    }
-    else {
+    } else {
       return data;
     }
   };

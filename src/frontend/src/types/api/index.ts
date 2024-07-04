@@ -231,13 +231,15 @@ export type ResponseErrorTypeAPI = {
 export type ResponseErrorDetailAPI = {
   response: { data: { detail: string } };
 };
-export type useQueryFunctionType<T = undefined, R = any> = T extends undefined? (
-  params?: T,
-  options?: Omit<UseQueryOptions, "queryFn" | "queryKey">,
-) => UseQueryResult<R>: (
-  params: T,
-  options?: Omit<UseQueryOptions, "queryFn" | "queryKey">,
-) => UseQueryResult<R>;
+export type useQueryFunctionType<T = undefined, R = any> = T extends undefined
+  ? (
+      params?: T,
+      options?: Omit<UseQueryOptions, "queryFn" | "queryKey">,
+    ) => UseQueryResult<R>
+  : (
+      params: T,
+      options?: Omit<UseQueryOptions, "queryFn" | "queryKey">,
+    ) => UseQueryResult<R>;
 
 export type QueryFunctionType = (
   queryKey: UseQueryOptions["queryKey"],
