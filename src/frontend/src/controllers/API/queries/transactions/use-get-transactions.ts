@@ -39,29 +39,24 @@ export const useGetTransactionsQuery: useQueryFunctionType<
     }
   };
 
-  const getTransactionsFn = async (id: string, params = {}) => {
+  const getTransactionsFn = async () => {
     const config = {};
     config["params"] = { flow_id: id };
     if (params) {
       config["params"] = { ...config["params"], ...params };
     }
 
-    return await api.get<TransactionsResponse>(
+    const rows = await api.get<TransactionsResponse>(
       `${getURL("TRANSACTIONS")}`,
       config,
     );
+
+    return responseFn(rows);
   };
 
-  const queryResult = query(
-    ["useGetTransactionsQuery"],
-    async () => {
-      const rows = await getTransactionsFn(id, params);
-      return responseFn(rows);
-    },
-    {
-      placeholderData: keepPreviousData,
-    },
-  );
+  const queryResult = query(["useGetTransactionsQuery"], getTransactionsFn, {
+    placeholderData: keepPreviousData,
+  });
 
   return queryResult;
 };

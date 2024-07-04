@@ -19,27 +19,16 @@ export const useGetDownloadImagesQuery: useQueryFunctionType<
 > = ({ flowId, fileName }) => {
   const { query } = UseRequestProcessor();
 
-  const getDownloadImagesFn = async ({
-    flowId,
-    fileName,
-  }: {
-    flowId: string;
-    fileName: string;
-  }) => {
-    return await api.get<DownloadImagesResponse>(
+  const getDownloadImagesFn = async () => {
+    const response = await api.get<DownloadImagesResponse>(
       `${getURL("FILES")}/images/${flowId}/${fileName}`,
     );
+    return response["data"];
   };
 
   const queryResult = query(
     ["useGetDownloadImagesQuery"],
-    async () => {
-      const response = await getDownloadImagesFn({
-        flowId,
-        fileName,
-      });
-      return response["data"];
-    },
+    getDownloadImagesFn,
     {
       placeholderData: keepPreviousData,
     },
