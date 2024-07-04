@@ -22,7 +22,6 @@ import UploadFileButton from "./components/uploadFileButton";
 import { getClassNamesFilePreview } from "./helpers/get-class-file-preview";
 import useAutoResizeTextArea from "./hooks/use-auto-resize-text-area";
 import useFocusOnUnlock from "./hooks/use-focus-unlock";
-import useUpload from "./hooks/use-upload";
 export default function ChatInput({
   lockChat,
   chatValue,
@@ -44,7 +43,6 @@ export default function ChatInput({
 
   useFocusOnUnlock(lockChat, inputRef);
   useAutoResizeTextArea(chatValue, inputRef);
-  useUpload(uploadFile, currentFlowId, setFiles, lockChat || saveLoading);
 
   const handleFileChange = async (
     event: React.ChangeEvent<HTMLInputElement>,
