@@ -1,6 +1,12 @@
 .PHONY: all init format lint build build_frontend install_frontend run_frontend run_backend dev help tests coverage
 
 all: help
+VERSION=$(shell grep "^version" pyproject.toml | sed 's/.*\"\(.*\)\"$$/\1/')
+DOCKERFILE=docker/build_and_push.Dockerfile
+DOCKERFILE_BACKEND=docker/build_and_push_backend.Dockerfile
+DOCKERFILE_FRONTEND=docker/frontend/build_and_push_frontend.Dockerfile
+DOCKER_COMPOSE=docker_example/docker-compose.yml
+
 log_level ?= debug
 host ?= 0.0.0.0
 port ?= 7860
@@ -268,6 +274,55 @@ else
 		@echo 'Running docker compose up without build'
 		docker compose $(if $(debug),-f docker-compose.debug.yml) up
 endif
+
+
+docker_build: dockerfile_build clear_dockerimage ## build DockerFile
+
+
+docker_build_backend: dockerfile_build_be clear_dockerimage ## build Backend DockerFile
+
+
+docker_build_frontend: dockerfile_build_fe clear_dockerimage ## build Frontend Dockerfile
+
+
+dockerfile_build:
+	@echo 'BUILDING DOCKER IMAGE: ${DOCKERFILE}'
+	@docker build --rm \
+		-f ${DOCKERFILE} \
+		-t langflow:${VERSION} .
+
+
+dockerfile_build_be: dockerfile_build
+	@echo 'BUILDING DOCKER IMAGE BACKEND: ${DOCKERFILE_BACKEND}'
+	@docker build --rm \
+		--build-arg LANGFLOW_IMAGE=langflow:${VERSION} \
+		   -f ${DOCKERFILE_BACKEND} \
+		   -t langflow_backend:${VERSION} .
+
+
+dockerfile_build_fe: dockerfile_build
+	@echo 'BUILDING DOCKER IMAGE FRONTEND: ${DOCKERFILE_FRONTEND}'
+	@docker build --rm \
+		--build-arg LANGFLOW_IMAGE=langflow:${VERSION} \
+		   -f ${DOCKERFILE_FRONTEND} \
+		   -t langflow_frontend:${VERSION} .
+
+
+clear_dockerimage:
+	@echo 'Clearing the docker build'
+	@if docker images -f "dangling=true" -q | grep -q '.*'; then \
+		docker rmi $$(docker images -f "dangling=true" -q); \
+	fi
+
+
+docker_compose_up: docker_build docker_compose_down
+	@echo 'Running docker compose up'
+	docker compose -f $(DOCKER_COMPOSE) up --remove-orphans
+
+
+docker_compose_down:
+	@echo 'Running docker compose down'
+	docker compose -f $(DOCKER_COMPOSE) down || true
 
 
 lock_base:
