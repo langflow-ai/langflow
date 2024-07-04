@@ -2,6 +2,7 @@ from langflow.base.memory.model import LCChatMemoryComponent
 from langflow.inputs import MessageTextInput, SecretStrInput, DictInput
 from langflow.field_typing import BaseChatMessageHistory
 
+
 class CassandraChatMemory(LCChatMemoryComponent):
     display_name = "Cassandra Chat Memory"
     description = "Retrieves and store chat messages from Apache Cassandra."
@@ -50,6 +51,7 @@ class CassandraChatMemory(LCChatMemoryComponent):
 
     def build_message_history(self) -> BaseChatMessageHistory:
         from langchain_community.chat_message_histories import CassandraChatMessageHistory
+
         try:
             import cassio
         except ImportError:

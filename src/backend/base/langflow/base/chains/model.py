@@ -1,12 +1,11 @@
 from langflow.custom import Component
 from langflow.template import Output
 
+
 class LCChainComponent(Component):
     trace_type = "chain"
 
-    outputs = [
-        Output(display_name="Text", name="text", method="invoke_chain")
-    ]
+    outputs = [Output(display_name="Text", name="text", method="invoke_chain")]
 
     def _validate_outputs(self):
         required_output_methods = ["invoke_chain"]

@@ -14,40 +14,17 @@ class SQLGeneratorComponent(LCChainComponent):
 
     inputs = [
         MultilineInput(
-            name="input_value",
-            display_name="Input",
-            info="The input value to pass to the chain.",
-            required=True
+            name="input_value", display_name="Input", info="The input value to pass to the chain.", required=True
         ),
-        HandleInput(
-            name="llm",
-            display_name="Language Model",
-            input_types=["LanguageModel"],
-            required=True
-        ),
-        HandleInput(
-            name="db",
-            display_name="SQLDatabase",
-            input_types=["SQLDatabase"],
-            required=True
-        ),
+        HandleInput(name="llm", display_name="Language Model", input_types=["LanguageModel"], required=True),
+        HandleInput(name="db", display_name="SQLDatabase", input_types=["SQLDatabase"], required=True),
         IntInput(
-            name="top_k",
-            display_name="Top K",
-            info="The number of results per select statement to return.",
-            value=5
+            name="top_k", display_name="Top K", info="The number of results per select statement to return.", value=5
         ),
-        MultilineInput(
-            name="prompt",
-            display_name="Prompt",
-            info="The prompt must contain `{question}`."
-        ),
+        MultilineInput(name="prompt", display_name="Prompt", info="The prompt must contain `{question}`."),
     ]
 
-    outputs = [
-        Output(display_name="Text", name="text", method="invoke_chain")
-    ]
-
+    outputs = [Output(display_name="Text", name="text", method="invoke_chain")]
 
     def invoke_chain(self) -> Message:
         if self.prompt:

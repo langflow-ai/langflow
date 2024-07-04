@@ -27,6 +27,7 @@ class LCChatMemoryComponent(Component):
 
     def build_base_memory(self) -> BaseChatMemory:
         return ConversationBufferMemory(chat_memory=self.build_message_history())
+
     @abstractmethod
     def build_message_history(self) -> BaseChatMessageHistory:
         """

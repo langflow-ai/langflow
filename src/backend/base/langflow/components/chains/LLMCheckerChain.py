@@ -3,7 +3,6 @@ from langchain.chains import LLMCheckerChain
 from langflow.base.chains.model import LCChainComponent
 from langflow.field_typing import Message
 from langflow.inputs import MultilineInput, HandleInput
-from langflow.template import Output
 
 
 class LLMCheckerChainComponent(LCChainComponent):
@@ -14,17 +13,9 @@ class LLMCheckerChainComponent(LCChainComponent):
 
     inputs = [
         MultilineInput(
-            name="input_value",
-            display_name="Input",
-            info="The input value to pass to the chain.",
-            required=True
+            name="input_value", display_name="Input", info="The input value to pass to the chain.", required=True
         ),
-        HandleInput(
-            name="llm",
-            display_name="Language Model",
-            input_types=["LanguageModel"],
-            required=True
-        ),
+        HandleInput(name="llm", display_name="Language Model", input_types=["LanguageModel"], required=True),
     ]
 
     def invoke_chain(self) -> Message:

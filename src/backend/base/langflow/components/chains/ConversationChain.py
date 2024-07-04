@@ -1,11 +1,8 @@
-from typing import Optional
-
 from langchain.chains import ConversationChain
 
 from langflow.base.chains.model import LCChainComponent
 from langflow.field_typing import Message
 from langflow.inputs import MultilineInput, HandleInput
-from langflow.template import Output
 
 
 class ConversationChainComponent(LCChainComponent):
@@ -15,22 +12,14 @@ class ConversationChainComponent(LCChainComponent):
 
     inputs = [
         MultilineInput(
-            name="input_value",
-            display_name="Input",
-            info="The input value to pass to the chain.",
-            required=True
+            name="input_value", display_name="Input", info="The input value to pass to the chain.", required=True
         ),
-        HandleInput(
-            name="llm",
-            display_name="Language Model",
-            input_types=["LanguageModel"],
-            required=True
-        ),
+        HandleInput(name="llm", display_name="Language Model", input_types=["LanguageModel"], required=True),
         HandleInput(
             name="memory",
             display_name="Memory",
             input_types=["BaseChatMemory"],
-        )
+        ),
     ]
 
     def invoke_chain(self) -> Message:

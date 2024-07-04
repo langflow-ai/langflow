@@ -1,9 +1,8 @@
-from langchain.chains import RetrievalQA, RetrievalQAWithSourcesChain
+from langchain.chains import RetrievalQA
 
 from langflow.base.chains.model import LCChainComponent
 from langflow.field_typing import Message
 from langflow.inputs import HandleInput, MultilineInput, BoolInput, DropdownInput
-from langflow.template import Output
 
 
 class RetrievalQAComponent(LCChainComponent):
@@ -13,10 +12,7 @@ class RetrievalQAComponent(LCChainComponent):
 
     inputs = [
         MultilineInput(
-            name="input_value",
-            display_name="Input",
-            info="The input value to pass to the chain.",
-            required=True
+            name="input_value", display_name="Input", info="The input value to pass to the chain.", required=True
         ),
         DropdownInput(
             name="chain_type",
@@ -26,18 +22,8 @@ class RetrievalQAComponent(LCChainComponent):
             value="Stuff",
             advanced=True,
         ),
-        HandleInput(
-            name="llm",
-            display_name="Language Model",
-            input_types=["LanguageModel"],
-            required=True
-        ),
-        HandleInput(
-            name="retriever",
-            display_name="Retriever",
-            input_types=["Retriever"],
-            required=True
-        ),
+        HandleInput(name="llm", display_name="Language Model", input_types=["LanguageModel"], required=True),
+        HandleInput(name="retriever", display_name="Retriever", input_types=["Retriever"], required=True),
         HandleInput(
             name="memory",
             display_name="Memory",
@@ -47,7 +33,7 @@ class RetrievalQAComponent(LCChainComponent):
             name="return_source_documents",
             display_name="Return Source Documents",
             value=False,
-        )
+        ),
     ]
 
     def invoke_chain(self) -> Message:
@@ -63,7 +49,7 @@ class RetrievalQAComponent(LCChainComponent):
             memory=self.memory,
             # always include to help debugging
             #
-            return_source_documents=True
+            return_source_documents=True,
         )
 
         result = runnable.invoke({"query": self.input_value})
@@ -76,5 +62,3 @@ class RetrievalQAComponent(LCChainComponent):
         # put the entire result to debug history, query and content
         self.status = {**result, "source_documents": source_docs, "output": result_str}
         return result_str
-
-

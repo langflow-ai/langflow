@@ -1,6 +1,7 @@
 from langflow.base.memory.model import LCChatMemoryComponent
-from langflow.inputs import MessageTextInput, SecretStrInput, DictInput, DropdownInput
+from langflow.inputs import MessageTextInput, SecretStrInput, DropdownInput
 from langflow.field_typing import BaseChatMessageHistory
+
 
 class ZepChatMemory(LCChatMemoryComponent):
     display_name = "Zep Chat Memory"
@@ -8,17 +9,8 @@ class ZepChatMemory(LCChatMemoryComponent):
     name = "ZepChatMemory"
 
     inputs = [
-        MessageTextInput(
-            name="url",
-            display_name="Zep URL",
-            info="URL of the Zep instance."
-        ),
-
-        SecretStrInput(
-            name="api_key",
-            display_name="API Key",
-            info="API Key for the Zep instance."
-        ),
+        MessageTextInput(name="url", display_name="Zep URL", info="URL of the Zep instance."),
+        SecretStrInput(name="api_key", display_name="API Key", info="API Key for the Zep instance."),
         DropdownInput(
             name="api_base_path",
             display_name="API Base Path",

@@ -2,6 +2,7 @@ from langflow.base.memory.model import LCChatMemoryComponent
 from langflow.inputs import MessageTextInput, StrInput, SecretStrInput
 from langflow.field_typing import BaseChatMessageHistory
 
+
 class AstraDBChatMemory(LCChatMemoryComponent):
     display_name = "Astra DB Chat Memory"
     description = "Retrieves and store chat messages from Astra DB."
