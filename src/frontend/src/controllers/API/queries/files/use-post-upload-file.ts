@@ -9,10 +9,9 @@ interface IPostUploadFile {
   id: string;
 }
 
-export const usePostUploadFile: useMutationFunctionType<IPostUploadFile> = ({
-  callbackSuccess,
-  callbackError,
-}) => {
+export const usePostUploadFile: useMutationFunctionType<IPostUploadFile> = (
+  options?,
+) => {
   const { mutate } = UseRequestProcessor();
 
   const postUploadFileFn = async (payload: IPostUploadFile): Promise<any> => {
@@ -24,28 +23,18 @@ export const usePostUploadFile: useMutationFunctionType<IPostUploadFile> = ({
       formData,
     );
 
-    return { data: response.data, file: payload.file };
+    return response.data;
   };
 
-  const mutation: UseMutationResult<any, any, IPostUploadFile> = mutate(
-    ["usePostUploadFile"],
-    async (payload: IPostUploadFile) => {
-      const res = await postUploadFileFn(payload);
-      return res;
-    },
-    {
-      onError: (err) => {
-        if (callbackError) {
-          callbackError(err);
-        }
+  const mutation: UseMutationResult<IPostUploadFile, any, IPostUploadFile> =
+    mutate(
+      ["usePostUploadFile"],
+      async (payload: IPostUploadFile) => {
+        const res = await postUploadFileFn(payload);
+        return res;
       },
-      onSuccess: (data) => {
-        if (callbackSuccess) {
-          callbackSuccess(data.data, data.file);
-        }
-      },
-    },
-  );
+      options,
+    );
 
   return mutation;
 };

@@ -47,24 +47,7 @@ export default function InputFileComponent({
     setMyValue(value);
   }, [value]);
 
-  const mutation = usePostUploadFile({
-    callbackSuccess: (data, file) => {
-      // Get the file name from the response
-      const { file_path } = data;
-
-      // sets the value that goes to the backend
-      onFileChange(file_path);
-      // Update the state and callback with the name of the file
-      // sets the value to the user
-      setMyValue(file.name);
-      onChange(file.name);
-      setLoading(false);
-    },
-    callbackError: () => {
-      console.error(CONSOLE_ERROR_MSG);
-      setLoading(false);
-    },
-  });
+  const mutation = usePostUploadFile();
 
   const handleButtonClick = (): void => {
     // Create a file input element
@@ -83,7 +66,27 @@ export default function InputFileComponent({
       // Check if the file type is correct
       if (file && checkFileType(file.name)) {
         // Upload the file
-        mutation.mutate({ file, id: currentFlowId });
+        mutation.mutate(
+          { file, id: currentFlowId },
+          {
+            onSuccess: (data) => {
+              // Get the file name from the response
+              const { file_path } = data;
+
+              // sets the value that goes to the backend
+              onFileChange(file_path);
+              // Update the state and on with the name of the file
+              // sets the value to the user
+              setMyValue(file.name);
+              onChange(file.name);
+              setLoading(false);
+            },
+            onError: () => {
+              console.error(CONSOLE_ERROR_MSG);
+              setLoading(false);
+            },
+          },
+        );
       } else {
         // Show an error if the file type is not allowed
         setErrorData({

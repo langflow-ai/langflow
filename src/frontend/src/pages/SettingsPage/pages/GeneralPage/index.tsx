@@ -68,14 +68,14 @@ export const GeneralPage = () => {
   useScrollToElement(scrollId, setCurrentFlowId);
 
   const { mutate } = usePostAddApiKey({
-    callbackSuccess: () => {
+    onSuccess: () => {
       setSuccessData({ title: "API key saved successfully" });
       setHasApiKey(true);
       setValidApiKey(true);
       setLoadingApiKey(false);
       handleInput({ target: { name: "apikey", value: "" } });
     },
-    callbackError: (error) => {
+    onError: (error) => {
       setErrorData({
         title: "API key save error",
         list: [(error as any)?.response?.data?.detail],
