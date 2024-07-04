@@ -34,7 +34,6 @@ export default function App() {
   const dark = useDarkStore((state) => state.dark);
 
   const isLoadingFolders = useFolderStore((state) => state.isLoadingFolders);
-  useGetVersionQuery(undefined, "updateState");
 
   const {
     data: healthData,

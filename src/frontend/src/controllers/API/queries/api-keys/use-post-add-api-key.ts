@@ -9,10 +9,9 @@ interface IPostAddApiKey {
 }
 
 // add types for error handling and success
-export const usePostAddApiKey: useMutationFunctionType<IPostAddApiKey> = ({
-  callbackSuccess,
-  callbackError,
-}) => {
+export const usePostAddApiKey: useMutationFunctionType<IPostAddApiKey> = (
+  options,
+) => {
   const { mutate } = UseRequestProcessor();
 
   const postAddApiKeyFn = async (payload: IPostAddApiKey): Promise<any> => {
@@ -27,18 +26,7 @@ export const usePostAddApiKey: useMutationFunctionType<IPostAddApiKey> = ({
       const res = await postAddApiKeyFn(payload);
       return res.data;
     },
-    {
-      onError: (err) => {
-        if (callbackError) {
-          callbackError(err);
-        }
-      },
-      onSuccess: (data) => {
-        if (callbackSuccess) {
-          callbackSuccess(data);
-        }
-      },
-    },
+    options,
   );
 
   return mutation;
