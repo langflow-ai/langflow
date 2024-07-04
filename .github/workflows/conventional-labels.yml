@@ -6,6 +6,14 @@ on:
     types: [ opened, edited ]
 
 jobs:
+  validate-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate the pull request
+        uses: Namchee/conventional-pr@v0.15.4
+        with:
+          access_token: ${{ secrets.GITHUB_TOKEN }}
+          verbose: true
   label:
     runs-on: ubuntu-latest
     name: Lint PR
