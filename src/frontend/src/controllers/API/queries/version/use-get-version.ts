@@ -14,7 +14,6 @@ export const useGetVersionQuery: useQueryFunctionType<
   versionQueryResponse
 > = (_, options) => {
   const { query } = UseRequestProcessor();
-  const { onFetch } = options || {};
 
   const getVersionFn = async () => {
     return await api.get<versionQueryResponse>(`${getURL("VERSION")}`);
@@ -22,7 +21,6 @@ export const useGetVersionQuery: useQueryFunctionType<
 
   const responseFn = async () => {
     const { data } = await getVersionFn();
-    if (typeof onFetch === "function") onFetch(data);
     const refreshVersion = useDarkStore.getState().refreshVersion;
     refreshVersion(data.version);
     return data;
