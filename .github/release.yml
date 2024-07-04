@@ -22,7 +22,7 @@ changelog:
         - chore
         - refactor
         - style
-        - perf
+        - performance
     - title: ✅ Tests
       description: Changes to tests
       labels:
