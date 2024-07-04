@@ -13,7 +13,7 @@ import {
   FETCH_ERROR_MESSAGE,
 } from "./constants/constants";
 import { AuthContext } from "./contexts/authContext";
-import { autoLogin, getGlobalVariables, getHealth } from "./controllers/API";
+import { autoLogin, getGlobalVariables } from "./controllers/API";
 import { setupAxiosDefaults } from "./controllers/API/utils";
 import useTrackLastVisitedPath from "./hooks/use-track-last-visited-path";
 import Router from "./routes";
@@ -22,13 +22,13 @@ import useAlertStore from "./stores/alertStore";
 import { useDarkStore } from "./stores/darkStore";
 import useFlowsManagerStore from "./stores/flowsManagerStore";
 import { useFolderStore } from "./stores/foldersStore";
+import { useGetHealthQuery } from "./controllers/API/queries/health";
 
 export default function App() {
   const queryClient = new QueryClient();
 
   useTrackLastVisitedPath();
 
-  const [fetchError, setFetchError] = useState(false);
   const isLoading = useFlowsManagerStore((state) => state.isLoading);
 
   const { isAuthenticated, login, setUserData, setAutoLogin, getUser } =
@@ -41,7 +41,7 @@ export default function App() {
 
   const isLoadingFolders = useFolderStore((state) => state.isLoadingFolders);
 
-  const [isLoadingHealth, setIsLoadingHealth] = useState(false);
+  const {isFetching:fetchingHealth,isError:isErrorHealth,refetch} = useGetHealthQuery(undefined,onHealthCheck);
 
   useEffect(() => {
     if (!dark) {
@@ -106,43 +106,7 @@ export default function App() {
     });
   };
 
-  useEffect(() => {
-    checkApplicationHealth();
-    // Timer to call getHealth every 5 seconds
-    const timer = setInterval(() => {
-      getHealth()
-        .then(() => {
-          onHealthCheck();
-        })
-        .catch(() => {
-          setFetchError(true);
-        });
-    }, 20000); // 20 seconds
-
-    // Clean up the timer on component unmount
-    return () => {
-      clearInterval(timer);
-    };
-  }, []);
-
-  const checkApplicationHealth = () => {
-    setIsLoadingHealth(true);
-    getHealth()
-      .then(() => {
-        onHealthCheck();
-      })
-      .catch(() => {
-        setFetchError(true);
-      });
-
-    setTimeout(() => {
-      setIsLoadingHealth(false);
-    }, 2000);
-  };
-
-  const onHealthCheck = () => {
-    setFetchError(false);
-    //This condition is necessary to avoid infinite loop on starter page when the application is not healthy
+  function onHealthCheck() {
     if (isLoading === true && window.location.pathname === "/") {
       navigate("/all");
       window.location.reload();
@@ -166,11 +130,11 @@ export default function App() {
               <FetchErrorComponent
                 description={FETCH_ERROR_DESCRIPION}
                 message={FETCH_ERROR_MESSAGE}
-                openModal={fetchError}
+                openModal={isErrorHealth}
                 setRetry={() => {
-                  checkApplicationHealth();
+                  refetch();
                 }}
-                isLoadingHealth={isLoadingHealth}
+                isLoadingHealth={fetchingHealth}
               ></FetchErrorComponent>
             }
 
