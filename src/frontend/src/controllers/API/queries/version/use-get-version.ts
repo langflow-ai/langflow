@@ -12,17 +12,20 @@ interface versionQueryResponse {
 export const useGetVersionQuery: useQueryFunctionType<
   undefined,
   versionQueryResponse
-> = (params, options) => {
+> = (_, options) => {
   const { query } = UseRequestProcessor();
+  const { onFetch } = options || {};
+  
+  const getVersionFn = async () => {
+    return await api.get<versionQueryResponse>(`${getURL("VERSION")}`);
+  };
 
   const responseFn = async () => {
     const { data } = await getVersionFn();
+    if (typeof onFetch === "function") onFetch(data);
     const refreshVersion = useDarkStore.getState().refreshVersion;
-    return refreshVersion(data.version);
-  };
-
-  const getVersionFn = async () => {
-    return await api.get<versionQueryResponse>(`${getURL("VERSION")}`);
+    refreshVersion(data.version);
+    return data;
   };
 
   const queryResult = query(["useGetVersionQuery"], responseFn, { ...options });
