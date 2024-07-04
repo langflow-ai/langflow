@@ -75,32 +75,35 @@ export default function ChatInput({
         { file: blob, loading: true, error: false, id, type },
       ]);
 
-      mutation.mutate({ file: blob, id: currentFlowId });
+      mutation.mutate(
+        { file: blob, id: currentFlowId },
+        {
+          onSuccess: (data) => {
+            setFiles((prev) => {
+              const newFiles = [...prev];
+              const updatedIndex = newFiles.findIndex((file) => file.id === id);
+              newFiles[updatedIndex].loading = false;
+              newFiles[updatedIndex].path = data.file_path;
+              return newFiles;
+            });
+          },
+          onError: () => {
+            setFiles((prev) => {
+              const newFiles = [...prev];
+              const updatedIndex = newFiles.findIndex((file) => file.id === id);
+              newFiles[updatedIndex].loading = false;
+              newFiles[updatedIndex].error = true;
+              return newFiles;
+            });
+          },
+        },
+      );
     }
 
     fileInput.value = "";
   };
 
-  const mutation = usePostUploadFile({
-    callbackSuccess: (data) => {
-      setFiles((prev) => {
-        const newFiles = [...prev];
-        const updatedIndex = newFiles.findIndex((file) => file.id === id);
-        newFiles[updatedIndex].loading = false;
-        newFiles[updatedIndex].path = data.file_path;
-        return newFiles;
-      });
-    },
-    callbackError: () => {
-      setFiles((prev) => {
-        const newFiles = [...prev];
-        const updatedIndex = newFiles.findIndex((file) => file.id === id);
-        newFiles[updatedIndex].loading = false;
-        newFiles[updatedIndex].error = true;
-        return newFiles;
-      });
-    },
-  });
+  const mutation = usePostUploadFile();
 
   const send = () => {
     sendMessage({
