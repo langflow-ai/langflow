@@ -23,6 +23,7 @@ changelog:
         - refactor
         - style
         - performance
+        - ci
     - title: ✅ Tests
       description: Changes to tests
       labels:
