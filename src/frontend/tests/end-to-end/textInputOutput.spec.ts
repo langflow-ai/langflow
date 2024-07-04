@@ -3,13 +3,14 @@ import * as dotenv from "dotenv";
 import path from "path";
 
 test("TextInputOutputComponent", async ({ page }) => {
-  if (!process.env.CI) {
-    dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-  }
   test.skip(
     !process?.env?.OPENAI_API_KEY,
     "OPENAI_API_KEY required to run this test",
   );
+
+  if (!process.env.CI) {
+    dotenv.config({ path: path.resolve(__dirname, "../../.env") });
+  }
 
   await page.goto("/");
   await page.waitForTimeout(2000);

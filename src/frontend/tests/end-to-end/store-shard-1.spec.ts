@@ -1,10 +1,17 @@
 import { expect, test } from "@playwright/test";
+import * as dotenv from "dotenv";
+import path from "path";
 
 test("should like and add components and flows", async ({ page }) => {
   test.skip(
     !process?.env?.STORE_API_KEY,
     "STORE_API_KEY required to run this test",
   );
+
+  if (!process.env.CI) {
+    dotenv.config({ path: path.resolve(__dirname, "../../.env") });
+  }
+
   await page.goto("/");
   await page.waitForTimeout(1000);
 
@@ -76,6 +83,11 @@ test("should find a searched Component on Store", async ({ page }) => {
     !process?.env?.STORE_API_KEY,
     "STORE_API_KEY required to run this test",
   );
+
+  if (!process.env.CI) {
+    dotenv.config({ path: path.resolve(__dirname, "../../.env") });
+  }
+
   await page.goto("/");
   await page.waitForTimeout(1000);
 

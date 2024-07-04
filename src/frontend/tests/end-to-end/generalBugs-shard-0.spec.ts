@@ -43,13 +43,14 @@ test("should interact with api request", async ({ page }) => {
 });
 
 test("erase button should clear the chat messages", async ({ page }) => {
-  if (!process.env.CI) {
-    dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-  }
   test.skip(
     !process?.env?.OPENAI_API_KEY,
     "OPENAI_API_KEY required to run this test",
   );
+
+  if (!process.env.CI) {
+    dotenv.config({ path: path.resolve(__dirname, "../../.env") });
+  }
 
   await page.goto("/");
 
