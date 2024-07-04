@@ -17,17 +17,16 @@ export const useGetProfilePicturesQuery: useQueryFunctionType<
   const { query } = UseRequestProcessor();
 
   const getProfilePicturesFn = async () => {
-    return await api.get<ProfilePicturesResponse>(
+    const response = await api.get<ProfilePicturesResponse>(
       `${getURL("FILES")}/profile_pictures/list`,
     );
+
+    return response.data;
   };
 
   const queryResult = query(
     ["useGetProfilePicturesQuery"],
-    async () => {
-      const response = await getProfilePicturesFn();
-      return response["data"];
-    },
+    getProfilePicturesFn,
     {
       placeholderData: keepPreviousData,
     },
