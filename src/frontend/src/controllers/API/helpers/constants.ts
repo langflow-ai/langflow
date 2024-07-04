@@ -3,6 +3,7 @@ import { BASE_URL_API } from "../../../constants/constants";
 export const URLs = {
   TRANSACTIONS: `monitor/transactions`,
   API_KEY: `api_key`,
+  VERSION: `version`,
 } as const;
 
 export function getURL(key: keyof typeof URLs, params: any = {}) {

@@ -233,10 +233,9 @@ export type ResponseErrorDetailAPI = {
   response: { data: { detail: string } };
 };
 
-export type useQueryFunctionType<T, R> = (
-  props: T,
-  onFetch?: ((data: R) => void) | string,
-) => UseQueryResult<R>;
+export type useQueryFunctionType<T = undefined, R = any> = T extends undefined
+  ? (props?: T, onFetch?: ((data: R) => void) | string) => UseQueryResult<R>
+  : (props: T, onFetch?: ((data: R) => void) | string) => UseQueryResult<R>;
 
 export type QueryFunctionType = (
   queryKey: UndefinedInitialDataOptions["queryKey"],
