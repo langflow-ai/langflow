@@ -10,6 +10,7 @@ class AmazonBedrockEmbeddingsComponent(LCModelComponent):
     description: str = "Generate embeddings using Amazon Bedrock models."
     documentation = "https://python.langchain.com/docs/modules/data_connection/text_embedding/integrations/bedrock"
     icon = "Amazon"
+    name = "AmazonBedrockEmbeddings"
 
     inputs = [
         DropdownInput(

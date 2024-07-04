@@ -1,10 +1,17 @@
 import { test } from "@playwright/test";
+import * as dotenv from "dotenv";
+import path from "path";
 
 test("should delete a component", async ({ page }) => {
   test.skip(
     !process?.env?.STORE_API_KEY,
     "STORE_API_KEY required to run this test",
   );
+
+  if (!process.env.CI) {
+    dotenv.config({ path: path.resolve(__dirname, "../../.env") });
+  }
+
   await page.goto("/");
   await page.waitForTimeout(1000);
 

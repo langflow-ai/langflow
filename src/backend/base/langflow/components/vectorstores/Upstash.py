@@ -12,6 +12,7 @@ class UpstashVectorStoreComponent(LCVectorStoreComponent):
     display_name = "Upstash"
     description = "Upstash Vector Store with search capabilities"
     documentation = "https://python.langchain.com/v0.2/docs/integrations/vectorstores/upstash/"
+    name = "Upstash"
     icon = "Upstash"
 
     inputs = [

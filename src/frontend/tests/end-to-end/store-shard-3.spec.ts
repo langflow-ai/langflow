@@ -1,10 +1,17 @@
 import { expect, test } from "@playwright/test";
+import * as dotenv from "dotenv";
+import path from "path";
 
 test("should order the visualization", async ({ page }) => {
   test.skip(
     !process?.env?.STORE_API_KEY,
     "STORE_API_KEY required to run this test",
   );
+
+  if (!process.env.CI) {
+    dotenv.config({ path: path.resolve(__dirname, "../../.env") });
+  }
+
   await page.goto("/");
   await page.waitForTimeout(1000);
 
@@ -46,6 +53,11 @@ test("should filter by type", async ({ page }) => {
     !process?.env?.STORE_API_KEY,
     "STORE_API_KEY required to run this test",
   );
+
+  if (!process.env.CI) {
+    dotenv.config({ path: path.resolve(__dirname, "../../.env") });
+  }
+
   await page.goto("/");
   await page.waitForTimeout(1000);
 

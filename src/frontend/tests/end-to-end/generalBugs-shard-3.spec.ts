@@ -1,6 +1,17 @@
 import { expect, test } from "@playwright/test";
+import * as dotenv from "dotenv";
+import path from "path";
 
 test("should copy code from playground modal", async ({ page }) => {
+  test.skip(
+    !process?.env?.OPENAI_API_KEY,
+    "OPENAI_API_KEY required to run this test",
+  );
+
+  if (!process.env.CI) {
+    dotenv.config({ path: path.resolve(__dirname, "../../.env") });
+  }
+
   await page.goto("/");
   await page.locator("span").filter({ hasText: "My Collection" }).isVisible();
   await page.waitForTimeout(2000);
@@ -79,11 +90,6 @@ test("should copy code from playground modal", async ({ page }) => {
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
-
-  test.skip(
-    !process?.env?.OPENAI_API_KEY,
-    "OPENAI_API_KEY required to run this test",
-  );
 
   await page
     .getByTestId("popover-anchor-input-openai_api_key")

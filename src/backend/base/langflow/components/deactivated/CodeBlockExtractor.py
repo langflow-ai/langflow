@@ -7,6 +7,7 @@ from langflow.field_typing import Input, Output, Text
 class CodeBlockExtractor(Component):
     display_name = "Code Block Extractor"
     description = "Extracts code block from text."
+    name = "CodeBlockExtractor"
 
     inputs = [Input(name="text", field_type=Text, description="Text to extract code blocks from.")]
 

@@ -22,6 +22,7 @@ class APIRequestComponent(Component):
         "**Note:** Check advanced options for more settings."
     )
     icon = "Globe"
+    name = "APIRequest"
 
     inputs = [
         MessageTextInput(
@@ -111,10 +112,18 @@ class APIRequestComponent(Component):
         if method not in ["GET", "POST", "PATCH", "PUT", "DELETE"]:
             raise ValueError(f"Unsupported method: {method}")
 
+        if isinstance(body, str) and body:
+            try:
+                body = json.loads(body)
+            except Exception as e:
+                logger.error(f"Error decoding JSON data: {e}")
+                body = None
+                raise ValueError(f"Error decoding JSON data: {e}")
+
         data = body if body else None
-        payload = json.dumps(data) if data else None
+
         try:
-            response = await client.request(method, url, headers=headers, content=payload, timeout=timeout)
+            response = await client.request(method, url, headers=headers, json=data, timeout=timeout)
             try:
                 result = response.json()
             except Exception:

@@ -12,6 +12,7 @@ class CohereComponent(LCModelComponent):
     description = "Generate text using Cohere LLMs."
     documentation = "https://python.langchain.com/docs/modules/model_io/models/llms/integrations/cohere"
     icon = "Cohere"
+    name = "CohereModel"
 
     inputs = [
         SecretStrInput(
