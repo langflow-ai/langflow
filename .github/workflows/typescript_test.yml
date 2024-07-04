@@ -34,6 +34,8 @@ jobs:
     env:
       OPENAI_API_KEY: ${{ inputs.openai_api_key || secrets.OPENAI_API_KEY }}
       STORE_API_KEY: ${{ inputs.store_api_key || secrets.STORE_API_KEY }}
+    outputs:
+      failed: ${{ steps.check-failure.outputs.failed }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -107,6 +109,15 @@ jobs:
         run: |
           cd src/frontend
           npx playwright test --trace on --shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --workers 2
+        continue-on-error: true
+
+      # If the test fails, set a flag to indicate that the shard failed
+      - name: Set failure flag
+        id: check-failure
+        if: failure()
+        run: echo "failed=true" >> "$GITHUB_OUTPUT"
+
+
 
       - name: Upload blob report to GitHub Actions Artifacts
         if: always()
