@@ -148,18 +148,6 @@ export default function IOModal({
   });
 
   useEffect(() => {
-    setSelectedViewField(startView());
-    if (haveChat) {
-      getMessagesTable("union", currentFlow!.id, ["index", "flow_id"]).then(
-        ({ rows, columns }) => {
-          setMessages(rows);
-          setColumns(columns);
-        },
-      );
-    }
-  }, [open]);
-
-  useEffect(() => {
     const sessions = new Set<string>();
     messages.forEach((row) => {
       sessions.add(row.session_id);
@@ -480,10 +468,8 @@ export default function IOModal({
                       (session) => session === selectedViewField.id,
                     ) && (
                       <SessionView
-                        rows={messages.filter(
-                          (message) =>
-                            message.session_id === selectedViewField.id,
-                        )}
+                        session={selectedViewField.id}
+                        id={currentFlow!.id}
                       />
                     )}
                   </div>
