@@ -53,27 +53,3 @@ class CharacterTextSplitterComponent(LCTextSplitterComponent):
             chunk_size=self.chunk_size,
             separator=separator,
         )
-
-    def build(
-        self,
-        inputs: List[Data],
-        chunk_overlap: int = 200,
-        chunk_size: int = 1000,
-        separator: str = "\n",
-    ) -> List[Data]:
-        # separator may come escaped from the frontend
-        separator = unescape_string(separator)
-        documents = []
-        for _input in inputs:
-            if isinstance(_input, Data):
-                documents.append(_input.to_lc_document())
-            else:
-                documents.append(_input)
-        docs = CharacterTextSplitter(
-            chunk_overlap=chunk_overlap,
-            chunk_size=chunk_size,
-            separator=separator,
-        ).split_documents(documents)
-        data = self.to_data(docs)
-        self.status = data
-        return data
