@@ -77,7 +77,7 @@ class Settings(BaseSettings):
     variable_store: str = "db"
     """The store can be 'db' or 'kubernetes'."""
 
-    prometheus_enabled: bool = True
+    prometheus_enabled: bool = False
     """If set to True, Langflow will expose Prometheus metrics."""
     prometheus_port: int = 9090
     """The port on which Langflow will expose Prometheus metrics. 9090 is the default port."""

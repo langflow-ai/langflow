@@ -1,3 +1,4 @@
+import os
 import asyncio
 import warnings
 from contextlib import asynccontextmanager
@@ -139,6 +140,16 @@ def create_app():
         return await call_next(request)
 
     settings = get_settings_service().settings
+    if prome_port_str := os.environ.get("LANGFLOW_PROMETHEUS_PORT"):
+        # set here for create_app() entry point
+        prome_port = int(prome_port_str)
+        if prome_port > 0 or prome_port < 65535:
+            rprint(f"[bold green]Starting Prometheus server on port {prome_port}...[/bold green]")
+            settings.prometheus_enabled = True
+            settings.prometheus_port = prome_port
+        else:
+            raise ValueError(f"Invalid port number {prome_port_str}")
+
     if settings.prometheus_enabled:
         from prometheus_client import start_http_server
 
