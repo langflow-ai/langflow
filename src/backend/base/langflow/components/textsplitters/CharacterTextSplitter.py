@@ -36,7 +36,7 @@ class CharacterTextSplitterComponent(LCTextSplitterComponent):
         MessageTextInput(
             name="separator",
             display_name="Separator",
-            info='The characters to split on.\nIf left empty defaults to "\\n\\n".'
+            info='The characters to split on.\nIf left empty defaults to "\\n\\n".',
         ),
     ]
 

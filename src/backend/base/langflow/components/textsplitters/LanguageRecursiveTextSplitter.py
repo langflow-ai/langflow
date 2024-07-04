@@ -32,11 +32,8 @@ class LanguageRecursiveTextSplitterComponent(LCTextSplitterComponent):
             input_types=["Document", "Data"],
         ),
         DropdownInput(
-            name="code_language",
-            display_name="Code Language",
-            options=[x.value for x in Language],
-            value="python"
-        )
+            name="code_language", display_name="Code Language", options=[x.value for x in Language], value="python"
+        ),
     ]
 
     def get_data_input(self) -> Any:

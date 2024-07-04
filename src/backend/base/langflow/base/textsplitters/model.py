@@ -1,13 +1,9 @@
 from abc import abstractmethod
-from typing import List, Any
+from typing import Any
 from langchain_text_splitters import TextSplitter
 
-from langchain_core.documents import Document
-from loguru import logger
 
 from langflow.custom import Component
-from langflow.field_typing import Retriever, Text, VectorStore
-from langflow.helpers.data import docs_to_data
 from langflow.io import Output
 from langflow.schema import Data
 from langflow.utils.util import build_loader_repr_from_data
@@ -18,6 +14,7 @@ class LCTextSplitterComponent(Component):
     outputs = [
         Output(display_name="Data", name="data", method="split_data"),
     ]
+
     def _validate_outputs(self):
         required_output_methods = ["text_splitter"]
         output_names = [output.name for output in self.outputs]
@@ -52,6 +49,7 @@ class LCTextSplitterComponent(Component):
         Get the data input.
         """
         pass
+
     @abstractmethod
     def build_text_splitter(self) -> TextSplitter:
         """
