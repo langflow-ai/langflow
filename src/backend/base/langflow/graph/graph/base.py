@@ -14,7 +14,7 @@ from langflow.graph.edge.base import ContractEdge
 from langflow.graph.graph.constants import lazy_load_vertex_dict
 from langflow.graph.graph.runnable_vertices_manager import RunnableVerticesManager
 from langflow.graph.graph.state_manager import GraphStateManager
-from langflow.graph.graph.utils import process_flow
+from langflow.graph.graph.utils import find_start_component_id, process_flow
 from langflow.graph.schema import InterfaceComponentTypes, RunOutputs
 from langflow.graph.vertex.base import Vertex
 from langflow.graph.vertex.types import InterfaceVertex, StateVertex
@@ -336,18 +336,7 @@ class Graph:
 
         try:
             # Prioritize the webhook component if it exists
-            start_component_id = None
-            webhook_component_id = next(
-                (vertex_id for vertex_id in self._is_input_vertices if "webhook" in vertex_id.lower()), None
-            )
-            if not webhook_component_id:
-                chat_component_id = next(
-                    (vertex_id for vertex_id in self._is_input_vertices if "chat" in vertex_id.lower()), None
-                )
-                start_component_id = chat_component_id
-            else:
-                start_component_id = webhook_component_id
-
+            start_component_id = find_start_component_id(self._is_input_vertices)
             await self.process(start_component_id=start_component_id, fallback_to_env_vars=fallback_to_env_vars)
             self.increment_run_count()
         except Exception as exc:
