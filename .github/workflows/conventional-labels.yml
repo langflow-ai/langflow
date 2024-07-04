@@ -1,0 +1,14 @@
+# Warning, do not check out untrusted code with
+# the pull_request_target event.
+name: Label PRs with Conventional Commits
+on:
+  pull_request_target:
+    types: [ opened, edited ]
+
+jobs:
+  label:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: bcoe/conventional-release-labels@v1
+        with:
+          type_labels: '{"feat": "feature", "fix": "fix", "breaking": "breaking", "chore": "chore", "docs": "docs", "style": "style", "refactor": "refactor", "perf": "performance", "test": "test"}'
