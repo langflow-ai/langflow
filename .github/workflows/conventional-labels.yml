@@ -3,7 +3,7 @@
 name: Label PRs with Conventional Commits
 on:
   pull_request_target:
-    types: [ opened, edited , synchronize]
+    types: [ opened, edited , reopened]
 
 jobs:
   validate-pr:
@@ -24,7 +24,6 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.event.pull_request.user.type != 'Bot' && needs.validate-pr.outputs.validate_output == 'true' }}
     steps:
-      - name: label
-        uses: action-runner/conventional-labeler@2.0.0
+      - uses: bcoe/conventional-release-labels@v1
         with:
           type_labels: '{"feat": "enhancement","fix": "bug","docs": "documentation","style": "style","refactor": "refactor","perf": "performance","test": "test","chore": "chore","build": "build"}'
