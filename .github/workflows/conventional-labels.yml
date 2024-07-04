@@ -7,6 +7,7 @@ on:
 
 jobs:
   validate-pr:
+    name: Validate PR
     runs-on: ubuntu-latest
     outputs:
       validate_output: ${{ steps.validate.outputs }}
@@ -18,6 +19,8 @@ jobs:
           access_token: ${{ secrets.GITHUB_TOKEN }}
           verbose: true
   label:
+    needs: validate-pr
+    name: Label PR
     runs-on: ubuntu-latest
     name: Lint PR
     steps:
