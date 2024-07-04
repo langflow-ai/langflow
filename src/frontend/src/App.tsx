@@ -14,6 +14,7 @@ import {
 } from "./constants/constants";
 import { AuthContext } from "./contexts/authContext";
 import { autoLogin, getGlobalVariables, getHealth } from "./controllers/API";
+import { useGetVersionQuery } from "./controllers/API/queries/version";
 import { setupAxiosDefaults } from "./controllers/API/utils";
 import useTrackLastVisitedPath from "./hooks/use-track-last-visited-path";
 import Router from "./routes";
@@ -22,7 +23,6 @@ import useAlertStore from "./stores/alertStore";
 import { useDarkStore } from "./stores/darkStore";
 import useFlowsManagerStore from "./stores/flowsManagerStore";
 import { useFolderStore } from "./stores/foldersStore";
-import { useGetVersionQuery } from "./controllers/API/queries/version";
 
 export default function App() {
   const queryClient = new QueryClient();
@@ -31,17 +31,14 @@ export default function App() {
   const [fetchError, setFetchError] = useState(false);
   const isLoading = useFlowsManagerStore((state) => state.isLoading);
   const { isAuthenticated, login, setUserData, setAutoLogin, getUser } =
-  useContext(AuthContext);
+    useContext(AuthContext);
   const setLoading = useAlertStore((state) => state.setLoading);
   const refreshStars = useDarkStore((state) => state.refreshStars);
   const navigate = useNavigate();
   const dark = useDarkStore((state) => state.dark);
 
   const isLoadingFolders = useFolderStore((state) => state.isLoadingFolders);
-  useGetVersionQuery(
-    undefined,
-    "GetVersion",
-  );
+  useGetVersionQuery(undefined, "GetVersion");
 
   const [isLoadingHealth, setIsLoadingHealth] = useState(false);
   useEffect(() => {
@@ -79,7 +76,7 @@ export default function App() {
         }
       });
 
-      /*
+    /*
       Abort the request as it isn't needed anymore, the component being
       unmounted. It helps avoid, among other things, the well-known "can't
       perform a React state update on an unmounted component" warning.
@@ -154,36 +151,36 @@ export default function App() {
   return (
     //need parent component with width and height
     <div className="flex h-full flex-col">
-        <ErrorBoundary
-          onReset={() => {
-            // any reset function
-          }}
-          FallbackComponent={CrashErrorComponent}
-        >
-          <>
-            {
-              <FetchErrorComponent
-                description={FETCH_ERROR_DESCRIPION}
-                message={FETCH_ERROR_MESSAGE}
-                openModal={fetchError}
-                setRetry={() => {
-                  checkApplicationHealth();
-                }}
-                isLoadingHealth={isLoadingHealth}
-              ></FetchErrorComponent>
-            }
+      <ErrorBoundary
+        onReset={() => {
+          // any reset function
+        }}
+        FallbackComponent={CrashErrorComponent}
+      >
+        <>
+          {
+            <FetchErrorComponent
+              description={FETCH_ERROR_DESCRIPION}
+              message={FETCH_ERROR_MESSAGE}
+              openModal={fetchError}
+              setRetry={() => {
+                checkApplicationHealth();
+              }}
+              isLoadingHealth={isLoadingHealth}
+            ></FetchErrorComponent>
+          }
 
-            <Case condition={isLoadingApplication}>
-              <div className="loading-page-panel">
-                <LoadingComponent remSize={50} />
-              </div>
-            </Case>
+          <Case condition={isLoadingApplication}>
+            <div className="loading-page-panel">
+              <LoadingComponent remSize={50} />
+            </div>
+          </Case>
 
-            <Case condition={!isLoadingApplication}>
-              <Router />
-            </Case>
-          </>
-        </ErrorBoundary>
+          <Case condition={!isLoadingApplication}>
+            <Router />
+          </Case>
+        </>
+      </ErrorBoundary>
       <div></div>
       <div className="app-div">
         <AlertDisplayArea />

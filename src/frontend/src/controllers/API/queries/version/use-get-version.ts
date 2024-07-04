@@ -1,15 +1,18 @@
+import { useDarkStore } from "@/stores/darkStore";
 import { useQueryFunctionType } from "@/types/api";
-import { UseRequestProcessor } from "../../services/request-processor";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
-import { useDarkStore } from "@/stores/darkStore";
+import { UseRequestProcessor } from "../../services/request-processor";
 
 interface versionQueryResponse {
-    version: string;
-    package: string;
-};
+  version: string;
+  package: string;
+}
 
-export const useGetVersionQuery: useQueryFunctionType<undefined, versionQueryResponse> = (_, onFetch) => {
+export const useGetVersionQuery: useQueryFunctionType<
+  undefined,
+  versionQueryResponse
+> = (_, onFetch) => {
   const { query } = UseRequestProcessor();
 
   const responseFn = (data: any) => {
@@ -26,19 +29,14 @@ export const useGetVersionQuery: useQueryFunctionType<undefined, versionQueryRes
   };
 
   const getVersionFn = async () => {
-    return await api.get<versionQueryResponse>(
-      `${getURL("VERSION")}`
-    )
-  }
+    return await api.get<versionQueryResponse>(`${getURL("VERSION")}`);
+  };
 
-  const queryResult = query(
-    ['useGetVersionQuery'],
-    async () => {
-      const { data } = await getVersionFn();
-      responseFn(data);
-      return {};
-    }
-  );
+  const queryResult = query(["useGetVersionQuery"], async () => {
+    const { data } = await getVersionFn();
+    responseFn(data);
+    return {};
+  });
 
   return queryResult;
-}
+};

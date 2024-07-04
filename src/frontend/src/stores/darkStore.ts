@@ -14,7 +14,7 @@ export const useDarkStore = create<DarkStoreType>((set, get) => ({
     window.localStorage.setItem("isDark", dark.toString());
   },
   refreshVersion: (v) => {
-    set(() => ({ version: v }))
+    set(() => ({ version: v }));
   },
   refreshStars: () => {
     if (import.meta.env.CI) {
