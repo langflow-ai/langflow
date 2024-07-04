@@ -69,9 +69,12 @@ test("LLMChain - Filter", async ({ page }) => {
   await expect(page.getByTestId("disclosure-memories")).toBeVisible();
   await expect(page.getByTestId("disclosure-prototypes")).toBeVisible();
   await expect(page.getByTestId("disclosure-retrievers")).toBeVisible();
-  await expect(page.getByTestId("disclosure-text splitters")).toBeVisible();
   await expect(page.getByTestId("disclosure-toolkits")).toBeVisible();
   await expect(page.getByTestId("disclosure-tools")).toBeVisible();
+
+  await expect(page.getByTestId("helpersID Generator").first()).toBeVisible();
+
+  await expect(page.getByTestId("agentsCSVAgent").first()).toBeVisible();
 
   await expect(page.getByTestId("chainsLLMChain").first()).toBeVisible();
   await expect(
@@ -86,9 +89,7 @@ test("LLMChain - Filter", async ({ page }) => {
   await expect(
     page.getByTestId("retrieversAmazon Kendra Retriever").first(),
   ).toBeVisible();
-  await expect(
-    page.getByTestId("textsplittersCharacterTextSplitter").first(),
-  ).toBeVisible();
+
   await expect(
     page.getByTestId("toolkitsVectorStoreInfo").first(),
   ).toBeVisible();
