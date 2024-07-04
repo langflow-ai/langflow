@@ -10,7 +10,8 @@ interface versionQueryResponse {
 }
 
 export const useGetVersionQuery: useQueryFunctionType<
-  undefined,versionQueryResponse
+  undefined,
+  versionQueryResponse
 > = (_, onFetch) => {
   const { query } = UseRequestProcessor();
 
@@ -33,7 +34,7 @@ export const useGetVersionQuery: useQueryFunctionType<
 
   const queryResult = query(["useGetVersionQuery"], async () => {
     const { data } = await getVersionFn();
-    return responseFn(data);;
+    return responseFn(data);
   });
 
   return queryResult;
