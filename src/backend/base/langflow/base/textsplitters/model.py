@@ -1,7 +1,7 @@
 from abc import abstractmethod
 from typing import Any
-from langchain_text_splitters import TextSplitter
 
+from langchain_text_splitters import TextSplitter
 
 from langflow.custom import Component
 from langflow.io import Output
@@ -29,7 +29,7 @@ class LCTextSplitterComponent(Component):
         documents = []
 
         if not isinstance(data_input, list):
-            data_input: list[Any] = [data_input]
+            data_input = [data_input]
 
         for _input in data_input:
             if isinstance(_input, Data):

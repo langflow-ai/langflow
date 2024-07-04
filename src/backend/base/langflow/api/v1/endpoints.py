@@ -214,11 +214,13 @@ async def simplified_run_flow(
         return result
 
     except ValueError as exc:
-        end_time = time.perf_counter()
         background_tasks.add_task(
             telemetry_service.log_package_run,
             RunPayload(
-                runIsWebhook=False, runSeconds=int(end_time - start_time), runSuccess=False, runErrorMessage=str(exc)
+                runIsWebhook=False,
+                runSeconds=int(time.perf_counter() - start_time),
+                runSuccess=False,
+                runErrorMessage=str(exc),
             ),
         )
         if "badly formed hexadecimal UUID string" in str(exc):
@@ -234,7 +236,10 @@ async def simplified_run_flow(
         background_tasks.add_task(
             telemetry_service.log_package_run,
             RunPayload(
-                runIsWebhook=False, runSeconds=int(end_time - start_time), runSuccess=False, runErrorMessage=str(exc)
+                runIsWebhook=False,
+                runSeconds=int(time.perf_counter() - start_time),
+                runSuccess=False,
+                runErrorMessage=str(exc),
             ),
         )
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc

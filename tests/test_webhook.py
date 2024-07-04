@@ -1,6 +1,13 @@
 import tempfile
 from pathlib import Path
 
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def check_openai_api_key_in_environment_variables():
+    pass
+
 
 def test_webhook_endpoint(client, added_webhook_test):
     # The test is as follows:
@@ -26,6 +33,18 @@ def test_webhook_endpoint(client, added_webhook_test):
     response = client.post(endpoint, json=payload)
     assert response.status_code == 202
     assert not file_path.exists()
+
+
+def test_webhook_flow_on_run_endpoint(client, added_webhook_test, created_api_key):
+    endpoint_name = added_webhook_test["endpoint_name"]
+    endpoint = f"api/v1/run/{endpoint_name}?stream=false"
+    # Just test that "Random Payload" returns 202
+    # returns 202
+    payload = {
+        "output_type": "any",
+    }
+    response = client.post(endpoint, headers={"x-api-key": created_api_key.api_key}, json=payload)
+    assert response.status_code == 200, response.json()
 
 
 def test_webhook_with_random_payload(client, added_webhook_test):
