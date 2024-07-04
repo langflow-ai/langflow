@@ -31,13 +31,13 @@ export default function App() {
     useContext(AuthContext);
   const setLoading = useAlertStore((state) => state.setLoading);
   const refreshStars = useDarkStore((state) => state.refreshStars);
-  const navigate = useNavigate();
   const dark = useDarkStore((state) => state.dark);
 
   const isLoadingFolders = useFolderStore((state) => state.isLoadingFolders);
   useGetVersionQuery(undefined, "updateState");
 
   const {
+    data: healthData,
     isFetching: fetchingHealth,
     isError: isErrorHealth,
     refetch,
@@ -120,7 +120,7 @@ export default function App() {
             <FetchErrorComponent
               description={FETCH_ERROR_DESCRIPION}
               message={FETCH_ERROR_MESSAGE}
-              openModal={isErrorHealth}
+              openModal={isErrorHealth || (healthData && Object.values(healthData).some((value) => value !== "ok"))}
               setRetry={() => {
                 console.log("retrying");
                 refetch();

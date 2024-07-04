@@ -6,14 +6,13 @@ import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
 
-interface TransactionsQueryParams {
-  id: string;
-  params?: Record<string, unknown>;
-}
 
 interface TransactionsResponse {
-  rows: Array<object>;
-  columns: Array<ColDef | ColGroupDef>;
+  status:string,
+  chat: string,
+  db: string,
+  folder:string,
+  variables:string
 }
 
 export const useGetHealthQuery: useQueryFunctionType<
@@ -22,7 +21,7 @@ export const useGetHealthQuery: useQueryFunctionType<
 > = (_, onFetch) => {
   const { query } = UseRequestProcessor();
 
-  const responseFn = (data: any) => {
+  const responseFn = (data: TransactionsResponse) => {
     if (!onFetch) return data;
     if (typeof onFetch === "function") return onFetch(data);
     switch (onFetch) {
@@ -34,7 +33,7 @@ export const useGetHealthQuery: useQueryFunctionType<
   /**
    * Fetches the health status of the API.
    *
-   * @returns {Promise<AxiosResponse<any>>} A promise that resolves to an AxiosResponse containing the health status.
+   * @returns {Promise<AxiosResponse<TransactionsResponse>>} A promise that resolves to an AxiosResponse containing the health status.
    */
   async function getHealthFn() {
     return await api.get("/health_check");
@@ -45,7 +44,7 @@ export const useGetHealthQuery: useQueryFunctionType<
     ["useGetHealthQuery"],
     async () => {
       const result = await getHealthFn();
-      return responseFn(result);
+      return responseFn(result.data);
     },
     {
       placeholderData: keepPreviousData,
