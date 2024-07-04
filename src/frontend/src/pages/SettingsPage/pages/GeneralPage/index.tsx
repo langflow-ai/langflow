@@ -1,4 +1,5 @@
 import { usePostAddApiKey } from "@/controllers/API/queries/api-keys";
+import { useGetProfilePicturesQuery } from "@/controllers/API/queries/files";
 import { useContext, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { CONTROL_PATCH_USER_STATE } from "../../../../constants/constants";
@@ -52,7 +53,10 @@ export const GeneralPage = () => {
     setErrorData,
   );
 
-  const { handleGetProfilePictures } = useGetProfilePictures(setErrorData);
+  const handleGetProfilePictures = () => {
+    const { data } = useGetProfilePicturesQuery({});
+    return data;
+  };
 
   const { handlePatchProfilePicture } = usePatchProfilePicture(
     setSuccessData,
@@ -64,14 +68,14 @@ export const GeneralPage = () => {
   useScrollToElement(scrollId, setCurrentFlowId);
 
   const { mutate } = usePostAddApiKey({
-    callbackSuccess: () => {
+    onSuccess: () => {
       setSuccessData({ title: "API key saved successfully" });
       setHasApiKey(true);
       setValidApiKey(true);
       setLoadingApiKey(false);
       handleInput({ target: { name: "apikey", value: "" } });
     },
-    callbackError: (error) => {
+    onError: (error) => {
       setErrorData({
         title: "API key save error",
         list: [(error as any)?.response?.data?.detail],
