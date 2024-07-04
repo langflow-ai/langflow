@@ -22,7 +22,7 @@ jobs:
     needs: validate-pr
     name: Label PR
     runs-on: ubuntu-latest
-    name: Lint PR
+    if: ${{ github.event.pull_request.user.type != 'Bot' && needs.validate-pr.outputs.validate_output == 'true' }}
     steps:
       - name: label
         uses: action-runner/conventional-labeler@2.0.0
