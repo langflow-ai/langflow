@@ -120,7 +120,11 @@ export default function App() {
             <FetchErrorComponent
               description={FETCH_ERROR_DESCRIPION}
               message={FETCH_ERROR_MESSAGE}
-              openModal={isErrorHealth || (healthData && Object.values(healthData).some((value) => value !== "ok"))}
+              openModal={
+                isErrorHealth ||
+                (healthData &&
+                  Object.values(healthData).some((value) => value !== "ok"))
+              }
               setRetry={() => {
                 console.log("retrying");
                 refetch();
