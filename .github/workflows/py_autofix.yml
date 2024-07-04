@@ -1,7 +1,6 @@
 name: autofix.ci
 on:
   pull_request:
-    types: [opened, synchronize, reopened, auto_merge_enabled]
     paths:
       - "poetry.lock"
       - "pyproject.toml"
@@ -12,14 +11,8 @@ env:
 
 jobs:
   lint:
-    name: Run Mypy
+    name: Run Ruff Check and Format
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version:
-          - "3.12"
-          - "3.11"
-          - "3.10"
     steps:
       - uses: actions/checkout@v4
       - uses: install-pinned/ruff@b52a71f70b28264686d57d1efef1ba845b9cec6c
