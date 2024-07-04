@@ -26,14 +26,6 @@ export const useGetHealthQuery: useQueryFunctionType<
     if (!onFetch) return data;
     if (typeof onFetch === "function") return onFetch(data);
     switch (onFetch) {
-      case "TableUnion": {
-        const columns = extractColumnsFromRows(data.data, "union");
-        return { rows: data.data, columns };
-      }
-      case "TableIntersection": {
-        const columns = extractColumnsFromRows(data.data, "intersection");
-        return { rows: data.data, columns };
-      }
       default:
         return data;
     }

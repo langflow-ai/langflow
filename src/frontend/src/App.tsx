@@ -1,4 +1,3 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useContext, useEffect, useState } from "react";
 import { ErrorBoundary } from "react-error-boundary";
 import { useNavigate } from "react-router-dom";
@@ -26,8 +25,6 @@ import { useFolderStore } from "./stores/foldersStore";
 import { useGetHealthQuery } from "./controllers/API/queries/health";
 
 export default function App() {
-  const queryClient = new QueryClient();
-
   useTrackLastVisitedPath();
   const isLoading = useFlowsManagerStore((state) => state.isLoading);
   const { isAuthenticated, login, setUserData, setAutoLogin, getUser } =
@@ -40,8 +37,7 @@ export default function App() {
   const isLoadingFolders = useFolderStore((state) => state.isLoadingFolders);
   useGetVersionQuery(undefined, "updateState");
 
-  const {isFetching:fetchingHealth,isError:isErrorHealth,refetch} = useGetHealthQuery(undefined,onHealthCheck);
-
+  const {isFetching:fetchingHealth,isError:isErrorHealth,refetch} = useGetHealthQuery();
   useEffect(() => {
     if (!dark) {
       document.getElementById("body")!.classList.remove("dark");
@@ -104,13 +100,6 @@ export default function App() {
     });
   };
 
-  function onHealthCheck() {
-    if (isLoading === true && window.location.pathname === "/") {
-      navigate("/all");
-      window.location.reload();
-    }
-  };
-
   const isLoadingApplication = isLoading || isLoadingFolders;
 
   return (
@@ -129,6 +118,7 @@ export default function App() {
                 message={FETCH_ERROR_MESSAGE}
                 openModal={isErrorHealth}
                 setRetry={() => {
+                  console.log("retrying");
                   refetch();
                 }}
                 isLoadingHealth={fetchingHealth}
