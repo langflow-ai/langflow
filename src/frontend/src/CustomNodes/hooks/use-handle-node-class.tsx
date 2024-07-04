@@ -24,7 +24,7 @@ const useHandleNodeClass = (
         display_name: newNodeClass.display_name ?? data.node!.display_name,
       };
       if (type) {
-        newNode.data.node.template[name].type = type;
+        newNode.data.type = type;
       }
       newNode.data.node.template[name].value = code;
 

@@ -10,6 +10,7 @@ class PromptComponent(Component):
     description: str = "Create a prompt template with dynamic variables."
     icon = "prompts"
     trace_type = "prompt"
+    name = "Prompt"
 
     inputs = [
         PromptInput(name="template", display_name="Template"),

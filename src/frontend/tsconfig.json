@@ -15,7 +15,12 @@
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
-    "noImplicitAny": false
+    "noImplicitAny": false,
+    "paths": {
+      "@/*": ["*"],
+      "@queries/*": ["controllers/API/queries/*"]
+    },
+    "baseUrl": "src"
   },
   "include": [
     "src",
@@ -26,7 +31,7 @@
     "tests/end-to-end/chatInputOutputUser-shard-2.spec.ts",
     "tests/end-to-end/codeAreaModalComponent.spec.ts",
     "tests/end-to-end/curlApiGeneration.spec.ts",
-    "tests/end-to-end/deleteComponentFlows.spec.ts",
+    "tests/end-to-end/deleteFlows.spec.ts",
     "tests/end-to-end/dragAndDrop.spec.ts",
     "tests/end-to-end/dropdownComponent.spec.ts",
     "tests/end-to-end/fileUploadComponent.spec.ts",
@@ -52,6 +57,7 @@
     "tests/end-to-end/tweaks_test.spec.ts",
     "tests/end-to-end/twoEdges.spec.ts",
     "tests/end-to-end/userSettings.spec.ts",
-    "tests/end-to-end/store.spec.ts"
+    "tests/end-to-end/store.spec.ts",
+    "tests/end-to-end/logs.spec.ts"
   ]
 }

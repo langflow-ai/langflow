@@ -21,6 +21,7 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
     display_name = "Qdrant"
     description = "Qdrant Vector Store with search capabilities"
     documentation = "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/qdrant"
+    name = "Qdrant"
     icon = "Qdrant"
 
     inputs = [

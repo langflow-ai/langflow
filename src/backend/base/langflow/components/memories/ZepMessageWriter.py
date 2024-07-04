@@ -11,6 +11,7 @@ if TYPE_CHECKING:
 class ZepMessageWriterComponent(BaseMemoryComponent):
     display_name = "Zep Message Writer"
     description = "Writes a message to Zep."
+    name = "ZepMessageWriter"
 
     def build_config(self):
         return {

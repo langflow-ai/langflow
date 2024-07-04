@@ -12,6 +12,7 @@ class PGVectorStoreComponent(LCVectorStoreComponent):
     display_name = "PGVector"
     description = "PGVector Vector Store with search capabilities"
     documentation = "https://python.langchain.com/v0.2/docs/integrations/vectorstores/pgvector/"
+    name = "pgvector"
     icon = "PGVector"
 
     inputs = [
