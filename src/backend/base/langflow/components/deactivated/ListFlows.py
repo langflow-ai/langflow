@@ -9,6 +9,7 @@ class ListFlowsComponent(CustomComponent):
     description = "A component to list all available flows."
     icon = "ListFlows"
     beta: bool = True
+    name = "ListFlows"
 
     def build_config(self):
         return {}

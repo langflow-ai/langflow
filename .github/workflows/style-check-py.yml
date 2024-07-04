@@ -4,9 +4,7 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, auto_merge_enabled]
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+
 
 env:
   POETRY_VERSION: "1.8.2"
@@ -35,6 +33,3 @@ jobs:
         run: echo "::add-matcher::.github/workflows/matchers/ruff.json"
       - name: Run Ruff Check
         run: poetry run ruff check --output-format=github .
-
-
-

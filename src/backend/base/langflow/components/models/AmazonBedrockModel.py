@@ -11,6 +11,7 @@ class AmazonBedrockComponent(LCModelComponent):
     display_name: str = "Amazon Bedrock"
     description: str = "Generate text using Amazon Bedrock LLMs."
     icon = "Amazon"
+    name = "AmazonBedrockModel"
 
     inputs = [
         MessageInput(name="input_value", display_name="Input"),

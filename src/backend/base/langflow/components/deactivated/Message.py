@@ -7,6 +7,7 @@ from langflow.schema.message import Message
 class MessageComponent(CustomComponent):
     display_name = "Message"
     description = "Creates a Message object given a Session ID."
+    name = "Message"
 
     def build_config(self):
         return {

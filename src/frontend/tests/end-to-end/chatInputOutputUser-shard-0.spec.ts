@@ -4,13 +4,14 @@ import { readFileSync } from "fs";
 import path from "path";
 
 test("user must be able to send an image on chat", async ({ page }) => {
-  if (!process.env.CI) {
-    dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-  }
   test.skip(
     !process?.env?.OPENAI_API_KEY,
     "OPENAI_API_KEY required to run this test",
   );
+
+  if (!process.env.CI) {
+    dotenv.config({ path: path.resolve(__dirname, "../../.env") });
+  }
 
   await page.goto("/");
 
@@ -54,7 +55,7 @@ test("user must be able to send an image on chat", async ({ page }) => {
   await page.getByText("Chat Input", { exact: true }).click();
   await page.getByTestId("more-options-modal").click();
   await page.getByTestId("edit-button-modal").click();
-  await page.getByText("Save Changes").click();
+  await page.getByText("Close").last().click();
 
   await page.getByText("Playground", { exact: true }).click();
 

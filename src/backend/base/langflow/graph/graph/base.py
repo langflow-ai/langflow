@@ -1230,15 +1230,17 @@ class Graph:
                             stack.append(successor.id)
                         else:
                             excluded.add(successor.id)
-                        all_successors = get_successors(successor)
+                        all_successors = get_successors(successor, recursive=False)
                         for successor in all_successors:
                             if is_start:
                                 stack.append(successor.id)
                             else:
                                 excluded.add(successor.id)
-                elif current_id not in stop_predecessors:
+                elif current_id not in stop_predecessors and is_start:
                     # If the current vertex is not the target vertex, we should add all its successors
                     # to the stack if they are not in visited
+
+                    # If we are starting from the beginning, we should add all successors
                     for successor in current_vertex.successors:
                         if successor.id not in visited:
                             stack.append(successor.id)
@@ -1468,6 +1470,9 @@ class Graph:
 
     def remove_from_predecessors(self, vertex_id: str):
         self.run_manager.remove_from_predecessors(vertex_id)
+
+    def remove_vertex_from_runnables(self, vertex_id: str):
+        self.run_manager.remove_vertex_from_runnables(vertex_id)
 
     def build_in_degree(self, edges: List[ContractEdge]) -> Dict[str, int]:
         in_degree: Dict[str, int] = defaultdict(int)
