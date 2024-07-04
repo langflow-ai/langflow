@@ -1,6 +1,13 @@
 import tempfile
 from pathlib import Path
 
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def check_openai_api_key_in_environment_variables():
+    pass
+
 
 def test_webhook_endpoint(client, added_webhook_test):
     # The test is as follows:
