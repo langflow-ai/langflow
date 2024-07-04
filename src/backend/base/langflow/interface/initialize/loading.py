@@ -57,19 +57,30 @@ async def build_component_and_get_results(
 ):
     params_copy = params.copy()
     # Remove code from params
-    class_object: Type["CustomComponent" | "Component"] = eval_custom_component_code(params_copy.pop("code"))
+    class_object: Type["CustomComponent" | "Component"] = eval_custom_component_code(
+        params_copy.pop("code")
+    )
     custom_component: "CustomComponent" | "Component" = class_object(
-        user_id=user_id, parameters=params_copy, vertex=vertex, tracing_service=tracing_service
+        user_id=user_id,
+        parameters=params_copy,
+        vertex=vertex,
+        tracing_service=tracing_service,
     )
     params_copy = update_params_with_load_from_db_fields(
         custom_component, params_copy, vertex.load_from_db_fields, fallback_to_env_vars
     )
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
-        if base_type == "custom_components" and isinstance(custom_component, CustomComponent):
-            return await build_custom_component(params=params_copy, custom_component=custom_component)
+        if base_type == "custom_components" and isinstance(
+            custom_component, CustomComponent
+        ):
+            return await build_custom_component(
+                params=params_copy, custom_component=custom_component
+            )
         elif base_type == "component" and isinstance(custom_component, Component):
-            return await build_component(params=params_copy, custom_component=custom_component)
+            return await build_component(
+                params=params_copy, custom_component=custom_component
+            )
         else:
             raise ValueError(f"Base type {base_type} not found.")
 
@@ -84,22 +95,28 @@ def convert_params_to_sets(params):
 
 
 def convert_kwargs(params):
-    # if *kwargs are passed as a string, convert to dict
-    # first find any key that has kwargs or config in it
-    kwargs_keys = [key for key in params.keys() if "kwargs" in key or "config" in key]
-    for key in kwargs_keys:
-        if isinstance(params[key], str):
-            try:
-                params[key] = orjson.loads(params[key])
-            except json.JSONDecodeError:
-                # if the string is not a valid json string, we will
-                # remove the key from the params
-                params.pop(key, None)
+    # Loop through items to avoid repeated lookups
+    items_to_remove = []
+    for key, value in params.items():
+        if "kwargs" in key or "config" in key:
+            if isinstance(value, str):
+                try:
+                    params[key] = orjson.loads(value)
+                except orjson.JSONDecodeError:
+                    items_to_remove.append(key)
+
+    # Remove invalid keys outside the loop to avoid modifying dict during iteration
+    for key in items_to_remove:
+        params.pop(key, None)
+
     return params
 
 
 def update_params_with_load_from_db_fields(
-    custom_component: "CustomComponent", params, load_from_db_fields, fallback_to_env_vars=False
+    custom_component: "CustomComponent",
+    params,
+    load_from_db_fields,
+    fallback_to_env_vars=False,
 ):
     # For each field in load_from_db_fields, we will check if it's in the params
     # and if it is, we will get the value from the custom_component.keys(name)
@@ -118,11 +135,17 @@ def update_params_with_load_from_db_fields(
                 if fallback_to_env_vars and key is None:
                     var = os.getenv(params[field])
                     if var is None:
-                        raise ValueError(f"Environment variable {params[field]} is not set.")
+                        raise ValueError(
+                            f"Environment variable {params[field]} is not set."
+                        )
                     key = var
-                    logger.info(f"Using environment variable {params[field]} for {field}")
+                    logger.info(
+                        f"Using environment variable {params[field]} for {field}"
+                    )
                 if key is None:
-                    logger.warning(f"Could not get value for {field}. Setting it to None.")
+                    logger.warning(
+                        f"Could not get value for {field}. Setting it to None."
+                    )
 
                 params[field] = key
 
@@ -130,7 +153,9 @@ def update_params_with_load_from_db_fields(
                 raise exc
 
             except Exception as exc:
-                logger.error(f"Failed to get value for {field} from custom component. Setting it to None. Error: {exc}")
+                logger.error(
+                    f"Failed to get value for {field} from custom component. Setting it to None. Error: {exc}"
+                )
 
                 params[field] = None
 
@@ -186,8 +211,12 @@ async def build_custom_component(params: dict, custom_component: "CustomComponen
     artifact = {"repr": custom_repr, "raw": raw, "type": artifact_type}
 
     if custom_component.vertex is not None:
-        custom_component._artifacts = {custom_component.vertex.outputs[0].get("name"): artifact}
-        custom_component._results = {custom_component.vertex.outputs[0].get("name"): build_result}
+        custom_component._artifacts = {
+            custom_component.vertex.outputs[0].get("name"): artifact
+        }
+        custom_component._results = {
+            custom_component.vertex.outputs[0].get("name"): build_result
+        }
         return custom_component, build_result, artifact
 
     raise ValueError("Custom component does not have a vertex")
