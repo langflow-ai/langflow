@@ -35,7 +35,7 @@ test("RetrievalQA - Filter", async ({ page }) => {
 
   await page.waitForTimeout(1000);
   await page
-    .getByTestId("chainsRetrievalQA")
+    .getByTestId("chainsRetrieval QA")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.mouse.up();
   await page.mouse.down();
@@ -73,7 +73,7 @@ test("RetrievalQA - Filter", async ({ page }) => {
   await expect(page.getByTestId("disclosure-toolkits")).toBeVisible();
   await expect(page.getByTestId("disclosure-tools")).toBeVisible();
 
-  await expect(page.getByTestId("chainsRetrievalQA").first()).toBeVisible();
+  await expect(page.getByTestId("chainsRetrieval QA").first()).toBeVisible();
   await expect(
     page.getByTestId("langchain_utilitiesSearchApi").first(),
   ).toBeVisible();
