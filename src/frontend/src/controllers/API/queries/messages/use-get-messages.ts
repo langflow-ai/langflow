@@ -5,61 +5,67 @@ import { extractColumnsFromRows } from "../../../../utils/utils";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
+import { useMessagesStore } from "@/stores/messagesStore";
 
 interface MessagesQueryParams {
-  id: string;
-  params?: Record<string, unknown>;
+  id?: string;
+  mode: "intersection" | "union",
+  excludedFields?: string[],
+  params?: object;
 }
 
 interface MessagesResponse {
   rows: Array<object>;
   columns: Array<ColDef | ColGroupDef>;
-}
+};
 
 export const useGetMessagesQuery: useQueryFunctionType<
   MessagesQueryParams,
   MessagesResponse
-> = ({ id, params }, onFetch) => {
+> = ({ id, mode,excludedFields,params }, onFetch) => {
   const { query } = UseRequestProcessor();
 
-  const responseFn = (data: any) => {
+  const responseFn = (
+    data: any,
+    mode: "intersection" | "union",
+    excludedFields?: string[]
+) => {
     if (!onFetch) return data;
     if (typeof onFetch === "function") return onFetch(data);
+    
     switch (onFetch) {
-      case "TableUnion": {
-        const columns = extractColumnsFromRows(data.data, "union");
-        return { rows: data.data, columns };
+      case "Table": {
+        const columns = extractColumnsFromRows(data.data, mode, excludedFields);
+        return { rows: data, columns };
       }
-      case "TableIntersection": {
-        const columns = extractColumnsFromRows(data.data, "intersection");
-        return { rows: data.data, columns };
-      }
+      case "TableSaveState":
+        const columns = extractColumnsFromRows(data.data, mode, excludedFields);
+        useMessagesStore.getState().setMessages(data.data);
+        useMessagesStore.getState().setColumns(columns);
+        return { rows: data, columns };
       default:
         return data;
     }
   };
 
-  const getMessagesFn = async (id: string, params = {}) => {
+  const getMessagesFn = async (id?: string, params = {}) => {
     const config = {};
-    config["params"] = { flow_id: id };
+    if (id) {
+      config["params"] = { flow_id: id };
+    }
     if (params) {
       config["params"] = { ...config["params"], ...params };
     }
-
-    return await api.get<MessagesResponse>(
-      `${getURL("MESSAGES")}`,
-      config,
-    );
+    return await api.get<any>(`${getURL("MESSAGES")}`, config);
   };
 
   const queryResult = query(
     ["useGetMessagesQuery"],
     async () => {
-      const rows = await getMessagesFn(id, params);
-      return responseFn(rows);
+      const data = await getMessagesFn(id, params);
+      return responseFn(data.data,mode,excludedFields);
     },
     {
-      placeholderData: keepPreviousData,
     },
   );
 
