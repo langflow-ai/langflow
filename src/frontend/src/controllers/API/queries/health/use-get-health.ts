@@ -3,13 +3,12 @@ import { useQueryFunctionType } from "../../../../types/api";
 import { api } from "../../api";
 import { UseRequestProcessor } from "../../services/request-processor";
 
-
 interface getHealthResponse {
-  status:string,
-  chat: string,
-  db: string,
-  folder:string,
-  variables:string
+  status: string;
+  chat: string;
+  db: string;
+  folder: string;
+  variables: string;
 }
 
 export const useGetHealthQuery: useQueryFunctionType<
