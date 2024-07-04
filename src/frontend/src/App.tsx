@@ -38,7 +38,7 @@ export default function App() {
   const dark = useDarkStore((state) => state.dark);
 
   const isLoadingFolders = useFolderStore((state) => state.isLoadingFolders);
-  useGetVersionQuery(undefined, "GetVersion");
+  useGetVersionQuery(undefined, "updateState");
 
   const [isLoadingHealth, setIsLoadingHealth] = useState(false);
   useEffect(() => {

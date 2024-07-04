@@ -1,4 +1,3 @@
-import { useGetVersionQuery } from "@/controllers/API/queries/version";
 import { create } from "zustand";
 import { getRepoStars, getVersion } from "../controllers/API";
 import { DarkStoreType } from "../types/zustand/dark";
