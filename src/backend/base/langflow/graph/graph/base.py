@@ -349,6 +349,8 @@ class Graph:
         # Get the outputs
         vertex_outputs = []
         for vertex in self.vertices:
+            if not vertex._built:
+                continue
             if vertex is None:
                 raise ValueError(f"Vertex {vertex_id} not found")
 
