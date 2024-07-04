@@ -31,13 +31,13 @@ export const useGetHealthQuery: useQueryFunctionType<
     }
   };
 
-/**
- * Fetches the health status of the API.
- *
- * @returns {Promise<AxiosResponse<any>>} A promise that resolves to an AxiosResponse containing the health status.
- */
-async function getHealthFn() {
-    return await api.get("/health")
+  /**
+   * Fetches the health status of the API.
+   *
+   * @returns {Promise<AxiosResponse<any>>} A promise that resolves to an AxiosResponse containing the health status.
+   */
+  async function getHealthFn() {
+    return await api.get("/health");
     // Health is the only endpoint that doesn't require /api/v1
   }
 

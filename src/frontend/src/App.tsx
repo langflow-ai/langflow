@@ -12,7 +12,8 @@ import {
   FETCH_ERROR_MESSAGE,
 } from "./constants/constants";
 import { AuthContext } from "./contexts/authContext";
-import { autoLogin, } from "./controllers/API";
+import { autoLogin } from "./controllers/API";
+import { useGetHealthQuery } from "./controllers/API/queries/health";
 import { useGetVersionQuery } from "./controllers/API/queries/version";
 import { setupAxiosDefaults } from "./controllers/API/utils";
 import useTrackLastVisitedPath from "./hooks/use-track-last-visited-path";
@@ -22,7 +23,6 @@ import useAlertStore from "./stores/alertStore";
 import { useDarkStore } from "./stores/darkStore";
 import useFlowsManagerStore from "./stores/flowsManagerStore";
 import { useFolderStore } from "./stores/foldersStore";
-import { useGetHealthQuery } from "./controllers/API/queries/health";
 
 export default function App() {
   useTrackLastVisitedPath();
@@ -37,7 +37,11 @@ export default function App() {
   const isLoadingFolders = useFolderStore((state) => state.isLoadingFolders);
   useGetVersionQuery(undefined, "updateState");
 
-  const {isFetching:fetchingHealth,isError:isErrorHealth,refetch} = useGetHealthQuery();
+  const {
+    isFetching: fetchingHealth,
+    isError: isErrorHealth,
+    refetch,
+  } = useGetHealthQuery();
   useEffect(() => {
     if (!dark) {
       document.getElementById("body")!.classList.remove("dark");
@@ -105,25 +109,25 @@ export default function App() {
   return (
     //need parent component with width and height
     <div className="flex h-full flex-col">
-        <ErrorBoundary
-          onReset={() => {
-            // any reset function
-          }}
-          FallbackComponent={CrashErrorComponent}
-        >
-          <>
-            {
-              <FetchErrorComponent
-                description={FETCH_ERROR_DESCRIPION}
-                message={FETCH_ERROR_MESSAGE}
-                openModal={isErrorHealth}
-                setRetry={() => {
-                  console.log("retrying");
-                  refetch();
-                }}
-                isLoadingHealth={fetchingHealth}
-              ></FetchErrorComponent>
-            }
+      <ErrorBoundary
+        onReset={() => {
+          // any reset function
+        }}
+        FallbackComponent={CrashErrorComponent}
+      >
+        <>
+          {
+            <FetchErrorComponent
+              description={FETCH_ERROR_DESCRIPION}
+              message={FETCH_ERROR_MESSAGE}
+              openModal={isErrorHealth}
+              setRetry={() => {
+                console.log("retrying");
+                refetch();
+              }}
+              isLoadingHealth={fetchingHealth}
+            ></FetchErrorComponent>
+          }
 
           <Case condition={isLoadingApplication}>
             <div className="loading-page-panel">
