@@ -9,8 +9,6 @@ jobs:
   validate-pr:
     name: Validate PR
     runs-on: ubuntu-latest
-    outputs:
-      validate_output: ${{ steps.validate.outputs }}
     steps:
       - name: Validate the pull request
         id: validate
