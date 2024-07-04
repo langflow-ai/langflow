@@ -37,7 +37,7 @@ export const useGetHealthQuery: useQueryFunctionType<
    * @returns {Promise<AxiosResponse<any>>} A promise that resolves to an AxiosResponse containing the health status.
    */
   async function getHealthFn() {
-    return await api.get("/health");
+    return await api.get("/health_check");
     // Health is the only endpoint that doesn't require /api/v1
   }
 
