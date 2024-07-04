@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 import httpx
 from loguru import logger
 from pydantic import BaseModel
+from langflow.services.telemetry.opentelemetry import OpenTelemetry
 
 from langflow.services.base import Service
 from langflow.services.telemetry.schema import (
@@ -34,6 +35,8 @@ class TelemetryService(Service):
         self.client = httpx.AsyncClient(timeout=10.0)  # Set a reasonable timeout
         self.running = False
         self.package = get_version_info()["package"]
+
+        self.ot = OpenTelemetry(prometheus_enabled=settings_service.settings.prometheus_enabled)
 
         # Check for do-not-track settings
         self.do_not_track = (

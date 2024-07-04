@@ -65,6 +65,9 @@ uncurl = "^0.0.11"
 sentry-sdk = {extras = ["fastapi", "loguru"], version = "^2.5.1"}
 chardet = "^5.2.0"
 firecrawl-py = "^0.0.16"
+opentelemetry-api = "^1.25.0"
+opentelemetry-sdk = "^1.25.0"
+opentelemetry-exporter-prometheus = "^0.46b0"
 
 
 [tool.poetry.extras]

@@ -14,6 +14,7 @@ from loguru import logger
 from pydantic import PydanticDeprecatedSince20
 from rich import print as rprint
 from starlette.middleware.base import BaseHTTPMiddleware
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
 from langflow.api import router, health_check_router
 from langflow.initial_setup.setup import (
@@ -137,8 +138,16 @@ def create_app():
 
         return await call_next(request)
 
+    settings = get_settings_service().settings
+    if settings.prometheus_enabled:
+        from prometheus_client import start_http_server
+
+        start_http_server(settings.prometheus_port)
+
     app.include_router(router)
     app.include_router(health_check_router)
+
+    FastAPIInstrumentor.instrument_app(app)
 
     return app
 
