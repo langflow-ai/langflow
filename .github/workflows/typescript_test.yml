@@ -127,9 +127,12 @@ jobs:
           path: src/frontend/blob-report
           retention-days: 1
 
+
+
   merge-reports:
     needs: setup-and-test
     runs-on: ubuntu-latest
+    if : ${{ needs.setup-and-test.outputs.failed != 'true' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
