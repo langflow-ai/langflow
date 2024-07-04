@@ -20,7 +20,7 @@ from langflow.schema import Data
 class QdrantVectorStoreComponent(LCVectorStoreComponent):
     display_name = "Qdrant"
     description = "Qdrant Vector Store with search capabilities"
-    documentation = "<link url='https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/qdrant'>Webpage description not available.</link>"
+    documentation = "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/qdrant"
     icon = "Qdrant"
 
     inputs = [
