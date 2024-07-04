@@ -25,8 +25,6 @@ import useFlowsManagerStore from "./stores/flowsManagerStore";
 import { useFolderStore } from "./stores/foldersStore";
 
 export default function App() {
-  const queryClient = new QueryClient();
-
   useTrackLastVisitedPath();
   const [fetchError, setFetchError] = useState(false);
   const isLoading = useFlowsManagerStore((state) => state.isLoading);
@@ -38,6 +36,8 @@ export default function App() {
   const dark = useDarkStore((state) => state.dark);
 
   const isLoadingFolders = useFolderStore((state) => state.isLoadingFolders);
+
+  useGetVersionQuery();
 
   const [isLoadingHealth, setIsLoadingHealth] = useState(false);
   useEffect(() => {

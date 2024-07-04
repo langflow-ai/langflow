@@ -20,7 +20,7 @@ interface TransactionsResponse {
 export const useGetTransactionsQuery: useQueryFunctionType<
   TransactionsQueryParams,
   TransactionsResponse
-> = (params, options?) => {
+> = (params, options) => {
   // Function body remains unchanged
   const { query } = UseRequestProcessor();
 

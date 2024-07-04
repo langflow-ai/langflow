@@ -233,7 +233,7 @@ export type ResponseErrorDetailAPI = {
 };
 
 export type useQueryFunctionType<T = undefined, R = any> = (
-  params: T,
+  params?: T,
   options?: Omit<UseQueryOptions, "queryFn" | "queryKey">,
 ) => UseQueryResult<R>;
 
