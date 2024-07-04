@@ -22,6 +22,7 @@ class DirectoryComponent(Component):
             name="types",
             display_name="Types",
             info="File types to load. Leave empty to load all types.",
+            is_list=True,
         ),
         IntInput(
             name="depth",
@@ -68,7 +69,7 @@ class DirectoryComponent(Component):
 
     def load_directory(self) -> List[Optional[Data]]:
         path = self.path
-        types = self.types.split() if self.types else []
+        types = self.types or []
         depth = self.depth
         max_concurrency = self.max_concurrency
         load_hidden = self.load_hidden
