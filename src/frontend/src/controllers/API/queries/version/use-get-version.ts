@@ -15,7 +15,7 @@ export const useGetVersionQuery: useQueryFunctionType<
 > = (_, options) => {
   const { query } = UseRequestProcessor();
   const { onFetch } = options || {};
-  
+
   const getVersionFn = async () => {
     return await api.get<versionQueryResponse>(`${getURL("VERSION")}`);
   };
