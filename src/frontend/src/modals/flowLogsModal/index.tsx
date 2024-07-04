@@ -18,7 +18,7 @@ export default function FlowLogsModal({
 
   const { data, isLoading, refetch } = useGetTransactionsQuery({
     id: currentFlowId,
-    fetchType: "TableUnion",
+    mode: "union",
   });
 
   useEffect(() => {

@@ -9,7 +9,8 @@ import { UseRequestProcessor } from "../../services/request-processor";
 interface TransactionsQueryParams {
   id: string;
   params?: Record<string, unknown>;
-  fetchType: string;
+  mode?: "union" | "intersection";
+  excludedColumns?: string[];
 }
 
 interface TransactionsResponse {
@@ -20,36 +21,30 @@ interface TransactionsResponse {
 export const useGetTransactionsQuery: useQueryFunctionType<
   TransactionsQueryParams,
   TransactionsResponse
-> = (params, options) => {
+> = ({ id, excludedColumns, mode, params }, options) => {
   // Function body remains unchanged
   const { query } = UseRequestProcessor();
 
-  const responseFn = (data: object[], fetchType: string) => {
-    switch (fetchType) {
-      case "TableUnion": {
-        const columns = extractColumnsFromRows(data, "union");
-        return { rows: data, columns };
-      }
-      case "TableIntersection": {
-        const columns = extractColumnsFromRows(data, "intersection");
-        return { rows: data, columns };
-      }
-      default:
-        return data;
+  const responseFn = (data: object[]) => {
+    if (mode) {
+      const columns = extractColumnsFromRows(data, mode, excludedColumns);
+      return { rows: data, columns };
+    }
+    else {
+      return data;
     }
   };
 
   const getTransactionsFn = async () => {
-    if (!params) return;
     const config = {};
-    config["params"] = { flow_id: params.id };
-    if (params.params) {
-      config["params"] = { ...config["params"], ...params.params };
+    config["params"] = { flow_id: id };
+    if (params) {
+      config["params"] = { ...config["params"], ...params };
     }
 
     const result = await api.get<object[]>(`${getURL("TRANSACTIONS")}`, config);
 
-    return responseFn(result.data, params.fetchType);
+    return responseFn(result.data);
   };
 
   const queryResult = query(["useGetTransactionsQuery"], getTransactionsFn, {
