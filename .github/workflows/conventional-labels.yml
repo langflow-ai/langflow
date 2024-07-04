@@ -8,8 +8,11 @@ on:
 jobs:
   validate-pr:
     runs-on: ubuntu-latest
+    outputs:
+      validate_output: ${{ steps.validate.outputs }}
     steps:
       - name: Validate the pull request
+        id: validate
         uses: Namchee/conventional-pr@v0.15.4
         with:
           access_token: ${{ secrets.GITHUB_TOKEN }}
@@ -19,6 +22,6 @@ jobs:
     name: Lint PR
     steps:
       - name: label
-        uses: action-runner/conventional-labeler@v1
+        uses: action-runner/conventional-labeler@2.0.0
         with:
           access_token: ${{ secrets.GITHUB_TOKEN }}
