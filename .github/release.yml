@@ -12,6 +12,7 @@ changelog:
       description: Bug fixes and patches
       labels:
         - fix
+        - bug
     - title: 📝 Documentation Updates
       description: Changes to documentation
       labels:
