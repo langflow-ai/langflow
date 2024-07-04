@@ -1,11 +1,12 @@
 from langchain.chains import RetrievalQA, RetrievalQAWithSourcesChain
-from langflow.custom import Component
+
+from langflow.base.chains.model import LCChainComponent
 from langflow.field_typing import Message
 from langflow.inputs import HandleInput, MultilineInput, BoolInput, DropdownInput
 from langflow.template import Output
 
 
-class RetrievalQAComponent(Component):
+class RetrievalQAComponent(LCChainComponent):
     display_name = "Retrieval QA"
     description = "Chain for question-answering querying sources from a retriever."
     name = "RetrievalQA"
@@ -47,10 +48,6 @@ class RetrievalQAComponent(Component):
             display_name="Return Source Documents",
             value=False,
         )
-    ]
-
-    outputs = [
-        Output(display_name="Text", name="text", method="invoke_chain")
     ]
 
     def invoke_chain(self) -> Message:

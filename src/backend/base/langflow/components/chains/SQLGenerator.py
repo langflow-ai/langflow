@@ -1,14 +1,13 @@
 from langchain.chains import create_sql_query_chain
 from langchain_core.prompts import PromptTemplate
 from langchain_core.runnables import Runnable
-
-from langflow.custom import Component
+from langflow.base.chains.model import LCChainComponent
 from langflow.field_typing import Message
 from langflow.inputs import MultilineInput, HandleInput, IntInput
 from langflow.template import Output
 
 
-class SQLGeneratorComponent(Component):
+class SQLGeneratorComponent(LCChainComponent):
     display_name = "Natural Language to SQL"
     description = "Generate SQL from natural language."
     name = "SQLGenerator"

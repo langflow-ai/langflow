@@ -1,12 +1,12 @@
 from langchain.chains import LLMCheckerChain
 
-from langflow.custom import Component
+from langflow.base.chains.model import LCChainComponent
 from langflow.field_typing import Message
 from langflow.inputs import MultilineInput, HandleInput
 from langflow.template import Output
 
 
-class LLMCheckerChainComponent(Component):
+class LLMCheckerChainComponent(LCChainComponent):
     display_name = "LLMCheckerChain"
     description = "Chain for question-answering with self-verification."
     documentation = "https://python.langchain.com/docs/modules/chains/additional/llm_checker"
@@ -25,10 +25,6 @@ class LLMCheckerChainComponent(Component):
             input_types=["LanguageModel"],
             required=True
         ),
-    ]
-
-    outputs = [
-        Output(display_name="Text", name="text", method="invoke_chain")
     ]
 
     def invoke_chain(self) -> Message:

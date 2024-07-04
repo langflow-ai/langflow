@@ -2,13 +2,13 @@ from typing import Optional
 
 from langchain.chains import ConversationChain
 
-from langflow.custom import Component
+from langflow.base.chains.model import LCChainComponent
 from langflow.field_typing import Message
 from langflow.inputs import MultilineInput, HandleInput
 from langflow.template import Output
 
 
-class ConversationChainComponent(Component):
+class ConversationChainComponent(LCChainComponent):
     display_name = "ConversationChain"
     description = "Chain to have a conversation and load context from memory."
     name = "ConversationChain"
@@ -31,10 +31,6 @@ class ConversationChainComponent(Component):
             display_name="Memory",
             input_types=["BaseChatMemory"],
         )
-    ]
-
-    outputs = [
-        Output(display_name="Text", name="text", method="invoke_chain")
     ]
 
     def invoke_chain(self) -> Message:

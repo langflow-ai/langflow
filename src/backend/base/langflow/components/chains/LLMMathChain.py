@@ -1,12 +1,12 @@
 from langchain.chains import LLMMathChain
 
-from langflow.custom import Component
+from langflow.base.chains.model import LCChainComponent
 from langflow.field_typing import Message
 from langflow.inputs import MultilineInput, HandleInput
 from langflow.template import Output
 
 
-class LLMMathChainComponent(Component):
+class LLMMathChainComponent(LCChainComponent):
     display_name = "LLMMathChain"
     description = "Chain that interprets a prompt and executes python code to do math."
     documentation = "https://python.langchain.com/docs/modules/chains/additional/llm_math"
