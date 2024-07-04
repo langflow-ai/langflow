@@ -1,12 +1,10 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useContext, useEffect, useState } from "react";
 import { ErrorBoundary } from "react-error-boundary";
 import { useNavigate } from "react-router-dom";
 import "reactflow/dist/style.css";
 import "./App.css";
 import AlertDisplayArea from "./alerts/displayArea";
-import ErrorAlert from "./alerts/error";
-import NoticeAlert from "./alerts/notice";
-import SuccessAlert from "./alerts/success";
 import CrashErrorComponent from "./components/crashErrorComponent";
 import FetchErrorComponent from "./components/fetchErrorComponent";
 import LoadingComponent from "./components/loadingComponent";
@@ -24,9 +22,10 @@ import useAlertStore from "./stores/alertStore";
 import { useDarkStore } from "./stores/darkStore";
 import useFlowsManagerStore from "./stores/flowsManagerStore";
 import { useFolderStore } from "./stores/foldersStore";
-import { useGlobalVariablesStore } from "./stores/globalVariablesStore/globalVariables";
-import { useStoreStore } from "./stores/storeStore";
+
 export default function App() {
+  const queryClient = new QueryClient();
+
   useTrackLastVisitedPath();
 
   const [fetchError, setFetchError] = useState(false);
@@ -35,13 +34,8 @@ export default function App() {
   const { isAuthenticated, login, setUserData, setAutoLogin, getUser } =
     useContext(AuthContext);
   const setLoading = useAlertStore((state) => state.setLoading);
-  const fetchApiData = useStoreStore((state) => state.fetchApiData);
   const refreshVersion = useDarkStore((state) => state.refreshVersion);
   const refreshStars = useDarkStore((state) => state.refreshStars);
-  const setGlobalVariables = useGlobalVariablesStore(
-    (state) => state.setGlobalVariables,
-  );
-  const checkHasStore = useStoreStore((state) => state.checkHasStore);
   const navigate = useNavigate();
   const dark = useDarkStore((state) => state.dark);
 
@@ -160,36 +154,38 @@ export default function App() {
   return (
     //need parent component with width and height
     <div className="flex h-full flex-col">
-      <ErrorBoundary
-        onReset={() => {
-          // any reset function
-        }}
-        FallbackComponent={CrashErrorComponent}
-      >
-        <>
-          {
-            <FetchErrorComponent
-              description={FETCH_ERROR_DESCRIPION}
-              message={FETCH_ERROR_MESSAGE}
-              openModal={fetchError}
-              setRetry={() => {
-                checkApplicationHealth();
-              }}
-              isLoadingHealth={isLoadingHealth}
-            ></FetchErrorComponent>
-          }
+      <QueryClientProvider client={queryClient}>
+        <ErrorBoundary
+          onReset={() => {
+            // any reset function
+          }}
+          FallbackComponent={CrashErrorComponent}
+        >
+          <>
+            {
+              <FetchErrorComponent
+                description={FETCH_ERROR_DESCRIPION}
+                message={FETCH_ERROR_MESSAGE}
+                openModal={fetchError}
+                setRetry={() => {
+                  checkApplicationHealth();
+                }}
+                isLoadingHealth={isLoadingHealth}
+              ></FetchErrorComponent>
+            }
 
-          <Case condition={isLoadingApplication}>
-            <div className="loading-page-panel">
-              <LoadingComponent remSize={50} />
-            </div>
-          </Case>
+            <Case condition={isLoadingApplication}>
+              <div className="loading-page-panel">
+                <LoadingComponent remSize={50} />
+              </div>
+            </Case>
 
-          <Case condition={!isLoadingApplication}>
-            <Router />
-          </Case>
-        </>
-      </ErrorBoundary>
+            <Case condition={!isLoadingApplication}>
+              <Router />
+            </Case>
+          </>
+        </ErrorBoundary>
+      </QueryClientProvider>
       <div></div>
       <div className="app-div">
         <AlertDisplayArea />

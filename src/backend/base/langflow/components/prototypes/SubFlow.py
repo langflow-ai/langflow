@@ -17,6 +17,7 @@ class SubFlowComponent(CustomComponent):
     description = (
         "Dynamically Generates a Component from a Flow. The output is a list of data with keys 'result' and 'message'."
     )
+    name = "SubFlow"
     beta: bool = True
     field_order = ["flow_name"]
 

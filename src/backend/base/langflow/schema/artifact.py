@@ -49,7 +49,7 @@ def get_artifact_type(value, build_result=None) -> str:
 def post_process_raw(raw, artifact_type: str):
     if artifact_type == ArtifactType.STREAM.value:
         raw = ""
-    elif artifact_type == ArtifactType.UNKNOWN.value:
+    elif artifact_type == ArtifactType.UNKNOWN.value and raw is not None:
         raw = "Built Successfully ✨"
 
     return raw

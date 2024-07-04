@@ -10,6 +10,7 @@ from langflow.field_typing import BaseMemory, BaseRetriever, LanguageModel, Text
 class RetrievalQAWithSourcesChainComponent(CustomComponent):
     display_name = "RetrievalQAWithSourcesChain"
     description = "Question-answering with sources over an index."
+    name = "RetrievalQAWithSourcesChain"
 
     def build_config(self):
         return {

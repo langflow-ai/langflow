@@ -8,6 +8,7 @@ class LLMCheckerChainComponent(CustomComponent):
     display_name = "LLMCheckerChain"
     description = ""
     documentation = "https://python.langchain.com/docs/modules/chains/additional/llm_checker"
+    name = "LLMCheckerChain"
 
     def build_config(self):
         return {

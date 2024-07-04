@@ -4,13 +4,14 @@ import { readFileSync } from "fs";
 import path from "path";
 
 test("user must interact with chat with Input/Output", async ({ page }) => {
-  if (!process.env.CI) {
-    dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-  }
   test.skip(
     !process?.env?.OPENAI_API_KEY,
     "OPENAI_API_KEY required to run this test",
   );
+
+  if (!process.env.CI) {
+    dotenv.config({ path: path.resolve(__dirname, "../../.env") });
+  }
 
   await page.goto("/");
 
@@ -93,12 +94,12 @@ test("user must interact with chat with Input/Output", async ({ page }) => {
   await page.getByText("Chat Input", { exact: true }).click();
   await page.getByTestId("advanced-button-modal").click();
   await page.getByTestId("showsender_name").click();
-  await page.getByText("Save Changes", { exact: true }).click();
+  await page.getByText("Close").last().click();
 
   await page.getByText("Chat Output", { exact: true }).click();
   await page.getByTestId("advanced-button-modal").click();
   await page.getByTestId("showsender_name").click();
-  await page.getByText("Save Changes", { exact: true }).click();
+  await page.getByText("Close").last().click();
 
   await page
     .getByTestId("popover-anchor-input-sender_name")

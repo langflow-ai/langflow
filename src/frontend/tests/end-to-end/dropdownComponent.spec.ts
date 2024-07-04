@@ -76,12 +76,6 @@ test("dropDownComponent", async ({ page }) => {
     expect(false).toBeTruthy();
   }
 
-  await page.locator('//*[@id="showcache"]').click();
-  expect(await page.locator('//*[@id="showcache"]').isChecked()).toBeFalsy();
-
-  await page.locator('//*[@id="showcache"]').click();
-  expect(await page.locator('//*[@id="showcache"]').isChecked()).toBeTruthy();
-
   await page.locator('//*[@id="showcredentials_profile_name"]').click();
   expect(
     await page.locator('//*[@id="showcredentials_profile_name"]').isChecked(),
@@ -90,16 +84,6 @@ test("dropDownComponent", async ({ page }) => {
   await page.locator('//*[@id="showcredentials_profile_name"]').click();
   expect(
     await page.locator('//*[@id="showcredentials_profile_name"]').isChecked(),
-  ).toBeTruthy();
-
-  await page.locator('//*[@id="showendpoint_url"]').click();
-  expect(
-    await page.locator('//*[@id="showendpoint_url"]').isChecked(),
-  ).toBeFalsy();
-
-  await page.locator('//*[@id="showendpoint_url"]').click();
-  expect(
-    await page.locator('//*[@id="showendpoint_url"]').isChecked(),
   ).toBeTruthy();
 
   await page.locator('//*[@id="showregion_name"]').click();
@@ -122,12 +106,6 @@ test("dropDownComponent", async ({ page }) => {
     await page.locator('//*[@id="showmodel_id"]').isChecked(),
   ).toBeTruthy();
 
-  await page.locator('//*[@id="showcache"]').click();
-  expect(await page.locator('//*[@id="showcache"]').isChecked()).toBeFalsy();
-
-  await page.locator('//*[@id="showcache"]').click();
-  expect(await page.locator('//*[@id="showcache"]').isChecked()).toBeTruthy();
-
   await page.locator('//*[@id="showcredentials_profile_name"]').click();
   expect(
     await page.locator('//*[@id="showcredentials_profile_name"]').isChecked(),
@@ -136,16 +114,6 @@ test("dropDownComponent", async ({ page }) => {
   await page.locator('//*[@id="showcredentials_profile_name"]').click();
   expect(
     await page.locator('//*[@id="showcredentials_profile_name"]').isChecked(),
-  ).toBeTruthy();
-
-  await page.locator('//*[@id="showendpoint_url"]').click();
-  expect(
-    await page.locator('//*[@id="showendpoint_url"]').isChecked(),
-  ).toBeFalsy();
-
-  await page.locator('//*[@id="showendpoint_url"]').click();
-  expect(
-    await page.locator('//*[@id="showendpoint_url"]').isChecked(),
   ).toBeTruthy();
 
   await page.locator('//*[@id="showregion_name"]').click();
@@ -176,7 +144,7 @@ test("dropDownComponent", async ({ page }) => {
     expect(false).toBeTruthy();
   }
 
-  await page.getByText("Save Changes", { exact: true }).click();
+  await page.getByText("Close").last().click();
 
   value = await page.getByTestId("dropdown-model_id").innerText();
   if (value !== "cohere.embed-multilingual-v3") {

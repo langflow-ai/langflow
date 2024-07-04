@@ -5,6 +5,7 @@ from langflow.schema import Data
 
 class EmbedComponent(CustomComponent):
     display_name = "Embed Texts"
+    name = "Embed"
 
     def build_config(self):
         return {"texts": {"display_name": "Texts"}, "embbedings": {"display_name": "Embeddings"}}

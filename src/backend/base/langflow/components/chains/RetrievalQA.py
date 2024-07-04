@@ -11,6 +11,7 @@ from langflow.schema import Data
 class RetrievalQAComponent(CustomComponent):
     display_name = "Retrieval QA"
     description = "Chain for question-answering against an index."
+    name = "RetrievalQA"
 
     def build_config(self):
         return {
