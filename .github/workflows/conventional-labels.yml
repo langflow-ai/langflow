@@ -18,6 +18,8 @@ jobs:
         with:
           access_token: ${{ secrets.GITHUB_TOKEN }}
           verbose: true
+          issue: false
+
   label:
     needs: validate-pr
     name: Label PR
