@@ -250,10 +250,10 @@ export type MutationFunctionType = (
   options?: Omit<UseMutationOptions<any, any>, "mutationFn" | "mutationKey">,
 ) => UseMutationResult<any, any, any, any>;
 
-export type useMutationFunctionType<Variables, Data = any, Error = any> = ({
+export type useMutationFunctionType<Variables, Data = any, Error = any,payload=any> = ({
   callbackError,
   callbackSuccess,
 }: {
-  callbackSuccess: (data: Data, payload?: any) => void;
+  callbackSuccess: (data: Data, payload?: payload) => void;
   callbackError: (err: Error) => void;
 }) => UseMutationResult<Data, Error, Variables>;
