@@ -1,3 +1,4 @@
+import { useGetVersionQuery } from "@/controllers/API/queries/version";
 import { create } from "zustand";
 import { getRepoStars, getVersion } from "../controllers/API";
 import { DarkStoreType } from "../types/zustand/dark";
@@ -12,10 +13,8 @@ export const useDarkStore = create<DarkStoreType>((set, get) => ({
     set(() => ({ dark: dark }));
     window.localStorage.setItem("isDark", dark.toString());
   },
-  refreshVersion: () => {
-    getVersion().then((data) => {
-      set(() => ({ version: data.version }));
-    });
+  refreshVersion: (v) => {
+    set(() => ({ version: v }))
   },
   refreshStars: () => {
     if (import.meta.env.CI) {

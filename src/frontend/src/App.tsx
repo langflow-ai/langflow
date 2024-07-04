@@ -22,27 +22,28 @@ import useAlertStore from "./stores/alertStore";
 import { useDarkStore } from "./stores/darkStore";
 import useFlowsManagerStore from "./stores/flowsManagerStore";
 import { useFolderStore } from "./stores/foldersStore";
+import { useGetVersionQuery } from "./controllers/API/queries/version";
 
 export default function App() {
   const queryClient = new QueryClient();
 
   useTrackLastVisitedPath();
-
   const [fetchError, setFetchError] = useState(false);
   const isLoading = useFlowsManagerStore((state) => state.isLoading);
-
   const { isAuthenticated, login, setUserData, setAutoLogin, getUser } =
-    useContext(AuthContext);
+  useContext(AuthContext);
   const setLoading = useAlertStore((state) => state.setLoading);
-  const refreshVersion = useDarkStore((state) => state.refreshVersion);
   const refreshStars = useDarkStore((state) => state.refreshStars);
   const navigate = useNavigate();
   const dark = useDarkStore((state) => state.dark);
 
   const isLoadingFolders = useFolderStore((state) => state.isLoadingFolders);
+  useGetVersionQuery(
+    undefined,
+    "GetVersion",
+  );
 
   const [isLoadingHealth, setIsLoadingHealth] = useState(false);
-
   useEffect(() => {
     if (!dark) {
       document.getElementById("body")!.classList.remove("dark");
@@ -78,17 +79,16 @@ export default function App() {
         }
       });
 
-    /*
+      /*
       Abort the request as it isn't needed anymore, the component being
       unmounted. It helps avoid, among other things, the well-known "can't
       perform a React state update on an unmounted component" warning.
     */
     return () => abortController.abort();
   }, []);
-
   const fetchAllData = async () => {
     setTimeout(async () => {
-      await Promise.all([refreshStars(), refreshVersion(), fetchData()]);
+      await Promise.all([refreshStars(), fetchData()]);
     }, 1000);
   };
 
@@ -154,7 +154,6 @@ export default function App() {
   return (
     //need parent component with width and height
     <div className="flex h-full flex-col">
-      <QueryClientProvider client={queryClient}>
         <ErrorBoundary
           onReset={() => {
             // any reset function
@@ -185,7 +184,6 @@ export default function App() {
             </Case>
           </>
         </ErrorBoundary>
-      </QueryClientProvider>
       <div></div>
       <div className="app-div">
         <AlertDisplayArea />
