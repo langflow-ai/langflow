@@ -1459,7 +1459,7 @@ class Graph:
         Returns:
             None
         """
-        self.run_manager.build_run_map(self)
+        self.run_manager.build_run_map(predecessor_map=self.predecessor_map, vertices_to_run=self.vertices_to_run)
 
     def find_runnable_predecessors_for_successors(self, vertex_id: str) -> List[str]:
         """
