@@ -67,7 +67,7 @@ export default function IOFileInput({ field, updateValue }: IOFileInputProps) {
     setIsDragging(false);
   };
 
-  const mutation = usePostUploadFile();
+  const { mutate } = usePostUploadFile();
 
   const upload = async (file) => {
     if (file) {
@@ -83,7 +83,7 @@ export default function IOFileInput({ field, updateValue }: IOFileInputProps) {
         document.body.appendChild(imgElement); // Add the image to the body or replace this with your desired location
       };
       fileReader.readAsDataURL(file);
-      mutation.mutate(
+      mutate(
         { file, id: currentFlowId },
         {
           onSuccess: (data) => {

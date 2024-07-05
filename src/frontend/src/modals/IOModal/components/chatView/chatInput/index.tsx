@@ -1,6 +1,6 @@
 import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
 import useAlertStore from "@/stores/alertStore";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import ShortUniqueId from "short-unique-id";
 import {
   ALLOWED_IMAGE_INPUT_EXTENSIONS,
@@ -9,7 +9,6 @@ import {
   FS_ERROR_TEXT,
   SN_ERROR_TEXT,
 } from "../../../../../constants/constants";
-import { uploadFile } from "../../../../../controllers/API";
 import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
 import {
   ChatInputType,
@@ -22,7 +21,7 @@ import UploadFileButton from "./components/uploadFileButton";
 import { getClassNamesFilePreview } from "./helpers/get-class-file-preview";
 import useAutoResizeTextArea from "./hooks/use-auto-resize-text-area";
 import useFocusOnUnlock from "./hooks/use-focus-unlock";
-export default function ChatInput({
+export default function ChattInput({
   lockChat,
   chatValue,
   sendMessage,
@@ -39,16 +38,33 @@ export default function ChatInput({
   const [inputFocus, setInputFocus] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  const [id, setId] = useState<string>("");
 
   useFocusOnUnlock(lockChat, inputRef);
   useAutoResizeTextArea(chatValue, inputRef);
 
+  const { mutate, isPending } = usePostUploadFile();
+
   const handleFileChange = async (
-    event: React.ChangeEvent<HTMLInputElement>,
+    event: React.ChangeEvent<HTMLInputElement> | ClipboardEvent,
   ) => {
-    const fileInput = event.target;
-    const file = fileInput.files?.[0];
+    let file: File | null = null;
+
+    if ("clipboardData" in event) {
+      const items = event.clipboardData?.items;
+      if (items) {
+        for (let i = 0; i < items.length; i++) {
+          const blob = items[i].getAsFile();
+          if (blob) {
+            file = blob;
+            break;
+          }
+        }
+      }
+    } else {
+      const fileInput = event.target as HTMLInputElement;
+      file = fileInput.files?.[0] ?? null;
+    }
+
     if (file) {
       const fileExtension = file.name.split(".").pop()?.toLowerCase();
 
@@ -65,18 +81,16 @@ export default function ChatInput({
 
       const uid = new ShortUniqueId();
       const id = uid.randomUUID(10);
-      setId(id);
 
       const type = file.type.split("/")[0];
-      const blob = file;
 
       setFiles((prevFiles) => [
         ...prevFiles,
-        { file: blob, loading: true, error: false, id, type },
+        { file, loading: true, error: false, id, type },
       ]);
 
-      mutation.mutate(
-        { file: blob, id: currentFlowId },
+      mutate(
+        { file, id: currentFlowId },
         {
           onSuccess: (data) => {
             setFiles((prev) => {
@@ -100,10 +114,17 @@ export default function ChatInput({
       );
     }
 
-    fileInput.value = "";
+    if ("target" in event && event.target instanceof HTMLInputElement) {
+      event.target.value = "";
+    }
   };
 
-  const mutation = usePostUploadFile();
+  useEffect(() => {
+    document.addEventListener("paste", handleFileChange);
+    return () => {
+      document.removeEventListener("paste", handleFileChange);
+    };
+  }, [handleFileChange, currentFlowId, lockChat]);
 
   const send = () => {
     sendMessage({
