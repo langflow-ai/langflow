@@ -320,22 +320,6 @@ export async function getVersion() {
 }
 
 /**
- * Fetches the health status of the API.
- *
- * @returns {Promise<AxiosResponse<any>>} A promise that resolves to an AxiosResponse containing the health status.
- */
-export async function getHealth() {
-  return await api.get("/health").catch((e) => {
-    if (e.code === "ECONNABORTED") {
-      console.log("request cancelled");
-    } else {
-      // raise error to be caught by the caller
-      throw e;
-    }
-  }); // Health is the only endpoint that doesn't require /api/v1
-}
-
-/**
  * Fetches the build status of a flow.
  * @param {string} flowId - The ID of the flow to fetch the build status for.
  * @returns {Promise<BuildStatusTypeAPI>} A promise that resolves to an AxiosResponse containing the build status.
