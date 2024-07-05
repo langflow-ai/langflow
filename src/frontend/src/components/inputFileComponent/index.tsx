@@ -47,7 +47,7 @@ export default function InputFileComponent({
     setMyValue(value);
   }, [value]);
 
-  const mutation = usePostUploadFile();
+  const { mutate } = usePostUploadFile();
 
   const handleButtonClick = (): void => {
     // Create a file input element
@@ -66,7 +66,7 @@ export default function InputFileComponent({
       // Check if the file type is correct
       if (file && checkFileType(file.name)) {
         // Upload the file
-        mutation.mutate(
+        mutate(
           { file, id: currentFlowId },
           {
             onSuccess: (data) => {
