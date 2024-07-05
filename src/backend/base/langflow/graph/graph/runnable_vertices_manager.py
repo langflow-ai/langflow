@@ -40,6 +40,11 @@ class RunnableVerticesManager:
         self.run_predecessors = state["run_predecessors"]
         self.vertices_to_run = state["vertices_to_run"]
 
+    def update_run_state(self, run_predecessors: dict, vertices_to_run: set):
+        self.run_predecessors.update(run_predecessors)
+        self.vertices_to_run.update(vertices_to_run)
+        self.build_run_map(self.run_predecessors, self.vertices_to_run)
+
     def is_vertex_runnable(self, vertex_id: str, inactivated_vertices: set[str]) -> bool:
         """Determines if a vertex is runnable."""
 
