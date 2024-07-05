@@ -1491,8 +1491,8 @@ class Graph:
 
     def build_adjacency_maps(self, edges: List[ContractEdge]) -> Tuple[Dict[str, List[str]], Dict[str, List[str]]]:
         """Returns the adjacency maps for the graph."""
-        predecessor_map = defaultdict(list)
-        successor_map = defaultdict(list)
+        predecessor_map: dict[str, list[str]] = defaultdict(list)
+        successor_map: dict[str, list[str]] = defaultdict(list)
         for edge in edges:
             if edge.source_id not in predecessor_map[edge.target_id]:
                 predecessor_map[edge.target_id].append(edge.source_id)
