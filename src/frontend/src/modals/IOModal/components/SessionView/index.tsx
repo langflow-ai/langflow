@@ -19,7 +19,7 @@ export default function SessionView({ session,id }: { session?:string,id?:string
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
 
-  let {isFetching}=useGetMessagesQuery({mode:"union",id},"TableSaveState");
+  let {isFetching}=useGetMessagesQuery({mode:"union",id});
 
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
 

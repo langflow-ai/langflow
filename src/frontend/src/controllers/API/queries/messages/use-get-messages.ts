@@ -22,7 +22,7 @@ interface MessagesResponse {
 export const useGetMessagesQuery: useQueryFunctionType<
   MessagesQueryParams,
   MessagesResponse
-> = ({ id, mode, excludedFields, params }, onFetch) => {
+> = ({ id, mode, excludedFields, params }, options) => {
   const { query } = UseRequestProcessor();
 
   const getMessagesFn = async (id?: string, params = {}) => {
@@ -48,7 +48,7 @@ export const useGetMessagesQuery: useQueryFunctionType<
   const queryResult = query(
     ["useGetMessagesQuery"],
     responseFn,
-    {},
+    {...options},
   );
 
   return queryResult;
