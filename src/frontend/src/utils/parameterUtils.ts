@@ -12,7 +12,7 @@ export const handleUpdateValues = async (name: string, data: NodeDataType) => {
 
   const template = data.node?.template;
   if (!template) {
-    console.error("No template found in the node.");
+    console.error("No template found in the component.");
     return;
   }
 
@@ -27,7 +27,7 @@ export const handleUpdateValues = async (name: string, data: NodeDataType) => {
       return res.data.template;
     }
   } catch (error) {
-    console.error("Error occurred while updating the node:", error);
+    console.error("Error occurred while updating the component:", error);
     throw error;
   }
 };

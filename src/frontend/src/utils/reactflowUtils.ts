@@ -348,7 +348,7 @@ Array<{ id: string; errors: Array<string> }> {
       {
         id: "",
         errors: [
-          "No nodes found in the flow. Please add at least one node to the flow.",
+          "No components found in the flow. Please add at least one component to the flow.",
         ],
       },
     ];
@@ -848,7 +848,7 @@ export function validateSelection(
   let errorsArray: Array<string> = [];
   // check if there is more than one node
   if (clonedSelection.nodes.length < 2) {
-    errorsArray.push("Please select more than one node");
+    errorsArray.push("Please select more than one component");
   }
   if (
     clonedSelection.nodes.some(
@@ -857,7 +857,7 @@ export function validateSelection(
         isOutputNode(node.data as NodeDataType),
     )
   ) {
-    errorsArray.push("Select non-input/output nodes only");
+    errorsArray.push("Select non-input/output components only");
   }
   //check if there are two or more nodes with free outputs
   if (
@@ -865,7 +865,7 @@ export function validateSelection(
       (n) => !clonedSelection.edges.some((e) => e.source === n.id),
     ).length > 1
   ) {
-    errorsArray.push("Select only one node with free outputs");
+    errorsArray.push("Select only one component with free outputs");
   }
 
   // check if there is any node that does not have any connection
@@ -876,7 +876,7 @@ export function validateSelection(
         !clonedSelection.edges.some((edge) => edge.source === node.id),
     )
   ) {
-    errorsArray.push("Select only connected nodes");
+    errorsArray.push("Select only connected components");
   }
   return errorsArray;
 }
