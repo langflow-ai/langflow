@@ -199,6 +199,10 @@ def run(
     except KeyboardInterrupt:
         if process is not None:
             process.terminate()
+        sys.exit(0)
+    except Exception as e:
+        logger.exception(e)
+        sys.exit(1)
 
 
 def wait_for_server_ready(host, port):
@@ -421,23 +425,23 @@ def run_langflow(host, port, log_level, options, app):
     Run Langflow server on localhost
     """
 
-        if platform.system() in ["Windows"]:
-            # Run using uvicorn on MacOS and Windows
-            # Windows doesn't support gunicorn
-            # MacOS requires an env variable to be set to use gunicorn
-            import uvicorn
+    if platform.system() in ["Windows"]:
+        # Run using uvicorn on MacOS and Windows
+        # Windows doesn't support gunicorn
+        # MacOS requires an env variable to be set to use gunicorn
+        import uvicorn
 
-            uvicorn.run(
-                app,
-                host=host,
-                port=port,
-                log_level=log_level.lower(),
-                loop="asyncio",
-            )
-        else:
-            from langflow.server import LangflowApplication
+        uvicorn.run(
+            app,
+            host=host,
+            port=port,
+            log_level=log_level.lower(),
+            loop="asyncio",
+        )
+    else:
+        from langflow.server import LangflowApplication
 
-            LangflowApplication(app, options).run()
+        LangflowApplication(app, options).run()
 
 
 @app.command()
