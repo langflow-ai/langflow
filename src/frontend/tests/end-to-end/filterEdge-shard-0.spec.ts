@@ -56,9 +56,6 @@ test("LLMChain - Tooltip", async ({ page }) => {
       page.getByTestId("available-output-chains").first(),
     ).toBeVisible();
     await expect(
-      page.getByTestId("available-output-textsplitters").first(),
-    ).toBeVisible();
-    await expect(
       page.getByTestId("available-output-retrievers").first(),
     ).toBeVisible();
     await expect(
@@ -72,9 +69,6 @@ test("LLMChain - Tooltip", async ({ page }) => {
     ).toBeVisible();
     await expect(
       page.getByTestId("available-output-toolkits").first(),
-    ).toBeVisible();
-    await expect(
-      page.getByTestId("available-output-chains").first(),
     ).toBeVisible();
     await expect(
       page.getByTestId("available-output-agents").first(),

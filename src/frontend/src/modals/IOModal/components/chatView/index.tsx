@@ -1,10 +1,14 @@
+import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
 import { useEffect, useRef, useState } from "react";
+import ShortUniqueId from "short-unique-id";
 import IconComponent from "../../../../components/genericIconComponent";
 import { Button } from "../../../../components/ui/button";
 import {
+  ALLOWED_IMAGE_INPUT_EXTENSIONS,
   CHAT_FIRST_INITIAL_TEXT,
   CHAT_SECOND_INITIAL_TEXT,
-  EMPTY_INPUT_SEND_MESSAGE,
+  FS_ERROR_TEXT,
+  SN_ERROR_TEXT,
 } from "../../../../constants/constants";
 import { deleteFlowPool } from "../../../../controllers/API";
 import useAlertStore from "../../../../stores/alertStore";
@@ -34,8 +38,8 @@ export default function ChatView({
   const inputTypes = inputs.map((obj) => obj.type);
   const inputIds = inputs.map((obj) => obj.id);
   const outputIds = outputs.map((obj) => obj.id);
-  const outputTypes = outputs.map((obj) => obj.type);
   const updateFlowPool = useFlowStore((state) => state.updateFlowPool);
+  const [id, setId] = useState<string>("");
 
   //build chat history
   useEffect(() => {
@@ -102,11 +106,6 @@ export default function ChatView({
     }
   }, []);
 
-  async function sendAll(data: sendAllProps): Promise<void> {}
-  useEffect(() => {
-    if (ref.current) ref.current.scrollIntoView({ behavior: "smooth" });
-  }, []);
-
   const ref = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -150,12 +149,76 @@ export default function ChatView({
   const [files, setFiles] = useState<FilePreviewType[]>([]);
   const [isDragging, setIsDragging] = useState(false);
 
-  const { dragOver, dragEnter, dragLeave, onDrop } = useDragAndDrop(
+  const { dragOver, dragEnter, dragLeave } = useDragAndDrop(
     setIsDragging,
     setFiles,
     currentFlowId,
     setErrorData,
   );
+
+  const onDrop = (e) => {
+    e.preventDefault();
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleFiles(e.dataTransfer.files, setFiles, currentFlowId, setErrorData);
+      e.dataTransfer.clearData();
+    }
+    setIsDragging(false);
+  };
+
+  const { mutate } = usePostUploadFile();
+
+  const handleFiles = (files, setFiles, currentFlowId, setErrorData) => {
+    if (files) {
+      const file = files?.[0];
+      const fileExtension = file.name.split(".").pop()?.toLowerCase();
+      if (
+        !fileExtension ||
+        !ALLOWED_IMAGE_INPUT_EXTENSIONS.includes(fileExtension)
+      ) {
+        console.log("Error uploading file");
+        setErrorData({
+          title: "Error uploading file",
+          list: [FS_ERROR_TEXT, SN_ERROR_TEXT],
+        });
+        return;
+      }
+      const uid = new ShortUniqueId();
+      const id = uid.randomUUID(3);
+      setId(id);
+
+      const type = files[0].type.split("/")[0];
+      const blob = files[0];
+
+      setFiles((prevFiles) => [
+        ...prevFiles,
+        { file: blob, loading: true, error: false, id, type },
+      ]);
+
+      mutate(
+        { file: blob, id: currentFlowId },
+        {
+          onSuccess: (data) => {
+            setFiles((prev) => {
+              const newFiles = [...prev];
+              const updatedIndex = newFiles.findIndex((file) => file.id === id);
+              newFiles[updatedIndex].loading = false;
+              newFiles[updatedIndex].path = data.file_path;
+              return newFiles;
+            });
+          },
+          onError: () => {
+            setFiles((prev) => {
+              const newFiles = [...prev];
+              const updatedIndex = newFiles.findIndex((file) => file.id === id);
+              newFiles[updatedIndex].loading = false;
+              newFiles[updatedIndex].error = true;
+              return newFiles;
+            });
+          },
+        },
+      );
+    }
+  };
 
   return (
     <div
