@@ -131,7 +131,8 @@ class Graph:
             name (str): The name of the state.
             caller (str): The ID of the vertex that is updating the state.
         """
-        vertices_ids = []
+        vertices_ids = set()
+        new_predecessor_map = {}
         for vertex_id in self._is_state_vertices:
             if vertex_id == caller:
                 continue
@@ -142,7 +143,7 @@ class Graph:
                 and vertex_id != caller
                 and isinstance(vertex, StateVertex)
             ):
-                vertices_ids.append(vertex_id)
+                vertices_ids.add(vertex_id)
                 successors = self.get_all_successors(vertex, flat=True)
                 # Update run_manager.run_predecessors because we are activating vertices
                 # The run_prdecessors is the predecessor map of the vertices
@@ -153,12 +154,17 @@ class Graph:
                 edges_set = set()
                 for vertex in [vertex] + successors:
                     edges_set.update(vertex.edges)
+                    vertices_ids.add(vertex.id)
                 edges = list(edges_set)
-                new_predecessor_map, _ = self.build_adjacency_maps(edges)
-                self.run_manager.run_predecessors.update(new_predecessor_map)
-                self.vertices_to_run.update(list(map(lambda x: x.id, successors)))
-        self.activated_vertices = vertices_ids
+                predecessor_map, _ = self.build_adjacency_maps(edges)
+                new_predecessor_map.update(predecessor_map)
+
+        self.activated_vertices = list(vertices_ids)
         self.vertices_to_run.update(vertices_ids)
+        self.run_manager.update_run_state(
+            run_predecessors=new_predecessor_map,
+            vertices_to_run=self.vertices_to_run,
+        )
 
     def reset_activated_vertices(self):
         """
