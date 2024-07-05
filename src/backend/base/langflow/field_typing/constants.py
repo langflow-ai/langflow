@@ -3,6 +3,7 @@ from typing import Callable, Dict, Text, TypeAlias, TypeVar, Union
 from langchain.agents.agent import AgentExecutor
 from langchain.chains.base import Chain
 from langchain.memory.chat_memory import BaseChatMemory
+from langchain_core.chat_history import BaseChatMessageHistory
 from langchain_core.document_loaders import BaseLoader
 from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
@@ -58,6 +59,7 @@ LANGCHAIN_BASE_TYPES = {
     "BaseMemory": BaseMemory,
     "BaseChatMemory": BaseChatMemory,
     "BaseChatModel": BaseChatModel,
+    "BaseChatMessageHistory": BaseChatMessageHistory,
 }
 # Langchain base types plus Python base types
 CUSTOM_COMPONENT_SUPPORTED_TYPES = {
