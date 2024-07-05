@@ -16,12 +16,10 @@ export default function FlowLogsModal({
   const [columns, setColumns] = useState<Array<ColDef | ColGroupDef>>([]);
   const [rows, setRows] = useState<any>([]);
 
-  const { data, isLoading, refetch } = useGetTransactionsQuery(
-    {
-      id: currentFlowId,
-    },
-    "TableUnion",
-  );
+  const { data, isLoading, refetch } = useGetTransactionsQuery({
+    id: currentFlowId,
+    mode: "union",
+  });
 
   useEffect(() => {
     if (data) {

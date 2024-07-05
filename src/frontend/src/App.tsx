@@ -41,6 +41,7 @@ export default function App() {
     isError: isErrorHealth,
     refetch,
   } = useGetHealthQuery();
+
   useEffect(() => {
     if (!dark) {
       document.getElementById("body")!.classList.remove("dark");

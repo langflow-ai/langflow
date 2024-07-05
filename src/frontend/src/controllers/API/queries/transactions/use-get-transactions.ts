@@ -9,6 +9,8 @@ import { UseRequestProcessor } from "../../services/request-processor";
 interface TransactionsQueryParams {
   id: string;
   params?: Record<string, unknown>;
+  mode?: "union" | "intersection";
+  excludedColumns?: string[];
 }
 
 interface TransactionsResponse {
@@ -19,23 +21,16 @@ interface TransactionsResponse {
 export const useGetTransactionsQuery: useQueryFunctionType<
   TransactionsQueryParams,
   TransactionsResponse
-> = ({ id, params }, onFetch) => {
+> = ({ id, excludedColumns, mode, params }, options) => {
+  // Function body remains unchanged
   const { query } = UseRequestProcessor();
 
-  const responseFn = (data: any) => {
-    if (!onFetch) return data;
-    if (typeof onFetch === "function") return onFetch(data);
-    switch (onFetch) {
-      case "TableUnion": {
-        const columns = extractColumnsFromRows(data.data, "union");
-        return { rows: data.data, columns };
-      }
-      case "TableIntersection": {
-        const columns = extractColumnsFromRows(data.data, "intersection");
-        return { rows: data.data, columns };
-      }
-      default:
-        return data;
+  const responseFn = (data: object[]) => {
+    if (mode) {
+      const columns = extractColumnsFromRows(data, mode, excludedColumns);
+      return { rows: data, columns };
+    } else {
+      return data;
     }
   };
 
@@ -46,16 +41,14 @@ export const useGetTransactionsQuery: useQueryFunctionType<
       config["params"] = { ...config["params"], ...params };
     }
 
-    const rows = await api.get<TransactionsResponse>(
-      `${getURL("TRANSACTIONS")}`,
-      config,
-    );
+    const result = await api.get<object[]>(`${getURL("TRANSACTIONS")}`, config);
 
-    return responseFn(rows);
+    return responseFn(result.data);
   };
 
   const queryResult = query(["useGetTransactionsQuery"], getTransactionsFn, {
     placeholderData: keepPreviousData,
+    ...options,
   });
 
   return queryResult;
