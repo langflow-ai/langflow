@@ -420,7 +420,7 @@ def run_langflow(host, port, log_level, options, app):
     """
     Run Langflow server on localhost
     """
-    try:
+
         if platform.system() in ["Windows"]:
             # Run using uvicorn on MacOS and Windows
             # Windows doesn't support gunicorn
@@ -438,11 +438,6 @@ def run_langflow(host, port, log_level, options, app):
             from langflow.server import LangflowApplication
 
             LangflowApplication(app, options).run()
-    except KeyboardInterrupt:
-        sys.exit(0)
-    except Exception as e:
-        logger.exception(e)
-        sys.exit(1)
 
 
 @app.command()
