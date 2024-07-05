@@ -1,5 +1,4 @@
 import inspect
-import json
 import os
 import warnings
 from typing import TYPE_CHECKING, Any, Type
@@ -59,7 +58,10 @@ async def build_component_and_get_results(
     # Remove code from params
     class_object: Type["CustomComponent" | "Component"] = eval_custom_component_code(params_copy.pop("code"))
     custom_component: "CustomComponent" | "Component" = class_object(
-        user_id=user_id, parameters=params_copy, vertex=vertex, tracing_service=tracing_service
+        user_id=user_id,
+        parameters=params_copy,
+        vertex=vertex,
+        tracing_service=tracing_service,
     )
     params_copy = update_params_with_load_from_db_fields(
         custom_component, params_copy, vertex.load_from_db_fields, fallback_to_env_vars
@@ -84,22 +86,28 @@ def convert_params_to_sets(params):
 
 
 def convert_kwargs(params):
-    # if *kwargs are passed as a string, convert to dict
-    # first find any key that has kwargs or config in it
-    kwargs_keys = [key for key in params.keys() if "kwargs" in key or "config" in key]
-    for key in kwargs_keys:
-        if isinstance(params[key], str):
-            try:
-                params[key] = orjson.loads(params[key])
-            except json.JSONDecodeError:
-                # if the string is not a valid json string, we will
-                # remove the key from the params
-                params.pop(key, None)
+    # Loop through items to avoid repeated lookups
+    items_to_remove = []
+    for key, value in params.items():
+        if "kwargs" in key or "config" in key:
+            if isinstance(value, str):
+                try:
+                    params[key] = orjson.loads(value)
+                except orjson.JSONDecodeError:
+                    items_to_remove.append(key)
+
+    # Remove invalid keys outside the loop to avoid modifying dict during iteration
+    for key in items_to_remove:
+        params.pop(key, None)
+
     return params
 
 
 def update_params_with_load_from_db_fields(
-    custom_component: "CustomComponent", params, load_from_db_fields, fallback_to_env_vars=False
+    custom_component: "CustomComponent",
+    params,
+    load_from_db_fields,
+    fallback_to_env_vars=False,
 ):
     # For each field in load_from_db_fields, we will check if it's in the params
     # and if it is, we will get the value from the custom_component.keys(name)
