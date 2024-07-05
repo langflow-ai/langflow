@@ -1,5 +1,4 @@
 import { useMutationFunctionType } from "@/types/api";
-import { UseMutationResult } from "@tanstack/react-query";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
@@ -9,37 +8,19 @@ interface IPostAddApiKey {
 }
 
 // add types for error handling and success
-export const usePostAddApiKey: useMutationFunctionType<IPostAddApiKey> = ({
-  callbackSuccess,
-  callbackError,
-}) => {
+export const usePostAddApiKey: useMutationFunctionType<IPostAddApiKey> = (
+  options,
+) => {
   const { mutate } = UseRequestProcessor();
 
   const postAddApiKeyFn = async (payload: IPostAddApiKey): Promise<any> => {
-    return await api.post<any>(`${getURL("API_KEY")}/store`, {
+    const res = await api.post<any>(`${getURL("API_KEY")}/store`, {
       api_key: payload.key,
     });
+    return res.data;
   };
 
-  const mutation: UseMutationResult<any, any, IPostAddApiKey> = mutate(
-    ["usePostAddApiKey"],
-    async (payload: IPostAddApiKey) => {
-      const res = await postAddApiKeyFn(payload);
-      return res.data;
-    },
-    {
-      onError: (err) => {
-        if (callbackError) {
-          callbackError(err);
-        }
-      },
-      onSuccess: (data) => {
-        if (callbackSuccess) {
-          callbackSuccess(data);
-        }
-      },
-    },
-  );
+  const mutation = mutate(["usePostAddApiKey"], postAddApiKeyFn, options);
 
   return mutation;
 };

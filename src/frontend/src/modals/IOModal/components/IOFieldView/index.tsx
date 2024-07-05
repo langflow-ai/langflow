@@ -7,7 +7,11 @@ import InputListComponent from "../../../../components/inputListComponent";
 import PdfViewer from "../../../../components/pdfViewer";
 import { Textarea } from "../../../../components/ui/textarea";
 import { PDFViewConstant } from "../../../../constants/constants";
-import { InputOutput } from "../../../../constants/enums";
+import {
+  IOInputTypes,
+  IOOutputTypes,
+  InputOutput,
+} from "../../../../constants/enums";
 import TextOutputView from "../../../../shared/components/textOutputView";
 import useFlowStore from "../../../../stores/flowStore";
 import { IOFieldViewProps } from "../../../../types/components";
@@ -54,7 +58,7 @@ export default function IOFieldView({
     switch (type) {
       case InputOutput.INPUT:
         switch (fieldType) {
-          case "TextInput":
+          case IOInputTypes.TEXT:
             return (
               <Textarea
                 className={`w-full custom-scroll ${
@@ -73,7 +77,7 @@ export default function IOFieldView({
                 }}
               />
             );
-          case "FileLoader":
+          case IOInputTypes.FILE_LOADER:
             return (
               <IOFileInput
                 field={node.data.node!.template["file_path"]["value"]}
@@ -87,7 +91,7 @@ export default function IOFieldView({
               />
             );
 
-          case "KeyPairInput":
+          case IOInputTypes.KEYPAIR:
             return (
               <IOKeyPairInput
                 value={node.data.node!.template["input_value"]?.value}
@@ -106,7 +110,7 @@ export default function IOFieldView({
               />
             );
 
-          case "JsonInput":
+          case IOInputTypes.JSON:
             return (
               <IoJsonInput
                 value={node.data.node!.template["input_value"]?.value}
@@ -121,7 +125,7 @@ export default function IOFieldView({
               />
             );
 
-          case "StringListInput":
+          case IOInputTypes.STRING_LIST:
             return (
               <>
                 <InputListComponent
@@ -160,15 +164,15 @@ export default function IOFieldView({
         }
       case InputOutput.OUTPUT:
         switch (fieldType) {
-          case "TextOutput":
+          case IOOutputTypes.TEXT:
             return <TextOutputView left={left} value={textOutputValue} />;
-          case "PDFOutput":
+          case IOOutputTypes.PDF:
             return left ? (
               <div>{PDFViewConstant}</div>
             ) : (
               <PdfViewer pdf={flowPoolNode?.params ?? ""} />
             );
-          case "CSVOutput":
+          case IOOutputTypes.CSV:
             return left ? (
               <>
                 <CsvSelect
@@ -181,7 +185,7 @@ export default function IOFieldView({
                 <CsvOutputComponent csvNode={node} flowPool={flowPoolNode} />
               </>
             );
-          case "ImageOutput":
+          case IOOutputTypes.IMAGE:
             return left ? (
               <div>Expand the view to see the image</div>
             ) : (
@@ -194,7 +198,7 @@ export default function IOFieldView({
               />
             );
 
-          case "JsonOutput":
+          case IOOutputTypes.JSON:
             return (
               <IoJsonInput
                 value={node.data.node!.template["input_value"]?.value}
@@ -210,7 +214,7 @@ export default function IOFieldView({
               />
             );
 
-          case "KeyPairOutput":
+          case IOOutputTypes.KEY_PAIR:
             return (
               <IOKeyPairInput
                 value={node.data.node!.template["input_value"]?.value}
@@ -228,7 +232,7 @@ export default function IOFieldView({
               />
             );
 
-          case "StringListOutput":
+          case IOOutputTypes.STRING_LIST:
             return (
               <>
                 <InputListComponent
@@ -245,7 +249,7 @@ export default function IOFieldView({
                 />
               </>
             );
-          case "DataOutput":
+          case IOOutputTypes.DATA:
             return (
               <div className={left ? "h-56" : "h-full"}>
                 <DataOutputComponent

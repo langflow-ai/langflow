@@ -107,7 +107,7 @@ class RunnableVerticesManager:
 
         """
         async with lock:
-            self.remove_from_predecessors(vertex.id)
+            self.remove_vertex_from_runnables(vertex.id)
             direct_successors_ready = [
                 v for v in vertex.successors_ids if self.is_vertex_runnable(v, graph.inactivated_vertices)
             ]

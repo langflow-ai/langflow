@@ -1,4 +1,3 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useContext, useEffect, useState } from "react";
 import { ErrorBoundary } from "react-error-boundary";
 import { useNavigate } from "react-router-dom";
@@ -13,7 +12,9 @@ import {
   FETCH_ERROR_MESSAGE,
 } from "./constants/constants";
 import { AuthContext } from "./contexts/authContext";
-import { autoLogin, getGlobalVariables, getHealth } from "./controllers/API";
+import { autoLogin } from "./controllers/API";
+import { useGetHealthQuery } from "./controllers/API/queries/health";
+import { useGetVersionQuery } from "./controllers/API/queries/version";
 import { setupAxiosDefaults } from "./controllers/API/utils";
 import useTrackLastVisitedPath from "./hooks/use-track-last-visited-path";
 import Router from "./routes";
@@ -24,24 +25,24 @@ import useFlowsManagerStore from "./stores/flowsManagerStore";
 import { useFolderStore } from "./stores/foldersStore";
 
 export default function App() {
-  const queryClient = new QueryClient();
-
   useTrackLastVisitedPath();
-
-  const [fetchError, setFetchError] = useState(false);
   const isLoading = useFlowsManagerStore((state) => state.isLoading);
-
   const { isAuthenticated, login, setUserData, setAutoLogin, getUser } =
     useContext(AuthContext);
   const setLoading = useAlertStore((state) => state.setLoading);
-  const refreshVersion = useDarkStore((state) => state.refreshVersion);
   const refreshStars = useDarkStore((state) => state.refreshStars);
-  const navigate = useNavigate();
   const dark = useDarkStore((state) => state.dark);
+
+  useGetVersionQuery();
 
   const isLoadingFolders = useFolderStore((state) => state.isLoadingFolders);
 
-  const [isLoadingHealth, setIsLoadingHealth] = useState(false);
+  const {
+    data: healthData,
+    isFetching: fetchingHealth,
+    isError: isErrorHealth,
+    refetch,
+  } = useGetHealthQuery();
 
   useEffect(() => {
     if (!dark) {
@@ -85,10 +86,9 @@ export default function App() {
     */
     return () => abortController.abort();
   }, []);
-
   const fetchAllData = async () => {
     setTimeout(async () => {
-      await Promise.all([refreshStars(), refreshVersion(), fetchData()]);
+      await Promise.all([refreshStars(), fetchData()]);
     }, 1000);
   };
 
@@ -106,86 +106,46 @@ export default function App() {
     });
   };
 
-  useEffect(() => {
-    checkApplicationHealth();
-    // Timer to call getHealth every 5 seconds
-    const timer = setInterval(() => {
-      getHealth()
-        .then(() => {
-          onHealthCheck();
-        })
-        .catch(() => {
-          setFetchError(true);
-        });
-    }, 20000); // 20 seconds
-
-    // Clean up the timer on component unmount
-    return () => {
-      clearInterval(timer);
-    };
-  }, []);
-
-  const checkApplicationHealth = () => {
-    setIsLoadingHealth(true);
-    getHealth()
-      .then(() => {
-        onHealthCheck();
-      })
-      .catch(() => {
-        setFetchError(true);
-      });
-
-    setTimeout(() => {
-      setIsLoadingHealth(false);
-    }, 2000);
-  };
-
-  const onHealthCheck = () => {
-    setFetchError(false);
-    //This condition is necessary to avoid infinite loop on starter page when the application is not healthy
-    if (isLoading === true && window.location.pathname === "/") {
-      navigate("/all");
-      window.location.reload();
-    }
-  };
-
   const isLoadingApplication = isLoading || isLoadingFolders;
 
   return (
     //need parent component with width and height
     <div className="flex h-full flex-col">
-      <QueryClientProvider client={queryClient}>
-        <ErrorBoundary
-          onReset={() => {
-            // any reset function
-          }}
-          FallbackComponent={CrashErrorComponent}
-        >
-          <>
-            {
-              <FetchErrorComponent
-                description={FETCH_ERROR_DESCRIPION}
-                message={FETCH_ERROR_MESSAGE}
-                openModal={fetchError}
-                setRetry={() => {
-                  checkApplicationHealth();
-                }}
-                isLoadingHealth={isLoadingHealth}
-              ></FetchErrorComponent>
-            }
+      <ErrorBoundary
+        onReset={() => {
+          // any reset function
+        }}
+        FallbackComponent={CrashErrorComponent}
+      >
+        <>
+          {
+            <FetchErrorComponent
+              description={FETCH_ERROR_DESCRIPION}
+              message={FETCH_ERROR_MESSAGE}
+              openModal={
+                isErrorHealth ||
+                (healthData &&
+                  Object.values(healthData).some((value) => value !== "ok"))
+              }
+              setRetry={() => {
+                console.log("retrying");
+                refetch();
+              }}
+              isLoadingHealth={fetchingHealth}
+            ></FetchErrorComponent>
+          }
 
-            <Case condition={isLoadingApplication}>
-              <div className="loading-page-panel">
-                <LoadingComponent remSize={50} />
-              </div>
-            </Case>
+          <Case condition={isLoadingApplication}>
+            <div className="loading-page-panel">
+              <LoadingComponent remSize={50} />
+            </div>
+          </Case>
 
-            <Case condition={!isLoadingApplication}>
-              <Router />
-            </Case>
-          </>
-        </ErrorBoundary>
-      </QueryClientProvider>
+          <Case condition={!isLoadingApplication}>
+            <Router />
+          </Case>
+        </>
+      </ErrorBoundary>
       <div></div>
       <div className="app-div">
         <AlertDisplayArea />

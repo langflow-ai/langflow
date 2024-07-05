@@ -50,6 +50,7 @@ test("LLMChain - Filter", async ({ page }) => {
     )
     .click();
 
+  await expect(page.getByTestId("helpersID Generator")).toBeVisible();
   await expect(page.getByTestId("disclosure-agents")).toBeVisible();
 
   await expect(page.getByTestId("chainsLLMChain").first()).toBeVisible();
@@ -65,9 +66,7 @@ test("LLMChain - Filter", async ({ page }) => {
   await expect(
     page.getByTestId("retrieversAmazon Kendra Retriever").first(),
   ).toBeVisible();
-  await expect(
-    page.getByTestId("textsplittersCharacterTextSplitter").first(),
-  ).toBeVisible();
+
   await expect(
     page.getByTestId("toolkitsVectorStoreInfo").first(),
   ).toBeVisible();

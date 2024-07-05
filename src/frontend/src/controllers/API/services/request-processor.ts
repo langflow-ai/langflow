@@ -1,4 +1,10 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useMutation,
+  UseMutationOptions,
+  useQuery,
+  useQueryClient,
+  UseQueryOptions,
+} from "@tanstack/react-query";
 import { MutationFunctionType, QueryFunctionType } from "../../../types/api";
 
 export function UseRequestProcessor(): {
@@ -7,7 +13,11 @@ export function UseRequestProcessor(): {
 } {
   const queryClient = useQueryClient();
 
-  function query(queryKey, queryFn, options = {}) {
+  function query(
+    queryKey: UseQueryOptions["queryKey"],
+    queryFn: UseQueryOptions["queryFn"],
+    options: Omit<UseQueryOptions, "queryFn" | "queryKey"> = {},
+  ) {
     return useQuery({
       queryKey,
       queryFn,
@@ -15,11 +25,18 @@ export function UseRequestProcessor(): {
     });
   }
 
-  function mutate(mutationKey, mutationFn, options = {}) {
+  function mutate(
+    mutationKey: UseMutationOptions["mutationKey"],
+    mutationFn: UseMutationOptions["mutationFn"],
+    options: Omit<UseMutationOptions, "mutationFn" | "mutationKey"> = {},
+  ) {
     return useMutation({
       mutationKey,
       mutationFn,
-      onSettled: () => queryClient.invalidateQueries(mutationKey),
+      onSettled: (data, error, variables, context) => {
+        queryClient.invalidateQueries({ queryKey: mutationKey });
+        options.onSettled && options.onSettled(data, error, variables, context);
+      },
       ...options,
     });
   }
