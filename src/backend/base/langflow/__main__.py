@@ -10,8 +10,8 @@ import click
 import httpx
 import typer
 from dotenv import dotenv_values, load_dotenv
-from multiprocess import cpu_count  # noqa
-from multiprocess.context import Process
+from multiprocess import cpu_count  # type: ignore
+from multiprocess.context import Process  # type: ignore
 from packaging import version as pkg_version
 from rich import box
 from rich import print as rprint
