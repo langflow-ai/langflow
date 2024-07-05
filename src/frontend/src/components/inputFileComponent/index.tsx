@@ -1,3 +1,4 @@
+import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
 import { useEffect, useState } from "react";
 import {
   CONSOLE_ERROR_MSG,
@@ -46,6 +47,8 @@ export default function InputFileComponent({
     setMyValue(value);
   }, [value]);
 
+  const { mutate } = usePostUploadFile();
+
   const handleButtonClick = (): void => {
     // Create a file input element
     const input = document.createElement("input");
@@ -63,24 +66,27 @@ export default function InputFileComponent({
       // Check if the file type is correct
       if (file && checkFileType(file.name)) {
         // Upload the file
-        uploadFile(file, currentFlowId)
-          .then((res) => res.data)
-          .then((data) => {
-            // Get the file name from the response
-            const { file_path } = data;
+        mutate(
+          { file, id: currentFlowId },
+          {
+            onSuccess: (data) => {
+              // Get the file name from the response
+              const { file_path } = data;
 
-            // sets the value that goes to the backend
-            onFileChange(file_path);
-            // Update the state and callback with the name of the file
-            // sets the value to the user
-            setMyValue(file.name);
-            onChange(file.name);
-            setLoading(false);
-          })
-          .catch(() => {
-            console.error(CONSOLE_ERROR_MSG);
-            setLoading(false);
-          });
+              // sets the value that goes to the backend
+              onFileChange(file_path);
+              // Update the state and on with the name of the file
+              // sets the value to the user
+              setMyValue(file.name);
+              onChange(file.name);
+              setLoading(false);
+            },
+            onError: () => {
+              console.error(CONSOLE_ERROR_MSG);
+              setLoading(false);
+            },
+          },
+        );
       } else {
         // Show an error if the file type is not allowed
         setErrorData({

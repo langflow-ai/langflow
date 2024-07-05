@@ -53,6 +53,9 @@ test("RetrievalQA - Tooltip", async ({ page }) => {
 
   await visibleElementHandle.hover().then(async () => {
     await expect(
+      page.getByTestId("available-output-inputs").first(),
+    ).toBeVisible();
+    await expect(
       page.getByTestId("available-output-chains").first(),
     ).toBeVisible();
     await expect(
@@ -65,25 +68,29 @@ test("RetrievalQA - Tooltip", async ({ page }) => {
       page.getByTestId("available-output-prototypes").first(),
     ).toBeVisible();
     await expect(
-      page.getByTestId("available-output-tools").first(),
+      page.getByTestId("available-output-embeddings").first(),
+    ).toBeVisible();
+    await expect(
+      page.getByTestId("available-output-data").first(),
+    ).toBeVisible();
+    await expect(
+      page.getByTestId("available-output-vectorstores").first(),
     ).toBeVisible();
     await expect(
       page.getByTestId("available-output-memories").first(),
     ).toBeVisible();
     await expect(
-      page.getByTestId("available-output-toolkits").first(),
+      page.getByTestId("available-output-models").first(),
     ).toBeVisible();
+
     await expect(
-      page.getByTestId("available-output-chains").first(),
+      page.getByTestId("available-output-outputs").first(),
     ).toBeVisible();
     await expect(
       page.getByTestId("available-output-agents").first(),
     ).toBeVisible();
     await expect(
       page.getByTestId("available-output-helpers").first(),
-    ).toBeVisible();
-    await expect(
-      page.getByTestId("available-output-langchain_utilities").first(),
     ).toBeVisible();
 
     await page.getByTestId("icon-X").click();
@@ -96,7 +103,7 @@ test("RetrievalQA - Tooltip", async ({ page }) => {
   await page.getByTitle("zoom out").click();
 
   const rqaChainInputElements1 = await page
-    .getByTestId("handle-retrievalqa-shownode-llm-left")
+    .getByTestId("handle-retrievalqa-shownode-language model-left")
     .all();
 
   for (const element of rqaChainInputElements1) {
@@ -122,7 +129,7 @@ test("RetrievalQA - Tooltip", async ({ page }) => {
   await page.getByTitle("zoom out").click();
 
   const rqaChainInputElements0 = await page
-    .getByTestId("handle-retrievalqa-shownode-template-left")
+    .getByTestId("handle-retrievalqa-shownode-retriever-left")
     .all();
 
   for (const element of rqaChainInputElements0) {
@@ -136,16 +143,10 @@ test("RetrievalQA - Tooltip", async ({ page }) => {
     await page.waitForTimeout(2000);
 
     await expect(
-      page.getByTestId("available-input-chains").first(),
+      page.getByTestId("available-input-retrievers").first(),
     ).toBeVisible();
     await expect(
-      page.getByTestId("available-input-prototypes").first(),
-    ).toBeVisible();
-    await expect(
-      page.getByTestId("available-input-agents").first(),
-    ).toBeVisible();
-    await expect(
-      page.getByTestId("available-input-helpers").first(),
+      page.getByTestId("available-input-vectorstores").first(),
     ).toBeVisible();
 
     await page.waitForTimeout(500);
@@ -169,7 +170,7 @@ test("RetrievalQA - Tooltip", async ({ page }) => {
 
   await visibleElementHandle.hover().then(async () => {
     await expect(
-      page.getByTestId("empty-tooltip-filter").first(),
+      page.getByTestId("available-input-memories").first(),
     ).toBeVisible();
   });
 });

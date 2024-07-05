@@ -62,40 +62,47 @@ test("RetrievalQA - Filter", async ({ page }) => {
     force: true,
   });
 
+  await expect(page.getByTestId("disclosure-inputs")).toBeVisible();
+  await expect(page.getByTestId("disclosure-outputs")).toBeVisible();
+  await expect(page.getByTestId("disclosure-data")).toBeVisible();
+  await expect(page.getByTestId("disclosure-models")).toBeVisible();
   await expect(page.getByTestId("disclosure-helpers")).toBeVisible();
+  await expect(page.getByTestId("disclosure-vector stores")).toBeVisible();
+  await expect(page.getByTestId("disclosure-embeddings")).toBeVisible();
   await expect(page.getByTestId("disclosure-agents")).toBeVisible();
   await expect(page.getByTestId("disclosure-chains")).toBeVisible();
-  await expect(page.getByTestId("disclosure-utilities")).toBeVisible();
   await expect(page.getByTestId("disclosure-memories")).toBeVisible();
   await expect(page.getByTestId("disclosure-prototypes")).toBeVisible();
   await expect(page.getByTestId("disclosure-retrievers")).toBeVisible();
   await expect(page.getByTestId("disclosure-text splitters")).toBeVisible();
-  await expect(page.getByTestId("disclosure-toolkits")).toBeVisible();
-  await expect(page.getByTestId("disclosure-tools")).toBeVisible();
 
-  await expect(page.getByTestId("chainsRetrieval QA").first()).toBeVisible();
+  await expect(page.getByTestId("inputsChat Input").first()).toBeVisible();
+  await expect(page.getByTestId("outputsChat Output").first()).toBeVisible();
+  await expect(page.getByTestId("dataAPI Request").first()).toBeVisible();
+  await expect(page.getByTestId("modelsAmazon Bedrock").first()).toBeVisible();
+  await expect(page.getByTestId("helpersChat Memory").first()).toBeVisible();
+  await expect(page.getByTestId("vectorstoresAstra DB").first()).toBeVisible();
   await expect(
-    page.getByTestId("langchain_utilitiesSearchApi").first(),
+    page.getByTestId("embeddingsAmazon Bedrock Embeddings").first(),
+  ).toBeVisible();
+  await expect(
+    page.getByTestId("agentsTool Calling Agent").first(),
+  ).toBeVisible();
+  await expect(
+    page.getByTestId("chainsConversationChain").first(),
   ).toBeVisible();
   await expect(
     page.getByTestId("memoriesAstra DB Chat Memory").first(),
   ).toBeVisible();
   await expect(
-    page.getByTestId("memoriesCassandra Chat Memory").first(),
+    page.getByTestId("prototypesConditional Router").first(),
   ).toBeVisible();
   await expect(
-    page.getByTestId("prototypesFlow as Tool").first(),
-  ).toBeVisible();
-  await expect(
-    page.getByTestId("retrieversAmazon Kendra Retriever").first(),
+    page.getByTestId("retrieversSelf Query Retriever").first(),
   ).toBeVisible();
   await expect(
     page.getByTestId("textsplittersCharacterTextSplitter").first(),
   ).toBeVisible();
-  await expect(
-    page.getByTestId("toolkitsVectorStoreInfo").first(),
-  ).toBeVisible();
-  await expect(page.getByTestId("toolsSearchApi").first()).toBeVisible();
 
   await page.getByPlaceholder("Search").click();
 

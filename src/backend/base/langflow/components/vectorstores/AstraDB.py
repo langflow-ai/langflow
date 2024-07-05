@@ -117,6 +117,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             name="embedding",
             display_name="Embedding or Astra Vectorize",
             input_types=["Embeddings", "dict"],
+            info="Allows either an embedding model or an Astra Vectorize configuration. If Astra Vectorize is already configured for the collection, this field is not required.",
         ),
         StrInput(
             name="metadata_indexing_exclude",
@@ -164,6 +165,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
     def _build_vector_store_no_ingest(self):
         if self._cached_vectorstore:
             return self._cached_vectorstore
+
         try:
             from langchain_astradb import AstraDBVectorStore
             from langchain_astradb.utils.astradb import SetupMode
@@ -226,11 +228,6 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
 
         return vector_store
 
-    def build_vector_store(self):
-        vector_store = self._build_vector_store_no_ingest()
-        self._add_documents_to_vector_store(vector_store)
-        return vector_store
-
     def _add_documents_to_vector_store(self, vector_store):
         documents = []
         for _input in self.ingest_data or []:
@@ -255,6 +252,18 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             return "mmr"
         else:
             return "similarity"
+
+    def _build_search_args(self):
+        args = {
+            "k": self.number_of_results,
+            "score_threshold": self.search_score_threshold,
+        }
+
+        if self.search_filter:
+            clean_filter = {k: v for k, v in self.search_filter.items() if k and v}
+            if len(clean_filter) > 0:
+                args["filter"] = clean_filter
+        return args
 
     def search_documents(self) -> list[Data]:
         vector_store = self._build_vector_store_no_ingest()
@@ -283,21 +292,14 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             logger.debug("No search input provided. Skipping search.")
             return []
 
-    def _build_search_args(self):
-        args = {
-            "k": self.number_of_results,
-            "score_threshold": self.search_score_threshold,
-        }
-
-        if self.search_filter:
-            clean_filter = {k: v for k, v in self.search_filter.items() if k and v}
-            if len(clean_filter) > 0:
-                args["filter"] = clean_filter
-        return args
-
     def get_retriever_kwargs(self):
         search_args = self._build_search_args()
         return {
             "search_type": self._map_search_type(),
             "search_kwargs": search_args,
         }
+
+    def build_vector_store(self):
+        vector_store = self._build_vector_store_no_ingest()
+        self._add_documents_to_vector_store(vector_store)
+        return vector_store
