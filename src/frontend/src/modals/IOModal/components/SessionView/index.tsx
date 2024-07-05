@@ -12,6 +12,7 @@ import useAlertStore from "../../../../stores/alertStore";
 import { useMessagesStore } from "../../../../stores/messagesStore";
 import { messagesSorter } from "../../../../utils/utils";
 import { useGetMessagesQuery } from "@/controllers/API/queries/messages";
+import Loading from "@/components/ui/loading";
 
 export default function SessionView({ session,id }: { session?:string,id?:string  }) {
   const columns = useMessagesStore((state) => state.columns);
@@ -19,7 +20,7 @@ export default function SessionView({ session,id }: { session?:string,id?:string
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
 
-  let {isFetching}=useGetMessagesQuery({mode:"union",id});
+  let {isLoading}=useGetMessagesQuery({mode:"union",id});
 
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
 
@@ -49,6 +50,10 @@ export default function SessionView({ session,id }: { session?:string,id?:string
   const filteredMessages = session? messages.filter((message) => message.session_id === session) : messages;
 
   return (
+    (isLoading?
+    <div>
+      <Loading></Loading>
+    </div>:
     <TableComponent
       key={"sessionView"}
       onDelete={handleRemoveMessages}
@@ -65,6 +70,6 @@ export default function SessionView({ session,id }: { session?:string,id?:string
       pagination={true}
       columnDefs={columns.sort(messagesSorter)}
       rowData={filteredMessages}
-    />
+    />)
   );
 }

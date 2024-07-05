@@ -149,7 +149,7 @@ export default function IOModal({
 
   useEffect(() => {
     const sessions = new Set<string>();
-    messages.forEach((row) => {
+    messages.filter(message=>message.flow_id===currentFlow!.id).forEach((row) => {
       sessions.add(row.session_id);
     });
     setSessions(Array.from(sessions));

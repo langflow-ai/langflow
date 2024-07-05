@@ -36,20 +36,18 @@ export const useGetMessagesQuery: useQueryFunctionType<
     return await api.get<any>(`${getURL("MESSAGES")}`, config);
   };
 
-  const responseFn = async (
-  ) => {
+  const responseFn = async () => {
     const data = await getMessagesFn(id, params);
     const columns = extractColumnsFromRows(data.data, mode, excludedFields);
     useMessagesStore.getState().setMessages(data.data);
     useMessagesStore.getState().setColumns(columns);
     return { rows: data, columns };
   };
-  
-  const queryResult = query(
-    ["useGetMessagesQuery"],
-    responseFn,
-    {...options},
-  );
+
+  const queryResult = query(["useGetMessagesQuery"], responseFn, {
+    placeholderData: keepPreviousData,
+    ...options,
+  });
 
   return queryResult;
 };
