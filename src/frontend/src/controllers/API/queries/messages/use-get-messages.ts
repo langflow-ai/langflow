@@ -44,7 +44,8 @@ export const useGetMessagesQuery: useQueryFunctionType<
     return { rows: data, columns };
   };
 
-  const queryResult = query(["useGetMessagesQuery"], responseFn, {
+
+  const queryResult = query(["useGetMessagesQuery", {id}], responseFn, {
     placeholderData: keepPreviousData,
     ...options,
   });
