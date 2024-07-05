@@ -16,7 +16,7 @@ from langflow.graph.graph.runnable_vertices_manager import RunnableVerticesManag
 from langflow.graph.graph.state_manager import GraphStateManager
 from langflow.graph.graph.utils import find_start_component_id, process_flow
 from langflow.graph.schema import InterfaceComponentTypes, RunOutputs
-from langflow.graph.vertex.base import Vertex
+from langflow.graph.vertex.base import Vertex, VertexStates
 from langflow.graph.vertex.types import InterfaceVertex, StateVertex
 from langflow.schema import Data
 from langflow.schema.schema import INPUT_FIELD_NAME, InputType
@@ -155,6 +155,8 @@ class Graph:
                 for vertex in [vertex] + successors:
                     edges_set.update(vertex.edges)
                     vertices_ids.add(vertex.id)
+                    if vertex.state == VertexStates.INACTIVE:
+                        vertex.set_state("ACTIVE")
                 edges = list(edges_set)
                 predecessor_map, _ = self.build_adjacency_maps(edges)
                 new_predecessor_map.update(predecessor_map)
