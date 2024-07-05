@@ -1,19 +1,16 @@
 import uuid
 
-from fastapi import Depends, APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from loguru import logger
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
-from langflow.services.deps import (
-    get_chat_service,
-    get_session,
-    get_variable_service,
-)
+from langflow.services.auth.utils import get_password_hash
 from langflow.services.database.models.flow import Flow
-from langflow.services.variable.service import VariableService, GENERIC_TYPE
 from langflow.services.database.models.folder.utils import create_default_folder_if_it_doesnt_exist
-
+from langflow.services.database.models.user.model import User
+from langflow.services.deps import get_chat_service, get_session, get_variable_service
+from langflow.services.variable.service import GENERIC_TYPE, VariableService
 
 health_check_router = APIRouter(tags=["Health Check"])
 
@@ -47,7 +44,18 @@ async def health_check(
 ):
     response = HealthResponse()
     test_id = uuid.uuid4()
+    user_id = "da93c2bd-c857-4b10-8c8c-60988103320f"
     try:
+        if not session.exec(select(User).where(User.id == user_id)).first():
+            session.add(
+                User(
+                    id=user_id,
+                    username="health_check",
+                    is_active=False,
+                    password=get_password_hash("health_check"),
+                )
+            )
+            session.commit()
         # Check database to query a bogus flow
         stmt = select(Flow).where(Flow.id == test_id)
         session.exec(stmt).first()
@@ -67,7 +75,6 @@ async def health_check(
         logger.exception(e)
 
     # use the same uuid for user_id for testing purpose
-    user_id = "da93c2bd-c857-4b10-8c8c-60988103320f"
     try:
         variable_service.initialize_user_variables(user_id, session)
         variable_service.create_variable(
