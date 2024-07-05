@@ -16,12 +16,13 @@ export interface DownloadImagesResponse {
 export const useGetDownloadImagesQuery: useQueryFunctionType<
   DownloadImagesQueryParams,
   DownloadImagesResponse
-> = ({ flowId, fileName }) => {
+> = (params) => {
   const { query } = UseRequestProcessor();
 
   const getDownloadImagesFn = async () => {
+    if (!params) return;
     const response = await api.get<DownloadImagesResponse>(
-      `${getURL("FILES")}/images/${flowId}/${fileName}`,
+      `${getURL("FILES")}/images/${params.flowId}/${params.fileName}`,
     );
     return response["data"];
   };
