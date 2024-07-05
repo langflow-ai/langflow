@@ -70,7 +70,7 @@ class DirectoryComponent(Component):
 
     def load_directory(self) -> List[Data]:
         path = self.path
-        types = self.types or []
+        types = self.types or []  # self.types is already a list due to is_list=True
         depth = self.depth
         max_concurrency = self.max_concurrency
         load_hidden = self.load_hidden
