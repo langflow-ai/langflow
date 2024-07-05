@@ -32,7 +32,7 @@ test("LLMChain - Filter", async ({ page }) => {
   await page.getByPlaceholder("Search").click();
   await page.getByPlaceholder("Search").fill("api request");
 
-  await page.waitForTimeout(1000);
+  await page.waitForTimeout(2000);
   await page
     .getByTestId("dataAPI Request")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
