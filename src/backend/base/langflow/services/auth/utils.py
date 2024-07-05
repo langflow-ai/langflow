@@ -345,16 +345,14 @@ def ensure_valid_key(s: str) -> bytes:
         random.seed(s)
         # Generate 32 random bytes
         key = bytes(random.getrandbits(8) for _ in range(32))
+        key = base64.urlsafe_b64encode(key)
     else:
-        # If the key is long enough, use the first 32 bytes
-        key = s[:32].encode()
-
-    # Ensure the key is URL-safe base64-encoded
-    return base64.urlsafe_b64encode(key)
+        key = add_padding(s).encode()
+    return key
 
 
 def get_fernet(settings_service=Depends(get_settings_service)):
-    SECRET_KEY = settings_service.auth_settings.SECRET_KEY.get_secret_value()
+    SECRET_KEY: str = settings_service.auth_settings.SECRET_KEY.get_secret_value()
     valid_key = ensure_valid_key(SECRET_KEY)
     fernet = Fernet(valid_key)
     return fernet
