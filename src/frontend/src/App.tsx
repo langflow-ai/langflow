@@ -33,6 +33,9 @@ export default function App() {
   const refreshStars = useDarkStore((state) => state.refreshStars);
   const dark = useDarkStore((state) => state.dark);
 
+  
+  useGetVersionQuery();
+
   const isLoadingFolders = useFolderStore((state) => state.isLoadingFolders);
 
   const {
