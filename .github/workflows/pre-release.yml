@@ -1,0 +1,129 @@
+name: Langflow Pre-release (Unified)
+run-name: Langflow (${{inputs.release_type}}) Pre-release by @${{ github.actor }}
+on:
+  workflow_dispatch:
+    inputs:
+      release_package:
+        description: "Release package"
+        required: true
+        type: boolean
+        default: false
+      release_type:
+        description: "Type of release (base or main)"
+        required: true
+        type: choice
+        options:
+          - base
+          - main
+
+env:
+  POETRY_VERSION: "1.8.2"
+
+jobs:
+  release:
+    name: Release Langflow
+    if: inputs.release_package == true
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.check-version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install poetry
+        run: pipx install poetry==${{ env.POETRY_VERSION }}
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: "poetry"
+      - name: Set up Nodejs 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Check Version
+        id: check-version
+        run: |
+          if [ "${{ inputs.release_type }}" == "base" ]; then
+            version=$(cd src/backend/base && poetry version --short)
+            last_released_version=$(curl -s "https://pypi.org/pypi/langflow-base/json" | jq -r '.releases | keys | .[]' | sort -V | tail -n 1)
+          else
+            version=$(poetry version --short)
+            last_released_version=$(curl -s "https://pypi.org/pypi/langflow/json" | jq -r '.releases | keys | .[]' | sort -V | tail -n 1)
+          fi
+          if [ "$version" = "$last_released_version" ]; then
+            echo "Version $version is already released. Skipping release."
+            exit 1
+          else
+            echo version=$version >> $GITHUB_OUTPUT
+          fi
+      - name: Build project for distribution
+        run: |
+          if [ "${{ inputs.release_type }}" == "base" ]; then
+            make build base=true
+          else
+            make build main=true
+          fi
+      - name: Test CLI
+        run: |
+          if [ "${{ inputs.release_type }}" == "base" ]; then
+            python -m pip install src/backend/base/dist/*.whl
+          else
+            python -m pip install dist/*.whl
+          fi
+          python -m langflow run --host 127.0.0.1 --port 7860 &
+          SERVER_PID=$!
+          # Wait for the server to start
+          timeout 120 bash -c 'until curl -f http://127.0.0.1:7860/health; do sleep 2; done' || (echo "Server did not start in time" && kill $SERVER_PID && exit 1)
+          # Terminate the server
+          kill $SERVER_PID || (echo "Failed to terminate the server" && exit 1)
+          sleep 10 # give the server some time to terminate
+          # Check if the server is still running
+          if kill -0 $SERVER_PID 2>/dev/null; then
+            echo "Failed to terminate the server"
+            exit 1
+          else
+            echo "Server terminated successfully"
+          fi
+      - name: Publish to PyPI
+        env:
+          POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          if [ "${{ inputs.release_type }}" == "base" ]; then
+            make publish base=true
+          else
+            make publish main=true
+          fi
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist${{ inputs.release_type }}
+          path: ${{ inputs.release_type == 'base' && 'src/backend/base/dist' || 'dist' }}
+
+  call_docker_build:
+    name: Call Docker Build Workflow
+    needs: release
+    uses: langflow-ai/langflow/.github/workflows/docker-build.yml@dev
+    with:
+      version: ${{ needs.release.outputs.version }}
+      release_type: ${{ inputs.release_type }}
+    secrets: inherit
+
+  create_release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: [release]
+    if: ${{ inputs.release_type == 'main' }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist${{ inputs.release_type }}
+          path: dist
+      - name: Create Release
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: "dist/*"
+          token: ${{ secrets.GITHUB_TOKEN }}
+          draft: false
+          generateReleaseNotes: true
+          prerelease: true
+          tag: v${{ needs.release.outputs.version }}
+          commit: dev

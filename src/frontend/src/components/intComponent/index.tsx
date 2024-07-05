@@ -19,7 +19,7 @@ export default function IntComponent({
   // Clear component state
   useEffect(() => {
     if (disabled && value !== "") {
-      onChange("");
+      onChange("", undefined, true);
     }
   }, [disabled, onChange]);
 

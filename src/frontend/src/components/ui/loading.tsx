@@ -1,11 +1,15 @@
 import { SVGProps } from "react";
 
+export type LoadingProps = SVGProps<SVGSVGElement> & {
+  size?: number;
+};
+
 // https://github.com/feathericons/feather/issues/695#issuecomment-1503699643
-export const Loading = (props: SVGProps<SVGSVGElement>) => (
+export const Loading = ({ size = 24, ...props }: LoadingProps) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
-    width={24}
-    height={24}
+    width={size}
+    height={size}
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"

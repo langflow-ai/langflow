@@ -2,12 +2,13 @@ from typing import Dict, Optional
 
 from langchain_community.utilities.searx_search import SearxSearchWrapper
 
-from langflow.interface.custom.custom_component import CustomComponent
+from langflow.custom import CustomComponent
 
 
 class SearxSearchWrapperComponent(CustomComponent):
     display_name = "SearxSearchWrapper"
     description = "Wrapper for Searx API."
+    name = "SearxSearchWrapper"
 
     def build_config(self):
         return {

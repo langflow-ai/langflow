@@ -2,7 +2,7 @@ from typing import Callable, Union
 
 from langchain_community.utilities.wikipedia import WikipediaAPIWrapper
 
-from langflow.interface.custom.custom_component import CustomComponent
+from langflow.custom import CustomComponent
 
 # Assuming WikipediaAPIWrapper is a class that needs to be imported.
 # The import statement is not included as it is not provided in the JSON
@@ -12,6 +12,7 @@ from langflow.interface.custom.custom_component import CustomComponent
 class WikipediaAPIWrapperComponent(CustomComponent):
     display_name = "WikipediaAPIWrapper"
     description = "Wrapper around WikipediaAPI."
+    name = "WikipediaAPIWrapper"
 
     def build_config(self):
         return {}

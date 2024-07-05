@@ -8,6 +8,7 @@ from langflow.field_typing import Tool
 class SearchApiToolComponent(CustomComponent):
     display_name: str = "SearchApi Tool"
     description: str = "Real-time search engine results API."
+    name = "SearchAPITool"
     documentation: str = "https://www.searchapi.io/docs/google"
     field_config = {
         "engine": {

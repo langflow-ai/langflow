@@ -1,23 +1,34 @@
 .PHONY: all init format lint build build_frontend install_frontend run_frontend run_backend dev help tests coverage
 
 all: help
+VERSION=$(shell grep "^version" pyproject.toml | sed 's/.*\"\(.*\)\"$$/\1/')
+DOCKERFILE=docker/build_and_push.Dockerfile
+DOCKERFILE_BACKEND=docker/build_and_push_backend.Dockerfile
+DOCKERFILE_FRONTEND=docker/frontend/build_and_push_frontend.Dockerfile
+DOCKER_COMPOSE=docker_example/docker-compose.yml
+
 log_level ?= debug
 host ?= 0.0.0.0
 port ?= 7860
 env ?= .env
 open_browser ?= true
 path = src/backend/base/langflow/frontend
+workers ?= 1
+
 
 codespell:
 	@poetry install --with spelling
 	poetry run codespell --toml pyproject.toml
 
+
 fix_codespell:
 	@poetry install --with spelling
 	poetry run codespell --toml pyproject.toml --write
 
+
 setup_poetry:
 	pipx install poetry
+
 
 add:
 	@echo 'Adding dependencies'
@@ -33,43 +44,58 @@ ifdef base
 	cd src/backend/base && poetry add $(base)
 endif
 
+
 init:
 	@echo 'Installing backend dependencies'
 	make install_backend
 	@echo 'Installing frontend dependencies'
 	make install_frontend
 
-coverage:
-	poetry run pytest --cov \
-		--cov-config=.coveragerc \
-		--cov-report xml \
-		--cov-report term-missing:skip-covered
+
+coverage: ## run the tests and generate a coverage report
+	@poetry run coverage run
+	@poetry run coverage erase
+
 
 # allow passing arguments to pytest
-tests:
-	poetry run pytest tests --instafail $(args)
-# Use like:
+unit_tests:
+	poetry run pytest \
+		--ignore=tests/integration \
+		--instafail -ra -n auto -m "not api_key_required" \
+		$(args)
 
-format:
+
+integration_tests:
+	poetry run pytest tests/integration \
+		--instafail -ra -n auto \
+		$(args)
+
+format: ## run code formatters
 	poetry run ruff check . --fix
 	poetry run ruff format .
 	cd src/frontend && npm run format
 
-lint:
+
+lint: ## run linters
 	poetry run mypy --namespace-packages -p "langflow"
 
-install_frontend:
+
+install_frontend: ## install the frontend dependencies
 	cd src/frontend && npm install
+
 
 install_frontendci:
 	cd src/frontend && npm ci
 
+
 install_frontendc:
 	cd src/frontend && rm -rf node_modules package-lock.json && npm install
+
 
 run_frontend:
 	@-kill -9 `lsof -t -i:3000`
 	cd src/frontend && npm start
+
 
 tests_frontend:
 ifeq ($(UI), true)
@@ -77,6 +103,7 @@ ifeq ($(UI), true)
 else
 		cd src/frontend && npx playwright test --project=chromium
 endif
+
 
 run_cli:
 	@echo 'Running the CLI'
@@ -91,6 +118,7 @@ else
 	@make start host=$(host) port=$(port) log_level=$(log_level)
 endif
 
+
 run_cli_debug:
 	@echo 'Running the CLI in debug mode'
 	@make install_frontend > /dev/null
@@ -104,15 +132,26 @@ else
 	@make start host=$(host) port=$(port) log_level=debug
 endif
 
+
 start:
 	@echo 'Running the CLI'
 
 ifeq ($(open_browser),false)
-	@make install_backend && poetry run langflow run --path $(path) --log-level $(log_level) --host $(host) --port $(port) --env-file $(env) --no-open-browser
+	@make install_backend && poetry run langflow run \
+		--path $(path) \
+		--log-level $(log_level) \
+		--host $(host) \
+		--port $(port) \
+		--env-file $(env) \
+		--no-open-browser
 else
-	@make install_backend && poetry run langflow run --path $(path) --log-level $(log_level) --host $(host) --port $(port) --env-file $(env)
+	@make install_backend && poetry run langflow run \
+		--path $(path) \
+		--log-level $(log_level) \
+		--host $(host) \
+		--port $(port) \
+		--env-file $(env)
 endif
-
 
 
 setup_devcontainer:
@@ -120,35 +159,55 @@ setup_devcontainer:
 	make build_frontend
 	poetry run langflow --path src/frontend/build
 
+
 setup_env:
 	@sh ./scripts/setup/update_poetry.sh 1.8.2
 	@sh ./scripts/setup/setup_env.sh
 
-frontend:
+
+frontend: ## run the frontend in development mode
 	make install_frontend
 	make run_frontend
+
 
 frontendc:
 	make install_frontendc
 	make run_frontend
+
 
 install_backend:
 	@echo 'Installing backend dependencies'
 	@poetry install
 	@poetry run pre-commit install
 
-backend:
+
+backend: ## run the backend in development mode
 	@echo 'Setting up the environment'
 	@make setup_env
 	make install_backend
-	@-kill -9 `lsof -t -i:7860`
+	@-kill -9 $$(lsof -t -i:7860)
 ifdef login
 	@echo "Running backend autologin is $(login)";
-	LANGFLOW_AUTO_LOGIN=$(login) poetry run uvicorn --factory langflow.main:create_app --host 0.0.0.0 --port 7860 --reload --env-file .env --loop asyncio
+	LANGFLOW_AUTO_LOGIN=$(login) poetry run uvicorn \
+		--factory langflow.main:create_app \
+		--host 0.0.0.0 \
+		--port $(port) \
+		--reload \
+		--env-file $(env) \
+		--loop asyncio \
+		--workers $(workers)
 else
-	@echo "Running backend respecting the .env file";
-	poetry run uvicorn --factory langflow.main:create_app --host 0.0.0.0 --port 7860 --reload --env-file .env  --loop asyncio
+	@echo "Running backend respecting the $(env) file";
+	poetry run uvicorn \
+		--factory langflow.main:create_app \
+		--host 0.0.0.0 \
+		--port $(port) \
+		--reload \
+		--env-file $(env) \
+		--loop asyncio \
+		--workers $(workers)
 endif
+
 
 build_and_run:
 	@echo 'Removing dist folder'
@@ -159,17 +218,21 @@ build_and_run:
 	poetry run pip install dist/*.tar.gz
 	poetry run langflow run
 
+
 build_and_install:
 	@echo 'Removing dist folder'
 	rm -rf dist
 	rm -rf src/backend/base/dist
 	make build && poetry run pip install dist/*.whl && pip install src/backend/base/dist/*.whl --force-reinstall
 
-build_frontend:
+
+build_frontend: ## build the frontend static files
 	cd src/frontend && CI='' npm run build
+	rm -rf src/backend/base/langflow/frontend
 	cp -r src/frontend/build src/backend/base/langflow/frontend
 
-build:
+
+build: ## build the frontend static files and package the project
 	@echo 'Building the project'
 	@make setup_env
 ifdef base
@@ -182,12 +245,15 @@ ifdef main
 	make build_langflow
 endif
 
+
 build_langflow_base:
 	cd src/backend/base && poetry build
 	rm -rf src/backend/base/langflow/frontend
 
+
 build_langflow_backup:
 	poetry lock && poetry build
+
 
 build_langflow:
 	cd ./scripts && poetry run python update_dependencies.py
@@ -198,7 +264,8 @@ ifdef restore
 	mv poetry.lock.bak poetry.lock
 endif
 
-dev:
+
+dev: ## run the project in development mode with docker compose
 	make install_frontend
 ifeq ($(build),1)
 		@echo 'Running docker compose up with build'
@@ -208,11 +275,62 @@ else
 		docker compose $(if $(debug),-f docker-compose.debug.yml) up
 endif
 
+
+docker_build: dockerfile_build clear_dockerimage ## build DockerFile
+
+
+docker_build_backend: dockerfile_build_be clear_dockerimage ## build Backend DockerFile
+
+
+docker_build_frontend: dockerfile_build_fe clear_dockerimage ## build Frontend Dockerfile
+
+
+dockerfile_build:
+	@echo 'BUILDING DOCKER IMAGE: ${DOCKERFILE}'
+	@docker build --rm \
+		-f ${DOCKERFILE} \
+		-t langflow:${VERSION} .
+
+
+dockerfile_build_be: dockerfile_build
+	@echo 'BUILDING DOCKER IMAGE BACKEND: ${DOCKERFILE_BACKEND}'
+	@docker build --rm \
+		--build-arg LANGFLOW_IMAGE=langflow:${VERSION} \
+		   -f ${DOCKERFILE_BACKEND} \
+		   -t langflow_backend:${VERSION} .
+
+
+dockerfile_build_fe: dockerfile_build
+	@echo 'BUILDING DOCKER IMAGE FRONTEND: ${DOCKERFILE_FRONTEND}'
+	@docker build --rm \
+		--build-arg LANGFLOW_IMAGE=langflow:${VERSION} \
+		   -f ${DOCKERFILE_FRONTEND} \
+		   -t langflow_frontend:${VERSION} .
+
+
+clear_dockerimage:
+	@echo 'Clearing the docker build'
+	@if docker images -f "dangling=true" -q | grep -q '.*'; then \
+		docker rmi $$(docker images -f "dangling=true" -q); \
+	fi
+
+
+docker_compose_up: docker_build docker_compose_down
+	@echo 'Running docker compose up'
+	docker compose -f $(DOCKER_COMPOSE) up --remove-orphans
+
+
+docker_compose_down:
+	@echo 'Running docker compose down'
+	docker compose -f $(DOCKER_COMPOSE) down || true
+
+
 lock_base:
 	cd src/backend/base && poetry lock
 
 lock_langflow:
 	poetry lock
+
 
 lock:
 # Run both in parallel
@@ -220,13 +338,20 @@ lock:
 	cd src/backend/base && poetry lock
 	poetry lock
 
+update:
+	@echo 'Updating dependencies'
+	cd src/backend/base && poetry update
+	poetry update
+
 publish_base:
 	cd src/backend/base && poetry publish
+
 
 publish_langflow:
 	poetry publish
 
-publish:
+
+publish: ## build the frontend static files and package the project and publish it to PyPI
 	@echo 'Publishing the project'
 ifdef base
 	make publish_base
@@ -236,17 +361,11 @@ ifdef main
 	make publish_langflow
 endif
 
-help:
+
+help: ## show this help message
 	@echo '----'
-	@echo 'format              - run code formatters'
-	@echo 'lint                - run linters'
-	@echo 'install_frontend    - install the frontend dependencies'
-	@echo 'build_frontend      - build the frontend static files'
-	@echo 'run_frontend        - run the frontend in development mode'
-	@echo 'run_backend         - run the backend in development mode'
-	@echo 'build               - build the frontend static files and package the project'
-	@echo 'publish             - build the frontend static files and package the project and publish it to PyPI'
-	@echo 'dev                 - run the project in development mode with docker compose'
-	@echo 'tests               - run the tests'
-	@echo 'coverage            - run the tests and generate a coverage report'
+	@echo -e "$$(grep -hE '^\S+:.*##' $(MAKEFILE_LIST) | \
+	sed -e 's/:.*##\s*/:/' \
+	-e 's/^\(.\+\):\(.*\)/\\x1b[36mmake \1\\x1b[m:\2/' | \
+	column -c2 -t -s :']]')"
 	@echo '----'

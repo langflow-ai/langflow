@@ -1,17 +1,18 @@
 from typing import Callable, Union
 
 from langchain.agents import AgentExecutor
-from langchain.sql_database import SQLDatabase
 from langchain_community.agent_toolkits import SQLDatabaseToolkit
 from langchain_community.agent_toolkits.sql.base import create_sql_agent
+from langchain_community.utilities import SQLDatabase
 
-from langflow.field_typing import BaseLanguageModel
-from langflow.interface.custom.custom_component import CustomComponent
+from langflow.custom import CustomComponent
+from langflow.field_typing import LanguageModel
 
 
 class SQLAgentComponent(CustomComponent):
     display_name = "SQLAgent"
     description = "Construct an SQL agent from an LLM and tools."
+    name = "SQLAgent"
 
     def build_config(self):
         return {
@@ -22,7 +23,7 @@ class SQLAgentComponent(CustomComponent):
 
     def build(
         self,
-        llm: BaseLanguageModel,
+        llm: LanguageModel,
         database_uri: str,
         verbose: bool = False,
     ) -> Union[AgentExecutor, Callable]:

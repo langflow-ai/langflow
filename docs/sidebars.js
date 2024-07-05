@@ -4,9 +4,7 @@ module.exports = {
       type: "category",
       label: "What's New?",
       collapsed: false,
-      items: [
-        "whats-new/a-new-chapter-langflow"
-      ],
+      items: ["whats-new/a-new-chapter-langflow"],
     },
     {
       type: "category",
@@ -16,8 +14,9 @@ module.exports = {
         "index",
         "getting-started/install-langflow",
         "getting-started/quickstart",
-        "getting-started/huggingface-spaces",
-        "getting-started/new-to-llms"
+        "getting-started/workspace",
+        "getting-started/possible-installation-issues",
+        "getting-started/new-to-llms",
       ],
     },
     {
@@ -29,7 +28,7 @@ module.exports = {
         "starter-projects/blog-writer",
         "starter-projects/document-qa",
         "starter-projects/memory-chatbot",
-        "starter-projects/vector-store-rag"
+        "starter-projects/vector-store-rag",
       ],
     },
     {
@@ -37,81 +36,84 @@ module.exports = {
       label: "Administration",
       collapsed: false,
       items: [
-        "administration/login",
         "administration/api",
+        "administration/login",
         "administration/cli",
-        "administration/components",
-        "administration/collection",
-        "administration/prompt-customization",
-        "administration/langfuse_integration"
+        "administration/playground",
+        "administration/memories",
+        "administration/logs",
+        "administration/collections-projects",
+        "administration/settings",
+        "administration/global-env",
+        "administration/chat-widget",
       ],
     },
     {
       type: "category",
-      label: "Core Components",
+      label: "Components",
       collapsed: false,
       items: [
-        "components/inputs",
-        "components/outputs",
+        "components/inputs-and-outputs",
+        "components/text-and-record",
         "components/data",
         "components/models",
         "components/helpers",
         "components/vector-stores",
         "components/embeddings",
-        "components/custom"
+        "components/custom",
       ],
     },
-    {
-      type: "category",
-      label: "Extended Components",
-      collapsed: true,
-      items: [
-        "components/agents",
-        "components/chains",
-        "components/experimental",
-        "components/utilities",
-        "components/model_specs",
-        "components/retrievers",
-        "components/text-splitters",
-        "components/toolkits",
-        "components/tools"
-      ],
-    },
-    {
-      type: "category",
-      label: "Example Components",
-      collapsed: true,
-      items: [
-        "examples/flow-runner",
-        "examples/conversation-chain",
-        "examples/buffer-memory",
-        "examples/csv-loader",
-        "examples/searchapi-tool",
-        "examples/serp-api-tool",
-        "examples/python-function"
-      ],
-    },
-    {
-      type: "category",
-      label: "Migration Guides",
-      collapsed: false,
-      items: [
-        "migration/possible-installation-issues",
-        "migration/migrating-to-one-point-zero",
-        "migration/inputs-and-outputs",
-        "migration/text-and-record",
-        "migration/compatibility",
-        "migration/global-variables"
-      ]
-    },
+    // RSN - Check if we need this
+    // {
+    //   type: "category",
+    //   label: "Extended Components",
+    //   collapsed: true,
+    //   items: [
+    //     "components/agents",
+    //     "components/chains",
+    //     "components/experimental",
+    //     "components/utilities",
+    //     "components/model_specs",
+    //     "components/retrievers",
+    //     "components/text-splitters",
+    //     "components/toolkits",
+    //     "components/tools",
+    //   ],
+    // },
+    // RSN - Check if we need this
+    // {
+    //   type: "category",
+    //   label: "Example Components",
+    //   collapsed: true,
+    //   items: [
+    //     "examples/chat-memory",
+    //     "examples/combine-text",
+    //     "examples/create-record",
+    //     "examples/pass",
+    //     "examples/store-message",
+    //     "examples/sub-flow",
+    //     "examples/text-operator",
+    //   ],
+    // },
+    // RSN - Check if we need this
+    // {
+    //   type: "category",
+    //   label: "Migration",
+    //   collapsed: false,
+    //   items: [
+    //     "migration/migrating-to-one-point-zero",
+    //     "migration/compatibility",
+    //   ],
+    // },
     {
       type: "category",
       label: "Tutorials",
       collapsed: true,
       items: [
         "tutorials/chatprompttemplate_guide",
+        "tutorials/custom_components",
         "tutorials/loading_document",
-        "tutorials/rag-with-astradb"
+        "tutorials/rag-with-astradb",
       ],
     },
     {
@@ -119,7 +121,10 @@ module.exports = {
       label: "Deployment",
       collapsed: true,
       items: [
-        "deployment/gcp-deployment"
+        "deployment/docker",
+        "deployment/backend-only",
+        "deployment/kubernetes",
+        "deployment/gcp-deployment",
       ],
     },
     {
@@ -127,10 +132,42 @@ module.exports = {
       label: "Contributing",
       collapsed: false,
       items: [
+        "contributing/telemetry",
         "contributing/how-contribute",
         "contributing/github-issues",
         "contributing/community",
-        "contributing/contribute-component"
+        "contributing/contribute-component",
+      ],
+    },
+    {
+      type: "category",
+      label: "Integrations",
+      collapsed: false,
+      items: [
+        "integrations/langsmith/intro",
+        {
+          type: "category",
+          label: "Notion",
+          items: [
+            "integrations/notion/intro",
+            "integrations/notion/setup",
+            "integrations/notion/search",
+            "integrations/notion/list-database-properties",
+            "integrations/notion/list-pages",
+            "integrations/notion/list-users",
+            "integrations/notion/page-create",
+            "integrations/notion/add-content-to-page",
+            "integrations/notion/page-update",
+            "integrations/notion/page-content-viewer",
+          ],
+        },
+        // {
+        //   type: "category",
+        //   label: "LangSmith",
+        //   items: [
+        //     ,
+        //   ],
+        // },
       ],
     },
   ],

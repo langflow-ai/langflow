@@ -1,25 +1,39 @@
+import {
+  UseMutationOptions,
+  UseMutationResult,
+  UseQueryOptions,
+  UseQueryResult,
+} from "@tanstack/react-query";
 import { Edge, Node, Viewport } from "reactflow";
+import { ChatInputType, ChatOutputType } from "../chat";
 import { FlowType } from "../flow";
 //kind and class are just representative names to represent the actual structure of the object received by the API
 export type APIDataType = { [key: string]: APIKindType };
 export type APIObjectType = { [key: string]: APIKindType };
 export type APIKindType = { [key: string]: APIClassType };
 export type APITemplateType = {
-  [key: string]: TemplateVariableType;
+  [key: string]: InputFieldType;
 };
 
 export type CustomFieldsType = {
   [key: string]: Array<string>;
 };
 
+export type CustomComponentRequest = {
+  data: APIClassType;
+  type: string;
+};
+
 export type APIClassType = {
-  base_classes: Array<string>;
+  base_classes?: Array<string>;
   description: string;
   template: APITemplateType;
   display_name: string;
   icon?: string;
+  edited?: boolean;
   is_input?: boolean;
   is_output?: boolean;
+  conditional_paths?: Array<string>;
   input_types?: Array<string>;
   output_types?: Array<string>;
   custom_fields?: CustomFieldsType;
@@ -27,6 +41,7 @@ export type APIClassType = {
   documentation: string;
   error?: string;
   official?: boolean;
+  outputs?: Array<OutputFieldType>;
   frozen?: boolean;
   flow?: FlowType;
   field_order?: string[];
@@ -38,10 +53,11 @@ export type APIClassType = {
     | FlowType
     | CustomFieldsType
     | boolean
-    | undefined;
+    | undefined
+    | Array<{ types: Array<string>; selected?: string }>;
 };
 
-export type TemplateVariableType = {
+export type InputFieldType = {
   type: string;
   required: boolean;
   placeholder?: string;
@@ -59,6 +75,21 @@ export type TemplateVariableType = {
   refresh_button?: boolean;
   refresh_button_text?: string;
   [key: string]: any;
+};
+
+export type OutputFieldProxyType = {
+  id: string;
+  name: string;
+  nodeDisplayName: string;
+};
+
+export type OutputFieldType = {
+  types: Array<string>;
+  selected?: string;
+  name: string;
+  display_name: string;
+  hidden?: boolean;
+  proxy?: OutputFieldProxyType;
 };
 export type sendAllProps = {
   nodes: Node[];
@@ -90,6 +121,10 @@ export type InitTypeAPI = {
 export type UploadFileTypeAPI = {
   file_path: string;
   flowId: string;
+};
+
+export type ProfilePicturesTypeAPI = {
+  files: string[];
 };
 
 export type LoginType = {
@@ -148,20 +183,36 @@ export type VertexBuildTypeAPI = {
   inactivated_vertices: Array<string> | null;
   next_vertices_ids: Array<string>;
   top_level_vertices: Array<string>;
-  run_id: string;
+  run_id?: string;
   valid: boolean;
-  params: string;
   data: VertexDataTypeAPI;
   timestamp: string;
+  params: any;
+  messages: ChatOutputType[] | ChatInputType[];
+  artifacts: any | ChatOutputType | ChatInputType;
+};
+
+export type ErrorLogType = {
+  errorMessage: string;
+  stackTrace: string;
+};
+
+export type OutputLogType = {
+  message: any | ErrorLogType;
+  type: string;
 };
 
 // data is the object received by the API
 // it has results, artifacts, timedelta, duration
 export type VertexDataTypeAPI = {
-  results: { [key: string]: { [key: string]: string } };
-  artifacts: { [key: string]: string };
+  results: { [key: string]: string };
+  outputs: { [key: string]: OutputLogType };
+  messages: ChatOutputType[] | ChatInputType[];
+  inactive?: boolean;
   timedelta?: number;
   duration?: string;
+  artifacts?: any | ChatOutputType | ChatInputType;
+  message?: ChatOutputType | ChatInputType;
 };
 
 export type CodeErrorDataTypeAPI = {
@@ -180,3 +231,28 @@ export type ResponseErrorTypeAPI = {
 export type ResponseErrorDetailAPI = {
   response: { data: { detail: string } };
 };
+export type useQueryFunctionType<T = undefined, R = any> = T extends undefined
+  ? (
+      params?: T,
+      options?: Omit<UseQueryOptions, "queryFn" | "queryKey">,
+    ) => UseQueryResult<R>
+  : (
+      params: T,
+      options?: Omit<UseQueryOptions, "queryFn" | "queryKey">,
+    ) => UseQueryResult<R>;
+
+export type QueryFunctionType = (
+  queryKey: UseQueryOptions["queryKey"],
+  queryFn: UseQueryOptions["queryFn"],
+  options?: Omit<UseQueryOptions, "queryKey" | "queryFn">,
+) => UseQueryResult<any>;
+
+export type MutationFunctionType = (
+  mutationKey: UseMutationOptions["mutationKey"],
+  mutationFn: UseMutationOptions<any, any, any>["mutationFn"],
+  options?: Omit<UseMutationOptions<any, any>, "mutationFn" | "mutationKey">,
+) => UseMutationResult<any, any, any, any>;
+
+export type useMutationFunctionType<Variables, Data = any, Error = any> = (
+  options?: Omit<UseMutationOptions<Data, Error>, "mutationFn" | "mutationKey">,
+) => UseMutationResult<Data, Error, Variables>;

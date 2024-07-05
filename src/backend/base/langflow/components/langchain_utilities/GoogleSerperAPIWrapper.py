@@ -4,12 +4,13 @@ from typing import Dict
 # If this class does not exist, you would need to create it or import the appropriate class from another module
 from langchain_community.utilities.google_serper import GoogleSerperAPIWrapper
 
-from langflow.interface.custom.custom_component import CustomComponent
+from langflow.custom import CustomComponent
 
 
 class GoogleSerperAPIWrapperComponent(CustomComponent):
     display_name = "GoogleSerperAPIWrapper"
     description = "Wrapper around the Serper.dev Google Search API."
+    name = "GoogleSerperAPIWrapper"
 
     def build_config(self) -> Dict[str, Dict]:
         return {

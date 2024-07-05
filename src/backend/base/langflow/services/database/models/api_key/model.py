@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Optional
 from uuid import UUID, uuid4
 
-from pydantic import field_validator, validator
+from pydantic import field_validator
 from sqlmodel import Column, DateTime, Field, Relationship, SQLModel, func
 
 if TYPE_CHECKING:
@@ -40,6 +40,7 @@ class ApiKeyCreate(ApiKeyBase):
     created_at: Optional[datetime] = Field(default_factory=utc_now)
 
     @field_validator("created_at", mode="before")
+    @classmethod
     def set_created_at(cls, v):
         return v or utc_now()
 
@@ -52,10 +53,12 @@ class UnmaskedApiKeyRead(ApiKeyBase):
 
 class ApiKeyRead(ApiKeyBase):
     id: UUID
-    api_key: str = Field()
+    api_key: str = Field(schema_extra={"validate_default": True})
     user_id: UUID = Field()
+    created_at: datetime = Field()
 
-    @validator("api_key", always=True)
+    @field_validator("api_key")
+    @classmethod
     def mask_api_key(cls, v):
         # This validator will always run, and will mask the API key
         return f"{v[:8]}{'*' * (len(v) - 8)}"

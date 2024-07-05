@@ -15,14 +15,17 @@ test("GlobalVariables", async ({ page }) => {
   }
 
   while (modalCount === 0) {
-    await page.locator('//*[@id="new-project-btn"]').click();
+    await page.getByText("New Project", { exact: true }).click();
     await page.waitForTimeout(5000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
-  await page.waitForTimeout(1000);
-
+  await page.waitForSelector('[data-testid="blank-flow"]', {
+    timeout: 30000,
+  });
   await page.getByTestId("blank-flow").click();
-  await page.waitForTimeout(1000);
+  await page.waitForSelector('[data-testid="extended-disclosure"]', {
+    timeout: 30000,
+  });
   await page.getByTestId("extended-disclosure").click();
   await page.getByPlaceholder("Search").click();
   await page.getByPlaceholder("Search").fill("openai");
@@ -35,6 +38,10 @@ test("GlobalVariables", async ({ page }) => {
   await page.mouse.up();
   await page.mouse.down();
 
+  await page.waitForSelector('[title="fit view"]', {
+    timeout: 100000,
+  });
+
   await page.getByTitle("fit view").click();
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
@@ -43,7 +50,7 @@ test("GlobalVariables", async ({ page }) => {
   const genericName = Math.random().toString();
   const credentialName = Math.random().toString();
 
-  await page.getByTestId("icon-Globe").nth(1).click();
+  await page.getByTestId("icon-Globe").nth(0).click();
   await page.getByText("Add New Variable", { exact: true }).click();
   await page
     .getByPlaceholder("Insert a name for the variable...")
@@ -69,6 +76,8 @@ test("GlobalVariables", async ({ page }) => {
   await page.getByText("Save Variable", { exact: true }).click();
   expect(page.getByText(credentialName, { exact: true })).not.toBeNull();
   await page.getByText(credentialName, { exact: true }).isVisible();
+  await page.waitForTimeout(2000);
+
   await page
     .getByText(credentialName, { exact: true })
     .hover()

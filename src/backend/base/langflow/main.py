@@ -1,24 +1,64 @@
+import os
+import asyncio
+import warnings
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Optional
 from urllib.parse import urlencode
 
 import nest_asyncio  # type: ignore
-import socketio  # type: ignore
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from loguru import logger
+from pydantic import PydanticDeprecatedSince20
 from rich import print as rprint
 from starlette.middleware.base import BaseHTTPMiddleware
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
-from langflow.api import router
-from langflow.initial_setup.setup import create_or_update_starter_projects
+from langflow.api import router, health_check_router
+from langflow.initial_setup.setup import (
+    create_or_update_starter_projects,
+    initialize_super_user_if_needed,
+    load_flows_from_directory,
+)
+from langflow.interface.types import get_and_cache_all_types_dict
 from langflow.interface.utils import setup_llm_caching
+from langflow.services.deps import get_cache_service, get_settings_service, get_telemetry_service
 from langflow.services.plugins.langfuse_plugin import LangfuseInstance
 from langflow.services.utils import initialize_services, teardown_services
 from langflow.utils.logger import configure
+
+# Ignore Pydantic deprecation warnings from Langchain
+warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
+
+
+class RequestCancelledMiddleware(BaseHTTPMiddleware):
+    def __init__(self, app):
+        super().__init__(app)
+
+    async def dispatch(self, request: Request, call_next):
+        sentinel = object()
+
+        async def cancel_handler():
+            while True:
+                if await request.is_disconnected():
+                    return sentinel
+                await asyncio.sleep(0.1)
+
+        handler_task = asyncio.create_task(call_next(request))
+        cancel_task = asyncio.create_task(cancel_handler())
+
+        done, pending = await asyncio.wait([handler_task, cancel_task], return_when=asyncio.FIRST_COMPLETED)
+
+        for task in pending:
+            task.cancel()
+
+        if cancel_task in done:
+            return Response("Request was cancelled", status_code=499)
+        else:
+            return await handler_task
 
 
 class JavaScriptMIMETypeMiddleware(BaseHTTPMiddleware):
@@ -33,22 +73,24 @@ class JavaScriptMIMETypeMiddleware(BaseHTTPMiddleware):
         return response
 
 
-def get_lifespan(fix_migration=False, socketio_server=None):
-    from langflow.version import __version__  # type: ignore
-
+def get_lifespan(fix_migration=False, socketio_server=None, version=None):
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         nest_asyncio.apply()
         # Startup message
-        if __version__:
-            rprint(f"[bold green]Starting Langflow v{__version__}...[/bold green]")
+        if version:
+            rprint(f"[bold green]Starting Langflow v{version}...[/bold green]")
         else:
             rprint("[bold green]Starting Langflow...[/bold green]")
         try:
             initialize_services(fix_migration=fix_migration, socketio_server=socketio_server)
             setup_llm_caching()
             LangfuseInstance.update()
-            create_or_update_starter_projects()
+            initialize_super_user_if_needed()
+            task = asyncio.create_task(get_and_cache_all_types_dict(get_settings_service(), get_cache_service()))
+            await create_or_update_starter_projects(task)
+            asyncio.create_task(get_telemetry_service().start())
+            load_flows_from_directory()
             yield
         except Exception as exc:
             if "langflow migration --fix" not in str(exc):
@@ -63,11 +105,17 @@ def get_lifespan(fix_migration=False, socketio_server=None):
 
 def create_app():
     """Create the FastAPI app and include the router."""
+    try:
+        from langflow.version import __version__  # type: ignore
+    except ImportError:
+        from importlib.metadata import version
+
+        __version__ = version("langflow-base")
 
     configure()
-    socketio_server = socketio.AsyncServer(async_mode="asgi", cors_allowed_origins="*", logger=True)
-    lifespan = get_lifespan(socketio_server=socketio_server)
-    app = FastAPI(lifespan=lifespan)
+    lifespan = get_lifespan(version=__version__)
+    app = FastAPI(lifespan=lifespan, title="Langflow", version=__version__)
+    setup_sentry(app)
     origins = ["*"]
 
     app.add_middleware(
@@ -78,6 +126,8 @@ def create_app():
         allow_headers=["*"],
     )
     app.add_middleware(JavaScriptMIMETypeMiddleware)
+    # ! Deactivating this until we find a better solution
+    # app.add_middleware(RequestCancelledMiddleware)
 
     @app.middleware("http")
     async def flatten_query_string_lists(request: Request, call_next):
@@ -89,20 +139,42 @@ def create_app():
 
         return await call_next(request)
 
-    @app.get("/health")
-    def health():
-        return {"status": "ok"}
+    settings = get_settings_service().settings
+    if prome_port_str := os.environ.get("LANGFLOW_PROMETHEUS_PORT"):
+        # set here for create_app() entry point
+        prome_port = int(prome_port_str)
+        if prome_port > 0 or prome_port < 65535:
+            rprint(f"[bold green]Starting Prometheus server on port {prome_port}...[/bold green]")
+            settings.prometheus_enabled = True
+            settings.prometheus_port = prome_port
+        else:
+            raise ValueError(f"Invalid port number {prome_port_str}")
+
+    if settings.prometheus_enabled:
+        from prometheus_client import start_http_server
+
+        start_http_server(settings.prometheus_port)
 
     app.include_router(router)
+    app.include_router(health_check_router)
 
-    app = mount_socketio(app, socketio_server)
+    FastAPIInstrumentor.instrument_app(app)
 
     return app
 
 
-def mount_socketio(app: FastAPI, socketio_server: socketio.AsyncServer):
-    app.mount("/sio", socketio.ASGIApp(socketio_server, socketio_path=""))
-    return app
+def setup_sentry(app: FastAPI):
+    settings = get_settings_service().settings
+    if settings.sentry_dsn:
+        import sentry_sdk
+        from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
+
+        sentry_sdk.init(
+            dsn=settings.sentry_dsn,
+            traces_sample_rate=settings.sentry_traces_sample_rate,
+            profiles_sample_rate=settings.sentry_profiles_sample_rate,
+        )
+        app.add_middleware(SentryAsgiMiddleware)
 
 
 def setup_static_files(app: FastAPI, static_files_dir: Path):

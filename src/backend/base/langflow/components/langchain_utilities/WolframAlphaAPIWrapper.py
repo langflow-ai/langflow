@@ -2,7 +2,7 @@ from typing import Callable, Union
 
 from langchain_community.utilities.wolfram_alpha import WolframAlphaAPIWrapper
 
-from langflow.interface.custom.custom_component import CustomComponent
+from langflow.custom import CustomComponent
 
 # Since all the fields in the JSON have show=False, we will only create a basic component
 # without any configurable fields.
@@ -11,6 +11,7 @@ from langflow.interface.custom.custom_component import CustomComponent
 class WolframAlphaAPIWrapperComponent(CustomComponent):
     display_name = "WolframAlphaAPIWrapper"
     description = "Wrapper for Wolfram Alpha."
+    name = "WolframAlphaAPIWrapper"
 
     def build_config(self):
         return {"appid": {"display_name": "App ID", "type": "str", "password": True}}

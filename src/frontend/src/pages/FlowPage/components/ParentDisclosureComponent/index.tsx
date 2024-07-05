@@ -5,11 +5,11 @@ import { DisclosureComponentType } from "../../../../types/components";
 export default function ParentDisclosureComponent({
   button: { title, Icon, buttons = [] },
   children,
-  openDisc,
+  defaultOpen,
   testId,
 }: DisclosureComponentType): JSX.Element {
   return (
-    <Disclosure as="div" defaultOpen={openDisc} key={title}>
+    <Disclosure as="div" defaultOpen={defaultOpen} key={title}>
       {({ open }) => (
         <>
           <div>
@@ -17,8 +17,13 @@ export default function ParentDisclosureComponent({
               className="parent-disclosure-arrangement"
               data-testid={testId}
             >
-              <div className="flex gap-4">
-                <span className="parent-disclosure-title ">{title}</span>
+              <div className="flex items-baseline gap-1 align-baseline">
+                <span className="parent-disclosure-title">{title}</span>
+                {title === "Experimental" && (
+                  <div className="h-fit rounded-full bg-beta-background px-2 py-1 text-xs/3 font-semibold text-beta-foreground-soft">
+                    BETA
+                  </div>
+                )}
               </div>
               <div className="components-disclosure-div">
                 {buttons.map((btn, index) => (
@@ -30,7 +35,7 @@ export default function ParentDisclosureComponent({
                   <IconComponent
                     name="ChevronsUpDownIcon"
                     className={`${
-                      open || openDisc ? "" : ""
+                      open || defaultOpen ? "" : ""
                     } h-4 w-4 text-foreground`}
                   />
                 </div>

@@ -10,10 +10,9 @@ export default function ShadTooltip({
   styleClasses,
   delayDuration = 500,
 }: ShadToolTipType): JSX.Element {
-  return (
-    <Tooltip delayDuration={delayDuration}>
+  return content ? (
+    <Tooltip defaultOpen={!children} delayDuration={delayDuration}>
       <TooltipTrigger asChild={asChild}>{children}</TooltipTrigger>
-
       <TooltipContent
         className={cn(styleClasses, "max-w-96")}
         side={side}
@@ -23,5 +22,7 @@ export default function ShadTooltip({
         {content}
       </TooltipContent>
     </Tooltip>
+  ) : (
+    <>{children}</>
   );
 }

@@ -3,13 +3,14 @@ from typing import Callable, Union
 from langchain.agents import AgentExecutor, create_vectorstore_agent
 from langchain.agents.agent_toolkits.vectorstore.toolkit import VectorStoreToolkit
 
-from langflow.field_typing import BaseLanguageModel
-from langflow.interface.custom.custom_component import CustomComponent
+from langflow.custom import CustomComponent
+from langflow.field_typing import LanguageModel
 
 
 class VectorStoreAgentComponent(CustomComponent):
     display_name = "VectorStoreAgent"
     description = "Construct an agent from a Vector Store."
+    name = "VectorStoreAgent"
 
     def build_config(self):
         return {
@@ -19,7 +20,7 @@ class VectorStoreAgentComponent(CustomComponent):
 
     def build(
         self,
-        llm: BaseLanguageModel,
+        llm: LanguageModel,
         vector_store_toolkit: VectorStoreToolkit,
     ) -> Union[AgentExecutor, Callable]:
         return create_vectorstore_agent(llm=llm, toolkit=vector_store_toolkit)

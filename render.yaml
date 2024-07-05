@@ -3,7 +3,7 @@ services:
   - type: web
     name: langflow
     runtime: docker
-    dockerfilePath: ./Dockerfile
+    dockerfilePath: ./docker/render.Dockerfile
     repo: https://github.com/langflow-ai/langflow
     branch: main
     healthCheckPath: /health
@@ -11,6 +11,8 @@ services:
     envVars:
       - key: LANGFLOW_DATABASE_URL
         value: sqlite:////home/user/.cache/langflow/langflow.db
+      - key: LANGFLOW_HOST
+        value: 0.0.0.0
     disk:
       name: langflow-data
       mountPath: /home/user/.cache/langflow

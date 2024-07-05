@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "langflow"
-version = "1.0.0a30"
+version = "1.0.6"
 description = "A Python package with a built-in web application"
 authors = ["Langflow <contact@langflow.org>"]
 maintainers = [
@@ -25,25 +25,24 @@ langflow = "langflow.__main__:main"
 
 
 [tool.poetry.dependencies]
-python = ">=3.10,<3.12"
+python = ">=3.10,<3.13"
 langflow-base = { path = "./src/backend/base", develop = true }
 beautifulsoup4 = "^4.12.2"
 google-search-results = "^2.4.1"
-google-api-python-client = "^2.118.0"
-huggingface-hub = { version = "^0.20.0", extras = ["inference"] }
+google-api-python-client = "^2.130.0"
+huggingface-hub = { version = "^0.22.0", extras = ["inference"] }
 llama-cpp-python = { version = "~0.2.0", optional = true }
 networkx = "^3.1"
-pysrt = "^1.1.2"
-fake-useragent = "^1.4.0"
+fake-useragent = "^1.5.0"
 psycopg2-binary = "^2.9.6"
 pyarrow = "^14.0.0"
 wikipedia = "^1.4.0"
-qdrant-client = "^1.7.0"
+qdrant-client = "^1.9.0"
 weaviate-client = "*"
 sentence-transformers = { version = "^2.3.1", optional = true }
 ctransformers = { version = "^0.2.10", optional = true }
-cohere = "^5.1.7"
-faiss-cpu = "^1.7.4"
+cohere = "^5.5.3"
+faiss-cpu = "^1.8.0"
 types-cachetools = "^5.3.0.5"
 pinecone-client = "^3.0.3"
 pymongo = "^4.6.0"
@@ -53,14 +52,13 @@ psycopg = "^3.1.9"
 psycopg-binary = "^3.1.9"
 fastavro = "^1.8.0"
 celery = { extras = ["redis"], version = "^5.3.6", optional = true }
-redis = { version = "^5.0.1", optional = true }
+redis = "^5.0.1"
 flower = { version = "^2.0.0", optional = true }
 metaphor-python = "^0.1.11"
 pywin32 = { version = "^306", markers = "sys_platform == 'win32'" }
-langfuse = "^2.9.0"
+langfuse = "^2.33.0"
 metal-sdk = "^2.5.0"
 markupsafe = "^2.1.3"
-extract-msg = "^0.47.0"
 # jq is not available for windows
 boto3 = "^1.34.0"
 numexpr = "^2.8.6"
@@ -68,44 +66,53 @@ qianfan = "0.3.5"
 pgvector = "^0.2.3"
 pyautogen = "^0.2.0"
 langchain-google-genai = "^1.0.1"
-langchain-cohere = "^0.1.0rc1"
+langchain-cohere = "^0.1.5"
 elasticsearch = "^8.12.0"
 pytube = "^15.0.0"
-llama-index = "^0.10.13"
-unstructured = { extras = ["md"], version = "^0.12.4" }
 dspy-ai = "^2.4.0"
-html2text = "^2024.2.26"
-assemblyai = "^0.23.1"
-litellm = "^1.34.22"
-chromadb = "^0.4.24"
+assemblyai = "^0.26.0"
+litellm = "^1.38.0"
+chromadb = "^0.5.0"
 langchain-anthropic = "^0.1.6"
-langchain-astradb = "^0.1.0"
+langchain-astradb = "^0.3.3"
 langchain-openai = "^0.1.1"
 zep-python = { version = "^2.0.0rc5", allow-prereleases = true }
 langchain-google-vertexai = "^1.0.3"
 langchain-groq = "^0.1.3"
 langchain-pinecone = "^0.1.0"
-langchain-mistralai ="^0.1.6"
+langchain-mistralai = "^0.1.6"
+couchbase = { extras = ["couchbase"], version = "^4.2.1", optional = true }
+youtube-transcript-api = "^0.6.2"
+markdown = "^3.6"
+langchain-chroma = "^0.1.1"
+upstash-vector = "^0.4.0"
+gitpython = "^3.1.43"
+cassio = { extras = ["cassio"], version = "^0.1.7", optional = true }
+unstructured = {extras = ["docx", "md", "pptx"], version = "^0.14.4"}
+langchain-aws = "^0.1.6"
+langchain-mongodb = "^0.1.6"
+kubernetes = "^30.1.0"
+firecrawl-py = "^0.0.16"
 
 
 [tool.poetry.group.dev.dependencies]
 types-redis = "^4.6.0.5"
 ipykernel = "^6.29.0"
-mypy = "^1.9.0"
-ruff = "^0.3.5"
+mypy = "^1.10.0"
+ruff = "^0.4.5"
 httpx = "*"
-pytest = "^8.1.0"
-types-requests = "^2.31.0"
-requests = "^2.31.0"
-pytest-cov = "^4.1.0"
+pytest = "^8.2.0"
+types-requests = "^2.32.0"
+requests = "^2.32.0"
+pytest-cov = "^5.0.0"
 pandas-stubs = "^2.1.4.231227"
 types-pillow = "^10.2.0.20240213"
 types-pyyaml = "^6.0.12.8"
 types-python-jose = "^3.3.4.8"
 types-passlib = "^1.7.7.13"
 locust = "^2.23.1"
-pytest-mock = "^3.12.0"
-pytest-xdist = "^3.5.0"
+pytest-mock = "^3.14.0"
+pytest-xdist = "^3.6.0"
 types-pywin32 = "^306.0.0.4"
 types-google-cloud-ndb = "^2.2.0.0"
 pytest-sugar = "^1.0.0"
@@ -114,9 +121,13 @@ pytest-instafail = "^0.5.0"
 pytest-asyncio = "^0.23.0"
 pytest-profiling = "^1.7.0"
 pre-commit = "^3.7.0"
+vulture = "^2.11"
+dictdiffer = "^0.9.0"
 
 [tool.poetry.extras]
 deploy = ["celery", "redis", "flower"]
+couchbase = ["couchbase"]
+cassio = ["cassio"]
 local = ["llama-cpp-python", "sentence-transformers", "ctransformers"]
 
 
@@ -124,22 +135,42 @@ local = ["llama-cpp-python", "sentence-transformers", "ctransformers"]
 optional = true
 
 [tool.poetry.group.spelling.dependencies]
-codespell = "^2.2.6"
+codespell = "^2.3.0"
 
 [tool.codespell]
-skip = '.git,*.pdf,*.svg,*.pdf,*.yaml,*.ipynb,poetry.lock,*.min.js,*.css,package-lock.json,*.trig'
+skip = '.git,*.pdf,*.svg,*.pdf,*.yaml,*.ipynb,poetry.lock,*.min.js,*.css,package-lock.json,*.trig.,**/node_modules/**,./stuff/*,*.csv'
 # Ignore latin etc
 ignore-regex = '.*(Stati Uniti|Tense=Pres).*'
 
 
 [tool.pytest.ini_options]
 minversion = "6.0"
-addopts = "-ra"
 testpaths = ["tests", "integration"]
 console_output_style = "progress"
-filterwarnings = ["ignore::DeprecationWarning"]
+filterwarnings = ["ignore::DeprecationWarning", "ignore::ResourceWarning"]
 log_cli = true
-markers = ["async_test"]
+markers = ["async_test", "api_key_required"]
+
+
+[tool.coverage.run]
+command_line = """
+    -m pytest --ignore=tests/integration
+    --cov --cov-report=term --cov-report=html
+    --instafail -ra -n auto -m "not api_key_required"
+"""
+source = ["src/backend/base/langflow/"]
+omit = ["*/alembic/*", "tests/*", "*/__init__.py"]
+
+
+[tool.coverage.report]
+sort = "Stmts"
+skip_empty = true
+show_missing = false
+ignore_errors = true
+
+
+[tool.coverage.html]
+directory = "coverage"
 
 
 [tool.ruff]

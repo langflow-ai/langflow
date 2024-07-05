@@ -16,18 +16,20 @@ test.describe("save component tests", () => {
     }
 
     while (modalCount === 0) {
-      await page.locator('//*[@id="new-project-btn"]').click();
+      await page.getByText("New Project", { exact: true }).click();
       await page.waitForTimeout(5000);
       modalCount = await page.getByTestId("modal-title")?.count();
     }
-    await page.waitForTimeout(1000);
+    await page.waitForSelector('[data-testid="blank-flow"]', {
+      timeout: 30000,
+    });
     await page.getByTestId("blank-flow").click();
     await page.waitForTimeout(1000);
 
     // Read your file into a buffer.
     const jsonContent = readFileSync(
       "tests/end-to-end/assets/flow_group_test.json",
-      "utf-8"
+      "utf-8",
     );
 
     // Create the DataTransfer and File
@@ -49,7 +51,7 @@ test.describe("save component tests", () => {
       "drop",
       {
         dataTransfer,
-      }
+      },
     );
 
     const genericNoda = page.getByTestId("div-generic-node");
@@ -61,9 +63,6 @@ test.describe("save component tests", () => {
       .locator('//*[@id="react-flow-id"]/div[1]/div[2]/button[3]')
       .click();
 
-    await page.getByTestId("title-PythonFunctionTool").click({
-      modifiers: ["Control"],
-    });
     await page.getByTestId("title-ChatOpenAI").click({
       modifiers: ["Control"],
     });
@@ -87,6 +86,8 @@ test.describe("save component tests", () => {
     }
 
     await page.getByTestId("title-Group").click();
+    await page.getByTestId("more-options-modal").click();
+
     await page.getByTestId("icon-SaveAll").click();
 
     const replaceButton = await page.getByTestId("replace-button").isVisible();
@@ -94,6 +95,9 @@ test.describe("save component tests", () => {
     if (replaceButton) {
       await page.getByTestId("replace-button").click();
     }
+    await page.waitForSelector('[data-testid="extended-disclosure"]', {
+      timeout: 30000,
+    });
     await page.getByTestId("extended-disclosure").click();
     await page.getByPlaceholder("Search").click();
     await page.getByPlaceholder("Search").fill("group");

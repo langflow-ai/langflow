@@ -1,0 +1,106 @@
+name: CI
+
+on:
+  workflow_call:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "(Optional) Branch to checkout"
+        required: false
+        type: string
+      openai_api_key:
+        description: "OpenAI API Key"
+        required: false
+        type: string
+      store_api_key:
+        description: "Store API Key"
+        required: false
+        type: string
+  pull_request:
+
+
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  path-filter:
+    name: Filter Paths
+    runs-on: ubuntu-latest
+    outputs:
+      python: ${{ steps.filter.outputs.python }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      docs: ${{ steps.filter.outputs.docs }}
+      tests: ${{ steps.filter.outputs.tests }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || github.ref }}
+      - name: Filter Paths
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            python:
+              - "src/backend/**"
+              - "src/backend/**.py"
+              - "pyproject.toml"
+              - "poetry.lock"
+              - "**/python_test.yml"
+            tests:
+              - "tests/**"
+              - "src/frontend/tests/**"
+            frontend:
+              - "src/frontend/**"
+              - "**/typescript_test.yml"
+            docs:
+              - "docs/**"
+
+  test-backend:
+    needs: path-filter
+    name: Run Backend Tests
+    if: ${{ needs.path-filter.outputs.python == 'true' || needs.path-filter.outputs.tests == 'true' }}
+    uses: ./.github/workflows/python_test.yml
+
+  test-frontend:
+    needs: path-filter
+    name: Run Frontend Tests
+    if: ${{ needs.path-filter.outputs.python == 'true' || needs.path-filter.outputs.frontend == 'true' || needs.path-filter.outputs.tests == 'true' }}
+    uses: ./.github/workflows/typescript_test.yml
+    secrets:
+      OPENAI_API_KEY: "${{ secrets.OPENAI_API_KEY }}"
+      STORE_API_KEY: "${{ secrets.STORE_API_KEY }}"
+
+  lint-backend:
+    needs: path-filter
+    if: ${{ needs.path-filter.outputs.python == 'true' || needs.path-filter.outputs.tests == 'true' }}
+    name: Lint Backend
+    uses: ./.github/workflows/lint-py.yml
+    # Run only if there are python files changed
+
+  test-docs-build:
+    needs: path-filter
+    if: ${{ needs.path-filter.outputs.docs == 'true' }}
+    name: Test Docs Build
+    uses: ./.github/workflows/docs_test.yml
+
+  # https://github.com/langchain-ai/langchain/blob/master/.github/workflows/check_diffs.yml
+  ci_success:
+    name: "CI Success"
+    needs: [test-backend, test-frontend, lint-backend, test-docs-build]
+    if: |
+      always()
+    runs-on: ubuntu-latest
+    env:
+      JOBS_JSON: ${{ toJSON(needs) }}
+      RESULTS_JSON: ${{ toJSON(needs.*.result) }}
+      EXIT_CODE: ${{!contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && '0' || '1'}}
+    steps:
+      - name: "CI Success"
+        run: |
+          echo $JOBS_JSON
+          echo $RESULTS_JSON
+          echo "Exiting with $EXIT_CODE"
+          exit $EXIT_CODE

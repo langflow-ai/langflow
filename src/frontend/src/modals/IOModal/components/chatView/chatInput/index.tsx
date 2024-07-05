@@ -1,140 +1,215 @@
-import { useEffect, useState } from "react";
-import IconComponent from "../../../../../components/genericIconComponent";
-import { Textarea } from "../../../../../components/ui/textarea";
+import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
+import useAlertStore from "@/stores/alertStore";
+import { useEffect, useRef, useState } from "react";
+import ShortUniqueId from "short-unique-id";
 import {
+  ALLOWED_IMAGE_INPUT_EXTENSIONS,
   CHAT_INPUT_PLACEHOLDER,
   CHAT_INPUT_PLACEHOLDER_SEND,
+  FS_ERROR_TEXT,
+  SN_ERROR_TEXT,
 } from "../../../../../constants/constants";
 import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
-import { chatInputType } from "../../../../../types/components";
-import { classNames } from "../../../../../utils/utils";
-
-export default function ChatInput({
+import {
+  ChatInputType,
+  FilePreviewType,
+} from "../../../../../types/components";
+import FilePreview from "../filePreviewChat";
+import ButtonSendWrapper from "./components/buttonSendWrapper";
+import TextAreaWrapper from "./components/textAreaWrapper";
+import UploadFileButton from "./components/uploadFileButton";
+import { getClassNamesFilePreview } from "./helpers/get-class-file-preview";
+import useAutoResizeTextArea from "./hooks/use-auto-resize-text-area";
+import useFocusOnUnlock from "./hooks/use-focus-unlock";
+export default function ChattInput({
   lockChat,
   chatValue,
   sendMessage,
   setChatValue,
   inputRef,
   noInput,
-}: chatInputType): JSX.Element {
+  files,
+  setFiles,
+  isDragging,
+}: ChatInputType): JSX.Element {
   const [repeat, setRepeat] = useState(1);
   const saveLoading = useFlowsManagerStore((state) => state.saveLoading);
-  useEffect(() => {
-    if (!lockChat && inputRef.current) {
-      inputRef.current.focus();
+  const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
+  const [inputFocus, setInputFocus] = useState<boolean>(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
+
+  useFocusOnUnlock(lockChat, inputRef);
+  useAutoResizeTextArea(chatValue, inputRef);
+
+  const { mutate, isPending } = usePostUploadFile();
+
+  const handleFileChange = async (
+    event: React.ChangeEvent<HTMLInputElement> | ClipboardEvent,
+  ) => {
+    let file: File | null = null;
+
+    if ("clipboardData" in event) {
+      const items = event.clipboardData?.items;
+      if (items) {
+        for (let i = 0; i < items.length; i++) {
+          const blob = items[i].getAsFile();
+          if (blob) {
+            file = blob;
+            break;
+          }
+        }
+      }
+    } else {
+      const fileInput = event.target as HTMLInputElement;
+      file = fileInput.files?.[0] ?? null;
     }
-  }, [lockChat, inputRef]);
+
+    if (file) {
+      const fileExtension = file.name.split(".").pop()?.toLowerCase();
+
+      if (
+        !fileExtension ||
+        !ALLOWED_IMAGE_INPUT_EXTENSIONS.includes(fileExtension)
+      ) {
+        setErrorData({
+          title: "Error uploading file",
+          list: [FS_ERROR_TEXT, SN_ERROR_TEXT],
+        });
+        return;
+      }
+
+      const uid = new ShortUniqueId();
+      const id = uid.randomUUID(10);
+
+      const type = file.type.split("/")[0];
+
+      setFiles((prevFiles) => [
+        ...prevFiles,
+        { file, loading: true, error: false, id, type },
+      ]);
+
+      mutate(
+        { file, id: currentFlowId },
+        {
+          onSuccess: (data) => {
+            setFiles((prev) => {
+              const newFiles = [...prev];
+              const updatedIndex = newFiles.findIndex((file) => file.id === id);
+              newFiles[updatedIndex].loading = false;
+              newFiles[updatedIndex].path = data.file_path;
+              return newFiles;
+            });
+          },
+          onError: () => {
+            setFiles((prev) => {
+              const newFiles = [...prev];
+              const updatedIndex = newFiles.findIndex((file) => file.id === id);
+              newFiles[updatedIndex].loading = false;
+              newFiles[updatedIndex].error = true;
+              return newFiles;
+            });
+          },
+        },
+      );
+    }
+
+    if ("target" in event && event.target instanceof HTMLInputElement) {
+      event.target.value = "";
+    }
+  };
 
   useEffect(() => {
-    if (inputRef.current && inputRef.current.scrollHeight !== 0) {
-      inputRef.current.style.height = "inherit"; // Reset the height
-      inputRef.current.style.height = `${inputRef.current.scrollHeight}px`; // Set it to the scrollHeight
-    }
-  }, [chatValue]);
+    document.addEventListener("paste", handleFileChange);
+    return () => {
+      document.removeEventListener("paste", handleFileChange);
+    };
+  }, [handleFileChange, currentFlowId, lockChat]);
+
+  const send = () => {
+    sendMessage({
+      repeat,
+      files: files.map((file) => file.path ?? "").filter((file) => file !== ""),
+    });
+    setFiles([]);
+  };
+
+  const checkSendingOk = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    return (
+      event.key === "Enter" &&
+      !lockChat &&
+      !saveLoading &&
+      !event.shiftKey &&
+      !event.nativeEvent.isComposing
+    );
+  };
+
+  const classNameFilePreview = getClassNamesFilePreview(inputFocus);
+
+  const handleButtonClick = () => {
+    fileInputRef.current!.click();
+  };
 
   return (
-    <div className="flex w-full gap-2">
+    <div className="flex w-full flex-col-reverse">
       <div className="relative w-full">
-        <Textarea
-          onKeyDown={(event) => {
-            if (
-              event.key === "Enter" &&
-              !lockChat &&
-              !saveLoading &&
-              !event.shiftKey &&
-              !event.nativeEvent.isComposing
-            ) {
-              sendMessage(repeat);
-            }
-          }}
-          rows={1}
-          ref={inputRef}
-          disabled={lockChat || noInput || saveLoading}
-          style={{
-            resize: "none",
-            bottom: `${inputRef?.current?.scrollHeight}px`,
-            maxHeight: "150px",
-            overflow: `${
-              inputRef.current && inputRef.current.scrollHeight > 150
-                ? "auto"
-                : "hidden"
-            }`,
-          }}
-          value={
-            lockChat ? "Thinking..." : saveLoading ? "Saving..." : chatValue
-          }
-          onChange={(event): void => {
-            setChatValue(event.target.value);
-          }}
-          className={classNames(
-            lockChat || saveLoading
-              ? " form-modal-lock-true bg-input"
-              : noInput
-              ? "form-modal-no-input bg-input"
-              : " form-modal-lock-false bg-background",
-
-            "form-modal-lockchat"
-          )}
-          placeholder={
-            noInput ? CHAT_INPUT_PLACEHOLDER : CHAT_INPUT_PLACEHOLDER_SEND
-          }
+        <TextAreaWrapper
+          checkSendingOk={checkSendingOk}
+          send={send}
+          lockChat={lockChat}
+          noInput={noInput}
+          saveLoading={saveLoading}
+          chatValue={chatValue}
+          setChatValue={setChatValue}
+          CHAT_INPUT_PLACEHOLDER={CHAT_INPUT_PLACEHOLDER}
+          CHAT_INPUT_PLACEHOLDER_SEND={CHAT_INPUT_PLACEHOLDER_SEND}
+          inputRef={inputRef}
+          setInputFocus={setInputFocus}
+          files={files}
+          isDragging={isDragging}
         />
         <div className="form-modal-send-icon-position">
-          <button
-            className={classNames(
-              "form-modal-send-button",
-              noInput
-                ? "bg-high-indigo text-background"
-                : chatValue === ""
-                ? "text-primary"
-                : "bg-chat-send text-background"
-            )}
-            disabled={lockChat || saveLoading}
-            onClick={(): void => sendMessage(repeat)}
-          >
-            {lockChat || saveLoading ? (
-              <IconComponent
-                name="Lock"
-                className="form-modal-lock-icon"
-                aria-hidden="true"
-              />
-            ) : noInput ? (
-              <IconComponent
-                name="Zap"
-                className="form-modal-play-icon"
-                aria-hidden="true"
-              />
-            ) : (
-              <IconComponent
-                name="LucideSend"
-                className="form-modal-send-icon "
-                aria-hidden="true"
-              />
-            )}
-          </button>
+          <ButtonSendWrapper
+            send={send}
+            lockChat={lockChat}
+            noInput={noInput}
+            saveLoading={saveLoading}
+            chatValue={chatValue}
+            files={files}
+          />
+        </div>
+
+        <div
+          className={`absolute bottom-2 left-4 ${
+            lockChat || saveLoading ? "cursor-not-allowed" : ""
+          }`}
+        >
+          <UploadFileButton
+            lockChat={lockChat || saveLoading}
+            fileInputRef={fileInputRef}
+            handleFileChange={handleFileChange}
+            handleButtonClick={handleButtonClick}
+          />
         </div>
       </div>
-      {/* 
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button variant="primary" className="h-13 px-4">
-            <IconComponent name="Repeat" className="" aria-hidden="true" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-fit">
-          <div className="flex flex-col items-center justify-center gap-2">
-            <span className="text-sm">Repetitions: </span>
-            <Input
-              onChange={(e) => {
-                handleChange(parseInt(e.target.value));
+      {files.length > 0 && (
+        <div className={classNameFilePreview}>
+          {files.map((file) => (
+            <FilePreview
+              error={file.error}
+              file={file.file}
+              loading={file.loading}
+              key={file.id}
+              onDelete={() => {
+                setFiles((prev: FilePreviewType[]) =>
+                  prev.filter((f) => f.id !== file.id),
+                );
+                // TODO: delete file on backend
               }}
-              className="w-16"
-              type="number"
-              min={0}
             />
-          </div>
-        </PopoverContent>
-      </Popover> */}
+          ))}
+        </div>
+      )}
     </div>
   );
 }

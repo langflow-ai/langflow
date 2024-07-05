@@ -36,13 +36,13 @@ export default function NoticeAlert({
           setShow(false);
           removeAlert(id);
         }}
-        className="nocopy nopan nodelete nodrag noundo mt-6 w-96 rounded-md bg-info-background p-4 shadow-xl"
+        className="noflow nowheel nopan nodelete nodrag mt-6 w-96 rounded-md bg-info-background p-4 shadow-xl"
       >
         <div className="flex">
-          <div className="flex-shrink-0">
+          <div className="flex-shrink-0 cursor-help">
             <IconComponent
               name="Info"
-              className="h-5 w-5 text-status-blue "
+              className="h-5 w-5 text-status-blue"
               aria-hidden="true"
             />
           </div>

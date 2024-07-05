@@ -1,11 +1,10 @@
 from typing import List, Union
 
-from langchain.agents import tool
-from langchain.agents.agent_toolkits.base import BaseToolkit
-from langchain.tools import Tool
+from langchain_community.agent_toolkits.base import BaseToolkit
+from langchain_core.tools import Tool, tool
 from metaphor_python import Metaphor  # type: ignore
 
-from langflow.interface.custom.custom_component import CustomComponent
+from langflow.custom import CustomComponent
 
 
 class MetaphorToolkit(CustomComponent):
@@ -13,6 +12,7 @@ class MetaphorToolkit(CustomComponent):
     description: str = "Metaphor Toolkit"
     documentation = "https://python.langchain.com/docs/integrations/tools/metaphor_search"
     beta: bool = True
+    name = "Metaphor"
     # api key should be password = True
     field_config = {
         "metaphor_api_key": {"display_name": "Metaphor API Key", "password": True},

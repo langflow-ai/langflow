@@ -48,8 +48,10 @@ apt -y upgrade
 
 # Install Python 3 pip, Langflow, and Nginx
 apt -y install python3-pip
-pip install langflow
-langflow --host 0.0.0.0 --port 7860
+pip3 install pip -U
+apt -y update
+pip3 install langflow
+langflow run --host 0.0.0.0 --port 7860
 EOF
 )
 

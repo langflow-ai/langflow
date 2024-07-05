@@ -33,13 +33,11 @@ export default function Dropdown({
 
   const refButton = useRef<HTMLButtonElement>(null);
 
-  const PopoverContentDropdown = children
-    ? PopoverContent
-    : PopoverContentWithoutPortal;
-
+  const PopoverContentDropdown =
+    children || editNode ? PopoverContent : PopoverContentWithoutPortal;
   return (
     <>
-      {Object.keys(options)?.length > 0 ? (
+      {Object.keys(options ?? [])?.length > 0 ? (
         <>
           <Popover open={open} onOpenChange={children ? () => {} : setOpen}>
             {children ? (
@@ -59,7 +57,7 @@ export default function Dropdown({
                       ? "dropdown-component-outline"
                       : "dropdown-component-false-outline",
                     "w-full justify-between font-normal",
-                    editNode ? "input-edit-node" : "py-2"
+                    editNode ? "input-edit-node" : "py-2",
                   )}
                 >
                   <span data-testid={`value-dropdown-` + id}>
@@ -78,7 +76,9 @@ export default function Dropdown({
               </PopoverTrigger>
             )}
             <PopoverContentDropdown
-              className="nocopy nowheel nopan nodelete nodrag noundo p-0"
+              side="bottom"
+              avoidCollisions={!!children}
+              className="noflow nowheel nopan nodelete nodrag p-0"
               style={
                 children
                   ? {}
@@ -105,7 +105,7 @@ export default function Dropdown({
                           name="Check"
                           className={cn(
                             "ml-auto h-4 w-4 text-primary",
-                            value === option ? "opacity-100" : "opacity-0"
+                            value === option ? "opacity-100" : "opacity-0",
                           )}
                         />
                       </CommandItem>

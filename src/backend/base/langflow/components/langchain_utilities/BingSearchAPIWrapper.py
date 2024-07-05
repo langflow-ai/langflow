@@ -3,12 +3,13 @@
 # We need to make sure this class is importable from the context where this code will be running.
 from langchain_community.utilities.bing_search import BingSearchAPIWrapper
 
-from langflow.interface.custom.custom_component import CustomComponent
+from langflow.custom import CustomComponent
 
 
 class BingSearchAPIWrapperComponent(CustomComponent):
     display_name = "BingSearchAPIWrapper"
     description = "Wrapper for Bing Search API."
+    name = "BingSearchAPIWrapper"
 
     def build_config(self):
         return {

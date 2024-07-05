@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { createRoot } from "react-dom/client";
+import { Control } from "react-hook-form";
 import { getComponent, postLikeComponent } from "../../controllers/API";
 import IOModal from "../../modals/IOModal";
 import DeleteConfirmationModal from "../../modals/deleteConfirmationModal";
@@ -6,11 +8,12 @@ import useAlertStore from "../../stores/alertStore";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { useStoreStore } from "../../stores/storeStore";
+import { FlowType } from "../../types/flow";
 import { storeComponent } from "../../types/store";
 import cloneFLowWithParent, {
   getInputsAndOutputs,
 } from "../../utils/storeUtils";
-import { cn, convertTestName } from "../../utils/utils";
+import { cn } from "../../utils/utils";
 import IconComponent from "../genericIconComponent";
 import ShadTooltip from "../shadTooltipComponent";
 import { Button } from "../ui/button";
@@ -21,8 +24,16 @@ import {
   CardHeader,
   CardTitle,
 } from "../ui/card";
+import { Checkbox } from "../ui/checkbox";
+import { FormControl, FormField } from "../ui/form";
 import Loading from "../ui/loading";
-import { FlowType } from "../../types/flow";
+import DragCardComponent from "./components/dragCardComponent";
+import useDataEffect from "./hooks/use-data-effect";
+import useInstallComponent from "./hooks/use-handle-install";
+import useLikeComponent from "./hooks/use-handle-like";
+import useDragStart from "./hooks/use-on-drag-start";
+import usePlaygroundEffect from "./hooks/use-playground-effect";
+import { convertTestName } from "./utils/convert-test-name";
 
 export default function CollectionCardComponent({
   data,
@@ -32,6 +43,8 @@ export default function CollectionCardComponent({
   onClick,
   onDelete,
   playground,
+  control,
+  is_component,
 }: {
   data: storeComponent;
   authorized?: boolean;
@@ -40,6 +53,8 @@ export default function CollectionCardComponent({
   button?: JSX.Element;
   playground?: boolean;
   onDelete?: () => void;
+  control?: Control<any, any>;
+  is_component?: boolean;
 }) {
   const addFlow = useFlowsManagerStore((state) => state.addFlow);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
@@ -49,11 +64,9 @@ export default function CollectionCardComponent({
   const isStore = false;
   const [loading, setLoading] = useState(false);
   const [loadingLike, setLoadingLike] = useState(false);
-  const [liked_by_user, setLiked_by_user] = useState(
-    data?.liked_by_user ?? false,
-  );
-  const [likes_count, setLikes_count] = useState(data?.liked_by_count ?? 0);
-  const [downloads_count, setDownloads_count] = useState(
+  const [likedByUser, setLikedByUser] = useState(data?.liked_by_user ?? false);
+  const [likesCount, setLikesCount] = useState(data?.liked_by_count ?? 0);
+  const [downloadsCount, setDownloadsCount] = useState(
     data?.downloads_count ?? 0,
   );
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
@@ -69,6 +82,10 @@ export default function CollectionCardComponent({
   );
   const [loadingPlayground, setLoadingPlayground] = useState(false);
 
+  const selectedFlowsComponentsCards = useFlowsManagerStore(
+    (state) => state.selectedFlowsComponentsCards,
+  );
+
   const name = data.is_component ? "Component" : "Flow";
 
   async function getFlowData() {
@@ -82,131 +99,83 @@ export default function CollectionCardComponent({
       return false;
     }
     const { inputs, outputs } = getInputsAndOutputs(flow?.data?.nodes ?? []);
-    console.log(inputs, outputs);
     return inputs.length > 0 || outputs.length > 0;
   }
 
-  useEffect(() => {
-    if (currentFlowId && playground) {
-      if (openPlayground) {
-        setNodes(currentFlow?.data?.nodes ?? [], true);
-        setEdges(currentFlow?.data?.edges ?? [], true);
-      } else {
-        setNodes([], true);
-        setEdges([], true);
-      }
-      cleanFlowPool();
-    }
-  }, [openPlayground]);
+  usePlaygroundEffect(
+    currentFlowId,
+    playground!,
+    openPlayground,
+    currentFlow,
+    setNodes,
+    setEdges,
+    cleanFlowPool,
+  );
 
-  useEffect(() => {
-    if (data) {
-      setLiked_by_user(data?.liked_by_user ?? false);
-      setLikes_count(data?.liked_by_count ?? 0);
-      setDownloads_count(data?.downloads_count ?? 0);
-    }
-  }, [data, data.liked_by_count, data.liked_by_user, data.downloads_count]);
+  useDataEffect(data, setLikedByUser, setLikesCount, setDownloadsCount);
 
-  function handleInstall() {
-    const temp = downloads_count;
-    setDownloads_count((old) => Number(old) + 1);
-    setLoading(true);
-    getComponent(data.id)
-      .then((res) => {
-        const newFlow = cloneFLowWithParent(res, res.id, data.is_component);
-        addFlow(true, newFlow)
-          .then((id) => {
-            setSuccessData({
-              title: `${name} ${
-                isStore ? "Downloaded" : "Installed"
-              } Successfully.`,
-            });
-            setLoading(false);
-          })
-          .catch((error) => {
-            setLoading(false);
-            setErrorData({
-              title: `Error ${
-                isStore ? "downloading" : "installing"
-              } the ${name}`,
-              list: [error["response"]["data"]["detail"]],
-            });
-          });
-      })
-      .catch((err) => {
-        setLoading(false);
-        setErrorData({
-          title: `Error ${isStore ? "downloading" : "installing"} the ${name}`,
-          list: [err["response"]["data"]["detail"]],
-        });
-        setDownloads_count(temp);
-      });
-  }
+  const { handleInstall } = useInstallComponent(
+    data,
+    name,
+    isStore,
+    downloadsCount,
+    setDownloadsCount,
+    setLoading,
+    setSuccessData,
+    setErrorData,
+  );
 
-  function handleLike() {
-    setLoadingLike(true);
-    if (liked_by_user !== undefined || liked_by_user !== null) {
-      const temp = liked_by_user;
-      const tempNum = likes_count;
-      setLiked_by_user((prev) => !prev);
-      if (!temp) {
-        setLikes_count((prev) => Number(prev) + 1);
-      } else {
-        setLikes_count((prev) => Number(prev) - 1);
-      }
-      postLikeComponent(data.id)
-        .then((response) => {
-          setLoadingLike(false);
-          setLikes_count(response.data.likes_count);
-          setLiked_by_user(response.data.liked_by_user);
-        })
-        .catch((error) => {
-          setLoadingLike(false);
-          setLikes_count(tempNum);
-          setLiked_by_user(temp);
-          if (error.response.status === 403) {
-            setValidApiKey(false);
-          } else {
-            console.error(error);
-            setErrorData({
-              title: `Error liking ${name}.`,
-              list: [error["response"]["data"]["detail"]],
-            });
-          }
-        });
-    }
-  }
+  const { handleLike } = useLikeComponent(
+    data,
+    name,
+    setLoadingLike,
+    likedByUser,
+    likesCount,
+    setLikedByUser,
+    setLikesCount,
+    setValidApiKey,
+    setErrorData,
+  );
+
+  const isSelectedCard =
+    selectedFlowsComponentsCards?.includes(data?.id) ?? false;
+
+  const { onDragStart } = useDragStart(data);
 
   return (
     <>
       <Card
+        onDragStart={onDragStart}
+        draggable
         data-testid={`card-${convertTestName(data.name)}`}
         //TODO check color schema
         className={cn(
-          "group relative flex min-h-[11rem] flex-col justify-between overflow-hidden transition-all hover:bg-muted/50 hover:shadow-md hover:dark:bg-[#ffffff10]",
+          "group relative flex h-[11rem] flex-col justify-between overflow-hidden hover:bg-muted/50 hover:shadow-md hover:dark:bg-[#5f5f5f0e]",
           disabled ? "pointer-events-none opacity-50" : "",
           onClick ? "cursor-pointer" : "",
+          isSelectedCard ? "border border-selected" : "",
         )}
         onClick={onClick}
       >
         <div>
           <CardHeader>
             <div>
-              <CardTitle className="flex w-full items-center justify-between gap-3 text-xl">
+              <CardTitle className="flex w-full items-start justify-between gap-3 text-xl">
                 <IconComponent
                   className={cn(
-                    "flex-shrink-0",
+                    "visible flex-shrink-0",
                     data.is_component
                       ? "mx-0.5 h-6 w-6 text-component-icon"
                       : "h-7 w-7 flex-shrink-0 text-flow-icon",
                   )}
                   name={data.is_component ? "ToyBrick" : "Group"}
                 />
+
                 <ShadTooltip content={data.name}>
-                  <div className="w-full truncate">{data.name}</div>
+                  <div className="w-full truncate pr-3">{data.name}</div>
                 </ShadTooltip>
                 {data?.metadata !== undefined && (
-                  <div className="flex gap-3">
+                  <div className="flex items-center gap-3">
                     {data.private && (
                       <ShadTooltip content="Private">
                         <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -226,12 +195,9 @@ export default function CollectionCardComponent({
                     )}
                     <ShadTooltip content="Likes">
                       <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <IconComponent
-                          name="Heart"
-                          className={cn("h-4 w-4 ")}
-                        />
+                        <IconComponent name="Heart" className={cn("h-4 w-4")} />
                         <span data-testid={`likes-${data.name}`}>
-                          {likes_count ?? 0}
+                          {likesCount ?? 0}
                         </span>
                       </span>
                     </ShadTooltip>
@@ -242,26 +208,37 @@ export default function CollectionCardComponent({
                           className="h-4 w-4"
                         />
                         <span data-testid={`downloads-${data.name}`}>
-                          {downloads_count ?? 0}
+                          {downloadsCount ?? 0}
                         </span>
                       </span>
                     </ShadTooltip>
                   </div>
                 )}
 
-                {onDelete && data?.metadata === undefined && (
-                  <button
-                    className="z-50"
+                {control && (
+                  <div
+                    className="flex"
                     onClick={(e) => {
                       e.stopPropagation();
-                      setOpenDelete(true);
                     }}
                   >
-                    <IconComponent
-                      name="Trash2"
-                      className="h-5 w-5 text-primary opacity-0 transition-all hover:text-destructive group-hover:opacity-100"
+                    <FormField
+                      control={control}
+                      name={`${data.id}`}
+                      defaultValue={false}
+                      render={({ field }) => (
+                        <FormControl>
+                          <Checkbox
+                            data-testid={`checkbox-component`}
+                            aria-label="checkbox-component"
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            className="h-5 w-5 border border-ring data-[state=checked]:border-selected data-[state=checked]:bg-selected"
+                          />
+                        </FormControl>
+                      )}
                     />
-                  </button>
+                  </div>
                 )}
               </CardTitle>
             </div>
@@ -281,24 +258,19 @@ export default function CollectionCardComponent({
                   )}
                 </span>
               )}
-              <div className="flex w-full flex-1 flex-wrap gap-2">
-                {/* {data.tags &&
-                  data.tags.length > 0 &&
-                  data.tags.map((tag, index) => (
-                    <Badge
-                      key={index}
-                      variant="outline"
-                      size="xq"
-                      className="text-muted-foreground"
-                    >
-                      {tag.name}
-                    </Badge>
-                  ))} */}
-              </div>
+              <div className="flex w-full flex-1 flex-wrap gap-2"></div>
             </div>
 
             <CardDescription className="pb-2 pt-2">
-              <div className="truncate-doubleline">{data.description}</div>
+              <div
+                className={
+                  data?.metadata !== undefined
+                    ? "truncate"
+                    : "truncate-doubleline"
+                }
+              >
+                {data.description}
+              </div>
             </CardDescription>
           </CardHeader>
         </div>
@@ -368,11 +340,7 @@ export default function CollectionCardComponent({
                         authorized ? "Delete" : "Please review your API key."
                       }
                     >
-                      <DeleteConfirmationModal
-                        onConfirm={() => {
-                          onDelete();
-                        }}
-                      >
+                      <DeleteConfirmationModal onConfirm={onDelete}>
                         <Button
                           variant="ghost"
                           size="icon"
@@ -386,7 +354,7 @@ export default function CollectionCardComponent({
                             name="Trash2"
                             className={cn(
                               "h-5 w-5",
-                              !authorized ? " text-ring" : "",
+                              !authorized ? "text-ring" : "",
                             )}
                           />
                         </Button>
@@ -418,10 +386,10 @@ export default function CollectionCardComponent({
                           name="Heart"
                           className={cn(
                             "h-5 w-5",
-                            liked_by_user
+                            likedByUser
                               ? "fill-destructive stroke-destructive"
                               : "",
-                            !authorized ? " text-ring" : "",
+                            !authorized ? "text-ring" : "",
                           )}
                         />
                       </Button>
@@ -459,7 +427,7 @@ export default function CollectionCardComponent({
                         }
                         className={cn(
                           loading ? "h-5 w-5 animate-spin" : "h-5 w-5",
-                          !authorized ? " text-ring" : "",
+                          !authorized ? "text-ring" : "",
                         )}
                       />
                     </Button>
@@ -540,6 +508,7 @@ export default function CollectionCardComponent({
           onConfirm={() => {
             if (onDelete) onDelete();
           }}
+          description={` ${is_component ? "component" : "flow"}`}
         >
           <></>
         </DeleteConfirmationModal>

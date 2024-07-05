@@ -19,6 +19,14 @@ CACHE_DIR = user_cache_dir("langflow", "langflow")
 PREFIX = "langflow_cache"
 
 
+class CacheMiss:
+    def __repr__(self):
+        return "<CACHE_MISS>"
+
+    def __bool__(self):
+        return False
+
+
 def create_cache_folder(func):
     def wrapper(*args, **kwargs):
         # Get the destination folder

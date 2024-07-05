@@ -2,9 +2,10 @@ import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
 import { cn } from "../../utils/utils";
+import ForwardedIconComponent from "../genericIconComponent";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none  ring-offset-background",
+  "noflow nowheel nopan nodelete nodrag  inline-flex items-center gap-2 justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none  ring-offset-background",
   {
     variants: {
       variant: {
@@ -32,13 +33,15 @@ const buttonVariants = cva(
       variant: "default",
       size: "default",
     },
-  }
+  },
 );
 
 export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonVariants> {
   asChild?: boolean;
+  loading?: boolean;
+  unstyled?: boolean;
 }
 
 function toTitleCase(text: string) {
@@ -49,21 +52,56 @@ function toTitleCase(text: string) {
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, children, ...props }, ref) => {
+  (
+    {
+      className,
+      variant,
+      unstyled,
+      size,
+      loading,
+      type,
+      disabled,
+      asChild = false,
+      children,
+      ...props
+    },
+    ref,
+  ) => {
     const Comp = asChild ? Slot : "button";
     let newChildren = children;
     if (typeof children === "string") {
       newChildren = toTitleCase(children);
     }
     return (
-      <Comp
-        className={cn(buttonVariants({ variant, size, className }))}
-        ref={ref}
-        children={newChildren}
-        {...props}
-      />
+      <>
+        <Comp
+          className={
+            !unstyled
+              ? buttonVariants({ variant, size, className })
+              : cn(className, "noflow nowheel nopan nodelete nodrag")
+          }
+          disabled={loading || disabled}
+          {...(asChild ? {} : { type: type || "button" })}
+          ref={ref}
+          {...props}
+        >
+          {loading ? (
+            <span className="relative">
+              <span className="invisible">{newChildren}</span>
+              <span className="absolute inset-0">
+                <ForwardedIconComponent
+                  name={"Loader2"}
+                  className={"m-auto h-full animate-spin"}
+                />
+              </span>
+            </span>
+          ) : (
+            newChildren
+          )}
+        </Comp>
+      </>
     );
-  }
+  },
 );
 Button.displayName = "Button";
 

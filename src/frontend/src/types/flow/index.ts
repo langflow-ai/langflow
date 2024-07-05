@@ -7,6 +7,7 @@ export type FlowType = {
   id: string;
   data: ReactFlowJsonObject | null;
   description: string;
+  endpoint_name?: string | null;
   style?: FlowStyleType;
   is_component?: boolean;
   last_tested_version?: string;
@@ -17,6 +18,8 @@ export type FlowType = {
   user_id?: string;
   icon?: string;
   icon_bg_color?: string;
+  folder_id?: string;
+  webhook?: boolean;
 };
 
 export type NodeType = {
@@ -33,6 +36,7 @@ export type NodeDataType = {
   node?: APIClassType;
   id: string;
   output_types?: string[];
+  selected_output_type?: string;
   buildStatus?: BuildStatus;
 };
 // FlowStyleType is the type of the style object that is used to style the
@@ -55,7 +59,9 @@ export type TweaksType = Array<
 export type sourceHandleType = {
   dataType: string;
   id: string;
-  baseClasses: string[];
+  output_types: string[];
+  conditionalPath?: string | null;
+  name: string;
 };
 //left side
 export type targetHandleType = {

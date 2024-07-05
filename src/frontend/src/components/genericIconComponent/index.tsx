@@ -7,7 +7,7 @@ import Loading from "../ui/loading";
 
 import { useEffect, useState } from "react";
 
-const ForwardedIconComponent = memo(
+export const ForwardedIconComponent = memo(
   forwardRef(
     (
       {
@@ -18,7 +18,7 @@ const ForwardedIconComponent = memo(
         strokeWidth,
         id = "",
       }: IconComponentProps,
-      ref
+      ref,
     ) => {
       const [showFallback, setShowFallback] = useState(false);
 
@@ -65,8 +65,8 @@ const ForwardedIconComponent = memo(
           />
         </Suspense>
       );
-    }
-  )
+    },
+  ),
 );
 
 export default ForwardedIconComponent;

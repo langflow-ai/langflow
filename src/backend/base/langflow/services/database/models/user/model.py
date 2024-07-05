@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Optional
 from uuid import UUID, uuid4
 
@@ -8,6 +8,7 @@ if TYPE_CHECKING:
     from langflow.services.database.models.api_key import ApiKey
     from langflow.services.database.models.variable import Variable
     from langflow.services.database.models.flow import Flow
+    from langflow.services.database.models.folder import Folder
 
 
 class User(SQLModel, table=True):
@@ -17,8 +18,8 @@ class User(SQLModel, table=True):
     profile_image: Optional[str] = Field(default=None, nullable=True)
     is_active: bool = Field(default=False)
     is_superuser: bool = Field(default=False)
-    create_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    create_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     last_login_at: Optional[datetime] = Field(default=None, nullable=True)
     api_keys: list["ApiKey"] = Relationship(
         back_populates="user",
@@ -27,6 +28,10 @@ class User(SQLModel, table=True):
     store_api_key: Optional[str] = Field(default=None, nullable=True)
     flows: list["Flow"] = Relationship(back_populates="user")
     variables: list["Variable"] = Relationship(
+        back_populates="user",
+        sa_relationship_kwargs={"cascade": "delete"},
+    )
+    folders: list["Folder"] = Relationship(
         back_populates="user",
         sa_relationship_kwargs={"cascade": "delete"},
     )

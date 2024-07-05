@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   Card,
   CardContent,
@@ -6,15 +6,21 @@ import {
   CardTitle,
 } from "../../../../components/ui/card";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
+import { useFolderStore } from "../../../../stores/foldersStore";
 
 export default function NewFlowCardComponent() {
   const addFlow = useFlowsManagerStore((state) => state.addFlow);
   const navigate = useNavigate();
+  const location = useLocation();
+  const folderId = location?.state?.folderId;
+  const setFolderUrl = useFolderStore((state) => state.setFolderUrl);
+
   return (
     <Card
       onClick={() => {
         addFlow(true).then((id) => {
-          navigate("/flow/" + id);
+          setFolderUrl(folderId ?? "");
+          navigate(`/flow/${id}${folderId ? `/folder/${folderId}` : ""}`);
         });
       }}
       className="h-64 w-80 cursor-pointer bg-background pt-4"

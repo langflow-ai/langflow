@@ -6,39 +6,17 @@ import Admonition from "@theme/Admonition";
 
 # Document QA
 
+<Admonition type="warning" title="warning">
+This page may contain outdated information. It will be updated as soon as possible.
+</Admonition>
+
 Build a question-and-answer chatbot with a document loaded from local memory.
 
 ## Prerequisites
 
-1. Install Langflow.
-```bash
-python -m pip install langflow --pre
-```
+- [Langflow installed and running](../getting-started/install-langflow)
 
-2. Start a local Langflow instance with the Langflow CLI:
-```bash
-langflow run
-```
-Or start Langflow with Python:
-```bash
-python -m langflow run
-```
-
-Result:
-```
-│ Welcome to ⛓ Langflow                             │
-│                                                   │
-│ Access http://127.0.0.1:7860                      │
-│ Collaborate, and contribute at our GitHub Repo 🚀 │
-```
-
-<Admonition type="info">
-
-  Langflow v1.0 alpha is also available in [HuggingFace Spaces](https://huggingface.co/spaces/Langflow/Langflow-Preview?duplicate=true). Try it out or follow the instructions [here](/getting-started/huggingface-spaces) to install it locally.
-
-</Admonition>
-
-3. Create an [OpenAI API key](https://platform.openai.com).
+- [OpenAI API key created](https://platform.openai.com)
 
 ## Create the Document QA project
 
@@ -52,7 +30,7 @@ Result:
     light: "img/document-qa.png",
     dark: "img/document-qa.png",
   }}
-  style={{ width: "80%", margin: "20px auto" }}
+  style={{ width: "100%", maxWidth: "800px", margin: "0 auto" }}
 />
 
 This flow creates a basic chatbot with the **Chat Input**, **Prompt**, **OpenAI**, and **Chat Output** components.
@@ -61,24 +39,27 @@ The **Prompt** component is instructed to answer questions based on the contents
 Including a file with the prompt gives the **OpenAI** component context it may not otherwise have access to.
 
 4. To create an environment variable for the **OpenAI** component, in the **OpenAI API Key** field, click the **Globe** button, and then click **Add New Variable**.
-    1. In the **Variable Name** field, enter `openai_api_key`.
-    2. In the **Value** field, paste your OpenAI API Key (`sk-...`).
-    3. Click **Save Variable**.
+
+   1. In the **Variable Name** field, enter `openai_api_key`.
+   2. In the **Value** field, paste your OpenAI API Key (`sk-...`).
+   3. Click **Save Variable**.
 
 5. To select a document to load, in the **Files** component, click within the **Path** field.
-    1. Select a local file, and then click **Open**.
-    2. The file name appears in the field.
-    <Admonition type="tip">
-        The file must be of an extension type listed [here](https://github.com/langflow-ai/langflow/blob/dev/src/backend/base/langflow/base/data/utils.py#L13).
-    </Admonition>
+   1. Select a local file, and then click **Open**.
+   2. The file name appears in the field.
+      <Admonition type="tip">
+        The file must be of an extension type listed
+        [here](https://github.com/langflow-ai/langflow/blob/dev/src/backend/base/langflow/base/data/utils.py#L13).
+      </Admonition>
 
 ## Run the Document QA flow
 
 1. Click the **Run** button.
-The **Interaction Panel** opens, where you can converse with your bot.
+   The **Interaction Panel** opens, where you can converse with your bot.
 2. Type a message and press Enter.
-For this example, we loaded an error log `.txt` file and asked, "What went wrong?"
-The bot responded:
+   For this example, we loaded an error log `.txt` file and asked, "What went wrong?"
+   The bot responded:
+
 ```
 The issue occurred during the execution of migrations in the application. Specifically, an error was raised by the Alembic library, indicating that new upgrade operations were detected that had not been accounted for in the existing migration scripts. The operation in question involved modifying the nullable property of a column (apikey, created_at) in the database, with details about the existing type (DATETIME()), existing server default, and other properties.
 ```

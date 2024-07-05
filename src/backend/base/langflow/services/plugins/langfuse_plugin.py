@@ -24,12 +24,12 @@ class LangfuseInstance:
 
             settings_manager = get_settings_service()
 
-            if settings_manager.settings.LANGFUSE_PUBLIC_KEY and settings_manager.settings.LANGFUSE_SECRET_KEY:
+            if settings_manager.settings.langfuse_public_key and settings_manager.settings.langfuse_secret_key:
                 logger.debug("Langfuse credentials found")
                 cls._instance = Langfuse(
-                    public_key=settings_manager.settings.LANGFUSE_PUBLIC_KEY,
-                    secret_key=settings_manager.settings.LANGFUSE_SECRET_KEY,
-                    host=settings_manager.settings.LANGFUSE_HOST,
+                    public_key=settings_manager.settings.langfuse_public_key,
+                    secret_key=settings_manager.settings.langfuse_secret_key,
+                    host=settings_manager.settings.langfuse_host,
                 )
             else:
                 logger.debug("No Langfuse credentials found")

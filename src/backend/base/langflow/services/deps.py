@@ -18,6 +18,8 @@ if TYPE_CHECKING:
     from langflow.services.storage.service import StorageService
     from langflow.services.store.service import StoreService
     from langflow.services.task.service import TaskService
+    from langflow.services.telemetry.service import TelemetryService
+    from langflow.services.tracing.service import TracingService
     from langflow.services.variable.service import VariableService
 
 
@@ -39,6 +41,30 @@ def get_service(service_type: ServiceType, default=None):
         #! Not optimal, but it works for now
         service_manager.register_factories()
     return service_manager.get(service_type, default)  # type: ignore
+
+
+def get_telemetry_service() -> "TelemetryService":
+    """
+    Retrieves the TelemetryService instance from the service manager.
+
+    Returns:
+        TelemetryService: The TelemetryService instance.
+    """
+    from langflow.services.telemetry.factory import TelemetryServiceFactory
+
+    return get_service(ServiceType.TELEMETRY_SERVICE, TelemetryServiceFactory())  # type: ignore
+
+
+def get_tracing_service() -> "TracingService":
+    """
+    Retrieves the TracingService instance from the service manager.
+
+    Returns:
+        TracingService: The TracingService instance.
+    """
+    from langflow.services.tracing.factory import TracingServiceFactory
+
+    return get_service(ServiceType.TRACING_SERVICE, TracingServiceFactory())  # type: ignore
 
 
 def get_state_service() -> "StateService":

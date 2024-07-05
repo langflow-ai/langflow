@@ -2,13 +2,12 @@ import secrets
 from pathlib import Path
 from typing import Literal
 
-from loguru import logger
-from passlib.context import CryptContext
-from pydantic import Field, SecretStr, validator
-from pydantic_settings import BaseSettings
-
 from langflow.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
 from langflow.services.settings.utils import read_secret_from_file, write_secret_to_file
+from loguru import logger
+from passlib.context import CryptContext
+from pydantic import Field, SecretStr, field_validator
+from pydantic_settings import BaseSettings
 
 
 class AuthSettings(BaseSettings):
@@ -47,6 +46,9 @@ class AuthSettings(BaseSettings):
     ACCESS_HTTPONLY: bool = False
     """The HttpOnly attribute of the access token cookie."""
 
+    COOKIE_DOMAIN: str | None = None
+    """The domain attribute of the cookies. If None, the domain is not set."""
+
     pwd_context: CryptContext = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
     class Config:
@@ -62,23 +64,25 @@ class AuthSettings(BaseSettings):
     # the default values
     # so we need to validate the superuser and superuser_password
     # fields
-    @validator("SUPERUSER", "SUPERUSER_PASSWORD", pre=True)
-    def validate_superuser(cls, value, values):
-        if values.get("AUTO_LOGIN"):
+    @field_validator("SUPERUSER", "SUPERUSER_PASSWORD", mode="before")
+    @classmethod
+    def validate_superuser(cls, value, info):
+        if info.data.get("AUTO_LOGIN"):
             if value != DEFAULT_SUPERUSER:
                 value = DEFAULT_SUPERUSER
                 logger.debug("Resetting superuser to default value")
-            if values.get("SUPERUSER_PASSWORD") != DEFAULT_SUPERUSER_PASSWORD:
-                values["SUPERUSER_PASSWORD"] = DEFAULT_SUPERUSER_PASSWORD
+            if info.data.get("SUPERUSER_PASSWORD") != DEFAULT_SUPERUSER_PASSWORD:
+                info.data["SUPERUSER_PASSWORD"] = DEFAULT_SUPERUSER_PASSWORD
                 logger.debug("Resetting superuser password to default value")
 
             return value
 
         return value
 
-    @validator("SECRET_KEY", pre=True)
-    def get_secret_key(cls, value, values):
-        config_dir = values.get("CONFIG_DIR")
+    @field_validator("SECRET_KEY", mode="before")
+    @classmethod
+    def get_secret_key(cls, value, info):
+        config_dir = info.data.get("CONFIG_DIR")
 
         if not config_dir:
             logger.debug("No CONFIG_DIR provided, not saving secret key")
@@ -86,9 +90,9 @@ class AuthSettings(BaseSettings):
 
         secret_key_path = Path(config_dir) / "secret_key"
 
-        if value and isinstance(value, SecretStr):
+        if value:
             logger.debug("Secret key provided")
-            secret_value = value.get_secret_value()
+            secret_value = value.get_secret_value() if isinstance(value, SecretStr) else value
             write_secret_to_file(secret_key_path, secret_value)
         else:
             logger.debug("No secret key provided, generating a random one")

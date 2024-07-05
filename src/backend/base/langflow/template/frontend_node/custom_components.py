@@ -1,10 +1,10 @@
 from typing import Optional
 
-from langflow.template.field.base import TemplateField
+from langflow.template.field.base import Input
 from langflow.template.frontend_node.base import FrontendNode
 from langflow.template.template.base import Template
 
-DEFAULT_CUSTOM_COMPONENT_CODE = """from langflow.interface.custom.custom_component import CustomComponent
+DEFAULT_CUSTOM_COMPONENT_CODE = """from langflow.custom import CustomComponent
 
 from typing import Optional, List, Dict, Union
 from langflow.field_typing import (
@@ -14,7 +14,6 @@ from langflow.field_typing import (
     BaseLLM,
     BaseLoader,
     BaseMemory,
-    BaseOutputParser,
     BasePromptTemplate,
     BaseRetriever,
     Callable,
@@ -53,7 +52,32 @@ class CustomComponentFrontendNode(FrontendNode):
     template: Template = Template(
         type_name="CustomComponent",
         fields=[
-            TemplateField(
+            Input(
+                field_type="code",
+                required=True,
+                placeholder="",
+                is_list=False,
+                show=True,
+                value=DEFAULT_CUSTOM_COMPONENT_CODE,
+                name="code",
+                advanced=False,
+                dynamic=True,
+            )
+        ],
+    )
+    description: Optional[str] = None
+    base_classes: list[str] = []
+
+
+class ComponentFrontendNode(FrontendNode):
+    _format_template: bool = False
+    name: str = "Component"
+    display_name: Optional[str] = "Component"
+    beta: bool = False
+    template: Template = Template(
+        type_name="Component",
+        fields=[
+            Input(
                 field_type="code",
                 required=True,
                 placeholder="",
