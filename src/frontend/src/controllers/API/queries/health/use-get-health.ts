@@ -27,15 +27,11 @@ export const useGetHealthQuery: useQueryFunctionType<
     // Health is the only endpoint that doesn't require /api/v1
   }
 
-  const queryResult = query(
-    ["useGetHealthQuery"],
-    getHealthFn,
-    {
-      placeholderData: keepPreviousData,
-      refetchInterval: 20000,
-      ...options
-    },
-  );
+  const queryResult = query(["useGetHealthQuery"], getHealthFn, {
+    placeholderData: keepPreviousData,
+    refetchInterval: 20000,
+    ...options,
+  });
 
   return queryResult;
 };
