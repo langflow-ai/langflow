@@ -1494,6 +1494,8 @@ class Graph:
         predecessor_map = defaultdict(list)
         successor_map = defaultdict(list)
         for edge in edges:
+            if edge.source_id not in predecessor_map[edge.target_id]:
             predecessor_map[edge.target_id].append(edge.source_id)
+            if edge.target_id not in successor_map[edge.source_id]:
             successor_map[edge.source_id].append(edge.target_id)
         return predecessor_map, successor_map
