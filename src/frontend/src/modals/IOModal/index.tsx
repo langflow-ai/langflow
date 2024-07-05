@@ -12,20 +12,20 @@ import {
 } from "../../components/ui/tabs";
 import { CHAT_FORM_DIALOG_SUBTITLE } from "../../constants/constants";
 import { InputOutput } from "../../constants/enums";
-import { getMessagesTable } from "../../controllers/API";
 import useAlertStore from "../../stores/alertStore";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { useMessagesStore } from "../../stores/messagesStore";
 import { IOModalPropsType } from "../../types/components";
 import { NodeDataType, NodeType } from "../../types/flow";
-import { updateVerticesOrder } from "../../utils/buildUtils";
 import { cn } from "../../utils/utils";
 import BaseModal from "../baseModal";
 import IOFieldView from "./components/IOFieldView";
 import SessionView from "./components/SessionView";
 import useRemoveSession from "./components/SessionView/hooks";
 import ChatView from "./components/chatView";
+import { useQueryClient } from "@tanstack/react-query";
+import { useGetMessagesQuery } from "@/controllers/API/queries/messages";
 
 export default function IOModal({
   children,
@@ -34,7 +34,6 @@ export default function IOModal({
   disable,
 }: IOModalPropsType): JSX.Element {
   const allNodes = useFlowStore((state) => state.nodes);
-  const setMessages = useMessagesStore((state) => state.setMessages);
   const inputs = useFlowStore((state) => state.inputs).filter(
     (input) => input.type !== "ChatInput",
   );
@@ -85,8 +84,10 @@ export default function IOModal({
   const setNode = useFlowStore((state) => state.setNode);
   const [sessions, setSessions] = useState<string[]>([]);
   const messages = useMessagesStore((state) => state.messages);
-  const setColumns = useMessagesStore((state) => state.setColumns);
   const flowPool = useFlowStore((state) => state.flowPool);
+
+  const {refetch} = useGetMessagesQuery({mode:"union",id:currentFlow?.id})
+
 
   async function sendMessage({
     repeat = 1,
@@ -111,12 +112,7 @@ export default function IOModal({
         setLockChat(false);
       });
     }
-    const { rows, columns } = await getMessagesTable("union", currentFlow!.id, [
-      "index",
-      "flow_id",
-    ]);
-    setMessages(rows);
-    setColumns(columns);
+    refetch();
     setLockChat(false);
     if (chatInput) {
       setNode(chatInput.id, (node: NodeType) => {

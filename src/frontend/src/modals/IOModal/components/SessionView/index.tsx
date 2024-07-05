@@ -13,15 +13,15 @@ import { useMessagesStore } from "../../../../stores/messagesStore";
 import { messagesSorter } from "../../../../utils/utils";
 import { useGetMessagesQuery } from "@/controllers/API/queries/messages";
 import Loading from "@/components/ui/loading";
+import { useIsFetching } from "@tanstack/react-query";
 
-export default function SessionView({ session,id }: { session?:string,id?:string  }) {
+export default function SessionView({ session,id}: { session?:string,id?:string  }) {
   const columns = useMessagesStore((state) => state.columns);
   const messages = useMessagesStore((state) => state.messages);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
 
-  let {isLoading}=useGetMessagesQuery({mode:"union",id});
-
+  const isFetching = useIsFetching({queryKey: ["useGetMessagesQuery"],exact:false});;
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
 
   const { handleRemoveMessages } = useRemoveMessages(
@@ -47,11 +47,11 @@ export default function SessionView({ session,id }: { session?:string,id?:string
     });
   }
 
-  const filteredMessages = session? messages.filter((message) => message.session_id === session) : messages;
-
+  let filteredMessages = session? messages.filter((message) => message.session_id === session) : messages;
+  filteredMessages = id? filteredMessages.filter((message) => message.flow_id === id) : filteredMessages;
   return (
-    (isLoading?
-    <div>
+    (isFetching>0?
+    <div className="h-full flex w-full items-center align-middle justify-center">
       <Loading></Loading>
     </div>:
     <TableComponent
