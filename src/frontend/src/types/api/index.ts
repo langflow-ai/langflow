@@ -1,8 +1,7 @@
 import {
-  MutationFunction,
-  UndefinedInitialDataOptions,
   UseMutationOptions,
   UseMutationResult,
+  UseQueryOptions,
   UseQueryResult,
 } from "@tanstack/react-query";
 import { Edge, Node, Viewport } from "reactflow";
@@ -232,20 +231,25 @@ export type ResponseErrorTypeAPI = {
 export type ResponseErrorDetailAPI = {
   response: { data: { detail: string } };
 };
-
 export type useQueryFunctionType<T = undefined, R = any> = T extends undefined
-  ? (props?: T, onFetch?: ((data: R) => void) | string) => UseQueryResult<R>
-  : (props: T, onFetch?: ((data: R) => void) | string) => UseQueryResult<R>;
+  ? (
+      params?: T,
+      options?: Omit<UseQueryOptions, "queryFn" | "queryKey">,
+    ) => UseQueryResult<R>
+  : (
+      params: T,
+      options?: Omit<UseQueryOptions, "queryFn" | "queryKey">,
+    ) => UseQueryResult<R>;
 
 export type QueryFunctionType = (
-  queryKey: UndefinedInitialDataOptions["queryKey"],
-  queryFn: UndefinedInitialDataOptions["queryFn"],
-  options?: Omit<UndefinedInitialDataOptions, "queryKey" | "queryFn">,
+  queryKey: UseQueryOptions["queryKey"],
+  queryFn: UseQueryOptions["queryFn"],
+  options?: Omit<UseQueryOptions, "queryKey" | "queryFn">,
 ) => UseQueryResult<any>;
 
 export type MutationFunctionType = (
   mutationKey: UseMutationOptions["mutationKey"],
-  mutationFn: MutationFunction<any, any>,
+  mutationFn: UseMutationOptions<any, any, any>["mutationFn"],
   options?: Omit<UseMutationOptions<any, any>, "mutationFn" | "mutationKey">,
 ) => UseMutationResult<any, any, any, any>;
 
