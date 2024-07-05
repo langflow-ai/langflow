@@ -117,8 +117,6 @@ jobs:
         if: failure()
         run: echo "failed=true" >> "$GITHUB_OUTPUT"
 
-
-
       - name: Upload blob report to GitHub Actions Artifacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -127,12 +125,10 @@ jobs:
           path: src/frontend/blob-report
           retention-days: 1
 
-
-
   merge-reports:
     needs: setup-and-test
     runs-on: ubuntu-latest
-    if : ${{ needs.setup-and-test.outputs.failed != 'true' }}
+    if : ${{ needs.setup-and-test.outputs.failed == 'true' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -159,3 +155,11 @@ jobs:
           name: html-report--attempt-${{ github.run_attempt }}
           path: playwright-report
           retention-days: 14
+  delete-reports:
+    needs: setup-and-test
+    runs-on: ubuntu-latest
+    if : ${{ needs.setup-and-test.outputs.failed != 'true' }}
+    steps:
+      - uses: geekyeggo/delete-artifact@v5
+        with:
+          name: blob-report-*
