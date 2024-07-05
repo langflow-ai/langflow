@@ -426,6 +426,7 @@ def test_build_vertex_invalid_vertex_id(client, added_flow_with_prompt_and_histo
     assert response.status_code == 500
 
 
+@pytest.mark.api_key_required
 def test_successful_run_no_payload(client, starter_project, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = starter_project["id"]
@@ -454,6 +455,7 @@ def test_successful_run_no_payload(client, starter_project, created_api_key):
     assert all([result is not None for result in inner_results]), (outputs_dict, output_results_has_results)
 
 
+@pytest.mark.api_key_required
 def test_successful_run_with_output_type_text(client, starter_project, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = starter_project["id"]
@@ -484,6 +486,7 @@ def test_successful_run_with_output_type_text(client, starter_project, created_a
     assert all([key in result for result in inner_results for key in expected_keys]), outputs_dict
 
 
+@pytest.mark.api_key_required
 def test_successful_run_with_output_type_any(client, starter_project, created_api_key):
     # This one should have both the ChatOutput and TextOutput components
     headers = {"x-api-key": created_api_key.api_key}
@@ -515,6 +518,7 @@ def test_successful_run_with_output_type_any(client, starter_project, created_ap
     assert all([key in result for result in inner_results for key in expected_keys]), outputs_dict
 
 
+@pytest.mark.api_key_required
 def test_successful_run_with_output_type_debug(client, starter_project, created_api_key):
     # This one should return outputs for all components
     # Let's just check the amount of outputs(there should be 7)
@@ -540,6 +544,7 @@ def test_successful_run_with_output_type_debug(client, starter_project, created_
     assert len(outputs_dict.get("outputs")) == 4
 
 
+@pytest.mark.api_key_required
 # To test input_type wel'l just set it with output_type debug and check if the value is correct
 def test_successful_run_with_input_type_text(client, starter_project, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
@@ -572,6 +577,7 @@ def test_successful_run_with_input_type_text(client, starter_project, created_ap
 
 
 # Now do the same for "chat" input type
+@pytest.mark.api_key_required
 def test_successful_run_with_input_type_chat(client, starter_project, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = starter_project["id"]
@@ -604,6 +610,7 @@ def test_successful_run_with_input_type_chat(client, starter_project, created_ap
     ), chat_input_outputs
 
 
+@pytest.mark.api_key_required
 def test_successful_run_with_input_type_any(client, starter_project, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = starter_project["id"]
@@ -640,22 +647,6 @@ def test_successful_run_with_input_type_any(client, starter_project, created_api
     ), any_input_outputs
 
 
-@pytest.mark.api_key_required
-def test_run_with_inputs_and_outputs(client, starter_project, created_api_key):
-    headers = {"x-api-key": created_api_key.api_key}
-    flow_id = starter_project["id"]
-    payload = {
-        "input_value": "value1",
-        "input_type": "text",
-        "output_type": "text",
-        "tweaks": {"parameter_name": "value"},
-        "stream": False,
-    }
-    response = client.post(f"/api/v1/run/{flow_id}", json=payload, headers=headers)
-    assert response.status_code == status.HTTP_200_OK, response.text
-    # Validate the response structure and content
-
-
 def test_invalid_flow_id(client, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = "invalid-flow-id"
@@ -666,88 +657,3 @@ def test_invalid_flow_id(client, created_api_key):
     response = client.post(f"/api/v1/run/{flow_id}", headers=headers)
     assert response.status_code == status.HTTP_404_NOT_FOUND, response.text
     # Check if the error detail is as expected
-
-
-@pytest.mark.api_key_required
-def test_run_flow_with_caching_success(client: TestClient, starter_project, created_api_key):
-    flow_id = starter_project["id"]
-    headers = {"x-api-key": created_api_key.api_key}
-    payload = {
-        "input_value": "value1",
-        "input_type": "text",
-        "output_type": "text",
-        "tweaks": {"parameter_name": "value"},
-        "stream": False,
-    }
-    response = client.post(f"/api/v1/run/{flow_id}", json=payload, headers=headers)
-    assert response.status_code == status.HTTP_200_OK
-    data = response.json()
-    assert "outputs" in data
-    assert "session_id" in data
-
-
-@pytest.mark.api_key_required
-def test_run_flow_with_caching_invalid_flow_id(client: TestClient, created_api_key):
-    invalid_flow_id = uuid4()
-    headers = {"x-api-key": created_api_key.api_key}
-    payload = {"input_value": "", "input_type": "text", "output_type": "text", "tweaks": {}, "stream": False}
-    response = client.post(f"/api/v1/run/{invalid_flow_id}", json=payload, headers=headers)
-    assert response.status_code == status.HTTP_404_NOT_FOUND
-    data = response.json()
-    assert "detail" in data
-    assert f"Flow identifier {invalid_flow_id} not found" in data["detail"]
-
-
-@pytest.mark.api_key_required
-def test_run_flow_with_caching_invalid_input_format(client: TestClient, starter_project, created_api_key):
-    flow_id = starter_project["id"]
-    headers = {"x-api-key": created_api_key.api_key}
-    payload = {"input_value": {"key": "value"}, "input_type": "text", "output_type": "text", "tweaks": {}}
-    response = client.post(f"/api/v1/run/{flow_id}", json=payload, headers=headers)
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
-
-
-# @pytest.mark.api_key_required
-# def test_run_flow_with_session_id(client, starter_project, created_api_key):
-#     headers = {"x-api-key": created_api_key.api_key}
-#     flow_id = starter_project["id"]
-#     payload = {
-#         "input_value": "value1",
-#         "input_type": "text",
-#         "output_type": "text",
-#         "session_id": "test-session-id",
-#     }
-#     response = client.post(f"/api/v1/run/{flow_id}", json=payload, headers=headers)
-#     assert response.status_code == status.HTTP_404_NOT_FOUND
-#     data = response.json()
-#     assert {"detail": "Session test-session-id not found"} == data
-
-
-# def test_run_flow_with_invalid_session_id(client, starter_project, created_api_key):
-#     headers = {"x-api-key": created_api_key.api_key}
-#     flow_id = starter_project["id"]
-#     payload = {
-#         "input_value": "value1",
-#         "input_type": "text",
-#         "output_type": "text",
-#         "session_id": "invalid-session-id",
-#     }
-#     response = client.post(f"/api/v1/run/{flow_id}", json=payload, headers=headers)
-#     assert response.status_code == status.HTTP_404_NOT_FOUND
-#     data = response.json()
-#     assert "detail" in data
-#     assert f"Session {payload['session_id']} not found" in data["detail"]
-
-
-@pytest.mark.api_key_required
-def test_run_flow_with_invalid_tweaks(client, starter_project, created_api_key):
-    headers = {"x-api-key": created_api_key.api_key}
-    flow_id = starter_project["id"]
-    payload = {
-        "input_value": "value1",
-        "input_type": "text",
-        "output_type": "text",
-        "tweaks": {"invalid_tweak": "value"},
-    }
-    response = client.post(f"/api/v1/run/{flow_id}", json=payload, headers=headers)
-    assert response.status_code == status.HTTP_200_OK

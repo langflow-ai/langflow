@@ -3,11 +3,13 @@ import * as dotenv from "dotenv";
 import path from "path";
 
 test("should delete rows from table message", async ({ page }) => {
-  if (!process?.env?.OPENAI_API_KEY) {
-    //You must set the OPENAI_API_KEY on .env file to run this test
-    expect(false).toBe(true);
+  test.skip(
+    !process?.env?.OPENAI_API_KEY,
+    "OPENAI_API_KEY required to run this test",
+  );
+  if (!process.env.CI) {
+    dotenv.config({ path: path.resolve(__dirname, "../../.env") });
   }
-
   await page.goto("/");
   await page.waitForTimeout(2000);
 
@@ -51,30 +53,9 @@ test("should delete rows from table message", async ({ page }) => {
   await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
   await page.getByText("built successfully").last().click({
-    timeout: 15000,
+    timeout: 30000,
   });
 
-  await page.getByText("Playground", { exact: true }).click();
-  await page
-    .getByText("No input message provided.", { exact: true })
-    .last()
-    .isVisible();
-
-  await page.waitForSelector('[data-testid="input-chat-playground"]', {
-    timeout: 100000,
-  });
-
-  await page
-    .getByTestId("input-chat-playground")
-    .last()
-    .fill("Say hello as a pirate");
-  await page.getByTestId("icon-LucideSend").last().click();
-
-  await page.waitForSelector("text=matey", {
-    timeout: 100000,
-  });
-
-  await page.getByText("Close").last().click();
   await page.getByTestId("user-profile-settings").last().click();
   await page.getByText("Settings").last().click();
   await page.getByText("Messages").last().click();

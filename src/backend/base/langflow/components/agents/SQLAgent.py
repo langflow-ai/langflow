@@ -12,6 +12,7 @@ from langflow.field_typing import LanguageModel
 class SQLAgentComponent(CustomComponent):
     display_name = "SQLAgent"
     description = "Construct an SQL agent from an LLM and tools."
+    name = "SQLAgent"
 
     def build_config(self):
         return {

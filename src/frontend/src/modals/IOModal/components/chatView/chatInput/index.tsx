@@ -1,7 +1,13 @@
+import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
+import useAlertStore from "@/stores/alertStore";
 import { useRef, useState } from "react";
+import ShortUniqueId from "short-unique-id";
 import {
+  ALLOWED_IMAGE_INPUT_EXTENSIONS,
   CHAT_INPUT_PLACEHOLDER,
   CHAT_INPUT_PLACEHOLDER_SEND,
+  FS_ERROR_TEXT,
+  SN_ERROR_TEXT,
 } from "../../../../../constants/constants";
 import { uploadFile } from "../../../../../controllers/API";
 import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
@@ -16,8 +22,6 @@ import UploadFileButton from "./components/uploadFileButton";
 import { getClassNamesFilePreview } from "./helpers/get-class-file-preview";
 import useAutoResizeTextArea from "./hooks/use-auto-resize-text-area";
 import useFocusOnUnlock from "./hooks/use-focus-unlock";
-import useHandleFileChange from "./hooks/use-handle-file-change";
-import useUpload from "./hooks/use-upload";
 export default function ChatInput({
   lockChat,
   chatValue,
@@ -34,11 +38,72 @@ export default function ChatInput({
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const [inputFocus, setInputFocus] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
+  const [id, setId] = useState<string>("");
 
   useFocusOnUnlock(lockChat, inputRef);
   useAutoResizeTextArea(chatValue, inputRef);
-  useUpload(uploadFile, currentFlowId, setFiles, lockChat || saveLoading);
-  const { handleFileChange } = useHandleFileChange(setFiles, currentFlowId);
+
+  const handleFileChange = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const fileInput = event.target;
+    const file = fileInput.files?.[0];
+    if (file) {
+      const fileExtension = file.name.split(".").pop()?.toLowerCase();
+
+      if (
+        !fileExtension ||
+        !ALLOWED_IMAGE_INPUT_EXTENSIONS.includes(fileExtension)
+      ) {
+        setErrorData({
+          title: "Error uploading file",
+          list: [FS_ERROR_TEXT, SN_ERROR_TEXT],
+        });
+        return;
+      }
+
+      const uid = new ShortUniqueId();
+      const id = uid.randomUUID(10);
+      setId(id);
+
+      const type = file.type.split("/")[0];
+      const blob = file;
+
+      setFiles((prevFiles) => [
+        ...prevFiles,
+        { file: blob, loading: true, error: false, id, type },
+      ]);
+
+      mutation.mutate(
+        { file: blob, id: currentFlowId },
+        {
+          onSuccess: (data) => {
+            setFiles((prev) => {
+              const newFiles = [...prev];
+              const updatedIndex = newFiles.findIndex((file) => file.id === id);
+              newFiles[updatedIndex].loading = false;
+              newFiles[updatedIndex].path = data.file_path;
+              return newFiles;
+            });
+          },
+          onError: () => {
+            setFiles((prev) => {
+              const newFiles = [...prev];
+              const updatedIndex = newFiles.findIndex((file) => file.id === id);
+              newFiles[updatedIndex].loading = false;
+              newFiles[updatedIndex].error = true;
+              return newFiles;
+            });
+          },
+        },
+      );
+    }
+
+    fileInput.value = "";
+  };
+
+  const mutation = usePostUploadFile();
 
   const send = () => {
     sendMessage({

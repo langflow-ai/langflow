@@ -1,6 +1,17 @@
 import { expect, test } from "@playwright/test";
+import * as dotenv from "dotenv";
+import path from "path";
 
 test("should create a flow with decision", async ({ page }) => {
+  test.skip(
+    !process?.env?.OPENAI_API_KEY,
+    "OPENAI_API_KEY required to run this test",
+  );
+
+  if (!process.env.CI) {
+    dotenv.config({ path: path.resolve(__dirname, "../../.env") });
+  }
+
   await page.goto("/");
   await page.locator("span").filter({ hasText: "My Collection" }).isVisible();
   await page.waitForTimeout(2000);
@@ -468,7 +479,7 @@ AI:
     .getByTestId("popover-anchor-input-input_message-edit")
     .nth(0)
     .fill("You're Happy! 🤪");
-  await page.getByText("Save Changes").click();
+  await page.getByText("Close").last().click();
 
   await page.getByTitle("zoom in").click();
   await page.getByTitle("zoom in").click();
@@ -491,7 +502,7 @@ AI:
     .getByTestId("popover-anchor-input-input_message-edit")
     .nth(0)
     .fill("You're Sad! 🥲");
-  await page.getByText("Save Changes").click();
+  await page.getByText("Close").last().click();
 
   await page.getByTitle("fit view").click({
     force: true,
@@ -535,11 +546,6 @@ AI:
   await page.mouse.up();
 
   await page.locator('//*[@id="react-flow-id"]').hover();
-
-  if (!process.env.OPENAI_API_KEY) {
-    //You must set the OPENAI_API_KEY on .env file to run this test
-    expect(false).toBe(true);
-  }
 
   await page
     .getByTestId("popover-anchor-input-openai_api_key")

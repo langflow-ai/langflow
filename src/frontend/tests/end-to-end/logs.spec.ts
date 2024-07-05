@@ -1,6 +1,17 @@
 import { test } from "@playwright/test";
+import * as dotenv from "dotenv";
+import path from "path";
 
 test("should able to see and interact with logs", async ({ page }) => {
+  test.skip(
+    !process?.env?.OPENAI_API_KEY,
+    "OPENAI_API_KEY required to run this test",
+  );
+
+  if (!process.env.CI) {
+    dotenv.config({ path: path.resolve(__dirname, "../../.env") });
+  }
+
   await page.goto("/");
   await page.waitForTimeout(2000);
 
@@ -20,7 +31,6 @@ test("should able to see and interact with logs", async ({ page }) => {
     await page.waitForTimeout(5000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
-  await page.waitForTimeout(1000);
 
   await page.getByRole("heading", { name: "Basic Prompting" }).click();
   await page.waitForTimeout(2000);

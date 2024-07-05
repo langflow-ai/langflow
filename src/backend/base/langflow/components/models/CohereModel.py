@@ -1,11 +1,10 @@
 from langchain_cohere import ChatCohere
-from langchain_core.language_models.chat_models import BaseChatModel
 from pydantic.v1 import SecretStr
 
 from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
-from langflow.io import BoolInput, FloatInput, MessageInput, Output, SecretStrInput, StrInput
+from langflow.io import BoolInput, FloatInput, MessageInput, SecretStrInput, StrInput
 
 
 class CohereComponent(LCModelComponent):
@@ -13,6 +12,7 @@ class CohereComponent(LCModelComponent):
     description = "Generate text using Cohere LLMs."
     documentation = "https://python.langchain.com/docs/modules/model_io/models/llms/integrations/cohere"
     icon = "Cohere"
+    name = "CohereModel"
 
     inputs = [
         SecretStrInput(
@@ -32,12 +32,8 @@ class CohereComponent(LCModelComponent):
             advanced=True,
         ),
     ]
-    outputs = [
-        Output(display_name="Text", name="text_output", method="text_response"),
-        Output(display_name="Language Model", name="model_output", method="build_model"),
-    ]
 
-    def build_model(self) -> LanguageModel | BaseChatModel:
+    def build_model(self) -> LanguageModel:  # type: ignore[type-var]
         cohere_api_key = self.cohere_api_key
         temperature = self.temperature
 

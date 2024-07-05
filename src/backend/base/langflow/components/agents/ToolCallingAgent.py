@@ -15,6 +15,7 @@ class ToolCallingAgentComponent(Component):
     description: str = "Agent that uses tools. Only models that are compatible with function calling are supported."
     icon = "LangChain"
     beta = True
+    name = "ToolCallingAgent"
 
     inputs = [
         MessageTextInput(
@@ -90,13 +91,16 @@ class ToolCallingAgentComponent(Component):
         if hasattr(self, "memory") and self.memory:
             input_dict["chat_history"] = self.convert_chat_history(self.memory)
         result = await runnable.ainvoke(input_dict)
-        self.status = result
 
         if "output" not in result:
             raise ValueError("Output key not found in result. Tried 'output'.")
 
-        result_string = result["output"]
-
+        results = result["output"]
+        if isinstance(results, list):
+            result_string = "\n".join([r["text"] for r in results if "text" in r and r.get("type") == "text"])
+        else:
+            result_string = results
+        self.status = result_string
         return Message(text=result_string)
 
     def convert_chat_history(self, chat_history: List[Data]) -> List[Dict[str, str]]:

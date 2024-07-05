@@ -59,7 +59,7 @@ async def build_component_and_get_results(
     # Remove code from params
     class_object: Type["CustomComponent" | "Component"] = eval_custom_component_code(params_copy.pop("code"))
     custom_component: "CustomComponent" | "Component" = class_object(
-        user_id=user_id, parameters=params_copy, vertex=vertex, _tracing_service=tracing_service
+        user_id=user_id, parameters=params_copy, vertex=vertex, tracing_service=tracing_service
     )
     params_copy = update_params_with_load_from_db_fields(
         custom_component, params_copy, vertex.load_from_db_fields, fallback_to_env_vars

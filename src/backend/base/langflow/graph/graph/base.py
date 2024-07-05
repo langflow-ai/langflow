@@ -14,7 +14,7 @@ from langflow.graph.edge.base import ContractEdge
 from langflow.graph.graph.constants import lazy_load_vertex_dict
 from langflow.graph.graph.runnable_vertices_manager import RunnableVerticesManager
 from langflow.graph.graph.state_manager import GraphStateManager
-from langflow.graph.graph.utils import process_flow
+from langflow.graph.graph.utils import find_start_component_id, process_flow
 from langflow.graph.schema import InterfaceComponentTypes, RunOutputs
 from langflow.graph.vertex.base import Vertex
 from langflow.graph.vertex.types import InterfaceVertex, StateVertex
@@ -335,9 +335,8 @@ class Graph:
             logger.exception(exc)
 
         try:
-            start_component_id = next(
-                (vertex_id for vertex_id in self._is_input_vertices if "chat" in vertex_id.lower()), None
-            )
+            # Prioritize the webhook component if it exists
+            start_component_id = find_start_component_id(self._is_input_vertices)
             await self.process(start_component_id=start_component_id, fallback_to_env_vars=fallback_to_env_vars)
             self.increment_run_count()
         except Exception as exc:
@@ -350,6 +349,8 @@ class Graph:
         # Get the outputs
         vertex_outputs = []
         for vertex in self.vertices:
+            if not vertex._built:
+                continue
             if vertex is None:
                 raise ValueError(f"Vertex {vertex_id} not found")
 
@@ -1230,15 +1231,17 @@ class Graph:
                             stack.append(successor.id)
                         else:
                             excluded.add(successor.id)
-                        all_successors = get_successors(successor)
+                        all_successors = get_successors(successor, recursive=False)
                         for successor in all_successors:
                             if is_start:
                                 stack.append(successor.id)
                             else:
                                 excluded.add(successor.id)
-                elif current_id not in stop_predecessors:
+                elif current_id not in stop_predecessors and is_start:
                     # If the current vertex is not the target vertex, we should add all its successors
                     # to the stack if they are not in visited
+
+                    # If we are starting from the beginning, we should add all successors
                     for successor in current_vertex.successors:
                         if successor.id not in visited:
                             stack.append(successor.id)
@@ -1468,6 +1471,9 @@ class Graph:
 
     def remove_from_predecessors(self, vertex_id: str):
         self.run_manager.remove_from_predecessors(vertex_id)
+
+    def remove_vertex_from_runnables(self, vertex_id: str):
+        self.run_manager.remove_vertex_from_runnables(vertex_id)
 
     def build_in_degree(self, edges: List[ContractEdge]) -> Dict[str, int]:
         in_degree: Dict[str, int] = defaultdict(int)
