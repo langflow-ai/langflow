@@ -28,16 +28,16 @@ class YuQueDocLoader(CustomComponent):
             "url": {
                 "display_name": "URL",
                 "required": True,
-                "info": "Please Enter the URL after [https://www.yuque.com/]"
+                "info": "Please Enter the URL after [https://www.yuque.com/]",
             },
             "code": {"show": "true"},
         }
 
     def build(
-            self,
-            doc_type: str,
-            token: str,
-            url: str,
+        self,
+        doc_type: str,
+        token: str,
+        url: str,
     ) -> Document:
         return YuQueDocLoaderExec(
             token=token,

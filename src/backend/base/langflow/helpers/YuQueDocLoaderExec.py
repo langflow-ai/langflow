@@ -8,12 +8,11 @@ logger = logging.getLogger(__name__)
 
 
 class YuQueDocLoaderExec(BaseLoader):
-
     def __init__(
-            self,
-            token: str = None,
-            url: str = None,
-            doc_type: str = None,
+        self,
+        token: str = None,
+        url: str = None,
+        doc_type: str = None,
     ):
         self.token = token
         self.url = url
