@@ -154,10 +154,9 @@ markers = ["async_test", "api_key_required"]
 
 [tool.coverage.run]
 command_line = """
-    -m pytest
+    -m pytest --ignore=tests/integration
     --cov --cov-report=term --cov-report=html
     --instafail -ra -n auto -m "not api_key_required"
-    tests/unit
 """
 source = ["src/backend/base/langflow/"]
 omit = ["*/alembic/*", "tests/*", "*/__init__.py"]
