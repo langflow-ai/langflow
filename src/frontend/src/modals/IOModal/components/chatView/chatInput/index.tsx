@@ -44,10 +44,12 @@ export default function ChattInput({
 
   const { mutate, isPending } = usePostUploadFile();
 
-  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement> | ClipboardEvent) => {
+  const handleFileChange = async (
+    event: React.ChangeEvent<HTMLInputElement> | ClipboardEvent,
+  ) => {
     let file: File | null = null;
 
-    if ('clipboardData' in event) {
+    if ("clipboardData" in event) {
       const items = event.clipboardData?.items;
       if (items) {
         for (let i = 0; i < items.length; i++) {
@@ -66,7 +68,10 @@ export default function ChattInput({
     if (file) {
       const fileExtension = file.name.split(".").pop()?.toLowerCase();
 
-      if (!fileExtension || !ALLOWED_IMAGE_INPUT_EXTENSIONS.includes(fileExtension)) {
+      if (
+        !fileExtension ||
+        !ALLOWED_IMAGE_INPUT_EXTENSIONS.includes(fileExtension)
+      ) {
         setErrorData({
           title: "Error uploading file",
           list: [FS_ERROR_TEXT, SN_ERROR_TEXT],
@@ -105,11 +110,11 @@ export default function ChattInput({
               return newFiles;
             });
           },
-        }
+        },
       );
     }
 
-    if ('target' in event && event.target instanceof HTMLInputElement) {
+    if ("target" in event && event.target instanceof HTMLInputElement) {
       event.target.value = "";
     }
   };
