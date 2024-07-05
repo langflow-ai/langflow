@@ -14,17 +14,8 @@ interface getHealthResponse {
 export const useGetHealthQuery: useQueryFunctionType<
   undefined,
   getHealthResponse
-> = (_, onFetch) => {
+> = (_, options) => {
   const { query } = UseRequestProcessor();
-
-  const responseFn = (data: getHealthResponse) => {
-    if (!onFetch) return data;
-    if (typeof onFetch === "function") return onFetch(data);
-    switch (onFetch) {
-      default:
-        return data;
-    }
-  };
 
   /**
    * Fetches the health status of the API.
@@ -32,21 +23,15 @@ export const useGetHealthQuery: useQueryFunctionType<
    * @returns {Promise<AxiosResponse<TransactionsResponse>>} A promise that resolves to an AxiosResponse containing the health status.
    */
   async function getHealthFn() {
-    return await api.get("/health_check");
+    return (await api.get("/health_check")).data;
     // Health is the only endpoint that doesn't require /api/v1
   }
 
-  const queryResult = query(
-    ["useGetHealthQuery"],
-    async () => {
-      const result = await getHealthFn();
-      return responseFn(result.data);
-    },
-    {
-      placeholderData: keepPreviousData,
-      refetchInterval: 20000,
-    },
-  );
+  const queryResult = query(["useGetHealthQuery"], getHealthFn, {
+    placeholderData: keepPreviousData,
+    refetchInterval: 20000,
+    ...options,
+  });
 
   return queryResult;
 };
