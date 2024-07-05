@@ -332,6 +332,12 @@ def authenticate_user(username: str, password: str, db: Session = Depends(get_se
     return user if verify_password(password, user.password) else None
 
 
+def add_padding(s):
+    # Calculate the number of padding characters needed
+    padding_needed = 4 - len(s) % 4
+    return s + "=" * padding_needed
+
+
 def ensure_valid_key(s: str) -> bytes:
     # If the key is too short, we'll use it as a seed to generate a valid key
     if len(s) < 32:
