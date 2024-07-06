@@ -1,85 +1,93 @@
 from typing import Optional
 from spider.spider import Spider
-from langflow.custom import CustomComponent
+from langflow.custom import Component
 from langflow.schema import Data
 from langflow.base.langchain_utilities.spider_constants import MODES
+from langflow.inputs import (
+    SecretStrInput,
+    StrInput,
+    DropdownInput,
+    IntInput,
+    BoolInput,
+    DictInput,
+)
 
-class SpiderTool(CustomComponent):
+class SpiderTool(Component):
     display_name: str = "Spider Web Crawler & Scraper"
     description: str = "Spider API for web crawling and scraping."
     output_types: list[str] = ["Document"]
     documentation: str = "https://spider.cloud/docs/api"
 
-    field_config = {
-        "spider_api_key": {
-            "display_name": "Spider API Key",
-            "field_type": "str",
-            "required": True,
-            "password": True,
-            "info": "The Spider API Key",
-        },
-        "url": {
-            "display_name": "URL",
-            "field_type": "str",
-            "required": True,
-            "info": "The URL to scrape or crawl",
-        },
-        "mode": {
-            "display_name": "Mode",
-            "field_type": "str",
-            "required": True,
-            "options": MODES,
-            "default": MODES[0],
-            "info": "The mode of operation: scrape or crawl",
-        },
-        "limit": {
-            "display_name": "Limit",
-            "field_type": "int",
-            "info": "The maximum amount of pages allowed to crawl per website. Set to 0 to crawl all pages.",
-            "advanced": True,
-        },
-        "depth": {
-            "display_name": "Depth",
-            "field_type": "int",
-            "info": "The crawl limit for maximum depth. If 0, no limit will be applied.",
-            "advanced": True,
-        },
-        "blacklist": {
-            "display_name": "Blacklist",
-            "field_type": "str",
-            "info": "Blacklist paths that you do not want to crawl. Use Regex patterns.",
-            "advanced": True,
-        },
-        "whitelist": {
-            "display_name": "Whitelist",
-            "field_type": "str",
-            "info": "Whitelist paths that you want to crawl, ignoring all other routes. Use Regex patterns.",
-            "advanced": True,
-        },
-        "use_readability": {
-            "display_name": "Use Readability",
-            "field_type": "bool",
-            "info": "Use readability to pre-process the content for reading.",
-            "advanced": True,
-        },
-        "request_timeout": {
-            "display_name": "Request Timeout",
-            "field_type": "int",
-            "info": "Timeout for the request in seconds.",
-            "advanced": True,
-        },
-        "metadata": {
-            "display_name": "Metadata",
-            "field_type": "bool",
-            "info": "Include metadata in the response.",
-            "advanced": True,
-        },
-        "params": {
-            "display_name": "Additional Parameters",
-            "field_type": "dict",
-            "info": "Additional parameters to pass to the API. If provided, other inputs will be ignored.",
-        },
-    }
+    inputs = [
+        SecretStrInput(
+            name="spider_api_key",
+            display_name="Spider API Key",
+            required=True,
+            password=True,
+            info="The Spider API Key, get it from https://spider.cloud",
+        ),
+        StrInput(
+            name="url",
+            display_name="URL",
+            required=True,
+            info="The URL to scrape or crawl",
+        ),
+        DropdownInput(
+            name="mode",
+            display_name="Mode",
+            required=True,
+            options=MODES,
+            value=MODES[0],
+            info="The mode of operation: scrape or crawl",
+        ),
+        IntInput(
+            name="limit",
+            display_name="Limit",
+            info="The maximum amount of pages allowed to crawl per website. Set to 0 to crawl all pages.",
+            advanced=True,
+        ),
+        IntInput(
+            name="depth",
+            display_name="Depth",
+            info="The crawl limit for maximum depth. If 0, no limit will be applied.",
+            advanced=True,
+        ),
+        StrInput(
+            name="blacklist",
+            display_name="Blacklist",
+            info="Blacklist paths that you do not want to crawl. Use Regex patterns.",
+            advanced=True,
+        ),
+        StrInput(
+            name="whitelist",
+            display_name="Whitelist",
+            info="Whitelist paths that you want to crawl, ignoring all other routes. Use Regex patterns.",
+            advanced=True,
+        ),
+        BoolInput(
+            name="use_readability",
+            display_name="Use Readability",
+            info="Use readability to pre-process the content for reading.",
+            advanced=True,
+        ),
+        IntInput(
+            name="request_timeout",
+            display_name="Request Timeout",
+            info="Timeout for the request in seconds.",
+            advanced=True,
+        ),
+        BoolInput(
+            name="metadata",
+            display_name="Metadata",
+            info="Include metadata in the response.",
+            advanced=True,
+        ),
+        DictInput(
+            name="params",
+            display_name="Additional Parameters",
+            info="Additional parameters to pass to the API. If provided, other inputs will be ignored.",
+        ),
+    ]
 
     def build(
         self,
