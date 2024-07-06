@@ -1,7 +1,6 @@
 from typing import List
 
 from langchain_community.vectorstores import Qdrant
-
 from langflow.base.vectorstores.model import LCVectorStoreComponent
 from langflow.helpers.data import docs_to_data
 from langflow.io import (
@@ -13,10 +12,8 @@ from langflow.io import (
     DataInput,
     MultilineInput,
 )
-
 from langflow.schema import Data
-from langchain.embeddings.base import Embeddings  # Ensure this import is correct
-
+from langchain.embeddings.base import Embeddings  # Certifique-se de que esta importação está correta
 
 class QdrantVectorStoreComponent(LCVectorStoreComponent):
     display_name = "Qdrant"
@@ -71,11 +68,11 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
 
         server_kwargs = {
             "host": self.host if self.host else None,
-            "port": int(self.port),  # Ensure port is an integer
-            "grpc_port": int(self.grpc_port),  # Ensure grpc_port is an integer
+            "port": int(self.port),  # Garantir que port seja um inteiro
+            "grpc_port": int(self.grpc_port),  # Garantir que grpc_port seja um inteiro
             "api_key": self.api_key,
             "prefix": self.prefix,
-            "timeout": int(self.timeout) if self.timeout else None,  # Ensure timeout is an integer
+            "timeout": int(self.timeout) if self.timeout else None,  # Garantir que timeout seja um inteiro
             "path": self.path if self.path else None,
             "url": self.url if self.url else None,
         }
