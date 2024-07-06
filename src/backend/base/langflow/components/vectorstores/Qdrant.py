@@ -15,7 +15,7 @@ from langflow.io import (
 )
 
 from langflow.schema import Data
-
+from langchain.embeddings.base import Embeddings  # Ensure this import is correct
 
 class QdrantVectorStoreComponent(LCVectorStoreComponent):
     display_name = "Qdrant"
@@ -88,19 +88,17 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
             else:
                 documents.append(_input)
 
-        from langchain.embeddings.base import Embeddings  # Ensure this import is correct
-
         embedding = self.embedding
         if not isinstance(embedding, Embeddings):
             raise ValueError("Invalid embedding object")
 
         if documents:
-            qdrant = Qdrant.from_documents(documents, embedding=embedding, **qdrant_kwargs)
+            qdrant = Qdrant.from_documents(documents, embeddings=embedding, **qdrant_kwargs)
         else:
             from qdrant_client import QdrantClient
 
             client = QdrantClient(**server_kwargs)
-            qdrant = Qdrant(embeddings=embedding.embed_query, client=client, **qdrant_kwargs)
+            qdrant = Qdrant(embeddings=embedding, client=client, **qdrant_kwargs)
 
         return qdrant
 
