@@ -15,6 +15,7 @@ from langflow.io import (
 from langflow.schema import Data
 from langchain.embeddings.base import Embeddings  # Certifique-se de que esta importação está correta
 
+
 class QdrantVectorStoreComponent(LCVectorStoreComponent):
     display_name = "Qdrant"
     description = "Qdrant Vector Store with search capabilities"
