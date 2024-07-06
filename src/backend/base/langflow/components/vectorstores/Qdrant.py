@@ -100,7 +100,7 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
             from qdrant_client import QdrantClient
 
             client = QdrantClient(**server_kwargs)
-            qdrant = Qdrant(Embeddings=embedding.embed_query, client=client, **qdrant_kwargs)
+            qdrant = Qdrant(embeddings=embedding.embed_query, client=client, **qdrant_kwargs)
 
         return qdrant
 
