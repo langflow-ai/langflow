@@ -16,7 +16,7 @@ from langflow.graph.graph.runnable_vertices_manager import RunnableVerticesManag
 from langflow.graph.graph.state_manager import GraphStateManager
 from langflow.graph.graph.utils import find_start_component_id, process_flow
 from langflow.graph.schema import InterfaceComponentTypes, RunOutputs
-from langflow.graph.vertex.base import Vertex
+from langflow.graph.vertex.base import Vertex, VertexStates
 from langflow.graph.vertex.types import InterfaceVertex, StateVertex
 from langflow.schema import Data
 from langflow.schema.schema import INPUT_FIELD_NAME, InputType
@@ -131,7 +131,8 @@ class Graph:
             name (str): The name of the state.
             caller (str): The ID of the vertex that is updating the state.
         """
-        vertices_ids = []
+        vertices_ids = set()
+        new_predecessor_map = {}
         for vertex_id in self._is_state_vertices:
             if vertex_id == caller:
                 continue
@@ -142,7 +143,7 @@ class Graph:
                 and vertex_id != caller
                 and isinstance(vertex, StateVertex)
             ):
-                vertices_ids.append(vertex_id)
+                vertices_ids.add(vertex_id)
                 successors = self.get_all_successors(vertex, flat=True)
                 # Update run_manager.run_predecessors because we are activating vertices
                 # The run_prdecessors is the predecessor map of the vertices
@@ -153,12 +154,19 @@ class Graph:
                 edges_set = set()
                 for vertex in [vertex] + successors:
                     edges_set.update(vertex.edges)
+                    vertices_ids.add(vertex.id)
+                    if vertex.state == VertexStates.INACTIVE:
+                        vertex.set_state("ACTIVE")
                 edges = list(edges_set)
-                new_predecessor_map, _ = self.build_adjacency_maps(edges)
-                self.run_manager.run_predecessors.update(new_predecessor_map)
-                self.vertices_to_run.update(list(map(lambda x: x.id, successors)))
-        self.activated_vertices = vertices_ids
+                predecessor_map, _ = self.build_adjacency_maps(edges)
+                new_predecessor_map.update(predecessor_map)
+
+        self.activated_vertices = list(vertices_ids)
         self.vertices_to_run.update(vertices_ids)
+        self.run_manager.update_run_state(
+            run_predecessors=new_predecessor_map,
+            vertices_to_run=self.vertices_to_run,
+        )
 
     def reset_activated_vertices(self):
         """
@@ -1459,7 +1467,7 @@ class Graph:
         Returns:
             None
         """
-        self.run_manager.build_run_map(self)
+        self.run_manager.build_run_map(predecessor_map=self.predecessor_map, vertices_to_run=self.vertices_to_run)
 
     def find_runnable_predecessors_for_successors(self, vertex_id: str) -> List[str]:
         """
@@ -1483,9 +1491,11 @@ class Graph:
 
     def build_adjacency_maps(self, edges: List[ContractEdge]) -> Tuple[Dict[str, List[str]], Dict[str, List[str]]]:
         """Returns the adjacency maps for the graph."""
-        predecessor_map = defaultdict(list)
-        successor_map = defaultdict(list)
+        predecessor_map: dict[str, list[str]] = defaultdict(list)
+        successor_map: dict[str, list[str]] = defaultdict(list)
         for edge in edges:
-            predecessor_map[edge.target_id].append(edge.source_id)
-            successor_map[edge.source_id].append(edge.target_id)
+            if edge.source_id not in predecessor_map[edge.target_id]:
+                predecessor_map[edge.target_id].append(edge.source_id)
+            if edge.target_id not in successor_map[edge.source_id]:
+                successor_map[edge.source_id].append(edge.target_id)
         return predecessor_map, successor_map

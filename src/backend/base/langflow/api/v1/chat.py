@@ -261,9 +261,9 @@ async def build_vertex(
             background_tasks.add_task(graph.end_all_traces)
 
         build_response = VertexBuildResponse(
-            inactivated_vertices=inactivated_vertices,
-            next_vertices_ids=next_runnable_vertices,
-            top_level_vertices=top_level_vertices,
+            inactivated_vertices=list(set(inactivated_vertices)),
+            next_vertices_ids=list(set(next_runnable_vertices)),
+            top_level_vertices=list(set(top_level_vertices)),
             valid=valid,
             params=params,
             id=vertex.id,
