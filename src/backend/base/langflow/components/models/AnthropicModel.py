@@ -4,13 +4,14 @@ from pydantic.v1 import SecretStr
 from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
-from langflow.io import BoolInput, DropdownInput, FloatInput, IntInput, MessageTextInput, Output, SecretStrInput
+from langflow.io import BoolInput, DropdownInput, FloatInput, IntInput, MessageTextInput, SecretStrInput
 
 
 class AnthropicModelComponent(LCModelComponent):
     display_name = "Anthropic"
     description = "Generate text using Anthropic Chat&Completion LLMs with prefill support."
     icon = "Anthropic"
+    name = "AnthropicModel"
 
     inputs = [
         MessageTextInput(name="input_value", display_name="Input"),
@@ -58,10 +59,6 @@ class AnthropicModelComponent(LCModelComponent):
             info="Prefill text to guide the model's response.",
             advanced=True,
         ),
-    ]
-    outputs = [
-        Output(display_name="Text", name="text_output", method="text_response"),
-        Output(display_name="Language Model", name="model_output", method="build_model"),
     ]
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]

@@ -1,5 +1,6 @@
 import { Button } from "../../../../../../components/ui/button";
 
+import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
 import { useEffect, useState } from "react";
 import IconComponent from "../../../../../../components/genericIconComponent";
 import { BASE_URL_API } from "../../../../../../constants/constants";
@@ -66,6 +67,8 @@ export default function IOFileInput({ field, updateValue }: IOFileInputProps) {
     setIsDragging(false);
   };
 
+  const { mutate } = usePostUploadFile();
+
   const upload = async (file) => {
     if (file) {
       // Check if a file was selected
@@ -80,17 +83,18 @@ export default function IOFileInput({ field, updateValue }: IOFileInputProps) {
         document.body.appendChild(imgElement); // Add the image to the body or replace this with your desired location
       };
       fileReader.readAsDataURL(file);
-
-      uploadFile(file, currentFlowId)
-        .then((res) => res.data)
-        .then((data) => {
-          // Get the file name from the response
-          const { file_path, flowId } = data;
-          setFilePath(file_path);
-        })
-        .catch(() => {
-          console.error("Error occurred while uploading file");
-        });
+      mutate(
+        { file, id: currentFlowId },
+        {
+          onSuccess: (data) => {
+            const { file_path } = data;
+            setFilePath(file_path);
+          },
+          onError: () => {
+            console.error("Error occurred while uploading file");
+          },
+        },
+      );
     }
   };
 

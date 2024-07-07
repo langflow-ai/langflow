@@ -1,6 +1,7 @@
 // src/constants/constants.ts
 
 import { languageMap } from "../types/components";
+import { nodeNames } from "../utils/styleUtils";
 
 /**
  * invalid characters for flow name
@@ -721,19 +722,7 @@ export const PRIORITY_SIDEBAR_ORDER = [
   "models",
   "helpers",
   "vectorstores",
-  "vectorsearch",
   "embeddings",
-];
-export const NATIVE_CATEGORIES = [
-  "inputs",
-  "outputs",
-  "prompts",
-  "data",
-  "prompt",
-  "models",
-  "helpers",
-  "experimental",
-  "agents",
 ];
 
 export const AUTHORIZED_DUPLICATE_REQUESTS = [
@@ -849,7 +838,7 @@ export const LOCATIONS_TO_RETURN = ["/flow/", "/settings/"];
 export const MAX_BATCH_SIZE = 50;
 
 export const MODAL_CLASSES =
-  "nopan nodelete nodrag noundo nocopy fixed inset-0 bottom-0 left-0 right-0 top-0 z-50 overflow-auto bg-blur-shared backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0";
+  "nopan nodelete nodrag  noflow fixed inset-0 bottom-0 left-0 right-0 top-0 z-50 overflow-auto bg-blur-shared backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0";
 
 export const ALLOWED_IMAGE_INPUT_EXTENSIONS = ["png", "jpg", "jpeg"];
 

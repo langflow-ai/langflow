@@ -476,7 +476,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         const ids = errorsObjs.map((obj) => obj.id).flat();
 
         get().updateBuildStatus(ids, BuildStatus.ERROR);
-        throw new Error("Invalid nodes");
+        throw new Error("Invalid components");
       }
     }
     function handleBuildUpdate(

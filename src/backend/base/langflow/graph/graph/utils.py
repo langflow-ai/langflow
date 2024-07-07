@@ -1,5 +1,24 @@
-from collections import deque
 import copy
+from collections import deque
+
+PRIORITY_LIST_OF_INPUTS = ["webhook", "chat"]
+
+
+def find_start_component_id(vertices):
+    """
+    Finds the component ID from a list of vertices based on a priority list of input types.
+
+    Args:
+        vertices (list): A list of vertex IDs.
+
+    Returns:
+        str or None: The component ID that matches the highest priority input type, or None if no match is found.
+    """
+    for input_type_str in PRIORITY_LIST_OF_INPUTS:
+        component_id = next((vertex_id for vertex_id in vertices if input_type_str in vertex_id.lower()), None)
+        if component_id:
+            return component_id
+    return None
 
 
 def find_last_node(nodes, edges):

@@ -1,11 +1,14 @@
 name: Lint Frontend
 
 on:
-  pull_request:
-    paths:
-      - "src/frontend/**"
-  merge_group:
-    types: [checks_requested]
+  workflow_call:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "(Optional) Branch to checkout"
+        required: false
+        type: string
+
 
 env:
   NODE_VERSION: "21"
@@ -20,6 +23,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || github.ref }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -46,5 +51,3 @@ jobs:
         run: |
           cd src/frontend
           npm run check-format
-
-

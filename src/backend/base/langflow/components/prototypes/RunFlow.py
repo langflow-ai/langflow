@@ -10,6 +10,7 @@ from langflow.schema import Data, dotdict
 class RunFlowComponent(CustomComponent):
     display_name = "Run Flow"
     description = "A component to run a flow."
+    name = "RunFlow"
     beta: bool = True
 
     def get_flow_names(self) -> List[str]:

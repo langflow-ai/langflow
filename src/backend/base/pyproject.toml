@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "langflow-base"
-version = "0.0.81"
+version = "0.0.83"
 description = "A Python package with a built-in web application"
 authors = ["Langflow <contact@langflow.org>"]
 maintainers = [
@@ -35,7 +35,7 @@ langchainhub = "~0.1.15"
 sqlmodel = "^0.0.18"
 loguru = "^0.7.1"
 rich = "^13.7.0"
-langchain-experimental = "*"
+langchain-experimental = "^0.0.61"
 pydantic = "^2.7.0"
 pydantic-settings = "^2.2.0"
 websockets = "*"
@@ -65,7 +65,10 @@ uncurl = "^0.0.11"
 sentry-sdk = {extras = ["fastapi", "loguru"], version = "^2.5.1"}
 chardet = "^5.2.0"
 firecrawl-py = "^0.0.16"
-
+opentelemetry-api = "^1.25.0"
+opentelemetry-sdk = "^1.25.0"
+opentelemetry-exporter-prometheus = "^0.46b0"
+prometheus-client = "^0.20.0"
 
 [tool.poetry.extras]
 deploy = ["celery", "redis", "flower"]

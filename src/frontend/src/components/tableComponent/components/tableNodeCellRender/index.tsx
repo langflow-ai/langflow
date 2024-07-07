@@ -2,6 +2,7 @@ import { CustomCellRendererProps } from "ag-grid-react";
 import { cloneDeep } from "lodash";
 import { useState } from "react";
 import useFlowStore from "../../../../stores/flowStore";
+import { APIClassType } from "../../../../types/api";
 import {
   convertObjToArray,
   convertValuesToNumbers,
@@ -25,24 +26,31 @@ import { renderStrType } from "./cellTypeStr";
 
 export default function TableNodeCellRender({
   node: { data },
-  value: { value, nodeClass, handleOnNewValue: handleOnNewValueNode },
+  value: {
+    value,
+    nodeClass,
+    handleOnNewValue: handleOnNewValueNode,
+    handleNodeClass,
+  },
 }: CustomCellRendererProps) {
   const handleOnNewValue = (newValue: any, name: string, dbValue?: boolean) => {
     handleOnNewValueNode(newValue, name, dbValue);
     setTemplateData((old) => {
       let newData = cloneDeep(old);
       newData.value = newValue;
-      if (dbValue) {
+      if (dbValue !== undefined) {
         newData.load_from_db = newValue;
       }
       return newData;
     });
     setTemplateValue(newValue);
   };
+  const setNodeClass = (value: APIClassType, code?: string, type?: string) => {
+    handleNodeClass(value, templateData.key, code, type);
+  };
 
   const [templateValue, setTemplateValue] = useState(value);
   const [templateData, setTemplateData] = useState(data);
-
   const [errorDuplicateKey, setErrorDuplicateKey] = useState(false);
   const edges = useFlowStore((state) => state.edges);
 
@@ -102,7 +110,7 @@ export default function TableNodeCellRender({
               disabled={disabled}
               editNode={true}
               value={
-                Object.keys(templateValue)?.length === 0 || !templateValue
+                Object.keys(templateValue || {})?.length === 0 || !templateValue
                   ? [{ "": "" }]
                   : convertObjToArray(templateValue, templateData.type)
               }
@@ -181,9 +189,7 @@ export default function TableNodeCellRender({
             editNode={true}
             disabled={disabled}
             nodeClass={nodeClass}
-            setNodeClass={(value) => {
-              nodeClass = value;
-            }}
+            setNodeClass={setNodeClass}
             value={templateValue ?? ""}
             onChange={(value: string | string[]) => {
               handleOnNewValue(value, templateData.key);
@@ -198,9 +204,7 @@ export default function TableNodeCellRender({
           <CodeAreaComponent
             readonly={nodeClass.flow && templateData.dynamic ? true : false}
             dynamic={templateData.dynamic ?? false}
-            setNodeClass={(value) => {
-              nodeClass = value;
-            }}
+            setNodeClass={setNodeClass}
             nodeClass={nodeClass}
             disabled={disabled}
             editNode={true}

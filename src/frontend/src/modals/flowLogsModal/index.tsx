@@ -1,8 +1,8 @@
+import { useGetTransactionsQuery } from "@/controllers/API/queries/transactions";
 import { ColDef, ColGroupDef } from "ag-grid-community";
 import { useEffect, useState } from "react";
 import IconComponent from "../../components/genericIconComponent";
 import TableComponent from "../../components/tableComponent";
-import { getTransactionTable } from "../../controllers/API";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { FlowSettingsPropsType } from "../../types/components";
 import BaseModal from "../baseModal";
@@ -16,13 +16,19 @@ export default function FlowLogsModal({
   const [columns, setColumns] = useState<Array<ColDef | ColGroupDef>>([]);
   const [rows, setRows] = useState<any>([]);
 
+  const { data, isLoading, refetch } = useGetTransactionsQuery({
+    id: currentFlowId,
+    mode: "union",
+  });
+
   useEffect(() => {
-    getTransactionTable(currentFlowId, "union").then((data) => {
+    if (data) {
       const { columns, rows } = data;
       setColumns(columns.map((col) => ({ ...col, editable: true })));
       setRows(rows);
-    });
-  }, [open]);
+    }
+    if (open) refetch();
+  }, [data, open, isLoading]);
 
   return (
     <BaseModal open={open} setOpen={setOpen} size="large">

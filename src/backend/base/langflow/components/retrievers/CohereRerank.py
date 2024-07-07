@@ -12,6 +12,7 @@ from langflow.schema import Data
 class CohereRerankComponent(LCVectorStoreComponent):
     display_name = "Cohere Rerank"
     description = "Rerank documents using the Cohere API and a retriever."
+    name = "CohereRerank"
     icon = "Cohere"
 
     inputs = [

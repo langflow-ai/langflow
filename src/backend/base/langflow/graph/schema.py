@@ -54,6 +54,7 @@ class InterfaceComponentTypes(str, Enum, metaclass=ContainsEnumMeta):
     TextInput = "TextInput"
     TextOutput = "TextOutput"
     DataOutput = "DataOutput"
+    WebhookInput = "Webhook"
 
     def __contains__(cls, item):
         try:
@@ -69,6 +70,7 @@ RECORDS_COMPONENTS = [InterfaceComponentTypes.DataOutput]
 INPUT_COMPONENTS = [
     InterfaceComponentTypes.ChatInput,
     InterfaceComponentTypes.TextInput,
+    InterfaceComponentTypes.WebhookInput,
 ]
 OUTPUT_COMPONENTS = [
     InterfaceComponentTypes.ChatOutput,

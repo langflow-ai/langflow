@@ -40,6 +40,11 @@ class RunnableVerticesManager:
         self.run_predecessors = state["run_predecessors"]
         self.vertices_to_run = state["vertices_to_run"]
 
+    def update_run_state(self, run_predecessors: dict, vertices_to_run: set):
+        self.run_predecessors.update(run_predecessors)
+        self.vertices_to_run.update(vertices_to_run)
+        self.build_run_map(self.run_predecessors, self.vertices_to_run)
+
     def is_vertex_runnable(self, vertex_id: str, inactivated_vertices: set[str]) -> bool:
         """Determines if a vertex is runnable."""
 
@@ -68,14 +73,14 @@ class RunnableVerticesManager:
             if vertex_id in self.run_predecessors[predecessor]:
                 self.run_predecessors[predecessor].remove(vertex_id)
 
-    def build_run_map(self, graph):
+    def build_run_map(self, predecessor_map, vertices_to_run):
         """Builds a map of vertices and their runnable successors."""
         self.run_map = defaultdict(list)
-        for vertex_id, predecessors in graph.predecessor_map.items():
+        for vertex_id, predecessors in predecessor_map.items():
             for predecessor in predecessors:
                 self.run_map[predecessor].append(vertex_id)
-        self.run_predecessors = graph.predecessor_map.copy()
-        self.vertices_to_run = graph.vertices_to_run
+        self.run_predecessors = predecessor_map.copy()
+        self.vertices_to_run = vertices_to_run
 
     def update_vertex_run_state(self, vertex_id: str, is_runnable: bool):
         """Updates the runnable state of a vertex."""
@@ -107,7 +112,7 @@ class RunnableVerticesManager:
 
         """
         async with lock:
-            self.remove_from_predecessors(vertex.id)
+            self.remove_vertex_from_runnables(vertex.id)
             direct_successors_ready = [
                 v for v in vertex.successors_ids if self.is_vertex_runnable(v, graph.inactivated_vertices)
             ]

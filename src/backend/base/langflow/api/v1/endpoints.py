@@ -22,7 +22,7 @@ from langflow.api.v1.schemas import (
     UploadFileResponse,
 )
 from langflow.custom.custom_component.component import Component
-from langflow.custom.utils import build_custom_component_template
+from langflow.custom.utils import build_custom_component_template, get_instance_name
 from langflow.graph.graph.base import Graph
 from langflow.graph.schema import RunOutputs
 from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
@@ -214,11 +214,13 @@ async def simplified_run_flow(
         return result
 
     except ValueError as exc:
-        end_time = time.perf_counter()
         background_tasks.add_task(
             telemetry_service.log_package_run,
             RunPayload(
-                runIsWebhook=False, runSeconds=int(end_time - start_time), runSuccess=False, runErrorMessage=str(exc)
+                runIsWebhook=False,
+                runSeconds=int(time.perf_counter() - start_time),
+                runSuccess=False,
+                runErrorMessage=str(exc),
             ),
         )
         if "badly formed hexadecimal UUID string" in str(exc):
@@ -234,7 +236,10 @@ async def simplified_run_flow(
         background_tasks.add_task(
             telemetry_service.log_package_run,
             RunPayload(
-                runIsWebhook=False, runSeconds=int(end_time - start_time), runSuccess=False, runErrorMessage=str(exc)
+                runIsWebhook=False,
+                runSeconds=int(time.perf_counter() - start_time),
+                runSuccess=False,
+                runErrorMessage=str(exc),
             ),
         )
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
@@ -519,7 +524,9 @@ async def custom_component(
     built_frontend_node, component_instance = build_custom_component_template(component, user_id=user.id)
     if raw_code.frontend_node is not None:
         built_frontend_node = component_instance.post_code_processing(built_frontend_node, raw_code.frontend_node)
-    return CustomComponentResponse(data=built_frontend_node, type=component_instance.__class__.__name__)
+
+    _type = get_instance_name(component_instance)
+    return CustomComponentResponse(data=built_frontend_node, type=_type)
 
 
 @router.post("/custom_component/update", status_code=HTTPStatus.OK)
