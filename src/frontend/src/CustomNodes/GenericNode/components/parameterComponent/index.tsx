@@ -12,7 +12,7 @@ import InputGlobalComponent from "../../../../components/inputGlobalComponent";
 import InputListComponent from "../../../../components/inputListComponent";
 import IntComponent from "../../../../components/intComponent";
 import KeypairListComponent from "../../../../components/keypairListComponent";
-import { MultiSelect } from "../../../../components/multiselectComponent";
+import { Multiselect } from "../../../../components/multiselectComponent";
 import PromptAreaComponent from "../../../../components/promptComponent";
 import ShadTooltip from "../../../../components/shadTooltipComponent";
 import TextAreaComponent from "../../../../components/textAreaComponent";
@@ -567,7 +567,7 @@ export default function ParameterComponent({
           }
         >
           <div className="mt-2 flex w-full items-center">
-            <MultiSelect
+            <Multiselect
               disabled={disabled}
               options={data?.node?.template?.[name]?.options || []}
               value={data?.node?.template?.[name]?.value || []}

@@ -1,7 +1,7 @@
 import Dropdown from "../../../dropdownComponent";
 import InputGlobalComponent from "../../../inputGlobalComponent";
 import InputListComponent from "../../../inputListComponent";
-import { MultiSelect } from "../../../multiselectComponent";
+import { Multiselect } from "../../../multiselectComponent";
 import TextAreaComponent from "../../../textAreaComponent";
 
 export function renderStrType({
@@ -47,7 +47,7 @@ export function renderStrType({
 
   if (!!templateData.options && !!templateData?.list) {
     return (
-      <MultiSelect
+      <Multiselect
         editNode={true}
         disabled={disabled}
         options={templateData.options || []}

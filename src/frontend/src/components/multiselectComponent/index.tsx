@@ -28,16 +28,16 @@ import {
 } from "../ui/popover";
 import { Separator } from "../ui/separator";
 
-const MultiSelectBadgeWrapper = ({
+const MultiselectBadgeWrapper = ({
   value,
   variant,
   className,
   onDelete,
 }: {
-  value: MultiSelectValue;
-  variant: MultiSelectProps<MultiSelectValue>["variant"];
-  className: MultiSelectProps<MultiSelectValue>["className"];
-  onDelete: ({ value }: { value: MultiSelectValue }) => void;
+  value: MultiselectValue;
+  variant: MultiselectProps<MultiselectValue>["variant"];
+  className: MultiselectProps<MultiselectValue>["className"];
+  onDelete: ({ value }: { value: MultiselectValue }) => void;
 }) => {
   const badgeRef = useRef<HTMLDivElement>(null);
 
@@ -52,7 +52,7 @@ const MultiSelectBadgeWrapper = ({
     <Badge
       className={cn(
         "overflow-hidden rounded-sm p-0 font-normal",
-        multiSelectVariants({ variant, className }),
+        multiselectVariants({ variant, className }),
       )}
     >
       <div id="content" className="p-1 pr-0" ref={badgeRef}>
@@ -78,7 +78,7 @@ const MultiSelectBadgeWrapper = ({
   );
 };
 
-const multiSelectVariants = cva("m-1 ", {
+const multiselectVariants = cva("m-1 ", {
   variants: {
     variant: {
       default:
@@ -95,14 +95,14 @@ const multiSelectVariants = cva("m-1 ", {
   },
 });
 
-type MultiSelectValue = {
+type MultiselectValue = {
   label: string;
   value: string;
 };
 
-interface MultiSelectProps<T>
+interface MultiselectProps<T>
   extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "value">,
-    VariantProps<typeof multiSelectVariants> {
+    VariantProps<typeof multiselectVariants> {
   options: T[];
   onValueChange: (value: T[]) => void;
   placeholder?: string;
@@ -112,9 +112,9 @@ interface MultiSelectProps<T>
   value?: T[];
 }
 
-export const MultiSelect = forwardRef<
+export const Multiselect = forwardRef<
   HTMLButtonElement,
-  MultiSelectProps<MultiSelectValue>
+  MultiselectProps<MultiselectValue>
 >(
   (
     {
@@ -130,7 +130,7 @@ export const MultiSelect = forwardRef<
     },
     ref,
   ) => {
-    const [selectedValues, setSelectedValues] = useState<MultiSelectValue[]>(
+    const [selectedValues, setSelectedValues] = useState<MultiselectValue[]>(
       value || [],
     );
     const [isPopoverOpen, setIsPopoverOpen] = useState(false);
@@ -156,7 +156,7 @@ export const MultiSelect = forwardRef<
       }
     };
 
-    const toggleOption = ({ value }: { value: MultiSelectValue }) => {
+    const toggleOption = ({ value }: { value: MultiselectValue }) => {
       const newSelectedValues = !!selectedValues.find(
         (v) => v.value === value.value,
       )
@@ -175,11 +175,11 @@ export const MultiSelect = forwardRef<
       setIsPopoverOpen((prev) => !prev);
     };
 
-    const PopoverContentMultiSelect = editNode
+    const PopoverContentMultiselect = editNode
       ? PopoverContent
       : PopoverContentWithoutPortal;
 
-    const popoverContentMultiSelectMinWidth = isRefObject(combinedRef)
+    const popoverContentMultiselectMinWidth = isRefObject(combinedRef)
       ? `${combinedRef?.current?.clientWidth}px`
       : "200px";
 
@@ -207,7 +207,7 @@ export const MultiSelect = forwardRef<
                 <div className="flex flex-wrap items-center">
                   {selectedValues?.map((selectedValue) => {
                     return (
-                      <MultiSelectBadgeWrapper
+                      <MultiselectBadgeWrapper
                         value={selectedValue}
                         onDelete={toggleOption}
                         variant={variant}
@@ -242,15 +242,15 @@ export const MultiSelect = forwardRef<
             )}
           </Button>
         </PopoverTrigger>
-        <PopoverContentMultiSelect
+        <PopoverContentMultiselect
           id="multiselect-content"
           side="bottom"
           className={cn(
             `nocopy nowheel nopan nodelete nodrag noundo w-full p-0`,
           )}
           style={{
-            minWidth: popoverContentMultiSelectMinWidth,
-            maxWidth: popoverContentMultiSelectMinWidth,
+            minWidth: popoverContentMultiselectMinWidth,
+            maxWidth: popoverContentMultiselectMinWidth,
           }}
           align="start"
           onEscapeKeyDown={() => setIsPopoverOpen(false)}
@@ -317,10 +317,10 @@ export const MultiSelect = forwardRef<
               </CommandGroup>
             </CommandList>
           </Command>
-        </PopoverContentMultiSelect>
+        </PopoverContentMultiselect>
       </Popover>
     );
   },
 );
 
-MultiSelect.displayName = "MultiSelect";
+Multiselect.displayName = "Multiselect";

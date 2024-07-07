@@ -11,7 +11,6 @@ from .input_mixin import (
     BaseInputMixin,
     DatabaseLoadMixin,
     DropDownMixin,
-    MultiselectMixin,
     FieldTypes,
     FileMixin,
     InputTraceMixin,
@@ -290,12 +289,12 @@ class DropdownInput(BaseInputMixin, DropDownMixin, MetadataTraceMixin):
     options: list[str] = Field(default_factory=list)
 
 
-class MultiselectInput(BaseInputMixin, MultiselectMixin, MetadataTraceMixin):
+class MultiselectInput(BaseInputMixin, ListableInputMixin, DropDownMixin, MetadataTraceMixin):
     """
     Represents a multiselect input field.
 
     This class represents a multiselect input field and provides functionality for handling multiselect values.
-    It inherits from the `BaseInputMixin` and `MultiselectMixin` classes.
+    It inherits from the `BaseInputMixin`, `ListableInputMixin` and `DropDownMixin` classes.
 
     Attributes:
         field_type (Optional[SerializableFieldTypes]): The field type of the input. Defaults to FieldTypes.TEXT.
