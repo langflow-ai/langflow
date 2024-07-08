@@ -2,20 +2,21 @@ from pathlib import Path
 
 import yaml
 from langchain.agents import AgentExecutor
-from langchain_community.agent_toolkits import create_json_agent
+from langchain_community.agent_toolkits import create_openapi_agent
 from langchain_community.agent_toolkits.json.toolkit import JsonToolkit
 from langchain_community.tools.json.tool import JsonSpec
+from langchain_community.agent_toolkits.openapi.toolkit import BaseToolkit, OpenAPIToolkit
 
 from langflow.base.agents.agent import LCAgentComponent
 from langflow.custom import Component
 from langflow.inputs import BoolInput, HandleInput, FileInput
-from langflow.template import Output
+from langchain_community.utilities.requests import TextRequestsWrapper
 
 
-class JsonAgentComponent(LCAgentComponent):
-    display_name = "JsonAgent"
-    description = "Construct a json agent from an LLM and tools."
-    name = "JsonAgent"
+class OpenAPIAgentComponent(LCAgentComponent):
+    display_name = "OpenAPI Agent"
+    description = "Agent to interact with OpenAPI API."
+    name = "OpenAPIAgent"
 
     inputs = LCAgentComponent._base_inputs + [
         FileInput(
@@ -29,6 +30,12 @@ class JsonAgentComponent(LCAgentComponent):
             display_name="Language Model",
             input_types=["LanguageModel"],
             required=True
+        ),
+        BoolInput(
+            name="allow_dangerous_requests",
+            display_name="Allow Dangerous Requests",
+            value=False,
+            required=True
         )
     ]
     def build_agent(self) -> AgentExecutor:
@@ -37,10 +44,19 @@ class JsonAgentComponent(LCAgentComponent):
             spec = JsonSpec(dict_=yaml_dict)
         else:
             spec = JsonSpec.from_file(Path(self.path))
-        toolkit = JsonToolkit(spec=spec)
+        requests_wrapper = TextRequestsWrapper()
+        toolkit = OpenAPIToolkit.from_llm(
+            llm=self.llm,
+            json_spec=spec,
+            requests_wrapper=requests_wrapper,
+            allow_dangerous_requests=self.allow_dangerous_requests,
+        )
 
-        return create_json_agent(
+        agent_args = self.get_agent_kwargs()
+        agent_args["max_iterations"] = agent_args["agent_executor_kwargs"]["max_iterations"]
+        del agent_args["agent_executor_kwargs"]["max_iterations"]
+        return create_openapi_agent(
             llm=self.llm,
             toolkit=toolkit,
-            **self.get_agent_kwargs()
+            **agent_args
         )

@@ -1,15 +1,16 @@
-from langchain.agents import create_tool_calling_agent
+from langchain.agents import create_openai_tools_agent
 from langchain_core.prompts import ChatPromptTemplate, PromptTemplate, HumanMessagePromptTemplate
+
 from langflow.base.agents.agent import LCAgentComponent, LCToolsAgentComponent
 from langflow.inputs import MultilineInput
 
 
-class ToolCallingAgentComponent(LCToolsAgentComponent):
-    display_name: str = "Tool Calling Agent"
-    description: str = "Agent that uses tools"
+class OpenAIToolsAgentComponent(LCToolsAgentComponent):
+    display_name: str = "OpenAI Tools Agent"
+    description: str = "Agent that uses tools via openai-tools."
     icon = "LangChain"
     beta = True
-    name = "ToolCallingAgent"
+    name = "OpenAIToolsAgent"
 
     inputs = LCToolsAgentComponent._base_inputs + [
         MultilineInput(
@@ -26,7 +27,6 @@ class ToolCallingAgentComponent(LCToolsAgentComponent):
         ),
     ]
 
-
     def creat_agent_runnable(self):
         if "input" not in self.user_prompt:
             raise ValueError("Prompt must contain 'input' key.")
@@ -36,4 +36,4 @@ class ToolCallingAgentComponent(LCToolsAgentComponent):
             ("placeholder", "{agent_scratchpad}")
         ]
         prompt = ChatPromptTemplate.from_messages(messages)
-        return create_tool_calling_agent(self.llm, self.tools, prompt)
+        return create_openai_tools_agent(self.llm, self.tools, prompt)
