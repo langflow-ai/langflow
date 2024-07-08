@@ -11,6 +11,7 @@ from langflow.custom import CustomComponent
 class WolframAlphaAPIWrapperComponent(CustomComponent):
     display_name = "WolframAlphaAPIWrapper"
     description = "Wrapper for Wolfram Alpha."
+    name = "WolframAlphaAPIWrapper"
 
     def build_config(self):
         return {"appid": {"display_name": "App ID", "type": "str", "password": True}}

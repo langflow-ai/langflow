@@ -10,7 +10,8 @@ import click
 import httpx
 import typer
 from dotenv import dotenv_values, load_dotenv
-from multiprocess import Process, cpu_count  # type: ignore
+from multiprocess import cpu_count  # type: ignore
+from multiprocess.context import Process  # type: ignore
 from packaging import version as pkg_version
 from rich import box
 from rich import print as rprint
@@ -181,6 +182,7 @@ def run(
     # Define an env variable to know if we are just testing the server
     if "pytest" in sys.modules:
         return
+    process: Process | None = None
     try:
         if platform.system() in ["Windows"]:
             # Run using uvicorn on MacOS and Windows
@@ -195,7 +197,12 @@ def run(
         if process:
             process.join()
     except KeyboardInterrupt:
-        pass
+        if process is not None:
+            process.terminate()
+        sys.exit(0)
+    except Exception as e:
+        logger.exception(e)
+        sys.exit(1)
 
 
 def wait_for_server_ready(host, port):
@@ -417,29 +424,24 @@ def run_langflow(host, port, log_level, options, app):
     """
     Run Langflow server on localhost
     """
-    try:
-        if platform.system() in ["Windows"]:
-            # Run using uvicorn on MacOS and Windows
-            # Windows doesn't support gunicorn
-            # MacOS requires an env variable to be set to use gunicorn
-            import uvicorn
 
-            uvicorn.run(
-                app,
-                host=host,
-                port=port,
-                log_level=log_level.lower(),
-                loop="asyncio",
-            )
-        else:
-            from langflow.server import LangflowApplication
+    if platform.system() in ["Windows"]:
+        # Run using uvicorn on MacOS and Windows
+        # Windows doesn't support gunicorn
+        # MacOS requires an env variable to be set to use gunicorn
+        import uvicorn
 
-            LangflowApplication(app, options).run()
-    except KeyboardInterrupt:
-        pass
-    except Exception as e:
-        logger.exception(e)
-        sys.exit(1)
+        uvicorn.run(
+            app,
+            host=host,
+            port=port,
+            log_level=log_level.lower(),
+            loop="asyncio",
+        )
+    else:
+        from langflow.server import LangflowApplication
+
+        LangflowApplication(app, options).run()
 
 
 @app.command()

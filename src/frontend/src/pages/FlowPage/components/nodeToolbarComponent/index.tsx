@@ -87,7 +87,7 @@ export default function NodeToolbarComponent({
     }
     setNoticeData({
       title:
-        "Minimization are only available for nodes with one handle or fewer.",
+        "Minimization are only available for components with one handle or fewer.",
     });
     return;
   }
@@ -390,7 +390,11 @@ export default function NodeToolbarComponent({
     });
   };
 
-  const handleNodeClass = (newNodeClass: APIClassType, code?: string): void => {
+  const handleNodeClass = (
+    newNodeClass: APIClassType,
+    code?: string,
+    type?: string,
+  ): void => {
     if (!data.node) return;
     if (data.node!.template[name].value !== code) {
       takeSnapshot();
@@ -405,6 +409,10 @@ export default function NodeToolbarComponent({
         description: newNodeClass.description ?? data.node!.description,
         display_name: newNodeClass.display_name ?? data.node!.display_name,
       };
+
+      if (type) {
+        newNode.data.type = type;
+      }
 
       newNode.data.node.template[name].value = code;
 
@@ -754,7 +762,7 @@ export default function NodeToolbarComponent({
             onClose={setShowOverrideModal}
             onCancel={() => {
               saveComponent(cloneDeep(data), false);
-              setSuccessData({ title: "New node successfully saved!" });
+              setSuccessData({ title: "New component successfully saved!" });
             }}
           >
             <ConfirmationModal.Content>

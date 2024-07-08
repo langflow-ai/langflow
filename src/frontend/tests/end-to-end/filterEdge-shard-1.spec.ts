@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("LLMChain - Filter", async ({ page }) => {
+test("RetrievalQA - Filter", async ({ page }) => {
   await page.goto("/");
   await page.waitForTimeout(2000);
 
@@ -31,11 +31,11 @@ test("LLMChain - Filter", async ({ page }) => {
   });
   await page.getByTestId("extended-disclosure").click();
   await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("llmchain");
+  await page.getByPlaceholder("Search").fill("retrievalqa");
 
   await page.waitForTimeout(1000);
   await page
-    .getByTestId("chainsLLMChain")
+    .getByTestId("chainsRetrieval QA")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.mouse.up();
   await page.mouse.down();
@@ -47,11 +47,11 @@ test("LLMChain - Filter", async ({ page }) => {
 
   let visibleElementHandle;
 
-  const llmChainOutputElements = await page
-    .getByTestId("handle-llmchain-shownode-text-right")
+  const outputElements = await page
+    .getByTestId("handle-retrievalqa-shownode-text-right")
     .all();
 
-  for (const element of llmChainOutputElements) {
+  for (const element of outputElements) {
     if (await element.isVisible()) {
       visibleElementHandle = element;
       break;
@@ -62,37 +62,47 @@ test("LLMChain - Filter", async ({ page }) => {
     force: true,
   });
 
+  await expect(page.getByTestId("disclosure-inputs")).toBeVisible();
+  await expect(page.getByTestId("disclosure-outputs")).toBeVisible();
+  await expect(page.getByTestId("disclosure-data")).toBeVisible();
+  await expect(page.getByTestId("disclosure-models")).toBeVisible();
   await expect(page.getByTestId("disclosure-helpers")).toBeVisible();
+  await expect(page.getByTestId("disclosure-vector stores")).toBeVisible();
+  await expect(page.getByTestId("disclosure-embeddings")).toBeVisible();
   await expect(page.getByTestId("disclosure-agents")).toBeVisible();
   await expect(page.getByTestId("disclosure-chains")).toBeVisible();
-  await expect(page.getByTestId("disclosure-utilities")).toBeVisible();
   await expect(page.getByTestId("disclosure-memories")).toBeVisible();
   await expect(page.getByTestId("disclosure-prototypes")).toBeVisible();
   await expect(page.getByTestId("disclosure-retrievers")).toBeVisible();
   await expect(page.getByTestId("disclosure-text splitters")).toBeVisible();
-  await expect(page.getByTestId("disclosure-toolkits")).toBeVisible();
-  await expect(page.getByTestId("disclosure-tools")).toBeVisible();
 
-  await expect(page.getByTestId("chainsLLMChain").first()).toBeVisible();
+  await expect(page.getByTestId("inputsChat Input").first()).toBeVisible();
+  await expect(page.getByTestId("outputsChat Output").first()).toBeVisible();
+  await expect(page.getByTestId("dataAPI Request").first()).toBeVisible();
+  await expect(page.getByTestId("modelsAmazon Bedrock").first()).toBeVisible();
+  await expect(page.getByTestId("helpersChat Memory").first()).toBeVisible();
+  await expect(page.getByTestId("vectorstoresAstra DB").first()).toBeVisible();
   await expect(
-    page.getByTestId("langchain_utilitiesSearchApi").first(),
+    page.getByTestId("embeddingsAmazon Bedrock Embeddings").first(),
   ).toBeVisible();
   await expect(
-    page.getByTestId("memoriesAstra DB Message Reader").first(),
+    page.getByTestId("agentsTool Calling Agent").first(),
   ).toBeVisible();
   await expect(
-    page.getByTestId("prototypesFlow as Tool").first(),
+    page.getByTestId("chainsConversationChain").first(),
   ).toBeVisible();
   await expect(
-    page.getByTestId("retrieversAmazon Kendra Retriever").first(),
+    page.getByTestId("memoriesAstra DB Chat Memory").first(),
+  ).toBeVisible();
+  await expect(
+    page.getByTestId("prototypesConditional Router").first(),
+  ).toBeVisible();
+  await expect(
+    page.getByTestId("retrieversSelf Query Retriever").first(),
   ).toBeVisible();
   await expect(
     page.getByTestId("textsplittersCharacterTextSplitter").first(),
   ).toBeVisible();
-  await expect(
-    page.getByTestId("toolkitsVectorStoreInfo").first(),
-  ).toBeVisible();
-  await expect(page.getByTestId("toolsSearchApi").first()).toBeVisible();
 
   await page.getByPlaceholder("Search").click();
 
@@ -109,11 +119,11 @@ test("LLMChain - Filter", async ({ page }) => {
   await expect(page.getByTestId("model_specsChatOpenAI")).not.toBeVisible();
   await expect(page.getByTestId("model_specsChatVertexAI")).not.toBeVisible();
 
-  const llmChainInputElements1 = await page
-    .getByTestId("handle-llmchain-shownode-llm-left")
+  const chainInputElements1 = await page
+    .getByTestId("handle-retrievalqa-shownode-llm-left")
     .all();
 
-  for (const element of llmChainInputElements1) {
+  for (const element of chainInputElements1) {
     if (await element.isVisible()) {
       visibleElementHandle = element;
       break;
@@ -128,11 +138,11 @@ test("LLMChain - Filter", async ({ page }) => {
 
   await expect(page.getByTestId("disclosure-models")).toBeVisible();
 
-  const llmChainInputElements0 = await page
-    .getByTestId("handle-llmchain-shownode-template-left")
+  const rqaChainInputElements0 = await page
+    .getByTestId("handle-retrievalqa-shownode-template-left")
     .all();
 
-  for (const element of llmChainInputElements0) {
+  for (const element of rqaChainInputElements0) {
     if (await element.isVisible()) {
       visibleElementHandle = element;
       break;

@@ -105,12 +105,6 @@ async def retrieve_vertices_order(
                 first_layer = graph.sort_vertices()
         else:
             first_layer = graph.sort_vertices()
-        # When we send vertices to the frontend
-        # we need to remove them from the predecessors
-        # so they are not considered for building again
-        # which duplicates the results
-        for vertex_id in first_layer:
-            graph.remove_from_predecessors(vertex_id)
 
         # Now vertices is a list of lists
         # We need to get the id of each vertex
@@ -160,7 +154,7 @@ async def build_vertex(
     Args:
         flow_id (str): The ID of the flow.
         vertex_id (str): The ID of the vertex to build.
-        background_tasks (BackgroundTasks): The background tasks object for logging.
+        background_tasks (BackgroundTasks): The background tasks dependency.
         inputs (Optional[InputValueRequest], optional): The input values for the vertex. Defaults to None.
         chat_service (ChatService, optional): The chat service dependency. Defaults to Depends(get_chat_service).
         current_user (Any, optional): The current user dependency. Defaults to Depends(get_current_active_user).
@@ -210,8 +204,6 @@ async def build_vertex(
                 lock, set_cache_coro, graph=graph, vertex=vertex, cache=False
             )
             top_level_vertices = graph.run_manager.get_top_level_vertices(graph, next_runnable_vertices)
-
-            result_data_response = ResultDataResponse(**result_dict.model_dump())
 
             result_data_response = ResultDataResponse.model_validate(result_dict, from_attributes=True)
         except Exception as exc:
@@ -265,13 +257,13 @@ async def build_vertex(
         if graph.stop_vertex and graph.stop_vertex in next_runnable_vertices:
             next_runnable_vertices = [graph.stop_vertex]
 
-        if not next_runnable_vertices:
+        if not graph.run_manager.vertices_to_run and not next_runnable_vertices:
             background_tasks.add_task(graph.end_all_traces)
 
         build_response = VertexBuildResponse(
-            inactivated_vertices=inactivated_vertices,
-            next_vertices_ids=next_runnable_vertices,
-            top_level_vertices=top_level_vertices,
+            inactivated_vertices=list(set(inactivated_vertices)),
+            next_vertices_ids=list(set(next_runnable_vertices)),
+            top_level_vertices=list(set(top_level_vertices)),
             valid=valid,
             params=params,
             id=vertex.id,

@@ -86,7 +86,7 @@ export async function updateVerticesOrder(
       });
       useFlowStore.getState().setIsBuilding(false);
       setLockChat && setLockChat(false);
-      throw new Error("Invalid nodes");
+      throw new Error("Invalid components");
     }
     // orderResponse.data.ids,
     // for each id we need to build the VertexLayerElementType object as

@@ -62,7 +62,7 @@ test("ToggleComponent", async ({ page }) => {
     await page.locator('//*[@id="showload_hidden"]').isChecked(),
   ).toBeTruthy();
 
-  await page.getByText("Save Changes", { exact: true }).click();
+  await page.getByText("Close").last().click();
 
   await page.waitForSelector('[title="fit view"]', {
     timeout: 100000,
@@ -152,7 +152,7 @@ test("ToggleComponent", async ({ page }) => {
     await page.locator('//*[@id="showuse_multithreading"]').isChecked(),
   ).toBeFalsy();
 
-  await page.getByText("Save Changes", { exact: true }).click();
+  await page.getByText("Close").last().click();
 
   const plusButtonLocator = page.getByTestId("toggle-load_hidden");
   const elementCount = await plusButtonLocator?.count();
@@ -173,7 +173,7 @@ test("ToggleComponent", async ({ page }) => {
       await page.getByTestId("toggle-edit-load_hidden").isChecked(),
     ).toBeTruthy();
 
-    await page.getByText("Save Changes", { exact: true }).click();
+    await page.getByText("Close").last().click();
 
     await page.getByTestId("toggle-load_hidden").click();
     expect(

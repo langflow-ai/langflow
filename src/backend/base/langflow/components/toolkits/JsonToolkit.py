@@ -10,6 +10,7 @@ from langflow.custom import CustomComponent
 class JsonToolkitComponent(CustomComponent):
     display_name = "JsonToolkit"
     description = "Toolkit for interacting with a JSON spec."
+    name = "JsonToolkit"
 
     def build_config(self):
         return {

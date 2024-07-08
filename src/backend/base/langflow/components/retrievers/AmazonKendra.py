@@ -9,6 +9,7 @@ from langflow.field_typing import Retriever
 class AmazonKendraRetrieverComponent(CustomComponent):
     display_name: str = "Amazon Kendra Retriever"
     description: str = "Retriever that uses the Amazon Kendra API."
+    name = "AmazonKendra"
     icon = "Amazon"
 
     def build_config(self):

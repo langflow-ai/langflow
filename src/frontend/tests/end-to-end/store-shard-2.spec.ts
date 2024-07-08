@@ -1,6 +1,17 @@
 import { expect, test } from "@playwright/test";
+import * as dotenv from "dotenv";
+import path from "path";
 
-test("should add API-KEY", async ({ page }) => {
+test("should filter by tag", async ({ page }) => {
+  test.skip(
+    !process?.env?.STORE_API_KEY,
+    "STORE_API_KEY required to run this test",
+  );
+
+  if (!process.env.CI) {
+    dotenv.config({ path: path.resolve(__dirname, "../../.env") });
+  }
+
   await page.goto("/");
   await page.waitForTimeout(1000);
 
@@ -8,30 +19,15 @@ test("should add API-KEY", async ({ page }) => {
   await page.waitForTimeout(1000);
 
   await page.getByTestId("api-key-button-store").click();
-  await page
-    .getByPlaceholder("Insert your API Key")
-    .fill("testtesttesttesttesttest");
-
-  await page.getByTestId("api-key-save-button-store").click();
-
-  await page.waitForTimeout(2000);
-  await page.getByText("Success! Your API Key has been saved.").isVisible();
 
   await page
     .getByPlaceholder("Insert your API Key")
     .fill(process.env.STORE_API_KEY ?? "");
+
   await page.getByTestId("api-key-save-button-store").click();
 
   await page.waitForTimeout(2000);
   await page.getByText("Success! Your API Key has been saved.").isVisible();
-
-  await page.waitForTimeout(2000);
-  await page.getByText("API Key Error").isHidden();
-});
-
-test("should filter by tag", async ({ page }) => {
-  await page.goto("/");
-  await page.waitForTimeout(1000);
 
   await page.getByTestId("button-store").click();
   await page.waitForTimeout(1000);
@@ -57,7 +53,33 @@ test("should filter by tag", async ({ page }) => {
 });
 
 test("should share component with share button", async ({ page }) => {
+  test.skip(
+    !process?.env?.STORE_API_KEY,
+    "STORE_API_KEY required to run this test",
+  );
+
+  if (!process.env.CI) {
+    dotenv.config({ path: path.resolve(__dirname, "../../.env") });
+  }
+
   await page.goto("/");
+  await page.waitForTimeout(1000);
+
+  await page.getByTestId("button-store").click();
+  await page.waitForTimeout(1000);
+
+  await page.getByTestId("api-key-button-store").click();
+
+  await page
+    .getByPlaceholder("Insert your API Key")
+    .fill(process.env.STORE_API_KEY ?? "");
+
+  await page.getByTestId("api-key-save-button-store").click();
+
+  await page.waitForTimeout(2000);
+  await page.getByText("Success! Your API Key has been saved.").isVisible();
+
+  await page.getByText("My Collection").click();
   await page.waitForTimeout(2000);
 
   let modalCount = 0;
