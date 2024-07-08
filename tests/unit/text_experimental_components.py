@@ -1,9 +1,9 @@
-from langflow.components import experimental
+from langflow.components import prototypes
 
 
 def test_python_function_component():
     # Arrange
-    python_function_component = experimental.PythonFunctionComponent()
+    python_function_component = prototypes.PythonFunctionComponent()
 
     # Act
     # function must be a string representation
