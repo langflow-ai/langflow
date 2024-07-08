@@ -27,6 +27,7 @@ type BuildVerticesParams = {
   onValidateNodes?: (nodes: string[]) => void;
   nodes?: Node[];
   edges?: Edge[];
+  orderResponse?: any;
 };
 
 function getInactiveVertexData(vertexId: string): VertexBuildTypeAPI {
@@ -55,39 +56,13 @@ function getInactiveVertexData(vertexId: string): VertexBuildTypeAPI {
   return inactiveVertexData;
 }
 
-export async function updateVerticesOrder(
-  flowId: string,
-  setLockChat?: (lock: boolean) => void,
-  startNodeId?: string | null,
-  stopNodeId?: string | null,
-  nodes?: Node[],
-  edges?: Edge[],
-): Promise<{
+export async function updateVerticesOrder(orderResponse?): Promise<{
   verticesLayers: VertexLayerElementType[][];
   verticesIds: string[];
   runId: string;
   verticesToRun: string[];
 }> {
   return new Promise(async (resolve, reject) => {
-    const setErrorData = useAlertStore.getState().setErrorData;
-    let orderResponse;
-    try {
-      orderResponse = await getVerticesOrder(
-        flowId,
-        startNodeId,
-        stopNodeId,
-        nodes,
-        edges,
-      );
-    } catch (error: any) {
-      setErrorData({
-        title: "Oops! Looks like you missed something",
-        list: [error.response?.data?.detail ?? "Unknown Error"],
-      });
-      useFlowStore.getState().setIsBuilding(false);
-      setLockChat && setLockChat(false);
-      throw new Error("Invalid components");
-    }
     // orderResponse.data.ids,
     // for each id we need to build the VertexLayerElementType object as
     // {id: id, reference: id}
@@ -97,6 +72,7 @@ export async function updateVerticesOrder(
       });
 
     const runId = orderResponse.data.run_id;
+    debugger;
     const verticesToRun = orderResponse.data.vertices_to_run;
 
     useFlowStore
@@ -126,23 +102,16 @@ export async function buildVertices({
   onBuildError,
   onBuildStart,
   onValidateNodes,
-  nodes,
-  edges,
   setLockChat,
+  orderResponse,
 }: BuildVerticesParams) {
   // if startNodeId and stopNodeId are provided
   // something is wrong
   if (startNodeId && stopNodeId) {
     return;
   }
-  let verticesOrderResponse = await updateVerticesOrder(
-    flowId,
-    setLockChat,
-    startNodeId,
-    stopNodeId,
-    nodes,
-    edges,
-  );
+  let verticesOrderResponse = await updateVerticesOrder(orderResponse);
+
   if (onValidateNodes) {
     try {
       onValidateNodes(verticesOrderResponse.verticesToRun);

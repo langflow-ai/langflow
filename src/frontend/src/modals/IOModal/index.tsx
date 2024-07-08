@@ -1,3 +1,4 @@
+import { usePostBuildVertices } from "@/controllers/API/queries/_build";
 import { useEffect, useState } from "react";
 import AccordionComponent from "../../components/accordionComponent";
 import IconComponent from "../../components/genericIconComponent";
@@ -88,6 +89,8 @@ export default function IOModal({
   const setColumns = useMessagesStore((state) => state.setColumns);
   const flowPool = useFlowStore((state) => state.flowPool);
 
+  const { mutate } = usePostBuildVertices();
+
   async function sendMessage({
     repeat = 1,
     files,
@@ -100,31 +103,39 @@ export default function IOModal({
     setLockChat(true);
     setChatValue("");
     for (let i = 0; i < repeat; i++) {
-      await buildFlow({
-        input_value: chatValue,
-        startNodeId: chatInput?.id,
-        files: files,
-        silent: true,
-        setLockChat,
-      }).catch((err) => {
-        console.error(err);
-        setLockChat(false);
-      });
-    }
-    const { rows, columns } = await getMessagesTable("union", currentFlow!.id, [
-      "index",
-      "flow_id",
-    ]);
-    setMessages(rows);
-    setColumns(columns);
-    setLockChat(false);
-    if (chatInput) {
-      setNode(chatInput.id, (node: NodeType) => {
-        const newNode = { ...node };
+      mutate(
+        {
+          input_value: chatValue,
+          startNodeId: chatInput?.id,
+          files,
+          silent: true,
+          setLockChat,
+        },
+        {
+          onSuccess: async () => {
+            const { rows, columns } = await getMessagesTable(
+              "union",
+              currentFlow!.id,
+              ["index", "flow_id"],
+            );
+            setMessages(rows);
+            setColumns(columns);
+            setLockChat(false);
+            if (chatInput) {
+              setNode(chatInput.id, (node: NodeType) => {
+                const newNode = { ...node };
 
-        newNode.data.node!.template["input_value"].value = chatValue;
-        return newNode;
-      });
+                newNode.data.node!.template["input_value"].value = chatValue;
+                return newNode;
+              });
+            }
+          },
+          onError: (err) => {
+            console.error(err);
+            setLockChat(false);
+          },
+        },
+      );
     }
   }
 
