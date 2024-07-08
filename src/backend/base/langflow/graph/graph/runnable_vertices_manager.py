@@ -127,7 +127,10 @@ class RunnableVerticesManager:
                 next_runnable_vertices = direct_successors_ready
 
             for v_id in set(next_runnable_vertices):  # Use set to avoid duplicates
-                self.add_to_vertices_being_run(v_id)
+                if vertex.id == v_id:
+                    next_runnable_vertices.remove(v_id)
+                else:
+                    self.add_to_vertices_being_run(v_id)
             if cache:
                 await set_cache_coro(data=graph, lock=lock)  # type: ignore
         return next_runnable_vertices
