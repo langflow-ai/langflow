@@ -1,4 +1,6 @@
 from abc import abstractmethod
+from typing import List
+
 from langchain.agents.agent import RunnableAgent
 
 from langchain.agents import AgentExecutor, BaseMultiActionAgent, BaseSingleActionAgent
@@ -9,13 +11,14 @@ from langflow.base.agents.utils import data_to_messages, get_agents_list
 from langflow.custom import CustomComponent, Component
 from langflow.field_typing import Text, Tool
 from langflow.inputs import BoolInput, IntInput, HandleInput
+from langflow.inputs.inputs import InputTypes
 from langflow.schema import Data
 from langflow.template import Output
 
 
 class LCAgentComponent(Component):
     trace_type = "agent"
-    _base_inputs = [
+    _base_inputs: List[InputTypes] = [
         BoolInput(
             name="handle_parsing_errors",
             display_name="Handle Parse Errors",
