@@ -1,13 +1,13 @@
 import os
 
 import pytest
+from integration.utils import MockEmbeddings, check_env_vars
 from langchain_core.documents import Document
-from langflow.components.memories.AstraDBMessageReader import AstraDBMessageReaderComponent
-from langflow.components.memories.AstraDBMessageWriter import AstraDBMessageWriterComponent
+
+# from langflow.components.memories.AstraDBMessageReader import AstraDBMessageReaderComponent
+# from langflow.components.memories.AstraDBMessageWriter import AstraDBMessageWriterComponent
 from langflow.components.vectorstores.AstraDB import AstraVectorStoreComponent
 from langflow.schema.data import Data
-
-from integration.utils import MockEmbeddings, check_env_vars
 
 COLLECTION = "test_basic"
 SEARCH_COLLECTION = "test_search"
