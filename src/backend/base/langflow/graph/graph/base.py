@@ -134,6 +134,7 @@ class Graph:
         vertices_ids = set()
         new_predecessor_map = {}
         for vertex_id in self._is_state_vertices:
+            vertices_ids.add(vertex_id)
             if vertex_id == caller:
                 continue
             vertex = self.get_vertex(vertex_id)
@@ -152,14 +153,16 @@ class Graph:
                 # and run self.build_adjacency_maps(edges) to get the new predecessor map
                 # that is not complete but we can use to update the run_predecessors
                 edges_set = set()
-                for vertex in [vertex] + successors:
-                    edges_set.update(vertex.edges)
-                    vertices_ids.add(vertex.id)
-                    if vertex.state == VertexStates.INACTIVE:
-                        vertex.set_state("ACTIVE")
+                for _vertex in [vertex] + successors:
+                    edges_set.update(_vertex.edges)
+                    if _vertex.state == VertexStates.INACTIVE:
+                        _vertex.set_state("ACTIVE")
                 edges = list(edges_set)
                 predecessor_map, _ = self.build_adjacency_maps(edges)
                 new_predecessor_map.update(predecessor_map)
+
+        vertices_ids.update(new_predecessor_map.keys())
+        vertices_ids.update(v_id for value_list in new_predecessor_map.values() for v_id in value_list)
 
         self.activated_vertices = list(vertices_ids)
         self.vertices_to_run.update(vertices_ids)
