@@ -74,20 +74,21 @@
                                 "display_name": "Output",
                                 "method": "build_output",
                                 "value": "__UNDEFINED__",
-                                "cache": true
+                                "cache": true,
+                                "hidden": false
                             }
                         ],
                         "field_order": [
                             "input_value"
                         ],
                         "beta": false,
-                        "edited": true
+                        "edited": false
                     },
                     "id": "CustomComponent-aF0h1",
                     "description": "Use as a template to create your own component.",
                     "display_name": "Custom Component"
                 },
-                "selected": true,
+                "selected": false,
                 "width": 384,
                 "height": 337,
                 "positionAbsolute": {
@@ -564,6 +565,95 @@
                     "y": 662.4287265670896
                 },
                 "dragging": false
+            },
+            {
+                "id": "CustomComponent-Ntw7h",
+                "type": "genericNode",
+                "position": {
+                    "x": 1396.7134608749789,
+                    "y": 284.91367968123217
+                },
+                "data": {
+                    "type": "CustomComponent",
+                    "node": {
+                        "template": {
+                            "_type": "Component",
+                            "code": {
+                                "type": "code",
+                                "required": true,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "multiline": true,
+                                "value": "# from langflow.field_typing import Data\nfrom langflow.custom import Component\nfrom langflow.io import StrInput\nfrom langflow.schema import Data\nfrom langflow.io import Output\nfrom pathlib import Path\nimport httpx\nclass CustomComponent(Component):\n    display_name = \"Async Component\"\n    description = \"Use as a template to create your own component.\"\n    documentation: str = \"http://docs.langflow.org/components/custom\"\n    icon = \"custom_components\"\n\n    inputs = [\n        StrInput(name=\"input_value\", display_name=\"Input Value\", value=\"Hello, World!\", input_types=[\"Data\"]),\n    ]\n\n    outputs = [\n        Output(display_name=\"Output\", name=\"output\", method=\"build_output\"),\n    ]\n\n    async def build_output(self) -> Data:\n        async with httpx.AsyncClient() as client:\n            response = await client.get(\"https://www.google.com\")\n            response.raise_for_status()\n            return Data(response=response.text)",
+                                "fileTypes": [],
+                                "file_path": "",
+                                "password": false,
+                                "name": "code",
+                                "advanced": true,
+                                "dynamic": true,
+                                "info": "",
+                                "load_from_db": false,
+                                "title_case": false
+                            },
+                            "input_value": {
+                                "trace_as_metadata": true,
+                                "load_from_db": false,
+                                "list": false,
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "value": "Hello, World!",
+                                "name": "input_value",
+                                "display_name": "Input Value",
+                                "advanced": false,
+                                "input_types": [
+                                    "Data"
+                                ],
+                                "dynamic": false,
+                                "info": "",
+                                "title_case": false,
+                                "type": "str"
+                            }
+                        },
+                        "description": "Use as a template to create your own component.",
+                        "icon": "custom_components",
+                        "base_classes": [],
+                        "display_name": "Custom Component",
+                        "documentation": "http://docs.langflow.org/components/custom",
+                        "custom_fields": {},
+                        "output_types": [],
+                        "pinned": false,
+                        "conditional_paths": [],
+                        "frozen": false,
+                        "outputs": [
+                            {
+                                "types": [],
+                                "name": "output",
+                                "display_name": "Output",
+                                "method": "build_output",
+                                "value": "__UNDEFINED__",
+                                "cache": true
+                            }
+                        ],
+                        "field_order": [
+                            "input_value"
+                        ],
+                        "beta": false,
+                        "edited": true
+                    },
+                    "id": "CustomComponent-Ntw7h",
+                    "description": "Use as a template to create your own component.",
+                    "display_name": "Custom Component"
+                },
+                "selected": true,
+                "width": 384,
+                "height": 337,
+                "positionAbsolute": {
+                    "x": 1396.7134608749789,
+                    "y": 284.91367968123217
+                },
+                "dragging": false
             }
         ],
         "edges": [
@@ -618,12 +708,37 @@
                 },
                 "id": "reactflow__edge-ChatInput-QivBB{œdataTypeœ:œChatInputœ,œidœ:œChatInput-QivBBœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-mN2VY{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-mN2VYœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
                 "className": ""
+            },
+            {
+                "source": "CustomComponent-aF0h1",
+                "sourceHandle": "{œdataTypeœ:œCustomComponentœ,œidœ:œCustomComponent-aF0h1œ,œnameœ:œoutputœ,œoutput_typesœ:[œDataœ]}",
+                "target": "CustomComponent-Ntw7h",
+                "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œCustomComponent-Ntw7hœ,œinputTypesœ:[œDataœ],œtypeœ:œstrœ}",
+                "data": {
+                    "targetHandle": {
+                        "fieldName": "input_value",
+                        "id": "CustomComponent-Ntw7h",
+                        "inputTypes": [
+                            "Data"
+                        ],
+                        "type": "str"
+                    },
+                    "sourceHandle": {
+                        "dataType": "CustomComponent",
+                        "id": "CustomComponent-aF0h1",
+                        "name": "output",
+                        "output_types": [
+                            "Data"
+                        ]
+                    }
+                },
+                "id": "reactflow__edge-CustomComponent-aF0h1{œdataTypeœ:œCustomComponentœ,œidœ:œCustomComponent-aF0h1œ,œnameœ:œoutputœ,œoutput_typesœ:[œDataœ]}-CustomComponent-Ntw7h{œfieldNameœ:œinput_valueœ,œidœ:œCustomComponent-Ntw7hœ,œinputTypesœ:[œDataœ],œtypeœ:œstrœ}"
             }
         ],
         "viewport": {
-            "x": 187.09619986027496,
-            "y": 374.1216068772955,
-            "zoom": 0.39392694302467346
+            "x": -7.6743264594028915,
+            "y": 186.6544574916296,
+            "zoom": 0.520510798842055
         }
     },
     "description": "The Power of Language at Your Fingertips.",
