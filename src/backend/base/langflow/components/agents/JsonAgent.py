@@ -15,7 +15,7 @@ from langflow.template import Output
 class JsonAgentComponent(LCAgentComponent):
     display_name = "JsonAgent"
     description = "Construct a json agent from an LLM and tools."
-    name: str = "JsonAgent"
+    name = "JsonAgent"
 
     inputs = LCAgentComponent._base_inputs + [
         FileInput(
