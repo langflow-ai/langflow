@@ -6,6 +6,9 @@ from langflow.services.tracing.schema import Log
 if TYPE_CHECKING:
     from langflow.graph.vertex.base import Vertex
 
+if TYPE_CHECKING:
+    from langflow.graph.vertex.base import Vertex
+
 
 class BaseTracer(ABC):
     @abstractmethod
