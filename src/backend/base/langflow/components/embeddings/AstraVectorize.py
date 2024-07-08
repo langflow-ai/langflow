@@ -63,16 +63,15 @@ class AstraVectorize(Component):
             f"available (https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html):\n\n{VECTORIZE_MODELS_STR}",
             required=True,
         ),
-        SecretStrInput(
-            name="provider_api_key",
-            display_name="Provider API Key",
-            info="An alternative to the Astra Authentication that passes an API key for the provider with each request to Astra DB. This may be used when Vectorize is configured for the collection, but no corresponding provider secret is stored within Astra's key management system.",
-        ),
         MessageTextInput(
             name="api_key_name",
             display_name="Provider API Key Name",
             info="The name of the embeddings provider API key stored on Astra. If set, it will override the 'ProviderKey' in the authentication parameters.",
-            advanced=True,
+        ),
+        SecretStrInput(
+            name="provider_api_key",
+            display_name="Provider API Key",
+            info="An alternative to the Astra Authentication that passes an API key for the provider with each request to Astra DB. This may be used when Vectorize is configured for the collection, but no corresponding provider secret is stored within Astra's key management system.",
         ),
         DictInput(
             name="authentication",
