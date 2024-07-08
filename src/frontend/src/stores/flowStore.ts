@@ -456,6 +456,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     setLockChat?: (lock: boolean) => void;
   }) => {
     get().setIsBuilding(true);
+    get().setLockChat(true);
     const currentFlow = useFlowsManagerStore.getState().currentFlow;
     const setSuccessData = useAlertStore.getState().setSuccessData;
     const setErrorData = useAlertStore.getState().setErrorData;
@@ -578,6 +579,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           }
         }
         get().setIsBuilding(false);
+        get().setLockChat(false);
       },
       onBuildUpdate: handleBuildUpdate,
       onBuildError: (title: string, list: string[], elementList) => {
@@ -587,6 +589,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         useFlowStore.getState().updateBuildStatus(idList, BuildStatus.BUILT);
         setErrorData({ list, title });
         get().setIsBuilding(false);
+        get().setLockChat(false);
       },
       onBuildStart: (elementList) => {
         const idList = elementList
@@ -600,6 +603,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       edges: !get().onFlowPage ? get().edges : undefined,
     });
     get().setIsBuilding(false);
+    get().setLockChat(false);
     get().revertBuiltStatusFromBuilding();
   },
   getFlow: () => {
