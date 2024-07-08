@@ -1,3 +1,6 @@
+import Loading from "@/components/ui/loading";
+import { useGetMessagesQuery } from "@/controllers/API/queries/messages";
+import { useIsFetching } from "@tanstack/react-query";
 import {
   CellEditRequestEvent,
   NewValueParams,
@@ -12,11 +15,22 @@ import useAlertStore from "../../../../stores/alertStore";
 import { useMessagesStore } from "../../../../stores/messagesStore";
 import { messagesSorter } from "../../../../utils/utils";
 
-export default function SessionView({ rows }: { rows: Array<any> }) {
+export default function SessionView({
+  session,
+  id,
+}: {
+  session?: string;
+  id?: string;
+}) {
   const columns = useMessagesStore((state) => state.columns);
+  const messages = useMessagesStore((state) => state.messages);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
 
+  const isFetching = useIsFetching({
+    queryKey: ["useGetMessagesQuery"],
+    exact: false,
+  });
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
 
   const { handleRemoveMessages } = useRemoveMessages(
@@ -42,7 +56,17 @@ export default function SessionView({ rows }: { rows: Array<any> }) {
     });
   }
 
-  return (
+  let filteredMessages = session
+    ? messages.filter((message) => message.session_id === session)
+    : messages;
+  filteredMessages = id
+    ? filteredMessages.filter((message) => message.flow_id === id)
+    : filteredMessages;
+  return isFetching > 0 ? (
+    <div className="flex h-full w-full items-center justify-center align-middle">
+      <Loading></Loading>
+    </div>
+  ) : (
     <TableComponent
       key={"sessionView"}
       onDelete={handleRemoveMessages}
@@ -58,7 +82,7 @@ export default function SessionView({ rows }: { rows: Array<any> }) {
       suppressRowClickSelection={true}
       pagination={true}
       columnDefs={columns.sort(messagesSorter)}
-      rowData={rows}
+      rowData={filteredMessages}
     />
   );
 }
