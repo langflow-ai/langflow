@@ -144,7 +144,6 @@ class Graph:
                 and vertex_id != caller
                 and isinstance(vertex, StateVertex)
             ):
-                vertices_ids.add(vertex_id)
                 successors = self.get_all_successors(vertex, flat=True)
                 # Update run_manager.run_predecessors because we are activating vertices
                 # The run_prdecessors is the predecessor map of the vertices
@@ -1497,6 +1496,6 @@ class Graph:
         predecessor_map: dict[str, list[str]] = defaultdict(list)
         successor_map: dict[str, list[str]] = defaultdict(list)
         for edge in edges:
-                predecessor_map[edge.target_id].append(edge.source_id)
-                successor_map[edge.source_id].append(edge.target_id)
+            predecessor_map[edge.target_id].append(edge.source_id)
+            successor_map[edge.source_id].append(edge.target_id)
         return predecessor_map, successor_map
