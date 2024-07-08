@@ -134,16 +134,17 @@ class Graph:
         vertices_ids = set()
         new_predecessor_map = {}
         for vertex_id in self._is_state_vertices:
-            vertices_ids.add(vertex_id)
-            if vertex_id == caller:
-                continue
+            caller_vertex = self.get_vertex(caller)
             vertex = self.get_vertex(vertex_id)
+            if vertex_id == caller or vertex.display_name == caller_vertex.display_name:
+                continue
             if (
                 isinstance(vertex._raw_params["name"], str)
                 and name in vertex._raw_params["name"]
                 and vertex_id != caller
                 and isinstance(vertex, StateVertex)
             ):
+                vertices_ids.add(vertex_id)
                 successors = self.get_all_successors(vertex, flat=True)
                 # Update run_manager.run_predecessors because we are activating vertices
                 # The run_prdecessors is the predecessor map of the vertices
@@ -160,8 +161,8 @@ class Graph:
                 predecessor_map, _ = self.build_adjacency_maps(edges)
                 new_predecessor_map.update(predecessor_map)
 
-        vertices_ids.update(new_predecessor_map.keys())
-        vertices_ids.update(v_id for value_list in new_predecessor_map.values() for v_id in value_list)
+        # vertices_ids.update(new_predecessor_map.keys())
+        # vertices_ids.update(v_id for value_list in new_predecessor_map.values() for v_id in value_list)
 
         self.activated_vertices = list(vertices_ids)
         self.vertices_to_run.update(vertices_ids)
@@ -863,6 +864,7 @@ class Graph:
             ValueError: If no result is found for the vertex.
         """
         vertex = self.get_vertex(vertex_id)
+        self.run_manager.add_to_vertices_being_run(vertex_id)
         try:
             params = ""
             if vertex.frozen:
