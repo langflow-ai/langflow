@@ -228,20 +228,20 @@ def get_updated_edges(base_flow, g_nodes, g_edges, group_node_id):
     return updated_edges
 
 
+def get_successors(vertex, recursive=True):
+    successors = vertex.successors
+    if not successors:
+        return []
+    successors_result = []
+    for successor in successors:
+        if recursive:
+            successors_result.extend(get_successors(successor))
+        successors_result.append(successor)
+    return successors_result
+
+
 def sort_up_to_vertex(graph, vertex_id: str, is_start: bool = False) -> List[Vertex]:
     """Cuts the graph up to a given vertex and sorts the resulting subgraph."""
-
-    def get_successors(vertex, recursive=True):
-        successors = vertex.successors
-        if not successors:
-            return []
-        successors_result = []
-        for successor in successors:
-            if recursive:
-                successors_result.extend(get_successors(successor))
-            successors_result.append(successor)
-        return successors_result
-
     try:
         stop_or_start_vertex = graph.get_vertex(vertex_id)
     except ValueError:
@@ -269,8 +269,7 @@ def sort_up_to_vertex(graph, vertex_id: str, is_start: bool = False) -> List[Ver
                     stack.append(successor.id)
                 else:
                     excluded.add(successor.id)
-                all_successors = get_successors(successor, recursive=False)
-                for succ in all_successors:
+                for succ in get_successors(successor, recursive=False):
                     if is_start:
                         stack.append(succ.id)
                     else:
