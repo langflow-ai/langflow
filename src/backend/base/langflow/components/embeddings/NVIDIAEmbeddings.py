@@ -33,7 +33,7 @@ class NVIDIAEmbeddingsComponent(LCEmbeddingsModel):
         if field_name == "base_url" and field_value:
             try:
                 build_model = self.build_embeddings()
-                ids = [model.id for model in build_model.available_models]
+                ids = [model.id for model in build_model.available_models]  # type: ignore
                 build_config["model"]["options"] = ids
                 build_config["model"]["value"] = ids[0]
             except Exception as e:
