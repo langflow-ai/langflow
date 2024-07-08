@@ -228,15 +228,13 @@ def get_updated_edges(base_flow, g_nodes, g_edges, group_node_id):
     return updated_edges
 
 
-def get_successors(vertex, recursive=True):
-    successors = vertex.successors
-    if not successors:
-        return []
+def get_successors(vertex):
     successors_result = []
-    for successor in successors:
-        if recursive:
-            successors_result.extend(get_successors(successor))
-        successors_result.append(successor)
+    stack = [vertex]
+    while stack:
+        current = stack.pop()
+        successors_result.append(current)
+        stack.extend(current.successors)
     return successors_result
 
 
@@ -260,8 +258,7 @@ def sort_up_to_vertex(graph, vertex_id: str, is_start: bool = False) -> List[Ver
         visited.add(current_id)
         current_vertex = graph.get_vertex(current_id)
 
-        for predecessor in current_vertex.predecessors:
-            stack.append(predecessor.id)
+        stack.extend(predecessor.id for predecessor in current_vertex.predecessors)
 
         if current_id == vertex_id or (current_id not in stop_predecessors and is_start):
             for successor in current_vertex.successors:
@@ -269,7 +266,7 @@ def sort_up_to_vertex(graph, vertex_id: str, is_start: bool = False) -> List[Ver
                     stack.append(successor.id)
                 else:
                     excluded.add(successor.id)
-                for succ in get_successors(successor, recursive=False):
+                for succ in get_successors(successor):
                     if is_start:
                         stack.append(succ.id)
                     else:
