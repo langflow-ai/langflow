@@ -1,5 +1,4 @@
 import json
-import json_repair #type: ignore
 import re
 import unicodedata
 from langflow.custom import Component
@@ -38,10 +37,20 @@ class JSONCleaner(Component):
     ]
 
     outputs = [
-        Output(display_name="Cleaned JSON String", name="output", method="clean_json"),
+        Output(display_name="Cleaned JSON String",
+               name="output", method="clean_json"),
     ]
 
     def clean_json(self) -> Message:
+
+        try:
+            from json_repair import repair_json  # type: ignore
+        except ImportError:
+            raise ImportError(
+                "Could not import the json_repair package."
+                "Please install it with `pip install json_repair`."
+            )
+
         """Clean the input JSON string based on provided options and return the cleaned JSON string."""
         json_str = self.json_str
         remove_control_chars = self.remove_control_chars
@@ -53,7 +62,7 @@ class JSONCleaner(Component):
             end = json_str.rfind("}")
             if start == -1 or end == -1:
                 raise ValueError("Invalid JSON string: Missing '{' or '}'")
-            json_str = json_str[start : end + 1]
+            json_str = json_str[start: end + 1]
 
             if remove_control_chars:
                 json_str = self._remove_control_characters(json_str)
@@ -62,7 +71,7 @@ class JSONCleaner(Component):
             if validate_json:
                 json_str = self._validate_json(json_str)
 
-            cleaned_json_str = json_repair.repair_json(json_str)
+            cleaned_json_str = repair_json(json_str)
             result = str(cleaned_json_str)
 
             self.status = result
@@ -81,7 +90,7 @@ class JSONCleaner(Component):
     def _validate_json(self, s: str) -> str:
         """Validate the JSON string."""
         try:
-            json_repair.loads(s)
+            json.loads(s)
             return s
         except json.JSONDecodeError as e:
             raise ValueError(f"Invalid JSON string: {str(e)}")
