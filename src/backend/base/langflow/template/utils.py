@@ -50,13 +50,13 @@ def is_valid_data(frontend_node, raw_frontend_data):
     return frontend_node and "template" in frontend_node and raw_frontend_data_is_valid(raw_frontend_data)
 
 
-def update_template_values(frontend_template, raw_template):
+def update_template_values(new_template, previous_template):
     """Updates the frontend template with values from the raw template."""
-    for key, value_dict in raw_template.items():
-        if key == "code" or not isinstance(value_dict, dict):
+    for key, previous_value_dict in previous_template.items():
+        if key == "code" or not isinstance(previous_value_dict, dict):
             continue
 
-        update_template_field(frontend_template, key, value_dict)
+        update_template_field(new_template, key, previous_value_dict)
 
 
 def update_frontend_node_with_template_values(frontend_node, raw_frontend_node):
