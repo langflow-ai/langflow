@@ -117,7 +117,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             name="embedding",
             display_name="Embedding or Astra Vectorize",
             input_types=["Embeddings", "dict"],
-            info="Allows either an embedding model or an Astra Vectorize configuration. If Astra Vectorize is already configured for the collection, this field is not required.",
+            info="Allows either an embedding model or an Astra Vectorize configuration.",  # TODO: This should be optional, but need to refactor langchain-astradb first.
         ),
         StrInput(
             name="metadata_indexing_exclude",
