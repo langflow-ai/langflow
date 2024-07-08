@@ -74,6 +74,8 @@ class Settings(BaseSettings):
     """The number of connections to allow that can be opened beyond the pool size. If not provided, the default is 10."""
     cache_type: str = "async"
     """The cache type can be 'async' or 'redis'."""
+    cache_expire: int = 3600
+    """The cache expire in seconds."""
     variable_store: str = "db"
     """The store can be 'db' or 'kubernetes'."""
 
