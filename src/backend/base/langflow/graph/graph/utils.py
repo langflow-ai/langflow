@@ -1,7 +1,7 @@
-from typing import List
+from typing import List, Dict
 import copy
 from collections import deque
-from langflow.graph.vertex.base import Vertex
+
 
 PRIORITY_LIST_OF_INPUTS = ["webhook", "chat"]
 
@@ -228,27 +228,26 @@ def get_updated_edges(base_flow, g_nodes, g_edges, group_node_id):
     return updated_edges
 
 
-def get_successors(vertex):
+def get_successors(graph: Dict[str, Dict[str, List[str]]], vertex_id: str) -> List[str]:
     successors_result = []
-    stack = [vertex]
+    stack = [vertex_id]
     while stack:
-        current = stack.pop()
-        successors_result.append(current)
-        stack.extend(current.successors)
+        current_id = stack.pop()
+        successors_result.append(current_id)
+        stack.extend(graph[current_id]["successors"])
     return successors_result
 
 
-def sort_up_to_vertex(graph, vertex_id: str, is_start: bool = False) -> List[Vertex]:
+def sort_up_to_vertex(graph: Dict[str, Dict[str, List[str]]], vertex_id: str, is_start: bool = False) -> List[str]:
     """Cuts the graph up to a given vertex and sorts the resulting subgraph."""
     try:
-        stop_or_start_vertex = graph.get_vertex(vertex_id)
-    except ValueError:
-        stop_or_start_vertex = graph.get_root_of_group_node(vertex_id)
-        vertex_id = stop_or_start_vertex.id
+        stop_or_start_vertex = graph[vertex_id]
+    except KeyError:
+        raise ValueError(f"Vertex {vertex_id} not found into graph")
 
     visited, excluded = set(), set()
     stack = [vertex_id]
-    stop_predecessors = {pre.id for pre in stop_or_start_vertex.predecessors}
+    stop_predecessors = set(stop_or_start_vertex["predecessors"])
 
     while stack:
         current_id = stack.pop()
@@ -256,20 +255,20 @@ def sort_up_to_vertex(graph, vertex_id: str, is_start: bool = False) -> List[Ver
             continue
 
         visited.add(current_id)
-        current_vertex = graph.get_vertex(current_id)
+        current_vertex = graph[current_id]
 
-        stack.extend(predecessor.id for predecessor in current_vertex.predecessors)
+        stack.extend(current_vertex["predecessors"])
 
         if current_id == vertex_id or (current_id not in stop_predecessors and is_start):
-            for successor in current_vertex.successors:
+            for successor_id in current_vertex["successors"]:
                 if is_start:
-                    stack.append(successor.id)
+                    stack.append(successor_id)
                 else:
-                    excluded.add(successor.id)
-                for succ in get_successors(successor):
+                    excluded.add(successor_id)
+                for succ_id in get_successors(graph, successor_id):
                     if is_start:
-                        stack.append(succ.id)
+                        stack.append(succ_id)
                     else:
-                        excluded.add(succ.id)
+                        excluded.add(succ_id)
 
-    return [graph.get_vertex(vid) for vid in visited]
+    return list(visited)
