@@ -41,5 +41,5 @@ class PromptComponent(Component):
         )
         # Now that template is updated, we need to grab any values that were set in the current_build_config
         # and update the frontend_node with those values
-        update_template_values(frontend_template=frontend_node, raw_template=current_build_config["template"])
+        update_template_values(new_template=frontend_node, previous_template=current_build_config["template"])
         return frontend_node
