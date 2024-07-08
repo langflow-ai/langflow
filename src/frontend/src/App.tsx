@@ -128,7 +128,6 @@ export default function App() {
                   Object.values(healthData).some((value) => value !== "ok"))
               }
               setRetry={() => {
-                console.log("retrying");
                 refetch();
               }}
               isLoadingHealth={fetchingHealth}
