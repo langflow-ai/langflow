@@ -37,18 +37,15 @@ class JSONCleaner(Component):
     ]
 
     outputs = [
-        Output(display_name="Cleaned JSON String",
-               name="output", method="clean_json"),
+        Output(display_name="Cleaned JSON String", name="output", method="clean_json"),
     ]
 
     def clean_json(self) -> Message:
-
         try:
             from json_repair import repair_json  # type: ignore
         except ImportError:
             raise ImportError(
-                "Could not import the json_repair package."
-                "Please install it with `pip install json_repair`."
+                "Could not import the json_repair package." "Please install it with `pip install json_repair`."
             )
 
         """Clean the input JSON string based on provided options and return the cleaned JSON string."""
@@ -62,7 +59,7 @@ class JSONCleaner(Component):
             end = json_str.rfind("}")
             if start == -1 or end == -1:
                 raise ValueError("Invalid JSON string: Missing '{' or '}'")
-            json_str = json_str[start: end + 1]
+            json_str = json_str[start : end + 1]
 
             if remove_control_chars:
                 json_str = self._remove_control_characters(json_str)
