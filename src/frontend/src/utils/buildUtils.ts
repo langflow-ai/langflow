@@ -72,7 +72,6 @@ export async function updateVerticesOrder(orderResponse?): Promise<{
       });
 
     const runId = orderResponse.data.run_id;
-    debugger;
     const verticesToRun = orderResponse.data.vertices_to_run;
 
     useFlowStore

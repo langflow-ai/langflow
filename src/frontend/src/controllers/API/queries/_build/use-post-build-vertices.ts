@@ -34,7 +34,6 @@ export const usePostBuildVertices: useMutationFunctionType<
   const postBuildVerticesFn = async (
     payload: IPostBuildVertices,
   ): Promise<any> => {
-    debugger;
     const setIsBuilding = useFlowStore.getState().setIsBuilding;
     const verticesBuild = useFlowStore.getState().verticesBuild;
     const updateVerticesBuild = useFlowStore.getState().updateVerticesBuild;
