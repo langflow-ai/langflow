@@ -12,6 +12,7 @@ class RunnableVerticesManager:
         self.run_map = defaultdict(list)  # Tracks successors of each vertex
         self.run_predecessors = defaultdict(set)  # Tracks predecessors for each vertex
         self.vertices_to_run = set()  # Set of vertices that are ready to run
+        self.vertices_being_run = set()  # Set of vertices that are currently running
 
     def to_dict(self) -> dict:
         return {
@@ -49,7 +50,7 @@ class RunnableVerticesManager:
         """Determines if a vertex is runnable."""
 
         return (
-            vertex_id in self.vertices_to_run
+            vertex_id not in self.vertices_being_run
             and not self.run_predecessors.get(vertex_id)
             and vertex_id not in inactivated_vertices
         )
@@ -88,6 +89,7 @@ class RunnableVerticesManager:
             self.vertices_to_run.add(vertex_id)
         else:
             self.vertices_to_run.discard(vertex_id)
+            self.vertices_being_run.discard(vertex_id)
 
     async def get_next_runnable_vertices(
         self,
@@ -125,7 +127,7 @@ class RunnableVerticesManager:
                 next_runnable_vertices = direct_successors_ready
 
             for v_id in set(next_runnable_vertices):  # Use set to avoid duplicates
-                self.remove_vertex_from_runnables(v_id)
+                self.add_to_vertices_being_run(v_id)
             if cache:
                 await set_cache_coro(data=graph, lock=lock)  # type: ignore
         return next_runnable_vertices
@@ -133,6 +135,9 @@ class RunnableVerticesManager:
     def remove_vertex_from_runnables(self, v_id):
         self.update_vertex_run_state(v_id, is_runnable=False)
         self.remove_from_predecessors(v_id)
+
+    def add_to_vertices_being_run(self, v_id):
+        self.vertices_being_run.add(v_id)
 
     @staticmethod
     def get_top_level_vertices(graph, vertices_ids):
