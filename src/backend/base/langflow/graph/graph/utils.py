@@ -230,68 +230,50 @@ def get_updated_edges(base_flow, g_nodes, g_edges, group_node_id):
 
 def sort_up_to_vertex(graph, vertex_id: str, is_start: bool = False) -> List[Vertex]:
     """Cuts the graph up to a given vertex and sorts the resulting subgraph."""
-    # Initial setup
-    visited = set()  # To keep track of visited vertices
-    excluded = set()  # To keep track of vertices that should be excluded
 
     def get_successors(vertex, recursive=True):
-        # Recursively get the successors of the current vertex
         successors = vertex.successors
         if not successors:
             return []
         successors_result = []
         for successor in successors:
-            # Just return a list of successors
             if recursive:
-                next_successors = get_successors(successor)
-                successors_result.extend(next_successors)
+                successors_result.extend(get_successors(successor))
             successors_result.append(successor)
         return successors_result
 
     try:
         stop_or_start_vertex = graph.get_vertex(vertex_id)
-        stack = [vertex_id]  # Use a list as a stack for DFS
     except ValueError:
         stop_or_start_vertex = graph.get_root_of_group_node(vertex_id)
-        stack = [stop_or_start_vertex.id]
         vertex_id = stop_or_start_vertex.id
-    stop_predecessors = [pre.id for pre in stop_or_start_vertex.predecessors]
-    # DFS to collect all vertices that can reach the specified vertex
+
+    visited, excluded = set(), set()
+    stack = [vertex_id]
+    stop_predecessors = {pre.id for pre in stop_or_start_vertex.predecessors}
+
     while stack:
         current_id = stack.pop()
-        if current_id not in visited and current_id not in excluded:
-            visited.add(current_id)
-            current_vertex = graph.get_vertex(current_id)
-            # Assuming get_predecessors is a method that returns all vertices with edges to current_vertex
-            for predecessor in current_vertex.predecessors:
-                stack.append(predecessor.id)
+        if current_id in visited or current_id in excluded:
+            continue
 
-            if current_id == vertex_id:
-                # We should add to visited all the vertices that are successors of the current vertex
-                # and their successors and so on
-                # if the vertex is a start, it means we are starting from the beginning
-                # and getting successors
-                for successor in current_vertex.successors:
+        visited.add(current_id)
+        current_vertex = graph.get_vertex(current_id)
+
+        for predecessor in current_vertex.predecessors:
+            stack.append(predecessor.id)
+
+        if current_id == vertex_id or (current_id not in stop_predecessors and is_start):
+            for successor in current_vertex.successors:
+                if is_start:
+                    stack.append(successor.id)
+                else:
+                    excluded.add(successor.id)
+                all_successors = get_successors(successor, recursive=False)
+                for succ in all_successors:
                     if is_start:
-                        stack.append(successor.id)
+                        stack.append(succ.id)
                     else:
-                        excluded.add(successor.id)
-                    all_successors = get_successors(successor, recursive=False)
-                    for successor in all_successors:
-                        if is_start:
-                            stack.append(successor.id)
-                        else:
-                            excluded.add(successor.id)
-            elif current_id not in stop_predecessors and is_start:
-                # If the current vertex is not the target vertex, we should add all its successors
-                # to the stack if they are not in visited
+                        excluded.add(succ.id)
 
-                # If we are starting from the beginning, we should add all successors
-                for successor in current_vertex.successors:
-                    if successor.id not in visited:
-                        stack.append(successor.id)
-
-    # Filter the original graph's vertices and edges to keep only those in `visited`
-    vertices_to_keep = [graph.get_vertex(vid) for vid in visited]
-
-    return vertices_to_keep
+    return [graph.get_vertex(vid) for vid in visited]
