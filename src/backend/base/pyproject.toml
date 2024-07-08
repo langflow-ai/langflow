@@ -69,6 +69,7 @@ opentelemetry-api = "^1.25.0"
 opentelemetry-sdk = "^1.25.0"
 opentelemetry-exporter-prometheus = "^0.46b0"
 prometheus-client = "^0.20.0"
+aiofiles = "^24.1.0"
 
 [tool.poetry.extras]
 deploy = ["celery", "redis", "flower"]
