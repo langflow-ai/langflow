@@ -131,14 +131,6 @@ function ApiInterceptor() {
       if (res?.data?.access_token && res?.data?.refresh_token) {
         login(res?.data?.access_token);
       }
-      if (error?.config?.headers) {
-        delete error.config.headers["Authorization"];
-        error.config.headers["Authorization"] = `Bearer ${cookies.get(
-          "access_token_lf",
-        )}`;
-        const response = await axios.request(error.config);
-        return response;
-      }
     } catch (error) {
       clearBuildVerticesState(error);
       logout();
