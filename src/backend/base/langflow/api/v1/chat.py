@@ -110,7 +110,7 @@ async def retrieve_vertices_order(
         # We need to get the id of each vertex
         # and return the same structure but only with the ids
         components_count = len(graph.vertices)
-        vertices_to_run = list(graph.vertices_to_run) + get_top_level_vertices(graph, graph.vertices_to_run)
+        vertices_to_run = list(graph.vertices_to_run.union(get_top_level_vertices(graph, graph.vertices_to_run)))
         await chat_service.set_cache(str(flow_id), graph)
         background_tasks.add_task(
             telemetry_service.log_package_playground,
