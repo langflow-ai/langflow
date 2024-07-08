@@ -60,11 +60,20 @@ class RunnableVerticesManager:
         runnable_vertices = []
         visited = set()
 
+        def find_runnable_predecessors(predecessor_id: str):
+            if predecessor_id in visited:
+                return
+            visited.add(predecessor_id)
+            if self.is_vertex_runnable(predecessor_id, inactivated_vertices):
+                runnable_vertices.append(predecessor_id)
+            else:
+                for pred_pred_id in self.run_predecessors.get(predecessor_id, []):
+                    find_runnable_predecessors(pred_pred_id)
+
         for successor_id in self.run_map.get(vertex_id, []):
             for predecessor_id in self.run_predecessors.get(successor_id, []):
-                if predecessor_id not in visited and self.is_vertex_runnable(predecessor_id, inactivated_vertices):
-                    runnable_vertices.append(predecessor_id)
-                    visited.add(predecessor_id)
+                find_runnable_predecessors(predecessor_id)
+
         return runnable_vertices
 
     def remove_from_predecessors(self, vertex_id: str):
