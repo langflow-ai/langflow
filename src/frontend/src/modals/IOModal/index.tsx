@@ -1,3 +1,5 @@
+import { useGetMessagesQuery } from "@/controllers/API/queries/messages";
+import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import AccordionComponent from "../../components/accordionComponent";
 import IconComponent from "../../components/genericIconComponent";
@@ -24,8 +26,6 @@ import IOFieldView from "./components/IOFieldView";
 import SessionView from "./components/SessionView";
 import useRemoveSession from "./components/SessionView/hooks";
 import ChatView from "./components/chatView";
-import { useQueryClient } from "@tanstack/react-query";
-import { useGetMessagesQuery } from "@/controllers/API/queries/messages";
 
 export default function IOModal({
   children,
@@ -86,8 +86,10 @@ export default function IOModal({
   const messages = useMessagesStore((state) => state.messages);
   const flowPool = useFlowStore((state) => state.flowPool);
 
-  const {refetch} = useGetMessagesQuery({mode:"union",id:currentFlow?.id})
-
+  const { refetch } = useGetMessagesQuery({
+    mode: "union",
+    id: currentFlow?.id,
+  });
 
   async function sendMessage({
     repeat = 1,
@@ -145,9 +147,11 @@ export default function IOModal({
 
   useEffect(() => {
     const sessions = new Set<string>();
-    messages.filter(message=>message.flow_id===currentFlow!.id).forEach((row) => {
-      sessions.add(row.session_id);
-    });
+    messages
+      .filter((message) => message.flow_id === currentFlow!.id)
+      .forEach((row) => {
+        sessions.add(row.session_id);
+      });
     setSessions(Array.from(sessions));
     sessions;
   }, [messages]);

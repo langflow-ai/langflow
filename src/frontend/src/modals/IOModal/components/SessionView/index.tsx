@@ -1,3 +1,6 @@
+import Loading from "@/components/ui/loading";
+import { useGetMessagesQuery } from "@/controllers/API/queries/messages";
+import { useIsFetching } from "@tanstack/react-query";
 import {
   CellEditRequestEvent,
   NewValueParams,
@@ -11,17 +14,23 @@ import useUpdateMessage from "../../../../pages/SettingsPage/pages/messagesPage/
 import useAlertStore from "../../../../stores/alertStore";
 import { useMessagesStore } from "../../../../stores/messagesStore";
 import { messagesSorter } from "../../../../utils/utils";
-import { useGetMessagesQuery } from "@/controllers/API/queries/messages";
-import Loading from "@/components/ui/loading";
-import { useIsFetching } from "@tanstack/react-query";
 
-export default function SessionView({ session,id}: { session?:string,id?:string  }) {
+export default function SessionView({
+  session,
+  id,
+}: {
+  session?: string;
+  id?: string;
+}) {
   const columns = useMessagesStore((state) => state.columns);
   const messages = useMessagesStore((state) => state.messages);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
 
-  const isFetching = useIsFetching({queryKey: ["useGetMessagesQuery"],exact:false});;
+  const isFetching = useIsFetching({
+    queryKey: ["useGetMessagesQuery"],
+    exact: false,
+  });
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
 
   const { handleRemoveMessages } = useRemoveMessages(
@@ -47,13 +56,17 @@ export default function SessionView({ session,id}: { session?:string,id?:string 
     });
   }
 
-  let filteredMessages = session? messages.filter((message) => message.session_id === session) : messages;
-  filteredMessages = id? filteredMessages.filter((message) => message.flow_id === id) : filteredMessages;
-  return (
-    (isFetching>0?
-    <div className="h-full flex w-full items-center align-middle justify-center">
+  let filteredMessages = session
+    ? messages.filter((message) => message.session_id === session)
+    : messages;
+  filteredMessages = id
+    ? filteredMessages.filter((message) => message.flow_id === id)
+    : filteredMessages;
+  return isFetching > 0 ? (
+    <div className="flex h-full w-full items-center justify-center align-middle">
       <Loading></Loading>
-    </div>:
+    </div>
+  ) : (
     <TableComponent
       key={"sessionView"}
       onDelete={handleRemoveMessages}
@@ -70,6 +83,6 @@ export default function SessionView({ session,id}: { session?:string,id?:string 
       pagination={true}
       columnDefs={columns.sort(messagesSorter)}
       rowData={filteredMessages}
-    />)
+    />
   );
 }

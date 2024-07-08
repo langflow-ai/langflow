@@ -1071,8 +1071,6 @@ export async function getTransactionTable(
   return { rows: rows.data, columns };
 }
 
-
-
 export async function deleteMessagesFn(ids: string[]) {
   try {
     return await api.delete(`${BASE_URL_API}monitor/messages`, {

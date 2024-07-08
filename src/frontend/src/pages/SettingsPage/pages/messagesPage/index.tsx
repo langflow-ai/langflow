@@ -1,11 +1,9 @@
-
 import { useGetMessagesQuery } from "@/controllers/API/queries/messages";
-import HeaderMessagesComponent from "./components/headerMessages";
 import SessionView from "@/modals/IOModal/components/SessionView";
+import HeaderMessagesComponent from "./components/headerMessages";
 
 export default function MessagesPage() {
-
-  useGetMessagesQuery({mode:"union"})
+  useGetMessagesQuery({ mode: "union" });
 
   return (
     <div className="flex h-full w-full flex-col justify-between gap-6">
