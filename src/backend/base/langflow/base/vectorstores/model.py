@@ -8,7 +8,6 @@ from langflow.field_typing import Retriever, Text, VectorStore
 from langflow.helpers.data import docs_to_data
 from langflow.io import Output
 from langflow.schema import Data
-from langchain.agents.agent_toolkits.vectorstore.toolkit import VectorStoreInfo
 
 
 class LCVectorStoreComponent(Component):
@@ -28,7 +27,7 @@ class LCVectorStoreComponent(Component):
             display_name="Vector Store",
             name="vector_store",
             method="cast_vector_store",
-        )
+        ),
     ]
 
     def _validate_outputs(self):

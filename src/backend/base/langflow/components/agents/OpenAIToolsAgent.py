@@ -1,7 +1,7 @@
 from langchain.agents import create_openai_tools_agent
 from langchain_core.prompts import ChatPromptTemplate, PromptTemplate, HumanMessagePromptTemplate
 
-from langflow.base.agents.agent import LCAgentComponent, LCToolsAgentComponent
+from langflow.base.agents.agent import LCToolsAgentComponent
 from langflow.inputs import MultilineInput
 
 
@@ -20,10 +20,7 @@ class OpenAIToolsAgentComponent(LCToolsAgentComponent):
             value="You are a helpful assistant",
         ),
         MultilineInput(
-            name="user_prompt",
-            display_name="Prompt",
-            info="This prompt must contain 'input' key.",
-            value="{input}"
+            name="user_prompt", display_name="Prompt", info="This prompt must contain 'input' key.", value="{input}"
         ),
     ]
 
@@ -32,8 +29,8 @@ class OpenAIToolsAgentComponent(LCToolsAgentComponent):
             raise ValueError("Prompt must contain 'input' key.")
         messages = [
             ("system", self.system_prompt),
-            HumanMessagePromptTemplate(prompt=PromptTemplate(input_variables=['input'], template=self.user_prompt)),
-            ("placeholder", "{agent_scratchpad}")
+            HumanMessagePromptTemplate(prompt=PromptTemplate(input_variables=["input"], template=self.user_prompt)),
+            ("placeholder", "{agent_scratchpad}"),
         ]
         prompt = ChatPromptTemplate.from_messages(messages)
         return create_openai_tools_agent(self.llm, self.tools, prompt)

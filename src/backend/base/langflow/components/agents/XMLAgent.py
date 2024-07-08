@@ -1,7 +1,7 @@
 from langchain.agents import create_xml_agent
 from langchain_core.prompts import ChatPromptTemplate, PromptTemplate, HumanMessagePromptTemplate
 
-from langflow.base.agents.agent import LCAgentComponent, LCToolsAgentComponent
+from langflow.base.agents.agent import LCToolsAgentComponent
 from langflow.inputs import MultilineInput
 
 
@@ -40,13 +40,13 @@ Begin!
 Question: {input}
 
 {agent_scratchpad}
-            """
+            """,
         ),
     ]
 
     def creat_agent_runnable(self):
         messages = [
-            HumanMessagePromptTemplate(prompt=PromptTemplate(input_variables=['input'], template=self.user_prompt))
+            HumanMessagePromptTemplate(prompt=PromptTemplate(input_variables=["input"], template=self.user_prompt))
         ]
         prompt = ChatPromptTemplate.from_messages(messages)
         return create_xml_agent(self.llm, self.tools, prompt)

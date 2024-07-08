@@ -3,12 +3,10 @@ from pathlib import Path
 import yaml
 from langchain.agents import AgentExecutor
 from langchain_community.agent_toolkits import create_openapi_agent
-from langchain_community.agent_toolkits.json.toolkit import JsonToolkit
 from langchain_community.tools.json.tool import JsonSpec
-from langchain_community.agent_toolkits.openapi.toolkit import BaseToolkit, OpenAPIToolkit
+from langchain_community.agent_toolkits.openapi.toolkit import OpenAPIToolkit
 
 from langflow.base.agents.agent import LCAgentComponent
-from langflow.custom import Component
 from langflow.inputs import BoolInput, HandleInput, FileInput
 from langchain_community.utilities.requests import TextRequestsWrapper
 
@@ -19,25 +17,11 @@ class OpenAPIAgentComponent(LCAgentComponent):
     name = "OpenAPIAgent"
 
     inputs = LCAgentComponent._base_inputs + [
-        FileInput(
-            name="path",
-            display_name="File Path",
-            file_types=["json", "yaml", "yml"],
-            required=True
-        ),
-        HandleInput(
-            name="llm",
-            display_name="Language Model",
-            input_types=["LanguageModel"],
-            required=True
-        ),
-        BoolInput(
-            name="allow_dangerous_requests",
-            display_name="Allow Dangerous Requests",
-            value=False,
-            required=True
-        )
+        FileInput(name="path", display_name="File Path", file_types=["json", "yaml", "yml"], required=True),
+        HandleInput(name="llm", display_name="Language Model", input_types=["LanguageModel"], required=True),
+        BoolInput(name="allow_dangerous_requests", display_name="Allow Dangerous Requests", value=False, required=True),
     ]
+
     def build_agent(self) -> AgentExecutor:
         if self.path.endswith("yaml") or self.path.endswith("yml"):
             yaml_dict = yaml.load(open(self.path, "r"), Loader=yaml.FullLoader)
@@ -55,8 +39,4 @@ class OpenAPIAgentComponent(LCAgentComponent):
         agent_args = self.get_agent_kwargs()
         agent_args["max_iterations"] = agent_args["agent_executor_kwargs"]["max_iterations"]
         del agent_args["agent_executor_kwargs"]["max_iterations"]
-        return create_openapi_agent(
-            llm=self.llm,
-            toolkit=toolkit,
-            **agent_args
-        )
+        return create_openapi_agent(llm=self.llm, toolkit=toolkit, **agent_args)

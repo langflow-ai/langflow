@@ -3,16 +3,12 @@ from typing import List
 
 from langchain.agents.agent import RunnableAgent
 
-from langchain.agents import AgentExecutor, BaseMultiActionAgent, BaseSingleActionAgent
-from langchain_core.messages import BaseMessage
+from langchain.agents import AgentExecutor
 from langchain_core.runnables import Runnable
 
-from langflow.base.agents.utils import data_to_messages, get_agents_list
-from langflow.custom import CustomComponent, Component
-from langflow.field_typing import Text, Tool
+from langflow.custom import Component
 from langflow.inputs import BoolInput, IntInput, HandleInput
 from langflow.inputs.inputs import InputTypes
-from langflow.schema import Data
 from langflow.template import Output
 
 
@@ -67,10 +63,7 @@ class LCAgentComponent(Component):
                 **base,
                 **agent_kwargs,
             }
-        return {
-            **base,
-            "agent_executor_kwargs": agent_kwargs
-        }
+        return {**base, "agent_executor_kwargs": agent_kwargs}
 
 
 class LCToolsAgentComponent(LCAgentComponent):
@@ -81,12 +74,7 @@ class LCToolsAgentComponent(LCAgentComponent):
             input_types=["Tool"],
             is_list=True,
         ),
-        HandleInput(
-            name="llm",
-            display_name="Language Model",
-            input_types=["LanguageModel"],
-            required=True
-        ),
+        HandleInput(name="llm", display_name="Language Model", input_types=["LanguageModel"], required=True),
     ]
 
     def build_agent(self) -> AgentExecutor:
@@ -94,7 +82,7 @@ class LCToolsAgentComponent(LCAgentComponent):
         return AgentExecutor.from_agent_and_tools(
             agent=RunnableAgent(runnable=agent, input_keys_arg=["input"], output_keys_arg=["output"]),
             tools=self.tools,
-            **self.get_agent_kwargs(flatten=True)
+            **self.get_agent_kwargs(flatten=True),
         )
 
     @abstractmethod

@@ -11,16 +11,12 @@ class RunnableExecComponent(Component):
     beta: bool = True
 
     inputs = [
-        MessageTextInput(
-            name="input_value",
-            display_name="Input",
-            required=True
-        ),
+        MessageTextInput(name="input_value", display_name="Input", required=True),
         HandleInput(
             name="runnable",
             display_name="Agent Executor",
             input_types=["Chain", "AgentExecutor", "Agent", "Runnable"],
-            required=True
+            required=True,
         ),
         MessageTextInput(
             name="input_key",

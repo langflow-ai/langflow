@@ -27,7 +27,7 @@ class VectorStoreInfoComponent(Component):
             display_name="Vector Store",
             input_types=["VectorStore"],
             required=True,
-        )
+        ),
     ]
 
     outputs = [
@@ -39,6 +39,6 @@ class VectorStoreInfoComponent(Component):
             "name": self.vectorstore_name,
             "description": self.vectorstore_description,
         }
-        return VectorStoreInfo(vectorstore=self.input_vectorstore,
-                               description=self.vectorstore_description,
-                               name=self.vectorstore_name)
+        return VectorStoreInfo(
+            vectorstore=self.input_vectorstore, description=self.vectorstore_description, name=self.vectorstore_name
+        )

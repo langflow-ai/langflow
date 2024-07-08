@@ -1,8 +1,8 @@
 from langchain.agents import create_vectorstore_router_agent
-from langchain.agents.agent_toolkits.vectorstore.toolkit import VectorStoreRouterToolkit, VectorStoreInfo
+from langchain.agents.agent_toolkits.vectorstore.toolkit import VectorStoreRouterToolkit
 
 from langflow.base.agents.agent import LCAgentComponent
-from langchain.agents import AgentExecutor, BaseMultiActionAgent, BaseSingleActionAgent
+from langchain.agents import AgentExecutor
 from langflow.inputs import HandleInput
 
 
@@ -12,22 +12,16 @@ class VectorStoreRouterAgentComponent(LCAgentComponent):
     name = "VectorStoreRouterAgent"
 
     inputs = LCAgentComponent._base_inputs + [
-        HandleInput(
-            name="llm",
-            display_name="Language Model",
-            input_types=["LanguageModel"],
-            required=True
-        ),
+        HandleInput(name="llm", display_name="Language Model", input_types=["LanguageModel"], required=True),
         HandleInput(
             name="vectorstores",
             display_name="Vector Stores",
             input_types=["VectorStoreInfo"],
             is_list=True,
-            required=True
-        )
+            required=True,
+        ),
     ]
 
     def build_agent(self) -> AgentExecutor:
         toolkit = VectorStoreRouterToolkit(vectorstores=self.vectorstores, llm=self.llm)
-        return create_vectorstore_router_agent(llm=self.llm, toolkit=toolkit,
-            **self.get_agent_kwargs())
+        return create_vectorstore_router_agent(llm=self.llm, toolkit=toolkit, **self.get_agent_kwargs())
