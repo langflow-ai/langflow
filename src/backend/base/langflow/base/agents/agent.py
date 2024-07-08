@@ -80,7 +80,7 @@ class LCToolsAgentComponent(LCAgentComponent):
     def build_agent(self) -> AgentExecutor:
         agent = self.creat_agent_runnable()
         return AgentExecutor.from_agent_and_tools(
-            agent=RunnableAgent(runnable=agent, input_keys_arg=["input"], output_keys_arg=["output"]),
+            agent=RunnableAgent(runnable=agent, input_keys_arg=["input"], return_keys_arg=["output"]),
             tools=self.tools,
             **self.get_agent_kwargs(flatten=True),
         )
