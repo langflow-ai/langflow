@@ -27,9 +27,7 @@ if TYPE_CHECKING:
 class TracingService(Service):
     name = "tracing_service"
 
-    def __init__(
-        self, settings_service: "SettingsService", monitor_service: "MonitorService"
-    ):
+    def __init__(self, settings_service: "SettingsService", monitor_service: "MonitorService"):
         self.settings_service = settings_service
         self.monitor_service = monitor_service
         self.inputs: dict[str, dict] = defaultdict(dict)
@@ -143,15 +141,11 @@ class TracingService(Service):
             if not tracer.ready:
                 continue
             try:
-                tracer.add_trace(
-                    trace_id, trace_name, trace_type, inputs, metadata, vertex
-                )
+                tracer.add_trace(trace_id, trace_name, trace_type, inputs, metadata, vertex)
             except Exception as e:
                 logger.error(f"Error starting trace {trace_name}: {e}")
 
-    def _end_traces(
-        self, trace_id: str, trace_name: str, error: Exception | None = None
-    ):
+    def _end_traces(self, trace_id: str, trace_name: str, error: Exception | None = None):
         for tracer in self._tracers.values():
             if not tracer.ready:
                 continue
@@ -171,9 +165,7 @@ class TracingService(Service):
             if not tracer.ready:
                 continue
             try:
-                tracer.end(
-                    self.inputs, outputs=self.outputs, error=error, metadata=outputs
-                )
+                tracer.end(self.inputs, outputs=self.outputs, error=error, metadata=outputs)
             except Exception as e:
                 logger.error(f"Error ending all traces: {e}")
 
@@ -230,9 +222,7 @@ class TracingService(Service):
 
 
 class LangSmithTracer(BaseTracer):
-    def __init__(
-        self, trace_name: str, trace_type: str, project_name: str, trace_id: UUID
-    ):
+    def __init__(self, trace_name: str, trace_type: str, project_name: str, trace_id: UUID):
         from langsmith.run_trees import RunTree
 
         self.trace_name = trace_name
@@ -246,9 +236,7 @@ class LangSmithTracer(BaseTracer):
                 run_type=self.trace_type,
                 id=self.trace_id,
             )
-            self._run_tree.add_event(
-                {"name": "Start", "time": datetime.now(timezone.utc).isoformat()}
-            )
+            self._run_tree.add_event({"name": "Start", "time": datetime.now(timezone.utc).isoformat()})
             self._children: dict[str, RunTree] = {}
             self._ready = self.setup_langsmith()
         except Exception as e:
@@ -265,9 +253,7 @@ class LangSmithTracer(BaseTracer):
 
             self._client = Client()
         except ImportError:
-            logger.error(
-                "Could not import langsmith. Please install it with `pip install langsmith`."
-            )
+            logger.error("Could not import langsmith. Please install it with `pip install langsmith`.")
             return False
         os.environ["LANGCHAIN_TRACING_V2"] = "true"
         return True
@@ -352,14 +338,10 @@ class LangSmithTracer(BaseTracer):
         error_message = None
         if error:
             try:  # python < 3.10
-                string_stacktrace = traceback.format_exception(
-                    etype=type(error), value=error, tb=error.__traceback__
-                )  # type: ignore
+                string_stacktrace = traceback.format_exception(etype=type(error), value=error, tb=error.__traceback__)  # type: ignore
             except:  # python 3.10+
                 string_stacktrace = traceback.format_exception(err)  # type: ignore
-            error_message = (
-                f"{error.__class__.__name__}: {error}\n\n{string_stacktrace}"
-            )
+            error_message = f"{error.__class__.__name__}: {error}\n\n{string_stacktrace}"
         return error_message
 
     def end(
@@ -378,9 +360,7 @@ class LangSmithTracer(BaseTracer):
 
 
 class LangWatchTracer(BaseTracer):
-    def __init__(
-        self, trace_name: str, trace_type: str, project_name: str, trace_id: UUID
-    ):
+    def __init__(self, trace_name: str, trace_type: str, project_name: str, trace_id: UUID):
         self.trace_name = trace_name
         self.trace_type = trace_type
         self.project_name = project_name
@@ -417,17 +397,14 @@ class LangWatchTracer(BaseTracer):
 
             self._client = langwatch
         except ImportError:
-            logger.error(
-                "Could not import langwatch. Please install it with `pip install langwatch`."
-            )
+            logger.error("Could not import langwatch. Please install it with `pip install langwatch`.")
             return False
         return True
 
     def _convert_trace_type(self, trace_type: str):
         trace_type_: "SpanTypes" = (
             cast("SpanTypes", trace_type)
-            if trace_type
-            in ["span", "llm", "chain", "tool", "agent", "guardrail", "rag"]
+            if trace_type in ["span", "llm", "chain", "tool", "agent", "guardrail", "rag"]
             else "span"
         )
         return trace_type_
@@ -445,15 +422,8 @@ class LangWatchTracer(BaseTracer):
 
         # If user is not using session_id, then it becomes the same as flow_id, but
         # we don't want to have an infinite thread with all the flow messages
-        if (
-            "session_id" in inputs
-            and "flow_id" in inputs
-            and inputs["flow_id"] != inputs["session_id"]
-        ):
-            self.trace.update(
-                metadata=(self.trace.metadata or {})
-                | {"thread_id": inputs["session_id"]}
-            )
+        if "session_id" in inputs and "flow_id" in inputs and inputs["flow_id"] != inputs["session_id"]:
+            self.trace.update(metadata=(self.trace.metadata or {}) | {"thread_id": inputs["session_id"]})
 
         name_without_id = " (".join(trace_name.split(" (")[0:-1])
 
@@ -463,12 +433,9 @@ class LangWatchTracer(BaseTracer):
             name=name_without_id,
             type=trace_type_,
             parent=(
-                [
-                    span
-                    for key, span in self.spans.items()
-                    for edge in vertex.incoming_edges
-                    if key == edge.source_id
-                ][-1]
+                [span for key, span in self.spans.items() for edge in vertex.incoming_edges if key == edge.source_id][
+                    -1
+                ]
                 if vertex and len(vertex.incoming_edges) > 0
                 else self.trace.root_span
             ),
@@ -494,13 +461,9 @@ class LangWatchTracer(BaseTracer):
                 and "model_output" in outputs
                 and "text_output" not in outputs
             ):
-                self.spans[trace_id].update(
-                    metrics={"prompt_tokens": 0, "completion_tokens": 0}
-                )
+                self.spans[trace_id].update(metrics={"prompt_tokens": 0, "completion_tokens": 0})
 
-            self.spans[trace_id].end(
-                output=self._convert_to_langwatch_types(outputs), error=error
-            )
+            self.spans[trace_id].end(output=self._convert_to_langwatch_types(outputs), error=error)
 
     def end(
         self,
@@ -516,10 +479,7 @@ class LangWatchTracer(BaseTracer):
         )
 
         if metadata and "flow_name" in metadata:
-            self.trace.update(
-                metadata=(self.trace.metadata or {})
-                | {"labels": [f"Flow: {metadata['flow_name']}"]}
-            )
+            self.trace.update(metadata=(self.trace.metadata or {}) | {"labels": [f"Flow: {metadata['flow_name']}"]})
         self.trace.deferred_send_spans()
 
     def _convert_to_langwatch_types(self, io_dict: Optional[Dict[str, Any]]):
@@ -548,12 +508,8 @@ class LangWatchTracer(BaseTracer):
         elif isinstance(value, Message):
             if "prompt" in value:
                 prompt = value.load_lc_prompt()
-                if len(prompt.input_variables) == 0 and all(
-                    isinstance(m, BaseMessage) for m in prompt.messages
-                ):
-                    value = langchain_messages_to_chat_messages(
-                        [cast(list[BaseMessage], prompt.messages)]
-                    )
+                if len(prompt.input_variables) == 0 and all(isinstance(m, BaseMessage) for m in prompt.messages):
+                    value = langchain_messages_to_chat_messages([cast(list[BaseMessage], prompt.messages)])
                 else:
                     value = cast(dict, value.load_lc_prompt())
             elif value.sender:
