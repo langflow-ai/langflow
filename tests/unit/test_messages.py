@@ -7,6 +7,7 @@ from langflow.schema.message import Message
 from langflow.services.database.models.message import MessageCreate, MessageRead
 from langflow.services.database.models.message.model import MessageTable
 from langflow.services.deps import session_scope
+from langflow.services.tracing.utils import convert_to_langchain_type
 
 
 @pytest.fixture()
@@ -74,3 +75,28 @@ def test_store_message():
     stored_messages = store_message(message)
     assert len(stored_messages) == 1
     assert stored_messages[0].text == "Stored message"
+
+
+@pytest.mark.parametrize("method_name", ["message", "convert_to_langchain_type"])
+def test_convert_to_langchain(method_name):
+    def convert(value):
+        if method_name == "message":
+            return value.to_lc_message()
+        elif method_name == "convert_to_langchain_type":
+            return convert_to_langchain_type(value)
+        else:
+            raise ValueError(f"Invalid method: {method_name}")
+
+    lc_message = convert(Message(text="Test message 1", sender="User", sender_name="User", session_id="session_id2"))
+    assert lc_message.content == "Test message 1"
+    assert lc_message.type == "human"
+
+    lc_message = convert(Message(text="Test message 2", sender="AI", session_id="session_id2"))
+    assert lc_message.content == "Test message 2"
+    assert lc_message.type == "ai"
+
+    iterator = iter(["stream", "message"])
+    lc_message = convert(Message(text=iterator, sender="AI", session_id="session_id2"))
+    assert lc_message.content == ""
+    assert lc_message.type == "ai"
+    assert len(list(iterator)) == 2
