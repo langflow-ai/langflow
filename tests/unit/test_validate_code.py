@@ -1,13 +1,10 @@
+from pathlib import Path
 from unittest import mock
 
 import pytest
-from langflow.utils.validate import (
-    create_function,
-    execute_function,
-    extract_function_name,
-    validate_code,
-)
 from requests.exceptions import MissingSchema
+
+from langflow.utils.validate import create_function, execute_function, extract_function_name, validate_code
 
 
 def test_validate_code():
@@ -95,13 +92,13 @@ def my_function(x):
 
 def test_create_function():
     code = """
-import math
+from pathlib import Path
 
-def my_function(x):
-    return math.sin(x) + 1
+def my_function(x: str) -> Path:
+    return Path(x)
 """
 
     function_name = extract_function_name(code)
     function = create_function(code, function_name)
-    result = function(0.5)
-    assert result == 1.479425538604203
+    result = function("test")
+    assert result == Path("test")
