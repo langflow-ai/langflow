@@ -46,7 +46,7 @@ class RunnableVerticesManager:
         self.vertices_to_run.update(vertices_to_run)
         self.build_run_map(self.run_predecessors, self.vertices_to_run)
 
-    def is_vertex_runnable(self, vertex_id: str, inactivated_vertices: set[str], activated_vertices: set[str]) -> bool:
+    def is_vertex_runnable(self, vertex_id: str, inactivated_vertices: set[str], activated_vertices: list[str]) -> bool:
         """Determines if a vertex is runnable."""
 
         if not activated_vertices:
