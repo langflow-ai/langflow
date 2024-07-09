@@ -26,7 +26,9 @@ class NvidiaRerankComponent(LCVectorStoreComponent):
             refresh_button=True,
             info="The base URL of the NVIDIA API. Defaults to https://integrate.api.nvidia.com/v1.",
         ),
-        DropdownInput(name="model", display_name="Model", options=[]),
+        DropdownInput(
+            name="model", display_name="Model", options=["nv-rerank-qa-mistral-4b:1"], value="nv-rerank-qa-mistral-4b:1"
+        ),
         SecretStrInput(name="api_key", display_name="API Key"),
         HandleInput(name="retriever", display_name="Retriever", input_types=["Retriever"]),
     ]
