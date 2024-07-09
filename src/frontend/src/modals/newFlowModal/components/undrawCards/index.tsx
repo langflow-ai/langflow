@@ -26,6 +26,9 @@ export default function UndrawCardComponent({
   const location = useLocation();
   const folderId = location?.state?.folderId;
   const setFolderUrl = useFolderStore((state) => state.setFolderUrl);
+  const myCollectionId = useFolderStore((state) => state.myCollectionId);
+
+  const folderIdUrl = folderId || myCollectionId || "";
 
   function selectImage() {
     switch (flow.name) {
@@ -108,7 +111,7 @@ export default function UndrawCardComponent({
         updateIds(flow.data!);
         addFlow(true, flow).then((id) => {
           setFolderUrl(folderId ?? "");
-          navigate(`/flow/${id}${folderId ? `/folder/${folderId}` : ""}`);
+          navigate(`/flow/${id}/folder/${folderIdUrl}`);
         });
       }}
       className="h-64 w-80 cursor-pointer bg-background pt-4"
