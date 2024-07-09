@@ -30,30 +30,15 @@ const ProfilePictureFormComponent = ({
   handleGetProfilePictures,
   userData,
 }: ProfilePictureFormComponentProps) => {
-  const [profilePictures, setProfilePictures] = useState<{
-    [key: string]: string[];
-  }>({});
-
-  const [loading, setLoading] = useState(true);
+  const [profilePictures, setProfilePictures] = useState({});
 
   const { data: response, isFetching } = useGetProfilePicturesQuery({});
 
   useEffect(() => {
-    if (response?.files) {
-      response?.files?.forEach((profile_picture) => {
-        const [folder, path] = profile_picture.split("/");
-        setProfilePictures((prev) => {
-          if (prev[folder]) {
-            prev[folder].push(path);
-          } else {
-            prev[folder] = [path];
-          }
-          setLoading(false);
-          return prev;
-        });
-      });
+    if (response) {
+      setProfilePictures(response);
     }
-  }, [response]);
+  }, [response, isFetching]);
 
   return (
     <Form.Root
@@ -73,7 +58,7 @@ const ProfilePictureFormComponent = ({
           <div className="py-2">
             <ProfilePictureChooserComponent
               profilePictures={profilePictures}
-              loading={isFetching || loading}
+              loading={isFetching}
               value={
                 profilePicture == ""
                   ? userData?.profile_image ??
