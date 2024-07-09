@@ -1,10 +1,10 @@
 from langchain_community.chat_models import ChatMaritalk
-from pydantic.v1 import SecretStr
 
+from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
 from langflow.field_typing.range_spec import RangeSpec
-from langflow.inputs import DropdownInput, FloatInput, IntInput, MessageInput, SecretStrInput, StrInput
+from langflow.inputs import BoolInput, DropdownInput, FloatInput, IntInput, MessageInput, SecretStrInput, StrInput
 
 
 class MaritalkModelComponent(LCModelComponent):
@@ -35,6 +35,7 @@ class MaritalkModelComponent(LCModelComponent):
             advanced=False,
         ),
         FloatInput(name="temperature", display_name="Temperature", value=0.1, range_spec=RangeSpec(min=0, max=1)),
+        BoolInput(name="stream", display_name="Stream", info=STREAM_INFO_TEXT, value=False),
         StrInput(
             name="system_message",
             display_name="System Message",
@@ -51,10 +52,6 @@ class MaritalkModelComponent(LCModelComponent):
         model_name: str = self.model_name
         max_tokens = self.max_tokens
 
-        if api_key:
-            api_key = SecretStr(api_key)
-        else:
-            api_key = None
         output = ChatMaritalk(
             max_tokens=max_tokens,
             model=model_name,
