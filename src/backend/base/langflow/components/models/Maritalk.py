@@ -35,7 +35,7 @@ class MaritalkModelComponent(LCModelComponent):
             advanced=False,
         ),
         FloatInput(name="temperature", display_name="Temperature", value=0.1, range_spec=RangeSpec(min=0, max=1)),
-        BoolInput(name="stream", display_name="Stream", info=STREAM_INFO_TEXT, value=False),
+        BoolInput(name="stream", display_name="Stream", info=STREAM_INFO_TEXT, value=False, advanced=True),
         StrInput(
             name="system_message",
             display_name="System Message",
