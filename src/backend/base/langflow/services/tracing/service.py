@@ -388,19 +388,23 @@ class LangWatchTracer(BaseTracer):
 
         try:
             self._ready = self.setup_langwatch()
+
+            import nanoid  # import after setting up langwatch so we are sure to be available
+
             self.trace = self._client.trace(
                 trace_id=str(self.trace_id),
             )
             self.spans: dict[str, "ContextSpan"] = {}
 
-            name_without_id = trace_name.split(" - ")[0]
-            self.spans[str(self.trace_id)] = self.trace.span(
-                span_id=str(self.trace_id),
+            name_without_id = " - ".join(trace_name.split(" - ")[0:-1])
+            flow_id = trace_name.split(" - ")[-1]
+            self.trace.root_span.update(
+                span_id=f"{flow_id}-{nanoid.generate(size=6)}",  # nanoid to make the span_id globally unique, which is required for LangWatch for now
                 name=name_without_id,
                 type=self._convert_trace_type(trace_type),
             )
         except Exception as e:
-            logger.debug(f"Error setting up LangSmith tracer: {e}")
+            logger.debug(f"Error setting up LangWatch tracer: {e}")
             self._ready = False
 
     @property
@@ -437,6 +441,8 @@ class LangWatchTracer(BaseTracer):
         metadata: Dict[str, Any] | None = None,
         vertex: Optional["Vertex"] = None,
     ):
+        import nanoid
+
         # If user is not using session_id, then it becomes the same as flow_id, but
         # we don't want to have an infinite thread with all the flow messages
         if (
@@ -453,12 +459,18 @@ class LangWatchTracer(BaseTracer):
 
         trace_type_ = self._convert_trace_type(trace_type)
         self.spans[trace_id] = self.trace.span(
+            span_id=f"{trace_id}-{nanoid.generate(size=6)}",  # Add a nanoid to make the span_id globally unique, which is required for LangWatch for now
             name=name_without_id,
             type=trace_type_,
             parent=(
-                self.spans[vertex.incoming_edges[-1].source_id]
+                [
+                    span
+                    for key, span in self.spans.items()
+                    for edge in vertex.incoming_edges
+                    if key == edge.source_id
+                ][-1]
                 if vertex and len(vertex.incoming_edges) > 0
-                else self.spans[self.trace.trace_id]
+                else self.trace.root_span
             ),
             input=self._convert_to_langwatch_types(inputs),
         )
@@ -474,6 +486,18 @@ class LangWatchTracer(BaseTracer):
         error: Exception | None = None,
     ):
         if self.spans.get(trace_id):
+            # Workaround for when model is used just as a component not actually called as an LLM,
+            # to prevent LangWatch from calculating the cost based on it when it was in fact never called
+            if (
+                self.spans[trace_id].type == "llm"
+                and outputs
+                and "model_output" in outputs
+                and "text_output" not in outputs
+            ):
+                self.spans[trace_id].update(
+                    metrics={"prompt_tokens": 0, "completion_tokens": 0}
+                )
+
             self.spans[trace_id].end(
                 output=self._convert_to_langwatch_types(outputs), error=error
             )
@@ -485,17 +509,16 @@ class LangWatchTracer(BaseTracer):
         error: Exception | None = None,
         metadata: dict[str, Any] | None = None,
     ):
-        self.spans[str(self.trace_id)].end(
+        self.trace.root_span.end(
             input=self._convert_to_langwatch_types(inputs),
             output=self._convert_to_langwatch_types(outputs),
             error=error,
         )
 
-        print("\n\nself.trace.spans", self.trace.spans, "\n\n")
         if metadata and "flow_name" in metadata:
             self.trace.update(
                 metadata=(self.trace.metadata or {})
-                | {"labels": [metadata["flow_name"]]}
+                | {"labels": [f"Flow: {metadata['flow_name']}"]}
             )
         self.trace.deferred_send_spans()
 
