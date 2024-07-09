@@ -17,7 +17,7 @@ from rich import print as rprint
 from starlette.middleware.base import BaseHTTPMiddleware
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
-from langflow.api import router, health_check_router
+from langflow.api import router, health_check_router, log_router
 from langflow.initial_setup.setup import (
     create_or_update_starter_projects,
     initialize_super_user_if_needed,
@@ -157,6 +157,7 @@ def create_app():
 
     app.include_router(router)
     app.include_router(health_check_router)
+    app.include_router(log_router)
 
     FastAPIInstrumentor.instrument_app(app)
 

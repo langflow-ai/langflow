@@ -1,8 +1,14 @@
+import json
 import logging
 import os
 import sys
+import threading
+import uuid
+from collections import deque
+from datetime import datetime, timedelta
+from math import ceil
 from pathlib import Path
-from typing import Optional
+from typing import Any, Dict, Deque, Optional
 
 import orjson
 from loguru import logger
@@ -10,6 +16,95 @@ from platformdirs import user_cache_dir
 from rich.logging import RichHandler
 
 VALID_LOG_LEVELS = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+
+
+class SizedLogBuffer:
+    def __init__(self):
+        """
+        a buffer for storing log messages for the log retrieval API
+        the buffer can be overwritten by an env variable LANGFLOW_LOG_RETRIEVER_BUFFER_SIZE
+        because the logger is initialized before the settings_service are loaded
+        """
+        self.max: int = 0
+        env_buffer_size = os.getenv("LANGFLOW_LOG_RETRIEVER_BUFFER_SIZE", "10000")
+        if env_buffer_size.isdigit():
+            self.max = int(env_buffer_size)
+        self.buffer: Deque[str] = deque(maxlen=self.max)
+        self._lock = threading.Lock()
+        self.page_size: int = 100
+        self.sessions: Dict[str, Dict] = {}
+        self.session_timeout: timedelta = timedelta(minutes=5)
+
+    def write(self, message: str):
+        record = json.loads(message)
+        log_entry = record["text"]
+        with self._lock:
+            self.buffer.append(log_entry)
+
+    def readlines(self) -> list[str]:
+        return list(self.buffer)
+
+    def enabled(self) -> bool:
+        return self.max > 0
+
+    def max_size(self) -> int:
+        return self.max
+
+    def create_session(self) -> str:
+        session_id = str(uuid.uuid4())
+        self.sessions[session_id] = {
+            "created": datetime.now(),
+            "last_access": datetime.now(),
+            "snapshot": list(self.buffer),
+        }
+        return session_id
+
+    def get_page(self, session_id: str, page: int) -> Dict[str, Any]:
+        self.cleanup_sessions()
+
+        if session_id not in self.sessions:
+            return {"error": "Invalid or expired session ID"}
+
+        session = self.sessions[session_id]
+        session["last_accessed"] = datetime.now()
+        logs = session["snapshot"]
+
+        total_logs = len(logs)
+        total_pages = ceil(total_logs / self.page_size)
+
+        if page < 1 or page > total_pages:
+            return {
+                "logs": [],
+                "page": page,
+                "total_pages": total_pages,
+                "total_logs": total_logs,
+                "session_id": session_id,
+            }
+
+        start_index = (page - 1) * self.page_size
+        end_index = min(start_index + self.page_size, total_logs)
+
+        return {
+            "logs": logs[start_index:end_index],
+            "page": page,
+            "total_pages": total_pages,
+            "total_logs": total_logs,
+            "session_id": session_id,
+        }
+
+    def cleanup_sessions(self) -> None:
+        current_time = datetime.now()
+        expired_sessions = [
+            sid
+            for sid, session in self.sessions.items()
+            if current_time - session["last_accessed"] > self.session_timeout
+        ]
+        for sid in expired_sessions:
+            del self.sessions[sid]
+
+
+# log buffer for capturing log messages
+log_buffer = SizedLogBuffer()
 
 
 def serialize_log(record):
@@ -84,6 +179,9 @@ def configure(
             )
         except Exception as exc:
             logger.error(f"Error setting up log file: {exc}")
+
+    if log_buffer.enabled():
+        logger.add(sink=log_buffer.write, format="{time} {level} {message}", serialize=True)
 
     logger.debug(f"Logger set up with log level: {log_level}")
 
