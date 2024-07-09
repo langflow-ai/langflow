@@ -26,7 +26,7 @@ class SizedLogBuffer:
         because the logger is initialized before the settings_service are loaded
         """
         self.max: int = 0
-        env_buffer_size = os.getenv("LANGFLOW_LOG_RETRIEVER_BUFFER_SIZE", "10000")
+        env_buffer_size = os.getenv("LANGFLOW_LOG_RETRIEVER_BUFFER_SIZE", "0")
         if env_buffer_size.isdigit():
             self.max = int(env_buffer_size)
         self.buffer: Deque[str] = deque(maxlen=self.max)
