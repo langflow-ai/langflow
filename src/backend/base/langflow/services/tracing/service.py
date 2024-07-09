@@ -360,11 +360,14 @@ class LangSmithTracer(BaseTracer):
 
 
 class LangWatchTracer(BaseTracer):
+    flow_id: str
+
     def __init__(self, trace_name: str, trace_type: str, project_name: str, trace_id: UUID):
         self.trace_name = trace_name
         self.trace_type = trace_type
         self.project_name = project_name
         self.trace_id = trace_id
+        self.flow_id = trace_name.split(" - ")[-1]
 
         try:
             self._ready = self.setup_langwatch()
@@ -377,9 +380,8 @@ class LangWatchTracer(BaseTracer):
             self.spans: dict[str, "ContextSpan"] = {}
 
             name_without_id = " - ".join(trace_name.split(" - ")[0:-1])
-            flow_id = trace_name.split(" - ")[-1]
             self.trace.root_span.update(
-                span_id=f"{flow_id}-{nanoid.generate(size=6)}",  # nanoid to make the span_id globally unique, which is required for LangWatch for now
+                span_id=f"{self.flow_id}-{nanoid.generate(size=6)}",  # nanoid to make the span_id globally unique, which is required for LangWatch for now
                 name=name_without_id,
                 type=self._convert_trace_type(trace_type),
             )
@@ -422,7 +424,7 @@ class LangWatchTracer(BaseTracer):
 
         # If user is not using session_id, then it becomes the same as flow_id, but
         # we don't want to have an infinite thread with all the flow messages
-        if "session_id" in inputs and "flow_id" in inputs and inputs["flow_id"] != inputs["session_id"]:
+        if "session_id" in inputs and inputs["session_id"] != self.flow_id:
             self.trace.update(metadata=(self.trace.metadata or {}) | {"thread_id": inputs["session_id"]})
 
         name_without_id = " (".join(trace_name.split(" (")[0:-1])
