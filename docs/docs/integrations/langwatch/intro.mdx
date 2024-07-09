@@ -1,0 +1,46 @@
+import Admonition from "@theme/Admonition";
+import ThemedImage from "@theme/ThemedImage";
+import useBaseUrl from "@docusaurus/useBaseUrl";
+import ZoomableImage from "/src/theme/ZoomableImage.js";
+
+# LangWatch
+
+LangWatch is an all-in-one LLMOps platform for monitoring, observability, analytics, evaluations and alerting for getting user insights and improve your LLM workflows.
+
+To integrate with Langflow, just add your LangWatch API as a Langflow environment variable and you are good to go!
+
+## Step-by-step Configuration
+
+1. Obtain your LangWatch API key from https://app.langwatch.com/
+2. Add the following key to Langflow .env file:
+
+```bash
+LANGWATCH_API_KEY="your-api-key"
+```
+
+or export it in your terminal:
+
+```bash
+export LANGWATCH_API_KEY="your-api-key"
+```
+
+3. Restart Langflow using `langflow run --env-file .env`
+4. Run any project and check the LangWatch dashboard for monitoring and observability.
+
+<ZoomableImage
+  alt="LangWatch Flow Example"
+  sources={{
+    light: useBaseUrl("img/langwatch-flow.png"),
+    dark: useBaseUrl("img/langwatch-flow.png"),
+  }}
+  style={{ width: "100%", margin: "20px auto", boxShadow: "rgba(50, 50, 93, 0.2) 0px 0px 27px" }}
+/>
+
+<ZoomableImage
+  alt="LangSmith Trace"
+  sources={{
+    light: useBaseUrl("img/langwatch-trace.png"),
+    dark: useBaseUrl("img/langwatch-trace.png"),
+  }}
+  style={{ width: "100%", margin: "20px auto", background: "red", boxShadow: "rgba(50, 50, 93, 0.2) 0px 0px 27px" }}
+/>
