@@ -16,8 +16,8 @@ interface IPostTemplateValue {
 }
 
 interface IPostTemplateValueParams {
-  parameterId: string;
   nodeData: NodeDataType;
+  parameterId: string;
 }
 
 export const usePostTemplateValue: useMutationFunctionType<
@@ -31,7 +31,11 @@ export const usePostTemplateValue: useMutationFunctionType<
   ): Promise<NodeDataType | undefined> => {
     const takeSnapshot = useFlowsManagerStore.getState().takeSnapshot;
     const setNode = useFlowStore.getState().setNode;
-    const parameter = nodeData.node?.template[parameterId];
+    const template = nodeData.node?.template;
+
+    if (!template) throw new Error("Template not found in node");
+
+    const parameter = template[parameterId];
 
     if (!parameter) throw new Error("Parameter not found in the template");
 
@@ -53,8 +57,8 @@ export const usePostTemplateValue: useMutationFunctionType<
       const response = await api.post<APIClassType>(
         getURL("CUSTOM_COMPONENT", { update: "update" }),
         {
-          code: nodeData.node?.template?.code?.value,
-          template: nodeData.node?.template,
+          code: template.code.value,
+          template: template,
           field: parameterId,
           field_value: payload.value,
         },
