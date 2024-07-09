@@ -184,6 +184,7 @@ import { GroqIcon } from "../icons/Groq";
 import { HuggingFaceIcon } from "../icons/HuggingFace";
 import { IFixIcon } from "../icons/IFixIt";
 import { LangChainIcon } from "../icons/LangChain";
+import { MaritalkIcon } from "../icons/Maritalk";
 import { MetaIcon } from "../icons/Meta";
 import { MidjourneyIcon } from "../icons/Midjorney";
 import { MongoDBIcon } from "../icons/MongoDB";
@@ -338,6 +339,7 @@ export const nodeIconsLucide: iconsType = {
   OllamaEmbeddings: OllamaIcon,
   ChatOllamaModel: OllamaIcon,
   FAISS: MetaIcon,
+  Maritalk: MaritalkIcon,
   FaissSearch: MetaIcon,
   LangChain: LangChainIcon,
   AzureOpenAiModel: AzureIcon,
