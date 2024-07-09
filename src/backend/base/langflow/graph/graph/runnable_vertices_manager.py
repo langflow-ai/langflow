@@ -46,16 +46,25 @@ class RunnableVerticesManager:
         self.vertices_to_run.update(vertices_to_run)
         self.build_run_map(self.run_predecessors, self.vertices_to_run)
 
-    def is_vertex_runnable(self, vertex_id: str, inactivated_vertices: set[str]) -> bool:
+    def is_vertex_runnable(self, vertex_id: str, inactivated_vertices: set[str], activated_vertices: set[str]) -> bool:
         """Determines if a vertex is runnable."""
 
+        if not activated_vertices:
+            # check vertices_to_run
+            should_run = vertex_id in self.vertices_to_run
+        else:
+            # check run_predecessors
+            should_run = vertex_id in activated_vertices
         return (
             vertex_id not in self.vertices_being_run
             and not self.run_predecessors.get(vertex_id)
             and vertex_id not in inactivated_vertices
+            and should_run
         )
 
-    def find_runnable_predecessors_for_successors(self, vertex_id: str, inactivated_vertices: set[str]) -> List[str]:
+    def find_runnable_predecessors_for_successors(
+        self, vertex_id: str, inactivated_vertices: set[str], activated_vertices: set[str]
+    ) -> List[str]:
         """Finds runnable predecessors for the successors of a given vertex."""
         runnable_vertices = []
         visited = set()
@@ -64,7 +73,7 @@ class RunnableVerticesManager:
             if predecessor_id in visited:
                 return
             visited.add(predecessor_id)
-            if self.is_vertex_runnable(predecessor_id, inactivated_vertices):
+            if self.is_vertex_runnable(predecessor_id, inactivated_vertices, activated_vertices):
                 runnable_vertices.append(predecessor_id)
             else:
                 for pred_pred_id in self.run_predecessors.get(predecessor_id, []):
@@ -125,12 +134,14 @@ class RunnableVerticesManager:
         async with lock:
             self.remove_vertex_from_runnables(vertex.id)
             direct_successors_ready = [
-                v for v in vertex.successors_ids if self.is_vertex_runnable(v, graph.inactivated_vertices)
+                v
+                for v in vertex.successors_ids
+                if self.is_vertex_runnable(v, graph.inactivated_vertices, graph.activated_vertices)
             ]
             if not direct_successors_ready:
                 # No direct successors ready, look for runnable predecessors of successors
                 next_runnable_vertices = self.find_runnable_predecessors_for_successors(
-                    vertex.id, graph.inactivated_vertices
+                    vertex.id, graph.inactivated_vertices, graph.activated_vertices
                 )
             else:
                 next_runnable_vertices = direct_successors_ready
