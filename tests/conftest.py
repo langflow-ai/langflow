@@ -73,13 +73,6 @@ def get_text():
         assert path.exists(), f"File {path} does not exist. Available files: {list(data_path.iterdir())}"
 
 
-@pytest.fixture(autouse=True)
-def check_openai_api_key_in_environment_variables():
-    import os
-
-    assert os.environ.get("OPENAI_API_KEY") is not None, "OPENAI_API_KEY is not set in environment variables"
-
-
 @pytest.fixture()
 async def async_client() -> AsyncGenerator:
     from langflow.main import create_app
