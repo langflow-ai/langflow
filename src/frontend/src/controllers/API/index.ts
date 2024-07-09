@@ -1071,31 +1071,6 @@ export async function getTransactionTable(
   return { rows: rows.data, columns };
 }
 
-export async function getMessagesTable(
-  mode: "intersection" | "union",
-  id?: string,
-  excludedFields?: string[],
-  params = {},
-): Promise<{ rows: Array<Message>; columns: Array<ColDef | ColGroupDef> }> {
-  const config = {};
-  if (id) {
-    config["params"] = { flow_id: id };
-  }
-  if (params) {
-    config["params"] = { ...config["params"], ...params };
-  }
-  const rows = await api.get(`${BASE_URL_API}monitor/messages`, config);
-
-  const rowsOrganized = rows.data;
-
-  const columns = extractColumnsFromRows(rowsOrganized, mode, excludedFields);
-  const sessions = new Set<string>();
-  rowsOrganized.forEach((row) => {
-    sessions.add(row.session_id);
-  });
-  return { rows: rowsOrganized, columns };
-}
-
 export async function deleteMessagesFn(ids: string[]) {
   try {
     return await api.delete(`${BASE_URL_API}monitor/messages`, {
