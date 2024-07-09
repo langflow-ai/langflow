@@ -1,5 +1,4 @@
 import { keepPreviousData } from "@tanstack/react-query";
-import { profile } from "console";
 import { useQueryFunctionType } from "../../../../types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
@@ -7,23 +6,24 @@ import { UseRequestProcessor } from "../../services/request-processor";
 
 interface ProfilePicturesQueryParams {}
 
-export interface ProfilePicturesResponse {
+export interface ProfilePicturesQueryResponse {
   files: string[];
 }
 
 export const useGetProfilePicturesQuery: useQueryFunctionType<
   ProfilePicturesQueryParams,
-  ProfilePicturesResponse
+  { [key: string]: string[] }
 > = () => {
   const { query } = UseRequestProcessor();
 
-  const getProfilePicturesFn = async () => {
-    const response = await api.get<ProfilePicturesResponse>(
-      `${getURL("FILES")}/profile_pictures/list`,
-    );
+  const getProfilePicturesFn =
+    async (): Promise<ProfilePicturesQueryResponse> => {
+      const response = await api.get<ProfilePicturesQueryResponse>(
+        `${getURL("FILES")}/profile_pictures/list`,
+      );
 
-    return response.data;
-  };
+      return response.data;
+    };
 
   const responseFn = async () => {
     const data = await getProfilePicturesFn();

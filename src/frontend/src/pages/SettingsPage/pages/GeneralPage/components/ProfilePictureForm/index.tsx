@@ -1,7 +1,4 @@
-import {
-  ProfilePicturesResponse,
-  useGetProfilePicturesQuery,
-} from "@/controllers/API/queries/files";
+import { useGetProfilePicturesQuery } from "@/controllers/API/queries/files";
 import * as Form from "@radix-ui/react-form";
 import { useEffect, useState } from "react";
 import { Button } from "../../../../../../components/ui/button";
@@ -20,7 +17,7 @@ type ProfilePictureFormComponentProps = {
   profilePicture: string;
   handleInput: (event: any) => void;
   handlePatchProfilePicture: (gradient: string) => void;
-  handleGetProfilePictures: () => ProfilePicturesResponse | undefined;
+  handleGetProfilePictures: () => undefined;
   userData: any;
 };
 const ProfilePictureFormComponent = ({
@@ -30,15 +27,7 @@ const ProfilePictureFormComponent = ({
   handleGetProfilePictures,
   userData,
 }: ProfilePictureFormComponentProps) => {
-  const [profilePictures, setProfilePictures] = useState({});
-
   const { data: response, isFetching } = useGetProfilePicturesQuery({});
-
-  useEffect(() => {
-    if (response) {
-      setProfilePictures(response);
-    }
-  }, [response, isFetching]);
 
   return (
     <Form.Root
@@ -57,7 +46,7 @@ const ProfilePictureFormComponent = ({
         <CardContent>
           <div className="py-2">
             <ProfilePictureChooserComponent
-              profilePictures={profilePictures}
+              profilePictures={response}
               loading={isFetching}
               value={
                 profilePicture == ""
