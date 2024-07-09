@@ -26,6 +26,7 @@ from langflow.custom.utils import build_custom_component_template, get_instance_
 from langflow.graph.graph.base import Graph
 from langflow.graph.schema import RunOutputs
 from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
+from langflow.interface.initialize.loading import update_params_with_load_from_db_fields
 from langflow.processing.process import process_tweaks, run_graph_internal
 from langflow.schema.graph import Tweaks
 from langflow.services.auth.utils import api_key_security, get_current_active_user
@@ -555,7 +556,16 @@ async def custom_component_update(
             component,
             user_id=user.id,
         )
-
+        if hasattr(cc_instance, "set_attributes"):
+            template = code_request.get_template()
+            params = {key: value_dict["value"] for key, value_dict in template.items() if isinstance(value_dict, dict)}
+            load_from_db_fields = [
+                field_name
+                for field_name, field_dict in template.items()
+                if isinstance(field_dict, dict) and field_dict.get("load_from_db")
+            ]
+            params = update_params_with_load_from_db_fields(cc_instance, params, load_from_db_fields)
+            cc_instance.set_attributes(params)
         updated_build_config = cc_instance.update_build_config(
             build_config=code_request.get_template(),
             field_value=code_request.field_value,
