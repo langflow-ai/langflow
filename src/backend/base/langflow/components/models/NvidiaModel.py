@@ -79,7 +79,6 @@ class NVIDIAModelComponent(LCModelComponent):
         model_name: str = self.model_name
         max_tokens = self.max_tokens
         seed = self.seed
-        assert nvidia_api_key.startswith("nvapi-"), f"{nvidia_api_key[:5]}... is not a valid key"
         output = ChatNVIDIA(
             max_tokens=max_tokens or None,
             model=model_name,
