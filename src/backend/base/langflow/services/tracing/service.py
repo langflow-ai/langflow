@@ -337,10 +337,7 @@ class LangSmithTracer(BaseTracer):
     def _error_to_string(self, error: Optional[Exception]):
         error_message = None
         if error:
-            try:  # python < 3.10
-                string_stacktrace = traceback.format_exception(etype=type(error), value=error, tb=error.__traceback__)  # type: ignore
-            except:  # python 3.10+
-                string_stacktrace = traceback.format_exception(err)  # type: ignore
+            string_stacktrace = traceback.format_exception(error)
             error_message = f"{error.__class__.__name__}: {error}\n\n{string_stacktrace}"
         return error_message
 
