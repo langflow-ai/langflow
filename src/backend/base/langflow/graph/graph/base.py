@@ -157,12 +157,14 @@ class Graph:
                     edges_set.update(_vertex.edges)
                     if _vertex.state == VertexStates.INACTIVE:
                         _vertex.set_state("ACTIVE")
+
+                    vertices_ids.add(_vertex.id)
                 edges = list(edges_set)
                 predecessor_map, _ = self.build_adjacency_maps(edges)
                 new_predecessor_map.update(predecessor_map)
 
-        # vertices_ids.update(new_predecessor_map.keys())
-        # vertices_ids.update(v_id for value_list in new_predecessor_map.values() for v_id in value_list)
+        vertices_ids.update(new_predecessor_map.keys())
+        vertices_ids.update(v_id for value_list in new_predecessor_map.values() for v_id in value_list)
 
         self.activated_vertices = list(vertices_ids)
         self.vertices_to_run.update(vertices_ids)
