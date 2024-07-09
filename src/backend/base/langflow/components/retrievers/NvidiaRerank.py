@@ -42,12 +42,15 @@ class NvidiaRerankComponent(LCVectorStoreComponent):
                 raise ValueError(f"Error getting model names: {e}")
         return build_config
 
-    def build_base_retriever(self) -> Retriever:  # type: ignore[type-var]
+    def build_model(self):
         try:
             from langchain_nvidia_ai_endpoints import NVIDIARerank
         except ImportError:
             raise ImportError("Please install langchain-nvidia-ai-endpoints to use the NVIDIA model.")
-        nvidia_reranker = NVIDIARerank(api_key=self.api_key, model=self.model, base_url=self.base_url)
+        return NVIDIARerank(api_key=self.api_key, model=self.model, base_url=self.base_url)
+
+    def build_base_retriever(self) -> Retriever:  # type: ignore[type-var]
+        nvidia_reranker = self.build_model()
         retriever = ContextualCompressionRetriever(base_compressor=nvidia_reranker, base_retriever=self.retriever)
         return cast(Retriever, retriever)
 
