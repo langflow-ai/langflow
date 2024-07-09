@@ -52,5 +52,5 @@ class NVIDIAEmbeddingsComponent(LCEmbeddingsModel):
                 temperature=self.temperature,
             )  # type: ignore
         except Exception as e:
-            raise ValueError("Could not connect to Ollama API.") from e
+            raise ValueError("Could not connect to NVIDIA API.") from e
         return output
