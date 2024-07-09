@@ -17,12 +17,20 @@ class BaseTracer(ABC):
 
     @abstractmethod
     def add_trace(
-        self, trace_id: str, trace_name: str, trace_type: str, inputs: Dict[str, Any], metadata: Dict[str, Any] | None = None, vertex: Optional["Vertex"] = None
+        self,
+        trace_id: str,
+        trace_name: str,
+        trace_type: str,
+        inputs: Dict[str, Any],
+        metadata: Dict[str, Any] | None = None,
+        vertex: Optional["Vertex"] = None,
     ):
         raise NotImplementedError
 
     @abstractmethod
-    def end_trace(self, trace_id: str, trace_name: str, outputs: Dict[str, Any] | None = None, error: Exception | None = None):
+    def end_trace(
+        self, trace_id: str, trace_name: str, outputs: Dict[str, Any] | None = None, error: Exception | None = None
+    ):
         raise NotImplementedError
 
     @abstractmethod

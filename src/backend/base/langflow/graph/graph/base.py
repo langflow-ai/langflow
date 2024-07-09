@@ -1,5 +1,4 @@
 import asyncio
-import traceback
 import uuid
 from collections import defaultdict, deque
 from datetime import datetime, timezone
