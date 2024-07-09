@@ -768,17 +768,6 @@ files = [
 ]
 
 [[package]]
-name = "coolname"
-version = "2.2.0"
-description = "Random name and slug generator"
-optional = false
-python-versions = "*"
-files = [
-    {file = "coolname-2.2.0-py2.py3-none-any.whl", hash = "sha256:4d1563186cfaf71b394d5df4c744f8c41303b6846413645e31d31915cdeb13e8"},
-    {file = "coolname-2.2.0.tar.gz", hash = "sha256:6c5d5731759104479e7ca195a9b64f7900ac5bead40183c09323c7d0be9e75c7"},
-]
-
-[[package]]
 name = "crewai"
 version = "0.36.1"
 description = "Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By fostering collaborative intelligence, CrewAI empowers agents to work together seamlessly, tackling complex tasks."
@@ -876,17 +865,6 @@ files = [
 [package.dependencies]
 marshmallow = ">=3.18.0,<4.0.0"
 typing-inspect = ">=0.4.0,<1"
-
-[[package]]
-name = "decorator"
-version = "5.1.1"
-description = "Decorators for Humans"
-optional = false
-python-versions = ">=3.5"
-files = [
-    {file = "decorator-5.1.1-py3-none-any.whl", hash = "sha256:b8c3f85900b9dc423225913c5aace94729fe1fa9763b38939a95226f02d37186"},
-    {file = "decorator-5.1.1.tar.gz", hash = "sha256:637996211036b6385ef91435e4fae22989472f9d571faba8927ba8253acbc330"},
-]
 
 [[package]]
 name = "deprecated"
@@ -2592,34 +2570,6 @@ pydantic = [
 requests = ">=2,<3"
 
 [[package]]
-name = "langwatch"
-version = "0.1.4"
-description = "Python SDK for LangWatch for monitoring your LLMs"
-optional = false
-python-versions = "<4.0,>=3.9"
-files = [
-    {file = "langwatch-0.1.4-py3-none-any.whl", hash = "sha256:8c7c5dccd20dcf7956d0c5e5c11c5670a69e9d048fe7d94fb982c571e0ddfa77"},
-    {file = "langwatch-0.1.4.tar.gz", hash = "sha256:cede6849e4ac4f2fe1b20e0511f4fb5b0a96ed92e6d4316b887f3c2b86261fa2"},
-]
-
-[package.dependencies]
-coolname = ">=2.2.0,<3.0.0"
-deprecated = ">=1.2.14,<2.0.0"
-httpx = ">=0.27.0,<0.28.0"
-nanoid = ">=2.0.0,<3.0.0"
-pandas = ">=2.2.2,<3.0.0"
-pydantic = ">=2.5.2"
-requests = ">=2.31.0,<3.0.0"
-retry = ">=0.9.2,<0.10.0"
-tqdm = ">=4.66.2,<5.0.0"
-
-[package.extras]
-dspy = ["dspy-ai (>=2.4.9,<3.0.0)"]
-langchain = ["langchain (>=0.2.0,<0.3.0)"]
-litellm = ["litellm (>=1.40.15,<2.0.0)"]
-openai = ["openai (>=1.3.7,<2.0.0)"]
-
-[[package]]
 name = "loguru"
 version = "0.7.2"
 description = "Python logging made (stupidly) simple"
@@ -3205,17 +3155,6 @@ python-versions = ">=3.5"
 files = [
     {file = "mypy_extensions-1.0.0-py3-none-any.whl", hash = "sha256:4392f6c0eb8a5668a69e23d168ffa70f0be9ccfd32b5cc2d26a34ae5b844552d"},
     {file = "mypy_extensions-1.0.0.tar.gz", hash = "sha256:75dbf8955dc00442a438fc4d0666508a9a97b6bd41aa2f0ffe9d2f2725af0782"},
-]
-
-[[package]]
-name = "nanoid"
-version = "2.0.0"
-description = "A tiny, secure, URL-friendly, unique string ID generator for Python"
-optional = false
-python-versions = "*"
-files = [
-    {file = "nanoid-2.0.0-py3-none-any.whl", hash = "sha256:90aefa650e328cffb0893bbd4c236cfd44c48bc1f2d0b525ecc53c3187b653bb"},
-    {file = "nanoid-2.0.0.tar.gz", hash = "sha256:5a80cad5e9c6e9ae3a41fa2fb34ae189f7cb420b2a5d8f82bd9d23466e4efa68"},
 ]
 
 [[package]]
@@ -4015,17 +3954,6 @@ avro = ["fastavro (>=1.9.2)"]
 functions = ["apache-bookkeeper-client (>=4.16.1)", "grpcio (>=1.60.0)", "prometheus-client", "protobuf (>=3.6.1,<=3.20.3)", "ratelimit"]
 
 [[package]]
-name = "py"
-version = "1.11.0"
-description = "library with cross-python path, ini-parsing, io, code, log facilities"
-optional = false
-python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
-files = [
-    {file = "py-1.11.0-py2.py3-none-any.whl", hash = "sha256:607c53218732647dff4acdfcd50cb62615cedf612e72d1724fb1a0cc6405b378"},
-    {file = "py-1.11.0.tar.gz", hash = "sha256:51c75c4126074b472f746a24399ad32f6053d1b34b68d2fa41e558e6f4a98719"},
-]
-
-[[package]]
 name = "pyasn1"
 version = "0.6.0"
 description = "Pure-Python implementation of ASN.1 types and DER/BER/CER codecs (X.208)"
@@ -4693,21 +4621,6 @@ requests = ">=2.0.0"
 
 [package.extras]
 rsa = ["oauthlib[signedtoken] (>=3.0.0)"]
-
-[[package]]
-name = "retry"
-version = "0.9.2"
-description = "Easy to use retry decorator."
-optional = false
-python-versions = "*"
-files = [
-    {file = "retry-0.9.2-py2.py3-none-any.whl", hash = "sha256:ccddf89761fa2c726ab29391837d4327f819ea14d244c232a1d24c67a2f98606"},
-    {file = "retry-0.9.2.tar.gz", hash = "sha256:f8bfa8b99b69c4506d6f5bd3b0aabf77f98cdb17f3c9fc3f5ca820033336fba4"},
-]
-
-[package.dependencies]
-decorator = ">=3.4.2"
-py = ">=1.4.26,<2.0.0"
 
 [[package]]
 name = "rich"
