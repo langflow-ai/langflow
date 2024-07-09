@@ -34,6 +34,8 @@ const ProfilePictureFormComponent = ({
     [key: string]: string[];
   }>({});
 
+  const [loading, setLoading] = useState(true);
+
   const { data: response, isFetching } = useGetProfilePicturesQuery({});
 
   useEffect(() => {
@@ -46,6 +48,7 @@ const ProfilePictureFormComponent = ({
           } else {
             prev[folder] = [path];
           }
+          setLoading(false);
           return prev;
         });
       });
@@ -70,7 +73,7 @@ const ProfilePictureFormComponent = ({
           <div className="py-2">
             <ProfilePictureChooserComponent
               profilePictures={profilePictures}
-              loading={isFetching}
+              loading={isFetching || loading}
               value={
                 profilePicture == ""
                   ? userData?.profile_image ??
