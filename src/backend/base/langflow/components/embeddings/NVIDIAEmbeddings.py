@@ -2,6 +2,7 @@ from typing import Any
 
 from langflow.base.embeddings.model import LCEmbeddingsModel
 from langflow.field_typing import Embeddings
+from langflow.inputs.inputs import SecretStrInput
 from langflow.io import FloatInput, MessageTextInput
 from langflow.schema.dotdict import dotdict
 
@@ -12,14 +13,19 @@ class NVIDIAEmbeddingsComponent(LCEmbeddingsModel):
     icon = "NVIDIA"
 
     inputs = [
-        MessageTextInput(
-            name="model",
-            display_name="Model",
-        ),
+        MessageTextInput(name="model", display_name="Model", value="NV-Embed-QA"),
         MessageTextInput(
             name="base_url",
             display_name="NVIDIA Base URL",
             refresh_button=True,
+            value="https://integrate.api.nvidia.com/v1",
+        ),
+        SecretStrInput(
+            name="nvidia_api_key",
+            display_name="NVIDIA API Key",
+            info="The NVIDIA API Key.",
+            advanced=False,
+            value="NVIDIA_API_KEY",
         ),
         FloatInput(
             name="temperature",
@@ -50,7 +56,8 @@ class NVIDIAEmbeddingsComponent(LCEmbeddingsModel):
                 model=self.model,
                 base_url=self.base_url,
                 temperature=self.temperature,
+                nvidia_api_key=self.nvidia_api_key,
             )  # type: ignore
         except Exception as e:
-            raise ValueError("Could not connect to NVIDIA API.") from e
+            raise ValueError(f"Could not connect to NVIDIA API. Error: {e}") from e
         return output
