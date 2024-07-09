@@ -35,7 +35,7 @@ const usePreloadImages = (
     preloadImages(imageArray).then(() => {
       setImagesLoaded(true);
     });
-  }, [profilePictures]);
+  }, [profilePictures, loading]);
 
   return;
 };
