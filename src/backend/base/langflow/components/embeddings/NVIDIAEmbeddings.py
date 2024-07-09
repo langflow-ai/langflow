@@ -2,7 +2,7 @@ from typing import Any
 
 from langflow.base.embeddings.model import LCEmbeddingsModel
 from langflow.field_typing import Embeddings
-from langflow.inputs.inputs import SecretStrInput
+from langflow.inputs.inputs import DropdownInput, SecretStrInput
 from langflow.io import FloatInput, MessageTextInput
 from langflow.schema.dotdict import dotdict
 
@@ -13,7 +13,15 @@ class NVIDIAEmbeddingsComponent(LCEmbeddingsModel):
     icon = "NVIDIA"
 
     inputs = [
-        MessageTextInput(name="model", display_name="Model", value="NV-Embed-QA"),
+        DropdownInput(
+            name="model",
+            display_name="Model",
+            options=[
+                "nvidia/nv-embed-v1",
+                "snowflake/arctic-embed-I",
+            ],
+            value="nvidia/nv-embed-v1",
+        ),
         MessageTextInput(
             name="base_url",
             display_name="NVIDIA Base URL",
