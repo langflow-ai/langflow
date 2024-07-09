@@ -1,6 +1,7 @@
 import asyncio
 import os
 import traceback
+import types
 from collections import defaultdict
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -214,11 +215,8 @@ class LangSmithTracer(BaseTracer):
     ):
         if not self._ready:
             return
-        raw_inputs = {}
         processed_inputs = {}
         if inputs:
-            raw_inputs = inputs.copy()
-            raw_inputs |= metadata or {}
             processed_inputs = self._convert_to_langchain_types(inputs)
         child = self._run_tree.create_child(
             name=trace_name,
@@ -226,7 +224,7 @@ class LangSmithTracer(BaseTracer):
             inputs=processed_inputs,
         )
         if metadata:
-            child.add_metadata(metadata)
+            child.add_metadata(self._convert_to_langchain_types(metadata))
         self._children[trace_name] = child
         self._child_link: dict[str, str] = {}
 
@@ -254,6 +252,9 @@ class LangSmithTracer(BaseTracer):
                 value = value.to_lc_document()
         elif isinstance(value, Data):
             value = value.to_lc_document()
+        elif isinstance(value, types.GeneratorType):
+            # generator is not serializable, also we can't consume it
+            value = str(value)
         return value
 
     def end_trace(
@@ -270,8 +271,8 @@ class LangSmithTracer(BaseTracer):
             raw_outputs = outputs
             processed_outputs = self._convert_to_langchain_types(outputs)
         if logs:
-            child.add_metadata({"logs": {log.get("name"): log for log in logs}})
-        child.add_metadata({"outputs": raw_outputs})
+            child.add_metadata(self._convert_to_langchain_types({"logs": {log.get("name"): log for log in logs}}))
+        child.add_metadata(self._convert_to_langchain_types({"outputs": raw_outputs}))
         child.end(outputs=processed_outputs, error=error)
         if error:
             child.patch()
