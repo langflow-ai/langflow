@@ -27,7 +27,6 @@ import {
 import { Checkbox } from "../ui/checkbox";
 import { FormControl, FormField } from "../ui/form";
 import Loading from "../ui/loading";
-import DragCardComponent from "./components/dragCardComponent";
 import useDataEffect from "./hooks/use-data-effect";
 import useInstallComponent from "./hooks/use-handle-install";
 import useLikeComponent from "./hooks/use-handle-like";
@@ -56,7 +55,6 @@ export default function CollectionCardComponent({
   control?: Control<any, any>;
   is_component?: boolean;
 }) {
-  const addFlow = useFlowsManagerStore((state) => state.addFlow);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setValidApiKey = useStoreStore((state) => state.updateValidApiKey);
