@@ -3,12 +3,11 @@ import logging
 import os
 import sys
 import threading
-import uuid
-from collections import deque
-from datetime import datetime, timedelta
-from math import ceil
+from datetime import timedelta
 from pathlib import Path
-from typing import Any, Dict, Deque, Optional
+from collections import OrderedDict
+from itertools import islice
+from typing import Dict, Optional
 
 import orjson
 from loguru import logger
@@ -29,7 +28,9 @@ class SizedLogBuffer:
         env_buffer_size = os.getenv("LANGFLOW_LOG_RETRIEVER_BUFFER_SIZE", "0")
         if env_buffer_size.isdigit():
             self.max = int(env_buffer_size)
-        self.buffer: Deque[str] = deque(maxlen=self.max)
+
+        self.buffer: OrderedDict[float, str] = OrderedDict()
+
         self._lock = threading.Lock()
         self.page_size: int = 100
         self.sessions: Dict[str, Dict] = {}
@@ -38,69 +39,47 @@ class SizedLogBuffer:
     def write(self, message: str):
         record = json.loads(message)
         log_entry = record["text"]
+        epoch = record["record"]["time"]["timestamp"]
         with self._lock:
-            self.buffer.append(log_entry)
+            if len(self.buffer) >= self.max:
+                # remove the oldest log entry if the buffer is full
+                self.buffer.popitem(last=False)
+            self.buffer[epoch] = log_entry
 
-    def readlines(self) -> list[str]:
-        return list(self.buffer)
+    def __len__(self):
+        return len(self.buffer)
+
+    def get_after_timestamp(self, timestamp: float, lines: int = 5) -> dict[float, str]:
+        rc = dict()
+        with self._lock:
+            for ts, msg in self.buffer.items():
+                if lines == 0:
+                    break
+                if ts >= timestamp and lines > 0:
+                    rc[ts] = msg
+                    lines -= 1
+        return rc
+
+    def get_before_timestamp(self, timestamp: float, lines: int = 5) -> dict[float, str]:
+        rc = dict()
+        with self._lock:
+            for ts, msg in reversed(self.buffer.items()):
+                if lines == 0:
+                    break
+                if ts < timestamp and lines > 0:
+                    rc[ts] = msg
+                    lines -= 1
+        return rc
+
+    def get_last_n(self, last_idx: int) -> dict[float, str]:
+        with self._lock:
+            return dict(islice(reversed(self.buffer.items()), last_idx))
 
     def enabled(self) -> bool:
         return self.max > 0
 
     def max_size(self) -> int:
         return self.max
-
-    def create_session(self) -> str:
-        session_id = str(uuid.uuid4())
-        self.sessions[session_id] = {
-            "created": datetime.now(),
-            "last_access": datetime.now(),
-            "snapshot": list(self.buffer),
-        }
-        return session_id
-
-    def get_page(self, session_id: str, page: int) -> Dict[str, Any]:
-        self.cleanup_sessions()
-
-        if session_id not in self.sessions:
-            return {"error": "Invalid or expired session ID"}
-
-        session = self.sessions[session_id]
-        session["last_accessed"] = datetime.now()
-        logs = session["snapshot"]
-
-        total_logs = len(logs)
-        total_pages = ceil(total_logs / self.page_size)
-
-        if page < 1 or page > total_pages:
-            return {
-                "logs": [],
-                "page": page,
-                "total_pages": total_pages,
-                "total_logs": total_logs,
-                "session_id": session_id,
-            }
-
-        start_index = (page - 1) * self.page_size
-        end_index = min(start_index + self.page_size, total_logs)
-
-        return {
-            "logs": logs[start_index:end_index],
-            "page": page,
-            "total_pages": total_pages,
-            "total_logs": total_logs,
-            "session_id": session_id,
-        }
-
-    def cleanup_sessions(self) -> None:
-        current_time = datetime.now()
-        expired_sessions = [
-            sid
-            for sid, session in self.sessions.items()
-            if current_time - session["last_accessed"] > self.session_timeout
-        ]
-        for sid in expired_sessions:
-            del self.sessions[sid]
 
 
 # log buffer for capturing log messages
