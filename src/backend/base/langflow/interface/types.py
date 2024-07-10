@@ -64,38 +64,38 @@ async def get_and_cache_all_types_dict(
     lock: asyncio.Lock | None = None,
 ):
     async def get_from_cache(key):
-            """
-            Retrieves a value from the cache based on the given key.
+        """
+        Retrieves a value from the cache based on the given key.
 
-            Args:
-                key: The key to retrieve the value from the cache.
+        Args:
+            key: The key to retrieve the value from the cache.
 
-            Returns:
-                The value associated with the given key in the cache.
+        Returns:
+            The value associated with the given key in the cache.
 
-            Raises:
-                None.
-            """
-            if isinstance(cache_service, AsyncBaseCacheService):
-                return await cache_service.get(key=key, lock=lock)
-            else:
-                return cache_service.get(key=key, lock=lock)
+        Raises:
+            None.
+        """
+        if isinstance(cache_service, AsyncBaseCacheService):
+            return await cache_service.get(key=key, lock=lock)
+        else:
+            return cache_service.get(key=key, lock=lock)
 
     async def set_in_cache(key, value):
-            """
-            Sets the given key-value pair in the cache.
+        """
+        Sets the given key-value pair in the cache.
 
-            Parameters:
-            - key: The key to set in the cache.
-            - value: The value to associate with the key in the cache.
+        Parameters:
+        - key: The key to set in the cache.
+        - value: The value to associate with the key in the cache.
 
-            Returns:
-            None
-            """
-            if isinstance(cache_service, AsyncBaseCacheService):
-                await cache_service.set(key=key, value=value, lock=lock)
-            else:
-                cache_service.set(key=key, value=value, lock=lock)
+        Returns:
+        None
+        """
+        if isinstance(cache_service, AsyncBaseCacheService):
+            await cache_service.set(key=key, value=value, lock=lock)
+        else:
+            cache_service.set(key=key, value=value, lock=lock)
 
     all_types_dict = await get_from_cache("all_types_dict")
     if not all_types_dict or force_refresh:
