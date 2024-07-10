@@ -64,8 +64,7 @@ export default function SessionView({
       ? filteredMessages.filter((message) => message.flow_id === id)
       : filteredMessages;
     return filteredMessages;
-
-  },[session, id, messages])
+  }, [session, id, messages]);
 
   return isFetching > 0 ? (
     <div className="flex h-full w-full items-center justify-center align-middle">
