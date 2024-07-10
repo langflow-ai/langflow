@@ -1,6 +1,5 @@
 import pytest
 import threading
-from unittest.mock import MagicMock
 from langflow.services.telemetry.opentelemetry import OpenTelemetry, Metric, MetricType
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -24,10 +23,6 @@ def test_gauge(opentelemetry_instance):
     opentelemetry_instance.update_gauge("file_uploads", 1024, fixed_labels)
 
 
-def test_gauge_with_update_method(opentelemetry_instance):
-    opentelemetry_instance.update_metric("file_uploads", 1, fixed_labels)
-
-
 def test_gauge_with_counter_method(opentelemetry_instance):
     with pytest.raises(ValueError, match="Metric 'file_uploads' is not a counter"):
         opentelemetry_instance.increment_counter(metric_name="file_uploads", value=1, labels=fixed_labels)
@@ -47,10 +42,6 @@ def test_increment_counter(opentelemetry_instance):
     opentelemetry_instance.increment_counter(metric_name="num_files_uploaded", value=5, labels=fixed_labels)
 
 
-def test_counter_with_update_method(opentelemetry_instance):
-    opentelemetry_instance.update_metric("num_files_uploaded", 5, fixed_labels)
-
-
 def test_regstier_metric(opentelemetry_instance):
     with pytest.raises(NotImplementedError, match="register_metric is not implemented"):
         opentelemetry_instance.register_metric(
@@ -67,12 +58,6 @@ def test_opentelementry_singleton(opentelemetry_instance):
     assert opentelemetry_instance.prometheus_enabled == opentelemetry_instance_3.prometheus_enabled
 
 
-def test_update_metric_unknown_type(opentelemetry_instance):
-    opentelemetry_instance._metrics_registry = {"unknown": MagicMock(type="unknown_type")}
-    with pytest.raises(ValueError, match="Unknown metric type: unknown_type"):
-        opentelemetry_instance.update_metric("unknown", 1, fixed_labels)
-
-
 def test_missing_labels(opentelemetry_instance):
     with pytest.raises(ValueError, match="Labels must be provided for Counter"):
         opentelemetry_instance.increment_counter(metric_name="num_files_uploaded", labels=None, value=1.0)
@@ -82,11 +67,6 @@ def test_missing_labels(opentelemetry_instance):
         opentelemetry_instance.update_gauge(metric_name="num_files_uploaded", value=1.0, labels=dict())
     with pytest.raises(ValueError, match="Labels must be provided for Histogram"):
         opentelemetry_instance.observe_histogram("num_files_uploaded", 1, dict())
-
-
-def test_update_metric_not_found(opentelemetry_instance):
-    with pytest.raises(ValueError, match="Metric 'non_existent' not found"):
-        opentelemetry_instance.update_metric("non_existent", 1, fixed_labels)
 
 
 def test_multithreaded_singleton():

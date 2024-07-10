@@ -5,7 +5,8 @@ from opentelemetry.metrics import Observation, CallbackOptions
 from opentelemetry.metrics._internal.instrument import Counter, Histogram, UpDownCounter
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.resources import Resource
-from typing import Dict, Mapping, Tuple, Union
+from typing import Any, Dict, Mapping, Tuple, Union
+from weakref import WeakValueDictionary
 
 import threading
 
@@ -69,48 +70,50 @@ class Metric:
         return f"Metric(name='{self.name}', description='{self.description}', type={self.type}, unit='{self.unit}')"
 
 
-class ThreadSafeSingletonMeta(type):
+class ThreadSafeSingletonMetaUsingWeakref(type):
     """
-    Thread-safe Singleton metaclass
+    Thread-safe Singleton metaclass using WeakValueDictionary
     """
 
-    _instances = None
+    _instances: WeakValueDictionary[Any, Any] = WeakValueDictionary()
     _lock: threading.Lock = threading.Lock()
 
     def __call__(cls, *args, **kwargs):
-        if cls._instances is None:
+        if cls not in cls._instances:
             with cls._lock:
-                if cls._instances is None:
-                    cls._instances = super(ThreadSafeSingletonMeta, cls).__call__(*args, **kwargs)
+                if cls not in cls._instances:
+                    instance = super(ThreadSafeSingletonMetaUsingWeakref, cls).__call__(*args, **kwargs)
+                    cls._instances[cls] = instance
+        return cls._instances[cls]
 
-        return cls._instances
 
+class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
+    _metrics_registry: Dict[str, Metric] = dict()
 
-class OpenTelemetry(metaclass=ThreadSafeSingletonMeta):
-    """
-    Define any custom metrics here
-    A thread safe singleton class to manage metrics
-    """
-
-    _metrics_registry: Mapping[str, Metric] = dict[str, Metric](
-        {
-            "file_uploads": Metric(
-                name="file_uploads",
-                description="The uploaded file size in bytes",
-                type=MetricType.OBSERVABLE_GAUGE,
-                unit="bytes",
-            ),
-            "num_files_uploaded": Metric(
-                name="num_files_uploaded",
-                description="The number of file uploaded",
-                type=MetricType.COUNTER,
-            ),
-        }
-    )
+    def _add_metric(self, name: str, description: str, unit: str, metric_type: MetricType):
+        metric = Metric(name=name, description=description, type=metric_type, unit=unit)
+        self._metrics_registry[name] = metric
 
     _metrics: Dict[str, Union[Counter, ObservableGaugeWrapper, Histogram, UpDownCounter]] = {}
 
     def __init__(self, prometheus_enabled: bool = True):
+        """
+        Define any custom metrics here
+        A thread safe singleton class to manage metrics
+        """
+        self._add_metric(
+            name="file_uploads",
+            description="The uploaded file size in bytes",
+            unit="bytes",
+            metric_type=MetricType.OBSERVABLE_GAUGE,
+        )
+        self._add_metric(
+            name="num_files_uploaded",
+            description="The number of file uploaded",
+            unit="",
+            metric_type=MetricType.COUNTER,
+        )
+
         resource = Resource.create({"service.name": "langflow"})
         meter_provider = MeterProvider(resource=resource)
 
@@ -202,18 +205,3 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMeta):
             histogram.record(value, labels)
         else:
             raise ValueError(f"Metric '{metric_name}' is not a histogram")
-
-    def update_metric(self, metric_name: str, value: float, labels: Mapping[str, str]):
-        metric = self._metrics_registry.get(metric_name)
-        if metric is None:
-            raise ValueError(f"Metric '{metric_name}' not found")
-        if metric.type == MetricType.COUNTER:
-            self.increment_counter(metric_name=metric_name, labels=labels, value=value)
-        elif metric.type == MetricType.OBSERVABLE_GAUGE:
-            self.update_gauge(metric_name=metric_name, value=value, labels=labels)
-        elif metric.type == MetricType.UP_DOWN_COUNTER:
-            self.up_down_counter(metric_name=metric_name, value=value, labels=labels)
-        elif metric.type == MetricType.HISTOGRAM:
-            self.observe_histogram(metric_name=metric_name, value=value, labels=labels)
-        else:
-            raise ValueError(f"Unknown metric type: {metric.type}")
