@@ -818,11 +818,12 @@ class Graph:
         # All vertices that do not have edges are invalid
         return len(self.get_vertex_edges(vertex.id)) > 0
 
-    def get_vertex(self, vertex_id: str) -> Vertex:
+    def get_vertex(self, vertex_id: str, silent: bool = False) -> Vertex:
         """Returns a vertex by id."""
         try:
             return self.vertex_map[vertex_id]
         except KeyError:
+            if not silent:
             raise ValueError(f"Vertex {vertex_id} not found")
 
     def get_root_of_group_node(self, vertex_id: str) -> Vertex:
