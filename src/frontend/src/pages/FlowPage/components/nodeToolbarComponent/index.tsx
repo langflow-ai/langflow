@@ -72,7 +72,7 @@ export default function NodeToolbarComponent({
         data.node.template[templateField]?.type === "dict" ||
         data.node.template[templateField]?.type === "NestedDict"),
   ).length;
-  const freezeMultipleNodes = useFlowStore((state) => state.freezeMultipleNodes);
+  const updateFreezeStatus = useFlowStore((state) => state.updateFreezeStatus);
 
   const hasStore = useStoreStore((state) => state.hasStore);
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
@@ -204,7 +204,10 @@ export default function NodeToolbarComponent({
   const flows = useFlowsManagerStore((state) => state.flows);
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
   const {mutate:getFreezeOrder} = usePostRetrieveVertexOrder({onSuccess:({vertices_to_run})=>{
-    freezeMultipleNodes(vertices_to_run);
+    updateFreezeStatus(vertices_to_run,!data.node?.frozen);
+    vertices_to_run.forEach((vertex)=>{
+      updateNodeInternals(vertex);
+    })
   }});
 
   //  useEffect(() => {

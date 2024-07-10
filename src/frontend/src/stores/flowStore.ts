@@ -65,14 +65,15 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   setFlowPool: (flowPool) => {
     set({ flowPool });
   },
-  freezeMultipleNodes: (nodeIds: string[]) => {
+  updateFreezeStatus: (nodeIds: string[],freeze:boolean) => {
     get().setNodes((oldNodes) =>
-      oldNodes.map((node) => {
+      {const newNodes = cloneDeep(oldNodes);
+      return newNodes.map((node) => {
         if (nodeIds.includes(node.id)) {
-          (node.data as NodeDataType).node!.frozen = true;
+          (node.data as NodeDataType).node!.frozen = freeze;
         }
         return node;
-      }),
+      })},
     );
   },
   addDataToFlowPool: (data: VertexBuildTypeAPI, nodeId: string) => {
