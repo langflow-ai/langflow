@@ -38,14 +38,25 @@ def add_parent_node_id(nodes, parent_node_id):
         node["parent_node_id"] = parent_node_id
 
 
+def add_frozen(nodes, frozen):
+    """
+    This function receives a list of nodes and adds a frozen to each node.
+    """
+    for node in nodes:
+        node["frozen"] = frozen
+
+
 def ungroup_node(group_node_data, base_flow):
-    template, flow = (
+    template, flow, frozen = (
         group_node_data["node"]["template"],
         group_node_data["node"]["flow"],
+        group_node_data["node"]["frozen"],
     )
     parent_node_id = group_node_data["id"]
+
     g_nodes = flow["data"]["nodes"]
     add_parent_node_id(g_nodes, parent_node_id)
+    add_frozen(g_nodes, frozen)
     g_edges = flow["data"]["edges"]
 
     # Redirect edges to the correct proxy node
