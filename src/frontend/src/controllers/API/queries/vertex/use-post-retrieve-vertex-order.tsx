@@ -13,12 +13,12 @@ interface retrieveGetVerticesOrder {
 }
 
 // add types for error handling and success
-export const usePostAddApiKey: useMutationFunctionType<retrieveGetVerticesOrder> = (
+export const usePostRetrieveVertexOrder: useMutationFunctionType<retrieveGetVerticesOrder> = (
   options,
 ) => {
   const { mutate } = UseRequestProcessor();
 
-  const postAddApiKeyFn = async ({flowId,data:flow,startNodeId,stopNodeId}: retrieveGetVerticesOrder): Promise<any> => {
+  const postRetrieveVertexOrder = async ({flowId,data:flow,startNodeId,stopNodeId}: retrieveGetVerticesOrder): Promise<any> => {
     // nodeId is optional and is a query parameter
     // if nodeId is not provided, the API will return all vertices
     const config: AxiosRequestConfig<any> = {};
@@ -44,7 +44,7 @@ export const usePostAddApiKey: useMutationFunctionType<retrieveGetVerticesOrder>
     return response.data;
   };
 
-  const mutation = mutate(["usePostAddApiKey"], postAddApiKeyFn, options);
+  const mutation = mutate(["usePostRetrieveVertexOrder",], postRetrieveVertexOrder, options);
 
   return mutation;
 };
