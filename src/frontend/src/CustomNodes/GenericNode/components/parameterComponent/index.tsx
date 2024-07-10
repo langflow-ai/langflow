@@ -248,7 +248,7 @@ export default function ParameterComponent({
   };
 
   useEffect(() => {
-    if (disabledOutput) {
+    if (disabledOutput && data.node?.outputs![index].hidden) {
       handleUpdateOutputHide(false);
     }
   }, [disabledOutput]);
