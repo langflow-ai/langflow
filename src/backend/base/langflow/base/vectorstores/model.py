@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, cast
 
 from langchain_core.documents import Document
 from loguru import logger
@@ -23,11 +23,16 @@ class LCVectorStoreComponent(Component):
             name="search_results",
             method="search_documents",
         ),
+        Output(
+            display_name="Vector Store",
+            name="vector_store",
+            method="cast_vector_store",
+        ),
     ]
 
     def _validate_outputs(self):
         # At least these three outputs must be defined
-        required_output_methods = ["build_base_retriever", "search_documents"]
+        required_output_methods = ["build_base_retriever", "search_documents", "build_vector_store"]
         output_names = [output.name for output in self.outputs]
         for method_name in required_output_methods:
             if method_name not in output_names:
@@ -66,6 +71,9 @@ class LCVectorStoreComponent(Component):
         data = docs_to_data(docs)
         self.status = data
         return data
+
+    def cast_vector_store(self) -> VectorStore:
+        return cast(VectorStore, self.build_vector_store())
 
     def build_vector_store(self) -> VectorStore:
         """
