@@ -1,10 +1,10 @@
 import pytest
 import threading
-from langflow.services.telemetry.opentelemetry import OpenTelemetry, Metric, MetricType
+from langflow.services.telemetry.opentelemetry import OpenTelemetry
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
-fixed_labels = {"service": "this", "user": "that"}
+fixed_labels = {"flow_id": "this_flow_id", "service": "this", "user": "that"}
 
 
 @pytest.fixture
@@ -42,11 +42,19 @@ def test_increment_counter(opentelemetry_instance):
     opentelemetry_instance.increment_counter(metric_name="num_files_uploaded", value=5, labels=fixed_labels)
 
 
-def test_regstier_metric(opentelemetry_instance):
-    with pytest.raises(NotImplementedError, match="register_metric is not implemented"):
-        opentelemetry_instance.register_metric(
-            Metric(name="non_existent", description="non_existent", type=MetricType.COUNTER)
-        )
+def test_increment_counter_empty_label(opentelemetry_instance):
+    with pytest.raises(ValueError, match="Labels must be provided for the metric"):
+        opentelemetry_instance.increment_counter(metric_name="num_files_uploaded", value=5, labels={})
+
+
+def test_increment_counter_missing_mandatory_label(opentelemetry_instance):
+    with pytest.raises(ValueError, match="Missing required labels: {'flow_id'}"):
+        opentelemetry_instance.increment_counter(metric_name="num_files_uploaded", value=5, labels={"service": "one"})
+
+
+def test_increment_counter_unregisted_metric(opentelemetry_instance):
+    with pytest.raises(ValueError, match="Metric 'num_files_uploaded_1' is not registered"):
+        opentelemetry_instance.increment_counter(metric_name="num_files_uploaded_1", value=5, labels=fixed_labels)
 
 
 def test_opentelementry_singleton(opentelemetry_instance):
@@ -59,13 +67,13 @@ def test_opentelementry_singleton(opentelemetry_instance):
 
 
 def test_missing_labels(opentelemetry_instance):
-    with pytest.raises(ValueError, match="Labels must be provided for Counter"):
+    with pytest.raises(ValueError, match="Labels must be provided for the metric"):
         opentelemetry_instance.increment_counter(metric_name="num_files_uploaded", labels=None, value=1.0)
-    with pytest.raises(ValueError, match="Labels must be provided for UpDownCounter"):
+    with pytest.raises(ValueError, match="Labels must be provided for the metric"):
         opentelemetry_instance.up_down_counter("num_files_uploaded", 1, None)
-    with pytest.raises(ValueError, match="Labels must be provided for Gauge"):
+    with pytest.raises(ValueError, match="Labels must be provided for the metric"):
         opentelemetry_instance.update_gauge(metric_name="num_files_uploaded", value=1.0, labels=dict())
-    with pytest.raises(ValueError, match="Labels must be provided for Histogram"):
+    with pytest.raises(ValueError, match="Labels must be provided for the metric"):
         opentelemetry_instance.observe_histogram("num_files_uploaded", 1, dict())
 
 
