@@ -1,4 +1,4 @@
-import { useDeleteFLowPool } from "@/controllers/API/queries/_builds";
+import { useDeleteBuilds } from "@/controllers/API/queries/_builds";
 import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
 import { useEffect, useRef, useState } from "react";
 import ShortUniqueId from "short-unique-id";
@@ -41,7 +41,7 @@ export default function ChatView({
   const outputIds = outputs.map((obj) => obj.id);
   const updateFlowPool = useFlowStore((state) => state.updateFlowPool);
   const [id, setId] = useState<string>("");
-  const { mutate: mutateFlowPool } = useDeleteFLowPool();
+  const { mutate: mutateDeleteFlowPool } = useDeleteBuilds();
 
   //build chat history
   useEffect(() => {
@@ -119,7 +119,7 @@ export default function ChatView({
   function clearChat(): void {
     setChatHistory([]);
 
-    mutateFlowPool(
+    mutateDeleteFlowPool(
       { flowId: currentFlowId },
       {
         onSuccess: () => {
