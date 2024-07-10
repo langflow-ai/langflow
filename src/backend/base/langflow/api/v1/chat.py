@@ -188,7 +188,7 @@ async def build_vertex(
         vertex = graph.get_vertex(vertex_id)
 
         try:
-            lock = chat_service._cache_locks[flow_id_str]
+            lock = chat_service._async_cache_locks[flow_id_str]
             (
                 result_dict,
                 params,

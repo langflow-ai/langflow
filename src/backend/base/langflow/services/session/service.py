@@ -1,7 +1,7 @@
 from typing import Coroutine, Optional
 
 from langflow.services.base import Service
-from langflow.services.cache.base import CacheService
+from langflow.services.cache.base import CacheService, AsyncBaseCacheService
 from langflow.services.session.utils import compute_dict_hash, session_id_generator
 
 
@@ -12,12 +12,16 @@ class SessionService(Service):
         self.cache_service: "CacheService" = cache_service
 
     async def load_session(self, key, flow_id: str, data_graph: Optional[dict] = None):
-        # Check if the data is cached
-        if key in self.cache_service:
-            result = self.cache_service.get(key)
-            if isinstance(result, Coroutine):
-                result = await result
+         # Check if the data is cached
+        if isinstance(self.cache_service, AsyncBaseCacheService):
+            result = await self.cache_service.get(key)
             return result
+        else:
+            if key in self.cache_service:
+                result = self.cache_service.get(key)
+                if isinstance(result, Coroutine):
+                    result = await result
+                return result
 
         if key is None:
             key = self.generate_key(session_id=None, data_graph=data_graph)
@@ -44,11 +48,12 @@ class SessionService(Service):
         return self.build_key(session_id, data_graph=data_graph)
 
     async def update_session(self, session_id, value):
-        result = self.cache_service.set(session_id, value)
-        # if it is a coroutine, await it
-        if isinstance(result, Coroutine):
-            await result
-
+        if isinstance(self.cache_service, AsyncBaseCacheService):
+            result = self.cache_service.set(session_id, value)
+            if isinstance(result, Coroutine):
+                await result
+        else:
+            self.cache_service.set(session_id, value)
     async def clear_session(self, session_id):
         result = self.cache_service.delete(session_id)
         # if it is a coroutine, await it

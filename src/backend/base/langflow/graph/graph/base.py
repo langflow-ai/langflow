@@ -949,7 +949,7 @@ class Graph:
         self.set_run_id(run_id)
         self.set_run_name()
         await self.initialize_run()
-        lock = chat_service._cache_locks[self.run_id]
+        lock = chat_service._async_cache_locks[self.run_id]
         while to_process:
             current_batch = list(to_process)  # Copy current deque items to a list
             to_process.clear()  # Clear the deque for new items
