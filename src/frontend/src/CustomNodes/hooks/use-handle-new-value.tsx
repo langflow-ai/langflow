@@ -1,80 +1,69 @@
-import { cloneDeep } from "lodash";
 import {
   ERROR_UPDATING_COMPONENT,
   TITLE_ERROR_UPDATING_COMPONENT,
-} from "../../constants/constants";
-import useAlertStore from "../../stores/alertStore";
-import { ResponseErrorTypeAPI } from "../../types/api";
+} from "@/constants/constants";
+import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
+import useAlertStore from "@/stores/alertStore";
+import useFlowStore from "@/stores/flowStore";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import { ResponseErrorDetailAPI } from "@/types/api";
+import { cloneDeep, debounce } from "lodash";
 import { NodeDataType } from "../../types/flow";
+import { mutateTemplate } from "../helpers/mutate-template";
+const useHandleOnNewValue = ({
+  data,
+  name,
+}: {
+  data: NodeDataType;
+  name: string;
+}) => {
+  const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
 
-const useHandleOnNewValue = (
-  data: NodeDataType,
-  name: string,
-  takeSnapshot: () => void,
-  handleUpdateValues: (name: string, data: NodeDataType) => Promise<any>,
-  debouncedHandleUpdateValues: any,
-  setNode: (id: string, callback: (oldNode: any) => any) => void,
-  setIsLoading: (value: boolean) => void,
-) => {
+  const setNode = useFlowStore((state) => state.setNode);
+
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
-  const handleOnNewValue = async (newValue, dbValue, skipSnapshot = false) => {
-    const nodeTemplate = data.node!.template[name];
-    const currentValue = nodeTemplate.value;
+  const postTemplateValue = usePostTemplateValue({
+    parameterId: name,
+    nodeData: data,
+  });
 
-    if (currentValue !== newValue && !skipSnapshot) {
-      takeSnapshot();
+  const handleOnNewValue = async (newValue, dbValue?, skipSnapshot = false) => {
+    const template = data.node?.template;
+
+    if (!template) {
+      setErrorData({ title: "Template not found in the component" });
+      return;
+    }
+
+    const parameter = template[name];
+
+    if (!parameter) {
+      setErrorData({ title: "Parameter not found in the template" });
+      return;
+    }
+
+    if (JSON.stringify(parameter.value) === JSON.stringify(newValue)) return;
+
+    if (!skipSnapshot) takeSnapshot();
+
+    parameter.value = newValue;
+
+    if (dbValue !== undefined) {
+      parameter.load_from_db = dbValue;
     }
 
     const shouldUpdate =
-      data.node?.template[name].real_time_refresh &&
-      !data.node?.template[name].refresh_button &&
-      currentValue !== newValue;
+      parameter.real_time_refresh && !parameter.refresh_button;
 
-    const typeToDebounce = nodeTemplate.type;
-
-    nodeTemplate.value = newValue;
-
-    let newTemplate;
     if (shouldUpdate) {
-      setIsLoading(true);
-      try {
-        if (["int"].includes(typeToDebounce)) {
-          newTemplate = await handleUpdateValues(name, data);
-        } else {
-          newTemplate = await debouncedHandleUpdateValues(name, data);
-        }
-      } catch (error) {
-        let responseError = error as ResponseErrorTypeAPI;
-        setErrorData({
-          title: TITLE_ERROR_UPDATING_COMPONENT,
-          list: [
-            responseError?.response?.data?.detail.error ??
-              ERROR_UPDATING_COMPONENT,
-          ],
-        });
-      }
-      setIsLoading(false);
+      mutateTemplate(newValue, data, postTemplateValue, setNode, setErrorData);
     }
 
-    setNode(data.id, (oldNode) => {
-      const newNode = cloneDeep(oldNode);
-      newNode.data = {
-        ...newNode.data,
-      };
-
-      if (dbValue !== undefined) {
-        newNode.data.node.template[name].load_from_db = dbValue;
-      }
-
-      if (data.node?.template[name].real_time_refresh && newTemplate) {
-        newNode.data.node.template = newTemplate;
-      } else {
-        newNode.data.node.template[name].value = newValue;
-      }
-
-      return newNode;
-    });
+    setNode(data.id, (oldNode) => ({
+      ...oldNode,
+      data: cloneDeep(data),
+    }));
   };
 
   return { handleOnNewValue };
