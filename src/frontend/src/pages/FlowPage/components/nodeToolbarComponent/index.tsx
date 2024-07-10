@@ -79,7 +79,7 @@ export default function NodeToolbarComponent({
   const validApiKey = useStoreStore((state) => state.validApiKey);
   const shortcuts = useShortcutsStore((state) => state.shortcuts);
   const unselectAll = useFlowStore((state) => state.unselectAll);
-  const currentFlow= useFlowsManagerStore((state) => state.currentFlow);
+  const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   function handleMinimizeWShortcut(e: KeyboardEvent) {
     if (isWrappedWithClass(e, "noflow")) return;
     e.preventDefault();
@@ -156,7 +156,6 @@ export default function NodeToolbarComponent({
   function handleFreeze(e: KeyboardEvent) {
     if (isWrappedWithClass(e, "noflow")) return;
     e.preventDefault();
-    if (data.node?.flow) return;
     setNode(data.id, (old) => ({
       ...old,
       data: {
@@ -169,6 +168,12 @@ export default function NodeToolbarComponent({
     }));
   }
 
+  function handleFreezeAll(e: KeyboardEvent) {
+    if (isWrappedWithClass(e, "noflow")) return;
+    e.preventDefault();
+    FreezeAllVertices({ flowId: currentFlow!.id, stopNodeId: data.id });
+  }
+
   const advanced = useShortcutsStore((state) => state.advanced);
   const minimize = useShortcutsStore((state) => state.minimize);
   const component = useShortcutsStore((state) => state.component);
@@ -178,6 +183,7 @@ export default function NodeToolbarComponent({
   const group = useShortcutsStore((state) => state.group);
   const download = useShortcutsStore((state) => state.download);
   const freeze = useShortcutsStore((state) => state.freeze);
+  const freezeAll = useShortcutsStore((state) => state.freezeAll);
 
   useHotkeys(minimize, handleMinimizeWShortcut, { preventDefault });
   useHotkeys(group, handleGroupWShortcut, { preventDefault });
@@ -188,6 +194,7 @@ export default function NodeToolbarComponent({
   useHotkeys(docs, handleDocsWShortcut, { preventDefault });
   useHotkeys(download, handleDownloadWShortcut, { preventDefault });
   useHotkeys(freeze, handleFreeze);
+  useHotkeys(freezeAll, handleFreezeAll);
 
   const isMinimal = numberOfHandles <= 1 && numberOfOutputHandles <= 1;
   const isGroup = data.node?.flow ? true : false;
@@ -203,12 +210,14 @@ export default function NodeToolbarComponent({
   const getNodePosition = useFlowStore((state) => state.getNodePosition);
   const flows = useFlowsManagerStore((state) => state.flows);
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
-  const {mutate:getFreezeOrder} = usePostRetrieveVertexOrder({onSuccess:({vertices_to_run})=>{
-    updateFreezeStatus(vertices_to_run,!data.node?.frozen);
-    vertices_to_run.forEach((vertex)=>{
-      updateNodeInternals(vertex);
-    })
-  }});
+  const { mutate: FreezeAllVertices } = usePostRetrieveVertexOrder({
+    onSuccess: ({ vertices_to_run }) => {
+      updateFreezeStatus(vertices_to_run, !data.node?.frozen);
+      vertices_to_run.forEach((vertex) => {
+        updateNodeInternals(vertex);
+      })
+    }
+  });
 
   //  useEffect(() => {
   //    if (openWDoubleClick) setShowModalAdvanced(true);
@@ -253,7 +262,6 @@ export default function NodeToolbarComponent({
         saveComponent(cloneDeep(data), false);
         break;
       case "freeze":
-        if (data.node?.flow) return;
         setNode(data.id, (old) => ({
           ...old,
           data: {
@@ -266,19 +274,7 @@ export default function NodeToolbarComponent({
         }));
         break;
       case "freezeAll":
-        console.log("freezeAll")
-        getFreezeOrder({ flowId: currentFlow!.id, stopNodeId: data.id});
-        // if (data.node?.flow) return;
-        // setNode(data.id, (old) => ({
-        //   ...old,
-        //   data: {
-        //     ...old.data,
-        //     node: {
-        //       ...old.data.node,
-        //       frozen: old.data?.node?.frozen ? false : true,
-        //     },
-        //   },
-        // }));
+        FreezeAllVertices({ flowId: currentFlow!.id, stopNodeId: data.id });
         break;
       case "code":
         setOpenModal(!openModal);
@@ -513,11 +509,10 @@ export default function NodeToolbarComponent({
               <IconComponent name="SaveAll" className="h-4 w-4" />
             </button>
           </ShadTooltip>*/}
-          {!data.node?.flow && (
             <ShadTooltip
               content={displayShortcut(
                 shortcuts.find(
-                  ({ name }) => name.split(" ")[0].toLowerCase() === "freeze",
+                  ({ name }) => name.toLowerCase() === "freeze all",
                 )!,
               )}
               side="top"
@@ -529,17 +524,7 @@ export default function NodeToolbarComponent({
                 onClick={(event) => {
                   event.preventDefault();
                   takeSnapshot();
-                  // setNode(data.id, (old) => ({
-                  //   ...old,
-                  //   data: {
-                  //     ...old.data,
-                  //     node: {
-                  //       ...old.data.node,
-                  //       frozen: old.data?.node?.frozen ? false : true,
-                  //     },
-                  //   },
-                  // }));
-                  getFreezeOrder({ flowId: currentFlow!.id, stopNodeId: data.id})
+                  FreezeAllVertices({ flowId: currentFlow!.id, stopNodeId: data.id })
                 }}
               >
                 <IconComponent
@@ -552,7 +537,6 @@ export default function NodeToolbarComponent({
                 />
               </button>
             </ShadTooltip>
-          )}
 
           {/*<ShadTooltip content={"Duplicate"} side="top">
             <button
@@ -722,32 +706,28 @@ export default function NodeToolbarComponent({
                   />
                 </SelectItem>
               )}
-              {!data.node?.flow && (
-                <SelectItem value="freeze">
-                  <ToolbarSelectItem
-                    shortcut={
-                      shortcuts.find((obj) => obj.name === "Freeze")?.shortcut!
-                    }
-                    value={"Freeze"}
-                    icon={"Snowflake"}
-                    dataTestId="group-button-modal"
-                    style={`${frozen ? " text-ice" : ""} transition-all`}
-                  />
-                </SelectItem>
-              )}
-              {!data.node?.flow && (
-                <SelectItem value="freeze">
-                  <ToolbarSelectItem
-                    shortcut={
-                      shortcuts.find((obj) => obj.name === "Freeze")?.shortcut!
-                    }
-                    value={"freezeAll"}
-                    icon={"freezeAll"}
-                    dataTestId="group-button-modal"
-                    style={`${frozen ? " text-ice" : ""} transition-all`}
-                  />
-                </SelectItem>
-              )}
+              <SelectItem value="freeze">
+                <ToolbarSelectItem
+                  shortcut={
+                    shortcuts.find((obj) => obj.name === "Freeze")?.shortcut!
+                  }
+                  value={"Freeze"}
+                  icon={"Snowflake"}
+                  dataTestId="group-button-modal"
+                  style={`${frozen ? " text-ice" : ""} transition-all`}
+                />
+              </SelectItem>
+              <SelectItem value="freezeAll">
+                <ToolbarSelectItem
+                  shortcut={
+                    shortcuts.find((obj) => obj.name === "Freeze All")?.shortcut!
+                  }
+                  value={"freezeAll"}
+                  icon={"FreezeAll"}
+                  dataTestId="group-button-modal"
+                  style={`${frozen ? " text-ice" : ""} transition-all`}
+                />
+              </SelectItem>
               <SelectItem value="Download">
                 <ToolbarSelectItem
                   shortcut={
