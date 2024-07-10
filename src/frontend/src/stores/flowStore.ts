@@ -510,11 +510,23 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         const top_level_vertices = vertexBuildData.top_level_vertices.filter(
           (vertex) => !vertexBuildData.inactivated_vertices?.includes(vertex),
         );
-        const nextVertices: VertexLayerElementType[] = zip(
+        let nextVertices: VertexLayerElementType[] = zip(
           next_vertices_ids,
           top_level_vertices,
         ).map(([id, reference]) => ({ id: id!, reference }));
 
+        // Now we filter nextVertices to remove any vertices that are in verticesLayers
+        // because they are already being built
+        // each layer is a list of vertexlayerelementtypes
+        let lastLayer =
+          get().verticesBuild!.verticesLayers[
+            get().verticesBuild!.verticesLayers.length - 1
+          ];
+        nextVertices = nextVertices.filter(
+          (vertex) =>
+            !lastLayer.some((layer) => layer.id === vertex.id) &&
+            !lastLayer.some((layer) => layer.reference === vertex.reference),
+        );
         const newLayers = [
           ...get().verticesBuild!.verticesLayers,
           nextVertices,
