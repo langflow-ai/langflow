@@ -1,4 +1,5 @@
 import pytest
+
 from langflow.graph.graph import utils
 
 
@@ -48,6 +49,14 @@ def test_get_successors_z(graph):
     result = utils.get_successors(graph, vertex_id)
 
     assert set(result) == {"Z"}
+
+
+def test_sort_up_to_vertex_n_is_start(graph):
+    vertex_id = "N"
+
+    result = utils.sort_up_to_vertex(graph, vertex_id, is_start=True)
+    # Result shoud be all the vertices
+    assert set(result) == set(graph.keys())
 
 
 def test_sort_up_to_vertex_z(graph):
