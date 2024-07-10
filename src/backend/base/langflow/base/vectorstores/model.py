@@ -88,7 +88,7 @@ class LCVectorStoreComponent(Component):
 
     def search_documents(self) -> List[Data]:
         """
-        Search for documents in the Chroma vector store.
+        Search for documents in the vector store.
         """
         search_query: str = self.search_query
         if not search_query:
