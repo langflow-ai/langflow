@@ -135,11 +135,6 @@ export default function ParameterComponent({
   const output = useShortcutsStore((state) => state.output);
   useHotkeys(output, handleOutputWShortcut, { preventDefault });
 
-  const postTemplateValue = usePostTemplateValue({
-    parameterId: name,
-    nodeData: data,
-  });
-
   const { handleNodeClass: handleNodeClassHook } = useHandleNodeClass(
     data,
     name,
@@ -169,28 +164,10 @@ export default function ParameterComponent({
 
   useFetchDataOnMount(data, name, handleUpdateValues, setNode, setIsLoading);
 
-  const { handleOnNewValue: handleOnNewValueHook } = useHandleOnNewValue(
+  const { handleOnNewValue } = useHandleOnNewValue({
     data,
     name,
-    takeSnapshot,
-    handleUpdateValues,
-    debouncedHandleUpdateValues,
-    setNode,
-    setIsLoading,
-  );
-
-  const handleOnNewValue = async (
-    newValue: string | string[] | boolean | Object[],
-    dbValue?: boolean,
-    skipSnapshot: boolean | undefined = false,
-  ): Promise<void> => {
-    // handleOnNewValueHook(newValue, dbValue, skipSnapshot);
-    postTemplateValue.mutate({
-      value: newValue,
-      load_from_db: dbValue,
-      skipSnapshot,
-    });
-  };
+  });
 
   const handleNodeClass = (
     newNodeClass: APIClassType,
@@ -625,7 +602,7 @@ export default function ParameterComponent({
         <Case condition={left === true && type === "int"}>
           <div className="mt-2 w-full">
             <IntComponent
-              rangeSpec={data.node?.template[name]?.rangeSpec}
+              rangeSpec={data.node?.template[name]?.range_spec}
               disabled={disabled}
               value={data.node?.template[name]?.value ?? ""}
               onChange={handleOnNewValue}
