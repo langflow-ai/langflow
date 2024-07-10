@@ -106,11 +106,14 @@ async def retrieve_vertices_order(
         else:
             first_layer = graph.sort_vertices()
 
+        for vertex_id in first_layer:
+            graph.run_manager.add_to_vertices_being_run(vertex_id)
+
         # Now vertices is a list of lists
         # We need to get the id of each vertex
         # and return the same structure but only with the ids
         components_count = len(graph.vertices)
-        vertices_to_run = list(graph.vertices_to_run) + get_top_level_vertices(graph, graph.vertices_to_run)
+        vertices_to_run = list(graph.vertices_to_run.union(get_top_level_vertices(graph, graph.vertices_to_run)))
         await chat_service.set_cache(str(flow_id), graph)
         background_tasks.add_task(
             telemetry_service.log_package_playground,
@@ -185,7 +188,7 @@ async def build_vertex(
         vertex = graph.get_vertex(vertex_id)
 
         try:
-            lock = chat_service._cache_locks[flow_id_str]
+            lock = chat_service._async_cache_locks[flow_id_str]
             (
                 result_dict,
                 params,

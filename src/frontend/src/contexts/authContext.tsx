@@ -1,3 +1,4 @@
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { createContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Cookies from "universal-cookie";
@@ -56,6 +57,8 @@ export function AuthProvider({ children }): React.ReactElement {
   );
   const checkHasStore = useStoreStore((state) => state.checkHasStore);
   const fetchApiData = useStoreStore((state) => state.fetchApiData);
+  const setAllFlows = useFlowsManagerStore((state) => state.setAllFlows);
+  const setSelectedFolder = useFolderStore((state) => state.setSelectedFolder);
 
   useEffect(() => {
     const storedAccessToken = cookies.get("access_token_lf");
@@ -105,6 +108,8 @@ export function AuthProvider({ children }): React.ReactElement {
       setUserData(null);
       setAccessToken(null);
       setIsAuthenticated(false);
+      setAllFlows([]);
+      setSelectedFolder(null);
       navigate("/login");
     } catch (error) {
       console.error(error);
