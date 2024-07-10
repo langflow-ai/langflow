@@ -57,9 +57,18 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   isBuilding: false,
   isPending: true,
   hasIO: false,
+  setHasIO: (hasIO) => {
+    set({ hasIO });
+  },
   reactFlowInstance: null,
   lastCopiedSelection: null,
   flowPool: {},
+  setInputs: (inputs) => {
+    set({ inputs });
+  },
+  setOutputs: (outputs) => {
+    set({ outputs });
+  },
   inputs: [],
   outputs: [],
   setFlowPool: (flowPool) => {

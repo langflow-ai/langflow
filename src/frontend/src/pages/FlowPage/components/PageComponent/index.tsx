@@ -1,3 +1,4 @@
+import { useGetBuildsQuery } from "@/controllers/API/queries/_builds";
 import _, { cloneDeep } from "lodash";
 import {
   KeyboardEvent,
@@ -162,13 +163,15 @@ export default function Page({
     };
   }, [lastCopiedSelection, lastSelection, takeSnapshot, selectionMenuVisible]);
 
+  const { refetch } = useGetBuildsQuery({
+    nodes: flow?.data?.nodes ?? [],
+    edges: flow?.data?.edges ?? [],
+    viewport: flow?.data?.viewport ?? { zoom: 1, x: 0, y: 0 },
+  });
+
   useEffect(() => {
     if (reactFlowInstance && currentFlowId) {
-      resetFlow({
-        nodes: flow?.data?.nodes ?? [],
-        edges: flow?.data?.edges ?? [],
-        viewport: flow?.data?.viewport ?? { zoom: 1, x: 0, y: 0 },
-      });
+      refetch();
     }
   }, [currentFlowId, reactFlowInstance]);
 
