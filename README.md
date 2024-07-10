@@ -42,9 +42,13 @@
 
 # 📝 Content
 
+- [](#)
+- [📝 Content](#-content)
 - [📦 Get Started](#-get-started)
 - [🎨 Create Flows](#-create-flows)
 - [Deploy](#deploy)
+  - [DataStax Langflow](#datastax-langflow)
+  - [Deploy Langflow on Hugging Face Spaces](#deploy-langflow-on-hugging-face-spaces)
   - [Deploy Langflow on Google Cloud Platform](#deploy-langflow-on-google-cloud-platform)
   - [Deploy on Railway](#deploy-on-railway)
   - [Deploy on Render](#deploy-on-render)
@@ -63,6 +67,13 @@ You can install Langflow with pip:
 ```shell
 # Make sure you have >=Python 3.10 installed on your system.
 python -m pip install langflow -U
+```
+Or
+
+If you would like to install from your cloned repo, you can build and install Langflow's frontend and backend with:
+
+```shell
+make install_frontend && make build_frontend && make install_backend
 ```
 
 Then, run Langflow with:

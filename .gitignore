@@ -272,3 +272,4 @@ prof/*
 src/frontend/temp
 *-shm
 *-wal
+.history

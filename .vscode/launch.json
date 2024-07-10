@@ -1,6 +1,7 @@
 {
   "version": "0.2.0",
   "configurations": [
+
     {
       "name": "Debug Backend",
       "type": "debugpy",
@@ -38,6 +39,7 @@
         "--env-file",
         "${workspaceFolder}/.env"
       ],
+      // "python": "/path/to/your/python_env/python", // Replace with the path to your Python executable
       "jinja": true,
       "justMyCode": false
     },

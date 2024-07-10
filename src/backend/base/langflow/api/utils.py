@@ -200,7 +200,7 @@ async def get_next_runnable_vertices(
         list: A list of IDs of the next runnable vertices.
 
     """
-    async with chat_service._cache_locks[flow_id] as lock:
+    async with chat_service._async_cache_locks[flow_id] as lock:
         graph.remove_from_predecessors(vertex_id)
         direct_successors_ready = [v for v in vertex.successors_ids if graph.is_vertex_runnable(v)]
         if not direct_successors_ready:
