@@ -1,5 +1,7 @@
+from typing import List, Dict
 import copy
 from collections import deque
+
 
 PRIORITY_LIST_OF_INPUTS = ["webhook", "chat"]
 
@@ -224,3 +226,49 @@ def get_updated_edges(base_flow, g_nodes, g_edges, group_node_id):
         if edge["target"] == group_node_id or edge["source"] == group_node_id:
             updated_edges.append(new_edge)
     return updated_edges
+
+
+def get_successors(graph: Dict[str, Dict[str, List[str]]], vertex_id: str) -> List[str]:
+    successors_result = []
+    stack = [vertex_id]
+    while stack:
+        current_id = stack.pop()
+        successors_result.append(current_id)
+        stack.extend(graph[current_id]["successors"])
+    return successors_result
+
+
+def sort_up_to_vertex(graph: Dict[str, Dict[str, List[str]]], vertex_id: str, is_start: bool = False) -> List[str]:
+    """Cuts the graph up to a given vertex and sorts the resulting subgraph."""
+    try:
+        stop_or_start_vertex = graph[vertex_id]
+    except KeyError:
+        raise ValueError(f"Vertex {vertex_id} not found into graph")
+
+    visited, excluded = set(), set()
+    stack = [vertex_id]
+    stop_predecessors = set(stop_or_start_vertex["predecessors"])
+
+    while stack:
+        current_id = stack.pop()
+        if current_id in visited or current_id in excluded:
+            continue
+
+        visited.add(current_id)
+        current_vertex = graph[current_id]
+
+        stack.extend(current_vertex["predecessors"])
+
+        if current_id == vertex_id or (current_id not in stop_predecessors and is_start):
+            for successor_id in current_vertex["successors"]:
+                if is_start:
+                    stack.append(successor_id)
+                else:
+                    excluded.add(successor_id)
+                for succ_id in get_successors(graph, successor_id):
+                    if is_start:
+                        stack.append(succ_id)
+                    else:
+                        excluded.add(succ_id)
+
+    return list(visited)
