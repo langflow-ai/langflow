@@ -33,6 +33,7 @@ import {
 import { classNames, cn, isThereModal } from "../../../../utils/utils";
 import isWrappedWithClass from "../PageComponent/utils/is-wrapped-with-class";
 import ToolbarSelectItem from "./toolbarSelectItem";
+import { usePostRetrieveVertexOrder } from "@/controllers/API/queries/vertex";
 
 export default function NodeToolbarComponent({
   data,
@@ -71,12 +72,14 @@ export default function NodeToolbarComponent({
         data.node.template[templateField]?.type === "dict" ||
         data.node.template[templateField]?.type === "NestedDict"),
   ).length;
+  const freezeMultipleNodes = useFlowStore((state) => state.freezeMultipleNodes);
 
   const hasStore = useStoreStore((state) => state.hasStore);
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
   const validApiKey = useStoreStore((state) => state.validApiKey);
   const shortcuts = useShortcutsStore((state) => state.shortcuts);
   const unselectAll = useFlowStore((state) => state.unselectAll);
+  const currentFlow= useFlowsManagerStore((state) => state.currentFlow);
   function handleMinimizeWShortcut(e: KeyboardEvent) {
     if (isWrappedWithClass(e, "noflow")) return;
     e.preventDefault();
@@ -200,6 +203,9 @@ export default function NodeToolbarComponent({
   const getNodePosition = useFlowStore((state) => state.getNodePosition);
   const flows = useFlowsManagerStore((state) => state.flows);
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
+  const {mutate:getFreezeOrder} = usePostRetrieveVertexOrder({onSuccess:({vertices_to_run})=>{
+    freezeMultipleNodes(vertices_to_run);
+  }});
 
   //  useEffect(() => {
   //    if (openWDoubleClick) setShowModalAdvanced(true);
@@ -255,6 +261,21 @@ export default function NodeToolbarComponent({
             },
           },
         }));
+        break;
+      case "freezeAll":
+        console.log("freezeAll")
+        getFreezeOrder({ flowId: currentFlow!.id, stopNodeId: data.id});
+        // if (data.node?.flow) return;
+        // setNode(data.id, (old) => ({
+        //   ...old,
+        //   data: {
+        //     ...old.data,
+        //     node: {
+        //       ...old.data.node,
+        //       frozen: old.data?.node?.frozen ? false : true,
+        //     },
+        //   },
+        // }));
         break;
       case "code":
         setOpenModal(!openModal);
@@ -459,9 +480,8 @@ export default function NodeToolbarComponent({
               side="top"
             >
               <button
-                className={`${
-                  isGroup ? "rounded-l-md" : ""
-                } relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10`}
+                className={`${isGroup ? "rounded-l-md" : ""
+                  } relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10`}
                 onClick={() => {
                   setShowModalAdvanced(true);
                 }}
@@ -505,20 +525,22 @@ export default function NodeToolbarComponent({
                 )}
                 onClick={(event) => {
                   event.preventDefault();
-                  setNode(data.id, (old) => ({
-                    ...old,
-                    data: {
-                      ...old.data,
-                      node: {
-                        ...old.data.node,
-                        frozen: old.data?.node?.frozen ? false : true,
-                      },
-                    },
-                  }));
+                  takeSnapshot();
+                  // setNode(data.id, (old) => ({
+                  //   ...old,
+                  //   data: {
+                  //     ...old.data,
+                  //     node: {
+                  //       ...old.data.node,
+                  //       frozen: old.data?.node?.frozen ? false : true,
+                  //     },
+                  //   },
+                  // }));
+                  getFreezeOrder({ flowId: currentFlow!.id, stopNodeId: data.id})
                 }}
               >
                 <IconComponent
-                  name="Snowflake"
+                  name="FreezeAll"
                   className={cn(
                     "h-4 w-4 transition-all",
                     // TODO UPDATE THIS COLOR TO BE A VARIABLE
@@ -710,6 +732,19 @@ export default function NodeToolbarComponent({
                   />
                 </SelectItem>
               )}
+              {!data.node?.flow && (
+                <SelectItem value="freeze">
+                  <ToolbarSelectItem
+                    shortcut={
+                      shortcuts.find((obj) => obj.name === "Freeze")?.shortcut!
+                    }
+                    value={"freezeAll"}
+                    icon={"freezeAll"}
+                    dataTestId="group-button-modal"
+                    style={`${frozen ? " text-ice" : ""} transition-all`}
+                  />
+                </SelectItem>
+              )}
               <SelectItem value="Download">
                 <ToolbarSelectItem
                   shortcut={
@@ -733,9 +768,8 @@ export default function NodeToolbarComponent({
                   />{" "}
                   <span className="">Delete</span>{" "}
                   <span
-                    className={`absolute right-2 top-2 flex items-center justify-center rounded-sm px-1 py-[0.2] ${
-                      deleteIsFocus ? " " : "bg-muted"
-                    }`}
+                    className={`absolute right-2 top-2 flex items-center justify-center rounded-sm px-1 py-[0.2] ${deleteIsFocus ? " " : "bg-muted"
+                      }`}
                   >
                     <IconComponent
                       name="Delete"

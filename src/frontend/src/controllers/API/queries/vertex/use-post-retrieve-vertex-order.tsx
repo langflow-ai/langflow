@@ -12,20 +12,27 @@ interface retrieveGetVerticesOrder {
   startNodeId?: string;
 }
 
+interface retrieveGetVerticesOrderResponse {
+  ids: string[];
+  rund_id: string;
+  vertices_to_run: string[];
+}
+
+
 // add types for error handling and success
-export const usePostRetrieveVertexOrder: useMutationFunctionType<retrieveGetVerticesOrder> = (
+export const usePostRetrieveVertexOrder: useMutationFunctionType<retrieveGetVerticesOrder,retrieveGetVerticesOrderResponse> = (
   options,
 ) => {
   const { mutate } = UseRequestProcessor();
 
-  const postRetrieveVertexOrder = async ({flowId,data:flow,startNodeId,stopNodeId}: retrieveGetVerticesOrder): Promise<any> => {
+  const postRetrieveVertexOrder = async ({flowId,data:flow,startNodeId,stopNodeId}: retrieveGetVerticesOrder): Promise<retrieveGetVerticesOrderResponse> => {
     // nodeId is optional and is a query parameter
     // if nodeId is not provided, the API will return all vertices
     const config: AxiosRequestConfig<any> = {};
     if (stopNodeId) {
-      config["params"] = { stop_component_id: stopNodeId };
+      config["params"] = { stop_component_id: decodeURIComponent(stopNodeId) };
     } else if (startNodeId) {
-      config["params"] = { start_component_id: startNodeId };
+      config["params"] = { start_component_id: decodeURIComponent(startNodeId) };
     }
     const data = {
       data: {},
@@ -36,7 +43,7 @@ export const usePostRetrieveVertexOrder: useMutationFunctionType<retrieveGetVert
       data["data"]["edges"] = edges;
     }
     const response = await api.post(
-      `${getURL("FILES")}/${flowId}/vertices`,
+      `${getURL("BUILD")}/${flowId}/vertices`,
       data,
       config,
     );
