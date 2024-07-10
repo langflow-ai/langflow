@@ -1,3 +1,4 @@
+import { useDeleteFLowPool } from "@/controllers/API/queries/_builds";
 import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
 import { useEffect, useRef, useState } from "react";
 import ShortUniqueId from "short-unique-id";
@@ -40,6 +41,7 @@ export default function ChatView({
   const outputIds = outputs.map((obj) => obj.id);
   const updateFlowPool = useFlowStore((state) => state.updateFlowPool);
   const [id, setId] = useState<string>("");
+  const { mutate: mutateFlowPool } = useDeleteFLowPool();
 
   //build chat history
   useEffect(() => {
@@ -116,9 +118,15 @@ export default function ChatView({
 
   function clearChat(): void {
     setChatHistory([]);
-    deleteFlowPool(currentFlowId).then((_) => {
-      CleanFlowPool();
-    });
+
+    mutateFlowPool(
+      { flowId: currentFlowId },
+      {
+        onSuccess: () => {
+          CleanFlowPool();
+        },
+      },
+    );
     //TODO tell backend to clear chat session
     if (lockChat) setLockChat(false);
   }
