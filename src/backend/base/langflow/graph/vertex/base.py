@@ -108,6 +108,9 @@ class Vertex:
         elif self.state == VertexStates.ACTIVE and self.id in self.graph.inactivated_vertices:
             self.graph.inactivated_vertices.remove(self.id)
 
+    def is_active(self):
+        return self.state == VertexStates.ACTIVE
+
     @property
     def avg_build_time(self):
         return sum(self.build_times) / len(self.build_times) if self.build_times else 0

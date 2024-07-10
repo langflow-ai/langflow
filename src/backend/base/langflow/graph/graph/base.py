@@ -157,12 +157,14 @@ class Graph:
                     edges_set.update(_vertex.edges)
                     if _vertex.state == VertexStates.INACTIVE:
                         _vertex.set_state("ACTIVE")
+
+                    vertices_ids.add(_vertex.id)
                 edges = list(edges_set)
                 predecessor_map, _ = self.build_adjacency_maps(edges)
                 new_predecessor_map.update(predecessor_map)
 
-        # vertices_ids.update(new_predecessor_map.keys())
-        # vertices_ids.update(v_id for value_list in new_predecessor_map.values() for v_id in value_list)
+        vertices_ids.update(new_predecessor_map.keys())
+        vertices_ids.update(v_id for value_list in new_predecessor_map.values() for v_id in value_list)
 
         self.activated_vertices = list(vertices_ids)
         self.vertices_to_run.update(vertices_ids)
@@ -1459,7 +1461,7 @@ class Graph:
 
     def is_vertex_runnable(self, vertex_id: str) -> bool:
         """Returns whether a vertex is runnable."""
-        return self.run_manager.is_vertex_runnable(vertex_id, self.inactivated_vertices)
+        return self.run_manager.is_vertex_runnable(self.get_vertex(vertex_id))
 
     def build_run_map(self):
         """
@@ -1479,7 +1481,7 @@ class Graph:
         This checks the direct predecessors of each successor to identify any that are
         immediately runnable, expanding the search to ensure progress can be made.
         """
-        return self.run_manager.find_runnable_predecessors_for_successors(vertex_id, self.inactivated_vertices)
+        return self.run_manager.find_runnable_predecessors_for_successors(self.get_vertex(vertex_id))
 
     def remove_from_predecessors(self, vertex_id: str):
         self.run_manager.remove_from_predecessors(vertex_id)
