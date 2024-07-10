@@ -7,6 +7,20 @@ from requests.exceptions import MissingSchema
 from langflow.utils.validate import create_function, execute_function, extract_function_name, validate_code
 
 
+def test_create_function():
+    code = """
+from pathlib import Path
+
+def my_function(x: str) -> Path:
+    return Path(x)
+"""
+
+    function_name = extract_function_name(code)
+    function = create_function(code, function_name)
+    result = function("test")
+    assert result == Path("test")
+
+
 def test_validate_code():
     # Test case with a valid import and function
     code1 = """
@@ -88,17 +102,3 @@ def my_function(x):
     with mock.patch("requests.get", side_effect=MissingSchema):
         with pytest.raises(MissingSchema):
             execute_function(code, "my_function", "invalid_url")
-
-
-def test_create_function():
-    code = """
-from pathlib import Path
-
-def my_function(x: str) -> Path:
-    return Path(x)
-"""
-
-    function_name = extract_function_name(code)
-    function = create_function(code, function_name)
-    result = function("test")
-    assert result == Path("test")
