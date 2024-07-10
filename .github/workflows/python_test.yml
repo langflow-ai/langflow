@@ -39,6 +39,7 @@ jobs:
           poetry env use ${{ matrix.python-version }}
           poetry install
       - name: Run unit tests
+        timeout-minutes: 12
         run: |
           make unit_tests
       - name: Test CLI

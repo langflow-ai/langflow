@@ -110,6 +110,7 @@ jobs:
           cd src/frontend
           npx playwright test --trace on --shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --workers 2
         continue-on-error: true
+        timeout-minutes: 12
 
       # If the test fails, set a flag to indicate that the shard failed
       - name: Set failure flag
