@@ -56,7 +56,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   edges: [],
   isBuilding: false,
   isPending: true,
-  hasIO: false,
+  hasIO: get().inputs.length > 0 || get().outputs.length > 0,
   setHasIO: (hasIO) => {
     set({ hasIO });
   },
@@ -118,25 +118,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   setPending: (isPending) => {
     set({ isPending });
   },
-  resetFlow: ({ nodes, edges, viewport }) => {
-    const currentFlow = useFlowsManagerStore.getState().currentFlow;
-    let newEdges = cleanEdges(nodes, edges);
-    const { inputs, outputs } = getInputsAndOutputs(nodes);
-    set({
-      nodes,
-      edges: newEdges,
-      flowState: undefined,
-      inputs,
-      outputs,
-      hasIO: inputs.length > 0 || outputs.length > 0,
-    });
-    get().reactFlowInstance!.setViewport(viewport);
-    if (currentFlow) {
-      getFlowPool({ flowId: currentFlow.id }).then((flowPool) => {
-        set({ flowPool: flowPool.data.vertex_builds });
-      });
-    }
-  },
+
   setIsBuilding: (isBuilding) => {
     set({ isBuilding });
   },
