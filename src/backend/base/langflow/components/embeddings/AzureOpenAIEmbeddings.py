@@ -1,5 +1,4 @@
 from langchain_openai import AzureOpenAIEmbeddings
-from pydantic.v1 import SecretStr
 
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import Embeddings
