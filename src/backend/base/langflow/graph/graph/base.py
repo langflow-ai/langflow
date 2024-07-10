@@ -1461,7 +1461,7 @@ class Graph:
 
     def is_vertex_runnable(self, vertex_id: str) -> bool:
         """Returns whether a vertex is runnable."""
-        return self.run_manager.is_vertex_runnable(vertex_id, self.inactivated_vertices, self.activated_vertices)
+        return self.run_manager.is_vertex_runnable(self.get_vertex(vertex_id))
 
     def build_run_map(self):
         """
