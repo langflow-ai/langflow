@@ -91,6 +91,7 @@ def test_astra_embeds_and_search(astra_fixture):
 
     assert len(records) == 1
 
+
 @pytest.mark.skipif(
     not check_env_vars("ASTRA_DB_APPLICATION_TOKEN", "ASTRA_DB_API_ENDPOINT"),
     reason="missing astra env vars",
@@ -135,7 +136,6 @@ def test_astra_vectorize():
             store.delete_collection()
 
 
-
 @pytest.mark.skipif(
     not check_env_vars("ASTRA_DB_APPLICATION_TOKEN", "ASTRA_DB_API_ENDPOINT", "OPENAI_API_KEY"),
     reason="missing env vars",
@@ -158,7 +158,9 @@ def test_astra_vectorize_with_provider_api_key():
         records = [Data.from_document(d) for d in documents]
 
         vectorize = AstraVectorizeComponent()
-        vectorize.build(provider="OpenAI", model_name="text-embedding-3-small", provider_api_key=os.getenv("OPENAI_API_KEY"))
+        vectorize.build(
+            provider="OpenAI", model_name="text-embedding-3-small", provider_api_key=os.getenv("OPENAI_API_KEY")
+        )
         vectorize_options = vectorize.build_options()
 
         component = AstraVectorStoreComponent()
@@ -177,6 +179,7 @@ def test_astra_vectorize_with_provider_api_key():
         if store is not None:
             store.delete_collection()
 
+
 @pytest.mark.skipif(
     not check_env_vars("ASTRA_DB_APPLICATION_TOKEN", "ASTRA_DB_API_ENDPOINT", "OPENAI_API_KEY"),
     reason="missing env vars",
@@ -187,7 +190,12 @@ def test_astra_vectorize_passes_authentication():
     try:
         application_token = os.getenv("ASTRA_DB_APPLICATION_TOKEN")
         api_endpoint = os.getenv("ASTRA_DB_API_ENDPOINT")
-        options = {"provider": "openai", "modelName": "text-embedding-3-small", "parameters": {}, "authentication": {"providerKey": "providerKey"}}
+        options = {
+            "provider": "openai",
+            "modelName": "text-embedding-3-small",
+            "parameters": {},
+            "authentication": {"providerKey": "providerKey"},
+        }
         store = AstraDBVectorStore(
             collection_name=VECTORIZE_COLLECTION_OPENAI_WITH_AUTH,
             api_endpoint=api_endpoint,
@@ -198,7 +206,9 @@ def test_astra_vectorize_passes_authentication():
         records = [Data.from_document(d) for d in documents]
 
         vectorize = AstraVectorizeComponent()
-        vectorize.build(provider="OpenAI", model_name="text-embedding-3-small", authentication={"providerKey": "providerKey"})
+        vectorize.build(
+            provider="OpenAI", model_name="text-embedding-3-small", authentication={"providerKey": "providerKey"}
+        )
         vectorize_options = vectorize.build_options()
 
         component = AstraVectorStoreComponent()
@@ -216,7 +226,6 @@ def test_astra_vectorize_passes_authentication():
     finally:
         if store is not None:
             store.delete_collection()
-
 
 
 # @pytest.mark.skipif(
