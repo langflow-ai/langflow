@@ -1,5 +1,4 @@
 from langchain_openai import AzureOpenAIEmbeddings
-from pydantic.v1 import SecretStr
 
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import Embeddings
@@ -59,20 +58,15 @@ class AzureOpenAIEmbeddingsComponent(LCModelComponent):
     ]
 
     def build_embeddings(self) -> Embeddings:
-        if not self.api_key:
-            raise ValueError("API Key is required")
-
-        azure_api_key = SecretStr(self.api_key)
-
         try:
             embeddings = AzureOpenAIEmbeddings(
                 azure_endpoint=self.azure_endpoint,
                 azure_deployment=self.azure_deployment,
                 api_version=self.api_version,
-                api_key=azure_api_key,
-                dimensions=self.dimensions,
+                api_key=self.api_key,
+                dimensions=self.dimensions or None,
             )
         except Exception as e:
-            raise ValueError("Could not connect to AzureOpenAIEmbeddings API.") from e
+            raise ValueError(f"Could not connect to AzureOpenAIEmbeddings API: {str(e)}") from e
 
         return embeddings

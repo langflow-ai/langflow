@@ -66,6 +66,12 @@ class OpenAIEmbeddingsComponent(LCEmbeddingsModel):
             value=True,
             info="If False, you must have transformers installed.",
         ),
+        IntInput(
+            name="dimensions",
+            display_name="Dimensions",
+            info="The number of dimensions the resulting output embeddings should have. Only supported by certain models.",
+            advanced=True,
+        ),
     ]
 
     def build_embeddings(self) -> Embeddings:
@@ -91,4 +97,5 @@ class OpenAIEmbeddingsComponent(LCEmbeddingsModel):
             show_progress_bar=self.show_progress_bar,
             skip_empty=self.skip_empty,
             tiktoken_model_name=self.tiktoken_model_name,
+            dimensions=self.dimensions or None,
         )
