@@ -1,3 +1,4 @@
+import { usePostRetrieveVertexOrder } from "@/controllers/API/queries/vertex";
 import _, { cloneDeep } from "lodash";
 import { useEffect, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
@@ -33,7 +34,6 @@ import {
 import { classNames, cn, isThereModal } from "../../../../utils/utils";
 import isWrappedWithClass from "../PageComponent/utils/is-wrapped-with-class";
 import ToolbarSelectItem from "./toolbarSelectItem";
-import { usePostRetrieveVertexOrder } from "@/controllers/API/queries/vertex";
 
 export default function NodeToolbarComponent({
   data,
@@ -215,8 +215,8 @@ export default function NodeToolbarComponent({
       updateFreezeStatus(vertices_to_run, !data.node?.frozen);
       vertices_to_run.forEach((vertex) => {
         updateNodeInternals(vertex);
-      })
-    }
+      });
+    },
   });
 
   //  useEffect(() => {
@@ -479,8 +479,9 @@ export default function NodeToolbarComponent({
               side="top"
             >
               <button
-                className={`${isGroup ? "rounded-l-md" : ""
-                  } relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10`}
+                className={`${
+                  isGroup ? "rounded-l-md" : ""
+                } relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10`}
                 onClick={() => {
                   setShowModalAdvanced(true);
                 }}
@@ -509,34 +510,37 @@ export default function NodeToolbarComponent({
               <IconComponent name="SaveAll" className="h-4 w-4" />
             </button>
           </ShadTooltip>*/}
-            <ShadTooltip
-              content={displayShortcut(
-                shortcuts.find(
-                  ({ name }) => name.toLowerCase() === "freeze all",
-                )!,
+          <ShadTooltip
+            content={displayShortcut(
+              shortcuts.find(
+                ({ name }) => name.toLowerCase() === "freeze all",
+              )!,
+            )}
+            side="top"
+          >
+            <button
+              className={classNames(
+                "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10",
               )}
-              side="top"
+              onClick={(event) => {
+                event.preventDefault();
+                takeSnapshot();
+                FreezeAllVertices({
+                  flowId: currentFlow!.id,
+                  stopNodeId: data.id,
+                });
+              }}
             >
-              <button
-                className={classNames(
-                  "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10",
+              <IconComponent
+                name="FreezeAll"
+                className={cn(
+                  "h-4 w-4 transition-all",
+                  // TODO UPDATE THIS COLOR TO BE A VARIABLE
+                  frozen ? "animate-wiggle text-ice" : "",
                 )}
-                onClick={(event) => {
-                  event.preventDefault();
-                  takeSnapshot();
-                  FreezeAllVertices({ flowId: currentFlow!.id, stopNodeId: data.id })
-                }}
-              >
-                <IconComponent
-                  name="FreezeAll"
-                  className={cn(
-                    "h-4 w-4 transition-all",
-                    // TODO UPDATE THIS COLOR TO BE A VARIABLE
-                    frozen ? "animate-wiggle text-ice" : "",
-                  )}
-                />
-              </button>
-            </ShadTooltip>
+              />
+            </button>
+          </ShadTooltip>
 
           {/*<ShadTooltip content={"Duplicate"} side="top">
             <button
@@ -720,7 +724,8 @@ export default function NodeToolbarComponent({
               <SelectItem value="freezeAll">
                 <ToolbarSelectItem
                   shortcut={
-                    shortcuts.find((obj) => obj.name === "Freeze All")?.shortcut!
+                    shortcuts.find((obj) => obj.name === "Freeze All")
+                      ?.shortcut!
                   }
                   value={"freezeAll"}
                   icon={"FreezeAll"}
@@ -751,8 +756,9 @@ export default function NodeToolbarComponent({
                   />{" "}
                   <span className="">Delete</span>{" "}
                   <span
-                    className={`absolute right-2 top-2 flex items-center justify-center rounded-sm px-1 py-[0.2] ${deleteIsFocus ? " " : "bg-muted"
-                      }`}
+                    className={`absolute right-2 top-2 flex items-center justify-center rounded-sm px-1 py-[0.2] ${
+                      deleteIsFocus ? " " : "bg-muted"
+                    }`}
                   >
                     <IconComponent
                       name="Delete"

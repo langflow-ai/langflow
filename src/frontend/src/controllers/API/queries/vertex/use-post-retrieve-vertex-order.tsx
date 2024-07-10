@@ -1,9 +1,9 @@
 import { useMutationFunctionType } from "@/types/api";
+import { AxiosRequestConfig } from "axios";
+import { ReactFlowJsonObject } from "reactflow";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
-import { ReactFlowJsonObject } from "reactflow";
-import { AxiosRequestConfig } from "axios";
 
 interface retrieveGetVerticesOrder {
   flowId: string;
@@ -18,21 +18,28 @@ interface retrieveGetVerticesOrderResponse {
   vertices_to_run: string[];
 }
 
-
 // add types for error handling and success
-export const usePostRetrieveVertexOrder: useMutationFunctionType<retrieveGetVerticesOrder,retrieveGetVerticesOrderResponse> = (
-  options,
-) => {
+export const usePostRetrieveVertexOrder: useMutationFunctionType<
+  retrieveGetVerticesOrder,
+  retrieveGetVerticesOrderResponse
+> = (options) => {
   const { mutate } = UseRequestProcessor();
 
-  const postRetrieveVertexOrder = async ({flowId,data:flow,startNodeId,stopNodeId}: retrieveGetVerticesOrder): Promise<retrieveGetVerticesOrderResponse> => {
+  const postRetrieveVertexOrder = async ({
+    flowId,
+    data: flow,
+    startNodeId,
+    stopNodeId,
+  }: retrieveGetVerticesOrder): Promise<retrieveGetVerticesOrderResponse> => {
     // nodeId is optional and is a query parameter
     // if nodeId is not provided, the API will return all vertices
     const config: AxiosRequestConfig<any> = {};
     if (stopNodeId) {
       config["params"] = { stop_component_id: decodeURIComponent(stopNodeId) };
     } else if (startNodeId) {
-      config["params"] = { start_component_id: decodeURIComponent(startNodeId) };
+      config["params"] = {
+        start_component_id: decodeURIComponent(startNodeId),
+      };
     }
     const data = {
       data: {},
@@ -51,7 +58,11 @@ export const usePostRetrieveVertexOrder: useMutationFunctionType<retrieveGetVert
     return response.data;
   };
 
-  const mutation = mutate(["usePostRetrieveVertexOrder",], postRetrieveVertexOrder, options);
+  const mutation = mutate(
+    ["usePostRetrieveVertexOrder"],
+    postRetrieveVertexOrder,
+    options,
+  );
 
   return mutation;
 };

@@ -1,5 +1,6 @@
 import React, { forwardRef } from "react";
-import SvgFreezeAll from "./freezeAll"; "./freezeAll.jsx";
+import SvgFreezeAll from "./freezeAll";
+("./freezeAll.jsx");
 
 export const freezeAllIcon = forwardRef<
   SVGSVGElement,
