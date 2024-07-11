@@ -38,21 +38,8 @@ class BaseCrewComponent(Component):
     def get_tasks_and_agents(self) -> tuple[list[Task], list[Agent]]:
         return self.tasks, self.agents
 
-    def build_crew(self, tasks: list[Task], agents: list[Agent]) -> Crew:
-        crew_type = Process.sequential
-        tasks, agents = self.get_tasks_and_agents(crew_type)
-        crew = Crew(
-            agents=agents,
-            tasks=tasks,
-            process=crew_type,
-            verbose=self.verbose,
-            memory=self.memory,
-            cache=self.use_cache,
-            max_rpm=self.max_rpm,
-            share_crew=self.share_crew,
-            function_calling_llm=self.function_calling_llm,
-        )
-        return crew
+    def build_crew(self) -> Crew:
+        raise NotImplementedError("build_crew must be implemented in subclasses")
 
     async def build_output(self) -> Message:
         crew = self.build_crew()
