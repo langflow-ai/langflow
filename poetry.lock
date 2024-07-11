@@ -2848,6 +2848,24 @@ google-auth = "*"
 httplib2 = ">=0.19.0"
 
 [[package]]
+name = "google-auth-oauthlib"
+version = "1.2.1"
+description = "Google Authentication Library"
+optional = false
+python-versions = ">=3.6"
+files = [
+    {file = "google_auth_oauthlib-1.2.1-py2.py3-none-any.whl", hash = "sha256:2d58a27262d55aa1b87678c3ba7142a080098cbc2024f903c62355deb235d91f"},
+    {file = "google_auth_oauthlib-1.2.1.tar.gz", hash = "sha256:afd0cad092a2eaa53cd8e8298557d6de1034c6cb4a740500b5357b648af97263"},
+]
+
+[package.dependencies]
+google-auth = ">=2.15.0"
+requests-oauthlib = ">=0.7.0"
+
+[package.extras]
+tool = ["click (>=6.0.0)"]
+
+[[package]]
 name = "google-cloud-aiplatform"
 version = "1.58.0"
 description = "Vertex AI API client library"
@@ -4576,6 +4594,24 @@ files = [
 [package.dependencies]
 langchain-community = ">=0.2.5,<0.3.0"
 langchain-core = ">=0.2.7,<0.3.0"
+
+[[package]]
+name = "langchain-google-calendar-tools"
+version = "0.0.1"
+description = "This repo walks through connecting to the Google Calendar API."
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "langchain_google_calendar_tools-0.0.1-py3-none-any.whl", hash = "sha256:ce0e62056fc62a90d2f95d4d33c9c2ef3d8a616b25ede266b67f88e8e02f9d55"},
+    {file = "langchain_google_calendar_tools-0.0.1.tar.gz", hash = "sha256:2222499ded96880c573c358bb6b4c75a86f638e1f3a446fb14b126a30ee7f62e"},
+]
+
+[package.dependencies]
+google-api-python-client = ">=2.104.0"
+google-auth-oauthlib = ">=1.1.0"
+langchain = ">=0.0.335"
+protobuf = ">=4.25.0"
+pytz = ">=2023.3.post1"
 
 [[package]]
 name = "langchain-google-genai"
@@ -11277,4 +11313,4 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-content-hash = "32ecfa0b1cf950dbb8b7d964ca8ec21ac3f7fa9652b60fe5f230fe10110c4c52"
+content-hash = "0dcc235615bcef9db6b669b27a2588f58121bf6233545a469b08206cb5a6e63b"
