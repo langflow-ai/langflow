@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field, PlainSerializer, field_valida
 
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.inputs.validators import CoalesceBool
+from langflow.schema.table import TableSchema
 
 
 class FieldTypes(str, Enum):
@@ -18,6 +19,7 @@ class FieldTypes(str, Enum):
     FILE = "file"
     PROMPT = "prompt"
     OTHER = "other"
+    TABLE = "table"
 
 
 SerializableFieldTypes = Annotated[FieldTypes, PlainSerializer(lambda v: v.value, return_type=str)]
@@ -136,3 +138,7 @@ class DropDownMixin(BaseModel):
 
 class MultilineMixin(BaseModel):
     multiline: CoalesceBool = True
+
+
+class TableMixin(BaseModel):
+    table_schema: Optional[TableSchema] = None
