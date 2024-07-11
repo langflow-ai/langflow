@@ -19,7 +19,13 @@ from .input_mixin import (
     MultilineMixin,
     RangeMixin,
     SerializableFieldTypes,
+    TableMixin,
 )
+
+
+class TableInput(BaseInputMixin, MetadataTraceMixin, TableMixin, ListableInputMixin):
+    field_type: Optional[SerializableFieldTypes] = FieldTypes.TABLE
+    is_list: bool = True
 
 
 class HandleInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin):
@@ -338,4 +344,5 @@ InputTypes = Union[
     StrInput,
     MessageTextInput,
     MessageInput,
+    TableInput,
 ]
