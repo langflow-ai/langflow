@@ -73,6 +73,9 @@ export default function DictAreaModal({
               setMyValue(edit.src);
             }}
             src={cloneDeep(myValue)}
+            customizeCopy={(copy) => {
+              navigator.clipboard.writeText(JSON.stringify(copy));
+            }}
           />
         </div>
       </BaseModal.Content>
