@@ -1,0 +1,19 @@
+# https://github.com/dorny/paths-filter
+python:
+  - "src/backend/**"
+  - "src/backend/**.py"
+  - "pyproject.toml"
+  - "poetry.lock"
+  - "**/python_test.yml"
+tests:
+  - "tests/**"
+  - "src/frontend/tests/**"
+frontend:
+  - "src/frontend/**"
+  - "**/typescript_test.yml"
+docs:
+  - "docs/**"
+astra_integration_tests:
+  - "src/backend/base/langflow/backend/components/vectorstores/AstraDB.py"
+  - "src/backend/base/langflow/backend/components/embeddings/AstraVectorize.py"
+  - "tests/integration/astra/**"
