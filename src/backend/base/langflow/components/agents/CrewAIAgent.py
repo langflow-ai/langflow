@@ -73,5 +73,5 @@ class CrewAIAgentComponent(Component):
             allow_delegation=self.allow_delegation,
             **kwargs,
         )
-        self.status = agent.model_dump()
+        self.status = repr(agent)
         return agent
