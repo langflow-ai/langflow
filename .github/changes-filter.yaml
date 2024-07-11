@@ -14,7 +14,7 @@ frontend:
 docs:
   - "docs/**"
 integration:
-  - "src/backend/base/langflow/backend/components/**"
+  - "src/backend/**.py"
   - "tests/integration/**"
 astra_integration:
   - "src/backend/base/langflow/backend/components/vectorstores/AstraDB.py"
