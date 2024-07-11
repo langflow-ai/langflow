@@ -1,9 +1,10 @@
 from enum import Enum
 from typing import Annotated, Any, Optional
 
+from pydantic import BaseModel, ConfigDict, Field, PlainSerializer, field_validator, model_serializer
+
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.inputs.validators import CoalesceBool
-from pydantic import BaseModel, ConfigDict, Field, PlainSerializer, field_validator, model_serializer
 
 
 class FieldTypes(str, Enum):
