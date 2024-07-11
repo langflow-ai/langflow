@@ -456,6 +456,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     setLockChat?: (lock: boolean) => void;
   }) => {
     get().setIsBuilding(true);
+    get().setLockChat(true);
     const currentFlow = useFlowsManagerStore.getState().currentFlow;
     const setSuccessData = useAlertStore.getState().setSuccessData;
     const setErrorData = useAlertStore.getState().setErrorData;
@@ -509,11 +510,23 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         const top_level_vertices = vertexBuildData.top_level_vertices.filter(
           (vertex) => !vertexBuildData.inactivated_vertices?.includes(vertex),
         );
-        const nextVertices: VertexLayerElementType[] = zip(
+        let nextVertices: VertexLayerElementType[] = zip(
           next_vertices_ids,
           top_level_vertices,
         ).map(([id, reference]) => ({ id: id!, reference }));
 
+        // Now we filter nextVertices to remove any vertices that are in verticesLayers
+        // because they are already being built
+        // each layer is a list of vertexlayerelementtypes
+        let lastLayer =
+          get().verticesBuild!.verticesLayers[
+            get().verticesBuild!.verticesLayers.length - 1
+          ];
+        nextVertices = nextVertices.filter(
+          (vertex) =>
+            !lastLayer.some((layer) => layer.id === vertex.id) &&
+            !lastLayer.some((layer) => layer.reference === vertex.reference),
+        );
         const newLayers = [
           ...get().verticesBuild!.verticesLayers,
           nextVertices,
@@ -578,6 +591,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           }
         }
         get().setIsBuilding(false);
+        get().setLockChat(false);
       },
       onBuildUpdate: handleBuildUpdate,
       onBuildError: (title: string, list: string[], elementList) => {
@@ -587,6 +601,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         useFlowStore.getState().updateBuildStatus(idList, BuildStatus.BUILT);
         setErrorData({ list, title });
         get().setIsBuilding(false);
+        get().setLockChat(false);
       },
       onBuildStart: (elementList) => {
         const idList = elementList
@@ -600,6 +615,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       edges: !get().onFlowPage ? get().edges : undefined,
     });
     get().setIsBuilding(false);
+    get().setLockChat(false);
     get().revertBuiltStatusFromBuilding();
   },
   getFlow: () => {

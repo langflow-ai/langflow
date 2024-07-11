@@ -7,17 +7,18 @@ from typing import Optional
 from urllib.parse import urlencode
 
 import nest_asyncio  # type: ignore
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, Request, Response, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from http import HTTPStatus
 from loguru import logger
 from pydantic import PydanticDeprecatedSince20
 from rich import print as rprint
 from starlette.middleware.base import BaseHTTPMiddleware
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
-from langflow.api import router, health_check_router
+from langflow.api import router, health_check_router, log_router
 from langflow.initial_setup.setup import (
     create_or_update_starter_projects,
     initialize_super_user_if_needed,
@@ -157,6 +158,22 @@ def create_app():
 
     app.include_router(router)
     app.include_router(health_check_router)
+    app.include_router(log_router)
+
+    @app.exception_handler(Exception)
+    async def exception_handler(request: Request, exc: Exception):
+        if isinstance(exc, HTTPException):
+            logger.error(f"HTTPException: {exc.detail}")
+            return JSONResponse(
+                status_code=exc.status_code,
+                content={"message": str(exc.detail)},
+            )
+        else:
+            logger.error(f"unhandled error: {exc}")
+            return JSONResponse(
+                status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+                content={"message": str(exc)},
+            )
 
     FastAPIInstrumentor.instrument_app(app)
 

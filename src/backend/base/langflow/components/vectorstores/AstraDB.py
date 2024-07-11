@@ -117,7 +117,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             name="embedding",
             display_name="Embedding or Astra Vectorize",
             input_types=["Embeddings", "dict"],
-            info="Allows either an embedding model or an Astra Vectorize configuration. If Astra Vectorize is already configured for the collection, this field is not required.",
+            info="Allows either an embedding model or an Astra Vectorize configuration.",  # TODO: This should be optional, but need to refactor langchain-astradb first.
         ),
         StrInput(
             name="metadata_indexing_exclude",
@@ -162,7 +162,8 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
         ),
     ]
 
-    def _build_vector_store_no_ingest(self):
+    def _build_vector_store(self):
+        # cache the vector store to avoid re-initializing and ingest data again
         if self._cached_vectorstore:
             return self._cached_vectorstore
 
@@ -194,9 +195,12 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             }
             dict_options["parameters"] = {k: v for k, v in dict_options.get("parameters", {}).items() if k and v}
             embedding_dict = {
-                "collection_vector_service_options": CollectionVectorServiceOptions.from_dict(dict_options),
-                "collection_embedding_api_key": self.embedding.get("collection_embedding_api_key"),
+                "collection_vector_service_options": CollectionVectorServiceOptions.from_dict(dict_options)
             }
+            collection_embedding_api_key = self.embedding.get("collection_embedding_api_key")
+            if collection_embedding_api_key:
+                embedding_dict["collection_embedding_api_key"] = collection_embedding_api_key
+
         vector_store_kwargs = {
             **embedding_dict,
             "collection_name": self.collection_name,
@@ -223,6 +227,8 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             vector_store = AstraDBVectorStore(**vector_store_kwargs)
         except Exception as e:
             raise ValueError(f"Error initializing AstraDBVectorStore: {str(e)}") from e
+
+        self._add_documents_to_vector_store(vector_store)
 
         self._cached_vectorstore = vector_store
 
@@ -266,8 +272,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
         return args
 
     def search_documents(self) -> list[Data]:
-        vector_store = self._build_vector_store_no_ingest()
-        self._add_documents_to_vector_store(vector_store)
+        vector_store = self._build_vector_store()
 
         logger.debug(f"Search input: {self.search_input}")
         logger.debug(f"Search type: {self.search_type}")
@@ -300,6 +305,5 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
         }
 
     def build_vector_store(self):
-        vector_store = self._build_vector_store_no_ingest()
-        self._add_documents_to_vector_store(vector_store)
+        vector_store = self._build_vector_store()
         return vector_store
