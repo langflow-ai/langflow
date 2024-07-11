@@ -529,6 +529,7 @@ export default function ParameterComponent({
           condition={
             left === true &&
             type === "str" &&
+            !data.node?.template[name]?.list &&
             (data.node?.template[name]?.options ||
               data.node?.template[name]?.real_time_refresh)
           }
@@ -570,7 +571,7 @@ export default function ParameterComponent({
             <Multiselect
               disabled={disabled}
               options={data?.node?.template?.[name]?.options || []}
-              value={data?.node?.template?.[name]?.value || []}
+              values={data?.node?.template?.[name]?.value || []}
               id={"multiselect-" + name}
               onValueChange={handleOnNewValue}
             />
