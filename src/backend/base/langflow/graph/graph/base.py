@@ -907,7 +907,7 @@ class Graph:
             return result_dict, params, valid, artifacts, vertex
         except Exception as exc:
             if not isinstance(exc, ComponentBuildException):
-                logger.exception(f"Error building Component:\n\n{exc}")
+                logger.exception(f"Error building Component: \n\n{exc}")
             flow_id = self.flow_id
             log_transaction(flow_id, vertex, status="failure", error=str(exc))
             raise exc
@@ -1195,7 +1195,7 @@ class Graph:
     def __repr__(self):
         vertex_ids = [vertex.id for vertex in self.vertices]
         edges_repr = "\n".join([f"{edge.source_id} --> {edge.target_id}" for edge in self.edges])
-        return f"Graph:\nNodes: {vertex_ids}\nConnections:\n{edges_repr}"
+        return f"Graph: \nNodes: {vertex_ids}\nConnections: \n{edges_repr}"
 
     def layered_topological_sort(
         self,

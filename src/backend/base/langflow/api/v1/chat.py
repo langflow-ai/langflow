@@ -292,7 +292,7 @@ async def build_vertex(
                 componentErrorMessage=str(exc),
             ),
         )
-        logger.error(f"Error building Component:\n\n{exc}")
+        logger.error(f"Error building Component: \n\n{exc}")
         logger.exception(exc)
         message = parse_exception(exc)
         raise HTTPException(status_code=500, detail=message) from exc
