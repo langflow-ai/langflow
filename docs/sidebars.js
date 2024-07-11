@@ -110,6 +110,7 @@ module.exports = {
       label: "Tutorials",
       collapsed: true,
       items: [
+        "tutorials/basic_prompting",
         "tutorials/chatprompttemplate_guide",
         "tutorials/custom_components",
         "tutorials/loading_document",

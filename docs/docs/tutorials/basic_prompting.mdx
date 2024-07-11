@@ -1,0 +1,134 @@
+import ThemedImage from "@theme/ThemedImage";
+import useBaseUrl from "@docusaurus/useBaseUrl";
+import ZoomableImage from "/src/theme/ZoomableImage.js";
+import ReactPlayer from "react-player";
+import Admonition from "@theme/Admonition";
+
+# Build Basic Chatbot 
+
+<Admonition type="warning" title="warning">
+This page may contain outdated information. It will be updated as soon as possible.
+</Admonition>
+
+## Overview
+
+In this guide, we will use the "Basic Prompt" example, integrating the ChatInput, ChatOutput,  Prompt and OpenAI components. By following these steps, you'll be able to build a personalized chatbot that can interpret and respond based on user-defined prompts.
+## Interactive Guide
+
+<iframe
+  src="https://app.tango.us/app/embed/57095c0c-5732-4219-9e8c-0c25e9e008f1?iframe=true"
+  sandbox="allow-scripts allow-top-navigation-by-user-activation allow-popups allow-same-origin"
+  security="restricted"
+  title="Step-by-Step Instructions to Customize and Build a Chatbot with custom System Message"
+  width="100%"
+  height="800px"
+  referrerpolicy="strict-origin-when-cross-origin"
+  frameborder="0"
+  webkitallowfullscreen="webkitallowfullscreen"
+  mozallowfullscreen="mozallowfullscreen"
+  allowfullscreen="allowfullscreen"
+></iframe>
+
+## Step-by-Step Instructions
+
+## # [DataStax Langflow](https://astra.datastax.com/langflow/)
+
+### 1. Click on New Project
+![Step 1 screenshot](https://images.tango.us/workflows/57095c0c-5732-4219-9e8c-0c25e9e008f1/steps/d897f7fe-66b6-4dda-8faf-6eca9f7e6a3e/9c56fde4-872f-49b2-b279-aefff1461e83.png?crop=focalpoint&fit=crop&fp-x=0.8862&fp-y=0.2119&fp-z=2.7623&w=1200&border=2%2CF4F2F7&border-radius=8%2C8%2C8%2C8&border-radius-inner=8%2C8%2C8%2C8&blend-align=bottom&blend-mode=normal&blend-x=0&blend-w=1200&blend64=aHR0cHM6Ly9pbWFnZXMudGFuZ28udXMvc3RhdGljL21hZGUtd2l0aC10YW5nby13YXRlcm1hcmstdjIucG5n&mark-x=618&mark-y=334&m64=aHR0cHM6Ly9pbWFnZXMudGFuZ28udXMvc3RhdGljL2JsYW5rLnBuZz9tYXNrPWNvcm5lcnMmYm9yZGVyPTYlMkNGRjc0NDImdz00MDkmaD0xMzgmZml0PWNyb3AmY29ybmVyLXJhZGl1cz0xMA%3D%3D)
+
+
+### 2. Click on Basic Prompting (Hello, World)
+
+You can create a blank flow or either choose from the templates available.
+
+![Step 2 screenshot](https://images.tango.us/workflows/57095c0c-5732-4219-9e8c-0c25e9e008f1/steps/04683a2d-5e95-4828-b8b7-c9e04d9a73e4/1bdb5a6e-8771-454a-815d-e33b745e94f1.png?crop=focalpoint&fit=crop&fp-x=0.4970&fp-y=0.3424&fp-z=1.8004&w=1200&border=2%2CF4F2F7&border-radius=8%2C8%2C8%2C8&border-radius-inner=8%2C8%2C8%2C8&blend-align=bottom&blend-mode=normal&blend-x=0&blend-w=1200&blend64=aHR0cHM6Ly9pbWFnZXMudGFuZ28udXMvc3RhdGljL21hZGUtd2l0aC10YW5nby13YXRlcm1hcmstdjIucG5n&mark-x=324&mark-y=229&m64=aHR0cHM6Ly9pbWFnZXMudGFuZ28udXMvc3RhdGljL2JsYW5rLnBuZz9tYXNrPWNvcm5lcnMmYm9yZGVyPTYlMkNGRjc0NDImdz01NTImaD0zNDkmZml0PWNyb3AmY29ybmVyLXJhZGl1cz0xMA%3D%3D)
+
+
+### 3. Click on fit view
+
+This enables to fit the whole flow view on the screen.
+
+![Step 3 screenshot](https://images.tango.us/workflows/57095c0c-5732-4219-9e8c-0c25e9e008f1/steps/c88fac4f-9607-4ce2-aaab-70d1f471ecbb/5bde6140-12a0-4432-8189-e4209e2b8ccc.png?crop=focalpoint&fit=crop&fp-x=0.2259&fp-y=0.9283&fp-z=3.0345&w=1200&border=2%2CF4F2F7&border-radius=8%2C8%2C8%2C8&border-radius-inner=8%2C8%2C8%2C8&blend-align=bottom&blend-mode=normal&blend-x=0&blend-w=1200&blend64=aHR0cHM6Ly9pbWFnZXMudGFuZ28udXMvc3RhdGljL21hZGUtd2l0aC10YW5nby13YXRlcm1hcmstdjIucG5n&mark-x=546&mark-y=576&m64=aHR0cHM6Ly9pbWFnZXMudGFuZ28udXMvc3RhdGljL2JsYW5rLnBuZz9tYXNrPWNvcm5lcnMmYm9yZGVyPTYlMkNGRjc0NDImdz0xMDgmaD0xMTEmZml0PWNyb3AmY29ybmVyLXJhZGl1cz0xMA%3D%3D)
+
+
+### 4. This is the Chat Input Component
+![Step 4 screenshot](https://images.tango.us/workflows/57095c0c-5732-4219-9e8c-0c25e9e008f1/steps/6448f735-b4c1-464a-87d9-b71f46042fcb/6ac9a98f-cd38-46f2-adde-e178634274bb.png?crop=focalpoint&fit=crop&fp-x=0.3102&fp-y=0.5052&fp-z=1.9244&w=1200&border=2%2CF4F2F7&border-radius=8%2C8%2C8%2C8&border-radius-inner=8%2C8%2C8%2C8&blend-align=bottom&blend-mode=normal&blend-x=0&blend-w=1200&blend64=aHR0cHM6Ly9pbWFnZXMudGFuZ28udXMvc3RhdGljL21hZGUtd2l0aC10YW5nby13YXRlcm1hcmstdjIucG5n&mark-x=425&mark-y=233&m64=aHR0cHM6Ly9pbWFnZXMudGFuZ28udXMvc3RhdGljL2JsYW5rLnBuZz9tYXNrPWNvcm5lcnMmYm9yZGVyPTYlMkNGRjc0NDImdz0zNDkmaD0zNDEmZml0PWNyb3AmY29ybmVyLXJhZGl1cz0xMA%3D%3D)
+
+
+### 5. This is the Prompt Component.
+![Step 5 screenshot](https://images.tango.us/workflows/57095c0c-5732-4219-9e8c-0c25e9e008f1/steps/5302e03d-f898-4b2d-adfd-55d740387de3/84e44d44-0347-46cb-bb4f-9d6695ea9f17.png?crop=focalpoint&fit=crop&fp-x=0.5143&fp-y=0.5601&fp-z=1.9102&w=1200&border=2%2CF4F2F7&border-radius=8%2C8%2C8%2C8&border-radius-inner=8%2C8%2C8%2C8&blend-align=bottom&blend-mode=normal&blend-x=0&blend-w=1200&blend64=aHR0cHM6Ly9pbWFnZXMudGFuZ28udXMvc3RhdGljL21hZGUtd2l0aC10YW5nby13YXRlcm1hcmstdjIucG5n&mark-x=427&mark-y=231&m64=aHR0cHM6Ly9pbWFnZXMudGFuZ28udXMvc3RhdGljL2JsYW5rLnBuZz9tYXNrPWNvcm5lcnMmYm9yZGVyPTYlMkNGRjc0NDImdz0zNDcmaD0zNDUmZml0PWNyb3AmY29ybmVyLXJhZGl1cz0xMA%3D%3D)
+
+
+### 6. Click on Template Field
+
+This enables the user to view/edit the prompt.
+
+![Step 6 screenshot](https://images.tango.us/workflows/57095c0c-5732-4219-9e8c-0c25e9e008f1/steps/516381f0-80a3-49ed-a12c-91c310e49192/e4cbdeb2-56fc-4e83-892d-68c51eedb66d.png?crop=focalpoint&fit=crop&fp-x=0.5143&fp-y=0.5607&fp-z=2.2960&w=1200&border=2%2CF4F2F7&border-radius=8%2C8%2C8%2C8&border-radius-inner=8%2C8%2C8%2C8&blend-align=bottom&blend-mode=normal&blend-x=0&blend-w=1200&blend64=aHR0cHM6Ly9pbWFnZXMudGFuZ28udXMvc3RhdGljL21hZGUtd2l0aC10YW5nby13YXRlcm1hcmstdjIucG5n&mark-x=413&mark-y=375&m64=aHR0cHM6Ly9pbWFnZXMudGFuZ28udXMvc3RhdGljL2JsYW5rLnBuZz9tYXNrPWNvcm5lcnMmYm9yZGVyPTYlMkNGRjc0NDImdz0zNzMmaD01NyZmaXQ9Y3JvcCZjb3JuZXItcmFkaXVzPTEw)
+
+
+### 7. Enter/ edit prompt
+![Step 7 screenshot](https://images.tango.us/workflows/57095c0c-5732-4219-9e8c-0c25e9e008f1/steps/6000ac17-66f1-4323-931b-03b1f792c3a8/7a576473-1a6d-4124-a534-824f00b47f1e.png?crop=focalpoint&fit=crop&fp-x=0.4996&fp-y=0.5278&fp-z=1.1025&w=1200&border=2%2CF4F2F7&border-radius=8%2C8%2C8%2C8&border-radius-inner=8%2C8%2C8%2C8&blend-align=bottom&blend-mode=normal&blend-x=0&blend-w=1200&blend64=aHR0cHM6Ly9pbWFnZXMudGFuZ28udXMvc3RhdGljL21hZGUtd2l0aC10YW5nby13YXRlcm1hcmstdjIucG5n&mark-x=62&mark-y=88&m64=aHR0cHM6Ly9pbWFnZXMudGFuZ28udXMvc3RhdGljL2JsYW5rLnBuZz9tYXNrPWNvcm5lcnMmYm9yZGVyPTYlMkNGRjc0NDImdz0xMDc2Jmg9NjMxJmZpdD1jcm9wJmNvcm5lci1yYWRpdXM9MTA%3D)
+
+
+### 8. Click on Check & Save
+![Step 8 screenshot](https://images.tango.us/workflows/57095c0c-5732-4219-9e8c-0c25e9e008f1/steps/e710a20f-a741-4272-b087-c96dd5fe4a7b/ec1f17dd-d1cf-402c-814e-2050f6ff0655.png?crop=focalpoint&fit=crop&fp-x=0.8501&fp-y=0.9535&fp-z=4.0000&w=1200&border=2%2CF4F2F7&border-radius=8%2C8%2C8%2C8&border-radius-inner=8%2C8%2C8%2C8&blend-align=bottom&blend-mode=normal&blend-x=0&blend-w=1200&blend64=aHR0cHM6Ly9pbWFnZXMudGFuZ28udXMvc3RhdGljL21hZGUtd2l0aC10YW5nby13YXRlcm1hcmstdjIucG5n&mark-x=327&mark-y=557&m64=aHR0cHM6Ly9pbWFnZXMudGFuZ28udXMvc3RhdGljL2JsYW5rLnBuZz9tYXNrPWNvcm5lcnMmYm9yZGVyPTYlMkNGRjc0NDImdz01NDYmaD0yMDAmZml0PWNyb3AmY29ybmVyLXJhZGl1cz0xMA%3D%3D)
+
+
+ℹ️ Make sure you have your OPENAI API KEY ready when implementing the flow.
+
+
+### 9. Enter OPENAI API KEY
+![Step 9 screenshot](https://images.tango.us/workflows/57095c0c-5732-4219-9e8c-0c25e9e008f1/steps/9db8ca53-cc26-4c3f-b0f9-b48839eb6a29/032e26bb-382d-4fa4-a8e5-882cceac61af.png?crop=focalpoint&fit=crop&fp-x=0.7202&fp-y=0.5775&fp-z=2.8775&w=1200&border=2%2CF4F2F7&border-radius=8%2C8%2C8%2C8&border-radius-inner=8%2C8%2C8%2C8&blend-align=bottom&blend-mode=normal&blend-x=0&blend-w=1200&blend64=aHR0cHM6Ly9pbWFnZXMudGFuZ28udXMvc3RhdGljL21hZGUtd2l0aC10YW5nby13YXRlcm1hcmstdjIucG5n&mark-x=366&mark-y=367&m64=aHR0cHM6Ly9pbWFnZXMudGFuZ28udXMvc3RhdGljL2JsYW5rLnBuZz9tYXNrPWNvcm5lcnMmYm9yZGVyPTYlMkNGRjc0NDImdz00NjgmaD03MiZmaXQ9Y3JvcCZjb3JuZXItcmFkaXVzPTEw)
+
+
+### 10. This is the Chat Output Component
+![Step 10 screenshot](https://images.tango.us/workflows/57095c0c-5732-4219-9e8c-0c25e9e008f1/steps/59897ce5-22ba-4395-b4e1-a077fdcf6f6a/e8170a2c-1623-4407-b0c4-f7df976260e7.png?crop=focalpoint&fit=crop&fp-x=0.8923&fp-y=0.5898&fp-z=1.9158&w=1200&border=2%2CF4F2F7&border-radius=8%2C8%2C8%2C8&border-radius-inner=8%2C8%2C8%2C8&blend-align=bottom&blend-mode=normal&blend-x=0&blend-w=1200&blend64=aHR0cHM6Ly9pbWFnZXMudGFuZ28udXMvc3RhdGljL21hZGUtd2l0aC10YW5nby13YXRlcm1hcmstdjIucG5n&mark-x=779&mark-y=231&m64=aHR0cHM6Ly9pbWFnZXMudGFuZ28udXMvc3RhdGljL2JsYW5rLnBuZz9tYXNrPWNvcm5lcnMmYm9yZGVyPTYlMkNGRjc0NDImdz0zNDgmaD0zNDYmZml0PWNyb3AmY29ybmVyLXJhZGl1cz0xMA%3D%3D)
+
+
+### 11. Click on Build to validate status.
+
+This verifies the flow components and builds them. Once built successfully you can see green tick marks on each component.
+
+![Step 11 screenshot](https://images.tango.us/workflows/57095c0c-5732-4219-9e8c-0c25e9e008f1/steps/abfd32a0-d65c-4919-ba5e-c20fa44f0c3a/93bf84ca-c3be-4103-90c8-17c6f11c057c.png?crop=focalpoint&fit=crop&fp-x=0.9509&fp-y=0.5039&fp-z=3.0211&w=1200&border=2%2CF4F2F7&border-radius=8%2C8%2C8%2C8&border-radius-inner=8%2C8%2C8%2C8&blend-align=bottom&blend-mode=normal&blend-x=0&blend-w=1200&blend64=aHR0cHM6Ly9pbWFnZXMudGFuZ28udXMvc3RhdGljL21hZGUtd2l0aC10YW5nby13YXRlcm1hcmstdjIucG5n&mark-x=986&mark-y=366&m64=aHR0cHM6Ly9pbWFnZXMudGFuZ28udXMvc3RhdGljL2JsYW5rLnBuZz9tYXNrPWNvcm5lcnMmYm9yZGVyPTYlMkNGRjc0NDImdz03MiZoPTc2JmZpdD1jcm9wJmNvcm5lci1yYWRpdXM9MTA%3D)
+
+
+### 12. Click on Playground
+
+This enables you to try the chatbot.
+
+![Step 12 screenshot](https://images.tango.us/workflows/57095c0c-5732-4219-9e8c-0c25e9e008f1/steps/d5a2b7e7-76f6-4f93-8403-3e9c4829ae84/bdcd61c3-1add-4de0-9a0c-3c1dce05cf99.png?crop=focalpoint&fit=crop&fp-x=0.9240&fp-y=0.9496&fp-z=4.0000&w=1200&border=2%2CF4F2F7&border-radius=8%2C8%2C8%2C8&border-radius-inner=8%2C8%2C8%2C8&blend-align=bottom&blend-mode=normal&blend-x=0&blend-w=1200&blend64=aHR0cHM6Ly9pbWFnZXMudGFuZ28udXMvc3RhdGljL21hZGUtd2l0aC10YW5nby13YXRlcm1hcmstdjIucG5n&mark-x=524&mark-y=536&m64=aHR0cHM6Ly9pbWFnZXMudGFuZ28udXMvc3RhdGljL2JsYW5rLnBuZz9tYXNrPWNvcm5lcnMmYm9yZGVyPTYlMkNGRjc0NDImdz02MjEmaD0yMTcmZml0PWNyb3AmY29ybmVyLXJhZGl1cz0xMA%3D%3D)
+
+
+### 13. This is where you could see the Chat.
+
+Note the Chat shown here is the output when we try to build the components.
+
+![Step 13 screenshot](https://images.tango.us/workflows/57095c0c-5732-4219-9e8c-0c25e9e008f1/steps/e92f5587-fcea-4424-a1a0-36952736a3ce/f526ff42-8957-4938-be5d-9eb4cb08e09a.png?crop=focalpoint&fit=crop&fp-x=0.4996&fp-y=0.5297&fp-z=1.2403&w=1200&border=2%2CF4F2F7&border-radius=8%2C8%2C8%2C8&border-radius-inner=8%2C8%2C8%2C8&blend-align=bottom&blend-mode=normal&blend-x=0&blend-w=1200&blend64=aHR0cHM6Ly9pbWFnZXMudGFuZ28udXMvc3RhdGljL21hZGUtd2l0aC10YW5nby13YXRlcm1hcmstdjIucG5n&mark-x=145&mark-y=98&m64=aHR0cHM6Ly9pbWFnZXMudGFuZ28udXMvc3RhdGljL2JsYW5rLnBuZz9tYXNrPWNvcm5lcnMmYm9yZGVyPTYlMkNGRjc0NDImdz05MTAmaD02MTAmZml0PWNyb3AmY29ybmVyLXJhZGl1cz0xMA%3D%3D)
+
+
+### 14. Click on Erase
+
+This clears the chat.
+
+![Step 14 screenshot](https://images.tango.us/workflows/57095c0c-5732-4219-9e8c-0c25e9e008f1/steps/ee7871f7-9332-456a-90aa-dbc789e2802d/6eaa4206-3f8c-4cb7-9de7-5112cb7beed3.png?crop=focalpoint&fit=crop&fp-x=0.7837&fp-y=0.2584&fp-z=2.9746&w=1200&border=2%2CF4F2F7&border-radius=8%2C8%2C8%2C8&border-radius-inner=8%2C8%2C8%2C8&blend-align=bottom&blend-mode=normal&blend-x=0&blend-w=1200&blend64=aHR0cHM6Ly9pbWFnZXMudGFuZ28udXMvc3RhdGljL21hZGUtd2l0aC10YW5nby13YXRlcm1hcmstdjIucG5n&mark-x=557&mark-y=360&m64=aHR0cHM6Ly9pbWFnZXMudGFuZ28udXMvc3RhdGljL2JsYW5rLnBuZz9tYXNrPWNvcm5lcnMmYm9yZGVyPTYlMkNGRjc0NDImdz04NyZoPTg3JmZpdD1jcm9wJmNvcm5lci1yYWRpdXM9MTA%3D)
+
+
+### 15. Start the Chat
+![Step 15 screenshot](https://images.tango.us/workflows/57095c0c-5732-4219-9e8c-0c25e9e008f1/steps/70d5d69d-83a1-46c7-ab07-fb4283f2abee/df2d1e5f-e9c4-4fb8-9441-38583d5630db.png?crop=focalpoint&fit=crop&fp-x=0.4996&fp-y=0.5297&fp-z=1.2403&w=1200&border=2%2CF4F2F7&border-radius=8%2C8%2C8%2C8&border-radius-inner=8%2C8%2C8%2C8&blend-align=bottom&blend-mode=normal&blend-x=0&blend-w=1200&blend64=aHR0cHM6Ly9pbWFnZXMudGFuZ28udXMvc3RhdGljL21hZGUtd2l0aC10YW5nby13YXRlcm1hcmstdjIucG5n&mark-x=145&mark-y=98&m64=aHR0cHM6Ly9pbWFnZXMudGFuZ28udXMvc3RhdGljL2JsYW5rLnBuZz9tYXNrPWNvcm5lcnMmYm9yZGVyPTYlMkNGRjc0NDImdz05MTAmaD02MTAmZml0PWNyb3AmY29ybmVyLXJhZGl1cz0xMA%3D%3D)
+
+
+### 16. Type "Hi"
+![Step 16 screenshot](https://images.tango.us/workflows/57095c0c-5732-4219-9e8c-0c25e9e008f1/steps/2aeef0fa-5e20-463c-b03a-6cb247d5d39c/da2a4fd2-735f-443c-8731-acd9ed6097df.png?crop=focalpoint&fit=crop&fp-x=0.4996&fp-y=0.8630&fp-z=1.2846&w=1200&border=2%2CF4F2F7&border-radius=8%2C8%2C8%2C8&border-radius-inner=8%2C8%2C8%2C8&blend-align=bottom&blend-mode=normal&blend-x=0&blend-w=1200&blend64=aHR0cHM6Ly9pbWFnZXMudGFuZ28udXMvc3RhdGljL21hZGUtd2l0aC10YW5nby13YXRlcm1hcmstdjIucG5n&mark-x=171&mark-y=625&m64=aHR0cHM6Ly9pbWFnZXMudGFuZ28udXMvc3RhdGljL2JsYW5rLnBuZz9tYXNrPWNvcm5lcnMmYm9yZGVyPTYlMkNGRjc0NDImdz04NTcmaD04MCZmaXQ9Y3JvcCZjb3JuZXItcmFkaXVzPTEw)
+
+
+### 17. Click on SEND button…
+![Step 17 screenshot](https://images.tango.us/workflows/57095c0c-5732-4219-9e8c-0c25e9e008f1/steps/403e74bb-3842-4410-b183-3c23e59588d9/27d219c6-197a-4dd2-8cba-f2e0108b0fb3.png?crop=focalpoint&fit=crop&fp-x=0.7454&fp-y=0.8630&fp-z=3.6540&w=1200&border=2%2CF4F2F7&border-radius=8%2C8%2C8%2C8&border-radius-inner=8%2C8%2C8%2C8&blend-align=bottom&blend-mode=normal&blend-x=0&blend-w=1200&blend64=aHR0cHM6Ly9pbWFnZXMudGFuZ28udXMvc3RhdGljL21hZGUtd2l0aC10YW5nby13YXRlcm1hcmstdjIucG5n&mark-x=516&mark-y=320&m64=aHR0cHM6Ly9pbWFnZXMudGFuZ28udXMvc3RhdGljL2JsYW5rLnBuZz9tYXNrPWNvcm5lcnMmYm9yZGVyPTYlMkNGRjc0NDImdz0xNjgmaD0xNjgmZml0PWNyb3AmY29ybmVyLXJhZGl1cz0xMA%3D%3D)
+
+
+### 18. Now you can see your Chat, Continue
+![Step 18 screenshot](https://images.tango.us/workflows/57095c0c-5732-4219-9e8c-0c25e9e008f1/steps/982dea94-8a94-4246-bac7-d21619a89463/556df15f-4650-49a7-bb72-c69355dbc9a1.png?crop=focalpoint&fit=crop&fp-x=0.4996&fp-y=0.5297&fp-z=1.2403&w=1200&border=2%2CF4F2F7&border-radius=8%2C8%2C8%2C8&border-radius-inner=8%2C8%2C8%2C8&blend-align=bottom&blend-mode=normal&blend-x=0&blend-w=1200&blend64=aHR0cHM6Ly9pbWFnZXMudGFuZ28udXMvc3RhdGljL21hZGUtd2l0aC10YW5nby13YXRlcm1hcmstdjIucG5n&mark-x=145&mark-y=98&m64=aHR0cHM6Ly9pbWFnZXMudGFuZ28udXMvc3RhdGljL2JsYW5rLnBuZz9tYXNrPWNvcm5lcnMmYm9yZGVyPTYlMkNGRjc0NDImdz05MTAmaD02MTAmZml0PWNyb3AmY29ybmVyLXJhZGl1cz0xMA%3D%3D)
+
+
+ℹ️ Congratulations! You have successfully built your chatbot
+
+<br/>
