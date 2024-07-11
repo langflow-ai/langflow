@@ -1,5 +1,7 @@
 import asyncio
 import json
+from typing import List, Any
+
 from fastapi import APIRouter, Query, HTTPException, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 from http import HTTPStatus
@@ -9,26 +11,38 @@ log_router = APIRouter(tags=["Log"])
 
 
 async def event_generator(request: Request):
-    # latest_timestamp = time.time()
     global log_buffer
+    last_read_item = None
+    current_not_sent = 0
+    while not await request.is_disconnected():
+        to_write: List[Any] = []
+        with log_buffer.get_write_lock():
+            if last_read_item is None:
+                last_read_item = log_buffer.buffer[len(log_buffer.buffer) - 1]
+            else:
+                found_last = False
+                for item in log_buffer.buffer:
+                    if found_last:
+                        to_write.append(item)
+                        last_read_item = item
+                        continue
+                    if item is last_read_item:
+                        found_last = True
+                        continue
 
-    last_line = log_buffer.get_last_n(1)
-    latest_timestamp, _ = last_line.popitem()
-    while True:
-        if await request.is_disconnected():
-            break
-
-        new_logs = log_buffer.get_after_timestamp(timestamp=latest_timestamp, lines=100)
-        if new_logs:
-            temp_ts = 0.0
-            for ts, msg in new_logs.items():
-                if ts > latest_timestamp:
-                    yield f"{json.dumps({ts:msg})}\n"
-                temp_ts = ts
-            # for the next query iteration
-            latest_timestamp = temp_ts
+                # in case the last item is nomore in the buffer
+                if not found_last:
+                    for item in log_buffer.buffer:
+                        to_write.append(item)
+                        last_read_item = item
+        if to_write:
+            for ts, msg in to_write:
+                yield f"{json.dumps({ts:msg})}\n\n"
         else:
-            yield ": keepalive\n\n"
+            current_not_sent += 1
+            if current_not_sent == 5:
+                current_not_sent = 0
+                yield "keepalive\n\n"
 
         await asyncio.sleep(1)
 
@@ -54,9 +68,9 @@ async def stream_logs(
 
 @log_router.get("/logs")
 async def logs(
-    lines_before: int = Query(1, ge=1, description="The number of logs before the timestamp or the last log"),
-    lines_after: int = Query(0, ge=1, description="The number of logs after the timestamp"),
-    timestamp: float = Query(0, description="The timestamp to start streaming logs from"),
+    lines_before: int = Query(0, description="The number of logs before the timestamp or the last log"),
+    lines_after: int = Query(0, description="The number of logs after the timestamp"),
+    timestamp: int = Query(0, description="The timestamp to start getting logs from"),
 ):
     global log_buffer
     if log_buffer.enabled() is False:
@@ -64,23 +78,26 @@ async def logs(
             status_code=HTTPStatus.NOT_IMPLEMENTED,
             detail="Log retrieval is disabled",
         )
-
-    logs = dict()
-    if lines_after > 0 and timestamp == 0:
+    if lines_after > 0 and lines_before > 0:
         raise HTTPException(
             status_code=HTTPStatus.BAD_REQUEST,
-            detail="Timestamp is required when requesting logs after the timestamp",
+            detail="Cannot request logs before and after the timestamp",
         )
-
-    if lines_after > 0 and timestamp > 0:
-        logs = log_buffer.get_after_timestamp(timestamp=timestamp, lines=lines_after)
-        return JSONResponse(content=logs)
-
-    if timestamp == 0:
-        if lines_before > 0:
-            logs = log_buffer.get_last_n(lines_before)
+    if timestamp <= 0:
+        if lines_after > 0:
+            raise HTTPException(
+                status_code=HTTPStatus.BAD_REQUEST,
+                detail="Timestamp is required when requesting logs after the timestamp",
+            )
+        if lines_before <= 0:
+            content = log_buffer.get_last_n(10)
+        else:
+            content = log_buffer.get_last_n(lines_before)
     else:
         if lines_before > 0:
-            logs = log_buffer.get_before_timestamp(timestamp=timestamp, lines=lines_before)
-
-    return JSONResponse(content=logs)
+            content = log_buffer.get_before_timestamp(timestamp=timestamp, lines=lines_before)
+        elif lines_after > 0:
+            content = log_buffer.get_after_timestamp(timestamp=timestamp, lines=lines_after)
+        else:
+            content = log_buffer.get_before_timestamp(timestamp=timestamp, lines=10)
+    return JSONResponse(content=content)
