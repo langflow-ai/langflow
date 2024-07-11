@@ -11,6 +11,7 @@ class HierarchicalCrewComponent(BaseCrewComponent):
     )
 
     inputs = BaseCrewComponent._base_inputs + [
+        HandleInput(name="agents", display_name="Agents", input_types=["Agent"], is_list=True),
         HandleInput(name="tasks", display_name="Tasks", input_types=["HierarchicalTask"], is_list=True),
         HandleInput(name="manager_llm", display_name="Manager LLM", input_types=["LanguageModel"], required=False),
         HandleInput(name="manager_agent", display_name="Manager Agent", input_types=["Agent"], required=False),
