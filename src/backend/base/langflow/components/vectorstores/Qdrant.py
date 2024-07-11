@@ -13,7 +13,7 @@ from langflow.io import (
     MultilineInput,
 )
 from langflow.schema import Data
-from langchain.embeddings.base import Embeddings  # Certifique-se de que esta importação está correta
+from langchain.embeddings.base import Embeddings
 
 
 class QdrantVectorStoreComponent(LCVectorStoreComponent):
@@ -91,7 +91,7 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
             raise ValueError("Invalid embedding object")
 
         if documents:
-            qdrant = Qdrant.from_documents(documents, embeddings=self.embedding, **qdrant_kwargs)
+            qdrant = Qdrant.from_documents(documents, embedding=self.embedding, **qdrant_kwargs)
         else:
             from qdrant_client import QdrantClient
 
