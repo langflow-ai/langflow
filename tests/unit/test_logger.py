@@ -23,11 +23,11 @@ def test_init_with_env_variable():
 
 
 def test_write(sized_log_buffer):
-    message = json.dumps({"text": "Test log", "record": {"time": {"timestamp": 1625097600}}})
+    message = json.dumps({"text": "Test log", "record": {"time": {"timestamp": 1625097600.1244334}}})
     sized_log_buffer.max = 1  # Set max size to 1 for testing
     sized_log_buffer.write(message)
     assert len(sized_log_buffer.buffer) == 1
-    assert 1625097600 == sized_log_buffer.buffer[0][0]
+    assert 1625097600124 == sized_log_buffer.buffer[0][0]
     assert "Test log" == sized_log_buffer.buffer[0][1]
 
 
@@ -38,8 +38,8 @@ def test_write_overflow(sized_log_buffer):
         sized_log_buffer.write(message)
 
     assert len(sized_log_buffer.buffer) == 2
-    assert 1625097601 == sized_log_buffer.buffer[0][0]
-    assert 1625097602 == sized_log_buffer.buffer[1][0]
+    assert 1625097601000 == sized_log_buffer.buffer[0][0]
+    assert 1625097602000 == sized_log_buffer.buffer[1][0]
 
 
 def test_len(sized_log_buffer):
@@ -57,10 +57,10 @@ def test_get_after_timestamp(sized_log_buffer):
     for message in messages:
         sized_log_buffer.write(message)
 
-    result = sized_log_buffer.get_after_timestamp(1625097602, lines=2)
+    result = sized_log_buffer.get_after_timestamp(1625097602000, lines=2)
     assert len(result) == 2
-    assert 1625097603 in result
-    assert 1625097602 in result
+    assert 1625097603000 in result
+    assert 1625097602000 in result
 
 
 def test_get_before_timestamp(sized_log_buffer):
@@ -69,10 +69,10 @@ def test_get_before_timestamp(sized_log_buffer):
     for message in messages:
         sized_log_buffer.write(message)
 
-    result = sized_log_buffer.get_before_timestamp(1625097603, lines=2)
+    result = sized_log_buffer.get_before_timestamp(1625097603000, lines=2)
     assert len(result) == 2
-    assert 1625097601 in result
-    assert 1625097602 in result
+    assert 1625097601000 in result
+    assert 1625097602000 in result
 
 
 def test_get_last_n(sized_log_buffer):
@@ -83,9 +83,9 @@ def test_get_last_n(sized_log_buffer):
 
     result = sized_log_buffer.get_last_n(3)
     assert len(result) == 3
-    assert 1625097602 in result
-    assert 1625097603 in result
-    assert 1625097604 in result
+    assert 1625097602000 in result
+    assert 1625097603000 in result
+    assert 1625097604000 in result
 
 
 def test_enabled(sized_log_buffer):

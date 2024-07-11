@@ -1,5 +1,7 @@
 import asyncio
 import json
+from typing import List, Any
+
 from fastapi import APIRouter, Query, HTTPException, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 from http import HTTPStatus
@@ -13,7 +15,7 @@ async def event_generator(request: Request):
     last_read_item = None
     current_not_sent = 0
     while not await request.is_disconnected():
-        to_write = []
+        to_write: List[Any] = []
         with log_buffer.get_write_lock():
             if last_read_item is None:
                 last_read_item = log_buffer.buffer[len(log_buffer.buffer) - 1]

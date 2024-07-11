@@ -31,7 +31,7 @@ class SizedLogBuffer:
         if env_buffer_size.isdigit():
             self.max = int(env_buffer_size)
 
-        self.buffer = deque()
+        self.buffer: deque = deque()
 
         self._max_readers = max_readers
         self._wlock = Lock()
