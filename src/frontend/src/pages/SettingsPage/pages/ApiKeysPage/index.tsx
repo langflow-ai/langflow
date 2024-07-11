@@ -1,3 +1,5 @@
+import { DEL_KEY_ERROR_ALERT, DEL_KEY_ERROR_ALERT_PLURAL, DEL_KEY_SUCCESS_ALERT, DEL_KEY_SUCCESS_ALERT_PLURAL } from "@/constants/alerts_constants";
+import { useDeleteApiKey } from "@/controllers/API/queries/api-keys";
 import { SelectionChangedEvent } from "ag-grid-community";
 import { useContext, useEffect, useRef, useState } from "react";
 import TableComponent from "../../../../components/tableComponent";
@@ -6,7 +8,6 @@ import useAlertStore from "../../../../stores/alertStore";
 import ApiKeyHeaderComponent from "./components/ApiKeyHeader";
 import { getColumnDefs } from "./helpers/column-defs";
 import useApiKeys from "./hooks/use-api-keys";
-import useDeleteApiKeys from "./hooks/use-handle-delete-key";
 
 export default function ApiKeysPage() {
   const [loadingKeys, setLoadingKeys] = useState(true);
@@ -32,12 +33,35 @@ export default function ApiKeysPage() {
     fetchApiKeys();
   }
 
-  const { handleDeleteKey } = useDeleteApiKeys(
-    selectedRows,
-    resetFilter,
-    setSuccessData,
-    setErrorData,
-  );
+  const { mutate } = useDeleteApiKey();
+
+  function handleDeleteApi() {
+    for(let i = 0; i < selectedRows.length; i++) {
+      mutate(
+        { keyId: selectedRows[i] },
+        {
+          onSuccess: () => {
+            resetFilter();
+            setSuccessData({
+              title:
+                selectedRows.length === 1
+                  ? DEL_KEY_SUCCESS_ALERT
+                  : DEL_KEY_SUCCESS_ALERT_PLURAL,
+            })
+          },
+          onError: (error) => {
+            setErrorData({
+              title:
+                selectedRows.length === 1
+                  ? DEL_KEY_ERROR_ALERT
+                  : DEL_KEY_ERROR_ALERT_PLURAL,
+              list: [error?.response?.data?.detail],
+            })
+          }
+        },
+      )
+    }
+  }
 
   const columnDefs = getColumnDefs();
 
@@ -52,7 +76,7 @@ export default function ApiKeysPage() {
       <div className="flex h-full w-full flex-col justify-between">
         <TableComponent
           key={"apiKeys"}
-          onDelete={handleDeleteKey}
+          onDelete={handleDeleteApi}
           overlayNoRowsTemplate="No data available"
           onSelectionChanged={(event: SelectionChangedEvent) => {
             setSelectedRows(event.api.getSelectedRows().map((row) => row.id));
