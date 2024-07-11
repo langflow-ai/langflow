@@ -1,18 +1,17 @@
-from crewai import Task
-
+from langflow.base.agents.crewai.tasks import HierarchicalTask
 from langflow.custom import Component
-from langflow.io import BoolInput, HandleInput, MessageTextInput, Output
+from langflow.io import HandleInput, MessageTextInput, Output
 
 
-class CrewAITask(Component):
-    display_name: str = "CrewAITask"
+class CrewAITaskHierarchical(Component):
+    display_name: str = "CrewAITask (Hierarchical)"
     description: str = "Each task must have a description, an expected output and an agent responsible for execution."
     documentation: str = "https://docs.crewai.com/how-to/LLM-Connections/"
     icon = "CrewAI"
 
     inputs = [
         MessageTextInput(
-            name="description",
+            name="task_description",
             display_name="Description",
             info="Descriptive text detailing task's purpose and execution.",
         ),
@@ -30,32 +29,17 @@ class CrewAITask(Component):
             required=False,
             advanced=True,
         ),
-        HandleInput(
-            name="agent",
-            display_name="Agent",
-            input_types=["Agent"],
-            info="Agent responsible for task execution. Represents entity performing task.",
-        ),
-        BoolInput(
-            name="async_execution",
-            display_name="Async Execution",
-            value=True,
-            advanced=True,
-            info="Boolean flag indicating asynchronous task execution.",
-        ),
     ]
 
     outputs = [
         Output(display_name="Task", name="task_output", method="build_task"),
     ]
 
-    def build_task(self) -> Task:
-        task = Task(
-            description=self.description,
+    def build_task(self) -> HierarchicalTask:
+        task = HierarchicalTask(
+            description=self.task_description,
             expected_output=self.expected_output,
             tools=self.tools or [],
-            async_execution=self.async_execution,
-            agent=self.agent,
         )
         self.status = task
         return task
