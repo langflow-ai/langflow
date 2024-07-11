@@ -304,6 +304,7 @@ class MultiselectInput(BaseInputMixin, ListableInputMixin, DropDownMixin, Metada
 
     field_type: Optional[SerializableFieldTypes] = FieldTypes.TEXT
     options: list[str] = Field(default_factory=list)
+    is_list: bool = Field(default=True, serialization_alias="list")
 
 
 class FileInput(BaseInputMixin, ListableInputMixin, FileMixin, MetadataTraceMixin):
