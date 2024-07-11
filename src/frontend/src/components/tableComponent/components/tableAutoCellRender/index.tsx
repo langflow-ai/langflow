@@ -8,7 +8,7 @@ import { Badge } from "../../../ui/badge";
 
 interface CustomCellRender extends CustomCellRendererProps{
   formatter?:"json"
-} 
+}
 
 export default function TableAutoCellRender({
   value,
