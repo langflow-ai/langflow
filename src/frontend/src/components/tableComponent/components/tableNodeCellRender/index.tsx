@@ -22,6 +22,7 @@ import KeypairListComponent from "../../../keypairListComponent";
 import PromptAreaComponent from "../../../promptComponent";
 import TextAreaComponent from "../../../textAreaComponent";
 import ToggleShadComponent from "../../../toggleShadComponent";
+import { renderStrType } from "./cellTypeStr";
 
 export default function TableNodeCellRender({
   node: { data },
@@ -75,52 +76,12 @@ export default function TableNodeCellRender({
   function getCellType() {
     switch (templateData.type) {
       case "str":
-        if (!templateData.options) {
-          return templateData?.list ? (
-            <InputListComponent
-              componentName={templateData.key ?? undefined}
-              editNode={true}
-              disabled={disabled}
-              value={
-                !templateValue || templateValue === "" ? [""] : templateValue
-              }
-              onChange={(value: string[]) => {
-                handleOnNewValue(value, templateData.key);
-              }}
-            />
-          ) : templateData.multiline ? (
-            <TextAreaComponent
-              id={"textarea-edit-" + templateData.name}
-              data-testid={"textarea-edit-" + templateData.name}
-              disabled={disabled}
-              editNode={true}
-              value={templateValue ?? ""}
-              onChange={(value: string | string[]) => {
-                handleOnNewValue(value, templateData.key);
-              }}
-            />
-          ) : (
-            <InputGlobalComponent
-              disabled={disabled}
-              editNode={true}
-              onChange={(value, dbValue, snapshot) =>
-                handleOnNewValue(value, templateData.key, dbValue)
-              }
-              name={templateData.key}
-              data={templateData}
-            />
-          );
-        } else {
-          return (
-            <Dropdown
-              editNode={true}
-              options={templateData.options}
-              onSelect={(value) => handleOnNewValue(value, templateData.key)}
-              value={templateValue ?? "Choose an option"}
-              id={"dropdown-edit-" + templateData.name}
-            />
-          );
-        }
+        return renderStrType({
+          templateData,
+          templateValue,
+          disabled,
+          handleOnNewValue,
+        });
 
       case "NestedDict":
         return (

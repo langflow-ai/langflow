@@ -171,7 +171,7 @@ def add_new_custom_field(
         field_config["load_from_db"] = True
         field_config["input_types"] = ["Text"]
 
-    # If options is a list, then it's a dropdown
+    # If options is a list, then it's a dropdown or multiselect
     # If options is None, then it's a list of strings
     is_list = isinstance(field_config.get("options"), list)
     field_config["is_list"] = is_list or field_config.get("list", False) or field_contains_list
