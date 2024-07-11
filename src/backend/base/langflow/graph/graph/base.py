@@ -209,7 +209,8 @@ class Graph:
                 for successor in successors:
                     if successor.params.get("stream") or successor.params.get("streaming"):
                         raise ValueError(
-                            f"Components {vertex.display_name} and {successor.display_name} are connected and both have stream or streaming set to True"
+                            f"Components {vertex.display_name} and {successor.display_name} "
+                            "are connected and both have stream or streaming set to True"
                         )
 
     @property
@@ -438,7 +439,7 @@ class Graph:
 
         Args:
             inputs (list[Dict[str, str]]): The input values for the graph.
-            inputs_components (Optional[list[list[str]]], optional): The components to run for the inputs. Defaults to None.
+            inputs_components (Optional[list[list[str]]], optional): Components to run for the inputs. Defaults to None.
             outputs (Optional[list[str]], optional): The outputs to retrieve from the graph. Defaults to None.
             session_id (Optional[str], optional): The session ID for the graph. Defaults to None.
             stream (bool, optional): Whether to stream the results or not. Defaults to False.
