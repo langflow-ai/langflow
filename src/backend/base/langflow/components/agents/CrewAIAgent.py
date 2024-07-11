@@ -1,10 +1,10 @@
-from crewai import Agent
+from crewai import Agent  # type: ignore
 
 from langflow.custom import Component
 from langflow.io import BoolInput, DictInput, HandleInput, MessageTextInput, Output
 
 
-class CrewAIAgent(Component):
+class CrewAIAgentComponent(Component):
     display_name = "CrewAIAgent"
     description = "Represents an agent of CrewAI."
     documentation: str = "https://docs.crewai.com/how-to/LLM-Connections/"
@@ -73,5 +73,5 @@ class CrewAIAgent(Component):
             allow_delegation=self.allow_delegation,
             **kwargs,
         )
-        self.status = agent
+        self.status = agent.model_dump()
         return agent
