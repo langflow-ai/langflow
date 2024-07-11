@@ -13,29 +13,15 @@ import { UseRequestProcessor } from "../../services/request-processor";
 interface BuildsQueryParams {
   flowId?: string;
   nodeId?: string;
-  nodes?: any;
-  edges?: any;
-  viewport?: any;
-}
-
-export interface BuildsQueryResponse {
-  files: string[];
 }
 
 export const useGetBuildsQuery: useQueryFunctionType<
   BuildsQueryParams,
   AxiosResponse<{ vertex_builds: FlowPoolType }>
-> = ({ nodes, edges, viewport, flowId, nodeId }) => {
+> = ({}) => {
   const { query } = UseRequestProcessor();
 
-  const setNodes = useFlowStore((state) => state.setNodes);
-  const setEdges = useFlowStore((state) => state.setEdges);
-  const setFlowState = useFlowStore((state) => state.setFlowState);
-  const setInputs = useFlowStore((state) => state.setInputs);
-  const setOutputs = useFlowStore((state) => state.setOutputs);
-  const setHasIO = useFlowStore((state) => state.setHasIO);
   const setFlowPool = useFlowStore((state) => state.setFlowPool);
-  const reactFlowInstance = useFlowStore((state) => state.reactFlowInstance);
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
 
   const getBuildsFn = async (
@@ -52,17 +38,6 @@ export const useGetBuildsQuery: useQueryFunctionType<
   };
 
   const responseFn = async () => {
-    let newEdges = cleanEdges(nodes, edges);
-    const { inputs, outputs } = getInputsAndOutputs(nodes);
-
-    setNodes(nodes);
-    setEdges(newEdges);
-    setFlowState(undefined);
-    setInputs(inputs);
-    setOutputs(outputs);
-    setHasIO(inputs.length > 0 || outputs.length > 0);
-    reactFlowInstance!.setViewport(viewport);
-
     const response = await getBuildsFn({
       flowId: currentFlow!.id,
     });
@@ -75,19 +50,9 @@ export const useGetBuildsQuery: useQueryFunctionType<
     return response;
   };
 
-  const queryResult = query(
-    [
-      "useGetBuildsQuery",
-      {
-        flowId,
-        nodeId,
-      },
-    ],
-    responseFn,
-    {
-      placeholderData: keepPreviousData,
-    },
-  );
+  const queryResult = query(["useGetBuildsQuery"], responseFn, {
+    placeholderData: keepPreviousData,
+  });
 
   return queryResult;
 };
