@@ -77,7 +77,6 @@ class SizedLogBuffer:
             i = 0
             max_index = -1
             for ts, msg in as_list:
-                print("comparing" + str(timestamp) + " to " + str(ts))
                 if ts >= timestamp:
                     max_index = i
                     break
@@ -85,7 +84,6 @@ class SizedLogBuffer:
             if max_index == -1:
                 return self.get_last_n(lines)
             rc = {}
-            print("found max index", max_index, "lines", lines)
             i = 0
             start_from = max(max_index - lines, 0)
             for ts, msg in as_list:
