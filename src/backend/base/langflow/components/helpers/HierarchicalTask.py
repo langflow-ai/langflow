@@ -3,12 +3,10 @@ from langflow.custom import Component
 from langflow.io import HandleInput, MessageTextInput, Output
 
 
-class CrewAITaskHierarchical(Component):
-    display_name: str = "CrewAITask (Hierarchical)"
+class HierarchicalTaskComponent(Component):
+    display_name: str = "Hierarchical Task"
     description: str = "Each task must have a description, an expected output and an agent responsible for execution."
-    documentation: str = "https://docs.crewai.com/how-to/LLM-Connections/"
     icon = "CrewAI"
-
     inputs = [
         MessageTextInput(
             name="task_description",
