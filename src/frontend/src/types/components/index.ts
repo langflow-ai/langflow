@@ -1,3 +1,4 @@
+import { ColDef } from "ag-grid-community";
 import { ReactElement, ReactNode, SetStateAction } from "react";
 import { ReactFlowJsonObject } from "reactflow";
 import { InputOutput } from "../../constants/enums";
@@ -10,7 +11,6 @@ import {
 import { ChatMessageType } from "../chat";
 import { FlowStyleType, FlowType, NodeDataType, NodeType } from "../flow/index";
 import { sourceHandleType, targetHandleType } from "./../flow/index";
-import { ColDef } from "ag-grid-community";
 export type InputComponentType = {
   name?: string;
   autoFocus?: boolean;
@@ -135,20 +135,17 @@ export type TextAreaComponentType = {
   readonly?: boolean;
 };
 
-interface BackendColumnType extends ColDef  {
-  format:string;
+interface BackendColumnType extends ColDef {
+  format: string;
 }
 
-
 export type TableComponentType = {
-  tableTitle:string;
-  onChange: (
-    value: any[],
-  ) => void;
+  tableTitle: string;
+  onChange: (value: any[]) => void;
   value: any[];
   editNode?: boolean;
   id?: string;
-  columns:BackendColumnType[];
+  columns: BackendColumnType[];
 };
 
 export type outputComponentType = {
