@@ -1,24 +1,30 @@
 from enum import Enum
 from typing import List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 
 class FormatterType(str, Enum):
     date = "date"
     text = "text"
     number = "number"
-    currency = "currency"
     json = "json"
 
 
 class Column(BaseModel):
-    header: str
-    field: str
+    display_name: str
+    name: str
     sortable: bool
     filterable: bool
-    width: int
-    formatter: Optional[FormatterType] = None
+    formatter: Optional[FormatterType | str] = None
+
+    @field_validator("formatter")
+    def validate_formatter(cls, value):
+        if isinstance(value, str):
+            return FormatterType(value)
+        if isinstance(value, FormatterType):
+            return value
+        raise ValueError("Invalid formatter type")
 
 
 class TableSchema(BaseModel):
