@@ -1,4 +1,4 @@
-import { ColDef, ColGroupDef } from "ag-grid-community";
+import { BaseCellDataType, ColDef, ColGroupDef } from "ag-grid-community";
 import clsx, { ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import TableAutoCellRender from "../components/tableComponent/components/tableAutoCellRender";
@@ -12,6 +12,7 @@ import {
 import { NodeType } from "../types/flow";
 import { FlowState } from "../types/tabs";
 import { isErrorLog } from "../types/utils/typeCheckingUtils";
+import { ColumnField } from "@/types/utils/functions";
 
 export function classNames(...classes: Array<string>): string {
   return classes.filter(Boolean).join(" ");
@@ -470,4 +471,33 @@ export function isEndpointNameValid(name: string, maxLength: number): boolean {
     // empty is also valid
     name.length === 0
   );
+}
+
+export function FormatColumns(columns:ColumnField[]):(ColDef<any>)[]{
+
+  const basic_types = new Set(["date","text","number"])
+
+
+  const colDefs = columns.map((col, index) => {
+    let newCol:ColDef = {
+      headerName: col.display_name,
+      field: col.name,
+      sortable: col.sortable,
+      filter: col.filterable,
+    };
+    if (col.formatter) {
+      if(basic_types.has(col.formatter)){
+        newCol.cellDataType = col.formatter;
+      }
+      else{
+        newCol.cellRendererParams = {
+          formatter: col.formatter,
+        }
+        newCol.cellRenderer = TableAutoCellRender;
+      }
+    }
+    return newCol;
+  });
+
+  return colDefs;
 }
