@@ -1,32 +1,46 @@
-# Assuming `BingSearchAPIWrapper` is a class that exists in the context
-# and has the appropriate methods and attributes.
-# We need to make sure this class is importable from the context where this code will be running.
-from langchain_community.utilities.bing_search import BingSearchAPIWrapper
+from typing import List
 
-from langflow.custom import CustomComponent
+from langchain_community.tools.bing_search import BingSearchResults
+from langchain_community.utilities import BingSearchAPIWrapper
+from langflow.custom import Component
+from langflow.inputs import MessageTextInput, SecretStrInput, IntInput, MultilineInput
+from langflow.schema import Data
+from langflow.template import Output
 
 
-class BingSearchAPIWrapperComponent(CustomComponent):
+class BingSearchAPIWrapperComponent(Component):
     display_name = "BingSearchAPIWrapper"
     description = "Wrapper for Bing Search API."
     name = "BingSearchAPIWrapper"
 
-    def build_config(self):
-        return {
-            "bing_search_url": {"display_name": "Bing Search URL"},
-            "bing_subscription_key": {
-                "display_name": "Bing Subscription Key",
-                "password": True,
-            },
-            "k": {"display_name": "Number of results", "advanced": True},
-            # 'k' is not included as it is not shown (show=False)
-        }
+    inputs = [
+        SecretStrInput(name="bing_subscription_key", display_name="Bing Subscription Key"),
+        MultilineInput(
+            name="input_value",
+            display_name="Input",
+        ),
+        MessageTextInput(name="bing_search_url", display_name="Bing Search URL", advanced=True),
+        IntInput(name="k", display_name="Number of results", value=4, required=True),
+    ]
 
-    def build(
-        self,
-        bing_search_url: str,
-        bing_subscription_key: str,
-        k: int = 10,
-    ) -> BingSearchAPIWrapper:
-        # 'k' has a default value and is not shown (show=False), so it is hardcoded here
-        return BingSearchAPIWrapper(bing_search_url=bing_search_url, bing_subscription_key=bing_subscription_key, k=k)
+    outputs = [
+        Output(name="api_run_model", display_name="Data", method="run_model"),
+        Output(name="api_build_tool", display_name="Tool", method="build_tool"),
+    ]
+
+    def run_model(self) -> List[Data]:
+        if self.bing_search_url:
+            wrapper = BingSearchAPIWrapper(bing_search_url=self.bing_search_url, bing_subscription_key=self.bing_subscription_key)
+        else:
+            wrapper = BingSearchAPIWrapper(bing_subscription_key=self.bing_subscription_key)
+        results = wrapper.results(query=self.input_value, num_results=self.k)
+        data = [Data(data=result, text=result["snippet"]) for result in results]
+        self.status = data
+        return data
+
+    def build_tool(self) -> BingSearchResults:
+        if self.bing_search_url:
+            wrapper = BingSearchAPIWrapper(bing_search_url=self.bing_search_url, bing_subscription_key=self.bing_subscription_key)
+        else:
+            wrapper = BingSearchAPIWrapper(bing_subscription_key=self.bing_subscription_key)
+        return BingSearchResults(api_wrapper=wrapper, num_results=self.k)
