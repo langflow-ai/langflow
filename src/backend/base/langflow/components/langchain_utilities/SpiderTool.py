@@ -1,4 +1,4 @@
-from spider.spider import Spider
+from spider.spider import Spider  # type: ignore
 
 from langflow.base.langchain_utilities.spider_constants import MODES
 from langflow.custom import Component
@@ -84,10 +84,10 @@ class SpiderTool(Component):
     ]
 
     outputs = [
-        Output(display_name="Markdown", name="content", method="build"),
+        Output(display_name="Markdown", name="content", method="crawl"),
     ]
 
-    def build(self) -> Data:
+    def crawl(self) -> list[Data]:
         if self.params:
             parameters = self.params.data
         else:
