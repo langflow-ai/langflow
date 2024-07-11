@@ -10,8 +10,8 @@ import {
 } from "../api";
 import { ChatMessageType } from "../chat";
 import { FlowStyleType, FlowType, NodeDataType, NodeType } from "../flow/index";
-import { sourceHandleType, targetHandleType } from "./../flow/index";
 import { ColumnField } from "../utils/functions";
+import { sourceHandleType, targetHandleType } from "./../flow/index";
 export type InputComponentType = {
   name?: string;
   autoFocus?: boolean;

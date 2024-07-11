@@ -6,18 +6,18 @@ import ObjectRender from "../../../objectRender";
 import StringReader from "../../../stringReaderComponent";
 import { Badge } from "../../../ui/badge";
 
-interface CustomCellRender extends CustomCellRendererProps{
-  formatter?:"json"
+interface CustomCellRender extends CustomCellRendererProps {
+  formatter?: "json";
 }
 
 export default function TableAutoCellRender({
   value,
   setValue,
   colDef,
-  formatter
+  formatter,
 }: CustomCellRender) {
   function getCellType() {
-    const format:string = formatter?formatter:typeof value
+    const format: string = formatter ? formatter : typeof value;
     switch (format) {
       case "object":
         if (value === null) {
