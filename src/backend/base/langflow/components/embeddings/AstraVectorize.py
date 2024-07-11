@@ -66,12 +66,13 @@ class AstraVectorizeComponent(Component):
         MessageTextInput(
             name="api_key_name",
             display_name="Provider API Key Name",
-            info="The name of the embeddings provider API key stored on Astra. If set, it will override the 'ProviderKey' in the authentication parameters.",
+            info="The name of the embeddings provider API key stored on Astra.",
         ),
         SecretStrInput(
             name="provider_api_key",
             display_name="Provider API Key",
             info="An alternative to the Astra Authentication that passes an API key for the provider with each request to Astra DB. This may be used when Vectorize is configured for the collection, but no corresponding provider secret is stored within Astra's key management system.",
+            advanced=True,
         ),
         DictInput(
             name="authentication",
