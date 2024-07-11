@@ -9,10 +9,12 @@ export default function TableOptions({
   deleteRow,
   hasSelection,
   stateChange,
+  addRow,
 }: {
   resetGrid: () => void;
   duplicateRow?: () => void;
   deleteRow?: () => void;
+  addRow?: ()=>void;
   hasSelection: boolean;
   stateChange: boolean;
 }): JSX.Element {
@@ -38,6 +40,20 @@ export default function TableOptions({
             </Button>
           </ShadTooltip>
         </div>
+        {addRow && (
+          <div>
+            <ShadTooltip
+              content={"Add a new row"}
+            >
+              <Button unstyled onClick={addRow}>
+                <IconComponent
+                  name="Plus"
+                  className={cn("h-5 w-5 text-primary transition-all")}
+                />
+              </Button>
+            </ShadTooltip>
+          </div>
+        )}
         {duplicateRow && (
           <div>
             <ShadTooltip

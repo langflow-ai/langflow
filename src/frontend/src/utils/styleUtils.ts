@@ -133,6 +133,7 @@ import {
   SquarePen,
   Store,
   SunIcon,
+  Table,
   TerminalIcon,
   TerminalSquare,
   TextCursorInput,
@@ -581,4 +582,5 @@ export const nodeIconsLucide: iconsType = {
   PGVector: CpuIcon,
   Confluence: ConfluenceIcon,
   FreezeAll: freezeAllIcon,
+  Table: Table,
 };

@@ -10,6 +10,7 @@ import {
 import { ChatMessageType } from "../chat";
 import { FlowStyleType, FlowType, NodeDataType, NodeType } from "../flow/index";
 import { sourceHandleType, targetHandleType } from "./../flow/index";
+import { ColDef } from "ag-grid-community";
 export type InputComponentType = {
   name?: string;
   autoFocus?: boolean;
@@ -132,6 +133,22 @@ export type TextAreaComponentType = {
   editNode?: boolean;
   id?: string;
   readonly?: boolean;
+};
+
+interface BackendColumnType extends ColDef  {
+  format:string;
+}
+
+
+export type TableComponentType = {
+  tableTitle:string;
+  onChange: (
+    value: any[],
+  ) => void;
+  value: any[];
+  editNode?: boolean;
+  id?: string;
+  columns:BackendColumnType[];
 };
 
 export type outputComponentType = {
