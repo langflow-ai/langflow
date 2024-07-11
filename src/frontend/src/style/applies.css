@@ -546,6 +546,13 @@
     @apply h-5 w-5 text-primary;
   }
 
+  .multiselect-component-outline {
+    @apply input-edit-node relative pr-8;
+  }
+  .multiselect-component-false-outline {
+    @apply primary-input py-2 pl-3 pr-10 text-left;
+  }
+
   .edit-flow-arrangement {
     @apply flex justify-between;
   }
