@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "langflow"
-version = "1.0.7"
+version = "1.0.8"
 description = "A Python package with a built-in web application"
 authors = ["Langflow <contact@langflow.org>"]
 maintainers = [
@@ -11,6 +11,7 @@ maintainers = [
     "Lucas Eduoli <lucaseduoli@gmail.com>",
     "Otávio Anovazzi <otavio2204@gmail.com>",
     "Rodrigo Nader <rodrigo@langflow.org>",
+    "Italo dos Anjos <italojohnnydosanjos@gmail.com>",
 ]
 repository = "https://github.com/langflow-ai/langflow"
 license = "MIT"
