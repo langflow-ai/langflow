@@ -5,7 +5,7 @@ from langflow.io import BoolInput, DictInput, HandleInput, MessageTextInput, Out
 
 
 class CrewAIAgentComponent(Component):
-    display_name = "CrewAIAgent"
+    display_name = "CrewAI Agent"
     description = "Represents an agent of CrewAI."
     documentation: str = "https://docs.crewai.com/how-to/LLM-Connections/"
     icon = "CrewAI"
