@@ -19,6 +19,7 @@ import resetGrid from "./utils/reset-grid-columns";
 interface TableComponentProps extends AgGridReactProps {
   columnDefs: NonNullable<AgGridReactProps["columnDefs"]>;
   rowData: NonNullable<AgGridReactProps["rowData"]>;
+  displayEmptyAlert?: boolean;
   alertTitle?: string;
   alertDescription?: string;
   editable?:
@@ -43,6 +44,7 @@ const TableComponent = forwardRef<
     {
       alertTitle = DEFAULT_TABLE_ALERT_TITLE,
       alertDescription = DEFAULT_TABLE_ALERT_MSG,
+      displayEmptyAlert = true,
       ...props
     },
     ref,
@@ -133,7 +135,7 @@ const TableComponent = forwardRef<
       params.api.setGridOption("columnDefs", updatedColumnDefs);
       if (props.onColumnMoved) props.onColumnMoved(params);
     };
-    if (props.rowData.length === 0) {
+    if (props.rowData.length === 0 && displayEmptyAlert) {
       return (
         <div className="flex h-full w-full items-center justify-center rounded-md border">
           <Alert variant={"default"} className="w-fit">
