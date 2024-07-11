@@ -155,7 +155,7 @@ class TracingService(Service):
                     trace_name=trace_name,
                     outputs=self.outputs[trace_name],
                     error=error,
-                    logs=self._logs[trace_name]
+                    logs=self._logs[trace_name],
                 )
             except Exception as e:
                 logger.error(f"Error ending trace {trace_name}: {e}")
