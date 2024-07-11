@@ -27,6 +27,11 @@ export default function TableNodeComponent({
                     </TableComponent>
                     <BaseModal.Footer submit={{label:"close"}}
                     ></BaseModal.Footer >
+                    <BaseModal.Trigger>
+                    <div className="flex justify-between align-middle items-start">
+                        <span>Edit Data</span>
+                    </div>
+                    </BaseModal.Trigger>
                 </BaseModal>
             </div>
         </div>
