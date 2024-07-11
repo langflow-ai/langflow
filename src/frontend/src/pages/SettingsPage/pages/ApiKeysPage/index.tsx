@@ -1,4 +1,9 @@
-import { DEL_KEY_ERROR_ALERT, DEL_KEY_ERROR_ALERT_PLURAL, DEL_KEY_SUCCESS_ALERT, DEL_KEY_SUCCESS_ALERT_PLURAL } from "@/constants/alerts_constants";
+import {
+  DEL_KEY_ERROR_ALERT,
+  DEL_KEY_ERROR_ALERT_PLURAL,
+  DEL_KEY_SUCCESS_ALERT,
+  DEL_KEY_SUCCESS_ALERT_PLURAL,
+} from "@/constants/alerts_constants";
 import { useDeleteApiKey } from "@/controllers/API/queries/api-keys";
 import { SelectionChangedEvent } from "ag-grid-community";
 import { useContext, useEffect, useRef, useState } from "react";
@@ -36,7 +41,7 @@ export default function ApiKeysPage() {
   const { mutate } = useDeleteApiKey();
 
   function handleDeleteApi() {
-    for(let i = 0; i < selectedRows.length; i++) {
+    for (let i = 0; i < selectedRows.length; i++) {
       mutate(
         { keyId: selectedRows[i] },
         {
@@ -47,7 +52,7 @@ export default function ApiKeysPage() {
                 selectedRows.length === 1
                   ? DEL_KEY_SUCCESS_ALERT
                   : DEL_KEY_SUCCESS_ALERT_PLURAL,
-            })
+            });
           },
           onError: (error) => {
             setErrorData({
@@ -56,10 +61,10 @@ export default function ApiKeysPage() {
                   ? DEL_KEY_ERROR_ALERT
                   : DEL_KEY_ERROR_ALERT_PLURAL,
               list: [error?.response?.data?.detail],
-            })
-          }
+            });
+          },
         },
-      )
+      );
     }
   }
 
