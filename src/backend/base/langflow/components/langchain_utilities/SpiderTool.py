@@ -1,16 +1,10 @@
-from typing import Optional
 from spider.spider import Spider
-from langflow.custom import Component
-from langflow.schema import Data
+
 from langflow.base.langchain_utilities.spider_constants import MODES
-from langflow.inputs import (
-    SecretStrInput,
-    StrInput,
-    DropdownInput,
-    IntInput,
-    BoolInput,
-    DictInput,
-)
+from langflow.custom import Component
+from langflow.io import BoolInput, DictInput, DropdownInput, IntInput, Output, SecretStrInput, StrInput
+from langflow.schema import Data
+
 
 
 class SpiderTool(Component):
@@ -90,43 +84,34 @@ class SpiderTool(Component):
         ),
     ]
 
-    def build(
-        self,
-        spider_api_key: str,
-        url: str,
-        mode: str,
-        limit: Optional[int] = 0,
-        depth: Optional[int] = 0,
-        blacklist: Optional[str] = None,
-        whitelist: Optional[str] = None,
-        use_readability: Optional[bool] = False,
-        request_timeout: Optional[int] = 30,
-        metadata: Optional[bool] = False,
-        params: Optional[Data] = None,
-    ) -> Data:
-        if params:
-            parameters = params.__dict__["data"]
+    outputs = [
+        Output(display_name="Markdown", name="content", method="build"),
+    ]
+
+    def build(self) -> Data:
+        if self.params:
+            parameters = self.params.data
         else:
             parameters = {
-                "limit": limit,
-                "depth": depth,
-                "blacklist": blacklist,
-                "whitelist": whitelist,
-                "use_readability": use_readability,
-                "request_timeout": request_timeout,
-                "metadata": metadata,
+                "limit": self.limit,
+                "depth": self.depth,
+                "blacklist": self.blacklist,
+                "whitelist": self.whitelist,
+                "use_readability": self.use_readability,
+                "request_timeout": self.request_timeout,
+                "metadata": self.metadata,
                 "return_format": "markdown",
             }
 
-        app = Spider(api_key=spider_api_key)
+        app = Spider(api_key=self.spider_api_key)
         try:
-            if mode == "scrape":
+            if self.mode == "scrape":
                 parameters["limit"] = 1
-                result = app.scrape_url(url, parameters)
-            elif mode == "crawl":
-                result = app.crawl_url(url, parameters)
+                result = app.scrape_url(self.url, parameters)
+            elif self.mode == "crawl":
+                result = app.crawl_url(self.url, parameters)
             else:
-                raise ValueError(f"Invalid mode: {mode}. Must be 'scrape' or 'crawl'.")
+                raise ValueError(f"Invalid mode: {self.mode}. Must be 'scrape' or 'crawl'.")
         except Exception as e:
             raise Exception(f"Error: {str(e)}")
 
