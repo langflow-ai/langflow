@@ -3,10 +3,9 @@ import logging
 import os
 import sys
 from pathlib import Path
-from collections import OrderedDict, deque
-from itertools import islice
+from collections import deque
 from threading import Lock, Semaphore
-from typing import Optional, List, Callable
+from typing import Optional
 
 import orjson
 from loguru import logger
@@ -39,6 +38,7 @@ class SizedLogBuffer:
 
     def get_write_lock(self) -> Lock:
         return self._wlock
+
     def write(self, message: str):
         record = json.loads(message)
         log_entry = record["text"]
