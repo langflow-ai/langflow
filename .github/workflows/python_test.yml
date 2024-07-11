@@ -2,7 +2,6 @@ name: Python tests
 
 on:
   workflow_call:
-
   workflow_dispatch:
     inputs:
       branch:
