@@ -28,7 +28,7 @@ export default function TableNodeComponent({
                         {tableTitle}
                     </BaseModal.Header>
                     <BaseModal.Content>
-                        <TableComponent displayEmptyAlert={false} className="h-full w-full" columnDefs={AgColumns} rowData={[]}></TableComponent>
+                        <TableComponent pagination={true} onAddRow={addRow} onDelete={deleteRow} onDuplicate={duplicateRow} displayEmptyAlert={false} className="h-full w-full" columnDefs={AgColumns} rowData={[]}></TableComponent>
                     </BaseModal.Content>
                     <BaseModal.Footer submit={{ label: "close" }}></BaseModal.Footer>
                     <BaseModal.Trigger>

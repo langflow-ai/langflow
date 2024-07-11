@@ -21,25 +21,6 @@ export default function TableOptions({
   return (
     <div className={cn("absolute bottom-3 left-6")}>
       <div className="flex items-center gap-3">
-        <div>
-          <ShadTooltip content="Reset Columns">
-            <Button
-              unstyled
-              onClick={() => {
-                resetGrid();
-              }}
-              disabled={!stateChange}
-            >
-              <IconComponent
-                name="RotateCcw"
-                strokeWidth={2}
-                className={cn(
-                  "h-5 w-5 text-primary transition-all hover:text-accent-foreground",
-                )}
-              />
-            </Button>
-          </ShadTooltip>
-        </div>
         {addRow && (
           <div>
             <ShadTooltip content={"Add a new row"}>
@@ -95,6 +76,25 @@ export default function TableOptions({
             </ShadTooltip>
           </div>
         )}{" "}
+        <div>
+          <ShadTooltip content="Reset Columns">
+            <Button
+              unstyled
+              onClick={() => {
+                resetGrid();
+              }}
+              disabled={!stateChange}
+            >
+              <IconComponent
+                name="RotateCcw"
+                strokeWidth={2}
+                className={cn(
+                  "h-5 w-5 text-primary transition-all hover:text-accent-foreground",
+                )}
+              />
+            </Button>
+          </ShadTooltip>
+        </div>
       </div>
     </div>
   );
