@@ -81,6 +81,8 @@ def validate_input_and_tweaks(input_request: SimplifiedAPIRequest):
     # then we need to check the tweaks if the ChatInput component is present
     # and if its input_value is not None
     # if so, we raise an error
+    if input_request.tweaks is None:
+        return
     for key, value in input_request.tweaks.items():
         if "ChatInput" in key or "Chat Input" in key:
             if isinstance(value, dict):
