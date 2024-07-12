@@ -367,7 +367,11 @@ def encrypt_api_key(api_key: str, settings_service=Depends(get_settings_service)
 
 def decrypt_api_key(encrypted_api_key: str, settings_service=Depends(get_settings_service)):
     fernet = get_fernet(settings_service)
+    decrypted_key = ""
     # Two-way decryption
     if isinstance(encrypted_api_key, str):
-        decrypted_key = fernet.decrypt(encrypted_api_key).decode()
+        try:
+            decrypted_key = fernet.decrypt(encrypted_api_key.encode()).decode()
+        except Exception:
+            decrypted_key = fernet.decrypt(encrypted_api_key).decode()
     return decrypted_key
