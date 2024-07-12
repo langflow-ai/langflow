@@ -43,7 +43,7 @@ export type shortcutsStoreType = {
   update: string;
   download: string;
   freeze: string;
-  freezeAll: string;
+  FreezePath: string;
   shortcuts: Array<{
     name: string;
     shortcut: string;

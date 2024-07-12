@@ -816,7 +816,7 @@ export const defaultShortcuts = [
     shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + F`,
   },
   {
-    name: "Freeze All",
+    name: "Freeze Path",
     shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + Shift + F`,
   },
   {

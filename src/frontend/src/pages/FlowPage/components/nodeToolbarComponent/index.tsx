@@ -1,4 +1,3 @@
-import { usePostRetrieveVertexOrder } from "@/controllers/API/queries/vertex";
 import _, { cloneDeep } from "lodash";
 import { useEffect, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
@@ -34,6 +33,7 @@ import {
 import { classNames, cn, isThereModal } from "../../../../utils/utils";
 import isWrappedWithClass from "../PageComponent/utils/is-wrapped-with-class";
 import ToolbarSelectItem from "./toolbarSelectItem";
+import { usePostRetrieveVertexOrder } from "@/controllers/API/queries/vertex";
 
 export default function NodeToolbarComponent({
   data,
@@ -183,7 +183,7 @@ export default function NodeToolbarComponent({
   const group = useShortcutsStore((state) => state.group);
   const download = useShortcutsStore((state) => state.download);
   const freeze = useShortcutsStore((state) => state.freeze);
-  const freezeAll = useShortcutsStore((state) => state.freezeAll);
+  const freezeAll = useShortcutsStore((state) => state.FreezePath);
 
   useHotkeys(minimize, handleMinimizeWShortcut, { preventDefault });
   useHotkeys(group, handleGroupWShortcut, { preventDefault });
@@ -513,7 +513,7 @@ export default function NodeToolbarComponent({
           <ShadTooltip
             content={displayShortcut(
               shortcuts.find(
-                ({ name }) => name.toLowerCase() === "freeze all",
+                ({ name }) => name.toLowerCase() === "freeze path",
               )!,
             )}
             side="top"
@@ -724,10 +724,10 @@ export default function NodeToolbarComponent({
               <SelectItem value="freezeAll">
                 <ToolbarSelectItem
                   shortcut={
-                    shortcuts.find((obj) => obj.name === "Freeze All")
+                    shortcuts.find((obj) => obj.name === "Freeze Path")
                       ?.shortcut!
                   }
-                  value={"freezeAll"}
+                  value={"Freeze Path"}
                   icon={"FreezeAll"}
                   dataTestId="group-button-modal"
                   style={`${frozen ? " text-ice" : ""} transition-all`}
