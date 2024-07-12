@@ -24,21 +24,20 @@ export default function ApiKeysPage() {
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const { userData } = useContext(AuthContext);
   const [userId, setUserId] = useState("");
-  const keysList = useRef<IApiKeysDataArray[]>([]);
+  const [keysList, setKeysList] = useState<IApiKeysDataArray[]>([]);
   const { refetch } = useGetApiKeysQuery();
 
   async function getApiKeysQuery() {
-    setLoadingKeys(true);
     const { data } = await refetch();
     if (data !== undefined) {
-      keysList.current = data["api_keys"].map((apikey) => ({
+      const updatedKeysList = data["api_keys"].map((apikey) => ({
         ...apikey,
         name: apikey.name && apikey.name !== "" ? apikey.name : "Untitled",
         last_used_at: apikey.last_used_at ?? "Never",
       }));
+      setKeysList(updatedKeysList);
       setUserId(data["user_id"]);
     }
-    setLoadingKeys(false);
   }
 
   useEffect(() => {
@@ -103,7 +102,7 @@ export default function ApiKeysPage() {
           suppressRowClickSelection={true}
           pagination={true}
           columnDefs={columnDefs}
-          rowData={keysList.current}
+          rowData={keysList}
         />
       </div>
     </div>
