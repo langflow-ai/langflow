@@ -606,6 +606,20 @@ def test_successful_run_with_input_type_chat(client, simple_api_test, created_ap
     ), chat_input_outputs
 
 
+def test_invalid_run_with_input_type_chat(client, simple_api_test, created_api_key):
+    headers = {"x-api-key": created_api_key.api_key}
+    flow_id = simple_api_test["id"]
+    payload = {
+        "input_type": "chat",
+        "output_type": "debug",
+        "input_value": "value1",
+        "tweaks": {"Chat Input": {"input_value": "value2"}},
+    }
+    response = client.post(f"/api/v1/run/{flow_id}", headers=headers, json=payload)
+    assert response.status_code == status.HTTP_400_BAD_REQUEST, response.text
+    assert "If you pass an input_value to the chat input, you cannot pass a tweak with the same name." in response.text
+
+
 def test_successful_run_with_input_type_any(client, simple_api_test, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = simple_api_test["id"]
