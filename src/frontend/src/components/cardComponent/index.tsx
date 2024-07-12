@@ -61,7 +61,6 @@ export default function CollectionCardComponent({
   const cleanFlowPool = useFlowStore((state) => state.CleanFlowPool);
   const isStore = false;
   const [loading, setLoading] = useState(false);
-  const [loadingLike, setLoadingLike] = useState(false);
   const [likedByUser, setLikedByUser] = useState(data?.liked_by_user ?? false);
   const [likesCount, setLikesCount] = useState(data?.liked_by_count ?? 0);
   const [downloadsCount, setDownloadsCount] = useState(
@@ -123,10 +122,9 @@ export default function CollectionCardComponent({
     setErrorData,
   );
 
-  const { mutate } = usePostLikeComponent();
+  const { mutate, isPending } = usePostLikeComponent();
 
   const handleLikeWMutate = () => {
-    setLoadingLike(true);
     if (likedByUser !== undefined || likedByUser !== null) {
       const temp = likedByUser;
       const tempNum = likesCount;
@@ -136,12 +134,10 @@ export default function CollectionCardComponent({
         { componentId: data.id },
         {
           onSuccess: (res) => {
-            setLoadingLike(false);
             setLikesCount(res.data.likes_count);
             setLikedByUser(res.data.liked_by_user);
           },
           onError: (error) => {
-            setLoadingLike(false);
             setLikesCount(tempNum);
             setLikedByUser(temp);
             if (error.response.status === 403) {
@@ -388,7 +384,7 @@ export default function CollectionCardComponent({
                       }
                     >
                       <Button
-                        disabled={loadingLike}
+                        disabled={isPending}
                         variant="ghost"
                         size="icon"
                         className={
