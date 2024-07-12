@@ -1,3 +1,4 @@
+import { useGetTagsQuery } from "@/controllers/API/queries/store";
 import { ReactNode, useEffect, useMemo, useState } from "react";
 import EditFlowSettings from "../../components/editFlowSettingsComponent";
 import IconComponent from "../../components/genericIconComponent";
@@ -55,13 +56,13 @@ export default function ShareModal({
   const nameComponent = is_component ? "component" : "workflow";
 
   const [tags, setTags] = useState<{ id: string; name: string }[]>([]);
-  const [loadingTags, setLoadingTags] = useState<boolean>(false);
   const [sharePublic, setSharePublic] = useState(true);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [unavaliableNames, setUnavaliableNames] = useState<
     { id: string; name: string }[]
   >([]);
   const saveFlow = useFlowsManagerStore((state) => state.saveFlow);
+  const { refetch, isFetching } = useGetTagsQuery();
 
   const [loadingNames, setLoadingNames] = useState(false);
 
@@ -77,12 +78,12 @@ export default function ShareModal({
     }
   }, [internalOpen, hasApiKey, hasStore]);
 
-  function handleGetTags() {
-    setLoadingTags(true);
-    getStoreTags().then((res) => {
-      setTags(res);
-      setLoadingTags(false);
-    });
+
+  async function handleGetTags() {
+    const { data } = await refetch();
+    if (data !== undefined) {
+      setTags(data);
+    }
   }
 
   async function handleGetNames() {
@@ -238,7 +239,7 @@ export default function ShareModal({
           <div className="mt-3 flex h-8 w-full">
             <TagsSelector
               tags={tags}
-              loadingTags={loadingTags}
+              loadingTags={isFetching}
               disabled={false}
               selectedTags={selectedTags}
               setSelectedTags={setSelectedTags}

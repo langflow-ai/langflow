@@ -34,6 +34,7 @@ import { useStoreStore } from "../../stores/storeStore";
 import { storeComponent } from "../../types/store";
 import { cn } from "../../utils/utils";
 import InputSearchComponent from "../MainPage/components/myCollectionComponent/components/inputSearchComponent";
+import { useGetTagsQuery } from "@/controllers/API/queries/store";
 
 export default function StorePage(): JSX.Element {
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
@@ -50,7 +51,6 @@ export default function StorePage(): JSX.Element {
   );
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const [loading, setLoading] = useState(true);
-  const [loadingTags, setLoadingTags] = useState(true);
   const { id } = useParams();
   const [filteredCategories, setFilterCategories] = useState<any[]>([]);
   const [inputText, setInputText] = useState<string>("");
@@ -63,6 +63,7 @@ export default function StorePage(): JSX.Element {
   const [tabActive, setTabActive] = useState("All");
   const [searchNow, setSearchNow] = useState("");
   const [selectFilter, setSelectFilter] = useState("all");
+  const { refetch, isFetching } = useGetTagsQuery();
 
   const navigate = useNavigate();
 
@@ -101,17 +102,14 @@ export default function StorePage(): JSX.Element {
     id,
   ]);
 
-  function handleGetTags() {
-    setLoadingTags(true);
-    getStoreTags()
-      .then((res) => {
-        setTags(res);
-        setLoadingTags(false);
-      })
-      .catch((err) => {
-        console.log(err);
-        setLoadingTags(false);
-      });
+  async function handleGetTags() {
+    const { data, isError, error } = await refetch();
+    if (data !== undefined) {
+      setTags(data);
+    }
+    if (isError) {
+      console.log(error);
+    }
   }
 
   function handleGetComponents() {
@@ -298,7 +296,7 @@ export default function StorePage(): JSX.Element {
             {id === undefined ? (
               <TagsSelector
                 tags={tags}
-                loadingTags={loadingTags}
+                loadingTags={isFetching}
                 disabled={loading}
                 selectedTags={filteredCategories}
                 setSelectedTags={setFilterCategories}
