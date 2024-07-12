@@ -6,6 +6,15 @@ slug: /components-data
 
 
 
+:::info
+
+This page may contain outdated information. It will be updated as soon as possible.
+
+:::
+
+
+
+
 ## API Request {#23da589293f74016a1f70d6d7c0fdc55}
 
 

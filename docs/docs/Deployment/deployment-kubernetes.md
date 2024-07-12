@@ -14,6 +14,9 @@ This guide will help you get LangFlow up and running in Kubernetes cluster, incl
 ## LangFlow (IDE) {#cb60b2f34e70490faf231cb0fe1a4b42}
 
 
+---
+
+
 This solution is designed to provide a complete environment for developers to create, test, and debug their flows. It includes both the API and the UI.
 
 
@@ -191,6 +194,9 @@ Visit the [LangFlow Helm Charts repository](https://github.com/langflow-ai/langf
 ## LangFlow (Runtime) {#49f2813ad2d3460081ad26a286a65e73}
 
 
+---
+
+
 The runtime chart is tailored for deploying applications in a production environment. It is focused on stability, performance, isolation, and security to ensure that applications run reliably and efficiently.
 
 
@@ -216,7 +222,6 @@ Follow the same steps as for the LangFlow IDE.
 	```shell
 	helm repo add langflow <https://langflow-ai.github.io/langflow-helm-charts>
 	helm repo update
-
 	```
 
 2. Install the LangFlow app with the default options in the `langflow` namespace.
@@ -225,20 +230,20 @@ If you want to download the flow from a remote location, you can specify the URL
 
 	```shell
 	helm install my-langflow-app langflow/langflow-runtime -n langflow --create-namespace --set image.repository=myuser/langflow-just-chat --set image.tag=1.0.0
-
+	
 	```
 
 
 	```shell
 	helm install my-langflow-app langflow/langflow-runtime -n langflow --create-namespace --set downloadFlows.flows[0].url=https://raw.githubusercontent.com/langflow-ai/langflow/dev/src/backend/base/langflow/initial_setup/starter_projects/Basic%20Prompting%20(Hello%2C%20world!).json
-
+	
 	```
 
 3. Check the status of the pods.
 
 	```text
 	kubectl get pods -n langflow
-
+	
 	```
 
 
@@ -250,7 +255,6 @@ Enable local port forwarding to access LangFlow from your local machine.
 
 ```text
 kubectl port-forward -n langflow svc/langflow-my-langflow-app 7860:7860
-
 ```
 
 
@@ -348,14 +352,20 @@ resources:
 ```
 
 
-### Other examples {#8522b4276b51448e9f8f0c6efc731a7c}
+## Other Examples {#8522b4276b51448e9f8f0c6efc731a7c}
 
 
-Visit the LangFlow Helm Charts repository for more examples and configurations.
+---
 
 
-Use the default values file as reference for all the options available.
+Visit the LangFlow Helm Charts repository for more examples and configurations. Use the default values file as reference for all the options available.
 
+
+:::note
 
 Visit the examples directory to learn more about different deployment options.
+
+:::
+
+
 
