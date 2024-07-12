@@ -7,7 +7,6 @@ import ShadTooltip from "../../components/shadTooltipComponent";
 import { SkeletonCardComponent } from "../../components/skeletonCardComponent";
 import { Button } from "../../components/ui/button";
 
-import { useGetTagsQuery } from "@/controllers/API/queries/store";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import PaginatorComponent from "../../components/paginatorComponent";
 import { TagsSelector } from "../../components/tagsSelectorComponent";
@@ -35,6 +34,7 @@ import { useStoreStore } from "../../stores/storeStore";
 import { storeComponent } from "../../types/store";
 import { cn } from "../../utils/utils";
 import InputSearchComponent from "../MainPage/components/myCollectionComponent/components/inputSearchComponent";
+import { useGetTagsQuery } from "@/controllers/API/queries/store";
 
 export default function StorePage(): JSX.Element {
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
@@ -59,11 +59,10 @@ export default function StorePage(): JSX.Element {
   const [pageSize, setPageSize] = useState(12);
   const [pageIndex, setPageIndex] = useState(1);
   const [pageOrder, setPageOrder] = useState("Popular");
-  const [tags, setTags] = useState<{ id: string; name: string }[]>([]);
   const [tabActive, setTabActive] = useState("All");
   const [searchNow, setSearchNow] = useState("");
   const [selectFilter, setSelectFilter] = useState("all");
-  const { refetch, isFetching } = useGetTagsQuery();
+  const { isFetching, data } = useGetTagsQuery();
 
   const navigate = useNavigate();
 
@@ -85,7 +84,6 @@ export default function StorePage(): JSX.Element {
   }, [loadingApiKey, validApiKey, hasApiKey, currentFlowId]);
 
   useEffect(() => {
-    handleGetTags();
     handleGetComponents();
   }, [
     tabActive,
@@ -101,16 +99,6 @@ export default function StorePage(): JSX.Element {
     loadingApiKey,
     id,
   ]);
-
-  async function handleGetTags() {
-    const { data, isError, error } = await refetch();
-    if (data !== undefined) {
-      setTags(data);
-    }
-    if (isError) {
-      console.log(error);
-    }
-  }
 
   function handleGetComponents() {
     if (loadingApiKey) return;
@@ -295,7 +283,7 @@ export default function StorePage(): JSX.Element {
             </Select>
             {id === undefined ? (
               <TagsSelector
-                tags={tags}
+                tags={data ?? []}
                 loadingTags={isFetching}
                 disabled={loading}
                 selectedTags={filteredCategories}

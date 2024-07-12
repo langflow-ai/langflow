@@ -1,4 +1,5 @@
 import { useGetTagsQuery } from "@/controllers/API/queries/store";
+import { cloneDeep } from "lodash";
 import { ReactNode, useEffect, useMemo, useState } from "react";
 import EditFlowSettings from "../../components/editFlowSettingsComponent";
 import IconComponent from "../../components/genericIconComponent";
@@ -54,15 +55,13 @@ export default function ShareModal({
       : useState(children ? false : true);
   const [openConfirmationModal, setOpenConfirmationModal] = useState(false);
   const nameComponent = is_component ? "component" : "workflow";
-
-  const [tags, setTags] = useState<{ id: string; name: string }[]>([]);
   const [sharePublic, setSharePublic] = useState(true);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [unavaliableNames, setUnavaliableNames] = useState<
     { id: string; name: string }[]
   >([]);
   const saveFlow = useFlowsManagerStore((state) => state.saveFlow);
-  const { refetch, isFetching } = useGetTagsQuery();
+  const { data, isFetching } = useGetTagsQuery();
 
   const [loadingNames, setLoadingNames] = useState(false);
 
@@ -72,18 +71,10 @@ export default function ShareModal({
   useEffect(() => {
     if (internalOpen) {
       if (hasApiKey && hasStore) {
-        handleGetTags();
         handleGetNames();
       }
     }
   }, [internalOpen, hasApiKey, hasStore]);
-
-  async function handleGetTags() {
-    const { data } = await refetch();
-    if (data !== undefined) {
-      setTags(data);
-    }
-  }
 
   async function handleGetNames() {
     setLoadingNames(true);
@@ -124,7 +115,7 @@ export default function ShareModal({
     }
 
     if (!update)
-      saveFlowStore(flow!, getTagsIds(selectedTags, tags), sharePublic).then(
+      saveFlowStore(flow!, getTagsIds(selectedTags, cloneDeep(data) ?? []), sharePublic).then(
         successShare,
         (err) => {
           setErrorData({
@@ -136,7 +127,7 @@ export default function ShareModal({
     else
       updateFlowStore(
         flow!,
-        getTagsIds(selectedTags, tags),
+        getTagsIds(selectedTags, cloneDeep(data) ?? []),
         sharePublic,
         unavaliableNames.find((e) => e.name === name)!.id,
       ).then(successShare, (err) => {
@@ -237,7 +228,7 @@ export default function ShareModal({
           </div>
           <div className="mt-3 flex h-8 w-full">
             <TagsSelector
-              tags={tags}
+              tags={data ?? []}
               loadingTags={isFetching}
               disabled={false}
               selectedTags={selectedTags}
