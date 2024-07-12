@@ -21,7 +21,7 @@ const usePreloadImages = (
   };
 
   useEffect(() => {
-    if (loading) return;
+    if (loading || !profilePictures) return;
     const imageArray: string[] = [];
 
     Object.keys(profilePictures).flatMap((folder) =>
