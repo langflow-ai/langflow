@@ -29,8 +29,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shardIndex: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
-        shardTotal: [14]
+        shardIndex: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+        shardTotal: [15]
     env:
       OPENAI_API_KEY: ${{ inputs.openai_api_key || secrets.OPENAI_API_KEY }}
       STORE_API_KEY: ${{ inputs.store_api_key || secrets.STORE_API_KEY }}
@@ -129,7 +129,7 @@ jobs:
   merge-reports:
     needs: setup-and-test
     runs-on: ubuntu-latest
-    if : ${{ needs.setup-and-test.outputs.failed == 'true' }}
+    if: ${{ needs.setup-and-test.outputs.failed == 'true' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -159,7 +159,7 @@ jobs:
   delete-reports:
     needs: setup-and-test
     runs-on: ubuntu-latest
-    if : ${{ needs.setup-and-test.outputs.failed != 'true' }}
+    if: ${{ needs.setup-and-test.outputs.failed != 'true' }}
     steps:
       - uses: geekyeggo/delete-artifact@v5
         with:

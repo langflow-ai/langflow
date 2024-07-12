@@ -198,7 +198,10 @@ export default function ComponentsComponent({
         onFileDrop={handleFileDrop}
         dragMessage={`Drag your ${name} here`}
       >
-        <div className="flex h-full w-full flex-col justify-between">
+        <div
+          className="flex h-full w-full flex-col justify-between"
+          data-testid="cards-wrapper"
+        >
           <div className="flex w-full flex-col gap-4">
             {!isLoading && !isLoadingFolders && data?.length === 0 ? (
               <EmptyComponent />
