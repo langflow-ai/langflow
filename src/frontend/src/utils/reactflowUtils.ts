@@ -368,7 +368,9 @@ export function updateEdges(edges: Edge[]) {
 }
 
 export function addVersionToDuplicates(flow: FlowType, flows: FlowType[]) {
-  const existingNames = flows.map((item) => item.name);
+  const flowsWithoutUpdatedFlow = flows.filter((f) => f.id !== flow.id);
+
+  const existingNames = flowsWithoutUpdatedFlow.map((item) => item.name);
   let newName = flow.name;
   let count = 1;
 

@@ -75,7 +75,12 @@ export const MenuBar = ({}: {}): JSX.Element => {
       <div className="header-menu-bar">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button asChild variant="primary" size="sm">
+            <Button
+              asChild
+              variant="primary"
+              size="sm"
+              data-testid="flow-configuration-button"
+            >
               <div className="header-menu-bar-display">
                 <div className="header-menu-flow-name" data-testid="flow_name">
                   {currentFlow.name}
