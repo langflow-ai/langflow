@@ -32,7 +32,7 @@ This article demonstrates how to use Langflow's prompt tools to issue basic prom
 ![](./487525520.png)
 
 
-This flow allows you to chat with the **OpenAI** component through the **Prompt** component.
+This flow allows you to chat with the **OpenAI** component through the **Prompt** component. 
 
 
 Examine the **Prompt** component. The **Template** field instructs the LLM to `Answer the user as if you were a pirate.` This should be interesting...

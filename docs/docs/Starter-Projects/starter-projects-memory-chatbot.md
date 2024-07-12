@@ -41,9 +41,9 @@ This gives the **OpenAI** component a memory of previous chat messages.
 1. Open the Playground.
 2. Type multiple questions. In the **Memories** tab, your queries are logged in order. Up to 100 queries are stored by default. Try telling the AI your name and asking `What is my name?` on a second message, or `What is the first subject I asked you about?` to validate that previous knowledge is taking effect.
 
->
-> 💡  Check and adjust advanced parameters by opening the Advanced Settings of the **Chat Memory** component.
->
+>   
+> 💡  Check and adjust advanced parameters by opening the Advanced Settings of the **Chat Memory** component.  
+> 
 
 
 ![](./1079168789.png)
@@ -61,9 +61,9 @@ In the **Memory Chatbot** flow you created, the **Chat Memory** component re
 2. Now, once you send a new message the **Playground**, you should have a new memory created on the **Memories** tab.
 3. Notice how your conversation is being stored in different memory sessions.
 
->
-> 💡  Every chat component in Langflow comes with a `SessionID`. It defaults to the flow ID. Explore how changing it affects what the AI remembers.
->
+>   
+> 💡  Every chat component in Langflow comes with a `SessionID`. It defaults to the flow ID. Explore how changing it affects what the AI remembers.  
+> 
 
 
 Learn more about memories in the [Chat Memory](/guides-chat-memory) section.

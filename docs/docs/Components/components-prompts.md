@@ -25,6 +25,6 @@ This component creates a prompt template with dynamic variables. This is useful 
 The `PromptTemplate` component enables users to create prompts and define variables that control how the model is instructed. Users can input a set of variables which the template uses to generate the prompt when a conversation starts.
 
 
-After defining a variable in the prompt template, it acts as its own component input.
+After defining a variable in the prompt template, it acts as its own component input. 
 
 - **template:** The template used to format an individual request.

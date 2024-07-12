@@ -39,7 +39,7 @@ The **Python Code** tab displays code to interact with your flow's `.json` f
 The **Tweaks** tab displays the available parameters for your flow. Modifying the parameters changes the code parameters across all windows. For example, changing the **Chat Input** component's `input_value` will change that value across all API calls.
 
 
-<ReactPlayer controls url="https://prod-files-secure.s3.us-west-2.amazonaws.com/09f11537-5a5b-4f56-9e8d-de8ebcfae549/d4b5f648-d99f-47cc-9ac6-986e1c32a71d/langflow_api.mp4?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=AKIAT73L2G45HZZMZUHI%2F20240712%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20240712T201829Z&X-Amz-Expires=3600&X-Amz-Signature=3c1a9966c3a83caf21469b4076a31105be15595992427999e290f4823262626e&X-Amz-SignedHeaders=host&x-id=GetObject" />
+<ReactPlayer controls url="https://prod-files-secure.s3.us-west-2.amazonaws.com/09f11537-5a5b-4f56-9e8d-de8ebcfae549/d4b5f648-d99f-47cc-9ac6-986e1c32a71d/langflow_api.mp4?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=AKIAT73L2G45HZZMZUHI%2F20240712%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20240712T214750Z&X-Amz-Expires=3600&X-Amz-Signature=3c3bb265b624da07f5d3185f294830d5c2eea55b3176f1bf8f95504cb0247903&X-Amz-SignedHeaders=host&x-id=GetObject" />
 
 
 ### Chat Widget HTML {#48f121a6cb3243979a341753da0c2700}
@@ -81,7 +81,7 @@ Clicking the Chat Widget HTML tab, you'll get the code to be inserted. Read belo
 The Chat Widget can be embedded into any HTML page, inside a `<body>` tag, as demonstrated in the video below.
 
 
-<ReactPlayer controls url="https://prod-files-secure.s3.us-west-2.amazonaws.com/09f11537-5a5b-4f56-9e8d-de8ebcfae549/01200476-f343-41e1-8be7-059250e0ce5e/langflow_widget.mp4?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=AKIAT73L2G45HZZMZUHI%2F20240712%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20240712T201829Z&X-Amz-Expires=3600&X-Amz-Signature=dfe3befd022a45d4c983e2e968d66fb501289008e77562d1d47e5832b16550c0&X-Amz-SignedHeaders=host&x-id=GetObject" />
+<ReactPlayer controls url="https://prod-files-secure.s3.us-west-2.amazonaws.com/09f11537-5a5b-4f56-9e8d-de8ebcfae549/01200476-f343-41e1-8be7-059250e0ce5e/langflow_widget.mp4?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=AKIAT73L2G45HZZMZUHI%2F20240712%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20240712T214750Z&X-Amz-Expires=3600&X-Amz-Signature=a7fe0c82b38995436f957a894b8df23c36ee32088358a5b1868e7343dd75848e&X-Amz-SignedHeaders=host&x-id=GetObject" />
 
 
 ### Embed your flow with React {#fe5d3b1c42e74e4c84ebc9d1799b7665}

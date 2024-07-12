@@ -41,12 +41,12 @@ We've chosen [Astra DB](https://astra.datastax.com/signup?utm_source=langflow-p
 The vector store RAG flow is built of two separate flows. Ingestion and query.
 
 
-The **ingestion** part (bottom of the screen) populates the vector store with data from a local file. It ingests data from a file (**File**), splits it into chunks (**Split Text**), indexes it in Astra DB (**Astra DB**), and computes embeddings for the chunks using an embedding model (**OpenAI Embeddings**).
+The **ingestion** part (bottom of the screen) populates the vector store with data from a local file. It ingests data from a file (**File**), splits it into chunks (**Split Text**), indexes it in Astra DB (**Astra DB**), and computes embeddings for the chunks using an embedding model (**OpenAI Embeddings**). 
 
 
->
-> 💡  Embeddings are numerical vectors that represent data meaningfully. They enable efficient similarity searches in vector stores by placing similar items close together in the vector space, enhancing search and recommendation tasks.
->
+>   
+> 💡  Embeddings are numerical vectors that represent data meaningfully. They enable efficient similarity searches in vector stores by placing similar items close together in the vector space, enhancing search and recommendation tasks.  
+> 
 
 
 This part creates a searchable index to be queried for contextual similarity.

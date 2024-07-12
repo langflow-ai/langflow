@@ -6,7 +6,7 @@ slug: /settings-project-general-settings
 
 
 
-> ⚠️ WARNING
+> ⚠️ WARNING  
 > This page may contain outdated information. It will be updated as soon as possible.
 
 

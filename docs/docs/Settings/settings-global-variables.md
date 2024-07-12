@@ -6,10 +6,10 @@ slug: /settings-global-variables
 
 import ReactPlayer from "react-player";
 
->
-> ⚠️ WARNING
-> This page may contain outdated information. It will be updated as soon as possible.
->
+>   
+> ⚠️ WARNING   
+> This page may contain outdated information. It will be updated as soon as possible.  
+> 
 
 
 Global Variables are a useful feature of Langflow, allowing you to define reusable variables accessed from any Text field in your project.
@@ -46,9 +46,9 @@ You now have a `openai_api_key` global environment variable for your Langflow pr
 Subsequently, clicking the 🌐 button in a Text field will display the new variable in the dropdown.
 
 
-> 💡 TIP
-> You can also create global variables in Settings &gt; Variables and Secrets.
->
+> 💡 TIP  
+> You can also create global variables in Settings &gt; Variables and Secrets.  
+> 
 
 
 ![](./418277339.png)
@@ -57,9 +57,9 @@ Subsequently, clicking the 🌐 button in a Text field will display the new vari
 To view and manage your project's global environment variables, visit **Settings** &gt; **Variables and Secrets**.
 
 
-> ⚠️ WARNING
-> All Credential Global Variables are encrypted and accessible only by you.
->
+> ⚠️ WARNING  
+> All Credential Global Variables are encrypted and accessible only by you.  
+> 
 
 
 ## Configure Environment Variables in your .env file {#76844a93dbbc4d1ba551ea1a4a89ccdd}
@@ -71,9 +71,9 @@ Setting `LANGFLOW_STORE_ENVIRONMENT_VARIABLES` to `true` in your `.env` file (de
 These variables are accessible like any other Global Variable.
 
 
-> 💡 TIP
-> To prevent this behavior, set `LANGFLOW_STORE_ENVIRONMENT_VARIABLES` to `false` in your `.env` file.
->
+> 💡 TIP  
+> To prevent this behavior, set `LANGFLOW_STORE_ENVIRONMENT_VARIABLES` to `false` in your `.env` file.  
+> 
 
 
 You can specify variables to get from the environment by listing them in `LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT`.
@@ -106,5 +106,5 @@ The default list of variables includes the ones below and more:
 - VECTARA_CORPUS_ID
 - VECTARA_API_KEY
 
-<ReactPlayer controls url="https://prod-files-secure.s3.us-west-2.amazonaws.com/09f11537-5a5b-4f56-9e8d-de8ebcfae549/7030d3ff-3ecd-44db-8640-9c2295b4e3bc/langflow_global_variables.mp4?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=AKIAT73L2G45HZZMZUHI%2F20240712%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20240712T201930Z&X-Amz-Expires=3600&X-Amz-Signature=5f73d1f28bf3681200b6871209bbb7d5ad8677f2a136b139c5ddc22667af6959&X-Amz-SignedHeaders=host&x-id=GetObject" />
+<ReactPlayer controls url="https://prod-files-secure.s3.us-west-2.amazonaws.com/09f11537-5a5b-4f56-9e8d-de8ebcfae549/7030d3ff-3ecd-44db-8640-9c2295b4e3bc/langflow_global_variables.mp4?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=AKIAT73L2G45HZZMZUHI%2F20240712%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20240712T214828Z&X-Amz-Expires=3600&X-Amz-Signature=3d50b75e182a14cfbd60d708088f5b24f3922dff74d4487a04e27ec149712197&X-Amz-SignedHeaders=host&x-id=GetObject" />
 
