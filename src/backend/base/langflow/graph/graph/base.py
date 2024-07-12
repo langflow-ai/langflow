@@ -1034,11 +1034,8 @@ class Graph:
             # This could usually happen with input vertices like ChatInput
             self.run_manager.remove_vertex_from_runnables(v.id)
 
-        set_cache_coro = partial(get_chat_service().set_cache, key=self.flow_id)
         for v in vertices:
-            next_runnable_vertices = await self.run_manager.get_next_runnable_vertices(
-                lock, set_cache_coro, graph=self, vertex=v, cache=False
-            )
+            next_runnable_vertices = await self.get_next_runnable_vertices(lock, vertex=v, cache=False)
             results.extend(next_runnable_vertices)
         return results
 
