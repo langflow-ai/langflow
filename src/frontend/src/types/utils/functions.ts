@@ -13,7 +13,6 @@ enum FormatterType {
   date = "date",
   text = "text",
   number = "number",
-  currency = "currency",
   json = "json",
 }
 

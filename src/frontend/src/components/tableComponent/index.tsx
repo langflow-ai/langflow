@@ -33,7 +33,7 @@ interface TableComponentProps extends AgGridReactProps {
   pagination?: boolean;
   onDelete?: () => void;
   onDuplicate?: () => void;
-  onAddRow?: () => void;
+  addRow?: () => void;
 }
 
 const TableComponent = forwardRef<
@@ -95,7 +95,7 @@ const TableComponent = forwardRef<
     });
     const gridRef = useRef(null);
     // @ts-ignore
-    const realRef: React.MutableRefObject<AgGridReact> = ref?.current
+    const realRef: React.MutableRefObject<AgGridReact> = ref?.current!==undefined
       ? ref
       : gridRef;
     const dark = useDarkStore((state) => state.dark);
@@ -183,7 +183,7 @@ const TableComponent = forwardRef<
             hasSelection={realRef.current?.api?.getSelectedRows().length > 0}
             duplicateRow={props.onDuplicate ? props.onDuplicate : undefined}
             deleteRow={props.onDelete ? props.onDelete : undefined}
-            addRow={props.onAddRow ? props.onAddRow : undefined}
+            addRow={props.addRow ? props.addRow : undefined}
             resetGrid={() => {
               resetGrid(realRef, initialColumnDefs);
               setTimeout(() => {
