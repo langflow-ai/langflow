@@ -115,15 +115,16 @@ export default function ShareModal({
     }
 
     if (!update)
-      saveFlowStore(flow!, getTagsIds(selectedTags, cloneDeep(data) ?? []), sharePublic).then(
-        successShare,
-        (err) => {
-          setErrorData({
-            title: "Error sharing " + (is_component ? "component" : "flow"),
-            list: [err["response"]["data"]["detail"]],
-          });
-        },
-      );
+      saveFlowStore(
+        flow!,
+        getTagsIds(selectedTags, cloneDeep(data) ?? []),
+        sharePublic,
+      ).then(successShare, (err) => {
+        setErrorData({
+          title: "Error sharing " + (is_component ? "component" : "flow"),
+          list: [err["response"]["data"]["detail"]],
+        });
+      });
     else
       updateFlowStore(
         flow!,
