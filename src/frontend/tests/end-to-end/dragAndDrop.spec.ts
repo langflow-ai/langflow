@@ -50,8 +50,8 @@ test.describe("drag and drop test", () => {
       },
     );
 
-    const genericNoda = page.getByTestId("div-generic-node");
-    const elementCount = await genericNoda?.count();
+    const genericNode = page.getByTestId("div-generic-node");
+    const elementCount = await genericNode?.count();
     if (elementCount > 0) {
       expect(true).toBeTruthy();
     }
