@@ -89,46 +89,6 @@ class RunnableVerticesManager:
         else:
             self.vertices_being_run.discard(vertex_id)
 
-    async def get_next_runnable_vertices(
-        self,
-        lock: asyncio.Lock,
-        set_cache_coro: Callable[["Graph", asyncio.Lock], Coroutine],
-        graph: "Graph",
-        vertex: "Vertex",
-        cache: bool = True,
-    ) -> List[str]:
-        """
-        Retrieves the next runnable vertices in the graph for a given vertex.
-
-        Args:
-            lock (asyncio.Lock): The lock object to be used for synchronization.
-            set_cache_coro (Callable): The coroutine function to set the cache.
-            graph (Graph): The graph object containing the vertices.
-            vertex (Vertex): The vertex object for which the next runnable vertices are to be retrieved.
-            cache (bool, optional): A flag to indicate if the cache should be updated. Defaults to True.
-
-        Returns:
-            list: A list of IDs of the next runnable vertices.
-
-        """
-        async with lock:
-            self.remove_vertex_from_runnables(vertex.id)
-            direct_successors_ready = [v for v in vertex.successors_ids if self.is_vertex_runnable(graph.get_vertex(v))]
-            if not direct_successors_ready:
-                # No direct successors ready, look for runnable predecessors of successors
-                next_runnable_vertices = self.find_runnable_predecessors_for_successors(vertex)
-            else:
-                next_runnable_vertices = direct_successors_ready
-
-            for v_id in set(next_runnable_vertices):  # Use set to avoid duplicates
-                if vertex.id == v_id:
-                    next_runnable_vertices.remove(v_id)
-                else:
-                    self.add_to_vertices_being_run(v_id)
-            if cache:
-                await set_cache_coro(data=graph, lock=lock)  # type: ignore
-        return next_runnable_vertices
-
     def remove_vertex_from_runnables(self, v_id):
         self.update_vertex_run_state(v_id, is_runnable=False)
         self.remove_from_predecessors(v_id)

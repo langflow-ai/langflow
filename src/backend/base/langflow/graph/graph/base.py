@@ -986,6 +986,29 @@ class Graph:
         logger.debug("Graph processing complete")
         return self
 
+    def find_next_runnable_vertices(self, vertex_id: str, vertex_successors_ids: List[str]) -> List[str]:
+        direct_successors_ready = [v_id for v_id in vertex_successors_ids if self.is_vertex_runnable(v_id)]
+        if not direct_successors_ready:
+            return self.find_runnable_predecessors_for_successors(vertex_id)
+        return direct_successors_ready
+
+    async def get_next_runnable_vertices(self, lock: asyncio.Lock, vertex: "Vertex", cache: bool = True) -> List[str]:
+        v_id = vertex.id
+        v_successors_ids = vertex.successors_ids
+        async with lock:
+            self.run_manager.remove_vertex_from_runnables(v_id)
+            next_runnable_vertices = self.find_next_runnable_vertices(v_id, v_successors_ids)
+
+            for i in set(next_runnable_vertices):  # Use set to avoid duplicates
+                if i == v_id:
+                    next_runnable_vertices.remove(v_id)
+                else:
+                    self.run_manager.add_to_vertices_being_run(v_id)
+            if cache:
+                set_cache_coro = partial(get_chat_service().set_cache, key=self.flow_id)
+                await set_cache_coro(self, lock)
+        return next_runnable_vertices
+
     async def _execute_tasks(self, tasks: List[asyncio.Task], lock: asyncio.Lock) -> List[str]:
         """Executes tasks in parallel, handling exceptions for each task."""
         results = []
