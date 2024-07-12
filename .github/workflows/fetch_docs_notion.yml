@@ -59,7 +59,7 @@ jobs:
         run: |
           git add .
           git commit -m "Update docs from Notion"
-          git push
+          git push --set-upstream origin update-docs-20240712225036
 
       - name: Create Pull Request
         id: create_pr
