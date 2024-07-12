@@ -94,8 +94,12 @@ langchain-aws = "^0.1.6"
 langchain-mongodb = "^0.1.6"
 kubernetes = "^30.1.0"
 firecrawl-py = "^0.0.16"
+
+json-repair = "^0.25.2"
+
 langchain-nvidia-ai-endpoints = "^0.1.2"
 langchain-google-calendar-tools = "^0.0.1"
+
 
 
 [tool.poetry.group.dev.dependencies]
