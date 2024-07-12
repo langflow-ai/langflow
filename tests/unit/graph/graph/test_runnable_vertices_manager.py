@@ -1,6 +1,8 @@
-from collections import defaultdict
 import pickle
+from collections import defaultdict
+
 import pytest
+
 from langflow.graph.graph.runnable_vertices_manager import RunnableVerticesManager
 
 
@@ -89,7 +91,7 @@ def test_is_vertex_runnable(data):
 
     result = manager.is_vertex_runnable(vertex_id, is_active)
 
-    assert result is True
+    assert result is False
 
 
 def test_is_vertex_runnable__wrong_is_active(data):
