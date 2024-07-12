@@ -26,7 +26,7 @@ As long as you have an [Input or Output](/components-io) component working, you 
 You can also open a flow's **Playground** without entering its workspace. From **My Collections** or **Langflow Store**, click the **Playground** in one of the projects card.
 
 
-<ReactPlayer controls url="https://prod-files-secure.s3.us-west-2.amazonaws.com/09f11537-5a5b-4f56-9e8d-de8ebcfae549/80ac6543-5548-4751-94fd-ddca60c23e62/langflow_playground.mp4?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=AKIAT73L2G45HZZMZUHI%2F20240712%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20240712T201824Z&X-Amz-Expires=3600&X-Amz-Signature=908c018ba70edb13139cb33810343de0f12fc8e222b9dd6f05ce1f320b549979&X-Amz-SignedHeaders=host&x-id=GetObject" />
+<ReactPlayer controls url="https://prod-files-secure.s3.us-west-2.amazonaws.com/09f11537-5a5b-4f56-9e8d-de8ebcfae549/80ac6543-5548-4751-94fd-ddca60c23e62/langflow_playground.mp4?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=AKIAT73L2G45HZZMZUHI%2F20240712%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20240712T215851Z&X-Amz-Expires=3600&X-Amz-Signature=47ab219c1220fd83e433fd9199f597045bf9b6829313a7686dea70bd7b35afb5&X-Amz-SignedHeaders=host&x-id=GetObject" />
 
 
 ## Memory Management {#821a5ee2a8a44d35b49943cba630511c}

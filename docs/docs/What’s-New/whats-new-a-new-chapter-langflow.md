@@ -6,7 +6,7 @@ slug: /whats-new-a-new-chapter-langflow
 
 
 
-![](./225113267.png)
+![](./1143907392.png)
 
 
 ## First things first {#5add758564574950862f689198a4e085}
@@ -44,9 +44,6 @@ Components can now have more than a single output, allowing for unique flexibili
 4. Enable the development of agent architectures from scratch;
 5. Build an orchestrator that routes between agents.
 
-![](./1285484510.webp)
-
-
 ### Flow + Composition {#12d86f91b5af4abc9f8e885c5f828df4}
 
 
@@ -64,9 +61,6 @@ This makes it so that composition is now just **another way** of building in L
 For example, a flow can sequentially process text, and after a few steps, trigger an agent. It can access functions that wait to be called or to respond. This blend of flow and composition brings an unprecedented level of flexibility and control to data workflows in LLM-based apps and agents that use multiple models and APIs working together to achieve tasks.
 
 
-![](./1019037178.webp)
-
-
 ### Memory Management {#a9e352272f4a44499f52fae65b663118}
 
 
@@ -74,9 +68,6 @@ Langflow 1.0 natively allows every chat message to be stored, and a single flow 
 
 
 You can edit and remove previous messages to inspect and validate a model’s response behavior. Control, explore, and manage conversation histories to get your models acting just right.
-
-
-![](./17412613.png)
 
 
 ### Component Freeze 🥶 {#4912d08da5464ff2aff595d6b26fd809}
@@ -91,16 +82,10 @@ Once a component runs, you can now lock its previous output state to prevent it 
 Avoid spending extra tokens and remove repetition when output should be constant — plus it's great for debugging and prototyping!
 
 
-![](./1528084074.jpg)
-
-
 ### Output Preview {#f56d4400b0214ef2ab1206add068dd99}
 
 
 Each component now includes an output visualizer that opens a pop-up screen, allowing you to easily inspect and monitor transmissions between components. It provides instant feedback on your workflows, letting you see results as they are processed. 🔍
-
-
-![](./196150825.gif)
 
 
 ### Inputs and Outputs Handling {#2112c11dc496480c9bd681f04f8533ea}
@@ -118,16 +103,10 @@ We’re proposing Langflow-native types to keep things consistent, but not limit
 Now you can pick a custom name for your endpoint used to call your flow from the API.
 
 
-![](./82097598.webp)
-
-
 ### Logs & Monitoring {#c902ee43b4b24711b526352ae2451c48}
 
 
 A new logs page has been added! Now, both component executions and message history from the chat can be inspected in an interactive table. This will make it easier to debug, inspect, and manage messages passing through components.
-
-
-![](./543968297.webp)
 
 
 ### Folders 📁 {#d01237fd83e4467994fed6fa7a8ee4f4}
@@ -152,9 +131,6 @@ For example, let's say you are building a simple RAG application. Generally, you
 
 
 Langflow is now multi-modal! It can now handle images and more soon!
-
-
-![](./2087505425.png)
 
 
 We’ve also improved project organization, global variables and overall settings, added Python 3.12 compatibility, keyboard shortcuts and a lot of new and fun experimental components!
