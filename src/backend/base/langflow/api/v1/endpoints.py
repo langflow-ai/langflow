@@ -23,6 +23,7 @@ from langflow.api.v1.schemas import (
 )
 from langflow.custom.custom_component.component import Component
 from langflow.custom.utils import build_custom_component_template, get_instance_name
+from langflow.exceptions.api import InvalidChatInputException
 from langflow.graph.graph.base import Graph
 from langflow.graph.schema import RunOutputs
 from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
@@ -75,12 +76,40 @@ async def get_all(
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
+def validate_input_and_tweaks(input_request: SimplifiedAPIRequest):
+    # If the input_value is not None and the input_type is "chat"
+    # then we need to check the tweaks if the ChatInput component is present
+    # and if its input_value is not None
+    # if so, we raise an error
+    if input_request.tweaks is None:
+        return
+    for key, value in input_request.tweaks.items():
+        if "ChatInput" in key or "Chat Input" in key:
+            if isinstance(value, dict):
+                has_input_value = value.get("input_value") is not None
+                input_value_is_chat = input_request.input_value is not None and input_request.input_type == "chat"
+                if has_input_value and input_value_is_chat:
+                    raise InvalidChatInputException(
+                        "If you pass an input_value to the chat input, you cannot pass a tweak with the same name."
+                    )
+        elif "Text Input" in key or "TextInput" in key:
+            if isinstance(value, dict):
+                has_input_value = value.get("input_value") is not None
+                input_value_is_text = input_request.input_value is not None and input_request.input_type == "text"
+                if has_input_value and input_value_is_text:
+                    raise InvalidChatInputException(
+                        "If you pass an input_value to the text input, you cannot pass a tweak with the same name."
+                    )
+
+
 async def simple_run_flow(
     flow: Flow,
     input_request: SimplifiedAPIRequest,
     stream: bool = False,
     api_key_user: Optional[User] = None,
 ):
+    if input_request.input_value is not None and input_request.tweaks is not None:
+        validate_input_and_tweaks(input_request)
     try:
         task_result: List[RunOutputs] = []
         user_id = api_key_user.id if api_key_user else None
@@ -232,6 +261,9 @@ async def simplified_run_flow(
         else:
             logger.exception(exc)
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+    except InvalidChatInputException as exc:
+        logger.error(exc)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     except Exception as exc:
         logger.exception(exc)
         background_tasks.add_task(
