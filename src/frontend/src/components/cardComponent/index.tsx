@@ -29,10 +29,10 @@ import { FormControl, FormField } from "../ui/form";
 import Loading from "../ui/loading";
 import useDataEffect from "./hooks/use-data-effect";
 import useInstallComponent from "./hooks/use-handle-install";
-import useLikeComponent from "./hooks/use-handle-like";
 import useDragStart from "./hooks/use-on-drag-start";
 import usePlaygroundEffect from "./hooks/use-playground-effect";
 import { convertTestName } from "./utils/convert-test-name";
+import { usePostLikeComponent } from "@/controllers/API/queries/store";
 
 export default function CollectionCardComponent({
   data,
@@ -123,17 +123,40 @@ export default function CollectionCardComponent({
     setErrorData,
   );
 
-  const { handleLike } = useLikeComponent(
-    data,
-    name,
-    setLoadingLike,
-    likedByUser,
-    likesCount,
-    setLikedByUser,
-    setLikesCount,
-    setValidApiKey,
-    setErrorData,
-  );
+  const { mutate } = usePostLikeComponent();
+
+  const handleLikeWMutate = () => {
+    setLoadingLike(true);
+    if (likedByUser !== undefined || likedByUser !== null) {
+      const temp = likedByUser;
+      const tempNum = likesCount;
+      setLikedByUser((prev) => !prev);
+      setLikesCount((prev) => (temp ? prev - 1 : prev + 1));
+      mutate(
+        { componentId: data.id },
+        {
+          onSuccess: (res) => {
+            setLoadingLike(false);
+            setLikesCount(res.data.likes_count);
+            setLikedByUser(res.data.liked_by_user);
+          },
+          onError: (error) => {
+            setLoadingLike(false);
+            setLikesCount(tempNum);
+            setLikedByUser(temp);
+            if (error.response.status === 403) {
+              return setValidApiKey(false);
+            }
+            console.error(error);
+            setErrorData({
+              title: `Error liking ${name}.`,
+              list: [error.response.data.detail],
+            });
+          }
+        },
+      )
+    }
+  };
 
   const isSelectedCard =
     selectedFlowsComponentsCards?.includes(data?.id) ?? false;
@@ -376,7 +399,7 @@ export default function CollectionCardComponent({
                           if (!authorized) {
                             return;
                           }
-                          handleLike();
+                          handleLikeWMutate();
                         }}
                         data-testid={`like-${data.name}`}
                       >
