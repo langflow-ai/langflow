@@ -427,9 +427,9 @@ def test_build_vertex_invalid_vertex_id(client, added_flow_with_prompt_and_histo
 
 
 @pytest.mark.api_key_required
-def test_successful_run_no_payload(client, starter_project, created_api_key):
+def test_successful_run_no_payload(client, simple_api_test, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
-    flow_id = starter_project["id"]
+    flow_id = simple_api_test["id"]
     response = client.post(f"/api/v1/run/{flow_id}", headers=headers)
     assert response.status_code == status.HTTP_200_OK, response.text
     # Add more assertions here to validate the response content
@@ -456,9 +456,9 @@ def test_successful_run_no_payload(client, starter_project, created_api_key):
 
 
 @pytest.mark.api_key_required
-def test_successful_run_with_output_type_text(client, starter_project, created_api_key):
+def test_successful_run_with_output_type_text(client, simple_api_test, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
-    flow_id = starter_project["id"]
+    flow_id = simple_api_test["id"]
     payload = {
         "output_type": "text",
     }
@@ -487,10 +487,10 @@ def test_successful_run_with_output_type_text(client, starter_project, created_a
 
 
 @pytest.mark.api_key_required
-def test_successful_run_with_output_type_any(client, starter_project, created_api_key):
+def test_successful_run_with_output_type_any(client, simple_api_test, created_api_key):
     # This one should have both the ChatOutput and TextOutput components
     headers = {"x-api-key": created_api_key.api_key}
-    flow_id = starter_project["id"]
+    flow_id = simple_api_test["id"]
     payload = {
         "output_type": "any",
     }
@@ -519,11 +519,11 @@ def test_successful_run_with_output_type_any(client, starter_project, created_ap
 
 
 @pytest.mark.api_key_required
-def test_successful_run_with_output_type_debug(client, starter_project, created_api_key):
+def test_successful_run_with_output_type_debug(client, simple_api_test, created_api_key):
     # This one should return outputs for all components
     # Let's just check the amount of outputs(there should be 7)
     headers = {"x-api-key": created_api_key.api_key}
-    flow_id = starter_project["id"]
+    flow_id = simple_api_test["id"]
     payload = {
         "output_type": "debug",
     }
@@ -546,9 +546,9 @@ def test_successful_run_with_output_type_debug(client, starter_project, created_
 
 @pytest.mark.api_key_required
 # To test input_type wel'l just set it with output_type debug and check if the value is correct
-def test_successful_run_with_input_type_text(client, starter_project, created_api_key):
+def test_successful_run_with_input_type_text(client, simple_api_test, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
-    flow_id = starter_project["id"]
+    flow_id = simple_api_test["id"]
     payload = {
         "input_type": "text",
         "output_type": "debug",
@@ -578,9 +578,9 @@ def test_successful_run_with_input_type_text(client, starter_project, created_ap
 
 # Now do the same for "chat" input type
 @pytest.mark.api_key_required
-def test_successful_run_with_input_type_chat(client, starter_project, created_api_key):
+def test_successful_run_with_input_type_chat(client, simple_api_test, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
-    flow_id = starter_project["id"]
+    flow_id = simple_api_test["id"]
     payload = {
         "input_type": "chat",
         "output_type": "debug",
@@ -611,9 +611,9 @@ def test_successful_run_with_input_type_chat(client, starter_project, created_ap
 
 
 @pytest.mark.api_key_required
-def test_successful_run_with_input_type_any(client, starter_project, created_api_key):
+def test_successful_run_with_input_type_any(client, simple_api_test, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
-    flow_id = starter_project["id"]
+    flow_id = simple_api_test["id"]
     payload = {
         "input_type": "any",
         "output_type": "debug",
