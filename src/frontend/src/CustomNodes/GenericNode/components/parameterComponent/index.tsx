@@ -528,7 +528,7 @@ export default function ParameterComponent({
         <Case condition={left === true && type === "table"}>
           <div className="mt-2 w-full">
             <TableNodeComponent
-              description={info||"add and edit your data"}
+              description={info || "add and edit your data"}
               columns={data.node?.template[name]?.table_schema?.columns}
               onChange={handleOnNewValue}
               tableTitle={data.node?.template[name]?.display_name ?? "Table"}
