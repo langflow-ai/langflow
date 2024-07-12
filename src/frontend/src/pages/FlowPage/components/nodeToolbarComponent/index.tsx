@@ -1,3 +1,4 @@
+import { usePostRetrieveVertexOrder } from "@/controllers/API/queries/vertex";
 import _, { cloneDeep } from "lodash";
 import { useEffect, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
@@ -33,7 +34,6 @@ import {
 import { classNames, cn, isThereModal } from "../../../../utils/utils";
 import isWrappedWithClass from "../PageComponent/utils/is-wrapped-with-class";
 import ToolbarSelectItem from "./toolbarSelectItem";
-import { usePostRetrieveVertexOrder } from "@/controllers/API/queries/vertex";
 
 export default function NodeToolbarComponent({
   data,
