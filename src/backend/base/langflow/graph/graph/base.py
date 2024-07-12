@@ -1440,6 +1440,26 @@ class Graph:
     def remove_vertex_from_runnables(self, vertex_id: str):
         self.run_manager.remove_vertex_from_runnables(vertex_id)
 
+    def get_top_level_vertices(self, vertices_ids):
+        """
+        Retrieves the top-level vertices from the given graph based on the provided vertex IDs.
+
+        Args:
+            vertices_ids (list): A list of vertex IDs.
+
+        Returns:
+            list: A list of top-level vertex IDs.
+
+        """
+        top_level_vertices = []
+        for vertex_id in vertices_ids:
+            vertex = self.get_vertex(vertex_id)
+            if vertex.parent_is_top_level:
+                top_level_vertices.append(vertex.parent_node_id)
+            else:
+                top_level_vertices.append(vertex_id)
+        return top_level_vertices
+
     def build_in_degree(self, edges: List[ContractEdge]) -> Dict[str, int]:
         in_degree: Dict[str, int] = defaultdict(int)
         for edge in edges:

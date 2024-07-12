@@ -158,25 +158,3 @@ class RunnableVerticesManager:
 
     def add_to_vertices_being_run(self, v_id):
         self.vertices_being_run.add(v_id)
-
-    @staticmethod
-    def get_top_level_vertices(graph, vertices_ids):
-        """
-        Retrieves the top-level vertices from the given graph based on the provided vertex IDs.
-
-        Args:
-            graph (Graph): The graph object containing the vertices.
-            vertices_ids (list): A list of vertex IDs.
-
-        Returns:
-            list: A list of top-level vertex IDs.
-
-        """
-        top_level_vertices = []
-        for vertex_id in vertices_ids:
-            vertex = graph.get_vertex(vertex_id)
-            if vertex.parent_is_top_level:
-                top_level_vertices.append(vertex.parent_node_id)
-            else:
-                top_level_vertices.append(vertex_id)
-        return top_level_vertices
