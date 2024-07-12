@@ -15,7 +15,6 @@ const useRowData = (
         return (
           key.charAt(0) !== "_" &&
           templateParam.show &&
-          LANGFLOW_SUPPORTED_TYPES.has(templateParam.type) &&
           !(
             (key === "code" && templateParam.type === "code") ||
             (key.includes("code") && templateParam.proxy)
