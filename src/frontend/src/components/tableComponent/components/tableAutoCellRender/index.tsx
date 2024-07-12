@@ -19,7 +19,7 @@ export default function TableAutoCellRender({
   function getCellType() {
     let format: string = formatter ? formatter : typeof value;
     //convert text to string to bind to the string reader
-    format=format==="text"?"string":format;
+    format = format === "text" ? "string" : format;
     switch (format) {
       case "object":
         if (value === null) {

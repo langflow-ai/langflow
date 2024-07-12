@@ -1,3 +1,4 @@
+import { ColDef } from "ag-grid-community";
 import "ag-grid-community/styles/ag-grid.css"; // Mandatory CSS required by the grid
 import "ag-grid-community/styles/ag-theme-quartz.css"; // Optional Theme applied to the grid
 import { AgGridReact, AgGridReactProps } from "ag-grid-react";
@@ -15,7 +16,6 @@ import ForwardedIconComponent from "../genericIconComponent";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import TableOptions from "./components/TableOptions";
 import resetGrid from "./utils/reset-grid-columns";
-import { ColDef } from "ag-grid-community";
 
 interface TableComponentProps extends AgGridReactProps {
   columnDefs: NonNullable<ColDef<any, any>[]>;
@@ -96,7 +96,8 @@ const TableComponent = forwardRef<
     });
     const gridRef = useRef(null);
     // @ts-ignore
-    const realRef: React.MutableRefObject<AgGridReact> = ref?.current !== undefined ? ref : gridRef;
+    const realRef: React.MutableRefObject<AgGridReact> =
+      ref?.current !== undefined ? ref : gridRef;
     const dark = useDarkStore((state) => state.dark);
     const initialColumnDefs = useRef(colDef);
     const [columnStateChange, setColumnStateChange] = useState(false);
