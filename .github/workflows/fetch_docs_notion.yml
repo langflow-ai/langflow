@@ -14,7 +14,7 @@ jobs:
     steps:
       - name: Get current date
         id: date
-        run: echo "::set-output name=date::$(date +'%Y%m%d%H%M%S')"
+        run: echo "DATE=date::$(date +'%Y%m%d%H%M%S')" >> "$GITHUB_OUTPUT
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -31,7 +31,7 @@ jobs:
 
       - name: Create new branch
         run: |
-          git checkout -b update-docs-${{ steps.date.outputs.date }}
+          git checkout -b update-docs-${{ steps.date.outputs.DATE }}
 
       - name: Cache Node.js dependencies
         uses: actions/cache@v4
@@ -73,7 +73,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           commit-message: Update docs from Notion
-          branch: update-docs-${{ steps.date.outputs.date }}
+          branch: update-docs-${{ steps.date.outputs.DATE }}
           base: main
           title: "docs: update docs from notion"
           body: This PR updates the documentation from Notion.
