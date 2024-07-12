@@ -20,7 +20,7 @@ jobs:
           cache-dependency-path: ./docs/package-lock.json
 
       - name: Install dependencies
-        run: cd docs && npm install
+        run: cd docs && npm install --legacy-peer-deps
       - name: Build website
         run: cd docs && npm run build
 
