@@ -541,7 +541,7 @@ def test_successful_run_with_output_type_debug(client, simple_api_test, created_
     assert "outputs" in outputs_dict
     assert outputs_dict.get("inputs") == {"input_value": ""}
     assert isinstance(outputs_dict.get("outputs"), list)
-    assert len(outputs_dict.get("outputs")) == 4
+    assert len(outputs_dict.get("outputs")) == 3
 
 
 @pytest.mark.api_key_required
@@ -568,12 +568,15 @@ def test_successful_run_with_input_type_text(client, simple_api_test, created_ap
     assert "outputs" in outputs_dict
     assert outputs_dict.get("inputs") == {"input_value": "value1"}
     assert isinstance(outputs_dict.get("outputs"), list)
-    assert len(outputs_dict.get("outputs")) == 4
+    assert len(outputs_dict.get("outputs")) == 3
     # Now we get all components that contain TextInput in the component_id
     text_input_outputs = [output for output in outputs_dict.get("outputs") if "TextInput" in output.get("component_id")]
-    assert len(text_input_outputs) == 0
+    assert len(text_input_outputs) == 1
     # Now we check if the input_value is correct
-    assert all([output.get("results") == "value1" for output in text_input_outputs]), text_input_outputs
+    # We get text key twice because the output is now a Message
+    assert all(
+        [output.get("results").get("text").get("text") == "value1" for output in text_input_outputs]
+    ), text_input_outputs
 
 
 # Now do the same for "chat" input type
@@ -600,7 +603,7 @@ def test_successful_run_with_input_type_chat(client, simple_api_test, created_ap
     assert "outputs" in outputs_dict
     assert outputs_dict.get("inputs") == {"input_value": "value1"}
     assert isinstance(outputs_dict.get("outputs"), list)
-    assert len(outputs_dict.get("outputs")) == 4
+    assert len(outputs_dict.get("outputs")) == 3
     # Now we get all components that contain TextInput in the component_id
     chat_input_outputs = [output for output in outputs_dict.get("outputs") if "ChatInput" in output.get("component_id")]
     assert len(chat_input_outputs) == 1
@@ -633,17 +636,21 @@ def test_successful_run_with_input_type_any(client, simple_api_test, created_api
     assert "outputs" in outputs_dict
     assert outputs_dict.get("inputs") == {"input_value": "value1"}
     assert isinstance(outputs_dict.get("outputs"), list)
-    assert len(outputs_dict.get("outputs")) == 4
+    assert len(outputs_dict.get("outputs")) == 3
     # Now we get all components that contain TextInput or ChatInput in the component_id
     any_input_outputs = [
         output
         for output in outputs_dict.get("outputs")
         if "TextInput" in output.get("component_id") or "ChatInput" in output.get("component_id")
     ]
-    assert len(any_input_outputs) == 1
+    assert len(any_input_outputs) == 2
     # Now we check if the input_value is correct
+    all_result_dicts = [output.get("results") for output in any_input_outputs]
+    all_message_or_text_dicts = [
+        result_dict.get("message", result_dict.get("text")) for result_dict in all_result_dicts
+    ]
     assert all(
-        [output.get("results").get("message").get("text") == "value1" for output in any_input_outputs]
+        [message_or_text_dict.get("text") == "value1" for message_or_text_dict in all_message_or_text_dicts]
     ), any_input_outputs
 
 
