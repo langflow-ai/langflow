@@ -109,7 +109,7 @@ interface MultiselectProps<T>
   asChild?: boolean;
   className?: string;
   editNode?: boolean;
-  value?: T[];
+  values?: T[];
 }
 
 export const Multiselect = forwardRef<
@@ -125,18 +125,23 @@ export const Multiselect = forwardRef<
       asChild = false,
       className,
       editNode = false,
-      value,
+      values,
       ...props
     },
     ref,
   ) => {
+    // if elements in values are strings, create the multiselectValue object
+    // otherwise, use the values as is
+    const value = values?.map((v) =>
+      typeof v === "string" ? { label: v, value: v } : v,
+    );
+
     const [selectedValues, setSelectedValues] = useState<MultiselectValue[]>(
       value || [],
     );
     const [isPopoverOpen, setIsPopoverOpen] = useState(false);
 
     const combinedRef = useMergeRefs<HTMLButtonElement>(ref);
-
     useEffect(() => {
       if (!!value && value?.length > 0 && !isEqual(selectedValues, value)) {
         setSelectedValues(value);
@@ -264,7 +269,7 @@ export const Multiselect = forwardRef<
             <CommandList>
               <CommandEmpty>No results found.</CommandEmpty>
               <CommandGroup>
-                {options?.map((option) => {
+                {value?.map((option) => {
                   const isSelected = !!selectedValues.find(
                     (sv) => sv.value === option.value,
                   );

@@ -103,6 +103,19 @@ class Message(Data):
         return AIMessage(content=text)  # type: ignore
 
     @classmethod
+    def from_lc_message(cls, lc_message: BaseMessage) -> "Message":
+        if lc_message.type == "human":
+            sender = "User"
+        elif lc_message.type == "ai":
+            sender = "Machine"
+        elif lc_message.type == "system":
+            sender = "System"
+        else:
+            sender = lc_message.type
+
+        return cls(text=lc_message.content, sender=sender, sender_name=sender)
+
+    @classmethod
     def from_data(cls, data: "Data") -> "Message":
         """
         Converts a BaseMessage to a Data.

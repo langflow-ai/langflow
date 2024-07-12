@@ -1,4 +1,5 @@
 import warnings
+from typing import List, Sequence
 from uuid import UUID
 
 from loguru import logger
@@ -9,6 +10,8 @@ from langflow.schema.message import Message
 from langflow.services.database.models.message.model import MessageRead, MessageTable
 from langflow.services.database.utils import migrate_messages_from_monitor_service_to_database
 from langflow.services.deps import session_scope
+from langflow.field_typing import BaseChatMessageHistory
+from langchain_core.messages import BaseMessage
 
 
 def get_messages(
@@ -19,7 +22,7 @@ def get_messages(
     order: str | None = "DESC",
     flow_id: UUID | None = None,
     limit: int | None = None,
-):
+) -> List[Message]:
     """
     Retrieves messages from the monitor service based on the provided filters.
 
@@ -136,3 +139,29 @@ def store_message(
         raise ValueError("All of session_id, sender, and sender_name must be provided.")
 
     return add_messages([message], flow_id=flow_id)
+
+
+class LCBuiltinChatMemory(BaseChatMessageHistory):
+    def __init__(
+        self,
+        flow_id: str,
+        session_id: str,
+    ) -> None:
+        self.flow_id = flow_id
+        self.session_id = session_id
+
+    @property
+    def messages(self) -> List[BaseMessage]:
+        messages = get_messages(
+            session_id=self.session_id,
+        )
+        return [m.to_lc_message() for m in messages]
+
+    def add_messages(self, messages: Sequence[BaseMessage]) -> None:
+        for lc_message in messages:
+            message = Message.from_lc_message(lc_message)
+            message.session_id = self.session_id
+            store_message(message, flow_id=self.flow_id)
+
+    def clear(self) -> None:
+        delete_messages(self.session_id)
