@@ -455,7 +455,6 @@ def test_successful_run_no_payload(client, simple_api_test, created_api_key):
     assert all([result is not None for result in inner_results]), (outputs_dict, output_results_has_results)
 
 
-@pytest.mark.api_key_required
 def test_successful_run_with_output_type_text(client, simple_api_test, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = simple_api_test["id"]
@@ -486,7 +485,6 @@ def test_successful_run_with_output_type_text(client, simple_api_test, created_a
     assert all([key in result for result in inner_results for key in expected_keys]), outputs_dict
 
 
-@pytest.mark.api_key_required
 def test_successful_run_with_output_type_any(client, simple_api_test, created_api_key):
     # This one should have both the ChatOutput and TextOutput components
     headers = {"x-api-key": created_api_key.api_key}
@@ -518,7 +516,6 @@ def test_successful_run_with_output_type_any(client, simple_api_test, created_ap
     assert all([key in result for result in inner_results for key in expected_keys]), outputs_dict
 
 
-@pytest.mark.api_key_required
 def test_successful_run_with_output_type_debug(client, simple_api_test, created_api_key):
     # This one should return outputs for all components
     # Let's just check the amount of outputs(there should be 7)
@@ -544,8 +541,6 @@ def test_successful_run_with_output_type_debug(client, simple_api_test, created_
     assert len(outputs_dict.get("outputs")) == 3
 
 
-@pytest.mark.api_key_required
-# To test input_type wel'l just set it with output_type debug and check if the value is correct
 def test_successful_run_with_input_type_text(client, simple_api_test, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = simple_api_test["id"]
@@ -579,8 +574,6 @@ def test_successful_run_with_input_type_text(client, simple_api_test, created_ap
     ), text_input_outputs
 
 
-# Now do the same for "chat" input type
-@pytest.mark.api_key_required
 def test_successful_run_with_input_type_chat(client, simple_api_test, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = simple_api_test["id"]
@@ -613,7 +606,6 @@ def test_successful_run_with_input_type_chat(client, simple_api_test, created_ap
     ), chat_input_outputs
 
 
-@pytest.mark.api_key_required
 def test_successful_run_with_input_type_any(client, simple_api_test, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = simple_api_test["id"]
