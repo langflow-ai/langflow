@@ -106,5 +106,5 @@ The default list of variables includes the ones below and more:
 - VECTARA_CORPUS_ID
 - VECTARA_API_KEY
 
-<ReactPlayer controls url="https://prod-files-secure.s3.us-west-2.amazonaws.com/09f11537-5a5b-4f56-9e8d-de8ebcfae549/7030d3ff-3ecd-44db-8640-9c2295b4e3bc/langflow_global_variables.mp4?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=AKIAT73L2G45HZZMZUHI%2F20240712%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20240712T201930Z&X-Amz-Expires=3600&X-Amz-Signature=5f73d1f28bf3681200b6871209bbb7d5ad8677f2a136b139c5ddc22667af6959&X-Amz-SignedHeaders=host&x-id=GetObject" />
+<ReactPlayer controls url="https://prod-files-secure.s3.us-west-2.amazonaws.com/09f11537-5a5b-4f56-9e8d-de8ebcfae549/7030d3ff-3ecd-44db-8640-9c2295b4e3bc/langflow_global_variables.mp4?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=AKIAT73L2G45HZZMZUHI%2F20240712%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20240712T220002Z&X-Amz-Expires=3600&X-Amz-Signature=bad6b33d89ef22b2d56becb6184c34cbc0ad51fc24d1a7d3b9f5d70d755506b1&X-Amz-SignedHeaders=host&x-id=GetObject" />
 
