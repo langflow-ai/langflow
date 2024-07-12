@@ -1,0 +1,2 @@
+class InvalidChatInputException(Exception):
+    pass
