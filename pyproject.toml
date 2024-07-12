@@ -99,6 +99,7 @@ json-repair = "^0.25.2"
 
 langchain-nvidia-ai-endpoints = "^0.1.2"
 langchain-google-calendar-tools = "^0.0.1"
+langchain-milvus = "^0.1.1"
 
 
 
