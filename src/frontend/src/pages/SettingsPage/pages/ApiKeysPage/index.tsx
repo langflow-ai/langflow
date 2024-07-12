@@ -4,7 +4,11 @@ import {
   DEL_KEY_SUCCESS_ALERT,
   DEL_KEY_SUCCESS_ALERT_PLURAL,
 } from "@/constants/alerts_constants";
-import { IApiKeys, useDeleteApiKey, useGetApiKeysQuery } from "@/controllers/API/queries/api-keys";
+import {
+  IApiKeys,
+  useDeleteApiKey,
+  useGetApiKeysQuery,
+} from "@/controllers/API/queries/api-keys";
 import { SelectionChangedEvent } from "ag-grid-community";
 import { useContext, useEffect, useRef, useState } from "react";
 import TableComponent from "../../../../components/tableComponent";
@@ -25,7 +29,7 @@ export default function ApiKeysPage() {
 
   async function getApiKeysQuery() {
     setLoadingKeys(true);
-    const { data } = await refetch()
+    const { data } = await refetch();
     if (data !== undefined) {
       keysList.current = data["api_keys"].map((apikey) => ({
         ...apikey,

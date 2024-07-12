@@ -5,20 +5,20 @@ import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
 
 export interface IApiKeys {
-    name: string;
-    last_used_at: string | null;
-    total_uses: number;
-    is_active: boolean;
-    id: string;
-    api_key: string;
-    user_id: string;
-    created_at: string;
+  name: string;
+  last_used_at: string | null;
+  total_uses: number;
+  is_active: boolean;
+  id: string;
+  api_key: string;
+  user_id: string;
+  created_at: string;
 }
 
 interface apiQueryResponse {
-    total_count: number;
-    user_id: string;
-    api_keys: Array<IApiKeys>;
+  total_count: number;
+  user_id: string;
+  api_keys: Array<IApiKeys>;
 }
 
 export const useGetApiKeysQuery: useQueryFunctionType<
