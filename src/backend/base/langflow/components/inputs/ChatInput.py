@@ -24,6 +24,7 @@ class ChatInput(ChatComponent):
             display_name="Store Messages",
             info="Store the message in the history.",
             value=True,
+            advanced=True,
         ),
         DropdownInput(
             name="sender",
