@@ -1,4 +1,5 @@
 import { ReactFlowJsonObject, XYPosition } from "reactflow";
+import { BuildStatus } from "../../constants/enums";
 import { APIClassType } from "../api/index";
 
 export type FlowType = {
@@ -6,13 +7,21 @@ export type FlowType = {
   id: string;
   data: ReactFlowJsonObject | null;
   description: string;
+  endpoint_name?: string | null;
   style?: FlowStyleType;
-  is_component: boolean;
-  parent?: string;
-  date_created?: string;
-  updated_at?: string;
+  is_component?: boolean;
   last_tested_version?: string;
+  updated_at?: string;
+  date_created?: string;
+  parent?: string;
+  folder?: string;
+  user_id?: string;
+  icon?: string;
+  icon_bg_color?: string;
+  folder_id?: string;
+  webhook?: boolean;
 };
+
 export type NodeType = {
   id: string;
   type?: string;
@@ -27,6 +36,8 @@ export type NodeDataType = {
   node?: APIClassType;
   id: string;
   output_types?: string[];
+  selected_output_type?: string;
+  buildStatus?: BuildStatus;
 };
 // FlowStyleType is the type of the style object that is used to style the
 // Flow card with an emoji and a color.
@@ -48,7 +59,9 @@ export type TweaksType = Array<
 export type sourceHandleType = {
   dataType: string;
   id: string;
-  baseClasses: string[];
+  output_types: string[];
+  conditionalPath?: string | null;
+  name: string;
 };
 //left side
 export type targetHandleType = {

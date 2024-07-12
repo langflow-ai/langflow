@@ -9,16 +9,17 @@ import { Input } from "../ui/input";
 export default function IntComponent({
   value,
   onChange,
+  rangeSpec,
   disabled,
   editNode = false,
   id = "",
 }: IntComponentType): JSX.Element {
-  const min = 0;
+  const min = -Infinity;
 
   // Clear component state
   useEffect(() => {
     if (disabled && value !== "") {
-      onChange("");
+      onChange("", undefined, true);
     }
   }, [disabled, onChange]);
 
@@ -31,8 +32,9 @@ export default function IntComponent({
           handleKeyDown(event, value, "");
         }}
         type="number"
-        step="1"
-        min={0}
+        step={rangeSpec?.step ?? 1}
+        min={rangeSpec?.min ?? min}
+        max={rangeSpec?.max ?? undefined}
         onInput={(event: React.ChangeEvent<HTMLInputElement>) => {
           if (Number(event.target.value) < min) {
             event.target.value = min.toString();
@@ -45,6 +47,7 @@ export default function IntComponent({
         onChange={(event) => {
           onChange(event.target.value);
         }}
+        data-testid={id}
       />
     </div>
   );

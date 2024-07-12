@@ -2,12 +2,14 @@ import { createContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Cookies from "universal-cookie";
 import {
-  autoLogin as autoLoginApi,
+  getGlobalVariables,
   getLoggedUser,
   requestLogout,
 } from "../controllers/API";
 import useAlertStore from "../stores/alertStore";
-import useFlowsManagerStore from "../stores/flowsManagerStore";
+import { useFolderStore } from "../stores/foldersStore";
+import { useGlobalVariablesStore } from "../stores/globalVariablesStore/globalVariables";
+import { useStoreStore } from "../stores/storeStore";
 import { Users } from "../types/api";
 import { AuthContextType } from "../types/contexts/auth";
 
@@ -26,6 +28,7 @@ const initialValue: AuthContextType = {
   setApiKey: () => {},
   apiKey: null,
   storeApiKey: () => {},
+  getUser: () => {},
 };
 
 export const AuthContext = createContext<AuthContextType>(initialValue);
@@ -34,18 +37,25 @@ export function AuthProvider({ children }): React.ReactElement {
   const navigate = useNavigate();
   const cookies = new Cookies();
   const [accessToken, setAccessToken] = useState<string | null>(
-    cookies.get("access_token_lf") ?? null
+    cookies.get("access_token_lf") ?? null,
   );
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(
-    !!cookies.get("access_token_lf")
+    !!cookies.get("access_token_lf"),
   );
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [userData, setUserData] = useState<Users | null>(null);
   const [autoLogin, setAutoLogin] = useState<boolean>(false);
   const setLoading = useAlertStore((state) => state.setLoading);
   const [apiKey, setApiKey] = useState<string | null>(
-    cookies.get("apikey_tkn_lflw")
+    cookies.get("apikey_tkn_lflw"),
   );
+
+  const getFoldersApi = useFolderStore((state) => state.getFoldersApi);
+  const setGlobalVariables = useGlobalVariablesStore(
+    (state) => state.setGlobalVariables,
+  );
+  const checkHasStore = useStoreStore((state) => state.checkHasStore);
+  const fetchApiData = useStoreStore((state) => state.fetchApiData);
 
   useEffect(() => {
     const storedAccessToken = cookies.get("access_token_lf");
@@ -61,40 +71,19 @@ export function AuthProvider({ children }): React.ReactElement {
     }
   }, []);
 
-  useEffect(() => {
-    const isLoginPage = location.pathname.includes("login");
-
-    autoLoginApi()
-      .then((user) => {
-        if (user && user["access_token"]) {
-          user["refresh_token"] = "auto";
-          login(user["access_token"]);
-          setUserData(user);
-          setAutoLogin(true);
-          setLoading(false);
-        }
-      })
-      .catch((error) => {
-        setAutoLogin(false);
-        if (isAuthenticated && !isLoginPage) {
-          getUser();
-        } else {
-          setLoading(false);
-          useFlowsManagerStore.setState({ isLoading: false });
-        }
-      });
-  }, [setUserData, setLoading, autoLogin, setIsAdmin]);
-
   function getUser() {
     getLoggedUser()
-      .then((user) => {
+      .then(async (user) => {
         setUserData(user);
-        setLoading(false);
         const isSuperUser = user!.is_superuser;
         setIsAdmin(isSuperUser);
+        getFoldersApi(true, true);
+        const res = await getGlobalVariables();
+        setGlobalVariables(res);
+        checkHasStore();
+        fetchApiData();
       })
       .catch((error) => {
-        console.log("auth context");
         setLoading(false);
       });
   }
@@ -146,6 +135,7 @@ export function AuthProvider({ children }): React.ReactElement {
         setApiKey,
         apiKey,
         storeApiKey,
+        getUser,
       }}
     >
       {children}

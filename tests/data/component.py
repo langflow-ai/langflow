@@ -1,6 +1,6 @@
 import random
 
-from langflow import CustomComponent
+from langflow.custom import CustomComponent
 
 
 class TestComponent(CustomComponent):

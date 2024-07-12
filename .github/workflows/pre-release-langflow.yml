@@ -1,0 +1,133 @@
+name: Langflow Pre-release
+run-name: Langflow Pre-release by @${{ github.actor }}
+on:
+  workflow_dispatch:
+    inputs:
+      release_package:
+        description: "Release package"
+        required: true
+        type: boolean
+        default: false
+  workflow_run:
+    workflows: ["pre-release-base"]
+    types: [completed]
+    branches: [dev]
+
+env:
+  POETRY_VERSION: "1.8.2"
+
+jobs:
+  release:
+    name: Release Langflow
+    if: inputs.release_package == true
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.check-version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install poetry
+        run: pipx install poetry==${{ env.POETRY_VERSION }}
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: "poetry"
+      - name: Check Version
+        id: check-version
+        run: |
+          version=$(poetry version --short)
+          last_released_version=$(curl -s "https://pypi.org/pypi/langflow/json" | jq -r '.releases | keys | .[]' | sort -V | tail -n 1)
+          if [ "$version" = "$last_released_version" ]; then
+            echo "Version $version is already released. Skipping release."
+            exit 1
+          else
+            echo version=$version >> $GITHUB_OUTPUT
+          fi
+      - name: Build project for distribution
+        run: make build main=true
+      - name: Display pyproject.toml langflow-base Version
+        run: cat pyproject.toml | grep langflow-base
+      - name: Publish to PyPI
+        env:
+          POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          make publish main=true
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist
+
+  docker_build:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+    needs: release
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        id: qemu
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          file: ./docker/build_and_push.Dockerfile
+          # provenance: false will result in a single manifest for all platforms which makes the image pullable from arm64 machines via the emulation (e.g. Apple Silicon machines)
+          provenance: false
+          tags: |
+            langflowai/langflow:${{ needs.release.outputs.version }}
+            langflowai/langflow:1.0-alpha
+      - name: Build and push (frontend)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          file: ./docker/frontend/build_and_push_frontend.Dockerfile
+          # provenance: false will result in a single manifest for all platforms which makes the image pullable from arm64 machines via the emulation (e.g. Apple Silicon machines)
+          provenance: false
+          tags: |
+            langflowai/langflow-frontend:${{ needs.release.outputs.version }}
+            langflowai/langflow-frontend:1.0-alpha
+      - name: Wait for Docker Hub to propagate
+        run: sleep 120
+      - name: Build and push (backend)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          file: ./docker/build_and_push_backend.Dockerfile
+          # provenance: false will result in a single manifest for all platforms which makes the image pullable from arm64 machines via the emulation (e.g. Apple Silicon machines)
+          provenance: false
+          build-args: |
+            LANGFLOW_IMAGE=langflowai/langflow:${{ needs.release.outputs.version }}
+          tags: |
+            langflowai/langflow-backend:${{ needs.release.outputs.version }}
+            langflowai/langflow-backend:1.0-alpha
+
+  create_release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: [docker_build, release]
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+      - name: Create Release
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: "dist/*"
+          token: ${{ secrets.GITHUB_TOKEN }}
+          draft: false
+          generateReleaseNotes: true
+          prerelease: true
+          tag: v${{ needs.release.outputs.version }}
+          commit: dev

@@ -180,6 +180,8 @@ coverage.xml
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
+*.db-shm
+*.db-wal
 
 # Flask stuff:
 instance/
@@ -258,5 +260,15 @@ langflow.db
 
 /tmp/*
 src/backend/langflow/frontend/
+src/backend/base/langflow/frontend/
 .docker
 scratchpad*
+chroma*/*
+stuff/*
+src/frontend/playwright-report/index.html
+*.bak
+prof/*
+
+src/frontend/temp
+*-shm
+*-wal

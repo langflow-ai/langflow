@@ -1,7 +1,7 @@
 import random
 
-from langflow import CustomComponent
-from langflow.field_typing import TemplateField
+from langflow.custom import CustomComponent
+from langflow.field_typing import Input
 
 
 class TestComponent(CustomComponent):
@@ -11,7 +11,7 @@ class TestComponent(CustomComponent):
         return [f"Random {random.randint(1, 100)}" for _ in range(5)]
 
     def build_config(self):
-        return {"param": TemplateField(display_name="Param", options=self.refresh_values)}
+        return {"param": Input(display_name="Param", options=self.refresh_values)}
 
     def build(self, param: int):
         return param

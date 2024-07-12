@@ -7,13 +7,14 @@ module.exports = {
   title: "Langflow Documentation",
   tagline: "Langflow is a GUI for LangChain, designed with react-flow",
   favicon: "img/favicon.ico",
-  url: "https://logspace-ai.github.io",
+  url: "https://langflow-ai.github.io",
   baseUrl: "/",
   onBrokenLinks: "throw",
   onBrokenMarkdownLinks: "warn",
-  organizationName: "logspace-ai",
+  organizationName: "langflow-ai",
   projectName: "langflow",
   trailingSlash: false,
+  staticDirectories: ["static"],
   customFields: {
     mendableAnonKey: process.env.MENDABLE_ANON_KEY,
   },
@@ -41,6 +42,10 @@ module.exports = {
           sidebarPath: require.resolve("./sidebars.js"),
           path: "docs",
           // sidebarPath: 'sidebars.js',
+        },
+        gtag: {
+          trackingID: "G-XHC7G628ZP",
+          anonymizeIP: true,
         },
         theme: {
           customCss: [
@@ -82,7 +87,7 @@ module.exports = {
           // right
           {
             position: "right",
-            href: "https://github.com/logspace-ai/langflow",
+            href: "https://github.com/langflow-ai/langflow",
             position: "right",
             className: "header-github-link",
             target: "_blank",
@@ -116,17 +121,6 @@ module.exports = {
         disableSwitch: false,
         /* Respect user preferences, such as low light mode in the evening */
         respectPrefersColorScheme: true,
-      },
-      announcementBar: {
-        content:
-          '⭐️ If you like ⛓️Langflow, star it on <a target="_blank" rel="noopener noreferrer" href="https://github.com/logspace-ai/langflow">GitHub</a>! ⭐️',
-        backgroundColor: "#E8EBF1", //Mustard Yellow #D19900 #D4B20B - Salmon #E9967A
-        textColor: "#1C1E21",
-        isCloseable: false,
-      },
-      footer: {
-        links: [],
-        copyright: `Copyright © ${new Date().getFullYear()} Logspace.`,
       },
       zoom: {
         selector: ".markdown :not(a) > img:not(.no-zoom)",

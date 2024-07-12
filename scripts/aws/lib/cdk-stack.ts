@@ -2,21 +2,38 @@ import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as ecs from 'aws-cdk-lib/aws-ecs'
 
-import { Network, EcrRepository, FrontEndCluster, BackEndCluster, Rds, EcsIAM } from './construct';
+import { Network, EcrRepository, Web, BackEndCluster, Rds, EcsIAM, Rag} from './construct';
 // import * as sqs from 'aws-cdk-lib/aws-sqs';
+
+const errorMessageForBooleanContext = (key: string) => {
+  return `There was an error setting $ {key}. Possible causes are as follows.
+  - Trying to set it with the -c option instead of changing cdk.json
+  - cdk.json is set to a value that is not a boolean (e.g. “true” double quotes are not required)
+  - no items in cdk.json (unset) `;
+};
+
 
 export class LangflowAppStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
+    // Kendra Enable
+    const ragEnabled: boolean = this.node.tryGetContext('ragEnabled')!;
+    if (typeof ragEnabled !== 'boolean') {
+      throw new Error(errorMessageForBooleanContext('ragEnabled'));
+    }
+    if (ragEnabled) {
+      new Rag(this, 'Rag', {
+      });
+    }
+
     // Arch
     const arch = ecs.CpuArchitecture.X86_64
 
     // VPC
-    const { vpc, cluster, alb, targetGroup, cloudmapNamespace, ecsFrontSG, ecsBackSG, dbSG, albSG, backendLogGroup, frontendLogGroup} = new Network(this, 'Network')
+    const { vpc, cluster, ecsBackSG, dbSG, backendLogGroup, alb, albTG, albSG} = new Network(this, 'Network')
 
     // ECR
-    const { ecrFrontEndRepository,ecrBackEndRepository} = new EcrRepository(this, 'Ecr', {
-      cloudmapNamespace:cloudmapNamespace,
+    const { ecrBackEndRepository } = new EcrRepository(this, 'Ecr', {
       arch:arch
     })
 
@@ -25,7 +42,7 @@ export class LangflowAppStack extends cdk.Stack {
     const { rdsCluster } = new Rds(this, 'Rds', { vpc, dbSG })
 
     // IAM
-    const { frontendTaskRole, frontendTaskExecutionRole, backendTaskRole, backendTaskExecutionRole } = new EcsIAM(this, 'EcsIAM',{
+    const { backendTaskRole, backendTaskExecutionRole } = new EcsIAM(this, 'EcsIAM',{
       rdsCluster:rdsCluster
     })
 
@@ -36,29 +53,18 @@ export class LangflowAppStack extends cdk.Stack {
       backendTaskRole:backendTaskRole,
       backendTaskExecutionRole:backendTaskExecutionRole,
       backendLogGroup:backendLogGroup,
-      cloudmapNamespace:cloudmapNamespace,
       rdsCluster:rdsCluster,
-      alb:alb,
-      arch:arch
+      arch:arch,
+      albTG:albTG
     })
     backendService.node.addDependency(rdsCluster);
 
-    const frontendService = new FrontEndCluster(this, 'frontend',{
+    const frontendService = new Web(this, 'frontend',{
       cluster:cluster,
-      ecsFrontSG:ecsFrontSG,
-      ecrFrontEndRepository:ecrFrontEndRepository,
-      targetGroup: targetGroup,
-      backendServiceName: backendService.backendServiceName,
-      frontendTaskRole: frontendTaskRole,
-      frontendTaskExecutionRole: frontendTaskExecutionRole,
-      frontendLogGroup: frontendLogGroup,
-      cloudmapNamespace: cloudmapNamespace,
-      arch:arch 
+      alb:alb,
+      albSG:albSG
     })
     frontendService.node.addDependency(backendService);
 
-
-    // S3+CloudFront
-    // new Web(this,'Cloudfront-S3')
   }
 }

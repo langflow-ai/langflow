@@ -1,0 +1,80 @@
+name: Langflow Base Pre-release
+run-name: Langflow Base Pre-release by @${{ github.actor }}
+on:
+  workflow_dispatch:
+    inputs:
+      release_package:
+        description: "Release package"
+        required: true
+        type: boolean
+        default: false
+
+env:
+  POETRY_VERSION: "1.8.2"
+
+jobs:
+  release:
+    name: Release Langflow Base
+    if: inputs.release_package == true
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.check-version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install poetry
+        run: pipx install poetry==${{ env.POETRY_VERSION }}
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: "poetry"
+      - name: Check Version
+        id: check-version
+        # In this step, we should check the version of the package
+        # and see if it is a version that is already released
+        # echo version=$(cd src/backend/base && poetry version --short) >> $GITHUB_OUTPUT
+        # cd src/backend/base && poetry version --short should
+        # be different than the last release version in pypi
+        # which we can get from curl -s "https://pypi.org/pypi/langflow/json" | jq -r '.releases | keys | .[]' | sort -V | tail -n 1
+        run: |
+          version=$(cd src/backend/base && poetry version --short)
+          last_released_version=$(curl -s "https://pypi.org/pypi/langflow-base/json" | jq -r '.releases | keys | .[]' | sort -V | tail -n 1)
+          if [ "$version" = "$last_released_version" ]; then
+            echo "Version $version is already released. Skipping release."
+            exit 1
+          else
+            echo version=$version >> $GITHUB_OUTPUT
+          fi
+      - name: Build project for distribution
+        run: make build base=true
+      - name: Publish to PyPI
+        env:
+          POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          make publish base=true
+  docker_build:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+    needs: release
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        id: qemu
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          file: ./docker/build_and_push_base.Dockerfile
+          tags: |
+            langflowai/langflow:base-${{ needs.release.outputs.version }}
+          # provenance: false will result in a single manifest for all platforms which makes the image pullable from arm64 machines via the emulation (e.g. Apple Silicon machines)
+          provenance: false

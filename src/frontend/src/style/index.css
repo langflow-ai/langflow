@@ -22,14 +22,17 @@
     --secondary-foreground: 222.2 47.4% 11.2%; /* hsl(222 47% 11%) */
     --accent: 210 30% 96.1%; /* hsl(210 30% 96%) */
     --accent-foreground: 222.2 47.4% 11.2%; /* hsl(222 47% 11%) */
-    --destructive: 0 100% 50%; /* hsl(0 100% 50%) */
+    --destructive: 0 60% 40%; /* hsl(0 60% 40%) */
     --destructive-foreground: 210 40% 98%; /* hsl(210 40% 98%) */
     --radius: 0.5rem;
     --ring: 215 20.2% 65.1%; /* hsl(215 20% 65%) */
     --round-btn-shadow: #00000063;
+    --ice: #31a3cc;
+    --selected: #2196f3;
 
     --error-background: #fef2f2;
     --error-foreground: #991b1b;
+    --error: #991b1b;
 
     --success-background: #f0fdf4;
     --success-foreground: #14532d;
@@ -43,12 +46,15 @@
 
     --beta-background: rgb(219 234 254);
     --beta-foreground: rgb(37 99 235);
+    --beta-foreground-soft: rgb(37 99 235 / 80%);
 
     --chat-bot-icon: #afe6ef;
     --chat-user-icon: #aface9;
 
     --component-icon: #d8598a;
     --flow-icon: #2f67d0;
+    --hover: #f2f4f5;
+    --disabled-run: #6366f1;
 
     /* Colors that are shared in dark and light mode */
     --blur-shared: #151923de;
@@ -60,12 +66,17 @@
     --chat-send: #059669;
     --status-green: #4ade80;
     --status-blue: #2563eb;
+    --status-gray: #6b7280;
     --connection: #555;
   }
 
   .dark {
-    --background: 224 35% 7.5%; /* hsl(224 40% 10%) */
+    --background: 224 28% 7.5%; /* hsl(224 10% 7.5%) */
     --foreground: 213 31% 80%; /* hsl(213 31% 91%) */
+    --ice: #60a5fa;
+    --hover: #1a202e;
+    --disabled-run: #6366f1;
+    --selected: #0369a1;
 
     --muted: 223 27% 11%; /* hsl(223 27% 11%) */
     --muted-foreground: 215.4 16.3% 56.9%; /* hsl(215 16% 56%) */
@@ -82,13 +93,13 @@
     --primary: 210 20% 80%; /* hsl(210 20% 80%) */
     --primary-foreground: 222.2 27.4% 1.2%; /* hsl(222 47% 1%) */
 
-    --secondary: 222.2 37.4% 7.2%; /* hsl(222 47% 11%) */
+    --secondary: 222.2 30.4% 7.2%; /* hsl(222 47% 11%) */
     --secondary-foreground: 210 40% 80%; /* hsl(210 40% 80%) */
 
     --accent: 216 24% 20%; /* hsl(216 34% 17%) */
     --accent-foreground: 210 30% 98%; /* hsl(210 40% 98%) */
 
-    --destructive: 0 63% 31%; /* hsl(0 63% 31%) */
+    --destructive: 0 60% 25%; /* hsl(0 60% 25%) */
     --destructive-foreground: 210 40% 98%; /* hsl(210 40% 98%) */
 
     --ring: 216 24% 30%; /* hsl(216 24% 30%) */
@@ -102,6 +113,7 @@
 
     --error-foreground: #fef2f2;
     --error-background: #450a0a;
+    --error: #991b1b;
 
     --info-foreground: #eff6ff;
     --info-background: #172554;
@@ -123,10 +135,11 @@
     --chat-send: #059669;
     --status-green: #4ade80;
     --status-blue: #2563eb;
-    --connection: #555;
+    --connection: #6d6c6c;
 
     --beta-background: rgb(37 99 235);
     --beta-foreground: rgb(219 234 254);
+    --beta-foreground-soft: rgb(219 234 254);
 
     --chat-bot-icon: #235d70;
     --chat-user-icon: #4f3d6e;

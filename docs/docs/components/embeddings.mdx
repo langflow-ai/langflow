@@ -2,122 +2,133 @@ import Admonition from "@theme/Admonition";
 
 # Embeddings
 
-<Admonition type="caution" icon="🚧" title="ZONE UNDER CONSTRUCTION">
-  <p>
-    We appreciate your understanding as we polish our documentation – it may
-    contain some rough edges. Share your feedback or report issues to help us
-    improve! 🛠️📝
-  </p>
+<Admonition type="warning" title="warning">
+This page may contain outdated information. It will be updated as soon as possible.
 </Admonition>
 
-Embeddings are vector representations of text that capture the semantic meaning of the text. They are created using text embedding models and allow us to think about the text in a vector space, enabling us to perform tasks like semantic search, where we look for pieces of text that are most similar in the vector space.
+## Amazon Bedrock Embeddings
 
----
+Used to load embedding models from [Amazon Bedrock](https://aws.amazon.com/bedrock/).
 
-### BedrockEmbeddings
+| **Parameter**              | **Type** | **Description**                                                                                                                                     | **Default** |
+| -------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| `credentials_profile_name` | `str`    | Name of the AWS credentials profile in ~/.aws/credentials or ~/.aws/config, which has access keys or role information.                              |             |
+| `model_id`                 | `str`    | ID of the model to call, e.g., `amazon.titan-embed-text-v1`. This is equivalent to the `modelId` property in the `list-foundation-models` API.      |             |
+| `endpoint_url`             | `str`    | URL to set a specific service endpoint other than the default AWS endpoint.                                                                         |             |
+| `region_name`              | `str`    | AWS region to use, e.g., `us-west-2`. Falls back to `AWS_DEFAULT_REGION` environment variable or region specified in ~/.aws/config if not provided. |             |
 
-Used to load [Amazon Bedrocks’s](https://aws.amazon.com/bedrock/) embedding models.
+## Astra vectorize
 
-**Params**
+Used to generate server-side embeddings using [DataStax Astra](https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html).
 
-- **credentials_profile_name:** The name of the profile in the ~/.aws/credentials or ~/.aws/config files, which has either access keys or role information specified. If not specified, the default credential profile or, if on an EC2 instance, credentials from IMDS will be used. See [the AWS documentation](https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html) for more details.
+| **Parameter**      | **Type** | **Description**                                                                                                       | **Default** |
+|--------------------|----------|-----------------------------------------------------------------------------------------------------------------------|-------------|
+| `provider`         | `str`    | The embedding provider to use.                                                                                        |             |
+| `model_name`       | `str`    | The embedding model to use.                                                                                           |             |
+| `authentication`   | `dict`   | Authentication parameters. Use the Astra Portal to add the embedding provider integration to your Astra organization. |             |
+| `provider_api_key` | `str`    | An alternative to the Astra Authentication that let you use directly the API key of the provider.                     |             |
+| `model_parameters` | `dict`   | Additional model parameters.                                                                                          |             |
 
-- **model_id:** Id of the model to call, e.g., amazon.titan-embed-text-v1, this is equivalent to the modelId property in the list-foundation-models api.
+## Cohere Embeddings
 
-- **endpoint_url:** Needed if you don’t want to default to us-east-1 endpoint.
+Used to load embedding models from [Cohere](https://cohere.com/).
 
-- **region_name:** The aws region e.g., us-west-2. Fallsback to AWS_DEFAULT_REGION env variable or region specified in ~/.aws/config in case it is not provided here.
+| **Parameter**    | **Type** | **Description**                                                           | **Default**          |
+| ---------------- | -------- | ------------------------------------------------------------------------- | -------------------- |
+| `cohere_api_key` | `str`    | API key required to authenticate with the Cohere service.                 |                      |
+| `model`          | `str`    | Language model used for embedding text documents and performing queries.  | `embed-english-v2.0` |
+| `truncate`       | `bool`   | Whether to truncate the input text to fit within the model's constraints. | `False`              |
 
----
+## Azure OpenAI Embeddings
 
-### CohereEmbeddings
+Generate embeddings using Azure OpenAI models.
 
-Used to load [Cohere’s](https://cohere.com/) embedding models.
+| **Parameter**     | **Type** | **Description**                                                                                    | **Default** |
+| ----------------- | -------- | -------------------------------------------------------------------------------------------------- | ----------- |
+| `Azure Endpoint`  | `str`    | Your Azure endpoint, including the resource. Example: `https://example-resource.azure.openai.com/` |             |
+| `Deployment Name` | `str`    | The name of the deployment.                                                                        |             |
+| `API Version`     | `str`    | The API version to use, options include various dates.                                             |             |
+| `API Key`         | `str`    | The API key to access the Azure OpenAI service.                                                    |             |
 
-**Params**
+## Hugging Face API Embeddings
 
-- **cohere_api_key:** Holds the API key required to authenticate with the Cohere service.
+Generate embeddings using Hugging Face Inference API models.
 
-- **model:** The language model used for embedding text documents and performing queries —defaults to `embed-english-v2.0`.
+| **Parameter**   | **Type** | **Description**                                       | **Default**              |
+| --------------- | -------- | ----------------------------------------------------- | ------------------------ |
+| `API Key`       | `str`    | API key for accessing the Hugging Face Inference API. |                          |
+| `API URL`       | `str`    | URL of the Hugging Face Inference API.                | `http://localhost:8080`  |
+| `Model Name`    | `str`    | Name of the model to use for embeddings.              | `BAAI/bge-large-en-v1.5` |
+| `Cache Folder`  | `str`    | Folder path to cache Hugging Face models.             |                          |
+| `Encode Kwargs` | `dict`   | Additional arguments for the encoding process.        |                          |
+| `Model Kwargs`  | `dict`   | Additional arguments for the model.                   |                          |
+| `Multi Process` | `bool`   | Whether to use multiple processes.                    | `False`                  |
 
-- **truncate:** Used to specify whether or not to truncate the input text. Truncation is useful when dealing with long texts that exceed the model's maximum input length. By truncating the text, the user can ensure that it fits within the model's constraints.
+## Hugging Face Embeddings
 
----
+Used to load embedding models from [HuggingFace](https://huggingface.co).
 
-### HuggingFaceEmbeddings
+| **Parameter**   | **Type** | **Description**                                | **Default**                               |
+| --------------- | -------- | ---------------------------------------------- | ----------------------------------------- |
+| `Cache Folder`  | `str`    | Folder path to cache HuggingFace models.       |                                           |
+| `Encode Kwargs` | `dict`   | Additional arguments for the encoding process. |                                           |
+| `Model Kwargs`  | `dict`   | Additional arguments for the model.            |                                           |
+| `Model Name`    | `str`    | Name of the HuggingFace model to use.          | `sentence-transformers/all-mpnet-base-v2` |
+| `Multi Process` | `bool`   | Whether to use multiple processes.             | `False`                                   |
 
-Used to load [HuggingFace’s](https://huggingface.co) embedding models.
+## OpenAI Embeddings
 
-**Params**
+Used to load embedding models from [OpenAI](https://openai.com/).
 
-- **cache_folder:** Used to specify the folder where the embeddings will be cached. When embeddings are computed for a text, they can be stored in the cache folder so that they can be reused later without the need to recompute them. This can improve the performance of the application by avoiding redundant computations.
+| **Parameter**              | **Type**         | **Description**                                  | **Default**              |
+| -------------------------- | ---------------- | ------------------------------------------------ | ------------------------ |
+| `OpenAI API Key`           | `str`            | The API key to use for accessing the OpenAI API. |                          |
+| `Default Headers`          | `Dict[str, str]` | Default headers for the HTTP requests.           |                          |
+| `Default Query`            | `NestedDict`     | Default query parameters for the HTTP requests.  |                          |
+| `Allowed Special`          | `List[str]`      | Special tokens allowed for processing.           | `[]`                     |
+| `Disallowed Special`       | `List[str]`      | Special tokens disallowed for processing.        | `["all"]`                |
+| `Chunk Size`               | `int`            | Chunk size for processing.                       | `1000`                   |
+| `Client`                   | `Any`            | HTTP client for making requests.                 |                          |
+| `Deployment`               | `str`            | Deployment name for the model.                   | `text-embedding-3-small` |
+| `Embedding Context Length` | `int`            | Length of embedding context.                     | `8191`                   |
+| `Max Retries`              | `int`            | Maximum number of retries for failed requests.   | `6`                      |
+| `Model`                    | `str`            | Name of the model to use.                        | `text-embedding-3-small` |
+| `Model Kwargs`             | `NestedDict`     | Additional keyword arguments for the model.      |                          |
+| `OpenAI API Base`          | `str`            | Base URL of the OpenAI API.                      |                          |
+| `OpenAI API Type`          | `str`            | Type of the OpenAI API.                          |                          |
+| `OpenAI API Version`       | `str`            | Version of the OpenAI API.                       |                          |
+| `OpenAI Organization`      | `str`            | Organization associated with the API key.        |                          |
+| `OpenAI Proxy`             | `str`            | Proxy server for the requests.                   |                          |
+| `Request Timeout`          | `float`          | Timeout for the HTTP requests.                   |                          |
+| `Show Progress Bar`        | `bool`           | Whether to show a progress bar for processing.   | `False`                  |
+| `Skip Empty`               | `bool`           | Whether to skip empty inputs.                    | `False`                  |
+| `TikToken Enable`          | `bool`           | Whether to enable TikToken.                      | `True`                   |
+| `TikToken Model Name`      | `str`            | Name of the TikToken model.                      |                          |
 
-- **encode_kwargs:** Used to pass additional keyword arguments to the encoding method of the underlying HuggingFace model. These keyword arguments can be used to customize the encoding process, such as specifying the maximum length of the input sequence or enabling truncation or padding.
+## Ollama Embeddings
 
-- **model_kwargs:** Used to customize the behavior of the model, such as specifying the model architecture, the tokenizer, or any other model-specific configuration options. By using `model_kwargs`, the user can configure the HuggingFace model according to specific needs and preferences.
+Generate embeddings using Ollama models.
 
-- **model_name:** Used to specify the name or identifier of the HuggingFace model that will be used for generating embeddings. It allows users to choose a specific pre-trained model from the Hugging Face model hub — defaults to `sentence-transformers/all-mpnet-base-v2`.
+| **Parameter**       | **Type** | **Description**                                                                          | **Default**              |
+| ------------------- | -------- | ---------------------------------------------------------------------------------------- | ------------------------ |
+| `Ollama Model`      | `str`    | Name of the Ollama model to use.                                                         | `llama2`                 |
+| `Ollama Base URL`   | `str`    | Base URL of the Ollama API.                                                              | `http://localhost:11434` |
+| `Model Temperature` | `float`  | Temperature parameter for the model. Adjusts the randomness in the generated embeddings. |                          |
 
----
-
-### OpenAIEmbeddings
-
-Used to load [OpenAI’s](https://openai.com/) embedding models.
-
-**Params**
-
-- **chunk_size:** Determines the maximum size of each chunk of text that is processed for embedding. If any of the incoming text chunks exceeds `chunk_size` characters, it will be split into multiple chunks of size `chunk_size` or less before being embedded — defaults to `1000`.
-
-- **deployment:** Used to specify the deployment name or identifier of the text embedding model. It allows the user to choose a specific deployment of the model to use for embedding. When the deployment is provided, this can be useful when the user has multiple deployments of the same model with different configurations or versions — defaults to `text-embedding-ada-002`.
-
-- **embedding_ctx_length:** This parameter determines the maximum context length for the text embedding model. It specifies the number of tokens that the model considers when generating embeddings for a piece of text — defaults to `8191` (this means that the model will consider up to 8191 tokens when generating embeddings).
-
-- **max_retries:** Determines the maximum number of times to retry a request if the model provider returns an error from their API — defaults to `6`.
-
-- **model:** Defines which pre-trained text embedding model to use — defaults to `text-embedding-ada-002`.
-
-- **openai_api_base:** Refers to the base URL for the Azure OpenAI resource. It is used to configure the API to connect to the Azure OpenAI service. The base URL can be found in the Azure portal under the user Azure OpenAI resource.
-
-- **openai_api_key:** Is used to authenticate and authorize access to the OpenAI service.
-
-- **openai_api_type:** Is used to specify the type of OpenAI API being used, either the regular OpenAI API or the Azure OpenAI API. This parameter allows the `OpenAIEmbeddings` class to connect to the appropriate API service.
-
-- **openai_api_version:** Is used to specify the version of the OpenAI API being used. This parameter allows the `OpenAIEmbeddings` class to connect to the appropriate version of the OpenAI API service.
-
-- **openai_organization:** Is used to specify the organization associated with the OpenAI API key. If not provided, the default organization associated with the API key will be used.
-
-- **openai_proxy:** Proxy enables better budgeting and cost management for making OpenAI API calls, including more transparency into pricing.
-
-- **request_timeout:** Used to specify the maximum amount of time, in milliseconds, to wait for a response from the OpenAI API when generating embeddings for a given text.
-
-- **tiktoken_model_name:** Used to count the number of tokens in documents to constrain them to be under a certain limit. By default, when set to None, this will be the same as the embedding model name.
-
----
-
-### VertexAIEmbeddings
+## VertexAI Embeddings
 
 Wrapper around [Google Vertex AI](https://cloud.google.com/vertex-ai) [Embeddings API](https://cloud.google.com/vertex-ai/docs/generative-ai/embeddings/get-text-embeddings).
 
-<Admonition type="info">
-Vertex AI is a cloud computing platform offered by Google Cloud Platform (GCP). It provides access, management, and development of applications and services through global data centers. To use Vertex AI PaLM, you need to have the [google-cloud-aiplatform](https://pypi.org/project/google-cloud-aiplatform/) Python package installed and credentials configured for your environment.
-</Admonition>
-
-- **credentials:** The default custom credentials (google.auth.credentials.Credentials) to use.
-- **location:** The default location to use when making API calls – defaults to `us-central1`.
-- **max_output_tokens:** Token limit determines the maximum amount of text output from one prompt – defaults to `128`.
-- **model_name:** The name of the Vertex AI large language model – defaults to `text-bison`.
-- **project:** The default GCP project to use when making Vertex API calls.
-- **request_parallelism:** The amount of parallelism allowed for requests issued to VertexAI models – defaults to `5`.
-- **temperature:** Tunes the degree of randomness in text generations. Should be a non-negative value – defaults to `0`.
-- **top_k:** How the model selects tokens for output, the next token is selected from – defaults to `40`.
-- **top_p:** Tokens are selected from most probable to least until the sum of their – defaults to `0.95`.
-- **tuned_model_name:** The name of a tuned model. If provided, model_name is ignored.
-- **verbose:** This parameter is used to control the level of detail in the output of the chain. When set to True, it will print out some internal states of the chain while it is being run, which can help debug and understand the chain's behavior. If set to False, it will suppress the verbose output – defaults to `False`.
-
-### OllamaEmbeddings
-
-Used to load [Ollama’s](https://ollama.ai/) embedding models. Wrapper around LangChain's [Ollama API](https://python.langchain.com/docs/integrations/text_embedding/ollama).
-
-- **model** The name of the Ollama model to use – defaults to `llama2`.
-- **base_url** The base URL for the Ollama API – defaults to `http://localhost:11434`.
-- **temperature** Tunes the degree of randomness in text generations. Should be a non-negative value – defaults to `0`.
+| **Parameter**         | **Type**      | **Description**                                                                                                                      | **Default**   |
+| --------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ------------- |
+| `credentials`         | `Credentials` | The default custom credentials to use.                                                                                               |               |
+| `location`            | `str`         | The default location to use when making API calls.                                                                                   | `us-central1` |
+| `max_output_tokens`   | `int`         | Token limit determines the maximum amount of text output from one prompt.                                                            | `128`         |
+| `model_name`          | `str`         | The name of the Vertex AI large language model.                                                                                      | `text-bison`  |
+| `project`             | `str`         | The default GCP project to use when making Vertex API calls.                                                                         |               |
+| `request_parallelism` | `int`         | The amount of parallelism allowed for requests issued to VertexAI models.                                                            | `5`           |
+| `temperature`         | `float`       | Tunes the degree of randomness in text generations. Should be a non-negative value.                                                  | `0`           |
+| `top_k`               | `int`         | How the model selects tokens for output, the next token is selected from the top `k` tokens.                                         | `40`          |
+| `top_p`               | `float`       | Tokens are selected from the most probable to least until the sum of their probabilities exceeds the top `p` value.                  | `0.95`        |
+| `tuned_model_name`    | `str`         | The name of a tuned model. If provided, `model_name` is ignored.                                                                     |               |
+| `verbose`             | `bool`        | This parameter controls the level of detail in the output. When set to `True`, it prints internal states of the chain to help debug. | `False`       |

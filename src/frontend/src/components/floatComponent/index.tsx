@@ -16,7 +16,7 @@ export default function FloatComponent({
   // Clear component state
   useEffect(() => {
     if (disabled && value !== "") {
-      onChange("");
+      onChange("", undefined, true);
     }
   }, [disabled]);
 

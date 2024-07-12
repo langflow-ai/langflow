@@ -1,9 +1,13 @@
 import { ReactNode, forwardRef, useEffect, useState } from "react";
-import EditFlowSettings from "../../components/EditFlowSettingsComponent";
+import EditFlowSettings from "../../components/editFlowSettingsComponent";
 import IconComponent from "../../components/genericIconComponent";
-import { Button } from "../../components/ui/button";
 import { Checkbox } from "../../components/ui/checkbox";
-import { EXPORT_DIALOG_SUBTITLE } from "../../constants/constants";
+import { API_WARNING_NOTICE_ALERT } from "../../constants/alerts_constants";
+import {
+  ALERT_SAVE_WITH_API,
+  EXPORT_DIALOG_SUBTITLE,
+  SAVE_WITH_API_CHECKBOX,
+} from "../../constants/constants";
 import useAlertStore from "../../stores/alertStore";
 import { useDarkStore } from "../../stores/darkStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
@@ -14,7 +18,7 @@ const ExportModal = forwardRef(
   (props: { children: ReactNode }, ref): JSX.Element => {
     const version = useDarkStore((state) => state.version);
     const setNoticeData = useAlertStore((state) => state.setNoticeData);
-    const [checked, setChecked] = useState(true);
+    const [checked, setChecked] = useState(false);
     const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
     useEffect(() => {
       setName(currentFlow!.name);
@@ -25,7 +29,45 @@ const ExportModal = forwardRef(
     const [open, setOpen] = useState(false);
 
     return (
-      <BaseModal size="smaller-h-full" open={open} setOpen={setOpen}>
+      <BaseModal
+        size="smaller-h-full"
+        open={open}
+        setOpen={setOpen}
+        onSubmit={() => {
+          if (checked) {
+            downloadFlow(
+              {
+                id: currentFlow!.id,
+                data: currentFlow!.data!,
+                description,
+                name,
+                last_tested_version: version,
+                endpoint_name: currentFlow!.endpoint_name,
+                is_component: false,
+              },
+              name!,
+              description,
+            );
+            setNoticeData({
+              title: API_WARNING_NOTICE_ALERT,
+            });
+          } else
+            downloadFlow(
+              removeApiKeys({
+                id: currentFlow!.id,
+                data: currentFlow!.data!,
+                description,
+                name,
+                last_tested_version: version,
+                endpoint_name: currentFlow!.endpoint_name,
+                is_component: false,
+              }),
+              name!,
+              description,
+            );
+          setOpen(false);
+        }}
+      >
         <BaseModal.Trigger asChild>{props.children}</BaseModal.Trigger>
         <BaseModal.Header description={EXPORT_DIALOG_SUBTITLE}>
           <span className="pr-2">Export</span>
@@ -50,58 +92,18 @@ const ExportModal = forwardRef(
                 setChecked(event);
               }}
             />
-            <label htmlFor="terms" className="export-modal-save-api text-sm ">
-              Save with my API keys
+            <label htmlFor="terms" className="export-modal-save-api text-sm">
+              {SAVE_WITH_API_CHECKBOX}
             </label>
           </div>
-          <span className=" text-xs text-destructive ">
-            Caution: Uncheck this box only removes API keys from fields
-            specifically designated for API keys.
+          <span className="mt-1 text-xs text-destructive">
+            {ALERT_SAVE_WITH_API}
           </span>
         </BaseModal.Content>
 
-        <BaseModal.Footer>
-          <Button
-            onClick={() => {
-              if (checked) {
-                downloadFlow(
-                  {
-                    id: currentFlow!.id,
-                    data: currentFlow!.data!,
-                    description,
-                    name,
-                    last_tested_version: version,
-                    is_component: false,
-                  },
-                  name!,
-                  description
-                );
-                setNoticeData({
-                  title:
-                    "Warning: Critical data, JSON file may include API keys.",
-                });
-              } else
-                downloadFlow(
-                  removeApiKeys({
-                    id: currentFlow!.id,
-                    data: currentFlow!.data!,
-                    description,
-                    name,
-                    last_tested_version: version,
-                    is_component: false,
-                  }),
-                  name!,
-                  description
-                );
-              setOpen(false);
-            }}
-            type="submit"
-          >
-            Download Flow
-          </Button>
-        </BaseModal.Footer>
+        <BaseModal.Footer submit={{ label: "Export" }} />
       </BaseModal>
     );
-  }
+  },
 );
 export default ExportModal;
