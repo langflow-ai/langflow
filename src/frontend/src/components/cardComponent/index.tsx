@@ -1,3 +1,4 @@
+import { usePostLikeComponent } from "@/controllers/API/queries/store";
 import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { Control } from "react-hook-form";
@@ -32,7 +33,6 @@ import useInstallComponent from "./hooks/use-handle-install";
 import useDragStart from "./hooks/use-on-drag-start";
 import usePlaygroundEffect from "./hooks/use-playground-effect";
 import { convertTestName } from "./utils/convert-test-name";
-import { usePostLikeComponent } from "@/controllers/API/queries/store";
 
 export default function CollectionCardComponent({
   data,
@@ -152,9 +152,9 @@ export default function CollectionCardComponent({
               title: `Error liking ${name}.`,
               list: [error.response.data.detail],
             });
-          }
+          },
         },
-      )
+      );
     }
   };
 

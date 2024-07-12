@@ -7,12 +7,14 @@ interface IPostLikeComponent {
   componentId: string;
 }
 
-export const usePostLikeComponent: useMutationFunctionType<IPostLikeComponent> = (
-  options,
-) => {
+export const usePostLikeComponent: useMutationFunctionType<
+  IPostLikeComponent
+> = (options) => {
   const { mutate } = UseRequestProcessor();
 
-  const postLikeComponent = async (payload: IPostLikeComponent): Promise<any> => {
+  const postLikeComponent = async (
+    payload: IPostLikeComponent,
+  ): Promise<any> => {
     const { componentId } = payload;
     return await api.post<any>(`${getURL("STORE")}/users/likes/${componentId}`);
   };
