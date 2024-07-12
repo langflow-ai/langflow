@@ -19,6 +19,7 @@ class RunnableVerticesManager:
             "run_map": self.run_map,
             "run_predecessors": self.run_predecessors,
             "vertices_to_run": self.vertices_to_run,
+            "vertices_being_run": self.vertices_being_run,
         }
 
     @classmethod
@@ -27,6 +28,7 @@ class RunnableVerticesManager:
         instance.run_map = data["run_map"]
         instance.run_predecessors = data["run_predecessors"]
         instance.vertices_to_run = data["vertices_to_run"]
+        instance.vertices_being_run = data["vertices_being_run"]
         return instance
 
     def __getstate__(self) -> object:
@@ -34,12 +36,14 @@ class RunnableVerticesManager:
             "run_map": self.run_map,
             "run_predecessors": self.run_predecessors,
             "vertices_to_run": self.vertices_to_run,
+            "vertices_being_run": self.vertices_being_run,
         }
 
     def __setstate__(self, state: dict) -> None:
         self.run_map = state["run_map"]
         self.run_predecessors = state["run_predecessors"]
         self.vertices_to_run = state["vertices_to_run"]
+        self.vertices_being_run = state["vertices_being_run"]
 
     def update_run_state(self, run_predecessors: dict, vertices_to_run: set):
         self.run_predecessors.update(run_predecessors)
