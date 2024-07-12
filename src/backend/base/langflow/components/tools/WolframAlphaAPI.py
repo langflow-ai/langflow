@@ -35,4 +35,4 @@ class WolframAlphaAPIComponent(LCToolComponent):
         )
 
     def _build_wrapper(self) -> WolframAlphaAPIWrapper:
-        return WolframAlphaAPIWrapper(wolfram_alpha_appid=self.app_id)
+        return WolframAlphaAPIWrapper(wolfram_alpha_appid=self.app_id)  # type: ignore

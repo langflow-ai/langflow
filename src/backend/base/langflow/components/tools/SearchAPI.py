@@ -8,7 +8,7 @@ from langflow.inputs import SecretStrInput, MultilineInput, DictInput, MessageTe
 from langflow.schema import Data
 
 
-class SearchAPI(LCToolComponent):
+class SearchAPIComponent(LCToolComponent):
     display_name: str = "Search API"
     description: str = "Call the searchapi.io API"
     name = "SearchAPI"

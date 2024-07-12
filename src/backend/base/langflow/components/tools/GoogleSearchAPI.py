@@ -40,7 +40,7 @@ class GoogleSearchAPIComponent(LCToolComponent):
 
     def _build_wrapper(self):
         try:
-            from langchain_google_community import GoogleSearchAPIWrapper
+            from langchain_google_community import GoogleSearchAPIWrapper  # type: ignore
         except ImportError:
             raise ImportError(
                 "Please install langchain-google-community to use GoogleSearchAPIWrapper."

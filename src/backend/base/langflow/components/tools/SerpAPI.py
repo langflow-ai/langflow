@@ -40,10 +40,10 @@ class SerpAPIComponent(LCToolComponent):
 
     def _build_wrapper(self) -> SerpAPIWrapper:
         if self.search_params:
-            return SerpAPIWrapper(
+            return SerpAPIWrapper(  # type: ignore
                 serpapi_api_key=self.serpapi_api_key,
                 params=self.search_params,
             )
-        return SerpAPIWrapper(
+        return SerpAPIWrapper(  # type: ignore
             serpapi_api_key=self.serpapi_api_key
         )

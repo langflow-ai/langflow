@@ -9,7 +9,7 @@ from langflow.schema import Data
 from langchain_core.tools import BaseTool
 
 
-class BingSearchAPIWrapperComponent(LCToolComponent):
+class BingSearchAPIComponent(LCToolComponent):
     display_name = "Bing Search API"
     description = "Call the Bing Search API."
     name = "BingSearchAPI"
@@ -29,7 +29,7 @@ class BingSearchAPIWrapperComponent(LCToolComponent):
             wrapper = BingSearchAPIWrapper(bing_search_url=self.bing_search_url,
                                            bing_subscription_key=self.bing_subscription_key)
         else:
-            wrapper = BingSearchAPIWrapper(bing_subscription_key=self.bing_subscription_key)
+            wrapper = BingSearchAPIWrapper(bing_subscription_key=self.bing_subscription_key)  # type: ignore
         results = wrapper.results(query=self.input_value, num_results=self.k)
         data = [Data(data=result, text=result["snippet"]) for result in results]
         self.status = data
