@@ -13,7 +13,7 @@ class BaseTracer(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def ready(self):
+    def ready(self) -> bool:
         raise NotImplementedError
 
     @abstractmethod
