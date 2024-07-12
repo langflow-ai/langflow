@@ -1,12 +1,12 @@
 {
-  "id": "1afb6526-2807-4904-a89c-36fcf11ef66b",
+  "id": "9570a502-34bb-44bf-aa15-9f92e7d10efe",
   "data": {
     "nodes": [
       {
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-SThNJ",
+          "id": "Prompt-qeJau",
           "node": {
             "base_classes": ["Message"],
             "beta": false,
@@ -28,8 +28,7 @@
                 "name": "prompt",
                 "selected": "Message",
                 "types": ["Message"],
-                "value": "__UNDEFINED__",
-                "hidden": false
+                "value": "__UNDEFINED__"
               }
             ],
             "pinned": false,
@@ -117,7 +116,7 @@
         },
         "dragging": false,
         "height": 517,
-        "id": "Prompt-SThNJ",
+        "id": "Prompt-qeJau",
         "position": { "x": 1880.8227904110583, "y": 625.8049209882275 },
         "positionAbsolute": { "x": 1880.8227904110583, "y": 625.8049209882275 },
         "selected": false,
@@ -128,7 +127,7 @@
         "data": {
           "description": "Get chat inputs from the Playground.",
           "display_name": "Chat Input",
-          "id": "ChatInput-Su3yM",
+          "id": "ChatInput-NFUUk",
           "node": {
             "template": {
               "_type": "Component",
@@ -295,8 +294,7 @@
                 "display_name": "Message",
                 "method": "message_response",
                 "value": "__UNDEFINED__",
-                "cache": true,
-                "hidden": false
+                "cache": true
               }
             ],
             "field_order": [
@@ -312,11 +310,11 @@
           },
           "type": "ChatInput"
         },
-        "dragging": true,
+        "dragging": false,
         "height": 385,
-        "id": "ChatInput-Su3yM",
-        "position": { "x": 1275.9262193671882, "y": 872.2691603911562 },
-        "positionAbsolute": { "x": 1275.9262193671882, "y": 872.2691603911562 },
+        "id": "ChatInput-NFUUk",
+        "position": { "x": 1275.9262193671882, "y": 836.1228056896347 },
+        "positionAbsolute": { "x": 1275.9262193671882, "y": 836.1228056896347 },
         "selected": false,
         "type": "genericNode",
         "width": 384
@@ -325,7 +323,7 @@
         "data": {
           "description": "Generates text using OpenAI LLMs.",
           "display_name": "OpenAI",
-          "id": "OpenAIModel-t8tqz",
+          "id": "OpenAIModel-gGnwp",
           "node": {
             "base_classes": ["LanguageModel", "Message"],
             "beta": false,
@@ -360,8 +358,7 @@
                 "name": "text_output",
                 "selected": "Message",
                 "types": ["Message"],
-                "value": "__UNDEFINED__",
-                "hidden": false
+                "value": "__UNDEFINED__"
               },
               {
                 "cache": true,
@@ -591,12 +588,12 @@
           },
           "type": "OpenAIModel"
         },
-        "dragging": true,
+        "dragging": false,
         "height": 623,
-        "id": "OpenAIModel-t8tqz",
-        "position": { "x": 2473.2208918053852, "y": 560.0689522326683 },
-        "positionAbsolute": { "x": 2473.2208918053852, "y": 560.0689522326683 },
-        "selected": false,
+        "id": "OpenAIModel-gGnwp",
+        "position": { "x": 2468.968379487559, "y": 560.0689522326683 },
+        "positionAbsolute": { "x": 2468.968379487559, "y": 560.0689522326683 },
+        "selected": true,
         "type": "genericNode",
         "width": 384
       },
@@ -604,7 +601,7 @@
         "data": {
           "description": "Display a chat message in the Playground.",
           "display_name": "Chat Output",
-          "id": "ChatOutput-jueEM",
+          "id": "ChatOutput-yJml1",
           "node": {
             "template": {
               "_type": "Component",
@@ -764,18 +761,17 @@
           "type": "ChatOutput"
         },
         "height": 385,
-        "id": "ChatOutput-jueEM",
+        "id": "ChatOutput-yJml1",
         "position": { "x": 3083.1710516244116, "y": 701.521688846004 },
-        "selected": true,
+        "selected": false,
         "type": "genericNode",
-        "width": 384,
-        "dragging": false
+        "width": 384
       },
       {
         "data": {
           "description": "Retrieves stored chat messages from Langflow tables or an external memory.",
           "display_name": "Chat Memory",
-          "id": "Memory-D1J81",
+          "id": "Memory-1cBNz",
           "node": {
             "template": {
               "_type": "Component",
@@ -941,8 +937,7 @@
                 "display_name": "Messages (Text)",
                 "method": "retrieve_messages_as_text",
                 "value": "__UNDEFINED__",
-                "cache": true,
-                "hidden": false
+                "cache": true
               },
               {
                 "types": ["BaseChatMemory"],
@@ -970,7 +965,7 @@
         },
         "dragging": false,
         "height": 387,
-        "id": "Memory-D1J81",
+        "id": "Memory-1cBNz",
         "position": { "x": 1301.98330242754, "y": 422.33865605652574 },
         "positionAbsolute": { "x": 1301.98330242754, "y": 422.33865605652574 },
         "selected": false,
@@ -984,98 +979,98 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-Su3yM",
+            "id": "ChatInput-NFUUk",
             "name": "message",
             "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "user_message",
-            "id": "Prompt-SThNJ",
+            "id": "Prompt-qeJau",
             "inputTypes": ["Message", "Text"],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-Su3yM{œdataTypeœ:œChatInputœ,œidœ:œChatInput-Su3yMœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-SThNJ{œfieldNameœ:œuser_messageœ,œidœ:œPrompt-SThNJœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "ChatInput-Su3yM",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-Su3yMœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "Prompt-SThNJ",
-        "targetHandle": "{œfieldNameœ:œuser_messageœ,œidœ:œPrompt-SThNJœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+        "id": "reactflow__edge-ChatInput-NFUUk{œdataTypeœ:œChatInputœ,œidœ:œChatInput-NFUUkœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-qeJau{œfieldNameœ:œuser_messageœ,œidœ:œPrompt-qeJauœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "ChatInput-NFUUk",
+        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-NFUUkœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Prompt-qeJau",
+        "targetHandle": "{œfieldNameœ:œuser_messageœ,œidœ:œPrompt-qeJauœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-SThNJ",
+            "id": "Prompt-qeJau",
             "name": "prompt",
             "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "OpenAIModel-t8tqz",
+            "id": "OpenAIModel-gGnwp",
             "inputTypes": ["Message"],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-SThNJ{œdataTypeœ:œPromptœ,œidœ:œPrompt-SThNJœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-t8tqz{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-t8tqzœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Prompt-SThNJ",
-        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-SThNJœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "OpenAIModel-t8tqz",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-t8tqzœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "id": "reactflow__edge-Prompt-qeJau{œdataTypeœ:œPromptœ,œidœ:œPrompt-qeJauœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-gGnwp{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-gGnwpœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "Prompt-qeJau",
+        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-qeJauœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "OpenAIModel-gGnwp",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-gGnwpœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIModel",
-            "id": "OpenAIModel-t8tqz",
+            "id": "OpenAIModel-gGnwp",
             "name": "text_output",
             "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-jueEM",
+            "id": "ChatOutput-yJml1",
             "inputTypes": ["Message"],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-OpenAIModel-t8tqz{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-t8tqzœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-jueEM{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-jueEMœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "OpenAIModel-t8tqz",
-        "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-t8tqzœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "ChatOutput-jueEM",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-jueEMœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "id": "reactflow__edge-OpenAIModel-gGnwp{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-gGnwpœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-yJml1{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-yJml1œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "OpenAIModel-gGnwp",
+        "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-gGnwpœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "ChatOutput-yJml1",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-yJml1œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "Memory",
-            "id": "Memory-D1J81",
+            "id": "Memory-1cBNz",
             "name": "messages_text",
             "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "context",
-            "id": "Prompt-SThNJ",
+            "id": "Prompt-qeJau",
             "inputTypes": ["Message", "Text"],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Memory-D1J81{œdataTypeœ:œMemoryœ,œidœ:œMemory-D1J81œ,œnameœ:œmessages_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-SThNJ{œfieldNameœ:œcontextœ,œidœ:œPrompt-SThNJœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "Memory-D1J81",
-        "sourceHandle": "{œdataTypeœ:œMemoryœ,œidœ:œMemory-D1J81œ,œnameœ:œmessages_textœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "Prompt-SThNJ",
-        "targetHandle": "{œfieldNameœ:œcontextœ,œidœ:œPrompt-SThNJœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+        "id": "reactflow__edge-Memory-1cBNz{œdataTypeœ:œMemoryœ,œidœ:œMemory-1cBNzœ,œnameœ:œmessages_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-qeJau{œfieldNameœ:œcontextœ,œidœ:œPrompt-qeJauœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "Memory-1cBNz",
+        "sourceHandle": "{œdataTypeœ:œMemoryœ,œidœ:œMemory-1cBNzœ,œnameœ:œmessages_textœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Prompt-qeJau",
+        "targetHandle": "{œfieldNameœ:œcontextœ,œidœ:œPrompt-qeJauœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
       }
     ],
     "viewport": {
-      "x": -428.8150986075648,
-      "y": -80.95629562143853,
-      "zoom": 0.5573032371977148
+      "x": -377.45799796990354,
+      "y": 18.161555190942522,
+      "zoom": 0.45494095964690673
     }
   },
   "description": "This project can be used as a starting point for building a Chat experience with user specific memory. You can set a different Session ID to start a new message history.",
-  "name": "memory_new",
+  "name": "memory_good",
   "last_tested_version": "1.0.7",
   "endpoint_name": null,
   "is_component": false
