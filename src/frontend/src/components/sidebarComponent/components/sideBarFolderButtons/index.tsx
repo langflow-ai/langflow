@@ -290,6 +290,7 @@ const SideBarFoldersButtonsComponent = ({
                   )}
                   {index > 0 && (
                     <Button
+                      data-testid="btn-delete-folder"
                       className="hidden p-0 hover:bg-white group-hover:block hover:dark:bg-[#0c101a00]"
                       onClick={(e) => {
                         handleDeleteFolder!(item);
