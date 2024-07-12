@@ -4,7 +4,7 @@ import {
   DEL_KEY_SUCCESS_ALERT,
   DEL_KEY_SUCCESS_ALERT_PLURAL,
 } from "@/constants/alerts_constants";
-import { useDeleteApiKey } from "@/controllers/API/queries/api-keys";
+import { IApiKeys, useDeleteApiKey, useGetApiKeysQuery } from "@/controllers/API/queries/api-keys";
 import { SelectionChangedEvent } from "ag-grid-community";
 import { useContext, useEffect, useRef, useState } from "react";
 import TableComponent from "../../../../components/tableComponent";
@@ -12,7 +12,6 @@ import { AuthContext } from "../../../../contexts/authContext";
 import useAlertStore from "../../../../stores/alertStore";
 import ApiKeyHeaderComponent from "./components/ApiKeyHeader";
 import { getColumnDefs } from "./helpers/column-defs";
-import useApiKeys from "./hooks/use-api-keys";
 
 export default function ApiKeysPage() {
   const [loadingKeys, setLoadingKeys] = useState(true);
@@ -21,21 +20,31 @@ export default function ApiKeysPage() {
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const { userData } = useContext(AuthContext);
   const [userId, setUserId] = useState("");
-  const keysList = useRef([]);
+  const keysList = useRef<IApiKeys[]>([]);
+  const { refetch } = useGetApiKeysQuery();
+
+  async function getApiKeysQuery() {
+    setLoadingKeys(true);
+    const { data } = await refetch()
+    if (data !== undefined) {
+      keysList.current = data["api_keys"].map((apikey) => ({
+        ...apikey,
+        name: apikey.name && apikey.name !== "" ? apikey.name : "Untitled",
+        last_used_at: apikey.last_used_at ?? "Never",
+      }));
+      setUserId(data["user_id"]);
+    }
+    setLoadingKeys(false);
+  }
 
   useEffect(() => {
-    fetchApiKeys();
+    if (userData) {
+      getApiKeysQuery();
+    }
   }, [userData]);
 
-  const { fetchApiKeys } = useApiKeys(
-    userData,
-    setLoadingKeys,
-    keysList,
-    setUserId,
-  );
-
   function resetFilter() {
-    fetchApiKeys();
+    getApiKeysQuery();
   }
 
   const { mutate } = useDeleteApiKey();
@@ -74,7 +83,7 @@ export default function ApiKeysPage() {
     <div className="flex h-full w-full flex-col justify-between gap-6">
       <ApiKeyHeaderComponent
         selectedRows={selectedRows}
-        fetchApiKeys={fetchApiKeys}
+        fetchApiKeys={getApiKeysQuery}
         userId={userId}
       />
 
