@@ -16,6 +16,9 @@ jobs:
         id: date
         run: echo "DATE=$(date +'%Y%m%d%H%M%S')" >> "$GITHUB_OUTPUT"
 
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         id: setup-node
