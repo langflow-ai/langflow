@@ -52,6 +52,7 @@ def pytest_configure(config):
     pytest.CHAT_INPUT = data_path / "ChatInputTest.json"
     pytest.TWO_OUTPUTS = data_path / "TwoOutputsTest.json"
     pytest.VECTOR_STORE_PATH = data_path / "Vector_store.json"
+    pytest.SIMPLE_API_TEST = data_path / "SimpleAPITest.json"
     pytest.CODE_WITH_SYNTAX_ERROR = """
 def get_text():
     retun "Hello World"
@@ -208,6 +209,12 @@ def vector_store_grouped_json_flow():
 @pytest.fixture
 def json_flow_with_prompt_and_history():
     with open(pytest.BASIC_CHAT_WITH_PROMPT_AND_HISTORY, "r") as f:
+        return f.read()
+
+
+@pytest.fixture
+def json_simple_api_test():
+    with open(pytest.SIMPLE_API_TEST, "r") as f:
         return f.read()
 
 
@@ -417,6 +424,20 @@ def created_api_key(active_user):
         session.commit()
         session.refresh(api_key)
     return api_key
+
+
+@pytest.fixture(name="simple_api_test")
+def get_simple_api_test(client, logged_in_headers, json_simple_api_test):
+    # Once the client is created, we can get the starter project
+    # Just create a new flow with the simple api test
+    flow = orjson.loads(json_simple_api_test)
+    data = flow["data"]
+    flow = FlowCreate(name="Simple API Test", data=data, description="Simple API Test")
+    response = client.post("api/v1/flows/", json=flow.model_dump(), headers=logged_in_headers)
+    assert response.status_code == 201
+    assert response.json()["name"] == flow.name
+    assert response.json()["data"] == flow.data
+    return response.json()
 
 
 @pytest.fixture(name="starter_project")
