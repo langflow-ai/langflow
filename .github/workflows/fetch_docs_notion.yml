@@ -55,17 +55,11 @@ jobs:
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           NOTION_DOCS_ROOT_PAGE_ID: ${{ secrets.NOTION_DOCS_ROOT_PAGE_ID }}
-
       - name: Commit changes
         run: |
           git add .
           git commit -m "Update docs from Notion"
-
-      - name: Push changes
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          git push --set-upstream origin $(git rev-parse --abbrev-ref HEAD)
+          git push
 
       - name: Create Pull Request
         id: create_pr
