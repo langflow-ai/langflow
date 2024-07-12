@@ -57,7 +57,7 @@ test("CRUD folders", async ({ page }) => {
     .last()
     .hover()
     .then(async () => {
-      await page.getByTestId("icon-trash").last().click();
+      await page.getByTestId("btn-delete-folder").last().click();
     });
 
   await page.getByText("Delete").last().click();
