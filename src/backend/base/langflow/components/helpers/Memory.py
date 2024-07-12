@@ -1,5 +1,3 @@
-from typing import List, Sequence
-
 from langflow.custom import Component
 from langflow.helpers.data import data_to_text
 from langflow.inputs import HandleInput

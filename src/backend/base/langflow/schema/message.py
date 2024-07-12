@@ -113,11 +113,7 @@ class Message(Data):
         else:
             sender = lc_message.type
 
-        return cls(
-            text=lc_message.content,
-            sender=sender,
-            sender_name=sender
-        )
+        return cls(text=lc_message.content, sender=sender, sender_name=sender)
 
     @classmethod
     def from_data(cls, data: "Data") -> "Message":

@@ -1,5 +1,5 @@
 from langflow.base.io.chat import ChatComponent
-from langflow.inputs import HandleInput, BoolInput
+from langflow.inputs import BoolInput
 from langflow.io import DropdownInput, MessageTextInput, Output
 from langflow.memory import store_message
 from langflow.schema.message import Message

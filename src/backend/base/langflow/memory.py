@@ -13,6 +13,7 @@ from langflow.services.deps import session_scope
 from langflow.field_typing import BaseChatMessageHistory
 from langchain_core.messages import BaseMessage
 
+
 def get_messages(
     sender: str | None = None,
     sender_name: str | None = None,
@@ -141,11 +142,10 @@ def store_message(
 
 
 class LCBuiltinChatMemory(BaseChatMessageHistory):
-
     def __init__(
-            self,
-            flow_id: str,
-            session_id: str,
+        self,
+        flow_id: str,
+        session_id: str,
     ) -> None:
         self.flow_id = flow_id
         self.session_id = session_id
@@ -165,5 +165,3 @@ class LCBuiltinChatMemory(BaseChatMessageHistory):
 
     def clear(self) -> None:
         delete_messages(self.session_id)
-
-

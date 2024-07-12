@@ -17,7 +17,7 @@ class StoreMessageComponent(Component):
             name="memory",
             display_name="External Memory",
             input_types=["BaseChatMessageHistory"],
-            info="The external memory to store the message. If empty, it will use the Langflow tables."
+            info="The external memory to store the message. If empty, it will use the Langflow tables.",
         ),
         StrInput(
             name="sender",

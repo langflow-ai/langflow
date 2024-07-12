@@ -1,6 +1,6 @@
 from langflow.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES
 from langflow.base.io.chat import ChatComponent
-from langflow.inputs import HandleInput, BoolInput
+from langflow.inputs import BoolInput
 from langflow.io import DropdownInput, FileInput, MessageTextInput, MultilineInput, Output
 from langflow.memory import store_message
 from langflow.schema.message import Message
