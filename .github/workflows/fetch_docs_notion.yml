@@ -15,23 +15,12 @@ jobs:
       - name: Get current date
         id: date
         run: echo "DATE=$(date +'%Y%m%d%H%M%S')" >> "$GITHUB_OUTPUT"
-      - name: Checkout code
-        uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         id: setup-node
         with:
           node-version: ${{ env.NODE_VERSION }}
-
-      - name: Configure git
-        run: |
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-
-      - name: Create new branch
-        run: |
-          git checkout -b update-docs-${{ steps.date.outputs.DATE }}
 
       - name: Cache Node.js dependencies
         uses: actions/cache@v4
@@ -55,11 +44,6 @@ jobs:
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           NOTION_DOCS_ROOT_PAGE_ID: ${{ secrets.NOTION_DOCS_ROOT_PAGE_ID }}
-      - name: Commit changes
-        run: |
-          git add .
-          git commit -m "Update docs from Notion"
-          git push --set-upstream origin update-docs-${{ steps.date.outputs.DATE }}
 
       - name: Create Pull Request
         id: create_pr
