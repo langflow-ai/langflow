@@ -66,29 +66,6 @@ class RunnableVerticesManager:
     def are_all_predecessors_fulfilled(self, vertex_id: str) -> bool:
         return not any(self.run_predecessors.get(vertex_id, []))
 
-    def find_runnable_predecessors_for_successors(self, vertex: "Vertex") -> List[str]:
-        """Finds runnable predecessors for the successors of a given vertex."""
-        runnable_vertices = []
-        visited = set()
-        get_vertex = vertex.graph.get_vertex
-
-        def find_runnable_predecessors(predecessor: "Vertex"):
-            predecessor_id = predecessor.id
-            if predecessor_id in visited:
-                return
-            visited.add(predecessor_id)
-            if self.is_vertex_runnable(predecessor):
-                runnable_vertices.append(predecessor_id)
-            else:
-                for pred_pred_id in self.run_predecessors.get(predecessor_id, []):
-                    find_runnable_predecessors(get_vertex(pred_pred_id))
-
-        for successor_id in self.run_map.get(vertex.id, []):
-            for predecessor_id in self.run_predecessors.get(successor_id, []):
-                find_runnable_predecessors(get_vertex(predecessor_id))
-
-        return runnable_vertices
-
     def remove_from_predecessors(self, vertex_id: str):
         """Removes a vertex from the predecessor list of its successors."""
         predecessors = self.run_map.get(vertex_id, [])

@@ -1432,7 +1432,26 @@ class Graph:
         This checks the direct predecessors of each successor to identify any that are
         immediately runnable, expanding the search to ensure progress can be made.
         """
-        return self.run_manager.find_runnable_predecessors_for_successors(self.get_vertex(vertex_id))
+        runnable_vertices = []
+        visited = set()
+
+        def find_runnable_predecessors(predecessor: "Vertex"):
+            predecessor_id = predecessor.id
+            if predecessor_id in visited:
+                return
+            visited.add(predecessor_id)
+            is_active = self.get_vertex(predecessor_id).is_active()
+            if self.run_manager.is_vertex_runnable(predecessor_id, is_active):
+                runnable_vertices.append(predecessor_id)
+            else:
+                for pred_pred_id in self.run_manager.run_predecessors.get(predecessor_id, []):
+                    find_runnable_predecessors(self.get_vertex(pred_pred_id))
+
+        for successor_id in self.run_manager.run_map.get(vertex_id, []):
+            for predecessor_id in self.run_manager.run_predecessors.get(successor_id, []):
+                find_runnable_predecessors(self.get_vertex(predecessor_id))
+
+        return runnable_vertices
 
     def remove_from_predecessors(self, vertex_id: str):
         self.run_manager.remove_from_predecessors(vertex_id)
