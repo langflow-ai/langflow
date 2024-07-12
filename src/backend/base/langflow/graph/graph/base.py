@@ -825,6 +825,7 @@ class Graph:
         except KeyError:
             if not silent:
                 raise ValueError(f"Vertex {vertex_id} not found")
+            return None
 
     def get_root_of_group_node(self, vertex_id: str) -> Vertex:
         """Returns the root of a group node."""
@@ -870,7 +871,7 @@ class Graph:
         self.run_manager.add_to_vertices_being_run(vertex_id)
         try:
             params = ""
-            parent_vertex = self.get_vertex(vertex.parent_node_id, silent=True)
+            parent_vertex = self.get_vertex(vertex.parent_node_id, silent=True) if vertex.parent_node_id else None
             if vertex.frozen or (parent_vertex and parent_vertex.frozen):
                 # Check the cache for the vertex
                 cached_result = await chat_service.get_cache(key=vertex.id)
