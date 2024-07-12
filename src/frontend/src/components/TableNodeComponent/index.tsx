@@ -69,8 +69,10 @@ export default function TableNodeComponent({
       <div className="flex w-full items-center gap-3" data-testid={"div-" + id}>
         <BaseModal>
           <BaseModal.Header description={"Add or edit your data"}>
-            <IconComponent name="Table" />
-            {tableTitle}
+            <div className="flex justify-center gap-2 align-baseline">
+              <IconComponent name="Table" />
+              {tableTitle}
+            </div>
           </BaseModal.Header>
           <BaseModal.Content>
             <TableComponent

@@ -12,7 +12,8 @@ export default function StringReader({
 }): JSX.Element {
   return (
     <TextModal editable={editable} setValue={setValue} value={string??""}>
-      <span className="truncate">{string}</span>
+      {/* INVISIBLE CHARACTER TO PREVENT AGgrid bug */}
+      <span className="truncate">{string??"‎"}</span>
     </TextModal>
   );
 }
