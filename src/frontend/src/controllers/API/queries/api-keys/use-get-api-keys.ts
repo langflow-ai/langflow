@@ -4,7 +4,7 @@ import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
 
-export interface IApiKeys {
+export interface IApiKeysDataArray {
   name: string;
   last_used_at: string | null;
   total_uses: number;
@@ -15,20 +15,20 @@ export interface IApiKeys {
   created_at: string;
 }
 
-interface apiQueryResponse {
+interface IApiQueryResponse {
   total_count: number;
   user_id: string;
-  api_keys: Array<IApiKeys>;
+  api_keys: Array<IApiKeysDataArray>;
 }
 
 export const useGetApiKeysQuery: useQueryFunctionType<
   undefined,
-  apiQueryResponse
+  IApiQueryResponse
 > = (_, options) => {
   const { query } = UseRequestProcessor();
 
   const getApiKeysFn = async () => {
-    return await api.get<apiQueryResponse>(`${getURL("API_KEY")}`);
+    return await api.get<IApiQueryResponse>(`${getURL("API_KEY")}`);
   };
 
   const responseFn = async () => {

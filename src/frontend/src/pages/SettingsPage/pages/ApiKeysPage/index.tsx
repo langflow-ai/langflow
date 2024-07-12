@@ -5,7 +5,7 @@ import {
   DEL_KEY_SUCCESS_ALERT_PLURAL,
 } from "@/constants/alerts_constants";
 import {
-  IApiKeys,
+  IApiKeysDataArray,
   useDeleteApiKey,
   useGetApiKeysQuery,
 } from "@/controllers/API/queries/api-keys";
@@ -24,7 +24,7 @@ export default function ApiKeysPage() {
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const { userData } = useContext(AuthContext);
   const [userId, setUserId] = useState("");
-  const keysList = useRef<IApiKeys[]>([]);
+  const keysList = useRef<IApiKeysDataArray[]>([]);
   const { refetch } = useGetApiKeysQuery();
 
   async function getApiKeysQuery() {
