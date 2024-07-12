@@ -15,9 +15,10 @@ import ForwardedIconComponent from "../genericIconComponent";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import TableOptions from "./components/TableOptions";
 import resetGrid from "./utils/reset-grid-columns";
+import { ColDef } from "ag-grid-community";
 
 interface TableComponentProps extends AgGridReactProps {
-  columnDefs: NonNullable<AgGridReactProps["columnDefs"]>;
+  columnDefs: NonNullable<ColDef<any, any>[]>;
   rowData: NonNullable<AgGridReactProps["rowData"]>;
   displayEmptyAlert?: boolean;
   alertTitle?: string;
@@ -82,7 +83,7 @@ const TableComponent = forwardRef<
             onUpdate: (value: any) => void;
             editableCell: boolean;
           }>
-        ).find((field) => field.field === newCol.headerName);
+        ).find((field) => field.field === newCol.field);
         if (field) {
           newCol = {
             ...newCol,

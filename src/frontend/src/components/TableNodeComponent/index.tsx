@@ -6,7 +6,7 @@ import TableComponent from "../tableComponent";
 import { SelectionChangedEvent } from "ag-grid-community";
 import { useRef, useState } from "react";
 import { AgGridReact } from "ag-grid-react";
-import { set } from "lodash";
+import { cloneDeep, set } from "lodash";
 
 export default function TableNodeComponent({
     tableTitle,
@@ -29,7 +29,14 @@ export default function TableNodeComponent({
             onChange(rows);
         }
     }
-    function duplicateRow() { }
+    function duplicateRow() {
+        if(agGrid.current && selectedNodes.length > 0){
+            const toDuplicate = selectedNodes.map((node) => cloneDeep(node.data));
+            setSelectedNodes([]);
+            const rows:any = []
+            onChange([...value, ...toDuplicate]);
+        }
+    }
     function addRow() {
         const newRow = {};
         columns.forEach((column) => {
@@ -56,8 +63,9 @@ export default function TableNodeComponent({
                             onSelectionChanged={(event: SelectionChangedEvent) => {
                                 setSelectedNodes(event.api.getSelectedNodes());
                             }}
+                            editable={true}
                             rowSelection="multiple"
-                            suppressRowClickSelection={true} editable={true}
+                            suppressRowClickSelection={true}
                             pagination={true}
                             addRow={addRow}
                             onDelete={deleteRow}
