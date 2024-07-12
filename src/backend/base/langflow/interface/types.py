@@ -76,10 +76,7 @@ async def get_and_cache_all_types_dict(
         Raises:
             None.
         """
-        if isinstance(cache_service, AsyncBaseCacheService):
-            return await cache_service.get(key=key, lock=lock)
-        else:
-            return cache_service.get(key=key, lock=lock)
+        return await cache_service.get(key=key, lock=lock)
 
     async def set_in_cache(key, value):
         """
