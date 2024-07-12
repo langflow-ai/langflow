@@ -138,7 +138,7 @@ class TracingService(Service):
         self.inputs[trace_name] = inputs
         self.inputs_metadata[trace_name] = metadata or {}
         for tracer in self._tracers.values():
-            if not tracer.ready:
+            if not tracer.ready:  # type: ignore
                 continue
             try:
                 tracer.add_trace(trace_id, trace_name, trace_type, inputs, metadata, vertex)
@@ -147,7 +147,7 @@ class TracingService(Service):
 
     def _end_traces(self, trace_id: str, trace_name: str, error: Exception | None = None):
         for tracer in self._tracers.values():
-            if not tracer.ready:
+            if not tracer.ready:  # type: ignore
                 continue
             try:
                 tracer.end_trace(
@@ -162,7 +162,7 @@ class TracingService(Service):
 
     def _end_all_traces(self, outputs: dict, error: Exception | None = None):
         for tracer in self._tracers.values():
-            if not tracer.ready:
+            if not tracer.ready:  # type: ignore
                 continue
             try:
                 tracer.end(self.inputs, outputs=self.outputs, error=error, metadata=outputs)
@@ -185,7 +185,9 @@ class TracingService(Service):
         inputs: Dict[str, Any],
         metadata: Optional[Dict[str, Any]] = None,
     ):
-        trace_id = component.vertex.id
+        trace_id = trace_name
+        if component.vertex:
+            trace_id = component.vertex.id
         trace_type = component.trace_type
         self._start_traces(
             trace_id,
@@ -265,6 +267,7 @@ class LangSmithTracer(BaseTracer):
         trace_type: str,
         inputs: Dict[str, Any],
         metadata: Dict[str, Any] | None = None,
+        vertex: Optional["Vertex"] = None,
     ):
         if not self._ready:
             return
@@ -369,7 +372,8 @@ class LangWatchTracer(BaseTracer):
         try:
             self._ready = self.setup_langwatch()
 
-            import nanoid  # import after setting up langwatch so we are sure to be available
+            # import after setting up langwatch so we are sure to be available
+            import nanoid  # type: ignore
 
             self.trace = self._client.trace(
                 trace_id=str(self.trace_id),
