@@ -450,6 +450,7 @@ class LangWatchTracer(BaseTracer):
         trace_name: str,
         outputs: Dict[str, Any] | None = None,
         error: Exception | None = None,
+        logs: list[Log | dict] = [],
     ):
         if self.spans.get(trace_id):
             # Workaround for when model is used just as a component not actually called as an LLM,

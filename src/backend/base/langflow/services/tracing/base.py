@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Dict, Optional
 from uuid import UUID
+from langflow.services.tracing.schema import Log
 
 if TYPE_CHECKING:
     from langflow.graph.vertex.base import Vertex
@@ -29,7 +30,12 @@ class BaseTracer(ABC):
 
     @abstractmethod
     def end_trace(
-        self, trace_id: str, trace_name: str, outputs: Dict[str, Any] | None = None, error: Exception | None = None
+        self,
+        trace_id: str,
+        trace_name: str,
+        outputs: Dict[str, Any] | None = None,
+        error: Exception | None = None,
+        logs: list[Log | dict] = [],
     ):
         raise NotImplementedError
 
