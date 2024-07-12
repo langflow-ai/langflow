@@ -2,16 +2,17 @@ from typing import List
 
 from langchain_community.tools.bing_search import BingSearchResults
 from langchain_community.utilities import BingSearchAPIWrapper
-from langflow.custom import Component
+
+from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.inputs import MessageTextInput, SecretStrInput, IntInput, MultilineInput
 from langflow.schema import Data
-from langflow.template import Output
+from langchain_core.tools import BaseTool
 
 
-class BingSearchAPIWrapperComponent(Component):
-    display_name = "BingSearchAPIWrapper"
-    description = "Wrapper for Bing Search API."
-    name = "BingSearchAPIWrapper"
+class BingSearchAPIWrapperComponent(LCToolComponent):
+    display_name = "Bing Search API"
+    description = "Call the Bing Search API."
+    name = "BingSearchAPI"
 
     inputs = [
         SecretStrInput(name="bing_subscription_key", display_name="Bing Subscription Key"),
@@ -23,14 +24,10 @@ class BingSearchAPIWrapperComponent(Component):
         IntInput(name="k", display_name="Number of results", value=4, required=True),
     ]
 
-    outputs = [
-        Output(name="api_run_model", display_name="Data", method="run_model"),
-        Output(name="api_build_tool", display_name="Tool", method="build_tool"),
-    ]
-
     def run_model(self) -> List[Data]:
         if self.bing_search_url:
-            wrapper = BingSearchAPIWrapper(bing_search_url=self.bing_search_url, bing_subscription_key=self.bing_subscription_key)
+            wrapper = BingSearchAPIWrapper(bing_search_url=self.bing_search_url,
+                                           bing_subscription_key=self.bing_subscription_key)
         else:
             wrapper = BingSearchAPIWrapper(bing_subscription_key=self.bing_subscription_key)
         results = wrapper.results(query=self.input_value, num_results=self.k)
@@ -38,7 +35,7 @@ class BingSearchAPIWrapperComponent(Component):
         self.status = data
         return data
 
-    def build_tool(self) -> BingSearchResults:
+    def build_tool(self) -> BaseTool:
         if self.bing_search_url:
             wrapper = BingSearchAPIWrapper(bing_search_url=self.bing_search_url, bing_subscription_key=self.bing_subscription_key)
         else:

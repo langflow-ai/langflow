@@ -389,6 +389,21 @@ files = [
 ]
 
 [[package]]
+name = "backports-tarfile"
+version = "1.2.0"
+description = "Backport of CPython tarfile module"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "backports.tarfile-1.2.0-py3-none-any.whl", hash = "sha256:77e284d754527b01fb1e6fa8a1afe577858ebe4e9dad8919e34c862cb399bc34"},
+    {file = "backports_tarfile-1.2.0.tar.gz", hash = "sha256:d75e02c268746e1b8144c278978b6e98e85de6ad16f8e4b0844a154557eca991"},
+]
+
+[package.extras]
+docs = ["furo", "jaraco.packaging (>=9.3)", "rst.linker (>=1.9)", "sphinx (>=3.5)", "sphinx-lint"]
+testing = ["jaraco.test", "pytest (!=8.0.*)", "pytest (>=6,!=8.1.*)", "pytest-checkdocs (>=2.4)", "pytest-cov", "pytest-enabler (>=2.2)"]
+
+[[package]]
 name = "bce-python-sdk"
 version = "0.9.17"
 description = "BCE SDK for python"
@@ -4163,6 +4178,24 @@ files = [
 ]
 
 [[package]]
+name = "jaraco-context"
+version = "5.3.0"
+description = "Useful decorators and context managers"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "jaraco.context-5.3.0-py3-none-any.whl", hash = "sha256:3e16388f7da43d384a1a7cd3452e72e14732ac9fe459678773a3608a812bf266"},
+    {file = "jaraco.context-5.3.0.tar.gz", hash = "sha256:c2f67165ce1f9be20f32f650f25d8edfc1646a8aeee48ae06fb35f90763576d2"},
+]
+
+[package.dependencies]
+"backports.tarfile" = {version = "*", markers = "python_version < \"3.12\""}
+
+[package.extras]
+docs = ["furo", "jaraco.packaging (>=9.3)", "jaraco.tidelift (>=1.4)", "rst.linker (>=1.9)", "sphinx (>=3.5)", "sphinx-lint"]
+testing = ["portend", "pytest (>=6,!=8.1.1)", "pytest-checkdocs (>=2.4)", "pytest-cov", "pytest-enabler (>=2.2)", "pytest-mypy", "pytest-ruff (>=0.2.1)"]
+
+[[package]]
 name = "jedi"
 version = "0.19.1"
 description = "An autocompletion tool for Python that can be used for text editors."
@@ -4794,6 +4827,39 @@ google-auth-oauthlib = ">=1.1.0"
 langchain = ">=0.0.335"
 protobuf = ">=4.25.0"
 pytz = ">=2023.3.post1"
+
+[[package]]
+name = "langchain-google-community"
+version = "1.0.6"
+description = "An integration package connecting miscellaneous Google's products and LangChain"
+optional = false
+python-versions = "<4.0,>=3.8.1"
+files = [
+    {file = "langchain_google_community-1.0.6-py3-none-any.whl", hash = "sha256:5c2f18aebfb60b51f68dc1608d09ac3e8231743d75c545f409230f7bee641faf"},
+    {file = "langchain_google_community-1.0.6.tar.gz", hash = "sha256:081ed78702426a62187c86984c169508c432fc13cd2b08dbf5b553b40bb160b3"},
+]
+
+[package.dependencies]
+google-api-core = ">=2.17.1,<3.0.0"
+google-api-python-client = ">=2.122.0,<3.0.0"
+grpcio = ">=1.62.0,<2.0.0"
+langchain-community = ">=0.2.1,<0.3.0"
+langchain-core = ">=0.2.9,<0.3"
+tenacity = ">=8.3.0,<8.4.0"
+
+[package.extras]
+bigquery = ["google-cloud-bigquery (>=3.21.0,<4.0.0)"]
+docai = ["gapic-google-longrunning (>=0.11.2,<0.12.0)", "google-cloud-contentwarehouse (>=0.7.7,<0.8.0)", "google-cloud-documentai (>=2.26.0,<3.0.0)", "google-cloud-documentai-toolbox (>=0.13.3a0,<0.14.0)"]
+drive = ["google-auth-httplib2 (>=0.2.0,<0.3.0)", "google-auth-oauthlib (>=1.2.0,<2.0.0)"]
+featurestore = ["db-dtypes (>=1.2.0,<2.0.0)", "google-cloud-aiplatform (>=1.56.0,<2.0.0)", "google-cloud-bigquery-storage (>=2.6.0,<3)", "pandas (>=1.0.0)", "pandas (>=2.0.0,<3.0)", "pyarrow (>=6.0.1)", "pydantic (>=2.7.4,<3.0.0)"]
+gcs = ["google-cloud-storage (>=2.16.0,<3.0.0)"]
+gmail = ["beautifulsoup4 (>=4.12.3,<5.0.0)", "google-auth-httplib2 (>=0.2.0,<0.3.0)", "google-auth-oauthlib (>=1.2.0,<2.0.0)"]
+places = ["googlemaps (>=4.10.0,<5.0.0)"]
+speech = ["google-cloud-speech (>=2.26.0,<3.0.0)"]
+texttospeech = ["google-cloud-texttospeech (>=2.16.3,<3.0.0)"]
+translate = ["google-cloud-translate (>=3.15.3,<4.0.0)"]
+vertexaisearch = ["google-cloud-discoveryengine (>=0.11.13,<0.12.0)"]
+vision = ["google-cloud-vision (>=3.7.2,<4.0.0)"]
 
 [[package]]
 name = "langchain-google-genai"
@@ -5750,6 +5816,17 @@ python-versions = "*"
 files = [
     {file = "monotonic-1.6-py2.py3-none-any.whl", hash = "sha256:68687e19a14f11f26d140dd5c86f3dba4bf5df58003000ed467e0e2a69bca96c"},
     {file = "monotonic-1.6.tar.gz", hash = "sha256:3a55207bcfed53ddd5c5bae174524062935efed17792e9de2ad0205ce9ad63f7"},
+]
+
+[[package]]
+name = "more-itertools"
+version = "10.3.0"
+description = "More routines for operating on iterables, beyond itertools"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "more-itertools-10.3.0.tar.gz", hash = "sha256:e5d93ef411224fbcef366a6e8ddc4c5781bc6359d43412a65dd5964e46111463"},
+    {file = "more_itertools-10.3.0-py3-none-any.whl", hash = "sha256:ea6a02e24a9161e51faad17a8782b92a0df82c12c1c8886fec7f0c3fa1a1b320"},
 ]
 
 [[package]]
@@ -9977,13 +10054,13 @@ files = [
 
 [[package]]
 name = "tenacity"
-version = "8.5.0"
+version = "8.3.0"
 description = "Retry code until it succeeds"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "tenacity-8.5.0-py3-none-any.whl", hash = "sha256:b594c2a5945830c267ce6b79a166228323ed52718f30302c1359836112346687"},
-    {file = "tenacity-8.5.0.tar.gz", hash = "sha256:8bc6c0c8a09b31e6cad13c47afbed1a567518250a9a171418582ed8d9c20ca78"},
+    {file = "tenacity-8.3.0-py3-none-any.whl", hash = "sha256:3649f6443dbc0d9b01b9d8020a9c4ec7a1ff5f6f3c6c8a036ef371f573fe9185"},
+    {file = "tenacity-8.3.0.tar.gz", hash = "sha256:953d4e6ad24357bceffbc9707bc74349aca9d245f68eb65419cf0c249a1949a2"},
 ]
 
 [package.extras]
@@ -11384,6 +11461,28 @@ files = [
 dev = ["black (>=19.3b0)", "pytest (>=4.6.2)"]
 
 [[package]]
+name = "wolframalpha"
+version = "5.1.3"
+description = "Wolfram|Alpha 2.0 API client"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "wolframalpha-5.1.3-py3-none-any.whl", hash = "sha256:549b44e64595c5845be4c94f2b306a84832157bef422b20937cbca44b48ee117"},
+    {file = "wolframalpha-5.1.3.tar.gz", hash = "sha256:56226efeca0f55acec5e17dd2f6537a178d0bf4feec4df0615165e2968bb49b8"},
+]
+
+[package.dependencies]
+httpx = "*"
+"jaraco.context" = "*"
+more-itertools = "*"
+multidict = "*"
+xmltodict = "*"
+
+[package.extras]
+doc = ["furo", "jaraco.packaging (>=9.3)", "rst.linker (>=1.9)", "sphinx (>=3.5)", "sphinx-lint"]
+test = ["keyring", "pmxbot", "pytest (>=6,!=8.1.*)", "pytest-checkdocs (>=2.4)", "pytest-cov", "pytest-enabler (>=2.2)", "pytest-mypy", "pytest-ruff (>=0.2.1)"]
+
+[[package]]
 name = "wrapt"
 version = "1.16.0"
 description = "Module for decorators, wrappers and monkey patching."
@@ -11485,6 +11584,17 @@ python-versions = ">=3.6"
 files = [
     {file = "XlsxWriter-3.2.0-py3-none-any.whl", hash = "sha256:ecfd5405b3e0e228219bcaf24c2ca0915e012ca9464a14048021d21a995d490e"},
     {file = "XlsxWriter-3.2.0.tar.gz", hash = "sha256:9977d0c661a72866a61f9f7a809e25ebbb0fb7036baa3b9fe74afcfca6b3cb8c"},
+]
+
+[[package]]
+name = "xmltodict"
+version = "0.13.0"
+description = "Makes working with XML feel like you are working with JSON"
+optional = false
+python-versions = ">=3.4"
+files = [
+    {file = "xmltodict-0.13.0-py2.py3-none-any.whl", hash = "sha256:aa89e8fd76320154a40d19a0df04a4695fb9dc5ba977cbb68ab3e4eb225e7852"},
+    {file = "xmltodict-0.13.0.tar.gz", hash = "sha256:341595a488e3e01a85a9d8911d8912fd922ede5fecc4dce437eb4b6c8d037e56"},
 ]
 
 [[package]]
