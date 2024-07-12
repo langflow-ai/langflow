@@ -6,7 +6,7 @@ slug: /configuration-api-keys
 
 
 
-:::caution
+:::info
 
 This page may contain outdated information. It will be updated as soon as possible.
 
@@ -18,7 +18,7 @@ This page may contain outdated information. It will be updated as soon as possib
 Langflow provides an API key functionality that allows users to access their individual components and flows without traditional login authentication. The API key is a user-specific token that can be included in the request header or query parameter to authenticate API calls. This documentation outlines how to generate, use, and manage API keys in Langflow.
 
 
-:::caution
+:::info
 
 The default user and password are set using the LANGFLOW_SUPERUSER and LANGFLOW_SUPERUSER_PASSWORD environment variables. The default values are langflow and langflow, respectively.
 

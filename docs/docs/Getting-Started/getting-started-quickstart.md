@@ -15,50 +15,63 @@ slug: /getting-started-quickstart
 - [OpenAI API key](https://platform.openai.com/)
 - [Langflow installed and running](/getting-started-installation)
 
-## Hello World - Basic Prompting {#67e7cd59d0fa43e3926bdc75134f7472}
+## Basic Prompting {#67e7cd59d0fa43e3926bdc75134f7472}
 
 
-Let's start with a Prompt component to instruct an OpenAI Model.
+---
 
 
-Prompts serve as the inputs to a large language model (LLM), acting as the interface between human instructions and computational tasks. By submitting natural language requests in a prompt to an LLM, you can obtain answers, generate text, and solve problems.
+### Create the basic prompting project {#c029603ddb1f42f5b28df92e58426ab3}
 
-1. From the Langflow dashboard, click **New Project**.
+
+1. From the Langflow dashboard, click **New Project**. 
+
+
+![](./1835734464.png)
+
+
 2. Select **Basic Prompting**.
 
-![](./131952085.png)
+
+3. The **Basic Prompting** flow is created.
 
 
-This flow allows you to chat with the **OpenAI** model by using a **Prompt** to send instructions.
+![](./487525520.png)
+
+
+This flow allows you to chat with the **OpenAI** component through the **Prompt** component. 
 
 
 Examine the **Prompt** component. The **Template** field instructs the LLM to `Answer the user as if you were a pirate.` This should be interesting...
 
 
-To use the **OpenAI** component, you have two options for providing your OpenAI API Key: directly passing it to the component or creating an environment variable. For better security and manageability, creating an environment variable is recommended. Here's how to set it up:
+![](./690736575.png)
 
 
-In the **OpenAI API Key** field, click the **Globe** button to access environment variables, and then click **Add New Variable**.
+4. To create an environment variable for the **OpenAI** component, in the **OpenAI API Key** field, click the **Globe** button, and then click **Add New Variable**.
 
-1. In the **Variable Name** field, enter `openai_api_key`.
-2. In the **Value** field, paste your OpenAI API Key (`sk-...`).
-3. Click **Save Variable**.
+	1. In the **Variable Name** field, enter `openai_api_key`.
+	2. In the **Value** field, paste your OpenAI API Key (`sk-...`).
+	3. Click **Save Variable**.
 
-By creating an environment variable, you keep your API key secure and make it easier to manage across different components or projects.
+![](./1390293355.png)
 
 
-## Run the basic prompting flow {#27ac88f4721b42c9a9587326905b8df4}
+### Run {#ef0e8283bfb646f99bbb825462d8cbab}
 
-1. Click the **Playground** button. This where you can interact with your bot.
-2. Type any message and press Enter. And... Ahoy! 🏴‍☠️ The bot responds in a piratical manner!
+1. Click the **Playground** button on the control panel (bottom right side of the workspace). This is where you can interact with your AI.
+2. Type a message and press Enter. The bot should respond in a markedly piratical manner!
 
-## Modify the prompt for a different result {#5208b946024846169fe59ee206021a4f}
+### Modify the prompt for a different result {#dcea9df0cd51434db76717c78b1e9a94}
 
 1. To modify your prompt results, in the **Prompt** template, click the **Template** field. The **Edit Prompt** window opens.
-2. Change `Answer the user as if you were a pirate` to a different character, perhaps `Answer the user as if you were Harold Abelson.`
-3. Run the basic prompting flow again. The response will be markedly different.
+2. Change `Answer the user as if you were a pirate` to a different character, perhaps `Answer the user as if you were Hermione Granger.`
+3. Run the workflow again. The response will be markedly different.
 
 ## Next steps {#63b6db6cb571489c86b3ae89051f1a4f}
+
+
+---
 
 
 Well done! You've built your first prompt in Langflow. 🎉

@@ -6,6 +6,15 @@ slug: /components-models
 
 
 
+:::info
+
+This page may contain outdated information. It will be updated as soon as possible.
+
+:::
+
+
+
+
 ## Amazon Bedrock {#3b8ceacef3424234814f95895a25bf43}
 
 

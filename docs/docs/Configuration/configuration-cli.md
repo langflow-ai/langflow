@@ -6,9 +6,13 @@ slug: /configuration-cli
 
 
 
-> ⚠️ WARNING
-> This page may contain outdated information. It will be updated as soon as possible.
->
+:::info
+
+This page may contain outdated information. It will be updated as soon as possible.
+
+:::
+
+
 
 
 Langflow's Command Line Interface (CLI) is a powerful tool that allows you to interact with the Langflow server from the command line. The CLI provides a wide range of commands to help you shape Langflow to your needs.
@@ -188,7 +192,6 @@ Create a superuser for Langflow.
 langflow superuser
 # or
 python -m langflow superuser
-
 ```
 
 

@@ -6,6 +6,15 @@ slug: /components-helpers
 
 
 
+:::info
+
+This page may contain outdated information. It will be updated as soon as possible.
+
+:::
+
+
+
+
 ## Chat memory {#304dc4a3bea74efb9068093ff18a56ad}
 
 

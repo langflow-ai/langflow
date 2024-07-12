@@ -11,6 +11,9 @@ LangSmith is a full-lifecycle DevOps service from LangChain that provides monito
 
 ## Step-by-step Configuration {#b912579a43984f9a92921232b67c885d}
 
+
+---
+
 1. Obtain your LangChain API key from [https://smith.langchain.com](https://smith.langchain.com/)
 2. Add the following keys to Langflow .env file:
 

@@ -23,6 +23,9 @@ Its intuitive interface allows for easy manipulation of AI building blocks, enab
 
 ## 🚀 First steps {#c1ccb5e315b040edaa8d9a67f4960d81}
 
+
+---
+
 - [Install Langflow](/getting-started-installation) - Install and start a local Langflow server.
 - [Quickstart](/getting-started-quickstart) - Create a flow and run it.
 - [Langflow Workspace](/workspace) - Learn more about the Langflow Workspace.

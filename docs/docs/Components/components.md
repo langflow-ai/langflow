@@ -9,6 +9,9 @@ slug: /components
 ## Component {#0323a728d8314767adb907b998036bb4}
 
 
+---
+
+
 A component is a single building block within a flow. It consists of inputs, outputs, and parameters that define their functionality. These elements provide a convenient and  straightforward way to compose LLM-based applications. Learn more about components and how they work below.
 
 

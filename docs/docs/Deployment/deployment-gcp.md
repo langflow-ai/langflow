@@ -6,22 +6,37 @@ slug: /deployment-gcp
 
 
 
-# Deploy on Google Cloud Platform {#4ee01cda736c4f7396936409f23cdb52}
+:::info
+
+This page may contain outdated information. It will be updated as soon as possible.
+
+:::
 
 
-> Warning: This page may contain outdated information. It will be updated as soon as possible.
 
 
-## Run Langflow from a New Google Cloud Project {#ce729796d7404ccdb627bee47d6a4399}
+## Deploy on Google Cloud Platform {#4ee01cda736c4f7396936409f23cdb52}
+
+
+---
+
+
+### Run Langflow from a New Google Cloud Project {#ce729796d7404ccdb627bee47d6a4399}
 
 
 This guide will help you set up a Langflow development VM in a Google Cloud Platform project using Google Cloud Shell.
 
 
-> Note: When Cloud Shell opens, be sure to select Trust repo. Some gcloud commands might not run in an ephemeral Cloud Shell environment.
+:::info
+
+When Cloud Shell opens, be sure to select Trust repo. Some gcloud commands might not run in an ephemeral Cloud Shell environment.
+
+:::
 
 
-## Standard VM {#245b47b450dd4159a5c56a5124bab84f}
+
+
+### Standard VM {#245b47b450dd4159a5c56a5124bab84f}
 
 
 [embed](https://console.cloud.google.com/cloudshell/open?git_repo=https://github.com/langflow-ai/langflow&working_dir=scripts/gcp&shellonly=true&tutorial=walkthroughtutorial.md)
