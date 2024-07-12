@@ -248,8 +248,13 @@ class InterfaceVertex(ComponentVertex):
                 message = str(text_output)
             # if the message is a generator or iterator
             # it means that it is a stream of messages
+
             else:
                 message = text_output
+
+            if hasattr(sender_name, "get_text"):
+                sender_name = sender_name.get_text()
+
             artifact_type = ArtifactType.STREAM if stream_url is not None else ArtifactType.OBJECT
             artifacts = ChatOutputResponse(
                 message=message,
@@ -335,10 +340,15 @@ class InterfaceVertex(ComponentVertex):
                 message = message.text if hasattr(message, "text") else message
                 yield message
                 complete_message += message
+
+        if hasattr(self.params.get("sender_name"), "get_text"):
+            sender_name = self.params.get("sender_name").get_text()
+        else:
+            sender_name = self.params.get("sender_name")
         self.artifacts = ChatOutputResponse(
             message=complete_message,
             sender=self.params.get("sender", ""),
-            sender_name=self.params.get("sender_name", ""),
+            sender_name=sender_name,
             files=[{"path": file} if isinstance(file, str) else file for file in self.params.get("files", [])],
             type=ArtifactType.OBJECT.value,
         ).model_dump()
