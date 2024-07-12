@@ -30,21 +30,21 @@ The CustomComponent class serves as the foundation for creating custom component
 
   The type annotations of the _`build`_ instance method are used to create the fields of the component.
 
-  | Supported Types                                           |
-  | --------------------------------------------------------- |
-  | _`str`_, _`int`_, _`float`_, _`bool`_, _`list`_, _`dict`_ |
-  | _`langflow.field_typing.NestedDict`_                      |
-  | _`langflow.field_typing.Prompt`_                         |
-  | _`langchain.chains.base.Chain`_                           |
-  | _`langchain.PromptTemplate`_                              |
-  | _`from langchain.schema.language_model import BaseLanguageModel`_                           |
-  | _`langchain.Tool`_                                        |
-  | _`langchain.document_loaders.base.BaseLoader`_            |
-  | _`langchain.schema.Document`_                             |
-  | _`langchain.text_splitters.TextSplitter`_                 |
-  | _`langchain.vectorstores.base.VectorStore`_               |
-  | _`langchain.embeddings.base.Embeddings`_                  |
-  | _`langchain.schema.BaseRetriever`_                        |
+  | Supported Types                                                   |
+  | ----------------------------------------------------------------- |
+  | _`str`_, _`int`_, _`float`_, _`bool`_, _`list`_, _`dict`_         |
+  | _`langflow.field_typing.NestedDict`_                              |
+  | _`langflow.field_typing.Prompt`_                                  |
+  | _`langchain.chains.base.Chain`_                                   |
+  | _`langchain.PromptTemplate`_                                      |
+  | _`from langchain.schema.language_model import BaseLanguageModel`_ |
+  | _`langchain.Tool`_                                                |
+  | _`langchain.document_loaders.base.BaseLoader`_                    |
+  | _`langchain.schema.Document`_                                     |
+  | _`langchain.text_splitters.TextSplitter`_                         |
+  | _`langchain.vectorstores.base.VectorStore`_                       |
+  | _`langchain.embeddings.base.Embeddings`_                          |
+  | _`langchain.schema.BaseRetriever`_                                |
 
   The difference between _`dict`_ and _`langflow.field_typing.NestedDict`_ is that one adds a simple key-value pair field, while the other opens a more robust dictionary editor.
 
@@ -53,7 +53,6 @@ The CustomComponent class serves as the foundation for creating custom component
 
       If you want to add the values of the variables to the template you defined, you must format the PromptTemplate inside the CustomComponent class.
         </Admonition>
-
 
   <Admonition type="info">
       Unlike Langchain types, base Python types do not add a
@@ -68,23 +67,23 @@ The CustomComponent class serves as the foundation for creating custom component
 
   Below are the available keys used to configure component fields:
 
-  | Key                        | Description                                                                                                                                                                                                                                                                 |
-  | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-  | _`is_list: bool`_          | If the field can be a list of values, meaning that the user can manually add more inputs to the same field.                                                                                                                                                                 |
-  | _`options: List[str]`_     | When defined, the field becomes a dropdown menu where a list of strings defines the options to be displayed. If the _`value`_ attribute is set to one of the options, that option becomes default. For this parameter to work, _`field_type`_ should invariably be _`str`_. |
-  | _`multiline: bool`_        | Defines if a string field opens a text editor. Useful for longer texts.                                                                                                                                                                                                     |
-  | _`input_types: List[str]`_ | Used when you want a _`str`_ field to have connectable handles.                                                                                                                                                                                                             |
-  | _`display_name: str`_      | Defines the name of the field.                                                                                                                                                                                                                                              |
-  | _`advanced: bool`_         | Hide the field in the canvas view (displayed component settings only). Useful when a field is for advanced users.                                                                                                                                                           |
-  | _`password: bool`_         | To mask the input text. Useful to hide sensitive text (e.g. API keys).                                                                                                                                                                                                      |
-  | _`required: bool`_         | This is determined automatically but can be used to override the default behavior.                                                                                                                                                                                         |
-  | _`info: str`_              | Adds a tooltip to the field.                                                                                                                                                                                                                                                |
-  | _`file_types: List[str]`_  | This is a requirement if the _`field_type`_ is _file_. Defines which file types will be accepted. For example, _json_, _yaml_ or _yml_.                                                                                                                                     |
-  | _`range_spec: langflow.field_typing.RangeSpec`_ | This is a requirement if the _`field_type`_ is _`float`_. Defines the range of values accepted and the step size. If none is defined, the default is _`[-1, 1, 0.1]`_.                                                                                 |
-  | _`title_case: bool`_       | Formats the name of the field when _`display_name`_ is not defined. Set it to False to keep the name as you set it in the _`build`_ method.                                                                                                                                 |
-  | _`refresh_button: bool`_          | If set to True a button will appear to the right of the field, and when clicked, it will call the _`update_build_config`_ method which takes in the _`build_config`_, the name of the field (_`field_name`_) and the latest value of the field (_`field_value`_). This is useful when you want to update the _`build_config`_ based on the value of the field. |
-  | _`real_time_refresh: bool`_ | If set to True, the _`update_build_config`_ method will be called every time the field value changes.                                                                                                                                                                      |
-  | _`field_type: str`_        | You should never define this key. It is automatically set based on the type hint of the _`build`_ method.                                                                                                                                                                  |
+  | Key                                             | Description                                                                                                                                                                                                                                                                                                                                                    |
+  | ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+  | _`is_list: bool`_                               | If the field can be a list of values, meaning that the user can manually add more inputs to the same field.                                                                                                                                                                                                                                                    |
+  | _`options: List[str]`_                          | When defined, the field becomes a dropdown menu where a list of strings defines the options to be displayed. If the _`value`_ attribute is set to one of the options, that option becomes default. For this parameter to work, _`field_type`_ should invariably be _`str`_.                                                                                    |
+  | _`multiline: bool`_                             | Defines if a string field opens a text editor. Useful for longer texts.                                                                                                                                                                                                                                                                                        |
+  | _`input_types: List[str]`_                      | Used when you want a _`str`_ field to have connectable handles.                                                                                                                                                                                                                                                                                                |
+  | _`display_name: str`_                           | Defines the name of the field.                                                                                                                                                                                                                                                                                                                                 |
+  | _`advanced: bool`_                              | Hide the field in the canvas view (displayed component settings only). Useful when a field is for advanced users.                                                                                                                                                                                                                                              |
+  | _`password: bool`_                              | To mask the input text. Useful to hide sensitive text (e.g. API keys).                                                                                                                                                                                                                                                                                         |
+  | _`required: bool`_                              | This is determined automatically but can be used to override the default behavior.                                                                                                                                                                                                                                                                             |
+  | _`info: str`_                                   | Adds a tooltip to the field.                                                                                                                                                                                                                                                                                                                                   |
+  | _`file_types: List[str]`_                       | This is a requirement if the _`field_type`_ is _file_. Defines which file types will be accepted. For example, _json_, _yaml_ or _yml_.                                                                                                                                                                                                                        |
+  | _`range_spec: langflow.field_typing.RangeSpec`_ | This is a requirement if the _`field_type`_ is _`float`_. Defines the range of values accepted and the step size. If none is defined, the default is _`[-1, 1, 0.1]`_.                                                                                                                                                                                         |
+  | _`title_case: bool`_                            | Formats the name of the field when _`display_name`_ is not defined. Set it to False to keep the name as you set it in the _`build`_ method.                                                                                                                                                                                                                    |
+  | _`refresh_button: bool`_                        | If set to True a button will appear to the right of the field, and when clicked, it will call the _`update_build_config`_ method which takes in the _`build_config`_, the name of the field (_`field_name`_) and the latest value of the field (_`field_value`_). This is useful when you want to update the _`build_config`_ based on the value of the field. |
+  | _`real_time_refresh: bool`_                     | If set to True, the _`update_build_config`_ method will be called every time the field value changes.                                                                                                                                                                                                                                                          |
+  | _`field_type: str`_                             | You should never define this key. It is automatically set based on the type hint of the _`build`_ method.                                                                                                                                                                                                                                                      |
 
 <Admonition type="info" label="Tip">
 
@@ -102,11 +101,11 @@ By using the _`update_build_config`_ method, you can update the _`build_config`_
 
 - Useful attributes:
 
-  | Attribute Name | Description                                                                   |
-  | -------------- | ----------------------------------------------------------------------------- |
-  | _`status`_ | Displays the value it receives in the _`build`_ method. Useful for debugging. |
-  | _`field_order`_ | Defines the order the fields will be displayed in the canvas.                  |
-  | _`icon`_ | Defines the emoji (for example, _`:rocket:`_) that will be displayed in the canvas. |
+  | Attribute Name  | Description                                                                         |
+  | --------------- | ----------------------------------------------------------------------------------- |
+  | _`status`_      | Displays the value it receives in the _`build`_ method. Useful for debugging.       |
+  | _`field_order`_ | Defines the order the fields will be displayed in the canvas.                       |
+  | _`icon`_        | Defines the emoji (for example, _`:rocket:`_) that will be displayed in the canvas. |
 
   <Admonition type="info" label="Tip">
 
