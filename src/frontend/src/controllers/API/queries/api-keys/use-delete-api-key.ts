@@ -3,17 +3,17 @@ import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
 
-interface IPostAddApiKey {
+interface IDeleteApiKey {
   keyId: string;
 }
 
 // add types for error handling and success
-export const useDeleteApiKey: useMutationFunctionType<IPostAddApiKey> = (
+export const useDeleteApiKey: useMutationFunctionType<IDeleteApiKey> = (
   options,
 ) => {
   const { mutate } = UseRequestProcessor();
 
-  const deleteApiKeyFn = async (payload: IPostAddApiKey): Promise<any> => {
+  const deleteApiKeyFn = async (payload: IDeleteApiKey): Promise<any> => {
     const res = await api.delete(`${getURL("API_KEY")}/${payload.keyId}`);
     return res.data;
   };
