@@ -8,7 +8,7 @@ interface ITagsDataArray {
   name: string;
 }
 
-type tagsQueryResponse = Array<ITagsDataArray>
+type tagsQueryResponse = Array<ITagsDataArray>;
 
 export const useGetTagsQuery: useQueryFunctionType<
   undefined,

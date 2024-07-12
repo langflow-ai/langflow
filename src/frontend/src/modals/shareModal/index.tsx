@@ -78,7 +78,6 @@ export default function ShareModal({
     }
   }, [internalOpen, hasApiKey, hasStore]);
 
-
   async function handleGetTags() {
     const { data } = await refetch();
     if (data !== undefined) {
