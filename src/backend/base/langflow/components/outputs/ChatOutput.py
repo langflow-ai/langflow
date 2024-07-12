@@ -1,5 +1,7 @@
 from langflow.base.io.chat import ChatComponent
+from langflow.inputs import BoolInput
 from langflow.io import DropdownInput, MessageTextInput, Output
+from langflow.memory import store_message
 from langflow.schema.message import Message
 
 
@@ -14,6 +16,13 @@ class ChatOutput(ChatComponent):
             name="input_value",
             display_name="Text",
             info="Message to be passed as output.",
+        ),
+        BoolInput(
+            name="store_message",
+            display_name="Store Messages",
+            info="Store the message in the history.",
+            value=True,
+            advanced=True,
         ),
         DropdownInput(
             name="sender",
@@ -49,7 +58,10 @@ class ChatOutput(ChatComponent):
             session_id=self.session_id,
         )
         if self.session_id and isinstance(message, Message) and isinstance(message.text, str):
-            self.store_message(message)
+            store_message(
+                message,
+                flow_id=self.graph.flow_id,
+            )
             self.message.value = message
 
         self.status = message

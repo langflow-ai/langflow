@@ -427,9 +427,9 @@ def test_build_vertex_invalid_vertex_id(client, added_flow_with_prompt_and_histo
 
 
 @pytest.mark.api_key_required
-def test_successful_run_no_payload(client, starter_project, created_api_key):
+def test_successful_run_no_payload(client, simple_api_test, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
-    flow_id = starter_project["id"]
+    flow_id = simple_api_test["id"]
     response = client.post(f"/api/v1/run/{flow_id}", headers=headers)
     assert response.status_code == status.HTTP_200_OK, response.text
     # Add more assertions here to validate the response content
@@ -455,10 +455,9 @@ def test_successful_run_no_payload(client, starter_project, created_api_key):
     assert all([result is not None for result in inner_results]), (outputs_dict, output_results_has_results)
 
 
-@pytest.mark.api_key_required
-def test_successful_run_with_output_type_text(client, starter_project, created_api_key):
+def test_successful_run_with_output_type_text(client, simple_api_test, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
-    flow_id = starter_project["id"]
+    flow_id = simple_api_test["id"]
     payload = {
         "output_type": "text",
     }
@@ -486,11 +485,10 @@ def test_successful_run_with_output_type_text(client, starter_project, created_a
     assert all([key in result for result in inner_results for key in expected_keys]), outputs_dict
 
 
-@pytest.mark.api_key_required
-def test_successful_run_with_output_type_any(client, starter_project, created_api_key):
+def test_successful_run_with_output_type_any(client, simple_api_test, created_api_key):
     # This one should have both the ChatOutput and TextOutput components
     headers = {"x-api-key": created_api_key.api_key}
-    flow_id = starter_project["id"]
+    flow_id = simple_api_test["id"]
     payload = {
         "output_type": "any",
     }
@@ -518,12 +516,11 @@ def test_successful_run_with_output_type_any(client, starter_project, created_ap
     assert all([key in result for result in inner_results for key in expected_keys]), outputs_dict
 
 
-@pytest.mark.api_key_required
-def test_successful_run_with_output_type_debug(client, starter_project, created_api_key):
+def test_successful_run_with_output_type_debug(client, simple_api_test, created_api_key):
     # This one should return outputs for all components
     # Let's just check the amount of outputs(there should be 7)
     headers = {"x-api-key": created_api_key.api_key}
-    flow_id = starter_project["id"]
+    flow_id = simple_api_test["id"]
     payload = {
         "output_type": "debug",
     }
@@ -541,14 +538,12 @@ def test_successful_run_with_output_type_debug(client, starter_project, created_
     assert "outputs" in outputs_dict
     assert outputs_dict.get("inputs") == {"input_value": ""}
     assert isinstance(outputs_dict.get("outputs"), list)
-    assert len(outputs_dict.get("outputs")) == 4
+    assert len(outputs_dict.get("outputs")) == 3
 
 
-@pytest.mark.api_key_required
-# To test input_type wel'l just set it with output_type debug and check if the value is correct
-def test_successful_run_with_input_type_text(client, starter_project, created_api_key):
+def test_successful_run_with_input_type_text(client, simple_api_test, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
-    flow_id = starter_project["id"]
+    flow_id = simple_api_test["id"]
     payload = {
         "input_type": "text",
         "output_type": "debug",
@@ -568,19 +563,20 @@ def test_successful_run_with_input_type_text(client, starter_project, created_ap
     assert "outputs" in outputs_dict
     assert outputs_dict.get("inputs") == {"input_value": "value1"}
     assert isinstance(outputs_dict.get("outputs"), list)
-    assert len(outputs_dict.get("outputs")) == 4
+    assert len(outputs_dict.get("outputs")) == 3
     # Now we get all components that contain TextInput in the component_id
     text_input_outputs = [output for output in outputs_dict.get("outputs") if "TextInput" in output.get("component_id")]
-    assert len(text_input_outputs) == 0
+    assert len(text_input_outputs) == 1
     # Now we check if the input_value is correct
-    assert all([output.get("results") == "value1" for output in text_input_outputs]), text_input_outputs
+    # We get text key twice because the output is now a Message
+    assert all(
+        [output.get("results").get("text").get("text") == "value1" for output in text_input_outputs]
+    ), text_input_outputs
 
 
-# Now do the same for "chat" input type
-@pytest.mark.api_key_required
-def test_successful_run_with_input_type_chat(client, starter_project, created_api_key):
+def test_successful_run_with_input_type_chat(client, simple_api_test, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
-    flow_id = starter_project["id"]
+    flow_id = simple_api_test["id"]
     payload = {
         "input_type": "chat",
         "output_type": "debug",
@@ -600,7 +596,7 @@ def test_successful_run_with_input_type_chat(client, starter_project, created_ap
     assert "outputs" in outputs_dict
     assert outputs_dict.get("inputs") == {"input_value": "value1"}
     assert isinstance(outputs_dict.get("outputs"), list)
-    assert len(outputs_dict.get("outputs")) == 4
+    assert len(outputs_dict.get("outputs")) == 3
     # Now we get all components that contain TextInput in the component_id
     chat_input_outputs = [output for output in outputs_dict.get("outputs") if "ChatInput" in output.get("component_id")]
     assert len(chat_input_outputs) == 1
@@ -610,10 +606,23 @@ def test_successful_run_with_input_type_chat(client, starter_project, created_ap
     ), chat_input_outputs
 
 
-@pytest.mark.api_key_required
-def test_successful_run_with_input_type_any(client, starter_project, created_api_key):
+def test_invalid_run_with_input_type_chat(client, simple_api_test, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
-    flow_id = starter_project["id"]
+    flow_id = simple_api_test["id"]
+    payload = {
+        "input_type": "chat",
+        "output_type": "debug",
+        "input_value": "value1",
+        "tweaks": {"Chat Input": {"input_value": "value2"}},
+    }
+    response = client.post(f"/api/v1/run/{flow_id}", headers=headers, json=payload)
+    assert response.status_code == status.HTTP_400_BAD_REQUEST, response.text
+    assert "If you pass an input_value to the chat input, you cannot pass a tweak with the same name." in response.text
+
+
+def test_successful_run_with_input_type_any(client, simple_api_test, created_api_key):
+    headers = {"x-api-key": created_api_key.api_key}
+    flow_id = simple_api_test["id"]
     payload = {
         "input_type": "any",
         "output_type": "debug",
@@ -633,17 +642,21 @@ def test_successful_run_with_input_type_any(client, starter_project, created_api
     assert "outputs" in outputs_dict
     assert outputs_dict.get("inputs") == {"input_value": "value1"}
     assert isinstance(outputs_dict.get("outputs"), list)
-    assert len(outputs_dict.get("outputs")) == 4
+    assert len(outputs_dict.get("outputs")) == 3
     # Now we get all components that contain TextInput or ChatInput in the component_id
     any_input_outputs = [
         output
         for output in outputs_dict.get("outputs")
         if "TextInput" in output.get("component_id") or "ChatInput" in output.get("component_id")
     ]
-    assert len(any_input_outputs) == 1
+    assert len(any_input_outputs) == 2
     # Now we check if the input_value is correct
+    all_result_dicts = [output.get("results") for output in any_input_outputs]
+    all_message_or_text_dicts = [
+        result_dict.get("message", result_dict.get("text")) for result_dict in all_result_dicts
+    ]
     assert all(
-        [output.get("results").get("message").get("text") == "value1" for output in any_input_outputs]
+        [message_or_text_dict.get("text") == "value1" for message_or_text_dict in all_message_or_text_dicts]
     ), any_input_outputs
 
 

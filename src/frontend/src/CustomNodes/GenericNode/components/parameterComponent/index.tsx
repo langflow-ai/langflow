@@ -297,7 +297,7 @@ export default function ParameterComponent({
                 disabled={disabledOutput}
                 unstyled
                 onClick={() => handleUpdateOutputHide()}
-                data-testid={`output-inspection-${title.toLowerCase()}`}
+                data-testid={`input-inspection-${title.toLowerCase()}`}
               >
                 <IconComponent
                   className={cn(

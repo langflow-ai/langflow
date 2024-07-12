@@ -522,10 +522,14 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           get().verticesBuild!.verticesLayers[
             get().verticesBuild!.verticesLayers.length - 1
           ];
+
         nextVertices = nextVertices.filter(
-          (vertex) =>
-            !lastLayer.some((layer) => layer.id === vertex.id) &&
-            !lastLayer.some((layer) => layer.reference === vertex.reference),
+          (vertexElement) =>
+            !lastLayer.some(
+              (layerElement) =>
+                layerElement.id === vertexElement.id &&
+                layerElement.reference === vertexElement.reference,
+            ),
         );
         const newLayers = [
           ...get().verticesBuild!.verticesLayers,

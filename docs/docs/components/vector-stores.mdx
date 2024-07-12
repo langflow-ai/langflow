@@ -167,6 +167,33 @@ For more details, see the [FAISS Component Documentation](https://faiss.ai/index
 
 ---
 
+### Milvus
+
+`Milvus` builds a vector store based on Milvus or Zilliz Cloud service to support document ingestion and search.
+
+**Parameters:**
+
+- **Input:** Documents or Data.
+- **Embedding:** Model used in Milvus vector store.
+- **Collection Name:** Collection identifier in Milvus.
+- **Connection URI:** URI used to connect Milvus or Zilliz Cloud service.
+
+---
+
+### Milvus Search
+
+`MilvusSearch` searches a Milvus Vector Store for documents similar to the input, using advanced similarity metrics.
+
+**Parameters:**
+
+- **Input Value:** Search query.
+- **Connection URI:** URI used to connect Milvus or Zilliz Cloud service.
+- **Embedding:** Model used in Milvus vector store.
+- **Collection Name:** Collection identifier in Milvus.
+- **Number of Results:** Number of search results to return.
+
+---
+
 ### MongoDB Atlas
 
 `MongoDBAtlas` builds a MongoDB Atlas-based vector store from Data, streamlining the storage and retrieval of documents.

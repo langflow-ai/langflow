@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "langflow"
-version = "1.0.8"
+version = "1.0.9"
 description = "A Python package with a built-in web application"
 authors = ["Langflow <contact@langflow.org>"]
 maintainers = [
@@ -94,8 +94,13 @@ langchain-aws = "^0.1.6"
 langchain-mongodb = "^0.1.6"
 kubernetes = "^30.1.0"
 firecrawl-py = "^0.0.16"
+
+json-repair = "^0.25.2"
+
 langchain-nvidia-ai-endpoints = "^0.1.2"
 langchain-google-calendar-tools = "^0.0.1"
+langchain-milvus = "^0.1.1"
+
 
 
 [tool.poetry.group.dev.dependencies]

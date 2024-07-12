@@ -7,7 +7,7 @@ import {
   SelectionChangedEvent,
 } from "ag-grid-community";
 import cloneDeep from "lodash/cloneDeep";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import TableComponent from "../../../../components/tableComponent";
 import useRemoveMessages from "../../../../pages/SettingsPage/pages/messagesPage/hooks/use-remove-messages";
 import useUpdateMessage from "../../../../pages/SettingsPage/pages/messagesPage/hooks/use-updateMessage";
@@ -56,12 +56,16 @@ export default function SessionView({
     });
   }
 
-  let filteredMessages = session
-    ? messages.filter((message) => message.session_id === session)
-    : messages;
-  filteredMessages = id
-    ? filteredMessages.filter((message) => message.flow_id === id)
-    : filteredMessages;
+  const filteredMessages = useMemo(() => {
+    let filteredMessages = session
+      ? messages.filter((message) => message.session_id === session)
+      : messages;
+    filteredMessages = id
+      ? filteredMessages.filter((message) => message.flow_id === id)
+      : filteredMessages;
+    return filteredMessages;
+  }, [session, id, messages]);
+
   return isFetching > 0 ? (
     <div className="flex h-full w-full items-center justify-center align-middle">
       <Loading></Loading>

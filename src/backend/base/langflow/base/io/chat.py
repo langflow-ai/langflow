@@ -49,18 +49,6 @@ class ChatComponent(Component):
             },
         }
 
-    def store_message(
-        self,
-        message: Message,
-    ) -> list[Message]:
-        messages = store_message(
-            message,
-            flow_id=self.graph.flow_id,
-        )
-
-        self.status = messages
-        return messages
-
     def build_with_data(
         self,
         sender: Optional[str] = "User",
@@ -86,5 +74,9 @@ class ChatComponent(Component):
 
         self.status = message_text
         if session_id and isinstance(message, Message) and isinstance(message.text, str):
-            self.store_message(message)
+            messages = store_message(
+                message,
+                flow_id=self.graph.flow_id,
+            )
+            self.status = messages
         return message_text  # type: ignore
