@@ -6,6 +6,15 @@ slug: /components-embedding-models
 
 
 
+:::info
+
+This page may contain outdated information. It will be updated as soon as possible.
+
+:::
+
+
+
+
 ## Amazon Bedrock Embeddings {#4ddcfde8c1664e358d3f16d718e944d8}
 
 

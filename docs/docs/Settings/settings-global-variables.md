@@ -6,10 +6,13 @@ slug: /settings-global-variables
 
 import ReactPlayer from "react-player";
 
->
-> ⚠️ WARNING
-> This page may contain outdated information. It will be updated as soon as possible.
->
+:::info
+
+This page may contain outdated information. It will be updated as soon as possible.
+
+:::
+
+
 
 
 Global Variables are a useful feature of Langflow, allowing you to define reusable variables accessed from any Text field in your project.
@@ -24,7 +27,7 @@ Global Variables are a useful feature of Langflow, allowing you to define reusab
 - All Credential Global Variables are encrypted and accessible only by you.
 - Set _`LANGFLOW_STORE_ENVIRONMENT_VARIABLES`_ to _`true`_ in your `.env` file to add all variables in _`LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT`_ to your user's Global Variables.
 
-## Create and Add a Global Variable {#3543d5ef00eb453aa459b97ba85501e5}
+### Create and Add a Global Variable {#3543d5ef00eb453aa459b97ba85501e5}
 
 
 To create and add a global variable, click the 🌐 button in a Text field, and then click **+ Add New Variable**.
@@ -46,9 +49,13 @@ You now have a `openai_api_key` global environment variable for your Langflow pr
 Subsequently, clicking the 🌐 button in a Text field will display the new variable in the dropdown.
 
 
-> 💡 TIP
-> You can also create global variables in Settings &gt; Variables and Secrets.
->
+:::tip
+
+You can also create global variables in Settings &gt; Variables and Secrets.
+
+:::
+
+
 
 
 ![](./418277339.png)
@@ -57,12 +64,7 @@ Subsequently, clicking the 🌐 button in a Text field will display the new vari
 To view and manage your project's global environment variables, visit **Settings** &gt; **Variables and Secrets**.
 
 
-> ⚠️ WARNING
-> All Credential Global Variables are encrypted and accessible only by you.
->
-
-
-## Configure Environment Variables in your .env file {#76844a93dbbc4d1ba551ea1a4a89ccdd}
+### Configure Environment Variables in your .env file {#76844a93dbbc4d1ba551ea1a4a89ccdd}
 
 
 Setting `LANGFLOW_STORE_ENVIRONMENT_VARIABLES` to `true` in your `.env` file (default) adds all variables in `LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT` to your user's Global Variables.
@@ -71,9 +73,13 @@ Setting `LANGFLOW_STORE_ENVIRONMENT_VARIABLES` to `true` in your `.env` file (de
 These variables are accessible like any other Global Variable.
 
 
-> 💡 TIP
-> To prevent this behavior, set `LANGFLOW_STORE_ENVIRONMENT_VARIABLES` to `false` in your `.env` file.
->
+:::info
+
+To prevent this behavior, set `LANGFLOW_STORE_ENVIRONMENT_VARIABLES` to `false` in your `.env` file.
+
+:::
+
+
 
 
 You can specify variables to get from the environment by listing them in `LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT`.
@@ -106,5 +112,5 @@ The default list of variables includes the ones below and more:
 - VECTARA_CORPUS_ID
 - VECTARA_API_KEY
 
-<ReactPlayer controls url="https://prod-files-secure.s3.us-west-2.amazonaws.com/09f11537-5a5b-4f56-9e8d-de8ebcfae549/7030d3ff-3ecd-44db-8640-9c2295b4e3bc/langflow_global_variables.mp4?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=AKIAT73L2G45HZZMZUHI%2F20240712%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20240712T220002Z&X-Amz-Expires=3600&X-Amz-Signature=bad6b33d89ef22b2d56becb6184c34cbc0ad51fc24d1a7d3b9f5d70d755506b1&X-Amz-SignedHeaders=host&x-id=GetObject" />
+<ReactPlayer controls url="https://prod-files-secure.s3.us-west-2.amazonaws.com/09f11537-5a5b-4f56-9e8d-de8ebcfae549/7030d3ff-3ecd-44db-8640-9c2295b4e3bc/langflow_global_variables.mp4?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=AKIAT73L2G45HZZMZUHI%2F20240712%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20240712T232240Z&X-Amz-Expires=3600&X-Amz-Signature=463a0203fa466f5efc5812f6c991821c996ea46f0bcf0ba84177cab56d604621&X-Amz-SignedHeaders=host&x-id=GetObject" />
 

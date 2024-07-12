@@ -22,7 +22,7 @@ The easiest way to get started with Langflow is through the DataStax Cloud Servi
 ![](./602374500.png)
 
 
-# **Install Langflow Locally** {#ef364ee864c545649d248113ad7d3038}
+## **Install Langflow Locally** {#ef364ee864c545649d248113ad7d3038}
 
 
 ---
@@ -59,6 +59,9 @@ Pipx can fetch the missing Python version for you with `--fetch-missing-python`
 ## Having a problem? {#86a16dad1d6e481cafb90efea2b9ff93}
 
 
+---
+
+
 If you encounter a problem, see [Common Installation Issues](/getting-started-common-installation-issues).
 
 
@@ -72,14 +75,23 @@ python -m langflow --help
 
 ## ⛓️ Run Langflow {#d318c4d486b74f5383c45b4f6859dcaa}
 
+
+---
+
+
 1. To run Langflow, enter the following command.
+
 
 ```bash
 python -m langflow run
 ```
 
-1. Confirm that a local Langflow instance starts by visiting `http://127.0.0.1:7860` in a Chromium-based browser.
+
+2. Confirm that a local Langflow instance starts by visiting `http://127.0.0.1:7860` in a Chromium-based browser.
+
 
 ![](./221680153.png)
 
-1. Continue on to the [Quickstart](/getting-started-quickstart).
+
+3. Continue on to the [Quickstart](/getting-started-quickstart).
+

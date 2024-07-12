@@ -6,14 +6,22 @@ slug: /settings-project-general-settings
 
 
 
-> ⚠️ WARNING
-> This page may contain outdated information. It will be updated as soon as possible.
+:::info
+
+This page may contain outdated information. It will be updated as soon as possible.
+
+:::
+
+
 
 
 Change the **Project Settings** or **General Settings** for Langflow.
 
 
 ## Project Settings {#71e61e6544c94f808cd74b8cc012363d}
+
+
+---
 
 
 Click **Project Name** &gt; **Settings** to view your **Project Settings**.
@@ -25,6 +33,9 @@ Visible on the Langflow Store.
 To use the default value, leave this field blank.
 
 ## General Settings {#1a0c451fd5e84feeb1d18c2886d642eb}
+
+
+---
 
 
 Select your **Profile Picture** &gt; **Settings** to view your **General Settings**.
