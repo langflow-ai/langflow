@@ -57,18 +57,6 @@ jobs:
       OPENAI_API_KEY: "${{ secrets.OPENAI_API_KEY }}"
       STORE_API_KEY: "${{ secrets.STORE_API_KEY }}"
 
-  test-integrations:
-    needs: path-filter
-    name: Run Integrations Tests
-    if: ${{ needs.path-filter.outputs.integration == 'true' || needs.path-filter.outputs.tests == 'true' }}
-    uses: ./.github/workflows/integration_test.yml
-    with:
-      astra: ${{ needs.path-filter.outputs.astra_integration }}
-    secrets:
-      OPENAI_API_KEY: "${{ secrets.OPENAI_API_KEY }}"
-      ASTRA_DB_API_KEY: "${{ secrets.ASTRA_DB_API_KEY }}"
-      ASTRA_DB_APPLICATION_TOKEN: "${{ secrets.ASTRA_DB_APPLICATION_TOKEN }}"
-
   lint-backend:
     needs: path-filter
     if: ${{ needs.path-filter.outputs.python == 'true' || needs.path-filter.outputs.tests == 'true' }}

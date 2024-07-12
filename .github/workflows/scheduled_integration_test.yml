@@ -1,24 +1,14 @@
 name: Integration tests
 
 on:
-  workflow_call:
-    secrets:
-      OPENAI_API_KEY:
-        required: true
-      ASTRA_DB_API_KEY:
-        required: true
-      ASTRA_DB_APPLICATION_TOKEN:
-        required: true
   workflow_dispatch:
     inputs:
       branch:
         description: "(Optional) Branch to checkout"
         required: false
         type: string
-      astra_integration:
-        description: "Run Astra DB integration tests"
-        required: false
-        type: boolean
+  schedule:
+    - cron: "0 0 */2 * *" # Run every 2 days
 
 env:
   POETRY_VERSION: "1.8.2"
@@ -48,10 +38,9 @@ jobs:
           poetry env use ${{ matrix.python-version }}
           poetry install
 
-  test-astra-integration:
+  test-integration:
     needs: setup-environment
-    if: ${{ inputs.astra_integration == 'true' }}
-    name: Run Astra DB Integration Tests
+    name: Run Integration Tests
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -64,7 +53,7 @@ jobs:
       ASTRA_DB_API_KEY: ${{ secrets.ASTRA_DB_API_KEY }}
       ASTRA_DB_APPLICATION_TOKEN: ${{ secrets.ASTRA_DB_APPLICATION_TOKEN }}
     steps:
-      - name: Run astra integration tests
+      - name: Run integration tests
         timeout-minutes: 12
         run: |
-          poetry run pytest tests/integration -ra
+          make integration_tests

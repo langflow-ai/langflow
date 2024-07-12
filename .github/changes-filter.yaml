@@ -13,10 +13,3 @@ frontend:
   - "**/typescript_test.yml"
 docs:
   - "docs/**"
-integration:
-  - "src/backend/**.py"
-  - "tests/integration/**"
-astra_integration:
-  - "src/backend/base/langflow/backend/components/vectorstores/AstraDB.py"
-  - "src/backend/base/langflow/backend/components/embeddings/AstraVectorize.py"
-  - "tests/integration/astra/**"
