@@ -96,8 +96,7 @@ const TableComponent = forwardRef<
     });
     const gridRef = useRef(null);
     // @ts-ignore
-    const realRef: React.MutableRefObject<AgGridReact> =
-      ref?.current !== undefined ? ref : gridRef;
+    const realRef: React.MutableRefObject<AgGridReact> = ref?.current !== undefined ? ref : gridRef;
     const dark = useDarkStore((state) => state.dark);
     const initialColumnDefs = useRef(colDef);
     const [columnStateChange, setColumnStateChange] = useState(false);

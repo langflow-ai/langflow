@@ -17,8 +17,9 @@ export default function TableAutoCellRender({
   formatter,
 }: CustomCellRender) {
   function getCellType() {
-    const format: string = formatter ? formatter : typeof value;
-    console.log("format", format);
+    let format: string = formatter ? formatter : typeof value;
+    //convert text to string to bind to the string reader
+    format=format==="text"?"string":format;
     switch (format) {
       case "object":
         if (value === null) {
@@ -28,7 +29,7 @@ export default function TableAutoCellRender({
         } else {
           return <ObjectRender object={value} />;
         }
-      case "string"||"text":
+      case "string":
         if (isTimeStampString(value)) {
           return <DateReader date={value} />;
         }
@@ -58,7 +59,6 @@ export default function TableAutoCellRender({
             </Badge>
           );
         } else {
-          console.log("coldDef", colDef);
           return (
             <StringReader
               editable={!!colDef?.onCellValueChanged}

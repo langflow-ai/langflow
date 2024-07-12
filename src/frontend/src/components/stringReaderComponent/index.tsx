@@ -6,12 +6,12 @@ export default function StringReader({
   setValue,
   editable = false,
 }: {
-  string: string;
+  string: string|null;
   setValue: (value: string) => void;
   editable: boolean;
 }): JSX.Element {
   return (
-    <TextModal editable={editable} setValue={setValue} value={string}>
+    <TextModal editable={editable} setValue={setValue} value={string??""}>
       <span className="truncate">{string}</span>
     </TextModal>
   );

@@ -474,8 +474,7 @@ export function isEndpointNameValid(name: string, maxLength: number): boolean {
 }
 
 export function FormatColumns(columns: ColumnField[]): ColDef<any>[] {
-  const basic_types = new Set(["date", "text", "number"]);
-
+  const basic_types = new Set(["date", "number"]);
   const colDefs = columns.map((col, index) => {
     let newCol: ColDef = {
       headerName: col.display_name,

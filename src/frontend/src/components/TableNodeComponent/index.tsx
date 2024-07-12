@@ -2,6 +2,7 @@ import BaseModal from "@/modals/baseModal";
 import { FormatColumns } from "@/utils/utils";
 import { SelectionChangedEvent } from "ag-grid-community";
 import { AgGridReact } from "ag-grid-react";
+import { cloneDeep } from "lodash";
 import { useRef, useState } from "react";
 import IconComponent from "../../components/genericIconComponent";
 import { TableComponentType } from "../../types/components";
@@ -18,19 +19,31 @@ export default function TableNodeComponent({
   const [selectedNodes, setSelectedNodes] = useState<Array<any>>([]);
   const agGrid = useRef<AgGridReact>(null);
   const AgColumns = FormatColumns(columns);
+
+  function setAllRows() {
+    if (agGrid.current) {
+      const rows: any = [];
+      agGrid.current.api.forEachNode((node) => rows.push(node.data));
+      onChange(rows);
+    }
+  }
   function deleteRow() {
     if (agGrid.current && selectedNodes.length > 0) {
       agGrid.current.api.applyTransaction({
         remove: selectedNodes.map((node) => node.data),
       });
       setSelectedNodes([]);
-
-      const rows: any = [];
-      agGrid.current.api.forEachNode((node) => rows.push(node.data));
-      onChange(rows);
+      setAllRows();
     }
   }
-  function duplicateRow() {}
+  function duplicateRow() {
+    if (agGrid.current && selectedNodes.length > 0) {
+      const toDuplicate = selectedNodes.map((node) => cloneDeep(node.data));
+      setSelectedNodes([]);
+      const rows: any = [];
+      onChange([...value, ...toDuplicate]);
+    }
+  }
   function addRow() {
     const newRow = {};
     columns.forEach((column) => {
@@ -39,7 +52,17 @@ export default function TableNodeComponent({
     onChange([...value, newRow]);
   }
 
-  function editRow() {}
+  function updateComponente() {
+    setAllRows();
+  }
+  const editable = columns.map((column) => {
+    const is_text = column.formatter && column.formatter === "text";
+    return {
+      field: column.name,
+      onUpdate: updateComponente,
+      editableCell: is_text ? false : true,
+    };
+  });
 
   return (
     <div className={"flex w-full items-center"}>
@@ -57,7 +80,7 @@ export default function TableNodeComponent({
               }}
               rowSelection="multiple"
               suppressRowClickSelection={true}
-              editable={true}
+              editable={editable}
               pagination={true}
               addRow={addRow}
               onDelete={deleteRow}
