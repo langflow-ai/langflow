@@ -1,18 +1,27 @@
 from langflow.custom import Component
 from langflow.helpers.data import data_to_text
+from langflow.inputs import HandleInput
 from langflow.io import DropdownInput, IntInput, MessageTextInput, MultilineInput, Output
-from langflow.memory import get_messages
+from langflow.memory import get_messages, LCBuiltinChatMemory
 from langflow.schema import Data
 from langflow.schema.message import Message
+from langflow.field_typing import BaseChatMemory
+from langchain.memory import ConversationBufferMemory
 
 
 class MemoryComponent(Component):
     display_name = "Chat Memory"
-    description = "Retrieves stored chat messages."
+    description = "Retrieves stored chat messages from Langflow tables or an external memory."
     icon = "message-square-more"
     name = "Memory"
 
     inputs = [
+        HandleInput(
+            name="memory",
+            display_name="External Memory",
+            input_types=["BaseChatMessageHistory"],
+            info="Retrieve messages from an external memory. If empty, it will use the Langflow tables.",
+        ),
         DropdownInput(
             name="sender",
             display_name="Sender Type",
@@ -58,8 +67,9 @@ class MemoryComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Chat History", name="messages", method="retrieve_messages"),
+        Output(display_name="Messages (Data)", name="messages", method="retrieve_messages"),
         Output(display_name="Messages (Text)", name="messages_text", method="retrieve_messages_as_text"),
+        Output(display_name="Memory", name="lc_memory", method="build_lc_memory"),
     ]
 
     def retrieve_messages(self) -> Data:
@@ -72,17 +82,38 @@ class MemoryComponent(Component):
         if sender == "Machine and User":
             sender = None
 
-        messages = get_messages(
-            sender=sender,
-            sender_name=sender_name,
-            session_id=session_id,
-            limit=n_messages,
-            order=order,
-        )
-        self.status = messages
-        return messages
+        if self.memory:
+            # override session_id
+            self.memory.session_id = session_id
+
+            stored = self.memory.messages
+            if sender:
+                expected_type = "Machine" if sender == "Machine" else "User"
+                stored = [m for m in stored if m.type == expected_type]
+            if order == "ASC":
+                stored = stored[::-1]
+            if n_messages:
+                stored = stored[:n_messages]
+            stored = [Message.from_lc_message(m) for m in stored]
+        else:
+            stored = get_messages(
+                sender=sender,
+                sender_name=sender_name,
+                session_id=session_id,
+                limit=n_messages,
+                order=order,
+            )
+        self.status = stored
+        return stored
 
     def retrieve_messages_as_text(self) -> Message:
-        messages_text = data_to_text(self.template, self.retrieve_messages())
-        self.status = messages_text
-        return Message(text=messages_text)
+        stored_text = data_to_text(self.template, self.retrieve_messages())
+        self.status = stored_text
+        return Message(text=stored_text)
+
+    def build_lc_memory(self) -> BaseChatMemory:
+        if self.memory:
+            chat_memory = self.memory
+        else:
+            chat_memory = LCBuiltinChatMemory(flow_id=self.graph.flow_id, session_id=self.session_id)
+        return ConversationBufferMemory(chat_memory=chat_memory)

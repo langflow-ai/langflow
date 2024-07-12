@@ -11,13 +11,13 @@ class LCChatMemoryComponent(Component):
     outputs = [
         Output(
             display_name="Memory",
-            name="base_memory",
-            method="build_base_memory",
+            name="memory",
+            method="build_message_history",
         )
     ]
 
     def _validate_outputs(self):
-        required_output_methods = ["build_base_memory"]
+        required_output_methods = ["build_message_history"]
         output_names = [output.name for output in self.outputs]
         for method_name in required_output_methods:
             if method_name not in output_names:
