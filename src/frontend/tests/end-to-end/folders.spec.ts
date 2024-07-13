@@ -57,7 +57,7 @@ test("CRUD folders", async ({ page }) => {
     .last()
     .hover()
     .then(async () => {
-      await page.getByTestId("icon-trash").last().click();
+      await page.getByTestId("btn-delete-folder").last().click();
     });
 
   await page.getByText("Delete").last().click();
@@ -117,6 +117,10 @@ test("change flow folder", async ({ page }) => {
     modalCount = await page.getByTestId("modal-title")?.count();
   }
   await page.getByRole("heading", { name: "Basic Prompting" }).click();
+
+  await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
+    timeout: 100000,
+  });
 
   await page.getByTestId("icon-ChevronLeft").first().click();
 

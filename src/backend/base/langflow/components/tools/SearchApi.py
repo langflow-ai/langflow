@@ -10,6 +10,8 @@ from langflow.services.database.models.base import orjson_dumps
 class SearchApi(CustomComponent):
     display_name: str = "SearchApi"
     description: str = "Real-time search engine results API."
+    name = "SearchApi"
+
     output_types: list[str] = ["Document"]
     documentation: str = "https://www.searchapi.io/docs/google"
     field_config = {

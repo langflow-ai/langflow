@@ -8,6 +8,7 @@ from langflow.field_typing import Text
 class SQLExecutorComponent(CustomComponent):
     display_name = "SQL Executor"
     description = "Execute SQL query."
+    name = "SQLExecutor"
     beta: bool = True
 
     def build_config(self):

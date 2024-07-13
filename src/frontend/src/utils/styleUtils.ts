@@ -184,10 +184,12 @@ import { GroqIcon } from "../icons/Groq";
 import { HuggingFaceIcon } from "../icons/HuggingFace";
 import { IFixIcon } from "../icons/IFixIt";
 import { LangChainIcon } from "../icons/LangChain";
+import { MaritalkIcon } from "../icons/Maritalk";
 import { MetaIcon } from "../icons/Meta";
 import { MidjourneyIcon } from "../icons/Midjorney";
 import { MongoDBIcon } from "../icons/MongoDB";
 import { NotionIcon } from "../icons/Notion";
+import { NvidiaIcon } from "../icons/Nvidia";
 import { OllamaIcon } from "../icons/Ollama";
 import { OpenAiIcon } from "../icons/OpenAi";
 import { PineconeIcon } from "../icons/Pinecone";
@@ -338,6 +340,7 @@ export const nodeIconsLucide: iconsType = {
   OllamaEmbeddings: OllamaIcon,
   ChatOllamaModel: OllamaIcon,
   FAISS: MetaIcon,
+  Maritalk: MaritalkIcon,
   FaissSearch: MetaIcon,
   LangChain: LangChainIcon,
   AzureOpenAiModel: AzureIcon,
@@ -384,6 +387,7 @@ export const nodeIconsLucide: iconsType = {
   MongoDB: MongoDBIcon,
   MongoDBChatMessageHistory: MongoDBIcon,
   NotionDirectoryLoader: NotionIcon,
+  NVIDIA: NvidiaIcon,
   ChatOpenAI: OpenAiIcon,
   AzureChatOpenAI: OpenAiIcon,
   OpenAI: OpenAiIcon,

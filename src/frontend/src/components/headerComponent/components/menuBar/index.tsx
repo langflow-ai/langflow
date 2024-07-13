@@ -75,7 +75,12 @@ export const MenuBar = ({}: {}): JSX.Element => {
       <div className="header-menu-bar">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button asChild variant="primary" size="sm">
+            <Button
+              asChild
+              variant="primary"
+              size="sm"
+              data-testid="flow-configuration-button"
+            >
               <div className="header-menu-bar-display">
                 <div className="header-menu-flow-name" data-testid="flow_name">
                   {currentFlow.name}
@@ -218,8 +223,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
               />
               <div>{printByBuildStatus()}</div>
             </div>
-            {/* Deactivating this until we find a better solution */}
-            {/* <button
+            <button
               disabled={!isBuilding}
               onClick={(_) => {
                 if (isBuilding) {
@@ -237,7 +241,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
             >
               <IconComponent name="Square" className="h-4 w-4" />
               <span>Stop</span>
-            </button> */}
+            </button>
           </div>
         </ShadTooltip>
       )}

@@ -1,13 +1,16 @@
 name: Python tests
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened]
-    branches: [dev, main]
-  merge_group:
-    types: [checks_requested]
+  workflow_call:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "(Optional) Branch to checkout"
+        required: false
+        type: string
 env:
   POETRY_VERSION: "1.8.2"
+
 
 jobs:
   build:
@@ -23,6 +26,8 @@ jobs:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || github.ref }}
       - name: Set up Python ${{ matrix.python-version }} + Poetry ${{ env.POETRY_VERSION }}
         uses: "./.github/actions/poetry_caching"
         with:
@@ -34,8 +39,9 @@ jobs:
           poetry env use ${{ matrix.python-version }}
           poetry install
       - name: Run unit tests
+        timeout-minutes: 12
         run: |
-          make unit_tests args="-n auto"
+          make unit_tests
       - name: Test CLI
         run: |
           poetry run python -m langflow run --host 127.0.0.1 --port 7860 --backend-only &

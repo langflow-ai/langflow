@@ -1,8 +1,13 @@
 import { useMemo } from "react";
 import { LANGFLOW_SUPPORTED_TYPES } from "../../../constants/constants";
+import { APIClassType } from "../../../types/api";
 import { NodeDataType } from "../../../types/flow";
 
-const useRowData = (myData: NodeDataType, open: boolean) => {
+const useRowData = (
+  myData: NodeDataType,
+  nodeClass: APIClassType,
+  open: boolean,
+) => {
   const rowData = useMemo(() => {
     return Object.keys(myData.node!.template)
       .filter((key: string) => {
@@ -10,7 +15,6 @@ const useRowData = (myData: NodeDataType, open: boolean) => {
         return (
           key.charAt(0) !== "_" &&
           templateParam.show &&
-          LANGFLOW_SUPPORTED_TYPES.has(templateParam.type) &&
           !(
             (key === "code" && templateParam.type === "code") ||
             (key.includes("code") && templateParam.proxy)
@@ -25,7 +29,7 @@ const useRowData = (myData: NodeDataType, open: boolean) => {
           id: key,
         };
       });
-  }, [open, myData]);
+  }, [open, nodeClass]);
 
   return rowData;
 };

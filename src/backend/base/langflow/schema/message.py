@@ -86,24 +86,34 @@ class Message(Data):
         # they are: "text", "sender"
         if self.text is None or not self.sender:
             logger.warning("Missing required keys ('text', 'sender') in Message, defaulting to HumanMessage.")
+        if not isinstance(self.text, str):
+            text = ""
+        else:
+            text = self.text
 
         if self.sender == "User" or not self.sender:
             if self.files:
-                contents = [{"type": "text", "text": self.text}]
+                contents = [{"type": "text", "text": text}]
                 contents.extend(self.get_file_content_dicts())
                 human_message = HumanMessage(content=contents)  # type: ignore
             else:
-                if not isinstance(self.text, str):
-                    text = ""
-                else:
-                    text = self.text
-                human_message = HumanMessage(
-                    content=text,
-                )
-
+                human_message = HumanMessage(content=text)
             return human_message
 
-        return AIMessage(content=self.text)  # type: ignore
+        return AIMessage(content=text)  # type: ignore
+
+    @classmethod
+    def from_lc_message(cls, lc_message: BaseMessage) -> "Message":
+        if lc_message.type == "human":
+            sender = "User"
+        elif lc_message.type == "ai":
+            sender = "Machine"
+        elif lc_message.type == "system":
+            sender = "System"
+        else:
+            sender = lc_message.type
+
+        return cls(text=lc_message.content, sender=sender, sender_name=sender)
 
     @classmethod
     def from_data(cls, data: "Data") -> "Message":

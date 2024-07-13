@@ -1,6 +1,8 @@
 from langflow.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES
 from langflow.base.io.chat import ChatComponent
+from langflow.inputs import BoolInput
 from langflow.io import DropdownInput, FileInput, MessageTextInput, MultilineInput, Output
+from langflow.memory import store_message
 from langflow.schema.message import Message
 
 
@@ -8,6 +10,7 @@ class ChatInput(ChatComponent):
     display_name = "Chat Input"
     description = "Get chat inputs from the Playground."
     icon = "ChatInput"
+    name = "ChatInput"
 
     inputs = [
         MultilineInput(
@@ -15,6 +18,13 @@ class ChatInput(ChatComponent):
             display_name="Text",
             value="",
             info="Message to be passed as input.",
+        ),
+        BoolInput(
+            name="store_message",
+            display_name="Store Messages",
+            info="Store the message in the history.",
+            value=True,
+            advanced=True,
         ),
         DropdownInput(
             name="sender",
@@ -55,8 +65,12 @@ class ChatInput(ChatComponent):
             session_id=self.session_id,
             files=self.files,
         )
+
         if self.session_id and isinstance(message, Message) and isinstance(message.text, str):
-            self.store_message(message)
+            store_message(
+                message,
+                flow_id=self.graph.flow_id,
+            )
             self.message.value = message
 
         self.status = message

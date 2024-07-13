@@ -1,10 +1,10 @@
 import asyncio
 import json
-
 from typing import TYPE_CHECKING
-from loguru import logger
 
+from loguru import logger
 from langflow.custom.utils import abuild_custom_components, build_custom_components
+from langflow.services.cache.base import AsyncBaseCacheService
 
 if TYPE_CHECKING:
     from langflow.services.cache.base import CacheService
@@ -63,9 +63,41 @@ async def get_and_cache_all_types_dict(
     force_refresh: bool = False,
     lock: asyncio.Lock | None = None,
 ):
-    all_types_dict = await cache_service.get(key="all_types_dict", lock=lock)
+    async def get_from_cache(key):
+        """
+        Retrieves a value from the cache based on the given key.
+
+        Args:
+            key: The key to retrieve the value from the cache.
+
+        Returns:
+            The value associated with the given key in the cache.
+
+        Raises:
+            None.
+        """
+        return await cache_service.get(key=key, lock=lock)
+
+    async def set_in_cache(key, value):
+        """
+        Sets the given key-value pair in the cache.
+
+        Parameters:
+        - key: The key to set in the cache.
+        - value: The value to associate with the key in the cache.
+
+        Returns:
+        None
+        """
+        if isinstance(cache_service, AsyncBaseCacheService):
+            await cache_service.set(key=key, value=value, lock=lock)
+        else:
+            cache_service.set(key=key, value=value, lock=lock)
+
+    all_types_dict = await get_from_cache("all_types_dict")
     if not all_types_dict or force_refresh:
         logger.debug("Building langchain types dict")
         all_types_dict = await aget_all_types_dict(settings_service.settings.components_path)
-    await cache_service.set(key="all_types_dict", value=all_types_dict, lock=lock)
+        await set_in_cache("all_types_dict", all_types_dict)
+
     return all_types_dict
