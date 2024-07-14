@@ -37,7 +37,7 @@ class SearchAPIComponent(LCToolComponent):
         return Tool(
             name="search_api",
             description="Search for recent results.",
-            func=lambda x: wrapper.run(query=x, **(self.search_params or {}))
+            func=lambda x: wrapper.run(query=x, **(self.search_params or {})),
         )
 
     def _build_wrapper(self):

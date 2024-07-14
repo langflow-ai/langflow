@@ -1,5 +1,3 @@
-from typing import Callable, Union
-
 from langchain_community.utilities.wikipedia import WikipediaAPIWrapper
 
 from langflow.base.langchain_utilities.model import LCToolComponent
@@ -21,9 +19,10 @@ class WikipediaAPIComponent(LCToolComponent):
         MessageTextInput(name="lang", display_name="Language", value="en"),
         IntInput(name="k", display_name="Number of results", value=4, required=True),
         BoolInput(name="load_all_available_meta", display_name="Load all available meta", value=False, advanced=True),
-        IntInput(name="doc_content_chars_max", display_name="Document content characters max", value=4000, advanced=True),
+        IntInput(
+            name="doc_content_chars_max", display_name="Document content characters max", value=4000, advanced=True
+        ),
     ]
-
 
     def run_model(self) -> list[Data]:
         wrapper = self._build_wrapper()

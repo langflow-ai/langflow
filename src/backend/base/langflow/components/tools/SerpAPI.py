@@ -1,5 +1,3 @@
-from typing import Callable, Union
-
 from langchain_community.utilities.serpapi import SerpAPIWrapper
 
 from langflow.base.langchain_utilities.model import LCToolComponent
@@ -32,11 +30,7 @@ class SerpAPIComponent(LCToolComponent):
 
     def build_tool(self) -> BaseTool:
         wrapper = self._build_wrapper()
-        return Tool(
-            name="search_api",
-            description="Search for recent results.",
-            func=wrapper.run
-        )
+        return Tool(name="search_api", description="Search for recent results.", func=wrapper.run)
 
     def _build_wrapper(self) -> SerpAPIWrapper:
         if self.search_params:

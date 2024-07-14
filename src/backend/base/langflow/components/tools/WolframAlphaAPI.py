@@ -28,11 +28,7 @@ class WolframAlphaAPIComponent(LCToolComponent):
 
     def build_tool(self) -> BaseTool:
         wrapper = self._build_wrapper()
-        return Tool(
-            name="wolfram_alpha_api",
-            description="Answers mathematical questions.",
-            func=wrapper.run
-        )
+        return Tool(name="wolfram_alpha_api", description="Answers mathematical questions.", func=wrapper.run)
 
     def _build_wrapper(self) -> WolframAlphaAPIWrapper:
         return WolframAlphaAPIWrapper(wolfram_alpha_appid=self.app_id)  # type: ignore

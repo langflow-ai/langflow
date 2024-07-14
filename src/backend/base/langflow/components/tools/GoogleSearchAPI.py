@@ -1,4 +1,4 @@
-from typing import Callable, Union
+from typing import Union
 
 from langchain_core.tools import BaseTool, Tool
 
@@ -29,7 +29,6 @@ class GoogleSearchAPIComponent(LCToolComponent):
         self.status = data
         return data
 
-
     def build_tool(self) -> BaseTool:
         wrapper = self._build_wrapper()
         return Tool(
@@ -42,7 +41,5 @@ class GoogleSearchAPIComponent(LCToolComponent):
         try:
             from langchain_google_community import GoogleSearchAPIWrapper  # type: ignore
         except ImportError:
-            raise ImportError(
-                "Please install langchain-google-community to use GoogleSearchAPIWrapper."
-            )
+            raise ImportError("Please install langchain-google-community to use GoogleSearchAPIWrapper.")
         return GoogleSearchAPIWrapper(google_api_key=self.google_api_key, google_cse_id=self.google_cse_id, k=self.k)

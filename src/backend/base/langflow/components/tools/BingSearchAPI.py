@@ -26,8 +26,9 @@ class BingSearchAPIComponent(LCToolComponent):
 
     def run_model(self) -> List[Data]:
         if self.bing_search_url:
-            wrapper = BingSearchAPIWrapper(bing_search_url=self.bing_search_url,
-                                           bing_subscription_key=self.bing_subscription_key)
+            wrapper = BingSearchAPIWrapper(
+                bing_search_url=self.bing_search_url, bing_subscription_key=self.bing_subscription_key
+            )
         else:
             wrapper = BingSearchAPIWrapper(bing_subscription_key=self.bing_subscription_key)  # type: ignore
         results = wrapper.results(query=self.input_value, num_results=self.k)
@@ -37,7 +38,9 @@ class BingSearchAPIComponent(LCToolComponent):
 
     def build_tool(self) -> BaseTool:
         if self.bing_search_url:
-            wrapper = BingSearchAPIWrapper(bing_search_url=self.bing_search_url, bing_subscription_key=self.bing_subscription_key)
+            wrapper = BingSearchAPIWrapper(
+                bing_search_url=self.bing_search_url, bing_subscription_key=self.bing_subscription_key
+            )
         else:
             wrapper = BingSearchAPIWrapper(bing_subscription_key=self.bing_subscription_key)
         return BingSearchResults(api_wrapper=wrapper, num_results=self.k)
