@@ -22,7 +22,7 @@ chown 1000:1000 "$MOUNT_POINT"
 
 # Execute the original entrypoint command or the command passed to docker run as uid 1000
 if [ $# -eq 0 ]; then
-    exec gosu 1000:1000 python -m langflow run --host 0.0.0.0 --port 7860
+    exec gosu 1000:1000 python -m langflow run --host 0.0.0.0 --port 7860 --backend-only
 else
     exec gosu 1000:1000 "$@"
 fi
