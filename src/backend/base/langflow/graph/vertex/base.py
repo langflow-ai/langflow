@@ -428,9 +428,9 @@ class Vertex:
         if self.base_type is None:
             raise ValueError(f"Base type for vertex {self.display_name} not found")
 
-        class_instance, custom_params = await loading.instantiate_class(user_id=user_id, vertex=self)
+        custom_component, custom_params = await loading.instantiate_class(user_id=user_id, vertex=self)
 
-        await self._build_results(class_instance, custom_params, fallback_to_env_vars)
+        await self._build_results(custom_component, custom_params, fallback_to_env_vars)
 
         self._validate_built_object()
 
@@ -641,10 +641,10 @@ class Vertex:
         if isinstance(self.params[key], list):
             self.params[key].extend(result)
 
-    async def _build_results(self, class_instance, custom_params, fallback_to_env_vars=False):
+    async def _build_results(self, custom_component, custom_params, fallback_to_env_vars=False):
         try:
             result = await loading.get_instance_results(
-                custom_component=class_instance,
+                custom_component=custom_component,
                 custom_params=custom_params,
                 vertex=self,
                 fallback_to_env_vars=fallback_to_env_vars,
