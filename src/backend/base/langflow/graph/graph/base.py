@@ -209,7 +209,8 @@ class Graph:
                 for successor in successors:
                     if successor.params.get("stream") or successor.params.get("streaming"):
                         raise ValueError(
-                            f"Components {vertex.display_name} and {successor.display_name} are connected and both have stream or streaming set to True"
+                            f"Components {vertex.display_name} and {successor.display_name} "
+                            "are connected and both have stream or streaming set to True"
                         )
 
     @property
@@ -438,7 +439,7 @@ class Graph:
 
         Args:
             inputs (list[Dict[str, str]]): The input values for the graph.
-            inputs_components (Optional[list[list[str]]], optional): The components to run for the inputs. Defaults to None.
+            inputs_components (Optional[list[list[str]]], optional): Components to run for the inputs. Defaults to None.
             outputs (Optional[list[str]], optional): The outputs to retrieve from the graph. Defaults to None.
             session_id (Optional[str], optional): The session ID for the graph. Defaults to None.
             stream (bool, optional): Whether to stream the results or not. Defaults to False.
@@ -539,6 +540,8 @@ class Graph:
         """Marks a vertex in the graph."""
         vertex = self.get_vertex(vertex_id)
         vertex.set_state(state)
+        if state == VertexStates.INACTIVE:
+            self.run_manager.remove_from_predecessors(vertex_id)
 
     def mark_branch(self, vertex_id: str, state: str, visited: Optional[set] = None, output_name: Optional[str] = None):
         """Marks a branch of the graph."""
@@ -907,7 +910,7 @@ class Graph:
             return result_dict, params, valid, artifacts, vertex
         except Exception as exc:
             if not isinstance(exc, ComponentBuildException):
-                logger.exception(f"Error building Component:\n\n{exc}")
+                logger.exception(f"Error building Component: \n\n{exc}")
             flow_id = self.flow_id
             log_transaction(flow_id, vertex, status="failure", error=str(exc))
             raise exc
@@ -985,6 +988,29 @@ class Graph:
         logger.debug("Graph processing complete")
         return self
 
+    def find_next_runnable_vertices(self, vertex_id: str, vertex_successors_ids: List[str]) -> List[str]:
+        direct_successors_ready = [v_id for v_id in vertex_successors_ids if self.is_vertex_runnable(v_id)]
+        if not direct_successors_ready:
+            return self.find_runnable_predecessors_for_successors(vertex_id)
+        return direct_successors_ready
+
+    async def get_next_runnable_vertices(self, lock: asyncio.Lock, vertex: "Vertex", cache: bool = True) -> List[str]:
+        v_id = vertex.id
+        v_successors_ids = vertex.successors_ids
+        async with lock:
+            self.run_manager.remove_vertex_from_runnables(v_id)
+            next_runnable_vertices = self.find_next_runnable_vertices(v_id, v_successors_ids)
+
+            for i in set(next_runnable_vertices):  # Use set to avoid duplicates
+                if i == v_id:
+                    next_runnable_vertices.remove(v_id)
+                else:
+                    self.run_manager.add_to_vertices_being_run(v_id)
+            if cache:
+                set_cache_coro = partial(get_chat_service().set_cache, key=self.flow_id)
+                await set_cache_coro(self, lock)
+        return next_runnable_vertices
+
     async def _execute_tasks(self, tasks: List[asyncio.Task], lock: asyncio.Lock) -> List[str]:
         """Executes tasks in parallel, handling exceptions for each task."""
         results = []
@@ -1010,11 +1036,8 @@ class Graph:
             # This could usually happen with input vertices like ChatInput
             self.run_manager.remove_vertex_from_runnables(v.id)
 
-        set_cache_coro = partial(get_chat_service().set_cache, key=self.flow_id)
         for v in vertices:
-            next_runnable_vertices = await self.run_manager.get_next_runnable_vertices(
-                lock, set_cache_coro, graph=self, vertex=v, cache=False
-            )
+            next_runnable_vertices = await self.get_next_runnable_vertices(lock, vertex=v, cache=False)
             results.extend(next_runnable_vertices)
         return results
 
@@ -1195,7 +1218,7 @@ class Graph:
     def __repr__(self):
         vertex_ids = [vertex.id for vertex in self.vertices]
         edges_repr = "\n".join([f"{edge.source_id} --> {edge.target_id}" for edge in self.edges])
-        return f"Graph:\nNodes: {vertex_ids}\nConnections:\n{edges_repr}"
+        return f"Graph: \nNodes: {vertex_ids}\nConnections: \n{edges_repr}"
 
     def layered_topological_sort(
         self,
@@ -1410,7 +1433,8 @@ class Graph:
 
     def is_vertex_runnable(self, vertex_id: str) -> bool:
         """Returns whether a vertex is runnable."""
-        return self.run_manager.is_vertex_runnable(self.get_vertex(vertex_id))
+        is_active = self.get_vertex(vertex_id).is_active()
+        return self.run_manager.is_vertex_runnable(vertex_id, is_active)
 
     def build_run_map(self):
         """
@@ -1430,13 +1454,52 @@ class Graph:
         This checks the direct predecessors of each successor to identify any that are
         immediately runnable, expanding the search to ensure progress can be made.
         """
-        return self.run_manager.find_runnable_predecessors_for_successors(self.get_vertex(vertex_id))
+        runnable_vertices = []
+        visited = set()
+
+        def find_runnable_predecessors(predecessor: "Vertex"):
+            predecessor_id = predecessor.id
+            if predecessor_id in visited:
+                return
+            visited.add(predecessor_id)
+            is_active = self.get_vertex(predecessor_id).is_active()
+            if self.run_manager.is_vertex_runnable(predecessor_id, is_active):
+                runnable_vertices.append(predecessor_id)
+            else:
+                for pred_pred_id in self.run_manager.run_predecessors.get(predecessor_id, []):
+                    find_runnable_predecessors(self.get_vertex(pred_pred_id))
+
+        for successor_id in self.run_manager.run_map.get(vertex_id, []):
+            for predecessor_id in self.run_manager.run_predecessors.get(successor_id, []):
+                find_runnable_predecessors(self.get_vertex(predecessor_id))
+
+        return runnable_vertices
 
     def remove_from_predecessors(self, vertex_id: str):
         self.run_manager.remove_from_predecessors(vertex_id)
 
     def remove_vertex_from_runnables(self, vertex_id: str):
         self.run_manager.remove_vertex_from_runnables(vertex_id)
+
+    def get_top_level_vertices(self, vertices_ids):
+        """
+        Retrieves the top-level vertices from the given graph based on the provided vertex IDs.
+
+        Args:
+            vertices_ids (list): A list of vertex IDs.
+
+        Returns:
+            list: A list of top-level vertex IDs.
+
+        """
+        top_level_vertices = []
+        for vertex_id in vertices_ids:
+            vertex = self.get_vertex(vertex_id)
+            if vertex.parent_is_top_level:
+                top_level_vertices.append(vertex.parent_node_id)
+            else:
+                top_level_vertices.append(vertex_id)
+        return top_level_vertices
 
     def build_in_degree(self, edges: List[ContractEdge]) -> Dict[str, int]:
         in_degree: Dict[str, int] = defaultdict(int)
