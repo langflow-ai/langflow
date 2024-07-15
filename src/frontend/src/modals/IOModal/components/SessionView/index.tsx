@@ -1,5 +1,8 @@
 import Loading from "@/components/ui/loading";
-import { useGetMessagesQuery, useUpdateMessage } from "@/controllers/API/queries/messages";
+import {
+  useGetMessagesQuery,
+  useUpdateMessage,
+} from "@/controllers/API/queries/messages";
 import { useIsFetching } from "@tanstack/react-query";
 import {
   CellEditRequestEvent,
@@ -40,7 +43,7 @@ export default function SessionView({
     selectedRows,
   );
 
-  const {  mutate:updateMessageMutation} = useUpdateMessage();
+  const { mutate: updateMessageMutation } = useUpdateMessage();
 
   function handleUpdateMessage(event: NewValueParams<any, string>) {
     const newValue = event.newValue;
@@ -50,19 +53,22 @@ export default function SessionView({
       ...row,
       [field]: newValue,
     };
-    updateMessageMutation(data,{onSuccess:()=>{
-      updateMessage(data);
-      // Set success message
-      setSuccessData({
-        title: "Messages updated successfully.",
-      });
-    },onError:()=>{
-      setErrorData({
-        title: "Error updating messages.",
-      });
-      event.data[field] = event.oldValue;
-      event.api.refreshCells();
-    }});
+    updateMessageMutation(data, {
+      onSuccess: () => {
+        updateMessage(data);
+        // Set success message
+        setSuccessData({
+          title: "Messages updated successfully.",
+        });
+      },
+      onError: () => {
+        setErrorData({
+          title: "Error updating messages.",
+        });
+        event.data[field] = event.oldValue;
+        event.api.refreshCells();
+      },
+    });
   }
 
   const filteredMessages = useMemo(() => {
