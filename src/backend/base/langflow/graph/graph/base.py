@@ -539,6 +539,8 @@ class Graph:
         """Marks a vertex in the graph."""
         vertex = self.get_vertex(vertex_id)
         vertex.set_state(state)
+        if state == VertexStates.INACTIVE:
+            self.run_manager.remove_from_predecessors(vertex_id)
 
     def mark_branch(self, vertex_id: str, state: str, visited: Optional[set] = None, output_name: Optional[str] = None):
         """Marks a branch of the graph."""
