@@ -15,6 +15,6 @@ ENTRYPOINT ["/bin/bash", "-c", "\
     cp -r \"$TEMP_DIR\"/* \"$MOUNT_POINT/\"; \
     rm -rf \"$TEMP_DIR\"; \
     chown -R user:user \"$MOUNT_POINT\"; \
-    chgrp -R user \"$MOUNT_POINT\"; \
-    exec sudo -u user /bin/bash -c 'python -m langflow run --host 0.0.0.0 --port 7860 --backend-only'; \
+    USER user; \
+    exec python -m langflow run --host 0.0.0.0 --port 7860 --backend-only; \
 "]
