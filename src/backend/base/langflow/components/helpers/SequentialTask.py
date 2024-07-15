@@ -34,6 +34,13 @@ class SequentialTaskComponent(Component):
             info="CrewAI Agent that will perform the task",
             required=True,
         ),
+        HandleInput(
+            name="task",
+            display_name="Task",
+            input_types=["SequentialTask"],
+            info="CrewAI Task that will perform the task",
+            required=True,
+        ),
         BoolInput(
             name="async_execution",
             display_name="Async Execution",
@@ -47,7 +54,8 @@ class SequentialTaskComponent(Component):
         Output(display_name="Task", name="task_output", method="build_task"),
     ]
 
-    def build_task(self) -> SequentialTask:
+    def build_task(self) -> list[SequentialTask]:
+        tasks = []
         task = SequentialTask(
             description=self.task_description,
             expected_output=self.expected_output,
@@ -55,5 +63,11 @@ class SequentialTaskComponent(Component):
             async_execution=False,
             agent=self.agent,
         )
+        tasks.append(task)
         self.status = task
-        return task
+        if self.task:
+            if isinstance(self.task, list):
+                tasks.extend(self.task)
+            else:
+                tasks.append(self.task)
+        return tasks
