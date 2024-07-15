@@ -1071,17 +1071,6 @@ export async function getTransactionTable(
   return { rows: rows.data, columns };
 }
 
-export async function deleteMessagesFn(ids: string[]) {
-  try {
-    return await api.delete(`${BASE_URL_API}monitor/messages`, {
-      data: ids,
-    });
-  } catch (error) {
-    console.error("Error deleting flows:", error);
-    throw error;
-  }
-}
-
 export async function updateMessageApi(data: Message) {
   if (data.files && typeof data.files === "string") {
     data.files = JSON.parse(data.files);
