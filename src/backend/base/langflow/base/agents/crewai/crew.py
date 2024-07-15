@@ -1,4 +1,8 @@
+from typing import Callable, List, Tuple, Union
+
 from crewai import Agent, Crew, Process, Task  # type: ignore
+from crewai.task import TaskOutput
+from langchain_core.agents import AgentAction, AgentFinish
 
 from langflow.custom import Component
 from langflow.inputs.inputs import HandleInput, InputTypes
@@ -41,9 +45,31 @@ class BaseCrewComponent(Component):
     def build_crew(self) -> Crew:
         raise NotImplementedError("build_crew must be implemented in subclasses")
 
+    def get_task_callback(
+        self,
+    ) -> Callable:
+        def task_callback(task_output: TaskOutput):
+            self.log(task_output.model_dump(), name=f"Task (Agent: {task_output.agent}) - {self.vertex.id}")
+
+        return task_callback
+
+    def get_step_callback(
+        self,
+    ) -> Callable:
+        def step_callback(agent_output: Union[AgentFinish, List[Tuple[AgentAction, str]]]):
+            if isinstance(agent_output, AgentFinish):
+                messages = agent_output.messages
+                self.log(messages[0], name=f"Finish (Agent: {self.vertex.id})")
+            elif isinstance(agent_output, list):
+                messages = {f"Action {i}": action.messages for i, (action, _) in enumerate(agent_output)}
+                messages = {k: v[0] if len(v) == 1 else v for k, v in messages.items()}
+                self.log(messages, name=f"Step (Agent: {self.vertex.id})")
+
+        return step_callback
+
     async def build_output(self) -> Message:
         crew = self.build_crew()
         result = await crew.kickoff_async()
-        message = Message(text=result)
-        self.status = message
+        message = Message(text=result, sender="Machine")
+        self.status = "\n\n".join([result] + [str(message) for message in self._logs])
         return message
