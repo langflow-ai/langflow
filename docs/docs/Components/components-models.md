@@ -168,7 +168,7 @@ This component facilitates text generation using LLM models from the Hugging Fac
 **Params**
 
 - **Endpoint URL:** The URL of the Hugging Face Inference API endpoint. Should be provided along with necessary authentication credentials.
-- **Task:** Specifies the task for text generation. Options include `"text2text-generation"`, `"text-generation"`, and `"summarization"`.
+- **Task:** Specifies the task for text generation. Options include `"text2text-generation"`, `"text-generation"`, `"summarization"`, and `"image-classification"`
 - **API Token:** The API token required for authentication with the Hugging Face Hub.
 - **Model Keyword Arguments (Optional):** Additional keyword arguments for the model. Should be provided as a Python dictionary.
 - **Input Value:** The input text for text generation.
