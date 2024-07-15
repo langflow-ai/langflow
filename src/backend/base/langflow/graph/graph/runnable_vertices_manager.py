@@ -46,11 +46,15 @@ class RunnableVerticesManager:
 
     def is_vertex_runnable(self, vertex_id: str, is_active: bool) -> bool:
         """Determines if a vertex is runnable."""
-        is_in_vertices_to_run = vertex_id in self.vertices_to_run
-        all_predecessors_fulfilled = self.are_all_predecessors_fulfilled(vertex_id)
-        is_not_being_run = vertex_id not in self.vertices_being_run
-
-        return is_active and is_in_vertices_to_run and all_predecessors_fulfilled and is_not_being_run
+        if not is_active:
+            return False
+        if vertex_id in self.vertices_being_run:
+            return False
+        if vertex_id not in self.vertices_to_run:
+            return False
+        if not self.are_all_predecessors_fulfilled(vertex_id):
+            return False
+        return True
 
     def are_all_predecessors_fulfilled(self, vertex_id: str) -> bool:
         return not any(self.run_predecessors.get(vertex_id, []))
