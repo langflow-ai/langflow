@@ -16,5 +16,4 @@ ENTRYPOINT ["/bin/bash", "-c", "\
     fi \
 "]
 
-# Set the new entrypoint
-ENTRYPOINT ["/usr/local/bin/ramdiskEntrypoint.sh"]
+
