@@ -6,18 +6,25 @@ slug: /configuration-authentication
 
 
 
+:::info
+
+This page may contain outdated information. It will be updated as soon as possible.
+
+:::
+
+
+
+
 ## Sign Up and Sign In {#f480dac5d2094d75a433de0b8e195641}
 
 
-> ⚠️ WARNING
-> This page may contain outdated information. It will be updated as soon as possible.
->
+---
 
 
 The login functionality in Langflow serves to authenticate users and protect sensitive routes in the application. Starting from version 0.5, Langflow introduces an enhanced login mechanism that is governed by a few environment variables. This allows new secure features.
 
 
-## Environment variables {#3ed7cae6f5324ba0ac14783cf2a6cc07}
+## Environment Variables {#3ed7cae6f5324ba0ac14783cf2a6cc07}
 
 
 The following environment variables are crucial in configuring the login settings:
@@ -37,9 +44,9 @@ langflow run --env-file .env
 ```
 
 
-> ℹ︎ INFO
-> It is critical not to expose these environment variables in your code repository. Always set them securely in your deployment environment, for example, using Docker secrets, Kubernetes ConfigMaps/Secrets, or dedicated secure environment configuration systems like AWS Secrets Manager.
->
+> ℹ︎ INFO  
+> It is critical not to expose these environment variables in your code repository. Always set them securely in your deployment environment, for example, using Docker secrets, Kubernetes ConfigMaps/Secrets, or dedicated secure environment configuration systems like AWS Secrets Manager.  
+> 
 
 
 ### _`LANGFLOW_AUTO_LOGIN`_ {#8b10059e0fbc44f3bc8ce63fe7692e7e}

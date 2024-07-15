@@ -12,6 +12,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Get current date
+        id: date
+        run: echo "DATE=$(date +'%Y%m%d%H%M%S')" >> "$GITHUB_OUTPUT"
+
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -20,15 +24,6 @@ jobs:
         id: setup-node
         with:
           node-version: ${{ env.NODE_VERSION }}
-
-      - name: Configure git
-        run: |
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-
-      - name: Create new branch
-        run: |
-          git checkout -b update-docs-$(date +%Y%m%d%H%M%S)
 
       - name: Cache Node.js dependencies
         uses: actions/cache@v4
@@ -53,24 +48,13 @@ jobs:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           NOTION_DOCS_ROOT_PAGE_ID: ${{ secrets.NOTION_DOCS_ROOT_PAGE_ID }}
 
-      - name: Commit changes
-        run: |
-          git add .
-          git commit -m "Update docs from Notion"
-
-      - name: Push changes
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          git push --set-upstream origin $(git rev-parse --abbrev-ref HEAD)
-
       - name: Create Pull Request
         id: create_pr
         uses: peter-evans/create-pull-request@v5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           commit-message: Update docs from Notion
-          branch: update-docs-$(date +%Y%m%d%H%M%S)
+          branch: update-docs-${{ steps.date.outputs.DATE }}
           base: main
           title: "docs: update docs from notion"
           body: This PR updates the documentation from Notion.

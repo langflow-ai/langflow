@@ -6,16 +6,16 @@ slug: /components-custom-components
 
 
 
-Langflow components can be created from within the platform, allowing users to extend the platform's functionality using Python code. They encapsulate are designed to be independent units, reusable across different workflows.
+Langflow components can be created from within the platform, allowing users to extend the platform's functionality using Python code. They encapsulate are designed to be independent units, reusable across different workflows. 
 
 
-These components can be easily connected within a language model pipeline, adding freedom and flexibility to what can be included in between user and AI messages.
+These components can be easily connected within a language model pipeline, adding freedom and flexibility to what can be included in between user and AI messages. 
 
 
 ![](./238089171.png)
 
 
-Since Langflow operates with Python behind the scenes, you can implement any Python function within a Custom Component. This means you can leverage the power of libraries such as Pandas, Scikit-learn, Numpy, and thousands of packages to create components that handle data processing in unlimited ways.
+Since Langflow operates with Python behind the scenes, you can implement any Python function within a Custom Component. This means you can leverage the power of libraries such as Pandas, Scikit-learn, Numpy, and thousands of packages to create components that handle data processing in unlimited ways. 
 
 
 Custom Components are not just about extending functionality; they also streamline the development process. By creating reusable and configurable components, you can enhance the capabilities of Langflow, making it a powerful tool for developing complex workflows.

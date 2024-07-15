@@ -30,9 +30,6 @@ You can find out more about Chat Input and other Inputs [here](/components-io).
 ### Chat Input {#2a5f02262f364f8fb75bcfa246e7bb26}
 
 
----
-
-
 This component collects user input from the chat.
 
 
@@ -43,19 +40,19 @@ This component collects user input from the chat.
 - **Message:** Specifies the message text. It is a multiline text input.
 - **Session ID:** Specifies the session ID of the chat history. If provided, the message will be saved in the Message History.
 
-NOTE
-
+:::note
 
 If `As Data` is `true` and the `Message` is a `Data`, the data of the `Data` will be updated with the `Sender`, `Sender Name`, and `Session ID`.
+
+:::
+
+
 
 
 One significant capability of the Chat Input component is its ability to transform the Playground into a chat window. This feature is particularly valuable for scenarios requiring user input to initiate or influence the flow.
 
 
 ### Text Input {#260aef3726834896b496b56cdefb6d4a}
-
-
----
 
 
 The **Text Input** component adds an **Input** field on the Playground. This enables you to define parameters while running and testing your flow.
@@ -99,9 +96,6 @@ You can find out more about it and the other Outputs [here](/components-io).
 ### Chat Output {#1edd49b72781432ea29d70acbda4e7e7}
 
 
----
-
-
 This component sends a message to the chat.
 
 
@@ -112,16 +106,16 @@ This component sends a message to the chat.
 - **Session ID:** Specifies the session ID of the chat history. If provided, messages are saved in the Message History.
 - **Message:** Specifies the text of the message.
 
-NOTE
-
+:::note
 
 If `As Data` is `true` and the `Message` is a `Data`, the data in the `Data` is updated with the `Sender`, `Sender Name`, and `Session ID`.
 
+:::
+
+
+
 
 ### Text Output {#b607000bc0c5402db0433c1a7d734d01}
-
-
----
 
 
 This component displays text data to the user. It is useful when you want to show text without sending it to the chat.

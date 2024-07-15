@@ -6,6 +6,15 @@ slug: /components-vector-stores
 
 
 
+:::info
+
+This page may contain outdated information. It will be updated as soon as possible.
+
+:::
+
+
+
+
 ### Astra DB {#453bcf5664154e37a920f1b602bd39da}
 
 
@@ -298,10 +307,13 @@ Ensure the PostgreSQL server is accessible and configured correctly.
 - **Search Kwargs:** Additional search parameters.
 - **Pool Threads:** Number of threads.
 
-NOTE
-
+:::info
 
 Ensure the Pinecone API key and environment are correctly configured.
+
+:::
+
+
 
 
 ---
@@ -381,10 +393,13 @@ Ensure the Pinecone API key and environment are correctly configured.
 For detailed documentation, refer to the [Redis Documentation](https://python.langchain.com/docs/integrations/vectorstores/redis).
 
 
-NOTE
-
+:::info
 
 Ensure the Redis server URL and index name are configured correctly. Provide a schema if no documents are available.
+
+:::
+
+
 
 
 ---
@@ -425,10 +440,13 @@ Ensure the Redis server URL and index name are configured correctly. Provide a s
 - **Supabase URL:** Instance URL.
 - **Table Name:** Optional table name.
 
-NOTE
-
+:::info
 
 Ensure the Supabase service key, URL, and table name are properly configured.
+
+:::
+
+
 
 
 ---
@@ -471,10 +489,13 @@ Ensure the Supabase service key, URL, and table name are properly configured.
 For more information, consult the [Vectara Component Documentation](https://python.langchain.com/docs/integrations/vectorstores/vectara).
 
 
-NOTE
-
+:::info
 
 If inputs or files_url are provided, they will be processed accordingly.
+
+:::
+
+
 
 
 ---
