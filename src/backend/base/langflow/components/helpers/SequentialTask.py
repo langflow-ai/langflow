@@ -39,7 +39,6 @@ class SequentialTaskComponent(Component):
             display_name="Task",
             input_types=["SequentialTask"],
             info="CrewAI Task that will perform the task",
-            required=True,
         ),
         BoolInput(
             name="async_execution",
