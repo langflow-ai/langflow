@@ -60,13 +60,6 @@ body:
           2.
           3.
 
-  - type: file
-    id: screenshots
-    attributes:
-      label: Screenshots
-      description: "If applicable, add screenshots to help explain your problem."
-      multiple: true
-      
   - type: textarea
     id: expected-behavior
     validations:
@@ -74,3 +67,19 @@ body:
     attributes:
       label: Expected behavior
       description: "A clear and concise description of what you would expect to happen."
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots
+      description: |
+        If applicable, add screenshots to help explain your problem.
+
+        You can drag and drop images directly into this text box or use the following Markdown syntax to include them:
+
+        ![Alt text](url)
+
+        Example:
+
+        ![Bug Screenshot](https://example.com/screenshot.png)
+      placeholder: "Drag and drop images here or use Markdown syntax to include screenshots."
