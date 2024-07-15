@@ -1,6 +1,9 @@
+from langchain_core.vectorstores import VectorStore
 from loguru import logger
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent
+from langflow.helpers import docs_to_data
+from langflow.inputs import DictInput, FloatInput
 from langflow.io import (
     BoolInput,
     DataInput,
@@ -18,25 +21,31 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
     display_name: str = "Astra DB"
     description: str = "Implementation of Vector Store using Astra DB with search capabilities"
     documentation: str = "https://python.langchain.com/docs/integrations/vectorstores/astradb"
+    name = "AstraDB"
     icon: str = "AstraDB"
+
+    _cached_vectorstore: VectorStore | None = None
 
     inputs = [
         StrInput(
             name="collection_name",
             display_name="Collection Name",
             info="The name of the collection within Astra DB where the vectors will be stored.",
+            required=True,
         ),
         SecretStrInput(
             name="token",
             display_name="Astra DB Application Token",
             info="Authentication token for accessing Astra DB.",
             value="ASTRA_DB_APPLICATION_TOKEN",
+            required=True,
         ),
         SecretStrInput(
             name="api_endpoint",
             display_name="API Endpoint",
             info="API endpoint URL for the Astra DB service.",
             value="ASTRA_DB_API_ENDPOINT",
+            required=True,
         ),
         MultilineInput(
             name="search_input",
@@ -108,6 +117,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             name="embedding",
             display_name="Embedding or Astra Vectorize",
             input_types=["Embeddings", "dict"],
+            info="Allows either an embedding model or an Astra Vectorize configuration.",  # TODO: This should be optional, but need to refactor langchain-astradb first.
         ),
         StrInput(
             name="metadata_indexing_exclude",
@@ -121,13 +131,6 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             info="Optional dictionary defining the indexing policy for the collection.",
             advanced=True,
         ),
-        DropdownInput(
-            name="search_type",
-            display_name="Search Type",
-            options=["Similarity", "MMR"],
-            value="Similarity",
-            advanced=True,
-        ),
         IntInput(
             name="number_of_results",
             display_name="Number of Results",
@@ -135,9 +138,35 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             advanced=True,
             value=4,
         ),
+        DropdownInput(
+            name="search_type",
+            display_name="Search Type",
+            info="Search type to use",
+            options=["Similarity", "Similarity with score threshold", "MMR (Max Marginal Relevance)"],
+            value="Similarity",
+            advanced=True,
+        ),
+        FloatInput(
+            name="search_score_threshold",
+            display_name="Search Score Threshold",
+            info="Minimum similarity score threshold for search results. (when using 'Similarity with score threshold')",
+            value=0,
+            advanced=True,
+        ),
+        DictInput(
+            name="search_filter",
+            display_name="Search Metadata Filter",
+            info="Optional dictionary of filters to apply to the search query.",
+            advanced=True,
+            is_list=True,
+        ),
     ]
 
-    def build_vector_store(self):
+    def _build_vector_store(self):
+        # cache the vector store to avoid re-initializing and ingest data again
+        if self._cached_vectorstore:
+            return self._cached_vectorstore
+
         try:
             from langchain_astradb import AstraDBVectorStore
             from langchain_astradb.utils.astradb import SetupMode
@@ -166,9 +195,12 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             }
             dict_options["parameters"] = {k: v for k, v in dict_options.get("parameters", {}).items() if k and v}
             embedding_dict = {
-                "collection_vector_service_options": CollectionVectorServiceOptions.from_dict(dict_options),
-                "collection_embedding_api_key": self.embedding.get("collection_embedding_api_key"),
+                "collection_vector_service_options": CollectionVectorServiceOptions.from_dict(dict_options)
             }
+            collection_embedding_api_key = self.embedding.get("collection_embedding_api_key")
+            if collection_embedding_api_key:
+                embedding_dict["collection_embedding_api_key"] = collection_embedding_api_key
+
         vector_store_kwargs = {
             **embedding_dict,
             "collection_name": self.collection_name,
@@ -196,11 +228,10 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
         except Exception as e:
             raise ValueError(f"Error initializing AstraDBVectorStore: {str(e)}") from e
 
-        if hasattr(self, "ingest_data") and self.ingest_data:
-            logger.debug("Ingesting data into the Vector Store.")
-            self._add_documents_to_vector_store(vector_store)
+        self._add_documents_to_vector_store(vector_store)
 
-        self.status = self._astradb_collection_to_data(vector_store.collection)
+        self._cached_vectorstore = vector_store
+
         return vector_store
 
     def _add_documents_to_vector_store(self, vector_store):
@@ -211,7 +242,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             else:
                 raise ValueError("Vector Store Inputs must be Data objects.")
 
-        if documents and self.embedding is not None:
+        if documents:
             logger.debug(f"Adding {len(documents)} documents to the Vector Store.")
             try:
                 vector_store.add_documents(documents)
@@ -220,8 +251,28 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
         else:
             logger.debug("No documents to add to the Vector Store.")
 
+    def _map_search_type(self):
+        if self.search_type == "Similarity with score threshold":
+            return "similarity_score_threshold"
+        elif self.search_type == "MMR (Max Marginal Relevance)":
+            return "mmr"
+        else:
+            return "similarity"
+
+    def _build_search_args(self):
+        args = {
+            "k": self.number_of_results,
+            "score_threshold": self.search_score_threshold,
+        }
+
+        if self.search_filter:
+            clean_filter = {k: v for k, v in self.search_filter.items() if k and v}
+            if len(clean_filter) > 0:
+                args["filter"] = clean_filter
+        return args
+
     def search_documents(self) -> list[Data]:
-        vector_store = self.build_vector_store()
+        vector_store = self._build_vector_store()
 
         logger.debug(f"Search input: {self.search_input}")
         logger.debug(f"Search type: {self.search_type}")
@@ -229,24 +280,16 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
 
         if self.search_input and isinstance(self.search_input, str) and self.search_input.strip():
             try:
-                if self.search_type == "Similarity":
-                    docs = vector_store.similarity_search(
-                        query=self.search_input,
-                        k=self.number_of_results,
-                    )
-                elif self.search_type == "MMR":
-                    docs = vector_store.max_marginal_relevance_search(
-                        query=self.search_input,
-                        k=self.number_of_results,
-                    )
-                else:
-                    raise ValueError(f"Invalid search type: {self.search_type}")
+                search_type = self._map_search_type()
+                search_args = self._build_search_args()
+
+                docs = vector_store.search(query=self.search_input, search_type=search_type, **search_args)
             except Exception as e:
                 raise ValueError(f"Error performing search in AstraDBVectorStore: {str(e)}") from e
 
             logger.debug(f"Retrieved documents: {len(docs)}")
 
-            data = [Data.from_document(doc) for doc in docs]
+            data = docs_to_data(docs)
             logger.debug(f"Converted documents to data: {len(data)}")
             self.status = data
             return data
@@ -254,12 +297,13 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             logger.debug("No search input provided. Skipping search.")
             return []
 
-    def _astradb_collection_to_data(self, collection):
-        data = []
-        data_dict = collection.find()
-        if data_dict and "data" in data_dict:
-            data_dict = data_dict["data"].get("documents", [])
+    def get_retriever_kwargs(self):
+        search_args = self._build_search_args()
+        return {
+            "search_type": self._map_search_type(),
+            "search_kwargs": search_args,
+        }
 
-        for item in data_dict:
-            data.append(Data(content=item["content"]))
-        return data
+    def build_vector_store(self):
+        vector_store = self._build_vector_store()
+        return vector_store

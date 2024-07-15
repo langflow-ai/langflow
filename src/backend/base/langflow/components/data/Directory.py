@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List
 
 from langflow.base.data.utils import parallel_load_data, parse_text_file_to_data, retrieve_file_paths
 from langflow.custom import Component
@@ -11,6 +11,7 @@ class DirectoryComponent(Component):
     display_name = "Directory"
     description = "Recursively load files from a directory."
     icon = "folder"
+    name = "Directory"
 
     inputs = [
         MessageTextInput(
@@ -22,6 +23,7 @@ class DirectoryComponent(Component):
             name="types",
             display_name="Types",
             info="File types to load. Leave empty to load all types.",
+            is_list=True,
         ),
         IntInput(
             name="depth",
@@ -66,8 +68,9 @@ class DirectoryComponent(Component):
         Output(display_name="Data", name="data", method="load_directory"),
     ]
 
-    def load_directory(self) -> List[Optional[Data]]:
+    def load_directory(self) -> List[Data]:
         path = self.path
+        types = self.types or []  # self.types is already a list due to is_list=True
         depth = self.depth
         max_concurrency = self.max_concurrency
         load_hidden = self.load_hidden
@@ -77,6 +80,10 @@ class DirectoryComponent(Component):
 
         resolved_path = self.resolve_path(path)
         file_paths = retrieve_file_paths(resolved_path, load_hidden, recursive, depth)
+
+        if types:
+            file_paths = [fp for fp in file_paths if any(fp.endswith(ext) for ext in types)]
+
         loaded_data = []
 
         if use_multithreading:
@@ -85,4 +92,4 @@ class DirectoryComponent(Component):
             loaded_data = [parse_text_file_to_data(file_path, silent_errors) for file_path in file_paths]
         loaded_data = list(filter(None, loaded_data))
         self.status = loaded_data
-        return loaded_data
+        return loaded_data  # type: ignore

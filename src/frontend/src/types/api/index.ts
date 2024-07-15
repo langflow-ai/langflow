@@ -1,3 +1,9 @@
+import {
+  UseMutationOptions,
+  UseMutationResult,
+  UseQueryOptions,
+  UseQueryResult,
+} from "@tanstack/react-query";
 import { Edge, Node, Viewport } from "reactflow";
 import { ChatInputType, ChatOutputType } from "../chat";
 import { FlowType } from "../flow";
@@ -225,3 +231,28 @@ export type ResponseErrorTypeAPI = {
 export type ResponseErrorDetailAPI = {
   response: { data: { detail: string } };
 };
+export type useQueryFunctionType<T = undefined, R = any> = T extends undefined
+  ? (
+      params?: T,
+      options?: Omit<UseQueryOptions, "queryFn" | "queryKey">,
+    ) => UseQueryResult<R>
+  : (
+      params: T,
+      options?: Omit<UseQueryOptions, "queryFn" | "queryKey">,
+    ) => UseQueryResult<R>;
+
+export type QueryFunctionType = (
+  queryKey: UseQueryOptions["queryKey"],
+  queryFn: UseQueryOptions["queryFn"],
+  options?: Omit<UseQueryOptions, "queryKey" | "queryFn">,
+) => UseQueryResult<any>;
+
+export type MutationFunctionType = (
+  mutationKey: UseMutationOptions["mutationKey"],
+  mutationFn: UseMutationOptions<any, any, any>["mutationFn"],
+  options?: Omit<UseMutationOptions<any, any>, "mutationFn" | "mutationKey">,
+) => UseMutationResult<any, any, any, any>;
+
+export type useMutationFunctionType<Variables, Data = any, Error = any> = (
+  options?: Omit<UseMutationOptions<Data, Error>, "mutationFn" | "mutationKey">,
+) => UseMutationResult<Data, Error, Variables>;

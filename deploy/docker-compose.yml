@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   proxy:
     image: traefik:v3.0
@@ -69,17 +67,13 @@ services:
         - traefik.http.routers.${STACK_NAME?Variable not set}-proxy-http.middlewares=${STACK_NAME?Variable not set}-www-redirect,${STACK_NAME?Variable not set}-https-redirect
 
   backend: &backend
-    image: "langflowai/langflow:latest"
+    image: "langflowai/langflow-backend:latest"
     depends_on:
       - db
       - broker
       - result_backend
     env_file:
       - .env
-    volumes:
-      - ../:/app
-      - ./startup-backend.sh:/startup-backend.sh # Ensure the paths match
-    command: /startup-backend.sh # Fixed the path
     healthcheck:
       test: "exit 0"
     deploy:
@@ -140,7 +134,7 @@ services:
     <<: *backend
     env_file:
       - .env
-    command: celery -A langflow.worker.celery_app worker --loglevel=INFO --concurrency=1 -n lf-worker@%h -P eventlet
+    command: /bin/sh -c "python -m celery -A langflow.worker.celery_app worker --loglevel=INFO --concurrency=1 -n lf-worker@%h -P eventlet"
     healthcheck:
       test: "exit 0"
     deploy:
@@ -155,7 +149,7 @@ services:
     environment:
       - FLOWER_PORT=5555
 
-    command: /bin/sh -c "celery -A langflow.worker.celery_app --broker=${BROKER_URL?Variable not set} flower --port=5555"
+    command: /bin/sh -c "python -m celery -A langflow.worker.celery_app --broker=${BROKER_URL?Variable not set} flower --port=5555"
     deploy:
       labels:
         - traefik.enable=true
@@ -171,15 +165,9 @@ services:
         - traefik.http.services.${STACK_NAME?Variable not set}-flower.loadbalancer.server.port=5555
 
   frontend:
-    image: "ogabrielluiz/langflow_frontend:latest"
+    image: "langflowai/langflow-frontend:latest"
     env_file:
       - .env
-    # user: your-non-root-user
-    build:
-      context: ../src/frontend
-      dockerfile: Dockerfile
-      args:
-        - BACKEND_URL=http://backend:7860
     restart: on-failure
     deploy:
       labels:

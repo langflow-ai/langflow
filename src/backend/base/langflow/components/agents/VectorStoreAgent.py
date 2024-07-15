@@ -1,25 +1,19 @@
-from typing import Callable, Union
-
 from langchain.agents import AgentExecutor, create_vectorstore_agent
 from langchain.agents.agent_toolkits.vectorstore.toolkit import VectorStoreToolkit
+from langflow.base.agents.agent import LCAgentComponent
+from langflow.inputs import HandleInput
 
-from langflow.custom import CustomComponent
-from langflow.field_typing import LanguageModel
 
-
-class VectorStoreAgentComponent(CustomComponent):
+class VectorStoreAgentComponent(LCAgentComponent):
     display_name = "VectorStoreAgent"
     description = "Construct an agent from a Vector Store."
+    name = "VectorStoreAgent"
 
-    def build_config(self):
-        return {
-            "llm": {"display_name": "LLM"},
-            "vector_store_toolkit": {"display_name": "Vector Store Info"},
-        }
+    inputs = LCAgentComponent._base_inputs + [
+        HandleInput(name="llm", display_name="Language Model", input_types=["LanguageModel"], required=True),
+        HandleInput(name="vectorstore", display_name="Vector Store", input_types=["VectorStoreInfo"], required=True),
+    ]
 
-    def build(
-        self,
-        llm: LanguageModel,
-        vector_store_toolkit: VectorStoreToolkit,
-    ) -> Union[AgentExecutor, Callable]:
-        return create_vectorstore_agent(llm=llm, toolkit=vector_store_toolkit)
+    def build_agent(self) -> AgentExecutor:
+        toolkit = VectorStoreToolkit(vectorstore_info=self.vectorstore, llm=self.llm)
+        return create_vectorstore_agent(llm=self.llm, toolkit=toolkit, **self.get_agent_kwargs())

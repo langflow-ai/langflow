@@ -76,6 +76,8 @@ export default function ComponentsComponent({
   const getFoldersApi = useFolderStore((state) => state.getFoldersApi);
   const setFolderUrl = useFolderStore((state) => state.setFolderUrl);
   const addFlow = useFlowsManagerStore((state) => state.addFlow);
+  const isLoadingFolders = useFolderStore((state) => state.isLoadingFolders);
+  const setSelectedFolder = useFolderStore((state) => state.setSelectedFolder);
 
   const cardTypes = useMemo(() => {
     if (window.location.pathname.includes("components")) {
@@ -159,6 +161,8 @@ export default function ComponentsComponent({
     getFolderById,
     setSuccessData,
     setErrorData,
+    setAllFlows,
+    setSelectedFolder,
   );
 
   useSelectedFlows(entireFormValues, setSelectedFlowsComponentsCards);
@@ -194,13 +198,18 @@ export default function ComponentsComponent({
         onFileDrop={handleFileDrop}
         dragMessage={`Drag your ${name} here`}
       >
-        <div className="flex h-full w-full flex-col justify-between">
+        <div
+          className="flex h-full w-full flex-col justify-between"
+          data-testid="cards-wrapper"
+        >
           <div className="flex w-full flex-col gap-4">
-            {!isLoading && data?.length === 0 ? (
+            {!isLoading && !isLoadingFolders && data?.length === 0 ? (
               <EmptyComponent />
             ) : (
               <div className="grid w-full gap-4 md:grid-cols-2 lg:grid-cols-2">
-                {isLoading === false && data?.length > 0 ? (
+                {isLoading === false &&
+                data?.length > 0 &&
+                isLoadingFolders === false ? (
                   <>
                     {data?.map((item) => (
                       <FormProvider {...methods} key={item.id}>

@@ -1,3 +1,4 @@
+import { useGetProfilePicturesQuery } from "@/controllers/API/queries/files";
 import * as Form from "@radix-ui/react-form";
 import { useEffect, useState } from "react";
 import { Button } from "../../../../../../components/ui/button";
@@ -16,7 +17,7 @@ type ProfilePictureFormComponentProps = {
   profilePicture: string;
   handleInput: (event: any) => void;
   handlePatchProfilePicture: (gradient: string) => void;
-  handleGetProfilePictures: () => Promise<string[] | undefined>;
+  handleGetProfilePictures: () => undefined;
   userData: any;
 };
 const ProfilePictureFormComponent = ({
@@ -26,42 +27,7 @@ const ProfilePictureFormComponent = ({
   handleGetProfilePictures,
   userData,
 }: ProfilePictureFormComponentProps) => {
-  const [profilePictures, setProfilePictures] = useState<{
-    [key: string]: string[];
-  }>({});
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const abortController = new AbortController();
-
-    handleGetProfilePictures()
-      .then((data) => {
-        if (data) {
-          data.forEach((profile_picture) => {
-            const [folder, path] = profile_picture.split("/");
-            setProfilePictures((prev) => {
-              if (prev[folder]) {
-                prev[folder].push(path);
-              } else {
-                prev[folder] = [path];
-              }
-              setLoading(false);
-              return prev;
-            });
-          });
-        }
-      })
-      .catch(() => {
-        setLoading(false);
-      });
-
-    /*
-      Abort the request as it isn't needed anymore, the component being
-      unmounted. It helps avoid, among other things, the well-known "can't
-      perform a React state update on an unmounted component" warning.
-    */
-    return () => abortController.abort();
-  }, []);
+  const { data: response, isFetching } = useGetProfilePicturesQuery({});
 
   return (
     <Form.Root
@@ -80,8 +46,8 @@ const ProfilePictureFormComponent = ({
         <CardContent>
           <div className="py-2">
             <ProfilePictureChooserComponent
-              profilePictures={profilePictures}
-              loading={loading}
+              profilePictures={response}
+              loading={isFetching}
               value={
                 profilePicture == ""
                   ? userData?.profile_image ??

@@ -1,3 +1,4 @@
+import os
 import asyncio
 import warnings
 from contextlib import asynccontextmanager
@@ -6,16 +7,18 @@ from typing import Optional
 from urllib.parse import urlencode
 
 import nest_asyncio  # type: ignore
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, Request, Response, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from http import HTTPStatus
 from loguru import logger
 from pydantic import PydanticDeprecatedSince20
 from rich import print as rprint
 from starlette.middleware.base import BaseHTTPMiddleware
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
-from langflow.api import router
+from langflow.api import router, health_check_router, log_router
 from langflow.initial_setup.setup import (
     create_or_update_starter_projects,
     initialize_super_user_if_needed,
@@ -137,11 +140,42 @@ def create_app():
 
         return await call_next(request)
 
-    @app.get("/health")
-    def health():
-        return {"status": "ok"}
+    settings = get_settings_service().settings
+    if prome_port_str := os.environ.get("LANGFLOW_PROMETHEUS_PORT"):
+        # set here for create_app() entry point
+        prome_port = int(prome_port_str)
+        if prome_port > 0 or prome_port < 65535:
+            rprint(f"[bold green]Starting Prometheus server on port {prome_port}...[/bold green]")
+            settings.prometheus_enabled = True
+            settings.prometheus_port = prome_port
+        else:
+            raise ValueError(f"Invalid port number {prome_port_str}")
+
+    if settings.prometheus_enabled:
+        from prometheus_client import start_http_server
+
+        start_http_server(settings.prometheus_port)
 
     app.include_router(router)
+    app.include_router(health_check_router)
+    app.include_router(log_router)
+
+    @app.exception_handler(Exception)
+    async def exception_handler(request: Request, exc: Exception):
+        if isinstance(exc, HTTPException):
+            logger.error(f"HTTPException: {exc.detail}")
+            return JSONResponse(
+                status_code=exc.status_code,
+                content={"message": str(exc.detail)},
+            )
+        else:
+            logger.error(f"unhandled error: {exc}")
+            return JSONResponse(
+                status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+                content={"message": str(exc)},
+            )
+
+    FastAPIInstrumentor.instrument_app(app)
 
     return app
 

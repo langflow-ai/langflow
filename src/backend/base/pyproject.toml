@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "langflow-base"
-version = "0.0.81"
+version = "0.0.85"
 description = "A Python package with a built-in web application"
 authors = ["Langflow <contact@langflow.org>"]
 maintainers = [
@@ -11,6 +11,7 @@ maintainers = [
     "Lucas Eduoli <lucaseduoli@gmail.com>",
     "Otávio Anovazzi <otavio2204@gmail.com>",
     "Rodrigo Nader <rodrigo@langflow.org>",
+    "Italo dos Anjos <italojohnnydosanjos@gmail.com>",
 ]
 repository = "https://github.com/langflow-ai/langflow"
 license = "MIT"
@@ -35,7 +36,7 @@ langchainhub = "~0.1.15"
 sqlmodel = "^0.0.18"
 loguru = "^0.7.1"
 rich = "^13.7.0"
-langchain-experimental = "*"
+langchain-experimental = "^0.0.61"
 pydantic = "^2.7.0"
 pydantic-settings = "^2.2.0"
 websockets = "*"
@@ -48,7 +49,7 @@ alembic = "^1.13.0"
 passlib = "^1.7.4"
 bcrypt = "4.0.1"
 pillow = "^10.2.0"
-docstring-parser = "^0.15"
+docstring-parser = "^0.16"
 python-jose = "^3.3.0"
 pandas = "2.2.0"
 multiprocess = "^0.70.14"
@@ -65,7 +66,12 @@ uncurl = "^0.0.11"
 sentry-sdk = {extras = ["fastapi", "loguru"], version = "^2.5.1"}
 chardet = "^5.2.0"
 firecrawl-py = "^0.0.16"
-
+opentelemetry-api = "^1.25.0"
+opentelemetry-sdk = "^1.25.0"
+opentelemetry-exporter-prometheus = "^0.46b0"
+prometheus-client = "^0.20.0"
+aiofiles = "^24.1.0"
+crewai = "^0.36.0"
 
 [tool.poetry.extras]
 deploy = ["celery", "redis", "flower"]

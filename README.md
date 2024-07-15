@@ -47,6 +47,8 @@
 - [📦 Get Started](#-get-started)
 - [🎨 Create Flows](#-create-flows)
 - [Deploy](#deploy)
+  - [DataStax Langflow](#datastax-langflow)
+  - [Deploy Langflow on Hugging Face Spaces](#deploy-langflow-on-hugging-face-spaces)
   - [Deploy Langflow on Google Cloud Platform](#deploy-langflow-on-google-cloud-platform)
   - [Deploy on Railway](#deploy-on-railway)
   - [Deploy on Render](#deploy-on-render)
@@ -66,14 +68,19 @@ You can install Langflow with pip:
 # Make sure you have >=Python 3.10 installed on your system.
 python -m pip install langflow -U
 ```
+Or
+
+If you would like to install from your cloned repo, you can build and install Langflow's frontend and backend with:
+
+```shell
+make install_frontend && make build_frontend && make install_backend
+```
 
 Then, run Langflow with:
 
 ```shell
 python -m langflow run
 ```
-
-You can also preview Langflow in [HuggingFace Spaces](https://huggingface.co/spaces/Langflow/Langflow-Preview). [Clone the space using this link](https://huggingface.co/spaces/Langflow/Langflow-Preview?duplicate=true) to create your own Langflow workspace in minutes.
 
 # 🎨 Create Flows
 
@@ -92,6 +99,14 @@ results = run_flow_from_json("path/to/flow.json", input_value="Hello, World!")
 ```
 
 # Deploy
+
+## DataStax Langflow
+
+DataStax Langflow is a hosted version of Langflow integrated with [AstraDB](https://www.datastax.com/products/datastax-astra). Be up and running in minutes with no installation or setup required. [Sign up for free](https://langflow.datastax.com).
+
+## Deploy Langflow on Hugging Face Spaces
+
+You can also preview Langflow in [HuggingFace Spaces](https://huggingface.co/spaces/Langflow/Langflow-Preview). [Clone the space using this link](https://huggingface.co/spaces/Langflow/Langflow-Preview?duplicate=true) to create your own Langflow workspace in minutes.
 
 ## Deploy Langflow on Google Cloud Platform
 

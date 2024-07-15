@@ -11,6 +11,7 @@ class HuggingFaceInferenceAPIEmbeddingsComponent(LCModelComponent):
     description = "Generate embeddings using Hugging Face Inference API models."
     documentation = "https://github.com/huggingface/text-embeddings-inference"
     icon = "HuggingFace"
+    name = "HuggingFaceInferenceAPIEmbeddings"
 
     inputs = [
         SecretStrInput(name="api_key", display_name="API Key", advanced=True),

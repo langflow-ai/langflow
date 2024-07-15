@@ -14,9 +14,9 @@ from langflow.graph.edge.base import ContractEdge
 from langflow.graph.graph.constants import lazy_load_vertex_dict
 from langflow.graph.graph.runnable_vertices_manager import RunnableVerticesManager
 from langflow.graph.graph.state_manager import GraphStateManager
-from langflow.graph.graph.utils import process_flow
+from langflow.graph.graph.utils import find_start_component_id, process_flow, sort_up_to_vertex
 from langflow.graph.schema import InterfaceComponentTypes, RunOutputs
-from langflow.graph.vertex.base import Vertex
+from langflow.graph.vertex.base import Vertex, VertexStates
 from langflow.graph.vertex.types import InterfaceVertex, StateVertex
 from langflow.schema import Data
 from langflow.schema.schema import INPUT_FIELD_NAME, InputType
@@ -131,18 +131,20 @@ class Graph:
             name (str): The name of the state.
             caller (str): The ID of the vertex that is updating the state.
         """
-        vertices_ids = []
+        vertices_ids = set()
+        new_predecessor_map = {}
         for vertex_id in self._is_state_vertices:
-            if vertex_id == caller:
-                continue
+            caller_vertex = self.get_vertex(caller)
             vertex = self.get_vertex(vertex_id)
+            if vertex_id == caller or vertex.display_name == caller_vertex.display_name:
+                continue
             if (
                 isinstance(vertex._raw_params["name"], str)
                 and name in vertex._raw_params["name"]
                 and vertex_id != caller
                 and isinstance(vertex, StateVertex)
             ):
-                vertices_ids.append(vertex_id)
+                vertices_ids.add(vertex_id)
                 successors = self.get_all_successors(vertex, flat=True)
                 # Update run_manager.run_predecessors because we are activating vertices
                 # The run_prdecessors is the predecessor map of the vertices
@@ -151,14 +153,25 @@ class Graph:
                 # and run self.build_adjacency_maps(edges) to get the new predecessor map
                 # that is not complete but we can use to update the run_predecessors
                 edges_set = set()
-                for vertex in [vertex] + successors:
-                    edges_set.update(vertex.edges)
+                for _vertex in [vertex] + successors:
+                    edges_set.update(_vertex.edges)
+                    if _vertex.state == VertexStates.INACTIVE:
+                        _vertex.set_state("ACTIVE")
+
+                    vertices_ids.add(_vertex.id)
                 edges = list(edges_set)
-                new_predecessor_map, _ = self.build_adjacency_maps(edges)
-                self.run_manager.run_predecessors.update(new_predecessor_map)
-                self.vertices_to_run.update(list(map(lambda x: x.id, successors)))
-        self.activated_vertices = vertices_ids
+                predecessor_map, _ = self.build_adjacency_maps(edges)
+                new_predecessor_map.update(predecessor_map)
+
+        vertices_ids.update(new_predecessor_map.keys())
+        vertices_ids.update(v_id for value_list in new_predecessor_map.values() for v_id in value_list)
+
+        self.activated_vertices = list(vertices_ids)
         self.vertices_to_run.update(vertices_ids)
+        self.run_manager.update_run_state(
+            run_predecessors=new_predecessor_map,
+            vertices_to_run=self.vertices_to_run,
+        )
 
     def reset_activated_vertices(self):
         """
@@ -335,9 +348,8 @@ class Graph:
             logger.exception(exc)
 
         try:
-            start_component_id = next(
-                (vertex_id for vertex_id in self._is_input_vertices if "chat" in vertex_id.lower()), None
-            )
+            # Prioritize the webhook component if it exists
+            start_component_id = find_start_component_id(self._is_input_vertices)
             await self.process(start_component_id=start_component_id, fallback_to_env_vars=fallback_to_env_vars)
             self.increment_run_count()
         except Exception as exc:
@@ -350,6 +362,8 @@ class Graph:
         # Get the outputs
         vertex_outputs = []
         for vertex in self.vertices:
+            if not vertex._built:
+                continue
             if vertex is None:
                 raise ValueError(f"Vertex {vertex_id} not found")
 
@@ -852,6 +866,7 @@ class Graph:
             ValueError: If no result is found for the vertex.
         """
         vertex = self.get_vertex(vertex_id)
+        self.run_manager.add_to_vertices_being_run(vertex_id)
         try:
             params = ""
             if vertex.frozen:
@@ -936,7 +951,7 @@ class Graph:
         self.set_run_id(run_id)
         self.set_run_name()
         await self.initialize_run()
-        lock = chat_service._cache_locks[self.run_id]
+        lock = chat_service._async_cache_locks[self.run_id]
         while to_process:
             current_batch = list(to_process)  # Copy current deque items to a list
             to_process.clear()  # Clear the deque for new items
@@ -1182,72 +1197,6 @@ class Graph:
         edges_repr = "\n".join([f"{edge.source_id} --> {edge.target_id}" for edge in self.edges])
         return f"Graph:\nNodes: {vertex_ids}\nConnections:\n{edges_repr}"
 
-    def sort_up_to_vertex(self, vertex_id: str, is_start: bool = False) -> List[Vertex]:
-        """Cuts the graph up to a given vertex and sorts the resulting subgraph."""
-        # Initial setup
-        visited = set()  # To keep track of visited vertices
-        excluded = set()  # To keep track of vertices that should be excluded
-
-        def get_successors(vertex, recursive=True):
-            # Recursively get the successors of the current vertex
-            successors = vertex.successors
-            if not successors:
-                return []
-            successors_result = []
-            for successor in successors:
-                # Just return a list of successors
-                if recursive:
-                    next_successors = get_successors(successor)
-                    successors_result.extend(next_successors)
-                successors_result.append(successor)
-            return successors_result
-
-        try:
-            stop_or_start_vertex = self.get_vertex(vertex_id)
-            stack = [vertex_id]  # Use a list as a stack for DFS
-        except ValueError:
-            stop_or_start_vertex = self.get_root_of_group_node(vertex_id)
-            stack = [stop_or_start_vertex.id]
-            vertex_id = stop_or_start_vertex.id
-        stop_predecessors = [pre.id for pre in stop_or_start_vertex.predecessors]
-        # DFS to collect all vertices that can reach the specified vertex
-        while stack:
-            current_id = stack.pop()
-            if current_id not in visited and current_id not in excluded:
-                visited.add(current_id)
-                current_vertex = self.get_vertex(current_id)
-                # Assuming get_predecessors is a method that returns all vertices with edges to current_vertex
-                for predecessor in current_vertex.predecessors:
-                    stack.append(predecessor.id)
-
-                if current_id == vertex_id:
-                    # We should add to visited all the vertices that are successors of the current vertex
-                    # and their successors and so on
-                    # if the vertex is a start, it means we are starting from the beginning
-                    # and getting successors
-                    for successor in current_vertex.successors:
-                        if is_start:
-                            stack.append(successor.id)
-                        else:
-                            excluded.add(successor.id)
-                        all_successors = get_successors(successor)
-                        for successor in all_successors:
-                            if is_start:
-                                stack.append(successor.id)
-                            else:
-                                excluded.add(successor.id)
-                elif current_id not in stop_predecessors:
-                    # If the current vertex is not the target vertex, we should add all its successors
-                    # to the stack if they are not in visited
-                    for successor in current_vertex.successors:
-                        if successor.id not in visited:
-                            stack.append(successor.id)
-
-        # Filter the original graph's vertices and edges to keep only those in `visited`
-        vertices_to_keep = [self.get_vertex(vid) for vid in visited]
-
-        return vertices_to_keep
-
     def layered_topological_sort(
         self,
         vertices: List[Vertex],
@@ -1378,6 +1327,21 @@ class Graph:
                 max_index = max(max_index, index_map[successor.id])
         return max_index
 
+    def __to_dict(self) -> Dict[str, Dict[str, List[str]]]:
+        """Converts the graph to a dictionary."""
+        result: Dict = dict()
+        for vertex in self.vertices:
+            vertex_id = vertex.id
+            sucessors = [i.id for i in self.get_all_successors(vertex)]
+            predecessors = [i.id for i in self.get_predecessors(vertex)]
+            result |= {vertex_id: {"successors": sucessors, "predecessors": predecessors}}
+        return result
+
+    def __filter_vertices(self, vertex_id: str, is_start: bool = False):
+        dictionaryized_graph = self.__to_dict()
+        vertex_ids = sort_up_to_vertex(dictionaryized_graph, vertex_id, is_start)
+        return [self.get_vertex(vertex_id) for vertex_id in vertex_ids]
+
     def sort_vertices(
         self,
         stop_component_id: Optional[str] = None,
@@ -1387,9 +1351,11 @@ class Graph:
         self.mark_all_vertices("ACTIVE")
         if stop_component_id is not None:
             self.stop_vertex = stop_component_id
-            vertices = self.sort_up_to_vertex(stop_component_id)
+            vertices = self.__filter_vertices(stop_component_id)
+
         elif start_component_id:
-            vertices = self.sort_up_to_vertex(start_component_id, is_start=True)
+            vertices = self.__filter_vertices(start_component_id, is_start=True)
+
         else:
             vertices = self.vertices
             # without component_id we are probably running in the chat
@@ -1444,7 +1410,7 @@ class Graph:
 
     def is_vertex_runnable(self, vertex_id: str) -> bool:
         """Returns whether a vertex is runnable."""
-        return self.run_manager.is_vertex_runnable(vertex_id, self.inactivated_vertices)
+        return self.run_manager.is_vertex_runnable(self.get_vertex(vertex_id))
 
     def build_run_map(self):
         """
@@ -1456,7 +1422,7 @@ class Graph:
         Returns:
             None
         """
-        self.run_manager.build_run_map(self)
+        self.run_manager.build_run_map(predecessor_map=self.predecessor_map, vertices_to_run=self.vertices_to_run)
 
     def find_runnable_predecessors_for_successors(self, vertex_id: str) -> List[str]:
         """
@@ -1464,10 +1430,13 @@ class Graph:
         This checks the direct predecessors of each successor to identify any that are
         immediately runnable, expanding the search to ensure progress can be made.
         """
-        return self.run_manager.find_runnable_predecessors_for_successors(vertex_id, self.inactivated_vertices)
+        return self.run_manager.find_runnable_predecessors_for_successors(self.get_vertex(vertex_id))
 
     def remove_from_predecessors(self, vertex_id: str):
         self.run_manager.remove_from_predecessors(vertex_id)
+
+    def remove_vertex_from_runnables(self, vertex_id: str):
+        self.run_manager.remove_vertex_from_runnables(vertex_id)
 
     def build_in_degree(self, edges: List[ContractEdge]) -> Dict[str, int]:
         in_degree: Dict[str, int] = defaultdict(int)
@@ -1477,8 +1446,8 @@ class Graph:
 
     def build_adjacency_maps(self, edges: List[ContractEdge]) -> Tuple[Dict[str, List[str]], Dict[str, List[str]]]:
         """Returns the adjacency maps for the graph."""
-        predecessor_map = defaultdict(list)
-        successor_map = defaultdict(list)
+        predecessor_map: dict[str, list[str]] = defaultdict(list)
+        successor_map: dict[str, list[str]] = defaultdict(list)
         for edge in edges:
             predecessor_map[edge.target_id].append(edge.source_id)
             successor_map[edge.source_id].append(edge.target_id)

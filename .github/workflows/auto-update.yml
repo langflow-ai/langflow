@@ -3,7 +3,6 @@ name: Auto-update
 on:
   push:
     branches:
-      - dev
       - main
 
 jobs:

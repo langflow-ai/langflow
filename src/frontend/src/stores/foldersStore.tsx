@@ -13,8 +13,8 @@ export const useFolderStore = create<FoldersStoreType>((set, get) => ({
   folders: [],
   getFoldersApi: (refetch = false, startupApplication: boolean = false) => {
     return new Promise<void>((resolve, reject) => {
+      get().setIsLoadingFolders(true);
       if (get()?.folders.length === 0 || refetch === true) {
-        get().setIsLoadingFolders(true);
         getFolders().then(
           async (res) => {
             const foldersWithoutStarterProjects = res?.filter(
@@ -36,18 +36,18 @@ export const useFolderStore = create<FoldersStoreType>((set, get) => ({
 
             const { refreshFlows } = useFlowsManagerStore.getState();
             const { getTypes } = useTypesStore.getState();
-            const { setIsLoadingFolders } = get();
 
             if (refetch) {
               if (startupApplication) {
                 await refreshFlows();
                 await getTypes();
+                get().setIsLoadingFolders(false);
               } else {
                 refreshFlows();
                 getTypes();
+                get().setIsLoadingFolders(false);
               }
             }
-            setIsLoadingFolders(false);
 
             resolve();
           },
@@ -98,12 +98,13 @@ export const useFolderStore = create<FoldersStoreType>((set, get) => ({
     if (id) {
       getFolderById(id).then((res) => {
         const setAllFlows = useFlowsManagerStore.getState().setAllFlows;
-        setAllFlows(res.flows);
+        setAllFlows(res?.flows);
         set({ selectedFolder: res });
       });
     }
   },
   selectedFolder: null,
+  setSelectedFolder: (folder) => set(() => ({ selectedFolder: folder })),
   loadingById: false,
   getMyCollectionFolder: () => {
     const folders = get().folders;

@@ -15,6 +15,8 @@ from langflow.graph.utils import UnbuiltObject, UnbuiltResult
 from langflow.interface.initialize import loading
 from langflow.interface.listing import lazy_load_dict
 from langflow.schema.artifact import ArtifactType
+from langflow.schema.data import Data
+from langflow.schema.message import Message
 from langflow.schema.schema import INPUT_FIELD_NAME, OutputLog, build_output_logs
 from langflow.services.deps import get_storage_service
 from langflow.services.monitor.utils import log_transaction
@@ -107,6 +109,9 @@ class Vertex:
             self.graph.inactivated_vertices.add(self.id)
         elif self.state == VertexStates.ACTIVE and self.id in self.graph.inactivated_vertices:
             self.graph.inactivated_vertices.remove(self.id)
+
+    def is_active(self):
+        return self.state == VertexStates.ACTIVE
 
     @property
     def avg_build_time(self):
@@ -280,7 +285,12 @@ class Vertex:
                         # we don't know the key of the dict but we need to set the value
                         # to the vertex that is the source of the edge
                         param_dict = template_dict[param_key]["value"]
-                        params[param_key] = {key: self.graph.get_vertex(edge.source_id) for key in param_dict.keys()}
+                        if param_dict:
+                            params[param_key] = {
+                                key: self.graph.get_vertex(edge.source_id) for key in param_dict.keys()
+                            }
+                        else:
+                            params[param_key] = self.graph.get_vertex(edge.source_id)
                     else:
                         params[param_key] = self.graph.get_vertex(edge.source_id)
 
@@ -427,16 +437,28 @@ class Vertex:
             List[str]: The extracted messages.
         """
         try:
+            text = artifacts["text"]
+            sender = artifacts.get("sender")
+            sender_name = artifacts.get("sender_name")
+            session_id = artifacts.get("session_id")
+            stream_url = artifacts.get("stream_url")
+            files = [{"path": file} if isinstance(file, str) else file for file in artifacts.get("files", [])]
+            component_id = self.id
+            _type = self.artifacts_type
+
+            if isinstance(sender_name, (Data, Message)):
+                sender_name = sender_name.get_text()
+
             messages = [
                 ChatOutputResponse(
-                    message=artifacts["text"],
-                    sender=artifacts.get("sender"),
-                    sender_name=artifacts.get("sender_name"),
-                    session_id=artifacts.get("session_id"),
-                    stream_url=artifacts.get("stream_url"),
-                    files=[{"path": file} if isinstance(file, str) else file for file in artifacts.get("files", [])],
-                    component_id=self.id,
-                    type=self.artifacts_type,
+                    message=text,
+                    sender=sender,
+                    sender_name=sender_name,
+                    session_id=session_id,
+                    stream_url=stream_url,
+                    files=files,
+                    component_id=component_id,
+                    type=_type,
                 ).model_dump(exclude_none=True)
             ]
         except KeyError:

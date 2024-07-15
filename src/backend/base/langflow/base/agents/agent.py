@@ -1,78 +1,91 @@
-from typing import List, Optional, Union, cast
+from abc import abstractmethod
+from typing import List
 
-from langchain.agents import AgentExecutor, BaseMultiActionAgent, BaseSingleActionAgent
-from langchain_core.messages import BaseMessage
+from langchain.agents.agent import RunnableAgent
+
+from langchain.agents import AgentExecutor
 from langchain_core.runnables import Runnable
 
-from langflow.base.agents.utils import data_to_messages, get_agents_list
-from langflow.custom import CustomComponent
-from langflow.field_typing import Text, Tool
-from langflow.schema import Data
+from langflow.custom import Component
+from langflow.inputs import BoolInput, IntInput, HandleInput
+from langflow.inputs.inputs import InputTypes
+from langflow.template import Output
 
 
-class LCAgentComponent(CustomComponent):
-    def get_agents_list(self):
-        return get_agents_list()
+class LCAgentComponent(Component):
+    trace_type = "agent"
+    _base_inputs: List[InputTypes] = [
+        BoolInput(
+            name="handle_parsing_errors",
+            display_name="Handle Parse Errors",
+            value=True,
+            advanced=True,
+        ),
+        BoolInput(
+            name="verbose",
+            display_name="Verbose",
+            value=True,
+            advanced=True,
+        ),
+        IntInput(
+            name="max_iterations",
+            display_name="Max Iterations",
+            value=15,
+            advanced=True,
+        ),
+    ]
 
-    def build_config(self):
-        return {
-            "lc": {
-                "display_name": "LangChain",
-                "info": "The LangChain to interact with.",
-            },
-            "handle_parsing_errors": {
-                "display_name": "Handle Parsing Errors",
-                "info": "If True, the agent will handle parsing errors. If False, the agent will raise an error.",
-                "advanced": True,
-            },
-            "output_key": {
-                "display_name": "Output Key",
-                "info": "The key to use to get the output from the agent.",
-                "advanced": True,
-            },
-            "memory": {
-                "display_name": "Memory",
-                "info": "Memory to use for the agent.",
-            },
-            "tools": {
-                "display_name": "Tools",
-                "info": "Tools the agent can use.",
-            },
-            "input_value": {
-                "display_name": "Input",
-                "info": "Input text to pass to the agent.",
-            },
+    outputs = [
+        Output(display_name="Agent", name="agent", method="build_agent"),
+    ]
+
+    def _validate_outputs(self):
+        required_output_methods = ["build_agent"]
+        output_names = [output.name for output in self.outputs]
+        for method_name in required_output_methods:
+            if method_name not in output_names:
+                raise ValueError(f"Output with name '{method_name}' must be defined.")
+            elif not hasattr(self, method_name):
+                raise ValueError(f"Method '{method_name}' must be defined.")
+
+    def get_agent_kwargs(self, flatten: bool = False) -> dict:
+        base = {
+            "handle_parsing_errors": self.handle_parsing_errors,
+            "verbose": self.verbose,
+            "allow_dangerous_code": True,
         }
+        agent_kwargs = {
+            "handle_parsing_errors": self.handle_parsing_errors,
+            "max_iterations": self.max_iterations,
+        }
+        if flatten:
+            return {
+                **base,
+                **agent_kwargs,
+            }
+        return {**base, "agent_executor_kwargs": agent_kwargs}
 
-    async def run_agent(
-        self,
-        agent: Union[Runnable, BaseSingleActionAgent, BaseMultiActionAgent, AgentExecutor],
-        inputs: str,
-        tools: List[Tool],
-        message_history: Optional[List[Data]] = None,
-        handle_parsing_errors: bool = True,
-        output_key: str = "output",
-    ) -> Text:
-        if isinstance(agent, AgentExecutor):
-            runnable = agent
-        else:
-            runnable = AgentExecutor.from_agent_and_tools(
-                agent=agent,  # type: ignore
-                tools=tools,
-                verbose=True,
-                handle_parsing_errors=handle_parsing_errors,
-            )
-        input_dict: dict[str, str | list[BaseMessage]] = {"input": inputs}
-        if message_history:
-            input_dict["chat_history"] = data_to_messages(message_history)
-        result = await runnable.ainvoke(input_dict)
-        self.status = result
-        if output_key in result:
-            return cast(str, result.get(output_key))
-        elif "output" not in result:
-            if output_key != "output":
-                raise ValueError(f"Output key not found in result. Tried '{output_key}' and 'output'.")
-            else:
-                raise ValueError("Output key not found in result. Tried 'output'.")
 
-        return cast(str, result.get("output"))
+class LCToolsAgentComponent(LCAgentComponent):
+    _base_inputs = LCAgentComponent._base_inputs + [
+        HandleInput(
+            name="tools",
+            display_name="Tools",
+            input_types=["Tool"],
+            is_list=True,
+        ),
+        HandleInput(name="llm", display_name="Language Model", input_types=["LanguageModel"], required=True),
+    ]
+
+    def build_agent(self) -> AgentExecutor:
+        agent = self.creat_agent_runnable()
+        return AgentExecutor.from_agent_and_tools(
+            agent=RunnableAgent(runnable=agent, input_keys_arg=["input"], return_keys_arg=["output"]),
+            tools=self.tools,
+            **self.get_agent_kwargs(flatten=True),
+        )
+
+    @abstractmethod
+    def creat_agent_runnable(self) -> Runnable:
+        """Create the agent."""
+        pass
