@@ -1,4 +1,3 @@
-```yaml
 name: "🐛 Bug Report"
 description: Submit a bug report to help us improve Langflow
 body:
@@ -84,4 +83,3 @@ body:
     attributes:
       label: Expected behavior
       description: "A clear and concise description of what you would expect to happen."
-```
