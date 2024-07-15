@@ -11,7 +11,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # Copy the entrypoint script into the container
-COPY ./docker/entrypoint.sh /usr/local/bin/entrypoint.sh
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 
 # Make the entrypoint script executable
 RUN chmod +x /usr/local/bin/entrypoint.sh
