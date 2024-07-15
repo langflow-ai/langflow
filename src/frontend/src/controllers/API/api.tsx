@@ -34,10 +34,11 @@ function ApiInterceptor() {
             const stillRefresh = checkErrorCount();
             if (!stillRefresh) {
               return Promise.reject(error);
-            }
-            const acceptedRequest = await tryToRenewAccessToken(error);
+              }
+              const acceptedRequest = await tryToRenewAccessToken(error);
 
-            const accessToken = cookies.get("access_token_lf");
+              const accessToken = cookies.get("access_token_lf");
+              window.localStorage.setItem("request-error-"+ Date.now(), JSON.stringify({error: error,accessToken,acceptedRequest}));
 
             if (!accessToken && error?.config?.url?.includes("login")) {
               return Promise.reject(error);
@@ -128,10 +129,12 @@ function ApiInterceptor() {
     try {
       if (window.location.pathname.includes("/login")) return;
       const res = await renewAccessToken();
+      window.localStorage.setItem("renewAccess-"+ Date.now(), JSON.stringify({error:error,res: res,oldAccess:accessToken}));
       if (res?.data?.access_token && res?.data?.refresh_token) {
         login(res?.data?.access_token);
       }
     } catch (error) {
+      window.localStorage.setItem("renewAccessError-"+ Date.now(), JSON.stringify({error,oldAccess:accessToken}));
       clearBuildVerticesState(error);
       logout();
       return Promise.reject("Authentication error");

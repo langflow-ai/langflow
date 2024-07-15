@@ -77,6 +77,7 @@ export function AuthProvider({ children }): React.ReactElement {
   function getUser() {
     getLoggedUser()
       .then(async (user) => {
+        window.localStorage.setItem("getUser-"+Date.now().toString(),JSON.stringify(user));
         setUserData(user);
         const isSuperUser = user!.is_superuser;
         setIsAdmin(isSuperUser);
@@ -92,12 +93,26 @@ export function AuthProvider({ children }): React.ReactElement {
   }
 
   function login(newAccessToken: string) {
+    window.localStorage.setItem("login-"+Date.now().toString(),JSON.stringify({
+      accessToken,
+      isAuthenticated,
+      isAdmin,
+      apiKey,
+      userData,
+    }));
     setAccessToken(newAccessToken);
     setIsAuthenticated(true);
     getUser();
   }
 
   async function logout() {
+    window.localStorage.setItem("logout-"+Date.now().toString(),JSON.stringify({
+      accessToken,
+      isAuthenticated,
+      isAdmin,
+      apiKey,
+      userData,
+    }));
     if (autoLogin) {
       return;
     }
