@@ -131,6 +131,7 @@ pytest-profiling = "^1.7.0"
 pre-commit = "^3.7.0"
 vulture = "^2.11"
 dictdiffer = "^0.9.0"
+pytest-split = "^0.9.0"
 
 [tool.poetry.extras]
 deploy = ["celery", "redis", "flower"]
