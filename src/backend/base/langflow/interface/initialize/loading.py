@@ -44,7 +44,7 @@ async def instantiate_class(
         tracing_service=get_tracing_service(),
     )
 
-    final_custom_component, build_results, artifacts = await __get_results(
+    final_custom_component, build_results, artifacts = await get_instance_results(
         custom_component=custom_component,
         custom_params=custom_params,
         vertex=vertex,
@@ -54,7 +54,7 @@ async def instantiate_class(
     return final_custom_component, build_results, artifacts
 
 
-async def __get_results(
+async def get_instance_results(
     custom_component,
     custom_params: dict,
     vertex: "Vertex",
