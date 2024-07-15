@@ -1,20 +1,20 @@
-FROM langflowai/langflow-backend
+# Use the specified base image
+FROM langflowai/langflow:1.0.9
 
-# Ensure commands run as root
+# Ensure the user is root
 USER root
 
-# Set the entrypoint directly in the Dockerfile
-ENTRYPOINT ["/bin/bash", "-c", "\
-    MOUNT_POINT=\"${MOUNT_POINT:-/app/data}\"; \
-    SIZE=\"${SIZE:-200M}\"; \
-    TEMP_DIR=\"/tmp/data_backup\"; \
-    mkdir -p \"$TEMP_DIR\"; \
-    cp -r /app/data/* \"$TEMP_DIR/\"; \
-    mkdir -p \"$MOUNT_POINT\"; \
-    mount -t tmpfs -o size=$SIZE tmpfs \"$MOUNT_POINT\"; \
-    cp -r \"$TEMP_DIR\"/* \"$MOUNT_POINT/\"; \
-    rm -rf \"$TEMP_DIR\"; \
-    chown -R user:user \"$MOUNT_POINT\"; \
-    USER user; \
-    exec python -m langflow run --host 0.0.0.0 --port 7860 --backend-only; \
-"]
+# Install gosu
+RUN apt-get update && \
+    apt-get install -y gosu && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Copy the entrypoint script into the container
+COPY ./docker/entrypoint.sh /usr/local/bin/entrypoint.sh
+
+# Make the entrypoint script executable
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+# Set the entrypoint to the script
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
