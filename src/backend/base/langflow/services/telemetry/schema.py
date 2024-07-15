@@ -34,4 +34,4 @@ class ComponentPayload(BaseModel):
     componentName: str
     componentSeconds: int
     componentSuccess: bool
-    componentErrorMessage: str
+    componentErrorMessage: str | None = None
