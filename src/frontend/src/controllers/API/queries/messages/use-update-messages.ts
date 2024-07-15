@@ -9,7 +9,7 @@ interface UpdateMessageParams {
   message: Message;
 }
 
-export const useUpdateMessages: useMutationFunctionType<
+export const useUpdateMessage: useMutationFunctionType<
   UpdateMessageParams
 > = (options?) => {
   const { mutate } = UseRequestProcessor();
