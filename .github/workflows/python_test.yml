@@ -43,7 +43,7 @@ jobs:
       - name: Run unit tests
         timeout-minutes: 12
         run: |
-          make unit_tests args="--split-count ${{ matrix.splitCount }} --group ${{ matrix.group }}"
+          make unit_tests args="--splits ${{ matrix.splitCount }} --group ${{ matrix.group }}"
       - name: Test CLI
         run: |
           poetry run python -m langflow run --host 127.0.0.1 --port 7860 --backend-only &
