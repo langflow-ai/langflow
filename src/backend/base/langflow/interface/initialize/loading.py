@@ -35,15 +35,21 @@ async def instantiate_class(
     if not base_type:
         raise ValueError("No base type provided for vertex")
 
-    custom_component, build_results, artifacts = await build_component_and_get_results(
+    custom_component, custom_params = await __build_component(
         params=params,
         vertex=vertex,
         user_id=user_id,
         tracing_service=get_tracing_service(),
+    )
+
+    final_custom_component, build_results, artifacts = await __get_results(
+        custom_component=custom_component,
+        custom_params=custom_params,
+        vertex=vertex,
         fallback_to_env_vars=fallback_to_env_vars,
         base_type=base_type,
     )
-    return custom_component, build_results, artifacts
+    return final_custom_component, build_results, artifacts
 
 
 async def __build_component(
