@@ -342,6 +342,7 @@ check_tools: ## check for required tools
 	@command -v npm >/dev/null 2>&1 || { echo >&2 "NPM is not installed. Aborting."; exit 1; }
 	@command -v docker >/dev/null 2>&1 || { echo >&2 "Docker is not installed. Aborting."; exit 1; }
 	@command -v pipx >/dev/null 2>&1 || { echo >&2 "pipx is not installed. Aborting."; exit 1; }
+	@echo "All required tools are installed."
 
 help: ## show this help message
 	@echo '----'
