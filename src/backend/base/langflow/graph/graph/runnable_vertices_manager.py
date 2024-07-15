@@ -41,6 +41,9 @@ class RunnableVerticesManager:
         self.run_predecessors = state["run_predecessors"]
         self.vertices_to_run = state["vertices_to_run"]
 
+    def all_predecessors_are_fulfilled(self) -> bool:
+        return all(not value for value in self.run_predecessors.values())
+
     def update_run_state(self, run_predecessors: dict, vertices_to_run: set):
         self.run_predecessors.update(run_predecessors)
         self.vertices_to_run.update(vertices_to_run)
