@@ -1,0 +1,85 @@
+name: "\U0001F41B Bug Report"
+description: Submit a bug report to help us improve
+body:
+  - type: textarea
+    id: describe-bug
+    attributes:
+      label: Describe the bug
+      description: A clear and concise description of what the bug is. Include details on what you expected to happen and what actually happened.
+      placeholder: Describe the bug in detail...
+    validations:
+      required: true
+
+  - type: input
+    id: browser-version
+    attributes:
+      label: Browser and Version
+      description: Please specify the browser and version where the bug occurred (e.g., Chrome 90, Safari 14).
+      placeholder: Browser and version (e.g., Chrome 90, Safari 14)
+    validations:
+      required: true
+
+  - type: input
+    id: operating-system
+    attributes:
+      label: Operating System
+      description: Please specify the operating system and version (e.g., Windows 10, macOS Big Sur, Ubuntu 20.04).
+      placeholder: Operating System and version (e.g., Windows 10, macOS Big Sur, Ubuntu 20.04)
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps-to-reproduce
+    attributes:
+      label: Steps to Reproduce
+      description: |
+        Steps to reproduce the behavior:
+
+        1. Go to '...'
+        2. Click on '....'
+        3. Scroll down to '....'
+        4. See error
+      placeholder: List the steps to reproduce the bug...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected behavior
+      description: A clear and concise description of what you expected to happen.
+      placeholder: Describe the expected behavior...
+    validations:
+      required: true
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots
+      description: If applicable, add screenshots to help explain your problem. Screenshots can be very helpful for visualizing the issue.
+      placeholder: Attach screenshots...
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional context
+      description: Add any other context about the problem here. Include any relevant logs, configuration files, or related issues.
+      placeholder: Add any additional context...
+
+  - type: textarea
+    id: potential-solutions
+    attributes:
+      label: Potential solutions
+      description: (Optional) If you have an idea of what might be causing the issue or a possible fix, please share it here.
+      placeholder: Describe potential solutions...
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      description: (Optional) How severe is this issue?
+      options:
+        - Critical
+        - Major
+        - Minor
+        - Trivial
