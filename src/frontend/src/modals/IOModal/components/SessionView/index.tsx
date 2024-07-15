@@ -32,19 +32,17 @@ export default function SessionView({
   });
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
 
-  const { mutate: deleteMessages } = useDeleteMessages({
-    onSuccess: () => {
-      deleteMessagesStore(selectedRows);
-      setSelectedRows([]);
-      setSuccessData({
-        title: "Messages deleted successfully.",
-      });
-    }, onError: () => {
-      setErrorData({
-        title: "Error deleting messages.",
-      })
-    }
-  });
+  const {mutate:deleteMessages}= useDeleteMessages({onSuccess:()=>{
+    deleteMessagesStore(selectedRows);
+    setSelectedRows([]);
+    setSuccessData({
+      title: "Messages deleted successfully.",
+    });
+  },onError:()=>{
+    setErrorData({
+      title: "Error deleting messages.",
+    })
+  }});
 
   const { handleUpdate } = useUpdateMessage(setSuccessData, setErrorData);
 
