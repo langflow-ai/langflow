@@ -2373,7 +2373,7 @@
                 "dynamic": false,
                 "info": "",
                 "input_types": [],
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "openai_api_key",
                 "password": true,
                 "placeholder": "",
@@ -2381,7 +2381,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "OPENAI_API_KEY"
               },
               "openai_api_type": {
                 "advanced": true,
