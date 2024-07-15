@@ -424,7 +424,14 @@ class Vertex:
         """
         logger.debug(f"Building {self.display_name}")
         await self._build_each_vertex_in_params_dict(user_id)
-        await self._get_and_instantiate_class(user_id, fallback_to_env_vars)
+
+        if self.base_type is None:
+            raise ValueError(f"Base type for vertex {self.display_name} not found")
+
+        class_instance, custom_params = await loading.instantiate_class(user_id=user_id, vertex=self)
+
+        await self._get_and_instantiate_class(class_instance, custom_params, fallback_to_env_vars)
+
         self._validate_built_object()
 
         self._built = True
@@ -634,14 +641,8 @@ class Vertex:
         if isinstance(self.params[key], list):
             self.params[key].extend(result)
 
-    async def _get_and_instantiate_class(self, user_id=None, fallback_to_env_vars=False):
-        """
-        Gets the class from a dictionary and instantiates it with the params.
-        """
-        if self.base_type is None:
-            raise ValueError(f"Base type for vertex {self.display_name} not found")
+    async def _get_and_instantiate_class(self, class_instance, custom_params, fallback_to_env_vars=False):
         try:
-            class_instance, custom_params = await loading.instantiate_class(user_id=user_id, vertex=self)
             result = await loading.get_instance_results(
                 custom_component=class_instance,
                 custom_params=custom_params,
