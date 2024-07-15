@@ -1,6 +1,16 @@
 name: "🐛 Bug Report"
 description: Submit a bug report to help us improve Langflow
 body:
+
+  - type: textarea
+    id: describe-bug
+    attributes:
+      label: Describe the bug
+      description: A clear and concise description of what the bug is. Include details on what you expected to happen and what actually happened.
+      placeholder: Describe the bug in detail...
+    validations:
+      required: true
+      
   - type: textarea
     id: system-info
     attributes:
