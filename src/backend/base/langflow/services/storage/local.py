@@ -56,7 +56,7 @@ class LocalStorageService(StorageService):
             raise FileNotFoundError(f"File {file_name} not found in flow {flow_id}")
 
         with open(file_path, "rb") as f:
-            logger.info(f"File {file_name} retrieved successfully from flow {flow_id}.")
+            logger.debug(f"File {file_name} retrieved successfully from flow {flow_id}.")
             return f.read()
 
     async def list_files(self, flow_id: str):

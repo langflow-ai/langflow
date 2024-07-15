@@ -598,8 +598,9 @@ async def custom_component_update(
             ]
             params = update_params_with_load_from_db_fields(cc_instance, params, load_from_db_fields)
             cc_instance.set_attributes(params)
-        updated_build_config = cc_instance.update_build_config(
-            build_config=code_request.get_template(),
+        updated_build_config = code_request.get_template()
+        cc_instance.update_build_config(
+            build_config=updated_build_config,
             field_value=code_request.field_value,
             field_name=code_request.field,
         )

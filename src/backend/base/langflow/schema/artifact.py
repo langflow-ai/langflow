@@ -1,6 +1,9 @@
 from enum import Enum
 from typing import Generator
 
+from fastapi.encoders import jsonable_encoder
+from pydantic import BaseModel
+
 from langflow.schema import Data
 from langflow.schema.message import Message
 
@@ -50,6 +53,12 @@ def post_process_raw(raw, artifact_type: str):
     if artifact_type == ArtifactType.STREAM.value:
         raw = ""
     elif artifact_type == ArtifactType.UNKNOWN.value and raw is not None:
-        raw = "Built Successfully ✨"
-
-    return raw
+        if isinstance(raw, (BaseModel, dict)):
+            try:
+                raw = jsonable_encoder(raw)
+                artifact_type = ArtifactType.OBJECT.value
+            except Exception:
+                raw = "Built Successfully ✨"
+        else:
+            raw = "Built Successfully ✨"
+    return raw, artifact_type
