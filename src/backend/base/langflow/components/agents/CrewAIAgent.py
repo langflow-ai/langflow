@@ -47,6 +47,13 @@ class CrewAIAgentComponent(Component):
             info="Whether the agent is allowed to delegate tasks to other agents.",
             value=True,
         ),
+        BoolInput(
+            name="allow_code_execution",
+            display_name="Allow Code Execution",
+            info="Whether the agent is allowed to execute code.",
+            value=False,
+            advanced=True,
+        ),
         DictInput(
             name="kwargs",
             display_name="kwargs",
@@ -57,7 +64,7 @@ class CrewAIAgentComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Output", name="output", method="build_output"),
+        Output(display_name="Agent", name="output", method="build_output"),
     ]
 
     def build_output(self) -> Agent:
@@ -71,6 +78,7 @@ class CrewAIAgentComponent(Component):
             memory=self.memory,
             tools=self.tools if self.tools else [],
             allow_delegation=self.allow_delegation,
+            allow_code_execution=self.allow_code_execution,
             **kwargs,
         )
         self.status = repr(agent)
