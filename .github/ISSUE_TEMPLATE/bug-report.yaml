@@ -1,5 +1,5 @@
 ```yaml
-name: "\U0001F41B Bug Report"
+name: "Bug Report"
 description: Submit a bug report to help us improve Langflow
 body:
   - type: textarea
