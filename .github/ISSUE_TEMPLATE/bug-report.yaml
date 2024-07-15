@@ -74,12 +74,3 @@ body:
       label: Screenshots
       description: |
         If applicable, add screenshots to help explain your problem.
-
-        You can drag and drop images directly into this text box or use the following Markdown syntax to include them:
-
-        ![Alt text](url)
-
-        Example:
-
-        ![Bug Screenshot](https://example.com/screenshot.png)
-      placeholder: "Drag and drop images here or use Markdown syntax to include screenshots."
