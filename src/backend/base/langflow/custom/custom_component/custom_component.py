@@ -88,6 +88,9 @@ class CustomComponent(BaseComponent):
     _logs: List[Log] = []
     tracing_service: Optional["TracingService"] = None
 
+    def set_attributes(self, parameters: dict):
+        pass
+
     def set_parameters(self, parameters: dict):
         self._parameters = parameters
         self.set_attributes(self._parameters)
