@@ -22,6 +22,8 @@ jobs:
           - "3.12"
           - "3.11"
           - "3.10"
+        splitCount: [5]
+        group: [1, 2, 3, 4, 5]
     env:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
     steps:
@@ -41,7 +43,7 @@ jobs:
       - name: Run unit tests
         timeout-minutes: 12
         run: |
-          make unit_tests
+          make unit_tests args="--split-count ${{ matrix.splitCount }} --group ${{ matrix.group }}"
       - name: Test CLI
         run: |
           poetry run python -m langflow run --host 127.0.0.1 --port 7860 --backend-only &
