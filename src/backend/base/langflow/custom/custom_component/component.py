@@ -40,14 +40,16 @@ class Component(CustomComponent):
     code_class_base_inheritance: ClassVar[str] = "Component"
 
     def __init__(self, **data):
-        super().__init__(**data)
         self._inputs: dict[str, InputTypes] = {}
         self._results: dict[str, Any] = {}
         self._attributes: dict[str, Any] = {}
+        self._parameters: dict[str, Any] = {}
+        super().__init__(**data)
         if not hasattr(self, "trace_type"):
             self.trace_type = "chain"
         if self.inputs is not None:
             self.map_inputs(self.inputs)
+        self.set_attributes(self._parameters)
 
     def __getattr__(self, name: str) -> Any:
         if "_attributes" in self.__dict__ and name in self.__dict__["_attributes"]:
