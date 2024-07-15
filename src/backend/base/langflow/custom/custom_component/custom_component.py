@@ -89,7 +89,8 @@ class CustomComponent(BaseComponent):
     tracing_service: Optional["TracingService"] = None
 
     def set_parameters(self, parameters: dict):
-        self.parameters = parameters
+        self._parameters = parameters
+        self.set_attributes(self._parameters)
 
     @classmethod
     def initialize(cls, **kwargs):
@@ -97,7 +98,7 @@ class CustomComponent(BaseComponent):
         vertex = kwargs.pop("vertex", None)
         tracing_service = kwargs.pop("tracing_service", get_tracing_service())
         params_copy = kwargs.copy()
-        return cls(user_id=user_id, parameters=params_copy, vertex=vertex, tracing_service=tracing_service)
+        return cls(user_id=user_id, _parameters=params_copy, vertex=vertex, tracing_service=tracing_service)
 
     @property
     def trace_name(self):
