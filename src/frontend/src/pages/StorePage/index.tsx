@@ -7,6 +7,7 @@ import ShadTooltip from "../../components/shadTooltipComponent";
 import { SkeletonCardComponent } from "../../components/skeletonCardComponent";
 import { Button } from "../../components/ui/button";
 
+import { useGetTagsQuery } from "@/controllers/API/queries/store";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import PaginatorComponent from "../../components/paginatorComponent";
 import { TagsSelector } from "../../components/tagsSelectorComponent";
@@ -50,7 +51,6 @@ export default function StorePage(): JSX.Element {
   );
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const [loading, setLoading] = useState(true);
-  const [loadingTags, setLoadingTags] = useState(true);
   const { id } = useParams();
   const [filteredCategories, setFilterCategories] = useState<any[]>([]);
   const [inputText, setInputText] = useState<string>("");
@@ -59,10 +59,10 @@ export default function StorePage(): JSX.Element {
   const [pageSize, setPageSize] = useState(12);
   const [pageIndex, setPageIndex] = useState(1);
   const [pageOrder, setPageOrder] = useState("Popular");
-  const [tags, setTags] = useState<{ id: string; name: string }[]>([]);
   const [tabActive, setTabActive] = useState("All");
   const [searchNow, setSearchNow] = useState("");
   const [selectFilter, setSelectFilter] = useState("all");
+  const { isFetching, data } = useGetTagsQuery();
 
   const navigate = useNavigate();
 
@@ -84,7 +84,6 @@ export default function StorePage(): JSX.Element {
   }, [loadingApiKey, validApiKey, hasApiKey, currentFlowId]);
 
   useEffect(() => {
-    handleGetTags();
     handleGetComponents();
   }, [
     tabActive,
@@ -100,19 +99,6 @@ export default function StorePage(): JSX.Element {
     loadingApiKey,
     id,
   ]);
-
-  function handleGetTags() {
-    setLoadingTags(true);
-    getStoreTags()
-      .then((res) => {
-        setTags(res);
-        setLoadingTags(false);
-      })
-      .catch((err) => {
-        console.log(err);
-        setLoadingTags(false);
-      });
-  }
 
   function handleGetComponents() {
     if (loadingApiKey) return;
@@ -297,8 +283,8 @@ export default function StorePage(): JSX.Element {
             </Select>
             {id === undefined ? (
               <TagsSelector
-                tags={tags}
-                loadingTags={loadingTags}
+                tags={data ?? []}
+                loadingTags={isFetching}
                 disabled={loading}
                 selectedTags={filteredCategories}
                 setSelectedTags={setFilterCategories}
