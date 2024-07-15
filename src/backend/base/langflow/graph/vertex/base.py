@@ -641,11 +641,15 @@ class Vertex:
         if self.base_type is None:
             raise ValueError(f"Base type for vertex {self.display_name} not found")
         try:
-            result = await loading.instantiate_class(
-                user_id=user_id,
-                fallback_to_env_vars=fallback_to_env_vars,
+            class_instance, custom_params = await loading.instantiate_class(user_id=user_id, vertex=self)
+            result = await loading.get_instance_results(
+                custom_component=class_instance,
+                custom_params=custom_params,
                 vertex=self,
+                fallback_to_env_vars=fallback_to_env_vars,
+                base_type=self.base_type,
             )
+
             self.outputs_logs = build_output_logs(self, result)
 
             self._update_built_object_and_artifacts(result)
