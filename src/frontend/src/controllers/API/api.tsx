@@ -38,7 +38,7 @@ function ApiInterceptor() {
               const acceptedRequest = await tryToRenewAccessToken(error);
 
               const accessToken = cookies.get("access_token_lf");
-              window.localStorage.setItem("request-error-"+ Date.now(), JSON.stringify({error: error,accessToken,acceptedRequest}));
+              window.localStorage.setItem("request-error-"+ (new Date(Date.now())).toLocaleString(), JSON.stringify({error: error,accessToken,acceptedRequest}));
 
             if (!accessToken && error?.config?.url?.includes("login")) {
               return Promise.reject(error);
@@ -129,12 +129,12 @@ function ApiInterceptor() {
     try {
       if (window.location.pathname.includes("/login")) return;
       const res = await renewAccessToken();
-      window.localStorage.setItem("renewAccess-"+ Date.now(), JSON.stringify({error:error,res: res,oldAccess:accessToken}));
+      window.localStorage.setItem("renewAccess-"+ (new Date(Date.now())).toLocaleString(), JSON.stringify({error:error,res: res,oldAccess:accessToken}));
       if (res?.data?.access_token && res?.data?.refresh_token) {
         login(res?.data?.access_token);
       }
     } catch (error) {
-      window.localStorage.setItem("renewAccessError-"+ Date.now(), JSON.stringify({error,oldAccess:accessToken}));
+      window.localStorage.setItem("renewAccessError-"+ (new Date(Date.now())).toLocaleString(), JSON.stringify({error,oldAccess:accessToken}));
       clearBuildVerticesState(error);
       logout();
       return Promise.reject("Authentication error");
