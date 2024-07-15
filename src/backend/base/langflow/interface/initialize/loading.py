@@ -15,7 +15,6 @@ from langflow.services.deps import get_tracing_service
 
 if TYPE_CHECKING:
     from langflow.graph.vertex.base import Vertex
-    from langflow.services.tracing.service import TracingService
 
 
 async def instantiate_class(
@@ -35,10 +34,13 @@ async def instantiate_class(
     if not base_type:
         raise ValueError("No base type provided for vertex")
 
-    custom_component, custom_params = await __build_component(
-        params=params,
-        vertex=vertex,
+    custom_params = params.copy()
+    code = custom_params.pop("code")
+    class_object: Type["CustomComponent" | "Component"] = eval_custom_component_code(code)
+    custom_component: "CustomComponent" | "Component" = class_object(
         user_id=user_id,
+        parameters=custom_params,
+        vertex=vertex,
         tracing_service=get_tracing_service(),
     )
 
@@ -50,24 +52,6 @@ async def instantiate_class(
         base_type=base_type,
     )
     return final_custom_component, build_results, artifacts
-
-
-async def __build_component(
-    params: dict,
-    vertex: "Vertex",
-    user_id: str,
-    tracing_service: "TracingService",
-):
-    custom_params = params.copy()
-    code = custom_params.pop("code")
-    class_object: Type["CustomComponent" | "Component"] = eval_custom_component_code(code)
-    custom_component: "CustomComponent" | "Component" = class_object(
-        user_id=user_id,
-        parameters=custom_params,
-        vertex=vertex,
-        tracing_service=tracing_service,
-    )
-    return custom_component, custom_params
 
 
 async def __get_results(
