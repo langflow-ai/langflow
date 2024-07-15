@@ -1,5 +1,3 @@
-Sure! Here's a GitHub issue template specifically tailored for the Langflow project:
-
 ```yaml
 name: "\U0001F41B Bug Report"
 description: Submit a bug report to help us improve Langflow
