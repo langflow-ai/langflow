@@ -34,7 +34,6 @@ class TelemetryService(Service):
         self.telemetry_queue: asyncio.Queue = asyncio.Queue()
         self.client = httpx.AsyncClient(timeout=10.0)  # Set a reasonable timeout
         self.running = False
-        self.package = get_version_info()["package"]
 
         self.ot = OpenTelemetry(prometheus_enabled=settings_service.settings.prometheus_enabled)
 
@@ -86,7 +85,7 @@ class TelemetryService(Service):
         version_info = get_version_info()
         architecture = platform.architecture()[0]
         payload = VersionPayload(
-            package=self.package.lower(),
+            package=version_info["package"].lower(),
             version=version_info["version"],
             platform=platform.platform(),
             python=python_version,
