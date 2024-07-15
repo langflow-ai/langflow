@@ -1,16 +1,6 @@
 name: "🐛 Bug Report"
 description: Submit a bug report to help us improve Langflow
 body:
-
-  - type: textarea
-    id: describe-bug
-    attributes:
-      label: Describe the bug
-      description: A clear and concise description of what the bug is. Include details on what you expected to happen and what actually happened.
-      placeholder: Describe the bug in detail...
-    validations:
-      required: true
-      
   - type: textarea
     id: system-info
     attributes:
@@ -51,24 +41,6 @@ body:
 
       placeholder: "@Username ..."
 
-  - type: checkboxes
-    id: information-scripts-examples
-    attributes:
-      label: Information
-      description: 'The problem arises when using:'
-      options:
-        - label: "The official example scripts"
-        - label: "My own modified scripts"
-
-  - type: checkboxes
-    id: information-tasks
-    attributes:
-      label: Tasks
-      description: "The tasks I am working on are:"
-      options:
-        - label: "An officially supported task in the `examples` folder"
-        - label: "My own task or dataset (give details below)"
-
   - type: textarea
     id: reproduction
     validations:
@@ -88,6 +60,13 @@ body:
           2.
           3.
 
+  - type: file
+    id: screenshots
+    attributes:
+      label: Screenshots
+      description: "If applicable, add screenshots to help explain your problem."
+      multiple: true
+      
   - type: textarea
     id: expected-behavior
     validations:
