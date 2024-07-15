@@ -250,17 +250,17 @@ def build_class_constructor(compiled_class, exec_globals, class_name):
     exec_globals[class_name] = locals()[class_name]
 
     # Return a function that imports necessary modules and creates an instance of the target class
-    def build_custom_class(*args, **kwargs):
+    def build_custom_class():
         for module_name, module in exec_globals.items():
             if isinstance(module, type(importlib)):
                 globals()[module_name] = module
 
-        instance = exec_globals[class_name](*args, **kwargs)
+        exec_globals[class_name]
 
-        return instance
+        return exec_globals[class_name]
 
     build_custom_class.__globals__.update(exec_globals)
-    return build_custom_class
+    return build_custom_class()
 
 
 def get_default_imports(code_string):
