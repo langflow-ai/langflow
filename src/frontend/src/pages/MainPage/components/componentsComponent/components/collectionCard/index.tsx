@@ -44,7 +44,6 @@ const CollectionCard = ({ item, type, isLoading, control }) => {
     }
     return null;
   };
-  console.log(type);
 
   return (
     <CollectionCardComponent
