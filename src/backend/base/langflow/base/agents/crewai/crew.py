@@ -1,7 +1,7 @@
 from crewai import Agent, Crew, Process, Task  # type: ignore
 
 from langflow.custom import Component
-from langflow.inputs.inputs import HandleInput
+from langflow.inputs.inputs import HandleInput, InputTypes
 from langflow.io import BoolInput, IntInput, Output
 from langflow.schema.data import Data
 from langflow.schema.message import Message
@@ -13,7 +13,7 @@ class BaseCrewComponent(Component):
     )
     icon = "CrewAI"
 
-    _base_inputs = [
+    _base_inputs: list[InputTypes] = [
         IntInput(name="verbose", display_name="Verbose", value=0, advanced=True),
         BoolInput(name="memory", display_name="Memory", value=False, advanced=True),
         BoolInput(name="use_cache", display_name="Cache", value=True, advanced=True),
