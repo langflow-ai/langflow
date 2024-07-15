@@ -19,7 +19,6 @@ if TYPE_CHECKING:
 
 async def instantiate_class(
     vertex: "Vertex",
-    fallback_to_env_vars,
     user_id=None,
 ) -> Any:
     """Instantiate class from module type and key, and params"""
@@ -43,15 +42,7 @@ async def instantiate_class(
         vertex=vertex,
         tracing_service=get_tracing_service(),
     )
-
-    final_custom_component, build_results, artifacts = await get_instance_results(
-        custom_component=custom_component,
-        custom_params=custom_params,
-        vertex=vertex,
-        fallback_to_env_vars=fallback_to_env_vars,
-        base_type=base_type,
-    )
-    return final_custom_component, build_results, artifacts
+    return custom_component, custom_params
 
 
 async def get_instance_results(
