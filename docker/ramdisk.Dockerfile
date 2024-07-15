@@ -4,7 +4,7 @@ FROM langflowai/langflow-backend:1.0.9
 # Set the entrypoint directly in the Dockerfile
 ENTRYPOINT ["/bin/bash", "-c", "\
     if [ \"$CREATE_RAMDISK\" = \"true\" ]; then \
-        MOUNT_POINT=\"${MOUNT_POINT:-/app/data}\"; \
+        MOUNT_POINT=\"${MOUNT_POINT:-/app/data/.cache}\"; \
         SIZE=\"${SIZE:-200M}\"; \
         mkdir -p \"$MOUNT_POINT\"; \
         mount -t tmpfs -o size=$SIZE tmpfs \"$MOUNT_POINT\"; \
