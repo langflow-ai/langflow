@@ -13,6 +13,7 @@ class ShutdownPayload(BaseModel):
 
 
 class VersionPayload(BaseModel):
+    package: str
     version: str
     platform: str
     python: str
