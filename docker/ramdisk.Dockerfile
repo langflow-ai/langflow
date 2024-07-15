@@ -1,11 +1,6 @@
 # Use the existing langflowai/langflow-backend image as the base
 FROM langflowai/langflow-backend
 
-# Install necessary tools
-RUN apt-get update && apt-get install -y \
-    mount \
-    && rm -rf /var/lib/apt/lists/*
-
 # Set the entrypoint directly in the Dockerfile
 ENTRYPOINT ["/bin/bash", "-c", "\
     if [ \"$CREATE_RAMDISK\" = \"true\" ]; then \
