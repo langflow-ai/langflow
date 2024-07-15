@@ -48,6 +48,7 @@ class Component(CustomComponent):
             self.trace_type = "chain"
         if self.inputs is not None:
             self.map_inputs(self.inputs)
+        self.set_attributes(self.parameters)
 
     def __getattr__(self, name: str) -> Any:
         if "_attributes" in self.__dict__ and name in self.__dict__["_attributes"]:

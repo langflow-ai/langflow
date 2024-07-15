@@ -146,11 +146,9 @@ def update_params_with_load_from_db_fields(
 
 
 async def build_component(
-    params: dict,
     custom_component: "Component",
 ):
     # Now set the params as attributes of the custom_component
-    custom_component.set_attributes(params)
     build_results, artifacts = await custom_component.build_results()
 
     return custom_component, build_results, artifacts
