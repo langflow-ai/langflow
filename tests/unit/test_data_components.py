@@ -184,10 +184,10 @@ def test_directory_without_mocks():
     # check if the directory component can load them
     # just check if the number of results is the same as the number of files
     directory_component = data.DirectoryComponent()
-    docs_path = Path(__file__).parent.parent.parent / "docs" / "docs" / "components"
+    docs_path = Path(__file__).parent.parent.parent / "docs" / "docs" / "Components"
     directory_component.set_attributes({"path": str(docs_path), "use_multithreading": False})
     results = directory_component.load_directory()
-    docs_files = list(docs_path.glob("*.mdx"))
+    docs_files = list(docs_path.glob("*.md")) + list(docs_path.glob("*.json"))
     assert len(results) == len(docs_files)
 
 
