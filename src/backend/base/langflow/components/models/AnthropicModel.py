@@ -38,6 +38,7 @@ class AnthropicModelComponent(LCModelComponent):
             name="anthropic_api_key",
             display_name="Anthropic API Key",
             info="Your Anthropic API key.",
+            value="ANTHROPIC_API_KEY",
         ),
         FloatInput(name="temperature", display_name="Temperature", value=0.1),
         MessageTextInput(
