@@ -1,7 +1,7 @@
-from typing import Callable, List, Tuple, Union
+from typing import Callable, List, Tuple, Union, cast
 
 from crewai import Agent, Crew, Process, Task  # type: ignore
-from crewai.task import TaskOutput
+from crewai.task import TaskOutput  # type: ignore
 from langchain_core.agents import AgentAction, AgentFinish
 
 from langflow.custom import Component
@@ -49,7 +49,11 @@ class BaseCrewComponent(Component):
         self,
     ) -> Callable:
         def task_callback(task_output: TaskOutput):
-            self.log(task_output.model_dump(), name=f"Task (Agent: {task_output.agent}) - {self.vertex.id}")
+            if self.vertex:
+                vertex_id = self.vertex.id
+            else:
+                vertex_id = self.display_name or self.__class__.__name__
+            self.log(task_output.model_dump(), name=f"Task (Agent: {task_output.agent}) - {vertex_id}")
 
         return task_callback
 
@@ -57,13 +61,14 @@ class BaseCrewComponent(Component):
         self,
     ) -> Callable:
         def step_callback(agent_output: Union[AgentFinish, List[Tuple[AgentAction, str]]]):
+            _id = self.vertex.id if self.vertex else self.display_name
             if isinstance(agent_output, AgentFinish):
                 messages = agent_output.messages
-                self.log(messages[0], name=f"Finish (Agent: {self.vertex.id})")
+                self.log(cast(dict, messages[0].to_json()), name=f"Finish (Agent: {_id})")
             elif isinstance(agent_output, list):
-                messages = {f"Action {i}": action.messages for i, (action, _) in enumerate(agent_output)}
-                messages = {k: v[0] if len(v) == 1 else v for k, v in messages.items()}
-                self.log(messages, name=f"Step (Agent: {self.vertex.id})")
+                _messages_dict = {f"Action {i}": action.messages for i, (action, _) in enumerate(agent_output)}
+                messages_dict = {k: v[0] if len(v) == 1 else v for k, v in _messages_dict.items()}
+                self.log(messages_dict, name=f"Step (Agent: {_id})")
 
         return step_callback
 
