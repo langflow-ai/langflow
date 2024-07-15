@@ -1,4 +1,7 @@
-import { useDeleteMessages, useGetMessagesQuery } from "@/controllers/API/queries/messages";
+import {
+  useDeleteMessages,
+  useGetMessagesQuery,
+} from "@/controllers/API/queries/messages";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import AccordionComponent from "../../components/accordionComponent";
@@ -58,30 +61,30 @@ export default function IOModal({
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const deleteSession = useMessagesStore((state) => state.deleteSession);
 
-
   const { mutate: deleteSessionFunction } = useDeleteMessages();
 
-
   function handleDeleteSession(session_id: string) {
-    deleteSessionFunction({
-      ids: messages
-        .filter((msg) => msg.session_id === session_id)
-        .map((msg) => msg.id),
-    },{onSuccess:()=>{
-      setSuccessData({
-        title: "Session deleted successfully.",
-      });
-      deleteSession(session_id);
-    },
-      onError: () => {
-        setErrorData({
-          title: "Error deleting Session.",
-        })
-      }
-    });
+    deleteSessionFunction(
+      {
+        ids: messages
+          .filter((msg) => msg.session_id === session_id)
+          .map((msg) => msg.id),
+      },
+      {
+        onSuccess: () => {
+          setSuccessData({
+            title: "Session deleted successfully.",
+          });
+          deleteSession(session_id);
+        },
+        onError: () => {
+          setErrorData({
+            title: "Error deleting Session.",
+          });
+        },
+      },
+    );
   }
-
-
 
   function startView() {
     if (!chatInput && !chatOutput) {
@@ -467,31 +470,31 @@ export default function IOModal({
                     {inputs.some(
                       (input) => input.id === selectedViewField.id,
                     ) && (
-                        <IOFieldView
-                          type={InputOutput.INPUT}
-                          left={false}
-                          fieldType={selectedViewField.type!}
-                          fieldId={selectedViewField.id!}
-                        />
-                      )}
+                      <IOFieldView
+                        type={InputOutput.INPUT}
+                        left={false}
+                        fieldType={selectedViewField.type!}
+                        fieldId={selectedViewField.id!}
+                      />
+                    )}
                     {outputs.some(
                       (output) => output.id === selectedViewField.id,
                     ) && (
-                        <IOFieldView
-                          type={InputOutput.OUTPUT}
-                          left={false}
-                          fieldType={selectedViewField.type!}
-                          fieldId={selectedViewField.id!}
-                        />
-                      )}
+                      <IOFieldView
+                        type={InputOutput.OUTPUT}
+                        left={false}
+                        fieldType={selectedViewField.type!}
+                        fieldId={selectedViewField.id!}
+                      />
+                    )}
                     {sessions.some(
                       (session) => session === selectedViewField.id,
                     ) && (
-                        <SessionView
-                          session={selectedViewField.id}
-                          id={currentFlow!.id}
-                        />
-                      )}
+                      <SessionView
+                        session={selectedViewField.id}
+                        id={currentFlow!.id}
+                      />
+                    )}
                   </div>
                 </div>
               )}

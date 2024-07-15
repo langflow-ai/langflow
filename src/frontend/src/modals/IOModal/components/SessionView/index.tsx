@@ -1,5 +1,8 @@
 import Loading from "@/components/ui/loading";
-import { useDeleteMessages, useGetMessagesQuery } from "@/controllers/API/queries/messages";
+import {
+  useDeleteMessages,
+  useGetMessagesQuery,
+} from "@/controllers/API/queries/messages";
 import { useIsFetching } from "@tanstack/react-query";
 import {
   CellEditRequestEvent,
@@ -32,17 +35,20 @@ export default function SessionView({
   });
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
 
-  const {mutate:deleteMessages}= useDeleteMessages({onSuccess:()=>{
-    deleteMessagesStore(selectedRows);
-    setSelectedRows([]);
-    setSuccessData({
-      title: "Messages deleted successfully.",
-    });
-  },onError:()=>{
-    setErrorData({
-      title: "Error deleting messages.",
-    })
-  }});
+  const { mutate: deleteMessages } = useDeleteMessages({
+    onSuccess: () => {
+      deleteMessagesStore(selectedRows);
+      setSelectedRows([]);
+      setSuccessData({
+        title: "Messages deleted successfully.",
+      });
+    },
+    onError: () => {
+      setErrorData({
+        title: "Error deleting messages.",
+      });
+    },
+  });
 
   const { handleUpdate } = useUpdateMessage(setSuccessData, setErrorData);
 
