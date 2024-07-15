@@ -31,5 +31,7 @@ class HierarchicalCrewComponent(BaseCrewComponent):
             function_calling_llm=self.function_calling_llm,
             manager_agent=self.manager_agent,
             manager_llm=self.manager_llm,
+            step_callback=self.get_step_callback(),
+            task_callback=self.get_task_callback(),
         )
         return crew

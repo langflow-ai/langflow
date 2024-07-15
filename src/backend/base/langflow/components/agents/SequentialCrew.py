@@ -32,5 +32,7 @@ class SequentialCrewComponent(BaseCrewComponent):
             max_rpm=self.max_rpm,
             share_crew=self.share_crew,
             function_calling_llm=self.function_calling_llm,
+            step_callback=self.get_step_callback(),
+            task_callback=self.get_task_callback(),
         )
         return crew
