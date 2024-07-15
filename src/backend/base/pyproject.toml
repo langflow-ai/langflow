@@ -79,6 +79,9 @@ local = ["llama-cpp-python", "sentence-transformers", "ctransformers"]
 all = ["deploy", "local"]
 
 
+[tool.poetry.group.dev.dependencies]
+pytest-split = "^0.9.0"
+
 [tool.pytest.ini_options]
 minversion = "6.0"
 addopts = "-ra"
