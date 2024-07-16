@@ -3,10 +3,11 @@ import traceback
 import uuid
 from typing import TYPE_CHECKING, Annotated, Optional
 
-from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from loguru import logger
 
+from langflow.api.disconnect import cancel_on_disconnect
 from langflow.api.utils import (
     build_and_cache_graph_from_data,
     build_graph_from_db,
@@ -141,7 +142,9 @@ async def retrieve_vertices_order(
 
 
 @router.post("/build/{flow_id}/vertices/{vertex_id}")
+@cancel_on_disconnect
 async def build_vertex(
+    request: Request,
     flow_id: uuid.UUID,
     vertex_id: str,
     background_tasks: BackgroundTasks,
