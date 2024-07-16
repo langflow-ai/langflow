@@ -108,9 +108,10 @@ body:
   - type: markdown
     attributes:
       value: '## Screenshot error'
-      "If applicable, add screenshots to help explain your problem."
+      description: "If applicable, add screenshots to help explain your problem."
 
   - type: markdown
     attributes:
       value: '## Flow file'
-      "Add your flow if applicable to help replicate the problem."
+      description: "Add your flow if applicable to help replicate the problem."
+
