@@ -47,7 +47,7 @@ export default function TableOptions({
               <Button unstyled onClick={duplicateRow} disabled={!hasSelection}>
                 <IconComponent
                   name="Copy"
-                  className={cn("h-5 w-5 text-primary transition-all")}
+                  className={cn("h-5 w-5 transition-all", hasSelection ? "text-primary" : "text-muted-foreground")}
                 />
               </Button>
             </ShadTooltip>
@@ -68,8 +68,10 @@ export default function TableOptions({
                 <IconComponent
                   name="Trash2"
                   className={cn(
-                    "h-5 w-5 text-primary transition-all",
-                    !hasSelection ? "" : "hover:text-status-red",
+                    "h-5 w-5 transition-all",
+                    !hasSelection
+                      ? "text-muted-foreground"
+                      : "text-primary hover:text-status-red",
                   )}
                 />
               </Button>
