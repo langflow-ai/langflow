@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING, Any, Dict, Optional, cast
 from uuid import UUID
 
-import nanoid
+import nanoid  # type: ignore
 from langwatch.tracer import ContextSpan
 from loguru import logger
 
