@@ -57,7 +57,7 @@ class ChatOutput(ChatComponent):
             sender_name=self.sender_name,
             session_id=self.session_id,
         )
-        if self.session_id and isinstance(message, Message) and isinstance(message.text, str):
+        if self.session_id and isinstance(message, Message) and isinstance(message.text, str) and self.store_message:
             store_message(
                 message,
                 flow_id=self.graph.flow_id,
