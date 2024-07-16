@@ -17,7 +17,7 @@ from langflow.interface.listing import lazy_load_dict
 from langflow.schema.artifact import ArtifactType
 from langflow.schema.data import Data
 from langflow.schema.message import Message
-from langflow.schema.schema import INPUT_FIELD_NAME, OutputLog, build_output_logs
+from langflow.schema.schema import INPUT_FIELD_NAME, OutputValue, build_output_logs
 from langflow.services.deps import get_storage_service
 from langflow.services.monitor.utils import log_transaction
 from langflow.services.tracing.schema import Log
@@ -84,7 +84,7 @@ class Vertex:
         self.layer = None
         self.result: Optional[ResultData] = None
         self.results: Dict[str, Any] = {}
-        self.outputs_logs: Dict[str, OutputLog] = {}
+        self.outputs_logs: Dict[str, OutputValue] = {}
         self.logs: Dict[str, Log] = {}
         try:
             self.is_interface_component = self.vertex_type in InterfaceComponentTypes
