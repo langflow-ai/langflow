@@ -18,7 +18,7 @@ class ChatOutput(ChatComponent):
             info="Message to be passed as output.",
         ),
         BoolInput(
-            name="store_message",
+            name="should_store_message",
             display_name="Store Messages",
             info="Store the message in the history.",
             value=True,
@@ -57,7 +57,12 @@ class ChatOutput(ChatComponent):
             sender_name=self.sender_name,
             session_id=self.session_id,
         )
-        if self.session_id and isinstance(message, Message) and isinstance(message.text, str):
+        if (
+            self.session_id
+            and isinstance(message, Message)
+            and isinstance(message.text, str)
+            and self.should_store_message
+        ):
             store_message(
                 message,
                 flow_id=self.graph.flow_id,

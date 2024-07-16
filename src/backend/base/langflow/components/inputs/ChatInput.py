@@ -20,7 +20,7 @@ class ChatInput(ChatComponent):
             info="Message to be passed as input.",
         ),
         BoolInput(
-            name="store_message",
+            name="should_store_message",
             display_name="Store Messages",
             info="Store the message in the history.",
             value=True,
@@ -66,7 +66,12 @@ class ChatInput(ChatComponent):
             files=self.files,
         )
 
-        if self.session_id and isinstance(message, Message) and isinstance(message.text, str):
+        if (
+            self.session_id
+            and isinstance(message, Message)
+            and isinstance(message.text, str)
+            and self.should_store_message
+        ):
             store_message(
                 message,
                 flow_id=self.graph.flow_id,

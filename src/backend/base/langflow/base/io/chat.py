@@ -49,6 +49,19 @@ class ChatComponent(Component):
             },
         }
 
+    # Keep this method for backward compatibility
+    def store_message(
+        self,
+        message: Message,
+    ) -> list[Message]:
+        messages = store_message(
+            message,
+            flow_id=self.graph.flow_id,
+        )
+
+        self.status = messages
+        return messages
+
     def build_with_data(
         self,
         sender: Optional[str] = "User",
