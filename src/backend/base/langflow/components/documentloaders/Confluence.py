@@ -4,7 +4,6 @@ from langflow.io import StrInput, SecretStrInput, BoolInput, DropdownInput, Outp
 from langflow.schema import Data
 from langchain_community.document_loaders import ConfluenceLoader
 from langchain_community.document_loaders.confluence import ContentFormat
-from langflow.helpers.data import docs_to_data
 
 
 class ConfluenceComponent(Component):
