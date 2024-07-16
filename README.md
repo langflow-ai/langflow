@@ -110,7 +110,7 @@ You can also preview Langflow in [HuggingFace Spaces](https://huggingface.co/spa
 
 ## Deploy Langflow on Google Cloud Platform
 
-Follow our step-by-step guide to deploy Langflow on Google Cloud Platform (GCP) using Google Cloud Shell. The guide is available in the [**Langflow in Google Cloud Platform**](https://github.com/langflow-ai/langflow/blob/dev/docs/docs/deployment/gcp-deployment.md) document.
+Follow our step-by-step guide to deploy Langflow on Google Cloud Platform (GCP) using Google Cloud Shell. The guide is available in the [**Langflow in Google Cloud Platform**](./docs/docs/Deployment/deployment-gcp.md) document.
 
 Alternatively, click the **"Open in Cloud Shell"** button below to launch Google Cloud Shell, clone the Langflow repository, and start an **interactive tutorial** that will guide you through the process of setting up the necessary resources and deploying Langflow on your GCP project.
 
@@ -124,13 +124,13 @@ Use this template to deploy Langflow 1.0 on Railway:
 
 ## Deploy on Render
 
-<a href="https://render.com/deploy?repo=https://github.com/langflow-ai/langflow/tree/dev">
+<a href="https://render.com/deploy?repo=https://github.com/langflow-ai/langflow/tree/main">
 <img src="https://render.com/images/deploy-to-render-button.svg" alt="Deploy to Render" />
 </a>
 
 ## Deploy on Kubernetes
 
-Follow our step-by-step guide to deploy [Langflow on Kubernetes](https://github.com/langflow-ai/langflow/blob/dev/docs/docs/deployment/kubernetes.md).
+Follow our step-by-step guide to deploy [Langflow on Kubernetes](./docs/docs/Deployment/deployment-kubernetes.md).
 
 # 🖥️ Command Line Interface (CLI)
 
