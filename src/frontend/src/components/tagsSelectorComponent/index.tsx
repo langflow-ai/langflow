@@ -26,35 +26,38 @@ export function TagsSelector({
 
   return (
     <HorizontalScrollFadeComponent isFolder={false}>
-      {!loadingTags &&
-        tags.map((tag, idx) => (
-          <button
-            disabled={disabled}
-            className={
-              disabled
-                ? "cursor-not-allowed"
-                : "overflow-hidden whitespace-nowrap"
-            }
-            onClick={() => {
-              updateTags(tag.name);
-            }}
-            key={idx}
-            data-testid={`tag-selector-${tag.name}`}
-          >
-            <Badge
+      {!loadingTags
+        ? tags.map((tag, idx) => (
+            <button
+              disabled={disabled}
+              className={
+                disabled
+                  ? "cursor-not-allowed"
+                  : "overflow-hidden whitespace-nowrap"
+              }
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                updateTags(tag.name);
+              }}
               key={idx}
-              variant="outline"
-              size="sq"
-              className={cn(
-                selectedTags.some((category) => category === tag.name)
-                  ? "min-w-min bg-beta-foreground text-background hover:bg-beta-foreground"
-                  : "",
-              )}
+              data-testid={`tag-selector-${tag.name}`}
             >
-              {tag.name}
-            </Badge>
-          </button>
-        ))}
+              <Badge
+                key={idx}
+                variant="outline"
+                size="sq"
+                className={cn(
+                  selectedTags.some((category) => category === tag.name)
+                    ? "min-w-min bg-beta-foreground text-background hover:bg-beta-foreground"
+                    : "",
+                )}
+              >
+                {tag.name}
+              </Badge>
+            </button>
+          ))
+        : []}
     </HorizontalScrollFadeComponent>
   );
 }
