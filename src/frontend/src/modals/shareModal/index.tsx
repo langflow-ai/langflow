@@ -1,4 +1,4 @@
-import { useGetTagsQuery } from "@/controllers/API/queries/store";
+import { useGetTagsQuery, usePatchUpdateFlowStore } from "@/controllers/API/queries/store";
 import { cloneDeep } from "lodash";
 import { ReactNode, useEffect, useMemo, useState } from "react";
 import EditFlowSettings from "../../components/editFlowSettingsComponent";
@@ -61,6 +61,7 @@ export default function ShareModal({
   >([]);
   const saveFlow = useFlowsManagerStore((state) => state.saveFlow);
   const { data, isFetching } = useGetTagsQuery();
+  const { mutate } = usePatchUpdateFlowStore();
 
   const [loadingNames, setLoadingNames] = useState(false);
 
@@ -123,18 +124,27 @@ export default function ShareModal({
           list: [err["response"]["data"]["detail"]],
         });
       });
-    else
-      updateFlowStore(
-        flow!,
-        getTagsIds(selectedTags, cloneDeep(data) ?? []),
-        sharePublic,
-        unavaliableNames.find((e) => e.name === name)!.id,
-      ).then(successShare, (err) => {
-        setErrorData({
-          title: "Error sharing " + is_component ? "component" : "flow",
-          list: [err["response"]["data"]["detail"]],
-        });
-      });
+    else {
+      mutate(
+        {
+          newFlow: flow!,
+          tags: getTagsIds(selectedTags, cloneDeep(data) ?? []),
+          publicFlow: sharePublic,
+          id: unavaliableNames.find((e) => e.name === name)!.id,
+        },
+        {
+          onSuccess: (res) => {
+            successShare();
+          },
+          onError: (err) => {
+            setErrorData({
+              title: "Error sharing " + is_component ? "component" : "flow",
+              list: [err["response"]["data"]["detail"]],
+            });
+          },
+        }
+      )
+    }
   };
 
   const handleUpdateComponent = () => {

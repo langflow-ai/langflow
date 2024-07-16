@@ -29,8 +29,17 @@ export const usePatchUpdateFlowStore: useMutationFunctionType<
   const patchComponent = async (
     payload: IPatchUpdateComponent,
   ): Promise<AxiosResponse<FlowType>> => {
-    const { id } = payload;
-    return await api.patch<FlowType>(`${getURL("STORE")}/components/${id}`);
+    const { id, tags, publicFlow, newFlow: { name, data, description, is_component, parent, last_tested_version }, } = payload;
+    return await api.patch<FlowType>(`${getURL("STORE")}/components/${id}`, {
+      name: name,
+      data: data,
+      description: description,
+      is_component: is_component,
+      parent: parent,
+      tags: tags,
+      private: !publicFlow,
+      last_tested_version: last_tested_version,
+    });
   };
 
   const mutation = mutate(["usePatchUpdateFlowStore"], patchComponent, options);
