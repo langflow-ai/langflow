@@ -1,35 +1,44 @@
 const FreezeAllSvg = (props) => {
   return (
     <svg
-      version="1.2"
       xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 1723 1723"
-      width="24"
-      height="24"
-      {...props}
+      version="1.2"
+      viewBox="0 0 24 24"
+      className="h-4 w-4 stroke-[1.5]"
     >
-      <style>{`.s0 { fill: currentColor; }`}</style>
+      <title>snowflake-svg</title>
       <path
-        id="Preencher com Cor Sólida 1"
-        className="s0"
-        d="m1511 337l-80.1-24-84 316-144 80-132-76v-168l224-228-60-56-164 168v-172l-84 4-4 160-168.1-164-64 64 228.1 224 4 788-228.1 228 60 64 172.1-168v164h80v-164l168 164 68-60-236-224 4-164 136-80 140 80 84 312 80.1-24-60.1-224 144.1 80 40-72-144-84 232-64-28-80-308.1 84-144-80v-156l156-84 304.1 80 12-80-216-60 136-84-44-80-140.1 88z"
+        id="Layer copy"
+        className="fill-none stroke-current"
+        d="m6 22.3l-4.4-4.4 4.4-4.3"
+      />
+      <path id="Layer" className="fill-none stroke-current" d="m11 17.9h-9.4" />
+      <path id="Layer" className="fill-none stroke-current" d="m7.8 8.9h14.6" />
+      <path
+        id="Layer"
+        className="fill-none stroke-current"
+        d="m15.1 1.6v14.6"
       />
       <path
-        id="Camada 1"
-        className="s0"
-        d="m898.4 686.9h-307.5c0 0-63.9-17.6-58.8-91.2 5.3-76.6 78.7-74.7 78.7-74.7 0 0 87.5-6.2 87.5 90.9 0 8.8 84.5 1.1 84.5 1.1 0 0 10.4-179.2-169.8-177.6-164.8 1.5-167.7 170.6-167.7 170.6 0 0-11.4 130.8 137.5 171 9.6 2.6 317.1-1.8 317.1-1.8z"
+        id="Layer"
+        className="fill-none stroke-current"
+        d="m21 11.8l-2.9-2.9 2.9-2.9"
       />
       <path
-        id="Camada 1 copy"
-        className="s0"
-        d="m899.9 1116.4l-478-0.3c0 0-63.9 17.6-58.8 91.4 5.3 76.9 78.7 74.9 78.7 74.9 0 0 87.5 6.2 87.5-91.1 0-8.9 84.5-1.1 84.5-1.1 0 0 10.4 179.6-169.8 178-164.8-1.5-167.7-171-167.7-171 0 0-11.5-131.1 137.4-171.4 9.7-2.6 486.2 3.8 486.2 3.8z"
+        id="Layer"
+        className="fill-none stroke-current"
+        d="m9.3 6l2.9 2.9-2.9 2.9"
       />
       <path
-        id="Camada 1 copy 2"
-        className="s0"
-        d="m614.5 861l-450.9-2c0 0-65.1-17.4-59.9-90.6 5.4-76.2 80.2-74.3 80.2-74.3 0 0 89.2-6.2 89.2 90.4 0 8.7 86.1 1 86.1 1 0 0 10.6-178.1-173.1-176.5-167.9 1.5-170.9 169.6-170.9 169.6 0 0-11.6 130.1 140.1 170 9.8 2.6 459.2-2.8 459.2-2.8z"
+        id="Layer"
+        className="fill-none stroke-current"
+        d="m18.1 3.1l-3 2.9-2.9-2.9"
       />
-      <path id="Camada 2" className="s0" d="m898.8 861h-200v84h200z" />
+      <path
+        id="Layer"
+        className="fill-none stroke-current"
+        d="m12.2 14.8l2.9-3 3 3"
+      />
     </svg>
   );
 };
