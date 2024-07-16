@@ -391,9 +391,7 @@ def build_custom_component_template(
             raise HTTPException(
                 status_code=400,
                 detail={
-                    "error": (
-                        "Please check if you are importing Component correctly."
-                    ),
+                    "error": ("Please check if you are importing Component correctly."),
                 },
             )
         if "inputs" in custom_component.template_config:
