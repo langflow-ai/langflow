@@ -1,4 +1,7 @@
-import { useGetTagsQuery, usePatchUpdateFlowStore } from "@/controllers/API/queries/store";
+import {
+  useGetTagsQuery,
+  usePatchUpdateFlowStore,
+} from "@/controllers/API/queries/store";
 import { cloneDeep } from "lodash";
 import { ReactNode, useEffect, useMemo, useState } from "react";
 import EditFlowSettings from "../../components/editFlowSettingsComponent";
@@ -132,7 +135,6 @@ export default function ShareModal({
       is_component: is_component,
     });
 
-
     if (!update)
       saveFlowStore(
         flow!,
@@ -145,14 +147,12 @@ export default function ShareModal({
         });
       });
     else {
-      mutate(
-        {
-          newFlow: flow!,
-          tags: getTagsIds(selectedTags, cloneDeep(data) ?? []),
-          publicFlow: sharePublic,
-          id: unavaliableNames.find((e) => e.name === name)!.id,
-        }
-      )
+      mutate({
+        newFlow: flow!,
+        tags: getTagsIds(selectedTags, cloneDeep(data) ?? []),
+        publicFlow: sharePublic,
+        id: unavaliableNames.find((e) => e.name === name)!.id,
+      });
     }
   };
 
