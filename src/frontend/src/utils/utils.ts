@@ -1,5 +1,5 @@
 import { ColumnField } from "@/types/utils/functions";
-import { BaseCellDataType, ColDef, ColGroupDef } from "ag-grid-community";
+import { ColDef, ColGroupDef } from "ag-grid-community";
 import clsx, { ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import TableAutoCellRender from "../components/tableComponent/components/tableAutoCellRender";
@@ -474,6 +474,7 @@ export function isEndpointNameValid(name: string, maxLength: number): boolean {
 }
 
 export function FormatColumns(columns: ColumnField[]): ColDef<any>[] {
+  if (!columns) return [];
   const basic_types = new Set(["date", "number"]);
   const colDefs = columns.map((col, index) => {
     let newCol: ColDef = {
