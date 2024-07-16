@@ -39,7 +39,6 @@ class Component(CustomComponent):
     inputs: List[InputTypes] = []
     outputs: List[Output] = []
     code_class_base_inheritance: ClassVar[str] = "Component"
-    _output_logs: dict[str, Log] = {}
 
     def __init__(self, **data):
         self._inputs: dict[str, InputTypes] = {}
