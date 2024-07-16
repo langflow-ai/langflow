@@ -26,6 +26,7 @@ body:
         - label: "3.12"
         - label: "3.11"
         - label: "3.10"
+      "Langflow requires Python version 3.10 or greater."
 
   - type: textarea
     id: who-can-help
