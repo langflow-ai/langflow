@@ -26,14 +26,14 @@ const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
     (flowPool[nodeId]?.length ?? 1) - 1
   ];
   let results: OutputLogType | LogsLogType =
-    type === "Outputs"
+    (type === "Outputs"
       ? flowPoolNode?.data?.outputs[outputName]
-      : flowPoolNode?.data?.logs[outputName] ?? "";
+      : flowPoolNode?.data?.logs[outputName]) ?? {};
   if (Array.isArray(results)) {
     return;
   }
   const resultType = results?.type;
-  let resultMessage = results?.message;
+  let resultMessage = results?.message ?? {};
   const RECORD_TYPES = ["data", "object", "array", "message"];
   if (resultMessage?.raw) {
     resultMessage = resultMessage.raw;
@@ -60,7 +60,9 @@ const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
               ? (resultMessage as Array<any>).every((item) => item.data)
                 ? (resultMessage as Array<any>).map((item) => item.data)
                 : resultMessage
-              : [resultMessage]
+              : Object.keys(resultMessage).length > 0
+                ? [resultMessage]
+                : []
           }
           pagination={true}
           columnMode="union"
@@ -91,7 +93,9 @@ const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
           ? (resultMessage as Array<any>).every((item) => item.data)
             ? (resultMessage as Array<any>).map((item) => item.data)
             : resultMessage
-          : [resultMessage]
+          : Object.keys(resultMessage).length > 0
+            ? [resultMessage]
+            : []
       }
       pagination={true}
       columnMode="union"
