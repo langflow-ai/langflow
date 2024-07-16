@@ -1070,14 +1070,3 @@ export async function getTransactionTable(
   const columns = extractColumnsFromRows(rows.data, mode);
   return { rows: rows.data, columns };
 }
-
-export async function deleteMessagesFn(ids: string[]) {
-  try {
-    return await api.delete(`${BASE_URL_API}monitor/messages`, {
-      data: ids,
-    });
-  } catch (error) {
-    console.error("Error deleting flows:", error);
-    throw error;
-  }
-}

@@ -1,5 +1,6 @@
 import Loading from "@/components/ui/loading";
 import {
+  useDeleteMessages,
   useGetMessagesQuery,
   useUpdateMessage,
 } from "@/controllers/API/queries/messages";
@@ -12,7 +13,6 @@ import {
 import cloneDeep from "lodash/cloneDeep";
 import { useMemo, useState } from "react";
 import TableComponent from "../../../../components/tableComponent";
-import useRemoveMessages from "../../../../pages/SettingsPage/pages/messagesPage/hooks/use-remove-messages";
 import useAlertStore from "../../../../stores/alertStore";
 import { useMessagesStore } from "../../../../stores/messagesStore";
 import { messagesSorter } from "../../../../utils/utils";
@@ -29,19 +29,27 @@ export default function SessionView({
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const updateMessage = useMessagesStore((state) => state.updateMessage);
-
+  const deleteMessagesStore = useMessagesStore((state) => state.removeMessages);
   const isFetching = useIsFetching({
     queryKey: ["useGetMessagesQuery"],
     exact: false,
   });
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
 
-  const { handleRemoveMessages } = useRemoveMessages(
-    setSelectedRows,
-    setSuccessData,
-    setErrorData,
-    selectedRows,
-  );
+  const { mutate: deleteMessages } = useDeleteMessages({
+    onSuccess: () => {
+      deleteMessagesStore(selectedRows);
+      setSelectedRows([]);
+      setSuccessData({
+        title: "Messages deleted successfully.",
+      });
+    },
+    onError: () => {
+      setErrorData({
+        title: "Error deleting messages.",
+      });
+    },
+  });
 
   const { mutate: updateMessageMutation } = useUpdateMessage();
 
@@ -80,6 +88,10 @@ export default function SessionView({
       : filteredMessages;
     return filteredMessages;
   }, [session, id, messages]);
+
+  function handleRemoveMessages() {
+    deleteMessages({ ids: selectedRows });
+  }
 
   return isFetching > 0 ? (
     <div className="flex h-full w-full items-center justify-center align-middle">
