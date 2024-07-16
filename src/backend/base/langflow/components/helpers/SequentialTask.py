@@ -54,7 +54,7 @@ class SequentialTaskComponent(Component):
     ]
 
     def build_task(self) -> list[SequentialTask]:
-        tasks = []
+        tasks: list[SequentialTask] = []
         task = SequentialTask(
             description=self.task_description,
             expected_output=self.expected_output,
@@ -65,8 +65,8 @@ class SequentialTaskComponent(Component):
         tasks.append(task)
         self.status = task
         if self.task:
-            if isinstance(self.task, list):
-                tasks.extend(self.task)
-            else:
-                tasks.append(self.task)
+            if isinstance(self.task, list) and all(isinstance(task, SequentialTask) for task in self.task):
+                tasks = self.task + tasks
+            elif isinstance(self.task, SequentialTask):
+                tasks = [self.task] + tasks
         return tasks
