@@ -105,12 +105,12 @@ body:
         - label: "3.11"
         - label: "3.10"
 
-    - type: markdown
+  - type: markdown
     attributes:
       value: '## Screenshot error'
       description: "If applicable, add screenshots to help explain your problem."
 
-    - type: markdown
+  - type: markdown
     attributes:
       value: '## Flow file'
       description: "Add your flow if applicable to help replicate the problem."
