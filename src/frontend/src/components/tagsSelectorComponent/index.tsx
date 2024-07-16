@@ -26,7 +26,7 @@ export function TagsSelector({
 
   return (
     <HorizontalScrollFadeComponent isFolder={false}>
-      {!loadingTags &&
+      {!loadingTags ? (
         tags.map((tag, idx) => (
           <button
             disabled={disabled}
@@ -35,7 +35,9 @@ export function TagsSelector({
                 ? "cursor-not-allowed"
                 : "overflow-hidden whitespace-nowrap"
             }
-            onClick={() => {
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
               updateTags(tag.name);
             }}
             key={idx}
@@ -54,7 +56,8 @@ export function TagsSelector({
               {tag.name}
             </Badge>
           </button>
-        ))}
+        ))
+      ) : []}
     </HorizontalScrollFadeComponent>
   );
 }
