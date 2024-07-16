@@ -43,7 +43,6 @@ export default function CollectionCardComponent({
   onDelete,
   playground,
   control,
-  is_component,
 }: {
   data: storeComponent;
   authorized?: boolean;
@@ -53,7 +52,6 @@ export default function CollectionCardComponent({
   playground?: boolean;
   onDelete?: () => void;
   control?: Control<any, any>;
-  is_component?: boolean;
 }) {
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -73,7 +71,6 @@ export default function CollectionCardComponent({
   const setNodes = useFlowStore((state) => state.setNodes);
   const setEdges = useFlowStore((state) => state.setEdges);
   const [openPlayground, setOpenPlayground] = useState(false);
-  const [openDelete, setOpenDelete] = useState(false);
   const setCurrentFlowId = useFlowsManagerStore(
     (state) => state.setCurrentFlowId,
   );
@@ -167,7 +164,9 @@ export default function CollectionCardComponent({
         data-testid={`card-${convertTestName(data.name)}`}
         //TODO check color schema
         className={cn(
-          "group relative flex h-[11rem] flex-col justify-between overflow-hidden hover:bg-muted/50 hover:shadow-md hover:dark:bg-[#5f5f5f0e]",
+          "group relative flex h-[11rem] flex-col justify-between overflow-hidden",
+          !data.is_component &&
+            "hover:bg-muted/50 hover:shadow-md hover:dark:bg-[#5f5f5f0e]",
           disabled ? "pointer-events-none opacity-50" : "",
           onClick ? "cursor-pointer" : "",
           isSelectedCard ? "border border-selected" : "",
@@ -517,18 +516,6 @@ export default function CollectionCardComponent({
         >
           <></>
         </IOModal>
-      )}
-      {openDelete && (
-        <DeleteConfirmationModal
-          open={openDelete}
-          setOpen={setOpenDelete}
-          onConfirm={() => {
-            if (onDelete) onDelete();
-          }}
-          description={` ${is_component ? "component" : "flow"}`}
-        >
-          <></>
-        </DeleteConfirmationModal>
       )}
     </>
   );
