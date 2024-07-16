@@ -12,7 +12,7 @@ body:
   - type: textarea
     id: langflow-version
     attributes:
-      label: Langflow Info
+      label: Langflow Version
       description: Please share your Langflow version.
     validations:
       required: true
