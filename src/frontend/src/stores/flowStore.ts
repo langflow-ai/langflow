@@ -687,6 +687,19 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     });
     set({ flowBuildStatus: newFlowBuildStatus });
   },
+  updateNodeField: (identifier, value,options) => {
+    const { NodeId, field } = identifier;
+    const { skipSnapshot } = options || {};
+    // get().setNode(NodeId, (oldNode) => {
+    //   const newNode = cloneDeep(oldNode);
+    //   const nodeData = newNode.data as NodeDataType;
+    //   nodeData.node!.template[field].value = value;
+    //   if (!skipSnapshot) {
+    //     // takeSnapshot();
+    //   }
+    //   return newNode;
+    // });
+  }
 }));
 
 export default useFlowStore;

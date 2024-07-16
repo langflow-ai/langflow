@@ -8,9 +8,10 @@ import {
   Viewport,
 } from "reactflow";
 import { BuildStatus } from "../../../constants/enums";
-import { VertexBuildTypeAPI } from "../../api";
+import { InputFieldType, VertexBuildTypeAPI } from "../../api";
 import { ChatInputType, ChatOutputType } from "../../chat";
 import { FlowState } from "../../tabs";
+import { ParameterComponentType } from "@/types/components";
 
 export type FlowPoolObjectType = {
   timestamp: string;
@@ -163,4 +164,5 @@ export type FlowStoreType = {
   getNodePosition: (nodeId: string) => { x: number; y: number };
   setLockChat: (lock: boolean) => void;
   lockChat: boolean;
+  updateNodeField:(Identifier:{NodeId:string,field:string},value:InputFieldType,options?:{skipSnapshot?:boolean})=>void;
 };

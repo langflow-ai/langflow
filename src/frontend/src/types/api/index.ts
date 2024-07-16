@@ -74,6 +74,7 @@ export type InputFieldType = {
   real_time_refresh?: boolean;
   refresh_button?: boolean;
   refresh_button_text?: string;
+  file_path?: string;
   [key: string]: any;
 };
 

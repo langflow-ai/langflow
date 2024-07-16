@@ -71,3 +71,9 @@ export type targetHandleType = {
   id: string;
   proxy?: { field: string; id: string };
 };
+
+export type NodeInputFieldType<value=any,options=any>={
+  value:value;
+  iseditNodeModal:boolean;
+  options?:options;
+}
