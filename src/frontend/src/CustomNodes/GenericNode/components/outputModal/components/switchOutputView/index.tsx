@@ -13,16 +13,21 @@ import ErrorOutput from "./components";
 interface SwitchOutputViewProps {
   nodeId: string;
   outputName: string;
+  type: "Outputs" | "Logs";
 }
 const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
   nodeId,
   outputName,
+  type,
 }) => {
   const flowPool = useFlowStore((state) => state.flowPool);
   const flowPoolNode = (flowPool[nodeId] ?? [])[
     (flowPool[nodeId]?.length ?? 1) - 1
   ];
-  let results = flowPoolNode?.data?.outputs[outputName] ?? "";
+  let results =
+    type === "Outputs"
+      ? flowPoolNode?.data?.outputs[outputName]
+      : flowPoolNode?.data?.logs[outputName] ?? "";
   if (Array.isArray(results)) {
     return;
   }
