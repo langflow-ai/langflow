@@ -4,9 +4,12 @@ import { SelectionChangedEvent } from "ag-grid-community";
 import { AgGridReact } from "ag-grid-react";
 import { cloneDeep } from "lodash";
 import { useRef, useState } from "react";
-import IconComponent from "../../components/genericIconComponent";
+import IconComponent, {
+  ForwardedIconComponent,
+} from "../../components/genericIconComponent";
 import { TableComponentType } from "../../types/components";
 import TableComponent from "../tableComponent";
+import { Button } from "../ui/button";
 
 export default function TableNodeComponent({
   tableTitle,
@@ -94,10 +97,11 @@ export default function TableNodeComponent({
             ></TableComponent>
           </BaseModal.Content>
           <BaseModal.Footer submit={{ label: "close" }}></BaseModal.Footer>
-          <BaseModal.Trigger>
-            <div className="flex items-start justify-between align-middle">
-              <span>Edit Data</span>
-            </div>
+          <BaseModal.Trigger asChild>
+            <Button variant="primary" className="w-full">
+              <ForwardedIconComponent name="Table" className="mt-px h-4 w-4" />
+              <span className="font-normal">Open Table</span>
+            </Button>
           </BaseModal.Trigger>
         </BaseModal>
       </div>
