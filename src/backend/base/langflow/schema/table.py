@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import List, Optional
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 
 
 class FormatterType(str, Enum):
@@ -14,8 +14,8 @@ class FormatterType(str, Enum):
 class Column(BaseModel):
     display_name: str
     name: str
-    sortable: bool
-    filterable: bool
+    sortable: bool = Field(default=True)
+    filterable: bool = Field(default=True)
     formatter: Optional[FormatterType | str] = None
 
     @field_validator("formatter")
