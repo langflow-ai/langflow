@@ -88,12 +88,11 @@ body:
       label: Expected behavior
       description: "A clear and concise description of what you would expect to happen."
 
-  - type: textarea
+  - type: input.imagepicker
     id: screenshot-link
     attributes:
       label: Screenshot Link
-      description: Please provide a link to a screenshot that is relevant to your bug report.
-      placeholder: "https://..."
+      description: If applicable, add screenshots to help explain your problem.
 
   - type: textarea
     id: json-link
