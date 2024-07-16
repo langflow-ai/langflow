@@ -1,6 +1,6 @@
 name: "🚀 Feature Request"
 description: Submit a proposal/request for a new Langflow feature
-labels: [ "Feature request" ]
+labels: [ "enhancement" ]
 body:
   - type: textarea
     id: feature-request
