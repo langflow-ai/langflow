@@ -68,8 +68,8 @@ class BaseCrewComponent(Component):
             elif isinstance(agent_output, list):
                 _messages_dict = {f"Action {i}": action.messages for i, (action, _) in enumerate(agent_output)}
                 # Serialize the messages with to_json() to avoid issues with circular references
-                _messages_dict = {k: [m.to_json() for m in v] for k, v in _messages_dict.items()}
-                messages_dict = {k: v[0] if len(v) == 1 else v for k, v in _messages_dict.items()}
+                serializable_dict = {k: [m.to_json() for m in v] for k, v in _messages_dict.items()}
+                messages_dict = {k: v[0] if len(v) == 1 else v for k, v in serializable_dict.items()}
                 self.log(messages_dict, name=f"Step (Agent: {_id})")
 
         return step_callback
