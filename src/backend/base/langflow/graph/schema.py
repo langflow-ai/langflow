@@ -12,6 +12,7 @@ class ResultData(BaseModel):
     results: Optional[Any] = Field(default_factory=dict)
     artifacts: Optional[Any] = Field(default_factory=dict)
     outputs: Optional[dict] = Field(default_factory=dict)
+    logs: Optional[dict] = Field(default_factory=dict)
     messages: Optional[list[ChatOutputResponse]] = Field(default_factory=list)
     timedelta: Optional[float] = None
     duration: Optional[str] = None
