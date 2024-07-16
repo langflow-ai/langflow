@@ -9,6 +9,7 @@ export const URLs = {
   STORE: `store`,
   USERS:'users',
   LOGOUT: `logout`,
+  LOGIN: `login`,
 } as const;
 
 export function getURL(key: keyof typeof URLs, params: any = {}) {
