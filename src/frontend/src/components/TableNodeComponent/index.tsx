@@ -1,15 +1,11 @@
-import BaseModal from "@/modals/baseModal";
 import TableModal from "@/modals/tableModal";
-import { cn, FormatColumns } from "@/utils/utils";
+import { FormatColumns } from "@/utils/utils";
 import { SelectionChangedEvent } from "ag-grid-community";
 import { AgGridReact } from "ag-grid-react";
 import { cloneDeep } from "lodash";
 import { useRef, useState } from "react";
-import IconComponent, {
-  ForwardedIconComponent,
-} from "../../components/genericIconComponent";
+import { ForwardedIconComponent } from "../../components/genericIconComponent";
 import { TableComponentType } from "../../types/components";
-import TableComponent from "../tableComponent";
 import { Button } from "../ui/button";
 
 export default function TableNodeComponent({
@@ -21,6 +17,9 @@ export default function TableNodeComponent({
   id = "",
   columns,
 }: TableComponentType): JSX.Element {
+  if (!columns) {
+    columns = [];
+  }
   const [selectedNodes, setSelectedNodes] = useState<Array<any>>([]);
   const agGrid = useRef<AgGridReact>(null);
   const AgColumns = FormatColumns(columns);
