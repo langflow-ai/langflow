@@ -9,17 +9,18 @@ import BaseModal from "../baseModal";
 
 interface TableModalProps extends TableComponentProps {
   tableTitle: string;
+  description: string;
   children: React.ReactNode;
 }
 
 const TableModal = forwardRef<
   ElementRef<typeof TableComponent>,
   TableModalProps
->(({ tableTitle, children, ...props }: TableModalProps, ref) => {
+>(({ tableTitle, description, children, ...props }: TableModalProps, ref) => {
   return (
     <BaseModal>
       <BaseModal.Trigger asChild>{children}</BaseModal.Trigger>
-      <BaseModal.Header description={"Add or edit your data"}>
+      <BaseModal.Header description={description}>
         <span className="pr-2">{tableTitle}</span>
         <ForwardedIconComponent name="Table" className="mr-2 h-4 w-4" />
       </BaseModal.Header>
