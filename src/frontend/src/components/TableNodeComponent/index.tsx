@@ -1,6 +1,6 @@
 import BaseModal from "@/modals/baseModal";
 import TableModal from "@/modals/tableModal";
-import { FormatColumns } from "@/utils/utils";
+import { cn, FormatColumns } from "@/utils/utils";
 import { SelectionChangedEvent } from "ag-grid-community";
 import { AgGridReact } from "ag-grid-react";
 import { cloneDeep } from "lodash";
@@ -91,7 +91,11 @@ export default function TableNodeComponent({
           columnDefs={AgColumns}
           rowData={value}
         >
-          <Button variant="primary" className="w-full">
+          <Button
+            variant="primary"
+            size={editNode ? "xs" : "default"}
+            className="w-full"
+          >
             <ForwardedIconComponent name="Table" className="mt-px h-4 w-4" />
             <span className="font-normal">Open Table</span>
           </Button>
