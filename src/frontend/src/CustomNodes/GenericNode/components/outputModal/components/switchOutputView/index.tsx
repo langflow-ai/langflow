@@ -86,12 +86,12 @@ const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
   ) : (
     <DataOutputComponent
       rows={
-        Array.isArray(resultMessage)
-          ? (resultMessage as Array<any>).every((item) => item.data)
-            ? (resultMessage as Array<any>).map((item) => item.data)
-            : resultMessage
-          : Object.keys(resultMessage).length > 0
-            ? [resultMessage]
+        Array.isArray(results)
+          ? (results as Array<any>).every((item) => item.data)
+            ? (results as Array<any>).map((item) => item.data)
+            : results
+          : Object.keys(results).length > 0
+            ? [results]
             : []
       }
       pagination={true}
