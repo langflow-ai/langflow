@@ -1,5 +1,6 @@
 name: "🐛 Bug Report"
 description: Submit a bug report to help us improve Langflow
+labels: [ "bug" ]
 body:
   - type: markdown
     attributes:
