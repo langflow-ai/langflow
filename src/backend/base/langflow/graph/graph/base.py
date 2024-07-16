@@ -1,5 +1,4 @@
 import asyncio
-import traceback
 import uuid
 from collections import defaultdict, deque
 from datetime import datetime, timezone
@@ -257,7 +256,7 @@ class Graph:
     async def initialize_run(self):
         await self.tracing_service.initialize_tracers()
 
-    async def end_all_traces(self, outputs: dict[str, Any] | None = None, error: str | None = None):
+    async def end_all_traces(self, outputs: dict[str, Any] | None = None, error: Exception | None = None):
         if not self.tracing_service:
             return
         self._end_time = datetime.now(timezone.utc)
@@ -354,9 +353,7 @@ class Graph:
             await self.process(start_component_id=start_component_id, fallback_to_env_vars=fallback_to_env_vars)
             self.increment_run_count()
         except Exception as exc:
-            logger.exception(exc)
-            tb = traceback.format_exc()
-            asyncio.create_task(self.end_all_traces(error=f"{exc.__class__.__name__}: {exc}\n\n{tb}"))
+            asyncio.create_task(self.end_all_traces(error=exc))
             raise ValueError(f"Error running graph: {exc}") from exc
         finally:
             asyncio.create_task(self.end_all_traces())
