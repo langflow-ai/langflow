@@ -26,6 +26,7 @@ from langflow.utils.schemas import ChatOutputResponse
 from langflow.utils.util import sync_to_async, unescape_string
 
 if TYPE_CHECKING:
+    from langflow.custom import Component
     from langflow.graph.edge.base import ContractEdge
     from langflow.graph.graph.base import Graph
 
@@ -653,7 +654,7 @@ class Vertex:
             logger.exception(exc)
             raise ComponentBuildException(f"Error building Component {self.display_name}:\n\n{exc}", tb) from exc
 
-    def _update_built_object_and_artifacts(self, result):
+    def _update_built_object_and_artifacts(self, result: Any | tuple[Any, dict] | tuple["Component", Any, dict]):
         """
         Updates the built object and its artifacts.
         """
@@ -662,7 +663,7 @@ class Vertex:
                 self._built_object, self.artifacts = result
             elif len(result) == 3:
                 self._custom_component, self._built_object, self.artifacts = result
-                self.logs = self._custom_component._logs
+                self.logs = self._custom_component._output_logs
                 self.artifacts_raw = self.artifacts.get("raw", None)
                 self.artifacts_type = self.artifacts.get("type", None) or ArtifactType.UNKNOWN.value
                 self.artifacts = {self.outputs[0]["name"]: self.artifacts}
