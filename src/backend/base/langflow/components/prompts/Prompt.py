@@ -27,11 +27,11 @@ class PromptComponent(Component):
         self.status = prompt.text
         return prompt
 
-    def post_code_processing(self, new_build_config: dict, current_build_config: dict):
+    def post_code_processing(self, new_frontend_node: dict, current_frontend_node: dict):
         """
         This function is called after the code validation is done.
         """
-        frontend_node = super().post_code_processing(new_build_config, current_build_config)
+        frontend_node = super().post_code_processing(new_frontend_node, current_frontend_node)
         template = frontend_node["template"]["template"]["value"]
         _ = process_prompt_template(
             template=template,
@@ -39,7 +39,7 @@ class PromptComponent(Component):
             custom_fields=frontend_node["custom_fields"],
             frontend_node_template=frontend_node["template"],
         )
-        # Now that template is updated, we need to grab any values that were set in the current_build_config
+        # Now that template is updated, we need to grab any values that were set in the current_frontend_node
         # and update the frontend_node with those values
-        update_template_values(new_template=frontend_node, previous_template=current_build_config["template"])
+        update_template_values(new_template=frontend_node, previous_template=current_frontend_node["template"])
         return frontend_node
