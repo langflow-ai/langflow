@@ -88,16 +88,16 @@ body:
       label: Expected behavior
       description: "A clear and concise description of what you would expect to happen."
 
-  - type: file
-    id: screenshot-upload
+  - type: textarea
+    id: screenshot-link
     attributes:
-      label: Upload Screenshot
-      description: Please upload a screenshot file that is relevant to your bug report.
-      accept: ".png, .jpg, .jpeg"
-  
-  - type: file
-    id: json-upload
+      label: Screenshot Link
+      description: Please provide a link to a screenshot that is relevant to your bug report.
+      placeholder: "https://..."
+
+  - type: textarea
+    id: json-link
     attributes:
-      label: Upload JSON
-      description: Please upload your flow, a .json file that is relevant to your bug report.
-      accept: ".json"
+      label: JSON File Link
+      description: Please provide a link to a JSON file that is relevant to your bug report.
+      placeholder: "https://..."
