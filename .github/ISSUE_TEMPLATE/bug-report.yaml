@@ -9,14 +9,14 @@ body:
     validations:
       required: true
 
-   - type: textarea
+  - type: textarea
     id: langflow-version
     attributes:
       label: Langflow Info
       description: Please share your Langflow version.
     validations:
       required: true
-      
+
   - type: checkboxes
     id: python-version
     attributes:
