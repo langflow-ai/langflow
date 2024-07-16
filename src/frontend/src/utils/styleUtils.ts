@@ -1,3 +1,4 @@
+import { freezeAllIcon } from "@/icons/freezeAll";
 import {
   AlertCircle,
   AlertTriangle,
@@ -574,4 +575,5 @@ export const nodeIconsLucide: iconsType = {
   MistralAI: MistralIcon,
   Upstash: UpstashSvgIcon,
   PGVector: CpuIcon,
+  FreezeAll: freezeAllIcon,
 };

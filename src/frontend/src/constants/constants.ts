@@ -816,6 +816,10 @@ export const defaultShortcuts = [
     shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + F`,
   },
   {
+    name: "Freeze Path",
+    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + Shift + F`,
+  },
+  {
     name: "Flow Share",
     shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + B`,
   },
