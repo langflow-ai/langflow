@@ -690,15 +690,20 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   updateNodeField: (identifier, value,options) => {
     const { NodeId, field } = identifier;
     const { skipSnapshot } = options || {};
-    // get().setNode(NodeId, (oldNode) => {
-    //   const newNode = cloneDeep(oldNode);
-    //   const nodeData = newNode.data as NodeDataType;
-    //   nodeData.node!.template[field].value = value;
-    //   if (!skipSnapshot) {
-    //     // takeSnapshot();
-    //   }
-    //   return newNode;
-    // });
+
+    get().setNode(NodeId, (oldNode) => {
+      const newNode = cloneDeep(oldNode);
+      const nodeData = newNode.data as NodeDataType;
+      const flowsManager = useFlowsManagerStore.getState();
+      // update the fields from the template
+      Object.keys(value).forEach((key) => {
+        nodeData.node!.template[field][key] = value[key];
+      })
+      if (!skipSnapshot) {
+        flowsManager.takeSnapshot();
+      }
+      return newNode;
+    });
   }
 }));
 
