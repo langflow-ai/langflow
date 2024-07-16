@@ -47,6 +47,7 @@ class ComponentVertex(Vertex):
                 self._built_object, self.artifacts = result
             elif len(result) == 3:
                 self._custom_component, self._built_object, self.artifacts = result
+                self.logs = self._custom_component._output_logs
                 for key in self.artifacts:
                     self.artifacts_raw[key] = self.artifacts[key].get("raw", None)
                     self.artifacts_type[key] = self.artifacts[key].get("type", None) or ArtifactType.UNKNOWN.value
@@ -149,6 +150,7 @@ class ComponentVertex(Vertex):
             results=result_dict,
             artifacts=self.artifacts,
             outputs=self.outputs_logs,
+            logs=self.logs,
             messages=messages,
             component_display_name=self.display_name,
             component_id=self.id,

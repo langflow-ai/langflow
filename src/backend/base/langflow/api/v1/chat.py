@@ -25,7 +25,7 @@ from langflow.api.v1.schemas import (
 )
 from langflow.exceptions.component import ComponentBuildException
 from langflow.graph.graph.base import Graph
-from langflow.schema.schema import OutputLog
+from langflow.schema.schema import OutputValue
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.chat.service import ChatService
 from langflow.services.deps import get_chat_service, get_session, get_session_service, get_telemetry_service
@@ -218,7 +218,7 @@ async def build_vertex(
             valid = False
             error_message = params
             output_label = vertex.outputs[0]["name"] if vertex.outputs else "output"
-            outputs = {output_label: OutputLog(message=message, type="error")}
+            outputs = {output_label: OutputValue(message=message, type="error")}
             result_data_response = ResultDataResponse(results={}, outputs=outputs)
             artifacts = {}
             background_tasks.add_task(graph.end_all_traces, error=exc)

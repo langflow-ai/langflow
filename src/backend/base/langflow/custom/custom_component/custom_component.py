@@ -13,7 +13,7 @@ from langflow.schema import Data
 from langflow.schema.artifact import get_artifact_type
 from langflow.schema.dotdict import dotdict
 from langflow.schema.log import LoggableType
-from langflow.schema.schema import OutputLog
+from langflow.schema.schema import OutputValue
 from langflow.services.deps import get_storage_service, get_tracing_service, get_variable_service, session_scope
 from langflow.services.storage.service import StorageService
 from langflow.services.tracing.schema import Log
@@ -84,7 +84,7 @@ class CustomComponent(BaseComponent):
     status: Optional[Any] = None
     """The status of the component. This is displayed on the frontend. Defaults to None."""
     _flows_data: Optional[List[Data]] = None
-    _outputs: List[OutputLog] = []
+    _outputs: List[OutputValue] = []
     _logs: List[Log] = []
     tracing_service: Optional["TracingService"] = None
 

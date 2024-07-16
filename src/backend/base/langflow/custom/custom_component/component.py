@@ -9,6 +9,7 @@ from langflow.inputs.inputs import InputTypes
 from langflow.schema.artifact import get_artifact_type, post_process_raw
 from langflow.schema.data import Data
 from langflow.schema.message import Message
+from langflow.services.tracing.schema import Log
 from langflow.template.field.base import UNDEFINED, Output
 
 from .custom_component import CustomComponent
@@ -38,12 +39,14 @@ class Component(CustomComponent):
     inputs: List[InputTypes] = []
     outputs: List[Output] = []
     code_class_base_inheritance: ClassVar[str] = "Component"
+    _output_logs: dict[str, Log] = {}
 
     def __init__(self, **data):
         self._inputs: dict[str, InputTypes] = {}
         self._results: dict[str, Any] = {}
         self._attributes: dict[str, Any] = {}
         self._parameters: dict[str, Any] = {}
+        self._output_logs = {}
         super().__init__(**data)
         if not hasattr(self, "trace_type"):
             self.trace_type = "chain"
@@ -189,6 +192,8 @@ class Component(CustomComponent):
                         raw, artifact_type = post_process_raw(raw, artifact_type)
                         artifact = {"repr": custom_repr, "raw": raw, "type": artifact_type}
                         _artifacts[output.name] = artifact
+                        self._output_logs[output.name] = self._logs
+                        self._logs = []
         self._artifacts = _artifacts
         self._results = _results
         if self.tracing_service:

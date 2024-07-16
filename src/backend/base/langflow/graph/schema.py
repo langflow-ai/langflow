@@ -4,7 +4,7 @@ from typing import Any, List, Optional
 from pydantic import BaseModel, Field, field_serializer, model_validator
 
 from langflow.graph.utils import serialize_field
-from langflow.schema.schema import OutputLog, StreamURL
+from langflow.schema.schema import OutputValue, StreamURL
 from langflow.utils.schemas import ChatOutputResponse, ContainsEnumMeta
 
 
@@ -12,6 +12,7 @@ class ResultData(BaseModel):
     results: Optional[Any] = Field(default_factory=dict)
     artifacts: Optional[Any] = Field(default_factory=dict)
     outputs: Optional[dict] = Field(default_factory=dict)
+    logs: Optional[dict] = Field(default_factory=dict)
     messages: Optional[list[ChatOutputResponse]] = Field(default_factory=list)
     timedelta: Optional[float] = None
     duration: Optional[str] = None
@@ -40,9 +41,9 @@ class ResultData(BaseModel):
 
                 if "stream_url" in message and "type" in message:
                     stream_url = StreamURL(location=message["stream_url"])
-                    values["outputs"].update({key: OutputLog(message=stream_url, type=message["type"])})
+                    values["outputs"].update({key: OutputValue(message=stream_url, type=message["type"])})
                 elif "type" in message:
-                    values["outputs"].update({OutputLog(message=message, type=message["type"])})
+                    values["outputs"].update({OutputValue(message=message, type=message["type"])})
         return values
 
 
