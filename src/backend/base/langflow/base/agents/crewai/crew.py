@@ -67,7 +67,9 @@ class BaseCrewComponent(Component):
                 self.log(cast(dict, messages[0].to_json()), name=f"Finish (Agent: {_id})")
             elif isinstance(agent_output, list):
                 _messages_dict = {f"Action {i}": action.messages for i, (action, _) in enumerate(agent_output)}
-                messages_dict = {k: v[0] if len(v) == 1 else v for k, v in _messages_dict.items()}
+                # Serialize the messages with to_json() to avoid issues with circular references
+                serializable_dict = {k: [m.to_json() for m in v] for k, v in _messages_dict.items()}
+                messages_dict = {k: v[0] if len(v) == 1 else v for k, v in serializable_dict.items()}
                 self.log(messages_dict, name=f"Step (Agent: {_id})")
 
         return step_callback
@@ -76,5 +78,5 @@ class BaseCrewComponent(Component):
         crew = self.build_crew()
         result = await crew.kickoff_async()
         message = Message(text=result, sender="Machine")
-        self.status = "\n\n".join([result] + [str(message) for message in self._logs])
+        self.status = message
         return message

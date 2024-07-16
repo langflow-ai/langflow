@@ -86,6 +86,7 @@ class CustomComponent(BaseComponent):
     _flows_data: Optional[List[Data]] = None
     _outputs: List[OutputValue] = []
     _logs: List[Log] = []
+    _output_logs: dict[str, Log] = {}
     tracing_service: Optional["TracingService"] = None
 
     def set_attributes(self, parameters: dict):
