@@ -11,7 +11,7 @@ class ConfluenceComponent(Component):
     display_name = "Confluence"
     description = "Confluence wiki collaboration platform"
     documentation = "https://python.langchain.com/v0.2/docs/integrations/document_loaders/confluence/"
-    trace_type = "document_loader"
+    trace_type = "tool"
     icon = "Confluence"
     name = "Confluence"
 
@@ -81,6 +81,6 @@ class ConfluenceComponent(Component):
     def load_documents(self) -> List[Data]:
         confluence = self.build_confluence()
         documents = confluence.load()
-        data = docs_to_data(documents)
+        data = [Data.from_document(doc) for doc in documents]  # Using the from_document method of Data
         self.status = data
         return data
