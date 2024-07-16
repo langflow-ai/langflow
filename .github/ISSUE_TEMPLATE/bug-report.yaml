@@ -1,65 +1,20 @@
 name: "🐛 Bug Report"
 description: Submit a bug report to help us improve Langflow
 body:
-  - type: textarea
-    id: system-info
-    attributes:
-      label: System Info
-      description: Please share your system info and any other relevant details with us.
-    validations:
-      required: true
 
-  - type: textarea
-    id: langflow-version
+  - type: markdown
     attributes:
-      label: Langflow Info
-      description: Please share your Langflow version.
-    validations:
-      required: true
-
-  - type: checkboxes
-    id: python-version
-    attributes:
-      label: Information
-      description: |
-        My Python version is:
+      value: |
+        Thanks for taking the time to fill out this bug report!
         
-        Langflow requires Python version 3.10 or greater.
-      options:
-        - label: "3.12"
-        - label: "3.11"
-        - label: "3.10"
-
   - type: textarea
-    id: who-can-help
+    id: description
     attributes:
-      label: Who can help?
-      description: |
-        Your issue will be replied to more quickly if you can figure out the right person to tag with @.
-        If you know the relevant code owner, please tag them. Otherwise, leave this blank and a core maintainer will direct the issue accordingly.
-
-        Please tag fewer than 3 people.
-
-        Specific Areas:
-
-          Frontend:
-            - @anovazzi1
-            - @Cristhianzl
-            - @lucaseduoli
-            - @igorrCarvalho
-            
-          Backend:
-            - @ogabrielluiz
-            - @italojohnny
-            
-          Full Stack:
-            - @nicoloboschi
-            - @zzzming
-            - @jordanrfrazier
-            - @mfortman11
-            - @NadirJ
-
-      placeholder: "@Username ..."
+      label: Bug Description
+      description: A clear and concise description of what the bug is
+      placeholder: Tell us what you see!
+    validations:
+      required: true
 
   - type: textarea
     id: reproduction
@@ -88,15 +43,74 @@ body:
       label: Expected behavior
       description: "A clear and concise description of what you would expect to happen."
 
-  - type: imagepicker
-    id: screenshot-link
-    attributes:
-      label: Screenshot Link
-      description: If applicable, add screenshots to help explain your problem.
-
   - type: textarea
-    id: json-link
+    id: who-can-help
     attributes:
-      label: JSON File Link
-      description: Please provide a link to a JSON file that is relevant to your bug report.
-      placeholder: "https://..."
+      label: Who can help?
+      description: |
+        Your issue will be replied to more quickly if you can figure out the right person to tag with @.
+        If you know the relevant code owner, please tag them. Otherwise, leave this blank and a core maintainer will direct the issue accordingly.
+
+        Please tag fewer than 3 people.
+
+        Specific Areas:
+
+          Frontend:
+            - @anovazzi1
+            - @Cristhianzl
+            - @lucaseduoli
+            - @igorrCarvalho
+            
+          Backend:
+            - @italojohnny
+            
+          Full Stack:
+            - @ogabrielluiz
+            - @nicoloboschi
+            - @zzzming
+            - @jordanrfrazier
+            - @mfortman11
+            - @NadirJ
+
+      placeholder: "@Username ..."
+      
+  - type: markdown
+    attributes:
+      value: '## Environment'
+  - type: input
+    id: os
+    attributes:
+      label: Operating System
+      placeholder: ex. Ubuntu Linux 22.04
+    validations:
+      required: true
+  - type: input
+    id: langflow-version
+    attributes:
+      label: Langflow Version
+      placeholder: ex. 1.0.9
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: python-version
+    attributes:
+      label: Information
+      description: |
+        My Python version is:
+        
+        Langflow requires Python version 3.10 or greater.
+      options:
+        - label: "3.12"
+        - label: "3.11"
+        - label: "3.10"
+
+    - type: markdown
+    attributes:
+      value: '## Screenshot error'
+      description: "If applicable, add screenshots to help explain your problem."
+
+    - type: markdown
+    attributes:
+      value: '## Flow file'
+      description: "Add your flow if applicable to help replicate the problem."
