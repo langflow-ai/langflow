@@ -1,13 +1,12 @@
 from typing import Any
 
 from langflow.custom import Component
-from langflow.inputs.inputs import IntInput, MessageTextInput
+from langflow.inputs.inputs import IntInput, MessageTextInput, DictInput
 from langflow.io import Output
 
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.schema import Data
 from langflow.schema.dotdict import dotdict
-from langflow.template.field.base import Input
 
 
 class CreateDataComponent(Component):
@@ -53,11 +52,10 @@ class CreateDataComponent(Component):
                     field = existing_fields[key]
                     build_config[key] = field
                 else:
-                    field = Input(
+                    field = DictInput(
                         display_name=f"Field {i}",
                         name=key,
                         info=f"Key for field {i}.",
-                        field_type="dict",
                         input_types=["Text", "Data"],
                     )
                     build_config[field.name] = field.to_dict()
@@ -83,13 +81,13 @@ class CreateDataComponent(Component):
         self.status = return_data
         return return_data
 
-    def post_code_processing(self, new_build_config: dict, current_build_config: dict):
+    def post_code_processing(self, new_frontend_node: dict, current_frontend_node: dict):
         """
         This function is called after the code validation is done.
         """
-        frontend_node = super().post_code_processing(new_build_config, current_build_config)
-        new_build_config = self.update_build_config(
+        frontend_node = super().post_code_processing(new_frontend_node, current_frontend_node)
+        frontend_node["template"] = self.update_build_config(
             frontend_node["template"], frontend_node["template"]["number_of_fields"]["value"], "number_of_fields"
         )
-        frontend_node = super().post_code_processing(new_build_config, current_build_config)
+        frontend_node = super().post_code_processing(new_frontend_node, current_frontend_node)
         return frontend_node
