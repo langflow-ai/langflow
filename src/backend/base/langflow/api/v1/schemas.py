@@ -14,6 +14,7 @@ from langflow.services.database.models.api_key.model import ApiKeyRead
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.flow import FlowCreate, FlowRead
 from langflow.services.database.models.user import UserRead
+from langflow.services.tracing.schema import Log
 
 
 class BuildStatus(Enum):
@@ -251,6 +252,7 @@ class VerticesOrderResponse(BaseModel):
 class ResultDataResponse(BaseModel):
     results: Optional[Any] = Field(default_factory=dict)
     outputs: dict[str, OutputLog] = Field(default_factory=dict)
+    logs: dict[str, Log] = Field(default_factory=dict)
     message: Optional[Any] = Field(default_factory=dict)
     artifacts: Optional[Any] = Field(default_factory=dict)
     timedelta: Optional[float] = None
