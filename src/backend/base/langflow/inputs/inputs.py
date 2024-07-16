@@ -27,6 +27,15 @@ class TableInput(BaseInputMixin, MetadataTraceMixin, TableMixin, ListableInputMi
     field_type: Optional[SerializableFieldTypes] = FieldTypes.TABLE
     is_list: bool = True
 
+    @field_validator("value")
+    @classmethod
+    def validate_value(cls, v: Any, _info):
+        # Check if value is a list of dicts
+        if isinstance(v, list):
+            if not all(isinstance(item, (dict, Data)) for item in v):
+                raise ValueError("TableInput must be a list of dictionaries")
+        return v
+
 
 class HandleInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin):
     """
