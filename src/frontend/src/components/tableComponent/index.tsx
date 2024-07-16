@@ -17,7 +17,7 @@ import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import TableOptions from "./components/TableOptions";
 import resetGrid from "./utils/reset-grid-columns";
 
-interface TableComponentProps extends AgGridReactProps {
+export interface TableComponentProps extends AgGridReactProps {
   columnDefs: NonNullable<ColDef<any, any>[]>;
   rowData: NonNullable<AgGridReactProps["rowData"]>;
   displayEmptyAlert?: boolean;
@@ -94,10 +94,9 @@ const TableComponent = forwardRef<
       }
       return newCol;
     });
-    const gridRef = useRef(null);
     // @ts-ignore
     const realRef: React.MutableRefObject<AgGridReact> =
-      ref?.current !== undefined ? ref : gridRef;
+      useRef<AgGridReact | null>(null);
     const dark = useDarkStore((state) => state.dark);
     const initialColumnDefs = useRef(colDef);
     const [columnStateChange, setColumnStateChange] = useState(false);
@@ -164,7 +163,15 @@ const TableComponent = forwardRef<
           }}
           animateRows={false}
           columnDefs={colDef}
-          ref={realRef}
+          ref={(node) => {
+            if (!node) return;
+            realRef.current = node;
+            if (typeof ref === "function") {
+              ref(node);
+            } else if (ref) {
+              ref.current = node;
+            }
+          }}
           onGridReady={onGridReady}
           onColumnMoved={onColumnMoved}
           onStateUpdated={(e) => {
