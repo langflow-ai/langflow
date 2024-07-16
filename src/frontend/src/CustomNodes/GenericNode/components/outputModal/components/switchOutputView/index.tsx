@@ -1,3 +1,4 @@
+import { LogsLogType, OutputLogType } from "@/types/api";
 import DataOutputComponent from "../../../../../../components/dataOutputComponent";
 import ForwardedIconComponent from "../../../../../../components/genericIconComponent";
 import {
@@ -24,7 +25,7 @@ const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
   const flowPoolNode = (flowPool[nodeId] ?? [])[
     (flowPool[nodeId]?.length ?? 1) - 1
   ];
-  let results =
+  let results: OutputLogType | LogsLogType =
     type === "Outputs"
       ? flowPoolNode?.data?.outputs[outputName]
       : flowPoolNode?.data?.logs[outputName] ?? "";
@@ -37,7 +38,7 @@ const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
   if (resultMessage?.raw) {
     resultMessage = resultMessage.raw;
   }
-  return (
+  return type === "Outputs" ? (
     <>
       <Case condition={!resultType || resultType === "unknown"}>
         <div>NO OUTPUT</div>
@@ -83,6 +84,18 @@ const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
         </div>
       </Case>
     </>
+  ) : (
+    <DataOutputComponent
+      rows={
+        Array.isArray(resultMessage)
+          ? (resultMessage as Array<any>).every((item) => item.data)
+            ? (resultMessage as Array<any>).map((item) => item.data)
+            : resultMessage
+          : [resultMessage]
+      }
+      pagination={true}
+      columnMode="union"
+    />
   );
 };
 
