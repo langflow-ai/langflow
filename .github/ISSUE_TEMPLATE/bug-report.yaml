@@ -1,6 +1,3 @@
-To add the text "Langflow requires Python version 3.10 or greater." to your YAML code, you should include it as part of the `description` attribute for the `python-version` section. Here's how you can do it:
-
-```yaml
 name: "🐛 Bug Report"
 description: Submit a bug report to help us improve Langflow
 body:
@@ -97,6 +94,3 @@ body:
       label: Screenshots
       description: |
         If applicable, add screenshots to help explain your problem.
-```
-
-In this updated YAML code, the `description` attribute for the `python-version` section now includes the additional text "Langflow requires Python version 3.10 or greater." as part of its value.
