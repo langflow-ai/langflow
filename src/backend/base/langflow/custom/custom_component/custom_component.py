@@ -14,7 +14,7 @@ from langflow.schema.artifact import get_artifact_type
 from langflow.schema.dotdict import dotdict
 from langflow.schema.log import LoggableType
 from langflow.schema.schema import OutputLog
-from langflow.services.deps import get_storage_service, get_variable_service, session_scope
+from langflow.services.deps import get_storage_service, get_tracing_service, get_variable_service, session_scope
 from langflow.services.storage.service import StorageService
 from langflow.services.tracing.schema import Log
 from langflow.template.utils import update_frontend_node_with_template_values
@@ -87,6 +87,21 @@ class CustomComponent(BaseComponent):
     _outputs: List[OutputLog] = []
     _logs: List[Log] = []
     tracing_service: Optional["TracingService"] = None
+
+    def set_attributes(self, parameters: dict):
+        pass
+
+    def set_parameters(self, parameters: dict):
+        self._parameters = parameters
+        self.set_attributes(self._parameters)
+
+    @classmethod
+    def initialize(cls, **kwargs):
+        user_id = kwargs.pop("user_id", None)
+        vertex = kwargs.pop("vertex", None)
+        tracing_service = kwargs.pop("tracing_service", get_tracing_service())
+        params_copy = kwargs.copy()
+        return cls(user_id=user_id, _parameters=params_copy, vertex=vertex, tracing_service=tracing_service)
 
     @property
     def trace_name(self):
@@ -177,11 +192,11 @@ class CustomComponent(BaseComponent):
         if self.repr_value == "":
             self.repr_value = self.status
         if isinstance(self.repr_value, dict):
-            self.repr_value = yaml.dump(self.repr_value)
+            return yaml.dump(self.repr_value)
+        if isinstance(self.repr_value, str):
+            return self.repr_value
         if isinstance(self.repr_value, BaseModel) and not isinstance(self.repr_value, Data):
-            self.repr_value = str(self.repr_value)
-        elif hasattr(self.repr_value, "to_json") and not isinstance(self.repr_value, Data):
-            self.repr_value = self.repr_value.to_json()
+            return str(self.repr_value)
         return self.repr_value
 
     def build_config(self):

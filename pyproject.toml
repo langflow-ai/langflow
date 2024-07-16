@@ -94,13 +94,11 @@ langchain-aws = "^0.1.6"
 langchain-mongodb = "^0.1.6"
 kubernetes = "^30.1.0"
 firecrawl-py = "^0.0.16"
-
 json-repair = "^0.25.2"
-
 langchain-nvidia-ai-endpoints = "^0.1.2"
 langchain-google-calendar-tools = "^0.0.1"
 langchain-milvus = "^0.1.1"
-
+crewai = {extras = ["tools"], version = "^0.36.0"}
 
 
 [tool.poetry.group.dev.dependencies]
@@ -131,6 +129,7 @@ pytest-profiling = "^1.7.0"
 pre-commit = "^3.7.0"
 vulture = "^2.11"
 dictdiffer = "^0.9.0"
+pytest-split = "^0.9.0"
 
 [tool.poetry.extras]
 deploy = ["celery", "redis", "flower"]

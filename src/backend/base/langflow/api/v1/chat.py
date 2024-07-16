@@ -1,7 +1,6 @@
 import time
 import traceback
 import uuid
-from functools import partial
 from typing import TYPE_CHECKING, Annotated, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException
@@ -174,6 +173,7 @@ async def build_vertex(
     next_runnable_vertices = []
     top_level_vertices = []
     start_time = time.perf_counter()
+    error_message = None
     try:
         cache = await chat_service.get_cache(flow_id_str)
         if not cache:
@@ -202,11 +202,8 @@ async def build_vertex(
                 inputs_dict=inputs.model_dump() if inputs else {},
                 files=files,
             )
-            set_cache_coro = partial(get_chat_service().set_cache, key=flow_id_str)
-            next_runnable_vertices = await graph.run_manager.get_next_runnable_vertices(
-                lock, set_cache_coro, graph=graph, vertex=vertex, cache=False
-            )
-            top_level_vertices = graph.run_manager.get_top_level_vertices(graph, next_runnable_vertices)
+            next_runnable_vertices = await graph.get_next_runnable_vertices(lock, vertex=vertex, cache=False)
+            top_level_vertices = graph.get_top_level_vertices(next_runnable_vertices)
 
             result_data_response = ResultDataResponse.model_validate(result_dict, from_attributes=True)
         except Exception as exc:
@@ -219,6 +216,7 @@ async def build_vertex(
                 params = format_exception_message(exc)
             message = {"errorMessage": params, "stackTrace": tb}
             valid = False
+            error_message = params
             output_label = vertex.outputs[0]["name"] if vertex.outputs else "output"
             outputs = {output_label: OutputLog(message=message, type="error")}
             result_data_response = ResultDataResponse(results={}, outputs=outputs)
@@ -235,7 +233,7 @@ async def build_vertex(
             background_tasks.add_task(
                 log_vertex_build,
                 flow_id=flow_id_str,
-                vertex_id=vertex_id,
+                vertex_id=vertex_id.split("-")[0],
                 valid=valid,
                 params=params,
                 data=result_data_response,
@@ -260,7 +258,7 @@ async def build_vertex(
         if graph.stop_vertex and graph.stop_vertex in next_runnable_vertices:
             next_runnable_vertices = [graph.stop_vertex]
 
-        if graph.run_manager.all_predecessors_are_fulfilled() and not next_runnable_vertices:
+        if not graph.run_manager.vertices_to_run and not next_runnable_vertices:
             background_tasks.add_task(graph.end_all_traces)
 
         build_response = VertexBuildResponse(
@@ -275,10 +273,10 @@ async def build_vertex(
         background_tasks.add_task(
             telemetry_service.log_package_component,
             ComponentPayload(
-                componentName=vertex_id,
+                componentName=vertex_id.split("-")[0],
                 componentSeconds=int(time.perf_counter() - start_time),
                 componentSuccess=valid,
-                componentErrorMessage=params,
+                componentErrorMessage=error_message,
             ),
         )
         return build_response
@@ -286,13 +284,13 @@ async def build_vertex(
         background_tasks.add_task(
             telemetry_service.log_package_component,
             ComponentPayload(
-                componentName=vertex_id,
+                componentName=vertex_id.split("-")[0],
                 componentSeconds=int(time.perf_counter() - start_time),
                 componentSuccess=False,
                 componentErrorMessage=str(exc),
             ),
         )
-        logger.error(f"Error building Component:\n\n{exc}")
+        logger.error(f"Error building Component: \n\n{exc}")
         logger.exception(exc)
         message = parse_exception(exc)
         raise HTTPException(status_code=500, detail=message) from exc
