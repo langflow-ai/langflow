@@ -40,7 +40,7 @@ export const switchCaseModalSize = (size: string) => {
       break;
     case "three-cards":
       minWidth = "min-w-[1066px]";
-      height = "h-fit";
+      height = "max-h-[94vh]";
       break;
     case "large-thin":
       minWidth = "min-w-[65vw]";
