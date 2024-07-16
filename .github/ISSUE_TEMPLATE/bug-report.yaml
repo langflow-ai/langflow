@@ -1,7 +1,6 @@
 name: "🐛 Bug Report"
 description: Submit a bug report to help us improve Langflow
 body:
-
   - type: markdown
     attributes:
       value: |
@@ -27,7 +26,6 @@ body:
         If you have code snippets, error messages, or stack traces please provide them here as well.
         Important! Use code tags to format your code correctly. See https://help.github.com/en/github/writing-on-github/creating-and-highlighting-code-blocks#syntax-highlighting
         Do not use screenshots, as they are hard to read, and (more importantly) don't allow others to copy-and-paste your code.
-
       placeholder: |
         Steps to reproduce the behavior:
 
@@ -73,10 +71,11 @@ body:
             - @NadirJ
 
       placeholder: "@Username ..."
-      
+
   - type: markdown
     attributes:
       value: '## Environment'
+      
   - type: input
     id: os
     attributes:
@@ -84,6 +83,7 @@ body:
       placeholder: ex. Ubuntu Linux 22.04
     validations:
       required: true
+      
   - type: input
     id: langflow-version
     attributes:
