@@ -74,6 +74,6 @@ export type targetHandleType = {
 
 export type NodeInputFieldType<value=any,options=any>={
   value:value;
-  iseditNodeModal:boolean;
+  isedit:boolean;
   options?:options;
 }

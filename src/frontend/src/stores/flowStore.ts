@@ -29,6 +29,7 @@ import {
   checkChatInput,
   checkOldComponents,
   cleanEdges,
+  customStringify,
   getHandleId,
   getNodeId,
   scapeJSONParse,
@@ -687,24 +688,33 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     });
     set({ flowBuildStatus: newFlowBuildStatus });
   },
-  updateNodeField: (identifier, value,options) => {
+  updateNodeField: (identifier, value, options) => {
     const { NodeId, field } = identifier;
     const { skipSnapshot } = options || {};
 
     get().setNode(NodeId, (oldNode) => {
       const newNode = cloneDeep(oldNode);
+      const currentField = oldNode.data.node!.template[field];
       const nodeData = newNode.data as NodeDataType;
       const flowsManager = useFlowsManagerStore.getState();
       // update the fields from the template
       Object.keys(value).forEach((key) => {
         nodeData.node!.template[field][key] = value[key];
-      })
+      });
       if (!skipSnapshot) {
         flowsManager.takeSnapshot();
       }
+      const shouldUpdate =
+        nodeData.node!.template[field].real_time_refresh &&
+        !nodeData.node!.template[field].refresh_button &&
+        customStringify(currentField) !==
+          customStringify(nodeData.node!.template[field]);
+
+      const typeToDebounce = nodeData.node!.template[field].type;
+
       return newNode;
     });
-  }
+  },
 }));
 
 export default useFlowStore;
