@@ -1083,13 +1083,13 @@ all = ["pycocotools (==2.0.6)"]
 
 [[package]]
 name = "clarifai-grpc"
-version = "10.6.3"
+version = "10.6.4"
 description = "Clarifai gRPC API Client"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "clarifai_grpc-10.6.3-py3-none-any.whl", hash = "sha256:304a8123dfe6fb41953026e0e4b800bffc3998a75408f51f3ab2a6eacfb1781e"},
-    {file = "clarifai_grpc-10.6.3.tar.gz", hash = "sha256:6be24d21f124678384902e693eb9b5d2e5c57aeef57c098e3a2b94e40a79c198"},
+    {file = "clarifai_grpc-10.6.4-py3-none-any.whl", hash = "sha256:9fb8c94e6ede5e1005010643f516aa7c1dd3c59ab9282e03ba4932fd929d7584"},
+    {file = "clarifai_grpc-10.6.4.tar.gz", hash = "sha256:84d92b10fc32c17ecf0c0fc30ec4c9960a6a9ee701f2829f0c372892ae761d14"},
 ]
 
 [package.dependencies]
@@ -1232,13 +1232,13 @@ types = ["chardet (>=5.1.0)", "mypy", "pytest", "pytest-cov", "pytest-dependency
 
 [[package]]
 name = "cohere"
-version = "5.5.8"
+version = "5.6.1"
 description = ""
 optional = false
 python-versions = "<4.0,>=3.8"
 files = [
-    {file = "cohere-5.5.8-py3-none-any.whl", hash = "sha256:e1ed84b90eadd13c6a68ee28e378a0bb955f8945eadc6eb7ee126b3399cafd54"},
-    {file = "cohere-5.5.8.tar.gz", hash = "sha256:84ce7666ff8fbdf4f41fb5f6ca452ab2639a514bc88967a2854a9b1b820d6ea0"},
+    {file = "cohere-5.6.1-py3-none-any.whl", hash = "sha256:1c8bcd39a54622d64b83cafb865f102cd2565ce091b0856fd5ce11bf7169109a"},
+    {file = "cohere-5.6.1.tar.gz", hash = "sha256:5d7efda64f0e512d4cc35aa04b17a6f74b3d8c175a99f2797991a7f31dfac349"},
 ]
 
 [package.dependencies]
@@ -4954,6 +4954,7 @@ jq = {version = "^1.7.0", markers = "sys_platform != \"win32\""}
 langchain = "~0.2.0"
 langchain-experimental = "^0.0.61"
 langchainhub = "~0.1.15"
+langwatch = "^0.1.3"
 loguru = "^0.7.1"
 multiprocess = "^0.70.14"
 nest-asyncio = "^1.6.0"
@@ -5065,13 +5066,13 @@ openai = ["openai (>=1.3.7,<2.0.0)"]
 
 [[package]]
 name = "litellm"
-version = "1.41.22"
+version = "1.41.23"
 description = "Library to easily interface with LLM API providers"
 optional = false
 python-versions = "!=2.7.*,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,!=3.6.*,!=3.7.*,>=3.8"
 files = [
-    {file = "litellm-1.41.22-py3-none-any.whl", hash = "sha256:b7560a5487ad23a2d8d5ce0d810d640488e6264f22f35041c1e3f9ca8933e71b"},
-    {file = "litellm-1.41.22.tar.gz", hash = "sha256:1cdfffc792535e87a40463fe04205353ebe681ce87fc3245a0436f4c124f6ed6"},
+    {file = "litellm-1.41.23-py3-none-any.whl", hash = "sha256:ccfe7763e694ae43b50229fc78bb999a18507b654ec2046c55c6e2a2ea48bf96"},
+    {file = "litellm-1.41.23.tar.gz", hash = "sha256:320afcd172fb936f1297ce135075e3397141cf245cdb936f01871c9d6ed56516"},
 ]
 
 [package.dependencies]
@@ -11736,4 +11737,4 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-content-hash = "b0e66106e761439a41669286b6ff96b8ce03dd04b42766f26efd00097fcc478d"
+content-hash = "afe38792a9e202ab55558389026b64beb95d1437b2fd4bccfbb300cbc7ad0677"
