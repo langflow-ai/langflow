@@ -391,11 +391,7 @@ def build_custom_component_template(
             raise HTTPException(
                 status_code=400,
                 detail={
-                    "error": (
-                        "Please check if you are importing Component correctly."
-                        " It should be `from langflow.custom import Component`"
-                    ),
-                    "traceback": traceback.format_exc(),
+                    "error": ("Please check if you are importing Component correctly."),
                 },
             )
         if "inputs" in custom_component.template_config:
