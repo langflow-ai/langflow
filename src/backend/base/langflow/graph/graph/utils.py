@@ -1,7 +1,6 @@
-from typing import List, Dict
 import copy
 from collections import deque
-
+from typing import Dict, List
 
 PRIORITY_LIST_OF_INPUTS = ["webhook", "chat"]
 
@@ -50,7 +49,7 @@ def ungroup_node(group_node_data, base_flow):
     template, flow, frozen = (
         group_node_data["node"]["template"],
         group_node_data["node"]["flow"],
-        group_node_data["node"]["frozen"],
+        group_node_data["node"].get("frozen", False),
     )
     parent_node_id = group_node_data["id"]
 
