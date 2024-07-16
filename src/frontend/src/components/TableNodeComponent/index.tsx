@@ -73,6 +73,7 @@ export default function TableNodeComponent({
     <div className={"flex w-full items-center"}>
       <div className="flex w-full items-center gap-3" data-testid={"div-" + id}>
         <TableModal
+          autoSizeStrategy={{ type: "fitGridWidth", defaultMinWidth: 100 }}
           tableTitle={tableTitle}
           description={description}
           ref={agGrid}
