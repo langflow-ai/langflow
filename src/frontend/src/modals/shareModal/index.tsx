@@ -62,7 +62,35 @@ export default function ShareModal({
   >([]);
   const saveFlow = useFlowsManagerStore((state) => state.saveFlow);
   const { data, isFetching } = useGetTagsQuery();
-  const { mutate } = usePatchUpdateFlowStore();
+
+  function successShare() {
+    const flow: FlowType = removeApiKeys({
+      id: component!.id,
+      data: component!.data,
+      description,
+      name,
+      last_tested_version: version,
+      is_component: is_component,
+    });
+    if (!is_component) {
+      saveFlow(flow!, true);
+    }
+    setSuccessData({
+      title: `${is_component ? "Component" : "Flow"} shared successfully!`,
+    });
+  }
+
+  const { mutate } = usePatchUpdateFlowStore({
+    onSuccess: () => {
+      successShare();
+    },
+    onError: (err) => {
+      setErrorData({
+        title: "Error sharing " + is_component ? "component" : "flow",
+        list: [err["response"]["data"]["detail"]],
+      });
+    },
+  });
 
   const [loadingNames, setLoadingNames] = useState(false);
 
@@ -106,14 +134,6 @@ export default function ShareModal({
       is_component: is_component,
     });
 
-    function successShare() {
-      if (!is_component) {
-        saveFlow(flow!, true);
-      }
-      setSuccessData({
-        title: `${is_component ? "Component" : "Flow"} shared successfully!`,
-      });
-    }
 
     if (!update)
       saveFlowStore(
@@ -133,17 +153,6 @@ export default function ShareModal({
           tags: getTagsIds(selectedTags, cloneDeep(data) ?? []),
           publicFlow: sharePublic,
           id: unavaliableNames.find((e) => e.name === name)!.id,
-        },
-        {
-          onSuccess: (res) => {
-            successShare();
-          },
-          onError: (err) => {
-            setErrorData({
-              title: "Error sharing " + is_component ? "component" : "flow",
-              list: [err["response"]["data"]["detail"]],
-            });
-          },
         }
       )
     }
