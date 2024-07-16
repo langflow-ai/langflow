@@ -2,6 +2,7 @@ import Loading from "@/components/ui/loading";
 import {
   useDeleteMessages,
   useGetMessagesQuery,
+  useUpdateMessage,
 } from "@/controllers/API/queries/messages";
 import { useIsFetching } from "@tanstack/react-query";
 import {
@@ -12,7 +13,6 @@ import {
 import cloneDeep from "lodash/cloneDeep";
 import { useMemo, useState } from "react";
 import TableComponent from "../../../../components/tableComponent";
-import useUpdateMessage from "../../../../pages/SettingsPage/pages/messagesPage/hooks/use-updateMessage";
 import useAlertStore from "../../../../stores/alertStore";
 import { useMessagesStore } from "../../../../stores/messagesStore";
 import { messagesSorter } from "../../../../utils/utils";
@@ -28,6 +28,7 @@ export default function SessionView({
   const messages = useMessagesStore((state) => state.messages);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const updateMessage = useMessagesStore((state) => state.updateMessage);
   const deleteMessagesStore = useMessagesStore((state) => state.removeMessages);
   const isFetching = useIsFetching({
     queryKey: ["useGetMessagesQuery"],
@@ -50,7 +51,7 @@ export default function SessionView({
     },
   });
 
-  const { handleUpdate } = useUpdateMessage(setSuccessData, setErrorData);
+  const { mutate: updateMessageMutation } = useUpdateMessage();
 
   function handleUpdateMessage(event: NewValueParams<any, string>) {
     const newValue = event.newValue;
@@ -60,9 +61,21 @@ export default function SessionView({
       ...row,
       [field]: newValue,
     };
-    handleUpdate(data).catch((error) => {
-      event.data[field] = event.oldValue;
-      event.api.refreshCells();
+    updateMessageMutation(data, {
+      onSuccess: () => {
+        updateMessage(data);
+        // Set success message
+        setSuccessData({
+          title: "Messages updated successfully.",
+        });
+      },
+      onError: () => {
+        setErrorData({
+          title: "Error updating messages.",
+        });
+        event.data[field] = event.oldValue;
+        event.api.refreshCells();
+      },
     });
   }
 

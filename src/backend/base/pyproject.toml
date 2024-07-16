@@ -72,12 +72,16 @@ opentelemetry-exporter-prometheus = "^0.46b0"
 prometheus-client = "^0.20.0"
 aiofiles = "^24.1.0"
 crewai = "^0.36.0"
+setuptools = ">=70"
 
 [tool.poetry.extras]
 deploy = ["celery", "redis", "flower"]
 local = ["llama-cpp-python", "sentence-transformers", "ctransformers"]
 all = ["deploy", "local"]
 
+
+[tool.poetry.group.dev.dependencies]
+pytest-split = "^0.9.0"
 
 [tool.pytest.ini_options]
 minversion = "6.0"

@@ -57,7 +57,7 @@ async def build_component_and_get_results(
     params_copy = params.copy()
     # Remove code from params
     class_object: Type["CustomComponent" | "Component"] = eval_custom_component_code(params_copy.pop("code"))
-    custom_component: "CustomComponent" | "Component" = class_object(
+    custom_component: "CustomComponent" | "Component" = class_object.initialize(
         user_id=user_id,
         parameters=params_copy,
         vertex=vertex,
@@ -66,12 +66,13 @@ async def build_component_and_get_results(
     params_copy = update_params_with_load_from_db_fields(
         custom_component, params_copy, vertex.load_from_db_fields, fallback_to_env_vars
     )
+    custom_component.set_parameters(params_copy)
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
         if base_type == "custom_components" and isinstance(custom_component, CustomComponent):
             return await build_custom_component(params=params_copy, custom_component=custom_component)
         elif base_type == "component" and isinstance(custom_component, Component):
-            return await build_component(params=params_copy, custom_component=custom_component)
+            return await build_component(custom_component=custom_component)
         else:
             raise ValueError(f"Base type {base_type} not found.")
 
@@ -146,11 +147,9 @@ def update_params_with_load_from_db_fields(
 
 
 async def build_component(
-    params: dict,
     custom_component: "Component",
 ):
     # Now set the params as attributes of the custom_component
-    custom_component.set_attributes(params)
     build_results, artifacts = await custom_component.build_results()
 
     return custom_component, build_results, artifacts
