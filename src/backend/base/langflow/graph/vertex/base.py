@@ -20,6 +20,7 @@ from langflow.schema.message import Message
 from langflow.schema.schema import INPUT_FIELD_NAME, OutputLog, build_output_logs
 from langflow.services.deps import get_storage_service
 from langflow.services.monitor.utils import log_transaction
+from langflow.services.tracing.schema import Log
 from langflow.utils.constants import DIRECT_TYPES
 from langflow.utils.schemas import ChatOutputResponse
 from langflow.utils.util import sync_to_async, unescape_string
@@ -83,6 +84,7 @@ class Vertex:
         self.result: Optional[ResultData] = None
         self.results: Dict[str, Any] = {}
         self.outputs_logs: Dict[str, OutputLog] = {}
+        self.logs: Dict[str, Log] = {}
         try:
             self.is_interface_component = self.vertex_type in InterfaceComponentTypes
         except ValueError:
@@ -480,6 +482,7 @@ class Vertex:
             results=result_dict,
             artifacts=artifacts,
             outputs=self.outputs_logs,
+            logs=self.logs,
             messages=messages,
             component_display_name=self.display_name,
             component_id=self.id,
@@ -643,6 +646,7 @@ class Vertex:
                 vertex=self,
             )
             self.outputs_logs = build_output_logs(self, result)
+
             self._update_built_object_and_artifacts(result)
         except Exception as exc:
             tb = traceback.format_exc()
@@ -658,6 +662,7 @@ class Vertex:
                 self._built_object, self.artifacts = result
             elif len(result) == 3:
                 self._custom_component, self._built_object, self.artifacts = result
+                self.logs = self._custom_component._logs
                 self.artifacts_raw = self.artifacts.get("raw", None)
                 self.artifacts_type = self.artifacts.get("type", None) or ArtifactType.UNKNOWN.value
                 self.artifacts = {self.outputs[0]["name"]: self.artifacts}
