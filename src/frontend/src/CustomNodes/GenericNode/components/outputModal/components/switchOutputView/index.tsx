@@ -29,9 +29,6 @@ const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
     (type === "Outputs"
       ? flowPoolNode?.data?.outputs[outputName]
       : flowPoolNode?.data?.logs[outputName]) ?? {};
-  if (Array.isArray(results)) {
-    return;
-  }
   const resultType = results?.type;
   let resultMessage = results?.message ?? {};
   const RECORD_TYPES = ["data", "object", "array", "message"];
