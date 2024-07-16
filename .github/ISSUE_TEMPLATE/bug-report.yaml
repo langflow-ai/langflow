@@ -5,10 +5,27 @@ body:
     id: system-info
     attributes:
       label: System Info
-      description: Please share your system info with us, including Langflow version, platform, Python version, and any other relevant details.
-      placeholder: Langflow version, platform, Python version, ...
+      description: Please share your system info and any other relevant details with us.
     validations:
       required: true
+
+   - type: textarea
+    id: langflow-version
+    attributes:
+      label: Langflow Info
+      description: Please share your Langflow version.
+    validations:
+      required: true
+      
+  - type: checkboxes
+    id: python-version
+    attributes:
+      label: Information
+      description: 'My Python version is:'
+      options:
+        - label: "3.12"
+        - label: "3.11"
+        - label: "3.10"
 
   - type: textarea
     id: who-can-help
@@ -49,9 +66,9 @@ body:
       label: Reproduction
       description: |
         Please provide a code sample that reproduces the problem you ran into. It can be a Colab link or just a code snippet.
-        If you have code snippets, error messages, stack traces please provide them here as well.
-        Important! Use code tags to correctly format your code. See https://help.github.com/en/github/writing-on-github/creating-and-highlighting-code-blocks#syntax-highlighting
-        Do not use screenshots, as they are hard to read and (more importantly) don't allow others to copy-and-paste your code.
+        If you have code snippets, error messages, or stack traces please provide them here as well.
+        Important! Use code tags to format your code correctly. See https://help.github.com/en/github/writing-on-github/creating-and-highlighting-code-blocks#syntax-highlighting
+        Do not use screenshots, as they are hard to read, and (more importantly) don't allow others to copy-and-paste your code.
 
       placeholder: |
         Steps to reproduce the behavior:
