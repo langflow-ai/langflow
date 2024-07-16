@@ -3,6 +3,7 @@ from functools import wraps
 from typing import Any, Awaitable, Callable
 
 from fastapi import HTTPException, Request
+from loguru import logger
 
 
 async def disconnect_poller(request: Request, result: Any):
@@ -14,11 +15,10 @@ async def disconnect_poller(request: Request, result: Any):
         while not await request.is_disconnected():
             await asyncio.sleep(0.01)
 
-        print("Request disconnected")
-
+        logger.debug("Request disconnected")
         return result
     except asyncio.CancelledError:
-        print("Stopping polling loop")
+        logger.debug("Stopping polling loop")
 
 
 def cancel_on_disconnect(handler: Callable[[Request], Awaitable[Any]]):
@@ -33,32 +33,27 @@ def cancel_on_disconnect(handler: Callable[[Request], Awaitable[Any]]):
 
         # Create two tasks, one to poll the request and check if the
         # client disconnected, and another which is the request handler
-        poller_task = asyncio.ensure_future(disconnect_poller(request, sentinel))
-        handler_task = asyncio.ensure_future(handler(request, *args, **kwargs))
+        poller_task = asyncio.create_task(disconnect_poller(request, sentinel))
+        handler_task = asyncio.create_task(handler(request, *args, **kwargs))
 
         done, pending = await asyncio.wait([poller_task, handler_task], return_when=asyncio.FIRST_COMPLETED)
 
         # Cancel any outstanding tasks
         for t in pending:
             t.cancel()
-
             try:
                 await t
             except asyncio.CancelledError:
-                print(f"{t} was cancelled")
+                logger.debug(f"{t} was cancelled")
             except Exception as exc:
-                print(f"{t} raised {exc} when being cancelled")
+                logger.error(f"{t} raised {exc} when being cancelled")
 
         # Return the result if the handler finished first
         if handler_task in done:
             return await handler_task
 
         # Otherwise, raise an exception
-        # This is not exactly needed, but it will prevent
-        # validation errors if your request handler is supposed
-        # to return something.
-        print("Raising an HTTP error because I was disconnected!!")
-
+        logger.error("Raising an HTTP error because I was disconnected!!")
         raise HTTPException(503)
 
     return cancel_on_disconnect_decorator
