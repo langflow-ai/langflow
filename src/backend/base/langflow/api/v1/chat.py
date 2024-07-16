@@ -221,7 +221,7 @@ async def build_vertex(
             outputs = {output_label: OutputLog(message=message, type="error")}
             result_data_response = ResultDataResponse(results={}, outputs=outputs)
             artifacts = {}
-            background_tasks.add_task(graph.end_all_traces, error=message["errorMessage"])
+            background_tasks.add_task(graph.end_all_traces, error=exc)
             # If there's an error building the vertex
             # we need to clear the cache
             await chat_service.clear_cache(flow_id_str)
