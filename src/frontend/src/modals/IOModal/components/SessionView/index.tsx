@@ -1,8 +1,5 @@
 import Loading from "@/components/ui/loading";
-import {
-  useGetMessagesQuery,
-  useUpdateMessage,
-} from "@/controllers/API/queries/messages";
+import { useUpdateMessage } from "@/controllers/API/queries/messages";
 import { useIsFetching } from "@tanstack/react-query";
 import {
   CellEditRequestEvent,
