@@ -1,6 +1,10 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict
+from typing import TYPE_CHECKING, Any, Dict, Optional
 from uuid import UUID
+from langflow.services.tracing.schema import Log
+
+if TYPE_CHECKING:
+    from langflow.graph.vertex.base import Vertex
 
 
 class BaseTracer(ABC):
@@ -9,17 +13,30 @@ class BaseTracer(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def ready(self):
+    def ready(self) -> bool:
         raise NotImplementedError
 
     @abstractmethod
     def add_trace(
-        self, trace_name: str, trace_type: str, inputs: Dict[str, Any], metadata: Dict[str, Any] | None = None
+        self,
+        trace_id: str,
+        trace_name: str,
+        trace_type: str,
+        inputs: Dict[str, Any],
+        metadata: Dict[str, Any] | None = None,
+        vertex: Optional["Vertex"] = None,
     ):
         raise NotImplementedError
 
     @abstractmethod
-    def end_trace(self, trace_name: str, outputs: Dict[str, Any] | None = None, error: str | None = None):
+    def end_trace(
+        self,
+        trace_id: str,
+        trace_name: str,
+        outputs: Dict[str, Any] | None = None,
+        error: Exception | None = None,
+        logs: list[Log | dict] = [],
+    ):
         raise NotImplementedError
 
     @abstractmethod
@@ -27,7 +44,7 @@ class BaseTracer(ABC):
         self,
         inputs: dict[str, Any],
         outputs: Dict[str, Any],
-        error: str | None = None,
+        error: Exception | None = None,
         metadata: dict[str, Any] | None = None,
     ):
         raise NotImplementedError
