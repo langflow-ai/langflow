@@ -47,7 +47,10 @@ export default function TableOptions({
               <Button unstyled onClick={duplicateRow} disabled={!hasSelection}>
                 <IconComponent
                   name="Copy"
-                  className={cn("h-5 w-5 transition-all", hasSelection ? "text-primary" : "text-muted-foreground")}
+                  className={cn(
+                    "h-5 w-5 transition-all",
+                    hasSelection ? "text-primary" : "text-muted-foreground",
+                  )}
                 />
               </Button>
             </ShadTooltip>
