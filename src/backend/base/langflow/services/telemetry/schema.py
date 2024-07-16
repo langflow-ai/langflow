@@ -13,6 +13,7 @@ class ShutdownPayload(BaseModel):
 
 
 class VersionPayload(BaseModel):
+    package: str
     version: str
     platform: str
     python: str
@@ -33,4 +34,4 @@ class ComponentPayload(BaseModel):
     componentName: str
     componentSeconds: int
     componentSuccess: bool
-    componentErrorMessage: str
+    componentErrorMessage: str | None = None
