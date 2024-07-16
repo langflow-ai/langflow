@@ -7,18 +7,18 @@ import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
 
 interface IPatchUpdateComponent {
-    newFlow: {
-        name?: string;
-        data: ReactFlowJsonObject | null;
-        description?: string;
-        style?: FlowStyleType;
-        is_component?: boolean;
-        parent?: string;
-        last_tested_version?: string;
-      };
-      tags: string[];
-      publicFlow: boolean;
-      id: string;
+  newFlow: {
+    name?: string;
+    data: ReactFlowJsonObject | null;
+    description?: string;
+    style?: FlowStyleType;
+    is_component?: boolean;
+    parent?: string;
+    last_tested_version?: string;
+  };
+  tags: string[];
+  publicFlow: boolean;
+  id: string;
 }
 
 export const usePatchUpdateFlowStore: useMutationFunctionType<
@@ -29,7 +29,19 @@ export const usePatchUpdateFlowStore: useMutationFunctionType<
   const patchComponent = async (
     payload: IPatchUpdateComponent,
   ): Promise<AxiosResponse<FlowType>> => {
-    const { id, tags, publicFlow, newFlow: { name, data, description, is_component, parent, last_tested_version }, } = payload;
+    const {
+      id,
+      tags,
+      publicFlow,
+      newFlow: {
+        name,
+        data,
+        description,
+        is_component,
+        parent,
+        last_tested_version,
+      },
+    } = payload;
     return await api.patch<FlowType>(`${getURL("STORE")}/components/${id}`, {
       name: name,
       data: data,
