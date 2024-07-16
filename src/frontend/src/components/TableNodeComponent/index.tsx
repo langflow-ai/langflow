@@ -14,6 +14,7 @@ import { Button } from "../ui/button";
 
 export default function TableNodeComponent({
   tableTitle,
+  description,
   value,
   onChange,
   editNode = false,
@@ -73,6 +74,7 @@ export default function TableNodeComponent({
       <div className="flex w-full items-center gap-3" data-testid={"div-" + id}>
         <TableModal
           tableTitle={tableTitle}
+          description={description}
           ref={agGrid}
           onSelectionChanged={(event: SelectionChangedEvent) => {
             setSelectedNodes(event.api.getSelectedNodes());
