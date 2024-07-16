@@ -1,37 +1,33 @@
+import asyncio
 import time
 import traceback
 import uuid
 from typing import TYPE_CHECKING, Annotated, Optional
 
-from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Request
+from fastapi import (APIRouter, BackgroundTasks, Body, Depends, HTTPException,
+                     Request)
 from fastapi.responses import StreamingResponse
 from loguru import logger
 
 from langflow.api.disconnect import cancel_on_disconnect
-from langflow.api.utils import (
-    build_and_cache_graph_from_data,
-    build_graph_from_db,
-    format_elapsed_time,
-    format_exception_message,
-    get_top_level_vertices,
-    parse_exception,
-)
-from langflow.api.v1.schemas import (
-    FlowDataRequest,
-    InputValueRequest,
-    ResultDataResponse,
-    StreamData,
-    VertexBuildResponse,
-    VerticesOrderResponse,
-)
+from langflow.api.utils import (build_and_cache_graph_from_data,
+                                build_graph_from_db, format_elapsed_time,
+                                format_exception_message,
+                                get_top_level_vertices, parse_exception)
+from langflow.api.v1.schemas import (FlowDataRequest, InputValueRequest,
+                                     ResultDataResponse, StreamData,
+                                     VertexBuildResponse,
+                                     VerticesOrderResponse)
 from langflow.exceptions.component import ComponentBuildException
 from langflow.graph.graph.base import Graph
 from langflow.schema.schema import OutputValue
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.chat.service import ChatService
-from langflow.services.deps import get_chat_service, get_session, get_session_service, get_telemetry_service
+from langflow.services.deps import (get_chat_service, get_session,
+                                    get_session_service, get_telemetry_service)
 from langflow.services.monitor.utils import log_vertex_build
-from langflow.services.telemetry.schema import ComponentPayload, PlaygroundPayload
+from langflow.services.telemetry.schema import (ComponentPayload,
+                                                PlaygroundPayload)
 from langflow.services.telemetry.service import TelemetryService
 
 if TYPE_CHECKING:
@@ -283,6 +279,8 @@ async def build_vertex(
             ),
         )
         return build_response
+    except asyncio.CancelledError as exc:
+        raise HTTPException(status_code=503, detail="The request was cancelled") from exc
     except Exception as exc:
         background_tasks.add_task(
             telemetry_service.log_package_component,
