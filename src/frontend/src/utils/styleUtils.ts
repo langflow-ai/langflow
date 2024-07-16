@@ -167,6 +167,7 @@ import { BotMessageSquareIcon } from "../icons/BotMessageSquare";
 import { CassandraIcon } from "../icons/Cassandra";
 import { ChromaIcon } from "../icons/ChromaIcon";
 import { CohereIcon } from "../icons/Cohere";
+import { ConfluenceIcon } from "../icons/Confluence";
 import { CouchbaseIcon } from "../icons/Couchbase";
 import { CrewAiIcon } from "../icons/CrewAI";
 import { ElasticsearchIcon } from "../icons/ElasticsearchStore";
@@ -574,4 +575,5 @@ export const nodeIconsLucide: iconsType = {
   MistralAI: MistralIcon,
   Upstash: UpstashSvgIcon,
   PGVector: CpuIcon,
+  Confluence: ConfluenceIcon,
 };
