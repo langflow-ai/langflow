@@ -89,15 +89,15 @@ body:
       description: "A clear and concise description of what you would expect to happen."
 
   - type: file
-      id: screenshot-upload
-      attributes:
-        label: Upload Screenshot
-        description: Please upload a screenshot file that is relevant to your bug report.
-        accept: ".png, .jpg, .jpeg"
+    id: screenshot-upload
+    attributes:
+      label: Upload Screenshot
+      description: Please upload a screenshot file that is relevant to your bug report.
+      accept: ".png, .jpg, .jpeg"
   
   - type: file
-      id: json-upload
-      attributes:
-        label: Upload JSON
-        description: Please upload your flow, a .json file that is relevant to your bug report.
-        accept: ".json"
+    id: json-upload
+    attributes:
+      label: Upload JSON
+      description: Please upload your flow, a .json file that is relevant to your bug report.
+      accept: ".json"
