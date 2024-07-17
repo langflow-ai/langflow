@@ -35,7 +35,6 @@ const useAuthStore = create<AuthStoreType>((set, get) => ({
   setAuthenticationErrorCount: (authenticationErrorCount) =>
     set({ authenticationErrorCount }),
 
-
   logout: async () => {
     const setAllFlows = useFlowsManagerStore.getState().setAllFlows;
     const setSelectedFolder = useFolderStore.getState().setSelectedFolder;
@@ -47,37 +46,37 @@ const useAuthStore = create<AuthStoreType>((set, get) => ({
       isAuthenticated: false,
       autoLogin: false,
       apiKey: null,
-      });
-      setAllFlows([]);
-      setSelectedFolder(null);
-      },
-      //   getUser: () => {
-      //     const setLoading = useAlertStore.getState().setLoading;
-      //     const getFoldersApi = useFolderStore.getState().getFoldersApi;
-      //     const setGlobalVariables = useGlobalVariablesStore.getState().setGlobalVariables;
-      //     const checkHasStore = useStoreStore.getState().checkHasStore;
-      //     const fetchApiData = useStoreStore.getState().fetchApiData;
+    });
+    setAllFlows([]);
+    setSelectedFolder(null);
+  },
+  //   getUser: () => {
+  //     const setLoading = useAlertStore.getState().setLoading;
+  //     const getFoldersApi = useFolderStore.getState().getFoldersApi;
+  //     const setGlobalVariables = useGlobalVariablesStore.getState().setGlobalVariables;
+  //     const checkHasStore = useStoreStore.getState().checkHasStore;
+  //     const fetchApiData = useStoreStore.getState().fetchApiData;
 
-      //     getLoggedUser()
-      //       .then(async (user) => {
-      //         set({ userData: user, isAdmin: user.is_superuser });
-      //         getFoldersApi(true, true);
-      //         const res = await getGlobalVariables();
-      //         setGlobalVariables(res);
-      //         checkHasStore();
-      //         fetchApiData();
-      //       })
-      //       .catch((error) => {
-      //         setLoading(false);
-      //       });
-      //   },
+  //     getLoggedUser()
+  //       .then(async (user) => {
+  //         set({ userData: user, isAdmin: user.is_superuser });
+  //         getFoldersApi(true, true);
+  //         const res = await getGlobalVariables();
+  //         setGlobalVariables(res);
+  //         checkHasStore();
+  //         fetchApiData();
+  //       })
+  //       .catch((error) => {
+  //         setLoading(false);
+  //       });
+  //   },
 
-      //   login: (newAccessToken) => {
-      //     set({ accessToken: newAccessToken, isAuthenticated: true });
-      //     get().getUser();
-      //   },
+  //   login: (newAccessToken) => {
+  //     set({ accessToken: newAccessToken, isAuthenticated: true });
+  //     get().getUser();
+  //   },
 
-      //   storeApiKey: (apikey) => {
+  //   storeApiKey: (apikey) => {
   //     cookies.set('apikey_tkn_lflw', apikey, { path: '/' });
   //     set({ apiKey: apikey });
   //   },
