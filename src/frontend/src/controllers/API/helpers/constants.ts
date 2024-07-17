@@ -10,6 +10,7 @@ export const URLs = {
   USERS:'users',
   LOGOUT: `logout`,
   LOGIN: `login`,
+  AUTOLOGIN:"auto_login"
 } as const;
 
 export function getURL(key: keyof typeof URLs, params: any = {}) {
