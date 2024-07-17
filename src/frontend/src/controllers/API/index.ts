@@ -140,7 +140,7 @@ export async function saveFlowToDatabase(newFlow: {
       endpoint_name: newFlow.endpoint_name,
     });
 
-    if (response.status !== 201) {
+    if (response?.status !== 201) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
     return response.data;
