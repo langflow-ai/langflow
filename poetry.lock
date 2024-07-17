@@ -4679,13 +4679,13 @@ tenacity = ">=8.1.0,<8.4.0 || >8.4.0,<9.0.0"
 
 [[package]]
 name = "langchain-core"
-version = "0.2.19"
+version = "0.2.20"
 description = "Building applications with LLMs through composability"
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
-    {file = "langchain_core-0.2.19-py3-none-any.whl", hash = "sha256:5b3cd34395be274c89e822c84f0e03c4da14168c177a83921c5b9414ac7a0651"},
-    {file = "langchain_core-0.2.19.tar.gz", hash = "sha256:13043a83e5c9ab58b9f5ce2a56896e7e88b752e8891b2958960a98e71801471e"},
+    {file = "langchain_core-0.2.20-py3-none-any.whl", hash = "sha256:16cc4da6f7ebf33accea7af45a70480733dc852ab291030fb6924865bd7caf76"},
+    {file = "langchain_core-0.2.20.tar.gz", hash = "sha256:a66c439e085d8c75f822f7650a5551d17bada4003521173c763d875d949e4ed5"},
 ]
 
 [package.dependencies]
@@ -4927,7 +4927,7 @@ six = "*"
 
 [[package]]
 name = "langflow-base"
-version = "0.0.85"
+version = "0.0.86"
 description = "A Python package with a built-in web application"
 optional = false
 python-versions = ">=3.10,<3.13"
@@ -4941,7 +4941,6 @@ asyncer = "^0.0.5"
 bcrypt = "4.0.1"
 cachetools = "^5.3.1"
 chardet = "^5.2.0"
-crewai = "^0.36.0"
 cryptography = "^42.0.5"
 docstring-parser = "^0.16"
 duckdb = "^1.0.0"
@@ -4954,12 +4953,12 @@ jq = {version = "^1.7.0", markers = "sys_platform != \"win32\""}
 langchain = "~0.2.0"
 langchain-experimental = "^0.0.61"
 langchainhub = "~0.1.15"
-langwatch = "^0.1.3"
 loguru = "^0.7.1"
 multiprocess = "^0.70.14"
 nest-asyncio = "^1.6.0"
 opentelemetry-api = "^1.25.0"
 opentelemetry-exporter-prometheus = "^0.46b0"
+opentelemetry-instrumentation-fastapi = "^0.46b0"
 opentelemetry-sdk = "^1.25.0"
 orjson = "3.10.0"
 pandas = "2.2.2"
@@ -5019,13 +5018,13 @@ openai = ["openai (>=0.27.8)"]
 
 [[package]]
 name = "langsmith"
-version = "0.1.86"
+version = "0.1.88"
 description = "Client library to connect to the LangSmith LLM Tracing and Evaluation Platform."
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
-    {file = "langsmith-0.1.86-py3-none-any.whl", hash = "sha256:55ed80cc6e98f9761f9b3ec3c49e01f6745d13e40bef80d9f831acabfd9a8a1e"},
-    {file = "langsmith-0.1.86.tar.gz", hash = "sha256:2e66577817253327b99b727588c3173fbba217fe0ca07ac6b7cdd23fc4894104"},
+    {file = "langsmith-0.1.88-py3-none-any.whl", hash = "sha256:460ebb7de440afd150fcea8f54ca8779821f2228cd59e149e5845c9dbe06db16"},
+    {file = "langsmith-0.1.88.tar.gz", hash = "sha256:28a07dec19197f4808aa2628d5a3ccafcbe14cc137aef0e607bbd128e7907821"},
 ]
 
 [package.dependencies]
@@ -5038,13 +5037,13 @@ requests = ">=2,<3"
 
 [[package]]
 name = "langwatch"
-version = "0.1.8"
+version = "0.1.9"
 description = "Python SDK for LangWatch for monitoring your LLMs"
 optional = false
 python-versions = "<4.0,>=3.9"
 files = [
-    {file = "langwatch-0.1.8-py3-none-any.whl", hash = "sha256:e6e7ffe2f3cd61c477e8ff6de4ad3d1e06f63b0c8f02880d68293fc126ec2bf7"},
-    {file = "langwatch-0.1.8.tar.gz", hash = "sha256:2ccc3a741ef9bf493946264ab8fff5cb33845e51d4426136218d62b1a4cbd26d"},
+    {file = "langwatch-0.1.9-py3-none-any.whl", hash = "sha256:d082f70bb7f6aa67623281e3e624065932bc6e5729322637d8957cc63942a007"},
+    {file = "langwatch-0.1.9.tar.gz", hash = "sha256:3f044b668239b0e4cc244635f8ceeb7e10948c736f6b60bcda7c26852308b2f8"},
 ]
 
 [package.dependencies]
@@ -7963,13 +7962,13 @@ files = [
 
 [[package]]
 name = "pyright"
-version = "1.1.371"
+version = "1.1.372"
 description = "Command line wrapper for pyright"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "pyright-1.1.371-py3-none-any.whl", hash = "sha256:cce52e42ff73943243e7e5e24f2a59dee81b97d99f4e3cf97370b27e8a1858cd"},
-    {file = "pyright-1.1.371.tar.gz", hash = "sha256:777b508b92dda2db476214c400ce043aad8d8f3dd0e10d284c96e79f298308b5"},
+    {file = "pyright-1.1.372-py3-none-any.whl", hash = "sha256:25b15fb8967740f0949fd35b963777187f0a0404c0bd753cc966ec139f3eaa0b"},
+    {file = "pyright-1.1.372.tar.gz", hash = "sha256:a9f5e0daa955daaa17e3d1ef76d3623e75f8afd5e37b437d3ff84d5b38c15420"},
 ]
 
 [package.dependencies]
@@ -9800,13 +9799,13 @@ test = ["pylint", "pytest", "pytest-black", "pytest-cov", "pytest-pylint"]
 
 [[package]]
 name = "structlog"
-version = "24.2.0"
+version = "24.3.0"
 description = "Structured Logging for Python"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "structlog-24.2.0-py3-none-any.whl", hash = "sha256:983bd49f70725c5e1e3867096c0c09665918936b3db27341b41d294283d7a48a"},
-    {file = "structlog-24.2.0.tar.gz", hash = "sha256:0e3fe74924a6d8857d3f612739efb94c72a7417d7c7c008d12276bca3b5bf13b"},
+    {file = "structlog-24.3.0-py3-none-any.whl", hash = "sha256:ee4c2c7ef7971201f89f85893a4470ecd03bbd97bb54d75581225fdb894689a4"},
+    {file = "structlog-24.3.0.tar.gz", hash = "sha256:bcf6b890cf8b48c35fa127ea79c155c79b9e6a4a826f4ce9dfc3bebd72f07fa8"},
 ]
 
 [package.extras]
@@ -9817,13 +9816,13 @@ typing = ["mypy (>=1.4)", "rich", "twisted"]
 
 [[package]]
 name = "supabase"
-version = "2.5.2"
+version = "2.5.3"
 description = "Supabase client for Python."
 optional = false
 python-versions = "<4.0,>=3.8"
 files = [
-    {file = "supabase-2.5.2-py3-none-any.whl", hash = "sha256:321b2278f6f71bdb2ac13f3f36e565f4045a3c099d44aa4f8454ef12c743b445"},
-    {file = "supabase-2.5.2.tar.gz", hash = "sha256:f97e06d9b821f972e50cfe188e49b2a657cd817d48a5b4604304ebd61b7b87ef"},
+    {file = "supabase-2.5.3-py3-none-any.whl", hash = "sha256:b5e9711f5cc0f5c5f96c4e2b4f043641ccfb63125b3d33eae9c26c9d37bf6e29"},
+    {file = "supabase-2.5.3.tar.gz", hash = "sha256:71570226d0399d7f7203a08c44b734d6b873c7c3cc0dbe74fd9cdc8b4513c2bb"},
 ]
 
 [package.dependencies]
@@ -10401,13 +10400,13 @@ typing-extensions = ">=3.7.4.3"
 
 [[package]]
 name = "types-cachetools"
-version = "5.3.0.7"
+version = "5.4.0.20240717"
 description = "Typing stubs for cachetools"
 optional = false
-python-versions = ">=3.7"
+python-versions = ">=3.8"
 files = [
-    {file = "types-cachetools-5.3.0.7.tar.gz", hash = "sha256:27c982cdb9cf3fead8b0089ee6b895715ecc99dac90ec29e2cab56eb1aaf4199"},
-    {file = "types_cachetools-5.3.0.7-py3-none-any.whl", hash = "sha256:98c069dc7fc087b1b061703369c80751b0a0fc561f6fb072b554e5eee23773a0"},
+    {file = "types-cachetools-5.4.0.20240717.tar.gz", hash = "sha256:1eae90c48760bac44ab89108be938e8ce1d740910f2d4b68446dcdc82763f186"},
+    {file = "types_cachetools-5.4.0.20240717-py3-none-any.whl", hash = "sha256:67c84c26df988039be68344b162afd2dd7cd3741dc08e7d67aa1954782fd2d2a"},
 ]
 
 [[package]]
@@ -11737,4 +11736,4 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-content-hash = "afe38792a9e202ab55558389026b64beb95d1437b2fd4bccfbb300cbc7ad0677"
+content-hash = "53efe77ea0fe985d9319884d4e0ade4d1949f6348ecf75d6afa7297483dd314c"
