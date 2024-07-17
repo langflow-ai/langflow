@@ -140,8 +140,8 @@ export async function saveFlowToDatabase(newFlow: {
       endpoint_name: newFlow.endpoint_name,
     });
 
-    if (response.status !== 201) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    if (response?.status !== 201) {
+      throw new Error(`HTTP error! status: ${response?.status}`);
     }
     return response.data;
   } catch (error) {
@@ -254,8 +254,8 @@ export async function deleteFlowFromDatabase(flowId: string) {
 export async function getFlowFromDatabase(flowId: number) {
   try {
     const response = await api.get(`${BASE_URL_API}flows/${flowId}`);
-    if (response.status !== 200) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    if (response?.status !== 200) {
+      throw new Error(`HTTP error! status: ${response?.status}`);
     }
     return response.data;
   } catch (error) {

@@ -1,3 +1,7 @@
+import {
+  LANGFLOW_ACCESS_TOKEN,
+  LANGFLOW_AUTO_LOGIN_OPTION,
+} from "@/constants/constants";
 import axios, { AxiosError, AxiosInstance } from "axios";
 import { useContext, useEffect } from "react";
 import { Cookies } from "react-cookie";
@@ -37,7 +41,7 @@ function ApiInterceptor() {
             }
             const acceptedRequest = await tryToRenewAccessToken(error);
 
-            const accessToken = cookies.get("access_token_lf");
+            const accessToken = cookies.get(LANGFLOW_ACCESS_TOKEN);
 
             if (!accessToken && error?.config?.url?.includes("login")) {
               return Promise.reject(error);
@@ -90,7 +94,7 @@ function ApiInterceptor() {
           console.error("Duplicate Request");
         }
 
-        const accessToken = cookies.get("access_token_lf");
+        const accessToken = cookies.get(LANGFLOW_ACCESS_TOKEN);
         if (accessToken && !isAuthorizedURL(config?.url)) {
           config.headers["Authorization"] = `Bearer ${accessToken}`;
         }
@@ -129,7 +133,7 @@ function ApiInterceptor() {
       if (window.location.pathname.includes("/login")) return;
       const res = await renewAccessToken();
       if (res?.data?.access_token && res?.data?.refresh_token) {
-        login(res?.data?.access_token);
+        login(res?.data?.access_token, cookies.get(LANGFLOW_AUTO_LOGIN_OPTION));
       }
     } catch (error) {
       clearBuildVerticesState(error);

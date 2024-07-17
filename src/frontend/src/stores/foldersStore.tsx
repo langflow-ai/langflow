@@ -25,7 +25,7 @@ export const useFolderStore = create<FoldersStoreType>((set, get) => ({
               (folder) => folder.name === STARTER_FOLDER_NAME,
             );
 
-            set({ starterProjectId: starterProjects!.id ?? "" });
+            set({ starterProjectId: starterProjects?.id ?? "" });
             set({ folders: foldersWithoutStarterProjects });
 
             const myCollectionId = res?.find(
@@ -72,7 +72,7 @@ export const useFolderStore = create<FoldersStoreType>((set, get) => ({
             (folder) => folder.name === STARTER_FOLDER_NAME,
           );
 
-          set({ starterProjectId: starterProjects!.id ?? "" });
+          set({ starterProjectId: starterProjects?.id ?? "" });
           set({ folders: foldersWithoutStarterProjects });
 
           const myCollectionId = res?.find(
