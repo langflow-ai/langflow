@@ -4,7 +4,9 @@ import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
 
-export const useLoginUser: useMutationFunctionType<LoginType> = (options?) => {
+export const useLoginUser: useMutationFunctionType<undefined, LoginType> = (
+  options?,
+) => {
   const { mutate } = UseRequestProcessor();
 
   async function updateUser({ password, username }: LoginType): Promise<any> {
