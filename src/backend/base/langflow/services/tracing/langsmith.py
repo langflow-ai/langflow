@@ -117,6 +117,8 @@ class LangSmithTracer(BaseTracer):
         error: Exception | None = None,
         logs: list[Log | dict] = [],
     ):
+        if not self._ready:
+            return
         child = self._children[trace_name]
         raw_outputs = {}
         processed_outputs = {}
@@ -147,6 +149,8 @@ class LangSmithTracer(BaseTracer):
         error: Exception | None = None,
         metadata: dict[str, Any] | None = None,
     ):
+        if not self._ready:
+            return
         self._run_tree.add_metadata({"inputs": inputs})
         if metadata:
             self._run_tree.add_metadata(metadata)
