@@ -60,11 +60,11 @@ export default function TableNodeComponent({
     setAllRows();
   }
   const editable = columns.map((column) => {
-    const is_text = column.formatter && column.formatter === "text";
+    const isCustomEdit = column.formatter && (column.formatter === "text" || column.formatter === "json");
     return {
       field: column.name,
       onUpdate: updateComponente,
-      editableCell: is_text ? false : true,
+      editableCell: isCustomEdit ? false : true,
     };
   });
 

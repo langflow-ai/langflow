@@ -66,7 +66,7 @@ const TableComponent = forwardRef<
         (typeof props.editable === "boolean" && props.editable) ||
         (Array.isArray(props.editable) &&
           props.editable.every((field) => typeof field === "string") &&
-          (props.editable as Array<string>).includes(newCol.headerName ?? ""))
+          (props.editable as Array<string>).includes(newCol.field ?? ""))
       ) {
         newCol = {
           ...newCol,
