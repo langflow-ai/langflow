@@ -16,6 +16,8 @@ on:
         description: "Store API Key"
         required: false
         type: string
+  pull_request:
+    types: [auto_merge_enabled]
   pull_request_review:
     types: [submitted]
 
