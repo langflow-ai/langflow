@@ -17,13 +17,16 @@ if TYPE_CHECKING:
 
 class LangSmithTracer(BaseTracer):
     def __init__(self, trace_name: str, trace_type: str, project_name: str, trace_id: UUID):
-        from langsmith.run_trees import RunTree
-
-        self.trace_name = trace_name
-        self.trace_type = trace_type
-        self.project_name = project_name
-        self.trace_id = trace_id
         try:
+            self._ready = self.setup_langsmith()
+            if not self._ready:
+                return
+            from langsmith.run_trees import RunTree
+
+            self.trace_name = trace_name
+            self.trace_type = trace_type
+            self.project_name = project_name
+            self.trace_id = trace_id
             self._run_tree = RunTree(
                 project_name=self.project_name,
                 name=self.trace_name,
@@ -32,7 +35,6 @@ class LangSmithTracer(BaseTracer):
             )
             self._run_tree.add_event({"name": "Start", "time": datetime.now(timezone.utc).isoformat()})
             self._children: dict[str, RunTree] = {}
-            self._ready = self.setup_langsmith()
         except Exception as e:
             logger.debug(f"Error setting up LangSmith tracer: {e}")
             self._ready = False
@@ -42,6 +44,8 @@ class LangSmithTracer(BaseTracer):
         return self._ready
 
     def setup_langsmith(self):
+        if os.getenv("LANGCHAIN_API_KEY") is None:
+            return False
         try:
             from langsmith import Client
 
