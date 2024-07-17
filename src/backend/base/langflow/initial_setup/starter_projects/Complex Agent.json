@@ -1,9 +1,9 @@
 {
-    "id": "0b867ea0-68c8-4ece-bb4e-027576c87e76",
+    "id": "7d95abad-3d2b-49f1-aa32-4a889c7491d6",
     "data": {
         "nodes": [
             {
-                "id": "HierarchicalCrewComponent-LUwzo",
+                "id": "HierarchicalCrewComponent-HDgpk",
                 "type": "genericNode",
                 "position": {
                     "x": 2444.845721347115,
@@ -238,7 +238,7 @@
                         "beta": false,
                         "edited": false
                     },
-                    "id": "HierarchicalCrewComponent-LUwzo",
+                    "id": "HierarchicalCrewComponent-HDgpk",
                     "description": "Represents a group of agents, defining how they should collaborate and the tasks they should perform.",
                     "display_name": "Hierarchical Crew"
                 },
@@ -247,7 +247,7 @@
                 "height": 459
             },
             {
-                "id": "OpenAIModel-b2HyG",
+                "id": "OpenAIModel-EfqIB",
                 "type": "genericNode",
                 "position": {
                     "x": 993.5222179419411,
@@ -380,7 +380,7 @@
                                 "type": "str"
                             },
                             "openai_api_key": {
-                                "load_from_db": true,
+                                "load_from_db": false,
                                 "required": false,
                                 "placeholder": "",
                                 "show": true,
@@ -526,7 +526,7 @@
                         "beta": false,
                         "edited": false
                     },
-                    "id": "OpenAIModel-b2HyG"
+                    "id": "OpenAIModel-EfqIB"
                 },
                 "selected": false,
                 "width": 384,
@@ -538,7 +538,7 @@
                 "dragging": false
             },
             {
-                "id": "ChatOutput-3Za4w",
+                "id": "ChatOutput-pDSgr",
                 "type": "genericNode",
                 "position": {
                     "x": 2947.7605810360546,
@@ -717,7 +717,7 @@
                         "beta": false,
                         "edited": false
                     },
-                    "id": "ChatOutput-3Za4w",
+                    "id": "ChatOutput-pDSgr",
                     "description": "Display a chat message in the Playground.",
                     "display_name": "Chat Output"
                 },
@@ -726,7 +726,7 @@
                 "height": 309
             },
             {
-                "id": "HierarchicalTaskComponent-glOp1",
+                "id": "HierarchicalTaskComponent-fKyO4",
                 "type": "genericNode",
                 "position": {
                     "x": 1940.5188074417165,
@@ -849,7 +849,7 @@
                         "beta": false,
                         "edited": false
                     },
-                    "id": "HierarchicalTaskComponent-glOp1",
+                    "id": "HierarchicalTaskComponent-fKyO4",
                     "description": "Each task must have a description, an expected output and an agent responsible for execution.",
                     "display_name": "Hierarchical Task"
                 },
@@ -858,7 +858,7 @@
                 "height": 455
             },
             {
-                "id": "CrewAIAgentComponent-npbdI",
+                "id": "CrewAIAgentComponent-NF3xN",
                 "type": "genericNode",
                 "position": {
                     "x": 1397.4912377259789,
@@ -1102,17 +1102,17 @@
                         "beta": false,
                         "edited": false
                     },
-                    "id": "CrewAIAgentComponent-npbdI",
+                    "id": "CrewAIAgentComponent-NF3xN",
                     "description": "Represents an agent of CrewAI.",
                     "display_name": "CrewAI Agent"
                 },
-                "selected": true,
+                "selected": false,
                 "width": 384,
                 "height": 665,
                 "dragging": false
             },
             {
-                "id": "CrewAIAgentComponent-2qCiH",
+                "id": "CrewAIAgentComponent-KFuv4",
                 "type": "genericNode",
                 "position": {
                     "x": 1897.563645835175,
@@ -1356,7 +1356,7 @@
                         "beta": false,
                         "edited": false
                     },
-                    "id": "CrewAIAgentComponent-2qCiH",
+                    "id": "CrewAIAgentComponent-KFuv4",
                     "description": "Represents an agent of CrewAI.",
                     "display_name": "CrewAI Agent"
                 },
@@ -1370,7 +1370,7 @@
                 "dragging": false
             },
             {
-                "id": "OpenAIModel-RS29a",
+                "id": "OpenAIModel-YeNN0",
                 "type": "genericNode",
                 "position": {
                     "x": 1689.7403176652529,
@@ -1503,7 +1503,7 @@
                                 "type": "str"
                             },
                             "openai_api_key": {
-                                "load_from_db": true,
+                                "load_from_db": false,
                                 "required": false,
                                 "placeholder": "",
                                 "show": true,
@@ -1649,7 +1649,7 @@
                         "beta": false,
                         "edited": false
                     },
-                    "id": "OpenAIModel-RS29a"
+                    "id": "OpenAIModel-YeNN0"
                 },
                 "selected": false,
                 "width": 384,
@@ -1661,7 +1661,7 @@
                 "dragging": false
             },
             {
-                "id": "Prompt-I95LI",
+                "id": "Prompt-zQCu9",
                 "type": "genericNode",
                 "position": {
                     "x": 1314.943965489173,
@@ -1772,7 +1772,7 @@
                         "error": null,
                         "edited": false
                     },
-                    "id": "Prompt-I95LI",
+                    "id": "Prompt-zQCu9",
                     "description": "Create a prompt template with dynamic variables.",
                     "display_name": "Prompt"
                 },
@@ -1782,7 +1782,7 @@
                 "dragging": false
             },
             {
-                "id": "ChatInput-T9PeO",
+                "id": "ChatInput-5gcMe",
                 "type": "genericNode",
                 "position": {
                     "x": -812.219234501281,
@@ -1983,7 +1983,7 @@
                         "beta": false,
                         "edited": false
                     },
-                    "id": "ChatInput-T9PeO"
+                    "id": "ChatInput-5gcMe"
                 },
                 "selected": false,
                 "width": 384,
@@ -1995,136 +1995,7 @@
                 "dragging": false
             },
             {
-                "id": "SearchAPITool-phidD",
-                "type": "genericNode",
-                "position": {
-                    "x": 336.39711859478393,
-                    "y": 491.5610524082325
-                },
-                "data": {
-                    "type": "SearchAPITool",
-                    "node": {
-                        "template": {
-                            "_type": "CustomComponent",
-                            "api_key": {
-                                "type": "str",
-                                "required": true,
-                                "placeholder": "",
-                                "list": false,
-                                "show": true,
-                                "multiline": false,
-                                "fileTypes": [],
-                                "file_path": "",
-                                "password": true,
-                                "name": "api_key",
-                                "display_name": "API Key",
-                                "advanced": false,
-                                "dynamic": false,
-                                "info": "The API key to use SearchApi.",
-                                "load_from_db": false,
-                                "title_case": false,
-                                "input_types": [
-                                    "Text"
-                                ],
-                                "value": ""
-                            },
-                            "code": {
-                                "type": "code",
-                                "required": true,
-                                "placeholder": "",
-                                "list": false,
-                                "show": true,
-                                "multiline": true,
-                                "value": "from langchain_community.tools.searchapi import SearchAPIRun\nfrom langchain_community.utilities.searchapi import SearchApiAPIWrapper\n\nfrom langflow.custom import CustomComponent\nfrom langflow.field_typing import Tool\n\n\nclass SearchApiToolComponent(CustomComponent):\n    display_name: str = \"SearchApi Tool\"\n    description: str = \"Real-time search engine results API.\"\n    name = \"SearchAPITool\"\n    documentation: str = \"https://www.searchapi.io/docs/google\"\n    field_config = {\n        \"engine\": {\n            \"display_name\": \"Engine\",\n            \"field_type\": \"str\",\n            \"info\": \"The search engine to use.\",\n        },\n        \"api_key\": {\n            \"display_name\": \"API Key\",\n            \"field_type\": \"str\",\n            \"required\": True,\n            \"password\": True,\n            \"info\": \"The API key to use SearchApi.\",\n        },\n    }\n\n    def build(\n        self,\n        engine: str,\n        api_key: str,\n    ) -> Tool:\n        search_api_wrapper = SearchApiAPIWrapper(engine=engine, searchapi_api_key=api_key)\n\n        tool = SearchAPIRun(api_wrapper=search_api_wrapper)\n\n        self.status = tool\n        return tool  # type: ignore\n",
-                                "fileTypes": [],
-                                "file_path": "",
-                                "password": false,
-                                "name": "code",
-                                "advanced": true,
-                                "dynamic": true,
-                                "info": "",
-                                "load_from_db": false,
-                                "title_case": false
-                            },
-                            "engine": {
-                                "type": "str",
-                                "required": true,
-                                "placeholder": "",
-                                "list": false,
-                                "show": true,
-                                "multiline": false,
-                                "fileTypes": [],
-                                "file_path": "",
-                                "password": false,
-                                "name": "engine",
-                                "display_name": "Engine",
-                                "advanced": false,
-                                "dynamic": false,
-                                "info": "The search engine to use.",
-                                "load_from_db": false,
-                                "title_case": false,
-                                "input_types": [
-                                    "Text"
-                                ],
-                                "value": "google"
-                            }
-                        },
-                        "description": "Real-time search engine results API.",
-                        "base_classes": [
-                            "BaseTool",
-                            "Generic",
-                            "object",
-                            "Runnable",
-                            "RunnableSerializable",
-                            "Serializable",
-                            "Tool"
-                        ],
-                        "display_name": "SearchApi Tool",
-                        "documentation": "https://www.searchapi.io/docs/google",
-                        "custom_fields": {
-                            "engine": null,
-                            "api_key": null
-                        },
-                        "output_types": [
-                            "Tool"
-                        ],
-                        "pinned": false,
-                        "conditional_paths": [],
-                        "frozen": false,
-                        "outputs": [
-                            {
-                                "types": [
-                                    "Tool"
-                                ],
-                                "selected": "Tool",
-                                "name": "tool",
-                                "hidden": null,
-                                "display_name": "Tool",
-                                "method": null,
-                                "value": "__UNDEFINED__",
-                                "cache": true
-                            }
-                        ],
-                        "field_order": [
-                            "engine",
-                            "api_key"
-                        ],
-                        "beta": false,
-                        "edited": false
-                    },
-                    "id": "SearchAPITool-phidD"
-                },
-                "selected": false,
-                "width": 384,
-                "height": 403,
-                "dragging": false,
-                "positionAbsolute": {
-                    "x": 336.39711859478393,
-                    "y": 491.5610524082325
-                }
-            },
-            {
-                "id": "YFinanceTool-LGip4",
+                "id": "YFinanceTool-jEZE4",
                 "type": "genericNode",
                 "position": {
                     "x": 339.85802955438953,
@@ -2142,7 +2013,7 @@
                                 "list": false,
                                 "show": true,
                                 "multiline": true,
-                                "value": "from langchain_community.tools.yahoo_finance_news import YahooFinanceNewsTool\n\nfrom langflow.custom import Component\nfrom langflow.field_typing import Tool\nfrom langflow.io import Output\n\n\nclass YfinanceToolComponent(Component):\n    display_name = \"Yahoo Finance News Tool\"\n    description = \"Tool for interacting with Yahoo Finance News.\"\n    name = \"YFinanceTool\"\n\n    outputs = [\n        Output(display_name=\"Tool\", name=\"tool\", method=\"build_tool\"),\n    ]\n\n    def build_tool(self) -> Tool:\n        return YahooFinanceNewsTool()\n",
+                                "value": "from typing import cast\n\nfrom langchain_community.tools.yahoo_finance_news import YahooFinanceNewsTool\n\nfrom langflow.custom import Component\nfrom langflow.field_typing import Tool\nfrom langflow.io import Output\n\n\nclass YfinanceToolComponent(Component):\n    display_name = \"Yahoo Finance News Tool\"\n    description = \"Tool for interacting with Yahoo Finance News.\"\n    name = \"YFinanceTool\"\n\n    outputs = [\n        Output(display_name=\"Tool\", name=\"tool\", method=\"build_tool\"),\n    ]\n\n    def build_tool(self) -> Tool:\n        return cast(Tool, YahooFinanceNewsTool())\n",
                                 "fileTypes": [],
                                 "file_path": "",
                                 "password": false,
@@ -2182,7 +2053,9 @@
                         "beta": false,
                         "edited": false
                     },
-                    "id": "YFinanceTool-LGip4"
+                    "id": "YFinanceTool-jEZE4",
+                    "description": "Tool for interacting with Yahoo Finance News.",
+                    "display_name": "Yahoo Finance News Tool"
                 },
                 "selected": false,
                 "width": 384,
@@ -2194,7 +2067,7 @@
                 "dragging": false
             },
             {
-                "id": "OpenAIModel-2aTcd",
+                "id": "OpenAIModel-5MBnT",
                 "type": "genericNode",
                 "position": {
                     "x": -1421.3072930401338,
@@ -2327,7 +2200,7 @@
                                 "type": "str"
                             },
                             "openai_api_key": {
-                                "load_from_db": true,
+                                "load_from_db": false,
                                 "required": false,
                                 "placeholder": "",
                                 "show": true,
@@ -2473,7 +2346,7 @@
                         "beta": false,
                         "edited": false
                     },
-                    "id": "OpenAIModel-2aTcd"
+                    "id": "OpenAIModel-5MBnT"
                 },
                 "selected": false,
                 "width": 384,
@@ -2485,7 +2358,7 @@
                 "dragging": false
             },
             {
-                "id": "Prompt-CMDLd",
+                "id": "Prompt-Q69ou",
                 "type": "genericNode",
                 "position": {
                     "x": -2011.857599027479,
@@ -2596,7 +2469,7 @@
                         "error": null,
                         "edited": false
                     },
-                    "id": "Prompt-CMDLd",
+                    "id": "Prompt-Q69ou",
                     "description": "Create a prompt template with dynamic variables.",
                     "display_name": "Prompt"
                 },
@@ -2610,7 +2483,7 @@
                 "dragging": false
             },
             {
-                "id": "OpenAIModel-TrJeF",
+                "id": "OpenAIModel-bAkSV",
                 "type": "genericNode",
                 "position": {
                     "x": -652.5526340446298,
@@ -2743,7 +2616,7 @@
                                 "type": "str"
                             },
                             "openai_api_key": {
-                                "load_from_db": true,
+                                "load_from_db": false,
                                 "required": false,
                                 "placeholder": "",
                                 "show": true,
@@ -2889,7 +2762,7 @@
                         "beta": false,
                         "edited": false
                     },
-                    "id": "OpenAIModel-TrJeF"
+                    "id": "OpenAIModel-bAkSV"
                 },
                 "selected": false,
                 "width": 384,
@@ -2901,7 +2774,7 @@
                 "dragging": false
             },
             {
-                "id": "Prompt-DJ4Ij",
+                "id": "Prompt-dtbdU",
                 "type": "genericNode",
                 "position": {
                     "x": -1127.1897676702288,
@@ -3037,7 +2910,7 @@
                         "error": null,
                         "edited": false
                     },
-                    "id": "Prompt-DJ4Ij",
+                    "id": "Prompt-dtbdU",
                     "description": "Create a prompt template with dynamic variables.",
                     "display_name": "Prompt"
                 },
@@ -3051,7 +2924,7 @@
                 "dragging": false
             },
             {
-                "id": "OpenAIModel-GqAaO",
+                "id": "OpenAIModel-Qxika",
                 "type": "genericNode",
                 "position": {
                     "x": -173.231944282948,
@@ -3184,7 +3057,7 @@
                                 "type": "str"
                             },
                             "openai_api_key": {
-                                "load_from_db": true,
+                                "load_from_db": false,
                                 "required": false,
                                 "placeholder": "",
                                 "show": true,
@@ -3330,7 +3203,7 @@
                         "beta": false,
                         "edited": false
                     },
-                    "id": "OpenAIModel-GqAaO"
+                    "id": "OpenAIModel-Qxika"
                 },
                 "selected": false,
                 "width": 384,
@@ -3342,7 +3215,7 @@
                 "dragging": false
             },
             {
-                "id": "Prompt-n2cBx",
+                "id": "Prompt-Lr8e3",
                 "type": "genericNode",
                 "position": {
                     "x": -559.9999554636487,
@@ -3503,7 +3376,7 @@
                         "error": null,
                         "edited": false
                     },
-                    "id": "Prompt-n2cBx",
+                    "id": "Prompt-Lr8e3",
                     "description": "Create a prompt template with dynamic variables.",
                     "display_name": "Prompt"
                 },
@@ -3515,19 +3388,180 @@
                     "y": 2893.2894056013133
                 },
                 "dragging": false
+            },
+            {
+                "id": "SearchAPI-Mx8M6",
+                "type": "genericNode",
+                "position": {
+                    "x": 333.3937684700711,
+                    "y": 310.93183831810336
+                },
+                "data": {
+                    "type": "SearchAPI",
+                    "node": {
+                        "template": {
+                            "_type": "Component",
+                            "api_key": {
+                                "load_from_db": true,
+                                "required": true,
+                                "placeholder": "",
+                                "show": true,
+                                "value": "",
+                                "name": "api_key",
+                                "display_name": "SearchAPI API Key",
+                                "advanced": false,
+                                "input_types": [],
+                                "dynamic": false,
+                                "info": "",
+                                "title_case": false,
+                                "password": true,
+                                "type": "str"
+                            },
+                            "code": {
+                                "type": "code",
+                                "required": true,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "multiline": true,
+                                "value": "from typing import Union\n\nfrom langchain_community.utilities.searchapi import SearchApiAPIWrapper\n\nfrom langflow.base.langchain_utilities.model import LCToolComponent\nfrom langchain_core.tools import BaseTool, Tool\nfrom langflow.inputs import SecretStrInput, MultilineInput, DictInput, MessageTextInput\nfrom langflow.schema import Data\nfrom langflow.field_typing import Tool\n\n\nclass SearchAPIComponent(LCToolComponent):\n    display_name: str = \"Search API\"\n    description: str = \"Call the searchapi.io API\"\n    name = \"SearchAPI\"\n    documentation: str = \"https://www.searchapi.io/docs/google\"\n\n    inputs = [\n        MessageTextInput(name=\"engine\", display_name=\"Engine\", value=\"google\"),\n        SecretStrInput(name=\"api_key\", display_name=\"SearchAPI API Key\", required=True),\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Input\",\n        ),\n        DictInput(name=\"search_params\", display_name=\"Search parameters\", advanced=True, is_list=True),\n    ]\n\n    def run_model(self) -> Union[Data, list[Data]]:\n        wrapper = self._build_wrapper()\n        results = wrapper.results(query=self.input_value, **(self.search_params or {}))\n        list_results = results.get(\"organic_results\", [])\n        data = [Data(data=result, text=result[\"snippet\"]) for result in list_results]\n        self.status = data\n        return data\n\n    def build_tool(self) -> Tool:\n        wrapper = self._build_wrapper()\n        return Tool(\n            name=\"search_api\",\n            description=\"Search for recent results.\",\n            func=lambda x: wrapper.run(query=x, **(self.search_params or {})),\n        )\n\n    def _build_wrapper(self):\n        return SearchApiAPIWrapper(engine=self.engine, searchapi_api_key=self.api_key)\n",
+                                "fileTypes": [],
+                                "file_path": "",
+                                "password": false,
+                                "name": "code",
+                                "advanced": true,
+                                "dynamic": true,
+                                "info": "",
+                                "load_from_db": false,
+                                "title_case": false
+                            },
+                            "engine": {
+                                "trace_as_input": true,
+                                "trace_as_metadata": true,
+                                "load_from_db": false,
+                                "list": false,
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "value": "google",
+                                "name": "engine",
+                                "display_name": "Engine",
+                                "advanced": false,
+                                "input_types": [
+                                    "Message"
+                                ],
+                                "dynamic": false,
+                                "info": "",
+                                "title_case": false,
+                                "type": "str"
+                            },
+                            "input_value": {
+                                "trace_as_input": true,
+                                "multiline": true,
+                                "trace_as_metadata": true,
+                                "load_from_db": false,
+                                "list": false,
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "value": "",
+                                "name": "input_value",
+                                "display_name": "Input",
+                                "advanced": false,
+                                "input_types": [
+                                    "Message"
+                                ],
+                                "dynamic": false,
+                                "info": "",
+                                "title_case": false,
+                                "type": "str"
+                            },
+                            "search_params": {
+                                "trace_as_input": true,
+                                "list": true,
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "value": {},
+                                "name": "search_params",
+                                "display_name": "Search parameters",
+                                "advanced": true,
+                                "dynamic": false,
+                                "info": "",
+                                "title_case": false,
+                                "type": "dict"
+                            }
+                        },
+                        "description": "Call the searchapi.io API",
+                        "base_classes": [
+                            "Data",
+                            "Tool"
+                        ],
+                        "display_name": "Search API",
+                        "documentation": "https://www.searchapi.io/docs/google",
+                        "custom_fields": {},
+                        "output_types": [],
+                        "pinned": false,
+                        "conditional_paths": [],
+                        "frozen": false,
+                        "outputs": [
+                            {
+                                "types": [
+                                    "Data"
+                                ],
+                                "selected": "Data",
+                                "name": "api_run_model",
+                                "display_name": "Data",
+                                "method": "run_model",
+                                "value": "__UNDEFINED__",
+                                "cache": true
+                            },
+                            {
+                                "types": [
+                                    "Tool"
+                                ],
+                                "selected": "Tool",
+                                "name": "api_build_tool",
+                                "display_name": "Tool",
+                                "method": "build_tool",
+                                "value": "__UNDEFINED__",
+                                "cache": true
+                            }
+                        ],
+                        "field_order": [
+                            "engine",
+                            "api_key",
+                            "input_value",
+                            "search_params"
+                        ],
+                        "beta": false,
+                        "edited": false
+                    },
+                    "id": "SearchAPI-Mx8M6",
+                    "description": "Call the searchapi.io API",
+                    "display_name": "Search API"
+                },
+                "selected": false,
+                "width": 384,
+                "height": 545,
+                "dragging": false,
+                "positionAbsolute": {
+                    "x": 333.3937684700711,
+                    "y": 310.93183831810336
+                }
             }
         ],
         "edges": [
             {
-                "source": "HierarchicalCrewComponent-LUwzo",
-                "target": "ChatOutput-3Za4w",
-                "sourceHandle": "{œdataTypeœ:œHierarchicalCrewComponentœ,œidœ:œHierarchicalCrewComponent-LUwzoœ,œnameœ:œoutputœ,œoutput_typesœ:[œMessageœ]}",
-                "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-3Za4wœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-                "id": "reactflow__edge-HierarchicalCrewComponent-LUwzo{œdataTypeœ:œHierarchicalCrewComponentœ,œidœ:œHierarchicalCrewComponent-LUwzoœ,œnameœ:œoutputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-3Za4w{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-3Za4wœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+                "source": "HierarchicalCrewComponent-HDgpk",
+                "target": "ChatOutput-pDSgr",
+                "sourceHandle": "{œdataTypeœ:œHierarchicalCrewComponentœ,œidœ:œHierarchicalCrewComponent-HDgpkœ,œnameœ:œoutputœ,œoutput_typesœ:[œMessageœ]}",
+                "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-pDSgrœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+                "id": "reactflow__edge-HierarchicalCrewComponent-HDgpk{œdataTypeœ:œHierarchicalCrewComponentœ,œidœ:œHierarchicalCrewComponent-HDgpkœ,œnameœ:œoutputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-pDSgr{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-pDSgrœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
                 "data": {
                     "targetHandle": {
                         "fieldName": "input_value",
-                        "id": "ChatOutput-3Za4w",
+                        "id": "ChatOutput-pDSgr",
                         "inputTypes": [
                             "Message"
                         ],
@@ -3535,7 +3569,7 @@
                     },
                     "sourceHandle": {
                         "dataType": "HierarchicalCrewComponent",
-                        "id": "HierarchicalCrewComponent-LUwzo",
+                        "id": "HierarchicalCrewComponent-HDgpk",
                         "name": "output",
                         "output_types": [
                             "Message"
@@ -3546,15 +3580,15 @@
                 "className": ""
             },
             {
-                "source": "HierarchicalTaskComponent-glOp1",
-                "target": "HierarchicalCrewComponent-LUwzo",
-                "sourceHandle": "{œdataTypeœ:œHierarchicalTaskComponentœ,œidœ:œHierarchicalTaskComponent-glOp1œ,œnameœ:œtask_outputœ,œoutput_typesœ:[œHierarchicalTaskœ]}",
-                "targetHandle": "{œfieldNameœ:œtasksœ,œidœ:œHierarchicalCrewComponent-LUwzoœ,œinputTypesœ:[œHierarchicalTaskœ],œtypeœ:œotherœ}",
-                "id": "reactflow__edge-HierarchicalTaskComponent-glOp1{œdataTypeœ:œHierarchicalTaskComponentœ,œidœ:œHierarchicalTaskComponent-glOp1œ,œnameœ:œtask_outputœ,œoutput_typesœ:[œHierarchicalTaskœ]}-HierarchicalCrewComponent-LUwzo{œfieldNameœ:œtasksœ,œidœ:œHierarchicalCrewComponent-LUwzoœ,œinputTypesœ:[œHierarchicalTaskœ],œtypeœ:œotherœ}",
+                "source": "HierarchicalTaskComponent-fKyO4",
+                "target": "HierarchicalCrewComponent-HDgpk",
+                "sourceHandle": "{œdataTypeœ:œHierarchicalTaskComponentœ,œidœ:œHierarchicalTaskComponent-fKyO4œ,œnameœ:œtask_outputœ,œoutput_typesœ:[œHierarchicalTaskœ]}",
+                "targetHandle": "{œfieldNameœ:œtasksœ,œidœ:œHierarchicalCrewComponent-HDgpkœ,œinputTypesœ:[œHierarchicalTaskœ],œtypeœ:œotherœ}",
+                "id": "reactflow__edge-HierarchicalTaskComponent-fKyO4{œdataTypeœ:œHierarchicalTaskComponentœ,œidœ:œHierarchicalTaskComponent-fKyO4œ,œnameœ:œtask_outputœ,œoutput_typesœ:[œHierarchicalTaskœ]}-HierarchicalCrewComponent-HDgpk{œfieldNameœ:œtasksœ,œidœ:œHierarchicalCrewComponent-HDgpkœ,œinputTypesœ:[œHierarchicalTaskœ],œtypeœ:œotherœ}",
                 "data": {
                     "targetHandle": {
                         "fieldName": "tasks",
-                        "id": "HierarchicalCrewComponent-LUwzo",
+                        "id": "HierarchicalCrewComponent-HDgpk",
                         "inputTypes": [
                             "HierarchicalTask"
                         ],
@@ -3562,7 +3596,7 @@
                     },
                     "sourceHandle": {
                         "dataType": "HierarchicalTaskComponent",
-                        "id": "HierarchicalTaskComponent-glOp1",
+                        "id": "HierarchicalTaskComponent-fKyO4",
                         "name": "task_output",
                         "output_types": [
                             "HierarchicalTask"
@@ -3573,15 +3607,15 @@
                 "className": ""
             },
             {
-                "source": "CrewAIAgentComponent-npbdI",
-                "target": "HierarchicalCrewComponent-LUwzo",
-                "sourceHandle": "{œdataTypeœ:œCrewAIAgentComponentœ,œidœ:œCrewAIAgentComponent-npbdIœ,œnameœ:œoutputœ,œoutput_typesœ:[œAgentœ]}",
-                "targetHandle": "{œfieldNameœ:œagentsœ,œidœ:œHierarchicalCrewComponent-LUwzoœ,œinputTypesœ:[œAgentœ],œtypeœ:œotherœ}",
-                "id": "reactflow__edge-CrewAIAgentComponent-npbdI{œdataTypeœ:œCrewAIAgentComponentœ,œidœ:œCrewAIAgentComponent-npbdIœ,œnameœ:œoutputœ,œoutput_typesœ:[œAgentœ]}-HierarchicalCrewComponent-LUwzo{œfieldNameœ:œagentsœ,œidœ:œHierarchicalCrewComponent-LUwzoœ,œinputTypesœ:[œAgentœ],œtypeœ:œotherœ}",
+                "source": "CrewAIAgentComponent-NF3xN",
+                "target": "HierarchicalCrewComponent-HDgpk",
+                "sourceHandle": "{œdataTypeœ:œCrewAIAgentComponentœ,œidœ:œCrewAIAgentComponent-NF3xNœ,œnameœ:œoutputœ,œoutput_typesœ:[œAgentœ]}",
+                "targetHandle": "{œfieldNameœ:œagentsœ,œidœ:œHierarchicalCrewComponent-HDgpkœ,œinputTypesœ:[œAgentœ],œtypeœ:œotherœ}",
+                "id": "reactflow__edge-CrewAIAgentComponent-NF3xN{œdataTypeœ:œCrewAIAgentComponentœ,œidœ:œCrewAIAgentComponent-NF3xNœ,œnameœ:œoutputœ,œoutput_typesœ:[œAgentœ]}-HierarchicalCrewComponent-HDgpk{œfieldNameœ:œagentsœ,œidœ:œHierarchicalCrewComponent-HDgpkœ,œinputTypesœ:[œAgentœ],œtypeœ:œotherœ}",
                 "data": {
                     "targetHandle": {
                         "fieldName": "agents",
-                        "id": "HierarchicalCrewComponent-LUwzo",
+                        "id": "HierarchicalCrewComponent-HDgpk",
                         "inputTypes": [
                             "Agent"
                         ],
@@ -3589,7 +3623,7 @@
                     },
                     "sourceHandle": {
                         "dataType": "CrewAIAgentComponent",
-                        "id": "CrewAIAgentComponent-npbdI",
+                        "id": "CrewAIAgentComponent-NF3xN",
                         "name": "output",
                         "output_types": [
                             "Agent"
@@ -3600,15 +3634,15 @@
                 "className": ""
             },
             {
-                "source": "OpenAIModel-b2HyG",
-                "target": "CrewAIAgentComponent-npbdI",
-                "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-b2HyGœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}",
-                "targetHandle": "{œfieldNameœ:œllmœ,œidœ:œCrewAIAgentComponent-npbdIœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
-                "id": "reactflow__edge-OpenAIModel-b2HyG{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-b2HyGœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-CrewAIAgentComponent-npbdI{œfieldNameœ:œllmœ,œidœ:œCrewAIAgentComponent-npbdIœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
+                "source": "OpenAIModel-EfqIB",
+                "target": "CrewAIAgentComponent-NF3xN",
+                "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-EfqIBœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}",
+                "targetHandle": "{œfieldNameœ:œllmœ,œidœ:œCrewAIAgentComponent-NF3xNœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
+                "id": "reactflow__edge-OpenAIModel-EfqIB{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-EfqIBœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-CrewAIAgentComponent-NF3xN{œfieldNameœ:œllmœ,œidœ:œCrewAIAgentComponent-NF3xNœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
                 "data": {
                     "targetHandle": {
                         "fieldName": "llm",
-                        "id": "CrewAIAgentComponent-npbdI",
+                        "id": "CrewAIAgentComponent-NF3xN",
                         "inputTypes": [
                             "LanguageModel"
                         ],
@@ -3616,7 +3650,7 @@
                     },
                     "sourceHandle": {
                         "dataType": "OpenAIModel",
-                        "id": "OpenAIModel-b2HyG",
+                        "id": "OpenAIModel-EfqIB",
                         "name": "model_output",
                         "output_types": [
                             "LanguageModel"
@@ -3627,15 +3661,15 @@
                 "className": ""
             },
             {
-                "source": "CrewAIAgentComponent-2qCiH",
-                "target": "HierarchicalCrewComponent-LUwzo",
-                "sourceHandle": "{œdataTypeœ:œCrewAIAgentComponentœ,œidœ:œCrewAIAgentComponent-2qCiHœ,œnameœ:œoutputœ,œoutput_typesœ:[œAgentœ]}",
-                "targetHandle": "{œfieldNameœ:œmanager_agentœ,œidœ:œHierarchicalCrewComponent-LUwzoœ,œinputTypesœ:[œAgentœ],œtypeœ:œotherœ}",
-                "id": "reactflow__edge-CrewAIAgentComponent-2qCiH{œdataTypeœ:œCrewAIAgentComponentœ,œidœ:œCrewAIAgentComponent-2qCiHœ,œnameœ:œoutputœ,œoutput_typesœ:[œAgentœ]}-HierarchicalCrewComponent-LUwzo{œfieldNameœ:œmanager_agentœ,œidœ:œHierarchicalCrewComponent-LUwzoœ,œinputTypesœ:[œAgentœ],œtypeœ:œotherœ}",
+                "source": "CrewAIAgentComponent-KFuv4",
+                "target": "HierarchicalCrewComponent-HDgpk",
+                "sourceHandle": "{œdataTypeœ:œCrewAIAgentComponentœ,œidœ:œCrewAIAgentComponent-KFuv4œ,œnameœ:œoutputœ,œoutput_typesœ:[œAgentœ]}",
+                "targetHandle": "{œfieldNameœ:œmanager_agentœ,œidœ:œHierarchicalCrewComponent-HDgpkœ,œinputTypesœ:[œAgentœ],œtypeœ:œotherœ}",
+                "id": "reactflow__edge-CrewAIAgentComponent-KFuv4{œdataTypeœ:œCrewAIAgentComponentœ,œidœ:œCrewAIAgentComponent-KFuv4œ,œnameœ:œoutputœ,œoutput_typesœ:[œAgentœ]}-HierarchicalCrewComponent-HDgpk{œfieldNameœ:œmanager_agentœ,œidœ:œHierarchicalCrewComponent-HDgpkœ,œinputTypesœ:[œAgentœ],œtypeœ:œotherœ}",
                 "data": {
                     "targetHandle": {
                         "fieldName": "manager_agent",
-                        "id": "HierarchicalCrewComponent-LUwzo",
+                        "id": "HierarchicalCrewComponent-HDgpk",
                         "inputTypes": [
                             "Agent"
                         ],
@@ -3643,7 +3677,7 @@
                     },
                     "sourceHandle": {
                         "dataType": "CrewAIAgentComponent",
-                        "id": "CrewAIAgentComponent-2qCiH",
+                        "id": "CrewAIAgentComponent-KFuv4",
                         "name": "output",
                         "output_types": [
                             "Agent"
@@ -3654,15 +3688,15 @@
                 "className": ""
             },
             {
-                "source": "OpenAIModel-RS29a",
-                "target": "CrewAIAgentComponent-2qCiH",
-                "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-RS29aœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}",
-                "targetHandle": "{œfieldNameœ:œllmœ,œidœ:œCrewAIAgentComponent-2qCiHœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
-                "id": "reactflow__edge-OpenAIModel-RS29a{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-RS29aœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-CrewAIAgentComponent-2qCiH{œfieldNameœ:œllmœ,œidœ:œCrewAIAgentComponent-2qCiHœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
+                "source": "OpenAIModel-YeNN0",
+                "target": "CrewAIAgentComponent-KFuv4",
+                "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-YeNN0œ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}",
+                "targetHandle": "{œfieldNameœ:œllmœ,œidœ:œCrewAIAgentComponent-KFuv4œ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
+                "id": "reactflow__edge-OpenAIModel-YeNN0{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-YeNN0œ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-CrewAIAgentComponent-KFuv4{œfieldNameœ:œllmœ,œidœ:œCrewAIAgentComponent-KFuv4œ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
                 "data": {
                     "targetHandle": {
                         "fieldName": "llm",
-                        "id": "CrewAIAgentComponent-2qCiH",
+                        "id": "CrewAIAgentComponent-KFuv4",
                         "inputTypes": [
                             "LanguageModel"
                         ],
@@ -3670,7 +3704,7 @@
                     },
                     "sourceHandle": {
                         "dataType": "OpenAIModel",
-                        "id": "OpenAIModel-RS29a",
+                        "id": "OpenAIModel-YeNN0",
                         "name": "model_output",
                         "output_types": [
                             "LanguageModel"
@@ -3681,15 +3715,15 @@
                 "className": ""
             },
             {
-                "source": "Prompt-I95LI",
-                "target": "HierarchicalTaskComponent-glOp1",
-                "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-I95LIœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
-                "targetHandle": "{œfieldNameœ:œtask_descriptionœ,œidœ:œHierarchicalTaskComponent-glOp1œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-                "id": "reactflow__edge-Prompt-I95LI{œdataTypeœ:œPromptœ,œidœ:œPrompt-I95LIœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-HierarchicalTaskComponent-glOp1{œfieldNameœ:œtask_descriptionœ,œidœ:œHierarchicalTaskComponent-glOp1œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+                "source": "Prompt-zQCu9",
+                "target": "HierarchicalTaskComponent-fKyO4",
+                "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-zQCu9œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+                "targetHandle": "{œfieldNameœ:œtask_descriptionœ,œidœ:œHierarchicalTaskComponent-fKyO4œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+                "id": "reactflow__edge-Prompt-zQCu9{œdataTypeœ:œPromptœ,œidœ:œPrompt-zQCu9œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-HierarchicalTaskComponent-fKyO4{œfieldNameœ:œtask_descriptionœ,œidœ:œHierarchicalTaskComponent-fKyO4œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
                 "data": {
                     "targetHandle": {
                         "fieldName": "task_description",
-                        "id": "HierarchicalTaskComponent-glOp1",
+                        "id": "HierarchicalTaskComponent-fKyO4",
                         "inputTypes": [
                             "Message"
                         ],
@@ -3697,7 +3731,7 @@
                     },
                     "sourceHandle": {
                         "dataType": "Prompt",
-                        "id": "Prompt-I95LI",
+                        "id": "Prompt-zQCu9",
                         "name": "prompt",
                         "output_types": [
                             "Message"
@@ -3708,15 +3742,15 @@
                 "className": ""
             },
             {
-                "source": "ChatInput-T9PeO",
-                "target": "Prompt-I95LI",
-                "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-T9PeOœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
-                "targetHandle": "{œfieldNameœ:œqueryœ,œidœ:œPrompt-I95LIœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-                "id": "reactflow__edge-ChatInput-T9PeO{œdataTypeœ:œChatInputœ,œidœ:œChatInput-T9PeOœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-I95LI{œfieldNameœ:œqueryœ,œidœ:œPrompt-I95LIœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+                "source": "ChatInput-5gcMe",
+                "target": "Prompt-zQCu9",
+                "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-5gcMeœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+                "targetHandle": "{œfieldNameœ:œqueryœ,œidœ:œPrompt-zQCu9œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+                "id": "reactflow__edge-ChatInput-5gcMe{œdataTypeœ:œChatInputœ,œidœ:œChatInput-5gcMeœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-zQCu9{œfieldNameœ:œqueryœ,œidœ:œPrompt-zQCu9œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
                 "data": {
                     "targetHandle": {
                         "fieldName": "query",
-                        "id": "Prompt-I95LI",
+                        "id": "Prompt-zQCu9",
                         "inputTypes": [
                             "Message",
                             "Text"
@@ -3725,7 +3759,7 @@
                     },
                     "sourceHandle": {
                         "dataType": "ChatInput",
-                        "id": "ChatInput-T9PeO",
+                        "id": "ChatInput-5gcMe",
                         "name": "message",
                         "output_types": [
                             "Message"
@@ -3736,41 +3770,14 @@
                 "className": ""
             },
             {
-                "source": "SearchAPITool-phidD",
-                "target": "CrewAIAgentComponent-npbdI",
-                "sourceHandle": "{œdataTypeœ:œSearchAPIToolœ,œidœ:œSearchAPITool-phidDœ,œnameœ:œtoolœ,œoutput_typesœ:[œToolœ]}",
-                "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œCrewAIAgentComponent-npbdIœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
-                "id": "reactflow__edge-SearchAPITool-phidD{œdataTypeœ:œSearchAPIToolœ,œidœ:œSearchAPITool-phidDœ,œnameœ:œtoolœ,œoutput_typesœ:[œToolœ]}-CrewAIAgentComponent-npbdI{œfieldNameœ:œtoolsœ,œidœ:œCrewAIAgentComponent-npbdIœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+                "source": "YFinanceTool-jEZE4",
+                "sourceHandle": "{œdataTypeœ:œYFinanceToolœ,œidœ:œYFinanceTool-jEZE4œ,œnameœ:œtoolœ,œoutput_typesœ:[œToolœ]}",
+                "target": "CrewAIAgentComponent-NF3xN",
+                "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œCrewAIAgentComponent-NF3xNœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
                 "data": {
                     "targetHandle": {
                         "fieldName": "tools",
-                        "id": "CrewAIAgentComponent-npbdI",
-                        "inputTypes": [
-                            "Tool"
-                        ],
-                        "type": "other"
-                    },
-                    "sourceHandle": {
-                        "dataType": "SearchAPITool",
-                        "id": "SearchAPITool-phidD",
-                        "name": "tool",
-                        "output_types": [
-                            "Tool"
-                        ]
-                    }
-                },
-                "selected": false,
-                "className": ""
-            },
-            {
-                "source": "YFinanceTool-LGip4",
-                "sourceHandle": "{œdataTypeœ:œYFinanceToolœ,œidœ:œYFinanceTool-LGip4œ,œnameœ:œtoolœ,œoutput_typesœ:[œToolœ]}",
-                "target": "CrewAIAgentComponent-npbdI",
-                "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œCrewAIAgentComponent-npbdIœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
-                "data": {
-                    "targetHandle": {
-                        "fieldName": "tools",
-                        "id": "CrewAIAgentComponent-npbdI",
+                        "id": "CrewAIAgentComponent-NF3xN",
                         "inputTypes": [
                             "Tool"
                         ],
@@ -3778,26 +3785,26 @@
                     },
                     "sourceHandle": {
                         "dataType": "YFinanceTool",
-                        "id": "YFinanceTool-LGip4",
+                        "id": "YFinanceTool-jEZE4",
                         "name": "tool",
                         "output_types": [
                             "Tool"
                         ]
                     }
                 },
-                "id": "reactflow__edge-YFinanceTool-LGip4{œdataTypeœ:œYFinanceToolœ,œidœ:œYFinanceTool-LGip4œ,œnameœ:œtoolœ,œoutput_typesœ:[œToolœ]}-CrewAIAgentComponent-npbdI{œfieldNameœ:œtoolsœ,œidœ:œCrewAIAgentComponent-npbdIœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+                "id": "reactflow__edge-YFinanceTool-jEZE4{œdataTypeœ:œYFinanceToolœ,œidœ:œYFinanceTool-jEZE4œ,œnameœ:œtoolœ,œoutput_typesœ:[œToolœ]}-CrewAIAgentComponent-NF3xN{œfieldNameœ:œtoolsœ,œidœ:œCrewAIAgentComponent-NF3xNœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
                 "className": "",
                 "selected": false
             },
             {
-                "source": "Prompt-CMDLd",
-                "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-CMDLdœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
-                "target": "OpenAIModel-2aTcd",
-                "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-2aTcdœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+                "source": "Prompt-Q69ou",
+                "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-Q69ouœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+                "target": "OpenAIModel-5MBnT",
+                "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-5MBnTœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
                 "data": {
                     "targetHandle": {
                         "fieldName": "input_value",
-                        "id": "OpenAIModel-2aTcd",
+                        "id": "OpenAIModel-5MBnT",
                         "inputTypes": [
                             "Message"
                         ],
@@ -3805,26 +3812,26 @@
                     },
                     "sourceHandle": {
                         "dataType": "Prompt",
-                        "id": "Prompt-CMDLd",
+                        "id": "Prompt-Q69ou",
                         "name": "prompt",
                         "output_types": [
                             "Message"
                         ]
                     }
                 },
-                "id": "reactflow__edge-Prompt-CMDLd{œdataTypeœ:œPromptœ,œidœ:œPrompt-CMDLdœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-2aTcd{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-2aTcdœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+                "id": "reactflow__edge-Prompt-Q69ou{œdataTypeœ:œPromptœ,œidœ:œPrompt-Q69ouœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-5MBnT{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-5MBnTœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
                 "selected": false,
                 "className": ""
             },
             {
-                "source": "OpenAIModel-2aTcd",
-                "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-2aTcdœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
-                "target": "CrewAIAgentComponent-npbdI",
-                "targetHandle": "{œfieldNameœ:œroleœ,œidœ:œCrewAIAgentComponent-npbdIœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+                "source": "OpenAIModel-5MBnT",
+                "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-5MBnTœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+                "target": "CrewAIAgentComponent-NF3xN",
+                "targetHandle": "{œfieldNameœ:œroleœ,œidœ:œCrewAIAgentComponent-NF3xNœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
                 "data": {
                     "targetHandle": {
                         "fieldName": "role",
-                        "id": "CrewAIAgentComponent-npbdI",
+                        "id": "CrewAIAgentComponent-NF3xN",
                         "inputTypes": [
                             "Message"
                         ],
@@ -3832,26 +3839,26 @@
                     },
                     "sourceHandle": {
                         "dataType": "OpenAIModel",
-                        "id": "OpenAIModel-2aTcd",
+                        "id": "OpenAIModel-5MBnT",
                         "name": "text_output",
                         "output_types": [
                             "Message"
                         ]
                     }
                 },
-                "id": "reactflow__edge-OpenAIModel-2aTcd{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-2aTcdœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-CrewAIAgentComponent-npbdI{œfieldNameœ:œroleœ,œidœ:œCrewAIAgentComponent-npbdIœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+                "id": "reactflow__edge-OpenAIModel-5MBnT{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-5MBnTœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-CrewAIAgentComponent-NF3xN{œfieldNameœ:œroleœ,œidœ:œCrewAIAgentComponent-NF3xNœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
                 "selected": false,
                 "className": ""
             },
             {
-                "source": "ChatInput-T9PeO",
-                "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-T9PeOœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
-                "target": "Prompt-DJ4Ij",
-                "targetHandle": "{œfieldNameœ:œqueryœ,œidœ:œPrompt-DJ4Ijœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+                "source": "ChatInput-5gcMe",
+                "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-5gcMeœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+                "target": "Prompt-dtbdU",
+                "targetHandle": "{œfieldNameœ:œqueryœ,œidœ:œPrompt-dtbdUœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
                 "data": {
                     "targetHandle": {
                         "fieldName": "query",
-                        "id": "Prompt-DJ4Ij",
+                        "id": "Prompt-dtbdU",
                         "inputTypes": [
                             "Message",
                             "Text"
@@ -3860,26 +3867,26 @@
                     },
                     "sourceHandle": {
                         "dataType": "ChatInput",
-                        "id": "ChatInput-T9PeO",
+                        "id": "ChatInput-5gcMe",
                         "name": "message",
                         "output_types": [
                             "Message"
                         ]
                     }
                 },
-                "id": "reactflow__edge-ChatInput-T9PeO{œdataTypeœ:œChatInputœ,œidœ:œChatInput-T9PeOœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-DJ4Ij{œfieldNameœ:œqueryœ,œidœ:œPrompt-DJ4Ijœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+                "id": "reactflow__edge-ChatInput-5gcMe{œdataTypeœ:œChatInputœ,œidœ:œChatInput-5gcMeœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-dtbdU{œfieldNameœ:œqueryœ,œidœ:œPrompt-dtbdUœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
                 "selected": false,
                 "className": ""
             },
             {
-                "source": "ChatInput-T9PeO",
-                "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-T9PeOœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
-                "target": "Prompt-CMDLd",
-                "targetHandle": "{œfieldNameœ:œqueryœ,œidœ:œPrompt-CMDLdœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+                "source": "ChatInput-5gcMe",
+                "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-5gcMeœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+                "target": "Prompt-Q69ou",
+                "targetHandle": "{œfieldNameœ:œqueryœ,œidœ:œPrompt-Q69ouœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
                 "data": {
                     "targetHandle": {
                         "fieldName": "query",
-                        "id": "Prompt-CMDLd",
+                        "id": "Prompt-Q69ou",
                         "inputTypes": [
                             "Message",
                             "Text"
@@ -3888,26 +3895,26 @@
                     },
                     "sourceHandle": {
                         "dataType": "ChatInput",
-                        "id": "ChatInput-T9PeO",
+                        "id": "ChatInput-5gcMe",
                         "name": "message",
                         "output_types": [
                             "Message"
                         ]
                     }
                 },
-                "id": "reactflow__edge-ChatInput-T9PeO{œdataTypeœ:œChatInputœ,œidœ:œChatInput-T9PeOœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-CMDLd{œfieldNameœ:œqueryœ,œidœ:œPrompt-CMDLdœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+                "id": "reactflow__edge-ChatInput-5gcMe{œdataTypeœ:œChatInputœ,œidœ:œChatInput-5gcMeœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-Q69ou{œfieldNameœ:œqueryœ,œidœ:œPrompt-Q69ouœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
                 "selected": false,
                 "className": ""
             },
             {
-                "source": "Prompt-DJ4Ij",
-                "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-DJ4Ijœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
-                "target": "OpenAIModel-TrJeF",
-                "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-TrJeFœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+                "source": "Prompt-dtbdU",
+                "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-dtbdUœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+                "target": "OpenAIModel-bAkSV",
+                "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-bAkSVœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
                 "data": {
                     "targetHandle": {
                         "fieldName": "input_value",
-                        "id": "OpenAIModel-TrJeF",
+                        "id": "OpenAIModel-bAkSV",
                         "inputTypes": [
                             "Message"
                         ],
@@ -3915,26 +3922,26 @@
                     },
                     "sourceHandle": {
                         "dataType": "Prompt",
-                        "id": "Prompt-DJ4Ij",
+                        "id": "Prompt-dtbdU",
                         "name": "prompt",
                         "output_types": [
                             "Message"
                         ]
                     }
                 },
-                "id": "reactflow__edge-Prompt-DJ4Ij{œdataTypeœ:œPromptœ,œidœ:œPrompt-DJ4Ijœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-TrJeF{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-TrJeFœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+                "id": "reactflow__edge-Prompt-dtbdU{œdataTypeœ:œPromptœ,œidœ:œPrompt-dtbdUœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-bAkSV{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-bAkSVœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
                 "selected": false,
                 "className": ""
             },
             {
-                "source": "OpenAIModel-2aTcd",
-                "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-2aTcdœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
-                "target": "Prompt-DJ4Ij",
-                "targetHandle": "{œfieldNameœ:œroleœ,œidœ:œPrompt-DJ4Ijœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+                "source": "OpenAIModel-5MBnT",
+                "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-5MBnTœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+                "target": "Prompt-dtbdU",
+                "targetHandle": "{œfieldNameœ:œroleœ,œidœ:œPrompt-dtbdUœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
                 "data": {
                     "targetHandle": {
                         "fieldName": "role",
-                        "id": "Prompt-DJ4Ij",
+                        "id": "Prompt-dtbdU",
                         "inputTypes": [
                             "Message",
                             "Text"
@@ -3943,26 +3950,26 @@
                     },
                     "sourceHandle": {
                         "dataType": "OpenAIModel",
-                        "id": "OpenAIModel-2aTcd",
+                        "id": "OpenAIModel-5MBnT",
                         "name": "text_output",
                         "output_types": [
                             "Message"
                         ]
                     }
                 },
-                "id": "reactflow__edge-OpenAIModel-2aTcd{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-2aTcdœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-Prompt-DJ4Ij{œfieldNameœ:œroleœ,œidœ:œPrompt-DJ4Ijœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+                "id": "reactflow__edge-OpenAIModel-5MBnT{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-5MBnTœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-Prompt-dtbdU{œfieldNameœ:œroleœ,œidœ:œPrompt-dtbdUœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
                 "selected": false,
                 "className": ""
             },
             {
-                "source": "OpenAIModel-TrJeF",
-                "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-TrJeFœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
-                "target": "CrewAIAgentComponent-npbdI",
-                "targetHandle": "{œfieldNameœ:œgoalœ,œidœ:œCrewAIAgentComponent-npbdIœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+                "source": "OpenAIModel-bAkSV",
+                "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-bAkSVœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+                "target": "CrewAIAgentComponent-NF3xN",
+                "targetHandle": "{œfieldNameœ:œgoalœ,œidœ:œCrewAIAgentComponent-NF3xNœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
                 "data": {
                     "targetHandle": {
                         "fieldName": "goal",
-                        "id": "CrewAIAgentComponent-npbdI",
+                        "id": "CrewAIAgentComponent-NF3xN",
                         "inputTypes": [
                             "Message"
                         ],
@@ -3970,27 +3977,27 @@
                     },
                     "sourceHandle": {
                         "dataType": "OpenAIModel",
-                        "id": "OpenAIModel-TrJeF",
+                        "id": "OpenAIModel-bAkSV",
                         "name": "text_output",
                         "output_types": [
                             "Message"
                         ]
                     }
                 },
-                "id": "reactflow__edge-OpenAIModel-TrJeF{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-TrJeFœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-CrewAIAgentComponent-npbdI{œfieldNameœ:œgoalœ,œidœ:œCrewAIAgentComponent-npbdIœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+                "id": "reactflow__edge-OpenAIModel-bAkSV{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-bAkSVœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-CrewAIAgentComponent-NF3xN{œfieldNameœ:œgoalœ,œidœ:œCrewAIAgentComponent-NF3xNœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
                 "selected": false,
                 "className": ""
             },
             {
-                "source": "Prompt-n2cBx",
-                "target": "OpenAIModel-GqAaO",
-                "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-n2cBxœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
-                "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-GqAaOœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-                "id": "reactflow__edge-Prompt-n2cBx{œdataTypeœ:œPromptœ,œidœ:œPrompt-n2cBxœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-GqAaO{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-GqAaOœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+                "source": "Prompt-Lr8e3",
+                "target": "OpenAIModel-Qxika",
+                "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-Lr8e3œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+                "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-Qxikaœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+                "id": "reactflow__edge-Prompt-Lr8e3{œdataTypeœ:œPromptœ,œidœ:œPrompt-Lr8e3œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-Qxika{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-Qxikaœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
                 "data": {
                     "targetHandle": {
                         "fieldName": "input_value",
-                        "id": "OpenAIModel-GqAaO",
+                        "id": "OpenAIModel-Qxika",
                         "inputTypes": [
                             "Message"
                         ],
@@ -3998,7 +4005,7 @@
                     },
                     "sourceHandle": {
                         "dataType": "Prompt",
-                        "id": "Prompt-n2cBx",
+                        "id": "Prompt-Lr8e3",
                         "name": "prompt",
                         "output_types": [
                             "Message"
@@ -4009,14 +4016,14 @@
                 "className": ""
             },
             {
-                "source": "OpenAIModel-TrJeF",
-                "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-TrJeFœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
-                "target": "Prompt-n2cBx",
-                "targetHandle": "{œfieldNameœ:œgoalœ,œidœ:œPrompt-n2cBxœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+                "source": "OpenAIModel-bAkSV",
+                "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-bAkSVœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+                "target": "Prompt-Lr8e3",
+                "targetHandle": "{œfieldNameœ:œgoalœ,œidœ:œPrompt-Lr8e3œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
                 "data": {
                     "targetHandle": {
                         "fieldName": "goal",
-                        "id": "Prompt-n2cBx",
+                        "id": "Prompt-Lr8e3",
                         "inputTypes": [
                             "Message",
                             "Text"
@@ -4025,25 +4032,25 @@
                     },
                     "sourceHandle": {
                         "dataType": "OpenAIModel",
-                        "id": "OpenAIModel-TrJeF",
+                        "id": "OpenAIModel-bAkSV",
                         "name": "text_output",
                         "output_types": [
                             "Message"
                         ]
                     }
                 },
-                "id": "reactflow__edge-OpenAIModel-TrJeF{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-TrJeFœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-Prompt-n2cBx{œfieldNameœ:œgoalœ,œidœ:œPrompt-n2cBxœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+                "id": "reactflow__edge-OpenAIModel-bAkSV{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-bAkSVœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-Prompt-Lr8e3{œfieldNameœ:œgoalœ,œidœ:œPrompt-Lr8e3œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
                 "className": ""
             },
             {
-                "source": "OpenAIModel-2aTcd",
-                "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-2aTcdœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
-                "target": "Prompt-n2cBx",
-                "targetHandle": "{œfieldNameœ:œroleœ,œidœ:œPrompt-n2cBxœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+                "source": "OpenAIModel-5MBnT",
+                "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-5MBnTœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+                "target": "Prompt-Lr8e3",
+                "targetHandle": "{œfieldNameœ:œroleœ,œidœ:œPrompt-Lr8e3œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
                 "data": {
                     "targetHandle": {
                         "fieldName": "role",
-                        "id": "Prompt-n2cBx",
+                        "id": "Prompt-Lr8e3",
                         "inputTypes": [
                             "Message",
                             "Text"
@@ -4052,25 +4059,25 @@
                     },
                     "sourceHandle": {
                         "dataType": "OpenAIModel",
-                        "id": "OpenAIModel-2aTcd",
+                        "id": "OpenAIModel-5MBnT",
                         "name": "text_output",
                         "output_types": [
                             "Message"
                         ]
                     }
                 },
-                "id": "reactflow__edge-OpenAIModel-2aTcd{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-2aTcdœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-Prompt-n2cBx{œfieldNameœ:œroleœ,œidœ:œPrompt-n2cBxœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+                "id": "reactflow__edge-OpenAIModel-5MBnT{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-5MBnTœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-Prompt-Lr8e3{œfieldNameœ:œroleœ,œidœ:œPrompt-Lr8e3œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
                 "className": ""
             },
             {
-                "source": "ChatInput-T9PeO",
-                "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-T9PeOœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
-                "target": "Prompt-n2cBx",
-                "targetHandle": "{œfieldNameœ:œqueryœ,œidœ:œPrompt-n2cBxœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+                "source": "ChatInput-5gcMe",
+                "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-5gcMeœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+                "target": "Prompt-Lr8e3",
+                "targetHandle": "{œfieldNameœ:œqueryœ,œidœ:œPrompt-Lr8e3œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
                 "data": {
                     "targetHandle": {
                         "fieldName": "query",
-                        "id": "Prompt-n2cBx",
+                        "id": "Prompt-Lr8e3",
                         "inputTypes": [
                             "Message",
                             "Text"
@@ -4079,25 +4086,25 @@
                     },
                     "sourceHandle": {
                         "dataType": "ChatInput",
-                        "id": "ChatInput-T9PeO",
+                        "id": "ChatInput-5gcMe",
                         "name": "message",
                         "output_types": [
                             "Message"
                         ]
                     }
                 },
-                "id": "reactflow__edge-ChatInput-T9PeO{œdataTypeœ:œChatInputœ,œidœ:œChatInput-T9PeOœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-n2cBx{œfieldNameœ:œqueryœ,œidœ:œPrompt-n2cBxœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+                "id": "reactflow__edge-ChatInput-5gcMe{œdataTypeœ:œChatInputœ,œidœ:œChatInput-5gcMeœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-Lr8e3{œfieldNameœ:œqueryœ,œidœ:œPrompt-Lr8e3œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
                 "className": ""
             },
             {
-                "source": "OpenAIModel-GqAaO",
-                "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-GqAaOœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
-                "target": "CrewAIAgentComponent-npbdI",
-                "targetHandle": "{œfieldNameœ:œbackstoryœ,œidœ:œCrewAIAgentComponent-npbdIœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+                "source": "OpenAIModel-Qxika",
+                "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-Qxikaœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+                "target": "CrewAIAgentComponent-NF3xN",
+                "targetHandle": "{œfieldNameœ:œbackstoryœ,œidœ:œCrewAIAgentComponent-NF3xNœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
                 "data": {
                     "targetHandle": {
                         "fieldName": "backstory",
-                        "id": "CrewAIAgentComponent-npbdI",
+                        "id": "CrewAIAgentComponent-NF3xN",
                         "inputTypes": [
                             "Message"
                         ],
@@ -4105,21 +4112,46 @@
                     },
                     "sourceHandle": {
                         "dataType": "OpenAIModel",
-                        "id": "OpenAIModel-GqAaO",
+                        "id": "OpenAIModel-Qxika",
                         "name": "text_output",
                         "output_types": [
                             "Message"
                         ]
                     }
                 },
-                "id": "reactflow__edge-OpenAIModel-GqAaO{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-GqAaOœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-CrewAIAgentComponent-npbdI{œfieldNameœ:œbackstoryœ,œidœ:œCrewAIAgentComponent-npbdIœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+                "id": "reactflow__edge-OpenAIModel-Qxika{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-Qxikaœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-CrewAIAgentComponent-NF3xN{œfieldNameœ:œbackstoryœ,œidœ:œCrewAIAgentComponent-NF3xNœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
                 "className": ""
+            },
+            {
+                "source": "SearchAPI-Mx8M6",
+                "sourceHandle": "{œdataTypeœ:œSearchAPIœ,œidœ:œSearchAPI-Mx8M6œ,œnameœ:œapi_build_toolœ,œoutput_typesœ:[œToolœ]}",
+                "target": "CrewAIAgentComponent-NF3xN",
+                "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œCrewAIAgentComponent-NF3xNœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+                "data": {
+                    "targetHandle": {
+                        "fieldName": "tools",
+                        "id": "CrewAIAgentComponent-NF3xN",
+                        "inputTypes": [
+                            "Tool"
+                        ],
+                        "type": "other"
+                    },
+                    "sourceHandle": {
+                        "dataType": "SearchAPI",
+                        "id": "SearchAPI-Mx8M6",
+                        "name": "api_build_tool",
+                        "output_types": [
+                            "Tool"
+                        ]
+                    }
+                },
+                "id": "reactflow__edge-SearchAPI-Mx8M6{œdataTypeœ:œSearchAPIœ,œidœ:œSearchAPI-Mx8M6œ,œnameœ:œapi_build_toolœ,œoutput_typesœ:[œToolœ]}-CrewAIAgentComponent-NF3xN{œfieldNameœ:œtoolsœ,œidœ:œCrewAIAgentComponent-NF3xNœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
             }
         ],
         "viewport": {
-            "x": 382.6194288580153,
-            "y": 146.8712450558219,
-            "zoom": 0.1381205605999893
+            "x": 481.25105323129605,
+            "y": 92.91135745923583,
+            "zoom": 0.18453930071035488
         }
     },
     "description": "This Agent is created on the fly based on what the user asks and a Manager Agent calls it if needed.",
