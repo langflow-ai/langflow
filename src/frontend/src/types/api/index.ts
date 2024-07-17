@@ -266,7 +266,6 @@ export type useMutationFunctionType<
   Error = any,
 > = Params extends undefined
   ? (
-      params?: Params,
       options?: Omit<
         UseMutationOptions<Data, Error>,
         "mutationFn" | "mutationKey"
