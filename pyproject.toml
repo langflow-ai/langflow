@@ -101,6 +101,7 @@ langchain-milvus = "^0.1.1"
 crewai = {extras = ["tools"], version = "^0.36.0"}
 langwatch = "^0.1.9"
 langsmith = "^0.1.86"
+yfinance = "^0.2.40"
 
 
 [tool.poetry.group.dev.dependencies]
