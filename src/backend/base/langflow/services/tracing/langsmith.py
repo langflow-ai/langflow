@@ -120,7 +120,8 @@ class LangSmithTracer(BaseTracer):
             raw_outputs = outputs
             processed_outputs = self._convert_to_langchain_types(outputs)
         if logs:
-            child.add_metadata(self._convert_to_langchain_types({"logs": {log.get("name"): log for log in logs}}))
+            logs_dicts = [log if isinstance(log, dict) else log.model_dump() for log in logs]
+            child.add_metadata(self._convert_to_langchain_types({"logs": {log.get("name"): log for log in logs_dicts}}))
         child.add_metadata(self._convert_to_langchain_types({"outputs": raw_outputs}))
         child.end(outputs=processed_outputs, error=self._error_to_string(error))
         if error:
