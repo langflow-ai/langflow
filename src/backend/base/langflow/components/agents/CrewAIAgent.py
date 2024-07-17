@@ -1,7 +1,7 @@
 from crewai import Agent  # type: ignore
 
 from langflow.custom import Component
-from langflow.io import BoolInput, DictInput, HandleInput, MessageTextInput, Output
+from langflow.io import BoolInput, DictInput, HandleInput, MultilineInput, Output
 
 
 class CrewAIAgentComponent(Component):
@@ -11,9 +11,9 @@ class CrewAIAgentComponent(Component):
     icon = "CrewAI"
 
     inputs = [
-        MessageTextInput(name="role", display_name="Role", info="The role of the agent."),
-        MessageTextInput(name="goal", display_name="Goal", info="The objective of the agent."),
-        MessageTextInput(name="backstory", display_name="Backstory", info="The backstory of the agent."),
+        MultilineInput(name="role", display_name="Role", info="The role of the agent."),
+        MultilineInput(name="goal", display_name="Goal", info="The objective of the agent."),
+        MultilineInput(name="backstory", display_name="Backstory", info="The backstory of the agent."),
         HandleInput(
             name="tools",
             display_name="Tools",

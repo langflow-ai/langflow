@@ -178,13 +178,13 @@ files = [
 
 [[package]]
 name = "anthropic"
-version = "0.31.1"
+version = "0.31.2"
 description = "The official Python library for the anthropic API"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "anthropic-0.31.1-py3-none-any.whl", hash = "sha256:d18809cbdecee2296f418e30beb2d0a8ecc225c065a1494cb02348af48794ff8"},
-    {file = "anthropic-0.31.1.tar.gz", hash = "sha256:d2248dfc15f7fc7823ac0bb9d48e73429e9b1ed8327ac66839d00cdb2f29d3cb"},
+    {file = "anthropic-0.31.2-py3-none-any.whl", hash = "sha256:28d176b98c72615bfae30f0a9eee6297cc33bf52535d38156fc2805556e2f09b"},
+    {file = "anthropic-0.31.2.tar.gz", hash = "sha256:0134b73df8d1f142fc68675fbadb75e920054e9e3437b99df63f10f0fc6ac26f"},
 ]
 
 [package.dependencies]
@@ -387,6 +387,21 @@ files = [
     {file = "backoff-2.2.1-py3-none-any.whl", hash = "sha256:63579f9a0628e06278f7e47b7d7d5b6ce20dc65c5e96a6f3ca99a6adca0396e8"},
     {file = "backoff-2.2.1.tar.gz", hash = "sha256:03f829f5bb1923180821643f8753b0502c3b682293992485b0eef2807afa5cba"},
 ]
+
+[[package]]
+name = "backports-tarfile"
+version = "1.2.0"
+description = "Backport of CPython tarfile module"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "backports.tarfile-1.2.0-py3-none-any.whl", hash = "sha256:77e284d754527b01fb1e6fa8a1afe577858ebe4e9dad8919e34c862cb399bc34"},
+    {file = "backports_tarfile-1.2.0.tar.gz", hash = "sha256:d75e02c268746e1b8144c278978b6e98e85de6ad16f8e4b0844a154557eca991"},
+]
+
+[package.extras]
+docs = ["furo", "jaraco.packaging (>=9.3)", "rst.linker (>=1.9)", "sphinx (>=3.5)", "sphinx-lint"]
+testing = ["jaraco.test", "pytest (!=8.0.*)", "pytest (>=6,!=8.1.*)", "pytest-checkdocs (>=2.4)", "pytest-cov", "pytest-enabler (>=2.2)"]
 
 [[package]]
 name = "bce-python-sdk"
@@ -2478,6 +2493,48 @@ pytz = "*"
 tornado = ">=5.0.0,<7.0.0"
 
 [[package]]
+name = "frozendict"
+version = "2.4.4"
+description = "A simple immutable dictionary"
+optional = false
+python-versions = ">=3.6"
+files = [
+    {file = "frozendict-2.4.4-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:4a59578d47b3949437519b5c39a016a6116b9e787bb19289e333faae81462e59"},
+    {file = "frozendict-2.4.4-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:12a342e439aef28ccec533f0253ea53d75fe9102bd6ea928ff530e76eac38906"},
+    {file = "frozendict-2.4.4-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:7f79c26dff10ce11dad3b3627c89bb2e87b9dd5958c2b24325f16a23019b8b94"},
+    {file = "frozendict-2.4.4-cp310-cp310-musllinux_1_1_aarch64.whl", hash = "sha256:2bd009cf4fc47972838a91e9b83654dc9a095dc4f2bb3a37c3f3124c8a364543"},
+    {file = "frozendict-2.4.4-cp310-cp310-musllinux_1_1_x86_64.whl", hash = "sha256:87ebcde21565a14fe039672c25550060d6f6d88cf1f339beac094c3b10004eb0"},
+    {file = "frozendict-2.4.4-cp310-cp310-win_amd64.whl", hash = "sha256:fefeb700bc7eb8b4c2dc48704e4221860d254c8989fb53488540bc44e44a1ac2"},
+    {file = "frozendict-2.4.4-cp310-cp310-win_arm64.whl", hash = "sha256:4297d694eb600efa429769125a6f910ec02b85606f22f178bafbee309e7d3ec7"},
+    {file = "frozendict-2.4.4-cp36-cp36m-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:812ab17522ba13637826e65454115a914c2da538356e85f43ecea069813e4b33"},
+    {file = "frozendict-2.4.4-cp36-cp36m-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:7fee9420475bb6ff357000092aa9990c2f6182b2bab15764330f4ad7de2eae49"},
+    {file = "frozendict-2.4.4-cp36-cp36m-musllinux_1_1_aarch64.whl", hash = "sha256:3148062675536724502c6344d7c485dd4667fdf7980ca9bd05e338ccc0c4471e"},
+    {file = "frozendict-2.4.4-cp36-cp36m-musllinux_1_1_x86_64.whl", hash = "sha256:78c94991944dd33c5376f720228e5b252ee67faf3bac50ef381adc9e51e90d9d"},
+    {file = "frozendict-2.4.4-cp36-cp36m-win_amd64.whl", hash = "sha256:1697793b5f62b416c0fc1d94638ec91ed3aa4ab277f6affa3a95216ecb3af170"},
+    {file = "frozendict-2.4.4-cp37-cp37m-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:199a4d32194f3afed6258de7e317054155bc9519252b568d9cfffde7e4d834e5"},
+    {file = "frozendict-2.4.4-cp37-cp37m-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:85375ec6e979e6373bffb4f54576a68bf7497c350861d20686ccae38aab69c0a"},
+    {file = "frozendict-2.4.4-cp37-cp37m-musllinux_1_1_aarch64.whl", hash = "sha256:2d8536e068d6bf281f23fa835ac07747fb0f8851879dd189e9709f9567408b4d"},
+    {file = "frozendict-2.4.4-cp37-cp37m-musllinux_1_1_x86_64.whl", hash = "sha256:259528ba6b56fa051bc996f1c4d8b57e30d6dd3bc2f27441891b04babc4b5e73"},
+    {file = "frozendict-2.4.4-cp37-cp37m-win_amd64.whl", hash = "sha256:07c3a5dee8bbb84cba770e273cdbf2c87c8e035903af8f781292d72583416801"},
+    {file = "frozendict-2.4.4-cp38-cp38-macosx_11_0_arm64.whl", hash = "sha256:6874fec816b37b6eb5795b00e0574cba261bf59723e2de607a195d5edaff0786"},
+    {file = "frozendict-2.4.4-cp38-cp38-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:c8f92425686323a950337da4b75b4c17a3327b831df8c881df24038d560640d4"},
+    {file = "frozendict-2.4.4-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:5d58d9a8d9e49662c6dafbea5e641f97decdb3d6ccd76e55e79818415362ba25"},
+    {file = "frozendict-2.4.4-cp38-cp38-musllinux_1_1_aarch64.whl", hash = "sha256:93a7b19afb429cbf99d56faf436b45ef2fa8fe9aca89c49eb1610c3bd85f1760"},
+    {file = "frozendict-2.4.4-cp38-cp38-musllinux_1_1_x86_64.whl", hash = "sha256:2b70b431e3a72d410a2cdf1497b3aba2f553635e0c0f657ce311d841bf8273b6"},
+    {file = "frozendict-2.4.4-cp38-cp38-win_amd64.whl", hash = "sha256:e1b941132d79ce72d562a13341d38fc217bc1ee24d8c35a20d754e79ff99e038"},
+    {file = "frozendict-2.4.4-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:dc2228874eacae390e63fd4f2bb513b3144066a977dc192163c9f6c7f6de6474"},
+    {file = "frozendict-2.4.4-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:63aa49f1919af7d45fb8fd5dec4c0859bc09f46880bd6297c79bb2db2969b63d"},
+    {file = "frozendict-2.4.4-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:c6bf9260018d653f3cab9bd147bd8592bf98a5c6e338be0491ced3c196c034a3"},
+    {file = "frozendict-2.4.4-cp39-cp39-musllinux_1_1_aarch64.whl", hash = "sha256:6eb716e6a6d693c03b1d53280a1947716129f5ef9bcdd061db5c17dea44b80fe"},
+    {file = "frozendict-2.4.4-cp39-cp39-musllinux_1_1_x86_64.whl", hash = "sha256:d13b4310db337f4d2103867c5a05090b22bc4d50ca842093779ef541ea9c9eea"},
+    {file = "frozendict-2.4.4-cp39-cp39-win_amd64.whl", hash = "sha256:b3b967d5065872e27b06f785a80c0ed0a45d1f7c9b85223da05358e734d858ca"},
+    {file = "frozendict-2.4.4-cp39-cp39-win_arm64.whl", hash = "sha256:4ae8d05c8d0b6134bfb6bfb369d5fa0c4df21eabb5ca7f645af95fdc6689678e"},
+    {file = "frozendict-2.4.4-py311-none-any.whl", hash = "sha256:705efca8d74d3facbb6ace80ab3afdd28eb8a237bfb4063ed89996b024bc443d"},
+    {file = "frozendict-2.4.4-py312-none-any.whl", hash = "sha256:d9647563e76adb05b7cde2172403123380871360a114f546b4ae1704510801e5"},
+    {file = "frozendict-2.4.4.tar.gz", hash = "sha256:3f7c031b26e4ee6a3f786ceb5e3abf1181c4ade92dce1f847da26ea2c96008c7"},
+]
+
+[[package]]
 name = "frozenlist"
 version = "1.4.1"
 description = "A list-like structure which implements collections.abc.MutableSequence"
@@ -3587,6 +3644,27 @@ files = [
 ]
 
 [[package]]
+name = "html5lib"
+version = "1.1"
+description = "HTML parser based on the WHATWG HTML specification"
+optional = false
+python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
+files = [
+    {file = "html5lib-1.1-py2.py3-none-any.whl", hash = "sha256:0d78f8fde1c230e99fe37986a60526d7049ed4bf8a9fadbad5f00e22e58e041d"},
+    {file = "html5lib-1.1.tar.gz", hash = "sha256:b2e5b40261e20f354d198eae92afc10d750afb487ed5e50f9c4eaf07c184146f"},
+]
+
+[package.dependencies]
+six = ">=1.9"
+webencodings = "*"
+
+[package.extras]
+all = ["chardet (>=2.2)", "genshi", "lxml"]
+chardet = ["chardet (>=2.2)"]
+genshi = ["genshi"]
+lxml = ["lxml"]
+
+[[package]]
 name = "httpcore"
 version = "1.0.5"
 description = "A minimal low-level HTTP client."
@@ -4100,6 +4178,24 @@ files = [
 ]
 
 [[package]]
+name = "jaraco-context"
+version = "5.3.0"
+description = "Useful decorators and context managers"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "jaraco.context-5.3.0-py3-none-any.whl", hash = "sha256:3e16388f7da43d384a1a7cd3452e72e14732ac9fe459678773a3608a812bf266"},
+    {file = "jaraco.context-5.3.0.tar.gz", hash = "sha256:c2f67165ce1f9be20f32f650f25d8edfc1646a8aeee48ae06fb35f90763576d2"},
+]
+
+[package.dependencies]
+"backports.tarfile" = {version = "*", markers = "python_version < \"3.12\""}
+
+[package.extras]
+docs = ["furo", "jaraco.packaging (>=9.3)", "jaraco.tidelift (>=1.4)", "rst.linker (>=1.9)", "sphinx (>=3.5)", "sphinx-lint"]
+testing = ["portend", "pytest (>=6,!=8.1.1)", "pytest-checkdocs (>=2.4)", "pytest-cov", "pytest-enabler (>=2.2)", "pytest-mypy", "pytest-ruff (>=0.2.1)"]
+
+[[package]]
 name = "jedi"
 version = "0.19.1"
 description = "An autocompletion tool for Python that can be used for text editors."
@@ -4537,19 +4633,19 @@ tests = ["aiohttp", "duckdb", "pandas (>=1.4)", "polars (>=0.19)", "pytest", "py
 
 [[package]]
 name = "langchain"
-version = "0.2.8"
+version = "0.2.9"
 description = "Building applications with LLMs through composability"
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
-    {file = "langchain-0.2.8-py3-none-any.whl", hash = "sha256:53e7dfe50294a14200f33bec22b4e14cb63857ccf0a5500b0d18b0fd51285d58"},
-    {file = "langchain-0.2.8.tar.gz", hash = "sha256:7fecb309e3558cde4e5cf7e9ffb7c1ab3f07121c40a7ff3b0c27135f8120c296"},
+    {file = "langchain-0.2.9-py3-none-any.whl", hash = "sha256:be23fcb29adbd5059944f1fed08fa575f0739d420b1c4127531e0fbf5663fcca"},
+    {file = "langchain-0.2.9.tar.gz", hash = "sha256:cc326a7f6347787a19882928c324433b1a79df629bba45604b2d26495ee5d69c"},
 ]
 
 [package.dependencies]
 aiohttp = ">=3.8.3,<4.0.0"
 async-timeout = {version = ">=4.0.0,<5.0.0", markers = "python_version < \"3.11\""}
-langchain-core = ">=0.2.19,<0.3.0"
+langchain-core = ">=0.2.20,<0.3.0"
 langchain-text-splitters = ">=0.2.0,<0.3.0"
 langsmith = ">=0.1.17,<0.2.0"
 numpy = [
@@ -4679,13 +4775,13 @@ tenacity = ">=8.1.0,<8.4.0 || >8.4.0,<9.0.0"
 
 [[package]]
 name = "langchain-core"
-version = "0.2.19"
+version = "0.2.20"
 description = "Building applications with LLMs through composability"
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
-    {file = "langchain_core-0.2.19-py3-none-any.whl", hash = "sha256:5b3cd34395be274c89e822c84f0e03c4da14168c177a83921c5b9414ac7a0651"},
-    {file = "langchain_core-0.2.19.tar.gz", hash = "sha256:13043a83e5c9ab58b9f5ce2a56896e7e88b752e8891b2958960a98e71801471e"},
+    {file = "langchain_core-0.2.20-py3-none-any.whl", hash = "sha256:16cc4da6f7ebf33accea7af45a70480733dc852ab291030fb6924865bd7caf76"},
+    {file = "langchain_core-0.2.20.tar.gz", hash = "sha256:a66c439e085d8c75f822f7650a5551d17bada4003521173c763d875d949e4ed5"},
 ]
 
 [package.dependencies]
@@ -4731,6 +4827,39 @@ google-auth-oauthlib = ">=1.1.0"
 langchain = ">=0.0.335"
 protobuf = ">=4.25.0"
 pytz = ">=2023.3.post1"
+
+[[package]]
+name = "langchain-google-community"
+version = "1.0.6"
+description = "An integration package connecting miscellaneous Google's products and LangChain"
+optional = false
+python-versions = "<4.0,>=3.8.1"
+files = [
+    {file = "langchain_google_community-1.0.6-py3-none-any.whl", hash = "sha256:5c2f18aebfb60b51f68dc1608d09ac3e8231743d75c545f409230f7bee641faf"},
+    {file = "langchain_google_community-1.0.6.tar.gz", hash = "sha256:081ed78702426a62187c86984c169508c432fc13cd2b08dbf5b553b40bb160b3"},
+]
+
+[package.dependencies]
+google-api-core = ">=2.17.1,<3.0.0"
+google-api-python-client = ">=2.122.0,<3.0.0"
+grpcio = ">=1.62.0,<2.0.0"
+langchain-community = ">=0.2.1,<0.3.0"
+langchain-core = ">=0.2.9,<0.3"
+tenacity = ">=8.3.0,<8.4.0"
+
+[package.extras]
+bigquery = ["google-cloud-bigquery (>=3.21.0,<4.0.0)"]
+docai = ["gapic-google-longrunning (>=0.11.2,<0.12.0)", "google-cloud-contentwarehouse (>=0.7.7,<0.8.0)", "google-cloud-documentai (>=2.26.0,<3.0.0)", "google-cloud-documentai-toolbox (>=0.13.3a0,<0.14.0)"]
+drive = ["google-auth-httplib2 (>=0.2.0,<0.3.0)", "google-auth-oauthlib (>=1.2.0,<2.0.0)"]
+featurestore = ["db-dtypes (>=1.2.0,<2.0.0)", "google-cloud-aiplatform (>=1.56.0,<2.0.0)", "google-cloud-bigquery-storage (>=2.6.0,<3)", "pandas (>=1.0.0)", "pandas (>=2.0.0,<3.0)", "pyarrow (>=6.0.1)", "pydantic (>=2.7.4,<3.0.0)"]
+gcs = ["google-cloud-storage (>=2.16.0,<3.0.0)"]
+gmail = ["beautifulsoup4 (>=4.12.3,<5.0.0)", "google-auth-httplib2 (>=0.2.0,<0.3.0)", "google-auth-oauthlib (>=1.2.0,<2.0.0)"]
+places = ["googlemaps (>=4.10.0,<5.0.0)"]
+speech = ["google-cloud-speech (>=2.26.0,<3.0.0)"]
+texttospeech = ["google-cloud-texttospeech (>=2.16.3,<3.0.0)"]
+translate = ["google-cloud-translate (>=3.15.3,<4.0.0)"]
+vertexaisearch = ["google-cloud-discoveryengine (>=0.11.13,<0.12.0)"]
+vision = ["google-cloud-vision (>=3.7.2,<4.0.0)"]
 
 [[package]]
 name = "langchain-google-genai"
@@ -4786,19 +4915,22 @@ langchain-core = ">=0.2.2,<0.3"
 
 [[package]]
 name = "langchain-milvus"
-version = "0.1.1"
+version = "0.1.2"
 description = "An integration package connecting Milvus and LangChain"
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
-    {file = "langchain_milvus-0.1.1-py3-none-any.whl", hash = "sha256:af382659041623441dae72e22ed53c6e73305c8b48d91b4481d92954cd6a3cd1"},
-    {file = "langchain_milvus-0.1.1.tar.gz", hash = "sha256:27dbabde6a003f5d0aa58379ebe26c32b1ca015f37ce80cf5be36b36318c4391"},
+    {file = "langchain_milvus-0.1.2-py3-none-any.whl", hash = "sha256:c7d599a2bc8f89254049aab6e4acbf5fa44b930ace0f25c5585ab04cbd7e26a6"},
+    {file = "langchain_milvus-0.1.2.tar.gz", hash = "sha256:bfab22a8877045f4ce3d482f439ffbe9455dca13ed638f246e1bc0aa90849ebd"},
 ]
 
 [package.dependencies]
-langchain-core = ">=0.2.0,<0.3.0"
+langchain-core = ">=0.2.20,<0.3.0"
 pymilvus = ">=2.4.3,<3.0.0"
-scipy = ">=1.7,<2.0"
+scipy = [
+    {version = ">=1.7,<2.0", markers = "python_version < \"3.12\""},
+    {version = ">=1.9,<2.0", markers = "python_version >= \"3.12\""},
+]
 
 [[package]]
 name = "langchain-mistralai"
@@ -4851,35 +4983,38 @@ pillow = ">=10.0.0,<11.0.0"
 
 [[package]]
 name = "langchain-openai"
-version = "0.1.16"
+version = "0.1.17"
 description = "An integration package connecting OpenAI and LangChain"
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
-    {file = "langchain_openai-0.1.16-py3-none-any.whl", hash = "sha256:bff90e9d0be786495920a7851ae4d55247fb084d3a11d1b15bfe91904ce1cb0f"},
-    {file = "langchain_openai-0.1.16.tar.gz", hash = "sha256:3dedcc785a64a488ad6a313cc59b0dccea025d27413b55cec73a20dcf3ded4da"},
+    {file = "langchain_openai-0.1.17-py3-none-any.whl", hash = "sha256:30bef5574ecbbbb91b8025b2dc5a1bd81fd62157d3ad1a35d820141f31c5b443"},
+    {file = "langchain_openai-0.1.17.tar.gz", hash = "sha256:c5d70ddecdcb93e146f376bdbadbb6ec69de9ac0f402cd5b83de50b655ba85ee"},
 ]
 
 [package.dependencies]
-langchain-core = ">=0.2.17,<0.3.0"
+langchain-core = ">=0.2.20,<0.3.0"
 openai = ">=1.32.0,<2.0.0"
 tiktoken = ">=0.7,<1"
 
 [[package]]
 name = "langchain-pinecone"
-version = "0.1.1"
+version = "0.1.2"
 description = "An integration package connecting Pinecone and LangChain"
 optional = false
 python-versions = "<3.13,>=3.8.1"
 files = [
-    {file = "langchain_pinecone-0.1.1-py3-none-any.whl", hash = "sha256:d2c2d11664533d75f9a5afa9a16e2a300f45e3f584250585c7145a8694298a21"},
-    {file = "langchain_pinecone-0.1.1.tar.gz", hash = "sha256:e33492443ede67c56ed08b0cf8642a1fd93585869cb5afd23606b429f1b2c61a"},
+    {file = "langchain_pinecone-0.1.2-py3-none-any.whl", hash = "sha256:07157885ef1e45bedadc3f7ea6bb181ec458fae5fd82dc7a6005444f67100613"},
+    {file = "langchain_pinecone-0.1.2.tar.gz", hash = "sha256:654fd93df8cefe1ff0ca7ac50cf308242df69a601ee3855019b524006b528595"},
 ]
 
 [package.dependencies]
 langchain-core = ">=0.1.52,<0.3"
-numpy = ">=1,<2"
-pinecone-client = ">=3.2.2,<4.0.0"
+numpy = [
+    {version = ">=1,<2", markers = "python_version < \"3.12\""},
+    {version = ">=1.26.0,<2.0.0", markers = "python_version >= \"3.12\""},
+]
+pinecone-client = ">=3.2.2,<5"
 
 [[package]]
 name = "langchain-text-splitters"
@@ -4927,7 +5062,7 @@ six = "*"
 
 [[package]]
 name = "langflow-base"
-version = "0.0.85"
+version = "0.0.86"
 description = "A Python package with a built-in web application"
 optional = false
 python-versions = ">=3.10,<3.13"
@@ -4958,6 +5093,7 @@ multiprocess = "^0.70.14"
 nest-asyncio = "^1.6.0"
 opentelemetry-api = "^1.25.0"
 opentelemetry-exporter-prometheus = "^0.46b0"
+opentelemetry-instrumentation-fastapi = "^0.46b0"
 opentelemetry-sdk = "^1.25.0"
 orjson = "3.10.0"
 pandas = "2.2.2"
@@ -5017,13 +5153,13 @@ openai = ["openai (>=0.27.8)"]
 
 [[package]]
 name = "langsmith"
-version = "0.1.86"
+version = "0.1.88"
 description = "Client library to connect to the LangSmith LLM Tracing and Evaluation Platform."
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
-    {file = "langsmith-0.1.86-py3-none-any.whl", hash = "sha256:55ed80cc6e98f9761f9b3ec3c49e01f6745d13e40bef80d9f831acabfd9a8a1e"},
-    {file = "langsmith-0.1.86.tar.gz", hash = "sha256:2e66577817253327b99b727588c3173fbba217fe0ca07ac6b7cdd23fc4894104"},
+    {file = "langsmith-0.1.88-py3-none-any.whl", hash = "sha256:460ebb7de440afd150fcea8f54ca8779821f2228cd59e149e5845c9dbe06db16"},
+    {file = "langsmith-0.1.88.tar.gz", hash = "sha256:28a07dec19197f4808aa2628d5a3ccafcbe14cc137aef0e607bbd128e7907821"},
 ]
 
 [package.dependencies]
@@ -5036,13 +5172,13 @@ requests = ">=2,<3"
 
 [[package]]
 name = "langwatch"
-version = "0.1.9"
+version = "0.1.10"
 description = "Python SDK for LangWatch for monitoring your LLMs"
 optional = false
 python-versions = "<4.0,>=3.9"
 files = [
-    {file = "langwatch-0.1.9-py3-none-any.whl", hash = "sha256:d082f70bb7f6aa67623281e3e624065932bc6e5729322637d8957cc63942a007"},
-    {file = "langwatch-0.1.9.tar.gz", hash = "sha256:3f044b668239b0e4cc244635f8ceeb7e10948c736f6b60bcda7c26852308b2f8"},
+    {file = "langwatch-0.1.10-py3-none-any.whl", hash = "sha256:271902080b6e0e5ee5aca7e244995b7737bbc54ead956bc16da50445c53d4dce"},
+    {file = "langwatch-0.1.10.tar.gz", hash = "sha256:4350aefbbe4ba5ff5f614f10bbf73ca36ccab4f010f66fd66fc826a1a14ade4b"},
 ]
 
 [package.dependencies]
@@ -5689,6 +5825,17 @@ files = [
 ]
 
 [[package]]
+name = "more-itertools"
+version = "10.3.0"
+description = "More routines for operating on iterables, beyond itertools"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "more-itertools-10.3.0.tar.gz", hash = "sha256:e5d93ef411224fbcef366a6e8ddc4c5781bc6359d43412a65dd5964e46111463"},
+    {file = "more_itertools-10.3.0-py3-none-any.whl", hash = "sha256:ea6a02e24a9161e51faad17a8782b92a0df82c12c1c8886fec7f0c3fa1a1b320"},
+]
+
+[[package]]
 name = "mpmath"
 version = "1.3.0"
 description = "Python library for arbitrary-precision floating-point arithmetic"
@@ -5896,6 +6043,17 @@ files = [
 
 [package.dependencies]
 dill = ">=0.3.7"
+
+[[package]]
+name = "multitasking"
+version = "0.0.11"
+description = "Non-blocking Python methods using decorators"
+optional = false
+python-versions = "*"
+files = [
+    {file = "multitasking-0.0.11-py3-none-any.whl", hash = "sha256:1e5b37a5f8fc1e6cfaafd1a82b6b1cc6d2ed20037d3b89c25a84f499bd7b3dd4"},
+    {file = "multitasking-0.0.11.tar.gz", hash = "sha256:4d6bc3cc65f9b2dca72fb5a787850a88dae8f620c2b36ae9b55248e51bcd6026"},
+]
 
 [[package]]
 name = "mypy"
@@ -6811,6 +6969,16 @@ argon2 = ["argon2-cffi (>=18.2.0)"]
 bcrypt = ["bcrypt (>=3.1.0)"]
 build-docs = ["cloud-sptheme (>=1.10.1)", "sphinx (>=1.6)", "sphinxcontrib-fulltoc (>=1.2.0)"]
 totp = ["cryptography"]
+
+[[package]]
+name = "peewee"
+version = "3.17.6"
+description = "a little orm"
+optional = false
+python-versions = "*"
+files = [
+    {file = "peewee-3.17.6.tar.gz", hash = "sha256:cea5592c6f4da1592b7cff8eaf655be6648a1f5857469e30037bf920c03fb8fb"},
+]
 
 [[package]]
 name = "pexpect"
@@ -7961,13 +8129,13 @@ files = [
 
 [[package]]
 name = "pyright"
-version = "1.1.371"
+version = "1.1.372"
 description = "Command line wrapper for pyright"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "pyright-1.1.371-py3-none-any.whl", hash = "sha256:cce52e42ff73943243e7e5e24f2a59dee81b97d99f4e3cf97370b27e8a1858cd"},
-    {file = "pyright-1.1.371.tar.gz", hash = "sha256:777b508b92dda2db476214c400ce043aad8d8f3dd0e10d284c96e79f298308b5"},
+    {file = "pyright-1.1.372-py3-none-any.whl", hash = "sha256:25b15fb8967740f0949fd35b963777187f0a0404c0bd753cc966ec139f3eaa0b"},
+    {file = "pyright-1.1.372.tar.gz", hash = "sha256:a9f5e0daa955daaa17e3d1ef76d3623e75f8afd5e37b437d3ff84d5b38c15420"},
 ]
 
 [package.dependencies]
@@ -8023,13 +8191,13 @@ dev = ["argcomplete", "attrs (>=19.2)", "hypothesis (>=3.56)", "mock", "pygments
 
 [[package]]
 name = "pytest-asyncio"
-version = "0.23.7"
+version = "0.23.8"
 description = "Pytest support for asyncio"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "pytest_asyncio-0.23.7-py3-none-any.whl", hash = "sha256:009b48127fbe44518a547bddd25611551b0e43ccdbf1e67d12479f569832c20b"},
-    {file = "pytest_asyncio-0.23.7.tar.gz", hash = "sha256:5f5c72948f4c49e7db4f29f2521d4031f1c27f86e57b046126654083d4770268"},
+    {file = "pytest_asyncio-0.23.8-py3-none-any.whl", hash = "sha256:50265d892689a5faefb84df80819d1ecef566eb3549cf915dfb33569359d1ce2"},
+    {file = "pytest_asyncio-0.23.8.tar.gz", hash = "sha256:759b10b33a6dc61cce40a8bd5205e302978bbbcc00e279a8b61d9a6a3c82e4d3"},
 ]
 
 [package.dependencies]
@@ -9798,30 +9966,30 @@ test = ["pylint", "pytest", "pytest-black", "pytest-cov", "pytest-pylint"]
 
 [[package]]
 name = "structlog"
-version = "24.2.0"
+version = "24.4.0"
 description = "Structured Logging for Python"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "structlog-24.2.0-py3-none-any.whl", hash = "sha256:983bd49f70725c5e1e3867096c0c09665918936b3db27341b41d294283d7a48a"},
-    {file = "structlog-24.2.0.tar.gz", hash = "sha256:0e3fe74924a6d8857d3f612739efb94c72a7417d7c7c008d12276bca3b5bf13b"},
+    {file = "structlog-24.4.0-py3-none-any.whl", hash = "sha256:597f61e80a91cc0749a9fd2a098ed76715a1c8a01f73e336b746504d1aad7610"},
+    {file = "structlog-24.4.0.tar.gz", hash = "sha256:b27bfecede327a6d2da5fbc96bd859f114ecc398a6389d664f62085ee7ae6fc4"},
 ]
 
 [package.extras]
 dev = ["freezegun (>=0.2.8)", "mypy (>=1.4)", "pretend", "pytest (>=6.0)", "pytest-asyncio (>=0.17)", "rich", "simplejson", "twisted"]
-docs = ["furo", "myst-parser", "sphinx", "sphinx-notfound-page", "sphinxcontrib-mermaid", "sphinxext-opengraph", "twisted"]
+docs = ["cogapp", "furo", "myst-parser", "sphinx", "sphinx-notfound-page", "sphinxcontrib-mermaid", "sphinxext-opengraph", "twisted"]
 tests = ["freezegun (>=0.2.8)", "pretend", "pytest (>=6.0)", "pytest-asyncio (>=0.17)", "simplejson"]
 typing = ["mypy (>=1.4)", "rich", "twisted"]
 
 [[package]]
 name = "supabase"
-version = "2.5.2"
+version = "2.5.3"
 description = "Supabase client for Python."
 optional = false
 python-versions = "<4.0,>=3.8"
 files = [
-    {file = "supabase-2.5.2-py3-none-any.whl", hash = "sha256:321b2278f6f71bdb2ac13f3f36e565f4045a3c099d44aa4f8454ef12c743b445"},
-    {file = "supabase-2.5.2.tar.gz", hash = "sha256:f97e06d9b821f972e50cfe188e49b2a657cd817d48a5b4604304ebd61b7b87ef"},
+    {file = "supabase-2.5.3-py3-none-any.whl", hash = "sha256:b5e9711f5cc0f5c5f96c4e2b4f043641ccfb63125b3d33eae9c26c9d37bf6e29"},
+    {file = "supabase-2.5.3.tar.gz", hash = "sha256:71570226d0399d7f7203a08c44b734d6b873c7c3cc0dbe74fd9cdc8b4513c2bb"},
 ]
 
 [package.dependencies]
@@ -9892,13 +10060,13 @@ files = [
 
 [[package]]
 name = "tenacity"
-version = "8.5.0"
+version = "8.3.0"
 description = "Retry code until it succeeds"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "tenacity-8.5.0-py3-none-any.whl", hash = "sha256:b594c2a5945830c267ce6b79a166228323ed52718f30302c1359836112346687"},
-    {file = "tenacity-8.5.0.tar.gz", hash = "sha256:8bc6c0c8a09b31e6cad13c47afbed1a567518250a9a171418582ed8d9c20ca78"},
+    {file = "tenacity-8.3.0-py3-none-any.whl", hash = "sha256:3649f6443dbc0d9b01b9d8020a9c4ec7a1ff5f6f3c6c8a036ef371f573fe9185"},
+    {file = "tenacity-8.3.0.tar.gz", hash = "sha256:953d4e6ad24357bceffbc9707bc74349aca9d245f68eb65419cf0c249a1949a2"},
 ]
 
 [package.extras]
@@ -10399,13 +10567,13 @@ typing-extensions = ">=3.7.4.3"
 
 [[package]]
 name = "types-cachetools"
-version = "5.3.0.7"
+version = "5.4.0.20240717"
 description = "Typing stubs for cachetools"
 optional = false
-python-versions = ">=3.7"
+python-versions = ">=3.8"
 files = [
-    {file = "types-cachetools-5.3.0.7.tar.gz", hash = "sha256:27c982cdb9cf3fead8b0089ee6b895715ecc99dac90ec29e2cab56eb1aaf4199"},
-    {file = "types_cachetools-5.3.0.7-py3-none-any.whl", hash = "sha256:98c069dc7fc087b1b061703369c80751b0a0fc561f6fb072b554e5eee23773a0"},
+    {file = "types-cachetools-5.4.0.20240717.tar.gz", hash = "sha256:1eae90c48760bac44ab89108be938e8ce1d740910f2d4b68446dcdc82763f186"},
+    {file = "types_cachetools-5.4.0.20240717-py3-none-any.whl", hash = "sha256:67c84c26df988039be68344b162afd2dd7cd3741dc08e7d67aa1954782fd2d2a"},
 ]
 
 [[package]]
@@ -11146,6 +11314,17 @@ requests = ">=2.30.0,<3.0.0"
 validators = "0.28.3"
 
 [[package]]
+name = "webencodings"
+version = "0.5.1"
+description = "Character encoding aliases for legacy web content"
+optional = false
+python-versions = "*"
+files = [
+    {file = "webencodings-0.5.1-py2.py3-none-any.whl", hash = "sha256:a0af1213f3c2226497a97e2b3aa01a7e4bee4f403f95be16fc9acd2947514a78"},
+    {file = "webencodings-0.5.1.tar.gz", hash = "sha256:b36a1c245f2d304965eb4e0a82848379241dc04b865afcc4aab16748587e1923"},
+]
+
+[[package]]
 name = "websocket-client"
 version = "1.8.0"
 description = "WebSocket client for Python with low level API options"
@@ -11288,6 +11467,28 @@ files = [
 dev = ["black (>=19.3b0)", "pytest (>=4.6.2)"]
 
 [[package]]
+name = "wolframalpha"
+version = "5.1.3"
+description = "Wolfram|Alpha 2.0 API client"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "wolframalpha-5.1.3-py3-none-any.whl", hash = "sha256:549b44e64595c5845be4c94f2b306a84832157bef422b20937cbca44b48ee117"},
+    {file = "wolframalpha-5.1.3.tar.gz", hash = "sha256:56226efeca0f55acec5e17dd2f6537a178d0bf4feec4df0615165e2968bb49b8"},
+]
+
+[package.dependencies]
+httpx = "*"
+"jaraco.context" = "*"
+more-itertools = "*"
+multidict = "*"
+xmltodict = "*"
+
+[package.extras]
+doc = ["furo", "jaraco.packaging (>=9.3)", "rst.linker (>=1.9)", "sphinx (>=3.5)", "sphinx-lint"]
+test = ["keyring", "pmxbot", "pytest (>=6,!=8.1.*)", "pytest-checkdocs (>=2.4)", "pytest-cov", "pytest-enabler (>=2.2)", "pytest-mypy", "pytest-ruff (>=0.2.1)"]
+
+[[package]]
 name = "wrapt"
 version = "1.16.0"
 description = "Module for decorators, wrappers and monkey patching."
@@ -11389,6 +11590,17 @@ python-versions = ">=3.6"
 files = [
     {file = "XlsxWriter-3.2.0-py3-none-any.whl", hash = "sha256:ecfd5405b3e0e228219bcaf24c2ca0915e012ca9464a14048021d21a995d490e"},
     {file = "XlsxWriter-3.2.0.tar.gz", hash = "sha256:9977d0c661a72866a61f9f7a809e25ebbb0fb7036baa3b9fe74afcfca6b3cb8c"},
+]
+
+[[package]]
+name = "xmltodict"
+version = "0.13.0"
+description = "Makes working with XML feel like you are working with JSON"
+optional = false
+python-versions = ">=3.4"
+files = [
+    {file = "xmltodict-0.13.0-py2.py3-none-any.whl", hash = "sha256:aa89e8fd76320154a40d19a0df04a4695fb9dc5ba977cbb68ab3e4eb225e7852"},
+    {file = "xmltodict-0.13.0.tar.gz", hash = "sha256:341595a488e3e01a85a9d8911d8912fd922ede5fecc4dce437eb4b6c8d037e56"},
 ]
 
 [[package]]
@@ -11612,6 +11824,34 @@ idna = ">=2.0"
 multidict = ">=4.0"
 
 [[package]]
+name = "yfinance"
+version = "0.2.40"
+description = "Download market data from Yahoo! Finance API"
+optional = false
+python-versions = "*"
+files = [
+    {file = "yfinance-0.2.40-py2.py3-none-any.whl", hash = "sha256:328176b5690de7aa192456a15b351c20ddde31b35d479f8179f5325bd340fc0b"},
+    {file = "yfinance-0.2.40.tar.gz", hash = "sha256:b053ac31229b5dc7f49a17a057f66aa7f688de2f5ddeb95c2455ec13cd89511a"},
+]
+
+[package.dependencies]
+beautifulsoup4 = ">=4.11.1"
+frozendict = ">=2.3.4"
+html5lib = ">=1.1"
+lxml = ">=4.9.1"
+multitasking = ">=0.0.7"
+numpy = ">=1.16.5"
+pandas = ">=1.3.0"
+peewee = ">=3.16.2"
+platformdirs = ">=2.0.0"
+pytz = ">=2022.5"
+requests = ">=2.31"
+
+[package.extras]
+nospam = ["requests-cache (>=1.0)", "requests-ratelimiter (>=0.3.1)"]
+repair = ["scipy (>=1.6.3)"]
+
+[[package]]
 name = "youtube-transcript-api"
 version = "0.6.2"
 description = "This is an python API which allows you to get the transcripts/subtitles for a given YouTube video. It also works for automatically generated subtitles, supports translating subtitles and it does not require a headless browser, like other selenium based solutions do!"
@@ -11735,4 +11975,4 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-content-hash = "53efe77ea0fe985d9319884d4e0ade4d1949f6348ecf75d6afa7297483dd314c"
+content-hash = "1c676440f3d6e74df8460f61ce3106255cc6b5158fcf798de368e4e7d623f19a"

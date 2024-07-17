@@ -20,6 +20,7 @@ interface retrieveGetVerticesOrderResponse {
 
 // add types for error handling and success
 export const usePostRetrieveVertexOrder: useMutationFunctionType<
+  undefined,
   retrieveGetVerticesOrder,
   retrieveGetVerticesOrderResponse
 > = (options) => {

@@ -39,10 +39,8 @@ export default function LoginPage(): JSX.Element {
     };
     onLogin(user)
       .then((user) => {
-        console.log("login page");
-
         setLoading(true);
-        login(user.access_token);
+        login(user.access_token, "login");
         navigate("/");
       })
       .catch((error) => {
