@@ -1,8 +1,9 @@
+from langchain.tools import WikipediaQueryRun
 from langchain_community.utilities.wikipedia import WikipediaAPIWrapper
 
 from langflow.base.langchain_utilities.model import LCToolComponent
-from langchain.tools import WikipediaQueryRun, BaseTool
-from langflow.inputs import IntInput, MessageTextInput, BoolInput, MultilineInput
+from langflow.field_typing import Tool
+from langflow.inputs import BoolInput, IntInput, MessageTextInput, MultilineInput
 from langflow.schema import Data
 
 
@@ -31,7 +32,7 @@ class WikipediaAPIComponent(LCToolComponent):
         self.status = data
         return data
 
-    def build_tool(self) -> BaseTool:
+    def build_tool(self) -> Tool:
         wrapper = self._build_wrapper()
         return WikipediaQueryRun(api_wrapper=wrapper)
 
