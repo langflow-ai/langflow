@@ -28,7 +28,7 @@ export const useGetApiKeysQuery: useQueryFunctionType<
   const { query } = UseRequestProcessor();
 
   const getApiKeysFn = async () => {
-    return await api.get<IApiQueryResponse>(`${getURL("API_KEY")}`);
+    return await api.get<IApiQueryResponse>(`${getURL("API_KEY")}/`);
   };
 
   const responseFn = async () => {
