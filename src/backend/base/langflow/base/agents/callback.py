@@ -10,7 +10,7 @@ from langflow.schema.log import LoggableType
 class AgentAsyncHandler(AsyncCallbackHandler):
     """Async callback handler that can be used to handle callbacks from langchain."""
 
-    def __init__(self, log_function: Callable[[LoggableType], None] | None = None):
+    def __init__(self, log_function: Callable[[LoggableType | list[LoggableType], str], None] | None = None):
         self.log_function = log_function
 
     async def on_tool_start(
