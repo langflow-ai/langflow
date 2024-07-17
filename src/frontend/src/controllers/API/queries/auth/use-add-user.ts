@@ -5,7 +5,7 @@ import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
 
-export const useAddUser: useMutationFunctionType<UserInputType> = (
+export const useAddUser: useMutationFunctionType<undefined, UserInputType> = (
   options?,
 ) => {
   const { mutate } = UseRequestProcessor();
