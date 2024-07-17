@@ -30,7 +30,7 @@
     "@types/axios": "^0.14.0",
     "ace-builds": "^1.35.0",
     "ag-grid-community": "^32.0.1",
-    "ag-grid-react": "^31.3.2",
+    "ag-grid-react": "^32.0.1",
     "ansi-to-html": "^0.7.2",
     "axios": "^1.7.2",
     "base64-js": "^1.5.1",
