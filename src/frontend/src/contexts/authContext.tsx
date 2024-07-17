@@ -1,3 +1,8 @@
+import {
+  LANGFLOW_ACCESS_TOKEN,
+  LANGFLOW_API_TOKEN,
+  LANGFLOW_AUTO_LOGIN_OPTION,
+} from "@/constants/constants";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { createContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -38,17 +43,17 @@ export function AuthProvider({ children }): React.ReactElement {
   const navigate = useNavigate();
   const cookies = new Cookies();
   const [accessToken, setAccessToken] = useState<string | null>(
-    cookies.get("access_token_lf") ?? null,
+    cookies.get(LANGFLOW_ACCESS_TOKEN) ?? null,
   );
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(
-    !!cookies.get("access_token_lf"),
+    !!cookies.get(LANGFLOW_ACCESS_TOKEN),
   );
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [userData, setUserData] = useState<Users | null>(null);
   const [autoLogin, setAutoLogin] = useState<boolean>(false);
   const setLoading = useAlertStore((state) => state.setLoading);
   const [apiKey, setApiKey] = useState<string | null>(
-    cookies.get("apikey_tkn_lflw"),
+    cookies.get(LANGFLOW_API_TOKEN),
   );
 
   const getFoldersApi = useFolderStore((state) => state.getFoldersApi);
@@ -61,14 +66,14 @@ export function AuthProvider({ children }): React.ReactElement {
   const setSelectedFolder = useFolderStore((state) => state.setSelectedFolder);
 
   useEffect(() => {
-    const storedAccessToken = cookies.get("access_token_lf");
+    const storedAccessToken = cookies.get(LANGFLOW_ACCESS_TOKEN);
     if (storedAccessToken) {
       setAccessToken(storedAccessToken);
     }
   }, []);
 
   useEffect(() => {
-    const apiKey = cookies.get("apikey_tkn_lflw");
+    const apiKey = cookies.get(LANGFLOW_API_TOKEN);
     if (apiKey) {
       setApiKey(apiKey);
     }
@@ -91,7 +96,8 @@ export function AuthProvider({ children }): React.ReactElement {
       });
   }
 
-  function login(newAccessToken: string) {
+  function login(newAccessToken: string, autoLogin: string) {
+    cookies.set(LANGFLOW_AUTO_LOGIN_OPTION, autoLogin, { path: "/" });
     setAccessToken(newAccessToken);
     setIsAuthenticated(true);
     getUser();
@@ -103,7 +109,8 @@ export function AuthProvider({ children }): React.ReactElement {
     }
     try {
       await requestLogout();
-      cookies.remove("apikey_tkn_lflw", { path: "/" });
+      cookies.remove(LANGFLOW_API_TOKEN, { path: "/" });
+      cookies.remove(LANGFLOW_AUTO_LOGIN_OPTION, { path: "/" });
       setIsAdmin(false);
       setUserData(null);
       setAccessToken(null);
@@ -111,6 +118,7 @@ export function AuthProvider({ children }): React.ReactElement {
       setAllFlows([]);
       setSelectedFolder(null);
       navigate("/login");
+      useFlowsManagerStore.setState({ isLoading: false });
     } catch (error) {
       console.error(error);
       throw error;
@@ -118,7 +126,7 @@ export function AuthProvider({ children }): React.ReactElement {
   }
 
   function storeApiKey(apikey: string) {
-    cookies.set("apikey_tkn_lflw", apikey, { path: "/" });
+    cookies.set(LANGFLOW_ACCESS_TOKEN, apikey, { path: "/" });
     setApiKey(apikey);
   }
 
