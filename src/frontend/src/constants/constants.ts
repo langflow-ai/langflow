@@ -816,6 +816,10 @@ export const defaultShortcuts = [
     shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + F`,
   },
   {
+    name: "Freeze Path",
+    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + Shift + F`,
+  },
+  {
     name: "Flow Share",
     shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + B`,
   },
@@ -852,6 +856,8 @@ export const TITLE_ERROR_UPDATING_COMPONENT =
   "Error while updating the Component";
 
 export const EMPTY_INPUT_SEND_MESSAGE = "No input message provided.";
+
+export const EMPTY_OUTPUT_SEND_MESSAGE = "Message empty.";
 
 export const TABS_ORDER = [
   "run curl",

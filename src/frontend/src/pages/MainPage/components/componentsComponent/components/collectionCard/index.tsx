@@ -47,7 +47,6 @@ const CollectionCard = ({ item, type, isLoading, control }) => {
 
   return (
     <CollectionCardComponent
-      is_component={type === "component"}
       data={{
         is_component: isComponent,
         ...item,
