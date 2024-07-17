@@ -55,6 +55,8 @@ class LCAgentComponent(Component):
             message_history=self.chat_history,
             handle_parsing_errors=self.handle_parsing_errors,
         )
+        if isinstance(result, list):
+            result = "\n".join([result_dict["text"] for result_dict in result])
         message = Message(text=result, sender="Machine")
         self.status = message
         return message
