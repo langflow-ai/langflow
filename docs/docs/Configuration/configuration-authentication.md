@@ -44,9 +44,14 @@ langflow run --env-file .env
 ```
 
 
-> ℹ︎ INFO  
-> It is critical not to expose these environment variables in your code repository. Always set them securely in your deployment environment, for example, using Docker secrets, Kubernetes ConfigMaps/Secrets, or dedicated secure environment configuration systems like AWS Secrets Manager.  
-> 
+:::caution
+
+ It is critical not to expose these environment variables in your code repository. Always set them securely in your deployment environment, for example, using Docker secrets, Kubernetes ConfigMaps/Secrets, or dedicated secure environment configuration systems like AWS Secrets Manager.
+
+
+:::
+
+
 
 
 ### _`LANGFLOW_AUTO_LOGIN`_ {#8b10059e0fbc44f3bc8ce63fe7692e7e}
