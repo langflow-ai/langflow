@@ -13,7 +13,7 @@ from langchain_core.memory import BaseMemory
 from langchain_core.output_parsers import BaseOutputParser
 from langchain_core.prompts import BasePromptTemplate, ChatPromptTemplate, PromptTemplate
 from langchain_core.retrievers import BaseRetriever
-from langchain_core.tools import Tool
+from langchain_core.tools import Tool, BaseTool
 from langchain_core.vectorstores import VectorStore, VectorStoreRetriever
 from langchain_text_splitters import TextSplitter
 
@@ -43,6 +43,7 @@ class Code:
 LANGCHAIN_BASE_TYPES = {
     "Chain": Chain,
     "AgentExecutor": AgentExecutor,
+    "BaseTool": BaseTool,
     "Tool": Tool,
     "BaseLLM": BaseLLM,
     "BaseLanguageModel": BaseLanguageModel,

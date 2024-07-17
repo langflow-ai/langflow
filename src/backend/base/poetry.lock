@@ -1245,19 +1245,19 @@ files = [
 
 [[package]]
 name = "langchain"
-version = "0.2.8"
+version = "0.2.9"
 description = "Building applications with LLMs through composability"
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
-    {file = "langchain-0.2.8-py3-none-any.whl", hash = "sha256:53e7dfe50294a14200f33bec22b4e14cb63857ccf0a5500b0d18b0fd51285d58"},
-    {file = "langchain-0.2.8.tar.gz", hash = "sha256:7fecb309e3558cde4e5cf7e9ffb7c1ab3f07121c40a7ff3b0c27135f8120c296"},
+    {file = "langchain-0.2.9-py3-none-any.whl", hash = "sha256:be23fcb29adbd5059944f1fed08fa575f0739d420b1c4127531e0fbf5663fcca"},
+    {file = "langchain-0.2.9.tar.gz", hash = "sha256:cc326a7f6347787a19882928c324433b1a79df629bba45604b2d26495ee5d69c"},
 ]
 
 [package.dependencies]
 aiohttp = ">=3.8.3,<4.0.0"
 async-timeout = {version = ">=4.0.0,<5.0.0", markers = "python_version < \"3.11\""}
-langchain-core = ">=0.2.19,<0.3.0"
+langchain-core = ">=0.2.20,<0.3.0"
 langchain-text-splitters = ">=0.2.0,<0.3.0"
 langsmith = ">=0.1.17,<0.2.0"
 numpy = [
