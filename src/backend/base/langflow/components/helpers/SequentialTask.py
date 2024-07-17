@@ -1,6 +1,6 @@
 from langflow.base.agents.crewai.tasks import SequentialTask
 from langflow.custom import Component
-from langflow.io import BoolInput, HandleInput, MessageTextInput, Output
+from langflow.io import BoolInput, HandleInput, MultilineInput, Output
 
 
 class SequentialTaskComponent(Component):
@@ -8,12 +8,12 @@ class SequentialTaskComponent(Component):
     description: str = "Each task must have a description, an expected output and an agent responsible for execution."
     icon = "CrewAI"
     inputs = [
-        MessageTextInput(
+        MultilineInput(
             name="task_description",
             display_name="Description",
             info="Descriptive text detailing task's purpose and execution.",
         ),
-        MessageTextInput(
+        MultilineInput(
             name="expected_output",
             display_name="Expected Output",
             info="Clear definition of expected task outcome.",
@@ -54,7 +54,7 @@ class SequentialTaskComponent(Component):
     ]
 
     def build_task(self) -> list[SequentialTask]:
-        tasks = []
+        tasks: list[SequentialTask] = []
         task = SequentialTask(
             description=self.task_description,
             expected_output=self.expected_output,
@@ -65,8 +65,8 @@ class SequentialTaskComponent(Component):
         tasks.append(task)
         self.status = task
         if self.task:
-            if isinstance(self.task, list):
-                tasks.extend(self.task)
-            else:
-                tasks.append(self.task)
+            if isinstance(self.task, list) and all(isinstance(task, SequentialTask) for task in self.task):
+                tasks = self.task + tasks
+            elif isinstance(self.task, SequentialTask):
+                tasks = [self.task] + tasks
         return tasks

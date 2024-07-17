@@ -1,3 +1,4 @@
+import { freezeAllIcon } from "@/icons/freezeAll";
 import {
   AlertCircle,
   AlertTriangle,
@@ -275,6 +276,7 @@ export const nodeColors: { [char: string]: string } = {
   wrappers: "#E6277A",
   helpers: "#31A3CC",
   prototypes: "#E6277A",
+  astra_assistants: "#272541",
   langchain_utilities: "#31A3CC",
   output_parsers: "#E6A627",
   // custom_components: "#ab11ab",
@@ -316,6 +318,7 @@ export const nodeNames: { [char: string]: string } = {
   retrievers: "Retrievers",
   helpers: "Helpers",
   prototypes: "Prototypes",
+  astra_assistants: "Astra Assistants",
   langchain_utilities: "Utilities",
   output_parsers: "Output Parsers",
   custom_components: "Custom",
@@ -431,6 +434,7 @@ export const nodeIconsLucide: iconsType = {
   textsplitters: Scissors,
   wrappers: Gift,
   helpers: Wand2,
+  astra_assistants: Sparkles,
   ScanEye,
   prototypes: FlaskConical,
   langchain_utilities: PocketKnife,
@@ -576,4 +580,5 @@ export const nodeIconsLucide: iconsType = {
   Upstash: UpstashSvgIcon,
   PGVector: CpuIcon,
   Confluence: ConfluenceIcon,
+  FreezeAll: freezeAllIcon,
 };

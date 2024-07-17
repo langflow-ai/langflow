@@ -163,4 +163,5 @@ export type FlowStoreType = {
   getNodePosition: (nodeId: string) => { x: number; y: number };
   setLockChat: (lock: boolean) => void;
   lockChat: boolean;
+  updateFreezeStatus: (nodeIds: string[], freeze: boolean) => void;
 };

@@ -1,3 +1,4 @@
+import { LogsLogType, OutputLogType } from "@/types/api";
 import DataOutputComponent from "../../../../../../components/dataOutputComponent";
 import ForwardedIconComponent from "../../../../../../components/genericIconComponent";
 import {
@@ -13,26 +14,28 @@ import ErrorOutput from "./components";
 interface SwitchOutputViewProps {
   nodeId: string;
   outputName: string;
+  type: "Outputs" | "Logs";
 }
 const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
   nodeId,
   outputName,
+  type,
 }) => {
   const flowPool = useFlowStore((state) => state.flowPool);
   const flowPoolNode = (flowPool[nodeId] ?? [])[
     (flowPool[nodeId]?.length ?? 1) - 1
   ];
-  let results = flowPoolNode?.data?.outputs[outputName] ?? "";
-  if (Array.isArray(results)) {
-    return;
-  }
+  let results: OutputLogType | LogsLogType =
+    (type === "Outputs"
+      ? flowPoolNode?.data?.outputs[outputName]
+      : flowPoolNode?.data?.logs[outputName]) ?? {};
   const resultType = results?.type;
-  let resultMessage = results?.message;
+  let resultMessage = results?.message ?? {};
   const RECORD_TYPES = ["data", "object", "array", "message"];
   if (resultMessage?.raw) {
     resultMessage = resultMessage.raw;
   }
-  return (
+  return type === "Outputs" ? (
     <>
       <Case condition={!resultType || resultType === "unknown"}>
         <div>NO OUTPUT</div>
@@ -54,7 +57,9 @@ const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
               ? (resultMessage as Array<any>).every((item) => item.data)
                 ? (resultMessage as Array<any>).map((item) => item.data)
                 : resultMessage
-              : [resultMessage]
+              : Object.keys(resultMessage).length > 0
+                ? [resultMessage]
+                : []
           }
           pagination={true}
           columnMode="union"
@@ -78,6 +83,20 @@ const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
         </div>
       </Case>
     </>
+  ) : (
+    <DataOutputComponent
+      rows={
+        Array.isArray(results)
+          ? (results as Array<any>).every((item) => item.data)
+            ? (results as Array<any>).map((item) => item.data)
+            : results
+          : Object.keys(results).length > 0
+            ? [results]
+            : []
+      }
+      pagination={true}
+      columnMode="union"
+    />
   );
 };
 

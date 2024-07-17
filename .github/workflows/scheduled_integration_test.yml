@@ -1,0 +1,59 @@
+name: Integration tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "(Optional) Branch to checkout"
+        required: false
+        type: string
+  schedule:
+    - cron: "0 0 */2 * *" # Run every 2 days
+
+env:
+  POETRY_VERSION: "1.8.2"
+
+jobs:
+  setup-environment:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version:
+          - "3.12"
+          - "3.11"
+          - "3.10"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || github.ref }}
+      - name: Set up Python ${{ matrix.python-version }} + Poetry ${{ env.POETRY_VERSION }}
+        uses: "./.github/actions/poetry_caching"
+        with:
+          python-version: ${{ matrix.python-version }}
+          poetry-version: ${{ env.POETRY_VERSION }}
+          cache-key: ${{ runner.os }}-poetry-${{ env.POETRY_VERSION }}-${{ hashFiles('**/poetry.lock') }}
+      - name: Install Python dependencies
+        run: |
+          poetry env use ${{ matrix.python-version }}
+          poetry install
+
+  test-integration:
+    needs: setup-environment
+    name: Run Integration Tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version:
+          - "3.12"
+          - "3.11"
+          - "3.10"
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      ASTRA_DB_API_KEY: ${{ secrets.ASTRA_DB_API_KEY }}
+      ASTRA_DB_APPLICATION_TOKEN: ${{ secrets.ASTRA_DB_APPLICATION_TOKEN }}
+    steps:
+      - name: Run integration tests
+        timeout-minutes: 12
+        run: |
+          make integration_tests

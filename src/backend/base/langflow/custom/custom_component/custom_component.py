@@ -86,6 +86,7 @@ class CustomComponent(BaseComponent):
     _flows_data: Optional[List[Data]] = None
     _outputs: List[OutputValue] = []
     _logs: List[Log] = []
+    _output_logs: dict[str, Log] = {}
     tracing_service: Optional["TracingService"] = None
 
     def set_attributes(self, parameters: dict):
@@ -518,11 +519,11 @@ class CustomComponent(BaseComponent):
         if self.tracing_service and self.vertex:
             self.tracing_service.add_log(trace_name=self.trace_name, log=log)
 
-    def post_code_processing(self, new_build_config: dict, current_build_config: dict):
+    def post_code_processing(self, new_frontend_node: dict, current_frontend_node: dict):
         """
         This function is called after the code validation is done.
         """
         frontend_node = update_frontend_node_with_template_values(
-            frontend_node=new_build_config, raw_frontend_node=current_build_config
+            frontend_node=new_frontend_node, raw_frontend_node=current_frontend_node
         )
         return frontend_node
