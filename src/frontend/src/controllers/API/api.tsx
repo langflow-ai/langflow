@@ -1,3 +1,7 @@
+import {
+  LANGFLOW_ACCESS_TOKEN,
+  LANGFLOW_AUTO_LOGIN_OPTION,
+} from "@/constants/constants";
 import axios, { AxiosError, AxiosInstance } from "axios";
 import { useContext, useEffect } from "react";
 import { Cookies } from "react-cookie";
@@ -7,7 +11,6 @@ import { AuthContext } from "../../contexts/authContext";
 import useAlertStore from "../../stores/alertStore";
 import useFlowStore from "../../stores/flowStore";
 import { checkDuplicateRequestAndStoreRequest } from "./helpers/check-duplicate-requests";
-import { LANGFLOW_ACCESS_TOKEN, LANGFLOW_AUTO_LOGIN_OPTION } from "@/constants/constants";
 
 // Create a new Axios instance
 const api: AxiosInstance = axios.create({
@@ -130,7 +133,6 @@ function ApiInterceptor() {
       if (window.location.pathname.includes("/login")) return;
       const res = await renewAccessToken();
       if (res?.data?.access_token && res?.data?.refresh_token) {
-
         login(res?.data?.access_token, cookies.get(LANGFLOW_AUTO_LOGIN_OPTION));
       }
     } catch (error) {

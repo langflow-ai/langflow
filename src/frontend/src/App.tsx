@@ -1,4 +1,5 @@
 import { useContext, useEffect, useState } from "react";
+import { Cookies } from "react-cookie";
 import { ErrorBoundary } from "react-error-boundary";
 import { useNavigate } from "react-router-dom";
 import "reactflow/dist/style.css";
@@ -24,7 +25,6 @@ import useAlertStore from "./stores/alertStore";
 import { useDarkStore } from "./stores/darkStore";
 import useFlowsManagerStore from "./stores/flowsManagerStore";
 import { useFolderStore } from "./stores/foldersStore";
-import { Cookies } from "react-cookie";
 
 export default function App() {
   useTrackLastVisitedPath();
@@ -72,8 +72,11 @@ export default function App() {
       .catch(async (error) => {
         if (error.name !== "CanceledError") {
           setAutoLogin(false);
-          if(cookies.get(LANGFLOW_AUTO_LOGIN_OPTION) === "auto" && isAuthenticated) {
-            logout()
+          if (
+            cookies.get(LANGFLOW_AUTO_LOGIN_OPTION) === "auto" &&
+            isAuthenticated
+          ) {
+            logout();
             return;
           }
 
