@@ -9,6 +9,7 @@ from langflow.inputs.inputs import InputTypes
 from langflow.schema.artifact import get_artifact_type, post_process_raw
 from langflow.schema.data import Data
 from langflow.schema.message import Message
+from langflow.services.tracing.schema import Log
 from langflow.template.field.base import UNDEFINED, Output
 
 from .custom_component import CustomComponent
@@ -38,6 +39,7 @@ class Component(CustomComponent):
     inputs: List[InputTypes] = []
     outputs: List[Output] = []
     code_class_base_inheritance: ClassVar[str] = "Component"
+    _output_logs: dict[str, Log] = {}
 
     def __init__(self, **data):
         self._inputs: dict[str, InputTypes] = {}
