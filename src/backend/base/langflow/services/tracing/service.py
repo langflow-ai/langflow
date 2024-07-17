@@ -9,8 +9,6 @@ from loguru import logger
 
 from langflow.services.base import Service
 from langflow.services.tracing.base import BaseTracer
-from langflow.services.tracing.langsmith import LangSmithTracer
-from langflow.services.tracing.langwatch import LangWatchTracer
 from langflow.services.tracing.schema import Log
 
 if TYPE_CHECKING:
@@ -18,6 +16,18 @@ if TYPE_CHECKING:
     from langflow.graph.vertex.base import Vertex
     from langflow.services.monitor.service import MonitorService
     from langflow.services.settings.service import SettingsService
+
+
+def _get_langsmith_tracer():
+    from langflow.services.tracing.langsmith import LangSmithTracer
+
+    return LangSmithTracer
+
+
+def _get_langwatch_tracer():
+    from langflow.services.tracing.langwatch import LangWatchTracer
+
+    return LangWatchTracer
 
 
 class TracingService(Service):
@@ -95,7 +105,8 @@ class TracingService(Service):
     def _initialize_langsmith_tracer(self):
         project_name = os.getenv("LANGCHAIN_PROJECT", "Langflow")
         self.project_name = project_name
-        self._tracers["langsmith"] = LangSmithTracer(
+        langsmith_tracer = _get_langsmith_tracer()
+        self._tracers["langsmith"] = langsmith_tracer(
             trace_name=self.run_name,
             trace_type="chain",
             project_name=self.project_name,
@@ -108,7 +119,8 @@ class TracingService(Service):
             and "langwatch" not in self._tracers
             or self._tracers["langwatch"].trace_id != self.run_id  # type: ignore
         ):
-            self._tracers["langwatch"] = LangWatchTracer(
+            langwatch_tracer = _get_langwatch_tracer()
+            self._tracers["langwatch"] = langwatch_tracer(
                 trace_name=self.run_name,
                 trace_type="chain",
                 project_name=self.project_name,
