@@ -27,7 +27,9 @@
 
 <div align="center">
   <a href="./README.md"><img alt="README in English" src="https://img.shields.io/badge/英文-d9d9d9"></a>
+  <a href="./README.PT.md"><img alt="README in Portuguese" src="https://img.shields.io/badge/Portuguese-d9d9d9"></a>
   <a href="./README.zh_CN.md"><img alt="README in Simplified Chinese" src="https://img.shields.io/badge/简体中文-d9d9d9"></a>
+  <a href="./README.ja.md"><img alt="README in Japanese" src="https://img.shields.io/badge/日本語-d9d9d9"></a>
 </div>
 
 <p align="center">
