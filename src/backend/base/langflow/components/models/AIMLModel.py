@@ -29,7 +29,6 @@ from langflow.inputs import (
 import requests
 
 
-
 class AIMLModelComponent(Component):
     display_name = "AI/ML API"
     description = "Generates text using the AI/ML API"
@@ -116,8 +115,29 @@ class AIMLModelComponent(Component):
 
         headers = {
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {api_key}"
+            "Authorization": f"Bearer {api_key.get_secret_value()}"
         }
+        print(f"headers: {headers}")
+        print(f"System message: {self.system_message}")
+        print(f"Input value: {self.input_value.text}")
+
+        messages = []
+        if self.system_message:
+            messages.append({
+                "role": "system",
+                "content": self.system_message
+            })
+
+        if self.input_value:
+            print(f"Input value: {self.input_value}")
+            messages.append(self.input_value)
+            # messages.append({
+            #     "role": "user",
+            #     "content": self.input_value.text
+            # })
+        else:
+           raise ValueError("Please provide an input value")
+
 
         # Prepare the request payload
         payload = {
@@ -125,17 +145,9 @@ class AIMLModelComponent(Component):
             "model_kwargs": model_kwargs,
             "model": model_name,
             "temperature": temperature or 0.1,
-            "messages" : [
-                {
-                    "role": "system",
-                    "content": self.system_message
-                },
-                {
-                    "role": "user",
-                    "content": self.input_value.text
-                }
-            ]
+            "messages" : messages,
         }
+
         if json_mode:
             payload["response_format"] = {"type": "json_object"}
 
@@ -154,6 +166,7 @@ class AIMLModelComponent(Component):
                     print(f"result text: {result}")
 
                 self.status = result
+                print("result: ", result)
                 return Message(text=result)
             except httpx.TimeoutException:
                 return Message(text="Request timed out.")
