@@ -121,7 +121,12 @@ class LCToolsAgentComponent(LCAgentComponent):
             input_types=["Tool", "BaseTool"],
             is_list=True,
         ),
-        HandleInput(name="llm", display_name="Language Model", input_types=["LanguageModel"], required=True),
+        HandleInput(
+            name="llm",
+            display_name="Language Model",
+            input_types=["LanguageModel", "ToolEnabledLanguageModel"],
+            required=True,
+        ),
     ]
 
     def build_agent(self) -> AgentExecutor:
