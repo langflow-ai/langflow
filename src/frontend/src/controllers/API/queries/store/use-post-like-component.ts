@@ -8,6 +8,7 @@ interface IPostLikeComponent {
 }
 
 export const usePostLikeComponent: useMutationFunctionType<
+  undefined,
   IPostLikeComponent
 > = (options) => {
   const { mutate } = UseRequestProcessor();

@@ -9,9 +9,10 @@ interface IPostUploadFile {
   id: string;
 }
 
-export const usePostUploadFile: useMutationFunctionType<IPostUploadFile> = (
-  options?,
-) => {
+export const usePostUploadFile: useMutationFunctionType<
+  undefined,
+  IPostUploadFile
+> = (options?) => {
   const { mutate } = UseRequestProcessor();
 
   const postUploadFileFn = async (payload: IPostUploadFile): Promise<any> => {

@@ -1,3 +1,4 @@
+import { ProfilePicturesQueryResponse } from "@/controllers/API/queries/files";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "../../../../../../../../components/ui/button";
 import Loading from "../../../../../../../../components/ui/loading";
@@ -7,7 +8,7 @@ import { cn } from "../../../../../../../../utils/utils";
 import usePreloadImages from "./hooks/use-preload-images";
 
 type ProfilePictureChooserComponentProps = {
-  profilePictures: { [key: string]: string[] } | undefined;
+  profilePictures: ProfilePicturesQueryResponse | undefined;
   loading: boolean;
   value: string;
   onChange: (value: string) => void;

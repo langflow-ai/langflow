@@ -9,9 +9,10 @@ interface UpdateMessageParams {
   message: Message;
 }
 
-export const useUpdateMessage: useMutationFunctionType<UpdateMessageParams> = (
-  options?,
-) => {
+export const useUpdateMessage: useMutationFunctionType<
+  undefined,
+  UpdateMessageParams
+> = (options?) => {
   const { mutate } = UseRequestProcessor();
 
   const updateMessageApi = async (data: Message) => {

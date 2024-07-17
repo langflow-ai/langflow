@@ -8,9 +8,10 @@ interface DeleteUserParams {
   user_id: string;
 }
 
-export const useDeleteMessages: useMutationFunctionType<DeleteUserParams> = (
-  options?,
-) => {
+export const useDeleteMessages: useMutationFunctionType<
+  undefined,
+  DeleteUserParams
+> = (options?) => {
   const { mutate } = UseRequestProcessor();
 
   const deleteMessage = async ({ user_id }: DeleteUserParams): Promise<any> => {

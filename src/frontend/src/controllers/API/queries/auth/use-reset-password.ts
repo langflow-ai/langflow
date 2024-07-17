@@ -13,9 +13,10 @@ interface resetPasswordParams {
   password: resetPasswordType;
 }
 
-export const useResetPassword: useMutationFunctionType<resetPasswordParams> = (
-  options?,
-) => {
+export const useResetPassword: useMutationFunctionType<
+  undefined,
+  resetPasswordParams
+> = (options?) => {
   const { mutate } = UseRequestProcessor();
 
   async function resetPassword({

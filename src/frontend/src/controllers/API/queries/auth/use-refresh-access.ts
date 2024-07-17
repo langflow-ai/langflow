@@ -4,7 +4,9 @@ import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
 
-export const useRefrshAccessToken: useMutationFunctionType = (options?) => {
+export const useRefreshAccessToken: useMutationFunctionType<undefined, any> = (
+  options?,
+) => {
   const { mutate } = UseRequestProcessor();
 
   async function refreshAccess(): Promise<any> {

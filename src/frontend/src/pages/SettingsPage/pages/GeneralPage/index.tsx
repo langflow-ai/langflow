@@ -53,10 +53,7 @@ export const GeneralPage = () => {
     setErrorData,
   );
 
-  const handleGetProfilePictures = () => {
-    const { data } = useGetProfilePicturesQuery({});
-    return data;
-  };
+  const handleGetProfilePictures = useGetProfilePicturesQuery();
 
   const { handlePatchProfilePicture } = usePatchProfilePicture(
     setSuccessData,

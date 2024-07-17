@@ -9,6 +9,7 @@ interface DeleteMessagesParams {
 }
 
 export const useDeleteMessages: useMutationFunctionType<
+  undefined,
   DeleteMessagesParams
 > = (options?) => {
   const { mutate } = UseRequestProcessor();
