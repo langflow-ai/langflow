@@ -9,9 +9,10 @@ interface UpdateUserParams {
   user: changeUser;
 }
 
-export const useUpdateUser: useMutationFunctionType<UpdateUserParams> = (
-  options?,
-) => {
+export const useUpdateUser: useMutationFunctionType<
+  undefined,
+  UpdateUserParams
+> = (options?) => {
   const { mutate } = UseRequestProcessor();
 
   async function updateUser({ user_id, user }: UpdateUserParams): Promise<any> {
