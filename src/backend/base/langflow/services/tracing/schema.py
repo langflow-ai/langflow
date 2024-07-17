@@ -1,4 +1,5 @@
 from pydantic import BaseModel, field_serializer
+from pydantic.v1 import BaseModel as V1BaseModel
 
 from langflow.schema.log import LoggableType
 
@@ -16,6 +17,9 @@ class Log(BaseModel):
         if isinstance(value, list):
             return [self.serialize_message(item) for item in value]
         # To json is for LangChain Serializable objects
+        if hasattr(value, "dict") and isinstance(value, V1BaseModel):
+            # This is for Pydantic V1 models
+            return value.dict()
         if hasattr(value, "to_json"):
             return value.to_json()
         if isinstance(value, BaseModel):
