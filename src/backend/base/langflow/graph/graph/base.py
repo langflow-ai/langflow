@@ -504,6 +504,12 @@ class Graph:
             "flow_name": self.flow_name,
         }
 
+    @property
+    def run_metadata(self):
+        metadata = self.metadata
+        metadata["run_stats"] = self._run_stats
+        return metadata
+
     def build_graph_maps(self, edges: Optional[List[ContractEdge]] = None, vertices: Optional[List[Vertex]] = None):
         """
         Builds the adjacency maps for the graph.
@@ -942,8 +948,9 @@ class Graph:
 
     async def process(self, fallback_to_env_vars: bool, start_component_id: Optional[str] = None) -> "Graph":
         """Processes the graph with vertices in each layer run in parallel."""
-
+        self._run_stats = {"start_time": datetime.now(timezone.utc)}
         first_layer = self.sort_vertices(start_component_id=start_component_id)
+        self._run_stats["start_component_id"] = start_component_id
         vertex_task_run_count: Dict[str, int] = {}
         to_process = deque(first_layer)
         layer_index = 0
@@ -957,6 +964,7 @@ class Graph:
             current_batch = list(to_process)  # Copy current deque items to a list
             to_process.clear()  # Clear the deque for new items
             tasks = []
+
             for vertex_id in current_batch:
                 vertex = self.get_vertex(vertex_id)
                 task = asyncio.create_task(
@@ -973,6 +981,8 @@ class Graph:
                 vertex_task_run_count[vertex_id] = vertex_task_run_count.get(vertex_id, 0) + 1
 
             logger.debug(f"Running layer {layer_index} with {len(tasks)} tasks")
+            self._run_stats[f"layer_{layer_index}"] = {"start_time": datetime.now(timezone.utc)}
+            self._run_stats[f"layer_{layer_index}"]["component_ids"] = current_batch
             try:
                 next_runnable_vertices = await self._execute_tasks(tasks, lock=lock)
             except Exception as e:
