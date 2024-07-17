@@ -1,4 +1,4 @@
-from typing import Any, Callable, Dict, List
+from typing import Any, Callable, Concatenate, Dict, List
 from uuid import UUID
 
 from langchain.callbacks.base import AsyncCallbackHandler
@@ -10,7 +10,7 @@ from langflow.schema.log import LoggableType
 class AgentAsyncHandler(AsyncCallbackHandler):
     """Async callback handler that can be used to handle callbacks from langchain."""
 
-    def __init__(self, log_function: Callable[[LoggableType | list[LoggableType], str], None] | None = None):
+    def __init__(self, log_function: Callable[Concatenate[LoggableType | list[LoggableType], ...], None] | None = None):
         self.log_function = log_function
 
     async def on_tool_start(
@@ -25,6 +25,8 @@ class AgentAsyncHandler(AsyncCallbackHandler):
         inputs: Dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> None:
+        if self.log_function is None:
+            return
         self.log_function(
             {
                 "type": "tool_start",
@@ -40,23 +42,16 @@ class AgentAsyncHandler(AsyncCallbackHandler):
             name="Tool Start",
         )
 
-    async def on_tool_end(
-        self,
-        output: str,
-        *,
-        run_id: UUID,
-        parent_run_id: UUID | None = None,
-        tags: List[str] | None = None,
-        metadata: Dict[str, Any] | None = None,
-    ) -> None:
+    async def on_tool_end(self, output: Any, *, run_id: UUID, parent_run_id: UUID | None = None, **kwargs: Any) -> None:
+        if self.log_function is None:
+            return
         self.log_function(
             {
                 "type": "tool_end",
                 "output": output,
                 "run_id": run_id,
                 "parent_run_id": parent_run_id,
-                "tags": tags,
-                "metadata": metadata,
+                **kwargs,
             },
             name="Tool End",
         )
@@ -70,6 +65,8 @@ class AgentAsyncHandler(AsyncCallbackHandler):
         tags: List[str] | None = None,
         **kwargs: Any,
     ) -> None:
+        if self.log_function is None:
+            return
         self.log_function(
             {
                 "type": "agent_action",
@@ -91,6 +88,8 @@ class AgentAsyncHandler(AsyncCallbackHandler):
         tags: List[str] | None = None,
         **kwargs: Any,
     ) -> None:
+        if self.log_function is None:
+            return
         self.log_function(
             {
                 "type": "agent_finish",
