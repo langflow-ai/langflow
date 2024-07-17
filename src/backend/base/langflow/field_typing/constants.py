@@ -21,6 +21,7 @@ from langflow.schema.message import Message
 
 NestedDict: TypeAlias = Dict[str, Union[str, Dict]]
 LanguageModel = TypeVar("LanguageModel", BaseLanguageModel, BaseLLM, BaseChatModel)
+ToolEnabledLanguageModel = TypeVar("ToolEnabledLanguageModel", BaseLanguageModel, BaseLLM, BaseChatModel)
 Retriever = TypeVar(
     "Retriever",
     BaseRetriever,
