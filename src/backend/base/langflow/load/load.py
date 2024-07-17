@@ -83,6 +83,7 @@ def run_flow_from_json(
     cache: Optional[str] = None,
     disable_logs: Optional[bool] = True,
     fallback_to_env_vars: bool = False,
+    return_metadata: bool = False,
 ) -> List[RunOutputs]:
     """
     Run a flow from a JSON file or dictionary.
@@ -131,4 +132,6 @@ def run_flow_from_json(
         output_component=output_component,
         fallback_to_env_vars=fallback_to_env_vars,
     )
+    if return_metadata:
+        return result, graph.run_metadata
     return result
