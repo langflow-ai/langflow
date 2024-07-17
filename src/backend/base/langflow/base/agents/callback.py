@@ -37,6 +37,7 @@ class AgentAsyncHandler(AsyncCallbackHandler):
                 "inputs": inputs,
                 **kwargs,
             },
+            name="Tool Start",
         )
 
     async def on_tool_end(
@@ -57,6 +58,7 @@ class AgentAsyncHandler(AsyncCallbackHandler):
                 "tags": tags,
                 "metadata": metadata,
             },
+            name="Tool End",
         )
 
     async def on_agent_action(
@@ -77,6 +79,7 @@ class AgentAsyncHandler(AsyncCallbackHandler):
                 "tags": tags,
                 **kwargs,
             },
+            name="Agent Action",
         )
 
     async def on_agent_finish(
@@ -97,4 +100,5 @@ class AgentAsyncHandler(AsyncCallbackHandler):
                 "tags": tags,
                 **kwargs,
             },
+            name="Agent Finish",
         )
