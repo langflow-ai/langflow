@@ -1,3 +1,4 @@
+import useAuthStore from "@/stores/authStore";
 import {
   changeUser,
   resetPasswordType,
@@ -8,19 +9,19 @@ import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
 
-export const useLogout: useMutationFunctionType<undefined> = (options?) => {
+export const useLogout: useMutationFunctionType = (options?) => {
   const { mutate } = UseRequestProcessor();
 
   async function logoutUser(): Promise<any> {
+    const autoLogin = useAuthStore.getState().autoLogin;
+    if (autoLogin) {
+      return {};
+    }
     const res = await api.patch(`${getURL("LOGOUT")}`);
     return res.data;
   }
 
-  const mutation: UseMutationResult<undefined, any, undefined> = mutate(
-    ["useLogout"],
-    logoutUser,
-    options,
-  );
+  const mutation = mutate(["useLogout"], logoutUser, options);
 
   return mutation;
 };
