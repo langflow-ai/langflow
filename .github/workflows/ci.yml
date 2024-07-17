@@ -17,6 +17,9 @@ on:
         required: false
         type: string
   pull_request:
+    types: [auto_merge_enabled]
+  pull_request_review:
+    types: [submitted]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -24,6 +27,8 @@ concurrency:
 
 jobs:
   path-filter:
+    # should run if the PR is approved,or if it's a manual run or if it is not a draft PR
+    if: ${{github.event.review.state == 'APPROVED' || github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false}}
     name: Filter Paths
     runs-on: ubuntu-latest
     outputs:
@@ -74,8 +79,7 @@ jobs:
   ci_success:
     name: "CI Success"
     needs: [test-backend, test-frontend, lint-backend, test-docs-build]
-    if: |
-      always()
+    if: always()
     runs-on: ubuntu-latest
     env:
       JOBS_JSON: ${{ toJSON(needs) }}

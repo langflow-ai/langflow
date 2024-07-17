@@ -58,6 +58,26 @@ export default function NewFlowModal({
                 flow={examples.find((e) => e.name == "Vector Store RAG")!}
               />
             )}
+            {examples.find((e) => e.name == "Sequential Tasks Agent") && (
+              <UndrawCardComponent
+                key={5}
+                flow={examples.find((e) => e.name == "Sequential Tasks Agent")!}
+              />
+            )}
+            {examples.find((e) => e.name == "Hierarchical Tasks Agent") && (
+              <UndrawCardComponent
+                key={6}
+                flow={
+                  examples.find((e) => e.name == "Hierarchical Tasks Agent")!
+                }
+              />
+            )}
+            {examples.find((e) => e.name == "Complex Agent") && (
+              <UndrawCardComponent
+                key={7}
+                flow={examples.find((e) => e.name == "Complex Agent")!}
+              />
+            )}
           </div>
         </div>
       </BaseModal.Content>
