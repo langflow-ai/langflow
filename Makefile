@@ -29,21 +29,23 @@ clean_npm_cache:
 	@echo 'Cleaning npm cache...'
 	cd src/frontend && npm cache clean --force
 	rm -rf src/frontend/node_modules
+	rm -rf src/frontend/build
+	rm -rf src/backend/base/langflow/frontend
 	rm -f src/frontend/package-lock.json
-	@echo 'NPM cache cleaned.'
+	@echo 'NPM cache and frontend directories cleaned.'
 
 clean_all: clean_python_cache clean_npm_cache
-	@echo 'All caches cleaned.'
+	@echo 'All caches and temporary directories cleaned.'
 
-codespell:
+codespell: ## run codespell to check spelling
 	@poetry install --with spelling
 	poetry run codespell --toml pyproject.toml
 
-fix_codespell:
+fix_codespell: ## run codespell to fix spelling errors
 	@poetry install --with spelling
 	poetry run codespell --toml pyproject.toml --write
 
-setup_poetry:
+setup_poetry: ## install poetry using pipx
 	pipx install poetry
 
 add:
@@ -71,13 +73,13 @@ coverage: ## run the tests and generate a coverage report
 	@poetry run coverage erase
 
 # allow passing arguments to pytest
-unit_tests:
+unit_tests: ## run unit tests
 	poetry run pytest \
 		--ignore=tests/integration \
 		--instafail -ra -n auto -m "not api_key_required" \
 		$(args)
 
-integration_tests:
+integration_tests: ## run integration tests
 	poetry run pytest tests/integration \
 		--instafail -ra -n auto \
 		$(args)
@@ -99,11 +101,11 @@ install_frontendci:
 install_frontendc:
 	cd src/frontend && rm -rf node_modules package-lock.json && npm install
 
-run_frontend:
+run_frontend: ## run the frontend
 	@-kill -9 `lsof -t -i:3000`
 	cd src/frontend && npm start
 
-tests_frontend:
+tests_frontend: ## run frontend tests
 ifeq ($(UI), true)
 	cd src/frontend && npx playwright test --ui --project=chromium
 else
@@ -156,12 +158,12 @@ else
 		--env-file $(env)
 endif
 
-setup_devcontainer:
+setup_devcontainer: ## set up the development container
 	make init
 	make build_frontend
 	poetry run langflow --path src/frontend/build
 
-setup_env:
+setup_env: ## set up the environment
 	@sh ./scripts/setup/update_poetry.sh 1.8.2
 	@sh ./scripts/setup/setup_env.sh
 
@@ -173,7 +175,7 @@ frontendc:
 	make install_frontendc
 	make run_frontend
 
-install_backend:
+install_backend: ## install the backend dependencies
 	@echo 'Installing backend dependencies'
 	@poetry install
 	@poetry run pre-commit install
@@ -205,7 +207,7 @@ else
 		--workers $(workers)
 endif
 
-build_and_run:
+build_and_run: ## build the project and run it
 	@echo 'Removing dist folder'
 	@make setup_env
 	rm -rf dist
@@ -214,7 +216,7 @@ build_and_run:
 	poetry run pip install dist/*.tar.gz
 	poetry run langflow run
 
-build_and_install:
+build_and_install: ## build the project and install it
 	@echo 'Removing dist folder'
 	rm -rf dist
 	rm -rf src/backend/base/dist
@@ -310,13 +312,13 @@ lock_base:
 lock_langflow:
 	poetry lock
 
-lock:
+lock: ## lock dependencies
 # Run both in parallel
 	@echo 'Locking dependencies'
 	cd src/backend/base && poetry lock
 	poetry lock
 
-update:
+update: ## update dependencies
 	@echo 'Updating dependencies'
 	cd src/backend/base && poetry update
 	poetry update
