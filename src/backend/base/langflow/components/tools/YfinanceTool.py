@@ -1,3 +1,5 @@
+from typing import cast
+
 from langchain_community.tools.yahoo_finance_news import YahooFinanceNewsTool
 
 from langflow.custom import Component
@@ -15,4 +17,4 @@ class YfinanceToolComponent(Component):
     ]
 
     def build_tool(self) -> Tool:
-        return YahooFinanceNewsTool()
+        return cast(Tool, YahooFinanceNewsTool())
