@@ -42,7 +42,6 @@
 
 # 📝 Content
 
-- [](#)
 - [📝 Content](#-content)
 - [📦 Get Started](#-get-started)
 - [🎨 Create Flows](#-create-flows)
