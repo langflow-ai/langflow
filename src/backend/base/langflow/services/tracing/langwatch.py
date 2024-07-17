@@ -32,9 +32,6 @@ class LangWatchTracer(BaseTracer):
             if not self._ready:
                 return
 
-            # import after setting up langwatch so we are sure to be available
-            import nanoid  # type: ignore
-
             self.trace = self._client.trace(
                 trace_id=str(self.trace_id),
             )
