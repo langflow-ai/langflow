@@ -1,21 +1,16 @@
-import asyncio
 import json
 import operator
 from functools import reduce
-from typing import Optional
+from typing import Dict
 import httpx
 from langflow.custom.custom_component.component import Component
 
 from langflow.schema.message import Message
-from langflow.schema.data import Data
 from langflow.template.field.base import Output
 from loguru import logger
 from pydantic.v1 import SecretStr
 
 from langflow.base.constants import STREAM_INFO_TEXT
-from langflow.base.models.model import LCModelComponent
-from langflow.base.models.openai_constants import MODEL_NAMES
-from langflow.field_typing import NestedDict, Text, LanguageModel
 from langflow.inputs import (
     BoolInput,
     DictInput,
@@ -37,7 +32,7 @@ class AIMLModelComponent(Component):
     chat_completion_url = "https://api.aimlapi.com/v1/chat/completions"
 
     models = [
-        "meta-llama/Llama-2-70b-chat-hf",
+        "gpt-4",
         "gpt-3.5-turbo",
         "gpt-3.5-turbo-davinci",
     ]
@@ -72,11 +67,12 @@ class AIMLModelComponent(Component):
             name="model_name", display_name="Model Name", advanced=False, options=models, value=models[0]
         ),
         SecretStrInput(
-            name="openai_api_key",
-            display_name="OpenAI API Key",
-            info="The OpenAI API Key to use for the OpenAI model.",
+            name="aiml_api_key",
+            display_name="AI/ML API Key",
+            info="The AI/ML API Key to use.",
+            value="AIML_API_KEY",
             advanced=False,
-            value="OPENAI_API_KEY",
+            required=True,
         ),
         FloatInput(name="temperature", display_name="Temperature", value=0.1),
         BoolInput(name="stream", display_name="Stream", info=STREAM_INFO_TEXT, advanced=True),
@@ -95,81 +91,73 @@ class AIMLModelComponent(Component):
         ),
     ]
 
+    def make_request(self) -> Message:
+        output_schema_dict: Dict[str, str] = {}
+        for d in self.output_schema or {}:
+            output_schema_dict |= d
 
-    async def make_request(self) -> Message:
-        output_schema_dict: dict[str, str] = reduce(operator.ior, self.output_schema or {}, {})
-        openai_api_key = self.openai_api_key
-        temperature = self.temperature
-        model_name: str = self.model_name
-        max_tokens = self.max_tokens
+        api_key = SecretStr(self.aiml_api_key) if self.aiml_api_key else None
+
         model_kwargs = self.model_kwargs or {}
-        json_mode = bool(output_schema_dict) or self.json_mode
-        seed = self.seed
-
-        if openai_api_key:
-            api_key = SecretStr(openai_api_key)
-        else:
-            api_key = None
-
-        model_kwargs["seed"] = seed
+        model_kwargs["seed"] = self.seed
 
         headers = {
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {api_key.get_secret_value()}"
+            "Authorization": f"Bearer {api_key.get_secret_value()}" if api_key else ""
         }
-        print(f"headers: {headers}")
-        print(f"System message: {self.system_message}")
-        print(f"Input value: {self.input_value.text}")
 
         messages = []
         if self.system_message:
-            messages.append({
-                "role": "system",
-                "content": self.system_message
-            })
+            messages.append({"role": "system", "content": self.system_message})
 
         if self.input_value:
-            print(f"Input value: {self.input_value}")
-            messages.append(self.input_value)
-            # messages.append({
-            #     "role": "user",
-            #     "content": self.input_value.text
-            # })
+            if isinstance(self.input_value, Message):
+                message = self.input_value.to_lc_message()
+                if message.type == "human":
+                    messages.append({"role": "user", "content": message.content})
+                else:
+                    raise ValueError(f"Expected user message, saw: {message.type}")
+            else:
+                raise TypeError(f"Expected Message type, saw: {type(self.input_value)}")
         else:
-           raise ValueError("Please provide an input value")
+            raise ValueError("Please provide an input value")
 
-
-        # Prepare the request payload
         payload = {
-            "max_tokens": max_tokens or None,
+            "max_tokens": self.max_tokens or None,
             "model_kwargs": model_kwargs,
-            "model": model_name,
-            "temperature": temperature or 0.1,
-            "messages" : messages,
+            "model": self.model_name,
+            "temperature": self.temperature or 0.1,
+            "messages": messages,
         }
 
-        if json_mode:
+        if bool(output_schema_dict) or self.json_mode:
             payload["response_format"] = {"type": "json_object"}
 
-        async with httpx.AsyncClient() as client:
+        try:
+            response = requests.post(self.chat_completion_url, headers=headers, data=json.dumps(payload))
             try:
-                response = await client.post(self.chat_completion_url, headers=headers, data=json.dumps(payload))
-                if response.status_code != 200:
-                    raise Exception(f"Request failed with status code {response.status_code} with error: {response.text}")
+                response.raise_for_status()  # Raise an error for bad status codes
+                result_data = response.json()
+                choice = result_data['choices'][0]
+                result = choice['message']['content']
+            except requests.exceptions.HTTPError as http_err:
+                logger.error(f"HTTP error occurred: {http_err}")
+                raise http_err
+            except requests.exceptions.RequestException as req_err:
+                logger.error(f"Request error occurred: {req_err}")
+                raise req_err
+            except json.JSONDecodeError:
+                logger.warning("Failed to decode JSON, response text: {response.text}")
+                result = response.text
+            except KeyError as key_err:
+                logger.warning(f"Key error: {key_err}, response content: {result_data}")
+                raise key_err
 
-                try:
-                    print(f"Response: {response}")
-                    print(f"Response json: {response.json()}")
-                    result = response.json()['message']
-                except Exception:
-                    result = response.text
-                    print(f"result text: {result}")
+            self.status = result
+        except httpx.TimeoutException:
+            return Message(text="Request timed out.")
+        except Exception as exc:
+            logger.error(f"Error: {exc}")
+            raise
 
-                self.status = result
-                print("result: ", result)
-                return Message(text=result)
-            except httpx.TimeoutException:
-                return Message(text="Request timed out.")
-            except Exception as exc:
-                logger.error(f"Error: {exc}")
-                raise exc
+        return Message(text=result)
