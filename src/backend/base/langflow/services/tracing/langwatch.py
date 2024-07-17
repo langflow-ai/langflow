@@ -3,7 +3,6 @@ from typing import TYPE_CHECKING, Any, Dict, Optional, cast
 from uuid import UUID
 
 import nanoid  # type: ignore
-from langwatch.tracer import ContextSpan
 from loguru import logger
 
 from langflow.schema.data import Data
