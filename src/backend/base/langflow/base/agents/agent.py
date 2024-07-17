@@ -6,10 +6,11 @@ from langchain.agents.agent import RunnableAgent
 from langchain_core.messages import BaseMessage
 from langchain_core.runnables import Runnable
 
+from langflow.base.agents.callback import AgentAsyncHandler
 from langflow.base.agents.utils import data_to_messages
 from langflow.custom import Component
 from langflow.field_typing import Text, Tool
-from langflow.inputs.inputs import InputTypes
+from langflow.inputs.inputs import DataInput, InputTypes
 from langflow.io import BoolInput, HandleInput, IntInput, MessageTextInput
 from langflow.schema import Data
 from langflow.schema.message import Message
@@ -53,7 +54,6 @@ class LCAgentComponent(Component):
             tools=self.tools,
             message_history=self.chat_history,
             handle_parsing_errors=self.handle_parsing_errors,
-            output_key=self.output_key,
         )
         message = Message(text=result, sender="Machine")
         self.status = message
@@ -105,7 +105,7 @@ class LCAgentComponent(Component):
         input_dict: dict[str, str | list[BaseMessage]] = {"input": inputs}
         if message_history:
             input_dict["chat_history"] = data_to_messages(message_history)
-        result = await runnable.ainvoke(input_dict)
+        result = await runnable.ainvoke(input_dict, config={"callbacks": [AgentAsyncHandler(self.log)]})
         self.status = result
         if "output" not in result:
             raise ValueError("Output key not found in result. Tried 'output'.")
@@ -127,6 +127,7 @@ class LCToolsAgentComponent(LCAgentComponent):
             input_types=["LanguageModel", "ToolEnabledLanguageModel"],
             required=True,
         ),
+        DataInput(name="chat_history", display_name="Chat History", is_list=True),
     ]
 
     def build_agent(self) -> AgentExecutor:
