@@ -2,11 +2,11 @@ from typing import List
 
 from langchain_community.tools.bing_search import BingSearchResults
 from langchain_community.utilities import BingSearchAPIWrapper
+from langchain_core.tools import BaseTool
 
 from langflow.base.langchain_utilities.model import LCToolComponent
-from langflow.inputs import MessageTextInput, SecretStrInput, IntInput, MultilineInput
+from langflow.inputs import IntInput, MessageTextInput, MultilineInput, SecretStrInput
 from langflow.schema import Data
-from langchain_core.tools import BaseTool
 
 
 class BingSearchAPIComponent(LCToolComponent):
@@ -42,5 +42,5 @@ class BingSearchAPIComponent(LCToolComponent):
                 bing_search_url=self.bing_search_url, bing_subscription_key=self.bing_subscription_key
             )
         else:
-            wrapper = BingSearchAPIWrapper(bing_subscription_key=self.bing_subscription_key)
+            wrapper = BingSearchAPIWrapper(bing_subscription_key=self.bing_subscription_key)  # type: ignore
         return BingSearchResults(api_wrapper=wrapper, num_results=self.k)
