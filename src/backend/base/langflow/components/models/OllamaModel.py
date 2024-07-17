@@ -16,6 +16,7 @@ class ChatOllamaComponent(LCModelComponent):
     name = "OllamaModel"
 
     def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None):
+        # raise Exception('test')
         if field_name == "mirostat":
             if field_value == "Disabled":
                 build_config["mirostat_eta"]["advanced"] = True
@@ -76,7 +77,7 @@ class ChatOllamaComponent(LCModelComponent):
             value="http://localhost:11434",
         ),
         DropdownInput(
-            name="model",
+            name="model_name",
             display_name="Model Name",
             value="llama2",
             info="Refer to https://ollama.ai/library for more models.",
@@ -107,6 +108,7 @@ class ChatOllamaComponent(LCModelComponent):
             info="Enable/disable Mirostat sampling for controlling perplexity.",
             value="Disabled",
             advanced=True,
+            real_time_refresh=True,
         ),
         FloatInput(
             name="mirostat_eta",
@@ -238,7 +240,7 @@ class ChatOllamaComponent(LCModelComponent):
         # Mapping system settings to their corresponding values
         llm_params = {
             "base_url": self.base_url,
-            "model": self.model,
+            "model": self.model_name,
             "mirostat": mirostat_value,
             "format": self.format,
             "metadata": self.metadata,

@@ -1,10 +1,11 @@
 import json
-import operator
-from functools import reduce
-from typing import Dict
+from typing import Any, Dict
 import httpx
+from langflow.components.models.OllamaModel import ChatOllamaComponent
+from langflow.components.models.OpenAIModel import OpenAIModelComponent
 from langflow.custom.custom_component.component import Component
 
+from langflow.schema.dotdict import dotdict
 from langflow.schema.message import Message
 from langflow.template.field.base import Output
 from loguru import logger
@@ -27,68 +28,81 @@ import requests
 class AIMLModelComponent(Component):
     display_name = "AI/ML API"
     description = "Generates text using the AI/ML API"
-    icon = "ChatInput" # TODO: Get their icon.
+    icon = "ChatInput"  # TODO: Get their icon.
 
     chat_completion_url = "https://api.aimlapi.com/v1/chat/completions"
 
-    models = [
-        "gpt-4",
-        "gpt-3.5-turbo",
-        "gpt-3.5-turbo-davinci",
-    ]
+    models = {
+        "gpt-4": "open_ai",
+        "gpt-3.5-turbo": "open_ai",
+        "gpt-3.5-turbo-davinci": "open_ai",
+        "codellama/CodeLlama-13b-Instruct-hf": "llama",
+        "codellama/CodeLlama-34b-Instruct-hf": "llama",
+        "codellama/CodeLlama-70b-Instruct-hf": "llama",
+    }
+
+    def _update_inputs(self, build_config, to_add):
+        for input in to_add:
+            # Don't include the `model_name` or `input_value` fields, as they are
+            # available by default.
+             # TODO: this hard coding nonsense is brittle. Either have good tests, or figure out
+                    # a better way to do this.
+            if input.name == "model_name":
+                continue
+
+            build_config[input.name] = input.to_dict()
+
+    def _remove_inputs(self, build_config, to_remove):
+        for input in to_remove:
+            if input.name == "model_name":
+                continue
+            if input.name in build_config:
+                build_config.pop(input.name)
+
+    def _update_build_config(self, build_config, field_value):
+        build_config["_provider"]['value'] = self.models[field_value]
+        if self.models[field_value] == "open_ai":
+            self._update_inputs(build_config, OpenAIModelComponent.inputs)
+        elif self.models[field_value] == "llama":
+            self._update_inputs(build_config, ChatOllamaComponent.inputs)
+
+
+    def update_build_config(
+        self,
+        build_config: dotdict,
+        field_value: Any,
+        field_name: str | None = None,
+    ):
+        if field_name == "model_name":
+            # Remove and update the inputs based on the model selected
+            if build_config["_provider"] is not None and build_config["_provider"]['value'] != "":
+                if build_config['_provider']['value'] == "open_ai" and self.models[field_value] != "open_ai":
+                    self._remove_inputs(build_config, OpenAIModelComponent.inputs)
+                    self._update_build_config(build_config, field_value)
+
+                if build_config['_provider']['value'] == "llama" and self.models[field_value] != "llama":
+                    self._remove_inputs(build_config, ChatOllamaComponent.inputs)
+                    self._update_build_config(build_config, field_value)
+            else:
+                # First time update - set the inputs
+                self._update_build_config(build_config, field_value)
+
+        return build_config
 
     outputs = [
         Output(display_name="Text", name="text_output", method="make_request"),
     ]
 
     inputs = [
-        MessageInput(name="input_value", display_name="Input"),
-        IntInput(
-            name="max_tokens",
-            display_name="Max Tokens",
-            advanced=True,
-            info="The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
-        ),
-        DictInput(name="model_kwargs", display_name="Model Kwargs", advanced=True),
-        BoolInput(
-            name="json_mode",
-            display_name="JSON Mode",
-            advanced=True,
-            info="If True, it will output JSON regardless of passing a schema.",
-        ),
-        DictInput(
-            name="output_schema",
-            is_list=True,
-            display_name="Schema",
-            advanced=True,
-            info="The schema for the Output of the model. You must pass the word JSON in the prompt. If left blank, JSON mode will be disabled.",
-        ),
         DropdownInput(
-            name="model_name", display_name="Model Name", advanced=False, options=models, value=models[0]
-        ),
-        SecretStrInput(
-            name="aiml_api_key",
-            display_name="AI/ML API Key",
-            info="The AI/ML API Key to use.",
-            value="AIML_API_KEY",
+            name="model_name",
+            display_name="Model Name",
             advanced=False,
-            required=True,
+            options=list(models.keys()),
+            # value="gpt-4", # If I don't provide a default, I don't have to populate the initial input :shrug:
+            real_time_refresh=True,
         ),
-        FloatInput(name="temperature", display_name="Temperature", value=0.1),
-        BoolInput(name="stream", display_name="Stream", info=STREAM_INFO_TEXT, advanced=True),
-        StrInput(
-            name="system_message",
-            display_name="System Message",
-            info="System message to pass to the model.",
-            advanced=True,
-        ),
-        IntInput(
-            name="seed",
-            display_name="Seed",
-            info="The seed controls the reproducibility of the job.",
-            advanced=True,
-            value=1,
-        ),
+        StrInput(name="_provider", show=False, info="Tracks the provider of the model; used for input updates"),
     ]
 
     def make_request(self) -> Message:
@@ -103,7 +117,7 @@ class AIMLModelComponent(Component):
 
         headers = {
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {api_key.get_secret_value()}" if api_key else ""
+            "Authorization": f"Bearer {api_key.get_secret_value()}" if api_key else "",
         }
 
         messages = []
@@ -134,12 +148,14 @@ class AIMLModelComponent(Component):
             payload["response_format"] = {"type": "json_object"}
 
         try:
-            response = requests.post(self.chat_completion_url, headers=headers, data=json.dumps(payload))
+            response = requests.post(
+                self.chat_completion_url, headers=headers, data=json.dumps(payload)
+            )
             try:
                 response.raise_for_status()  # Raise an error for bad status codes
                 result_data = response.json()
-                choice = result_data['choices'][0]
-                result = choice['message']['content']
+                choice = result_data["choices"][0]
+                result = choice["message"]["content"]
             except requests.exceptions.HTTPError as http_err:
                 logger.error(f"HTTP error occurred: {http_err}")
                 raise http_err
