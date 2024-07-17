@@ -60,7 +60,9 @@ export default function TableNodeComponent({
     setAllRows();
   }
   const editable = columns.map((column) => {
-    const isCustomEdit = column.formatter && (column.formatter === "text" || column.formatter === "json");
+    const isCustomEdit =
+      column.formatter &&
+      (column.formatter === "text" || column.formatter === "json");
     return {
       field: column.name,
       onUpdate: updateComponente,

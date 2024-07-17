@@ -24,7 +24,12 @@ export default function TableAutoCellRender({
 
     switch (format) {
       case "object":
-        return <ObjectRender setValue={(!!colDef?.onCellValueChanged) ? setValue : undefined} object={value} />;
+        return (
+          <ObjectRender
+            setValue={!!colDef?.onCellValueChanged ? setValue : undefined}
+            object={value}
+          />
+        );
 
       case "string":
         if (isTimeStampString(value)) {
