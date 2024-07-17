@@ -12,16 +12,16 @@ interface getUsersPageQueryParams {
 export const useGetUserPage: useQueryFunctionType<
   getUsersPageQueryParams,
   Users
-> = ({skip,limit}) => {
+> = ({ skip, limit }) => {
   const { query } = UseRequestProcessor();
 
   async function getUsersPage(): Promise<Array<Users>> {
-      const res = await api.get(
-        `${getURL("USERS")}/?skip=${skip}&limit=${limit}`,
-      );
-      if (res.status === 200) {
-        return res.data;
-      }
+    const res = await api.get(
+      `${getURL("USERS")}/?skip=${skip}&limit=${limit}`,
+    );
+    if (res.status === 200) {
+      return res.data;
+    }
     return [];
   }
 

@@ -7,11 +7,11 @@ export const URLs = {
   VERSION: `version`,
   MESSAGES: `monitor/messages`,
   STORE: `store`,
-  USERS:'users',
+  USERS: "users",
   LOGOUT: `logout`,
   LOGIN: `login`,
-  AUTOLOGIN:"auto_login",
-  REFRESH:"refresh",
+  AUTOLOGIN: "auto_login",
+  REFRESH: "refresh",
   BUILD: `build`,
 } as const;
 
