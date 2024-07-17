@@ -4915,19 +4915,22 @@ langchain-core = ">=0.2.2,<0.3"
 
 [[package]]
 name = "langchain-milvus"
-version = "0.1.1"
+version = "0.1.2"
 description = "An integration package connecting Milvus and LangChain"
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
-    {file = "langchain_milvus-0.1.1-py3-none-any.whl", hash = "sha256:af382659041623441dae72e22ed53c6e73305c8b48d91b4481d92954cd6a3cd1"},
-    {file = "langchain_milvus-0.1.1.tar.gz", hash = "sha256:27dbabde6a003f5d0aa58379ebe26c32b1ca015f37ce80cf5be36b36318c4391"},
+    {file = "langchain_milvus-0.1.2-py3-none-any.whl", hash = "sha256:c7d599a2bc8f89254049aab6e4acbf5fa44b930ace0f25c5585ab04cbd7e26a6"},
+    {file = "langchain_milvus-0.1.2.tar.gz", hash = "sha256:bfab22a8877045f4ce3d482f439ffbe9455dca13ed638f246e1bc0aa90849ebd"},
 ]
 
 [package.dependencies]
-langchain-core = ">=0.2.0,<0.3.0"
+langchain-core = ">=0.2.20,<0.3.0"
 pymilvus = ">=2.4.3,<3.0.0"
-scipy = ">=1.7,<2.0"
+scipy = [
+    {version = ">=1.7,<2.0", markers = "python_version < \"3.12\""},
+    {version = ">=1.9,<2.0", markers = "python_version >= \"3.12\""},
+]
 
 [[package]]
 name = "langchain-mistralai"
@@ -4980,35 +4983,38 @@ pillow = ">=10.0.0,<11.0.0"
 
 [[package]]
 name = "langchain-openai"
-version = "0.1.16"
+version = "0.1.17"
 description = "An integration package connecting OpenAI and LangChain"
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
-    {file = "langchain_openai-0.1.16-py3-none-any.whl", hash = "sha256:bff90e9d0be786495920a7851ae4d55247fb084d3a11d1b15bfe91904ce1cb0f"},
-    {file = "langchain_openai-0.1.16.tar.gz", hash = "sha256:3dedcc785a64a488ad6a313cc59b0dccea025d27413b55cec73a20dcf3ded4da"},
+    {file = "langchain_openai-0.1.17-py3-none-any.whl", hash = "sha256:30bef5574ecbbbb91b8025b2dc5a1bd81fd62157d3ad1a35d820141f31c5b443"},
+    {file = "langchain_openai-0.1.17.tar.gz", hash = "sha256:c5d70ddecdcb93e146f376bdbadbb6ec69de9ac0f402cd5b83de50b655ba85ee"},
 ]
 
 [package.dependencies]
-langchain-core = ">=0.2.17,<0.3.0"
+langchain-core = ">=0.2.20,<0.3.0"
 openai = ">=1.32.0,<2.0.0"
 tiktoken = ">=0.7,<1"
 
 [[package]]
 name = "langchain-pinecone"
-version = "0.1.1"
+version = "0.1.2"
 description = "An integration package connecting Pinecone and LangChain"
 optional = false
 python-versions = "<3.13,>=3.8.1"
 files = [
-    {file = "langchain_pinecone-0.1.1-py3-none-any.whl", hash = "sha256:d2c2d11664533d75f9a5afa9a16e2a300f45e3f584250585c7145a8694298a21"},
-    {file = "langchain_pinecone-0.1.1.tar.gz", hash = "sha256:e33492443ede67c56ed08b0cf8642a1fd93585869cb5afd23606b429f1b2c61a"},
+    {file = "langchain_pinecone-0.1.2-py3-none-any.whl", hash = "sha256:07157885ef1e45bedadc3f7ea6bb181ec458fae5fd82dc7a6005444f67100613"},
+    {file = "langchain_pinecone-0.1.2.tar.gz", hash = "sha256:654fd93df8cefe1ff0ca7ac50cf308242df69a601ee3855019b524006b528595"},
 ]
 
 [package.dependencies]
 langchain-core = ">=0.1.52,<0.3"
-numpy = ">=1,<2"
-pinecone-client = ">=3.2.2,<4.0.0"
+numpy = [
+    {version = ">=1,<2", markers = "python_version < \"3.12\""},
+    {version = ">=1.26.0,<2.0.0", markers = "python_version >= \"3.12\""},
+]
+pinecone-client = ">=3.2.2,<5"
 
 [[package]]
 name = "langchain-text-splitters"
@@ -8185,13 +8191,13 @@ dev = ["argcomplete", "attrs (>=19.2)", "hypothesis (>=3.56)", "mock", "pygments
 
 [[package]]
 name = "pytest-asyncio"
-version = "0.23.7"
+version = "0.23.8"
 description = "Pytest support for asyncio"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "pytest_asyncio-0.23.7-py3-none-any.whl", hash = "sha256:009b48127fbe44518a547bddd25611551b0e43ccdbf1e67d12479f569832c20b"},
-    {file = "pytest_asyncio-0.23.7.tar.gz", hash = "sha256:5f5c72948f4c49e7db4f29f2521d4031f1c27f86e57b046126654083d4770268"},
+    {file = "pytest_asyncio-0.23.8-py3-none-any.whl", hash = "sha256:50265d892689a5faefb84df80819d1ecef566eb3549cf915dfb33569359d1ce2"},
+    {file = "pytest_asyncio-0.23.8.tar.gz", hash = "sha256:759b10b33a6dc61cce40a8bd5205e302978bbbcc00e279a8b61d9a6a3c82e4d3"},
 ]
 
 [package.dependencies]
@@ -11969,4 +11975,4 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-content-hash = "56dbd5894cb81a0c9b0ae7bae0f2664b276a25b3f936ac33e44367ecbfdc8b73"
+content-hash = "1c676440f3d6e74df8460f61ce3106255cc6b5158fcf798de368e4e7d623f19a"
