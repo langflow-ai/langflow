@@ -82,7 +82,7 @@ class OpenAIModelComponent(LCModelComponent):
     ]
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
-        # self.output_schea is a list of dictionarie s
+        # self.output_schema is a list of dictionaries
         # let's convert it to a dictionary
         output_schema_dict: dict[str, str] = reduce(operator.ior, self.output_schema or {}, {})
         openai_api_key = self.openai_api_key
