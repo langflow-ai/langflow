@@ -1,6 +1,6 @@
 from langflow.base.agents.crewai.tasks import HierarchicalTask
 from langflow.custom import Component
-from langflow.io import HandleInput, MessageTextInput, Output
+from langflow.io import HandleInput, MultilineInput, Output
 
 
 class HierarchicalTaskComponent(Component):
@@ -8,12 +8,12 @@ class HierarchicalTaskComponent(Component):
     description: str = "Each task must have a description, an expected output and an agent responsible for execution."
     icon = "CrewAI"
     inputs = [
-        MessageTextInput(
+        MultilineInput(
             name="task_description",
             display_name="Description",
             info="Descriptive text detailing task's purpose and execution.",
         ),
-        MessageTextInput(
+        MultilineInput(
             name="expected_output",
             display_name="Expected Output",
             info="Clear definition of expected task outcome.",
