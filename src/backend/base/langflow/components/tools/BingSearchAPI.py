@@ -1,10 +1,10 @@
-from typing import List
+from typing import List, cast
 
 from langchain_community.tools.bing_search import BingSearchResults
 from langchain_community.utilities import BingSearchAPIWrapper
-from langchain_core.tools import BaseTool
 
 from langflow.base.langchain_utilities.model import LCToolComponent
+from langflow.field_typing import Tool
 from langflow.inputs import IntInput, MessageTextInput, MultilineInput, SecretStrInput
 from langflow.schema import Data
 
@@ -36,11 +36,11 @@ class BingSearchAPIComponent(LCToolComponent):
         self.status = data
         return data
 
-    def build_tool(self) -> BaseTool:
+    def build_tool(self) -> Tool:
         if self.bing_search_url:
             wrapper = BingSearchAPIWrapper(
                 bing_search_url=self.bing_search_url, bing_subscription_key=self.bing_subscription_key
             )
         else:
             wrapper = BingSearchAPIWrapper(bing_subscription_key=self.bing_subscription_key)  # type: ignore
-        return BingSearchResults(api_wrapper=wrapper, num_results=self.k)
+        return cast(Tool, BingSearchResults(api_wrapper=wrapper, num_results=self.k))

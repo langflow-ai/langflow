@@ -1,9 +1,9 @@
 from langchain_community.utilities.serpapi import SerpAPIWrapper
 
 from langflow.base.langchain_utilities.model import LCToolComponent
-from langchain_core.tools import BaseTool, Tool
 from langflow.inputs import SecretStrInput, DictInput, MultilineInput
 from langflow.schema import Data
+from langflow.field_typing import Tool
 
 
 class SerpAPIComponent(LCToolComponent):
@@ -28,7 +28,7 @@ class SerpAPIComponent(LCToolComponent):
         self.status = data
         return data
 
-    def build_tool(self) -> BaseTool:
+    def build_tool(self) -> Tool:
         wrapper = self._build_wrapper()
         return Tool(name="search_api", description="Search for recent results.", func=wrapper.run)
 

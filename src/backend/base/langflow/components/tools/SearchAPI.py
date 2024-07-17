@@ -3,9 +3,9 @@ from typing import Union
 from langchain_community.utilities.searchapi import SearchApiAPIWrapper
 
 from langflow.base.langchain_utilities.model import LCToolComponent
-from langchain_core.tools import BaseTool, Tool
 from langflow.inputs import SecretStrInput, MultilineInput, DictInput, MessageTextInput
 from langflow.schema import Data
+from langflow.field_typing import Tool
 
 
 class SearchAPIComponent(LCToolComponent):
@@ -32,7 +32,7 @@ class SearchAPIComponent(LCToolComponent):
         self.status = data
         return data
 
-    def build_tool(self) -> BaseTool:
+    def build_tool(self) -> Tool:
         wrapper = self._build_wrapper()
         return Tool(
             name="search_api",

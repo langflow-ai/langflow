@@ -1,11 +1,10 @@
 from abc import abstractmethod
 from typing import Union
 
-
 from langflow.custom import Component
+from langflow.field_typing import Tool
 from langflow.io import Output
 from langflow.schema import Data
-from langchain_core.tools import BaseTool
 
 
 class LCToolComponent(Component):
@@ -32,7 +31,7 @@ class LCToolComponent(Component):
         pass
 
     @abstractmethod
-    def build_tool(self) -> BaseTool:
+    def build_tool(self) -> Tool:
         """
         Build the tool.
         """

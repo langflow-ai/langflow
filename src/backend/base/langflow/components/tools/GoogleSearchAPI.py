@@ -1,6 +1,6 @@
 from typing import Union
 
-from langchain_core.tools import BaseTool, Tool
+from langchain_core.tools import Tool
 
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.inputs import SecretStrInput, MultilineInput, IntInput
@@ -29,7 +29,7 @@ class GoogleSearchAPIComponent(LCToolComponent):
         self.status = data
         return data
 
-    def build_tool(self) -> BaseTool:
+    def build_tool(self) -> Tool:
         wrapper = self._build_wrapper()
         return Tool(
             name="google_search",

@@ -1,7 +1,7 @@
 from langchain_community.utilities.wolfram_alpha import WolframAlphaAPIWrapper
 
 from langflow.base.langchain_utilities.model import LCToolComponent
-from langchain.tools import BaseTool, Tool
+from langflow.field_typing import Tool
 from langflow.inputs import MultilineInput, SecretStrInput
 from langflow.schema import Data
 
@@ -26,7 +26,7 @@ class WolframAlphaAPIComponent(LCToolComponent):
         self.status = data
         return data
 
-    def build_tool(self) -> BaseTool:
+    def build_tool(self) -> Tool:
         wrapper = self._build_wrapper()
         return Tool(name="wolfram_alpha_api", description="Answers mathematical questions.", func=wrapper.run)
 
