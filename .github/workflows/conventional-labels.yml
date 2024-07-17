@@ -3,7 +3,9 @@
 name: Label PRs with Conventional Commits
 on:
   pull_request_target:
-    types: [ opened, edited , reopened, auto_merge_enabled]
+    types: [opened, edited]
+  pull_request_review:
+    types: [submitted]
 
 jobs:
   validate-pr:
