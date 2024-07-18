@@ -2,15 +2,16 @@ import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-t
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
-import { InputFieldType } from "@/types/api";
+import { APIClassType, InputFieldType } from "@/types/api";
 import { cloneDeep } from "lodash";
-import { NodeDataType } from "../../types/flow";
 import { mutateTemplate } from "../helpers/mutate-template";
 const useHandleOnNewValue = ({
-  data,
+  node,
+  nodeId,
   name,
 }: {
-  data: NodeDataType;
+  node: APIClassType;
+  nodeId: string;
   name: string;
 }) => {
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
@@ -21,14 +22,16 @@ const useHandleOnNewValue = ({
 
   const postTemplateValue = usePostTemplateValue({
     parameterId: name,
-    nodeData: data,
+    nodeId: nodeId,
+    node: node,
   });
 
   const handleOnNewValue = async (
     changes: Partial<InputFieldType>,
     options?: { skipSnapshot?: boolean },
   ) => {
-    const template = data.node?.template;
+    const newNode = cloneDeep(node);
+    const template = newNode.template;
 
     if (!template) {
       setErrorData({ title: "Template not found in the component" });
@@ -48,25 +51,28 @@ const useHandleOnNewValue = ({
       parameter[key] = value;
     });
 
-    console.log(parameter);
-
     const shouldUpdate =
       parameter.real_time_refresh && !parameter.refresh_button;
 
     if (shouldUpdate && changes.value) {
       mutateTemplate(
         changes.value,
-        data,
+        newNode,
+        nodeId,
         postTemplateValue,
         setNode,
         setErrorData,
       );
     }
 
-    setNode(data.id, (oldNode) => ({
-      ...oldNode,
-      data: cloneDeep(data),
-    }));
+    setNode(nodeId, (oldNode) => {
+      const newData = cloneDeep(oldNode.data);
+      newData.node = newNode;
+      return {
+        ...oldNode,
+        data: newData,
+      };
+    });
   };
 
   return { handleOnNewValue };

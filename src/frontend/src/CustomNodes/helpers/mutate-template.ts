@@ -3,15 +3,19 @@ import {
   SAVE_DEBOUNCE_TIME,
   TITLE_ERROR_UPDATING_COMPONENT,
 } from "@/constants/constants";
-import { APITemplateType, ResponseErrorDetailAPI } from "@/types/api";
-import { NodeDataType } from "@/types/flow";
+import {
+  APIClassType,
+  APITemplateType,
+  ResponseErrorDetailAPI,
+} from "@/types/api";
 import { UseMutationResult } from "@tanstack/react-query";
 import { cloneDeep, debounce } from "lodash";
 
 export const mutateTemplate = debounce(
   async (
     newValue,
-    data: NodeDataType,
+    node: APIClassType,
+    nodeId: string,
     postTemplateValue: UseMutationResult<
       APITemplateType | undefined,
       ResponseErrorDetailAPI,
@@ -21,17 +25,21 @@ export const mutateTemplate = debounce(
     setErrorData,
   ) => {
     try {
-      const newData = cloneDeep(data);
+      const newNode = cloneDeep(node);
       const newTemplate = await postTemplateValue.mutateAsync({
         value: newValue,
       });
       if (newTemplate) {
-        newData.node!.template = newTemplate;
+        newNode.template = newTemplate;
       }
-      setNode(data.id, (oldNode) => ({
-        ...oldNode,
-        data: newData,
-      }));
+      setNode(nodeId, (oldNode) => {
+        const newData = cloneDeep(oldNode.data);
+        newData.node = newNode;
+        return {
+          ...oldNode,
+          data: newData,
+        };
+      });
     } catch (e) {
       const error = e as ResponseErrorDetailAPI;
       setErrorData({

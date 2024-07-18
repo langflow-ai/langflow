@@ -80,7 +80,8 @@ export default function ParameterComponent({
   const myData = useTypesStore((state) => state.data);
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
   const postTemplateValue = usePostTemplateValue({
-    nodeData: data,
+    node: data.node!,
+    nodeId: data.id,
     parameterId: name,
   });
   const isLoading = postTemplateValue.isPending;
@@ -149,7 +150,8 @@ export default function ParameterComponent({
   const handleRefreshButtonPress = () =>
     mutateTemplate(
       data.node?.template[name]?.value,
-      data,
+      data.node!,
+      data.id,
       postTemplateValue,
       setNode,
       setErrorData,
@@ -167,10 +169,11 @@ export default function ParameterComponent({
         edge.sourceHandle === scapedJSONStringfy(proxy ? { ...id, proxy } : id),
     ) ?? false;
 
-  useFetchDataOnMount(data, name, postTemplateValue, setNode);
+  useFetchDataOnMount(data.node!, data.id, name, postTemplateValue, setNode);
 
   const { handleOnNewValue: handleOnNewValueHook } = useHandleOnNewValue({
-    data,
+    node: data.node!,
+    nodeId: data.id,
     name,
   });
 

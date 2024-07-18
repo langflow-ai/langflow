@@ -4,7 +4,6 @@ import {
   ResponseErrorDetailAPI,
   useMutationFunctionType,
 } from "@/types/api";
-import { NodeDataType } from "@/types/flow";
 import { UseMutationResult } from "@tanstack/react-query";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
@@ -15,7 +14,8 @@ interface IPostTemplateValue {
 }
 
 interface IPostTemplateValueParams {
-  nodeData: NodeDataType;
+  node: APIClassType;
+  nodeId: string;
   parameterId: string;
 }
 
@@ -24,13 +24,13 @@ export const usePostTemplateValue: useMutationFunctionType<
   IPostTemplateValue,
   APITemplateType | undefined,
   ResponseErrorDetailAPI
-> = ({ parameterId, nodeData }, options?) => {
+> = ({ parameterId, nodeId, node }, options?) => {
   const { mutate } = UseRequestProcessor();
 
   const postTemplateValueFn = async (
     payload: IPostTemplateValue,
   ): Promise<APITemplateType | undefined> => {
-    const template = nodeData.node?.template;
+    const template = node.template;
 
     if (!template) return;
 
@@ -52,7 +52,7 @@ export const usePostTemplateValue: useMutationFunctionType<
     ResponseErrorDetailAPI,
     IPostTemplateValue
   > = mutate(
-    ["usePostTemplateValue", { parameterId, nodeId: nodeData.id }],
+    ["usePostTemplateValue", { parameterId, nodeId }],
     postTemplateValueFn,
     options,
   );

@@ -1,12 +1,16 @@
-import { APITemplateType, ResponseErrorDetailAPI } from "@/types/api";
+import {
+  APIClassType,
+  APITemplateType,
+  ResponseErrorDetailAPI,
+} from "@/types/api";
 import { UseMutationResult } from "@tanstack/react-query";
 import { useEffect } from "react";
 import useAlertStore from "../../stores/alertStore";
-import { NodeDataType } from "../../types/flow";
 import { mutateTemplate } from "../helpers/mutate-template";
 
 const useFetchDataOnMount = (
-  data: NodeDataType,
+  node: APIClassType,
+  nodeId: string,
   name: string,
   postTemplateValue: UseMutationResult<
     APITemplateType | undefined,
@@ -19,15 +23,16 @@ const useFetchDataOnMount = (
 
   useEffect(() => {
     async function fetchData() {
+      const template = node.template[name];
       if (
-        (data.node?.template[name]?.real_time_refresh ||
-          data.node?.template[name]?.refresh_button) &&
+        (template?.real_time_refresh || template?.refresh_button) &&
         // options can be undefined but not an empty array
-        (data.node?.template[name]?.options?.length ?? 0) === 0
+        (template?.options?.length ?? 0) === 0
       ) {
         mutateTemplate(
-          data.node?.template[name]?.value,
-          data,
+          template?.value,
+          node,
+          nodeId,
           postTemplateValue,
           setNode,
           setErrorData,
