@@ -143,7 +143,7 @@ export type TableComponentType = {
   value: any[];
   editNode?: boolean;
   id?: string;
-  columns: ColumnField[];
+  columns?: ColumnField[];
 };
 
 export type outputComponentType = {

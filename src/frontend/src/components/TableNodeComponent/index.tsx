@@ -1,5 +1,5 @@
 import TableModal from "@/modals/tableModal";
-import { FormatColumns } from "@/utils/utils";
+import { FormatColumns, generateBackendColumnsFromValue } from "@/utils/utils";
 import { SelectionChangedEvent } from "ag-grid-community";
 import { AgGridReact } from "ag-grid-react";
 import { cloneDeep } from "lodash";
@@ -22,7 +22,8 @@ export default function TableNodeComponent({
   }
   const [selectedNodes, setSelectedNodes] = useState<Array<any>>([]);
   const agGrid = useRef<AgGridReact>(null);
-  const AgColumns = FormatColumns(columns);
+  const componentColumns = columns?columns:generateBackendColumnsFromValue(value??[]);
+  const AgColumns = FormatColumns(componentColumns);
 
   function setAllRows() {
     if (agGrid.current) {
@@ -50,7 +51,7 @@ export default function TableNodeComponent({
   }
   function addRow() {
     const newRow = {};
-    columns.forEach((column) => {
+    componentColumns.forEach((column) => {
       newRow[column.name] = null;
     });
     onChange([...value, newRow]);
@@ -59,7 +60,7 @@ export default function TableNodeComponent({
   function updateComponente() {
     setAllRows();
   }
-  const editable = columns.map((column) => {
+  const editable = componentColumns.map((column) => {
     const isCustomEdit =
       column.formatter &&
       (column.formatter === "text" || column.formatter === "json");
