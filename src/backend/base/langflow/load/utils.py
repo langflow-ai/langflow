@@ -29,7 +29,7 @@ def upload(file_path, host, flow_id):
         raise Exception(f"Error uploading file: {e}")
 
 
-def upload_file(file_path, host, flow_id, components, tweaks={}):
+def upload_file(file_path: str, host: str, flow_id: str, components: list[str], tweaks: dict | None = None):
     """
     Upload a file to Langflow and return the file path.
 
@@ -47,6 +47,8 @@ def upload_file(file_path, host, flow_id, components, tweaks={}):
     Raises:
         Exception: If an error occurs during the upload process.
     """
+    if not tweaks:
+        tweaks = {}
     try:
         response = upload(file_path, host, flow_id)
         if response["file_path"]:

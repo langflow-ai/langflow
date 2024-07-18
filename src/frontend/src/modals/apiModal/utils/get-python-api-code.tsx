@@ -35,7 +35,7 @@ except ImportError:
     warnings.warn("Langflow provides a function to help you upload files to the flow. Please install langflow to use it.")
     upload_file = None
 
-BASE_API_URL = "${window.location.protocol}//${window.location.host}/api/v1/run"
+BASE_API_URL = "${window.location.protocol}//${window.location.host}"
 FLOW_ID = "${flowId}"
 ENDPOINT = "${endpointName || ""}" ${
     endpointName
@@ -61,7 +61,7 @@ def run_flow(message: str,
     :param tweaks: Optional tweaks to customize the flow
     :return: The JSON response from the flow
     """
-    api_url = f"{BASE_API_URL}/{endpoint}"
+    api_url = f"{BASE_API_URL}/api/v1/run/{endpoint}"
 
     payload = {
         "input_value": message,
