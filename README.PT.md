@@ -69,7 +69,7 @@ Então, execute o Langflow com:
 python -m langflow run
 ```
 
-Você também pode visualizar o Langflow no [HuggingFace Spaces](https://huggingface.co/spaces/Langflow/Langflow-Preview). [Clone o Space usando este link](https://huggingface.co/spaces/Langflow/Langflow-Preview?duplicate=true) para criar seu próprio workspace do Langflow em minutos.
+Você também pode visualizar o Langflow no [HuggingFace Spaces](https://huggingface.co/spaces/Langflow/Langflow). [Clone o Space usando este link](https://huggingface.co/spaces/Langflow/Langflow?duplicate=true) para criar seu próprio workspace do Langflow em minutos.
 
 # 🎨 Criar Fluxos
 
