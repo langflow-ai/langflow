@@ -105,7 +105,7 @@ body:
         - "3.12"
         - "3.11"
         - "3.10"
-      default: "3.10"  # Optional: Set a default value if needed
+      placeholder: 3.1.10
 
   - type: markdown
     attributes:
