@@ -1,0 +1,116 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.28.1.47646",
+      "templateHash": "327590888452337661"
+    }
+  },
+  "parameters": {
+    "webAppName": {
+      "type": "string",
+      "defaultValue": "[format('LangFlow-{0}', uniqueString(resourceGroup().id))]",
+      "metadata": {
+        "description": "The name of our application. It has to be unique. Type a name followed by your resource group name. (<name>-<resourceGroupName>)"
+      }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Location for all resources."
+      }
+    }
+  },
+  "variables": {
+    "sku": "PremiumV2",
+    "skuCode": "P2v2",
+    "workerSize": 2,
+    "appInsightName": "[format('{0}-insights', parameters('webAppName'))]",
+    "hostingPlanName": "[format('hpn-{0}', resourceGroup().name)]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Web/serverfarms",
+      "apiVersion": "2022-03-01",
+      "name": "[variables('hostingPlanName')]",
+      "location": "[parameters('location')]",
+      "sku": {
+        "tier": "[variables('sku')]",
+        "name": "[variables('skuCode')]"
+      },
+      "kind": "linux",
+      "properties": {
+        "reserved": true,
+        "targetWorkerSizeId": "[variables('workerSize')]",
+        "targetWorkerCount": 1
+      }
+    },
+    {
+      "type": "Microsoft.Web/sites",
+      "apiVersion": "2022-03-01",
+      "name": "[parameters('webAppName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "siteConfig": {
+          "appSettings": [
+            {
+              "name": "WEBSITES_ENABLE_APP_SERVICE_STORAGE",
+              "value": "false"
+            },
+            {
+              "name": "APPINSIGHTS_INSTRUMENTATIONKEY",
+              "value": "[reference(resourceId('Microsoft.Insights/components', variables('appInsightName')), '2020-02-02').InstrumentationKey]"
+            },
+            {
+              "name": "XDT_MicrosoftApplicationInsights_Mode",
+              "value": "default"
+            },
+            {
+              "name": "ApplicationInsightsAgent_EXTENSION_VERSION",
+              "value": "~2"
+            },
+            {
+              "name": "WEBSITES_PORT",
+              "value": "7860"
+            },
+            {
+              "name": "DOCKER_CUSTOM_IMAGE_NAME",
+              "value": "langflowai/langflow:latest"
+            }
+          ],
+          "linuxFxVersion": "DOCKER|langflowai/langflow:latest"
+        },
+        "clientAffinityEnabled": false,
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]",
+        "httpsOnly": true
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Insights/components', variables('appInsightName'))]",
+        "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Insights/components",
+      "apiVersion": "2020-02-02",
+      "name": "[variables('appInsightName')]",
+      "location": "[parameters('location')]",
+      "kind": "web",
+      "properties": {
+        "Application_Type": "web"
+      }
+    }
+  ],
+  "outputs": {
+    "webAppNameOutput": {
+      "type": "string",
+      "value": "[parameters('webAppName')]"
+    },
+    "appInsightInstrumentationKey": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Insights/components', variables('appInsightName')), '2020-02-02').InstrumentationKey]"
+    }
+  }
+}
