@@ -1,12 +1,13 @@
 import json
 from typing import Any, Dict
 import httpx
+from langflow.base.models.aiml_constants import MODEL_NAMES
 from langflow.components.models.MistralModel import MistralAIModelComponent
 from langflow.components.models.OllamaModel import ChatOllamaComponent
 from langflow.components.models.OpenAIModel import OpenAIModelComponent
 from langflow.custom.custom_component.component import Component
 
-from langflow.inputs.inputs import SecretStrInput
+from langflow.inputs.inputs import FloatInput, IntInput, MessageInput, SecretStrInput
 from langflow.schema.dotdict import dotdict
 from langflow.schema.message import Message
 from langflow.template.field.base import Output
@@ -25,69 +26,6 @@ class AIMLModelComponent(Component):
     description = "Generates text using the AI/ML API"
     icon = "ChatInput"  # TODO: Get their icon.
     chat_completion_url = "https://api.aimlapi.com/v1/chat/completions"
-    models = {
-        "gpt-4": "open_ai",
-        "gpt-3.5-turbo": "open_ai",
-        "gpt-3.5-turbo-davinci": "open_ai",
-        "codellama/CodeLlama-13b-Instruct-hf": "llama",
-        "codellama/CodeLlama-34b-Instruct-hf": "llama",
-        "codellama/CodeLlama-70b-Instruct-hf": "llama",
-        "mistralai/Mistral-7B-Instruct-v0.1": "mistral",
-    }
-
-    def _update_inputs(self, build_config, to_add):
-        for input in to_add:
-            # Skip the `model_name` input; we need to use this components dropdown.
-            # TODO: this hard coding nonsense is brittle. Either have good tests, or figure out
-            # a better way to do this.
-            if input.name == "model_name" or input.name == "api_key":
-                continue
-
-            build_config[input.name] = input.to_dict()
-
-    def _remove_inputs(self, build_config, to_remove):
-        for input in to_remove:
-            if input.name == "model_name":
-                continue
-            if input.name in build_config:
-                build_config.pop(input.name)
-
-    def _update_build_config(self, build_config, field_value):
-        build_config["_provider"]['value'] = self.models[field_value]
-        if self.models[field_value] == "open_ai":
-            self._update_inputs(build_config, OpenAIModelComponent.inputs)
-        elif self.models[field_value] == "llama":
-            self._update_inputs(build_config, ChatOllamaComponent.inputs)
-        elif self.models[field_value] == "mistral":
-            # TODO: Might have to remove "api_base_urls" from the inputs too
-            self._update_inputs(build_config, MistralAIModelComponent.inputs)
-
-
-    def update_build_config(
-        self,
-        build_config: dotdict,
-        field_value: Any,
-        field_name: str | None = None,
-    ):
-        if field_name == "model_name":
-            # Remove and update the inputs based on the model selected
-            if build_config["_provider"] is not None and build_config["_provider"]['value'] != "":
-                if build_config['_provider']['value'] == "open_ai" and self.models[field_value] != "open_ai":
-                    self._remove_inputs(build_config, OpenAIModelComponent.inputs)
-                    self._update_build_config(build_config, field_value)
-
-                if build_config['_provider']['value'] == "llama" and self.models[field_value] != "llama":
-                    self._remove_inputs(build_config, ChatOllamaComponent.inputs)
-                    self._update_build_config(build_config, field_value)
-
-                if build_config['_provider']['value'] == "mistral" and self.models[field_value] != "mistral":
-                    self._remove_inputs(build_config, MistralAIModelComponent.inputs)
-                    self._update_build_config(build_config, field_value)
-            else:
-                # First time update - set the inputs
-                self._update_build_config(build_config, field_value)
-
-        return build_config
 
     outputs = [
         Output(display_name="Text", name="text_output", method="make_request"),
@@ -97,7 +35,7 @@ class AIMLModelComponent(Component):
         DropdownInput(
             name="model_name",
             display_name="Model Name",
-            options=list(models.keys()),
+            options=MODEL_NAMES,
             real_time_refresh=True,
         ),
         SecretStrInput(
@@ -105,18 +43,53 @@ class AIMLModelComponent(Component):
             display_name="AI/ML API Key",
             value="AIML_API_KEY",
         ),
-        StrInput(name="_provider", show=False, info="Tracks the provider of the model; used for input updates"),
+        MessageInput(name="input_value", display_name="Input", required=True),
+        IntInput(
+            name="max_tokens",
+            display_name="Max Tokens",
+            advanced=True,
+            info="The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
+        ),
+        StrInput(
+            name="stop_tokens",
+            display_name="Stop Tokens",
+            info="Comma-separated list of tokens to signal the model to stop generating text.",
+            advanced=True,
+        ),
+        IntInput(
+            name="top_k",
+            display_name="Top K",
+            info="Limits token selection to top K. (Default: 40)",
+            advanced=True,
+        ),
+        FloatInput(
+            name="top_p",
+            display_name="Top P",
+            info="Works together with top-k. (Default: 0.9)",
+            advanced=True,
+        ),
+        FloatInput(
+            name="repeat_penalty",
+            display_name="Repeat Penalty",
+            info="Penalty for repetitions in generated text. (Default: 1.1)",
+            advanced=True,
+        ),
+        FloatInput(
+            name="temperature",
+            display_name="Temperature",
+            value=0.2,
+            info="Controls the creativity of model responses.",
+        ),
+        StrInput(
+            name="system_message",
+            display_name="System Message",
+            info="System message to pass to the model.",
+            advanced=True,
+        ),
     ]
 
     def make_request(self) -> Message:
-        output_schema_dict: Dict[str, str] = {}
-        for d in self.output_schema or {}:
-            output_schema_dict |= d
-
         api_key = SecretStr(self.aiml_api_key) if self.aiml_api_key else None
-
-        model_kwargs = self.model_kwargs or {}
-        model_kwargs["seed"] = self.seed
 
         headers = {
             "Content-Type": "application/json",
@@ -141,15 +114,15 @@ class AIMLModelComponent(Component):
             raise ValueError("Please provide an input value")
 
         payload = {
-            "max_tokens": self.max_tokens or None,
-            "model_kwargs": model_kwargs,
             "model": self.model_name,
-            "temperature": self.temperature or 0.1,
             "messages": messages,
+            "max_tokens": self.max_tokens or None,
+            "temperature": self.temperature or 0.2,
+            "top_k": self.top_k or 40,
+            "top_p": self.top_p or 0.9,
+            "repeat_penalty": self.repeat_penalty or 1.1,
+            "stop_tokens": self.stop_tokens or None,
         }
-
-        if bool(output_schema_dict) or self.json_mode:
-            payload["response_format"] = {"type": "json_object"}
 
         try:
             response = requests.post(
