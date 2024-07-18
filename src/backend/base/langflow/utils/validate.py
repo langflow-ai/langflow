@@ -173,7 +173,8 @@ def create_class(code, class_name):
     try:
         return build_class_constructor(compiled_class, exec_globals, class_name)
     except ValidationError as e:
-        error_message = "\n".join([error["msg"].split(",", 1)[1] for error in e.errors()])
+        messages = [error["msg"].split(",", 1) for error in e.errors()]
+        error_message = "\n".join([message[1] if len(message) > 1 else message[0] for message in messages])
         raise ValueError(error_message) from e
 
 
