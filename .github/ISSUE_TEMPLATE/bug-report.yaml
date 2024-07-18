@@ -93,7 +93,7 @@ body:
     validations:
       required: true
 
-  - type: checkboxes
+  - type: dropdown
     id: python-version
     attributes:
       label: Python Version
