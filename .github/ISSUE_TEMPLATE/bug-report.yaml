@@ -99,10 +99,14 @@ body:
       label: "Python Version"
       description: |        
         **Langflow requires Python version 3.10 or greater.**
+      multiple: true
       options:
-        - "3.12"
-        - "3.11"
-        - "3.10"
+        - value: "3.12"
+          label: "3.12"
+        - value: "3.11"
+          label: "3.11"
+        - value: "3.10"
+          label: "3.10"
         
   - type: markdown
     attributes:
