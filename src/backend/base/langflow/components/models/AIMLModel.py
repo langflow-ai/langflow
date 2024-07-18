@@ -13,7 +13,6 @@ from langflow.inputs import (
     DropdownInput,
     StrInput,
 )
-import httpx
 
 
 class AIMLModelComponent(Component):
@@ -120,9 +119,7 @@ class AIMLModelComponent(Component):
         }
 
         try:
-            response = httpx.post(
-                self.chat_completion_url, headers=headers, json=payload
-            )
+            response = httpx.post(self.chat_completion_url, headers=headers, json=payload)
             try:
                 response.raise_for_status()
                 result_data = response.json()

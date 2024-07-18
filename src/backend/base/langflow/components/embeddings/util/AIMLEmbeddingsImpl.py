@@ -1,11 +1,12 @@
 import json
-from typing import Any, List
+from typing import List
 
 import httpx
 from langflow.field_typing import Embeddings
 from langchain_core.runnables.config import run_in_executor
 from langchain_core.pydantic_v1 import BaseModel, SecretStr
 from loguru import logger
+
 
 class AIMLEmbeddingsImpl(BaseModel, Embeddings):
     embeddings_completion_url: str = "https://api.aimlapi.com/v1/embeddings"

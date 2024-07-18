@@ -1,4 +1,3 @@
-from typing import Any
 from langflow.base.embeddings.model import LCEmbeddingsModel
 from langflow.base.models.aiml_constants import EMBEDDING_MODELS
 from langflow.components.embeddings.util.AIMLEmbeddingsImpl import AIMLEmbeddingsImpl
