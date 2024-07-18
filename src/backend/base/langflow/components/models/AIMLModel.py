@@ -1,14 +1,9 @@
 import json
-from typing import Any, Dict
 import httpx
-from langflow.base.models.aiml_constants import MODEL_NAMES
-from langflow.components.models.MistralModel import MistralAIModelComponent
-from langflow.components.models.OllamaModel import ChatOllamaComponent
-from langflow.components.models.OpenAIModel import OpenAIModelComponent
+from langflow.base.models.aiml_constants import CHAT_MODELS
 from langflow.custom.custom_component.component import Component
 
 from langflow.inputs.inputs import FloatInput, IntInput, MessageInput, SecretStrInput
-from langflow.schema.dotdict import dotdict
 from langflow.schema.message import Message
 from langflow.template.field.base import Output
 from loguru import logger
@@ -18,7 +13,7 @@ from langflow.inputs import (
     DropdownInput,
     StrInput,
 )
-import requests
+import httpx
 
 
 class AIMLModelComponent(Component):
@@ -35,8 +30,8 @@ class AIMLModelComponent(Component):
         DropdownInput(
             name="model_name",
             display_name="Model Name",
-            options=MODEL_NAMES,
-            real_time_refresh=True,
+            options=CHAT_MODELS,
+            required=True,
         ),
         SecretStrInput(
             name="aiml_api_key",
@@ -125,18 +120,18 @@ class AIMLModelComponent(Component):
         }
 
         try:
-            response = requests.post(
-                self.chat_completion_url, headers=headers, data=json.dumps(payload)
+            response = httpx.post(
+                self.chat_completion_url, headers=headers, json=payload
             )
             try:
                 response.raise_for_status()
                 result_data = response.json()
                 choice = result_data["choices"][0]
                 result = choice["message"]["content"]
-            except requests.exceptions.HTTPError as http_err:
+            except httpx.HTTPStatusError as http_err:
                 logger.error(f"HTTP error occurred: {http_err}")
                 raise http_err
-            except requests.exceptions.RequestException as req_err:
+            except httpx.RequestError as req_err:
                 logger.error(f"Request error occurred: {req_err}")
                 raise req_err
             except json.JSONDecodeError:
