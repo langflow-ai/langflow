@@ -45,7 +45,7 @@ class MistralAIModelComponent(LCModelComponent):
             ),
         ),
         SecretStrInput(
-            name="mistral_api_key",
+            name="api_key",
             display_name="Mistral API Key",
             info="The Mistral API Key to use for the Mistral model.",
             advanced=False,
@@ -67,7 +67,7 @@ class MistralAIModelComponent(LCModelComponent):
     ]
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
-        mistral_api_key = self.mistral_api_key
+        mistral_api_key = self.api_key
         temperature = self.temperature
         model_name = self.model_name
         max_tokens = self.max_tokens
