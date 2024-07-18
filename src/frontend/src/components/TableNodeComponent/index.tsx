@@ -22,7 +22,9 @@ export default function TableNodeComponent({
   }
   const [selectedNodes, setSelectedNodes] = useState<Array<any>>([]);
   const agGrid = useRef<AgGridReact>(null);
-  const componentColumns = columns?columns:generateBackendColumnsFromValue(value??[]);
+  const componentColumns = columns
+    ? columns
+    : generateBackendColumnsFromValue(value ?? []);
   const AgColumns = FormatColumns(componentColumns);
 
   function setAllRows() {
