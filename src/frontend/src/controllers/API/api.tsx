@@ -2,6 +2,7 @@ import {
   LANGFLOW_ACCESS_TOKEN,
   LANGFLOW_AUTO_LOGIN_OPTION,
 } from "@/constants/constants";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from "axios";
 import { useContext, useEffect } from "react";
 import { Cookies } from "react-cookie";
@@ -11,7 +12,6 @@ import { AuthContext } from "../../contexts/authContext";
 import useAlertStore from "../../stores/alertStore";
 import useFlowStore from "../../stores/flowStore";
 import { checkDuplicateRequestAndStoreRequest } from "./helpers/check-duplicate-requests";
-import useFlowsManagerStore from "@/stores/flowsManagerStore";
 
 // Create a new Axios instance
 const api: AxiosInstance = axios.create({
@@ -20,11 +20,10 @@ const api: AxiosInstance = axios.create({
 
 function ApiInterceptor() {
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  let { accessToken,  logout, authenticationErrorCount, autoLogin } =
+  let { accessToken, logout, authenticationErrorCount, autoLogin } =
     useContext(AuthContext);
   const cookies = new Cookies();
   const setSaveLoading = useFlowsManagerStore((state) => state.setSaveLoading);
-
 
   useEffect(() => {
     const interceptor = api.interceptors.response.use(
@@ -42,7 +41,7 @@ function ApiInterceptor() {
             if (!stillRefresh) {
               return Promise.reject(error);
             }
-            
+
             await tryToRenewAccessToken(error);
 
             const accessToken = cookies.get(LANGFLOW_ACCESS_TOKEN);
@@ -135,7 +134,7 @@ function ApiInterceptor() {
   async function tryToRenewAccessToken(error: AxiosError) {
     try {
       if (window.location.pathname.includes("/login")) return;
-       await renewAccessToken();
+      await renewAccessToken();
     } catch (error) {
       clearBuildVerticesState(error);
       logout();
@@ -153,22 +152,21 @@ function ApiInterceptor() {
     }
   }
 
-
   async function remakeRequest(error: AxiosError) {
     const originalRequest = error.config as AxiosRequestConfig;
 
     try {
       const accessToken = cookies.get(LANGFLOW_ACCESS_TOKEN);
       if (!accessToken) {
-        throw new Error('Access token not found in cookies');
+        throw new Error("Access token not found in cookies");
       }
-  
+
       // Modify headers in originalRequest
       originalRequest.headers = {
         ...(originalRequest.headers as Record<string, string>), // Cast to suppress TypeScript error
         Authorization: `Bearer ${accessToken}`,
       };
-  
+
       const response = await axios.request(originalRequest);
       return response.data; // Or handle the response as needed
     } catch (err) {
@@ -176,8 +174,6 @@ function ApiInterceptor() {
     }
   }
 
-
-  
   return null;
 }
 
