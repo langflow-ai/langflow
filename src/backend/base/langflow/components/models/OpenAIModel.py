@@ -105,7 +105,7 @@ class OpenAIModelComponent(LCModelComponent):
             base_url=openai_api_base,
             api_key=api_key,
             temperature=temperature or 0.1,
-            seed=seed
+            seed=seed,
         )
         if json_mode:
             if output_schema_dict:
