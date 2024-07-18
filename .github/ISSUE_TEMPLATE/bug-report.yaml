@@ -94,21 +94,21 @@ body:
       required: true
 
    - type: dropdown
-    id: python-version
-    attributes:
-      label: "Python Version"
-      description: |
-        My Python version is:
-        
-        Langflow requires Python version 3.10 or greater.
-      options:
-        - value: "3.12"
-          label: "3.12"
-        - value: "3.11"
-          label: "3.11"
-        - value: "3.10"
-          label: "3.10"
-      default: "3.10"  # Optional: Set a default value if needed
+      id: python-version
+      attributes:
+        label: "Python Version"
+        description: |
+          My Python version is:
+          
+          Langflow requires Python version 3.10 or greater.
+        options:
+          - value: "3.12"
+            label: "3.12"
+          - value: "3.11"
+            label: "3.11"
+          - value: "3.10"
+            label: "3.10"
+        default: "3.10"  # Optional: Set a default value if needed
 
   - type: markdown
     attributes:
