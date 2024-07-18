@@ -78,6 +78,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
   },
   currentFlow: undefined,
   saveLoading: false,
+  setSaveLoading: (saveLoading: boolean) => set({ saveLoading }),
   isLoading: true,
   setIsLoading: (isLoading: boolean) => set({ isLoading }),
   refreshFlows: () => {
