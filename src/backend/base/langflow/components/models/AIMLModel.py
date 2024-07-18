@@ -18,7 +18,7 @@ from langflow.inputs import (
 class AIMLModelComponent(Component):
     display_name = "AI/ML API"
     description = "Generates text using the AI/ML API"
-    icon = "ChatInput"  # TODO: Get their icon.
+    icon = "AI/ML"
     chat_completion_url = "https://api.aimlapi.com/v1/chat/completions"
 
     outputs = [

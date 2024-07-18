@@ -9,7 +9,7 @@ from langflow.io import SecretStrInput
 class AIMLEmbeddingsComponent(LCEmbeddingsModel):
     display_name = "AI/ML Embeddings"
     description = "Generate embeddings using the AI/ML API."
-    icon = "OpenAI"  # TODO: icon
+    icon = "AI/ML"
     name = "AIMLEmbeddings"
 
     inputs = [
