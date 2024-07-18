@@ -93,16 +93,17 @@ body:
     validations:
       required: true
 
-   - type: dropdown
+  - type: dropdown
     id: python-version
-    attributes:
     label: "Python Version"
     description: |
-    Langflow requires Python version 3.10 or greater.
+      My Python version is:
+      
+      Langflow requires Python version 3.10 or greater.
     options:
-    - "3.12"
-    - "3.11"
-    - "3.10"
+      - "3.12"
+      - "3.11"
+      - "3.10"
         
   - type: markdown
     attributes:
