@@ -216,6 +216,7 @@ import { HackerNewsIcon } from "../icons/hackerNews";
 import { MistralIcon } from "../icons/mistral";
 import { SupabaseIcon } from "../icons/supabase";
 import { iconsType } from "../types/components";
+import { AIMLIcon } from "@/icons/AIML";
 
 export const gradients = [
   "bg-gradient-to-br from-gray-800 via-rose-700 to-violet-900",
@@ -581,4 +582,6 @@ export const nodeIconsLucide: iconsType = {
   PGVector: CpuIcon,
   Confluence: ConfluenceIcon,
   FreezeAll: freezeAllIcon,
+  AIML:AIMLIcon,
+  "AI/ML": AIMLIcon,
 };
