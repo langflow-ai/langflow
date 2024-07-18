@@ -101,6 +101,7 @@ body:
         My Python version is:
         
         Langflow requires Python version 3.10 or greater.
+      allow_empty: false  # Example setting to disable "None" option
       options:
         - value: "3.12"
           label: "3.12"
