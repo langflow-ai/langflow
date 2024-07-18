@@ -320,8 +320,6 @@ export default function GenericNode({
     return (
       <NodeToolbar>
         <NodeToolbarComponent
-          //          openWDoubleClick={openWDoubleCLick}
-          //          setOpenWDoubleClick={setOpenWDoubleCLick}
           data={data}
           deleteNode={(id) => {
             takeSnapshot();

@@ -219,10 +219,6 @@ export default function NodeToolbarComponent({
     },
   });
 
-  //  useEffect(() => {
-  //    if (openWDoubleClick) setShowModalAdvanced(true);
-  //  }, [openWDoubleClick, setOpenWDoubleClick]);
-
   const openInNewTab = (url) => {
     window.open(url, "_blank", "noreferrer");
   };
@@ -492,24 +488,6 @@ export default function NodeToolbarComponent({
             </ShadTooltip>
           )}
 
-          {/*<ShadTooltip content={"Save"} side="top">
-            <button
-              data-testid="save-button-modal"
-              className={classNames(
-                "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10",
-                hasCode ? " " : " rounded-l-md ",
-              )}
-              onClick={(event) => {
-                event.preventDefault();
-                if (isSaved) {
-                  return setShowOverrideModal(true);
-                }
-                saveComponent(cloneDeep(data), false);
-              }}
-            >
-              <IconComponent name="SaveAll" className="h-4 w-4" />
-            </button>
-          </ShadTooltip>*/}
           <ShadTooltip
             content={displayShortcut(
               shortcuts.find(
@@ -542,21 +520,6 @@ export default function NodeToolbarComponent({
             </button>
           </ShadTooltip>
 
-          {/*<ShadTooltip content={"Duplicate"} side="top">
-            <button
-              data-testid="duplicate-button-modal"
-              className={classNames(
-                "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10",
-              )}
-              onClick={(event) => {
-                event.preventDefault();
-                handleSelectChange("duplicate");
-              }}
-            >
-              <IconComponent name="Copy" className="h-4 w-4" />
-            </button>
-          </ShadTooltip>*/}
-
           <Select onValueChange={handleSelectChange} value="">
             <ShadTooltip content="All" side="top">
               <SelectTrigger>
@@ -564,7 +527,7 @@ export default function NodeToolbarComponent({
                   <div
                     data-testid="more-options-modal"
                     className={classNames(
-                      "relative -ml-px inline-flex h-8 w-[31px] items-center rounded-r-md bg-background text-foreground shadow-md ring-1 ring-inset ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10",
+                      "relative -ml-px inline-flex h-8 w-[2rem] items-center rounded-r-md bg-background text-foreground shadow-md ring-1 ring-inset ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10",
                     )}
                   >
                     <IconComponent
@@ -659,19 +622,7 @@ export default function NodeToolbarComponent({
                   />
                 </SelectItem>
               )}
-              {/* {(!hasStore || !hasApiKey || !validApiKey) && (
-                <SelectItem value={"Download"}>
-                  <ToolbarSelectItem
-                    shortcut={
-                      shortcuts.find((obj) => obj.name === "Download")
-                        ?.shortcut!
-                    }
-                    value={"Download"}
-                    icon={"Download"}
-                    dataTestId="Download-button-modal"
-                  />
-                </SelectItem>
-              )} */}
+
               <SelectItem
                 value={"documentation"}
                 disabled={data.node?.documentation === ""}
@@ -717,7 +668,7 @@ export default function NodeToolbarComponent({
                   }
                   value={"Freeze"}
                   icon={"Snowflake"}
-                  dataTestId="group-button-modal"
+                  dataTestId="freeze-button"
                   style={`${frozen ? " text-ice" : ""} transition-all`}
                 />
               </SelectItem>
@@ -729,7 +680,7 @@ export default function NodeToolbarComponent({
                   }
                   value={"Freeze Path"}
                   icon={"FreezeAll"}
-                  dataTestId="group-button-modal"
+                  dataTestId="freeze-path-button"
                   style={`${frozen ? " text-ice" : ""} transition-all`}
                 />
               </SelectItem>

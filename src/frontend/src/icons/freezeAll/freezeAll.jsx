@@ -1,10 +1,13 @@
-const FreezeAllSvg = (props) => {
+import { cn } from "../../utils/utils";
+
+const FreezeAllSvg = ({ className, ...props }) => {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
       version="1.2"
       viewBox="0 0 24 24"
-      className="h-4 w-4 stroke-[1.5]"
+      className={cn("h-4 w-4 stroke-[1.5]", className)}
+      {...props}
     >
       <title>snowflake-svg</title>
       <path
