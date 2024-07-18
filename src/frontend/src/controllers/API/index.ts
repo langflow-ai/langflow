@@ -140,8 +140,8 @@ export async function saveFlowToDatabase(newFlow: {
       endpoint_name: newFlow.endpoint_name,
     });
 
-    if (response.status !== 201) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    if (response?.status !== 201) {
+      throw new Error(`HTTP error! status: ${response?.status}`);
     }
     return response.data;
   } catch (error) {
@@ -254,8 +254,8 @@ export async function deleteFlowFromDatabase(flowId: string) {
 export async function getFlowFromDatabase(flowId: number) {
   try {
     const response = await api.get(`${BASE_URL_API}flows/${flowId}`);
-    if (response.status !== 200) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    if (response?.status !== 200) {
+      throw new Error(`HTTP error! status: ${response?.status}`);
     }
     return response.data;
   } catch (error) {
@@ -1069,22 +1069,4 @@ export async function getTransactionTable(
   const rows = await api.get(`${BASE_URL_API}monitor/transactions`, config);
   const columns = extractColumnsFromRows(rows.data, mode);
   return { rows: rows.data, columns };
-}
-
-export async function deleteMessagesFn(ids: string[]) {
-  try {
-    return await api.delete(`${BASE_URL_API}monitor/messages`, {
-      data: ids,
-    });
-  } catch (error) {
-    console.error("Error deleting flows:", error);
-    throw error;
-  }
-}
-
-export async function updateMessageApi(data: Message) {
-  if (data.files && typeof data.files === "string") {
-    data.files = JSON.parse(data.files);
-  }
-  return await api.put(`${BASE_URL_API}monitor/messages/${data.id}`, data);
 }

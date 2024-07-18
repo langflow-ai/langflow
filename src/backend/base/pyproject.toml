@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "langflow-base"
-version = "0.0.85"
+version = "0.0.86"
 description = "A Python package with a built-in web application"
 authors = ["Langflow <contact@langflow.org>"]
 maintainers = [
@@ -51,7 +51,7 @@ bcrypt = "4.0.1"
 pillow = "^10.2.0"
 docstring-parser = "^0.16"
 python-jose = "^3.3.0"
-pandas = "2.2.0"
+pandas = "2.2.2"
 multiprocess = "^0.70.14"
 duckdb = "^1.0.0"
 python-docx = "^1.1.0"
@@ -69,9 +69,9 @@ firecrawl-py = "^0.0.16"
 opentelemetry-api = "^1.25.0"
 opentelemetry-sdk = "^1.25.0"
 opentelemetry-exporter-prometheus = "^0.46b0"
+opentelemetry-instrumentation-fastapi = "^0.46b0"
 prometheus-client = "^0.20.0"
 aiofiles = "^24.1.0"
-crewai = "^0.36.0"
 setuptools = ">=70"
 
 [tool.poetry.extras]

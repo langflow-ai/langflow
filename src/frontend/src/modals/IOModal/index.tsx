@@ -1,4 +1,7 @@
-import { useGetMessagesQuery } from "@/controllers/API/queries/messages";
+import {
+  useDeleteMessages,
+  useGetMessagesQuery,
+} from "@/controllers/API/queries/messages";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import AccordionComponent from "../../components/accordionComponent";
@@ -24,7 +27,6 @@ import { cn } from "../../utils/utils";
 import BaseModal from "../baseModal";
 import IOFieldView from "./components/IOFieldView";
 import SessionView from "./components/SessionView";
-import useRemoveSession from "./components/SessionView/hooks";
 import ChatView from "./components/chatView";
 
 export default function IOModal({
@@ -57,6 +59,32 @@ export default function IOModal({
   );
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const deleteSession = useMessagesStore((state) => state.deleteSession);
+
+  const { mutate: deleteSessionFunction } = useDeleteMessages();
+
+  function handleDeleteSession(session_id: string) {
+    deleteSessionFunction(
+      {
+        ids: messages
+          .filter((msg) => msg.session_id === session_id)
+          .map((msg) => msg.id),
+      },
+      {
+        onSuccess: () => {
+          setSuccessData({
+            title: "Session deleted successfully.",
+          });
+          deleteSession(session_id);
+        },
+        onError: () => {
+          setErrorData({
+            title: "Error deleting Session.",
+          });
+        },
+      },
+    );
+  }
 
   function startView() {
     if (!chatInput && !chatOutput) {
@@ -125,11 +153,6 @@ export default function IOModal({
       });
     }
   }
-
-  const { handleRemoveSession } = useRemoveSession(
-    setSuccessData,
-    setErrorData,
-  );
 
   useEffect(() => {
     setSelectedTab(inputs.length > 0 ? 1 : outputs.length > 0 ? 2 : 0);
@@ -371,7 +394,7 @@ export default function IOModal({
                               onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
-                                handleRemoveSession(session);
+                                handleDeleteSession(session);
                                 if (selectedViewField?.id === session)
                                   setSelectedViewField(undefined);
                               }}

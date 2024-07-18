@@ -4,15 +4,13 @@ import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
 
-interface ProfilePicturesQueryParams {}
-
-export interface ProfilePicturesQueryResponse {
+export interface ProfilePicturesQueryResponse extends Record<string, string[]> {
   files: string[];
 }
 
 export const useGetProfilePicturesQuery: useQueryFunctionType<
-  ProfilePicturesQueryParams,
-  { [key: string]: string[] }
+  undefined,
+  ProfilePicturesQueryResponse
 > = () => {
   const { query } = UseRequestProcessor();
 

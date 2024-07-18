@@ -40,7 +40,7 @@ export default function LoginAdminPage() {
 
         setLoading(true);
 
-        login(user.access_token);
+        login(user.access_token, "login");
         navigate("/admin/");
       })
       .catch((error) => {

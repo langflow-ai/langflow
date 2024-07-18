@@ -1,5 +1,4 @@
 import asyncio
-import traceback
 import uuid
 from collections import defaultdict, deque
 from datetime import datetime, timezone
@@ -257,7 +256,7 @@ class Graph:
     async def initialize_run(self):
         await self.tracing_service.initialize_tracers()
 
-    async def end_all_traces(self, outputs: dict[str, Any] | None = None, error: str | None = None):
+    async def end_all_traces(self, outputs: dict[str, Any] | None = None, error: Exception | None = None):
         if not self.tracing_service:
             return
         self._end_time = datetime.now(timezone.utc)
@@ -354,9 +353,7 @@ class Graph:
             await self.process(start_component_id=start_component_id, fallback_to_env_vars=fallback_to_env_vars)
             self.increment_run_count()
         except Exception as exc:
-            logger.exception(exc)
-            tb = traceback.format_exc()
-            asyncio.create_task(self.end_all_traces(error=f"{exc.__class__.__name__}: {exc}\n\n{tb}"))
+            asyncio.create_task(self.end_all_traces(error=exc))
             raise ValueError(f"Error running graph: {exc}") from exc
         finally:
             asyncio.create_task(self.end_all_traces())
@@ -821,7 +818,7 @@ class Graph:
         # All vertices that do not have edges are invalid
         return len(self.get_vertex_edges(vertex.id)) > 0
 
-    def get_vertex(self, vertex_id: str) -> Vertex:
+    def get_vertex(self, vertex_id: str, silent: bool = False) -> Vertex:
         """Returns a vertex by id."""
         try:
             return self.vertex_map[vertex_id]
@@ -872,7 +869,8 @@ class Graph:
         self.run_manager.add_to_vertices_being_run(vertex_id)
         try:
             params = ""
-            if vertex.frozen:
+            parent_vertex = self.get_vertex(vertex.parent_node_id) if vertex.parent_node_id else None
+            if vertex.frozen or (parent_vertex and parent_vertex.frozen):
                 # Check the cache for the vertex
                 cached_result = await chat_service.get_cache(key=vertex.id)
                 if isinstance(cached_result, CacheMiss):

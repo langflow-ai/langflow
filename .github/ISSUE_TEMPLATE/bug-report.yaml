@@ -1,0 +1,117 @@
+name: "🐛 Bug Report"
+description: Submit a bug report to help us improve Langflow
+labels: [ "bug" ]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report!
+        
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of what the bug is
+      placeholder: Tell us what you see!
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    validations:
+      required: true
+    attributes:
+      label: Reproduction
+      description: |
+        Please provide a code sample that reproduces the problem you ran into. It can be a Colab link or just a code snippet.
+        If you have code snippets, error messages, or stack traces please provide them here as well.
+        Important! Use code tags to format your code correctly. See https://help.github.com/en/github/writing-on-github/creating-and-highlighting-code-blocks#syntax-highlighting
+        Do not use screenshots, as they are hard to read, and (more importantly) don't allow others to copy-and-paste your code.
+      placeholder: |
+        Steps to reproduce the behavior:
+
+          1.
+          2.
+          3.
+
+  - type: textarea
+    id: expected-behavior
+    validations:
+      required: true
+    attributes:
+      label: Expected behavior
+      description: "A clear and concise description of what you would expect to happen."
+
+  - type: textarea
+    id: who-can-help
+    attributes:
+      label: Who can help?
+      description: |
+        Your issue will be replied to more quickly if you can figure out the right person to tag with @.
+        If you know the relevant code owner, please tag them. Otherwise, leave this blank and a core maintainer will direct the issue accordingly.
+
+        Please tag fewer than 3 people.
+
+        Specific Areas:
+
+          Frontend:
+            - @anovazzi1
+            - @Cristhianzl
+            - @lucaseduoli
+            - @igorrCarvalho
+            
+          Backend:
+            - @italojohnny
+            
+          Full Stack:
+            - @ogabrielluiz
+            - @nicoloboschi
+            - @zzzming
+            - @jordanrfrazier
+            - @mfortman11
+            - @NadirJ
+
+      placeholder: "@Username ..."
+
+  - type: markdown
+    attributes:
+      value: '## Environment'
+      
+  - type: input
+    id: os
+    attributes:
+      label: Operating System
+      placeholder: ex. Ubuntu Linux 22.04
+    validations:
+      required: true
+      
+  - type: input
+    id: langflow-version
+    attributes:
+      label: Langflow Version
+      placeholder: ex. 1.0.9
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: python-version
+    attributes:
+      label: Python Version
+      description: |
+        My Python version is:
+        
+        Langflow requires Python version 3.10 or greater.
+      options:
+        - label: "3.12"
+        - label: "3.11"
+        - label: "3.10"
+
+  - type: markdown
+    attributes:
+      value: |
+        Screenshot error - If applicable, add screenshots to help explain your problem.
+
+  - type: markdown
+    attributes:
+      value: |
+        Flow file - Add your flow if applicable to help replicate the problem.

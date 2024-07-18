@@ -9,11 +9,12 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_serial
 from langflow.graph.schema import RunOutputs
 from langflow.schema import dotdict
 from langflow.schema.graph import Tweaks
-from langflow.schema.schema import InputType, OutputLog, OutputType
+from langflow.schema.schema import InputType, OutputType, OutputValue
 from langflow.services.database.models.api_key.model import ApiKeyRead
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.flow import FlowCreate, FlowRead
 from langflow.services.database.models.user import UserRead
+from langflow.services.tracing.schema import Log
 
 
 class BuildStatus(Enum):
@@ -250,7 +251,8 @@ class VerticesOrderResponse(BaseModel):
 
 class ResultDataResponse(BaseModel):
     results: Optional[Any] = Field(default_factory=dict)
-    outputs: dict[str, OutputLog] = Field(default_factory=dict)
+    outputs: dict[str, OutputValue] = Field(default_factory=dict)
+    logs: dict[str, list[Log]] = Field(default_factory=dict)
     message: Optional[Any] = Field(default_factory=dict)
     artifacts: Optional[Any] = Field(default_factory=dict)
     timedelta: Optional[float] = None

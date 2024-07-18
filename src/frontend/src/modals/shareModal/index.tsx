@@ -146,7 +146,6 @@ export default function ShareModal({
       is_component: is_component,
     });
 
-
     if (!update)
       postComponent({
         newFlow: flow!,
@@ -154,14 +153,12 @@ export default function ShareModal({
         publicFlow: sharePublic,
       })
     else {
-      mutate(
-        {
-          newFlow: flow!,
-          tags: getTagsIds(selectedTags, cloneDeep(data) ?? []),
-          publicFlow: sharePublic,
-          id: unavaliableNames.find((e) => e.name === name)!.id,
-        }
-      )
+      mutate({
+        newFlow: flow!,
+        tags: getTagsIds(selectedTags, cloneDeep(data) ?? []),
+        publicFlow: sharePublic,
+        id: unavaliableNames.find((e) => e.name === name)!.id,
+      });
     }
   };
 
