@@ -27,8 +27,8 @@ concurrency:
 
 jobs:
   path-filter:
-    # should run if the PR is approved,or if it's a manual run or if it is not a draft PR
-    if: ${{ (github.event.review.state == 'APPROVED' && github.event.pull_request.draft == false) || github.event_name == 'workflow_dispatch' }}
+    if: ${{ (contains( github.event.pull_request.labels.*.name, 'lgtm') && github.event.pull_request.draft == false) || github.event_name == 'workflow_dispatch' }}
+
     name: Filter Paths
     runs-on: ubuntu-latest
     outputs:
