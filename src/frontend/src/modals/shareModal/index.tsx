@@ -1,6 +1,7 @@
 import {
   useGetTagsQuery,
   usePatchUpdateFlowStore,
+  usePostComponent,
 } from "@/controllers/API/queries/store";
 import { cloneDeep } from "lodash";
 import { ReactNode, useEffect, useMemo, useState } from "react";
@@ -94,6 +95,18 @@ export default function ShareModal({
     },
   });
 
+  const { mutate: postComponent } = usePostComponent({
+    onSuccess: () => {
+      successShare();
+    },
+    onError: (err) => {
+      setErrorData({
+        title: "Error sharing " + (is_component ? "component" : "flow"),
+        list: [err["response"]["data"]["detail"]],
+      });
+    },
+  });
+
   const [loadingNames, setLoadingNames] = useState(false);
 
   const name = component?.name ?? "";
@@ -136,15 +149,10 @@ export default function ShareModal({
     });
 
     if (!update)
-      saveFlowStore(
-        flow!,
-        getTagsIds(selectedTags, cloneDeep(data) ?? []),
-        sharePublic,
-      ).then(successShare, (err) => {
-        setErrorData({
-          title: "Error sharing " + (is_component ? "component" : "flow"),
-          list: [err["response"]["data"]["detail"]],
-        });
+      postComponent({
+        newFlow: flow!,
+        tags: getTagsIds(selectedTags, cloneDeep(data) ?? []),
+        publicFlow: sharePublic,
       });
     else {
       mutate({
