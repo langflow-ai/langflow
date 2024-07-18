@@ -1,7 +1,7 @@
 import { useLocation } from "react-router-dom";
 import { FolderType } from "../../pages/MainPage/entities";
 import { useFolderStore } from "../../stores/foldersStore";
-import { cn } from "../../utils/utils"; // Ensure cn function is correctly imported
+import { cn } from "../../utils/utils";
 import HorizontalScrollFadeComponent from "../horizontalScrollFadeComponent";
 import SideBarButtonsComponent from "./components/sideBarButtons";
 import SideBarFoldersButtonsComponent from "./components/sideBarFolderButtons";
