@@ -13,7 +13,7 @@
     <a href="https://docs.langflow.org" style="text-decoration: underline;">Docs</a> -
     <a href="https://discord.com/invite/EqksyE2EX9" style="text-decoration: underline;">Junte-se ao nosso Discord</a> -
     <a href="https://twitter.com/langflow_ai" style="text-decoration: underline;">Siga-nos no X</a> -
-    <a href="https://huggingface.co/spaces/Langflow/Langflow-Preview" style="text-decoration: underline;">Demonstração</a>
+    <a href="https://huggingface.co/spaces/Langflow/Langflow" style="text-decoration: underline;">Demonstração</a>
 </p>
 
 <p align="center">
@@ -69,7 +69,7 @@ Então, execute o Langflow com:
 python -m langflow run
 ```
 
-Você também pode visualizar o Langflow no [HuggingFace Spaces](https://huggingface.co/spaces/Langflow/Langflow-Preview). [Clone o Space usando este link](https://huggingface.co/spaces/Langflow/Langflow-Preview?duplicate=true) para criar seu próprio workspace do Langflow em minutos.
+Você também pode visualizar o Langflow no [HuggingFace Spaces](https://huggingface.co/spaces/Langflow/Langflow). [Clone o Space usando este link](https://huggingface.co/spaces/Langflow/Langflow?duplicate=true) para criar seu próprio workspace do Langflow em minutos.
 
 # 🎨 Criar Fluxos
 
