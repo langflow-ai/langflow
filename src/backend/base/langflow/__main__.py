@@ -120,6 +120,11 @@ def run(
         help="Enables the store features.",
         envvar="LANGFLOW_STORE",
     ),
+    streamlit_enabled: bool = typer.Option(
+        True,
+        help="Enables the streamlit features.",
+        envvar="LANGFLOW_STREAMLIT_ENABLED",
+    ),
 ):
     """
     Run Langflow.
@@ -194,6 +199,7 @@ def wait_for_server_ready(host, port):
 
 
 def run_on_mac_or_linux(host, port, log_level, options, app):
+    print("here i am", flush=True)
     webapp_process = Process(target=run_langflow, args=(host, port, log_level, options, app))
     webapp_process.start()
     wait_for_server_ready(host, port)

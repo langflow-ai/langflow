@@ -104,6 +104,27 @@ def get_lifespan(fix_migration=False, socketio_server=None, version=None):
     return lifespan
 
 
+def run_streamlit_api():
+    from langflow.streamlit import streamlit_router
+    from asyncio import new_event_loop
+    import uvicorn
+
+    loop = new_event_loop()
+    streamlit_app = FastAPI()
+    streamlit_app.include_router(streamlit_router, prefix="/api/v1")
+    config = uvicorn.Config(
+        streamlit_app,
+        host="0.0.0.0",
+        port=7881,
+        workers=1,
+        log_level="error",
+        reload=True,
+        loop="asyncio",
+    )
+    loop.create_task(uvicorn.Server(config=config).serve())
+    loop.run_forever()
+
+
 def create_app():
     """Create the FastAPI app and include the router."""
     try:
@@ -174,9 +195,15 @@ def create_app():
                 status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
                 content={"message": str(exc)},
             )
+    if os.getenv("LANGFLOW_STREAMLIT_ENABLED", "false").lower() == "true":
+        from langflow.streamlit import StreamlitApplication
+        import threading
+        StreamlitApplication.start()
+
+        streamlit_api_thread = threading.Thread(target=run_streamlit_api)
+        streamlit_api_thread.start()
 
     FastAPIInstrumentor.instrument_app(app)
-
     return app
 
 
