@@ -1,19 +1,19 @@
-import { cloneDeep } from "lodash";
+import { APITemplateType, ResponseErrorDetailAPI } from "@/types/api";
+import { UseMutationResult } from "@tanstack/react-query";
 import { useEffect } from "react";
-import {
-  ERROR_UPDATING_COMPONENT,
-  TITLE_ERROR_UPDATING_COMPONENT,
-} from "../../constants/constants";
 import useAlertStore from "../../stores/alertStore";
-import { ResponseErrorDetailAPI } from "../../types/api";
 import { NodeDataType } from "../../types/flow";
+import { mutateTemplate } from "../helpers/mutate-template";
 
 const useFetchDataOnMount = (
   data: NodeDataType,
   name: string,
-  handleUpdateValues: (name: string, data: NodeDataType) => Promise<any>,
+  postTemplateValue: UseMutationResult<
+    APITemplateType | undefined,
+    ResponseErrorDetailAPI,
+    any
+  >,
   setNode: (id: string, callback: (oldNode: any) => any) => void,
-  setIsLoading: (value: boolean) => void,
 ) => {
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
@@ -25,31 +25,13 @@ const useFetchDataOnMount = (
         // options can be undefined but not an empty array
         (data.node?.template[name]?.options?.length ?? 0) === 0
       ) {
-        setIsLoading(true);
-        try {
-          let newTemplate = await handleUpdateValues(name, data);
-
-          if (newTemplate) {
-            setNode(data.id, (oldNode) => {
-              let newNode = cloneDeep(oldNode);
-              newNode.data = {
-                ...newNode.data,
-              };
-              newNode.data.node.template = newTemplate;
-              return newNode;
-            });
-          }
-        } catch (error) {
-          let responseError = error as ResponseErrorDetailAPI;
-
-          setErrorData({
-            title: TITLE_ERROR_UPDATING_COMPONENT,
-            list: [
-              responseError?.response?.data?.detail ?? ERROR_UPDATING_COMPONENT,
-            ],
-          });
-        }
-        setIsLoading(false);
+        mutateTemplate(
+          data.node?.template[name]?.value,
+          data,
+          postTemplateValue,
+          setNode,
+          setErrorData,
+        );
       }
     }
     fetchData();
