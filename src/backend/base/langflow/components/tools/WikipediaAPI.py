@@ -1,4 +1,4 @@
-from langchain.tools import WikipediaQueryRun
+from langchain_community.tools import WikipediaQueryRun
 from langchain_community.utilities.wikipedia import WikipediaAPIWrapper
 
 from langflow.base.langchain_utilities.model import LCToolComponent
