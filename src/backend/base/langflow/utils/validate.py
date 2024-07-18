@@ -4,6 +4,8 @@ import importlib
 from types import FunctionType
 from typing import Dict, List, Optional, Union
 
+from pydantic import ValidationError
+
 from langflow.field_typing.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES
 
 
@@ -168,8 +170,11 @@ def create_class(code, class_name):
 
     class_code = extract_class_code(module, class_name)
     compiled_class = compile_class_code(class_code)
-
-    return build_class_constructor(compiled_class, exec_globals, class_name)
+    try:
+        return build_class_constructor(compiled_class, exec_globals, class_name)
+    except ValidationError as e:
+        error_message = "\n".join([error["msg"].split(",", 1)[1] for error in e.errors()])
+        raise ValueError(error_message) from e
 
 
 def create_type_ignore_class():
