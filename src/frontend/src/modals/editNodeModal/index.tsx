@@ -36,10 +36,9 @@ const EditNodeModal = forwardRef(
     const updateNodeInternals = useUpdateNodeInternals();
 
     const { handleNodeClass: handleNodeClassHook } = useHandleNodeClass(
-      data,
       takeSnapshot,
       setNode,
-      updateNodeInternals,
+      data.id,
     );
 
     const [nodeClass, setNodeClass] = useState<APIClassType>(data.node!);

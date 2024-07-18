@@ -151,9 +151,8 @@ export default function ParameterComponent({
     mutateTemplate(
       data.node?.template[name]?.value,
       data.node!,
-      data.id,
+      handleNodeClass,
       postTemplateValue,
-      setNode,
       setErrorData,
     );
 
@@ -168,8 +167,6 @@ export default function ParameterComponent({
       (edge) =>
         edge.sourceHandle === scapedJSONStringfy(proxy ? { ...id, proxy } : id),
     ) ?? false;
-
-  useFetchDataOnMount(data.node!, data.id, name, postTemplateValue, setNode);
 
   const { handleOnNewValue: handleOnNewValueHook } = useHandleOnNewValue({
     node: data.node!,
@@ -198,6 +195,8 @@ export default function ParameterComponent({
   ): void => {
     handleNodeClassHook(newNodeClass, code, type);
   };
+
+  useFetchDataOnMount(data.node!, handleNodeClass, name, postTemplateValue);
 
   useEffect(() => {
     // @ts-ignore

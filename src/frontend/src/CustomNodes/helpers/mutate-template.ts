@@ -15,13 +15,12 @@ export const mutateTemplate = debounce(
   async (
     newValue,
     node: APIClassType,
-    nodeId: string,
+    setNodeClass,
     postTemplateValue: UseMutationResult<
       APITemplateType | undefined,
       ResponseErrorDetailAPI,
       any
     >,
-    setNode,
     setErrorData,
   ) => {
     try {
@@ -32,14 +31,7 @@ export const mutateTemplate = debounce(
       if (newTemplate) {
         newNode.template = newTemplate;
       }
-      setNode(nodeId, (oldNode) => {
-        const newData = cloneDeep(oldNode.data);
-        newData.node = newNode;
-        return {
-          ...oldNode,
-          data: newData,
-        };
-      });
+      setNodeClass(newNode);
     } catch (e) {
       const error = e as ResponseErrorDetailAPI;
       setErrorData({

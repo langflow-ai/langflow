@@ -10,14 +10,13 @@ import { mutateTemplate } from "../helpers/mutate-template";
 
 const useFetchDataOnMount = (
   node: APIClassType,
-  nodeId: string,
+  setNodeClass: (node: APIClassType) => void,
   name: string,
   postTemplateValue: UseMutationResult<
     APITemplateType | undefined,
     ResponseErrorDetailAPI,
     any
   >,
-  setNode: (id: string, callback: (oldNode: any) => any) => void,
 ) => {
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
@@ -32,9 +31,8 @@ const useFetchDataOnMount = (
         mutateTemplate(
           template?.value,
           node,
-          nodeId,
+          setNodeClass,
           postTemplateValue,
-          setNode,
           setErrorData,
         );
       }

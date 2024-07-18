@@ -28,7 +28,10 @@ const useHandleOnNewValue = ({
 
   const handleOnNewValue = async (
     changes: Partial<InputFieldType>,
-    options?: { skipSnapshot?: boolean },
+    options?: {
+      skipSnapshot?: boolean;
+      setNodeClass?: (node: APIClassType) => void;
+    },
   ) => {
     const newNode = cloneDeep(node);
     const template = newNode.template;
@@ -54,13 +57,24 @@ const useHandleOnNewValue = ({
     const shouldUpdate =
       parameter.real_time_refresh && !parameter.refresh_button;
 
+    const setNodeClass = (newNodeClass: APIClassType) => {
+      options?.setNodeClass && options.setNodeClass(newNodeClass);
+      setNode(nodeId, (oldNode) => {
+        const newData = cloneDeep(oldNode.data);
+        newData.node = newNodeClass;
+        return {
+          ...oldNode,
+          data: newData,
+        };
+      });
+    };
+
     if (shouldUpdate && changes.value) {
       mutateTemplate(
         changes.value,
         newNode,
-        nodeId,
+        setNodeClass,
         postTemplateValue,
-        setNode,
         setErrorData,
       );
     }

@@ -49,7 +49,7 @@ export default function TableNodeCellRender({
         value,
         load_from_db: dbValue,
       },
-      { skipSnapshot },
+      { skipSnapshot, setNodeClass },
     );
     setTemplateData((old) => {
       let newData = cloneDeep(old);
