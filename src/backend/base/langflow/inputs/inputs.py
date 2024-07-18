@@ -31,9 +31,14 @@ class TableInput(BaseInputMixin, MetadataTraceMixin, TableMixin, ListableInputMi
     @classmethod
     def validate_value(cls, v: Any, _info):
         # Check if value is a list of dicts
-        if isinstance(v, list):
-            if not all(isinstance(item, (dict, Data)) for item in v):
-                raise ValueError("TableInput must be a list of dictionaries")
+        if not isinstance(v, list):
+            raise ValueError(f"TableInput value must be a list of dictionaries or Data. Value '{v}' is not a list.")
+
+        for item in v:
+            if not isinstance(item, (dict, Data)):
+                raise ValueError(
+                    f"TableInput value must be a list of dictionaries or Data. Item '{item}' is not a dictionary or Data."
+                )
         return v
 
 
