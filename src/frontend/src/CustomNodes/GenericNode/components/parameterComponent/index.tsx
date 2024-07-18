@@ -1,4 +1,6 @@
+import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
+import useAlertStore from "@/stores/alertStore";
 import { cloneDeep } from "lodash";
 import { ReactNode, useEffect, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
@@ -29,10 +31,6 @@ import { useTypesStore } from "../../../../stores/typesStore";
 import { APIClassType } from "../../../../types/api";
 import { ParameterComponentType } from "../../../../types/components";
 import {
-  debouncedHandleUpdateValues,
-  handleUpdateValues,
-} from "../../../../utils/parameterUtils";
-import {
   convertObjToArray,
   convertValuesToNumbers,
   getGroupOutputNodeId,
@@ -50,7 +48,6 @@ import {
 import useFetchDataOnMount from "../../../hooks/use-fetch-data-on-mount";
 import useHandleOnNewValue from "../../../hooks/use-handle-new-value";
 import useHandleNodeClass from "../../../hooks/use-handle-node-class";
-import useHandleRefreshButtonPress from "../../../hooks/use-handle-refresh-buttons";
 import OutputComponent from "../OutputComponent";
 import HandleRenderComponent from "../handleRenderComponent";
 import OutputModal from "../outputModal";
@@ -82,7 +79,11 @@ export default function ParameterComponent({
   const setNode = useFlowStore((state) => state.setNode);
   const myData = useTypesStore((state) => state.data);
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
-  const [isLoading, setIsLoading] = useState(false);
+  const postTemplateValue = usePostTemplateValue({
+    nodeData: data,
+    parameterId: name,
+  });
+  const isLoading = postTemplateValue.isPending;
   const updateNodeInternals = useUpdateNodeInternals();
   const [errorDuplicateKey, setErrorDuplicateKey] = useState(false);
   const setFilterEdge = useFlowStore((state) => state.setFilterEdge);
@@ -132,6 +133,8 @@ export default function ParameterComponent({
     }
   }
 
+  const setErrorData = useAlertStore((state) => state.setErrorData);
+
   const output = useShortcutsStore((state) => state.output);
   useHotkeys(output, handleOutputWShortcut, { preventDefault });
 
@@ -143,8 +146,14 @@ export default function ParameterComponent({
     updateNodeInternals,
   );
 
-  const { handleRefreshButtonPress: handleRefreshButtonPressHook } =
-    useHandleRefreshButtonPress(setIsLoading, setNode);
+  const handleRefreshButtonPress = () =>
+    mutateTemplate(
+      data.node?.template[name]?.value,
+      data,
+      postTemplateValue,
+      setNode,
+      setErrorData,
+    );
 
   let disabled =
     edges.some(
@@ -158,11 +167,7 @@ export default function ParameterComponent({
         edge.sourceHandle === scapedJSONStringfy(proxy ? { ...id, proxy } : id),
     ) ?? false;
 
-  const handleRefreshButtonPress = async (name, data) => {
-    handleRefreshButtonPressHook(name, data);
-  };
-
-  useFetchDataOnMount(data, name, handleUpdateValues, setNode, setIsLoading);
+  useFetchDataOnMount(data, name, postTemplateValue, setNode);
 
   const { handleOnNewValue } = useHandleOnNewValue({
     data,
