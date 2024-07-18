@@ -94,7 +94,8 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           poetry-version: ${{ env.POETRY_VERSION }}
-          cache-key: ${{ runner.os }}-poetry-${{ env.POETRY_VERSION }}-${{ hashFiles('**/poetry.lock') }}
+          cache-key: tests
+
       - name: Install Python dependencies
         run: |
           poetry env use ${{ env.PYTHON_VERSION }}
