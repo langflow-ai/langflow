@@ -58,7 +58,7 @@ class OpenAIModelComponent(LCModelComponent):
             info="The base URL of the OpenAI API. Defaults to https://api.openai.com/v1. You can change this to use other APIs like JinaChat, LocalAI and Prem.",
         ),
         SecretStrInput(
-            name="openai_api_key",
+            name="api_key",
             display_name="OpenAI API Key",
             info="The OpenAI API Key to use for the OpenAI model.",
             advanced=False,
@@ -85,7 +85,7 @@ class OpenAIModelComponent(LCModelComponent):
         # self.output_schema is a list of dictionaries
         # let's convert it to a dictionary
         output_schema_dict: dict[str, str] = reduce(operator.ior, self.output_schema or {}, {})
-        openai_api_key = self.openai_api_key
+        openai_api_key = self.api_key
         temperature = self.temperature
         model_name: str = self.model_name
         max_tokens = self.max_tokens

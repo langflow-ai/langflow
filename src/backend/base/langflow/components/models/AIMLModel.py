@@ -1,25 +1,20 @@
 import json
 from typing import Any, Dict
 import httpx
+from langflow.components.models.MistralModel import MistralAIModelComponent
 from langflow.components.models.OllamaModel import ChatOllamaComponent
 from langflow.components.models.OpenAIModel import OpenAIModelComponent
 from langflow.custom.custom_component.component import Component
 
+from langflow.inputs.inputs import SecretStrInput
 from langflow.schema.dotdict import dotdict
 from langflow.schema.message import Message
 from langflow.template.field.base import Output
 from loguru import logger
 from pydantic.v1 import SecretStr
 
-from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.inputs import (
-    BoolInput,
-    DictInput,
     DropdownInput,
-    FloatInput,
-    IntInput,
-    MessageInput,
-    SecretStrInput,
     StrInput,
 )
 import requests
@@ -29,9 +24,7 @@ class AIMLModelComponent(Component):
     display_name = "AI/ML API"
     description = "Generates text using the AI/ML API"
     icon = "ChatInput"  # TODO: Get their icon.
-
     chat_completion_url = "https://api.aimlapi.com/v1/chat/completions"
-
     models = {
         "gpt-4": "open_ai",
         "gpt-3.5-turbo": "open_ai",
@@ -39,15 +32,15 @@ class AIMLModelComponent(Component):
         "codellama/CodeLlama-13b-Instruct-hf": "llama",
         "codellama/CodeLlama-34b-Instruct-hf": "llama",
         "codellama/CodeLlama-70b-Instruct-hf": "llama",
+        "mistralai/Mistral-7B-Instruct-v0.1": "mistral",
     }
 
     def _update_inputs(self, build_config, to_add):
         for input in to_add:
-            # Don't include the `model_name` or `input_value` fields, as they are
-            # available by default.
-             # TODO: this hard coding nonsense is brittle. Either have good tests, or figure out
-                    # a better way to do this.
-            if input.name == "model_name":
+            # Skip the `model_name` input; we need to use this components dropdown.
+            # TODO: this hard coding nonsense is brittle. Either have good tests, or figure out
+            # a better way to do this.
+            if input.name == "model_name" or input.name == "api_key":
                 continue
 
             build_config[input.name] = input.to_dict()
@@ -65,6 +58,9 @@ class AIMLModelComponent(Component):
             self._update_inputs(build_config, OpenAIModelComponent.inputs)
         elif self.models[field_value] == "llama":
             self._update_inputs(build_config, ChatOllamaComponent.inputs)
+        elif self.models[field_value] == "mistral":
+            # TODO: Might have to remove "api_base_urls" from the inputs too
+            self._update_inputs(build_config, MistralAIModelComponent.inputs)
 
 
     def update_build_config(
@@ -83,6 +79,10 @@ class AIMLModelComponent(Component):
                 if build_config['_provider']['value'] == "llama" and self.models[field_value] != "llama":
                     self._remove_inputs(build_config, ChatOllamaComponent.inputs)
                     self._update_build_config(build_config, field_value)
+
+                if build_config['_provider']['value'] == "mistral" and self.models[field_value] != "mistral":
+                    self._remove_inputs(build_config, MistralAIModelComponent.inputs)
+                    self._update_build_config(build_config, field_value)
             else:
                 # First time update - set the inputs
                 self._update_build_config(build_config, field_value)
@@ -97,10 +97,13 @@ class AIMLModelComponent(Component):
         DropdownInput(
             name="model_name",
             display_name="Model Name",
-            advanced=False,
             options=list(models.keys()),
-            # value="gpt-4", # If I don't provide a default, I don't have to populate the initial input :shrug:
             real_time_refresh=True,
+        ),
+        SecretStrInput(
+            name="aiml_api_key",
+            display_name="AI/ML API Key",
+            value="AIML_API_KEY",
         ),
         StrInput(name="_provider", show=False, info="Tracks the provider of the model; used for input updates"),
     ]
@@ -126,6 +129,7 @@ class AIMLModelComponent(Component):
 
         if self.input_value:
             if isinstance(self.input_value, Message):
+                # Though we aren't using langchain here, the helper method is useful
                 message = self.input_value.to_lc_message()
                 if message.type == "human":
                     messages.append({"role": "user", "content": message.content})
@@ -152,7 +156,7 @@ class AIMLModelComponent(Component):
                 self.chat_completion_url, headers=headers, data=json.dumps(payload)
             )
             try:
-                response.raise_for_status()  # Raise an error for bad status codes
+                response.raise_for_status()
                 result_data = response.json()
                 choice = result_data["choices"][0]
                 result = choice["message"]["content"]
