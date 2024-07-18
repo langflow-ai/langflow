@@ -20,7 +20,9 @@ const useHandleNodeClass = (
       if (type) {
         newNode.data.node.template[name].type = type;
       }
-      newNode.data.node.template[name].value = code;
+      if (code) {
+        newNode.data.node.template[name].value = code;
+      }
 
       return newNode;
     });
