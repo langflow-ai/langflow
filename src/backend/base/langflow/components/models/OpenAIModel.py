@@ -93,7 +93,6 @@ class OpenAIModelComponent(LCModelComponent):
         openai_api_base = self.openai_api_base or "https://api.openai.com/v1"
         json_mode = bool(output_schema_dict) or self.json_mode
         seed = self.seed
-        model_kwargs["seed"] = seed
 
         if openai_api_key:
             api_key = SecretStr(openai_api_key)
@@ -106,6 +105,7 @@ class OpenAIModelComponent(LCModelComponent):
             base_url=openai_api_base,
             api_key=api_key,
             temperature=temperature or 0.1,
+            seed=seed
         )
         if json_mode:
             if output_schema_dict:
