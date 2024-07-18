@@ -2,7 +2,7 @@ import ast
 from typing import Any, Dict, List, Optional
 
 from langchain.agents import Tool
-from langchain.tools import StructuredTool
+from langchain_core.tools import StructuredTool
 
 from langflow.custom import CustomComponent
 from langflow.schema.dotdict import dotdict
