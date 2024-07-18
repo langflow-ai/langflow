@@ -21,7 +21,7 @@ def upload(file_path, host, flow_id):
     try:
         url = f"{host}/api/v1/upload/{flow_id}"
         response = httpx.post(url, files={"file": open(file_path, "rb")})
-        if response.status_code == 200:
+        if response.status_code == 200 or response.status_code == 201:
             return response.json()
         else:
             raise Exception(f"Error uploading file: {response.status_code}")
@@ -54,7 +54,7 @@ def upload_file(file_path: str, host: str, flow_id: str, components: list[str], 
         if response["file_path"]:
             for component in components:
                 if isinstance(component, str):
-                    tweaks[component] = {"file_path": response["file_path"]}
+                    tweaks[component] = {"path": response["file_path"]}
                 else:
                     raise ValueError(f"Component ID or name must be a string. Got {type(component)}")
             return tweaks
