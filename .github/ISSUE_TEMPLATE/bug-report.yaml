@@ -94,18 +94,17 @@ body:
       required: true
 
   - type: multi-select
-    id: python-version
+    id: user-languages
     attributes:
-      label: "Python Version"
-      description: |        
-        **Langflow requires Python version 3.10 or greater.**
+      label: "Languages Spoken"
+      description: "Select all languages you speak."
       options:
-        - value: "3.12"
-          label: "3.12"
-        - value: "3.11"
-          label: "3.11"
-        - value: "3.10"
-          label: "3.10"
+        - value: "en"
+          label: "English"
+        - value: "es"
+          label: "Spanish"
+        - value: "fr"
+          label: "French"
         
   - type: markdown
     attributes:
