@@ -1,13 +1,9 @@
-import {
-  ERROR_UPDATING_COMPONENT,
-  TITLE_ERROR_UPDATING_COMPONENT,
-} from "@/constants/constants";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
-import { ResponseErrorDetailAPI } from "@/types/api";
-import { cloneDeep, debounce } from "lodash";
+import { InputFieldType } from "@/types/api";
+import { cloneDeep } from "lodash";
 import { NodeDataType } from "../../types/flow";
 import { mutateTemplate } from "../helpers/mutate-template";
 const useHandleOnNewValue = ({
@@ -28,7 +24,10 @@ const useHandleOnNewValue = ({
     nodeData: data,
   });
 
-  const handleOnNewValue = async (newValue, dbValue?, skipSnapshot = false) => {
+  const handleOnNewValue = async (
+    changes: Partial<InputFieldType>,
+    options?: { skipSnapshot?: boolean },
+  ) => {
     const template = data.node?.template;
 
     if (!template) {
@@ -43,21 +42,25 @@ const useHandleOnNewValue = ({
       return;
     }
 
-    if (JSON.stringify(parameter.value) === JSON.stringify(newValue)) return;
+    if (!options?.skipSnapshot) takeSnapshot();
 
-    if (!skipSnapshot) takeSnapshot();
+    Object.entries(changes).forEach(([key, value]) => {
+      parameter[key] = value;
+    });
 
-    parameter.value = newValue;
-
-    if (dbValue !== undefined) {
-      parameter.load_from_db = dbValue;
-    }
+    console.log(parameter);
 
     const shouldUpdate =
       parameter.real_time_refresh && !parameter.refresh_button;
 
-    if (shouldUpdate) {
-      mutateTemplate(newValue, data, postTemplateValue, setNode, setErrorData);
+    if (shouldUpdate && changes.value) {
+      mutateTemplate(
+        changes.value,
+        data,
+        postTemplateValue,
+        setNode,
+        setErrorData,
+      );
     }
 
     setNode(data.id, (oldNode) => ({

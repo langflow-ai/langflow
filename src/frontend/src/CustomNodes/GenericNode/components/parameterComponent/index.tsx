@@ -169,10 +169,24 @@ export default function ParameterComponent({
 
   useFetchDataOnMount(data, name, postTemplateValue, setNode);
 
-  const { handleOnNewValue } = useHandleOnNewValue({
+  const { handleOnNewValue: handleOnNewValueHook } = useHandleOnNewValue({
     data,
     name,
   });
+
+  const handleOnNewValue = (
+    value: any,
+    dbValue?: boolean,
+    skipSnapshot?: boolean,
+  ) => {
+    handleOnNewValueHook(
+      {
+        value,
+        load_from_db: dbValue,
+      },
+      { skipSnapshot },
+    );
+  };
 
   const handleNodeClass = (
     newNodeClass: APIClassType,
