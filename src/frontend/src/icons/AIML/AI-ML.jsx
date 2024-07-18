@@ -1,8 +1,8 @@
-import { cn } from "@/utils/utils"
+import { cn } from "@/utils/utils";
 
-export const AIMLComponent = ({className,...props}) => (
+export const AIMLComponent = ({ className, ...props }) => (
   <svg
-   className={cn("dark:invert",className)}
+    className={cn("dark:invert", className)}
     width="225"
     height="225"
     viewBox="0 0 225 225"
