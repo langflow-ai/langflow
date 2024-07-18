@@ -1,12 +1,12 @@
 name: "🐛 Bug Report"
 description: Submit a bug report to help us improve Langflow
-labels: ["bug"]
+labels: [ "bug" ]
 body:
   - type: markdown
     attributes:
       value: |
         Thanks for taking the time to fill out this bug report!
-
+        
   - type: textarea
     id: description
     attributes:
@@ -93,23 +93,18 @@ body:
     validations:
       required: true
 
-  - type: dropdown
+  - type: checkboxes
     id: python-version
     attributes:
-      label: "Python Version"
+      label: Python Version
       description: |
         My Python version is:
         
         Langflow requires Python version 3.10 or greater.
-      allow_empty: false  # Example setting to disable "None" option
       options:
-        - value: "3.12"
-          label: "3.12"
-        - value: "3.11"
-          label: "3.11"
-        - value: "3.10"
-          label: "3.10"
-      default: "3.10"  # Optional: Set a default value if needed
+        - label: "3.12"
+        - label: "3.11"
+        - label: "3.10"
 
   - type: markdown
     attributes:
