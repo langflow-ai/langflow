@@ -1,4 +1,8 @@
-import { useGetTagsQuery, usePatchUpdateFlowStore, usePostComponent } from "@/controllers/API/queries/store";
+import {
+  useGetTagsQuery,
+  usePatchUpdateFlowStore,
+  usePostComponent,
+} from "@/controllers/API/queries/store";
 import { cloneDeep } from "lodash";
 import { ReactNode, useEffect, useMemo, useState } from "react";
 import EditFlowSettings from "../../components/editFlowSettingsComponent";
@@ -151,7 +155,7 @@ export default function ShareModal({
         newFlow: flow!,
         tags: getTagsIds(selectedTags, cloneDeep(data) ?? []),
         publicFlow: sharePublic,
-      })
+      });
     else {
       mutate({
         newFlow: flow!,
