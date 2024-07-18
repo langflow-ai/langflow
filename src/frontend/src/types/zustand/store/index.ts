@@ -3,7 +3,7 @@ export type StoreStoreType = {
   validApiKey: boolean;
   hasApiKey: boolean;
   loadingApiKey: boolean;
-  checkHasStore: () => void;
+  checkHasStore: (hasStore: { enabled: boolean }) => void;
   updateValidApiKey: (validApiKey: boolean) => void;
   updateHasApiKey: (hasApiKey: boolean) => void;
   updateLoadingApiKey: (loadingApiKey: boolean) => void;

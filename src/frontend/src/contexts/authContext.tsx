@@ -3,6 +3,7 @@ import {
   LANGFLOW_API_TOKEN,
   LANGFLOW_AUTO_LOGIN_OPTION,
 } from "@/constants/constants";
+import { useGetCheckQuery } from "@/controllers/API/queries/store";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { createContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -55,6 +56,7 @@ export function AuthProvider({ children }): React.ReactElement {
   const [apiKey, setApiKey] = useState<string | null>(
     cookies.get(LANGFLOW_API_TOKEN),
   );
+  const { refetch } = useGetCheckQuery();
 
   const getFoldersApi = useFolderStore((state) => state.getFoldersApi);
   const setGlobalVariables = useGlobalVariablesStore(
@@ -88,7 +90,7 @@ export function AuthProvider({ children }): React.ReactElement {
         getFoldersApi(true, true);
         const res = await getGlobalVariables();
         setGlobalVariables(res);
-        checkHasStore();
+        refetch();
         fetchApiData();
       })
       .catch((error) => {

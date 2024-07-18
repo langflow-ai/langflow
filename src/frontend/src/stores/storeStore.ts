@@ -7,10 +7,8 @@ export const useStoreStore = create<StoreStoreType>((set) => ({
   validApiKey: false,
   hasApiKey: false,
   loadingApiKey: true,
-  checkHasStore: () => {
-    checkHasStore().then((res) => {
-      set({ hasStore: res?.enabled ?? false });
-    });
+  checkHasStore: (hasStore) => {
+    set({ hasStore: hasStore?.enabled ?? false });
   },
   updateValidApiKey: (validApiKey) => set(() => ({ validApiKey: validApiKey })),
   updateLoadingApiKey: (loadingApiKey) =>
