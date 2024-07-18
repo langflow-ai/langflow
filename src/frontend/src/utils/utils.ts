@@ -358,7 +358,7 @@ export function extractColumnsFromRows(
   rows: object[],
   mode: "intersection" | "union",
   excludeColumns?: Array<string>,
-): (ColDef<any> | ColGroupDef<any>)[] {
+): (ColDef<any>)[] {
   let columnsKeys: { [key: string]: ColDef<any> | ColGroupDef<any> } = {};
   if (rows.length === 0) {
     return [];
@@ -497,4 +497,18 @@ export function FormatColumns(columns: ColumnField[]): ColDef<any>[] {
   });
 
   return colDefs;
+}
+
+
+export function generateBackendColumnsFromValue(rows:Object[]):ColumnField[]{
+  const columns = extractColumnsFromRows(rows, "union");
+  return columns.map((column) => {
+    return {
+      name: column.field??"",
+      display_name: column.headerName??"",
+      sortable: true,
+      filterable: true,
+    };
+  });
+
 }
