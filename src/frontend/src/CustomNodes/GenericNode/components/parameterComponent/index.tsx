@@ -1,4 +1,5 @@
 import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
+import useHandleNodeClass from "@/CustomNodes/hooks/use-handle-node-class";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import useAlertStore from "@/stores/alertStore";
 import { cloneDeep } from "lodash";
@@ -47,7 +48,6 @@ import {
 } from "../../../../utils/utils";
 import useFetchDataOnMount from "../../../hooks/use-fetch-data-on-mount";
 import useHandleOnNewValue from "../../../hooks/use-handle-new-value";
-import useHandleNodeClass from "../../../hooks/use-handle-node-class";
 import OutputComponent from "../OutputComponent";
 import HandleRenderComponent from "../handleRenderComponent";
 import OutputModal from "../outputModal";
@@ -140,11 +140,9 @@ export default function ParameterComponent({
   useHotkeys(output, handleOutputWShortcut, { preventDefault });
 
   const { handleNodeClass: handleNodeClassHook } = useHandleNodeClass(
-    data,
-    name,
     takeSnapshot,
     setNode,
-    updateNodeInternals,
+    data.id,
   );
 
   const handleRefreshButtonPress = () =>
@@ -193,7 +191,7 @@ export default function ParameterComponent({
     code?: string,
     type?: string,
   ): void => {
-    handleNodeClassHook(newNodeClass, code, type);
+    handleNodeClassHook(newNodeClass, name, code, type);
   };
 
   useFetchDataOnMount(data.node!, handleNodeClass, name, postTemplateValue);
