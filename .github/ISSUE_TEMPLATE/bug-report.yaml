@@ -97,9 +97,7 @@ body:
     id: python-version
     attributes:
       label: "Python Version"
-      description: |
-        My Python version is:
-        
+      description: |        
         Langflow requires Python version 3.10 or greater.
       options:
         - "3.12"
