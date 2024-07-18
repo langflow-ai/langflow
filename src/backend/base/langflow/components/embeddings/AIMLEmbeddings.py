@@ -32,5 +32,4 @@ class AIMLEmbeddingsComponent(LCEmbeddingsModel):
         return AIMLEmbeddingsImpl(
             api_key=self.aiml_api_key,
             model=self.model_name,
-            chunk_size=self.chunk_size,
         )
