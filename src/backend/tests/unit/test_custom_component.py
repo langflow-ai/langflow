@@ -14,7 +14,7 @@ from langflow.services.database.models.flow import Flow, FlowCreate
 
 @pytest.fixture
 def code_component_with_multiple_outputs():
-    with open("tests/data/component_multiple_outputs.py", "r") as f:
+    with open("src/backend/tests/data/component_multiple_outputs.py", "r") as f:
         code = f.read()
         return Component(code=code)
 
