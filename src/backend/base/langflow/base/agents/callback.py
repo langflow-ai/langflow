@@ -1,16 +1,16 @@
-from typing import Any, Callable, Concatenate, Dict, List
+from typing import Any, Dict, List
 from uuid import UUID
 
 from langchain.callbacks.base import AsyncCallbackHandler
 from langchain_core.agents import AgentAction, AgentFinish
 
-from langflow.schema.log import LoggableType
+from langflow.schema.log import LogFunctionType
 
 
 class AgentAsyncHandler(AsyncCallbackHandler):
     """Async callback handler that can be used to handle callbacks from langchain."""
 
-    def __init__(self, log_function: Callable[Concatenate[LoggableType | list[LoggableType], ...], None] | None = None):
+    def __init__(self, log_function: LogFunctionType | None = None):
         self.log_function = log_function
 
     async def on_tool_start(
