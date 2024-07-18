@@ -16,7 +16,6 @@ class ChatOllamaComponent(LCModelComponent):
     name = "OllamaModel"
 
     def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None):
-        # raise Exception('test')
         if field_name == "mirostat":
             if field_value == "Disabled":
                 build_config["mirostat_eta"]["advanced"] = True
