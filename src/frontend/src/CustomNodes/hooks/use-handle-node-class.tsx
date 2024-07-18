@@ -18,7 +18,7 @@ const useHandleNodeClass = (
         node: cloneDeep(newNodeClass),
       };
       if (type) {
-        newNode.data.node.template[name].type = type;
+        newNode.data.type = type;
       }
       if (code) {
         newNode.data.node.template[name].value = code;
