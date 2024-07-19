@@ -171,7 +171,7 @@ export type CodeAreaComponentType = {
   value: string;
   editNode?: boolean;
   nodeClass?: APIClassType;
-  setNodeClass?: (value: APIClassType, code?: string) => void;
+  setNodeClass?: (value: APIClassType, code: string, type: string) => void;
   dynamic?: boolean;
   id?: string;
   readonly?: boolean;
@@ -612,8 +612,8 @@ export type codeAreaModalPropsType = {
   nodeClass: APIClassType | undefined;
   setNodeClass: (
     Class: APIClassType,
-    code?: string,
-    type?: string,
+    code: string,
+    type: string,
   ) => void | undefined;
   children: ReactNode;
   dynamic?: boolean;
