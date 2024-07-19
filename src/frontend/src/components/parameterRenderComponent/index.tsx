@@ -10,7 +10,7 @@ import PromptAreaComponent from "../promptComponent";
 import ToggleShadComponent from "../toggleShadComponent";
 import { StrRenderComponent } from "./component/strRenderComponent";
 
-function ParameterRenderComponent({
+export function ParameterRenderComponent({
   handleOnNewValue,
   templateData,
   templateValue,
