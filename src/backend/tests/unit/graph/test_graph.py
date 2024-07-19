@@ -116,7 +116,8 @@ def test_invalid_node_types():
         "edges": [],
     }
     with pytest.raises(Exception):
-        Graph(graph_data["nodes"], graph_data["edges"])
+        g = Graph()
+        g.add_nodes_and_edges(graph_data["nodes"], graph_data["edges"])
 
 
 def test_get_vertices_with_target(basic_graph):
