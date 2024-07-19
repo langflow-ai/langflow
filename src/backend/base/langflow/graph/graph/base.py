@@ -88,6 +88,14 @@ class Graph:
         self._edges = self._graph_data["edges"]
         self.initialize()
 
+    # TODO: Create a TypedDict to represente the node
+    def add_node(self, node: dict):
+        self._vertices.append(node)
+
+    # TODO: Create a TypedDict to represente the edge
+    def add_edge(self, edge: dict):
+        self._edges.append(edge)
+
     def initialize(self):
         self._build_graph()
         self.build_graph_maps(self.edges)
@@ -1191,19 +1199,23 @@ class Graph:
         """Builds the vertices of the graph."""
         vertices: List[Vertex] = []
         for vertex in self._vertices:
-            vertex_data = vertex["data"]
-            vertex_type: str = vertex_data["type"]  # type: ignore
-            vertex_base_type: str = vertex_data["node"]["template"]["_type"]  # type: ignore
-            if "id" not in vertex_data:
-                raise ValueError(f"Vertex data for {vertex_data['display_name']} does not contain an id")
-
-            VertexClass = self._get_vertex_class(vertex_type, vertex_base_type, vertex_data["id"])
-
-            vertex_instance = VertexClass(vertex, graph=self)
-            vertex_instance.set_top_level(self.top_level_vertices)
+            vertex_instance = self._create_vertex(vertex)
             vertices.append(vertex_instance)
 
         return vertices
+
+    def _create_vertex(self, vertex: dict):
+        vertex_data = vertex["data"]
+        vertex_type: str = vertex_data["type"]  # type: ignore
+        vertex_base_type: str = vertex_data["node"]["template"]["_type"]  # type: ignore
+        if "id" not in vertex_data:
+            raise ValueError(f"Vertex data for {vertex_data['display_name']} does not contain an id")
+
+        VertexClass = self._get_vertex_class(vertex_type, vertex_base_type, vertex_data["id"])
+
+        vertex_instance = VertexClass(vertex, graph=self)
+        vertex_instance.set_top_level(self.top_level_vertices)
+        return vertex_instance
 
     def get_children_by_vertex_type(self, vertex: Vertex, vertex_type: str) -> List[Vertex]:
         """Returns the children of a vertex based on the vertex type."""
