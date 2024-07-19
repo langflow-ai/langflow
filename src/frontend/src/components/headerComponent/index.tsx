@@ -11,6 +11,7 @@ import {
 } from "../../constants/constants";
 import { AuthContext } from "../../contexts/authContext";
 
+import useAuthStore from "@/stores/authStore";
 import useAlertStore from "../../stores/alertStore";
 import { useDarkStore } from "../../stores/darkStore";
 import useFlowStore from "../../stores/flowStore";
@@ -29,7 +30,6 @@ import {
 } from "../ui/dropdown-menu";
 import { Separator } from "../ui/separator";
 import MenuBar from "./components/menuBar";
-import useAuthStore from "@/stores/authStore";
 
 export default function Header(): JSX.Element {
   const notificationCenter = useAlertStore((state) => state.notificationCenter);
@@ -37,7 +37,6 @@ export default function Header(): JSX.Element {
 
   const { logout, isAdmin, userData } = useContext(AuthContext);
   const autoLogin = useAuthStore((state) => state.autoLogin);
-
 
   const navigate = useNavigate();
   const removeFlow = useFlowsManagerStore((store) => store.removeFlow);
