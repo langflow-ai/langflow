@@ -19,6 +19,7 @@ import PasswordFormComponent from "./components/PasswordForm";
 import ProfilePictureFormComponent from "./components/ProfilePictureForm";
 import useGetProfilePictures from "./components/ProfilePictureForm/components/profilePictureChooserComponent/hooks/use-get-profile-pictures";
 import StoreApiKeyFormComponent from "./components/StoreApiKeyForm";
+import useAuthStore from "@/stores/authStore";
 
 export const GeneralPage = () => {
   const setCurrentFlowId = useFlowsManagerStore(
@@ -31,7 +32,6 @@ export const GeneralPage = () => {
     CONTROL_PATCH_USER_STATE,
   );
 
-  const { autoLogin } = useContext(AuthContext);
 
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -41,6 +41,8 @@ export const GeneralPage = () => {
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
   const loadingApiKey = useStoreStore((state) => state.loadingApiKey);
   const { password, cnfPassword, profilePicture, apikey } = inputState;
+  const autoLogin = useAuthStore((state) => state.autoLogin);
+
 
   const { storeApiKey } = useContext(AuthContext);
   const setHasApiKey = useStoreStore((state) => state.updateHasApiKey);

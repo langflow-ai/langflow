@@ -12,6 +12,8 @@ import { AuthContext } from "../../contexts/authContext";
 import useAlertStore from "../../stores/alertStore";
 import useFlowStore from "../../stores/flowStore";
 import { checkDuplicateRequestAndStoreRequest } from "./helpers/check-duplicate-requests";
+import useAuthStore from "@/stores/authStore";
+
 
 // Create a new Axios instance
 const api: AxiosInstance = axios.create({
@@ -19,8 +21,9 @@ const api: AxiosInstance = axios.create({
 });
 
 function ApiInterceptor() {
+  const autoLogin = useAuthStore((state) => state.autoLogin);
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  let { accessToken, logout, authenticationErrorCount, autoLogin } =
+  let { accessToken, logout, authenticationErrorCount } =
     useContext(AuthContext);
   const cookies = new Cookies();
   const setSaveLoading = useFlowsManagerStore((state) => state.setSaveLoading);

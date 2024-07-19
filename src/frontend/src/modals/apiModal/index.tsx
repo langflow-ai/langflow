@@ -28,6 +28,7 @@ import getTabsOrder from "./utils/get-tabs-order";
 import { getValue } from "./utils/get-value";
 import getWidgetCode from "./utils/get-widget-code";
 import { createTabsArray } from "./utils/tabs-array";
+import useAuthStore from "@/stores/authStore";
 
 const ApiModal = forwardRef(
   (
@@ -51,7 +52,8 @@ const ApiModal = forwardRef(
     const tweaksList = useTweaksStore((state) => state.tweaksList);
     const isThereTweaks = Object.keys(tweaksCode).length > 0;
     const [activeTweaks, setActiveTweaks] = useState(false);
-    const { autoLogin } = useContext(AuthContext);
+    const autoLogin = useAuthStore((state) => state.autoLogin);
+
     const [open, setOpen] =
       mySetOpen !== undefined && myOpen !== undefined
         ? [myOpen, mySetOpen]

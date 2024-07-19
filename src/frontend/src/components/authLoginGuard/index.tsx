@@ -1,9 +1,11 @@
 import { useContext } from "react";
 import { Navigate } from "react-router-dom";
 import { AuthContext } from "../../contexts/authContext";
+import useAuthStore from "@/stores/authStore";
 
 export const ProtectedLoginRoute = ({ children }) => {
-  const { isAuthenticated, autoLogin } = useContext(AuthContext);
+  const { isAuthenticated} = useContext(AuthContext);
+  const autoLogin = useAuthStore((state) => state.autoLogin);
 
   if (autoLogin === true) {
     window.location.replace("/");
