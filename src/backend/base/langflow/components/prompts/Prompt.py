@@ -1,6 +1,7 @@
 from langflow.base.prompts.api_utils import process_prompt_template
 from langflow.custom import Component
 from langflow.inputs.inputs import DefaultPromptField
+from langflow.inputs.inputs import MessageInput
 from langflow.io import Output, PromptInput
 from langflow.schema.message import Message
 from langflow.template.utils import update_template_values
@@ -15,6 +16,7 @@ class PromptComponent(Component):
 
     inputs = [
         PromptInput(name="template", display_name="Template"),
+        MessageInput(name="format_instructions", display_name="Format Instructions"),
     ]
 
     outputs = [
@@ -44,6 +46,7 @@ class PromptComponent(Component):
         """
         This function is called after the code validation is done.
         """
+        print(f"Doing post code processing for PromptComponent with node: {new_frontend_node}, {current_frontend_node}")
         frontend_node = super().post_code_processing(new_frontend_node, current_frontend_node)
         template = frontend_node["template"]["template"]["value"]
         # Kept it duplicated for backwards compatibility
@@ -55,7 +58,7 @@ class PromptComponent(Component):
         )
         # Now that template is updated, we need to grab any values that were set in the current_frontend_node
         # and update the frontend_node with those values
-        update_template_values(new_template=frontend_node, previous_template=current_frontend_node["template"])
+        update_template_values(new_template=frontend_node, previous_template=current_frontend_node["template", 'format_instructions'])
         return frontend_node
 
     def _get_fallback_input(self, **kwargs):

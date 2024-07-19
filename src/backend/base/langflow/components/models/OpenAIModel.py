@@ -3,6 +3,7 @@ from functools import reduce
 
 from langflow.field_typing.range_spec import RangeSpec
 from langchain_openai import ChatOpenAI
+from langflow.inputs.inputs import HandleInput
 from pydantic.v1 import SecretStr
 
 from langflow.base.models.model import LCModelComponent
@@ -75,6 +76,13 @@ class OpenAIModelComponent(LCModelComponent):
             advanced=True,
             value=1,
         ),
+        HandleInput(
+            name="output_parser",
+            display_name="Output Parser",
+            info="The output parser to use to parse the output of the model",
+            advanced=False, # TODO fraz: probably make true
+            input_types=["BaseOutputParser"]
+        )
     ]
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]

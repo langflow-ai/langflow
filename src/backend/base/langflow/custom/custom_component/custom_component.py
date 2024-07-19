@@ -541,6 +541,7 @@ class CustomComponent(BaseComponent):
         """
         This function is called after the code validation is done.
         """
+        print(f"Post code processing for {self.display_name}")
         frontend_node = update_frontend_node_with_template_values(
             frontend_node=new_frontend_node, raw_frontend_node=current_frontend_node
         )

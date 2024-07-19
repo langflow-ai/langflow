@@ -233,7 +233,14 @@ class Message(Data):
         if contents:
             message = HumanMessage(content=[{"type": "text", "text": text}] + contents)
 
-        prompt_template = ChatPromptTemplate(messages=[message])  # type: ignore
+        prompt_template = ChatPromptTemplate.from_messages([message])  # type: ignore
+
+        # Adds output format to the prompt
+        print(f"variables: {variables}")
+        print(f"Output parser: {variables.get('output_parser')}")
+        if "output_parser" in variables:
+            prompt_template.partial(format_instructions=variables["format_instructions"])
+
         instance.prompt = jsonable_encoder(prompt_template.to_json())
         instance.messages = instance.prompt.get("kwargs", {}).get("messages", [])
         return instance

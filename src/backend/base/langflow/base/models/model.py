@@ -33,7 +33,9 @@ class LCModelComponent(Component):
 
     outputs = [
         Output(display_name="Text", name="text_output", method="text_response"),
-        Output(display_name="Language Model", name="model_output", method="build_model"),
+        Output(
+            display_name="Language Model", name="model_output", method="build_model"
+        ),
     ]
 
     def _get_exception_message(self, e: Exception):
@@ -163,6 +165,10 @@ class LCModelComponent(Component):
             messages.append(SystemMessage(content=system_message))
         inputs: Union[list, dict] = messages or {}
         try:
+            if self.output_parser is not None:
+                print(f"Running with output parser: {self.output_parser}")
+                runnable = runnable | self.output_parser
+
             runnable = runnable.with_config(  # type: ignore
                 {
                     "run_name": self.display_name,

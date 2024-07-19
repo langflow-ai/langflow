@@ -29,6 +29,7 @@ __all__ = [
     "inputs",
     "memories",
     "outputs",
+    "output_parsers",
     "retrievers",
     "textsplitters",
     "toolkits",
