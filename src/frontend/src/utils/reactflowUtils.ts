@@ -1,4 +1,4 @@
-import { cloneDeep, get } from "lodash";
+import { cloneDeep } from "lodash";
 import {
   Connection,
   Edge,
@@ -940,7 +940,7 @@ export function mergeNodeTemplates({
   });
   return template;
 }
-function isTargetHandleConnected(
+export function isTargetHandleConnected(
   edges: Edge[],
   key: string,
   field: InputFieldType,
