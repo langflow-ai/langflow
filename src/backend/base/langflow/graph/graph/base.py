@@ -34,8 +34,6 @@ class Graph:
 
     def __init__(
         self,
-        nodes: List[Dict],
-        edges: List[Dict[str, str]],
         flow_id: Optional[str] = None,
         flow_name: Optional[str] = None,
         user_id: Optional[str] = None,
@@ -48,9 +46,6 @@ class Graph:
             edges (List[Dict[str, str]]): A list of dictionaries representing the edges of the graph.
             flow_id (Optional[str], optional): The ID of the flow. Defaults to None.
         """
-        self._vertices = nodes
-        self._edges = edges
-        self.raw_graph_data = {"nodes": nodes, "edges": edges}
         self._runs = 0
         self._updates = 0
         self.flow_id = flow_id
@@ -63,7 +58,26 @@ class Graph:
         self._sorted_vertices_layers: List[List[str]] = []
         self._run_id = ""
         self._start_time = datetime.now(timezone.utc)
+        self.inactivated_vertices: set = set()
+        self.activated_vertices: List[str] = []
+        self.vertices_layers: List[List[str]] = []
+        self.vertices_to_run: set[str] = set()
+        self.stop_vertex: Optional[str] = None
+        self.inactive_vertices: set = set()
+        self.edges: List[ContractEdge] = []
+        self.vertices: List[Vertex] = []
+        self.run_manager = RunnableVerticesManager()
+        self.state_manager = GraphStateManager()
+        try:
+            self.tracing_service: "TracingService" | None = get_tracing_service()
+        except Exception as exc:
+            logger.error(f"Error getting tracing service: {exc}")
+            self.tracing_service = None
 
+    def add_nodes_and_edges(self, nodes: List[Dict], edges: List[Dict[str, str]]):
+        self._vertices = nodes
+        self._edges = edges
+        self.raw_graph_data = {"nodes": nodes, "edges": edges}
         self.top_level_vertices = []
         for vertex in self._vertices:
             if vertex_id := vertex.get("id"):
@@ -72,25 +86,12 @@ class Graph:
 
         self._vertices = self._graph_data["nodes"]
         self._edges = self._graph_data["edges"]
-        self.inactivated_vertices: set = set()
-        self.activated_vertices: List[str] = []
-        self.vertices_layers: List[List[str]] = []
-        self.vertices_to_run: set[str] = set()
-        self.stop_vertex: Optional[str] = None
+        self.initialize()
 
-        self.inactive_vertices: set = set()
-        self.edges: List[ContractEdge] = []
-        self.vertices: List[Vertex] = []
-        self.run_manager = RunnableVerticesManager()
+    def initialize(self):
         self._build_graph()
         self.build_graph_maps(self.edges)
         self.define_vertices_lists()
-        self.state_manager = GraphStateManager()
-        try:
-            self.tracing_service: "TracingService" | None = get_tracing_service()
-        except Exception as exc:
-            logger.error(f"Error getting tracing service: {exc}")
-            self.tracing_service = None
 
     def get_state(self, name: str) -> Optional[Data]:
         """
@@ -638,7 +639,9 @@ class Graph:
         try:
             vertices = payload["nodes"]
             edges = payload["edges"]
-            return cls(vertices, edges, flow_id, flow_name, user_id)
+            graph = cls(flow_id, flow_name, user_id)
+            graph.add_nodes_and_edges(vertices, edges)
+            return graph
         except KeyError as exc:
             logger.exception(exc)
             if "nodes" not in payload and "edges" not in payload:
