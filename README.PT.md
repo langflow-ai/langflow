@@ -13,7 +13,7 @@
     <a href="https://docs.langflow.org" style="text-decoration: underline;">Docs</a> -
     <a href="https://discord.com/invite/EqksyE2EX9" style="text-decoration: underline;">Junte-se ao nosso Discord</a> -
     <a href="https://twitter.com/langflow_ai" style="text-decoration: underline;">Siga-nos no X</a> -
-    <a href="https://huggingface.co/spaces/Langflow/Langflow-Preview" style="text-decoration: underline;">Demonstração</a>
+    <a href="https://huggingface.co/spaces/Langflow/Langflow" style="text-decoration: underline;">Demonstração</a>
 </p>
 
 <p align="center">
@@ -27,7 +27,9 @@
 
 <div align="center">
   <a href="./README.md"><img alt="README em Inglês" src="https://img.shields.io/badge/English-d9d9d9"></a>
+  <a href="./README.PT.md"><img alt="README em Português" src="https://img.shields.io/badge/Português-d9d9d9"></a>
   <a href="./README.zh_CN.md"><img alt="README em Chinês Simplificado" src="https://img.shields.io/badge/简体中文-d9d9d9"></a>
+  <a href="./README.ja.md"><img alt="README em Japonês" src="https://img.shields.io/badge/日本語-d9d9d9"></a>
 </div>
 
 <p align="center">
@@ -69,7 +71,7 @@ Então, execute o Langflow com:
 python -m langflow run
 ```
 
-Você também pode visualizar o Langflow no [HuggingFace Spaces](https://huggingface.co/spaces/Langflow/Langflow-Preview). [Clone o Space usando este link](https://huggingface.co/spaces/Langflow/Langflow-Preview?duplicate=true) para criar seu próprio workspace do Langflow em minutos.
+Você também pode visualizar o Langflow no [HuggingFace Spaces](https://huggingface.co/spaces/Langflow/Langflow). [Clone o Space usando este link](https://huggingface.co/spaces/Langflow/Langflow?duplicate=true) para criar seu próprio workspace do Langflow em minutos.
 
 # 🎨 Criar Fluxos
 

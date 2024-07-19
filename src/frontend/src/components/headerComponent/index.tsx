@@ -134,7 +134,7 @@ export default function Header(): JSX.Element {
           </Link>
         )}
       </div>
-      <div className="header-end-division lg:w-[407px]">
+      <div className="header-end-division">
         <div className="header-end-display">
           <a
             href="https://github.com/langflow-ai/langflow"

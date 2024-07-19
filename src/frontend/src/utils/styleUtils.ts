@@ -1,3 +1,4 @@
+import { AIMLIcon } from "@/icons/AIML";
 import { freezeAllIcon } from "@/icons/freezeAll";
 import {
   AlertCircle,
@@ -581,4 +582,6 @@ export const nodeIconsLucide: iconsType = {
   PGVector: CpuIcon,
   Confluence: ConfluenceIcon,
   FreezeAll: freezeAllIcon,
+  AIML: AIMLIcon,
+  "AI/ML": AIMLIcon,
 };

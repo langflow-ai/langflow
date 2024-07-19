@@ -1,4 +1,5 @@
-from langchain.tools import WikipediaQueryRun
+from typing import cast
+from langchain_community.tools import WikipediaQueryRun
 from langchain_community.utilities.wikipedia import WikipediaAPIWrapper
 
 from langflow.base.langchain_utilities.model import LCToolComponent
@@ -34,7 +35,7 @@ class WikipediaAPIComponent(LCToolComponent):
 
     def build_tool(self) -> Tool:
         wrapper = self._build_wrapper()
-        return WikipediaQueryRun(api_wrapper=wrapper)
+        return cast(Tool, WikipediaQueryRun(api_wrapper=wrapper))
 
     def _build_wrapper(self) -> WikipediaAPIWrapper:
         return WikipediaAPIWrapper(  # type: ignore
