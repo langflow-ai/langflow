@@ -22,10 +22,10 @@ import useTrackLastVisitedPath from "./hooks/use-track-last-visited-path";
 import Router from "./routes";
 import { Case } from "./shared/components/caseComponent";
 import useAlertStore from "./stores/alertStore";
+import useAuthStore from "./stores/authStore";
 import { useDarkStore } from "./stores/darkStore";
 import useFlowsManagerStore from "./stores/flowsManagerStore";
 import { useFolderStore } from "./stores/foldersStore";
-import useAuthStore from "./stores/authStore";
 
 export default function App() {
   useTrackLastVisitedPath();

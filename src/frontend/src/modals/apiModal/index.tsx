@@ -4,6 +4,7 @@ import "ace-builds/src-noconflict/theme-github";
 import "ace-builds/src-noconflict/theme-twilight";
 import { ReactNode, forwardRef, useContext, useEffect, useState } from "react";
 // import "ace-builds/webpack-resolver";
+import useAuthStore from "@/stores/authStore";
 import { cloneDeep } from "lodash";
 import CodeTabsComponent from "../../components/codeTabsComponent";
 import IconComponent from "../../components/genericIconComponent";
@@ -28,7 +29,6 @@ import getTabsOrder from "./utils/get-tabs-order";
 import { getValue } from "./utils/get-value";
 import getWidgetCode from "./utils/get-widget-code";
 import { createTabsArray } from "./utils/tabs-array";
-import useAuthStore from "@/stores/authStore";
 
 const ApiModal = forwardRef(
   (
