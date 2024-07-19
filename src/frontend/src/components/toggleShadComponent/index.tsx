@@ -7,7 +7,6 @@ export default function ToggleShadComponent({
   disabled,
   size,
   id = "",
-  editNode = false,
 }: ToggleComponentType): JSX.Element {
   let scaleX, scaleY;
   switch (size) {
