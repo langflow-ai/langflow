@@ -10,13 +10,14 @@ from loguru import logger
 
 from langflow.exceptions.component import ComponentBuildException
 from langflow.graph.edge.base import ContractEdge
+from langflow.graph.edge.schema import EdgeData
 from langflow.graph.graph.constants import lazy_load_vertex_dict
 from langflow.graph.graph.runnable_vertices_manager import RunnableVerticesManager
 from langflow.graph.graph.state_manager import GraphStateManager
 from langflow.graph.graph.utils import find_start_component_id, process_flow, sort_up_to_vertex
 from langflow.graph.schema import InterfaceComponentTypes, RunOutputs
 from langflow.graph.vertex.base import Vertex, VertexStates
-from langflow.graph.vertex.types import InterfaceVertex, StateVertex
+from langflow.graph.vertex.types import ComponentVertex, InterfaceVertex, StateVertex
 from langflow.schema import Data
 from langflow.schema.schema import INPUT_FIELD_NAME, InputType
 from langflow.services.cache.utils import CacheMiss
@@ -99,8 +100,7 @@ class Graph:
     def add_node(self, node: dict):
         self._vertices.append(node)
 
-    # TODO: Create a TypedDict to represente the edge
-    def add_edge(self, edge: dict):
+    def add_edge(self, edge: EdgeData):
         self._edges.append(edge)
 
     def initialize(self):
