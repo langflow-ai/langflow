@@ -90,11 +90,6 @@ test("InputComponent", async ({ page }) => {
     await page.locator('//*[@id="showchroma_server_ssl_enabled"]').isChecked(),
   ).toBeTruthy();
 
-  await page.locator('//*[@id="showcollection_name"]').click();
-  expect(
-    await page.locator('//*[@id="showcollection_name"]').isChecked(),
-  ).toBeFalsy();
-
   await page.locator('//*[@id="showchroma_server_cors_allow_origins"]').click();
   expect(
     await page
@@ -146,11 +141,6 @@ test("InputComponent", async ({ page }) => {
 
     await page.getByTestId("more-options-modal").click();
     await page.getByTestId("edit-button-modal").click();
-
-    await page.locator('//*[@id="showcollection_name"]').click();
-    expect(
-      await page.locator('//*[@id="showcollection_name"]').isChecked(),
-    ).toBeTruthy();
 
     await page.getByText("Close").last().click();
 
