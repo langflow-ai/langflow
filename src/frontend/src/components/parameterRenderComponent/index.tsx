@@ -12,6 +12,7 @@ import { StrRenderComponent } from "./component/strRenderComponent";
 
 export function ParameterRenderComponent({
   handleOnNewValue,
+  name,
   templateData,
   templateValue,
   editNode,
@@ -20,6 +21,7 @@ export function ParameterRenderComponent({
   disabled,
 }: {
   handleOnNewValue: handleOnNewValueType;
+  name: string;
   templateData: Partial<InputFieldType>;
   templateValue: any;
   editNode: boolean;
@@ -35,6 +37,7 @@ export function ParameterRenderComponent({
     <StrRenderComponent
       templateData={templateData}
       value={templateValue}
+      name={name}
       disabled={disabled}
       handleOnNewValue={handleOnNewValue}
       editNode={editNode}
@@ -92,7 +95,7 @@ export function ParameterRenderComponent({
   ) : templateData.type === "prompt" ? (
     <PromptAreaComponent
       readonly={nodeClass.flow ? true : false}
-      field_name={templateData.key}
+      field_name={name}
       editNode={editNode}
       disabled={disabled}
       nodeClass={nodeClass}
