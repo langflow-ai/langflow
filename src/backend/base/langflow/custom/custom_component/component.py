@@ -43,6 +43,7 @@ class Component(CustomComponent):
 
     def __init__(self, **data):
         self._inputs: dict[str, InputTypes] = {}
+        self._outputs: dict[str, Output] = {}
         self._results: dict[str, Any] = {}
         self._attributes: dict[str, Any] = {}
         self._parameters: dict[str, Any] = {}
@@ -52,6 +53,8 @@ class Component(CustomComponent):
             self.trace_type = "chain"
         if self.inputs is not None:
             self.map_inputs(self.inputs)
+        if self.outputs is not None:
+            self.map_outputs(self.outputs)
         self.set_attributes(self._parameters)
 
     def __getattr__(self, name: str) -> Any:
@@ -60,6 +63,23 @@ class Component(CustomComponent):
         if "_inputs" in self.__dict__ and name in self.__dict__["_inputs"]:
             return self.__dict__["_inputs"][name].value
         raise AttributeError(f"{name} not found in {self.__class__.__name__}")
+
+    def get_input(self, name: str) -> Any:
+        if name in self._inputs:
+            return self._inputs[name]
+        raise ValueError(f"Input {name} not found in {self.__class__.__name__}")
+
+    def get_output(self, name: str) -> Any:
+        if name in self._outputs:
+            return self._outputs[name]
+        raise ValueError(f"Output {name} not found in {self.__class__.__name__}")
+
+    def map_outputs(self, outputs: List[Output]):
+        self.outputs = outputs
+        for output in outputs:
+            if output.name is None:
+                raise ValueError("Output name cannot be None.")
+            self._outputs[output.name] = output
 
     def map_inputs(self, inputs: List[InputTypes]):
         self.inputs = inputs
