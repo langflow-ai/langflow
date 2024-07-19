@@ -18,21 +18,22 @@ import { useGlobalVariablesStore } from "../stores/globalVariablesStore/globalVa
 import { useStoreStore } from "../stores/storeStore";
 import { Users } from "../types/api";
 import { AuthContextType } from "../types/contexts/auth";
+import useAuthStore from "@/stores/authStore";
 
 const initialValue: AuthContextType = {
   isAdmin: false,
   setIsAdmin: () => false,
   isAuthenticated: false,
   accessToken: null,
-  login: () => {},
-  logout: () => new Promise(() => {}),
+  login: () => { },
+  logout: () => new Promise(() => { }),
   userData: null,
-  setUserData: () => {},
+  setUserData: () => { },
   authenticationErrorCount: 0,
-  setApiKey: () => {},
+  setApiKey: () => { },
   apiKey: null,
-  storeApiKey: () => {},
-  getUser: () => {},
+  storeApiKey: () => { },
+  getUser: () => { },
 };
 
 export const AuthContext = createContext<AuthContextType>(initialValue);
@@ -48,7 +49,6 @@ export function AuthProvider({ children }): React.ReactElement {
   );
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [userData, setUserData] = useState<Users | null>(null);
-  const [autoLogin, setAutoLogin] = useState<boolean>(false);
   const setLoading = useAlertStore((state) => state.setLoading);
   const [apiKey, setApiKey] = useState<string | null>(
     cookies.get(LANGFLOW_API_TOKEN),
@@ -102,7 +102,7 @@ export function AuthProvider({ children }): React.ReactElement {
   }
 
   async function logout() {
-    if (autoLogin) {
+    if (useAuthStore.getState().autoLogin) {
       return;
     }
     try {
