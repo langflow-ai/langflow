@@ -54,7 +54,7 @@ const useHandleOnNewValue = ({
     if (!options?.skipSnapshot) takeSnapshot();
 
     Object.entries(changes).forEach(([key, value]) => {
-      parameter[key] = value;
+      if (value !== undefined) parameter[key] = value;
     });
 
     const shouldUpdate =
