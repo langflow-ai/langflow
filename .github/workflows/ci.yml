@@ -27,7 +27,7 @@ concurrency:
 
 jobs:
   path-filter:
-    if: ${{ (contains( github.event.pull_request.labels.*.name, 'lgtm') && github.event.pull_request.draft == false) || github.event_name == 'workflow_dispatch' }}
+    if: ${{ (contains( github.event.pull_request.labels.*.name, 'lgtm') && github.event.pull_request.draft == false) || (github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call') }}
 
     name: Filter Paths
     runs-on: ubuntu-latest
