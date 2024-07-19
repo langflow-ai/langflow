@@ -1,0 +1,193 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Deploy Langflow Service on AWS Elastic Beanstalk using Docker
+
+Parameters:
+  EnvironmentName:
+    Type: String
+    Default: 'langflow-env'
+    Description: 'The name of the Elastic Beanstalk environment.'
+
+  ApplicationName:
+    Type: String
+    Default: 'langflow-app'
+    Description: 'The name of the Elastic Beanstalk application.'
+
+  S3BucketName:
+    Type: String
+    Default: 'langflow-quickstart'
+    Description: 'The name of the existing S3 bucket where deployment.zip is stored.'
+
+  S3Key:
+    Type: String
+    Default: 'deployment.zip'
+    Description: 'The S3 key (file name) of the deployment package.'
+
+  SolutionStackName:
+    Type: String
+    Default: '64bit Amazon Linux 2023 v4.3.4 running Docker'
+    Description: 'Elastic Beanstalk platform versions for Single Container Docker'
+
+  InstanceType:
+    Type: String
+    Default: 't3.medium'
+    Description: 'EC2 Instance Type'
+
+Resources:
+  MyVPC:
+    Type: 'AWS::EC2::VPC'
+    Properties:
+      CidrBlock: '10.0.0.0/16'
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: LangflowVPC
+
+  MyInternetGateway:
+    Type: 'AWS::EC2::InternetGateway'
+    Properties:
+      Tags:
+        - Key: Name
+          Value: LangflowInternetGateway
+
+  VpcGatewayAttachment:
+    Type: 'AWS::EC2::VPCGatewayAttachment'
+    Properties:
+      InternetGatewayId: !Ref MyInternetGateway
+      VpcId: !Ref MyVPC
+
+  MyRouteTable:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref MyVPC
+      Tags:
+        - Key: Name
+          Value: LangflowRouteTable
+
+  MyRoute:
+    Type: 'AWS::EC2::Route'
+    Properties:
+      RouteTableId: !Ref MyRouteTable
+      DestinationCidrBlock: '0.0.0.0/0'
+      GatewayId: !Ref MyInternetGateway
+
+  MySubnet1:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref MyVPC
+      CidrBlock: '10.0.1.0/24'
+      AvailabilityZone: !Select [ 0, !GetAZs "" ]
+      Tags:
+        - Key: Name
+          Value: LangflowSubnet1
+
+  MySubnet2:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref MyVPC
+      CidrBlock: '10.0.2.0/24'
+      AvailabilityZone: !Select [ 1, !GetAZs "" ]
+      Tags:
+        - Key: Name
+          Value: LangflowSubnet2
+
+  MySubnet1RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref MySubnet1
+      RouteTableId: !Ref MyRouteTable
+
+  MySubnet2RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref MySubnet2
+      RouteTableId: !Ref MyRouteTable
+
+  MySecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: 'Security group for my Elastic Beanstalk environment'
+      VpcId: !Ref MyVPC
+      SecurityGroupIngress:
+        - IpProtocol: 'tcp'
+          FromPort: 7860
+          ToPort: 7860
+          CidrIp: '0.0.0.0/0'
+      SecurityGroupEgress:
+        - IpProtocol: '-1'
+          FromPort: 0
+          ToPort: 65535
+          CidrIp: '0.0.0.0/0'
+      Tags:
+        - Key: Name
+          Value: LangflowSecurityGroup
+
+  ElasticBeanstalkApplication:
+    Type: 'AWS::ElasticBeanstalk::Application'
+    Properties:
+      ApplicationName: !Ref ApplicationName
+      Description: 'Application for LangFlow'
+
+  ElasticBeanstalkApplicationVersion:
+    Type: 'AWS::ElasticBeanstalk::ApplicationVersion'
+    Properties:
+      ApplicationName: !Ref ElasticBeanstalkApplication
+      Description: 'Version 1.0'
+      SourceBundle:
+        S3Bucket: !Ref S3BucketName
+        S3Key: !Ref S3Key
+
+  ElasticBeanstalkEnvironment:
+    Type: 'AWS::ElasticBeanstalk::Environment'
+    Properties:
+      EnvironmentName: !Ref EnvironmentName
+      ApplicationName: !Ref ApplicationName
+      VersionLabel: !Ref ElasticBeanstalkApplicationVersion
+      SolutionStackName: !Ref SolutionStackName
+      OptionSettings:
+        - Namespace: 'aws:autoscaling:launchconfiguration'
+          OptionName: 'InstanceType'
+          Value: !Ref InstanceType
+        - Namespace: 'aws:elasticbeanstalk:environment'
+          OptionName: 'EnvironmentType'
+          Value: 'SingleInstance'
+        - Namespace: 'aws:autoscaling:launchconfiguration'
+          OptionName: 'IamInstanceProfile'
+          Value: !Ref InstanceProfile
+        - Namespace: 'aws:autoscaling:launchconfiguration'
+          OptionName: 'SecurityGroups'
+          Value: !Ref MySecurityGroup
+        - Namespace: 'aws:ec2:vpc'
+          OptionName: 'VPCId'
+          Value: !Ref MyVPC
+        - Namespace: 'aws:ec2:vpc'
+          OptionName: 'Subnets'
+          Value: !Join [ ',', [ !Ref MySubnet1, !Ref MySubnet2 ] ]
+
+  InstanceProfile:
+    Type: 'AWS::IAM::InstanceProfile'
+    Properties:
+      Roles:
+        - !Ref EC2Role
+
+  EC2Role:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: 'Allow'
+            Principal:
+              Service: 'ec2.amazonaws.com'
+            Action: 'sts:AssumeRole'
+      Path: '/'
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AWSElasticBeanstalkWebTier
+        - arn:aws:iam::aws:policy/AWSElasticBeanstalkMulticontainerDocker
+        - arn:aws:iam::aws:policy/AWSElasticBeanstalkWorkerTier
+        - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
+
+Outputs:
+  EnvironmentURL:
+    Description: 'URL of the Elastic Beanstalk Environment'
+    Value: !GetAtt ElasticBeanstalkEnvironment.EndpointURL
