@@ -1,19 +1,18 @@
 import { ColDef, ValueGetterParams } from "ag-grid-community";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import TableNodeCellRender from "../../../components/tableComponent/components/tableNodeCellRender";
 import TableToggleCellRender from "../../../components/tableComponent/components/tableToggleCellRender";
 import { APIClassType } from "../../../types/api";
-import { NodeDataType } from "../../../types/flow";
 
 const useColumnDefs = (
   nodeClass: APIClassType,
-  handleOnNewValue: (newValue: any, name: string, setDb?: boolean) => void,
   handleNodeClass: (
     newNodeClass: APIClassType,
     name: string,
     code: string,
     type?: string,
   ) => void,
+  nodeId: string,
   changeAdvanced: (n: string) => void,
   open: boolean,
 ) => {
@@ -53,8 +52,8 @@ const useColumnDefs = (
         valueGetter: (params: ValueGetterParams) => {
           return {
             value: params.data.value,
+            nodeId: nodeId,
             nodeClass: nodeClass,
-            handleOnNewValue: handleOnNewValue,
             handleNodeClass: handleNodeClass,
           };
         },

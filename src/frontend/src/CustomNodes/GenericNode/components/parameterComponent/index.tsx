@@ -1,3 +1,7 @@
+import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
+import useHandleNodeClass from "@/CustomNodes/hooks/use-handle-node-class";
+import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
+import useAlertStore from "@/stores/alertStore";
 import { cloneDeep } from "lodash";
 import { ReactNode, useEffect, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
@@ -28,10 +32,6 @@ import { useTypesStore } from "../../../../stores/typesStore";
 import { APIClassType } from "../../../../types/api";
 import { ParameterComponentType } from "../../../../types/components";
 import {
-  debouncedHandleUpdateValues,
-  handleUpdateValues,
-} from "../../../../utils/parameterUtils";
-import {
   convertObjToArray,
   convertValuesToNumbers,
   getGroupOutputNodeId,
@@ -48,8 +48,6 @@ import {
 } from "../../../../utils/utils";
 import useFetchDataOnMount from "../../../hooks/use-fetch-data-on-mount";
 import useHandleOnNewValue from "../../../hooks/use-handle-new-value";
-import useHandleNodeClass from "../../../hooks/use-handle-node-class";
-import useHandleRefreshButtonPress from "../../../hooks/use-handle-refresh-buttons";
 import OutputComponent from "../OutputComponent";
 import HandleRenderComponent from "../handleRenderComponent";
 import OutputModal from "../outputModal";
@@ -81,7 +79,12 @@ export default function ParameterComponent({
   const setNode = useFlowStore((state) => state.setNode);
   const myData = useTypesStore((state) => state.data);
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
-  const [isLoading, setIsLoading] = useState(false);
+  const postTemplateValue = usePostTemplateValue({
+    node: data.node!,
+    nodeId: data.id,
+    parameterId: name,
+  });
+  const isLoading = postTemplateValue.isPending;
   const updateNodeInternals = useUpdateNodeInternals();
   const [errorDuplicateKey, setErrorDuplicateKey] = useState(false);
   const setFilterEdge = useFlowStore((state) => state.setFilterEdge);
@@ -131,29 +134,25 @@ export default function ParameterComponent({
     }
   }
 
+  const setErrorData = useAlertStore((state) => state.setErrorData);
+
   const output = useShortcutsStore((state) => state.output);
   useHotkeys(output, handleOutputWShortcut, { preventDefault });
 
-  const { handleOnNewValue: handleOnNewValueHook } = useHandleOnNewValue(
-    data,
-    name,
-    takeSnapshot,
-    handleUpdateValues,
-    debouncedHandleUpdateValues,
-    setNode,
-    setIsLoading,
-  );
-
   const { handleNodeClass: handleNodeClassHook } = useHandleNodeClass(
-    data,
-    name,
     takeSnapshot,
     setNode,
-    updateNodeInternals,
+    data.id,
   );
 
-  const { handleRefreshButtonPress: handleRefreshButtonPressHook } =
-    useHandleRefreshButtonPress(setIsLoading, setNode);
+  const handleRefreshButtonPress = () =>
+    mutateTemplate(
+      data.node?.template[name]?.value,
+      data.node!,
+      handleNodeClass,
+      postTemplateValue,
+      setErrorData,
+    );
 
   let disabled =
     edges.some(
@@ -167,18 +166,24 @@ export default function ParameterComponent({
         edge.sourceHandle === scapedJSONStringfy(proxy ? { ...id, proxy } : id),
     ) ?? false;
 
-  const handleRefreshButtonPress = async (name, data) => {
-    handleRefreshButtonPressHook(name, data);
-  };
+  const { handleOnNewValue: handleOnNewValueHook } = useHandleOnNewValue({
+    node: data.node!,
+    nodeId: data.id,
+    name,
+  });
 
-  useFetchDataOnMount(data, name, handleUpdateValues, setNode, setIsLoading);
-
-  const handleOnNewValue = async (
-    newValue: string | string[] | boolean | Object[],
+  const handleOnNewValue = (
+    value: any,
     dbValue?: boolean,
-    skipSnapshot: boolean | undefined = false,
-  ): Promise<void> => {
-    handleOnNewValueHook(newValue, dbValue, skipSnapshot);
+    skipSnapshot?: boolean,
+  ) => {
+    handleOnNewValueHook(
+      {
+        value,
+        load_from_db: dbValue,
+      },
+      { skipSnapshot },
+    );
   };
 
   const handleNodeClass = (
@@ -186,8 +191,10 @@ export default function ParameterComponent({
     code?: string,
     type?: string,
   ): void => {
-    handleNodeClassHook(newNodeClass, code, type);
+    handleNodeClassHook(newNodeClass, name, code, type);
   };
+
+  useFetchDataOnMount(data.node!, handleNodeClass, name, postTemplateValue);
 
   useEffect(() => {
     // @ts-ignore
@@ -614,7 +621,7 @@ export default function ParameterComponent({
         <Case condition={left === true && type === "int"}>
           <div className="mt-2 w-full">
             <IntComponent
-              rangeSpec={data.node?.template[name]?.rangeSpec}
+              rangeSpec={data.node?.template[name]?.range_spec}
               disabled={disabled}
               value={data.node?.template[name]?.value ?? ""}
               onChange={handleOnNewValue}
