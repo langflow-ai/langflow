@@ -170,7 +170,7 @@ test("RetrievalQA - Tooltip", async ({ page }) => {
 
   await visibleElementHandle.hover().then(async () => {
     await expect(
-      page.getByTestId("available-input-memories").first(),
+      page.getByTestId("available-input-helpers").first(),
     ).toBeVisible();
   });
 });
