@@ -1,6 +1,6 @@
+import useAuthStore from "@/stores/authStore";
 import { useContext } from "react";
 import { AuthContext } from "../../contexts/authContext";
-import useAuthStore from "@/stores/authStore";
 
 export const ProtectedRoute = ({ children }) => {
   const { logout } = useContext(AuthContext);

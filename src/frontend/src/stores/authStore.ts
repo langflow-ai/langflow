@@ -1,4 +1,5 @@
 // authStore.js
+import { LANGFLOW_ACCESS_TOKEN } from "@/constants/constants";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { AuthStoreType } from "@/types/zustand/auth";
 import { useNavigate } from "react-router-dom";
@@ -14,7 +15,6 @@ import { useFolderStore } from "../stores/foldersStore";
 import { useGlobalVariablesStore } from "../stores/globalVariablesStore/globalVariables";
 import { useStoreStore } from "../stores/storeStore";
 import { Users } from "../types/api";
-import { LANGFLOW_ACCESS_TOKEN } from "@/constants/constants";
 
 const cookies = new Cookies();
 

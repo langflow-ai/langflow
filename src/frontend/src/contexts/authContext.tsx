@@ -3,6 +3,7 @@ import {
   LANGFLOW_API_TOKEN,
   LANGFLOW_AUTO_LOGIN_OPTION,
 } from "@/constants/constants";
+import useAuthStore from "@/stores/authStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { createContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -18,7 +19,6 @@ import { useGlobalVariablesStore } from "../stores/globalVariablesStore/globalVa
 import { useStoreStore } from "../stores/storeStore";
 import { Users } from "../types/api";
 import { AuthContextType } from "../types/contexts/auth";
-import useAuthStore from "@/stores/authStore";
 
 const initialValue: AuthContextType = {
   isAdmin: false,
