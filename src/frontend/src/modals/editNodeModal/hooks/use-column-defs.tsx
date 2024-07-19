@@ -1,8 +1,7 @@
-import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import { ColDef, ValueGetterParams } from "ag-grid-community";
 import { useMemo } from "react";
+import TableAdvancedToggleCellRender from "../../../components/tableComponent/components/tableAdvancedToggleCellRender";
 import TableNodeCellRender from "../../../components/tableComponent/components/tableNodeCellRender";
-import TableToggleCellRender from "../../../components/tableComponent/components/tableToggleCellRender";
 import { APIClassType } from "../../../types/api";
 
 const useColumnDefs = (
@@ -13,7 +12,6 @@ const useColumnDefs = (
     code: string,
     type?: string,
   ) => void,
-  handleOnNewValue: handleOnNewValueType,
   nodeId: string,
   open: boolean,
 ) => {
@@ -56,7 +54,6 @@ const useColumnDefs = (
             nodeId: nodeId,
             nodeClass: nodeClass,
             handleNodeClass,
-            handleOnNewValue,
           };
         },
         minWidth: 340,
@@ -68,14 +65,12 @@ const useColumnDefs = (
       {
         headerName: "Show",
         field: "advanced",
-        cellRenderer: TableToggleCellRender,
+        cellRenderer: TableAdvancedToggleCellRender,
         valueGetter: (params: ValueGetterParams) => {
           return {
-            name: params.data.name,
-            enabled: !params.data.advanced,
-            setEnabled: () => {
-              handleOnNewValue({ advanced: !params.data.advanced });
-            },
+            value: !params.data.advanced,
+            nodeId: nodeId,
+            nodeClass,
           };
         },
         editable: false,
