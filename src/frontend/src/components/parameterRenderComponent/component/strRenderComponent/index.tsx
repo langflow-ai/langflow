@@ -7,20 +7,23 @@ import TextAreaComponent from "../../../textAreaComponent";
 export function StrRenderComponent({
   templateData,
   value,
+  name,
   disabled,
   handleOnNewValue,
   editNode,
 }) {
+  const onChange = (value: any, dbValue?: boolean, skipSnapshot?: boolean) => {
+    handleOnNewValue({ value, load_from_db: dbValue }, { skipSnapshot });
+  };
+
   if (!templateData.options) {
     return templateData?.list ? (
       <InputListComponent
-        componentName={templateData.key ?? undefined}
+        componentName={name ?? undefined}
         editNode={editNode}
         disabled={disabled}
         value={!value || value === "" ? [""] : value}
-        onChange={(value: string[]) => {
-          handleOnNewValue(value, templateData.key);
-        }}
+        onChange={onChange}
       />
     ) : templateData.multiline ? (
       <TextAreaComponent
@@ -29,18 +32,14 @@ export function StrRenderComponent({
         disabled={disabled}
         editNode={editNode}
         value={value ?? ""}
-        onChange={(value: string | string[]) => {
-          handleOnNewValue(value, templateData.key);
-        }}
+        onChange={onChange}
       />
     ) : (
       <InputGlobalComponent
         disabled={disabled}
         editNode={editNode}
-        onChange={(value, dbValue, snapshot) =>
-          handleOnNewValue(value, templateData.key, dbValue)
-        }
-        name={templateData.key}
+        onChange={onChange}
+        name={name}
         data={templateData}
       />
     );
@@ -54,7 +53,7 @@ export function StrRenderComponent({
         options={templateData.options || []}
         values={[value ?? "Choose an option"]}
         id={"multiselect-" + templateData.name}
-        onValueChange={(value) => handleOnNewValue(value, templateData.key)}
+        onValueChange={onChange}
       />
     );
   }
@@ -64,7 +63,7 @@ export function StrRenderComponent({
       <Dropdown
         editNode={editNode}
         options={templateData.options}
-        onSelect={(value) => handleOnNewValue(value, templateData.key)}
+        onSelect={onChange}
         value={value ?? "Choose an option"}
         id={"dropdown-edit-" + templateData.name}
       />
