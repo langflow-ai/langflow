@@ -122,6 +122,11 @@ test("InputComponent", async ({ page }) => {
     await page.locator('//*[@id="showchroma_server_ssl_enabled"]').isChecked(),
   ).toBeFalsy();
 
+  await page.locator('//*[@id="showcollection_name"]').click();
+  expect(
+    await page.locator('//*[@id="showcollection_name"]').isChecked(),
+  ).toBeTruthy();
+
   let valueEditNode = await page
     .getByTestId("popover-anchor-input-collection_name-edit")
     .inputValue();
