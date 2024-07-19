@@ -1,3 +1,8 @@
+type fetchApiDataParam = {
+  has_api_key: boolean;
+  is_valid: boolean;
+};
+
 export type StoreStoreType = {
   hasStore: boolean;
   validApiKey: boolean;
@@ -7,5 +12,5 @@ export type StoreStoreType = {
   updateValidApiKey: (validApiKey: boolean) => void;
   updateHasApiKey: (hasApiKey: boolean) => void;
   updateLoadingApiKey: (loadingApiKey: boolean) => void;
-  fetchApiData: () => Promise<void>;
+  fetchApiData: (data: fetchApiDataParam) => void;
 };
