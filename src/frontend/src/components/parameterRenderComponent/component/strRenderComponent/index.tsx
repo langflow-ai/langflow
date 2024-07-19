@@ -4,19 +4,20 @@ import InputListComponent from "../../../inputListComponent";
 import { Multiselect } from "../../../multiselectComponent";
 import TextAreaComponent from "../../../textAreaComponent";
 
-export function renderStrType({
+export function StrRenderComponent({
   templateData,
-  templateValue,
+  value,
   disabled,
   handleOnNewValue,
+  editNode,
 }) {
   if (!templateData.options) {
     return templateData?.list ? (
       <InputListComponent
         componentName={templateData.key ?? undefined}
-        editNode={true}
+        editNode={editNode}
         disabled={disabled}
-        value={!templateValue || templateValue === "" ? [""] : templateValue}
+        value={!value || value === "" ? [""] : value}
         onChange={(value: string[]) => {
           handleOnNewValue(value, templateData.key);
         }}
@@ -26,8 +27,8 @@ export function renderStrType({
         id={"textarea-edit-" + templateData.name}
         data-testid={"textarea-edit-" + templateData.name}
         disabled={disabled}
-        editNode={true}
-        value={templateValue ?? ""}
+        editNode={editNode}
+        value={value ?? ""}
         onChange={(value: string | string[]) => {
           handleOnNewValue(value, templateData.key);
         }}
@@ -35,7 +36,7 @@ export function renderStrType({
     ) : (
       <InputGlobalComponent
         disabled={disabled}
-        editNode={true}
+        editNode={editNode}
         onChange={(value, dbValue, snapshot) =>
           handleOnNewValue(value, templateData.key, dbValue)
         }
@@ -48,10 +49,10 @@ export function renderStrType({
   if (!!templateData.options && !!templateData?.list) {
     return (
       <Multiselect
-        editNode={true}
+        editNode={editNode}
         disabled={disabled}
         options={templateData.options || []}
-        values={[templateValue ?? "Choose an option"]}
+        values={[value ?? "Choose an option"]}
         id={"multiselect-" + templateData.name}
         onValueChange={(value) => handleOnNewValue(value, templateData.key)}
       />
@@ -61,10 +62,10 @@ export function renderStrType({
   if (!!templateData.options) {
     return (
       <Dropdown
-        editNode={true}
+        editNode={editNode}
         options={templateData.options}
         onSelect={(value) => handleOnNewValue(value, templateData.key)}
-        value={templateValue ?? "Choose an option"}
+        value={value ?? "Choose an option"}
         id={"dropdown-edit-" + templateData.name}
       />
     );
