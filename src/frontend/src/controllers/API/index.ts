@@ -49,7 +49,7 @@ const GITHUB_API_URL = "https://api.github.com";
 export async function getRepoStars(owner: string, repo: string) {
   try {
     const response = await api.get(`${GITHUB_API_URL}/repos/${owner}/${repo}`);
-    return response.data.stargazers_count;
+    return response?.data.stargazers_count;
   } catch (error) {
     console.error("Error fetching repository data:", error);
     return null;
@@ -101,7 +101,7 @@ export async function getExamples(): Promise<FlowType[]> {
     "https://api.github.com/repos/langflow-ai/langflow_examples/contents/examples?ref=main";
   const response = await api.get(url);
 
-  const jsonFiles = response.data.filter((file: any) => {
+  const jsonFiles = response?.data.filter((file: any) => {
     return file.name.endsWith(".json");
   });
 
@@ -143,7 +143,7 @@ export async function saveFlowToDatabase(newFlow: {
     if (response?.status !== 201) {
       throw new Error(`HTTP error! status: ${response?.status}`);
     }
-    return response.data;
+    return response?.data;
   } catch (error) {
     console.error(error);
     throw error;
@@ -168,10 +168,10 @@ export async function updateFlowInDatabase(
       endpoint_name: updatedFlow.endpoint_name,
     });
 
-    if (response?.status !== 200) {
+    if (response && response?.status !== 200) {
       throw new Error(`HTTP error! status: ${response?.status}`);
     }
-    return response.data;
+    return response?.data;
   } catch (error) {
     console.error(error);
     throw error;
@@ -187,10 +187,10 @@ export async function updateFlowInDatabase(
 export async function readFlowsFromDatabase() {
   try {
     const response = await api.get(`${BASE_URL_API}flows/`);
-    if (response?.status !== 200) {
+    if (response && response?.status !== 200) {
       throw new Error(`HTTP error! status: ${response?.status}`);
     }
-    return response.data;
+    return response?.data;
   } catch (error) {
     console.error(error);
     throw error;
@@ -200,10 +200,10 @@ export async function readFlowsFromDatabase() {
 export async function downloadFlowsFromDatabase() {
   try {
     const response = await api.get(`${BASE_URL_API}flows/download/`);
-    if (response?.status !== 200) {
+    if (response && response?.status !== 200) {
       throw new Error(`HTTP error! status: ${response?.status}`);
     }
-    return response.data;
+    return response?.data;
   } catch (error) {
     console.error(error);
     throw error;
@@ -217,7 +217,7 @@ export async function uploadFlowsToDatabase(flows: FormData) {
     if (response?.status !== 201) {
       throw new Error(`HTTP error! status: ${response?.status}`);
     }
-    return response.data;
+    return response?.data;
   } catch (error) {
     console.error(error);
     throw error;
@@ -237,7 +237,7 @@ export async function deleteFlowFromDatabase(flowId: string) {
     if (response.status !== 200) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-    return response.data;
+    return response?.data;
   } catch (error) {
     console.error(error);
     throw error;
@@ -254,10 +254,10 @@ export async function deleteFlowFromDatabase(flowId: string) {
 export async function getFlowFromDatabase(flowId: number) {
   try {
     const response = await api.get(`${BASE_URL_API}flows/${flowId}`);
-    if (response?.status !== 200) {
+    if (response && response?.status !== 200) {
       throw new Error(`HTTP error! status: ${response?.status}`);
     }
-    return response.data;
+    return response?.data;
   } catch (error) {
     console.error(error);
     throw error;
@@ -276,7 +276,7 @@ export async function getFlowStylesFromDatabase() {
     if (response.status !== 200) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-    return response.data;
+    return response?.data;
   } catch (error) {
     console.error(error);
     throw error;
@@ -302,7 +302,7 @@ export async function saveFlowStyleToDatabase(flowStyle: FlowStyleType) {
     if (response.status !== 201) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-    return response.data;
+    return response?.data;
   } catch (error) {
     console.error(error);
     throw error;
@@ -316,7 +316,7 @@ export async function saveFlowStyleToDatabase(flowStyle: FlowStyleType) {
  */
 export async function getVersion() {
   const response = await api.get(`${BASE_URL_API}version`);
-  return response.data;
+  return response?.data;
 }
 
 /**
@@ -416,7 +416,7 @@ export async function onLogin(user: LoginType) {
     );
 
     if (response.status === 200) {
-      const data = response.data;
+      const data = response?.data;
       return data;
     }
   } catch (error) {
@@ -431,7 +431,7 @@ export async function autoLogin(abortSignal) {
     });
 
     if (response.status === 200) {
-      const data = response.data;
+      const data = response?.data;
       return data;
     }
   } catch (error) {
@@ -607,7 +607,7 @@ export async function saveFlowStore(
     if (response.status !== 201) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-    return response.data;
+    return response?.data;
   } catch (error) {
     console.error(error);
     throw error;
@@ -862,7 +862,7 @@ export async function updateFlowStore(
     if (response.status !== 201) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-    return response.data;
+    return response?.data;
   } catch (error) {
     console.error(error);
     throw error;
@@ -872,7 +872,7 @@ export async function updateFlowStore(
 export async function requestLogout() {
   try {
     const response = await api.post(`${BASE_URL_API}logout`);
-    return response.data;
+    return response?.data;
   } catch (error) {
     console.error(error);
     throw error;
@@ -883,7 +883,7 @@ export async function getGlobalVariables(): Promise<{
   [key: string]: { id: string; type: string; default_fields: string[] };
 }> {
   const globalVariables = {};
-  (await api.get(`${BASE_URL_API}variables/`)).data.forEach((element) => {
+  (await api.get(`${BASE_URL_API}variables/`))?.data?.forEach((element) => {
     globalVariables[element.name] = {
       id: element.id,
       type: element.type,
