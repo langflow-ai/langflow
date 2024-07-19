@@ -139,11 +139,7 @@ export default function ParameterComponent({
   const output = useShortcutsStore((state) => state.output);
   useHotkeys(output, handleOutputWShortcut, { preventDefault });
 
-  const { handleNodeClass: handleNodeClassHook } = useHandleNodeClass(
-    takeSnapshot,
-    setNode,
-    data.id,
-  );
+  const { handleNodeClass: handleNodeClassHook } = useHandleNodeClass(data.id);
 
   const handleRefreshButtonPress = () =>
     mutateTemplate(
@@ -186,12 +182,8 @@ export default function ParameterComponent({
     );
   };
 
-  const handleNodeClass = (
-    newNodeClass: APIClassType,
-    code?: string,
-    type?: string,
-  ): void => {
-    handleNodeClassHook(newNodeClass, name, code, type);
+  const handleNodeClass = (newNodeClass: APIClassType, type?: string): void => {
+    handleNodeClassHook(newNodeClass, type);
   };
 
   useFetchDataOnMount(data.node!, handleNodeClass, name, postTemplateValue);
