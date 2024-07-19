@@ -145,6 +145,7 @@ jobs:
   merge-reports:
     needs: setup-and-test
     runs-on: ubuntu-latest
+    if: always()
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
