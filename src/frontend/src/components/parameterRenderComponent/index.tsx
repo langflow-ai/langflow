@@ -1,3 +1,4 @@
+import { TEXT_FIELD_TYPES } from "@/CustomNodes/GenericNode/components/parameterComponent/constants";
 import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import { APIClassType, InputFieldType } from "@/types/api";
 import CodeAreaComponent from "../codeAreaComponent";
@@ -8,11 +9,13 @@ import IntComponent from "../intComponent";
 import KeypairListComponent from "../keypairListComponent";
 import PromptAreaComponent from "../promptComponent";
 import ToggleShadComponent from "../toggleShadComponent";
+import { RefreshParameterComponent } from "./component/refreshParameterComponent";
 import { StrRenderComponent } from "./component/strRenderComponent";
 
 export function ParameterRenderComponent({
   handleOnNewValue,
   name,
+  nodeId,
   templateData,
   templateValue,
   editNode,
@@ -22,6 +25,7 @@ export function ParameterRenderComponent({
 }: {
   handleOnNewValue: handleOnNewValueType;
   name: string;
+  nodeId: string;
   templateData: Partial<InputFieldType>;
   templateValue: any;
   editNode: boolean;
@@ -33,93 +37,103 @@ export function ParameterRenderComponent({
     handleOnNewValue({ value });
   };
 
-  return templateData.type === "str" ? (
-    <StrRenderComponent
+  return (
+    <RefreshParameterComponent
       templateData={templateData}
-      value={templateValue}
+      disabled={disabled}
+      nodeId={nodeId}
+      nodeClass={nodeClass}
+      handleNodeClass={handleNodeClass}
       name={name}
-      disabled={disabled}
-      handleOnNewValue={handleOnNewValue}
-      editNode={editNode}
-    />
-  ) : templateData.type === "NestedDict" ? (
-    <DictComponent
-      disabled={disabled}
-      editNode={editNode}
-      value={(templateValue || "").toString() === "{}" ? {} : templateValue}
-      onChange={onChange}
-      id="editnode-div-dict-input"
-    />
-  ) : templateData.type === "dict" ? (
-    <KeypairListComponent
-      disabled={disabled}
-      editNode={editNode}
-      value={templateValue}
-      onChange={onChange}
-      isList={templateData.list ?? false}
-    />
-  ) : templateData.type === "bool" ? (
-    <ToggleShadComponent
-      id={"toggle-edit-" + templateData.name}
-      disabled={disabled}
-      enabled={templateValue}
-      setEnabled={onChange}
-      size="small"
-      editNode={editNode}
-    />
-  ) : templateData.type === "float" ? (
-    <FloatComponent
-      disabled={disabled}
-      editNode={editNode}
-      rangeSpec={templateData.rangeSpec}
-      value={templateValue ?? ""}
-      onChange={onChange}
-    />
-  ) : templateData.type === "int" ? (
-    <IntComponent
-      rangeSpec={templateData.rangeSpec}
-      id={"edit-int-input-" + templateData.name}
-      disabled={disabled}
-      editNode={editNode}
-      value={templateValue ?? ""}
-      onChange={onChange}
-    />
-  ) : templateData.type === "file" ? (
-    <InputFileComponent
-      editNode={editNode}
-      disabled={disabled}
-      value={templateValue ?? ""}
-      handleOnNewValue={handleOnNewValue}
-      fileTypes={templateData.fileTypes}
-    />
-  ) : templateData.type === "prompt" ? (
-    <PromptAreaComponent
-      readonly={nodeClass.flow ? true : false}
-      field_name={name}
-      editNode={editNode}
-      disabled={disabled}
-      nodeClass={nodeClass}
-      setNodeClass={handleNodeClass}
-      value={templateValue ?? ""}
-      onChange={onChange}
-      id={"prompt-area-edit-" + templateData.name}
-      data-testid={"modal-prompt-input-" + templateData.name}
-    />
-  ) : templateData.type === "code" ? (
-    <CodeAreaComponent
-      readonly={nodeClass.flow && templateData.dynamic ? true : false}
-      dynamic={templateData.dynamic ?? false}
-      setNodeClass={handleNodeClass}
-      nodeClass={nodeClass}
-      disabled={disabled}
-      editNode={editNode}
-      value={templateValue ?? ""}
-      onChange={onChange}
-      id={"code-area-edit" + templateData.name}
-    />
-  ) : templateData.type === "Any" ? (
-    <>-</>
-  ) : (
-    String(templateValue)
+    >
+      {TEXT_FIELD_TYPES.includes(templateData.type ?? "") ? (
+        <StrRenderComponent
+          templateData={templateData}
+          value={templateValue}
+          name={name}
+          disabled={disabled}
+          handleOnNewValue={handleOnNewValue}
+          editNode={editNode}
+        />
+      ) : templateData.type === "NestedDict" ? (
+        <DictComponent
+          disabled={disabled}
+          editNode={editNode}
+          value={(templateValue || "").toString() === "{}" ? {} : templateValue}
+          onChange={onChange}
+          id="editnode-div-dict-input"
+        />
+      ) : templateData.type === "dict" ? (
+        <KeypairListComponent
+          disabled={disabled}
+          editNode={editNode}
+          value={templateValue}
+          onChange={onChange}
+          isList={templateData.list ?? false}
+        />
+      ) : templateData.type === "bool" ? (
+        <ToggleShadComponent
+          id={"toggle-edit-" + templateData.name}
+          disabled={disabled}
+          enabled={templateValue}
+          setEnabled={onChange}
+          size={editNode ? "small" : "large"}
+        />
+      ) : templateData.type === "float" ? (
+        <FloatComponent
+          disabled={disabled}
+          editNode={editNode}
+          rangeSpec={templateData.rangeSpec}
+          value={templateValue ?? ""}
+          onChange={onChange}
+        />
+      ) : templateData.type === "int" ? (
+        <IntComponent
+          rangeSpec={templateData.rangeSpec}
+          id={"edit-int-input-" + templateData.name}
+          disabled={disabled}
+          editNode={editNode}
+          value={templateValue ?? ""}
+          onChange={onChange}
+        />
+      ) : templateData.type === "file" ? (
+        <InputFileComponent
+          editNode={editNode}
+          disabled={disabled}
+          value={templateValue ?? ""}
+          handleOnNewValue={handleOnNewValue}
+          fileTypes={templateData.fileTypes}
+        />
+      ) : templateData.type === "prompt" ? (
+        <PromptAreaComponent
+          readonly={nodeClass.flow ? true : false}
+          field_name={name}
+          editNode={editNode}
+          disabled={disabled}
+          nodeClass={nodeClass}
+          setNodeClass={handleNodeClass}
+          value={templateValue ?? ""}
+          onChange={onChange}
+          id={"prompt-area-edit-" + templateData.name}
+          data-testid={"modal-prompt-input-" + templateData.name}
+        />
+      ) : templateData.type === "code" ? (
+        <CodeAreaComponent
+          readonly={nodeClass.flow && templateData.dynamic ? true : false}
+          dynamic={templateData.dynamic ?? false}
+          setNodeClass={handleNodeClass}
+          nodeClass={nodeClass}
+          disabled={disabled}
+          editNode={editNode}
+          value={templateValue ?? ""}
+          onChange={onChange}
+          id={"code-area-edit" + templateData.name}
+        />
+      ) : templateData.type === "Any" ? (
+        <>-</>
+      ) : (
+        String(templateValue)
+      )}
+    </RefreshParameterComponent>
   );
 }
