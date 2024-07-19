@@ -17,16 +17,13 @@ export default function TableNodeComponent({
   id = "",
   columns,
 }: TableComponentType): JSX.Element {
-  if (!columns) {
-    columns = [];
-  }
   const [selectedNodes, setSelectedNodes] = useState<Array<any>>([]);
   const agGrid = useRef<AgGridReact>(null);
   const componentColumns = columns
     ? columns
     : generateBackendColumnsFromValue(value ?? []);
-  const AgColumns = FormatColumns(componentColumns);
 
+  const AgColumns = FormatColumns(componentColumns);
   function setAllRows() {
     if (agGrid.current) {
       const rows: any = [];

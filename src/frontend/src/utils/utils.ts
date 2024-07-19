@@ -1,4 +1,4 @@
-import { ColumnField } from "@/types/utils/functions";
+import { ColumnField, FormatterType } from "@/types/utils/functions";
 import { ColDef, ColGroupDef } from "ag-grid-community";
 import clsx, { ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -502,11 +502,24 @@ export function FormatColumns(columns: ColumnField[]): ColDef<any>[] {
 export function generateBackendColumnsFromValue(rows: Object[]): ColumnField[] {
   const columns = extractColumnsFromRows(rows, "union");
   return columns.map((column) => {
-    return {
+    const newColumn: ColumnField = {
       name: column.field ?? "",
       display_name: column.headerName ?? "",
       sortable: true,
       filterable: true,
     };
+    if (rows[0] && rows[0][column.field ?? ""]) {
+      const value = rows[0][column.field ?? ""] as any;
+      if (typeof value === "string") {
+        if (isTimeStampString(value)) {
+          newColumn.formatter = FormatterType.date;
+        } else {
+          newColumn.formatter = FormatterType.text;
+        }
+      } else if (typeof value === "object") {
+        newColumn.formatter = FormatterType.json;
+      }
+    }
+    return newColumn;
   });
 }

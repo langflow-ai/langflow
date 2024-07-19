@@ -9,7 +9,7 @@ export type getCodesObjProps = {
 
 export type getCodesObjReturn = Array<{ name: string; code: string }>;
 
-enum FormatterType {
+export enum FormatterType {
   date = "date",
   text = "text",
   number = "number",
