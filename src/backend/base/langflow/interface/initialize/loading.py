@@ -25,15 +25,12 @@ async def instantiate_class(
 
     vertex_type = vertex.vertex_type
     base_type = vertex.base_type
-    params = vertex.params
-    params = convert_params_to_sets(params)
-    params = convert_kwargs(params)
     logger.debug(f"Instantiating {vertex_type} of type {base_type}")
 
     if not base_type:
         raise ValueError("No base type provided for vertex")
 
-    custom_params = params.copy()
+    custom_params = get_params(vertex.params)
     code = custom_params.pop("code")
     class_object: Type["CustomComponent" | "Component"] = eval_custom_component_code(code)
     custom_component: "CustomComponent" | "Component" = class_object(
@@ -63,6 +60,13 @@ async def get_instance_results(
             return await build_component(params=custom_params, custom_component=custom_component)
         else:
             raise ValueError(f"Base type {base_type} not found.")
+
+
+def get_params(vertex_params):
+    params = vertex_params
+    params = convert_params_to_sets(params)
+    params = convert_kwargs(params)
+    return params.copy()
 
 
 def convert_params_to_sets(params):
