@@ -1,3 +1,4 @@
+import useHandleOnNewValue from "@/CustomNodes/hooks/use-handle-new-value";
 import { CustomCellRendererProps } from "ag-grid-react";
 import { cloneDeep } from "lodash";
 import { useState } from "react";
@@ -12,39 +13,18 @@ import {
 import { classNames } from "../../../../utils/utils";
 import CodeAreaComponent from "../../../codeAreaComponent";
 import DictComponent from "../../../dictComponent";
-import Dropdown from "../../../dropdownComponent";
 import FloatComponent from "../../../floatComponent";
 import InputFileComponent from "../../../inputFileComponent";
-import InputGlobalComponent from "../../../inputGlobalComponent";
-import InputListComponent from "../../../inputListComponent";
 import IntComponent from "../../../intComponent";
 import KeypairListComponent from "../../../keypairListComponent";
 import PromptAreaComponent from "../../../promptComponent";
-import TextAreaComponent from "../../../textAreaComponent";
 import ToggleShadComponent from "../../../toggleShadComponent";
 import { renderStrType } from "./cellTypeStr";
 
 export default function TableNodeCellRender({
   node: { data },
-  value: {
-    value,
-    nodeClass,
-    handleOnNewValue: handleOnNewValueNode,
-    handleNodeClass,
-  },
+  value: { value, nodeId, nodeClass, handleNodeClass },
 }: CustomCellRendererProps) {
-  const handleOnNewValue = (newValue: any, name: string, dbValue?: boolean) => {
-    handleOnNewValueNode(newValue, name, dbValue);
-    setTemplateData((old) => {
-      let newData = cloneDeep(old);
-      newData.value = newValue;
-      if (dbValue !== undefined) {
-        newData.load_from_db = newValue;
-      }
-      return newData;
-    });
-    setTemplateValue(newValue);
-  };
   const setNodeClass = (value: APIClassType, code?: string, type?: string) => {
     handleNodeClass(value, templateData.key, code, type);
   };
@@ -53,6 +33,34 @@ export default function TableNodeCellRender({
   const [templateData, setTemplateData] = useState(data);
   const [errorDuplicateKey, setErrorDuplicateKey] = useState(false);
   const edges = useFlowStore((state) => state.edges);
+
+  const { handleOnNewValue: handleOnNewValueHook } = useHandleOnNewValue({
+    node: nodeClass,
+    nodeId: nodeId,
+    name: data.key,
+  });
+  const handleOnNewValue = (
+    value: any,
+    dbValue?: boolean,
+    skipSnapshot?: boolean,
+  ) => {
+    handleOnNewValueHook(
+      {
+        value,
+        load_from_db: dbValue,
+      },
+      { skipSnapshot, setNodeClass },
+    );
+    setTemplateData((old) => {
+      let newData = cloneDeep(old);
+      newData.value = value;
+      if (dbValue !== undefined) {
+        newData.load_from_db = value;
+      }
+      return newData;
+    });
+    setTemplateValue(value);
+  };
 
   const id = {
     inputTypes: templateData.input_types,
