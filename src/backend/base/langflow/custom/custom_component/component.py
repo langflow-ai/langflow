@@ -1,16 +1,18 @@
 import inspect
-from typing import Any, AsyncIterator, Callable, ClassVar, Generator, Iterator, List, Optional, Union
+from typing import Any, AsyncIterator, Callable, ClassVar, Generator, Iterator, List, Optional, Union, get_type_hints
 from uuid import UUID
 
 import yaml
 from pydantic import BaseModel
 
+from langflow.helpers.custom import format_type
 from langflow.inputs.inputs import InputTypes
 from langflow.schema.artifact import get_artifact_type, post_process_raw
 from langflow.schema.data import Data
 from langflow.schema.message import Message
 from langflow.services.tracing.schema import Log
 from langflow.template.field.base import UNDEFINED, Output
+from langflow.template.frontend_node.custom_components import ComponentFrontendNode
 
 from .custom_component import CustomComponent
 
@@ -95,6 +97,36 @@ class Component(CustomComponent):
     def _validate_outputs(self):
         # Raise Error if some rule isn't met
         pass
+
+    def map_parameters_on_frontend_node(self, frontend_node: ComponentFrontendNode):
+        for name, value in self._parameters.items():
+            frontend_node.set_field_value_in_template(name, value)
+
+    def _get_method_return_type(self, method_name: str) -> List[str]:
+        method = getattr(self, method_name)
+        return [format_type(get_type_hints(method)["return"])]
+
+    def to_frontend_node(self):
+        field_config = self.get_template_config(self)
+        frontend_node = ComponentFrontendNode.from_inputs(**field_config)
+        self.map_parameters_on_frontend_node(frontend_node)
+        # But we now need to calculate the return_type of the methods in the outputs
+        for output in frontend_node.outputs:
+            if output.types:
+                continue
+            return_types = self._get_method_return_type(output.method)
+            output.add_types(return_types)
+            output.set_selected()
+        # Validate that there is not name overlap between inputs and outputs
+        frontend_node.validate_component()
+        frontend_node.set_base_classes_from_outputs()
+        data = {
+            "data": {
+                "node": frontend_node.to_dict(keep_name=False),
+                "type": self.__class__.__name__,
+            }
+        }
+        return data
 
     def _validate_inputs(self, params: dict):
         # Params keys are the `name` attribute of the Input objects
