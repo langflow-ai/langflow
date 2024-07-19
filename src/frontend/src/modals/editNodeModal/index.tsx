@@ -1,7 +1,6 @@
 import { ColDef } from "ag-grid-community";
 import { forwardRef, useState } from "react";
 import { useUpdateNodeInternals } from "reactflow";
-import useHandleNodeClass from "../../CustomNodes/hooks/use-handle-node-class";
 import TableComponent from "../../components/tableComponent";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
@@ -10,9 +9,15 @@ import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { APIClassType } from "../../types/api";
 import { NodeDataType } from "../../types/flow";
+import {
+  debouncedHandleUpdateValues,
+  handleUpdateValues,
+} from "../../utils/parameterUtils";
 import BaseModal from "../baseModal";
 import useColumnDefs from "./hooks/use-column-defs";
 import useHandleChangeAdvanced from "./hooks/use-handle-change-advanced";
+import useHandleOnNewValue from "./hooks/use-handle-new-value";
+import useHandleNodeClass from "./hooks/use-handle-node-class";
 import useRowData from "./hooks/use-row-data";
 
 const EditNodeModal = forwardRef(
@@ -35,10 +40,19 @@ const EditNodeModal = forwardRef(
     const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
     const updateNodeInternals = useUpdateNodeInternals();
 
+    const { handleOnNewValue: handleOnNewValueHook } = useHandleOnNewValue(
+      data,
+      takeSnapshot,
+      handleUpdateValues,
+      debouncedHandleUpdateValues,
+      setNode,
+    );
+
     const { handleNodeClass: handleNodeClassHook } = useHandleNodeClass(
+      data,
       takeSnapshot,
       setNode,
-      data.id,
+      updateNodeInternals,
     );
 
     const [nodeClass, setNodeClass] = useState<APIClassType>(data.node!);
@@ -60,8 +74,8 @@ const EditNodeModal = forwardRef(
 
     const columnDefs: ColDef[] = useColumnDefs(
       nodeClass,
+      handleOnNewValueHook,
       handleNodeClass,
-      data.id,
       handleChangeAdvancedHook,
       open,
     );
