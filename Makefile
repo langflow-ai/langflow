@@ -74,13 +74,13 @@ coverage: ## run the tests and generate a coverage report
 
 # allow passing arguments to pytest
 unit_tests: ## run unit tests
-	poetry run pytest \
-		--ignore=tests/integration \
+	poetry run pytest src/backend/tests \
+		--ignore=src/backend/tests/integration \
 		--instafail -ra -n auto -m "not api_key_required" \
 		$(args)
 
 integration_tests: ## run integration tests
-	poetry run pytest tests/integration \
+	poetry run pytest src/backend/tests/integration \
 		--instafail -ra -n auto \
 		$(args)
 
