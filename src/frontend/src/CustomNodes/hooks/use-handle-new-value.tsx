@@ -5,6 +5,15 @@ import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { APIClassType, InputFieldType } from "@/types/api";
 import { cloneDeep } from "lodash";
 import { mutateTemplate } from "../helpers/mutate-template";
+
+export type handleOnNewValueType = (
+  changes: Partial<InputFieldType>,
+  options?: {
+    skipSnapshot?: boolean;
+    setNodeClass?: (node: APIClassType) => void;
+  },
+) => void;
+
 const useHandleOnNewValue = ({
   node,
   nodeId,
@@ -26,13 +35,7 @@ const useHandleOnNewValue = ({
     node: node,
   });
 
-  const handleOnNewValue = async (
-    changes: Partial<InputFieldType>,
-    options?: {
-      skipSnapshot?: boolean;
-      setNodeClass?: (node: APIClassType) => void;
-    },
-  ) => {
+  const handleOnNewValue: handleOnNewValueType = async (changes, options?) => {
     const newNode = cloneDeep(node);
     const template = newNode.template;
 
