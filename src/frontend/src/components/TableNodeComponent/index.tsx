@@ -64,7 +64,7 @@ export default function TableNodeComponent({
     : generateBackendColumnsFromValue(value ?? []);
   const AgColumns = FormatColumns(componentColumns);
   function setAllRows() {
-    if (agGrid.current) {
+    if (agGrid.current && !agGrid.current.api.isDestroyed(  )) {
       const rows: any = [];
       agGrid.current.api.forEachNode((node) => rows.push(node.data));
       onChange(rows);
@@ -95,7 +95,7 @@ export default function TableNodeComponent({
     onChange([...value, newRow]);
   }
 
-  function updateComponente() {
+  function updateComponent() {
     setAllRows();
   }
   const editable = componentColumns.map((column) => {
@@ -104,7 +104,7 @@ export default function TableNodeComponent({
       (column.formatter === "text" || column.formatter === "json");
     return {
       field: column.name,
-      onUpdate: updateComponente,
+      onUpdate: updateComponent,
       editableCell: isCustomEdit ? false : true,
     };
   });
