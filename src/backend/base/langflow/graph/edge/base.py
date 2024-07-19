@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
 
 class Edge:
-    def __init__(self, source: "Vertex", target: "Vertex", edge: dict):
+    def __init__(self, source: "Vertex", target: "Vertex", edge: EdgeData):
         self.source_id: str = source.id if source else ""
         self.target_id: str = target.id if target else ""
         if data := edge.get("data", {}):
