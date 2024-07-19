@@ -96,6 +96,9 @@ class Vertex:
         self.build_times: List[float] = []
         self.state = VertexStates.ACTIVE
 
+    def add_component_instance(self, component_instance: "Component"):
+        self._custom_component = component_instance
+
     def add_result(self, name: str, result: Any):
         self.results[name] = result
 
