@@ -67,6 +67,14 @@ class Graph:
         self.vertices: List[Vertex] = []
         self.run_manager = RunnableVerticesManager()
         self.state_manager = GraphStateManager()
+        self._vertices: List[dict] = []
+        self._edges: List[dict] = []
+        self.top_level_vertices: List[str] = []
+        self.vertex_map: Dict[str, Vertex] = {}
+        self.predecessor_map: Dict[str, List[str]] = defaultdict(list)
+        self.successor_map: Dict[str, List[str]] = defaultdict(list)
+        self.in_degree_map: Dict[str, int] = defaultdict(int)
+        self.parent_child_map: Dict[str, List[str]] = defaultdict(list)
         try:
             self.tracing_service: "TracingService" | None = get_tracing_service()
         except Exception as exc:
