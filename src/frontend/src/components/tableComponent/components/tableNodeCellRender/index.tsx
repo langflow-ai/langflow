@@ -31,7 +31,7 @@ export default function TableNodeCellRender({
     setTemplateData((old) => {
       let newData = cloneDeep(old);
       Object.entries(data).forEach(([key, value]) => {
-        newData[key] = value;
+        if (value !== undefined) newData[key] = value;
       });
       return newData;
     });
@@ -45,6 +45,7 @@ export default function TableNodeCellRender({
       <ParameterRenderComponent
         handleOnNewValue={handleOnNewValue}
         templateData={templateData}
+        name={templateData.key}
         templateValue={templateValue}
         editNode={true}
         handleNodeClass={handleNodeClass}
