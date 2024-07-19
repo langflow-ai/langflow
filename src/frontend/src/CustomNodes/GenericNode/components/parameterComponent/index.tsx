@@ -347,13 +347,13 @@ export default function ParameterComponent({
           />
         )}
         <div className="mt-2 w-full">
-          {data.node?.template[name]?.value !== undefined && (
+          {data.node?.template[name] !== undefined && (
             <ParameterRenderComponent
               handleOnNewValue={handleOnNewValue}
               name={name}
               nodeId={data.id}
               templateData={data.node?.template[name]!}
-              templateValue={data.node?.template[name].value}
+              templateValue={data.node?.template[name].value ?? ""}
               editNode={false}
               handleNodeClass={handleNodeClass}
               nodeClass={data.node!}
