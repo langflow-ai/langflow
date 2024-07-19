@@ -16,7 +16,9 @@ export const useGetCheckApiKeysQuery: useQueryFunctionType<
   const { query } = UseRequestProcessor();
 
   const getCheckFn = async () => {
-    return await api.get<ICheckQueryResponse>(`${getURL("STORE")}/check/api_key/`);
+    return await api.get<ICheckQueryResponse>(
+      `${getURL("STORE")}/check/api_key/`,
+    );
   };
 
   const responseFn = async () => {
@@ -28,7 +30,9 @@ export const useGetCheckApiKeysQuery: useQueryFunctionType<
     return data;
   };
 
-  const queryResult = query(["useGetCheckApiKeysQuery"], responseFn, { ...options });
+  const queryResult = query(["useGetCheckApiKeysQuery"], responseFn, {
+    ...options,
+  });
 
   return queryResult;
 };
