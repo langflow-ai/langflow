@@ -8,7 +8,7 @@ import {
   convertObjToArray,
   convertValuesToNumbers,
   hasDuplicateKeys,
-  scapedJSONStringfy,
+  isTargetHandleConnected,
 } from "../../../../utils/reactflowUtils";
 import { classNames } from "../../../../utils/utils";
 import CodeAreaComponent from "../../../codeAreaComponent";
@@ -25,8 +25,8 @@ export default function TableNodeCellRender({
   node: { data },
   value: { value, nodeId, nodeClass, handleNodeClass },
 }: CustomCellRendererProps) {
-  const setNodeClass = (value: APIClassType, code?: string, type?: string) => {
-    handleNodeClass(value, templateData.key, code, type);
+  const setNodeClass = (value: APIClassType, type?: string) => {
+    handleNodeClass(value, type);
   };
 
   const [templateValue, setTemplateValue] = useState(value);
@@ -62,25 +62,8 @@ export default function TableNodeCellRender({
     setTemplateValue(value);
   };
 
-  const id = {
-    inputTypes: templateData.input_types,
-    type: templateData.type,
-    id: nodeClass.id,
-    fieldName: templateData.key,
-  };
-  const disabled =
-    edges.some(
-      (edge) =>
-        edge.targetHandle ===
-        scapedJSONStringfy(
-          templateData.proxy
-            ? {
-                ...id,
-                proxy: templateData.proxy,
-              }
-            : id,
-        ),
-    ) ?? false;
+  const disabled = isTargetHandleConnected(edges, data.key, data, nodeId);
+
   function getCellType() {
     switch (templateData.type) {
       case "str":
