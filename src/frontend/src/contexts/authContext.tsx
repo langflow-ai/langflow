@@ -3,6 +3,7 @@ import {
   LANGFLOW_API_TOKEN,
   LANGFLOW_AUTO_LOGIN_OPTION,
 } from "@/constants/constants";
+import { useGetCheckApiKeysQuery } from "@/controllers/API/queries/store";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { createContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -61,9 +62,9 @@ export function AuthProvider({ children }): React.ReactElement {
     (state) => state.setGlobalVariables,
   );
   const checkHasStore = useStoreStore((state) => state.checkHasStore);
-  const fetchApiData = useStoreStore((state) => state.fetchApiData);
   const setAllFlows = useFlowsManagerStore((state) => state.setAllFlows);
   const setSelectedFolder = useFolderStore((state) => state.setSelectedFolder);
+  const { refetch: fetchApiData } = useGetCheckApiKeysQuery();
 
   useEffect(() => {
     const storedAccessToken = cookies.get(LANGFLOW_ACCESS_TOKEN);

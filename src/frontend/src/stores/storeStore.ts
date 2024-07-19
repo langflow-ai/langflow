@@ -16,18 +16,10 @@ export const useStoreStore = create<StoreStoreType>((set) => ({
   updateLoadingApiKey: (loadingApiKey) =>
     set(() => ({ loadingApiKey: loadingApiKey })),
   updateHasApiKey: (hasApiKey) => set(() => ({ hasApiKey: hasApiKey })),
-  fetchApiData: async () => {
-    set({ loadingApiKey: true });
-    try {
-      const res = await checkHasApiKey();
-      set({
-        validApiKey: res?.is_valid ?? false,
-        hasApiKey: res?.has_api_key ?? false,
-        loadingApiKey: false,
-      });
-    } catch (e) {
-      set({ loadingApiKey: false });
-      console.log(e);
-    }
+  fetchApiData: (data) => {
+    set({
+      validApiKey: data?.is_valid ?? false,
+      hasApiKey: data?.has_api_key ?? false,
+    });
   },
 }));
