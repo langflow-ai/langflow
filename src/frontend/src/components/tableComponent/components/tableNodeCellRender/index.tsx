@@ -1,25 +1,13 @@
-import useHandleOnNewValue from "@/CustomNodes/hooks/use-handle-new-value";
+import useHandleOnNewValue, {
+  handleOnNewValueType,
+} from "@/CustomNodes/hooks/use-handle-new-value";
+import { ParameterRenderComponent } from "@/components/parameterRenderComponent";
 import { CustomCellRendererProps } from "ag-grid-react";
 import { cloneDeep } from "lodash";
 import { useState } from "react";
 import useFlowStore from "../../../../stores/flowStore";
 import { APIClassType } from "../../../../types/api";
-import {
-  convertObjToArray,
-  convertValuesToNumbers,
-  hasDuplicateKeys,
-  isTargetHandleConnected,
-} from "../../../../utils/reactflowUtils";
-import { classNames } from "../../../../utils/utils";
-import CodeAreaComponent from "../../../codeAreaComponent";
-import DictComponent from "../../../dictComponent";
-import FloatComponent from "../../../floatComponent";
-import InputFileComponent from "../../../inputFileComponent";
-import IntComponent from "../../../intComponent";
-import KeypairListComponent from "../../../keypairListComponent";
-import PromptAreaComponent from "../../../promptComponent";
-import ToggleShadComponent from "../../../toggleShadComponent";
-import { renderStrType } from "./cellTypeStr";
+import { isTargetHandleConnected } from "../../../../utils/reactflowUtils";
 
 export default function TableNodeCellRender({
   node: { data },
@@ -31,7 +19,6 @@ export default function TableNodeCellRender({
 
   const [templateValue, setTemplateValue] = useState(value);
   const [templateData, setTemplateData] = useState(data);
-  const [errorDuplicateKey, setErrorDuplicateKey] = useState(false);
   const edges = useFlowStore((state) => state.edges);
 
   const { handleOnNewValue: handleOnNewValueHook } = useHandleOnNewValue({
@@ -39,24 +26,13 @@ export default function TableNodeCellRender({
     nodeId: nodeId,
     name: data.key,
   });
-  const handleOnNewValue = (
-    value: any,
-    dbValue?: boolean,
-    skipSnapshot?: boolean,
-  ) => {
-    handleOnNewValueHook(
-      {
-        value,
-        load_from_db: dbValue,
-      },
-      { skipSnapshot, setNodeClass },
-    );
+  const handleOnNewValue: handleOnNewValueType = (data, options) => {
+    handleOnNewValueHook(data, { setNodeClass, ...options });
     setTemplateData((old) => {
       let newData = cloneDeep(old);
-      newData.value = value;
-      if (dbValue !== undefined) {
-        newData.load_from_db = value;
-      }
+      Object.entries(data).forEach(([key, value]) => {
+        newData[key] = value;
+      });
       return newData;
     });
     setTemplateValue(value);
@@ -64,158 +40,17 @@ export default function TableNodeCellRender({
 
   const disabled = isTargetHandleConnected(edges, data.key, data, nodeId);
 
-  function getCellType() {
-    switch (templateData.type) {
-      case "str":
-        return renderStrType({
-          templateData,
-          templateValue,
-          disabled,
-          handleOnNewValue,
-        });
-
-      case "NestedDict":
-        return (
-          <DictComponent
-            disabled={disabled}
-            editNode={true}
-            value={
-              (templateValue || "").toString() === "{}" ? {} : templateValue
-            }
-            onChange={(newValue) => {
-              handleOnNewValue(newValue, templateData.key);
-            }}
-            id="editnode-div-dict-input"
-          />
-        );
-
-      case "dict":
-        return (
-          <div
-            className={classNames(
-              "max-h-48 w-full overflow-auto custom-scroll",
-              templateValue?.length > 1 ? "my-3" : "",
-            )}
-          >
-            <KeypairListComponent
-              disabled={disabled}
-              editNode={true}
-              value={
-                Object.keys(templateValue || {})?.length === 0 || !templateValue
-                  ? [{ "": "" }]
-                  : convertObjToArray(templateValue, templateData.type)
-              }
-              duplicateKey={errorDuplicateKey}
-              onChange={(newValue) => {
-                const valueToNumbers = convertValuesToNumbers(newValue);
-                setErrorDuplicateKey(hasDuplicateKeys(valueToNumbers));
-                handleOnNewValue(valueToNumbers, templateData.key);
-              }}
-              isList={templateData.list ?? false}
-            />
-          </div>
-        );
-
-      case "bool":
-        return (
-          <ToggleShadComponent
-            id={"toggle-edit-" + templateData.name}
-            disabled={disabled}
-            enabled={templateValue}
-            setEnabled={(isEnabled) => {
-              handleOnNewValue(isEnabled, templateData.key);
-            }}
-            size="small"
-            editNode={true}
-          />
-        );
-
-      case "float":
-        return (
-          <FloatComponent
-            disabled={disabled}
-            editNode={true}
-            rangeSpec={templateData.rangeSpec}
-            value={templateValue ?? ""}
-            onChange={(value) => {
-              handleOnNewValue(value, templateData.key);
-            }}
-          />
-        );
-      case "int":
-        return (
-          <IntComponent
-            rangeSpec={templateData.rangeSpec}
-            id={"edit-int-input-" + templateData.name}
-            disabled={disabled}
-            editNode={true}
-            value={templateValue ?? ""}
-            onChange={(value) => {
-              handleOnNewValue(value, templateData.key);
-            }}
-          />
-        );
-
-      case "file":
-        return (
-          <InputFileComponent
-            editNode={true}
-            disabled={disabled}
-            value={templateValue ?? ""}
-            onChange={(value: string | string[]) => {
-              handleOnNewValue(value, templateData.key);
-            }}
-            fileTypes={templateData.fileTypes}
-            onFileChange={(filePath: string) => {
-              templateData.file_path = filePath;
-            }}
-          />
-        );
-
-      case "prompt":
-        return (
-          <PromptAreaComponent
-            readonly={nodeClass.flow ? true : false}
-            field_name={templateData.key}
-            editNode={true}
-            disabled={disabled}
-            nodeClass={nodeClass}
-            setNodeClass={setNodeClass}
-            value={templateValue ?? ""}
-            onChange={(value: string | string[]) => {
-              handleOnNewValue(value, templateData.key);
-            }}
-            id={"prompt-area-edit-" + templateData.name}
-            data-testid={"modal-prompt-input-" + templateData.name}
-          />
-        );
-
-      case "code":
-        return (
-          <CodeAreaComponent
-            readonly={nodeClass.flow && templateData.dynamic ? true : false}
-            dynamic={templateData.dynamic ?? false}
-            setNodeClass={setNodeClass}
-            nodeClass={nodeClass}
-            disabled={disabled}
-            editNode={true}
-            value={templateValue ?? ""}
-            onChange={(value: string | string[]) => {
-              handleOnNewValue(value, templateData.key);
-            }}
-            id={"code-area-edit" + templateData.name}
-          />
-        );
-      case "Any":
-        return <>-</>;
-      default:
-        return String(templateValue);
-    }
-  }
-
   return (
-    <div className="group mx-auto flex h-full w-[300px] items-center justify-center py-2.5">
-      {getCellType()}
+    <div className="group mx-auto flex h-full max-h-48 w-[300px] items-center justify-center overflow-auto py-2.5 custom-scroll">
+      <ParameterRenderComponent
+        handleOnNewValue={handleOnNewValue}
+        templateData={templateData}
+        templateValue={templateValue}
+        editNode={true}
+        handleNodeClass={handleNodeClass}
+        nodeClass={nodeClass}
+        disabled={disabled}
+      />
     </div>
   );
 }
