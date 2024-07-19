@@ -378,7 +378,7 @@ def build_custom_component_template_from_inputs(
     frontend_node.set_base_classes_from_outputs()
     reorder_fields(frontend_node, custom_component._get_field_order())
     cc_instance = get_component_instance(custom_component, user_id=user_id)
-    return frontend_node.to_dict(add_name=False), cc_instance
+    return frontend_node.to_dict(keep_name=False), cc_instance
 
 
 def build_custom_component_template(
@@ -414,7 +414,7 @@ def build_custom_component_template(
 
         reorder_fields(frontend_node, custom_instance._get_field_order())
 
-        return frontend_node.to_dict(add_name=False), custom_instance
+        return frontend_node.to_dict(keep_name=False), custom_instance
     except Exception as exc:
         if isinstance(exc, HTTPException):
             raise exc
