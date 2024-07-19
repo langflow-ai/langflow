@@ -1,5 +1,7 @@
 # Langflow Azure ARM Quickstart
 
+*[Leia em português](README.pt.md)*
+
 This repository provides a quickstart deployment of the [Langflow](https://github.com/langflow-ai/langflow) project on Azure using Docker containers with Bicep templates. With a single click, you can deploy Langflow to Azure App Service.
 
 ## Features
@@ -27,19 +29,16 @@ This repository provides a quickstart deployment of the [Langflow](https://githu
    ```
    Replace `<YourResourceGroup>` with the desired name for your Resource Group and `<location>` with the desired Azure region (e.g., `EastUS`, `WestUS`, `NorthEurope`, etc.).
 
-
 2. Click the button below to deploy Langflow to Azure:
 
    [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fdanielgines%2Flangflow-azure-arm-quickstart%2Fmain%2Fazure-deploy.json)
 
-
-3. Follow the instructions in the Azure portal to complete the deployment.
-
-**Attention:** The first deployment may take several minutes to complete. Please wait until the deployment process is finalized. Once completed, open the default domain provided on the Overview screen of the Web App to access Langflow.
-
+3. Follow the instructions in the Azure portal to complete the deployment. 
 4. To visualize the template, click the button below:
 
    [![Visualize](https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/1-CONTRIBUTION-GUIDE/images/visualizebutton.svg?sanitize=true)](https://armviz.io/#/?load=https%3A%2F%2Fraw.githubusercontent.com%2Fdanielgines%2Flangflow-azure-arm-quickstart%2Fmain%2Fazure-deploy.json)
+
+> **Attention:** The first deployment may take several minutes to complete. Please wait until the deployment process is finalized. Once completed, open the default domain provided on the Overview screen of the Web App to access Langflow.
 
 ### Performance Plans
 
@@ -73,11 +72,11 @@ Here are the configuration parameters for the different plans:
 
 If you need to customize the deployment, you can modify the `azure-deploy.bicep` file as needed. For example, to use the Premium (P1v2) plan, set the variables as follows:
 
-```
-var sku = 'PremiumV2'
-var skuCode = 'P1v2'
-var workerSize = 1
-```
+   ```
+   var sku = 'PremiumV2'
+   var skuCode = 'P1v2'
+   var workerSize = 1
+   ```
 
 ### Using Azure CLI
 
@@ -89,7 +88,6 @@ To deploy the template using the Azure CLI, follow these steps:
    bicep build azure-deploy.bicep
    ```
    This will generate an `azure-deploy.json` file.
-
 
 2. Deploy the compiled ARM template:
 
