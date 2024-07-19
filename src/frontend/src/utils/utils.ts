@@ -516,8 +516,16 @@ export function generateBackendColumnsFromValue(rows: Object[]): ColumnField[] {
         } else {
           newColumn.formatter = FormatterType.text;
         }
-      } else if (typeof value === "object") {
-        newColumn.formatter = FormatterType.json;
+      } else if (typeof value === "object" && value !== null) {
+        // Check if the object is a Date object
+        if (
+          Object.prototype.toString.call(value) === "[object Date]" ||
+          value instanceof Date
+        ) {
+          newColumn.formatter = FormatterType.date;
+        } else {
+          newColumn.formatter = FormatterType.json;
+        }
       }
     }
     return newColumn;
