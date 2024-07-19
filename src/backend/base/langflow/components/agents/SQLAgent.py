@@ -15,7 +15,13 @@ class SQLAgentComponent(LCAgentComponent):
     inputs = LCAgentComponent._base_inputs + [
         HandleInput(name="llm", display_name="Language Model", input_types=["LanguageModel"], required=True),
         MessageTextInput(name="database_uri", display_name="Database URI", required=True),
-        HandleInput(name="extra_tools", display_name="Extra Tools", input_types=["Tool", "BaseTool"], is_list=True, advanced=True)
+        HandleInput(
+            name="extra_tools",
+            display_name="Extra Tools",
+            input_types=["Tool", "BaseTool"],
+            is_list=True,
+            advanced=True,
+        ),
     ]
 
     def build_agent(self) -> AgentExecutor:

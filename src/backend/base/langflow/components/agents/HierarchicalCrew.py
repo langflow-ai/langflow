@@ -10,7 +10,7 @@ class HierarchicalCrewComponent(BaseCrewComponent):
         "Represents a group of agents, defining how they should collaborate and the tasks they should perform."
     )
     documentation: str = "https://docs.crewai.com/how-to/Hierarchical/"
-    icon="CrewAI"
+    icon = "CrewAI"
 
     inputs = BaseCrewComponent._base_inputs + [
         HandleInput(name="agents", display_name="Agents", input_types=["Agent"], is_list=True),
