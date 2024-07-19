@@ -126,7 +126,7 @@ export function AuthProvider({ children }): React.ReactElement {
   }
 
   function storeApiKey(apikey: string) {
-    cookies.set(LANGFLOW_ACCESS_TOKEN, apikey, { path: "/" });
+    cookies.set(LANGFLOW_API_TOKEN, apikey, { path: "/" });
     setApiKey(apikey);
   }
 

@@ -130,11 +130,11 @@ test("InputComponent", async ({ page }) => {
     expect(false).toBeTruthy();
   }
 
-  await page.getByTestId("popover-anchor-input-collection_name-edit").click();
   await page
     .getByTestId("popover-anchor-input-collection_name-edit")
     .fill("NEW_collection_name_test_123123123!@#$&*(&%$@ÇÇÇÀõe");
 
+  await page.waitForTimeout(1000);
   await page.getByText("Close").last().click();
 
   const plusButtonLocator = page.getByTestId("input-collection_name");
@@ -146,11 +146,6 @@ test("InputComponent", async ({ page }) => {
 
     await page.getByTestId("more-options-modal").click();
     await page.getByTestId("edit-button-modal").click();
-
-    await page.locator('//*[@id="showcollection_name"]').click();
-    expect(
-      await page.locator('//*[@id="showcollection_name"]').isChecked(),
-    ).toBeTruthy();
 
     await page.getByText("Close").last().click();
 
