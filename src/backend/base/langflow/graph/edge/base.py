@@ -29,6 +29,8 @@ class Edge:
             self._target_handle = edge.get("targetHandle", "")
             # 'BaseLoader;BaseOutputParser|documents|PromptTemplate-zmTlD'
             # target_param is documents
+            self.source_handle = None
+            self.target_handle = None
             self.target_param = self._target_handle.split("|")[1]
         # Validate in __init__ to fail fast
         self.validate_edge(source, target)
@@ -208,4 +210,6 @@ class ContractEdge(Edge):
         return self.result
 
     def __repr__(self) -> str:
+        if self.source_handle and self.target_handle:
+            return f"{self.source_id} -[{self.source_handle.name}->{self.target_handle.fieldName}]-> {self.target_id}"
         return f"{self.source_id} -[{self.target_param}]-> {self.target_id}"
