@@ -1,3 +1,4 @@
+import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import { ColDef, ValueGetterParams } from "ag-grid-community";
 import { useMemo } from "react";
 import TableNodeCellRender from "../../../components/tableComponent/components/tableNodeCellRender";
@@ -12,8 +13,8 @@ const useColumnDefs = (
     code: string,
     type?: string,
   ) => void,
+  handleOnNewValue: handleOnNewValueType,
   nodeId: string,
-  changeAdvanced: (n: string) => void,
   open: boolean,
 ) => {
   const columnDefs: ColDef[] = useMemo(
@@ -54,7 +55,8 @@ const useColumnDefs = (
             value: params.data.value,
             nodeId: nodeId,
             nodeClass: nodeClass,
-            handleNodeClass: handleNodeClass,
+            handleNodeClass,
+            handleOnNewValue,
           };
         },
         minWidth: 340,
@@ -72,7 +74,7 @@ const useColumnDefs = (
             name: params.data.name,
             enabled: !params.data.advanced,
             setEnabled: () => {
-              changeAdvanced(params.data.key);
+              handleOnNewValue({ advanced: !params.data.advanced });
             },
           };
         },
