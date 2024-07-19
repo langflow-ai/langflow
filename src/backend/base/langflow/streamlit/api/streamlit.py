@@ -1,8 +1,8 @@
-from typing import Optional, List
+from typing import Optional
 from pydantic import BaseModel, Field
 from fastapi import APIRouter, Response
 from asyncio import get_running_loop, Future, wait_for
-from json import dumps
+from json import dumps, loads
 from aiohttp import ClientSession
 from langflow.streamlit.application import StreamlitApplication
 import os
@@ -29,15 +29,23 @@ class RunFlowModel(BaseModel):
     tweaks: dict = {}
 
 path = os.getenv("LANGFLOW_STREAMLIT_FOLDER_PATH", "./")
-base_chat = {
+base_chat_data = {
     "messages": [],
 }
+
 chat = {}
 
 pending_message = None
 
-import sys
-import subprocess
+
+def load_previous_chat():
+    global base_chat_data
+    if os.path.isfile(f"{path}base_chat_data.json"):
+        with open(f"{path}base_chat_data.json", "r") as f:
+            base_chat_data = loads(f.read())
+
+
+load_previous_chat()
 
 
 async def arun_flow(flow_id: str, api_key: str):
@@ -46,7 +54,8 @@ async def arun_flow(flow_id: str, api_key: str):
             "x-api-key": api_key
         }
         async with session.post(f"http://backend:7860/api/v1/run/{flow_id}", headers=headers) as r:
-            json_body = await r.json()
+            await r.json()
+
 
 @router.post("/run/{flow_id}")
 async def run_flow(flow_id: str, api_key: str):
@@ -73,6 +82,7 @@ async def get_chat_messages(session_id: str, limit: int = 0):
 
 @router.get("/listen/message")
 async def listen_message(timeout: int = 60*2):
+    print("streamlit api / listen message")
     global pending_message
     if pending_message is None or pending_message.done():
         loop = get_running_loop()
@@ -80,6 +90,7 @@ async def listen_message(timeout: int = 60*2):
         result = await wait_for(pending_message, timeout)
         return Response(dumps(result), headers={"Content-Type": "application/json"})
     return Response(None, status_code=204)
+
 
 def run_flow(api_key: str, flow_id: str, tweaks: dict = []):
     import requests, time
@@ -113,6 +124,7 @@ async def post_rerun_flow(body: RunFlowModel):
 
 @router.post("/sessions/{session_id}/messages")
 async def register_chat_message(session_id: str, model: ChatMessageModel):
+    print("streamlit api / sent message", model)
     global pending_message
     if session_id in chat:
         with open(f"{path}{session_id}.json", "w") as f:
@@ -127,16 +139,18 @@ async def register_chat_message(session_id: str, model: ChatMessageModel):
         return Response(model.model_dump_json(), headers={"Content-Type": "application/json"})
     return Response(None, status_code=204, headers={"Content-Type": "application/json"})
 
+
 @router.post("/sessions/{session_id}")
 async def create_chat_session(session_id: str):
     if session_id not in chat:
         filename = f"{path}{session_id}.json"
         with open(filename, "w") as f:
-            f.write(dumps(base_chat["messages"]))
-        chat[session_id] = {"messages": base_chat["messages"].copy(), "filename": filename}
+            f.write(dumps(base_chat_data["messages"]))
+        chat[session_id] = {"messages": base_chat_data["messages"].copy(), "filename": filename}
 
         return Response(dumps(chat[session_id]["messages"]), headers={"Content-Type": "application/json"})
     return Response(None, status_code=204, headers={"Content-Type": "application/json"})
+
 
 @router.get("/sessions/last")
 async def get_last_session():
@@ -145,17 +159,14 @@ async def get_last_session():
         return Response(dumps(sessions[-1]), status_code=200)
     return Response(None, status_code=204)
 
+
 @router.get("/sessions")
 async def get_sessions():
     return Response(dumps(list(chat.keys())), status_code=200)
 
+
 @router.post("/chats")
 def create_chat(model: ChatModel):
-    base_chat["messages"] = [{
-        "role": "ai",
-        "content": model.welcome_msg,
-        "type": "text",
-    }]
     ai_avatar = f'"{model.ai_avatar}"' if model.ai_avatar else "None"
     user_avatar = f'"{model.user_avatar}"' if model.user_avatar else "None"
     streamlit_code = f"""import streamlit as st
@@ -228,7 +239,16 @@ sleep(2);st.rerun();
         if changed:
             with open(f"{path}streamlit.py", "w") as f:
                 f.write(streamlit_code)
-        StreamlitApplication.restart()
-        return 200
+            with open(f"{path}base_chat_data.json", "w") as f:
+                base_chat_data["type"] = "chat"
+                base_chat_data["messages"] = [{
+                    "role": "ai",
+                    "content": model.welcome_msg,
+                    "type": "text",
+                }]
+                f.write(dumps(base_chat_data))
+            StreamlitApplication.restart()
+
+        return "Message was sent successfully!"
     except TimeoutError as err:
         return err
