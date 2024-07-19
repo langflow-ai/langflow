@@ -1,3 +1,4 @@
+import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import { ReactElement, ReactNode, SetStateAction } from "react";
 import { ReactFlowJsonObject } from "reactflow";
 import { InputOutput } from "../../constants/enums";
@@ -103,7 +104,6 @@ export type KeyPairListComponentType = {
   onChange: (value: Object[]) => void;
   disabled: boolean;
   editNode?: boolean;
-  duplicateKey?: boolean;
   editNodeModal?: boolean;
   isList?: boolean;
 };
@@ -182,14 +182,9 @@ export type CodeAreaComponentType = {
 export type FileComponentType = {
   IOInputProps?;
   disabled: boolean;
-  onChange: (
-    value: string[] | string,
-    dbValue?: boolean,
-    skipSnapshot?: boolean,
-  ) => void;
+  handleOnNewValue: handleOnNewValueType;
   value: string;
   fileTypes: Array<string>;
-  onFileChange: (value: string) => void;
   editNode?: boolean;
 };
 
