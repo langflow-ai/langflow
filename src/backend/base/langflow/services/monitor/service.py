@@ -21,7 +21,7 @@ class MonitorService(Service):
         from langflow.services.monitor.schema import DuckDbMessageModel, TransactionModel, VertexBuildModel
 
         self.settings_service = settings_service
-        self.base_cache_dir = Path(user_cache_dir("langflow"))
+        self.base_cache_dir = Path(user_cache_dir("langflow"), ensure_exists=True)
         self.db_path = self.base_cache_dir / "monitor.duckdb"
         self.table_map: dict[str, type[TransactionModel | DuckDbMessageModel | VertexBuildModel]] = {
             "transactions": TransactionModel,
