@@ -14,13 +14,14 @@ import { useFolderStore } from "../stores/foldersStore";
 import { useGlobalVariablesStore } from "../stores/globalVariablesStore/globalVariables";
 import { useStoreStore } from "../stores/storeStore";
 import { Users } from "../types/api";
+import { LANGFLOW_ACCESS_TOKEN } from "@/constants/constants";
 
 const cookies = new Cookies();
 
 const useAuthStore = create<AuthStoreType>((set, get) => ({
   isAdmin: false,
-  isAuthenticated: !!cookies.get("access_token_lf"),
-  accessToken: cookies.get("access_token_lf") ?? null,
+  isAuthenticated: !!!!cookies.get(LANGFLOW_ACCESS_TOKEN),
+  accessToken: cookies.get(LANGFLOW_ACCESS_TOKEN) ?? null,
   userData: null,
   autoLogin: false,
   apiKey: cookies.get("apikey_tkn_lflw"),
