@@ -125,11 +125,11 @@ test("InputComponent", async ({ page }) => {
     expect(false).toBeTruthy();
   }
 
-  await page.getByTestId("popover-anchor-input-collection_name-edit").click();
   await page
     .getByTestId("popover-anchor-input-collection_name-edit")
     .fill("NEW_collection_name_test_123123123!@#$&*(&%$@ÇÇÇÀõe");
 
+  await page.waitForTimeout(1000);
   await page.getByText("Close").last().click();
 
   const plusButtonLocator = page.getByTestId("input-collection_name");
