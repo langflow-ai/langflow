@@ -428,7 +428,11 @@ class Vertex:
         if self.base_type is None:
             raise ValueError(f"Base type for vertex {self.display_name} not found")
 
-        custom_component, custom_params = await loading.instantiate_class(user_id=user_id, vertex=self)
+        if not self._custom_component:
+            custom_component, custom_params = await loading.instantiate_class(user_id=user_id, vertex=self)
+        else:
+            custom_component = self._custom_component
+            custom_params = loading.get_params(self.params)
 
         await self._build_results(custom_component, custom_params, fallback_to_env_vars)
 
