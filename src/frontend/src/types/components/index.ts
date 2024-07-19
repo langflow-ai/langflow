@@ -147,7 +147,7 @@ export type outputComponentType = {
 export type PromptAreaComponentType = {
   field_name?: string;
   nodeClass?: APIClassType;
-  setNodeClass?: (value: APIClassType, code?: string) => void;
+  setNodeClass?: (value: APIClassType) => void;
   disabled: boolean;
   onChange: (
     value: string[] | string,
@@ -171,7 +171,7 @@ export type CodeAreaComponentType = {
   value: string;
   editNode?: boolean;
   nodeClass?: APIClassType;
-  setNodeClass?: (value: APIClassType, code: string, type: string) => void;
+  setNodeClass?: (value: APIClassType, type: string) => void;
   dynamic?: boolean;
   id?: string;
   readonly?: boolean;
@@ -610,11 +610,7 @@ export type codeAreaModalPropsType = {
   setOpenModal?: (bool: boolean) => void;
   value: string;
   nodeClass: APIClassType | undefined;
-  setNodeClass: (
-    Class: APIClassType,
-    code: string,
-    type: string,
-  ) => void | undefined;
+  setNodeClass: (Class: APIClassType, type: string) => void | undefined;
   children: ReactNode;
   dynamic?: boolean;
   readonly?: boolean;
@@ -643,7 +639,7 @@ export type genericModalPropsType = {
   type: number;
   disabled?: boolean;
   nodeClass?: APIClassType;
-  setNodeClass?: (Class: APIClassType, code?: string) => void;
+  setNodeClass?: (Class: APIClassType, type?: string) => void;
   children: ReactNode;
   id?: string;
   readonly?: boolean;
