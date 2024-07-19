@@ -25,6 +25,7 @@ from langflow.services.chat.service import ChatService
 from langflow.services.deps import get_chat_service, get_tracing_service
 
 if TYPE_CHECKING:
+    from langflow.custom.custom_component.component import Component
     from langflow.graph.schema import ResultData
     from langflow.services.tracing.service import TracingService
 
@@ -95,6 +96,50 @@ class Graph:
         self._vertices = self._graph_data["nodes"]
         self._edges = self._graph_data["edges"]
         self.initialize()
+
+    def add_component(self, _id: str, component: "Component"):
+        frontend_node = component.to_frontend_node()
+        frontend_node["data"]["id"] = _id
+        frontend_node["id"] = _id
+        self._vertices.append(frontend_node)
+        vertex = self._create_vertex(frontend_node)
+        vertex.add_component_instance(component)
+        self.vertices.append(vertex)
+        self.vertex_map[_id] = vertex
+
+    def add_component_edge(self, source_id: str, output_input_tuple: Tuple[str, str], target_id: str):
+        source_vertex = self.get_vertex(source_id)
+        if not isinstance(source_vertex, ComponentVertex):
+            raise ValueError(f"Source vertex {source_id} is not a component vertex.")
+        target_vertex = self.get_vertex(target_id)
+        if not isinstance(target_vertex, ComponentVertex):
+            raise ValueError(f"Target vertex {target_id} is not a component vertex.")
+        output_name, input_name = output_input_tuple
+        edge_data = {
+            "source": source_id,
+            "target": target_id,
+            "data": {
+                "sourceHandle": {
+                    "dataType": source_vertex.base_name,
+                    "id": source_vertex.id,
+                    "name": output_name,
+                    "output_types": source_vertex.get_output(output_name).types,
+                },
+                "targetHandle": {
+                    "fieldName": input_name,
+                    "id": target_vertex.id,
+                    "inputTypes": target_vertex.get_input(input_name).input_types,
+                    "type": target_vertex.get_input(input_name).field_type,
+                },
+            },
+        }
+        self.add_edge(edge_data)
+        edge = self.build_edge(edge_data)
+        self.edges.append(edge)
+        self.predecessor_map[target_id].append(source_id)
+        self.successor_map[source_id].append(target_id)
+        self.in_degree_map[target_id] += 1
+        self.parent_child_map[source_id].append(target_id)
 
     # TODO: Create a TypedDict to represente the node
     def add_node(self, node: dict):
