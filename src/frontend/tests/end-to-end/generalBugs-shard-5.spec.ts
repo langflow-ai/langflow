@@ -218,10 +218,11 @@ test("should be able to see output preview from grouped components", async ({
 
   await page.getByTestId("button_run_text output").last().click();
 
-  await page.waitForSelector("text=Text Output built successfully", {
-    timeout: 30000,
-  });
+  await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
+  await page.getByText("built successfully").last().click({
+    timeout: 15000,
+  });
   await page.waitForTimeout(3000);
 
   expect(

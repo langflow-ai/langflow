@@ -47,7 +47,7 @@ test("Basic Prompting (Hello, World)", async ({ page }) => {
     .fill(process.env.OPENAI_API_KEY ?? "");
 
   await page.getByTestId("dropdown-model_name").click();
-  await page.getByTestId("gpt-4o-0-option").click();
+  await page.getByTestId("gpt-4o-1-option").click();
 
   await page.waitForTimeout(2000);
 

@@ -91,7 +91,7 @@ test("LLMChain - Filter", async ({ page }) => {
   await expect(page.getByTestId("dataAPI Request")).toBeVisible();
   await expect(page.getByTestId("helpersChat Memory")).toBeVisible();
   await expect(page.getByTestId("vectorstoresAstra DB")).toBeVisible();
-  await expect(page.getByTestId("langchain_utilitiesSearchApi")).toBeVisible();
+  await expect(page.getByTestId("toolsSearch API")).toBeVisible();
   await expect(page.getByTestId("prototypesSub Flow")).toBeVisible();
   await expect(
     page.getByTestId("retrieversSelf Query Retriever"),
@@ -99,16 +99,14 @@ test("LLMChain - Filter", async ({ page }) => {
   await expect(
     page.getByTestId("textsplittersCharacterTextSplitter"),
   ).toBeVisible();
-  await expect(page.getByTestId("toolsSearchApi")).toBeVisible();
+  await expect(page.getByTestId("toolsSearch API")).toBeVisible();
 
   await page.getByPlaceholder("Search").click();
 
   await expect(page.getByTestId("dataAPI Request")).not.toBeVisible();
   await expect(page.getByTestId("helpersChat Memory")).not.toBeVisible();
   await expect(page.getByTestId("vectorstoresAstra DB")).not.toBeVisible();
-  await expect(
-    page.getByTestId("langchain_utilitiesSearchApi"),
-  ).not.toBeVisible();
+  await expect(page.getByTestId("toolsSearch API")).not.toBeVisible();
   await expect(page.getByTestId("prototypesSub Flow")).not.toBeVisible();
   await expect(
     page.getByTestId("retrieversSelf Query Retriever"),
@@ -116,5 +114,5 @@ test("LLMChain - Filter", async ({ page }) => {
   await expect(
     page.getByTestId("textsplittersCharacterTextSplitter"),
   ).not.toBeVisible();
-  await expect(page.getByTestId("toolsSearchApi")).not.toBeVisible();
+  await expect(page.getByTestId("toolsSearch API")).not.toBeVisible();
 });
