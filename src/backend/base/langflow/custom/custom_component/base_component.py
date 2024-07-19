@@ -64,6 +64,25 @@ class BaseComponent:
 
         return validate.create_function(self.code, self._function_entrypoint_name)
 
+    @staticmethod
+    def get_template_config(component):
+        """
+        Gets the template configuration for the custom component itself.
+        """
+        template_config = {}
+
+        for attribute, func in ATTR_FUNC_MAPPING.items():
+            if hasattr(component, attribute):
+                value = getattr(component, attribute)
+                if value is not None:
+                    template_config[attribute] = func(value=value)
+
+        for key in template_config.copy():
+            if key not in ATTR_FUNC_MAPPING.keys():
+                template_config.pop(key, None)
+
+        return template_config
+
     def build_template_config(self) -> dict:
         """
         Builds the template configuration for the custom component.
@@ -76,18 +95,7 @@ class BaseComponent:
 
         cc_class = eval_custom_component_code(self.code)
         component_instance = cc_class()
-        template_config = {}
-
-        for attribute, func in ATTR_FUNC_MAPPING.items():
-            if hasattr(component_instance, attribute):
-                value = getattr(component_instance, attribute)
-                if value is not None:
-                    template_config[attribute] = func(value=value)
-
-        for key in template_config.copy():
-            if key not in ATTR_FUNC_MAPPING.keys():
-                template_config.pop(key, None)
-
+        template_config = self.get_template_config(component_instance)
         return template_config
 
     def build(self, *args: Any, **kwargs: Any) -> Any:
