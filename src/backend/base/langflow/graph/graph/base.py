@@ -11,7 +11,7 @@ from loguru import logger
 from langflow.exceptions.component import ComponentBuildException
 from langflow.graph.edge.base import ContractEdge
 from langflow.graph.edge.schema import EdgeData
-from langflow.graph.graph.constants import lazy_load_vertex_dict
+from langflow.graph.graph.constants import Finish, lazy_load_vertex_dict
 from langflow.graph.graph.runnable_vertices_manager import RunnableVerticesManager
 from langflow.graph.graph.schema import VertexBuildResult
 from langflow.graph.graph.state_manager import GraphStateManager
@@ -26,6 +26,7 @@ from langflow.services.cache.utils import CacheMiss
 from langflow.services.deps import get_chat_service, get_tracing_service
 
 if TYPE_CHECKING:
+    from langflow.api.v1.schemas import InputValueRequest
     from langflow.custom.custom_component.component import Component
     from langflow.graph.schema import ResultData
     from langflow.services.tracing.service import TracingService
@@ -78,6 +79,7 @@ class Graph:
         self.successor_map: Dict[str, List[str]] = defaultdict(list)
         self.in_degree_map: Dict[str, int] = defaultdict(int)
         self.parent_child_map: Dict[str, List[str]] = defaultdict(list)
+        self._run_queue: deque[str] = deque()
         try:
             self.tracing_service: "TracingService" | None = get_tracing_service()
         except Exception as exc:
@@ -902,6 +904,37 @@ class Graph:
                 if not any(successor in vertices for successor in successors):
                     return vertex
         raise ValueError(f"Vertex {vertex_id} is not a top level vertex or no root vertex found")
+
+    async def step(
+        self,
+        inputs: Optional["InputValueRequest"] = None,
+        files: Optional[list[str]] = None,
+        user_id: Optional[str] = None,
+    ):
+        vertex_id = self._run_queue.popleft()
+        if not vertex_id:
+            asyncio.create_task(self.end_all_traces)
+            return Finish()
+        lock = self._async_cache_locks[self._run_id]
+        chat_service = get_chat_service()
+        vertex_build_result = await self.build_vertex(
+            vertex_id=vertex_id,
+            user_id=user_id,
+            inputs_dict=inputs.model_dump() if inputs else {},
+            files=files,
+            get_cache=chat_service.get_cache,
+            set_cache=chat_service.set_cache,
+        )
+        next_runnable_vertices = await self.get_next_runnable_vertices(
+            lock, vertex=vertex_build_result.vertex, cache=False
+        )
+        if self.stop_vertex and self.stop_vertex in next_runnable_vertices:
+            next_runnable_vertices = [self.stop_vertex]
+        self._run_queue.extend(next_runnable_vertices)
+        self.reset_inactivated_vertices()
+        self.reset_activated_vertices()
+
+        await chat_service.set_cache(str(self.flow_id or self._run_id), self)
 
     async def build_vertex(
         self,
