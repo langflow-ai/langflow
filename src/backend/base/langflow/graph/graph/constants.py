@@ -2,6 +2,11 @@ from langflow.graph.schema import CHAT_COMPONENTS
 from langflow.utils.lazy_load import LazyLoadDictBase
 
 
+class Finish:
+    def __bool__(self):
+        return True
+
+
 def _import_vertex_types():
     from langflow.graph.vertex import types
 
