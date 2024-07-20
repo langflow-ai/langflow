@@ -32,6 +32,7 @@ path = os.getenv("LANGFLOW_STREAMLIT_FOLDER_PATH", "./")
 base_chat_data = {
     "messages": [],
 }
+last_message = None
 
 chat = {}
 
@@ -122,11 +123,24 @@ async def post_rerun_flow(body: RunFlowModel):
     return Response(None, status_code=204)
 
 
+@router.post("/reset/messages")
+async def reset_messages():
+    import re
+    import os
+    for file_name in os.listdir(path):
+        if file_name.endswith('.json') and re.match(r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.json$', file_name):
+            os.remove(os.path.join(path, file_name))
+
+
+
 @router.post("/sessions/{session_id}/messages")
 async def register_chat_message(session_id: str, model: ChatMessageModel):
     print("streamlit api / sent message", model)
-    global pending_message
+    global pending_message, last_message
     if session_id in chat:
+        if last_message:
+            if last_message == model.content:
+                return Response(model.model_dump_json(), headers={"Content-Type": "application/json"})
         with open(f"{path}{session_id}.json", "w") as f:
             chat[session_id]["messages"].append(model.model_dump())
             f.write(dumps(chat[session_id]["messages"]))
@@ -136,6 +150,7 @@ async def register_chat_message(session_id: str, model: ChatMessageModel):
                 **model.model_dump(),
                 "history": chat[session_id]["messages"][:-1]
             })
+        last_message = model.content
         return Response(model.model_dump_json(), headers={"Content-Type": "application/json"})
     return Response(None, status_code=204, headers={"Content-Type": "application/json"})
 
@@ -174,16 +189,23 @@ import requests as rq
 from time import sleep
 from json import loads
 import uuid
+import os
 
 
 messages = []
 
-if 'session_id' not in st.session_state:
+def create_session():
     st.session_state.session_id = str(uuid.uuid4())
     st.session_state.write_speed = {model.write_speed}
     st.session_state.messages_filename = "{path}" + st.session_state.session_id + ".json"
     st.session_state.messages = []
     resp = rq.post(f"http://localhost:7881/api/v1/sessions/" + st.session_state.session_id)
+
+if 'session_id' not in st.session_state:
+    create_session()
+
+if not os.path.isfile("{path}" + st.session_state.session_id + ".json"):
+    create_session()
 
 def reload_messages():
     global messages
