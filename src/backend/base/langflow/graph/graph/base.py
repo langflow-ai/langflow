@@ -5,7 +5,7 @@ from collections import defaultdict, deque
 from datetime import datetime, timezone
 from functools import partial
 from itertools import chain
-from typing import TYPE_CHECKING, Any, Dict, Generator, List, Optional, Tuple, Type, Union
+from typing import TYPE_CHECKING, Any, Awaitable, Dict, Generator, List, Optional, Tuple, Type, Union
 
 import nest_asyncio
 from loguru import logger
@@ -19,6 +19,7 @@ from langflow.graph.graph.schema import GraphData, GraphDump, VertexBuildResult
 from langflow.graph.graph.state_manager import GraphStateManager
 from langflow.graph.graph.utils import find_start_component_id, process_flow, sort_up_to_vertex
 from langflow.graph.schema import InterfaceComponentTypes, RunOutputs
+from langflow.graph.utils import log_transaction
 from langflow.graph.vertex.base import Vertex, VertexStates
 from langflow.graph.vertex.schema import NodeData
 from langflow.graph.vertex.types import ComponentVertex, InterfaceVertex, StateVertex
