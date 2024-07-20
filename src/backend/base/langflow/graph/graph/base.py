@@ -1073,6 +1073,7 @@ class Graph:
         for vertex_id in first_layer:
             self.run_manager.add_to_vertices_being_run(vertex_id)
         self._run_queue.extend(first_layer)
+        self._prepared = True
         return self
 
     async def build_vertex(
