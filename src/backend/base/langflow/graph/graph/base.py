@@ -80,6 +80,7 @@ class Graph:
         self.in_degree_map: Dict[str, int] = defaultdict(int)
         self.parent_child_map: Dict[str, List[str]] = defaultdict(list)
         self._run_queue: deque[str] = deque()
+        self._first_layer: List[str] = []
         try:
             self.tracing_service: "TracingService" | None = get_tracing_service()
         except Exception as exc:
@@ -936,6 +937,22 @@ class Graph:
 
         await chat_service.set_cache(str(self.flow_id or self._run_id), self)
 
+    def prepare(self, stop_component_id: Optional[str] = None, start_component_id: Optional[str] = None):
+        self.validate_stream()
+        if stop_component_id or start_component_id:
+            try:
+                first_layer = self.sort_vertices(stop_component_id, start_component_id)
+            except Exception as exc:
+                logger.error(exc)
+                first_layer = self.sort_vertices()
+        else:
+            first_layer = self.sort_vertices()
+
+        for vertex_id in first_layer:
+            self.run_manager.add_to_vertices_being_run(vertex_id)
+        self._run_queue.extend(first_layer)
+        return self
+
     async def build_vertex(
         self,
         vertex_id: str,
@@ -1504,6 +1521,7 @@ class Graph:
         self.vertices_to_run = {vertex_id for vertex_id in chain.from_iterable(vertices_layers)}
         self.build_run_map()
         # Return just the first layer
+        self._first_layer = first_layer
         return first_layer
 
     def sort_interface_components_first(self, vertices_layers: List[List[str]]) -> List[List[str]]:
