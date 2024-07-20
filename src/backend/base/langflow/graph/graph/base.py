@@ -1035,7 +1035,6 @@ class Graph:
             files=files,
             get_cache=chat_service.get_cache,
             set_cache=chat_service.set_cache,
-
         )
 
         next_runnable_vertices = await self.get_next_runnable_vertices(
