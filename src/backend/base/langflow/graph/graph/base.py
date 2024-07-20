@@ -49,6 +49,7 @@ class Graph:
             edges (List[Dict[str, str]]): A list of dictionaries representing the edges of the graph.
             flow_id (Optional[str], optional): The ID of the flow. Defaults to None.
         """
+        self._prepared = False
         self._runs = 0
         self._updates = 0
         self.flow_id = flow_id
@@ -951,6 +952,7 @@ class Graph:
         for vertex_id in first_layer:
             self.run_manager.add_to_vertices_being_run(vertex_id)
         self._run_queue.extend(first_layer)
+        self._prepared = True
         return self
 
     async def build_vertex(
