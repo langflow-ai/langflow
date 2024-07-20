@@ -82,6 +82,7 @@ class Graph:
         self.parent_child_map: Dict[str, List[str]] = defaultdict(list)
         self._run_queue: deque[str] = deque()
         self._first_layer: List[str] = []
+        self._lock = asyncio.Lock()
         try:
             self.tracing_service: "TracingService" | None = get_tracing_service()
         except Exception as exc:
@@ -926,9 +927,11 @@ class Graph:
             files=files,
             get_cache=chat_service.get_cache,
             set_cache=chat_service.set_cache,
+
         )
+
         next_runnable_vertices = await self.get_next_runnable_vertices(
-            lock, vertex=vertex_build_result.vertex, cache=False
+            self._lock, vertex=vertex_build_result.vertex, cache=False
         )
         if self.stop_vertex and self.stop_vertex in next_runnable_vertices:
             next_runnable_vertices = [self.stop_vertex]
