@@ -2,7 +2,7 @@ from typing import List
 
 from langchain_community.document_loaders.git import GitLoader
 from langflow.custom import Component
-from langflow.io import StrInput, DropdownInput, Output
+from langflow.io import StrInput, Output
 from langflow.schema import Data
 
 
