@@ -4,7 +4,7 @@ from collections import defaultdict, deque
 from datetime import datetime, timezone
 from functools import partial
 from itertools import chain
-from typing import TYPE_CHECKING, Any, Dict, Generator, List, Optional, Tuple, Type, Union
+from typing import TYPE_CHECKING, Any, Awaitable, Dict, Generator, List, Optional, Tuple, Type, Union
 
 from loguru import logger
 
@@ -13,15 +13,16 @@ from langflow.graph.edge.base import ContractEdge
 from langflow.graph.edge.schema import EdgeData
 from langflow.graph.graph.constants import lazy_load_vertex_dict
 from langflow.graph.graph.runnable_vertices_manager import RunnableVerticesManager
+from langflow.graph.graph.schema import VertexBuildResult
 from langflow.graph.graph.state_manager import GraphStateManager
 from langflow.graph.graph.utils import find_start_component_id, process_flow, sort_up_to_vertex
 from langflow.graph.schema import InterfaceComponentTypes, RunOutputs
+from langflow.graph.utils import log_transaction
 from langflow.graph.vertex.base import Vertex, VertexStates
 from langflow.graph.vertex.types import ComponentVertex, InterfaceVertex, StateVertex
 from langflow.schema import Data
 from langflow.schema.schema import INPUT_FIELD_NAME, InputType
 from langflow.services.cache.utils import CacheMiss
-from langflow.services.chat.service import ChatService
 from langflow.services.deps import get_chat_service, get_tracing_service
 
 if TYPE_CHECKING:
@@ -904,12 +905,13 @@ class Graph:
 
     async def build_vertex(
         self,
-        chat_service: ChatService,
         vertex_id: str,
         inputs_dict: Optional[Dict[str, str]] = None,
         files: Optional[list[str]] = None,
         user_id: Optional[str] = None,
         fallback_to_env_vars: bool = False,
+        get_cache: Awaitable[CacheMiss | None] = None,
+        set_cache: Awaitable[None] = None,
     ):
         """
         Builds a vertex in the graph.
@@ -934,12 +936,12 @@ class Graph:
             params = ""
             if vertex.frozen:
                 # Check the cache for the vertex
-                cached_result = await chat_service.get_cache(key=vertex.id)
+                cached_result = await get_cache(key=vertex.id)
                 if isinstance(cached_result, CacheMiss):
                     await vertex.build(
                         user_id=user_id, inputs=inputs_dict, fallback_to_env_vars=fallback_to_env_vars, files=files
                     )
-                    await chat_service.set_cache(key=vertex.id, data=vertex)
+                    await set_cache(key=vertex.id, data=vertex)
                 else:
                     cached_vertex = cached_result["result"]
                     # Now set update the vertex with the cached vertex
@@ -956,7 +958,7 @@ class Graph:
                 await vertex.build(
                     user_id=user_id, inputs=inputs_dict, fallback_to_env_vars=fallback_to_env_vars, files=files
                 )
-                await chat_service.set_cache(key=vertex.id, data=vertex)
+                await set_cache(key=vertex.id, data=vertex)
 
             if vertex.result is not None:
                 params = f"{vertex._built_object_repr()}{params}"
@@ -965,7 +967,10 @@ class Graph:
                 artifacts = vertex.artifacts
             else:
                 raise ValueError(f"No result found for vertex {vertex_id}")
-            return result_dict, params, valid, artifacts, vertex
+            flow_id = self.flow_id
+            log_transaction(flow_id, vertex, status="success")
+            vertex_build_result = VertexBuildResult(result_dict, params, valid, artifacts, vertex)
+            return vertex_build_result
         except Exception as exc:
             if not isinstance(exc, ComponentBuildException):
                 logger.exception(f"Error building Component: \n\n{exc}")
@@ -1019,11 +1024,12 @@ class Graph:
                 vertex = self.get_vertex(vertex_id)
                 task = asyncio.create_task(
                     self.build_vertex(
-                        chat_service=chat_service,
                         vertex_id=vertex_id,
                         user_id=self.user_id,
                         inputs_dict={},
                         fallback_to_env_vars=fallback_to_env_vars,
+                        get_cache=chat_service.get_cache,
+                        set_cache=chat_service.set_cache,
                     ),
                     name=f"{vertex.display_name} Run {vertex_task_run_count.get(vertex_id, 0)}",
                 )
