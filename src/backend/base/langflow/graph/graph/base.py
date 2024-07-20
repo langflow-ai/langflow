@@ -914,11 +914,12 @@ class Graph:
         files: Optional[list[str]] = None,
         user_id: Optional[str] = None,
     ):
-        vertex_id = self._run_queue.popleft()
-        if not vertex_id:
+        if not self._prepared:
+            raise ValueError("Graph not prepared. Call prepare() first.")
+        if not self._run_queue:
             asyncio.create_task(self.end_all_traces)
             return Finish()
-        lock = self._async_cache_locks[self._run_id]
+        vertex_id = self._run_queue.popleft()
         chat_service = get_chat_service()
         vertex_build_result = await self.build_vertex(
             vertex_id=vertex_id,
