@@ -869,8 +869,7 @@ class Graph:
         self.run_manager.add_to_vertices_being_run(vertex_id)
         try:
             params = ""
-            parent_vertex = self.get_vertex(vertex.parent_node_id) if vertex.parent_node_id else None
-            if vertex.frozen or (parent_vertex and parent_vertex.frozen):
+            if vertex.frozen:
                 # Check the cache for the vertex
                 cached_result = await chat_service.get_cache(key=vertex.id)
                 if isinstance(cached_result, CacheMiss):
