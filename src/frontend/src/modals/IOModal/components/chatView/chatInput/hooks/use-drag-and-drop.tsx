@@ -1,17 +1,4 @@
-import ShortUniqueId from "short-unique-id";
-import {
-  ALLOWED_IMAGE_INPUT_EXTENSIONS,
-  FS_ERROR_TEXT,
-  SN_ERROR_TEXT,
-} from "../../../../../../constants/constants";
-// import useFileUpload from "./use-file-upload";
-
-const useDragAndDrop = (
-  setIsDragging: (value: boolean) => void,
-  setFiles: (value: any) => void,
-  currentFlowId: string,
-  setErrorData: (value: any) => void,
-) => {
+const useDragAndDrop = (setIsDragging: (value: boolean) => void) => {
   const dragOver = (e) => {
     e.preventDefault();
     if (e.dataTransfer.types.some((type) => type === "Files")) {

@@ -1,31 +1,37 @@
 import { cloneDeep } from "lodash";
+import { NodeDataType } from "../../types/flow";
 
 const useHandleNodeClass = (
+  data: NodeDataType,
+  name: string,
   takeSnapshot: () => void,
   setNode: (id: string, callback: (oldNode: any) => any) => void,
-  nodeId: string,
+  updateNodeInternals: (id: string) => void,
 ) => {
-  const handleNodeClass = (newNodeClass, name, code, type?: string) => {
-    if (code) {
+  const handleNodeClass = (newNodeClass, code, type?: string) => {
+    if (!data.node) return;
+    if (data.node!.template[name].value !== code) {
       takeSnapshot();
     }
 
-    setNode(nodeId, (oldNode) => {
+    setNode(data.id, (oldNode) => {
       let newNode = cloneDeep(oldNode);
 
       newNode.data = {
         ...newNode.data,
-        node: cloneDeep(newNodeClass),
+        node: newNodeClass,
+        description: newNodeClass.description ?? data.node!.description,
+        display_name: newNodeClass.display_name ?? data.node!.display_name,
       };
       if (type) {
         newNode.data.type = type;
       }
-      if (code) {
-        newNode.data.node.template[name].value = code;
-      }
+      newNode.data.node.template[name].value = code;
 
       return newNode;
     });
+
+    updateNodeInternals(data.id);
   };
 
   return { handleNodeClass };

@@ -4,6 +4,7 @@ import "ace-builds/src-noconflict/theme-github";
 import "ace-builds/src-noconflict/theme-twilight";
 import { ReactNode, forwardRef, useContext, useEffect, useState } from "react";
 // import "ace-builds/webpack-resolver";
+import useAuthStore from "@/stores/authStore";
 import { cloneDeep } from "lodash";
 import CodeTabsComponent from "../../components/codeTabsComponent";
 import IconComponent from "../../components/genericIconComponent";
@@ -51,7 +52,8 @@ const ApiModal = forwardRef(
     const tweaksList = useTweaksStore((state) => state.tweaksList);
     const isThereTweaks = Object.keys(tweaksCode).length > 0;
     const [activeTweaks, setActiveTweaks] = useState(false);
-    const { autoLogin } = useContext(AuthContext);
+    const autoLogin = useAuthStore((state) => state.autoLogin);
+
     const [open, setOpen] =
       mySetOpen !== undefined && myOpen !== undefined
         ? [myOpen, mySetOpen]
