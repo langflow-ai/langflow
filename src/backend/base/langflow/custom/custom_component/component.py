@@ -156,7 +156,7 @@ class Component(CustomComponent):
         self._validate_inputs(params)
         _attributes = {}
         for key, value in params.items():
-            if key in self.__dict__:
+            if key in self.__dict__ and value != getattr(self, key):
                 raise ValueError(
                     f"{self.__class__.__name__} defines an input parameter named '{key}' "
                     f"that is a reserved word and cannot be used."
