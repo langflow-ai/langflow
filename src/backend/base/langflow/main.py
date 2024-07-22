@@ -118,7 +118,7 @@ def run_streamlit_api():
         port=7881,
         workers=1,
         log_level="error",
-        reload=True,
+        reload=False,
         loop="asyncio",
     )
     loop.create_task(uvicorn.Server(config=config).serve())
@@ -197,11 +197,11 @@ def create_app():
             )
     if os.getenv("LANGFLOW_STREAMLIT_ENABLED", "false").lower() == "true":
         from langflow.streamlit import StreamlitApplication
-        import threading
+        import threading, multiprocessing
         StreamlitApplication.start()
 
-        streamlit_api_thread = threading.Thread(target=run_streamlit_api)
-        streamlit_api_thread.start()
+        streamlit_api_process = multiprocessing.Process(target=run_streamlit_api)
+        streamlit_api_process.start()
 
     FastAPIInstrumentor.instrument_app(app)
     return app
