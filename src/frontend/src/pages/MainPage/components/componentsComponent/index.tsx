@@ -1,19 +1,15 @@
 import { usePostDownloadMultipleFlows } from "@/controllers/API/queries/flows";
 import { useEffect, useMemo, useState } from "react";
 import { FormProvider, useForm, useWatch } from "react-hook-form";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import CardsWrapComponent from "../../../../components/cardsWrapComponent";
-import IconComponent from "../../../../components/genericIconComponent";
 import PaginatorComponent from "../../../../components/paginatorComponent";
 import { SkeletonCardComponent } from "../../../../components/skeletonCardComponent";
-import { Button } from "../../../../components/ui/button";
 import DeleteConfirmationModal from "../../../../modals/deleteConfirmationModal";
 import useAlertStore from "../../../../stores/alertStore";
-import { useDarkStore } from "../../../../stores/darkStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useFolderStore } from "../../../../stores/foldersStore";
 import { FlowType } from "../../../../types/flow";
-import { downloadFlow, removeApiKeys } from "../../../../utils/reactflowUtils";
 import useFileDrop from "../../hooks/use-on-file-drop";
 import { getNameByType } from "../../utils/get-name-by-type";
 import { sortFlows } from "../../utils/sort-flows";
@@ -24,7 +20,6 @@ import useDeleteMultipleFlows from "./hooks/use-delete-multiple";
 import useDescriptionModal from "./hooks/use-description-modal";
 import useFilteredFlows from "./hooks/use-filtered-flows";
 import useDuplicateFlows from "./hooks/use-handle-duplicate";
-import useExportFlows from "./hooks/use-handle-export";
 import useSelectAll from "./hooks/use-handle-select-all";
 import useSelectOptionsChange from "./hooks/use-select-options-change";
 import useSelectedFlows from "./hooks/use-selected-flows";
@@ -141,22 +136,39 @@ export default function ComponentsComponent({
       },
       {
         onSuccess: (data) => {
-          const blob = new Blob([data], { type: "application/zip" });
+          const selectedFlow = allFlows.find(
+            (flow) => flow.id === selectedFlowsComponentsCards[0],
+          );
+
+          const blobType =
+            selectedFlowsComponentsCards.length > 1
+              ? "application/zip"
+              : "application/json";
+
+          const fileNameSuffix =
+            selectedFlowsComponentsCards.length > 1
+              ? "_langflow_flows.zip"
+              : `${selectedFlow!.name}.json`;
+
+          const blob = new Blob([data], { type: blobType });
 
           const link = document.createElement("a");
           link.href = window.URL.createObjectURL(blob);
 
           let current_time = new Date().toISOString().replace(/[:.]/g, "");
+
           current_time = current_time
             .replace(/-/g, "")
             .replace(/T/g, "")
             .replace(/Z/g, "");
-          link.download = `${current_time}_langflow_flows.zip`;
+
+          link.download =
+            selectedFlowsComponentsCards.length > 1
+              ? `${current_time}${fileNameSuffix}`
+              : `${fileNameSuffix}`;
 
           document.body.appendChild(link);
-
           link.click();
-
           document.body.removeChild(link);
 
           setSuccessData({ title: `${cardTypes} exported successfully` });

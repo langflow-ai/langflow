@@ -317,19 +317,6 @@ async def upload_file(
 
     return response_list
 
-
-@router.get("/download/", response_model=FlowListRead, status_code=200)
-async def download_file(
-    *,
-    session: Session = Depends(get_session),
-    settings_service: "SettingsService" = Depends(get_settings_service),
-    current_user: User = Depends(get_current_active_user),
-):
-    """Download all flows as a file."""
-    flows = read_flows(current_user=current_user, session=session, settings_service=settings_service)
-    return FlowListRead(flows=flows)
-
-
 @router.delete("/")
 async def delete_multiple_flows(
     flow_ids: List[UUID], user: User = Depends(get_current_active_user), db: Session = Depends(get_session)
@@ -356,37 +343,45 @@ async def delete_multiple_flows(
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
-@router.post("/download_multiple_flows/", status_code=200)
+@router.post("/download/", status_code=200)
 async def download_multiple_file(
-    flow_ids: List[UUID], user: User = Depends(get_current_active_user), db: Session = Depends(get_session)
+    flow_ids: List[UUID], 
+    user: User = Depends(get_current_active_user), 
+    db: Session = Depends(get_session),
 ):
     """Download all flows as a zip file."""
     flows = db.exec(select(Flow).where(and_(Flow.user_id == user.id, Flow.id.in_(flow_ids)))).all()
 
     if not flows:
         raise HTTPException(status_code=404, detail="No flows found.")
+    
+    flows_without_api_keys = [remove_api_keys(flow.model_dump()) for flow in flows]
 
-    # Create a byte stream to hold the ZIP file
-    zip_stream = io.BytesIO()
+    if len(flows_without_api_keys) > 1:
+        # Create a byte stream to hold the ZIP file
+        zip_stream = io.BytesIO()
 
-    # Create a ZIP file
-    with zipfile.ZipFile(zip_stream, "w") as zip_file:
-        for flow in flows:
-            # Convert the flow object to JSON
-            flow_json = json.dumps(jsonable_encoder(flow))
+        # Create a ZIP file
+        with zipfile.ZipFile(zip_stream, "w") as zip_file:
+            for flow in flows_without_api_keys:
+                # Convert the flow object to JSON
+                flow_json = json.dumps(jsonable_encoder(flow))
 
-            # Write the JSON to the ZIP file
-            zip_file.writestr(f"{flow.name}.json", flow_json)
+                # Write the JSON to the ZIP file
+                zip_file.writestr(f"{flow['name']}.json", flow_json)
 
-    # Seek to the beginning of the byte stream
-    zip_stream.seek(0)
+        # Seek to the beginning of the byte stream
+        zip_stream.seek(0)
 
-    # Generate the filename with the current datetime
-    current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"{current_time}_langflow_flows.zip"
+        # Generate the filename with the current datetime
+        current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"{current_time}_langflow_flows.zip"
 
-    return StreamingResponse(
-        zip_stream,
-        media_type="application/x-zip-compressed",
-        headers={"Content-Disposition": f"attachment; filename={filename}"},
-    )
+        return StreamingResponse(
+            zip_stream,
+            media_type="application/x-zip-compressed",
+            headers={"Content-Disposition": f"attachment; filename={filename}"},
+        )
+    else:
+        return FlowListRead(flows=flows_without_api_keys)
+        

@@ -18,7 +18,7 @@ export const usePostDownloadMultipleFlows: useMutationFunctionType<
     payload: IPostDownloadMultipleFlows,
   ): Promise<any> => {
     const response = await api.post<any>(
-      `${getURL("FLOWS")}/download_multiple_flows/`,
+      `${getURL("FLOWS")}/download/`,
       payload.flow_ids,
       { responseType: "blob" },
     );
