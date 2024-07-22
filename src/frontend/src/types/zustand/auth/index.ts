@@ -18,7 +18,6 @@ export interface AuthStoreType {
   setAuthenticationErrorCount: (authenticationErrorCount: number) => void;
   logout: () => Promise<void>;
   // setUserData: (userData: Users | null) => void;
-  // setAutoLogin: (autoLogin: boolean) => void;
   // setIsAdmin: (isAdmin: boolean) => void;
   // setApiKey: (apiKey: string | null) => void;
 
