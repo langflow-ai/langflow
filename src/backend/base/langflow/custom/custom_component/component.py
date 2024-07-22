@@ -364,6 +364,9 @@ class Component(CustomComponent):
     def _update_template(self, frontend_node: dict):
         return frontend_node
 
+    def _update_template(self, frontend_node: dict):
+        return frontend_node
+
     def to_frontend_node(self):
         #! This part here is clunky but we need it like this for
         #! backwards compatibility. We can change how prompt component
