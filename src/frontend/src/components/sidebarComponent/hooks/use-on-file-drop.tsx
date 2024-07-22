@@ -3,7 +3,10 @@ import {
   WRONG_FILE_ERROR_ALERT,
 } from "../../../constants/alerts_constants";
 import { updateFlowInDatabase } from "../../../controllers/API";
-import { uploadFlowsFromFolders } from "../../../pages/MainPage/services";
+import {
+  uploadFlowToFolder,
+  uploadFlowsFromFolders,
+} from "../../../pages/MainPage/services";
 import useAlertStore from "../../../stores/alertStore";
 import useFlowsManagerStore from "../../../stores/flowsManagerStore";
 import { useFolderStore } from "../../../stores/foldersStore";
@@ -131,7 +134,8 @@ const useFileDrop = (
     formData.append("file", data);
     setFolderDragging(false);
     setFolderIdDragging("");
-    uploadFlowsFromFolders(formData).then(() => {
+
+    uploadFlowToFolder(formData, folderId).then(() => {
       refreshFolders();
       triggerFolderChange(folderId);
     });
