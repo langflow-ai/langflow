@@ -13,7 +13,6 @@ export const URLs = {
   AUTOLOGIN: "auto_login",
   REFRESH: "refresh",
   BUILD: `build`,
-  CUSTOM_COMPONENT: `custom_component`,
 } as const;
 
 export function getURL(key: keyof typeof URLs, params: any = {}) {
