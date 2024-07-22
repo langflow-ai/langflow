@@ -132,9 +132,9 @@ export const Multiselect = forwardRef<
   ) => {
     // if elements in values are strings, create the multiselectValue object
     // otherwise, use the values as is
-    const value = values?.map((v) =>
-      typeof v === "string" ? { label: v, value: v } : v,
-    );
+    const value = Array.isArray(values)
+      ? values?.map((v) => (typeof v === "string" ? { label: v, value: v } : v))
+      : [];
 
     const [selectedValues, setSelectedValues] = useState<MultiselectValue[]>(
       value || [],

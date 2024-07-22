@@ -110,3 +110,22 @@ export async function moveFlowToFolder(
     throw error;
   }
 }
+
+export async function uploadFlowToFolder(
+  flows: FormData,
+  folderId: string,
+): Promise<FlowType[]> {
+  try {
+    const url = `${BASE_URL_API}flows/upload/?folder_id=${encodeURIComponent(folderId)}`;
+
+    const response = await api.post(url, flows);
+
+    if (response?.status !== 201) {
+      throw new Error(`HTTP error! status: ${response?.status}`);
+    }
+    return response.data;
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+}
