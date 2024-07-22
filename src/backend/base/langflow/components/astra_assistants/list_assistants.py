@@ -3,6 +3,7 @@ from langflow.custom import Component
 from openai import OpenAI
 from langflow.schema.message import Message
 
+
 class AssistantsListAssistants(Component):
     client = patch(OpenAI())
     display_name = "List Assistants"

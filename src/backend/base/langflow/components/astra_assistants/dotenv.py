@@ -1,7 +1,7 @@
 import io
 from dotenv import load_dotenv
 from langflow.custom import Component
-from langflow.inputs import SecretStrInput, MultilineInput
+from langflow.inputs import MultilineInput
 from langflow.schema.message import Message
 from langflow.template import Output
 
@@ -26,11 +26,7 @@ class Dotenv(Component):
         fake_file = io.StringIO(self.dotenv_file_content)
         result = load_dotenv(stream=fake_file, override=True)
 
-        message = Message(
-            text="No variables found in .env"
-        )
+        message = Message(text="No variables found in .env")
         if result:
-            message = Message(
-                text="Loaded .env"
-            )
+            message = Message(text="Loaded .env")
         return message
