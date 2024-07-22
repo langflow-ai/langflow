@@ -1,6 +1,5 @@
 import io
 import json
-from pathlib import Path
 import re
 from datetime import datetime, timezone
 from typing import List
@@ -8,7 +7,6 @@ from uuid import UUID
 import zipfile
 
 from fastapi.responses import StreamingResponse
-from langflow.services.cache.utils import CACHE_DIR
 import orjson
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.encoders import jsonable_encoder
@@ -363,11 +361,7 @@ async def download_multiple_file(
     flow_ids: List[UUID], user: User = Depends(get_current_active_user), db: Session = Depends(get_session)
 ):
     """Download all flows as a zip file."""
-    flows = db.exec(
-        select(Flow).where(
-            and_(Flow.user_id == user.id, Flow.id.in_(flow_ids))
-        )
-    ).all()
+    flows = db.exec(select(Flow).where(and_(Flow.user_id == user.id, Flow.id.in_(flow_ids)))).all()
 
     if not flows:
         raise HTTPException(status_code=404, detail="No flows found.")
@@ -391,6 +385,8 @@ async def download_multiple_file(
     current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"{current_time}_langflow_flows.zip"
 
-    return StreamingResponse(zip_stream, media_type="application/x-zip-compressed", headers={
-        "Content-Disposition": f"attachment; filename={filename}"
-    })
+    return StreamingResponse(
+        zip_stream,
+        media_type="application/x-zip-compressed",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
