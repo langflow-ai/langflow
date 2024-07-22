@@ -22,6 +22,7 @@ import useTrackLastVisitedPath from "./hooks/use-track-last-visited-path";
 import Router from "./routes";
 import { Case } from "./shared/components/caseComponent";
 import useAlertStore from "./stores/alertStore";
+import useAuthStore from "./stores/authStore";
 import { useDarkStore } from "./stores/darkStore";
 import useFlowsManagerStore from "./stores/flowsManagerStore";
 import { useFolderStore } from "./stores/foldersStore";
@@ -29,8 +30,9 @@ import { useFolderStore } from "./stores/foldersStore";
 export default function App() {
   useTrackLastVisitedPath();
   const isLoading = useFlowsManagerStore((state) => state.isLoading);
-  const { isAuthenticated, login, setUserData, setAutoLogin, getUser, logout } =
+  const { isAuthenticated, login, setUserData, getUser, logout } =
     useContext(AuthContext);
+  const setAutoLogin = useAuthStore((state) => state.setAutoLogin);
   const setLoading = useAlertStore((state) => state.setLoading);
   const refreshStars = useDarkStore((state) => state.refreshStars);
   const dark = useDarkStore((state) => state.dark);
