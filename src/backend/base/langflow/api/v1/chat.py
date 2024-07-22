@@ -258,7 +258,7 @@ async def build_vertex(
         if graph.stop_vertex and graph.stop_vertex in next_runnable_vertices:
             next_runnable_vertices = [graph.stop_vertex]
 
-        if not graph.run_manager.vertices_to_run and not next_runnable_vertices:
+        if not graph.run_manager.vertices_being_run and not next_runnable_vertices:
             background_tasks.add_task(graph.end_all_traces)
 
         build_response = VertexBuildResponse(
