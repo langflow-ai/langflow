@@ -323,7 +323,7 @@ class Graph:
                 vertex = self.get_vertex(vertex_id)
                 # If the vertex is not in the input_components list
                 if input_components and (
-                    vertex_id not in input_components or vertex.display_name not in input_components
+                    vertex_id not in input_components and vertex.display_name not in input_components
                 ):
                     continue
                 # If the input_type is not any and the input_type is not in the vertex id
