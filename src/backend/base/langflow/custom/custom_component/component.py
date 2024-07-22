@@ -106,9 +106,17 @@ class Component(CustomComponent):
         method = getattr(self, method_name)
         return [format_type(get_type_hints(method)["return"])]
 
+    def _update_template(self, frontend_node: dict):
+        return frontend_node
+
     def to_frontend_node(self):
         field_config = self.get_template_config(self)
         frontend_node = ComponentFrontendNode.from_inputs(**field_config)
+        frontend_node_dict = frontend_node.to_dict(keep_name=True)
+        name = frontend_node_dict.pop("name")
+        frontend_node_dict = self._update_template(frontend_node_dict)
+        frontend_node = ComponentFrontendNode(name=name, **frontend_node_dict)
+
         self.map_parameters_on_frontend_node(frontend_node)
         # But we now need to calculate the return_type of the methods in the outputs
         for output in frontend_node.outputs:
