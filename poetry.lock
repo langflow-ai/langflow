@@ -283,6 +283,25 @@ websockets = ">=11.0"
 extras = ["pyaudio (>=0.2.13)"]
 
 [[package]]
+name = "astra-assistants"
+version = "2.0.15"
+description = "Astra Assistants API - drop in replacement for OpenAI Assistants, powered by AstraDB"
+optional = false
+python-versions = "<4.0,>=3.10"
+files = [
+    {file = "astra_assistants-2.0.15-py3-none-any.whl", hash = "sha256:aa7d9479cf1a501f6edfc666a6d64028866ca8111d2936c4ae5b0649958252cb"},
+    {file = "astra_assistants-2.0.15.tar.gz", hash = "sha256:6daa30f5db3f8460bba8272b3c7bb096c25310cf9f866c8b7b90505e9037138e"},
+]
+
+[package.dependencies]
+aiohttp = ">=3.9.4,<4.0.0"
+boto3 = ">=1.34.31,<2.0.0"
+httpx = ">=0.27.0,<0.28.0"
+litellm = ">=1.36.0,<2.0.0"
+openai = ">=1.20.0,<2.0.0"
+python-dotenv = ">=1.0.1,<2.0.0"
+
+[[package]]
 name = "astrapy"
 version = "1.4.0"
 description = "AstraPy is a Pythonic SDK for DataStax Astra and its Data API"
@@ -2688,8 +2707,8 @@ files = [
 [package.dependencies]
 cffi = {version = ">=1.12.2", markers = "platform_python_implementation == \"CPython\" and sys_platform == \"win32\""}
 greenlet = [
-    {version = ">=2.0.0", markers = "platform_python_implementation == \"CPython\" and python_version < \"3.11\""},
     {version = ">=3.0rc3", markers = "platform_python_implementation == \"CPython\" and python_version >= \"3.11\""},
+    {version = ">=2.0.0", markers = "platform_python_implementation == \"CPython\" and python_version < \"3.11\""},
 ]
 "zope.event" = "*"
 "zope.interface" = "*"
@@ -2848,12 +2867,12 @@ files = [
 google-auth = ">=2.14.1,<3.0.dev0"
 googleapis-common-protos = ">=1.56.2,<2.0.dev0"
 grpcio = [
-    {version = ">=1.33.2,<2.0dev", optional = true, markers = "python_version < \"3.11\" and extra == \"grpc\""},
     {version = ">=1.49.1,<2.0dev", optional = true, markers = "python_version >= \"3.11\" and extra == \"grpc\""},
+    {version = ">=1.33.2,<2.0dev", optional = true, markers = "python_version < \"3.11\" and extra == \"grpc\""},
 ]
 grpcio-status = [
-    {version = ">=1.33.2,<2.0.dev0", optional = true, markers = "python_version < \"3.11\" and extra == \"grpc\""},
     {version = ">=1.49.1,<2.0.dev0", optional = true, markers = "python_version >= \"3.11\" and extra == \"grpc\""},
+    {version = ">=1.33.2,<2.0.dev0", optional = true, markers = "python_version < \"3.11\" and extra == \"grpc\""},
 ]
 proto-plus = ">=1.22.3,<2.0.0dev"
 protobuf = ">=3.19.5,<3.20.0 || >3.20.0,<3.20.1 || >3.20.1,<4.21.0 || >4.21.0,<4.21.1 || >4.21.1,<4.21.2 || >4.21.2,<4.21.3 || >4.21.3,<4.21.4 || >4.21.4,<4.21.5 || >4.21.5,<6.0.0.dev0"
@@ -4991,7 +5010,7 @@ six = "*"
 
 [[package]]
 name = "langflow-base"
-version = "0.0.87"
+version = "0.0.88"
 description = "A Python package with a built-in web application"
 optional = false
 python-versions = ">=3.10,<3.13"
@@ -5201,8 +5220,8 @@ psutil = ">=5.9.1"
 pywin32 = {version = "*", markers = "platform_system == \"Windows\""}
 pyzmq = ">=25.0.0"
 requests = [
-    {version = ">=2.26.0", markers = "python_version <= \"3.11\""},
     {version = ">=2.32.2", markers = "python_version > \"3.11\""},
+    {version = ">=2.26.0", markers = "python_version <= \"3.11\""},
 ]
 tomli = {version = ">=1.1.0", markers = "python_version < \"3.11\""}
 typing-extensions = {version = ">=4.6.0", markers = "python_version < \"3.11\""}
@@ -6807,9 +6826,9 @@ files = [
 
 [package.dependencies]
 numpy = [
+    {version = ">=1.26.0", markers = "python_version >= \"3.12\""},
     {version = ">=1.22.4", markers = "python_version < \"3.11\""},
     {version = ">=1.23.2", markers = "python_version == \"3.11\""},
-    {version = ">=1.26.0", markers = "python_version >= \"3.12\""},
 ]
 python-dateutil = ">=2.8.2"
 pytz = ">=2020.1"
@@ -11816,4 +11835,4 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-content-hash = "1c676440f3d6e74df8460f61ce3106255cc6b5158fcf798de368e4e7d623f19a"
+content-hash = "dc3c3bf982b64e4f8cf62249471bec4a90e76bde0bd010b4e2e6f6ca0d6a551b"
