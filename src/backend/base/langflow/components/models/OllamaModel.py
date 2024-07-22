@@ -3,10 +3,9 @@ from typing import Any
 import httpx
 from langchain_community.chat_models import ChatOllama
 
-from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
-from langflow.io import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, MessageInput, StrInput
+from langflow.io import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, StrInput
 
 
 class ChatOllamaComponent(LCModelComponent):
@@ -68,7 +67,7 @@ class ChatOllamaComponent(LCModelComponent):
         except Exception as e:
             raise ValueError("Could not retrieve models. Please, make sure Ollama is running.") from e
 
-    inputs = [
+    inputs = LCModelComponent._base_inputs + [
         StrInput(
             name="base_url",
             display_name="Base URL",
@@ -202,21 +201,6 @@ class ChatOllamaComponent(LCModelComponent):
             name="template",
             display_name="Template",
             info="Template to use for generating text.",
-            advanced=True,
-        ),
-        MessageInput(
-            name="input_value",
-            display_name="Input",
-        ),
-        BoolInput(
-            name="stream",
-            display_name="Stream",
-            info=STREAM_INFO_TEXT,
-        ),
-        StrInput(
-            name="system_message",
-            display_name="System Message",
-            info="System message to pass to the model.",
             advanced=True,
         ),
     ]

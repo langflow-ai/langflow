@@ -1,9 +1,7 @@
-from langchain_google_vertexai import ChatVertexAI
-
-from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
-from langflow.io import BoolInput, FileInput, FloatInput, IntInput, MessageInput, MultilineInput, StrInput
+from langflow.inputs import MessageTextInput
+from langflow.io import BoolInput, FileInput, FloatInput, IntInput, StrInput
 
 
 class ChatVertexAIComponent(LCModelComponent):
@@ -12,64 +10,57 @@ class ChatVertexAIComponent(LCModelComponent):
     icon = "VertexAI"
     name = "VertexAiModel"
 
-    inputs = [
-        MessageInput(name="input_value", display_name="Input"),
+    inputs = LCModelComponent._base_inputs + [
         FileInput(
             name="credentials",
             display_name="Credentials",
-            info="Path to the JSON file containing the credentials.",
+            info="JSON credentials file. Leave empty to fallback to environment variables",
             file_types=["json"],
-            advanced=True,
         ),
-        StrInput(name="project", display_name="Project", info="The project ID."),
-        MultilineInput(
-            name="examples",
-            display_name="Examples",
-            info="Examples to pass to the model.",
-            advanced=True,
-        ),
-        StrInput(name="location", display_name="Location", value="us-central1", advanced=True),
-        IntInput(
-            name="max_output_tokens",
-            display_name="Max Output Tokens",
-            value=128,
-            advanced=True,
-        ),
-        StrInput(name="model_name", display_name="Model Name", value="gemini-1.5-pro"),
-        FloatInput(name="temperature", display_name="Temperature", value=0.0),
-        IntInput(name="top_k", display_name="Top K", value=40, advanced=True),
+        MessageTextInput(name="model_name", display_name="Model Name", value="gemini-1.5-pro"),
+        StrInput(name="project", display_name="Project", info="The project ID.", advanced=True),
+        StrInput(name="location", display_name="Location", advanced=True),
+        IntInput(name="max_output_tokens", display_name="Max Output Tokens", advanced=True),
+        IntInput(name="max_retries", display_name="Max Retries", value=1, advanced=True),
+        FloatInput(name="temperature", value=0.0, display_name="Temperature"),
+        IntInput(name="top_k", display_name="Top K", advanced=True),
         FloatInput(name="top_p", display_name="Top P", value=0.95, advanced=True),
         BoolInput(name="verbose", display_name="Verbose", value=False, advanced=True),
-        BoolInput(name="stream", display_name="Stream", info=STREAM_INFO_TEXT, advanced=True),
-        StrInput(
-            name="system_message",
-            display_name="System Message",
-            info="System message to pass to the model.",
-            advanced=True,
-        ),
     ]
 
-    def build_model(self) -> LanguageModel:  # type: ignore[type-var]
-        credentials = self.credentials
-        location = self.location
-        max_output_tokens = self.max_output_tokens
-        model_name = self.model_name
-        project = self.project
-        temperature = self.temperature
-        top_k = self.top_k
-        top_p = self.top_p
-        verbose = self.verbose
+    def build_model(self) -> LanguageModel:
+        try:
+            from langchain_google_vertexai import ChatVertexAI
+        except ImportError:
+            raise ImportError(
+                "Please install the langchain-google-vertexai package to use the VertexAIEmbeddings component."
+            )
+        location = self.location or None
+        if self.credentials:
+            from google.oauth2 import service_account
+            from google.cloud import aiplatform
 
-        output = ChatVertexAI(
+            credentials = service_account.Credentials.from_service_account_file(self.credentials)
+            project = self.project or credentials.project_id
+            # ChatVertexAI sometimes skip manual credentials initialization
+            aiplatform.init(
+                project=project,
+                location=location,
+                credentials=credentials,
+            )
+        else:
+            project = self.project or None
+            credentials = None
+
+        return ChatVertexAI(
             credentials=credentials,
             location=location,
-            max_output_tokens=max_output_tokens,
-            model_name=model_name,
             project=project,
-            temperature=temperature,
-            top_k=top_k,
-            top_p=top_p,
-            verbose=verbose,
+            max_output_tokens=self.max_output_tokens,
+            max_retries=self.max_retries,
+            model_name=self.model_name,
+            temperature=self.temperature,
+            top_k=self.top_k,
+            top_p=self.top_p,
+            verbose=self.verbose,
         )
-
-        return output  # type: ignore
