@@ -105,6 +105,7 @@ def get_lifespan(fix_migration=False, socketio_server=None, version=None):
 
 
 def run_streamlit_api():
+    from fastapi import FastAPI
     from langflow.streamlit import streamlit_router
     from asyncio import new_event_loop
     import uvicorn
@@ -112,6 +113,10 @@ def run_streamlit_api():
     loop = new_event_loop()
     streamlit_app = FastAPI()
     streamlit_app.include_router(streamlit_router, prefix="/api/v1")
+    @streamlit_app.get("/health")
+    async def health():
+        ...
+
     config = uvicorn.Config(
         streamlit_app,
         host="0.0.0.0",
@@ -197,11 +202,13 @@ def create_app():
             )
     if os.getenv("LANGFLOW_STREAMLIT_ENABLED", "false").lower() == "true":
         from langflow.streamlit import StreamlitApplication
-        import threading, multiprocessing
-        StreamlitApplication.start()
+        from .__main__ import wait_for_server_ready
+        import multiprocessing
 
         streamlit_api_process = multiprocessing.Process(target=run_streamlit_api)
         streamlit_api_process.start()
+        wait_for_server_ready("localhost", 7881)
+        StreamlitApplication.start()
 
     FastAPIInstrumentor.instrument_app(app)
     return app
