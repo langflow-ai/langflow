@@ -1,10 +1,9 @@
 import { ColDef, ColGroupDef } from "ag-grid-community";
 import clsx, { ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import TableAutoCellRender from "../components/tableAutoCellRender";
-import { priorityFields } from "../constants/constants";
-import { ADJECTIVES, DESCRIPTIONS, NOUNS } from "../flow_constants";
-import { APIDataType, TemplateVariableType } from "../types/api";
+import TableAutoCellRender from "../components/tableComponent/components/tableAutoCellRender";
+import { MESSAGES_TABLE_ORDER, MODAL_CLASSES } from "../constants/constants";
+import { APIDataType, InputFieldType, VertexDataTypeAPI } from "../types/api";
 import {
   groupedObjType,
   nodeGroupedObjType,
@@ -12,6 +11,7 @@ import {
 } from "../types/components";
 import { NodeType } from "../types/flow";
 import { FlowState } from "../types/tabs";
+import { isErrorLog } from "../types/utils/typeCheckingUtils";
 
 export function classNames(...classes: Array<string>): string {
   return classes.filter(Boolean).join(" ");
@@ -236,14 +236,14 @@ export function groupByFamily(
   let checkedNodes = new Map();
   const excludeTypes = new Set(["bool", "float", "code", "file", "int"]);
 
-  const checkBaseClass = (template: TemplateVariableType) => {
+  const checkBaseClass = (template: InputFieldType) => {
     return (
-      template.type &&
-      template.show &&
+      template?.type &&
+      template?.show &&
       ((!excludeTypes.has(template.type) &&
         baseClassesSet.has(template.type)) ||
-        (template.input_types &&
-          template.input_types.some((inputType) =>
+        (template?.input_types &&
+          template?.input_types.some((inputType) =>
             baseClassesSet.has(inputType),
           )))
     );
@@ -263,7 +263,7 @@ export function groupByFamily(
           Object.values(nodeData.node!.template).some(checkBaseClass),
         hasBaseClassInBaseClasses:
           foundNode?.hasBaseClassInBaseClasses ||
-          nodeData.node!.base_classes.some((baseClass) =>
+          nodeData.node!.base_classes?.some((baseClass) =>
             baseClassesSet.has(baseClass),
           ), //seta como anterior ou verifica se o node tem base class
         displayName: nodeData.node?.display_name,
@@ -283,7 +283,7 @@ export function groupByFamily(
           hasBaseClassInTemplate: Object.values(node!.template).some(
             checkBaseClass,
           ),
-          hasBaseClassInBaseClasses: node!.base_classes.some((baseClass) =>
+          hasBaseClassInBaseClasses: node!.base_classes?.some((baseClass) =>
             baseClassesSet.has(baseClass),
           ),
           displayName: node?.display_name,
@@ -347,15 +347,18 @@ export function freezeObject(obj: any) {
   return JSON.parse(JSON.stringify(obj));
 }
 export function isTimeStampString(str: string): boolean {
-  const timestampRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3}Z)?$/;
-  return timestampRegex.test(str);
+  const timestampRegexA = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3}Z)?$/;
+  const timestampRegexB = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{6})?$/;
+
+  return timestampRegexA.test(str) || timestampRegexB.test(str);
 }
 
 export function extractColumnsFromRows(
   rows: object[],
   mode: "intersection" | "union",
+  excludeColumns?: Array<string>,
 ): (ColDef<any> | ColGroupDef<any>)[] {
-  const columnsKeys: { [key: string]: ColDef<any> | ColGroupDef<any> } = {};
+  let columnsKeys: { [key: string]: ColDef<any> | ColGroupDef<any> } = {};
   if (rows.length === 0) {
     return [];
   }
@@ -366,7 +369,6 @@ export function extractColumnsFromRows(
         field: key,
         cellRenderer: TableAutoCellRender,
         filter: true,
-        autoHeight: true,
       };
     }
     for (const row of rows) {
@@ -385,15 +387,87 @@ export function extractColumnsFromRows(
           field: key,
           filter: true,
           cellRenderer: TableAutoCellRender,
+          suppressAutoSize: true,
+          tooltipField: key,
         };
       }
     }
   }
+
   if (mode === "intersection") {
     intersection();
   } else {
     union();
   }
 
+  if (excludeColumns) {
+    for (const key of excludeColumns) {
+      delete columnsKeys[key];
+    }
+  }
+
   return Object.values(columnsKeys);
+}
+
+export function isThereModal(): boolean {
+  const modal = document.body.getElementsByClassName(MODAL_CLASSES);
+  return modal.length > 0;
+}
+
+export function messagesSorter(a: any, b: any) {
+  const indexA = MESSAGES_TABLE_ORDER.indexOf(a.field);
+  const indexB = MESSAGES_TABLE_ORDER.indexOf(b.field);
+
+  // If the field is not in the MESSAGES_TABLE_ORDER, we can place it at the end.
+  const orderA = indexA === -1 ? MESSAGES_TABLE_ORDER.length : indexA;
+  const orderB = indexB === -1 ? MESSAGES_TABLE_ORDER.length : indexB;
+
+  return orderA - orderB;
+}
+
+export const logHasMessage = (
+  data: VertexDataTypeAPI,
+  outputName: string | undefined,
+) => {
+  if (!outputName) return;
+  const outputs = data?.outputs[outputName];
+  if (Array.isArray(outputs) && outputs.length > 1) {
+    return outputs.some((outputLog) => outputLog.message);
+  } else {
+    return outputs?.message;
+  }
+};
+
+export const logTypeIsUnknown = (
+  data: VertexDataTypeAPI,
+  outputName: string | undefined,
+) => {
+  if (!outputName) return;
+  const outputs = data?.outputs[outputName];
+  if (Array.isArray(outputs) && outputs.length > 1) {
+    return outputs.some((outputLog) => outputLog.type === "unknown");
+  } else {
+    return outputs?.type === "unknown";
+  }
+};
+
+export const logTypeIsError = (
+  data: VertexDataTypeAPI,
+  outputName: string | undefined,
+) => {
+  if (!outputName) return;
+  const outputs = data?.outputs[outputName];
+  if (Array.isArray(outputs) && outputs.length > 1) {
+    return outputs.some((log) => isErrorLog(log));
+  } else {
+    return isErrorLog(outputs);
+  }
+};
+
+export function isEndpointNameValid(name: string, maxLength: number): boolean {
+  return (
+    (/^[a-zA-Z0-9_-]+$/.test(name) && name.length <= maxLength) ||
+    // empty is also valid
+    name.length === 0
+  );
 }

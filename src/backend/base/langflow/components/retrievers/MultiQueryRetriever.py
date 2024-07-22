@@ -3,13 +3,14 @@ from typing import Optional
 from langchain.retrievers import MultiQueryRetriever
 
 from langflow.custom import CustomComponent
-from langflow.field_typing import BaseLanguageModel, BaseRetriever, PromptTemplate, Text
+from langflow.field_typing import BaseRetriever, LanguageModel, PromptTemplate, Text
 
 
 class MultiQueryRetrieverComponent(CustomComponent):
     display_name = "MultiQueryRetriever"
     description = "Initialize from llm using default template."
     documentation = "https://python.langchain.com/docs/modules/data_connection/retrievers/how_to/MultiQueryRetriever"
+    name = "MultiQueryRetriever"
 
     def build_config(self):
         return {
@@ -39,7 +40,7 @@ class MultiQueryRetrieverComponent(CustomComponent):
 
     def build(
         self,
-        llm: BaseLanguageModel,
+        llm: LanguageModel,
         retriever: BaseRetriever,
         prompt: Optional[Text] = None,
         parser_key: str = "lines",

@@ -26,7 +26,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install poetry
-        run: pipx install poetry==$POETRY_VERSION
+        run: pipx install poetry==${{ env.POETRY_VERSION }}
       - name: Set up Python 3.10
         uses: actions/setup-python@v5
         with:
@@ -66,6 +66,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
+        id: qemu
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       - name: Login to Docker Hub
@@ -74,14 +75,42 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Build and push
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           push: true
           file: ./docker/build_and_push.Dockerfile
+          # provenance: false will result in a single manifest for all platforms which makes the image pullable from arm64 machines via the emulation (e.g. Apple Silicon machines)
+          provenance: false
           tags: |
             langflowai/langflow:${{ needs.release.outputs.version }}
             langflowai/langflow:1.0-alpha
+      - name: Build and push (frontend)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          file: ./docker/frontend/build_and_push_frontend.Dockerfile
+          # provenance: false will result in a single manifest for all platforms which makes the image pullable from arm64 machines via the emulation (e.g. Apple Silicon machines)
+          provenance: false
+          tags: |
+            langflowai/langflow-frontend:${{ needs.release.outputs.version }}
+            langflowai/langflow-frontend:1.0-alpha
+      - name: Wait for Docker Hub to propagate
+        run: sleep 120
+      - name: Build and push (backend)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          file: ./docker/build_and_push_backend.Dockerfile
+          # provenance: false will result in a single manifest for all platforms which makes the image pullable from arm64 machines via the emulation (e.g. Apple Silicon machines)
+          provenance: false
+          build-args: |
+            LANGFLOW_IMAGE=langflowai/langflow:${{ needs.release.outputs.version }}
+          tags: |
+            langflowai/langflow-backend:${{ needs.release.outputs.version }}
+            langflowai/langflow-backend:1.0-alpha
 
   create_release:
     name: Create Release

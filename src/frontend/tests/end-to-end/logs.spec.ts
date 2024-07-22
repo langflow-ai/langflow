@@ -1,6 +1,17 @@
 import { test } from "@playwright/test";
+import * as dotenv from "dotenv";
+import path from "path";
 
 test("should able to see and interact with logs", async ({ page }) => {
+  test.skip(
+    !process?.env?.OPENAI_API_KEY,
+    "OPENAI_API_KEY required to run this test",
+  );
+
+  if (!process.env.CI) {
+    dotenv.config({ path: path.resolve(__dirname, "../../.env") });
+  }
+
   await page.goto("/");
   await page.waitForTimeout(2000);
 
@@ -20,7 +31,6 @@ test("should able to see and interact with logs", async ({ page }) => {
     await page.waitForTimeout(5000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
-  await page.waitForTimeout(1000);
 
   await page.getByRole("heading", { name: "Basic Prompting" }).click();
   await page.waitForTimeout(2000);
@@ -33,6 +43,11 @@ test("should able to see and interact with logs", async ({ page }) => {
   await page
     .getByTestId("popover-anchor-input-openai_api_key")
     .fill(process.env.OPENAI_API_KEY ?? "");
+
+  await page.getByTestId("dropdown-model_name").click();
+  await page.getByTestId("gpt-4o-0-option").click();
+
+  await page.waitForTimeout(2000);
   await page.getByTestId("button_run_chat output").first().click();
 
   await page.waitForTimeout(2000);
@@ -42,19 +57,29 @@ test("should able to see and interact with logs", async ({ page }) => {
   await page.getByTestId("icon-ChevronDown").click();
   await page.getByText("Logs").click();
 
-  await page.getByText("timestamp").isVisible();
-  await page.getByText("flow_id").isVisible();
-  await page.getByText("source").isVisible();
-  await page.getByText("target", { exact: true }).isVisible();
-  await page.getByText("target_args", { exact: true }).isVisible();
+  await page.getByText("timestamp").first().isVisible();
+  await page.getByText("flow_id").first().isVisible();
+  await page.getByText("source").first().isVisible();
+  await page.getByText("target", { exact: true }).first().isVisible();
+  await page.getByText("target_args", { exact: true }).first().isVisible();
   await page.getByRole("gridcell").first().isVisible();
 
+  await page.keyboard.press("Escape");
+
+  await page.getByTestId("user-profile-settings").first().click();
+  await page.getByText("Settings", { exact: true }).click();
+
   await page.getByText("Messages", { exact: true }).click();
-  await page.getByText("timestamp").isVisible();
-  await page.getByText("sender", { exact: true }).isVisible();
-  await page.getByText("sender_name").isVisible();
-  await page.getByText("session_id", { exact: true }).isVisible();
-  await page.getByText("message", { exact: true }).isVisible();
-  await page.getByText("artifacts", { exact: true }).isVisible();
+  await page.getByText("index", { exact: true }).last().isVisible();
+  await page.getByText("timestamp", { exact: true }).isVisible();
+  await page.getByText("flow_id", { exact: true }).isVisible();
+  await page.getByText("source", { exact: true }).isVisible();
+  await page.getByText("target", { exact: true }).isVisible();
+  await page.getByText("vertex_id", { exact: true }).isVisible();
+  await page.getByText("status", { exact: true }).isVisible();
+  await page.getByText("error", { exact: true }).isVisible();
+  await page.getByText("outputs", { exact: true }).isVisible();
+  await page.getByText("inputs", { exact: true }).isVisible();
+
   await page.getByRole("gridcell").first().isVisible();
 });

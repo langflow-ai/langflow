@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING, Any, List, Optional
 
 from loguru import logger
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from langflow.schema.schema import INPUT_FIELD_NAME
 from langflow.services.monitor.utils import log_message
@@ -11,9 +11,22 @@ if TYPE_CHECKING:
 
 
 class SourceHandle(BaseModel):
-    baseClasses: List[str] = Field(..., description="List of base classes for the source handle.")
+    baseClasses: list[str] = Field(default_factory=list, description="List of base classes for the source handle.")
     dataType: str = Field(..., description="Data type for the source handle.")
     id: str = Field(..., description="Unique identifier for the source handle.")
+    name: Optional[str] = Field(None, description="Name of the source handle.")
+    output_types: List[str] = Field(default_factory=list, description="List of output types for the source handle.")
+
+    @field_validator("name", mode="before")
+    @classmethod
+    def validate_name(cls, v, _info):
+        if _info.data["dataType"] == "GroupNode":
+            # 'OpenAIModel-u4iGV_text_output'
+            splits = v.split("_", 1)
+            if len(splits) != 2:
+                raise ValueError(f"Invalid source handle name {v}")
+            v = splits[1]
+        return v
 
 
 class TargetHandle(BaseModel):
@@ -47,6 +60,27 @@ class Edge:
         self.validate_edge(source, target)
 
     def validate_handles(self, source, target) -> None:
+        if isinstance(self._source_handle, str) or self.source_handle.baseClasses:
+            self._legacy_validate_handles(source, target)
+        else:
+            self._validate_handles(source, target)
+
+    def _validate_handles(self, source, target) -> None:
+        if self.target_handle.inputTypes is None:
+            self.valid_handles = self.target_handle.type in self.source_handle.output_types
+
+        elif self.source_handle.output_types is not None:
+            self.valid_handles = (
+                any(output_type in self.target_handle.inputTypes for output_type in self.source_handle.output_types)
+                or self.target_handle.type in self.source_handle.output_types
+            )
+
+        if not self.valid_handles:
+            logger.debug(self.source_handle)
+            logger.debug(self.target_handle)
+            raise ValueError(f"Edge between {source.vertex_type} and {target.vertex_type} " f"has invalid handles")
+
+    def _legacy_validate_handles(self, source, target) -> None:
         if self.target_handle.inputTypes is None:
             self.valid_handles = self.target_handle.type in self.source_handle.baseClasses
         else:
@@ -67,6 +101,48 @@ class Edge:
         self.target_handle = state.get("target_handle")
 
     def validate_edge(self, source, target) -> None:
+        # If the self.source_handle has baseClasses, then we are using the legacy
+        # way of defining the source and target handles
+        if isinstance(self._source_handle, str) or self.source_handle.baseClasses:
+            self._legacy_validate_edge(source, target)
+        else:
+            self._validate_edge(source, target)
+
+    def _validate_edge(self, source, target) -> None:
+        # Validate that the outputs of the source node are valid inputs
+        # for the target node
+        # .outputs is a list of Output objects as dictionaries
+        # meaning: check for "types" key in each dictionary
+        self.source_types = [output for output in source.outputs if output["name"] == self.source_handle.name]
+        self.target_reqs = target.required_inputs + target.optional_inputs
+        # Both lists contain strings and sometimes a string contains the value we are
+        # looking for e.g. comgin_out=["Chain"] and target_reqs=["LLMChain"]
+        # so we need to check if any of the strings in source_types is in target_reqs
+        self.valid = any(
+            any(output_type in target_req for output_type in output["types"])
+            for output in self.source_types
+            for target_req in self.target_reqs
+        )
+        # Get what type of input the target node is expecting
+
+        # Update the matched type to be the first found match
+        self.matched_type = next(
+            (
+                output_type
+                for output in self.source_types
+                for output_type in output["types"]
+                for target_req in self.target_reqs
+                if output_type in target_req
+            ),
+            None,
+        )
+        no_matched_type = self.matched_type is None
+        if no_matched_type:
+            logger.debug(self.source_types)
+            logger.debug(self.target_reqs)
+            raise ValueError(f"Edge between {source.vertex_type} and {target.vertex_type} " f"has no matched type. ")
+
+    def _legacy_validate_edge(self, source, target) -> None:
         # Validate that the outputs of the source node are valid inputs
         # for the target node
         self.source_types = source.output
@@ -153,7 +229,6 @@ class ContractEdge(Edge):
                 sender_name=target.params.get("sender_name", ""),
                 message=target.params.get(INPUT_FIELD_NAME, {}),
                 session_id=target.params.get("session_id", ""),
-                artifacts=target.artifacts,
                 flow_id=target.graph.flow_id,
             )
         return self.result

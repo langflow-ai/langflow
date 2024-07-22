@@ -3,7 +3,7 @@
 import re
 import warnings
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Dict, Optional
+from typing import TYPE_CHECKING, Dict, List, Optional
 from uuid import UUID, uuid4
 
 import emoji
@@ -13,10 +13,11 @@ from pydantic import field_serializer, field_validator
 from sqlalchemy import UniqueConstraint
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
-from langflow.schema.schema import Record
+from langflow.schema import Data
 
 if TYPE_CHECKING:
     from langflow.services.database.models.folder import Folder
+    from langflow.services.database.models.message import MessageTable
     from langflow.services.database.models.user import User
 
 
@@ -28,7 +29,7 @@ class FlowBase(SQLModel):
     data: Optional[Dict] = Field(default=None, nullable=True)
     is_component: Optional[bool] = Field(default=False, nullable=True)
     updated_at: Optional[datetime] = Field(default_factory=lambda: datetime.now(timezone.utc), nullable=True)
-    folder_id: Optional[UUID] = Field(default=None, nullable=True)
+    webhook: Optional[bool] = Field(default=False, nullable=True, description="Can be used on the webhook endpoint")
     endpoint_name: Optional[str] = Field(default=None, nullable=True, index=True)
 
     @field_validator("endpoint_name")
@@ -114,10 +115,15 @@ class FlowBase(SQLModel):
 
     # updated_at can be serialized to JSON
     @field_serializer("updated_at")
-    def serialize_dt(self, dt: datetime, _info):
-        if dt is None:
-            return None
-        return dt.isoformat()
+    def serialize_datetime(value):
+        if isinstance(value, datetime):
+            # I'm getting 2024-05-29T17:57:17.631346
+            # and I want 2024-05-29T17:57:17-05:00
+            value = value.replace(microsecond=0)
+            if value.tzinfo is None:
+                value = value.replace(tzinfo=timezone.utc)
+            return value.isoformat()
+        return value
 
     @field_validator("updated_at", mode="before")
     def validate_dt(cls, v):
@@ -136,8 +142,9 @@ class Flow(FlowBase, table=True):
     user: "User" = Relationship(back_populates="flows")
     folder_id: Optional[UUID] = Field(default=None, foreign_key="folder.id", nullable=True, index=True)
     folder: Optional["Folder"] = Relationship(back_populates="flows")
+    messages: List["MessageTable"] = Relationship(back_populates="flow")
 
-    def to_record(self):
+    def to_data(self):
         serialized = self.model_dump()
         data = {
             "id": serialized.pop("id"),
@@ -146,7 +153,7 @@ class Flow(FlowBase, table=True):
             "description": serialized.pop("description"),
             "updated_at": serialized.pop("updated_at"),
         }
-        record = Record(data=data)
+        record = Data(data=data)
         return record
 
     __table_args__ = (

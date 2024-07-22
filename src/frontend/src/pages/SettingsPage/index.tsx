@@ -21,18 +21,27 @@ export default function SettingsPage(): JSX.Element {
       icon: (
         <ForwardedIconComponent
           name="SlidersHorizontal"
-          className="mx-[0.08rem] w-[1.1rem] stroke-[1.5]"
+          className="w-4 flex-shrink-0 justify-start stroke-[1.5]"
         />
       ),
     },
-
     {
       title: "Global Variables",
       href: "/settings/global-variables",
       icon: (
         <ForwardedIconComponent
           name="Globe"
-          className="mx-[0.08rem] w-[1.1rem] stroke-[1.5]"
+          className="w-4 flex-shrink-0 justify-start stroke-[1.5]"
+        />
+      ),
+    },
+    {
+      title: "Langflow API",
+      href: "/settings/api-keys",
+      icon: (
+        <ForwardedIconComponent
+          name="Key"
+          className="w-4 flex-shrink-0 justify-start stroke-[1.5]"
         />
       ),
     },
@@ -40,7 +49,20 @@ export default function SettingsPage(): JSX.Element {
       title: "Shortcuts",
       href: "/settings/shortcuts",
       icon: (
-        <ForwardedIconComponent name="Keyboard" className="w-5 stroke-[1.5]" />
+        <ForwardedIconComponent
+          name="Keyboard"
+          className="w-4 flex-shrink-0 justify-start stroke-[1.5]"
+        />
+      ),
+    },
+    {
+      title: "Messages",
+      href: "/settings/messages",
+      icon: (
+        <ForwardedIconComponent
+          name="MessagesSquare"
+          className="w-4 flex-shrink-0 justify-start stroke-[1.5]"
+        />
       ),
     },
   ];
@@ -50,11 +72,13 @@ export default function SettingsPage(): JSX.Element {
       description="Manage the general settings for Langflow."
     >
       <div className="flex h-full w-full space-y-8 lg:flex-row lg:space-x-8 lg:space-y-0">
-        <aside className="flex h-full flex-col space-y-6 lg:w-1/5">
+        <aside className="flex h-full shrink-0 flex-col space-y-6 lg:w-[20vw]">
           <SidebarNav items={sidebarNavItems} />
         </aside>
-        <div className="h-full w-full flex-1">
-          <Outlet />
+        <div className="flex h-full w-full flex-1 flex-col">
+          <div className="flex-1 pb-8">
+            <Outlet />
+          </div>
         </div>
       </div>
     </PageLayout>

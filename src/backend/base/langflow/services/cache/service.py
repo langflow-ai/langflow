@@ -3,18 +3,17 @@ import pickle
 import threading
 import time
 from collections import OrderedDict
-from typing import Optional
+from typing import Generic, Optional
 
 from loguru import logger
 
-from langflow.services.base import Service
-from langflow.services.cache.base import AsyncBaseCacheService, CacheService
+from langflow.services.cache.base import AsyncBaseCacheService, AsyncLockType, CacheService, LockType
 from langflow.services.cache.utils import CacheMiss
 
 CACHE_MISS = CacheMiss()
 
 
-class ThreadingInMemoryCache(CacheService, Service):
+class ThreadingInMemoryCache(CacheService, Generic[LockType]):
     """
     A simple in-memory cache using an OrderedDict.
 
@@ -182,7 +181,7 @@ class ThreadingInMemoryCache(CacheService, Service):
         return f"InMemoryCache(max_size={self.max_size}, expiration_time={self.expiration_time})"
 
 
-class RedisCache(CacheService):
+class RedisCache(CacheService, Generic[LockType]):
     """
     A Redis-based cache implementation.
 
@@ -243,10 +242,11 @@ class RedisCache(CacheService):
         try:
             self._client.ping()
             return True
-        except redis.exceptions.ConnectionError:
+        except redis.exceptions.ConnectionError as exc:
+            logger.error(f"RedisCache could not connect to the Redis server: {exc}")
             return False
 
-    def get(self, key):
+    async def get(self, key, lock=None):
         """
         Retrieve an item from the cache.
 
@@ -256,10 +256,12 @@ class RedisCache(CacheService):
         Returns:
             The value associated with the key, or None if the key is not found.
         """
-        value = self._client.get(key)
+        if key is None:
+            return None
+        value = self._client.get(str(key))
         return pickle.loads(value) if value else None
 
-    def set(self, key, value):
+    async def set(self, key, value, lock=None):
         """
         Add an item to the cache.
 
@@ -269,13 +271,13 @@ class RedisCache(CacheService):
         """
         try:
             if pickled := pickle.dumps(value):
-                result = self._client.setex(key, self.expiration_time, pickled)
+                result = self._client.setex(str(key), self.expiration_time, pickled)
                 if not result:
                     raise ValueError("RedisCache could not set the value.")
         except TypeError as exc:
             raise TypeError("RedisCache only accepts values that can be pickled. ") from exc
 
-    def upsert(self, key, value):
+    async def upsert(self, key, value, lock=None):
         """
         Inserts or updates a value in the cache.
         If the existing value and the new value are both dictionaries, they are merged.
@@ -284,14 +286,16 @@ class RedisCache(CacheService):
             key: The key of the item.
             value: The value to insert or update.
         """
-        existing_value = self.get(key)
+        if key is None:
+            return
+        existing_value = await self.get(key)
         if existing_value is not None and isinstance(existing_value, dict) and isinstance(value, dict):
             existing_value.update(value)
             value = existing_value
 
-        self.set(key, value)
+        await self.set(key, value)
 
-    def delete(self, key):
+    async def delete(self, key, lock=None):
         """
         Remove an item from the cache.
 
@@ -300,7 +304,7 @@ class RedisCache(CacheService):
         """
         self._client.delete(key)
 
-    def clear(self):
+    async def clear(self, lock=None):
         """
         Clear all items from the cache.
         """
@@ -308,17 +312,17 @@ class RedisCache(CacheService):
 
     def __contains__(self, key):
         """Check if the key is in the cache."""
-        return False if key is None else self._client.exists(key)
+        return False if key is None else self._client.exists(str(key))
 
-    def __getitem__(self, key):
+    async def __getitem__(self, key):
         """Retrieve an item from the cache using the square bracket notation."""
         return self.get(key)
 
-    def __setitem__(self, key, value):
+    async def __setitem__(self, key, value):
         """Add an item to the cache using the square bracket notation."""
         self.set(key, value)
 
-    def __delitem__(self, key):
+    async def __delitem__(self, key):
         """Remove an item from the cache using the square bracket notation."""
         self.delete(key)
 
@@ -327,7 +331,7 @@ class RedisCache(CacheService):
         return f"RedisCache(expiration_time={self.expiration_time})"
 
 
-class AsyncInMemoryCache(AsyncBaseCacheService, Service):
+class AsyncInMemoryCache(AsyncBaseCacheService, Generic[AsyncLockType]):
     def __init__(self, max_size=None, expiration_time=3600):
         self.cache = OrderedDict()
 
@@ -350,7 +354,7 @@ class AsyncInMemoryCache(AsyncBaseCacheService, Service):
                 return pickle.loads(item["value"]) if isinstance(item["value"], bytes) else item["value"]
             else:
                 logger.info(f"Cache item for key '{key}' has expired and will be deleted.")
-                await self.delete(key)  # Log before deleting the expired item
+                await self._delete(key)  # Log before deleting the expired item
         return CACHE_MISS
 
     async def set(self, key, value, lock: Optional[asyncio.Lock] = None):

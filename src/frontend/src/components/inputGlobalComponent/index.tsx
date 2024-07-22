@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { Controller } from "react-hook-form";
 import { deleteGlobalVariable } from "../../controllers/API";
 import DeleteConfirmationModal from "../../modals/deleteConfirmationModal";
 import useAlertStore from "../../stores/alertStore";
@@ -13,7 +14,6 @@ import { CommandItem } from "../ui/command";
 export default function InputGlobalComponent({
   disabled,
   onChange,
-  setDb,
   name,
   data,
   editNode = false,
@@ -23,44 +23,17 @@ export default function InputGlobalComponent({
   );
 
   const getVariableId = useGlobalVariablesStore((state) => state.getVariableId);
-  const unavaliableFields = useGlobalVariablesStore(
-    (state) => state.unavaliableFields,
-  );
   const removeGlobalVariable = useGlobalVariablesStore(
     (state) => state.removeGlobalVariable,
   );
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
   useEffect(() => {
-    if (data.node?.template[name])
-      if (
-        globalVariablesEntries &&
-        !globalVariablesEntries.includes(data.node?.template[name].value) &&
-        data.node?.template[name].load_from_db
-      ) {
-        setTimeout(() => {
-          onChange("", true);
-          setDb(false);
-        }, 100);
+    if (data && globalVariablesEntries)
+      if (data.load_from_db && !globalVariablesEntries.includes(data.value)) {
+        onChange("", false, true);
       }
   }, [globalVariablesEntries]);
-
-  useEffect(() => {
-    if (
-      !data.node?.template[name].value &&
-      data.node?.template[name].display_name
-    ) {
-      if (
-        unavaliableFields[data.node?.template[name].display_name!] &&
-        !disabled
-      ) {
-        setTimeout(() => {
-          setDb(true);
-          onChange(unavaliableFields[data.node?.template[name].display_name!]);
-        }, 100);
-      }
-    }
-  }, [unavaliableFields]);
 
   async function handleDelete(key: string) {
     const id = getVariableId(key);
@@ -68,12 +41,8 @@ export default function InputGlobalComponent({
       await deleteGlobalVariable(id)
         .then(() => {
           removeGlobalVariable(key);
-          if (
-            data?.node?.template[name].value === key &&
-            data?.node?.template[name].load_from_db
-          ) {
-            onChange("");
-            setDb(false);
+          if (data?.value === key && data?.load_from_db) {
+            onChange("", false);
           }
         })
         .catch(() => {
@@ -94,8 +63,8 @@ export default function InputGlobalComponent({
       id={"input-" + name}
       editNode={editNode}
       disabled={disabled}
-      password={data.node?.template[name].password ?? false}
-      value={data.node?.template[name].value ?? ""}
+      password={data.password ?? false}
+      value={data.value ?? ""}
       options={globalVariablesEntries}
       optionsPlaceholder={"Global Variables"}
       optionsIcon="Globe"
@@ -138,19 +107,17 @@ export default function InputGlobalComponent({
         </DeleteConfirmationModal>
       )}
       selectedOption={
-        data?.node?.template[name].load_from_db &&
+        data?.load_from_db &&
         globalVariablesEntries &&
-        globalVariablesEntries.includes(data?.node?.template[name].value ?? "")
-          ? data?.node?.template[name].value
+        globalVariablesEntries.includes(data?.value ?? "")
+          ? data?.value
           : ""
       }
       setSelectedOption={(value) => {
-        onChange(value);
-        setDb(value !== "" ? true : false);
+        onChange(value, value !== "" ? true : false);
       }}
       onChange={(value, skipSnapshot) => {
-        onChange(value, skipSnapshot);
-        setDb(false);
+        onChange(value, false, skipSnapshot);
       }}
     />
   );

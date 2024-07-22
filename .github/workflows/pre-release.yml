@@ -29,12 +29,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install poetry
-        run: pipx install poetry==$POETRY_VERSION
+        run: pipx install poetry==${{ env.POETRY_VERSION }}
       - name: Set up Python 3.10
         uses: actions/setup-python@v5
         with:
           python-version: "3.10"
           cache: "poetry"
+      - name: Set up Nodejs 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
       - name: Check Version
         id: check-version
         run: |
@@ -57,6 +61,27 @@ jobs:
             make build base=true
           else
             make build main=true
+          fi
+      - name: Test CLI
+        run: |
+          if [ "${{ inputs.release_type }}" == "base" ]; then
+            python -m pip install src/backend/base/dist/*.whl
+          else
+            python -m pip install dist/*.whl
+          fi
+          python -m langflow run --host 127.0.0.1 --port 7860 &
+          SERVER_PID=$!
+          # Wait for the server to start
+          timeout 120 bash -c 'until curl -f http://127.0.0.1:7860/health; do sleep 2; done' || (echo "Server did not start in time" && kill $SERVER_PID && exit 1)
+          # Terminate the server
+          kill $SERVER_PID || (echo "Failed to terminate the server" && exit 1)
+          sleep 10 # give the server some time to terminate
+          # Check if the server is still running
+          if kill -0 $SERVER_PID 2>/dev/null; then
+            echo "Failed to terminate the server"
+            exit 1
+          else
+            echo "Server terminated successfully"
           fi
       - name: Publish to PyPI
         env:

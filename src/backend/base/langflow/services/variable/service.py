@@ -10,14 +10,16 @@ from langflow.services.auth import utils as auth_utils
 from langflow.services.base import Service
 from langflow.services.database.models.variable.model import Variable, VariableCreate
 from langflow.services.deps import get_session
+from langflow.services.variable.base import VariableService
 
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
 
+CREDENTIAL_TYPE = "Credential"
+GENERIC_TYPE = "Generic"
 
-class VariableService(Service):
-    name = "variable_service"
 
+class DatabaseVariableService(VariableService, Service):
     def __init__(self, settings_service: "SettingsService"):
         self.settings_service = settings_service
 
@@ -29,9 +31,22 @@ class VariableService(Service):
             for var in self.settings_service.settings.variables_to_get_from_environment:
                 if var in os.environ:
                     logger.debug(f"Creating {var} variable from environment.")
-                    if not session.exec(
+
+                    if found_variable := session.exec(
                         select(Variable).where(Variable.user_id == user_id, Variable.name == var)
                     ).first():
+                        # Update it
+                        value = os.environ[var]
+                        if isinstance(value, str):
+                            value = value.strip()
+                        # If the secret_key changes the stored value could be invalid
+                        # so we need to re-encrypt it
+                        encrypted = auth_utils.encrypt_api_key(value, settings_service=self.settings_service)
+                        found_variable.value = encrypted
+                        session.add(found_variable)
+                        session.commit()
+                    else:
+                        # Create it
                         try:
                             value = os.environ[var]
                             if isinstance(value, str):
@@ -41,7 +56,7 @@ class VariableService(Service):
                                 name=var,
                                 value=value,
                                 default_fields=[],
-                                _type="Credential",
+                                _type=CREDENTIAL_TYPE,
                                 session=session,
                             )
                         except Exception as e:
@@ -54,11 +69,19 @@ class VariableService(Service):
         self,
         user_id: Union[UUID, str],
         name: str,
+        field: str,
         session: Session = Depends(get_session),
     ) -> str:
         # we get the credential from the database
         # credential = session.query(Variable).filter(Variable.user_id == user_id, Variable.name == name).first()
         variable = session.exec(select(Variable).where(Variable.user_id == user_id, Variable.name == name)).first()
+
+        if variable.type == CREDENTIAL_TYPE and field == "session_id":  # type: ignore
+            raise TypeError(
+                f"variable {name} of type 'Credential' cannot be used in a Session ID field "
+                "because its purpose is to prevent the exposure of values."
+            )
+
         # we decrypt the value
         if not variable or not variable.value:
             raise ValueError(f"{name} variable not found.")
@@ -105,7 +128,7 @@ class VariableService(Service):
         name: str,
         value: str,
         default_fields: list[str] = [],
-        _type: str = "Generic",
+        _type: str = GENERIC_TYPE,
         session: Session = Depends(get_session),
     ):
         variable_base = VariableCreate(

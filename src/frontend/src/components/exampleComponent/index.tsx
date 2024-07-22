@@ -28,7 +28,7 @@ export default function CollectionCardComponent({
   return (
     <Card
       className={cn(
-        "group relative flex h-48 w-2/6 flex-col justify-between overflow-hidden transition-all hover:shadow-md"
+        "group relative flex h-48 w-2/6 flex-col justify-between overflow-hidden transition-all hover:shadow-md",
       )}
     >
       <div>
@@ -84,7 +84,7 @@ export default function CollectionCardComponent({
               tabIndex={-1}
               variant="outline"
               size="sm"
-              className="whitespace-nowrap "
+              className="whitespace-nowrap"
             >
               <IconComponent
                 name="ExternalLink"

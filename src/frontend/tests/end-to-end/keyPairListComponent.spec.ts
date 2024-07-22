@@ -19,10 +19,13 @@ test("KeypairListComponent", async ({ page }) => {
     await page.waitForTimeout(5000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
-  await page.waitForTimeout(1000);
-
+  await page.waitForSelector('[data-testid="blank-flow"]', {
+    timeout: 30000,
+  });
   await page.getByTestId("blank-flow").click();
-  await page.waitForTimeout(1000);
+  await page.waitForSelector('[data-testid="extended-disclosure"]', {
+    timeout: 30000,
+  });
   await page.getByTestId("extended-disclosure").click();
   await page.getByPlaceholder("Search").click();
   await page.getByPlaceholder("Search").fill("amazon bedrock");
@@ -30,7 +33,7 @@ test("KeypairListComponent", async ({ page }) => {
   await page.waitForTimeout(1000);
 
   await page
-    .getByTestId("model_specsAmazon Bedrock")
+    .getByTestId("modelsAmazon Bedrock")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.mouse.up();
   await page.mouse.down();
@@ -38,6 +41,14 @@ test("KeypairListComponent", async ({ page }) => {
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
+
+  await page.getByTestId("more-options-modal").click();
+  await page.getByTestId("edit-button-modal").click();
+
+  await page.getByTestId("showmodel_kwargs").click();
+  expect(await page.getByTestId("showmodel_kwargs").isChecked()).toBeTruthy();
+  await page.getByText("Close").last().click();
+
   await page.locator('//*[@id="keypair0"]').click();
   await page.locator('//*[@id="keypair0"]').fill("testtesttesttest");
   await page.locator('//*[@id="keypair100"]').click();
@@ -77,13 +88,11 @@ test("KeypairListComponent", async ({ page }) => {
   await page.getByTestId("more-options-modal").click();
   await page.getByTestId("edit-button-modal").click();
 
-  await page.locator('//*[@id="showcache"]').click();
-  expect(await page.locator('//*[@id="showcache"]').isChecked()).toBeFalsy();
   await page.locator('//*[@id="showcredentials_profile_name"]').click();
   expect(
     await page.locator('//*[@id="showcredentials_profile_name"]').isChecked(),
   ).toBeFalsy();
-  await page.locator('//*[@id="saveChangesBtn"]').click();
+  await page.getByText("Close").last().click();
 
   const plusButtonLocator = page.locator('//*[@id="plusbtn0"]');
   const elementCount = await plusButtonLocator?.count();
@@ -98,8 +107,6 @@ test("KeypairListComponent", async ({ page }) => {
     expect(
       await page.locator('//*[@id="showcredentials_profile_name"]').isChecked(),
     ).toBeTruthy();
-    await page.locator('//*[@id="showcache"]').click();
-    expect(await page.locator('//*[@id="showcache"]').isChecked()).toBeTruthy();
 
     await page.locator('//*[@id="editNodekeypair0"]').click();
     await page.locator('//*[@id="editNodekeypair0"]').fill("testtesttesttest");
@@ -108,7 +115,7 @@ test("KeypairListComponent", async ({ page }) => {
     const elementKeyCount = await keyPairVerification?.count();
 
     if (elementKeyCount === 1) {
-      await page.locator('//*[@id="saveChangesBtn"]').click();
+      await page.getByText("Close").last().click();
 
       await page.getByTestId("div-generic-node").click();
 

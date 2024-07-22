@@ -19,9 +19,13 @@ test("NestedComponent", async ({ page }) => {
     await page.waitForTimeout(5000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
-
+  await page.waitForSelector('[data-testid="blank-flow"]', {
+    timeout: 30000,
+  });
   await page.getByTestId("blank-flow").click();
-  await page.waitForTimeout(1000);
+  await page.waitForSelector('[data-testid="extended-disclosure"]', {
+    timeout: 30000,
+  });
   await page.getByTestId("extended-disclosure").click();
   await page.getByPlaceholder("Search").click();
   await page.getByPlaceholder("Search").fill("pinecone");
@@ -37,18 +41,6 @@ test("NestedComponent", async ({ page }) => {
   await page.getByTestId("more-options-modal").click();
   await page.getByTestId("edit-button-modal").click();
 
-  //showpool_threads
-  await page.locator('//*[@id="showpool_threads"]').click();
-
-  expect(
-    await page.locator('//*[@id="showpool_threads"]').isChecked(),
-  ).toBeTruthy();
-
-  //showtext_key
-  await page.locator('//*[@id="showtext_key"]').click();
-
-  expect(await page.locator('//*[@id="showtext_key"]').isChecked()).toBeFalsy();
-
   // showindex_name
   await page.locator('//*[@id="showindex_name"]').click();
 
@@ -174,13 +166,6 @@ test("NestedComponent", async ({ page }) => {
   expect(
     await page.locator('//*[@id="showpinecone_api_key"]').isChecked(),
   ).toBeTruthy();
-
-  //showpool_threads
-  await page.locator('//*[@id="showpool_threads"]').click();
-
-  expect(
-    await page.locator('//*[@id="showpool_threads"]').isChecked(),
-  ).toBeFalsy();
 
   //showtext_key
   await page.locator('//*[@id="showtext_key"]').click();
@@ -189,5 +174,5 @@ test("NestedComponent", async ({ page }) => {
     await page.locator('//*[@id="showtext_key"]').isChecked(),
   ).toBeTruthy();
 
-  await page.locator('//*[@id="saveChangesBtn"]').click();
+  await page.getByText("Close").last().click();
 });

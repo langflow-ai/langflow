@@ -7,7 +7,7 @@ import {
   CSVViewErrorTitle,
 } from "../../constants/constants";
 import { useDarkStore } from "../../stores/darkStore";
-import { FlowPoolObjectType } from "../../types/chat";
+import { VertexBuildTypeAPI } from "../../types/api";
 import { NodeType } from "../../types/flow";
 import ForwardedIconComponent from "../genericIconComponent";
 import TableComponent from "../tableComponent";
@@ -19,7 +19,7 @@ function CsvOutputComponent({
   flowPool,
 }: {
   csvNode: NodeType;
-  flowPool: FlowPoolObjectType;
+  flowPool: VertexBuildTypeAPI;
 }) {
   const csvNodeArtifacts = flowPool?.data?.artifacts?.repr;
   const jsonString = csvNodeArtifacts?.replace(/'/g, '"');
@@ -32,7 +32,7 @@ function CsvOutputComponent({
 
   if (!file) {
     return (
-      <div className=" align-center flex h-full w-full flex-col items-center justify-center gap-5">
+      <div className="align-center flex h-full w-full flex-col items-center justify-center gap-5">
         <div className="align-center flex w-full justify-center gap-2">
           <ForwardedIconComponent name="Table" />
           {CSVViewErrorTitle}
@@ -81,9 +81,9 @@ function CsvOutputComponent({
   }, [separator]);
 
   return (
-    <div className=" h-full rounded-md border bg-muted">
+    <div className="h-full rounded-md border bg-muted">
       {status === "nodata" && (
-        <div className=" align-center flex h-full w-full flex-col items-center justify-center gap-5">
+        <div className="align-center flex h-full w-full flex-col items-center justify-center gap-5">
           <div className="align-center flex w-full justify-center gap-2">
             <ForwardedIconComponent name="Table" />
             {CSVViewErrorTitle}
@@ -96,7 +96,7 @@ function CsvOutputComponent({
         </div>
       )}
       {status === "error" && (
-        <div className=" align-center flex h-full w-full flex-col items-center justify-center gap-5">
+        <div className="align-center flex h-full w-full flex-col items-center justify-center gap-5">
           <div className="align-center flex w-full justify-center gap-2">
             <ForwardedIconComponent name="Table" />
             {CSVViewErrorTitle}
@@ -115,6 +115,7 @@ function CsvOutputComponent({
           style={{ height: "100%", width: "100%" }}
         >
           <TableComponent
+            key={"csv-output"}
             rowData={rowData}
             columnDefs={colDefs}
             defaultColDef={defaultColDef}
@@ -124,7 +125,7 @@ function CsvOutputComponent({
         </div>
       )}
       {status === "loading" && (
-        <div className="  flex h-full w-full items-center justify-center align-middle">
+        <div className="flex h-full w-full items-center justify-center align-middle">
           <Loading />
         </div>
       )}

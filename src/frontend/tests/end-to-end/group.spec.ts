@@ -26,6 +26,10 @@ test.describe("group node test", () => {
       .click();
     await page.waitForTimeout(2000);
     await page.getByLabel("fit view").first().click();
+
+    await page.getByTestId("title-OpenAI").click();
+    await page.getByTestId("title-OpenAI").click({ modifiers: ["Control"] });
+    await page.getByTestId("title-Prompt").click({ modifiers: ["Control"] });
     await page.getByTestId("title-OpenAI").click({ modifiers: ["Control"] });
 
     await page.getByRole("button", { name: "Group" }).click();

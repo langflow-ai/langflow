@@ -1,13 +1,13 @@
 import json
-from typing import List
+from typing import List, cast
 
 from langchain.chains.query_constructor.base import AttributeInfo
 from langchain.retrievers.self_query.base import SelfQueryRetriever
-from langchain_core.language_models import BaseLanguageModel
-from langchain_core.retrievers import BaseRetriever
 from langchain_core.vectorstores import VectorStore
 
 from langflow.custom import CustomComponent
+from langflow.field_typing import Retriever
+from langflow.field_typing.constants import LanguageModel
 
 
 class VectaraSelfQueryRetriverComponent(CustomComponent):
@@ -18,6 +18,7 @@ class VectaraSelfQueryRetriverComponent(CustomComponent):
     display_name: str = "Vectara Self Query Retriever for Vectara Vector Store"
     description: str = "Implementation of Vectara Self Query Retriever"
     documentation = "https://python.langchain.com/docs/integrations/retrievers/self_query/vectara_self_query"
+    name = "VectaraSelfQueryRetriver"
     icon = "Vectara"
 
     field_config = {
@@ -38,9 +39,9 @@ class VectaraSelfQueryRetriverComponent(CustomComponent):
         self,
         vectorstore: VectorStore,
         document_content_description: str,
-        llm: BaseLanguageModel,
+        llm: LanguageModel,
         metadata_field_info: List[str],
-    ) -> BaseRetriever:
+    ) -> Retriever:  # type: ignore
         metadata_field_obj = []
 
         for meta in metadata_field_info:
@@ -54,6 +55,9 @@ class VectaraSelfQueryRetriverComponent(CustomComponent):
             )
             metadata_field_obj.append(attribute_info)
 
-        return SelfQueryRetriever.from_llm(
-            llm, vectorstore, document_content_description, metadata_field_obj, verbose=True
+        return cast(
+            Retriever,
+            SelfQueryRetriever.from_llm(
+                llm, vectorstore, document_content_description, metadata_field_obj, verbose=True
+            ),
         )

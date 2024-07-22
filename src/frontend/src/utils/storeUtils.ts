@@ -21,8 +21,16 @@ export default function cloneFLowWithParent(
 }
 
 export function getInputsAndOutputs(nodes: Node[]) {
-  let inputs: { type: string; id: string; displayName: string }[] = [];
-  let outputs: { type: string; id: string; displayName: string }[] = [];
+  let inputs: {
+    type: string;
+    id: string;
+    displayName: string;
+  }[] = [];
+  let outputs: {
+    type: string;
+    id: string;
+    displayName: string;
+  }[] = [];
   nodes.forEach((node) => {
     const nodeData: NodeDataType = node.data as NodeDataType;
     if (isOutputNode(nodeData)) {

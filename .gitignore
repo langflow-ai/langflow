@@ -180,6 +180,8 @@ coverage.xml
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
+*.db-shm
+*.db-wal
 
 # Flask stuff:
 instance/
@@ -266,3 +268,8 @@ stuff/*
 src/frontend/playwright-report/index.html
 *.bak
 prof/*
+
+src/frontend/temp
+*-shm
+*-wal
+.history

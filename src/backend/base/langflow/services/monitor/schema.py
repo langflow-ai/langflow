@@ -1,57 +1,71 @@
 import json
-from datetime import datetime
-from typing import TYPE_CHECKING, Any, Optional
+from datetime import datetime, timezone
+from typing import Any
+from uuid import UUID
 
 from pydantic import BaseModel, Field, field_serializer, field_validator
 
-if TYPE_CHECKING:
-    from langflow.schema import Record
+from langflow.schema.message import Message
 
 
-class TransactionModel(BaseModel):
-    index: Optional[int] = Field(default=None)
-    timestamp: Optional[datetime] = Field(default_factory=datetime.now, alias="timestamp")
-    flow_id: str
-    source: str
-    target: str
-    target_args: dict
-    status: str
-    error: Optional[str] = None
-
+class DefaultModel(BaseModel):
     class Config:
         from_attributes = True
         populate_by_name = True
+        json_encoders = {
+            datetime: lambda v: v.isoformat(),
+        }
+
+    def json(self, **kwargs):
+        # Usa a função de serialização personalizada
+        return super().model_dump_json(**kwargs, encoder=self.custom_encoder)
+
+    @staticmethod
+    def custom_encoder(obj):
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        raise TypeError(f"Object of type {obj.__class__.__name__} is not JSON serializable")
+
+
+class TransactionModel(DefaultModel):
+    index: int | None = Field(default=None)
+    timestamp: datetime | None = Field(default_factory=datetime.now, alias="timestamp")
+    vertex_id: str
+    target_id: str | None = None
+    inputs: dict
+    outputs: dict | None = None
+    status: str
+    error: str | None = None
+    flow_id: str | None = Field(default=None, alias="flow_id")
 
     # validate target_args in case it is a JSON
-    @field_validator("target_args", mode="before")
+    @field_validator("outputs", "inputs", mode="before")
     def validate_target_args(cls, v):
         if isinstance(v, str):
             return json.loads(v)
         return v
 
-    @field_serializer("target_args")
+    @field_serializer("outputs", "inputs")
     def serialize_target_args(v):
         if isinstance(v, dict):
             return json.dumps(v)
         return v
 
 
-class TransactionModelResponse(BaseModel):
-    index: Optional[int] = Field(default=None)
-    timestamp: Optional[datetime] = Field(default_factory=datetime.now, alias="timestamp")
-    flow_id: str
-    source: str
-    target: str
-    target_args: dict
+class TransactionModelResponse(DefaultModel):
+    index: int | None = Field(default=None)
+    timestamp: datetime | None = Field(default_factory=datetime.now, alias="timestamp")
+    vertex_id: str
+    inputs: dict
+    outputs: dict | None = None
     status: str
-    error: Optional[str] = None
-
-    class Config:
-        from_attributes = True
-        populate_by_name = True
+    error: str | None = None
+    flow_id: str | None = Field(default=None, alias="flow_id")
+    source: str | None = None
+    target: str | None = None
 
     # validate target_args in case it is a JSON
-    @field_validator("target_args", mode="before")
+    @field_validator("outputs", "inputs", mode="before")
     def validate_target_args(cls, v):
         if isinstance(v, str):
             return json.loads(v)
@@ -67,74 +81,118 @@ class TransactionModelResponse(BaseModel):
         return v
 
 
-class MessageModel(BaseModel):
-    index: Optional[int] = Field(default=None)
-    flow_id: Optional[str] = Field(default=None, alias="flow_id")
-    timestamp: datetime = Field(default_factory=datetime.now)
+class DuckDbMessageModel(DefaultModel):
+    index: int | None = Field(default=None, alias="index")
+    flow_id: str | None = Field(default=None, alias="flow_id")
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     sender: str
     sender_name: str
     session_id: str
-    message: str
-    artifacts: dict
+    text: str
+    files: list[str] = []
 
-    class Config:
-        from_attributes = True
-        populate_by_name = True
-
-    @field_validator("artifacts", mode="before")
-    def validate_target_args(cls, v):
+    @field_validator("files", mode="before")
+    @classmethod
+    def validate_files(cls, v):
         if isinstance(v, str):
-            return json.loads(v)
+            v = json.loads(v)
+        return v
+
+    @field_serializer("timestamp")
+    @classmethod
+    def serialize_timestamp(cls, v):
+        v = v.replace(microsecond=0)
+        return v.strftime("%Y-%m-%d %H:%M:%S")
+
+    @field_serializer("files")
+    @classmethod
+    def serialize_files(cls, v):
+        if isinstance(v, list):
+            return json.dumps(v)
         return v
 
     @classmethod
-    def from_record(cls, record: "Record", flow_id: Optional[str] = None):
+    def from_message(cls, message: Message, flow_id: str | None = None):
         # first check if the record has all the required fields
-        if not record.data or ("sender" not in record.data and "sender_name" not in record.data):
-            raise ValueError("The record does not have the required fields 'sender' and 'sender_name' in the data.")
+        if message.text is None or not message.sender or not message.sender_name:
+            raise ValueError("The message does not have the required fields (text, sender, sender_name).")
         return cls(
-            sender=record.sender,
-            sender_name=record.sender_name,
-            message=record.text,
-            session_id=record.session_id,
-            artifacts=record.artifacts or {},
-            timestamp=record.timestamp,
+            sender=message.sender,
+            sender_name=message.sender_name,
+            text=message.text,
+            session_id=message.session_id,
+            files=message.files or [],
+            timestamp=message.timestamp,
+            flow_id=flow_id,
+        )
+
+
+class MessageModel(DefaultModel):
+    id: str | UUID | None = Field(default=None)
+    flow_id: UUID | None = Field(default=None)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    sender: str
+    sender_name: str
+    session_id: str
+    text: str
+    files: list[str] = []
+
+    @field_validator("files", mode="before")
+    @classmethod
+    def validate_files(cls, v):
+        if isinstance(v, str):
+            v = json.loads(v)
+        return v
+
+    @field_serializer("timestamp")
+    @classmethod
+    def serialize_timestamp(cls, v):
+        v = v.replace(microsecond=0)
+        return v.strftime("%Y-%m-%d %H:%M:%S")
+
+    @field_serializer("files")
+    @classmethod
+    def serialize_files(cls, v):
+        if isinstance(v, list):
+            return json.dumps(v)
+        return v
+
+    @classmethod
+    def from_message(cls, message: Message, flow_id: str | None = None):
+        # first check if the record has all the required fields
+        if message.text is None or not message.sender or not message.sender_name:
+            raise ValueError("The message does not have the required fields (text, sender, sender_name).")
+        return cls(
+            sender=message.sender,
+            sender_name=message.sender_name,
+            text=message.text,
+            session_id=message.session_id,
+            files=message.files or [],
+            timestamp=message.timestamp,
             flow_id=flow_id,
         )
 
 
 class MessageModelResponse(MessageModel):
-    index: Optional[int] = Field(default=None)
-
-    @field_validator("artifacts", mode="before")
-    def serialize_artifacts(v):
-        if isinstance(v, str):
-            return json.loads(v)
-        return v
-
-    @field_validator("index", mode="before")
-    def validate_id(cls, v):
-        if isinstance(v, float):
-            try:
-                return int(v)
-            except ValueError:
-                return None
-        return v
+    pass
 
 
-class VertexBuildModel(BaseModel):
-    index: Optional[int] = Field(default=None, alias="index", exclude=True)
-    id: Optional[str] = Field(default=None, alias="id")
+class MessageModelRequest(MessageModel):
+    text: str = Field(default="")
+    sender: str = Field(default="")
+    sender_name: str = Field(default="")
+    session_id: str = Field(default="")
+
+
+class VertexBuildModel(DefaultModel):
+    index: int | None = Field(default=None, alias="index", exclude=True)
+    id: str | None = Field(default=None, alias="id")
     flow_id: str
     valid: bool
     params: Any
     data: dict
     artifacts: dict
     timestamp: datetime = Field(default_factory=datetime.now)
-
-    class Config:
-        from_attributes = True
-        populate_by_name = True
 
     @field_serializer("data", "artifacts")
     def serialize_dict(v):
@@ -145,7 +203,7 @@ class VertexBuildModel(BaseModel):
                     v[key] = value.model_dump()
                 elif isinstance(value, list) and all(isinstance(i, BaseModel) for i in value):
                     v[key] = [i.model_dump() for i in value]
-            return json.dumps(v)
+            return json.dumps(v, default=str)
         elif isinstance(v, BaseModel):
             return v.model_dump_json()
         return v

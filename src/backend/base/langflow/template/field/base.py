@@ -1,14 +1,25 @@
-from typing import Any, Callable, Optional, Union
+from enum import Enum
+from typing import Any, Callable, GenericAlias, Optional, Union, _GenericAlias, _UnionGenericAlias  # type: ignore
 
 from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator, model_serializer, model_validator
 
+from langflow.field_typing import Text
 from langflow.field_typing.range_spec import RangeSpec
+from langflow.helpers.custom import format_type
+from langflow.type_extraction.type_extraction import post_process_type
 
 
-class TemplateField(BaseModel):
-    model_config = ConfigDict()
+class UndefinedType(Enum):
+    undefined = "__UNDEFINED__"
 
-    field_type: str = Field(default="str", serialization_alias="type")
+
+UNDEFINED = UndefinedType.undefined
+
+
+class Input(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    field_type: str | type | None = Field(default=str, serialization_alias="type")
     """The type of field this is. Default is a string."""
 
     required: bool = False
@@ -26,7 +37,7 @@ class TemplateField(BaseModel):
     multiline: bool = False
     """Defines if the field will allow the user to open a text editor. Default is False."""
 
-    value: Any = ""
+    value: Any = None
     """The value of the field. Default is None."""
 
     file_types: list[str] = Field(default=[], serialization_alias="fileTypes")
@@ -85,7 +96,7 @@ class TemplateField(BaseModel):
         if self.field_type in ["str", "Text"]:
             if "input_types" not in result:
                 result["input_types"] = ["Text"]
-        if self.field_type == "Text":
+        if self.field_type == Text:
             result["type"] = "str"
         else:
             result["type"] = self.field_type
@@ -104,7 +115,7 @@ class TemplateField(BaseModel):
 
     @field_serializer("field_type")
     def serialize_field_type(self, value, _info):
-        if value == "float" and self.range_spec is None:
+        if value == float and self.range_spec is None:
             self.range_spec = RangeSpec()
         return value
 
@@ -128,3 +139,71 @@ class TemplateField(BaseModel):
             (f".{file_type}" if isinstance(file_type, str) and not file_type.startswith(".") else file_type)
             for file_type in value
         ]
+
+    @field_validator("field_type", mode="before")
+    @classmethod
+    def validate_type(cls, v):
+        # If the user passes CustomComponent as a type insteado of "CustomComponent" we need to convert it to a string
+        # this should be done for all types
+        # How to check if v is a type?
+        if isinstance(v, (type, _GenericAlias, GenericAlias, _UnionGenericAlias)):
+            v = post_process_type(v)[0]
+            v = format_type(v)
+        elif not isinstance(v, str):
+            raise ValueError(f"type must be a string or a type, not {type(v)}")
+        return v
+
+
+class Output(BaseModel):
+    types: Optional[list[str]] = Field(default=[])
+    """List of output types for the field."""
+
+    selected: Optional[str] = Field(default=None)
+    """The selected output type for the field."""
+
+    name: str = Field(description="The name of the field.")
+    """The name of the field."""
+
+    hidden: Optional[bool] = Field(default=None)
+    """Dictates if the field is hidden."""
+
+    display_name: Optional[str] = Field(default=None)
+    """The display name of the field."""
+
+    method: Optional[str] = Field(default=None)
+    """The method to use for the output."""
+
+    value: Optional[Any] = Field(default=UNDEFINED)
+
+    cache: bool = Field(default=True)
+
+    def to_dict(self):
+        return self.model_dump(by_alias=True, exclude_none=True)
+
+    def add_types(self, _type: list[Any]):
+        for type_ in _type:
+            if self.types is None:
+                self.types = []
+            self.types.append(type_)
+
+    def set_selected(self):
+        if not self.selected and self.types:
+            self.selected = self.types[0]
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        result = handler(self)
+        if self.value == UNDEFINED:
+            result["value"] = UNDEFINED.value
+
+        return result
+
+    @model_validator(mode="after")
+    def validate_model(self):
+        if self.value == UNDEFINED.value:
+            self.value = UNDEFINED
+        if self.name is None:
+            raise ValueError("name must be set")
+        if self.display_name is None:
+            self.display_name = self.name
+        return self

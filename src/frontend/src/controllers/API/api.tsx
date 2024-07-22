@@ -1,12 +1,16 @@
+import {
+  LANGFLOW_ACCESS_TOKEN,
+  LANGFLOW_AUTO_LOGIN_OPTION,
+} from "@/constants/constants";
 import axios, { AxiosError, AxiosInstance } from "axios";
 import { useContext, useEffect } from "react";
 import { Cookies } from "react-cookie";
 import { renewAccessToken } from ".";
-import { AUTHORIZED_DUPLICATE_REQUESTS } from "../../constants/constants";
 import { BuildStatus } from "../../constants/enums";
 import { AuthContext } from "../../contexts/authContext";
 import useAlertStore from "../../stores/alertStore";
 import useFlowStore from "../../stores/flowStore";
+import { checkDuplicateRequestAndStoreRequest } from "./helpers/check-duplicate-requests";
 
 // Create a new Axios instance
 const api: AxiosInstance = axios.create({
@@ -37,7 +41,7 @@ function ApiInterceptor() {
             }
             const acceptedRequest = await tryToRenewAccessToken(error);
 
-            const accessToken = cookies.get("access_token_lf");
+            const accessToken = cookies.get(LANGFLOW_ACCESS_TOKEN);
 
             if (!accessToken && error?.config?.url?.includes("login")) {
               return Promise.reject(error);
@@ -48,7 +52,7 @@ function ApiInterceptor() {
         }
         await clearBuildVerticesState(error);
         return Promise.reject(error);
-      }
+      },
     );
 
     const isAuthorizedURL = (url) => {
@@ -65,10 +69,10 @@ function ApiInterceptor() {
         const parsedURL = new URL(url);
 
         const isDomainAllowed = authorizedDomains.some(
-          (domain) => parsedURL.origin === new URL(domain).origin
+          (domain) => parsedURL.origin === new URL(domain).origin,
         );
         const isEndpointAllowed = authorizedEndpoints.some((endpoint) =>
-          parsedURL.pathname.includes(endpoint)
+          parsedURL.pathname.includes(endpoint),
         );
 
         return isDomainAllowed || isEndpointAllowed;
@@ -81,38 +85,28 @@ function ApiInterceptor() {
     // Request interceptor to add access token to every request
     const requestInterceptor = api.interceptors.request.use(
       (config) => {
-        const lastUrl = localStorage.getItem("lastUrlCalled");
-        const lastMethodCalled = localStorage.getItem("lastMethodCalled");
+        const checkRequest = checkDuplicateRequestAndStoreRequest(config);
 
-        const isContained = AUTHORIZED_DUPLICATE_REQUESTS.some((request) =>
-          config?.url!.includes(request),
-        );
+        const controller = new AbortController();
 
-        if (
-          config?.url === lastUrl &&
-          !isContained &&
-          lastMethodCalled === config.method
-        ) {
-          return Promise.reject("Duplicate request");
+        if (!checkRequest) {
+          controller.abort("Duplicate Request");
+          console.error("Duplicate Request");
         }
 
-        localStorage.setItem("lastUrlCalled", config.url ?? "");
-        localStorage.setItem("lastMethodCalled", config.method ?? "");
-        localStorage.setItem(
-          "lastRequestData",
-          JSON.stringify(config.data) ?? "",
-        );
-
-        const accessToken = cookies.get("access_token_lf");
+        const accessToken = cookies.get(LANGFLOW_ACCESS_TOKEN);
         if (accessToken && !isAuthorizedURL(config?.url)) {
           config.headers["Authorization"] = `Bearer ${accessToken}`;
         }
 
-        return config;
+        return {
+          ...config,
+          signal: controller.signal,
+        };
       },
       (error) => {
         return Promise.reject(error);
-      }
+      },
     );
 
     return () => {
@@ -139,15 +133,7 @@ function ApiInterceptor() {
       if (window.location.pathname.includes("/login")) return;
       const res = await renewAccessToken();
       if (res?.data?.access_token && res?.data?.refresh_token) {
-        login(res?.data?.access_token);
-      }
-      if (error?.config?.headers) {
-        delete error.config.headers["Authorization"];
-        error.config.headers["Authorization"] = `Bearer ${cookies.get(
-          "access_token_lf"
-        )}`;
-        const response = await axios.request(error.config);
-        return response;
+        login(res?.data?.access_token, cookies.get(LANGFLOW_AUTO_LOGIN_OPTION));
       }
     } catch (error) {
       clearBuildVerticesState(error);

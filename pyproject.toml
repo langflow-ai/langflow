@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "langflow"
-version = "1.0.0a42"
+version = "1.0.10"
 description = "A Python package with a built-in web application"
 authors = ["Langflow <contact@langflow.org>"]
 maintainers = [
@@ -11,6 +11,7 @@ maintainers = [
     "Lucas Eduoli <lucaseduoli@gmail.com>",
     "Otávio Anovazzi <otavio2204@gmail.com>",
     "Rodrigo Nader <rodrigo@langflow.org>",
+    "Italo dos Anjos <italojohnnydosanjos@gmail.com>",
 ]
 repository = "https://github.com/langflow-ai/langflow"
 license = "MIT"
@@ -30,7 +31,7 @@ langflow-base = { path = "./src/backend/base", develop = true }
 beautifulsoup4 = "^4.12.2"
 google-search-results = "^2.4.1"
 google-api-python-client = "^2.130.0"
-huggingface-hub = { version = "^0.20.0", extras = ["inference"] }
+huggingface-hub = { version = "^0.22.0", extras = ["inference"] }
 llama-cpp-python = { version = "~0.2.0", optional = true }
 networkx = "^3.1"
 fake-useragent = "^1.5.0"
@@ -47,12 +48,12 @@ types-cachetools = "^5.3.0.5"
 pinecone-client = "^3.0.3"
 pymongo = "^4.6.0"
 supabase = "^2.3.0"
-certifi = "^2023.11.17"
+certifi = ">=2023.11.17,<2025.0.0"
 psycopg = "^3.1.9"
 psycopg-binary = "^3.1.9"
 fastavro = "^1.8.0"
 celery = { extras = ["redis"], version = "^5.3.6", optional = true }
-redis = { version = "^5.0.1", optional = true }
+redis = "^5.0.1"
 flower = { version = "^2.0.0", optional = true }
 metaphor-python = "^0.1.11"
 pywin32 = { version = "^306", markers = "sys_platform == 'win32'" }
@@ -66,26 +67,44 @@ qianfan = "0.3.5"
 pgvector = "^0.2.3"
 pyautogen = "^0.2.0"
 langchain-google-genai = "^1.0.1"
-langchain-cohere = "^0.1.0rc1"
+langchain-cohere = "^0.1.5"
 elasticsearch = "^8.12.0"
 pytube = "^15.0.0"
 dspy-ai = "^2.4.0"
 assemblyai = "^0.26.0"
 litellm = "^1.38.0"
-chromadb = "^0.5.0"
+chromadb = "^0.4"
 langchain-anthropic = "^0.1.6"
-langchain-astradb = "^0.3.0"
+langchain-astradb = "^0.3.3"
 langchain-openai = "^0.1.1"
 zep-python = { version = "^2.0.0rc5", allow-prereleases = true }
 langchain-google-vertexai = "^1.0.3"
 langchain-groq = "^0.1.3"
 langchain-pinecone = "^0.1.0"
 langchain-mistralai = "^0.1.6"
-couchbase = "^4.2.1"
+couchbase = { extras = ["couchbase"], version = "^4.2.1", optional = true }
 youtube-transcript-api = "^0.6.2"
 markdown = "^3.6"
 langchain-chroma = "^0.1.1"
-astra-assistants = "^2.0.2"
+upstash-vector = "^0.4.0"
+gitpython = "^3.1.43"
+cassio = { extras = ["cassio"], version = "^0.1.7", optional = true }
+unstructured = {extras = ["docx", "md", "pptx"], version = "^0.14.4"}
+langchain-aws = "^0.1.6"
+langchain-mongodb = "^0.1.6"
+kubernetes = "^30.1.0"
+firecrawl-py = "^0.0.16"
+json-repair = "^0.25.2"
+langchain-nvidia-ai-endpoints = "^0.1.2"
+langchain-google-calendar-tools = "^0.0.1"
+langchain-milvus = "^0.1.1"
+crewai = {extras = ["tools"], version = "^0.36.0"}
+langwatch = "^0.1.10"
+langsmith = "^0.1.86"
+yfinance = "^0.2.40"
+langchain-google-community = "^1.0.6"
+wolframalpha = "^5.1.3"
+astra-assistants = "^2.0.15"
 
 
 [tool.poetry.group.dev.dependencies]
@@ -115,9 +134,13 @@ pytest-asyncio = "^0.23.0"
 pytest-profiling = "^1.7.0"
 pre-commit = "^3.7.0"
 vulture = "^2.11"
+dictdiffer = "^0.9.0"
+pytest-split = "^0.9.0"
 
 [tool.poetry.extras]
 deploy = ["celery", "redis", "flower"]
+couchbase = ["couchbase"]
+cassio = ["cassio"]
 local = ["llama-cpp-python", "sentence-transformers", "ctransformers"]
 
 
@@ -125,22 +148,42 @@ local = ["llama-cpp-python", "sentence-transformers", "ctransformers"]
 optional = true
 
 [tool.poetry.group.spelling.dependencies]
-codespell = "^2.2.6"
+codespell = "^2.3.0"
 
 [tool.codespell]
-skip = '.git,*.pdf,*.svg,*.pdf,*.yaml,*.ipynb,poetry.lock,*.min.js,*.css,package-lock.json,*.trig'
+skip = '.git,*.pdf,*.svg,*.pdf,*.yaml,*.ipynb,poetry.lock,*.min.js,*.css,package-lock.json,*.trig.,**/node_modules/**,./stuff/*,*.csv'
 # Ignore latin etc
 ignore-regex = '.*(Stati Uniti|Tense=Pres).*'
 
 
 [tool.pytest.ini_options]
 minversion = "6.0"
-addopts = "-ra -n auto"
 testpaths = ["tests", "integration"]
 console_output_style = "progress"
-filterwarnings = ["ignore::DeprecationWarning"]
+filterwarnings = ["ignore::DeprecationWarning", "ignore::ResourceWarning"]
 log_cli = true
-markers = ["async_test"]
+markers = ["async_test", "api_key_required"]
+
+
+[tool.coverage.run]
+command_line = """
+    -m pytest --ignore=tests/integration
+    --cov --cov-report=term --cov-report=html
+    --instafail -ra -n auto -m "not api_key_required"
+"""
+source = ["src/backend/base/langflow/"]
+omit = ["*/alembic/*", "tests/*", "*/__init__.py"]
+
+
+[tool.coverage.report]
+sort = "Stmts"
+skip_empty = true
+show_missing = false
+ignore_errors = true
+
+
+[tool.coverage.html]
+directory = "coverage"
 
 
 [tool.ruff]

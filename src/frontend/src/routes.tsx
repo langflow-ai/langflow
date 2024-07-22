@@ -1,87 +1,110 @@
+import { Suspense, lazy } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { ProtectedAdminRoute } from "./components/authAdminGuard";
 import { ProtectedRoute } from "./components/authGuard";
 import { ProtectedLoginRoute } from "./components/authLoginGuard";
 import { CatchAllRoute } from "./components/catchAllRoutes";
+import LoadingComponent from "./components/loadingComponent";
 import { StoreGuard } from "./components/storeGuard";
-import AdminPage from "./pages/AdminPage";
-import LoginAdminPage from "./pages/AdminPage/LoginPage";
-import ApiKeysPage from "./pages/ApiKeysPage";
-import DeleteAccountPage from "./pages/DeleteAccountPage";
-import FlowPage from "./pages/FlowPage";
-import LoginPage from "./pages/LoginPage";
-import MyCollectionComponent from "./pages/MainPage/components/myCollectionComponent";
-import HomePage from "./pages/MainPage/pages/mainPage";
-import PlaygroundPage from "./pages/Playground";
-import SettingsPage from "./pages/SettingsPage";
-import GeneralPage from "./pages/SettingsPage/pages/GeneralPage";
-import GlobalVariablesPage from "./pages/SettingsPage/pages/GlobalVariablesPage";
-import ShortcutsPage from "./pages/SettingsPage/pages/ShortcutsPage";
-import SignUp from "./pages/SignUpPage";
-import StorePage from "./pages/StorePage";
-import ViewPage from "./pages/ViewPage";
+import MessagesPage from "./pages/SettingsPage/pages/messagesPage";
+
+const AdminPage = lazy(() => import("./pages/AdminPage"));
+const LoginAdminPage = lazy(() => import("./pages/AdminPage/LoginPage"));
+const ApiKeysPage = lazy(
+  () => import("./pages/SettingsPage/pages/ApiKeysPage"),
+);
+const DeleteAccountPage = lazy(() => import("./pages/DeleteAccountPage"));
+const FlowPage = lazy(() => import("./pages/FlowPage"));
+const LoginPage = lazy(() => import("./pages/LoginPage"));
+const MyCollectionComponent = lazy(
+  () => import("./pages/MainPage/components/myCollectionComponent"),
+);
+const HomePage = lazy(() => import("./pages/MainPage/pages/mainPage"));
+const PlaygroundPage = lazy(() => import("./pages/Playground"));
+const SettingsPage = lazy(() => import("./pages/SettingsPage"));
+const GeneralPage = lazy(
+  () => import("./pages/SettingsPage/pages/GeneralPage"),
+);
+const GlobalVariablesPage = lazy(
+  () => import("./pages/SettingsPage/pages/GlobalVariablesPage"),
+);
+const ShortcutsPage = lazy(
+  () => import("./pages/SettingsPage/pages/ShortcutsPage"),
+);
+const SignUp = lazy(() => import("./pages/SignUpPage"));
+const StorePage = lazy(() => import("./pages/StorePage"));
+const ViewPage = lazy(() => import("./pages/ViewPage"));
 
 const Router = () => {
   return (
-    <Routes>
-      <Route
-        path="/"
-        element={
-          <ProtectedRoute>
-            <HomePage />
-          </ProtectedRoute>
-        }
-      >
-        <Route index element={<Navigate replace to={"all"} />} />
+    <Suspense
+      fallback={
+        <div className="loading-page-panel">
+          <LoadingComponent remSize={50} />
+        </div>
+      }
+    >
+      <Routes>
         <Route
-          path="flows/*"
-          element={<MyCollectionComponent key="flows" type="flow" />}
+          path="/"
+          element={
+            <ProtectedRoute>
+              <HomePage />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<Navigate replace to={"all"} />} />
+          <Route
+            path="flows/*"
+            element={<MyCollectionComponent key="flows" type="flow" />}
+          />
+          <Route
+            path="components/*"
+            element={
+              <MyCollectionComponent key="components" type="component" />
+            }
+          />
+          <Route
+            path="all/*"
+            element={<MyCollectionComponent key="all" type="all" />}
+          />
+        </Route>
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute>
+              <SettingsPage />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<Navigate replace to={"general"} />} />
+          <Route path="global-variables" element={<GlobalVariablesPage />} />
+          <Route path="api-keys" element={<ApiKeysPage />} />
+          <Route path="general/:scrollId?" element={<GeneralPage />} />
+          <Route path="shortcuts" element={<ShortcutsPage />} />
+          <Route path="messages" element={<MessagesPage />} />
+        </Route>
+        <Route
+          path="/store"
+          element={
+            <ProtectedRoute>
+              <StoreGuard>
+                <StorePage />
+              </StoreGuard>
+            </ProtectedRoute>
+          }
         />
         <Route
-          path="components/*"
-          element={<MyCollectionComponent key="components" type="component" />}
+          path="/store/:id/"
+          element={
+            <ProtectedRoute>
+              <StoreGuard>
+                <StorePage />
+              </StoreGuard>
+            </ProtectedRoute>
+          }
         />
-        <Route
-          path="all/*"
-          element={<MyCollectionComponent key="all" type="all" />}
-        />
-      </Route>
-      <Route
-        path="/settings"
-        element={
-          <ProtectedRoute>
-            <SettingsPage />
-          </ProtectedRoute>
-        }
-      >
-        <Route index element={<Navigate replace to={"general"} />} />
-        <Route path="global-variables" element={<GlobalVariablesPage />} />
-        <Route path="general" element={<GeneralPage />} />
-        <Route path="shortcuts" element={<ShortcutsPage />} />
-      </Route>
-      <Route
-        path="/store"
-        element={
-          <ProtectedRoute>
-            <StoreGuard>
-              <StorePage />
-            </StoreGuard>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/store/:id/"
-        element={
-          <ProtectedRoute>
-            <StoreGuard>
-              <StorePage />
-            </StoreGuard>
-          </ProtectedRoute>
-        }
-      />
-      <Route path="/playground/:id/">
-        element=
-        {
+        <Route path="/playground/:id/">
           <Route
             path=""
             element={
@@ -90,96 +113,88 @@ const Router = () => {
               </ProtectedRoute>
             }
           />
-        }
-      </Route>
-      <Route path="/flow/:id/">
+        </Route>
+        <Route path="/flow/:id/">
+          <Route
+            path="*"
+            element={
+              <ProtectedRoute>
+                <FlowPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path=""
+            element={
+              <ProtectedRoute>
+                <FlowPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="view"
+            element={
+              <ProtectedRoute>
+                <ViewPage />
+              </ProtectedRoute>
+            }
+          />
+        </Route>
         <Route
           path="*"
           element={
             <ProtectedRoute>
-              <FlowPage />
+              <CatchAllRoute />
             </ProtectedRoute>
           }
         />
+
         <Route
-          path=""
+          path="/login"
           element={
-            <ProtectedRoute>
-              <FlowPage />
-            </ProtectedRoute>
+            <ProtectedLoginRoute>
+              <LoginPage />
+            </ProtectedLoginRoute>
           }
         />
         <Route
-          path="view"
+          path="/signup"
           element={
-            <ProtectedRoute>
-              <ViewPage />
-            </ProtectedRoute>
+            <ProtectedLoginRoute>
+              <SignUp />
+            </ProtectedLoginRoute>
           }
         />
-      </Route>
-      <Route
-        path="*"
-        element={
-          <ProtectedRoute>
-            <CatchAllRoute />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/login"
-        element={
-          <ProtectedLoginRoute>
-            <LoginPage />
-          </ProtectedLoginRoute>
-        }
-      />
-      <Route
-        path="/signup"
-        element={
-          <ProtectedLoginRoute>
-            <SignUp />
-          </ProtectedLoginRoute>
-        }
-      />
-      <Route
-        path="/login/admin"
-        element={
-          <ProtectedLoginRoute>
-            <LoginAdminPage />
-          </ProtectedLoginRoute>
-        }
-      />
-
-      <Route
-        path="/admin"
-        element={
-          <ProtectedAdminRoute>
-            <AdminPage />
-          </ProtectedAdminRoute>
-        }
-      />
-
-      <Route path="/account">
         <Route
-          path="delete"
+          path="/login/admin"
           element={
-            <ProtectedRoute>
-              <DeleteAccountPage />
-            </ProtectedRoute>
+            <ProtectedLoginRoute>
+              <LoginAdminPage />
+            </ProtectedLoginRoute>
           }
-        ></Route>
+        />
+
         <Route
-          path="api-keys"
+          path="/admin"
           element={
-            <ProtectedRoute>
-              <ApiKeysPage />
-            </ProtectedRoute>
+            <ProtectedAdminRoute>
+              <AdminPage />
+            </ProtectedAdminRoute>
           }
-        ></Route>
-      </Route>
-    </Routes>
+        />
+
+        <Route path="/account">
+          <Route
+            path="delete"
+            element={
+              <ProtectedRoute>
+                <DeleteAccountPage />
+              </ProtectedRoute>
+            }
+          ></Route>
+        </Route>
+      </Routes>
+    </Suspense>
   );
 };
 

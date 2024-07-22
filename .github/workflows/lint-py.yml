@@ -1,0 +1,43 @@
+name: Lint Python
+
+on:
+  workflow_call:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "(Optional) Branch to checkout"
+        required: false
+        type: string
+env:
+  POETRY_VERSION: "1.8.2"
+
+
+jobs:
+  lint:
+    name: Run Mypy
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version:
+          - "3.12"
+          - "3.11"
+          - "3.10"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || github.ref }}
+      - name: Set up Python ${{ matrix.python-version }} + Poetry ${{ env.POETRY_VERSION }}
+        uses: "./.github/actions/poetry_caching"
+        with:
+          python-version: ${{ matrix.python-version }}
+          poetry-version: ${{ env.POETRY_VERSION }}
+          cache-key: ${{ runner.os }}-poetry-${{ env.POETRY_VERSION }}-${{ hashFiles('**/poetry.lock') }}
+      - name: Install Python dependencies
+        run: |
+          poetry env use ${{ matrix.python-version }}
+          poetry install
+      - name: Run Mypy
+        run: |
+          make lint
+        env:
+          GITHUB_TOKEN: ${{ secrets.github_token }}

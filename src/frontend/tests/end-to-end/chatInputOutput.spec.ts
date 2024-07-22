@@ -1,5 +1,4 @@
 import { expect, test } from "@playwright/test";
-import { readFileSync } from "fs";
 
 test("chat_io_teste", async ({ page }) => {
   await page.goto("/");
@@ -22,37 +21,90 @@ test("chat_io_teste", async ({ page }) => {
     modalCount = await page.getByTestId("modal-title")?.count();
   }
 
-  const jsonContent = readFileSync(
-    "tests/end-to-end/assets/ChatTest.json",
-    "utf-8"
-  );
+  await page.waitForSelector('[data-testid="blank-flow"]', {
+    timeout: 30000,
+  });
 
   await page.getByTestId("blank-flow").click();
-  await page.waitForTimeout(2000);
+  await page.waitForSelector('[data-testid="extended-disclosure"]', {
+    timeout: 30000,
+  });
+  await page.getByTestId("extended-disclosure").click();
+  await page.getByPlaceholder("Search").click();
+  await page.getByPlaceholder("Search").fill("chat output");
+  await page.waitForTimeout(1000);
 
-  // Create the DataTransfer and File
-  const dataTransfer = await page.evaluateHandle((data) => {
-    const dt = new DataTransfer();
-    // Convert the buffer to a hex array
-    const file = new File([data], "ChatTest.json", {
-      type: "application/json",
-    });
-    dt.items.add(file);
-    return dt;
-  }, jsonContent);
+  await page
+    .getByTestId("outputsChat Output")
+    .dragTo(page.locator('//*[@id="react-flow-id"]'));
+  await page.mouse.up();
+  await page.mouse.down();
 
-  // Now dispatch
-  await page.dispatchEvent(
-    '//*[@id="react-flow-id"]/div[1]/div[1]/div',
-    "drop",
-    {
-      dataTransfer,
+  await page.getByPlaceholder("Search").click();
+  await page.getByPlaceholder("Search").fill("chat input");
+  await page.waitForTimeout(1000);
+
+  await page
+    .getByTestId("inputsChat Input")
+    .dragTo(page.locator('//*[@id="react-flow-id"]'));
+  await page.mouse.up();
+  await page.mouse.down();
+
+  await page.waitForSelector('[title="fit view"]', {
+    timeout: 100000,
+  });
+
+  await page.getByTitle("fit view").click();
+  await page.getByTitle("zoom out").click();
+  await page.getByTitle("zoom out").click();
+  await page.getByTitle("zoom out").click();
+  await page.getByTitle("zoom out").click();
+  await page.getByTitle("zoom out").click();
+  await page.getByTitle("zoom out").click();
+  await page.getByTitle("zoom out").click();
+
+  const elementsChatInput = await page
+    .locator('[data-testid="handle-chatinput-shownode-message-right"]')
+    .all();
+
+  let visibleElementHandle;
+
+  for (const element of elementsChatInput) {
+    if (await element.isVisible()) {
+      visibleElementHandle = element;
+      break;
     }
-  );
+  }
+
+  // Click and hold on the first element
+  await visibleElementHandle.hover();
+  await page.mouse.down();
+
+  // Move to the second element
+
+  const elementsChatOutput = await page
+    .getByTestId("handle-chatoutput-shownode-text-left")
+    .all();
+
+  for (const element of elementsChatOutput) {
+    if (await element.isVisible()) {
+      visibleElementHandle = element;
+      break;
+    }
+  }
+
+  await visibleElementHandle.hover();
+
+  // Release the mouse
+  await page.mouse.up();
+
   await page.getByLabel("fit view").click();
   await page.getByText("Playground", { exact: true }).click();
-  await page.getByPlaceholder("Send a message...").click();
-  await page.getByPlaceholder("Send a message...").fill("teste");
+  await page.waitForSelector('[data-testid="input-chat-playground"]', {
+    timeout: 100000,
+  });
+  await page.getByTestId("input-chat-playground").click();
+  await page.getByTestId("input-chat-playground").fill("teste");
   await page.getByRole("button").nth(1).click();
   const chat_output = page.getByTestId("chat-message-AI-teste");
   const chat_input = page.getByTestId("chat-message-User-teste");

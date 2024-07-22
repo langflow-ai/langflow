@@ -23,7 +23,7 @@ export default function CodeAreaComponent({
   useEffect(() => {
     if (disabled && myValue !== "") {
       setMyValue("");
-      onChange("", true);
+      onChange("", undefined, true);
     }
   }, [disabled]);
 
@@ -32,7 +32,7 @@ export default function CodeAreaComponent({
   }, [value]);
 
   return (
-    <div className={disabled ? "pointer-events-none w-full " : " w-full"}>
+    <div className={disabled ? "pointer-events-none w-full" : "w-full"}>
       <CodeAreaModal
         open={open}
         setOpen={setOpen}
@@ -46,15 +46,15 @@ export default function CodeAreaComponent({
           onChange(value);
         }}
       >
-        <div className="flex w-full items-center">
+        <div className="flex w-full items-center gap-3">
           <span
             id={id}
             data-testid={id}
             className={
               editNode
                 ? "input-edit-node input-dialog"
-                : (disabled ? " input-disable input-ring " : "") +
-                  " primary-input text-muted-foreground "
+                : (disabled ? "input-disable input-ring " : "") +
+                  " primary-input text-muted-foreground"
             }
           >
             {myValue !== "" ? myValue : "Type something..."}
@@ -63,7 +63,7 @@ export default function CodeAreaComponent({
             <IconComponent
               name="ExternalLink"
               className={
-                "icons-parameters-comp" +
+                "icons-parameters-comp shrink-0" +
                 (disabled ? " text-ring" : " hover:text-accent-foreground")
               }
             />

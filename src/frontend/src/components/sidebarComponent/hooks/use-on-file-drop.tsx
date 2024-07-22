@@ -9,14 +9,17 @@ import useFlowsManagerStore from "../../../stores/flowsManagerStore";
 import { useFolderStore } from "../../../stores/foldersStore";
 import { addVersionToDuplicates } from "../../../utils/reactflowUtils";
 
-const useFileDrop = (folderId, folderChangeCallback) => {
+const useFileDrop = (
+  folderId: string,
+  folderChangeCallback: (folderId: string) => void,
+) => {
   const setFolderDragging = useFolderStore((state) => state.setFolderDragging);
   const setFolderIdDragging = useFolderStore(
     (state) => state.setFolderIdDragging,
   );
 
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  const getFoldersApi = useFolderStore((state) => state.getFoldersApi);
+  const refreshFolders = useFolderStore((state) => state.refreshFolders);
   const flows = useFlowsManagerStore((state) => state.flows);
 
   const triggerFolderChange = (folderId) => {
@@ -118,7 +121,7 @@ const useFileDrop = (folderId, folderChangeCallback) => {
     setFolderIdDragging("");
 
     updateFlowInDatabase(updatedFlow).then(() => {
-      getFoldersApi(true);
+      refreshFolders();
       triggerFolderChange(folderId);
     });
   };
@@ -129,7 +132,7 @@ const useFileDrop = (folderId, folderChangeCallback) => {
     setFolderDragging(false);
     setFolderIdDragging("");
     uploadFlowsFromFolders(formData).then(() => {
-      getFoldersApi(true);
+      refreshFolders();
       triggerFolderChange(folderId);
     });
   };

@@ -1,64 +1,35 @@
-from typing import List, Optional
-
-from langchain.agents.tool_calling_agent.base import create_tool_calling_agent
-from langchain_core.prompts import ChatPromptTemplate
-
-from langflow.base.agents.agent import LCAgentComponent
-from langflow.field_typing import BaseLanguageModel, Text, Tool
-from langflow.schema.schema import Record
+from langchain.agents import create_tool_calling_agent
+from langchain_core.prompts import ChatPromptTemplate, PromptTemplate, HumanMessagePromptTemplate
+from langflow.base.agents.agent import LCToolsAgentComponent
+from langflow.inputs import MultilineInput
 
 
-class ToolCallingAgentComponent(LCAgentComponent):
+class ToolCallingAgentComponent(LCToolsAgentComponent):
     display_name: str = "Tool Calling Agent"
-    description: str = "Agent that uses tools. Only models that are compatible with function calling are supported."
+    description: str = "Agent that uses tools"
+    icon = "LangChain"
+    beta = True
+    name = "ToolCallingAgent"
 
-    def build_config(self):
-        return {
-            "llm": {"display_name": "LLM"},
-            "tools": {"display_name": "Tools"},
-            "user_prompt": {
-                "display_name": "Prompt",
-                "multiline": True,
-                "info": "This prompt must contain 'input' key.",
-            },
-            "handle_parsing_errors": {
-                "display_name": "Handle Parsing Errors",
-                "info": "If True, the agent will handle parsing errors. If False, the agent will raise an error.",
-                "advanced": True,
-            },
-            "memory": {
-                "display_name": "Memory",
-                "info": "Memory to use for the agent.",
-            },
-            "input_value": {
-                "display_name": "Inputs",
-                "info": "Input text to pass to the agent.",
-            },
-        }
+    inputs = LCToolsAgentComponent._base_inputs + [
+        MultilineInput(
+            name="system_prompt",
+            display_name="System Prompt",
+            info="System prompt for the agent.",
+            value="You are a helpful assistant",
+        ),
+        MultilineInput(
+            name="user_prompt", display_name="Prompt", info="This prompt must contain 'input' key.", value="{input}"
+        ),
+    ]
 
-    async def build(
-        self,
-        input_value: str,
-        llm: BaseLanguageModel,
-        tools: List[Tool],
-        user_prompt: str = "{input}",
-        message_history: Optional[List[Record]] = None,
-        system_message: str = "You are a helpful assistant",
-        handle_parsing_errors: bool = True,
-    ) -> Text:
-        if "input" not in user_prompt:
+    def creat_agent_runnable(self):
+        if "input" not in self.user_prompt:
             raise ValueError("Prompt must contain 'input' key.")
         messages = [
-            ("system", system_message),
-            (
-                "placeholder",
-                "{chat_history}",
-            ),
-            ("human", user_prompt),
+            ("system", self.system_prompt),
+            HumanMessagePromptTemplate(prompt=PromptTemplate(input_variables=["input"], template=self.user_prompt)),
             ("placeholder", "{agent_scratchpad}"),
         ]
         prompt = ChatPromptTemplate.from_messages(messages)
-        agent = create_tool_calling_agent(llm, tools, prompt)
-        result = await self.run_agent(agent, input_value, tools, message_history, handle_parsing_errors)
-        self.status = result
-        return result
+        return create_tool_calling_agent(self.llm, self.tools, prompt)

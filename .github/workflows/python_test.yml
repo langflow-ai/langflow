@@ -1,24 +1,19 @@
-name: test
+name: Python tests
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "poetry.lock"
-      - "pyproject.toml"
-      - "src/backend/**"
-  pull_request:
-    branches: [dev]
-    paths:
-      - "poetry.lock"
-      - "pyproject.toml"
-      - "src/backend/**"
-
+  workflow_call:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "(Optional) Branch to checkout"
+        required: false
+        type: string
 env:
   POETRY_VERSION: "1.8.2"
 
 jobs:
   build:
+    name: Run Unit Tests
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -26,8 +21,38 @@ jobs:
           - "3.12"
           - "3.11"
           - "3.10"
+        splitCount: [5]
+        group: [1, 2, 3, 4, 5]
     env:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || github.ref }}
+      - name: Set up Python ${{ matrix.python-version }} + Poetry ${{ env.POETRY_VERSION }}
+        uses: "./.github/actions/poetry_caching"
+        with:
+          python-version: ${{ matrix.python-version }}
+          poetry-version: ${{ env.POETRY_VERSION }}
+          cache-key: ${{ runner.os }}-poetry-${{ env.POETRY_VERSION }}-${{ hashFiles('**/poetry.lock') }}
+      - name: Install Python dependencies
+        run: |
+          poetry env use ${{ matrix.python-version }}
+          poetry install
+      - name: Run unit tests
+        timeout-minutes: 12
+        run: |
+          make unit_tests args="--splits ${{ matrix.splitCount }} --group ${{ matrix.group }}"
+
+  test-cli:
+    name: Test CLI
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version:
+          - "3.12"
+          - "3.11"
+          - "3.10"
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python ${{ matrix.python-version }} + Poetry ${{ env.POETRY_VERSION }}
@@ -40,6 +65,19 @@ jobs:
         run: |
           poetry env use ${{ matrix.python-version }}
           poetry install
-      - name: Run unit tests
+      - name: Test CLI
         run: |
-          make tests args="-n auto"
+          poetry run python -m langflow run --host 127.0.0.1 --port 7860 --backend-only &
+          SERVER_PID=$!
+          # Wait for the server to start
+          timeout 120 bash -c 'until curl -f http://127.0.0.1:7860/api/v1/auto_login; do sleep 5; done' || (echo "Server did not start in time" && kill $SERVER_PID && exit 1)
+          # Terminate the server
+          kill $SERVER_PID || (echo "Failed to terminate the server" && exit 1)
+          sleep 10 # give the server some time to terminate
+          # Check if the server is still running
+          if kill -0 $SERVER_PID 2>/dev/null; then
+            echo "Failed to terminate the server"
+            exit 1
+          else
+            echo "Server terminated successfully"
+          fi

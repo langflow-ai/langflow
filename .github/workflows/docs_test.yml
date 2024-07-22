@@ -1,0 +1,49 @@
+name: Test Docs Build
+
+on:
+  workflow_call:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "(Optional) Branch to checkout"
+        required: false
+        type: string
+
+env:
+  NODE_VERSION: "21"
+
+jobs:
+  test-docs-build:
+    name: Test Docs Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || github.ref }}
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        id: setup-node
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Cache Node.js dependencies
+        uses: actions/cache@v4
+        id: npm-cache
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('docs/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Install Node.js dependencies
+        run: |
+          cd docs
+          npm install --legacy-peer-deps
+        if: ${{ steps.setup-node.outputs.cache-hit != 'true' }}
+
+      - name: Build Docs
+        run: |
+          cd docs
+          npm run build

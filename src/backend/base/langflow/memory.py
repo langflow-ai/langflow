@@ -1,21 +1,28 @@
 import warnings
-from typing import List, Optional, Union
+from typing import List, Sequence
+from uuid import UUID
 
 from loguru import logger
+from sqlalchemy import delete
+from sqlmodel import Session, col, select
 
-from langflow.schema import Record
-from langflow.services.deps import get_monitor_service
-from langflow.services.monitor.schema import MessageModel
+from langflow.schema.message import Message
+from langflow.services.database.models.message.model import MessageRead, MessageTable
+from langflow.services.database.utils import migrate_messages_from_monitor_service_to_database
+from langflow.services.deps import session_scope
+from langflow.field_typing import BaseChatMessageHistory
+from langchain_core.messages import BaseMessage
 
 
 def get_messages(
-    sender: Optional[str] = None,
-    sender_name: Optional[str] = None,
-    session_id: Optional[str] = None,
-    order_by: Optional[str] = "timestamp",
-    order: Optional[str] = "DESC",
-    limit: Optional[int] = None,
-):
+    sender: str | None = None,
+    sender_name: str | None = None,
+    session_id: str | None = None,
+    order_by: str | None = "timestamp",
+    order: str | None = "DESC",
+    flow_id: UUID | None = None,
+    limit: int | None = None,
+) -> List[Message]:
     """
     Retrieves messages from the monitor service based on the provided filters.
 
@@ -27,69 +34,68 @@ def get_messages(
         limit (Optional[int]): The maximum number of messages to retrieve.
 
     Returns:
-        List[Record]: A list of Record objects representing the retrieved messages.
+        List[Data]: A list of Data objects representing the retrieved messages.
     """
-    monitor_service = get_monitor_service()
-    messages_df = monitor_service.get_messages(
-        sender=sender,
-        sender_name=sender_name,
-        session_id=session_id,
-        order_by=order_by,
-        limit=limit,
-        order=order,
-    )
+    with session_scope() as session:
+        migrate_messages_from_monitor_service_to_database(session)
+    messages_read: list[Message] = []
+    with session_scope() as session:
+        stmt = select(MessageTable)
+        if sender:
+            stmt = stmt.where(MessageTable.sender == sender)
+        if sender_name:
+            stmt = stmt.where(MessageTable.sender_name == sender_name)
+        if session_id:
+            stmt = stmt.where(MessageTable.session_id == session_id)
+        if flow_id:
+            stmt = stmt.where(MessageTable.flow_id == flow_id)
+        if order_by:
+            if order == "DESC":
+                col = getattr(MessageTable, order_by).desc()
+            else:
+                col = getattr(MessageTable, order_by).asc()
+            stmt = stmt.order_by(col)
+        if limit:
+            stmt = stmt.limit(limit)
+        messages = session.exec(stmt)
+        messages_read = [Message(**d.model_dump()) for d in messages]
 
-    records: list[Record] = []
-    # messages_df has a timestamp
-    # it gets the last 5 messages, for example
-    # but now they are ordered from most recent to least recent
-    # so we need to reverse the order
-    messages_df = messages_df[::-1] if order == "DESC" else messages_df
-    for row in messages_df.itertuples():
-        record = Record(
-            data={
-                "text": row.message,
-                "sender": row.sender,
-                "sender_name": row.sender_name,
-                "session_id": row.session_id,
-                "timestamp": row.timestamp,
-            },
-        )
-        records.append(record)
-
-    return records
+    return messages_read
 
 
-def add_messages(records: Union[list[Record], Record], flow_id: Optional[str] = None):
+def add_messages(messages: Message | list[Message], flow_id: str | None = None):
     """
     Add a message to the monitor service.
     """
     try:
-        monitor_service = get_monitor_service()
+        if not isinstance(messages, list):
+            messages = [messages]
 
-        if isinstance(records, Record):
-            records = [records]
+        if not all(isinstance(message, Message) for message in messages):
+            types = ", ".join([str(type(message)) for message in messages])
+            raise ValueError(f"The messages must be instances of Message. Found: {types}")
 
-        if not all(isinstance(record, (Record, str)) for record in records):
-            types = ", ".join([str(type(record)) for record in records])
-            raise ValueError(f"The records must be instances of Record. Found: {types}")
-
-        messages: list[MessageModel] = []
-        for record in records:
-            record.timestamp = monitor_service.get_timestamp()
-            messages.append(MessageModel.from_record(record, flow_id=flow_id))
-
-        for message in messages:
-            try:
-                monitor_service.add_message(message)
-            except Exception as e:
-                logger.error(f"Error adding message to monitor service: {e}")
-                logger.exception(e)
-                raise e
-        return records
+        messages_models: list[MessageTable] = []
+        for msg in messages:
+            messages_models.append(MessageTable.from_message(msg, flow_id=flow_id))
+        with session_scope() as session:
+            messages_models = add_messagetables(messages_models, session)
+        return [Message(**message.model_dump()) for message in messages_models]
     except Exception as e:
         logger.exception(e)
         raise e
+
+
+def add_messagetables(messages: list[MessageTable], session: Session):
+    for message in messages:
+        try:
+            session.add(message)
+            session.commit()
+            session.refresh(message)
+        except Exception as e:
+            logger.exception(e)
+            raise e
+    return [MessageRead.model_validate(message, from_attributes=True) for message in messages]
 
 
 def delete_messages(session_id: str):
@@ -99,29 +105,28 @@ def delete_messages(session_id: str):
     Args:
         session_id (str): The session ID associated with the messages to delete.
     """
-    monitor_service = get_monitor_service()
-    monitor_service.delete_messages(session_id)
+    with session_scope() as session:
+        session.exec(
+            delete(MessageTable)
+            .where(col(MessageTable.session_id) == session_id)
+            .execution_options(synchronize_session="fetch")
+        )
+        session.commit()
 
 
 def store_message(
-    message: Union[str, Record],
-    session_id: Optional[str] = None,
-    sender: Optional[str] = None,
-    sender_name: Optional[str] = None,
-    flow_id: Optional[str] = None,
-) -> List[Record]:
+    message: Message,
+    flow_id: str | None = None,
+) -> list[Message]:
     """
     Stores a message in the memory.
 
     Args:
-        message (Union[str, Record]): The message to be stored. It can be either a string or a Record object.
-        session_id (Optional[str]): The session ID associated with the message.
-        sender (Optional[str]): The sender ID associated with the message.
-        sender_name (Optional[str]): The name of the sender associated with the message.
+        message (Message): The message to store.
         flow_id (Optional[str]): The flow ID associated with the message. When running from the CustomComponent you can access this using `self.graph.flow_id`.
 
     Returns:
-        List[Record]: A list of records containing the stored message.
+        List[Message]: A list of data containing the stored message.
 
     Raises:
         ValueError: If any of the required parameters (session_id, sender, sender_name) is not provided.
@@ -130,26 +135,33 @@ def store_message(
         warnings.warn("No message provided.")
         return []
 
-    if not session_id or not sender or not sender_name:
+    if not message.session_id or not message.sender or not message.sender_name:
         raise ValueError("All of session_id, sender, and sender_name must be provided.")
 
-    if isinstance(message, Record):
-        record = message
-        record.data.update(
-            {
-                "session_id": session_id,
-                "sender": sender,
-                "sender_name": sender_name,
-            }
-        )
-    elif isinstance(message, str):
-        record = Record(
-            data={
-                "text": message,
-                "session_id": session_id,
-                "sender": sender,
-                "sender_name": sender_name,
-            },
-        )
+    return add_messages([message], flow_id=flow_id)
 
-    return add_messages([record], flow_id=flow_id)
+
+class LCBuiltinChatMemory(BaseChatMessageHistory):
+    def __init__(
+        self,
+        flow_id: str,
+        session_id: str,
+    ) -> None:
+        self.flow_id = flow_id
+        self.session_id = session_id
+
+    @property
+    def messages(self) -> List[BaseMessage]:
+        messages = get_messages(
+            session_id=self.session_id,
+        )
+        return [m.to_lc_message() for m in messages]
+
+    def add_messages(self, messages: Sequence[BaseMessage]) -> None:
+        for lc_message in messages:
+            message = Message.from_lc_message(lc_message)
+            message.session_id = self.session_id
+            store_message(message, flow_id=self.flow_id)
+
+    def clear(self) -> None:
+        delete_messages(self.session_id)

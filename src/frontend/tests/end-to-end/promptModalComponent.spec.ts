@@ -19,9 +19,13 @@ test("PromptTemplateComponent", async ({ page }) => {
     await page.waitForTimeout(5000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
-
+  await page.waitForSelector('[data-testid="blank-flow"]', {
+    timeout: 30000,
+  });
   await page.getByTestId("blank-flow").click();
-  await page.waitForTimeout(1000);
+  await page.waitForSelector('[data-testid="extended-disclosure"]', {
+    timeout: 30000,
+  });
   await page.getByTestId("extended-disclosure").click();
   await page.getByPlaceholder("Search").click();
   await page.getByPlaceholder("Search").fill("prompt");
@@ -29,7 +33,7 @@ test("PromptTemplateComponent", async ({ page }) => {
   await page.waitForTimeout(1000);
 
   await page
-    .locator('//*[@id="inputsPrompt"]')
+    .locator('//*[@id="promptsPrompt"]')
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.mouse.up();
   await page.mouse.down();
@@ -72,6 +76,10 @@ test("PromptTemplateComponent", async ({ page }) => {
     expect(false).toBeTruthy();
   }
 
+  await page.getByTestId("div-generic-node").click();
+
+  await page.getByTestId("more-options-modal").click();
+
   await page.getByTestId("save-button-modal").click();
 
   const replace = await page.getByTestId("replace-button").isVisible();
@@ -100,13 +108,16 @@ test("PromptTemplateComponent", async ({ page }) => {
   await page.getByTestId("more-options-modal").click();
   await page.getByTestId("edit-button-modal").click();
 
-  value = await page.locator('//*[@id="textarea-edit-prompt"]').inputValue();
+  value =
+    (await page.locator('//*[@id="textarea-edit-prompt"]').textContent()) ?? "";
 
   if (value != "prompt_value_!@#!@#") {
     expect(false).toBeTruthy();
   }
 
-  value = await page.locator('//*[@id="textarea-edit-prompt1"]').inputValue();
+  value =
+    (await page.locator('//*[@id="textarea-edit-prompt1"]').textContent()) ??
+    "";
 
   if (value != "prompt_name_test_123123!@#!@#") {
     expect(false).toBeTruthy();
@@ -120,12 +131,19 @@ test("PromptTemplateComponent", async ({ page }) => {
     expect(false).toBeTruthy();
   }
 
+  await page.locator('//*[@id="textarea-edit-prompt1"]').click();
   await page
-    .locator('//*[@id="textarea-edit-prompt1"]')
+    .getByTestId("text-area-modal")
     .fill("prompt_edit_test_12312312321!@#$");
+
+  await page.getByText("Finish Editing", { exact: true }).click();
+
+  await page.locator('//*[@id="textarea-edit-prompt"]').click();
   await page
-    .locator('//*[@id="textarea-edit-prompt"]')
+    .getByTestId("text-area-modal")
     .fill("prompt_edit_test_44444444444!@#$");
+
+  await page.getByText("Finish Editing", { exact: true }).click();
 
   await page.locator('//*[@id="showtemplate"]').click();
   expect(await page.locator('//*[@id="showtemplate"]').isChecked()).toBeFalsy();
@@ -164,7 +182,7 @@ test("PromptTemplateComponent", async ({ page }) => {
   await page.locator('//*[@id="showprompt"]').click();
   expect(await page.locator('//*[@id="showprompt"]').isChecked()).toBeTruthy();
 
-  await page.locator('//*[@id="saveChangesBtn"]').click();
+  await page.getByText("Close").last().click();
 
   await page.getByTestId("more-options-modal").click();
   await page.getByTestId("edit-button-modal").click();
@@ -172,13 +190,16 @@ test("PromptTemplateComponent", async ({ page }) => {
   await page.locator('//*[@id="showprompt1"]').click();
   expect(await page.locator('//*[@id="showprompt1"]').isChecked()).toBeTruthy();
 
-  value = await page.locator('//*[@id="textarea-edit-prompt"]').inputValue();
+  value =
+    (await page.locator('//*[@id="textarea-edit-prompt"]').textContent()) ?? "";
 
   if (value != "prompt_edit_test_44444444444!@#$") {
     expect(false).toBeTruthy();
   }
 
-  value = await page.locator('//*[@id="textarea-edit-prompt1"]').inputValue();
+  value =
+    (await page.locator('//*[@id="textarea-edit-prompt1"]').textContent()) ??
+    "";
 
   if (value != "prompt_edit_test_12312312321!@#$") {
     expect(false).toBeTruthy();

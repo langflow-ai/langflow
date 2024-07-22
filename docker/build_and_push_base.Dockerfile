@@ -10,7 +10,9 @@
 # PYTHON-BASE
 # Sets up all our shared environment variables
 ################################
-FROM python:3.12-slim as python-base
+
+# use python:3.12.3-slim as the base image until https://github.com/pydantic/pydantic-core/issues/1292 gets resolved
+FROM python:3.12.3-slim as python-base
 
 # python
 ENV PYTHONUNBUFFERED=1 \
@@ -93,6 +95,7 @@ USER user
 # Install the package from the .tar.gz
 RUN python -m pip install /app/src/backend/base/dist/*.tar.gz --user
 
+ENV LANGFLOW_HOST=0.0.0.0
+ENV LANGFLOW_PORT=7860
 
-ENTRYPOINT ["python", "-m", "langflow", "run"]
-CMD ["--host", "0.0.0.0", "--port", "7860"]
+CMD ["python", "-m", "langflow", "run"]

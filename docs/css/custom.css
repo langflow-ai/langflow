@@ -1,0 +1,246 @@
+/**
+ * Any CSS included here will be global. The classic template
+ * bundles Infima by default. Infima is a CSS framework designed to
+ * work well for content-centric websites.
+ */
+:root {
+  --ifm-background-color: var(--token-primary-bg-c);
+  --ifm-navbar-link-hover-color: initial;
+  --ifm-navbar-padding-vertical: 0;
+  --ifm-navbar-item-padding-vertical: 0;
+  --ifm-font-family-base: -apple-system, BlinkMacSystemFont, Inter, Helvetica,
+    Arial, sans-serif, "Apple Color Emoji", "Segoe UI emoji";
+  --ifm-font-family-monospace: "SFMono-Regular", "Roboto Mono", Consolas,
+    "Liberation Mono", Menlo, Courier, monospace;
+}
+
+.theme-doc-sidebar-item-category.menu__list-item:not(:first-child) {
+  margin-top: 1.5rem !important;
+}
+
+.docusaurus-highlight-code-line {
+  background-color: rgba(0, 0, 0, 0.1);
+  display: block;
+  margin: 0 calc(-1 * var(--ifm-pre-padding));
+  padding: 0 var(--ifm-pre-padding);
+}
+
+.diagonal-box {
+  transform: skewY(-6deg);
+}
+
+.diagonal-content {
+  transform: skewY(6deg);
+}
+
+[class^="announcementBar"] {
+  z-index: 10;
+}
+
+.showcase {
+  background-color: #fff;
+}
+
+.showcase-border {
+  border-color: rgba(243, 244, 246, 1);
+}
+
+.text-description {
+  color: rgba(107, 114, 128, 1);
+}
+
+p {
+  text-align: justify;
+}
+
+/* apply */
+#hero-apply {
+  z-index: -1;
+  background-image: linear-gradient(
+    var(--ifm-footer-background-color),
+    var(--ifm-navbar-background-color)
+  );
+}
+
+.apply-form {
+  background-image: linear-gradient(#fff, #f5f5fa);
+  max-width: 600px;
+}
+
+.apply-text {
+  color: #36395a;
+}
+
+/* index */
+#hero {
+  background-image: linear-gradient(
+    var(--ifm-footer-background-color),
+    var(--ifm-navbar-background-color)
+  );
+}
+
+/**
+  * Hero component title overrides to match other heading styles
+  */
+.hero-title {
+  color: rgb(28, 30, 33);
+  font-family: var(--ifm-heading-font-family);
+}
+h1 {
+  font-size: 26px;
+}
+h2 {
+  font-size: 22px;
+}
+h3 {
+  font-size: 18px;
+}
+
+body {
+  font-size: 16px;
+}
+
+.docsearch-logo {
+  color: #21243d;
+}
+
+.apply-button:hover {
+  color: #fff;
+}
+
+/* GitHub */
+.header-github-link:hover {
+  opacity: 0.6;
+}
+
+.header-github-link:before {
+  content: "";
+  width: 24px;
+  height: 24px;
+  display: flex;
+  background: url("/logos/gitLight.svg")
+    no-repeat;
+}
+
+[data-theme='dark'] .header-github-link:before {
+  content: "";
+  width: 24px;
+  height: 24px;
+  display: flex;
+  background: url("/logos/gitDark.svg")
+    no-repeat;
+}
+
+/* Twitter */
+.header-twitter-link:hover {
+  opacity: 0.6;
+}
+
+.header-twitter-link::before {
+  content: "";
+  width: 24px;
+  height: 24px;
+  display: flex;
+  background: url("/logos/xLight.svg");
+  background-size: contain;
+}
+
+[data-theme='dark'] .header-twitter-link::before {
+  content: "";
+  width: 24px;
+  height: 24px;
+  display: flex;
+  background: url("/logos/xDark.svg");
+  background-size: contain;
+}
+
+/* Discord */
+
+.header-discord-link {
+  margin-right: 0.5rem;
+}
+
+.header-discord-link:hover {
+  opacity: 0.6;
+}
+
+[data-theme='dark'] .header-discord-link::before {
+  content: "";
+  width: 24px;
+  height: 24px;
+  display: flex;
+  background: url("/logos/discordDark.svg");
+  background-size: contain;
+}
+
+.header-discord-link::before {
+  content: "";
+  width: 24px;
+  height: 24px;
+  display: flex;
+  background: url("/logos/discordLight.svg");
+  background-size: contain;
+}
+
+/* Images */
+.image-rendering-crisp {
+  image-rendering: crisp-edges;
+
+  /* alias for google chrome */
+  image-rendering: -webkit-optimize-contrast;
+}
+
+.image-rendering-pixel {
+  image-rendering: pixelated;
+}
+
+.img-center {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.resized-image {
+  width: 400px;
+}
+
+/* Reduce width on mobile for Mendable Search */
+@media (max-width: 767px) {
+  .mendable-search {
+    width: 200px;
+  }
+}
+
+@media (max-width: 500px) {
+  .mendable-search {
+    width: 150px;
+  }
+}
+
+@media (max-width: 380px) {
+  .mendable-search {
+    width: 140px;
+  }
+}
+/*
+.ch-scrollycoding {
+  gap: 10rem !important;
+} */
+
+.ch-scrollycoding-content {
+  max-width: 55% !important;
+  min-width: 40% !important;
+}
+
+.ch-scrollycoding-sticker {
+  max-width: 60% !important;
+  min-width: 45% !important;
+}
+
+.ch-scrollycoding-step-content {
+  min-height: 70px;
+}
+
+.theme-doc-sidebar-item-category.theme-doc-sidebar-item-category-level-2.menu__list-item:not(:first-child) {
+  margin-top: 0.25rem!important;
+}

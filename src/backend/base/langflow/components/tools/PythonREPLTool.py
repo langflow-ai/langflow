@@ -9,6 +9,7 @@ from langchain_core.tools import Tool
 class PythonREPLToolComponent(CustomComponent):
     display_name = "Python REPL Tool"
     description = "A tool for running Python code in a REPL environment."
+    name = "PythonREPLTool"
 
     def build_config(self):
         return {
@@ -36,7 +37,7 @@ class PythonREPLToolComponent(CustomComponent):
                 imported_module = importlib.import_module(module)
                 global_dict[imported_module.__name__] = imported_module
             except ImportError:
-                print(f"Could not import module {module}")
+                raise ImportError(f"Could not import module {module}")
         return global_dict
 
     def build(

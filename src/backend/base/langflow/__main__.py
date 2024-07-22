@@ -4,13 +4,14 @@ import sys
 import time
 import warnings
 from pathlib import Path
-from typing import Optional
+from typing import Any, Callable, Optional
 
 import click
 import httpx
 import typer
-from dotenv import load_dotenv
-from multiprocess import Process, cpu_count  # type: ignore
+from dotenv import dotenv_values, load_dotenv
+from multiprocess import cpu_count  # type: ignore
+from multiprocess.context import Process  # type: ignore
 from packaging import version as pkg_version
 from rich import box
 from rich import print as rprint
@@ -121,7 +122,7 @@ def run(
     ),
 ):
     """
-    Run the Langflow.
+    Run Langflow.
     """
 
     configure(log_level=log_level, log_file=log_file)
@@ -130,6 +131,29 @@ def run(
 
     if env_file:
         load_dotenv(env_file, override=True)
+        env_vars = dotenv_values(env_file)
+
+        # Define a mapping of environment variables to their corresponding variables and types
+        env_var_mapping: dict[str, tuple[str, type | Callable[[Any], bool]]] = {
+            "LANGFLOW_HOST": ("host", str),
+            "LANGFLOW_PORT": ("port", int),
+            "LANGFLOW_WORKERS": ("workers", int),
+            "LANGFLOW_WORKER_TIMEOUT": ("timeout", int),
+            "LANGFLOW_COMPONENTS_PATH": ("components_path", Path),
+            "LANGFLOW_LOG_LEVEL": ("log_level", str),
+            "LANGFLOW_LOG_FILE": ("log_file", Path),
+            "LANGFLOW_LANGCHAIN_CACHE": ("cache", str),
+            "LANGFLOW_FRONTEND_PATH": ("path", str),
+            "LANGFLOW_OPEN_BROWSER": ("open_browser", lambda x: x.lower() == "true"),
+            "LANGFLOW_REMOVE_API_KEYS": ("remove_api_keys", lambda x: x.lower() == "true"),
+            "LANGFLOW_BACKEND_ONLY": ("backend_only", lambda x: x.lower() == "true"),
+            "LANGFLOW_STORE": ("store", lambda x: x.lower() == "true"),
+        }
+
+        # Update variables based on environment variables
+        for env_var, (var_name, var_type) in env_var_mapping.items():
+            if env_var in env_vars:
+                locals()[var_name] = var_type(env_vars[env_var])
 
     update_settings(
         dev=dev,
@@ -140,12 +164,12 @@ def run(
     )
     # create path object if path is provided
     static_files_dir: Optional[Path] = Path(path) if path else None
+    settings_service = get_settings_service()
+    settings_service.set("backend_only", backend_only)
     app = setup_app(static_files_dir=static_files_dir, backend_only=backend_only)
     # check if port is being used
     if is_port_in_use(port, host):
         port = get_free_port(port)
-
-    settings_service = get_settings_service()
 
     settings_service.set("worker_timeout", timeout)
 
@@ -158,6 +182,7 @@ def run(
     # Define an env variable to know if we are just testing the server
     if "pytest" in sys.modules:
         return
+    process: Process | None = None
     try:
         if platform.system() in ["Windows"]:
             # Run using uvicorn on MacOS and Windows
@@ -167,12 +192,17 @@ def run(
         else:
             # Run using gunicorn on Linux
             process = run_on_mac_or_linux(host, port, log_level, options, app)
-        if open_browser:
+        if open_browser and not backend_only:
             click.launch(f"http://{host}:{port}")
         if process:
             process.join()
     except KeyboardInterrupt:
-        pass
+        if process is not None:
+            process.terminate()
+        sys.exit(0)
+    except Exception as e:
+        logger.exception(e)
+        sys.exit(1)
 
 
 def wait_for_server_ready(host, port):
@@ -381,10 +411,11 @@ def print_banner(host: str, port: int):
     styled_package_name = stylize_text(package_name, package_name, any("pre-release" in notice for notice in notices))
 
     title = f"[bold]Welcome to :chains: {styled_package_name}[/bold]\n"
-    info_text = "Collaborate, and contribute at our [bold][link=https://github.com/langflow-ai/langflow]GitHub Repo[/link][/bold] :rocket:"
+    info_text = "Collaborate, and contribute at our [bold][link=https://github.com/langflow-ai/langflow]GitHub Repo[/link][/bold] :star2:"
+    telemetry_text = "We collect anonymous usage data to improve Langflow.\nYou can opt-out by setting [bold]DO_NOT_TRACK=true[/bold] in your environment."
     access_link = f"Access [link=http://{host}:{port}]http://{host}:{port}[/link]"
 
-    panel_content = "\n\n".join([title, *styled_notices, info_text, access_link])
+    panel_content = "\n\n".join([title, *styled_notices, info_text, telemetry_text, access_link])
     panel = Panel(panel_content, box=box.ROUNDED, border_style="blue", expand=False)
     rprint(panel)
 
@@ -393,29 +424,24 @@ def run_langflow(host, port, log_level, options, app):
     """
     Run Langflow server on localhost
     """
-    try:
-        if platform.system() in ["Windows"]:
-            # Run using uvicorn on MacOS and Windows
-            # Windows doesn't support gunicorn
-            # MacOS requires an env variable to be set to use gunicorn
-            import uvicorn
 
-            uvicorn.run(
-                app,
-                host=host,
-                port=port,
-                log_level=log_level.lower(),
-                loop="asyncio",
-            )
-        else:
-            from langflow.server import LangflowApplication
+    if platform.system() in ["Windows"]:
+        # Run using uvicorn on MacOS and Windows
+        # Windows doesn't support gunicorn
+        # MacOS requires an env variable to be set to use gunicorn
+        import uvicorn
 
-            LangflowApplication(app, options).run()
-    except KeyboardInterrupt:
-        pass
-    except Exception as e:
-        logger.exception(e)
-        sys.exit(1)
+        uvicorn.run(
+            app,
+            host=host,
+            port=port,
+            log_level=log_level.lower(),
+            loop="asyncio",
+        )
+    else:
+        from langflow.server import LangflowApplication
+
+        LangflowApplication(app, options).run()
 
 
 @app.command()

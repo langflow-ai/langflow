@@ -1,0 +1,13 @@
+name: Auto-update
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  Auto:
+    name: Auto-update
+    runs-on: ubuntu-latest
+    steps:
+      - uses: tibdex/auto-update@v2

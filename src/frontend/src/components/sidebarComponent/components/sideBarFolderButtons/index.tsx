@@ -3,6 +3,7 @@ import { useLocation } from "react-router-dom";
 import { FolderType } from "../../../../pages/MainPage/entities";
 import { addFolder, updateFolder } from "../../../../pages/MainPage/services";
 import { handleDownloadFolderFn } from "../../../../pages/MainPage/utils/handle-download-folder";
+import useAlertStore from "../../../../stores/alertStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useFolderStore } from "../../../../stores/foldersStore";
 import { handleKeyDown } from "../../../../utils/reactflowUtils";
@@ -15,16 +16,13 @@ import { Input } from "../../../ui/input";
 import useFileDrop from "../../hooks/use-on-file-drop";
 
 type SideBarFoldersButtonsComponentProps = {
-  folders: FolderType[];
   pathname: string;
   handleChangeFolder?: (id: string) => void;
-  handleEditFolder?: (item: FolderType) => void;
   handleDeleteFolder?: (item: FolderType) => void;
 };
 const SideBarFoldersButtonsComponent = ({
   pathname,
   handleChangeFolder,
-  handleEditFolder,
   handleDeleteFolder,
 }: SideBarFoldersButtonsComponentProps) => {
   const refInput = useRef<HTMLInputElement>(null);
@@ -33,14 +31,14 @@ const SideBarFoldersButtonsComponent = ({
   const [foldersNames, setFoldersNames] = useState({});
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
   const [editFolders, setEditFolderName] = useState(
-    folders.map((obj) => ({ name: obj.name, edit: false }))
+    folders.map((obj) => ({ name: obj.name, edit: false })),
   );
   const uploadFolder = useFolderStore((state) => state.uploadFolder);
   const currentFolder = pathname.split("/");
   const urlWithoutPath = pathname.split("/").length < 4;
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
-  const getFoldersApi = useFolderStore((state) => state.getFoldersApi);
   const folderIdDragging = useFolderStore((state) => state.folderIdDragging);
+  const refreshFolders = useFolderStore((state) => state.refreshFolders);
 
   const checkPathName = (itemId: string) => {
     if (urlWithoutPath && itemId === myCollectionId) {
@@ -51,18 +49,33 @@ const SideBarFoldersButtonsComponent = ({
   const location = useLocation();
   const folderId = location?.state?.folderId ?? myCollectionId;
   const getFolderById = useFolderStore((state) => state.getFolderById);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
 
-  const handleFolderChange = (folderId: string) => {
+  const handleFolderChange = () => {
     getFolderById(folderId);
   };
 
   const { dragOver, dragEnter, dragLeave, onDrop } = useFileDrop(
     folderId,
-    handleFolderChange
+    handleFolderChange,
   );
 
   const handleUploadFlowsToFolder = () => {
-    uploadFolder(folderId);
+    uploadFolder(folderId)
+      .then(() => {
+        getFolderById(folderId);
+        setSuccessData({
+          title: "Uploaded successfully",
+        });
+      })
+      .catch((err) => {
+        console.log(err);
+        setErrorData({
+          title: `Error on upload`,
+          list: [err["response"]["data"]],
+        });
+      });
   };
 
   const handleDownloadFolder = (id: string) => {
@@ -72,8 +85,8 @@ const SideBarFoldersButtonsComponent = ({
   function addNewFolder() {
     addFolder({ name: "New Folder", parent_id: null, description: "" }).then(
       (res) => {
-        getFoldersApi(true);
-      }
+        refreshFolders();
+      },
     );
   }
 
@@ -91,26 +104,71 @@ const SideBarFoldersButtonsComponent = ({
     folders.map((obj) => ({ name: obj.name, edit: false }));
   }, [folders]);
 
+  const handleEditNameFolder = async (item) => {
+    const newEditFolders = editFolders.map((obj) => {
+      if (obj.name === item.name) {
+        return { name: item.name, edit: false };
+      }
+      return { name: obj.name, edit: false };
+    });
+    setEditFolderName(newEditFolders);
+    if (foldersNames[item.name].trim() !== "") {
+      setFoldersNames((old) => ({
+        ...old,
+        [item.name]: foldersNames[item.name],
+      }));
+      const body = {
+        ...item,
+        name: foldersNames[item.name],
+        flows: item.flows?.length > 0 ? item.flows : [],
+        components: item.components?.length > 0 ? item.components : [],
+      };
+      const updatedFolder = await updateFolder(body, item.id!);
+
+      const updatedFolderIndex = folders.findIndex(
+        (f) => f.id === updatedFolder.id,
+      );
+
+      const updateFolders = [...folders];
+      updateFolders[updatedFolderIndex] = updatedFolder;
+
+      setFolders(updateFolders);
+      setFoldersNames({});
+      setEditFolderName(
+        folders.map((obj) => ({
+          name: obj.name,
+          edit: false,
+        })),
+      );
+    } else {
+      setFoldersNames((old) => ({
+        ...old,
+        [item.name]: item.name,
+      }));
+    }
+  };
+
   return (
     <>
-      <div className="flex shrink-0 items-center justify-between">
-        <Button variant="primary" onClick={addNewFolder}>
-          <ForwardedIconComponent
-            name="Plus"
-            className="main-page-nav-button"
-          />
-          New Folder
+      <div className="flex shrink-0 items-center justify-between gap-2">
+        <div className="flex-1 self-start text-lg font-semibold">Folders</div>
+        <Button
+          variant="primary"
+          size="icon"
+          className="px-2"
+          onClick={addNewFolder}
+          data-testid="add-folder-button"
+        >
+          <ForwardedIconComponent name="FolderPlus" className="w-4" />
         </Button>
         <Button
           variant="primary"
-          className="px-7"
+          size="icon"
+          className="px-2"
           onClick={handleUploadFlowsToFolder}
+          data-testid="upload-folder-button"
         >
-          <ForwardedIconComponent
-            name="Upload"
-            className="main-page-nav-button"
-          />
-          Upload
+          <ForwardedIconComponent name="Upload" className="w-4" />
         </Button>
       </div>
 
@@ -118,7 +176,7 @@ const SideBarFoldersButtonsComponent = ({
         <>
           {folders.map((item, index) => {
             const editFolderName = editFolders?.filter(
-              (folder) => folder.name === item.name
+              (folder) => folder.name === item.name,
             )[0];
             return (
               <div
@@ -134,7 +192,7 @@ const SideBarFoldersButtonsComponent = ({
                     ? "border border-border bg-muted hover:bg-muted"
                     : "border hover:bg-transparent lg:border-transparent lg:hover:border-border",
                   "group flex w-full shrink-0 cursor-pointer gap-2 opacity-100 lg:min-w-full",
-                  folderIdDragging === item.id! ? "bg-border" : ""
+                  folderIdDragging === item.id! ? "bg-border" : "",
                 )}
                 onClick={() => handleChangeFolder!(item.id!)}
               >
@@ -204,7 +262,7 @@ const SideBarFoldersButtonsComponent = ({
                               folders.map((obj) => ({
                                 name: obj.name,
                                 edit: false,
-                              }))
+                              })),
                             );
                           }
                           if (e.key === "Enter") {
@@ -214,61 +272,25 @@ const SideBarFoldersButtonsComponent = ({
                         }}
                         autoFocus={true}
                         onBlur={async () => {
-                          const newEditFolders = editFolders.map((obj) => {
-                            if (obj.name === item.name) {
-                              return { name: item.name, edit: false };
-                            }
-                            return { name: obj.name, edit: false };
-                          });
-                          setEditFolderName(newEditFolders);
-                          if (foldersNames[item.name].trim() !== "") {
-                            setFoldersNames((old) => ({
-                              ...old,
-                              [item.name]: foldersNames[item.name],
-                            }));
-                            const body = {
-                              ...item,
-                              name: foldersNames[item.name],
-                              flows: item.flows?.length > 0 ? item.flows : [],
-                              components:
-                                item.components?.length > 0
-                                  ? item.components
-                                  : [],
-                            };
-                            const updatedFolder = await updateFolder(
-                              body,
-                              item.id!
-                            );
-                            const updateFolders = folders.filter(
-                              (f) => f.name !== item.name
-                            );
-                            setFolders([...updateFolders, updatedFolder]);
-                            setFoldersNames({});
-                            setEditFolderName(
-                              folders.map((obj) => ({
-                                name: obj.name,
-                                edit: false,
-                              }))
-                            );
+                          if (refInput.current?.value !== item.name) {
+                            handleEditNameFolder(item);
                           } else {
-                            setFoldersNames((old) => ({
-                              ...old,
-                              [item.name]: item.name,
-                            }));
+                            editFolderName.edit = false;
                           }
                         }}
                         value={foldersNames[item.name]}
                         id={`input-folder-${item.name}`}
+                        data-testid={`input-folder`}
                       />
                     </div>
                   ) : (
-                    <span className="block max-w-full truncate opacity-100">
+                    <span className="block w-full truncate opacity-100">
                       {item.name}
                     </span>
                   )}
-                  <div className="flex-1" />
                   {index > 0 && (
                     <Button
+                      data-testid="btn-delete-folder"
                       className="hidden p-0 hover:bg-white group-hover:block hover:dark:bg-[#0c101a00]"
                       onClick={(e) => {
                         handleDeleteFolder!(item);
@@ -276,28 +298,14 @@ const SideBarFoldersButtonsComponent = ({
                         e.preventDefault();
                       }}
                       variant={"ghost"}
+                      size={"icon"}
                     >
                       <IconComponent
                         name={"trash"}
-                        className=" w-4 stroke-[1.5]"
+                        className="w-4 stroke-[1.5] p-0"
                       />
                     </Button>
                   )}
-                  {/* {index > 0 && (
-                    <Button
-                      className="hidden p-0 hover:bg-white group-hover:block hover:dark:bg-[#0c101a00]"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        e.preventDefault();
-                      }}
-                      variant={"ghost"}
-                    >
-                      <IconComponent
-                        name={"pencil"}
-                        className="  w-4 stroke-[1.5] text-white  "
-                      />
-                    </Button>
-                  )} */}
                   <Button
                     className="hidden p-0 hover:bg-white group-hover:block hover:dark:bg-[#0c101a00]"
                     onClick={(e) => {
@@ -305,11 +313,11 @@ const SideBarFoldersButtonsComponent = ({
                       e.stopPropagation();
                       e.preventDefault();
                     }}
-                    variant={"ghost"}
+                    unstyled
                   >
                     <IconComponent
                       name={"Download"}
-                      className="  w-4 stroke-[1.5] text-white  "
+                      className="w-4 stroke-[1.5] text-white"
                     />
                   </Button>
                 </div>

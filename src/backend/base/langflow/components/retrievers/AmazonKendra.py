@@ -1,14 +1,15 @@
-from typing import Optional
+from typing import Optional, cast
 
 from langchain_community.retrievers import AmazonKendraRetriever
-from langchain_core.retrievers import BaseRetriever
 
 from langflow.custom import CustomComponent
+from langflow.field_typing import Retriever
 
 
 class AmazonKendraRetrieverComponent(CustomComponent):
     display_name: str = "Amazon Kendra Retriever"
     description: str = "Retriever that uses the Amazon Kendra API."
+    name = "AmazonKendra"
     icon = "Amazon"
 
     def build_config(self):
@@ -36,7 +37,7 @@ class AmazonKendraRetrieverComponent(CustomComponent):
         credentials_profile_name: Optional[str] = None,
         attribute_filter: Optional[dict] = None,
         user_context: Optional[dict] = None,
-    ) -> BaseRetriever:
+    ) -> Retriever:  # type: ignore[type-var]
         try:
             output = AmazonKendraRetriever(
                 index_id=index_id,
@@ -48,4 +49,4 @@ class AmazonKendraRetrieverComponent(CustomComponent):
             )  # type: ignore
         except Exception as e:
             raise ValueError("Could not connect to AmazonKendra API.") from e
-        return output
+        return cast(Retriever, output)

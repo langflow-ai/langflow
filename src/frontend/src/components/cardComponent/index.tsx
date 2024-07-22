@@ -1,3 +1,4 @@
+import { usePostLikeComponent } from "@/controllers/API/queries/store";
 import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { Control } from "react-hook-form";
@@ -27,8 +28,11 @@ import {
 import { Checkbox } from "../ui/checkbox";
 import { FormControl, FormField } from "../ui/form";
 import Loading from "../ui/loading";
+import useDataEffect from "./hooks/use-data-effect";
+import useInstallComponent from "./hooks/use-handle-install";
+import useDragStart from "./hooks/use-on-drag-start";
+import usePlaygroundEffect from "./hooks/use-playground-effect";
 import { convertTestName } from "./utils/convert-test-name";
-import DragCardComponent from "./components/dragCardComponent";
 
 export default function CollectionCardComponent({
   data,
@@ -39,7 +43,6 @@ export default function CollectionCardComponent({
   onDelete,
   playground,
   control,
-  is_component,
 }: {
   data: storeComponent;
   authorized?: boolean;
@@ -49,21 +52,16 @@ export default function CollectionCardComponent({
   playground?: boolean;
   onDelete?: () => void;
   control?: Control<any, any>;
-  is_component?: boolean;
 }) {
-  const addFlow = useFlowsManagerStore((state) => state.addFlow);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setValidApiKey = useStoreStore((state) => state.updateValidApiKey);
   const cleanFlowPool = useFlowStore((state) => state.CleanFlowPool);
   const isStore = false;
   const [loading, setLoading] = useState(false);
-  const [loadingLike, setLoadingLike] = useState(false);
-  const [liked_by_user, setLiked_by_user] = useState(
-    data?.liked_by_user ?? false,
-  );
-  const [likes_count, setLikes_count] = useState(data?.liked_by_count ?? 0);
-  const [downloads_count, setDownloads_count] = useState(
+  const [likedByUser, setLikedByUser] = useState(data?.liked_by_user ?? false);
+  const [likesCount, setLikesCount] = useState(data?.liked_by_count ?? 0);
+  const [downloadsCount, setDownloadsCount] = useState(
     data?.downloads_count ?? 0,
   );
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
@@ -73,7 +71,6 @@ export default function CollectionCardComponent({
   const setNodes = useFlowStore((state) => state.setNodes);
   const setEdges = useFlowStore((state) => state.setEdges);
   const [openPlayground, setOpenPlayground] = useState(false);
-  const [openDelete, setOpenDelete] = useState(false);
   const setCurrentFlowId = useFlowsManagerStore(
     (state) => state.setCurrentFlowId,
   );
@@ -99,115 +96,65 @@ export default function CollectionCardComponent({
     return inputs.length > 0 || outputs.length > 0;
   }
 
-  useEffect(() => {
-    if (currentFlowId && playground) {
-      if (openPlayground) {
-        setNodes(currentFlow?.data?.nodes ?? [], true);
-        setEdges(currentFlow?.data?.edges ?? [], true);
-      } else {
-        setNodes([], true);
-        setEdges([], true);
-      }
-      cleanFlowPool();
-    }
-  }, [openPlayground]);
+  usePlaygroundEffect(
+    currentFlowId,
+    playground!,
+    openPlayground,
+    currentFlow,
+    setNodes,
+    setEdges,
+    cleanFlowPool,
+  );
 
-  useEffect(() => {
-    if (data) {
-      setLiked_by_user(data?.liked_by_user ?? false);
-      setLikes_count(data?.liked_by_count ?? 0);
-      setDownloads_count(data?.downloads_count ?? 0);
-    }
-  }, [data, data.liked_by_count, data.liked_by_user, data.downloads_count]);
+  useDataEffect(data, setLikedByUser, setLikesCount, setDownloadsCount);
 
-  function handleInstall() {
-    const temp = downloads_count;
-    setDownloads_count((old) => Number(old) + 1);
-    setLoading(true);
-    getComponent(data.id)
-      .then((res) => {
-        const newFlow = cloneFLowWithParent(res, res.id, data.is_component);
-        addFlow(true, newFlow)
-          .then((id) => {
-            setSuccessData({
-              title: `${name} ${
-                isStore ? "Downloaded" : "Installed"
-              } Successfully.`,
-            });
-            setLoading(false);
-          })
-          .catch((error) => {
-            setLoading(false);
-            setErrorData({
-              title: `Error ${
-                isStore ? "downloading" : "installing"
-              } the ${name}`,
-              list: [error["response"]["data"]["detail"]],
-            });
-          });
-      })
-      .catch((err) => {
-        setLoading(false);
-        setErrorData({
-          title: `Error ${isStore ? "downloading" : "installing"} the ${name}`,
-          list: [err["response"]["data"]["detail"]],
-        });
-        setDownloads_count(temp);
-      });
-  }
+  const { handleInstall } = useInstallComponent(
+    data,
+    name,
+    isStore,
+    downloadsCount,
+    setDownloadsCount,
+    setLoading,
+    setSuccessData,
+    setErrorData,
+  );
 
-  function handleLike() {
-    setLoadingLike(true);
-    if (liked_by_user !== undefined || liked_by_user !== null) {
-      const temp = liked_by_user;
-      const tempNum = likes_count;
-      setLiked_by_user((prev) => !prev);
-      if (!temp) {
-        setLikes_count((prev) => Number(prev) + 1);
-      } else {
-        setLikes_count((prev) => Number(prev) - 1);
-      }
-      postLikeComponent(data.id)
-        .then((response) => {
-          setLoadingLike(false);
-          setLikes_count(response.data.likes_count);
-          setLiked_by_user(response.data.liked_by_user);
-        })
-        .catch((error) => {
-          setLoadingLike(false);
-          setLikes_count(tempNum);
-          setLiked_by_user(temp);
-          if (error.response.status === 403) {
-            setValidApiKey(false);
-          } else {
+  const { mutate, isPending } = usePostLikeComponent();
+
+  const handleLikeWMutate = () => {
+    if (likedByUser !== undefined || likedByUser !== null) {
+      const temp = likedByUser;
+      const tempNum = likesCount;
+      setLikedByUser((prev) => !prev);
+      setLikesCount((prev) => (temp ? prev - 1 : prev + 1));
+      mutate(
+        { componentId: data.id },
+        {
+          onSuccess: (res) => {
+            setLikesCount(res.data.likes_count);
+            setLikedByUser(res.data.liked_by_user);
+          },
+          onError: (error) => {
+            setLikesCount(tempNum);
+            setLikedByUser(temp);
+            if (error.response.status === 403) {
+              return setValidApiKey(false);
+            }
             console.error(error);
             setErrorData({
               title: `Error liking ${name}.`,
-              list: [error["response"]["data"]["detail"]],
+              list: [error.response.data.detail],
             });
-          }
-        });
+          },
+        },
+      );
     }
-  }
+  };
 
   const isSelectedCard =
     selectedFlowsComponentsCards?.includes(data?.id) ?? false;
 
-  function onDragStart(event: React.DragEvent<any>) {
-    let image: JSX.Element = <DragCardComponent data={data} />; // <== whatever you want here
-
-    var ghost = document.createElement("div");
-    ghost.style.transform = "translate(-10000px, -10000px)";
-    ghost.style.position = "absolute";
-    document.body.appendChild(ghost);
-    event.dataTransfer.setDragImage(ghost, 0, 0);
-    const root = createRoot(ghost);
-    root.render(image);
-    const flow = getFlowById(data.id);
-    if (flow) {
-      event.dataTransfer.setData("flow", JSON.stringify(data));
-    }
-  }
+  const { onDragStart } = useDragStart(data);
 
   return (
     <>
@@ -217,7 +164,9 @@ export default function CollectionCardComponent({
         data-testid={`card-${convertTestName(data.name)}`}
         //TODO check color schema
         className={cn(
-          "group relative flex min-h-[11rem] flex-col justify-between overflow-hidden transition-all hover:bg-muted/50 hover:shadow-md hover:dark:bg-[#ffffff10]",
+          "group relative flex h-[11rem] flex-col justify-between overflow-hidden",
+          !data.is_component &&
+            "hover:bg-muted/50 hover:shadow-md hover:dark:bg-[#5f5f5f0e]",
           disabled ? "pointer-events-none opacity-50" : "",
           onClick ? "cursor-pointer" : "",
           isSelectedCard ? "border border-selected" : "",
@@ -262,12 +211,9 @@ export default function CollectionCardComponent({
                     )}
                     <ShadTooltip content="Likes">
                       <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <IconComponent
-                          name="Heart"
-                          className={cn("h-4 w-4 ")}
-                        />
+                        <IconComponent name="Heart" className={cn("h-4 w-4")} />
                         <span data-testid={`likes-${data.name}`}>
-                          {likes_count ?? 0}
+                          {likesCount ?? 0}
                         </span>
                       </span>
                     </ShadTooltip>
@@ -278,7 +224,7 @@ export default function CollectionCardComponent({
                           className="h-4 w-4"
                         />
                         <span data-testid={`downloads-${data.name}`}>
-                          {downloads_count ?? 0}
+                          {downloadsCount ?? 0}
                         </span>
                       </span>
                     </ShadTooltip>
@@ -299,6 +245,7 @@ export default function CollectionCardComponent({
                       render={({ field }) => (
                         <FormControl>
                           <Checkbox
+                            data-testid={`checkbox-component`}
                             aria-label="checkbox-component"
                             checked={field.value}
                             onCheckedChange={field.onChange}
@@ -327,24 +274,19 @@ export default function CollectionCardComponent({
                   )}
                 </span>
               )}
-              <div className="flex w-full flex-1 flex-wrap gap-2">
-                {/* {data.tags &&
-                  data.tags.length > 0 &&
-                  data.tags.map((tag, index) => (
-                    <Badge
-                      key={index}
-                      variant="outline"
-                      size="xq"
-                      className="text-muted-foreground"
-                    >
-                      {tag.name}
-                    </Badge>
-                  ))} */}
-              </div>
+              <div className="flex w-full flex-1 flex-wrap gap-2"></div>
             </div>
 
             <CardDescription className="pb-2 pt-2">
-              <div className="truncate-doubleline">{data.description}</div>
+              <div
+                className={
+                  data?.metadata !== undefined
+                    ? "truncate"
+                    : "truncate-doubleline"
+                }
+              >
+                {data.description}
+              </div>
             </CardDescription>
           </CardHeader>
         </div>
@@ -428,7 +370,7 @@ export default function CollectionCardComponent({
                             name="Trash2"
                             className={cn(
                               "h-5 w-5",
-                              !authorized ? " text-ring" : "",
+                              !authorized ? "text-ring" : "",
                             )}
                           />
                         </Button>
@@ -441,7 +383,7 @@ export default function CollectionCardComponent({
                       }
                     >
                       <Button
-                        disabled={loadingLike}
+                        disabled={isPending}
                         variant="ghost"
                         size="icon"
                         className={
@@ -452,7 +394,7 @@ export default function CollectionCardComponent({
                           if (!authorized) {
                             return;
                           }
-                          handleLike();
+                          handleLikeWMutate();
                         }}
                         data-testid={`like-${data.name}`}
                       >
@@ -460,10 +402,10 @@ export default function CollectionCardComponent({
                           name="Heart"
                           className={cn(
                             "h-5 w-5",
-                            liked_by_user
+                            likedByUser
                               ? "fill-destructive stroke-destructive"
                               : "",
-                            !authorized ? " text-ring" : "",
+                            !authorized ? "text-ring" : "",
                           )}
                         />
                       </Button>
@@ -501,7 +443,7 @@ export default function CollectionCardComponent({
                         }
                         className={cn(
                           loading ? "h-5 w-5 animate-spin" : "h-5 w-5",
-                          !authorized ? " text-ring" : "",
+                          !authorized ? "text-ring" : "",
                         )}
                       />
                     </Button>
@@ -574,18 +516,6 @@ export default function CollectionCardComponent({
         >
           <></>
         </IOModal>
-      )}
-      {openDelete && (
-        <DeleteConfirmationModal
-          open={openDelete}
-          setOpen={setOpenDelete}
-          onConfirm={() => {
-            if (onDelete) onDelete();
-          }}
-          description={` ${is_component ? "component" : "flow"}`}
-        >
-          <></>
-        </DeleteConfirmationModal>
       )}
     </>
   );
