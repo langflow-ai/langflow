@@ -4,7 +4,10 @@ import pDebounce from "p-debounce";
 import { useLocation } from "react-router-dom";
 import { Edge, Node, Viewport, XYPosition } from "reactflow";
 import { create } from "zustand";
-import { BROKEN_EDGES_WARNING, SAVE_DEBOUNCE_TIME } from "../constants/constants";
+import {
+  BROKEN_EDGES_WARNING,
+  SAVE_DEBOUNCE_TIME,
+} from "../constants/constants";
 import {
   deleteFlowFromDatabase,
   multipleDeleteFlowsComponents,
@@ -300,13 +303,19 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
         throw error; // Re-throw the error so the caller can handle it if needed
       }
     } else {
-
-      let brokenEdges = detectBrokenEdgesEdges(flow!.data!.nodes, flow!.data!.edges);
-      if(brokenEdges.length>0){
-
-        useAlertStore.getState().setErrorData({title:BROKEN_EDGES_WARNING,
-          list:brokenEdges.map(edge=>`Edge ${edge.source} -> ${edge.target}`),
-        });
+      let brokenEdges = detectBrokenEdgesEdges(
+        flow!.data!.nodes,
+        flow!.data!.edges,
+      );
+      if (brokenEdges.length > 0) {
+        useAlertStore
+          .getState()
+          .setErrorData({
+            title: BROKEN_EDGES_WARNING,
+            list: brokenEdges.map(
+              (edge) => `Edge ${edge.source} -> ${edge.target}`,
+            ),
+          });
       }
       useFlowStore
         .getState()
@@ -314,7 +323,6 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
           { nodes: flow!.data!.nodes, edges: flow!.data!.edges },
           position ?? { x: 10, y: 10 },
         );
-
     }
   },
   removeFlow: async (id: string | string[]) => {

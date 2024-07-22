@@ -1,3 +1,4 @@
+import { BROKEN_EDGES_WARNING } from "@/constants/constants";
 import { cloneDeep, zip } from "lodash";
 import {
   Edge,
@@ -42,7 +43,6 @@ import useAlertStore from "./alertStore";
 import { useDarkStore } from "./darkStore";
 import useFlowsManagerStore from "./flowsManagerStore";
 import { useGlobalVariablesStore } from "./globalVariablesStore/globalVariables";
-import { BROKEN_EDGES_WARNING } from "@/constants/constants";
 
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
 const useFlowStore = create<FlowStoreType>((set, get) => ({
@@ -125,11 +125,15 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   resetFlow: ({ nodes, edges, viewport }) => {
     const currentFlow = useFlowsManagerStore.getState().currentFlow;
     let brokenEdges = detectBrokenEdgesEdges(nodes, edges);
-    if(brokenEdges.length>0){
-
-      useAlertStore.getState().setErrorData({title:BROKEN_EDGES_WARNING,
-        list:brokenEdges.map(edge=>`Edge ${edge.source} -> ${edge.target}`),
-      });
+    if (brokenEdges.length > 0) {
+      useAlertStore
+        .getState()
+        .setErrorData({
+          title: BROKEN_EDGES_WARNING,
+          list: brokenEdges.map(
+            (edge) => `Edge ${edge.source} -> ${edge.target}`,
+          ),
+        });
     }
     let newEdges = cleanEdges(nodes, edges);
     const { inputs, outputs } = getInputsAndOutputs(nodes);

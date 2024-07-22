@@ -103,10 +103,9 @@ export function cleanEdges(nodes: NodeType[], edges: Edge[]) {
   return newEdges;
 }
 
-
 export function detectBrokenEdgesEdges(nodes: NodeType[], edges: Edge[]) {
   let newEdges = cloneDeep(edges);
-  let BrokenEdges:{source:string,target:string}[] = [];
+  let BrokenEdges: { source: string; target: string }[] = [];
   edges.forEach((edge) => {
     // check if the source and target node still exists
     const sourceNode = nodes.find((node) => node.id === edge.source);
@@ -132,7 +131,10 @@ export function detectBrokenEdgesEdges(nodes: NodeType[], edges: Edge[]) {
       }
       if (scapedJSONStringfy(id) !== targetHandle) {
         newEdges = newEdges.filter((e) => e.id !== edge.id);
-        BrokenEdges.push({source:sourceNode.data.node!.display_name,target:targetNode.data.node!.display_name});
+        BrokenEdges.push({
+          source: sourceNode.data.node!.display_name,
+          target: targetNode.data.node!.display_name,
+        });
       }
     }
     if (sourceHandle) {
@@ -153,11 +155,17 @@ export function detectBrokenEdgesEdges(nodes: NodeType[], edges: Edge[]) {
         };
         if (scapedJSONStringfy(id) !== sourceHandle) {
           newEdges = newEdges.filter((e) => e.id !== edge.id);
-          BrokenEdges.push({source:sourceNode.data.node!.display_name,target:targetNode.data.node!.display_name});
+          BrokenEdges.push({
+            source: sourceNode.data.node!.display_name,
+            target: targetNode.data.node!.display_name,
+          });
         }
       } else {
         newEdges = newEdges.filter((e) => e.id !== edge.id);
-        BrokenEdges.push({source:sourceNode.data.node!.display_name,target:targetNode.data.node!.display_name});
+        BrokenEdges.push({
+          source: sourceNode.data.node!.display_name,
+          target: targetNode.data.node!.display_name,
+        });
       }
     }
   });
