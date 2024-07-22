@@ -1,6 +1,8 @@
-from langflow.custom import CustomComponent
+from typing import Optional
+from astra_assistants import patch  # type: ignore
 from openai import OpenAI
-from astra_assistants import patch
+
+from langflow.custom import CustomComponent
 
 
 class AssistantsGetAssistantName(CustomComponent):
@@ -20,7 +22,7 @@ class AssistantsGetAssistantName(CustomComponent):
             },
         }
 
-    def build(self, assistant_id: str, env_set: str = None) -> str:
+    def build(self, assistant_id: str, env_set: Optional[str] = None) -> str:
         client = patch(OpenAI())
         assistant = client.beta.assistants.retrieve(
             assistant_id=assistant_id,

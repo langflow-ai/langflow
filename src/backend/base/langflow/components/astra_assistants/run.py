@@ -1,7 +1,9 @@
-from langflow.custom import CustomComponent
+from typing import Optional
+from astra_assistants import patch  # type: ignore
 from openai import OpenAI
 from openai.lib.streaming import AssistantEventHandler
-from astra_assistants import patch
+
+from langflow.custom import CustomComponent
 
 
 class AssistantsRun(CustomComponent):
@@ -35,7 +37,9 @@ class AssistantsRun(CustomComponent):
             },
         }
 
-    def build(self, assistant_id: str, user_message: str, thread_id: str = None, env_set: str = None) -> str:
+    def build(
+        self, assistant_id: str, user_message: str, thread_id: Optional[str] = None, env_set: Optional[str] = None
+    ) -> str:
         text = ""
         client = patch(OpenAI())
 

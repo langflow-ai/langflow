@@ -1,6 +1,9 @@
-from langflow.custom import CustomComponent
+from typing import Optional
+
+from astra_assistants import patch  # type: ignore
 from openai import OpenAI
-from astra_assistants import patch
+
+from langflow.custom import CustomComponent
 
 
 class AssistantsCreateThread(CustomComponent):
@@ -16,7 +19,7 @@ class AssistantsCreateThread(CustomComponent):
             },
         }
 
-    def build(self, env_set: str = None) -> str:
+    def build(self, env_set: Optional[str] = None) -> str:
         client = patch(OpenAI())
 
         thread = client.beta.threads.create()

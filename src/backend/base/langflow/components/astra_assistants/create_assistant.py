@@ -1,6 +1,9 @@
-from langflow.custom import CustomComponent
+from typing import Optional
+
+from astra_assistants import patch  # type: ignore
 from openai import OpenAI
-from astra_assistants import patch
+
+from langflow.custom import CustomComponent
 
 
 class AssistantsCreateAssistant(CustomComponent):
@@ -35,8 +38,7 @@ class AssistantsCreateAssistant(CustomComponent):
             },
         }
 
-    def build(self, name: str, instructions: str, model: str, env_set: str = None) -> str:
-        print(f"env_set is {env_set}")
+    def build(self, name: str, instructions: str, model: str, env_set: Optional[str] = None) -> str:
         if env_set is None:
             raise Exception("Environment variables not set")
         client = patch(OpenAI())
