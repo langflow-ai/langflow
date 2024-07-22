@@ -20,7 +20,7 @@ const cookies = new Cookies();
 
 const useAuthStore = create<AuthStoreType>((set, get) => ({
   isAdmin: false,
-  isAuthenticated: !!!!cookies.get(LANGFLOW_ACCESS_TOKEN),
+  isAuthenticated: !!cookies.get(LANGFLOW_ACCESS_TOKEN),
   accessToken: cookies.get(LANGFLOW_ACCESS_TOKEN) ?? null,
   userData: null,
   autoLogin: false,
