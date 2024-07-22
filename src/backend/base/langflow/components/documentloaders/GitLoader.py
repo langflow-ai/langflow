@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional, Callable
 
 from langchain_community.document_loaders.git import GitLoader
 from langflow.custom import Component
@@ -40,8 +40,8 @@ class GitLoaderComponent(Component):
             required=False,
             advanced=True,
             info="A function that takes a file path and returns a boolean indicating whether to load the file. "
-            "Example to include only .py files: lambda file_path: file_path.endswith('.py'). "
-            "Example to exclude .py files: lambda file_path: not file_path.endswith('.py').",
+                 "Example to include only .py files: lambda file_path: file_path.endswith('.py'). "
+                 "Example to exclude .py files: lambda file_path: not file_path.endswith('.py').",
         ),
     ]
 
@@ -50,9 +50,11 @@ class GitLoaderComponent(Component):
     ]
 
     def build_gitloader(self) -> GitLoader:
-        file_filter = None
-        if self.file_filter:
+        file_filter: Optional[Callable[[str], bool]] = None
+        if self.file_filter and isinstance(self.file_filter, str):
             file_filter = eval(self.file_filter)
+            if not callable(file_filter):
+                file_filter = None
 
         loader = GitLoader(
             repo_path=self.repo_path,
