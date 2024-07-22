@@ -27,6 +27,7 @@ class BaseCrewComponent(Component):
             name="function_calling_llm",
             display_name="Function Calling LLM",
             input_types=["LanguageModel"],
+            info="Turns the ReAct CrewAI agent into a function-calling agent",
             required=False,
             advanced=True,
         ),

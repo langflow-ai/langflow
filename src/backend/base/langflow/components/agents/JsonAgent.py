@@ -16,8 +16,8 @@ class JsonAgentComponent(LCAgentComponent):
     name = "JsonAgent"
 
     inputs = LCAgentComponent._base_inputs + [
-        FileInput(name="path", display_name="File Path", file_types=["json", "yaml", "yml"], required=True),
         HandleInput(name="llm", display_name="Language Model", input_types=["LanguageModel"], required=True),
+        FileInput(name="path", display_name="File Path", file_types=["json", "yaml", "yml"], required=True),
     ]
 
     def build_agent(self) -> AgentExecutor:
