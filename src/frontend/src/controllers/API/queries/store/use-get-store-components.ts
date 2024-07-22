@@ -59,17 +59,17 @@ export const useGetStoreComponentsQuery: useQueryFunctionType<
   componentsQueryResponse
 > = (
   {
-    component_id,
-    search,
-    isPrivate,
-    tags,
-    fields,
-    sort,
-    liked,
-    filterByUser,
-    page,
-    limit,
-    is_component,
+    component_id = null,
+    page = 1,
+    limit = 9999999,
+    is_component = null,
+    sort = "-count(liked_by)",
+    tags = [] || null,
+    liked = null,
+    isPrivate = null,
+    search = null,
+    filterByUser = null,
+    fields = null,
   },
   options,
 ) => {
