@@ -18,14 +18,16 @@ const useHandleOnNewValue = ({
   node,
   nodeId,
   name,
+  setNode: setNodeExternal,
 }: {
   node: APIClassType;
   nodeId: string;
   name: string;
+  setNode?: (id: string, update: Node | ((oldState: Node) => Node)) => void;
 }) => {
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
 
-  const setNode = useFlowStore((state) => state.setNode);
+  const setNode = setNodeExternal ?? useFlowStore((state) => state.setNode);
 
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
