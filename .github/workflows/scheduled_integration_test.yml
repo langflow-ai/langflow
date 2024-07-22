@@ -7,7 +7,6 @@ on:
         description: "(Optional) Branch to checkout"
         required: false
         type: string
-  pull_request:
   schedule:
     - cron: "0 0 */2 * *" # Run every 2 days
 
@@ -28,10 +27,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ inputs.branch || github.ref }}
-      - name: Print working directory
-        run: pwd
-      - name: List files
-        run: ls -al
       - name: Set up Python ${{ matrix.python-version }} + Poetry ${{ env.POETRY_VERSION }}
         uses: "./.github/actions/poetry_caching"
         with:
@@ -58,10 +53,10 @@ jobs:
       ASTRA_DB_API_KEY: ${{ secrets.ASTRA_DB_API_KEY }}
       ASTRA_DB_APPLICATION_TOKEN: ${{ secrets.ASTRA_DB_APPLICATION_TOKEN }}
     steps:
-      - name: Print working directory
-        run: pwd
-      - name: List files
-        run: ls -al
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || github.ref }}
       - name: Run integration tests
         timeout-minutes: 12
         run: |
