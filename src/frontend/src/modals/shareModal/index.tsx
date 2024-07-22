@@ -1,4 +1,4 @@
-import { useGetTagsQuery } from "@/controllers/API/queries/store";
+import { useGetStoreComponentsQuery, useGetTagsQuery } from "@/controllers/API/queries/store";
 import { cloneDeep } from "lodash";
 import { ReactNode, useEffect, useMemo, useState } from "react";
 import EditFlowSettings from "../../components/editFlowSettingsComponent";
@@ -61,8 +61,10 @@ export default function ShareModal({
   >([]);
   const saveFlow = useFlowsManagerStore((state) => state.saveFlow);
   const { data, isFetching } = useGetTagsQuery();
-
-  const [loadingNames, setLoadingNames] = useState(false);
+  const { refetch, isFetching: loadingNames } = useGetStoreComponentsQuery({
+    fields: ["name", "id", "is_component"],
+    filterByUser: true,
+  });
 
   const name = component?.name ?? "";
   const description = component?.description ?? "";
@@ -75,19 +77,14 @@ export default function ShareModal({
     }
   }, [internalOpen, hasApiKey, hasStore]);
 
-  async function handleGetNames() {
-    setLoadingNames(true);
+  function handleGetNames() {
     const unavaliableNames: Array<{ id: string; name: string }> = [];
-    await getStoreComponents({
-      fields: ["name", "id", "is_component"],
-      filterByUser: true,
-    }).then((res) => {
+    refetch().then(({ data: res }) => {
       res?.results?.forEach((element: any) => {
         if ((element.is_component ?? false) === is_component)
           unavaliableNames.push({ name: element.name, id: element.id });
       });
       setUnavaliableNames(unavaliableNames);
-      setLoadingNames(false);
     });
   }
 
