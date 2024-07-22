@@ -1,7 +1,9 @@
 from typing import List
-from langflow.custom import CustomComponent
+
+from astra_assistants import patch  # type: ignore
 from openai import OpenAI
-from astra_assistants import patch
+
+from langflow.custom import CustomComponent
 
 
 class AssistantsListAssistants(CustomComponent):

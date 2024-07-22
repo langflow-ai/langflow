@@ -1,5 +1,7 @@
 import io
+
 from dotenv import load_dotenv
+
 from langflow.custom import CustomComponent
 
 
@@ -23,6 +25,6 @@ class Dotenv(CustomComponent):
         try:
             fake_file = io.StringIO(dotenv_file_content)
             result = load_dotenv(stream=fake_file, override=True)
-            return result
+            return "Loaded .env" if result else "No variables found in .env"
         except Exception as e:
             raise e
