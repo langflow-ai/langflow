@@ -12,8 +12,7 @@ class MaritalkModelComponent(LCModelComponent):
     description = "Generates text using Maritalk LLMs."
     icon = "Maritalk"
     name = "Maritalk"
-    inputs = [
-        MessageInput(name="input_value", display_name="Input"),
+    inputs = LCModelComponent._base_inputs + [
         IntInput(
             name="max_tokens",
             display_name="Max Tokens",
@@ -35,13 +34,6 @@ class MaritalkModelComponent(LCModelComponent):
             advanced=False,
         ),
         FloatInput(name="temperature", display_name="Temperature", value=0.1, range_spec=RangeSpec(min=0, max=1)),
-        BoolInput(name="stream", display_name="Stream", info=STREAM_INFO_TEXT, value=False, advanced=True),
-        StrInput(
-            name="system_message",
-            display_name="System Message",
-            info="System message to pass to the model.",
-            advanced=True,
-        ),
     ]
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]

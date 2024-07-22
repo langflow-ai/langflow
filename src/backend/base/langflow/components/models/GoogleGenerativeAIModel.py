@@ -12,8 +12,7 @@ class GoogleGenerativeAIComponent(LCModelComponent):
     icon = "GoogleGenerativeAI"
     name = "GoogleGenerativeAIModel"
 
-    inputs = [
-        MessageInput(name="input_value", display_name="Input"),
+    inputs = LCModelComponent._base_inputs + [
         IntInput(
             name="max_output_tokens",
             display_name="Max Output Tokens",
@@ -38,17 +37,10 @@ class GoogleGenerativeAIComponent(LCModelComponent):
             advanced=True,
         ),
         FloatInput(name="temperature", display_name="Temperature", value=0.1),
-        BoolInput(name="stream", display_name="Stream", info=STREAM_INFO_TEXT, advanced=True),
         IntInput(
             name="n",
             display_name="N",
             info="Number of chat completions to generate for each prompt. Note that the API may not return the full n completions if duplicates are generated.",
-            advanced=True,
-        ),
-        StrInput(
-            name="system_message",
-            display_name="System Message",
-            info="System message to pass to the model.",
             advanced=True,
         ),
         IntInput(

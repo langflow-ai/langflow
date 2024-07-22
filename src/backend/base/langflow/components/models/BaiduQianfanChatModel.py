@@ -14,11 +14,7 @@ class QianfanChatEndpointComponent(LCModelComponent):
     icon = "BaiduQianfan"
     name = "BaiduQianfanChatModel"
 
-    inputs = [
-        MessageTextInput(
-            name="input_value",
-            display_name="Input",
-        ),
+    inputs = LCModelComponent._base_inputs + [
         DropdownInput(
             name="model",
             display_name="Model Name",
@@ -71,19 +67,7 @@ class QianfanChatEndpointComponent(LCModelComponent):
             name="endpoint",
             display_name="Endpoint",
             info="Endpoint of the Qianfan LLM, required if custom model used.",
-        ),
-        BoolInput(
-            name="stream",
-            display_name="Stream",
-            info=STREAM_INFO_TEXT,
-            advanced=True,
-        ),
-        MessageTextInput(
-            name="system_message",
-            display_name="System Message",
-            info="System message to pass to the model.",
-            advanced=True,
-        ),
+        )
     ]
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]

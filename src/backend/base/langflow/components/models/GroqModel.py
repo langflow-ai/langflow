@@ -14,7 +14,7 @@ class GroqModel(LCModelComponent):
     icon = "Groq"
     name = "GroqModel"
 
-    inputs = [
+    inputs = LCModelComponent._base_inputs + [
         SecretStrInput(
             name="groq_api_key",
             display_name="Groq API Key",
@@ -49,23 +49,6 @@ class GroqModel(LCModelComponent):
             display_name="Model",
             info="The name of the model to use.",
             options=MODEL_NAMES,
-        ),
-        MessageTextInput(
-            name="input_value",
-            display_name="Input",
-            info="The input to the model.",
-        ),
-        BoolInput(
-            name="stream",
-            display_name="Stream",
-            info=STREAM_INFO_TEXT,
-            advanced=True,
-        ),
-        MessageTextInput(
-            name="system_message",
-            display_name="System Message",
-            info="System message to pass to the model.",
-            advanced=True,
         ),
     ]
 

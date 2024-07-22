@@ -13,8 +13,7 @@ class MistralAIModelComponent(LCModelComponent):
     icon = "MistralAI"
     name = "MistralModel"
 
-    inputs = [
-        MessageInput(name="input_value", display_name="Input"),
+    inputs = LCModelComponent._base_inputs + [
         IntInput(
             name="max_tokens",
             display_name="Max Tokens",
@@ -51,13 +50,6 @@ class MistralAIModelComponent(LCModelComponent):
             advanced=False,
         ),
         FloatInput(name="temperature", display_name="Temperature", advanced=False, value=0.5),
-        BoolInput(name="stream", display_name="Stream", info=STREAM_INFO_TEXT, advanced=True),
-        StrInput(
-            name="system_message",
-            display_name="System Message",
-            info="System message to pass to the model.",
-            advanced=True,
-        ),
         IntInput(name="max_retries", display_name="Max Retries", advanced=True, value=5),
         IntInput(name="timeout", display_name="Timeout", advanced=True, value=60),
         IntInput(name="max_concurrent_requests", display_name="Max Concurrent Requests", advanced=True, value=3),

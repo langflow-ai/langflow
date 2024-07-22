@@ -13,8 +13,7 @@ class AnthropicModelComponent(LCModelComponent):
     icon = "Anthropic"
     name = "AnthropicModel"
 
-    inputs = [
-        MessageTextInput(name="input_value", display_name="Input"),
+    inputs = LCModelComponent._base_inputs + [
         IntInput(
             name="max_tokens",
             display_name="Max Tokens",
@@ -45,13 +44,6 @@ class AnthropicModelComponent(LCModelComponent):
             display_name="Anthropic API URL",
             advanced=True,
             info="Endpoint of the Anthropic API. Defaults to 'https://api.anthropic.com' if not specified.",
-        ),
-        BoolInput(name="stream", display_name="Stream", info=STREAM_INFO_TEXT, advanced=True, value=False),
-        MessageTextInput(
-            name="system_message",
-            display_name="System Message",
-            info="System message to pass to the model.",
-            advanced=True,
         ),
         MessageTextInput(
             name="prefill",

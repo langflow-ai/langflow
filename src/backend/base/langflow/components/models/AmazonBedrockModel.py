@@ -13,8 +13,7 @@ class AmazonBedrockComponent(LCModelComponent):
     icon = "Amazon"
     name = "AmazonBedrockModel"
 
-    inputs = [
-        MessageInput(name="input_value", display_name="Input"),
+    inputs = LCModelComponent._base_inputs + [
         DropdownInput(
             name="model_id",
             display_name="Model ID",
@@ -57,13 +56,6 @@ class AmazonBedrockComponent(LCModelComponent):
         MessageTextInput(name="region_name", display_name="Region Name", value="us-east-1"),
         DictInput(name="model_kwargs", display_name="Model Kwargs", advanced=True, is_list=True),
         MessageTextInput(name="endpoint_url", display_name="Endpoint URL", advanced=True),
-        MessageTextInput(
-            name="system_message",
-            display_name="System Message",
-            info="System message to pass to the model.",
-            advanced=True,
-        ),
-        BoolInput(name="stream", display_name="Stream", info=STREAM_INFO_TEXT, advanced=True),
     ]
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
