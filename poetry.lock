@@ -283,6 +283,25 @@ websockets = ">=11.0"
 extras = ["pyaudio (>=0.2.13)"]
 
 [[package]]
+name = "astra-assistants"
+version = "2.0.15"
+description = "Astra Assistants API - drop in replacement for OpenAI Assistants, powered by AstraDB"
+optional = false
+python-versions = "<4.0,>=3.10"
+files = [
+    {file = "astra_assistants-2.0.15-py3-none-any.whl", hash = "sha256:aa7d9479cf1a501f6edfc666a6d64028866ca8111d2936c4ae5b0649958252cb"},
+    {file = "astra_assistants-2.0.15.tar.gz", hash = "sha256:6daa30f5db3f8460bba8272b3c7bb096c25310cf9f866c8b7b90505e9037138e"},
+]
+
+[package.dependencies]
+aiohttp = ">=3.9.4,<4.0.0"
+boto3 = ">=1.34.31,<2.0.0"
+httpx = ">=0.27.0,<0.28.0"
+litellm = ">=1.36.0,<2.0.0"
+openai = ">=1.20.0,<2.0.0"
+python-dotenv = ">=1.0.1,<2.0.0"
+
+[[package]]
 name = "astrapy"
 version = "1.4.0"
 description = "AstraPy is a Pythonic SDK for DataStax Astra and its Data API"
@@ -6336,6 +6355,7 @@ description = "Nvidia JIT LTO Library"
 optional = true
 python-versions = ">=3"
 files = [
+    {file = "nvidia_nvjitlink_cu12-12.5.82-py3-none-manylinux2014_aarch64.whl", hash = "sha256:98103729cc5226e13ca319a10bbf9433bbbd44ef64fe72f45f067cacc14b8d27"},
     {file = "nvidia_nvjitlink_cu12-12.5.82-py3-none-manylinux2014_x86_64.whl", hash = "sha256:f9b37bc5c8cf7509665cb6ada5aaa0ce65618f2332b7d3e78e9790511f111212"},
     {file = "nvidia_nvjitlink_cu12-12.5.82-py3-none-win_amd64.whl", hash = "sha256:e782564d705ff0bf61ac3e1bf730166da66dd2fe9012f111ede5fc49b64ae697"},
 ]
@@ -11816,4 +11836,4 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-content-hash = "1c676440f3d6e74df8460f61ce3106255cc6b5158fcf798de368e4e7d623f19a"
+content-hash = "dc3c3bf982b64e4f8cf62249471bec4a90e76bde0bd010b4e2e6f6ca0d6a551b"
