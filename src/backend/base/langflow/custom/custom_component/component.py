@@ -98,7 +98,7 @@ class Component(CustomComponent):
         # Raise Error if some rule isn't met
         pass
 
-    def map_parameters_on_frontend_node(self, frontend_node: ComponentFrontendNode):
+    def _map_parameters_on_frontend_node(self, frontend_node: ComponentFrontendNode):
         for name, value in self._parameters.items():
             frontend_node.set_field_value_in_template(name, value)
 
@@ -112,8 +112,8 @@ class Component(CustomComponent):
     def to_frontend_node(self):
         field_config = self.get_template_config(self)
         frontend_node = ComponentFrontendNode.from_inputs(**field_config)
-        frontend_node_dict = frontend_node.to_dict(keep_name=True)
-        name = frontend_node_dict.pop("name")
+        self._map_parameters_on_frontend_node(frontend_node)
+        frontend_node_dict = frontend_node.to_dict(keep_name=False)
         frontend_node_dict = self._update_template(frontend_node_dict)
         frontend_node = ComponentFrontendNode(name=name, **frontend_node_dict)
 
