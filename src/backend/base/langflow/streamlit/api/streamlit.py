@@ -31,6 +31,7 @@ class RunFlowModel(BaseModel):
 path = os.getenv("LANGFLOW_STREAMLIT_FOLDER_PATH", "./")
 base_chat_data = {
     "messages": [],
+    "type": None
 }
 last_message = None
 
@@ -83,7 +84,6 @@ async def get_chat_messages(session_id: str, limit: int = 0):
 
 @router.get("/listen/message")
 async def listen_message(timeout: int = 60*2):
-    print("streamlit api / listen message")
     global pending_message
     if pending_message is None or pending_message.done():
         loop = get_running_loop()
@@ -135,7 +135,6 @@ async def reset_messages():
 
 @router.post("/sessions/{session_id}/messages")
 async def register_chat_message(session_id: str, model: ChatMessageModel):
-    print("streamlit api / sent message", model)
     global pending_message, last_message
     if session_id in chat:
         if last_message:
