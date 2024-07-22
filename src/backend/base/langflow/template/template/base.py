@@ -35,6 +35,19 @@ class Template(BaseModel):
 
         return result
 
+    @classmethod
+    def from_dict(cls, data: dict) -> "Template":
+        for key, value in data.copy().items():
+            if key == "_type":
+                data["type_name"] = value
+                del data[key]
+            else:
+                value["name"] = key
+                if "fields" not in data:
+                    data["fields"] = []
+                data["fields"].append(Input(**value))
+        return cls(**data)
+
     # For backwards compatibility
     def to_dict(self, format_field_func=None):
         self.process_fields(format_field_func)
