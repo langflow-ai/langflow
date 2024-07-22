@@ -1,5 +1,6 @@
 import { usePostAddApiKey } from "@/controllers/API/queries/api-keys";
 import { useGetProfilePicturesQuery } from "@/controllers/API/queries/files";
+import useAuthStore from "@/stores/authStore";
 import { useContext, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { CONTROL_PATCH_USER_STATE } from "../../../../constants/constants";
@@ -31,8 +32,6 @@ export const GeneralPage = () => {
     CONTROL_PATCH_USER_STATE,
   );
 
-  const { autoLogin } = useContext(AuthContext);
-
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const { userData, setUserData } = useContext(AuthContext);
@@ -41,6 +40,7 @@ export const GeneralPage = () => {
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
   const loadingApiKey = useStoreStore((state) => state.loadingApiKey);
   const { password, cnfPassword, profilePicture, apikey } = inputState;
+  const autoLogin = useAuthStore((state) => state.autoLogin);
 
   const { storeApiKey } = useContext(AuthContext);
   const setHasApiKey = useStoreStore((state) => state.updateHasApiKey);

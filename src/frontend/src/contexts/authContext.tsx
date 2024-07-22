@@ -3,6 +3,7 @@ import {
   LANGFLOW_API_TOKEN,
   LANGFLOW_AUTO_LOGIN_OPTION,
 } from "@/constants/constants";
+import useAuthStore from "@/stores/authStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { createContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -29,8 +30,6 @@ const initialValue: AuthContextType = {
   userData: null,
   setUserData: () => {},
   authenticationErrorCount: 0,
-  autoLogin: false,
-  setAutoLogin: () => {},
   setApiKey: () => {},
   apiKey: null,
   storeApiKey: () => {},
@@ -50,7 +49,6 @@ export function AuthProvider({ children }): React.ReactElement {
   );
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [userData, setUserData] = useState<Users | null>(null);
-  const [autoLogin, setAutoLogin] = useState<boolean>(false);
   const setLoading = useAlertStore((state) => state.setLoading);
   const [apiKey, setApiKey] = useState<string | null>(
     cookies.get(LANGFLOW_API_TOKEN),
@@ -104,7 +102,7 @@ export function AuthProvider({ children }): React.ReactElement {
   }
 
   async function logout() {
-    if (autoLogin) {
+    if (useAuthStore.getState().autoLogin) {
       return;
     }
     try {
@@ -143,8 +141,6 @@ export function AuthProvider({ children }): React.ReactElement {
         setUserData,
         userData,
         authenticationErrorCount: 0,
-        setAutoLogin,
-        autoLogin,
         setApiKey,
         apiKey,
         storeApiKey,
