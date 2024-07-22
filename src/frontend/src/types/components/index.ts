@@ -701,6 +701,7 @@ type codeTabsFuncTempType = {
 };
 
 export type codeTabsPropsType = {
+  open: boolean;
   isThereTweaks?: boolean;
   isThereWH?: boolean;
   flow?: FlowType;
@@ -709,20 +710,8 @@ export type codeTabsPropsType = {
   setActiveTab: (value: string) => void;
   isMessage?: boolean;
   tweaks?: {
-    tweak?: tweakType;
     tweaksList?: Array<string>;
-    buildContent?: (value: string) => ReactNode;
-    getValue?: (
-      value: string,
-      node: NodeType,
-      template: InputFieldType,
-      tweak: tweakType,
-    ) => string;
-    buildTweakObject?: (
-      tw: string,
-      changes: string | string[] | boolean | number | Object[] | Object,
-      template: InputFieldType,
-    ) => Promise<string | void>;
+    buildTweaks: (node: NodeType[]) => void;
   };
   activeTweaks?: boolean;
   setActiveTweaks?: (value: boolean) => void;
