@@ -158,7 +158,6 @@ class LCModelComponent(Component):
                 messages.append(HumanMessage(content=input_value))
 
         inputs: Union[list, dict] = messages or {}
-        print("doing with inpits", inputs, input_value)
         try:
             runnable = runnable.with_config(  # type: ignore
                 {"run_name": self.display_name, "project_name": self.tracing_service.project_name}  # type: ignore
