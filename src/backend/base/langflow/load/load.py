@@ -84,7 +84,7 @@ def run_flow_from_json(
     disable_logs: Optional[bool] = True,
     fallback_to_env_vars: bool = False,
     return_metadata: bool = False,
-) -> List[RunOutputs]:
+) -> List[RunOutputs] | tuple[List[RunOutputs], dict]:
     """
     Run a flow from a JSON file or dictionary.
 
