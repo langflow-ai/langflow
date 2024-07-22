@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "langflow-base"
-version = "0.0.86"
+version = "0.0.87"
 description = "A Python package with a built-in web application"
 authors = ["Langflow <contact@langflow.org>"]
 maintainers = [
@@ -97,6 +97,7 @@ markers = ["async_test"]
 namespace_packages = true
 mypy_path = "langflow"
 ignore_missing_imports = true
+disable_error_code = ["type-var"]
 
 
 [tool.ruff]

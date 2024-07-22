@@ -498,17 +498,17 @@ files = [
 
 [[package]]
 name = "boto3"
-version = "1.34.144"
+version = "1.34.145"
 description = "The AWS SDK for Python"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "boto3-1.34.144-py3-none-any.whl", hash = "sha256:b8433d481d50b68a0162c0379c0dd4aabfc3d1ad901800beb5b87815997511c1"},
-    {file = "boto3-1.34.144.tar.gz", hash = "sha256:2f3e88b10b8fcc5f6100a9d74cd28230edc9d4fa226d99dd40a3ab38ac213673"},
+    {file = "boto3-1.34.145-py3-none-any.whl", hash = "sha256:69d5afb7a017d07dd6bdfb680d2912d5d369b3fafa0a45161207d9f393b14d7e"},
+    {file = "boto3-1.34.145.tar.gz", hash = "sha256:ac770fb53dde1743aec56bd8e56b7ee2e2f5ad42a37825968ec4ff8428822640"},
 ]
 
 [package.dependencies]
-botocore = ">=1.34.144,<1.35.0"
+botocore = ">=1.34.145,<1.35.0"
 jmespath = ">=0.7.1,<2.0.0"
 s3transfer = ">=0.10.0,<0.11.0"
 
@@ -517,13 +517,13 @@ crt = ["botocore[crt] (>=1.21.0,<2.0a0)"]
 
 [[package]]
 name = "botocore"
-version = "1.34.144"
+version = "1.34.145"
 description = "Low-level, data-driven core of boto 3."
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "botocore-1.34.144-py3-none-any.whl", hash = "sha256:a2cf26e1bf10d5917a2285e50257bc44e94a1d16574f282f3274f7a5d8d1f08b"},
-    {file = "botocore-1.34.144.tar.gz", hash = "sha256:4215db28d25309d59c99507f1f77df9089e5bebbad35f6e19c7c44ec5383a3e8"},
+    {file = "botocore-1.34.145-py3-none-any.whl", hash = "sha256:2e72e262de02adcb0264ac2bac159a28f55dbba8d9e52aa0308773a42950dff5"},
+    {file = "botocore-1.34.145.tar.gz", hash = "sha256:edf0fb4c02186ae29b76263ac5fda18b0a085d334a310551c9984407cf1079e6"},
 ]
 
 [package.dependencies]
@@ -1071,49 +1071,6 @@ typing-extensions = ">=4.5.0"
 uvicorn = {version = ">=0.18.3", extras = ["standard"]}
 
 [[package]]
-name = "clarifai"
-version = "10.5.4"
-description = "Clarifai Python SDK"
-optional = false
-python-versions = ">=3.8"
-files = [
-    {file = "clarifai-10.5.4-py3-none-any.whl", hash = "sha256:56cc5c0f2a735aa90990c23e9cc2698ce531491d970b0c0f86fb6c107bc1592f"},
-    {file = "clarifai-10.5.4.tar.gz", hash = "sha256:bf2d377dfe8fa7704a666cef7b8b564654c6fced4ef3a83a78b38a6c8bb1847c"},
-]
-
-[package.dependencies]
-clarifai-grpc = ">=10.5.0"
-inquirerpy = "0.3.4"
-numpy = ">=1.22.0"
-Pillow = ">=9.5.0"
-PyYAML = ">=6.0.1"
-rich = ">=13.4.2"
-schema = "0.7.5"
-tabulate = ">=0.9.0"
-tqdm = ">=4.65.0"
-tritonclient = ">=2.34.0"
-
-[package.extras]
-all = ["pycocotools (==2.0.6)"]
-
-[[package]]
-name = "clarifai-grpc"
-version = "10.6.4"
-description = "Clarifai gRPC API Client"
-optional = false
-python-versions = ">=3.8"
-files = [
-    {file = "clarifai_grpc-10.6.4-py3-none-any.whl", hash = "sha256:9fb8c94e6ede5e1005010643f516aa7c1dd3c59ab9282e03ba4932fd929d7584"},
-    {file = "clarifai_grpc-10.6.4.tar.gz", hash = "sha256:84d92b10fc32c17ecf0c0fc30ec4c9960a6a9ee701f2829f0c372892ae761d14"},
-]
-
-[package.dependencies]
-googleapis-common-protos = ">=1.53.0"
-grpcio = ">=1.44.0"
-protobuf = ">=3.20.3"
-requests = ">=2.25.1"
-
-[[package]]
 name = "clevercsv"
 version = "0.8.2"
 description = "A Python package for handling messy CSV files"
@@ -1344,17 +1301,6 @@ files = [
 [package.extras]
 test = ["PyYAML", "mock", "pytest"]
 yaml = ["PyYAML"]
-
-[[package]]
-name = "contextlib2"
-version = "21.6.0"
-description = "Backports and enhancements for the contextlib module"
-optional = false
-python-versions = ">=3.6"
-files = [
-    {file = "contextlib2-21.6.0-py2.py3-none-any.whl", hash = "sha256:3fbdb64466afd23abaf6c977627b75b6139a5a3e8ce38405c5b413aed7a0471f"},
-    {file = "contextlib2-21.6.0.tar.gz", hash = "sha256:ab1e2bfe1d01d968e1b7e8d9023bc51ef3509bba217bb730cee3827e1ee82869"},
-]
 
 [[package]]
 name = "coolname"
@@ -2054,20 +2000,19 @@ idna = ">=2.0.0"
 
 [[package]]
 name = "embedchain"
-version = "0.1.116"
+version = "0.1.117"
 description = "Simplest open source retrieval (RAG) framework"
 optional = false
 python-versions = "<=3.13,>=3.9"
 files = [
-    {file = "embedchain-0.1.116-py3-none-any.whl", hash = "sha256:388835d047f9ff4542ebf50e3fa633ef596db262cbe506195ee4976b91a49172"},
-    {file = "embedchain-0.1.116.tar.gz", hash = "sha256:3e4d6418df2e749c2bd3cd3153c3857cbecd7227afe40b87d5ac3df629c394b2"},
+    {file = "embedchain-0.1.117-py3-none-any.whl", hash = "sha256:865adaabd9201b9df10d705f442d9904f5037f671528cc26bb315bcf62bc3c01"},
+    {file = "embedchain-0.1.117.tar.gz", hash = "sha256:752e2d8b71e2e9a49abbe99f7839dc03f5ef6af8bd606a1ffa2e3009dcd44031"},
 ]
 
 [package.dependencies]
 alembic = ">=1.13.1,<2.0.0"
 beautifulsoup4 = ">=4.12.2,<5.0.0"
 chromadb = ">=0.4.24,<0.5.0"
-clarifai = ">=10.0.1,<11.0.0"
 cohere = ">=5.3,<6.0"
 google-cloud-aiplatform = ">=1.26.1,<2.0.0"
 gptcache = ">=0.1.43,<0.2.0"
@@ -2075,7 +2020,7 @@ langchain = ">0.2,<=0.3"
 langchain-cohere = ">=0.1.4,<0.2.0"
 langchain-community = ">=0.2.6,<0.3.0"
 langchain-openai = ">=0.1.7,<0.2.0"
-memzero = ">=0.0.7,<0.0.8"
+mem0ai = ">=0.0.5,<0.0.6"
 openai = ">=1.1.1"
 posthog = ">=3.0.2,<4.0.0"
 pypdf = ">=4.0.1,<5.0.0"
@@ -2087,34 +2032,22 @@ sqlalchemy = ">=2.0.27,<3.0.0"
 tiktoken = ">=0.7.0,<0.8.0"
 
 [package.extras]
-aws-bedrock = ["boto3 (>=1.34.20,<2.0.0)"]
-dataloaders = ["docx2txt (>=0.8,<0.9)", "duckduckgo-search (>=6.1.5,<7.0.0)", "pytube (>=15.0.0,<16.0.0)", "sentence-transformers (>=2.2.2,<3.0.0)", "youtube-transcript-api (>=0.6.1,<0.7.0)"]
-discord = ["discord (>=2.3.2,<3.0.0)"]
-dropbox = ["dropbox (>=11.36.2,<12.0.0)"]
 elasticsearch = ["elasticsearch (>=8.9.0,<9.0.0)"]
-github = ["PyGithub (>=1.59.1,<2.0.0)", "gitpython (>=3.1.38,<4.0.0)"]
 gmail = ["google-api-core (>=2.15.0,<3.0.0)", "google-api-python-client (>=2.111.0,<3.0.0)", "google-auth (>=2.25.2,<3.0.0)", "google-auth-httplib2 (>=0.2.0,<0.3.0)", "google-auth-oauthlib (>=1.2.0,<2.0.0)", "requests (>=2.31.0,<3.0.0)"]
 google = ["google-generativeai (>=0.3.0,<0.4.0)"]
 googledrive = ["google-api-python-client (>=2.111.0,<3.0.0)", "google-auth-httplib2 (>=0.2.0,<0.3.0)", "google-auth-oauthlib (>=1.2.0,<2.0.0)"]
-huggingface-hub = ["huggingface_hub (>=0.17.3,<0.18.0)"]
 lancedb = ["lancedb (>=0.6.2,<0.7.0)"]
 llama2 = ["replicate (>=0.15.4,<0.16.0)"]
 milvus = ["pymilvus (==2.4.3)"]
 mistralai = ["langchain-mistralai (>=0.1.9,<0.2.0)"]
-modal = ["modal (>=0.56.4329,<0.57.0)"]
 mysql = ["mysql-connector-python (>=8.1.0,<9.0.0)"]
 opensearch = ["opensearch-py (==2.3.1)"]
 opensource = ["gpt4all (==2.0.2)", "sentence-transformers (>=2.2.2,<3.0.0)", "torch (==2.3.0)"]
-poe = ["fastapi-poe (==0.0.16)"]
 postgres = ["psycopg (>=3.1.12,<4.0.0)", "psycopg-binary (>=3.1.12,<4.0.0)", "psycopg-pool (>=3.1.8,<4.0.0)"]
 qdrant = ["qdrant-client (>=1.6.3,<2.0.0)"]
-rss-feed = ["feedparser (>=6.0.10,<7.0.0)", "listparser (>=0.19,<0.20)", "newspaper3k (>=0.2.8,<0.3.0)"]
-slack = ["flask (>=2.3.3,<3.0.0)", "slack-sdk (==3.21.3)"]
-together = ["together (>=0.2.8,<0.3.0)"]
+together = ["together (>=1.2.1,<2.0.0)"]
 vertexai = ["langchain-google-vertexai (>=1.0.6,<2.0.0)"]
 weaviate = ["weaviate-client (>=3.24.1,<4.0.0)"]
-whatsapp = ["flask (>=2.3.3,<3.0.0)", "twilio (>=8.5.0,<9.0.0)"]
-youtube = ["youtube-transcript-api (>=0.6.1,<0.7.0)", "yt_dlp (>=2023.11.14,<2024.0.0)"]
 
 [[package]]
 name = "emoji"
@@ -2153,6 +2086,20 @@ dev = ["dj-database-url", "dj-email-url", "django-cache-url", "flake8 (==4.0.1)"
 django = ["dj-database-url", "dj-email-url", "django-cache-url"]
 lint = ["flake8 (==4.0.1)", "flake8-bugbear (==21.9.2)", "mypy (==0.910)", "pre-commit (>=2.4,<3.0)"]
 tests = ["dj-database-url", "dj-email-url", "django-cache-url", "pytest"]
+
+[[package]]
+name = "eval-type-backport"
+version = "0.2.0"
+description = "Like `typing._eval_type`, but lets older Python versions use newer typing features."
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "eval_type_backport-0.2.0-py3-none-any.whl", hash = "sha256:ac2f73d30d40c5a30a80b8739a789d6bb5e49fdffa66d7912667e2015d9c9933"},
+    {file = "eval_type_backport-0.2.0.tar.gz", hash = "sha256:68796cfbc7371ebf923f03bdf7bef415f3ec098aeced24e054b253a0e78f7b37"},
+]
+
+[package.extras]
+tests = ["pytest"]
 
 [[package]]
 name = "exceptiongroup"
@@ -4032,24 +3979,6 @@ files = [
 ]
 
 [[package]]
-name = "inquirerpy"
-version = "0.3.4"
-description = "Python port of Inquirer.js (A collection of common interactive command-line user interfaces)"
-optional = false
-python-versions = ">=3.7,<4.0"
-files = [
-    {file = "InquirerPy-0.3.4-py3-none-any.whl", hash = "sha256:c65fdfbac1fa00e3ee4fb10679f4d3ed7a012abf4833910e63c295827fe2a7d4"},
-    {file = "InquirerPy-0.3.4.tar.gz", hash = "sha256:89d2ada0111f337483cb41ae31073108b2ec1e618a49d7110b0d7ade89fc197e"},
-]
-
-[package.dependencies]
-pfzy = ">=0.3.1,<0.4.0"
-prompt-toolkit = ">=3.0.1,<4.0.0"
-
-[package.extras]
-docs = ["Sphinx (>=4.1.2,<5.0.0)", "furo (>=2021.8.17-beta.43,<2022.0.0)", "myst-parser (>=0.15.1,<0.16.0)", "sphinx-autobuild (>=2021.3.14,<2022.0.0)", "sphinx-copybutton (>=0.4.0,<0.5.0)"]
-
-[[package]]
 name = "instructor"
 version = "1.3.3"
 description = "structured outputs for llm"
@@ -5062,7 +4991,7 @@ six = "*"
 
 [[package]]
 name = "langflow-base"
-version = "0.0.86"
+version = "0.0.87"
 description = "A Python package with a built-in web application"
 optional = false
 python-versions = ">=3.10,<3.13"
@@ -5129,13 +5058,13 @@ url = "src/backend/base"
 
 [[package]]
 name = "langfuse"
-version = "2.39.1"
+version = "2.39.2"
 description = "A client library for accessing langfuse"
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
-    {file = "langfuse-2.39.1-py3-none-any.whl", hash = "sha256:a8f517150e60605cf5e52556f550aeaf8143774f7d1d6dc55e4fa9e8742c55e3"},
-    {file = "langfuse-2.39.1.tar.gz", hash = "sha256:39f5ed2baa06bfe3ef4c4d102efd748931d5f17217ccc17d1b98a02e0dd72992"},
+    {file = "langfuse-2.39.2-py3-none-any.whl", hash = "sha256:ef2016704c0366026b93c6613e5ea8e0a2a0bfdbee1a887aa43fb08c6a255e10"},
+    {file = "langfuse-2.39.2.tar.gz", hash = "sha256:bb1264722d4968309f3608af01186e0395bcd398a30792579a5f51d5fe1f4902"},
 ]
 
 [package.dependencies]
@@ -5154,13 +5083,13 @@ openai = ["openai (>=0.27.8)"]
 
 [[package]]
 name = "langsmith"
-version = "0.1.89"
+version = "0.1.92"
 description = "Client library to connect to the LangSmith LLM Tracing and Evaluation Platform."
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
-    {file = "langsmith-0.1.89-py3-none-any.whl", hash = "sha256:779a6165bb4e3df7ab926f953aab09d684004de5c6c9ce50bde53b0ed9dd77c4"},
-    {file = "langsmith-0.1.89.tar.gz", hash = "sha256:3defc47fd165496192975d10d20e531c768584057be0c219c13c3e2ad7ccd817"},
+    {file = "langsmith-0.1.92-py3-none-any.whl", hash = "sha256:8acb27844ff5263bde14b23425f83ee63996f4d5a8e9998cdeef07fd913137ff"},
+    {file = "langsmith-0.1.92.tar.gz", hash = "sha256:681a613a4dc8c8e57c8961c347a39ffcb64d6c697e8ddde1fd8458fcfaef6c13"},
 ]
 
 [package.dependencies]
@@ -5173,13 +5102,13 @@ requests = ">=2,<3"
 
 [[package]]
 name = "langwatch"
-version = "0.1.10"
+version = "0.1.11"
 description = "Python SDK for LangWatch for monitoring your LLMs"
 optional = false
 python-versions = "<4.0,>=3.9"
 files = [
-    {file = "langwatch-0.1.10-py3-none-any.whl", hash = "sha256:271902080b6e0e5ee5aca7e244995b7737bbc54ead956bc16da50445c53d4dce"},
-    {file = "langwatch-0.1.10.tar.gz", hash = "sha256:4350aefbbe4ba5ff5f614f10bbf73ca36ccab4f010f66fd66fc826a1a14ade4b"},
+    {file = "langwatch-0.1.11-py3-none-any.whl", hash = "sha256:0fefc7fe83ec12db5552a69b255799fc8e77084a61223b42804d624d155aeb62"},
+    {file = "langwatch-0.1.11.tar.gz", hash = "sha256:865f38a5bc9db52ff0c757de550a543e215de68f251e491b8a51d53a01bbbcc9"},
 ]
 
 [package.dependencies]
@@ -5188,7 +5117,7 @@ deprecated = ">=1.2.14,<2.0.0"
 httpx = ">=0.27.0,<0.28.0"
 nanoid = ">=2.0.0,<3.0.0"
 pandas = ">=2.2.2,<3.0.0"
-pydantic = ">=2.5.2"
+pydantic = ">=1,<3"
 requests = ">=2.31.0,<3.0.0"
 retry = ">=0.9.2,<0.10.0"
 tqdm = ">=4.66.2,<5.0.0"
@@ -5201,13 +5130,13 @@ openai = ["openai (>=1.3.7,<2.0.0)"]
 
 [[package]]
 name = "litellm"
-version = "1.41.23"
+version = "1.41.24"
 description = "Library to easily interface with LLM API providers"
 optional = false
 python-versions = "!=2.7.*,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,!=3.6.*,!=3.7.*,>=3.8"
 files = [
-    {file = "litellm-1.41.23-py3-none-any.whl", hash = "sha256:ccfe7763e694ae43b50229fc78bb999a18507b654ec2046c55c6e2a2ea48bf96"},
-    {file = "litellm-1.41.23.tar.gz", hash = "sha256:320afcd172fb936f1297ce135075e3397141cf245cdb936f01871c9d6ed56516"},
+    {file = "litellm-1.41.24-py3-none-any.whl", hash = "sha256:e20047ee2789cddb704e7f27b2c123ce95093287a3c32a4e3d95daf751d71014"},
+    {file = "litellm-1.41.24.tar.gz", hash = "sha256:fba8668d17830b6444c74a7bc2e22c2dcfbb1283a847e86c430a52d9ee94a8ec"},
 ]
 
 [package.dependencies]
@@ -5627,20 +5556,24 @@ files = [
 ]
 
 [[package]]
-name = "memzero"
-version = "0.0.7"
+name = "mem0ai"
+version = "0.0.5"
 description = "Long-term memory for AI Agents"
 optional = false
-python-versions = "<4.0,>=3.9"
+python-versions = "<4.0,>=3.8"
 files = [
-    {file = "memzero-0.0.7-py3-none-any.whl", hash = "sha256:65f6da88d46263dbc05621fcd01bd09616d0e7f082d55ed9899dc2152491ffd2"},
-    {file = "memzero-0.0.7.tar.gz", hash = "sha256:0c1f413d8ee0ade955fe9f8b8f5aff2cf58bc94869537aca62139db3d9f50725"},
+    {file = "mem0ai-0.0.5-py3-none-any.whl", hash = "sha256:6f6e5356fd522adf0510322cd581476ea456fd7ccefca11b5ac050e9a6f00f36"},
+    {file = "mem0ai-0.0.5.tar.gz", hash = "sha256:f2ac35d15e4e620becb8d06b8ebeb1ffa85fac0b7cb2d3138056babec48dd5dd"},
 ]
 
 [package.dependencies]
-httpx = ">=0.27.0,<0.28.0"
+boto3 = ">=1.34.144,<2.0.0"
+groq = ">=0.9.0,<0.10.0"
+openai = ">=1.33.0,<2.0.0"
 posthog = ">=3.5.0,<4.0.0"
 pydantic = ">=2.7.3,<3.0.0"
+qdrant-client = ">=1.9.1,<2.0.0"
+together = ">=1.2.1,<2.0.0"
 
 [[package]]
 name = "metal-sdk"
@@ -6478,13 +6411,13 @@ sympy = "*"
 
 [[package]]
 name = "openai"
-version = "1.35.14"
+version = "1.35.15"
 description = "The official Python library for the openai API"
 optional = false
 python-versions = ">=3.7.1"
 files = [
-    {file = "openai-1.35.14-py3-none-any.whl", hash = "sha256:adadf8c176e0b8c47ad782ed45dc20ef46438ee1f02c7103c4155cff79c8f68b"},
-    {file = "openai-1.35.14.tar.gz", hash = "sha256:394ba1dfd12ecec1d634c50e512d24ff1858bbc2674ffcce309b822785a058de"},
+    {file = "openai-1.35.15-py3-none-any.whl", hash = "sha256:1b9a6ada4239b91f38f51c426c6ee2746a2069c92cbf25ed8694e5ec00ff4597"},
+    {file = "openai-1.35.15.tar.gz", hash = "sha256:307007e2036d57115612c1ecb50e9bc98fcc93537109a9f9efa1b4eedb2ea968"},
 ]
 
 [package.dependencies]
@@ -6994,20 +6927,6 @@ files = [
 
 [package.dependencies]
 ptyprocess = ">=0.5"
-
-[[package]]
-name = "pfzy"
-version = "0.3.4"
-description = "Python port of the fzy fuzzy string matching algorithm"
-optional = false
-python-versions = ">=3.7,<4.0"
-files = [
-    {file = "pfzy-0.3.4-py3-none-any.whl", hash = "sha256:5f50d5b2b3207fa72e7ec0ef08372ef652685470974a107d0d4999fc5a903a96"},
-    {file = "pfzy-0.3.4.tar.gz", hash = "sha256:717ea765dd10b63618e7298b2d98efd819e0b30cd5905c9707223dceeb94b3f1"},
-]
-
-[package.extras]
-docs = ["Sphinx (>=4.1.2,<5.0.0)", "furo (>=2021.8.17-beta.43,<2022.0.0)", "myst-parser (>=0.15.1,<0.16.0)", "sphinx-autobuild (>=2021.3.14,<2022.0.0)", "sphinx-copybutton (>=0.4.0,<0.5.0)"]
 
 [[package]]
 name = "pgvector"
@@ -8449,88 +8368,6 @@ Pillow = ">=3.3.2"
 XlsxWriter = ">=0.5.7"
 
 [[package]]
-name = "python-rapidjson"
-version = "1.18"
-description = "Python wrapper around rapidjson"
-optional = false
-python-versions = ">=3.6"
-files = [
-    {file = "python-rapidjson-1.18.tar.gz", hash = "sha256:09a5c362e2fec2a41b53e79e88bd8f0704447cb67c1c89a59e3092ccb4a30355"},
-    {file = "python_rapidjson-1.18-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:1f38c7ca5fee31423bb34f464c789f57954886dd00e1a8c8483fd13e0c0d2583"},
-    {file = "python_rapidjson-1.18-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:1912224817f734ee9138e91d170b62818fd01caa731aa8668e8c9bce9017fe7e"},
-    {file = "python_rapidjson-1.18-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:2af6ca181e812f2306d4806beb974334ddd0774a8f62194ad1721277236f4ad1"},
-    {file = "python_rapidjson-1.18-cp310-cp310-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:08f859f64470ecb307cdcd7a532bef9c9ab3c94d2005c5693a7e18b3a11d4b28"},
-    {file = "python_rapidjson-1.18-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:507595740300e95dded254536558cd56733cc3207e3c2457f19231ad00e78d85"},
-    {file = "python_rapidjson-1.18-cp310-cp310-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:5815af2f69a11c114e5004a77b8b036b5abcd06202c8bc1525856f9d836254a3"},
-    {file = "python_rapidjson-1.18-cp310-cp310-musllinux_1_2_aarch64.whl", hash = "sha256:d680b8c8f4dbceb465544bbdd28463aa7e0b651343aa73c2476533bf300e0266"},
-    {file = "python_rapidjson-1.18-cp310-cp310-musllinux_1_2_i686.whl", hash = "sha256:ff22c4160227be38322a88856f011c95d199103c30993bf3ee64f4bce9221807"},
-    {file = "python_rapidjson-1.18-cp310-cp310-musllinux_1_2_ppc64le.whl", hash = "sha256:9deb8a8a2df2982b446f2a19264a5da2780ddb415caf9e11d48e74701053f02e"},
-    {file = "python_rapidjson-1.18-cp310-cp310-musllinux_1_2_x86_64.whl", hash = "sha256:f6ecd86abf689538fdab5a55483c38bf10bdd9a8ed204ae10fa5a1bac7222d88"},
-    {file = "python_rapidjson-1.18-cp310-cp310-win32.whl", hash = "sha256:a9d4cd0be643b8310c1c92987961c06b68429527154e9bea75118802cd179178"},
-    {file = "python_rapidjson-1.18-cp310-cp310-win_amd64.whl", hash = "sha256:52f1d509ec20ab5d26f6dbc5d56821e0b2b1a5a878439eb0b3a33137b59029f5"},
-    {file = "python_rapidjson-1.18-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:83912aae7c508204c263818befa24cf3223ecf0175e70d0412169e1302f1b4f2"},
-    {file = "python_rapidjson-1.18-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:0f45a02e4593879772099cf88d18dbde3376334684a809feb9228b8745c0c08c"},
-    {file = "python_rapidjson-1.18-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:f201e0c1e41c0e491cf2eca121d51f30c666f35ce33a6d14ba8fc5b76e4a2fa7"},
-    {file = "python_rapidjson-1.18-cp311-cp311-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:697d06a66a1ba267f5abbb04971e461df1d4528ba341af6848a1ef01ae224e90"},
-    {file = "python_rapidjson-1.18-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:4b7e22b841fda1ec8c9e0a49069fbc6579363ba79fa5398fc7d37666357068cf"},
-    {file = "python_rapidjson-1.18-cp311-cp311-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:356b2f81e6cdb4c1bb9122b635c8bd827f845da7c0de8618874c933fb88de573"},
-    {file = "python_rapidjson-1.18-cp311-cp311-musllinux_1_2_aarch64.whl", hash = "sha256:acd2430dd7a8f66618247635c51a9413679e9a5279aaea708f854ef03cc933e1"},
-    {file = "python_rapidjson-1.18-cp311-cp311-musllinux_1_2_i686.whl", hash = "sha256:a587b3ec2b76480dfb57409654a9344ab47910e1b9d09e1c8eefe2db6c8c7364"},
-    {file = "python_rapidjson-1.18-cp311-cp311-musllinux_1_2_ppc64le.whl", hash = "sha256:2cf502e6c01d0933dc65888ab62b86d67967903c9a66158c2e458b312e671345"},
-    {file = "python_rapidjson-1.18-cp311-cp311-musllinux_1_2_x86_64.whl", hash = "sha256:43e622aa170f0b1e04f5b5ac8c7bf94b99f79efceb3608d8f1456f617cd79cdb"},
-    {file = "python_rapidjson-1.18-cp311-cp311-win32.whl", hash = "sha256:f9c9faa7c1df63e2b238fcbdb915d52eba9ba42ee6e2a502f81e8aac07938783"},
-    {file = "python_rapidjson-1.18-cp311-cp311-win_amd64.whl", hash = "sha256:e7b1cadf5c8852ae6e0a19fcf5b734eef4f92170292686cfdcced1302ea0aa20"},
-    {file = "python_rapidjson-1.18-cp312-cp312-macosx_10_9_x86_64.whl", hash = "sha256:52912323a2ac460ea605ab55f437196f662ec9db82669367dab4cda8f4c05b13"},
-    {file = "python_rapidjson-1.18-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:ebbd471d63bfa3c09180fd44eefec7b0f46ca41ee4552559c3a027799c67d781"},
-    {file = "python_rapidjson-1.18-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:1cb89a794242a692ef5d15ec9ad14c21fd17abc4671af62eadc8e6a1861a0319"},
-    {file = "python_rapidjson-1.18-cp312-cp312-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:fcae2fdd5a2520dc85f98224ba1fc96badd0b68d3a8ee41485b3e37be67b7bef"},
-    {file = "python_rapidjson-1.18-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:9f46face2b3e6891dd646dc1062c1133323ce4dc26409a084535f2af9e2bb4e3"},
-    {file = "python_rapidjson-1.18-cp312-cp312-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:67a3f71225200344ffaab3d28add533398b92f65d9166e649222a50677370fd2"},
-    {file = "python_rapidjson-1.18-cp312-cp312-musllinux_1_2_aarch64.whl", hash = "sha256:7851252083aba29668cf1f02dc1c1e5e5a9113bf4f1dedc2f509c00e43f0c884"},
-    {file = "python_rapidjson-1.18-cp312-cp312-musllinux_1_2_i686.whl", hash = "sha256:32c32256edb35a234b16dfa6452bdf066cc272675cf9b3eb980e853505202766"},
-    {file = "python_rapidjson-1.18-cp312-cp312-musllinux_1_2_ppc64le.whl", hash = "sha256:5f9d27c090782f83de06dd51b9a7143b04c32314e53ed531a2d8f170f9f255e9"},
-    {file = "python_rapidjson-1.18-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:d3e0b8863cc0e78e36d41aae856101291c0bea9215690decafa6bae5f413e1f3"},
-    {file = "python_rapidjson-1.18-cp312-cp312-win32.whl", hash = "sha256:123e7bf9726c09055d97ba0c4fc8cdb9deda80c2a9d5409bfd49935a0f38d0b2"},
-    {file = "python_rapidjson-1.18-cp312-cp312-win_amd64.whl", hash = "sha256:03d14892a1cdc24e5b200ca619fda397e0f36a3d1420edcb7212ae47d4d9fd3e"},
-    {file = "python_rapidjson-1.18-cp313-cp313-macosx_10_13_x86_64.whl", hash = "sha256:1d4861adede630a5eee77c46f9c901da2ac15bc3c0296ad851d69036db3a0374"},
-    {file = "python_rapidjson-1.18-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:35d0e9c8dd61670b5833546b3ded057b68e696ab530d3c14603e718a4bc3db00"},
-    {file = "python_rapidjson-1.18-cp313-cp313-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:d229114f738ee0d9ff1b727aaf7bfe6a90d6f77e0449b33f87ad7814c493c921"},
-    {file = "python_rapidjson-1.18-cp313-cp313-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:fb0a8361b668e920d7fa78f725f59d224adedb3620f526509cef4416778e3393"},
-    {file = "python_rapidjson-1.18-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:20256271a00f758a96ccfdd61434c11a1fc6b5e3fd4e7324dd832e576c9f720b"},
-    {file = "python_rapidjson-1.18-cp313-cp313-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:ad82fa706d7437ceb0d8e36870715e8318359bc604016fc505c14ccc109322e9"},
-    {file = "python_rapidjson-1.18-cp313-cp313-musllinux_1_2_aarch64.whl", hash = "sha256:f13a8be00c0fd31c75304f03df1240d16268720b9d12eca3d055f702dd607427"},
-    {file = "python_rapidjson-1.18-cp313-cp313-musllinux_1_2_i686.whl", hash = "sha256:e9712964a864c7604319bebbdd4ab5de9a42698d3c9a6c15c964a06d586a2c66"},
-    {file = "python_rapidjson-1.18-cp313-cp313-musllinux_1_2_ppc64le.whl", hash = "sha256:f0f36f9c194d8c893463128a57bd7cde3bb28151eaf5bb5db5f552de0eb0eb93"},
-    {file = "python_rapidjson-1.18-cp313-cp313-musllinux_1_2_x86_64.whl", hash = "sha256:4704f9f987a62c4b7e419843bb3c5daea81271dba95cae47e92b2475978ae66b"},
-    {file = "python_rapidjson-1.18-cp313-cp313-win32.whl", hash = "sha256:2d197c686a4eacc2defe9bd31bf73b23877ad4974857b72b65e126cef7a50fa5"},
-    {file = "python_rapidjson-1.18-cp313-cp313-win_amd64.whl", hash = "sha256:30f4a317af410d3977cf405737a2d6e81c6695d24df33113523023f665bb5e75"},
-    {file = "python_rapidjson-1.18-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:300b8d84d5bebea7988312950fc949c1701055086b2790afaaad68e8f1cf389d"},
-    {file = "python_rapidjson-1.18-cp38-cp38-macosx_11_0_arm64.whl", hash = "sha256:981dd50522999a4fe519ca14135e20b3acc4928df4d4421d96792913d2fb359d"},
-    {file = "python_rapidjson-1.18-cp38-cp38-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:d03390ac612090c58553e1d8454faff6099a2b2ee0c44ebd19546d5a73b30689"},
-    {file = "python_rapidjson-1.18-cp38-cp38-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:0550caca5227e3f929b63b758c19c584f39c10d4e1c4ad9b7e322f19030db3b8"},
-    {file = "python_rapidjson-1.18-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:37295c26b6270515666243d499c060006471b0517dbdf7690b5f855b9531f9b8"},
-    {file = "python_rapidjson-1.18-cp38-cp38-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:d058b9c740c55fe3ffab826742773f995620992eda6a31d794727526d0ea1610"},
-    {file = "python_rapidjson-1.18-cp38-cp38-musllinux_1_2_aarch64.whl", hash = "sha256:0c4697e3fa587c7f3938d2394ff6563085bbf346e4cab29fb425595d267a59d1"},
-    {file = "python_rapidjson-1.18-cp38-cp38-musllinux_1_2_i686.whl", hash = "sha256:aa8fbc9c31d9320e80a290d3cf847756d37290628ccaad3719de6fa51ab43597"},
-    {file = "python_rapidjson-1.18-cp38-cp38-musllinux_1_2_ppc64le.whl", hash = "sha256:191e051b7b384474b6558902b8c33f82474492e3d19cc188224cd1a5584ca4bf"},
-    {file = "python_rapidjson-1.18-cp38-cp38-musllinux_1_2_x86_64.whl", hash = "sha256:0dd0bc1b3d4d72bd3eb9f60f84473fcefb316912422267bf06d8c2290ef33e02"},
-    {file = "python_rapidjson-1.18-cp38-cp38-win32.whl", hash = "sha256:1925a3ed72504812ab1d8edd59ad83bd4b96b5a3e149ee927f3cdb98b803ac22"},
-    {file = "python_rapidjson-1.18-cp38-cp38-win_amd64.whl", hash = "sha256:4e21cbd8585598ce091990196fe6fe354c607e13e2b17794f3711a8f2b2b8b11"},
-    {file = "python_rapidjson-1.18-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:68230f34a076a54298d5c860ae8aa08e3de5ab5a289b23b96a0a6039861f911b"},
-    {file = "python_rapidjson-1.18-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:b1ec8b167484523bc0d753998594cb2614061755191946b73c7e88e124287595"},
-    {file = "python_rapidjson-1.18-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:9bad5d1a46b2d07f1d9b4ad1c316a36e024da451ff876d1572cb345c6bb50a42"},
-    {file = "python_rapidjson-1.18-cp39-cp39-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:daf270f1d2feddf7680ddc2faf2778e814caf569095cc60c2079e856af3d2bc3"},
-    {file = "python_rapidjson-1.18-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:72948a56b9d4964d72f2f3862d5d168b247457f9d1e70cee750a0cd660f67555"},
-    {file = "python_rapidjson-1.18-cp39-cp39-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:0624eebe2ceba44dd84a3d3409fab1e7e1a021c3701b5ad5bd8a0fba47898d20"},
-    {file = "python_rapidjson-1.18-cp39-cp39-musllinux_1_2_aarch64.whl", hash = "sha256:b975fcecbf5f3845ce72040be4630ece4c5b467c24c749be2a81827918a2e530"},
-    {file = "python_rapidjson-1.18-cp39-cp39-musllinux_1_2_i686.whl", hash = "sha256:f725f560f4865fb5b684a26935f78690e44aa475c8b41a793d096a122115c9b3"},
-    {file = "python_rapidjson-1.18-cp39-cp39-musllinux_1_2_ppc64le.whl", hash = "sha256:0a31ea1a7a11a6e60fed42364e6726d29346f6ba1a9212ea1b6753731f600909"},
-    {file = "python_rapidjson-1.18-cp39-cp39-musllinux_1_2_x86_64.whl", hash = "sha256:477aff79a2d87daee45c49e917097426fe5495f99fb935a5adb20716cb52c86a"},
-    {file = "python_rapidjson-1.18-cp39-cp39-win32.whl", hash = "sha256:d13a0e3f647726f653cd3d6bfc770d595f51d75212b38df82d2a465bc0df5dd8"},
-    {file = "python_rapidjson-1.18-cp39-cp39-win_amd64.whl", hash = "sha256:412c716cbf41ecfb99879443fc11288513053e63302232df0ed99d629fd220da"},
-]
-
-[[package]]
 name = "pytube"
 version = "15.0.0"
 description = "Python 3 library for downloading YouTube Videos."
@@ -9457,17 +9294,14 @@ torch = ["safetensors[numpy]", "torch (>=1.10)"]
 
 [[package]]
 name = "schema"
-version = "0.7.5"
+version = "0.7.7"
 description = "Simple data validation library"
 optional = false
 python-versions = "*"
 files = [
-    {file = "schema-0.7.5-py2.py3-none-any.whl", hash = "sha256:f3ffdeeada09ec34bf40d7d79996d9f7175db93b7a5065de0faa7f41083c1e6c"},
-    {file = "schema-0.7.5.tar.gz", hash = "sha256:f06717112c61895cabc4707752b88716e8420a8819d71404501e114f91043197"},
+    {file = "schema-0.7.7-py2.py3-none-any.whl", hash = "sha256:5d976a5b50f36e74e2157b47097b60002bd4d42e65425fcc9c9befadb4255dde"},
+    {file = "schema-0.7.7.tar.gz", hash = "sha256:7da553abd2958a19dc2547c388cde53398b39196175a9be59ea1caf5ab0a1807"},
 ]
-
-[package.dependencies]
-contextlib2 = ">=0.5.5"
 
 [[package]]
 name = "scikit-learn"
@@ -9664,13 +9498,13 @@ tornado = ["tornado (>=6)"]
 
 [[package]]
 name = "setuptools"
-version = "71.0.0"
+version = "71.0.3"
 description = "Easily download, build, install, upgrade, and uninstall Python packages"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "setuptools-71.0.0-py3-none-any.whl", hash = "sha256:f06fbe978a91819d250a30e0dc4ca79df713d909e24438a42d0ec300fc52247f"},
-    {file = "setuptools-71.0.0.tar.gz", hash = "sha256:98da3b8aca443b9848a209ae4165e2edede62633219afa493a58fbba57f72e2e"},
+    {file = "setuptools-71.0.3-py3-none-any.whl", hash = "sha256:f501b6e6db709818dc76882582d9c516bf3b67b948864c5fa1d1624c09a49207"},
+    {file = "setuptools-71.0.3.tar.gz", hash = "sha256:3d8531791a27056f4a38cd3e54084d8b1c4228ff9cf3f2d7dd075ec99f9fd70d"},
 ]
 
 [package.extras]
@@ -10153,6 +9987,34 @@ requests = ">=2.26.0"
 blobfile = ["blobfile (>=2)"]
 
 [[package]]
+name = "together"
+version = "1.2.2"
+description = "Python client for Together's Cloud Platform!"
+optional = false
+python-versions = "<4.0,>=3.8"
+files = [
+    {file = "together-1.2.2-py3-none-any.whl", hash = "sha256:7ce89f902dbaca67e46e693d90182514494f510f3bc16cb89d816a5031ab0433"},
+    {file = "together-1.2.2.tar.gz", hash = "sha256:fd026f4a604e1fb3ee2fa5803f31e5e36ad31b3d182ef47f611326de66907d13"},
+]
+
+[package.dependencies]
+aiohttp = ">=3.9.3,<4.0.0"
+click = ">=8.1.7,<9.0.0"
+eval-type-backport = ">=0.1.3,<0.3.0"
+filelock = ">=3.13.1,<4.0.0"
+numpy = [
+    {version = ">=1.23.5", markers = "python_version < \"3.12\""},
+    {version = ">=1.26.0", markers = "python_version >= \"3.12\""},
+]
+pillow = ">=10.3.0,<11.0.0"
+pyarrow = ">=10.0.1"
+pydantic = ">=2.6.3,<3.0.0"
+requests = ">=2.31.0,<3.0.0"
+tabulate = ">=0.9.0,<0.10.0"
+tqdm = ">=4.66.2,<5.0.0"
+typer = ">=0.9,<0.13"
+
+[[package]]
 name = "tokenizers"
 version = "0.19.1"
 description = ""
@@ -10526,29 +10388,6 @@ filelock = "*"
 build = ["cmake (>=3.20)", "lit"]
 tests = ["autopep8", "flake8", "isort", "numpy", "pytest", "scipy (>=1.7.1)", "torch"]
 tutorials = ["matplotlib", "pandas", "tabulate", "torch"]
-
-[[package]]
-name = "tritonclient"
-version = "2.47.0"
-description = "Python client library and utilities for communicating with Triton Inference Server"
-optional = false
-python-versions = "*"
-files = [
-    {file = "tritonclient-2.47.0-py3-none-any.whl", hash = "sha256:a731aebceb69e9d0508fef1dd4e703730b70b4dd5ab283d9d836823897a0561b"},
-    {file = "tritonclient-2.47.0-py3-none-manylinux1_x86_64.whl", hash = "sha256:754ab373a45306be0c45afbcde06838179d04561694f6d15e138530153aee581"},
-    {file = "tritonclient-2.47.0-py3-none-manylinux2014_aarch64.whl", hash = "sha256:5500ef5637ac3ed7ceeac3740ca28fc6acb94473cc49b261a86dc4cb55267179"},
-]
-
-[package.dependencies]
-numpy = ">=1.19.1,<2"
-python-rapidjson = ">=0.9.1"
-urllib3 = ">=2.0.7"
-
-[package.extras]
-all = ["aiohttp (>=3.8.1,<4.0.0)", "cuda-python", "geventhttpclient (>=1.4.4,<=2.0.2)", "grpcio (>=1.41.0)", "numpy (>=1.19.1,<2)", "packaging (>=14.1)", "protobuf (>=3.5.0,<5)", "python-rapidjson (>=0.9.1)"]
-cuda = ["cuda-python"]
-grpc = ["grpcio (>=1.41.0)", "numpy (>=1.19.1,<2)", "packaging (>=14.1)", "protobuf (>=3.5.0,<5)", "python-rapidjson (>=0.9.1)"]
-http = ["aiohttp (>=3.8.1,<4.0.0)", "geventhttpclient (>=1.4.4,<=2.0.2)", "numpy (>=1.19.1,<2)", "python-rapidjson (>=0.9.1)"]
 
 [[package]]
 name = "typer"
