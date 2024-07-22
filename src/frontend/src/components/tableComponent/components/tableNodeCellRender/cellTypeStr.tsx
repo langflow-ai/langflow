@@ -51,7 +51,7 @@ export function renderStrType({
         editNode={true}
         disabled={disabled}
         options={templateData.options || []}
-        values={[templateValue ?? "Choose an option"]}
+        value={templateValue ?? "Choose an option"}
         id={"multiselect-" + templateData.name}
         onValueChange={(value) => handleOnNewValue(value, templateData.key)}
       />
