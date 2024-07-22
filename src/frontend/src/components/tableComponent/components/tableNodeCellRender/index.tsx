@@ -11,7 +11,7 @@ import { isTargetHandleConnected } from "../../../../utils/reactflowUtils";
 
 export default function TableNodeCellRender({
   node: { data },
-  value: { value, nodeId, nodeClass, handleNodeClass },
+  value: { value, nodeId, nodeClass, handleNodeClass, setNode },
 }: CustomCellRendererProps) {
   const setNodeClass = (value: APIClassType, type?: string) => {
     handleNodeClass(value, type);
@@ -25,6 +25,7 @@ export default function TableNodeCellRender({
     node: nodeClass,
     nodeId: nodeId,
     name: data.key,
+    setNode: setNode,
   });
   const handleOnNewValue: handleOnNewValueType = (data, options) => {
     handleOnNewValueHook(data, { setNodeClass, ...options });
@@ -35,7 +36,7 @@ export default function TableNodeCellRender({
       });
       return newData;
     });
-    setTemplateValue(value);
+    data.value && setTemplateValue(data.value);
   };
 
   const disabled = isTargetHandleConnected(edges, data.key, data, nodeId);
