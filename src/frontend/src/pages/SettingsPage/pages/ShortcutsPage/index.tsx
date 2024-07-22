@@ -85,10 +85,10 @@ export default function ShortcutsPage() {
               )}
               <Button
                 variant="primary"
-                className="ml-3"
+                className="flex gap-2"
                 onClick={handleRestore}
               >
-                <ForwardedIconComponent name="RotateCcw" className="mr-2 w-4" />
+                <ForwardedIconComponent name="RotateCcw" className="w-4" />
                 Restore
               </Button>
             </div>
