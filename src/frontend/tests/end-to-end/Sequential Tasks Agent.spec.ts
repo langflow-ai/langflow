@@ -80,10 +80,14 @@ test("Sequential Tasks Agent", async ({ page }) => {
   });
 
   await page.getByText("Playground", { exact: true }).click();
-  await page
-    .getByPlaceholder("No chat input variables found. Click to run your flow")
-    .last()
-    .isVisible();
+
+  await page.waitForTimeout(2000);
+
+  expect(
+    page
+      .getByPlaceholder("No chat input variables found. Click to run your flow")
+      .last(),
+  ).toBeVisible();
 
   await page.getByText("Topic", { exact: true }).nth(1).isVisible();
   await page.getByText("Topic", { exact: true }).nth(1).click();

@@ -90,23 +90,17 @@ test("Hierarchical Tasks Agent", async ({ page }) => {
   });
 
   await page.getByText("Playground", { exact: true }).click();
-  await page
-    .getByPlaceholder("No chat input variables found. Click to run your flow")
-    .last()
-    .isVisible();
 
-  await page.getByText("Topic", { exact: true }).nth(1).isVisible();
-  await page.getByText("Topic", { exact: true }).nth(1).click();
-  expect(await page.getByPlaceholder("Enter text...").inputValue()).toBe(
-    "Agile",
-  );
+  await page.waitForTimeout(2000);
+
+  expect(page.getByText("What is Langflow?", { exact: true })).toBeVisible();
 
   const textContents = await page
     .getByTestId("div-chat-message")
     .allTextContents();
 
   const concatAllText = textContents.join(" ");
-  expect(concatAllText.toLocaleLowerCase()).toContain("agile");
+  expect(concatAllText.toLocaleLowerCase()).toContain("langflow");
   const allTextLength = concatAllText.length;
   expect(allTextLength).toBeGreaterThan(500);
 });

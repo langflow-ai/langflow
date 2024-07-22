@@ -57,30 +57,24 @@ test("Complex Agent", async ({ page }) => {
 
   await page
     .getByTestId("popover-anchor-input-api_key")
-    .first()
-    .fill(process.env.OPENAI_API_KEY ?? "");
-
-  await page
-    .getByTestId("popover-anchor-input-api_key")
-    .nth(1)
-    .fill(process.env.OPENAI_API_KEY ?? "");
-
-  await page.getByTestId("dropdown-model_name").first().click();
-  await page.getByTestId("gpt-4o-1-option").first().click();
-
-  await page.waitForTimeout(2000);
-
-  await page.getByTestId("dropdown-model_name").last().click();
-  await page.getByTestId("gpt-4o-1-option").last().click();
-
-  await page.waitForTimeout(2000);
-
-  await page
-    .getByTestId("popover-anchor-input-api_key")
     .last()
     .fill(process.env.BRAVE_SEARCH_API_KEY ?? "");
 
   await page.waitForTimeout(2000);
+
+  let openAiLlms = await page.getByText("OpenAI", { exact: true }).count();
+
+  for (let i = 0; i < openAiLlms; i++) {
+    await page
+      .getByTestId("popover-anchor-input-api_key")
+      .nth(i)
+      .fill(process.env.OPENAI_API_KEY ?? "");
+
+    await page.getByTestId("dropdown-model_name").nth(i).click();
+    await page.getByTestId("gpt-4o-1-option").last().click();
+
+    await page.waitForTimeout(1000);
+  }
 
   await page.getByTestId("button_run_chat output").click();
   await page.waitForSelector("text=built successfully", { timeout: 60000 * 3 });
@@ -90,23 +84,19 @@ test("Complex Agent", async ({ page }) => {
   });
 
   await page.getByText("Playground", { exact: true }).click();
-  await page
-    .getByPlaceholder("No chat input variables found. Click to run your flow")
-    .last()
-    .isVisible();
 
-  await page.getByText("Topic", { exact: true }).nth(1).isVisible();
-  await page.getByText("Topic", { exact: true }).nth(1).click();
-  expect(await page.getByPlaceholder("Enter text...").inputValue()).toBe(
-    "Agile",
-  );
+  await page.waitForTimeout(2000);
+
+  expect(
+    page.getByText("Could you search info about AAPL?", { exact: true }).last(),
+  ).toBeVisible();
 
   const textContents = await page
     .getByTestId("div-chat-message")
     .allTextContents();
 
   const concatAllText = textContents.join(" ");
-  expect(concatAllText.toLocaleLowerCase()).toContain("agile");
+  expect(concatAllText.toLocaleLowerCase()).toContain("apple");
   const allTextLength = concatAllText.length;
   expect(allTextLength).toBeGreaterThan(500);
 });
