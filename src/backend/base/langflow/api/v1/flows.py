@@ -293,10 +293,12 @@ async def upload_file(
     session: Session = Depends(get_session),
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_active_user),
+    folder_id: UUID | None = None,
 ):
     """Upload flows from a file."""
     contents = await file.read()
     data = orjson.loads(contents)
+    response_list = []
     if "flows" in data:
         flow_list = FlowListCreate(**data)
     else:
@@ -304,8 +306,12 @@ async def upload_file(
     # Now we set the user_id for all flows
     for flow in flow_list.flows:
         flow.user_id = current_user.id
+        if folder_id:
+            flow.folder_id = folder_id
+        response = create_flow(session=session, flow=flow, current_user=current_user)
+        response_list.append(response)
 
-    return create_flows(session=session, flow_list=flow_list, current_user=current_user)
+    return response_list
 
 
 @router.get("/download/", response_model=FlowListRead, status_code=200)
