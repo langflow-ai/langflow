@@ -1,3 +1,4 @@
+import { NodeType } from "@/types/flow";
 import { ColDef, ValueGetterParams } from "ag-grid-community";
 import { useMemo } from "react";
 import TableAdvancedToggleCellRender from "../../../components/tableComponent/components/tableAdvancedToggleCellRender";
@@ -14,9 +15,14 @@ const useColumnDefs = (
   ) => void,
   nodeId: string,
   open: boolean,
+  setNode?: (
+    id: string,
+    update: NodeType | ((oldState: NodeType) => NodeType),
+  ) => void,
+  hideVisibility?: boolean,
 ) => {
-  const columnDefs: ColDef[] = useMemo(
-    () => [
+  const columnDefs: ColDef[] = useMemo(() => {
+    const colDefs: ColDef[] = [
       {
         headerName: "Field Name",
         field: "display_name",
@@ -54,6 +60,7 @@ const useColumnDefs = (
             nodeId: nodeId,
             nodeClass: nodeClass,
             handleNodeClass,
+            setNode,
           };
         },
         minWidth: 340,
@@ -62,7 +69,9 @@ const useColumnDefs = (
         resizable: false,
         cellClass: "no-border",
       },
-      {
+    ];
+    if (!hideVisibility) {
+      colDefs.push({
         headerName: "Show",
         field: "advanced",
         cellRenderer: TableAdvancedToggleCellRender,
@@ -77,10 +86,10 @@ const useColumnDefs = (
         maxWidth: 80,
         resizable: false,
         cellClass: "no-border",
-      },
-    ],
-    [open, nodeClass],
-  );
+      });
+    }
+    return colDefs;
+  }, [open, nodeClass]);
 
   return columnDefs;
 };
