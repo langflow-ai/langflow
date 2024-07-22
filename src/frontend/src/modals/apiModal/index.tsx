@@ -165,6 +165,7 @@ const ApiModal = forwardRef(
                 nodes[index].id,
                 nodes[index].data.node!.template[key].value,
                 nodes[index].data.node!.template[key],
+                true,
               );
             }
           },
@@ -176,6 +177,7 @@ const ApiModal = forwardRef(
       tw: string,
       changes: string | string[] | boolean | number | Object[] | Object,
       template: InputFieldType,
+      byChangeCall=false,
     ) {
       changes = getChangesType(changes, template);
 
@@ -207,7 +209,7 @@ const ApiModal = forwardRef(
       if (tweak && tweak.length > 0) {
         const cloneTweak = cloneDeep(tweak);
         addCodes(cloneTweak);
-        addTweaks(cloneTweak);
+        if(!byChangeCall) addTweaks(cloneTweak);
       }
     }
 
