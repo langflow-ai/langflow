@@ -1,11 +1,10 @@
 from langchain_groq import ChatGroq
 from pydantic.v1 import SecretStr
 
-from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.groq_constants import MODEL_NAMES
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
-from langflow.io import BoolInput, DropdownInput, FloatInput, IntInput, MessageTextInput, SecretStrInput
+from langflow.io import DropdownInput, FloatInput, IntInput, MessageTextInput, SecretStrInput
 
 
 class GroqModel(LCModelComponent):
@@ -14,7 +13,7 @@ class GroqModel(LCModelComponent):
     icon = "Groq"
     name = "GroqModel"
 
-    inputs = [
+    inputs = LCModelComponent._base_inputs + [
         SecretStrInput(
             name="groq_api_key",
             display_name="Groq API Key",
@@ -49,23 +48,6 @@ class GroqModel(LCModelComponent):
             display_name="Model",
             info="The name of the model to use.",
             options=MODEL_NAMES,
-        ),
-        MessageTextInput(
-            name="input_value",
-            display_name="Input",
-            info="The input to the model.",
-        ),
-        BoolInput(
-            name="stream",
-            display_name="Stream",
-            info=STREAM_INFO_TEXT,
-            advanced=True,
-        ),
-        MessageTextInput(
-            name="system_message",
-            display_name="System Message",
-            info="System message to pass to the model.",
-            advanced=True,
         ),
     ]
 
