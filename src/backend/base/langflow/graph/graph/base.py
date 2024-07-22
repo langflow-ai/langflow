@@ -998,11 +998,11 @@ class Graph:
             self.run_manager.remove_vertex_from_runnables(v_id)
             next_runnable_vertices = self.find_next_runnable_vertices(v_id, v_successors_ids)
 
-            for i in set(next_runnable_vertices):  # Use set to avoid duplicates
-                if i == v_id:
+            for next_v_id in set(next_runnable_vertices):  # Use set to avoid duplicates
+                if next_v_id == v_id:
                     next_runnable_vertices.remove(v_id)
                 else:
-                    self.run_manager.add_to_vertices_being_run(v_id)
+                    self.run_manager.add_to_vertices_being_run(next_v_id)
             if cache:
                 set_cache_coro = partial(get_chat_service().set_cache, key=self.flow_id)
                 await set_cache_coro(self, lock)
