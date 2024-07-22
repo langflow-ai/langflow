@@ -317,6 +317,7 @@ async def upload_file(
 
     return response_list
 
+
 @router.delete("/")
 async def delete_multiple_flows(
     flow_ids: List[UUID], user: User = Depends(get_current_active_user), db: Session = Depends(get_session)
@@ -345,8 +346,8 @@ async def delete_multiple_flows(
 
 @router.post("/download/", status_code=200)
 async def download_multiple_file(
-    flow_ids: List[UUID], 
-    user: User = Depends(get_current_active_user), 
+    flow_ids: List[UUID],
+    user: User = Depends(get_current_active_user),
     db: Session = Depends(get_session),
 ):
     """Download all flows as a zip file."""
@@ -354,7 +355,7 @@ async def download_multiple_file(
 
     if not flows:
         raise HTTPException(status_code=404, detail="No flows found.")
-    
+
     flows_without_api_keys = [remove_api_keys(flow.model_dump()) for flow in flows]
 
     if len(flows_without_api_keys) > 1:
@@ -384,4 +385,3 @@ async def download_multiple_file(
         )
     else:
         return FlowListRead(flows=flows_without_api_keys)
-        
