@@ -315,8 +315,8 @@ lock_langflow:
 lock: ## lock dependencies
 # Run both in parallel
 	@echo 'Locking dependencies'
-	cd src/backend/base && poetry lock
-	poetry lock
+	cd src/backend/base && poetry lock --no-update
+	poetry lock --no-update
 
 update: ## update dependencies
 	@echo 'Updating dependencies'
