@@ -1,10 +1,9 @@
 from langchain_cohere import ChatCohere
 from pydantic.v1 import SecretStr
 
-from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
-from langflow.io import BoolInput, FloatInput, MessageInput, SecretStrInput, StrInput
+from langflow.io import FloatInput, SecretStrInput
 
 
 class CohereComponent(LCModelComponent):
@@ -14,7 +13,7 @@ class CohereComponent(LCModelComponent):
     icon = "Cohere"
     name = "CohereModel"
 
-    inputs = [
+    inputs = LCModelComponent._base_inputs + [
         SecretStrInput(
             name="cohere_api_key",
             display_name="Cohere API Key",
@@ -23,14 +22,6 @@ class CohereComponent(LCModelComponent):
             value="COHERE_API_KEY",
         ),
         FloatInput(name="temperature", display_name="Temperature", value=0.75),
-        MessageInput(name="input_value", display_name="Input"),
-        BoolInput(name="stream", display_name="Stream", info=STREAM_INFO_TEXT, advanced=True),
-        StrInput(
-            name="system_message",
-            display_name="System Message",
-            info="System message to pass to the model.",
-            advanced=True,
-        ),
     ]
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
