@@ -115,9 +115,7 @@ class Component(CustomComponent):
         self._map_parameters_on_frontend_node(frontend_node)
         frontend_node_dict = frontend_node.to_dict(keep_name=False)
         frontend_node_dict = self._update_template(frontend_node_dict)
-        frontend_node = ComponentFrontendNode(name=name, **frontend_node_dict)
-
-        self.map_parameters_on_frontend_node(frontend_node)
+        frontend_node = ComponentFrontendNode.from_dict(frontend_node_dict)
         # But we now need to calculate the return_type of the methods in the outputs
         for output in frontend_node.outputs:
             if output.types:
