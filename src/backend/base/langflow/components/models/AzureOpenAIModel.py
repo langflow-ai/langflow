@@ -1,9 +1,8 @@
 from langchain_openai import AzureChatOpenAI
-from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
 from langflow.inputs import MessageTextInput
-from langflow.io import BoolInput, DropdownInput, FloatInput, IntInput, MessageInput, SecretStrInput, StrInput
+from langflow.io import DropdownInput, FloatInput, IntInput, SecretStrInput
 
 
 class AzureChatOpenAIComponent(LCModelComponent):
@@ -47,7 +46,7 @@ class AzureChatOpenAIComponent(LCModelComponent):
             display_name="Max Tokens",
             advanced=True,
             info="The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
-        )
+        ),
     ]
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]

@@ -1,6 +1,6 @@
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import Embeddings
-from langflow.io import BoolInput, DictInput, FileInput, FloatInput, IntInput, MessageTextInput, Output
+from langflow.io import BoolInput, FileInput, FloatInput, IntInput, MessageTextInput, Output
 
 
 class VertexAIEmbeddingsComponent(LCModelComponent):
@@ -10,18 +10,24 @@ class VertexAIEmbeddingsComponent(LCModelComponent):
     name = "VertexAIEmbeddings"
 
     inputs = [
-        FileInput(name="credentials",display_name="Credentials", info="JSON credentials file. Leave empty to fallback to environment variables", value="",file_types=["json"]),
+        FileInput(
+            name="credentials",
+            display_name="Credentials",
+            info="JSON credentials file. Leave empty to fallback to environment variables",
+            value="",
+            file_types=["json"],
+        ),
         MessageTextInput(name="location", display_name="Location", advanced=True),
         MessageTextInput(name="project", display_name="Project", info="The project ID.", advanced=True),
-        IntInput(name="max_output_tokens",display_name="Max Output Tokens", advanced=True),
-        IntInput(name="max_retries", display_name="Max Retries",value=1, advanced=True),
-        MessageTextInput(name="model_name",display_name="Model Name",value="textembedding-gecko"),
-        IntInput(name="n",display_name="N",value=1,advanced=True),
+        IntInput(name="max_output_tokens", display_name="Max Output Tokens", advanced=True),
+        IntInput(name="max_retries", display_name="Max Retries", value=1, advanced=True),
+        MessageTextInput(name="model_name", display_name="Model Name", value="textembedding-gecko"),
+        IntInput(name="n", display_name="N", value=1, advanced=True),
         IntInput(name="request_parallelism", value=5, display_name="Request Parallelism", advanced=True),
-        MessageTextInput(name="stop_sequences",display_name="Stop",advanced=True,is_list=True),
-        BoolInput(name="streaming", display_name="Streaming",value=False,advanced=True),
+        MessageTextInput(name="stop_sequences", display_name="Stop", advanced=True, is_list=True),
+        BoolInput(name="streaming", display_name="Streaming", value=False, advanced=True),
         FloatInput(name="temperature", value=0.0, display_name="Temperature"),
-        IntInput(name="top_k", display_name="Top K",advanced=True),
+        IntInput(name="top_k", display_name="Top K", advanced=True),
         FloatInput(name="top_p", display_name="Top P", value=0.95, advanced=True),
     ]
 
@@ -38,6 +44,7 @@ class VertexAIEmbeddingsComponent(LCModelComponent):
             )
 
         from google.oauth2 import service_account
+
         if self.credentials:
             gcloud_credentials = service_account.Credentials.from_service_account_file(self.credentials)
         else:
