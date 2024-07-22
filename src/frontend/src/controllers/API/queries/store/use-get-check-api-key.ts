@@ -17,7 +17,7 @@ export const useGetCheckApiKeysQuery: useQueryFunctionType<
 
   const getCheckFn = async () => {
     return await api.get<ICheckQueryResponse>(
-      `${getURL("STORE")}/check/api_key/`,
+      `${getURL("STORE")}/check/api_key`,
     );
   };
 
