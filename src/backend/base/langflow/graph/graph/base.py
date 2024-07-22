@@ -981,8 +981,11 @@ class Graph:
                 vertex_task_run_count[vertex_id] = vertex_task_run_count.get(vertex_id, 0) + 1
 
             logger.debug(f"Running layer {layer_index} with {len(tasks)} tasks")
-            self._run_stats[f"layer_{layer_index}"] = {"start_time": datetime.now(timezone.utc)}
-            self._run_stats[f"layer_{layer_index}"]["component_ids"] = current_batch
+            self._run_stats[f"layer_{layer_index}"] = {
+                "start_time": datetime.now(timezone.utc),
+                "component_ids": current_batch,
+            }
+
             try:
                 next_runnable_vertices = await self._execute_tasks(tasks, lock=lock)
             except Exception as e:
