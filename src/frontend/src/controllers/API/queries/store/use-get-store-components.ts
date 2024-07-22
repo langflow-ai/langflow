@@ -1,18 +1,20 @@
 import { useQueryFunctionType } from "@/types/api";
+import { cloneDeep } from "lodash";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
-import { cloneDeep } from "lodash";
 
 interface IMetadata {
-  [char: string]: {
-    count: number;
-  } | number;
+  [char: string]:
+    | {
+        count: number;
+      }
+    | number;
 }
 
 interface ITags {
-    id: string;
-    name: string;
+  id: string;
+  name: string;
 }
 
 interface IComponentData {
@@ -22,11 +24,11 @@ interface IComponentData {
   liked_by_count: number;
   liked_by_user: undefined | boolean;
   is_component: boolean;
-  metadata: IMetadata,
+  metadata: IMetadata;
   user_created: {
     username: string;
-  },
-  tags: Array<ITags>,
+  };
+  tags: Array<ITags>;
   downloads_count: number;
   last_tested_version: string;
   private: boolean;
@@ -36,7 +38,7 @@ type componentsQueryResponse = {
   count: number;
   authorized: boolean;
   results: Array<IComponentData>;
-}
+};
 
 interface IGetComponentsParams {
   component_id?: string | null;
@@ -55,20 +57,22 @@ interface IGetComponentsParams {
 export const useGetStoreComponentsQuery: useQueryFunctionType<
   IGetComponentsParams,
   componentsQueryResponse
-> = ({
-  component_id,
-  search,
-  isPrivate,
-  tags,
-  fields,
-  sort,
-  liked,
-  filterByUser,
-  page,
-  limit,
-  is_component,
-
-}, options) => {
+> = (
+  {
+    component_id,
+    search,
+    isPrivate,
+    tags,
+    fields,
+    sort,
+    liked,
+    filterByUser,
+    page,
+    limit,
+    is_component,
+  },
+  options,
+) => {
   const { query } = UseRequestProcessor();
 
   const processUrl = (url: string): string => {
@@ -116,8 +120,8 @@ export const useGetStoreComponentsQuery: useQueryFunctionType<
     if (queryParams.length > 0) {
       newUrl += `?${queryParams.join("&")}`;
     }
-    return newUrl
-  }
+    return newUrl;
+  };
 
   const getComponentFn = async () => {
     const url = processUrl(`${getURL("STORE")}/components/`);
@@ -129,7 +133,9 @@ export const useGetStoreComponentsQuery: useQueryFunctionType<
     return data;
   };
 
-  const queryResult = query(["useGetStoreComponentsQuery"], responseFn, { ...options });
+  const queryResult = query(["useGetStoreComponentsQuery"], responseFn, {
+    ...options,
+  });
 
   return queryResult;
 };

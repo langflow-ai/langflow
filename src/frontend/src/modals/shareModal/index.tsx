@@ -1,4 +1,7 @@
-import { useGetStoreComponentsQuery, useGetTagsQuery } from "@/controllers/API/queries/store";
+import {
+  useGetStoreComponentsQuery,
+  useGetTagsQuery,
+} from "@/controllers/API/queries/store";
 import { cloneDeep } from "lodash";
 import { ReactNode, useEffect, useMemo, useState } from "react";
 import EditFlowSettings from "../../components/editFlowSettingsComponent";

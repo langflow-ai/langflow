@@ -7,7 +7,10 @@ import ShadTooltip from "../../components/shadTooltipComponent";
 import { SkeletonCardComponent } from "../../components/skeletonCardComponent";
 import { Button } from "../../components/ui/button";
 
-import { useGetStoreComponentsQuery, useGetTagsQuery } from "@/controllers/API/queries/store";
+import {
+  useGetStoreComponentsQuery,
+  useGetTagsQuery,
+} from "@/controllers/API/queries/store";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import PaginatorComponent from "../../components/paginatorComponent";
 import { TagsSelector } from "../../components/tagsSelectorComponent";
@@ -62,7 +65,11 @@ export default function StorePage(): JSX.Element {
   const [searchNow, setSearchNow] = useState("");
   const [selectFilter, setSelectFilter] = useState("all");
   const { isFetching, data } = useGetTagsQuery();
-  const { isFetching: isComponentsFetching, data: componentsData, refetch } = useGetStoreComponentsQuery({
+  const {
+    isFetching: isComponentsFetching,
+    data: componentsData,
+    refetch,
+  } = useGetStoreComponentsQuery({
     component_id: id,
     page: pageIndex,
     limit: pageSize,
@@ -113,32 +120,34 @@ export default function StorePage(): JSX.Element {
 
   function handleGetComponents() {
     if (loadingApiKey) return;
-    refetch().then(({ data: res }) => {
-      if (!res?.authorized && validApiKey === true) {
-        setValidApiKey(false);
-        setSelectFilter("all");
-      } else {
-        if (res?.authorized) {
-          setValidApiKey(true);
+    refetch()
+      .then(({ data: res }) => {
+        if (!res?.authorized && validApiKey === true) {
+          setValidApiKey(false);
+          setSelectFilter("all");
+        } else {
+          if (res?.authorized) {
+            setValidApiKey(true);
+          }
+          setTotalRowsCount(
+            filteredCategories?.length === 0
+              ? Number(res?.count ?? 0)
+              : res?.results?.length ?? 0,
+          );
         }
-        setTotalRowsCount(
-          filteredCategories?.length === 0
-            ? Number(res?.count ?? 0)
-            : res?.results?.length ?? 0,
-        );
-      }
-    }).catch((err) => {
-      if (err.response?.status === 403 || err.response?.status === 401) {
-        setValidApiKey(false);
-      } else {
-        setTotalRowsCount(0);
-        setErrorData({
-          title: COMPONENTS_ERROR_ALERT,
-          list: [err["response"]["data"]["detail"]],
-        });
-      }
-    });
-}
+      })
+      .catch((err) => {
+        if (err.response?.status === 403 || err.response?.status === 401) {
+          setValidApiKey(false);
+        } else {
+          setTotalRowsCount(0);
+          setErrorData({
+            title: COMPONENTS_ERROR_ALERT,
+            list: [err["response"]["data"]["detail"]],
+          });
+        }
+      });
+  }
 
   // Set a null id
   useEffect(() => {
@@ -297,7 +306,8 @@ export default function StorePage(): JSX.Element {
           </div>
           <div className="flex items-end justify-between">
             <span className="px-0.5 text-sm text-muted-foreground">
-              {(!isComponentsFetching || (componentsData?.results ?? []).length !== 0) && (
+              {(!isComponentsFetching ||
+                (componentsData?.results ?? []).length !== 0) && (
                 <>
                   {totalRowsCount} {totalRowsCount !== 1 ? "results" : "result"}
                 </>
@@ -322,7 +332,8 @@ export default function StorePage(): JSX.Element {
           </div>
 
           <div className="grid w-full gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {!isComponentsFetching || (componentsData?.results ?? []).length !== 0 ? (
+            {!isComponentsFetching ||
+            (componentsData?.results ?? []).length !== 0 ? (
               (componentsData?.results ?? []).map((item) => {
                 return (
                   <>
@@ -348,44 +359,46 @@ export default function StorePage(): JSX.Element {
             )}
           </div>
 
-          {!isComponentsFetching && (componentsData?.results ?? []).length === 0 && (
-            <div className="mt-6 flex w-full items-center justify-center text-center">
-              <div className="flex h-full w-full flex-col">
-                <div className="flex w-full flex-col gap-4">
-                  <div className="grid w-full gap-4">
-                    {selectFilter != "all" ? (
-                      <>
-                        You haven't{" "}
-                        {selectFilter === "createdbyme" ? "created" : "liked"}{" "}
-                        anything with the selected filters yet.
-                      </>
-                    ) : (
-                      <>
-                        There are no{" "}
-                        {tabActive == "Flows" ? "Flows" : "Components"} with the
-                        selected filters.
-                      </>
-                    )}
+          {!isComponentsFetching &&
+            (componentsData?.results ?? []).length === 0 && (
+              <div className="mt-6 flex w-full items-center justify-center text-center">
+                <div className="flex h-full w-full flex-col">
+                  <div className="flex w-full flex-col gap-4">
+                    <div className="grid w-full gap-4">
+                      {selectFilter != "all" ? (
+                        <>
+                          You haven't{" "}
+                          {selectFilter === "createdbyme" ? "created" : "liked"}{" "}
+                          anything with the selected filters yet.
+                        </>
+                      ) : (
+                        <>
+                          There are no{" "}
+                          {tabActive == "Flows" ? "Flows" : "Components"} with
+                          the selected filters.
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
+            )}
+        </div>
+        {!isComponentsFetching &&
+          (componentsData?.results ?? []).length > 0 && (
+            <div className="relative py-6">
+              <PaginatorComponent
+                storeComponent={true}
+                pageIndex={pageIndex}
+                pageSize={pageSize}
+                totalRowsCount={totalRowsCount}
+                paginate={(pageSize, pageIndex) => {
+                  setPageIndex(pageIndex);
+                  setPageSize(pageSize);
+                }}
+              ></PaginatorComponent>
             </div>
           )}
-        </div>
-        {!isComponentsFetching && (componentsData?.results ?? []).length > 0 && (
-          <div className="relative py-6">
-            <PaginatorComponent
-              storeComponent={true}
-              pageIndex={pageIndex}
-              pageSize={pageSize}
-              totalRowsCount={totalRowsCount}
-              paginate={(pageSize, pageIndex) => {
-                setPageIndex(pageIndex);
-                setPageSize(pageSize);
-              }}
-            ></PaginatorComponent>
-          </div>
-        )}
       </div>
     </PageLayout>
   );
