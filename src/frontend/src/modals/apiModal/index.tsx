@@ -4,17 +4,16 @@ import "ace-builds/src-noconflict/theme-github";
 import "ace-builds/src-noconflict/theme-twilight";
 import { ReactNode, forwardRef, useContext, useEffect, useState } from "react";
 // import "ace-builds/webpack-resolver";
+import { APITemplateType, InputFieldType } from "@/types/api";
 import { cloneDeep } from "lodash";
 import CodeTabsComponent from "../../components/codeTabsComponent";
 import IconComponent from "../../components/genericIconComponent";
 import { EXPORT_CODE_DIALOG } from "../../constants/constants";
 import { AuthContext } from "../../contexts/authContext";
 import { useTweaksStore } from "../../stores/tweaksStore";
-import { InputFieldType } from "../../types/api";
 import { uniqueTweakType } from "../../types/components";
-import { FlowType } from "../../types/flow/index";
+import { FlowType, NodeType } from "../../types/flow/index";
 import BaseModal from "../baseModal";
-import { buildContent } from "./utils/build-content";
 import { buildTweaks } from "./utils/build-tweaks";
 import { checkCanBuildTweakObject } from "./utils/check-can-build-tweak-object";
 import { getChangesType } from "./utils/get-changes-types";
@@ -25,7 +24,6 @@ import { getNodesWithDefaultValue } from "./utils/get-nodes-with-default-value";
 import getPythonApiCode from "./utils/get-python-api-code";
 import getPythonCode from "./utils/get-python-code";
 import getTabsOrder from "./utils/get-tabs-order";
-import { getValue } from "./utils/get-value";
 import getWidgetCode from "./utils/get-widget-code";
 import { createTabsArray } from "./utils/tabs-array";
 
@@ -118,16 +116,14 @@ const ApiModal = forwardRef(
       } else {
         buildTweaksInitialState();
       }
+      setActiveTab("0");
 
       filterNodes();
-
-      if (isThereTweaks) {
-        setActiveTab("0");
-        setTabs(createTabsArray(codesArray, includeWebhook, true));
-      } else {
-        setTabs(createTabsArray(codesArray, includeWebhook, false));
-      }
     }, [flow["data"]!["nodes"], open]);
+
+    useEffect(() => {
+      setTabs(createTabsArray(codesArray, includeWebhook, isThereTweaks));
+    }, [open, isThereTweaks]);
 
     useEffect(() => {
       if (canShowTweaks) {
@@ -153,6 +149,27 @@ const ApiModal = forwardRef(
 
     const filterNodes = () => {
       setTweaksList(getNodesWithDefaultValue(flow));
+    };
+
+    const buildTweaksByChange = (nodes: NodeType[]) => {
+      if (!flow || !flow.data || !flow.data.nodes) return;
+
+      flow.data.nodes.forEach((currentNode, index) => {
+        Object.entries(currentNode!.data!.node!.template).forEach(
+          ([key, template]) => {
+            if (
+              JSON.stringify((template as APITemplateType).value) !==
+              JSON.stringify(nodes[index].data.node!.template[key].value)
+            ) {
+              buildTweakObject(
+                nodes[index].id,
+                nodes[index].data.node!.template[key].value,
+                nodes[index].data.node!.template[key],
+              );
+            }
+          },
+        );
+      });
     };
 
     async function buildTweakObject(
@@ -250,6 +267,7 @@ const ApiModal = forwardRef(
         </BaseModal.Header>
         <BaseModal.Content overflowHidden>
           <CodeTabsComponent
+            open={open}
             isThereTweaks={isThereTweaks}
             isThereWH={includeWebhook ?? false}
             flow={flow}
@@ -257,11 +275,8 @@ const ApiModal = forwardRef(
             activeTab={activeTab}
             setActiveTab={setActiveTab}
             tweaks={{
-              tweak,
               tweaksList,
-              buildContent,
-              buildTweakObject,
-              getValue,
+              buildTweaks: buildTweaksByChange,
             }}
             activeTweaks={activeTweaks}
             setActiveTweaks={setActiveTweaks}
