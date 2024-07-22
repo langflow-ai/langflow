@@ -1,19 +1,19 @@
 from langchain.agents import create_xml_agent
 from langchain_core.prompts import ChatPromptTemplate, PromptTemplate, HumanMessagePromptTemplate
 
-from langflow.base.agents.agent import LCAgentComponent
+from langflow.base.agents.agent import LCToolsAgentComponent
 from langflow.inputs import MultilineInput
 from langflow.inputs.inputs import HandleInput
 
 
-class XMLAgentComponent(LCAgentComponent):
+class XMLAgentComponent(LCToolsAgentComponent):
     display_name: str = "XML Agent"
     description: str = "Agent that uses tools formatting instructions as xml to the Language Model."
     icon = "LangChain"
     beta = True
     name = "XMLAgent"
 
-    inputs = LCAgentComponent._base_inputs + [
+    inputs = LCToolsAgentComponent._base_inputs + [
         HandleInput(name="llm", display_name="Language Model", input_types=["LanguageModel"], required=True),
         MultilineInput(
             name="user_prompt",
