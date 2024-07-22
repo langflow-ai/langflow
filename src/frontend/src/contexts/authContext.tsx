@@ -23,7 +23,6 @@ import { AuthContextType } from "../types/contexts/auth";
 const initialValue: AuthContextType = {
   isAdmin: false,
   setIsAdmin: () => false,
-  isAuthenticated: false,
   accessToken: null,
   login: () => {},
   logout: () => new Promise(() => {}),
@@ -43,9 +42,6 @@ export function AuthProvider({ children }): React.ReactElement {
   const cookies = new Cookies();
   const [accessToken, setAccessToken] = useState<string | null>(
     cookies.get(LANGFLOW_ACCESS_TOKEN) ?? null,
-  );
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(
-    !!cookies.get(LANGFLOW_ACCESS_TOKEN),
   );
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [userData, setUserData] = useState<Users | null>(null);
@@ -97,7 +93,7 @@ export function AuthProvider({ children }): React.ReactElement {
   function login(newAccessToken: string, autoLogin: string) {
     cookies.set(LANGFLOW_AUTO_LOGIN_OPTION, autoLogin, { path: "/" });
     setAccessToken(newAccessToken);
-    setIsAuthenticated(true);
+    useAuthStore.getState().setIsAuthenticated(true);
     getUser();
   }
 
@@ -112,7 +108,7 @@ export function AuthProvider({ children }): React.ReactElement {
       setIsAdmin(false);
       setUserData(null);
       setAccessToken(null);
-      setIsAuthenticated(false);
+      useAuthStore.getState().setIsAuthenticated(false);
       setAllFlows([]);
       setSelectedFolder(null);
       navigate("/login");
@@ -134,7 +130,6 @@ export function AuthProvider({ children }): React.ReactElement {
       value={{
         isAdmin,
         setIsAdmin,
-        isAuthenticated,
         accessToken,
         login,
         logout,

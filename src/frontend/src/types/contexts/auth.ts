@@ -3,7 +3,6 @@ import { Users } from "../api";
 export type AuthContextType = {
   isAdmin: boolean;
   setIsAdmin: (isAdmin: boolean) => void;
-  isAuthenticated: boolean;
   accessToken: string | null;
   login: (accessToken: string, autoLogin: string) => void;
   logout: () => Promise<void>;
