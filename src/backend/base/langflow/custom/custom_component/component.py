@@ -57,7 +57,15 @@ class Component(CustomComponent):
             self.map_inputs(self.inputs)
         if self.outputs is not None:
             self.map_outputs(self.outputs)
+        self._parameters = self._build_parameters(data)
         self.set_attributes(self._parameters)
+
+    def _build_parameters(self, data: dict):
+        parameters = {}
+        for key, value in data.items():
+            if key in self._inputs:
+                parameters[key] = value
+        return parameters
 
     def __getattr__(self, name: str) -> Any:
         if "_attributes" in self.__dict__ and name in self.__dict__["_attributes"]:
