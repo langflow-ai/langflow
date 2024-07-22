@@ -179,6 +179,7 @@ def test_upload_file(client: TestClient, session: Session, json_flow: str, logge
     assert response_data[1]["description"] == "description"
     assert response_data[1]["data"] == data
 
+
 def test_download_file(
     client: TestClient,
     session: Session,
@@ -207,7 +208,11 @@ def test_download_file(
         # Make request to endpoint inside the session context
         flow_ids = [str(db_flow.id) for db_flow in saved_flows]  # Convert UUIDs to strings
         flow_ids_json = json.dumps(flow_ids)
-        response = client.post(f"api/v1/flows/download/", data=flow_ids_json, headers={**logged_in_headers, "Content-Type": "application/json"})
+        response = client.post(
+            "api/v1/flows/download/",
+            data=flow_ids_json,
+            headers={**logged_in_headers, "Content-Type": "application/json"},
+        )
     # Check response status code
     assert response.status_code == 200, response.json()
     # Check response data
