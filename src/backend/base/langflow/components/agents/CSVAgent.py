@@ -12,8 +12,8 @@ class CSVAgentComponent(LCAgentComponent):
     name = "CSVAgent"
 
     inputs = LCAgentComponent._base_inputs + [
-        FileInput(name="path", display_name="File Path", file_types=["csv"], required=True),
         HandleInput(name="llm", display_name="Language Model", input_types=["LanguageModel"], required=True),
+        FileInput(name="path", display_name="File Path", file_types=["csv"], required=True),
         DropdownInput(
             name="agent_type",
             display_name="Agent Type",
