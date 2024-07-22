@@ -22,24 +22,26 @@ export default function TableNodeComponent({
   } = useMemo(() => {
     return {
       // override `date` to handle custom date format `dd/mm/yyyy`
-      "date": {
-        baseDataType: 'date',
-        extendsDataType: 'date',
-        valueParser: params => {
+      date: {
+        baseDataType: "date",
+        extendsDataType: "date",
+        valueParser: (params) => {
           if (params.newValue == null) {
             return null;
           }
           // convert from `dd/mm/yyyy`
-          const dateParts = params.newValue.split('/');
-          return dateParts.length === 3 ? new Date(
-            parseInt(dateParts[2]),
-            parseInt(dateParts[1]) - 1,
-            parseInt(dateParts[0])
-          ) : null;
+          const dateParts = params.newValue.split("/");
+          return dateParts.length === 3
+            ? new Date(
+                parseInt(dateParts[2]),
+                parseInt(dateParts[1]) - 1,
+                parseInt(dateParts[0]),
+              )
+            : null;
         },
-        valueFormatter: params => {
+        valueFormatter: (params) => {
           let date = params.value;
-          if (typeof params.value === 'string') {
+          if (typeof params.value === "string") {
             date = new Date(params.value);
           }
           // convert to `dd/mm/yyyy`
@@ -48,13 +50,12 @@ export default function TableNodeComponent({
             : `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
         },
       },
-      "number": {
-        baseDataType: 'number',
-        extendsDataType: 'number',
-        valueFormatter: params => params.value == null
-          ? "‎"
-          : `${params.value}`,
-      }
+      number: {
+        baseDataType: "number",
+        extendsDataType: "number",
+        valueFormatter: (params) =>
+          params.value == null ? "‎" : `${params.value}`,
+      },
     };
   }, []);
   const [selectedNodes, setSelectedNodes] = useState<Array<any>>([]);
@@ -64,7 +65,7 @@ export default function TableNodeComponent({
     : generateBackendColumnsFromValue(value ?? []);
   const AgColumns = FormatColumns(componentColumns);
   function setAllRows() {
-    if (agGrid.current && !agGrid.current.api.isDestroyed(  )) {
+    if (agGrid.current && !agGrid.current.api.isDestroyed()) {
       const rows: any = [];
       agGrid.current.api.forEachNode((node) => rows.push(node.data));
       onChange(rows);
