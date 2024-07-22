@@ -181,7 +181,7 @@ class ThreadingInMemoryCache(CacheService, Generic[LockType]):
         return f"InMemoryCache(max_size={self.max_size}, expiration_time={self.expiration_time})"
 
 
-class RedisCache(CacheService, Generic[LockType]):
+class RedisCache(AsyncBaseCacheService, Generic[LockType]):
     """
     A Redis-based cache implementation.
 
