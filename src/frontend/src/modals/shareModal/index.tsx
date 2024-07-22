@@ -64,10 +64,11 @@ export default function ShareModal({
   >([]);
   const saveFlow = useFlowsManagerStore((state) => state.saveFlow);
   const { data, isFetching } = useGetTagsQuery();
-  const { isFetching: loadingNames, data: myComponents } = useGetStoreComponentsQuery({
-    fields: ["name", "id", "is_component"],
-    filterByUser: true,
-  });
+  const { isFetching: loadingNames, data: myComponents } =
+    useGetStoreComponentsQuery({
+      fields: ["name", "id", "is_component"],
+      filterByUser: true,
+    });
 
   const name = component?.name ?? "";
   const description = component?.description ?? "";
@@ -81,11 +82,11 @@ export default function ShareModal({
 
   function handleGetNames() {
     const unavaliableNames: Array<{ id: string; name: string }> = [];
-      myComponents?.results?.forEach((element: any) => {
-        if ((element.is_component ?? false) === is_component)
-          unavaliableNames.push({ name: element.name, id: element.id });
-      });
-      setUnavaliableNames(unavaliableNames);
+    myComponents?.results?.forEach((element: any) => {
+      if ((element.is_component ?? false) === is_component)
+        unavaliableNames.push({ name: element.name, id: element.id });
+    });
+    setUnavaliableNames(unavaliableNames);
   }
 
   const handleShareComponent = async (update = false) => {
