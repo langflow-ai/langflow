@@ -1,3 +1,4 @@
+import { usePostDownloadMultipleFlows } from "@/controllers/API/queries/flows";
 import { useEffect, useMemo, useState } from "react";
 import { FormProvider, useForm, useWatch } from "react-hook-form";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -78,6 +79,8 @@ export default function ComponentsComponent({
   const isLoadingFolders = useFolderStore((state) => state.isLoadingFolders);
   const setSelectedFolder = useFolderStore((state) => state.setSelectedFolder);
 
+  const [shouldSelectAll, setShouldSelectAll] = useState(true);
+
   const cardTypes = useMemo(() => {
     if (window.location.pathname.includes("components")) {
       return "Components";
@@ -128,19 +131,42 @@ export default function ComponentsComponent({
     cardTypes,
   );
 
-  const version = useDarkStore((state) => state.version);
+  const { mutate: mutateDownloadMultipleFlows } =
+    usePostDownloadMultipleFlows();
 
-  const { handleExport } = useExportFlows(
-    selectedFlowsComponentsCards,
-    allFlows,
-    downloadFlow,
-    removeApiKeys,
-    version,
-    setSuccessData,
-    setSelectedFlowsComponentsCards,
-    handleSelectAll,
-    cardTypes,
-  );
+  const handleExport = () => {
+    mutateDownloadMultipleFlows(
+      {
+        flow_ids: selectedFlowsComponentsCards,
+      },
+      {
+        onSuccess: (data) => {
+          const blob = new Blob([data], { type: "application/zip" });
+
+          const link = document.createElement("a");
+          link.href = window.URL.createObjectURL(blob);
+
+          let current_time = new Date().toISOString().replace(/[:.]/g, "");
+          current_time = current_time
+            .replace(/-/g, "")
+            .replace(/T/g, "")
+            .replace(/Z/g, "");
+          link.download = `${current_time}_langflow_flows.zip`;
+
+          document.body.appendChild(link);
+
+          link.click();
+
+          document.body.removeChild(link);
+
+          setSuccessData({ title: `${cardTypes} exported successfully` });
+          setSelectedFlowsComponentsCards([]);
+          handleSelectAll(false);
+          setShouldSelectAll(true);
+        },
+      },
+    );
+  };
 
   const { handleSelectOptionsChange } = useSelectOptionsChange(
     selectedFlowsComponentsCards,
@@ -184,6 +210,8 @@ export default function ComponentsComponent({
       <div className="flex w-full gap-4 pb-5">
         {allFlows?.length > 0 && (
           <HeaderComponent
+            shouldSelectAll={shouldSelectAll}
+            setShouldSelectAll={setShouldSelectAll}
             handleDelete={() => handleSelectOptionsChange("delete")}
             handleSelectAll={handleSelectAll}
             handleDuplicate={() => handleSelectOptionsChange("duplicate")}

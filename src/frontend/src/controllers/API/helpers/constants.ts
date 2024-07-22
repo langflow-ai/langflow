@@ -14,6 +14,7 @@ export const URLs = {
   REFRESH: "refresh",
   BUILD: `build`,
   CUSTOM_COMPONENT: `custom_component`,
+  FLOWS: `flows`,
 } as const;
 
 export function getURL(key: keyof typeof URLs, params: any = {}) {
