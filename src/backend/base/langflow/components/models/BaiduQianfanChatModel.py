@@ -1,10 +1,9 @@
 from langchain_community.chat_models.baidu_qianfan_endpoint import QianfanChatEndpoint
 from pydantic.v1 import SecretStr
 
-from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing.constants import LanguageModel
-from langflow.io import BoolInput, DropdownInput, FloatInput, MessageTextInput, SecretStrInput
+from langflow.io import DropdownInput, FloatInput, MessageTextInput, SecretStrInput
 
 
 class QianfanChatEndpointComponent(LCModelComponent):
@@ -14,11 +13,7 @@ class QianfanChatEndpointComponent(LCModelComponent):
     icon = "BaiduQianfan"
     name = "BaiduQianfanChatModel"
 
-    inputs = [
-        MessageTextInput(
-            name="input_value",
-            display_name="Input",
-        ),
+    inputs = LCModelComponent._base_inputs + [
         DropdownInput(
             name="model",
             display_name="Model Name",
@@ -71,18 +66,6 @@ class QianfanChatEndpointComponent(LCModelComponent):
             name="endpoint",
             display_name="Endpoint",
             info="Endpoint of the Qianfan LLM, required if custom model used.",
-        ),
-        BoolInput(
-            name="stream",
-            display_name="Stream",
-            info=STREAM_INFO_TEXT,
-            advanced=True,
-        ),
-        MessageTextInput(
-            name="system_message",
-            display_name="System Message",
-            info="System message to pass to the model.",
-            advanced=True,
         ),
     ]
 
