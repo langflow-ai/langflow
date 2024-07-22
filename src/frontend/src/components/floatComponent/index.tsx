@@ -24,6 +24,7 @@ export default function FloatComponent({
     <div className="w-full">
       <Input
         id="float-input"
+        data-testid="float-input"
         type="number"
         step={step}
         min={min}

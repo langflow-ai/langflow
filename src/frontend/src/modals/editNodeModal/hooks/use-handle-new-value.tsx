@@ -2,23 +2,26 @@ import { cloneDeep } from "lodash";
 import {
   ERROR_UPDATING_COMPONENT,
   TITLE_ERROR_UPDATING_COMPONENT,
-} from "../../constants/constants";
-import useAlertStore from "../../stores/alertStore";
-import { ResponseErrorTypeAPI } from "../../types/api";
-import { NodeDataType } from "../../types/flow";
+} from "../../../constants/constants";
+import useAlertStore from "../../../stores/alertStore";
+import { ResponseErrorTypeAPI } from "../../../types/api";
+import { NodeDataType } from "../../../types/flow";
 
 const useHandleOnNewValue = (
   data: NodeDataType,
-  name: string,
   takeSnapshot: () => void,
   handleUpdateValues: (name: string, data: NodeDataType) => Promise<any>,
   debouncedHandleUpdateValues: any,
   setNode: (id: string, callback: (oldNode: any) => any) => void,
-  setIsLoading: (value: boolean) => void,
 ) => {
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
-  const handleOnNewValue = async (newValue, dbValue, skipSnapshot = false) => {
+  const handleOnNewValue = async (
+    newValue,
+    name,
+    dbValue,
+    skipSnapshot = false,
+  ) => {
     const nodeTemplate = data.node!.template[name];
     const currentValue = nodeTemplate.value;
 
@@ -37,7 +40,6 @@ const useHandleOnNewValue = (
 
     let newTemplate;
     if (shouldUpdate) {
-      setIsLoading(true);
       try {
         if (["int"].includes(typeToDebounce)) {
           newTemplate = await handleUpdateValues(name, data);
@@ -54,7 +56,6 @@ const useHandleOnNewValue = (
           ],
         });
       }
-      setIsLoading(false);
     }
 
     setNode(data.id, (oldNode) => {

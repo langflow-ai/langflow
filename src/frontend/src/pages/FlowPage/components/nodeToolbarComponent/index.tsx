@@ -1,7 +1,4 @@
-import useHandleOnNewValue from "@/CustomNodes/hooks/use-handle-new-value";
-import useHandleNodeClass from "@/CustomNodes/hooks/use-handle-node-class";
 import { usePostRetrieveVertexOrder } from "@/controllers/API/queries/vertex";
-import { APIClassType } from "@/types/api";
 import _, { cloneDeep } from "lodash";
 import { useEffect, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
@@ -25,6 +22,7 @@ import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useShortcutsStore } from "../../../../stores/shortcuts";
 import { useStoreStore } from "../../../../stores/storeStore";
+import { APIClassType } from "../../../../types/api";
 import { nodeToolbarPropsType } from "../../../../types/components";
 import { FlowType } from "../../../../types/flow";
 import {
@@ -33,7 +31,7 @@ import {
   expandGroupNode,
   updateFlowPosition,
 } from "../../../../utils/reactflowUtils";
-import { classNames, cn } from "../../../../utils/utils";
+import { classNames, cn, isThereModal } from "../../../../utils/utils";
 import isWrappedWithClass from "../PageComponent/utils/is-wrapped-with-class";
 import ToolbarSelectItem from "./toolbarSelectItem";
 
@@ -386,28 +384,57 @@ export default function NodeToolbarComponent({
 
   const setNode = useFlowStore((state) => state.setNode);
 
-  const { handleOnNewValue: handleOnNewValueHook } = useHandleOnNewValue({
-    node: data.node!,
-    nodeId: data.id,
-    name,
-  });
+  const handleOnNewValue = (
+    newValue: string | string[] | boolean | Object[],
+  ): void => {
+    if (data.node!.template[name].value !== newValue) {
+      takeSnapshot();
+    }
 
-  const handleOnNewValue = (value: string | string[]) => {
-    handleOnNewValueHook({ value });
+    data.node!.template[name].value = newValue; // necessary to enable ctrl+z inside the input
+
+    setNode(data.id, (oldNode) => {
+      let newNode = cloneDeep(oldNode);
+
+      newNode.data = {
+        ...newNode.data,
+      };
+
+      newNode.data.node.template[name].value = newValue;
+
+      return newNode;
+    });
   };
-
-  const { handleNodeClass: handleNodeClassHook } = useHandleNodeClass(
-    takeSnapshot,
-    setNode,
-    data.id,
-  );
 
   const handleNodeClass = (
     newNodeClass: APIClassType,
-    code: string,
-    type: string,
-  ) => {
-    handleNodeClassHook(newNodeClass, name, code, type);
+    code?: string,
+    type?: string,
+  ): void => {
+    if (!data.node) return;
+    if (data.node!.template[name].value !== code) {
+      takeSnapshot();
+    }
+
+    setNode(data.id, (oldNode) => {
+      let newNode = cloneDeep(oldNode);
+
+      newNode.data = {
+        ...newNode.data,
+        node: newNodeClass,
+        description: newNodeClass.description ?? data.node!.description,
+        display_name: newNodeClass.display_name ?? data.node!.display_name,
+      };
+
+      if (type) {
+        newNode.data.type = type;
+      }
+
+      newNode.data.node.template[name].value = code;
+
+      return newNode;
+    });
+    updateNodeInternals(data.id);
   };
 
   const [openModal, setOpenModal] = useState(false);
