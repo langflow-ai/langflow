@@ -2,13 +2,14 @@ from fastapi import APIRouter, Response
 from asyncio import get_running_loop, Future, wait_for
 from json import dumps, loads
 from langflow.streamlit.application import StreamlitApplication
+from langflow.services.deps import get_settings_service
 from .schemas import ChatMessageModel, ChatModel
 import os
 
 
 router = APIRouter(tags=["Streamlit"])
 
-path = os.getenv("LANGFLOW_STREAMLIT_FOLDER_PATH", "./")
+path = get_settings_service().settings.streamlit_folder_path
 base_chat_data = {"messages": [], "type": None}
 last_message = None
 
