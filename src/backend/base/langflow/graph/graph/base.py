@@ -981,7 +981,7 @@ class Graph:
         if not self._prepared:
             raise ValueError("Graph not prepared. Call prepare() first.")
         if not self._run_queue:
-            asyncio.create_task(self.end_all_traces)
+            asyncio.create_task(self.end_all_traces())
             return Finish()
         vertex_id = self._run_queue.popleft()
         chat_service = get_chat_service()
