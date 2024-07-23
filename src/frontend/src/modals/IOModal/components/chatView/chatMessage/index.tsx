@@ -173,7 +173,10 @@ export default function ChatMessage({
               )}
               {chat.thought && chat.thought !== "" && !hidden && <br></br>}
               <div className="flex w-full flex-col">
-                <div className="flex w-full flex-col dark:text-white">
+                <div
+                  className="flex w-full flex-col dark:text-white"
+                  data-testid="div-chat-message"
+                >
                   <div
                     data-testid={
                       "chat-message-" + chat.sender_name + "-" + chatMessage
