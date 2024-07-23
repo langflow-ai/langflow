@@ -214,6 +214,10 @@ def create_app():
         logger.debug("streamlit backend is running!")
         StreamlitApplication.start()
 
+        @app.on_event("shutdown")
+        def shutdown():
+            streamlit_api_process.kill()
+
     FastAPIInstrumentor.instrument_app(app)
     return app
 
