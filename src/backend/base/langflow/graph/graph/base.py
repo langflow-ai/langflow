@@ -91,7 +91,7 @@ class Graph:
             logger.error(f"Error getting tracing service: {exc}")
             self.tracing_service = None
         if inputs is not None and outputs is not None:
-            self.set_inputs_and_outputs(inputs, outputs)
+            self._set_inputs_and_outputs(inputs, outputs)
 
     def add_nodes_and_edges(self, nodes: List[Dict], edges: List[Dict[str, str]]):
         self._vertices = nodes
@@ -127,7 +127,7 @@ class Graph:
             for _component in component._components:
                 self.add_component(_component.id, _component)
 
-    def set_inputs_and_outputs(
+    def _set_inputs_and_outputs(
         self, inputs: Union[list["Component"], "Component"], outputs: Union[list["Component"], "Component"]
     ):
         if not isinstance(inputs, list):
