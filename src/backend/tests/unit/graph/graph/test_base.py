@@ -40,3 +40,22 @@ async def test_graph():
     assert graph.vertices[1].id == "chat_output"
     assert graph.edges[0].source_id == "chat_input"
     assert graph.edges[0].target_id == "chat_output"
+
+
+@pytest.mark.asyncio
+async def test_graph_functional():
+    chat_input = components.inputs.ChatInput(_id="chat_input")
+    chat_output = components.outputs.ChatOutput(message="test", _id="chat_output")(
+        sender_name=chat_input.message_response
+    )
+    graph = Graph(chat_input, chat_output)
+    assert graph._run_queue == deque([])
+    graph.prepare()
+    assert graph._run_queue == deque(["chat_input"])
+    await graph.astep()
+    assert graph._run_queue == deque(["chat_output"])
+
+    assert graph.vertices[0].id == "chat_input"
+    assert graph.vertices[1].id == "chat_output"
+    assert graph.edges[0].source_id == "chat_input"
+    assert graph.edges[0].target_id == "chat_output"
