@@ -172,9 +172,6 @@ class Graph:
         self.add_edge(edge)
         source_id = edge["data"]["sourceHandle"]["id"]
         target_id = edge["data"]["targetHandle"]["id"]
-        self.add_edge(edge)
-        source_id = edge["data"]["sourceHandle"]["id"]
-        target_id = edge["data"]["targetHandle"]["id"]
         self.predecessor_map[target_id].append(source_id)
         self.successor_map[source_id].append(target_id)
         self.in_degree_map[target_id] += 1
@@ -978,6 +975,8 @@ class Graph:
         await chat_service.set_cache(str(self.flow_id or self._run_id), self)
 
     def prepare(self, stop_component_id: Optional[str] = None, start_component_id: Optional[str] = None):
+        if stop_component_id and start_component_id:
+            raise ValueError("You can only provide one of stop_component_id or start_component_id")
         self.validate_stream()
         self.edges = self._build_edges()
         if stop_component_id or start_component_id:
