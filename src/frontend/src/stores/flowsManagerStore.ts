@@ -1,3 +1,4 @@
+import { BrokenEdgeMessage } from "@/utils/utils";
 import { AxiosError } from "axios";
 import { cloneDeep } from "lodash";
 import pDebounce from "p-debounce";
@@ -37,7 +38,6 @@ import useFlowStore from "./flowStore";
 import { useFolderStore } from "./foldersStore";
 import { useGlobalVariablesStore } from "./globalVariablesStore/globalVariables";
 import { useTypesStore } from "./typesStore";
-import { BrokenEdgeMessage } from "@/utils/utils";
 
 let saveTimeoutId: NodeJS.Timeout | null = null;
 
@@ -304,13 +304,17 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
         throw error; // Re-throw the error so the caller can handle it if needed
       }
     } else {
-
-      let brokenEdges = detectBrokenEdgesEdges(flow!.data!.nodes, flow!.data!.edges);
-      if(brokenEdges.length>0){
-
-        useAlertStore.getState().setErrorData({title:BROKEN_EDGES_WARNING,
-          list:brokenEdges.map(edge=>BrokenEdgeMessage(edge)),
-        });
+      let brokenEdges = detectBrokenEdgesEdges(
+        flow!.data!.nodes,
+        flow!.data!.edges,
+      );
+      if (brokenEdges.length > 0) {
+        useAlertStore
+          .getState()
+          .setErrorData({
+            title: BROKEN_EDGES_WARNING,
+            list: brokenEdges.map((edge) => BrokenEdgeMessage(edge)),
+          });
       }
       useFlowStore
         .getState()

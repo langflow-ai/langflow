@@ -472,7 +472,12 @@ export function isEndpointNameValid(name: string, maxLength: number): boolean {
   );
 }
 
-export function BrokenEdgeMessage({source,target}:{source:string,target:string}){
+export function BrokenEdgeMessage({
+  source,
+  target,
+}: {
+  source: string;
+  target: string;
+}) {
   return `${source} -> ${target}`;
-
 }
