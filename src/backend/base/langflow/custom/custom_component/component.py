@@ -30,6 +30,9 @@ from langflow.template.frontend_node.custom_components import ComponentFrontendN
 
 from .custom_component import CustomComponent
 
+if TYPE_CHECKING:
+    from langflow.graph.vertex.base import Vertex
+
 
 def recursive_serialize_or_str(obj):
     try:
@@ -88,6 +91,24 @@ class Component(CustomComponent):
             self.map_inputs(self.inputs)
         if self.outputs is not None:
             self.map_outputs(self.outputs)
+        # Set output types
+        self._set_output_types()
+
+    def _set_output_types(self):
+        for output in self.outputs:
+            if output.types:
+                continue
+            return_types = self._get_method_return_type(output.method)
+            output.add_types(return_types)
+            output.set_selected()
+
+    def _get_output_by_method(self, method: Callable):
+        # method is a callable and output.method is a string
+        # we need to find the output that has the same method
+        for output in self.outputs:
+            if output.method == method.__name__:
+                return output
+        return None
 
     def __call__(self, **kwargs):
         for key, value in kwargs.items():
