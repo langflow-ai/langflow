@@ -107,6 +107,8 @@ def read_folder(
         folder = session.exec(select(Folder).where(Folder.id == folder_id, Folder.user_id == current_user.id)).first()
         if not folder:
             raise HTTPException(status_code=404, detail="Folder not found")
+        flows_from_current_user_in_folder = [flow for flow in folder.flows if flow.user_id == current_user.id]
+        folder.flows = flows_from_current_user_in_folder
         return folder
     except Exception as e:
         if "No result found" in str(e):
