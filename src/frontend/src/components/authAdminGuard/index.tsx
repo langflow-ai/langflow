@@ -7,7 +7,7 @@ export const ProtectedAdminRoute = ({ children }) => {
   const { logout, userData } = useContext(AuthContext);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const autoLogin = useAuthStore((state) => state.autoLogin);
-  const isAdmin = useAuthStore((state)=> state.isAdmin);
+  const isAdmin = useAuthStore((state) => state.isAdmin);
   if (!isAuthenticated) {
     logout();
   } else if ((userData && !isAdmin) || autoLogin) {
