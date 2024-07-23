@@ -34,6 +34,7 @@ import useFlowStore from "./flowStore";
 import { useFolderStore } from "./foldersStore";
 import { useGlobalVariablesStore } from "./globalVariablesStore/globalVariables";
 import { useTypesStore } from "./typesStore";
+import { BrokenEdgeMessage } from "@/utils/utils";
 
 let saveTimeoutId: NodeJS.Timeout | null = null;
 
@@ -305,7 +306,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
       if(brokenEdges.length>0){
 
         useAlertStore.getState().setErrorData({title:BROKEN_EDGES_WARNING,
-          list:brokenEdges.map(edge=>`Edge ${edge.source} -> ${edge.target}`),
+          list:brokenEdges.map(edge=>BrokenEdgeMessage(edge)),
         });
       }
       useFlowStore

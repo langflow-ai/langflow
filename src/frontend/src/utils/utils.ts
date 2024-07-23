@@ -471,3 +471,8 @@ export function isEndpointNameValid(name: string, maxLength: number): boolean {
     name.length === 0
   );
 }
+
+export function BrokenEdgeMessage({source,target}:{source:string,target:string}){
+  return `${source} -> ${target}`;
+
+}

@@ -734,7 +734,7 @@ export const AUTHORIZED_DUPLICATE_REQUESTS = [
   "/auto_login",
 ];
 
-export const BROKEN_EDGES_WARNING = "Some edges were removed because they were broken:"
+export const BROKEN_EDGES_WARNING = "Some connections were removed because they were invalid:"
 
 export const SAVE_DEBOUNCE_TIME = 300;
 
