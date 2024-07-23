@@ -1,4 +1,5 @@
 import { usePostUploadFolders } from "@/controllers/API/queries/folders";
+import { usePostFolders } from "@/controllers/API/queries/folders/use-post-folders";
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { FolderType } from "../../../../pages/MainPage/entities";
@@ -110,10 +111,21 @@ const SideBarFoldersButtonsComponent = ({
     handleDownloadFolderFn(id);
   };
 
+  const { mutate: mutateAddFolder } = usePostFolders();
+
   function addNewFolder() {
-    addFolder({ name: "New Folder", parent_id: null, description: "" }).then(
-      (res) => {
-        refreshFolders();
+    mutateAddFolder(
+      {
+        data: {
+          name: "New Folder",
+          parent_id: null,
+          description: "",
+        },
+      },
+      {
+        onSuccess: () => {
+          refreshFolders();
+        },
       },
     );
   }

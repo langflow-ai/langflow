@@ -1,3 +1,6 @@
+import { usePostFolders } from "@/controllers/API/queries/folders";
+import { updateFolder } from "@/pages/MainPage/services";
+import useAlertStore from "@/stores/alertStore";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -8,7 +11,6 @@ import { useFolderStore } from "../../stores/foldersStore";
 import BaseModal from "../baseModal";
 import FolderForms from "./component";
 import { FolderFormsSchema } from "./entities";
-import useFolderSubmit from "./hooks/submit-folder";
 
 type FoldersModalProps = {
   open: boolean;
@@ -31,10 +33,55 @@ export default function FoldersModal({
   });
 
   const folderToEdit = useFolderStore((state) => state.folderToEdit);
-  const { onSubmit: onSubmitFolder } = useFolderSubmit(setOpen, folderToEdit);
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
+  const getFoldersApi = useFolderStore((state) => state.getFoldersApi);
+
+  const { mutate: mutateAddFolder } = usePostFolders();
 
   const onSubmit = (data) => {
-    onSubmitFolder(data);
+    if (folderToEdit) {
+      updateFolder(data, folderToEdit?.id!).then(
+        () => {
+          setSuccessData({
+            title: "Folder updated successfully.",
+          });
+          getFoldersApi(true);
+          setOpen(false);
+        },
+        (reason) => {
+          if (reason) {
+            setErrorData({
+              title: `Error updating folder.`,
+            });
+            console.error(reason);
+          } else {
+            getFoldersApi(true);
+            setOpen(false);
+          }
+        },
+      );
+    } else {
+      mutateAddFolder(
+        {
+          data,
+        },
+        {
+          onSuccess: () => {
+            setSuccessData({
+              title: "Folder created successfully.",
+            });
+            getFoldersApi(true);
+            setOpen(false);
+          },
+          onError: () => {
+            setErrorData({
+              title: `Error creating folder.`,
+            });
+          },
+        },
+      );
+    }
   };
 
   return (
