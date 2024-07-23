@@ -174,8 +174,6 @@ class CustomComponent(BaseComponent):
 
     @property
     def user_id(self):
-        if hasattr(self, "_user_id"):
-            return self._user_id
         return self.graph.user_id
 
     @property
@@ -391,7 +389,7 @@ class CustomComponent(BaseComponent):
         if not self._code:
             return ""
 
-        base_name = self.code_class_base_inheritance
+        base_name = self._code_class_base_inheritance
         method_name = self.function_entrypoint_name
 
         classes = []
