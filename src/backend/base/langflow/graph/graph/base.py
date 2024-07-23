@@ -168,7 +168,7 @@ class Graph:
         }
         self._add_edge(edge_data)
 
-    async def start(self, inputs: Optional[List[dict]] = None):
+    async def async_start(self, inputs: Optional[List[dict]] = None):
         if not self._prepared:
             raise ValueError("Graph not prepared. Call prepare() first.")
         # The idea is for this to return a generator that yields the result of
@@ -181,7 +181,22 @@ class Graph:
             result = await self.astep()
             yield result
             if isinstance(result, Finish):
-                raise StopIteration
+                return
+
+    def start(self, inputs: Optional[List[dict]] = None) -> Generator:
+        loop = asyncio.get_event_loop()
+        async_gen = self.async_start(inputs)
+        async_gen_task = asyncio.ensure_future(async_gen.__anext__())
+
+        while True:
+            try:
+                result = loop.run_until_complete(async_gen_task)
+                yield result
+                if isinstance(result, Finish):
+                    return
+                async_gen_task = asyncio.ensure_future(async_gen.__anext__())
+            except StopAsyncIteration:
+                break
 
     def _add_edge(self, edge: EdgeData):
         self.add_edge(edge)
