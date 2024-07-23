@@ -1,30 +1,13 @@
-from typing import Optional
-from pydantic import BaseModel, Field
 from fastapi import APIRouter, Response
 from asyncio import get_running_loop, Future, wait_for
 from json import dumps, loads
 from aiohttp import ClientSession
 from langflow.streamlit.application import StreamlitApplication
+from .schemas import ChatMessageModel, ChatModel
 import os
 
 
 router = APIRouter(tags=["Streamlit"])
-
-
-class ChatModel(BaseModel):
-    welcome_msg: str = "Hello human, welcome to the digital world. Feel free to ask questions; I am ready to help you."
-    write_speed: float = 0.05
-    input_msg: str = "Ask some question..."
-    ai_avatar: Optional[str] = None
-    user_avatar: Optional[str] = None
-    port: int = 5001
-
-
-class ChatMessageModel(BaseModel):
-    role: str
-    content: str
-    type: str = Field("text", pattern="text|image")
-
 
 path = os.getenv("LANGFLOW_STREAMLIT_FOLDER_PATH", "./")
 base_chat_data = {"messages": [], "type": None}
