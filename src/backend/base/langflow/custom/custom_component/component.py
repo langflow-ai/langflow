@@ -60,6 +60,11 @@ class Component(CustomComponent):
         if self.outputs is not None:
             self.map_outputs(self.outputs)
 
+    def __call__(self, **kwargs):
+        for key, value in kwargs.items():
+            self._inputs[key].value = value
+        return self
+
     def __getattr__(self, name: str) -> Any:
         if "_attributes" in self.__dict__ and name in self.__dict__["_attributes"]:
             return self.__dict__["_attributes"][name]
