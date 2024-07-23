@@ -17,7 +17,6 @@ import {
   SUCCESS_BUILD,
   specialCharsRegex,
 } from "../constants/constants";
-import { downloadFlowsFromDatabase } from "../controllers/API";
 import { DESCRIPTIONS } from "../flow_constants";
 import {
   APIClassType,
@@ -1421,22 +1420,6 @@ export function downloadFlow(
 
   // simulate a click on the link element to trigger the download
   link.click();
-}
-
-export function downloadFlows() {
-  downloadFlowsFromDatabase().then((flows) => {
-    const jsonString = `data:text/json;chatset=utf-8,${encodeURIComponent(
-      JSON.stringify(flows),
-    )}`;
-
-    // create a link element and set its properties
-    const link = document.createElement("a");
-    link.href = jsonString;
-    link.download = `flows.json`;
-
-    // simulate a click on the link element to trigger the download
-    link.click();
-  });
 }
 
 export function getRandomElement<T>(array: T[]): T {
