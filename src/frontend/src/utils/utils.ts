@@ -476,8 +476,16 @@ export function brokenEdgeMessage({
   source,
   target,
 }: {
-  source: string;
-  target: string;
+  source: {
+    nodeDisplayName: string;
+    outputDisplayName?: string;
+  };
+  target: {
+    displayName: string;
+    field: string;
+  };
 }) {
-  return `${source} -> ${target}`;
+  console.log("source", source);
+  console.log("target", target);
+  return `${source.nodeDisplayName}${source.outputDisplayName ? " | " + source.outputDisplayName : ""} -> ${target.displayName}${target.field ? " | " + target.field : ""}`;
 }

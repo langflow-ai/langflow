@@ -103,8 +103,42 @@ export function cleanEdges(nodes: NodeType[], edges: Edge[]) {
 }
 
 export function detectBrokenEdgesEdges(nodes: NodeType[], edges: Edge[]) {
+  function generateAlertObject(sourceNode, targetNode, edge) {
+    const targetHandleObject: targetHandleType = scapeJSONParse(
+      edge.targetHandle,
+    );
+    const sourceHandleObject: sourceHandleType = scapeJSONParse(
+      edge.sourceHandle,
+    );
+    const name = sourceHandleObject.name;
+    const output = sourceNode.data.node!.outputs?.find(
+      (output) => output.name === name,
+    );
+
+    return {
+      source: {
+        nodeDisplayName: sourceNode.data.node!.display_name,
+        outputDisplayName: output?.display_name,
+      },
+      target: {
+        displayName: targetNode.data.node!.display_name,
+        field:
+          targetNode.data.node!.template[targetHandleObject.fieldName]
+            .display_name,
+      },
+    };
+  }
   let newEdges = cloneDeep(edges);
-  let BrokenEdges: { source: string; target: string }[] = [];
+  let BrokenEdges: {
+    source: {
+      nodeDisplayName: string;
+      outputDisplayName?: string;
+    };
+    target: {
+      displayName: string;
+      field: string;
+    };
+  }[] = [];
   edges.forEach((edge) => {
     // check if the source and target node still exists
     const sourceNode = nodes.find((node) => node.id === edge.source);
@@ -130,10 +164,7 @@ export function detectBrokenEdgesEdges(nodes: NodeType[], edges: Edge[]) {
       }
       if (scapedJSONStringfy(id) !== targetHandle) {
         newEdges = newEdges.filter((e) => e.id !== edge.id);
-        BrokenEdges.push({
-          source: sourceNode.data.node!.display_name,
-          target: targetNode.data.node!.display_name,
-        });
+        BrokenEdges.push(generateAlertObject(sourceNode, targetNode, edge));
       }
     }
     if (sourceHandle) {
@@ -154,17 +185,11 @@ export function detectBrokenEdgesEdges(nodes: NodeType[], edges: Edge[]) {
         };
         if (scapedJSONStringfy(id) !== sourceHandle) {
           newEdges = newEdges.filter((e) => e.id !== edge.id);
-          BrokenEdges.push({
-            source: sourceNode.data.node!.display_name,
-            target: targetNode.data.node!.display_name,
-          });
+          BrokenEdges.push(generateAlertObject(sourceNode, targetNode, edge));
         }
       } else {
         newEdges = newEdges.filter((e) => e.id !== edge.id);
-        BrokenEdges.push({
-          source: sourceNode.data.node!.display_name,
-          target: targetNode.data.node!.display_name,
-        });
+        BrokenEdges.push(generateAlertObject(sourceNode, targetNode, edge));
       }
     }
   });
