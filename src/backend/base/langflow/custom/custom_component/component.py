@@ -65,6 +65,20 @@ class Component(CustomComponent):
             self._inputs[key].value = value
         return self
 
+    async def _run(self):
+        # Resolve callable inputs
+        for key, _input in self._inputs.items():
+            if callable(_input.value):
+                result = _input.value()
+                if inspect.iscoroutine(result):
+                    result = await result
+                self._inputs[key].value = result
+
+        return await self.build_results()
+
+    async def run(self):
+        return await self._run()
+
     def __getattr__(self, name: str) -> Any:
         if "_attributes" in self.__dict__ and name in self.__dict__["_attributes"]:
             return self.__dict__["_attributes"][name]
