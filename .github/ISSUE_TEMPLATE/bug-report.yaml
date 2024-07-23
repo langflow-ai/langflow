@@ -110,11 +110,11 @@ body:
     attributes:
       label: Screenshot
       description: "If applicable, add screenshots to help explain your problem."
-      placeholder: "Paste your screenshot URL or markdown image link here."
+      placeholder: "Paste your screenshot here."
 
   - type: textarea
     id: flow-file
     attributes:
       label: Flow File
       description: "Add your flow if applicable to help replicate the problem."
-      placeholder: "Paste your JSON component here."
+      placeholder: "Add your flow link here."
