@@ -44,11 +44,15 @@ class Component(CustomComponent):
     _output_logs: dict[str, Log] = {}
 
     def __init__(self, **data):
+        self._name = self.name
+        del self.name
         self._inputs: dict[str, InputTypes] = {}
         self._outputs: dict[str, Output] = {}
         self._results: dict[str, Any] = {}
         self._attributes: dict[str, Any] = {}
-        self._parameters: dict[str, Any] = {}
+        data_copy = data.copy().pop("_user_id", None)
+        self._parameters = self._build_parameters(data_copy)
+        self.set_attributes(self._parameters)
         self._output_logs = {}
         super().__init__(**data)
         if not hasattr(self, "trace_type"):
@@ -57,8 +61,6 @@ class Component(CustomComponent):
             self.map_inputs(self.inputs)
         if self.outputs is not None:
             self.map_outputs(self.outputs)
-        self._parameters = self._build_parameters(data)
-        self.set_attributes(self._parameters)
 
     def _build_parameters(self, data: dict):
         parameters = {}
