@@ -168,6 +168,21 @@ class Graph:
         }
         self._add_edge(edge_data)
 
+    async def start(self, inputs: Optional[List[dict]] = None):
+        if not self._prepared:
+            raise ValueError("Graph not prepared. Call prepare() first.")
+        # The idea is for this to return a generator that yields the result of
+        # each step call and raise StopIteration when the graph is done
+        for _input in inputs or []:
+            for key, value in _input.items():
+                vertex = self.get_vertex(key)
+                vertex.set_input_value(key, value)
+        while True:
+            result = await self.astep()
+            yield result
+            if isinstance(result, Finish):
+                raise StopIteration
+
     def _add_edge(self, edge: EdgeData):
         self.add_edge(edge)
         source_id = edge["data"]["sourceHandle"]["id"]
