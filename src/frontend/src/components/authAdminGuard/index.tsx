@@ -4,9 +4,8 @@ import { Navigate } from "react-router-dom";
 import { AuthContext } from "../../contexts/authContext";
 
 export const ProtectedAdminRoute = ({ children }) => {
-  const { isAdmin, isAuthenticated, logout, userData } =
-    useContext(AuthContext);
-
+  const { isAdmin, logout, userData } = useContext(AuthContext);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const autoLogin = useAuthStore((state) => state.autoLogin);
 
   if (!isAuthenticated) {
