@@ -4,6 +4,7 @@ import pytest
 
 from langflow import components
 from langflow.graph.graph.base import Graph
+from langflow.graph.graph.constants import Finish
 
 
 @pytest.fixture
@@ -59,3 +60,44 @@ async def test_graph_functional():
     assert graph.vertices[1].id == "chat_output"
     assert graph.edges[0].source_id == "chat_input"
     assert graph.edges[0].target_id == "chat_output"
+
+
+@pytest.mark.asyncio
+async def test_graph_functional_async_start():
+    chat_input = components.inputs.ChatInput(_id="chat_input")
+    chat_output = components.outputs.ChatOutput(input_value="test", _id="chat_output")(
+        sender_name=chat_input.message_response
+    )
+    graph = Graph(chat_input, chat_output)
+    graph.prepare()
+    # Now iterate through the graph
+    # and check that the graph is running
+    # correctly
+    ids = ["chat_input", "chat_output"]
+    results = []
+    async for result in graph.async_start():
+        results.append(result)
+
+    assert len(results) == 3
+    assert all(result.vertex.id in ids for result in results if hasattr(result, "vertex"))
+    assert results[-1] == Finish()
+
+
+def test_graph_functional_start():
+    chat_input = components.inputs.ChatInput(_id="chat_input")
+    chat_output = components.outputs.ChatOutput(input_value="test", _id="chat_output")(
+        sender_name=chat_input.message_response
+    )
+    graph = Graph(chat_input, chat_output)
+    graph.prepare()
+    # Now iterate through the graph
+    # and check that the graph is running
+    # correctly
+    ids = ["chat_input", "chat_output"]
+    results = []
+    for result in graph.start():
+        results.append(result)
+
+    assert len(results) == 3
+    assert all(result.vertex.id in ids for result in results if hasattr(result, "vertex"))
+    assert results[-1] == Finish()
