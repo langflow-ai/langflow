@@ -26,12 +26,6 @@ class ChatMessageModel(BaseModel):
     type: str = Field("text", pattern="text|image")
 
 
-class RunFlowModel(BaseModel):
-    api_key: str
-    flow_id: str
-    tweaks: dict = {}
-
-
 path = os.getenv("LANGFLOW_STREAMLIT_FOLDER_PATH", "./")
 base_chat_data = {"messages": [], "type": None}
 last_message = None
@@ -58,13 +52,6 @@ async def arun_flow(flow_id: str, api_key: str):
             await r.json()
 
 
-@router.post("/run/{flow_id}")
-async def run_flow(flow_id: str, api_key: str):
-    loop = get_running_loop()
-    loop.create_task(arun_flow(flow_id, api_key))
-    return Response(None, status_code=204)
-
-
 @router.get("/sessions/{session_id}/messages/last")
 async def get_last_chat_message(session_id: str, role: str = "any"):
     if session_id in chat:
@@ -89,15 +76,6 @@ async def listen_message(timeout: int = 60 * 2):
         pending_message = Future(loop=loop)
         result = await wait_for(pending_message, timeout)
         return Response(dumps(result), headers={"Content-Type": "application/json"})
-    return Response(None, status_code=204)
-
-
-@router.post("/reflow")
-async def post_rerun_flow(body: RunFlowModel):
-    from multiprocessing import Process
-
-    p = Process(target=run_flow, args=(body.api_key, body.flow_id, body.tweaks))
-    p.start()
     return Response(None, status_code=204)
 
 
