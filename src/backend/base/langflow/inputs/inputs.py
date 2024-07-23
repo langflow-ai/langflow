@@ -177,6 +177,7 @@ class MultilineInput(MessageTextInput, MultilineMixin, InputTraceMixin):
     field_type: Optional[SerializableFieldTypes] = FieldTypes.TEXT
     multiline: CoalesceBool = True
 
+
 class MultilineSecretInput(MessageTextInput, MultilineMixin, InputTraceMixin):
     """
     Represents a multiline input field.
