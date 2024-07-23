@@ -132,6 +132,7 @@ export type TextAreaComponentType = {
   editNode?: boolean;
   id?: string;
   readonly?: boolean;
+  password?: boolean;
 };
 
 export type outputComponentType = {

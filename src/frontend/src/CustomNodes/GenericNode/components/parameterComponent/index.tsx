@@ -438,6 +438,7 @@ export default function ParameterComponent({
                     disabled={disabled}
                     value={data.node!.template[name]?.value ?? ""}
                     onChange={handleOnNewValue}
+                    password={data.node?.template[name]?.password}
                     id={"textarea-" + data.node!.template[name]?.name}
                     data-testid={"textarea-" + data.node!.template[name]?.name}
                   />
