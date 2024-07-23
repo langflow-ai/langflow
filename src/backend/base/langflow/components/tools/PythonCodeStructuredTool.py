@@ -1,15 +1,15 @@
 import ast
 from typing import Any, Dict
- 
+
 from langchain.agents import Tool
 from langflow.inputs.inputs import MultilineInput, MessageTextInput, BoolInput, DropdownInput
 from langchain_core.tools import StructuredTool
 from langflow.io import Output
- 
+
 from langflow.custom import Component
 from langflow.schema.dotdict import dotdict
- 
- 
+
+
 class PythonCodeStructuredTool(Component):
     display_name = "Python Code Tool"
     description = "structuredtool dataclass code to tool"
@@ -26,8 +26,14 @@ class PythonCodeStructuredTool(Component):
             refresh_button=True,
         ),
         MessageTextInput(name="tool_name", display_name="Tool Name", info="Enter the name of the tool."),
-        MessageTextInput(name="tool_description", display_name="Description", info="Enter the description of the tool."),
-        BoolInput(name="return_direct", display_name="Return Directly", info="Should the tool return the function output directly?"),
+        MessageTextInput(
+            name="tool_description", display_name="Description", info="Enter the description of the tool."
+        ),
+        BoolInput(
+            name="return_direct",
+            display_name="Return Directly",
+            info="Should the tool return the function output directly?",
+        ),
         DropdownInput(
             name="tool_function",
             display_name="Tool Function",
@@ -47,13 +53,13 @@ class PythonCodeStructuredTool(Component):
     outputs = [
         Output(display_name="Tool", name="result_tool", method="build_tool"),
     ]
- 
+
     def parse_source_name(self, code: str) -> Dict:
         parsed_code = ast.parse(code)
         class_names = [node.name for node in parsed_code.body if isinstance(node, ast.ClassDef)]
         function_names = [node.name for node in parsed_code.body if isinstance(node, ast.FunctionDef)]
         return {"class": class_names, "function": function_names}
- 
+
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:
         if field_name == "tool_code" or field_name == "tool_function" or field_name == "tool_class":
             try:
@@ -65,21 +71,26 @@ class PythonCodeStructuredTool(Component):
                 build_config["tool_function"]["options"] = ["Failed to parse", str(e)]
                 build_config["tool_class"]["options"] = ["Failed to parse", str(e)]
         return build_config
+
     async def build_tool(self) -> Tool:
         local_namespace = {}  # type: ignore
         exec(self.tool_code, globals(), local_namespace)
- 
+
         func = local_namespace[self.tool_function]
         _class = None
- 
+
         if self.tool_class:
             _class = local_namespace[self.tool_class]
- 
+
         tool = StructuredTool.from_function(
-            func=func, args_schema=_class, name=self.tool_name, description=self.tool_description, return_direct=self.return_direct
+            func=func,
+            args_schema=_class,
+            name=self.tool_name,
+            description=self.tool_description,
+            return_direct=self.return_direct,
         )
         return tool  # type: ignore
- 
+
     def post_code_processing(self, new_frontend_node: dict, current_frontend_node: dict):
         """
         This function is called after the code validation is done.
