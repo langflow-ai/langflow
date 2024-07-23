@@ -326,7 +326,11 @@ export default function CodeTabsComponent({
                                                             templateField
                                                           ].value
                                                     }
-                                                    password = {node.data.node.template[templateField].password ?? false}
+                                                    password={
+                                                      node.data.node.template[
+                                                        templateField
+                                                      ].password ?? false
+                                                    }
                                                     onChange={(target) => {
                                                       setData((old) => {
                                                         let newInputList =

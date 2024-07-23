@@ -75,7 +75,7 @@ export default function TableNodeCellRender({
   function getCellType() {
     switch (templateData.type) {
       case "str":
-        let password = data.password ?? false
+        let password = data.password ?? false;
         return renderStrType({
           templateData,
           templateValue,
