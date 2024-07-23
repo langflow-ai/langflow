@@ -115,9 +115,13 @@ class Component(CustomComponent):
         return frontend_node
 
     def to_frontend_node(self):
+        #! This part here is clunky but we need it like this for
+        #! backwards compatibility. We can change how prompt component
+        #! works and then update this later
         field_config = self.get_template_config(self)
         frontend_node = ComponentFrontendNode.from_inputs(**field_config)
         self._map_parameters_on_frontend_node(frontend_node)
+
         frontend_node_dict = frontend_node.to_dict(keep_name=False)
         frontend_node_dict = self._update_template(frontend_node_dict)
         self._map_parameters_on_template(frontend_node_dict["template"])
