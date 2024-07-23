@@ -1,9 +1,3 @@
-
-import Admonition from "@theme/Admonition";
-import ThemedImage from "@theme/ThemedImage";
-import useBaseUrl from "@docusaurus/useBaseUrl";
-import ZoomableImage from "/src/theme/ZoomableImage.js";
-
 # Streamlit Listen Chat Message
 
 Langflow enhances its functionality with custom components like `StreamlitListenChatMessage`. This component listen for message of a specified Streamlit application.
@@ -34,8 +28,9 @@ To incorporate the `StreamlitListenChatMessage` component into a Langflow flow:
 
 ```python
 from typing import Optional
-from langflow import CustomComponent
-import subprocess
+from langflow.custom import Component
+from langflow.schema.message import Message, Data
+from langflow.inputs import MessageTextInput, IntInput, DataInput
 import sys
 from json import loads, dumps
 
@@ -45,34 +40,56 @@ def install(package):
 
 install("requests")
 
-class StreamlitListenChatMessage(CustomComponent):
+class StreamlitListenChatMessage(Component):
     display_name = "StreamlitListenChatMessage"
     description = "Retrieve the next Streamlit chat message (webhook)."
-    field_order = ["timeout", "message"]
     icon = "Streamlit"
+    response = None
 
-    def build_config(self) -> dict:
-        return {
-            "timeout": {
-                "display_name": "timeout",
-                "info": "Timeout in seconds",
-                "value": 1*60,
-                "required": False,
-            },"message": {
-                "display_name": "Message",
-                "info": "One more way to connect to the flow",
-                "value": None,
-                "required": False,
-            }
-        }
+    inputs = [
+        IntInput(
+            name="timeout",
+            display_name="Timeout",
+            info="Timeout in seconds",
+            value=10,
+            required=True
+        ),
+        MessageTextInput(
+            name="input",
+            display_name="Input",
+            info="One more way to connect the Component"
+        )
+    ]
 
-    def build(self, timeout: int, message: Optional[str] = None) -> str:
+    outputs = [
+        Output(display_name="SessionId", name="session_id", method="session_id_response"),
+        Output(display_name="MessageContent", name="text", method="text_response"),
+        Output(display_name="History", name="chat history", method="chat_history_response"),
+    ]
+
+    def get_api_response(self):
         import requests
-        resp = requests.get(f"http://streamlit:7881/api/v1/listen/message?timeout={timeout}")
+        resp = requests.get(f"http://localhost:7881/api/v1/listen/message?timeout={self.timeout}")
         if resp.status_code == 200:
-            return dumps(loads(resp.content))
+            self.response = loads(resp.content)
+            return self.response
         else:
             raise Exception("Timeout exception")
+
+    def session_id_response(self) -> Message:
+        if self.response is not None:
+            return self.response["session_id"]
+        return self.get_api_response()["session_id"]
+
+    def text_response(self) -> Message:
+        if self.response is not None:
+            return self.response["content"]
+        return self.get_api_response()["content"]
+
+    def chat_history_response(self) -> Data:
+        if self.response is not None:
+            return self.response["history"]
+        return self.get_api_response()["history"]
 ```
 
 ## Example Usage
@@ -81,14 +98,7 @@ class StreamlitListenChatMessage(CustomComponent):
 
 Example of using the `StreamlitListenChatMessage` component in a Langflow flow:
 
-<ZoomableImage
-  alt="Streamlit Get Session Messages Flow"
-  sources={{
-    light: "img/streamlit/StreamlitListenChatMessage_flow_example.png",
-    dark: "img/streamlit/StreamlitListenChatMessage_flow_example_dark.png",
-  }}
-  style={{ width: "100%", margin: "20px 0" }}
-/>
+![](./767267152.png)
 
 In this example, the `StreamlitListenChatMessage` component connects to a text output node to display the listened message.
 

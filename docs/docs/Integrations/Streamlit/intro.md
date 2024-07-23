@@ -1,22 +1,17 @@
-import Admonition from "@theme/Admonition";
-import ThemedImage from "@theme/ThemedImage";
-import useBaseUrl from "@docusaurus/useBaseUrl";
-import ZoomableImage from "/src/theme/ZoomableImage.js";
+---
+title: Introduction to Streamlit in Langflow
+
+sidebar_position: 0
+slug: /intro
+---
 
 # Introduction to Streamlit in Langflow
 
 The Streamlit integration in Langflow enables seamless connectivity with Streamlit applications, facilitating automation and enhancing user interactions.
 
-<ZoomableImage
-  alt="Streamlit Components in Langflow"
-  sources={{
-    light: "img/streamlit/streamlit_bundle.png",
-    dark: "img/streamlit/streamlit_bundle.png",
-  }}
-  style={{ width: "100%", margin: "20px 0" }}
-/>
+![](./562852086.png)
 
-#### <a target="\_blank" href="json_files/Streamlit_Components_bundle.json" download>Download Streamlit Components Bundle</a>
+#### Components Bundle, flowId: 075d8ba0-d1a0-4de2-96fa-4be8637a7083
 
 ### Key Features of Streamlit Integration in Langflow
 

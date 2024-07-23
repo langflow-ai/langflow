@@ -1,10 +1,4 @@
-
-import Admonition from "@theme/Admonition";
-import ThemedImage from "@theme/ThemedImage";
-import useBaseUrl from "@docusaurus/useBaseUrl";
-import ZoomableImage from "/src/theme/ZoomableImage.js";
-
-# Streamlit Send Chat Message
+# Streamlit Chat Template
 
 Langflow enhances its functionality with custom components like `StreamlitChatTemplate`. This component set the chat layout to a specified Streamlit application.
 
@@ -38,7 +32,11 @@ To incorporate the `StreamlitChatTemplate` component into a Langflow flow:
 
 ```python
 from typing import Optional
-from langflow import CustomComponent
+from langflow.custom import Component
+#from langflow.api.v1.streamlit import ChatModel, create_chat, listen_message
+from langflow.schema.message import Message
+from langflow.inputs import MessageTextInput, FloatInput
+from json import loads, dumps
 import subprocess
 import sys
 
@@ -48,57 +46,66 @@ def install(package):
 
 install("requests")
 
-class StreamlitChatTemplate(CustomComponent):
+class StreamlitChatTemplate(Component):
     display_name = "StreamlitChatTemplate"
     description = "Set up a chat template on Streamlit (webhook)."
     field_order = ["welcome_msg", "input_msg", "write_speed", "ai_avatar", "user_avatar"]
     icon = "Streamlit"
 
-    def build_config(self) -> dict:
-        return {
-            "welcome_msg": {
-                "display_name": "WelcomeMessage",
-                "advanced": False,
-                "required": True,
-            },"input_msg": {
-                "display_name": "InputMessage",
-                "advanced": False,
-                "required": True,
-            },"write_speed":{
-                "display_name": "WriteSpeed",
-                "value": 0.2,
-                "advanced": False,
-                "required": True,
-            },"ai_avatar":{
-                "display_name": "AIAvatar",
-                "value": None,
-                "advanced": False,
-                "required": False,
-            },"user_avatar":{
-                "display_name": "UserAvatar",
-                "value": None,
-                "advanced": False,
-                "required": False,
-            },"message": {
-                "display_name": "Message",
-                "value": None,
-                "advanced": False,
-                "required": False,
-            }
-        }
+    inputs = [
+        MessageTextInput(
+            name="welcome_msg",
+            display_name="WelcomeMessage",
+            required=True,
+        ),
+        MessageTextInput(
+            name="input_msg",
+            display_name="InputMessage",
+            required=True,
+        ),
+        FloatInput(
+            name="write_speed",
+            display_name="WriteSpeed",
+            value=0.2,
+            required=True,
+        ),
+        MessageTextInput(
+            name="ai_avatar",
+            display_name="AIAvatar",
+            value="🤖",
+            info="It must be an emoji",
+            required=False,
+        ),
+        MessageTextInput(
+            name="user_avatar",
+            display_name="UserAvatar",
+            value="",
+            required=False,
+        ),
+        MessageTextInput(
+            name="message",
+            display_name="Message",
+            value="",
+            required=False,
+        ),
+    ]
 
-    def build(self, welcome_msg: str, input_msg: str, write_speed: float, ai_avatar: Optional[str] = None, user_avatar: Optional[str] = None, message: Optional[str] = None) -> str:
+    outputs = [
+        Output(display_name="Text", name="text", method="text_response"),
+    ]
+
+    def text_response(self) -> Message:
         import requests
         body = {
-            "welcome_msg": welcome_msg,
-            "input_msg": input_msg,
-            "write_speed": write_speed,
+            "welcome_msg": self.welcome_msg,
+            "input_msg": self.input_msg,
+            "write_speed": self.write_speed,
         }
-        if ai_avatar: body["ai_avatar"] = ai_avatar
-        if user_avatar: body["user_avatar"] = user_avatar
-        resp = requests.post("http://streamlit:7881/api/v1/chats", json=body)
+        if self.ai_avatar: body["ai_avatar"] = self.ai_avatar
+        if self.user_avatar: body["user_avatar"] = self.user_avatar
+        resp = requests.post("http://localhost:7881/api/v1/chats", json=body)
         if resp.status_code == 200:
-            return resp.content
+            return loads(resp.content)
         else:
             raise Exception("Timeout exception")
 ```
@@ -109,14 +116,7 @@ class StreamlitChatTemplate(CustomComponent):
 
 Example of using the `StreamlitChatTemplate` component in a Langflow flow:
 
-<ZoomableImage
-  alt="Streamlit Send Chat Message Flow"
-  sources={{
-    light: "img/streamlit/StreamlitChatTemplate_flow_example.png",
-    dark: "img/streamlit/StreamlitChatTemplate_flow_example_dark.png",
-  }}
-  style={{ width: "100%", margin: "20px 0" }}
-/>
+![](./982136732.png)
 
 In this example, the `StreamlitChatTemplate` component defines the Streamlit web page's visual layout as a chat template.
 

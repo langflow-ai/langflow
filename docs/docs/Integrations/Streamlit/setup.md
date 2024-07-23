@@ -1,20 +1,35 @@
-import Admonition from "@theme/Admonition";
+---
+title: Setting up a Streamlit App
+sidebar_position: 1
+slug: /setup
+---
 
-# Setting up a Streamlit App
 
-To use Streamlit components in Langflow, you first need to ensure that Streamlit application is running and how to access the web server. This guide will walk you through the process of setting up a Streamlit application and granting it access to self hosted streamlit web page.
 
-## Prerequisites
+Streamlit is a powerful tool for creating interactive web applications. To integrate Streamlit components into Langflow, first ensure your Streamlit application is running. Follow the guide to set up your Streamlit application and grant access to your self-hosted Streamlit web page. Once done, you can seamlessly use Streamlit components within Langflow!
 
-- Docker installed, follow this [guide](https://docs.docker.com/engine/install/).
-- Langflow repository cloned locally.
 
-## Step 1: Run a Streamlit application
+## Step-by-step Configuration {#b912579a43984f9a92921232b67c885f}
 
-1. Go to the Langflow cloned repository.
-2. Configure the .env file following the ./README.md file.
-3. Run the command "docker compose -f docker/".
-4. Install if not present and use one of the [supported browsers](https://docs.streamlit.io/knowledge-base/using-streamlit/supported-browsers), open the [self hosted streamlit application](https://localhost:5001/).
+
+---
+
+
+1. Add the following keys to Langflow .env file:
+
+`LANGFLOW_STREAMLIT_ENABLED=true LANGFLOW_STREAMLIT_PORT=5001`
+
+
+or export the environment variables in your terminal:
+
+
+`export LANGFLOW_STREAMLIT_ENABLED=true export LANGFLOW_STREAMLIT_PORT=5001`
+
+1. Restart Langflow using `langflow run --env-file .env`
+2. Run any project and check the LangSmith dashboard for monitoring and observability.
+
+
+
 
 ## Using Streamlit Components in Langflow
 
@@ -29,14 +44,6 @@ Langflow provides the following Streamlit components:
 - **Get Last Session**: Retrieve the last active session of a Streamlit application, aiding in session management and continuity.
 
 Refer to the individual component documentation for more details on how to use each component in your Langflow flows.
-
-## Components Compatibility
-- ChatTemplate:
-  - StreamlitListenChatMessage
-  - StreamlitSendChatMessage
-  - StreamlitGetLastSession
-  - StreamlitGetSessionMessages
-
 
 ## Additional Resources
 

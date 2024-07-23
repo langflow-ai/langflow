@@ -1,9 +1,3 @@
-
-import Admonition from "@theme/Admonition";
-import ThemedImage from "@theme/ThemedImage";
-import useBaseUrl from "@docusaurus/useBaseUrl";
-import ZoomableImage from "/src/theme/ZoomableImage.js";
-
 # Streamlit Send Chat Message
 
 Langflow enhances its functionality with custom components like `StreamlitSendChatMessage`. This component sends message the provided session of a specified Streamlit application.
@@ -84,14 +78,7 @@ class StreamlitSendChatMessage(CustomComponent):
 
 Example of using the `StreamlitSendChatMessage` component in a Langflow flow:
 
-<ZoomableImage
-  alt="Streamlit Send Chat Message Flow"
-  sources={{
-    light: "img/streamlit/StreamlitSendChatMessage_flow_example.png",
-    dark: "img/streamlit/StreamlitSendChatMessage_flow_example_dark.png",
-  }}
-  style={{ width: "100%", margin: "20px 0" }}
-/>
+![](./564987654.png)
 
 In this example, the `StreamlitSendChatMessage` component receives an text message as input and sends to streamlit chat session.
 

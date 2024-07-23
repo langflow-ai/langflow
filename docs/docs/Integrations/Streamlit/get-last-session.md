@@ -1,9 +1,3 @@
-
-import Admonition from "@theme/Admonition";
-import ThemedImage from "@theme/ThemedImage";
-import useBaseUrl from "@docusaurus/useBaseUrl";
-import ZoomableImage from "/src/theme/ZoomableImage.js";
-
 # Get Last Session of Streamlit
 
 Langflow enhances its functionality with custom components like `StreamlitGetLastSession`. This component retrieves the last session information from a specified Streamlit application.
@@ -32,7 +26,8 @@ To incorporate the `StreamlitGetLastSession` component into a Langflow flow:
 
 ```python
 from typing import Optional
-from langflow import CustomComponent
+from langflow.custom import Component
+from langflow.schema.message import Message
 import subprocess
 import sys
 import base64
@@ -44,25 +39,18 @@ def install(package):
 
 install("requests")
 
-class StreamlitGetLastSession(CustomComponent):
+class StreamlitGetLastSession(Component):
     display_name = "StreamlitGetLastSession"
     description = "Get the last session of Streamlit"
-    field_order = ["input"]
     icon = "Streamlit"
 
-    def build_config(self) -> dict:
-        return {
-            "input": {
-                "display_name": "Input",
-                "info": "One more way to connect to the flow",
-                "value": None,
-                "required": False,
-            }
-        }
+    outputs = [
+        Output(display_name="Text", name="text", method="text_response"),
+    ]
 
-    def build(self, input: Optional[str] = None) -> str:
+    def text_response(self) -> Message:
         import requests
-        resp = requests.get(f"http://streamlit:7881/api/v1/sessions/last")
+        resp = requests.get(f"http://localhost:7881/api/v1/sessions/last")
         if resp.status_code == 200:
             return dumps(loads(resp.content)).strip('"')
         else:
@@ -75,16 +63,9 @@ class StreamlitGetLastSession(CustomComponent):
 
 Example of using the `StreamlitGetLastSession` component in a Langflow flow:
 
-<ZoomableImage
-  alt="Streamlit Get Last Session Flow"
-  sources={{
-    light: "img/streamlit/StreamlitGetLastSession_flow_example.png",
-    dark: "img/streamlit/StreamlitGetLastSession_flow_example_dark.png",
-  }}
-  style={{ width: "100%", margin: "20px 0" }}
-/>
+![](./126736523.png)
 
-In this example, the `StreamlitGetLastSession` component connects to a text output node to display last session.
+In this example, the `StreamlitGetLastSession` component connects to `StreamlitSendChatMessage` node to send message to last active session.
 
 </Admonition>
 

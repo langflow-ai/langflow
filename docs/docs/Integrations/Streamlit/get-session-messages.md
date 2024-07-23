@@ -1,8 +1,3 @@
-import Admonition from "@theme/Admonition";
-import ThemedImage from "@theme/ThemedImage";
-import useBaseUrl from "@docusaurus/useBaseUrl";
-import ZoomableImage from "/src/theme/ZoomableImage.js";
-
 # Streamlit Get Session Messages
 
 Langflow enhances its functionality with custom components like `StreamlitGetSessionMessages`. This component retrieves all messages from the latest session of a specified Streamlit application.
@@ -34,8 +29,9 @@ To incorporate the `StreamlitGetSessionMessages` component into a Langflow flow:
 
 ```python
 from typing import Optional
-from langflow import CustomComponent
-import subprocess
+from langflow.custom import Component
+from langflow.schema.message import Message, Data
+from langflow.inputs import MessageTextInput, IntInput
 import sys
 from json import loads, dumps
 
@@ -45,37 +41,53 @@ def install(package):
 
 install("requests")
 
-class StreamlitGetSessionMessages(CustomComponent):
+class StreamlitGetSessionMessages(Component):
     display_name = "StreamlitGetSessionMessages"
     description = "Retrieve the messages from the Streamlit session."
-    field_order = ["session_id", "limit", "message"]
     icon = "Streamlit"
+    response = None
 
-    def build_config(self) -> dict:
-        return {
-            "session_id": {
-                "display_name": "SessionId",
-                "info": "The streamlit sessionID",
-                "required": True,
-            }, "limit": {
-                "display_name": "Limit",
-                "info": "The limit of messages returned, 0 means limitless",
-                "required": True,
-            }, "message": {
-                "display_name": "Message",
-                "info": "One more way to connect to the flow",
-                "value": None,
-                "required": False,
-            }
-        }
+    inputs = [
+        MessageTextInput(
+            name="session_id",
+            display_name="Session Id",
+            info="The streamlit sessionID",
+            required=True
+        ),
+        IntInput(
+            name="limit",
+            display_name="Limit",
+            info="The limit of messages returned, 0 means limitless",
+            value=10,
+            required=True
+        ),
+    ]
 
-    def build(self, session_id: str, limit: int = 0, message: Optional[str] = None) -> str:
+    outputs = [
+        Output(display_name="Text", name="text", method="text_response"),
+        Output(display_name="Data", name="data", method="data_response"),
+    ]
+
+    def get_messages(self):
         import requests
-        resp = requests.get(f"http://streamlit:7881/api/v1/sessions/{session_id}/messages?limit={limit}")
+        resp = requests.get(f"http://streamlit:7881/api/v1/sessions/{self.session_id}/messages?limit={self.limit}")
         if resp.status_code == 200:
-            return dumps(loads(resp.content))
+            self.response = loads(resp.content)
+            return self.response
         else:
             raise Exception("Timeout exception")
+
+    def text_response(self) -> Message:
+        if self.response is not None:
+            return dumps(self.response)
+        return dumps(self.get_messages())
+
+    def data_response(self) -> Data:
+        if self.response is not None:
+            return self.response
+        return self.get_messages()
+
+
 ```
 
 ## Example Usage
@@ -84,14 +96,7 @@ class StreamlitGetSessionMessages(CustomComponent):
 
 Example of using the `StreamlitGetSessionMessages` component in a Langflow flow:
 
-<ZoomableImage
-  alt="Streamlit Get Session Messages Flow"
-  sources={{
-    light: "img/streamlit/StreamlitGetSessionMessages_flow_example.png",
-    dark: "img/streamlit/StreamlitGetSessionMessages_flow_example_dark.png",
-  }}
-  style={{ width: "100%", margin: "20px 0" }}
-/>
+![](./651237523.png)
 
 In this example, the `StreamlitGetSessionMessages` component connects to a text output node to display messages of session.
 
