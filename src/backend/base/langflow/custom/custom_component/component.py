@@ -164,6 +164,9 @@ class Component(CustomComponent):
             return self.__dict__["_inputs"][name].value
         raise AttributeError(f"{name} not found in {self.__class__.__name__}")
 
+    def set_vertex(self, vertex: "Vertex"):
+        self.vertex = vertex
+
     def get_input(self, name: str) -> Any:
         if name in self._inputs:
             return self._inputs[name]
