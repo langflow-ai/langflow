@@ -59,22 +59,18 @@ class GroqModel(LCModelComponent):
         base_url = self.groq_api_base or "https://api.groq.com"
         url = f"{base_url}/openai/v1/models"
 
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json"
-        }
+        headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
 
         try:
             response = requests.get(url, headers=headers)
             response.raise_for_status()
             model_list = response.json()
-            return [model['id'] for model in model_list.get('data', [])]
+            return [model["id"] for model in model_list.get("data", [])]
         except requests.RequestException as e:
             self.status = f"Error fetching models: {str(e)}"
             return []
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
-
         if field_name == "groq_api_key" or field_name == "groq_api_base" or field_name == "model_name":
             models = self.get_models()
             build_config["model_name"]["options"] = models
