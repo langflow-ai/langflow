@@ -29,7 +29,7 @@
     "@tanstack/react-query": "^5.49.2",
     "@types/axios": "^0.14.0",
     "ace-builds": "^1.35.0",
-    "ag-grid-community": "^31.3.2",
+    "ag-grid-community": "^32.0.0",
     "ag-grid-react": "^31.3.2",
     "ansi-to-html": "^0.7.2",
     "axios": "^1.7.2",
