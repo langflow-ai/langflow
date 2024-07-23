@@ -37,6 +37,8 @@ class Graph:
 
     def __init__(
         self,
+        inputs: Union[list["Component"], "Component", None] = None,
+        outputs: Union[list["Component"], "Component", None] = None,
         flow_id: Optional[str] = None,
         flow_name: Optional[str] = None,
         user_id: Optional[str] = None,
@@ -88,6 +90,8 @@ class Graph:
         except Exception as exc:
             logger.error(f"Error getting tracing service: {exc}")
             self.tracing_service = None
+        if inputs is not None and outputs is not None:
+            self.set_inputs_and_outputs(inputs, outputs)
 
     def add_nodes_and_edges(self, nodes: List[Dict], edges: List[Dict[str, str]]):
         self._vertices = nodes
@@ -104,6 +108,8 @@ class Graph:
         self.initialize()
 
     def add_component(self, _id: str, component: "Component"):
+        if _id in self.vertex_map:
+            return
         frontend_node = component.to_frontend_node()
         frontend_node["data"]["id"] = _id
         frontend_node["id"] = _id
@@ -112,6 +118,27 @@ class Graph:
         vertex.add_component_instance(component)
         self.vertices.append(vertex)
         self.vertex_map[_id] = vertex
+
+        if component._edges:
+            for edge in component._edges:
+                self._add_edge(edge)
+
+        if component._components:
+            for _component in component._components:
+                self.add_component(_component.id, _component)
+
+    def set_inputs_and_outputs(
+        self, inputs: Union[list["Component"], "Component"], outputs: Union[list["Component"], "Component"]
+    ):
+        if not isinstance(inputs, list):
+            inputs = [inputs]
+        if not isinstance(outputs, list):
+            outputs = [outputs]
+        for component in inputs:
+            self.add_component(component._id, component)
+
+        for component in outputs:
+            self.add_component(component._id, component)
 
     def add_component_edge(self, source_id: str, output_input_tuple: Tuple[str, str], target_id: str):
         source_vertex = self.get_vertex(source_id)
