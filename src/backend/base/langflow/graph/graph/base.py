@@ -139,9 +139,15 @@ class Graph:
                 },
             },
         }
-        self.add_edge(edge_data)
-        edge = self.build_edge(edge_data)
-        self.edges.append(edge)
+        self._add_edge(edge_data)
+
+    def _add_edge(self, edge: EdgeData):
+        self.add_edge(edge)
+        source_id = edge["data"]["sourceHandle"]["id"]
+        target_id = edge["data"]["targetHandle"]["id"]
+        self.add_edge(edge)
+        source_id = edge["data"]["sourceHandle"]["id"]
+        target_id = edge["data"]["targetHandle"]["id"]
         self.predecessor_map[target_id].append(source_id)
         self.successor_map[source_id].append(target_id)
         self.in_degree_map[target_id] += 1
