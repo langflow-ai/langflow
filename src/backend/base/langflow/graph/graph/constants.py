@@ -6,6 +6,9 @@ class Finish:
     def __bool__(self):
         return True
 
+    def __eq__(self, other):
+        return isinstance(other, Finish)
+
 
 def _import_vertex_types():
     from langflow.graph.vertex import types
