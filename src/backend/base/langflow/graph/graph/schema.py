@@ -1,8 +1,25 @@
 from typing import TYPE_CHECKING, NamedTuple
 
+from typing_extensions import NotRequired, TypedDict
+
+from langflow.graph.edge.schema import EdgeData
+from langflow.graph.vertex.schema import NodeData
+
 if TYPE_CHECKING:
     from langflow.graph.schema import ResultData
     from langflow.graph.vertex.base import Vertex
+
+
+class ViewPort(TypedDict):
+    x: float
+    y: float
+    zoom: float
+
+
+class GraphData(TypedDict):
+    nodes: List[NodeData]
+    edges: List[EdgeData]
+    viewport: NotRequired[ViewPort]
 
 
 class VertexBuildResult(NamedTuple):
