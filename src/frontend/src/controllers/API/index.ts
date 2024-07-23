@@ -197,19 +197,6 @@ export async function readFlowsFromDatabase() {
   }
 }
 
-export async function downloadFlowsFromDatabase() {
-  try {
-    const response = await api.get(`${BASE_URL_API}flows/download/`);
-    if (response && response?.status !== 200) {
-      throw new Error(`HTTP error! status: ${response?.status}`);
-    }
-    return response?.data;
-  } catch (error) {
-    console.error(error);
-    throw error;
-  }
-}
-
 export async function uploadFlowsToDatabase(flows: FormData) {
   try {
     const response = await api.post(`${BASE_URL_API}flows/upload/`, flows);

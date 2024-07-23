@@ -13,6 +13,8 @@ export const URLs = {
   AUTOLOGIN: "auto_login",
   REFRESH: "refresh",
   BUILD: `build`,
+  CUSTOM_COMPONENT: `custom_component`,
+  FLOWS: `flows`,
   FOLDERS: `folders`,
 } as const;
 

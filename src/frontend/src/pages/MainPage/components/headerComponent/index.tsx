@@ -11,6 +11,8 @@ type HeaderComponentProps = {
   handleDuplicate: () => void;
   handleExport: () => void;
   disableFunctions: boolean;
+  setShouldSelectAll: (select) => void;
+  shouldSelectAll: boolean;
 };
 
 const HeaderComponent = ({
@@ -19,9 +21,9 @@ const HeaderComponent = ({
   handleDuplicate,
   handleExport,
   disableFunctions,
+  setShouldSelectAll,
+  shouldSelectAll,
 }: HeaderComponentProps) => {
-  const [shouldSelectAll, setShouldSelectAll] = useState(true);
-
   const handleClick = () => {
     handleSelectAll(shouldSelectAll);
     setShouldSelectAll((prevState) => !prevState);
