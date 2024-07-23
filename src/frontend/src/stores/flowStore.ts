@@ -127,12 +127,10 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     const currentFlow = useFlowsManagerStore.getState().currentFlow;
     let brokenEdges = detectBrokenEdgesEdges(nodes, edges);
     if (brokenEdges.length > 0) {
-      useAlertStore
-        .getState()
-        .setErrorData({
-          title: BROKEN_EDGES_WARNING,
-          list: brokenEdges.map((edge) => BrokenEdgeMessage(edge)),
-        });
+      useAlertStore.getState().setErrorData({
+        title: BROKEN_EDGES_WARNING,
+        list: brokenEdges.map((edge) => BrokenEdgeMessage(edge)),
+      });
     }
     let newEdges = cleanEdges(nodes, edges);
     const { inputs, outputs } = getInputsAndOutputs(nodes);

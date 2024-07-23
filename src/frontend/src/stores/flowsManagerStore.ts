@@ -309,12 +309,10 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
         flow!.data!.edges,
       );
       if (brokenEdges.length > 0) {
-        useAlertStore
-          .getState()
-          .setErrorData({
-            title: BROKEN_EDGES_WARNING,
-            list: brokenEdges.map((edge) => BrokenEdgeMessage(edge)),
-          });
+        useAlertStore.getState().setErrorData({
+          title: BROKEN_EDGES_WARNING,
+          list: brokenEdges.map((edge) => BrokenEdgeMessage(edge)),
+        });
       }
       useFlowStore
         .getState()
