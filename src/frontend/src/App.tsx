@@ -30,12 +30,12 @@ import { useFolderStore } from "./stores/foldersStore";
 export default function App() {
   useTrackLastVisitedPath();
   const isLoading = useFlowsManagerStore((state) => state.isLoading);
-  const { isAuthenticated, login, setUserData, getUser, logout } =
-    useContext(AuthContext);
+  const { login, setUserData, getUser, logout } = useContext(AuthContext);
   const setAutoLogin = useAuthStore((state) => state.setAutoLogin);
   const setLoading = useAlertStore((state) => state.setLoading);
   const refreshStars = useDarkStore((state) => state.refreshStars);
   const dark = useDarkStore((state) => state.dark);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
   useGetVersionQuery();
   const cookies = new Cookies();

@@ -18,7 +18,7 @@ export default function LoginAdminPage() {
 
   const [inputState, setInputState] =
     useState<loginInputStateType>(CONTROL_LOGIN_STATE);
-  const { login, isAuthenticated, setUserData } = useContext(AuthContext);
+  const { login } = useContext(AuthContext);
   const setLoading = useAlertStore((state) => state.setLoading);
 
   const { password, username } = inputState;
