@@ -5,12 +5,11 @@ import os
 
 
 def kill_process_on_port(port):
-    if sys.platform.startswith('linux') or sys.platform == 'darwin':  # Linux and macOS
+    if sys.platform.startswith("linux") or sys.platform == "darwin":  # Linux and macOS
         command = f"fuser -k {port}/tcp"
-    elif sys.platform == 'win32':  # Windows
+    elif sys.platform == "win32":  # Windows
         command = (
-            f"netstat -ano | findstr :{port} | "
-            "for /F \"tokens=5\" %P in ('findstr :{port}') do taskkill /F /PID %P"
+            f"netstat -ano | findstr :{port} | " "for /F \"tokens=5\" %P in ('findstr :{port}') do taskkill /F /PID %P"
         )
     else:
         raise OSError(f"Unsupported platform: {sys.platform}")
@@ -29,10 +28,10 @@ class StreamlitApplication:
     @classmethod
     def __load_streamlit(cls):
         if not os.path.exists(f"{cls.path}streamlit.py"):
-            with open(f"{cls.path}streamlit.py", 'w') as file:
+            with open(f"{cls.path}streamlit.py", "w") as file:
                 file.write("import streamlit as st")
         else:
-            with open(f"{cls.path}streamlit.py", 'r+') as file:
+            with open(f"{cls.path}streamlit.py", "r+") as file:
                 content = file.read()
                 if len(content) < 10:
                     file.seek(0)
@@ -41,7 +40,11 @@ class StreamlitApplication:
 
     @classmethod
     def run_streamlit(cls, args):
-        run(f"poetry run streamlit run {cls.path}streamlit.py --browser.serverPort {cls.port} --server.port {cls.port} {args}", shell=True, stdout=PIPE)
+        run(
+            f"poetry run streamlit run {cls.path}streamlit.py --browser.serverPort {cls.port} --server.port {cls.port} {args}",
+            shell=True,
+            stdout=PIPE,
+        )
 
     @classmethod
     def start(cls, args=""):

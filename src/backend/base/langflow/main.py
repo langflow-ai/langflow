@@ -113,9 +113,10 @@ def run_streamlit_api():
     loop = new_event_loop()
     streamlit_app = FastAPI()
     streamlit_app.include_router(streamlit_router, prefix="/api/v1")
+
     @streamlit_app.get("/health")
     async def health():
-        ...
+        pass
 
     config = uvicorn.Config(
         streamlit_app,
@@ -200,6 +201,7 @@ def create_app():
                 status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
                 content={"message": str(exc)},
             )
+
     if os.getenv("LANGFLOW_STREAMLIT_ENABLED", "false").lower() == "true":
         from langflow.streamlit import StreamlitApplication
         from .__main__ import wait_for_server_ready

@@ -10,6 +10,7 @@ import os
 
 router = APIRouter(tags=["Streamlit"])
 
+
 class ChatModel(BaseModel):
     welcome_msg: str = "Hello human, welcome to the digital world. Feel free to ask questions; I am ready to help you."
     write_speed: float = 0.05
@@ -18,21 +19,21 @@ class ChatModel(BaseModel):
     user_avatar: Optional[str] = None
     port: int = 5001
 
+
 class ChatMessageModel(BaseModel):
     role: str
     content: str
     type: str = Field("text", pattern="text|image")
+
 
 class RunFlowModel(BaseModel):
     api_key: str
     flow_id: str
     tweaks: dict = {}
 
+
 path = os.getenv("LANGFLOW_STREAMLIT_FOLDER_PATH", "./")
-base_chat_data = {
-    "messages": [],
-    "type": None
-}
+base_chat_data = {"messages": [], "type": None}
 last_message = None
 
 chat = {}
@@ -52,9 +53,7 @@ load_previous_chat()
 
 async def arun_flow(flow_id: str, api_key: str):
     async with ClientSession() as session:
-        headers = {
-            "x-api-key": api_key
-        }
+        headers = {"x-api-key": api_key}
         async with session.post(f"http://backend:7860/api/v1/run/{flow_id}", headers=headers) as r:
             await r.json()
 
@@ -83,7 +82,7 @@ async def get_chat_messages(session_id: str, limit: int = 0):
 
 
 @router.get("/listen/message")
-async def listen_message(timeout: int = 60*2):
+async def listen_message(timeout: int = 60 * 2):
     global pending_message
     if pending_message is None or pending_message.done():
         loop = get_running_loop()
@@ -93,31 +92,10 @@ async def listen_message(timeout: int = 60*2):
     return Response(None, status_code=204)
 
 
-def run_flow(api_key: str, flow_id: str, tweaks: dict = []):
-    import requests, time
-    body = {
-        "tweaks":{
-            **tweaks,
-            "api_key": api_key,
-            "flow_id": flow_id
-        }
-    }
-    headers = {"x-api-key": api_key}
-    time.sleep(2)
-    requests.post(f"http://backend:7860/api/v1/run/{flow_id}", json=body, headers=headers)
-
-
-@router.get("/reflow")
-async def rerun_flow(api_key: str, flow_id: str):
-    from multiprocessing import Process
-    p = Process(target=run_flow, args=(api_key, flow_id))
-    p.start()
-    return Response(None, status_code=204)
-
-
 @router.post("/reflow")
 async def post_rerun_flow(body: RunFlowModel):
     from multiprocessing import Process
+
     p = Process(target=run_flow, args=(body.api_key, body.flow_id, body.tweaks))
     p.start()
     return Response(None, status_code=204)
@@ -127,10 +105,12 @@ async def post_rerun_flow(body: RunFlowModel):
 async def reset_messages():
     import re
     import os
-    for file_name in os.listdir(path):
-        if file_name.endswith('.json') and re.match(r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.json$', file_name):
-            os.remove(os.path.join(path, file_name))
 
+    for file_name in os.listdir(path):
+        if file_name.endswith(".json") and re.match(
+            r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.json$", file_name
+        ):
+            os.remove(os.path.join(path, file_name))
 
 
 @router.post("/sessions/{session_id}/messages")
@@ -144,11 +124,9 @@ async def register_chat_message(session_id: str, model: ChatMessageModel):
             chat[session_id]["messages"].append(model.model_dump())
             f.write(dumps(chat[session_id]["messages"]))
         if isinstance(pending_message, Future) and not pending_message.done():
-            pending_message.set_result({
-                "session_id": session_id,
-                **model.model_dump(),
-                "history": chat[session_id]["messages"][:-1]
-            })
+            pending_message.set_result(
+                {"session_id": session_id, **model.model_dump(), "history": chat[session_id]["messages"][:-1]}
+            )
         last_message = model.content
         return Response(model.model_dump_json(), headers={"Content-Type": "application/json"})
     return Response(None, status_code=204, headers={"Content-Type": "application/json"})
@@ -262,11 +240,13 @@ sleep(2);st.rerun();
                 f.write(streamlit_code)
             with open(f"{path}base_chat_data.json", "w") as f:
                 base_chat_data["type"] = "chat"
-                base_chat_data["messages"] = [{
-                    "role": "ai",
-                    "content": model.welcome_msg,
-                    "type": "text",
-                }]
+                base_chat_data["messages"] = [
+                    {
+                        "role": "ai",
+                        "content": model.welcome_msg,
+                        "type": "text",
+                    }
+                ]
                 f.write(dumps(base_chat_data))
             StreamlitApplication.restart()
 
