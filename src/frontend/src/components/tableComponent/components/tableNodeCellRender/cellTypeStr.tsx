@@ -9,6 +9,7 @@ export function renderStrType({
   templateValue,
   disabled,
   handleOnNewValue,
+  password = false,
 }) {
   if (!templateData.options) {
     return templateData?.list ? (
@@ -26,11 +27,12 @@ export function renderStrType({
         id={"textarea-edit-" + templateData.name}
         data-testid={"textarea-edit-" + templateData.name}
         disabled={disabled}
-        editNode={true}
+        editNode={false}
         value={templateValue ?? ""}
         onChange={(value: string | string[]) => {
           handleOnNewValue(value, templateData.key);
         }}
+        password={password}
       />
     ) : (
       <InputGlobalComponent

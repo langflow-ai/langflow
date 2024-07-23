@@ -20,7 +20,6 @@ import InputListComponent from "../../../inputListComponent";
 import IntComponent from "../../../intComponent";
 import KeypairListComponent from "../../../keypairListComponent";
 import PromptAreaComponent from "../../../promptComponent";
-import TextAreaComponent from "../../../textAreaComponent";
 import ToggleShadComponent from "../../../toggleShadComponent";
 import { renderStrType } from "./cellTypeStr";
 
@@ -76,11 +75,13 @@ export default function TableNodeCellRender({
   function getCellType() {
     switch (templateData.type) {
       case "str":
+        let password = data.password ?? false
         return renderStrType({
           templateData,
           templateValue,
           disabled,
           handleOnNewValue,
+          password,
         });
 
       case "NestedDict":
