@@ -973,6 +973,7 @@ class Graph:
         self.reset_activated_vertices()
 
         await chat_service.set_cache(str(self.flow_id or self._run_id), self)
+        return vertex_build_result
 
     def prepare(self, stop_component_id: Optional[str] = None, start_component_id: Optional[str] = None):
         if stop_component_id and start_component_id:
