@@ -16,6 +16,7 @@ class Edge:
         self.target_id: str = target.id if target else ""
         self.target_param: str | None = None
         self._target_handle: TargetHandleDict | str | None = None
+        self._data = edge.copy()
         if data := edge.get("data", {}):
             self._source_handle = data.get("sourceHandle", {})
             self._target_handle = cast(TargetHandleDict, data.get("targetHandle", {}))
@@ -42,6 +43,9 @@ class Edge:
                 raise ValueError("Target handle is not a string")
         # Validate in __init__ to fail fast
         self.validate_edge(source, target)
+
+    def to_data(self):
+        return self._data
 
     def validate_handles(self, source, target) -> None:
         if isinstance(self._source_handle, str) or self.source_handle.baseClasses:
