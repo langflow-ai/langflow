@@ -60,13 +60,6 @@ class Component(CustomComponent):
         if self.outputs is not None:
             self.map_outputs(self.outputs)
 
-    def _build_parameters(self, data: dict):
-        parameters = {}
-        for key, value in data.items():
-            if key in self._inputs:
-                parameters[key] = value
-        return parameters
-
     def __getattr__(self, name: str) -> Any:
         if "_attributes" in self.__dict__ and name in self.__dict__["_attributes"]:
             return self.__dict__["_attributes"][name]
@@ -110,6 +103,10 @@ class Component(CustomComponent):
         for name, value in self._parameters.items():
             frontend_node.set_field_value_in_template(name, value)
 
+    def _map_parameters_on_template(self, template: dict):
+        for name, value in self._parameters.items():
+            template[name]["value"] = value
+
     def _get_method_return_type(self, method_name: str) -> List[str]:
         method = getattr(self, method_name)
         return [format_type(get_type_hints(method)["return"])]
@@ -123,15 +120,17 @@ class Component(CustomComponent):
         self._map_parameters_on_frontend_node(frontend_node)
         frontend_node_dict = frontend_node.to_dict(keep_name=False)
         frontend_node_dict = self._update_template(frontend_node_dict)
+        self._map_parameters_on_template(frontend_node_dict["template"])
+
         frontend_node = ComponentFrontendNode.from_dict(frontend_node_dict)
-        # But we now need to calculate the return_type of the methods in the outputs
+
         for output in frontend_node.outputs:
             if output.types:
                 continue
             return_types = self._get_method_return_type(output.method)
             output.add_types(return_types)
             output.set_selected()
-        # Validate that there is not name overlap between inputs and outputs
+
         frontend_node.validate_component()
         frontend_node.set_base_classes_from_outputs()
         data = {
