@@ -1035,7 +1035,7 @@ class Graph:
         fallback_to_env_vars: bool = False,
         get_cache: Awaitable[CacheMiss | None] = None,
         set_cache: Awaitable[None] = None,
-    ):
+    ) -> VertexBuildResult:
         """
         Builds a vertex in the graph.
 
