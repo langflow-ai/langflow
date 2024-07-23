@@ -102,7 +102,9 @@ class CustomComponent(BaseComponent):
         vertex = kwargs.pop("vertex", None)
         tracing_service = kwargs.pop("tracing_service", get_tracing_service())
         params_copy = kwargs.copy()
-        return cls(user_id=user_id, _parameters=params_copy, vertex=vertex, tracing_service=tracing_service)
+        return cls(
+            config=dict(user_id=user_id, _parameters=params_copy, vertex=vertex, tracing_service=tracing_service)
+        )
 
     @property
     def trace_name(self):

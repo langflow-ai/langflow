@@ -43,18 +43,16 @@ class Component(CustomComponent):
     code_class_base_inheritance: ClassVar[str] = "Component"
     _output_logs: dict[str, Log] = {}
 
-    def __init__(self, **data):
-        self._name = self.name
-        del self.name
+    def __init__(self, config: dict | None = None, **inputs):
         self._inputs: dict[str, InputTypes] = {}
         self._outputs: dict[str, Output] = {}
         self._results: dict[str, Any] = {}
         self._attributes: dict[str, Any] = {}
-        data_copy = data.copy().pop("_user_id", None)
-        self._parameters = self._build_parameters(data_copy)
+        self._parameters = inputs or {}
         self.set_attributes(self._parameters)
         self._output_logs = {}
-        super().__init__(**data)
+        config = config or {}
+        super().__init__(**config)
         if not hasattr(self, "trace_type"):
             self.trace_type = "chain"
         if self.inputs is not None:
