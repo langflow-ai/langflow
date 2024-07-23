@@ -102,6 +102,9 @@ export default function TextAreaComponent({
             tabIndex={-1}
             className={classNames(
               "mb-px",
+              "absolute",
+              "bottom-2",
+              "right-6",
               editNode
                 ? "input-component-true-button"
                 : "input-component-false-button",
