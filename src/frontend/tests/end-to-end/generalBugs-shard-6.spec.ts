@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("should be able to see error when something went wrong on Code Modal", async ({
+test("should be able to see error when something goes wrong on Code Modal", async ({
   page,
 }) => {
   await page.goto("/");
