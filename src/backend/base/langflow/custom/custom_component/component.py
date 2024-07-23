@@ -1,10 +1,24 @@
 import inspect
-from typing import Any, AsyncIterator, Callable, ClassVar, Generator, Iterator, List, Optional, Union, get_type_hints
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    AsyncIterator,
+    Callable,
+    ClassVar,
+    Generator,
+    Iterator,
+    List,
+    Optional,
+    Union,
+    get_type_hints,
+)
 from uuid import UUID
 
+import nanoid
 import yaml
 from pydantic import BaseModel
 
+from langflow.graph.edge.schema import EdgeData
 from langflow.helpers.custom import format_type
 from langflow.inputs.inputs import InputTypes
 from langflow.schema.artifact import get_artifact_type, post_process_raw
@@ -43,16 +57,31 @@ class Component(CustomComponent):
     code_class_base_inheritance: ClassVar[str] = "Component"
     _output_logs: dict[str, Log] = {}
 
-    def __init__(self, config: dict | None = None, **inputs):
+    def __init__(self, **kwargs):
+        # if key starts with _ it is a config
+        # else it is an input
+        inputs = {}
+        config = {}
+        for key, value in kwargs.items():
+            if key.startswith("_"):
+                config[key] = value
+            else:
+                inputs[key] = value
         self._inputs: dict[str, InputTypes] = {}
         self._outputs: dict[str, Output] = {}
         self._results: dict[str, Any] = {}
         self._attributes: dict[str, Any] = {}
         self._parameters = inputs or {}
+        self._edges: list[EdgeData] = []
+        self._components: list[Component] = []
         self.set_attributes(self._parameters)
         self._output_logs = {}
         config = config or {}
+        if "_id" not in config:
+            config |= {"_id": f"{self.__class__.__name__}-{nanoid.generate(size=5)}"}
         super().__init__(**config)
+        if hasattr(self, "_trace_type"):
+            self.trace_type = self._trace_type
         if not hasattr(self, "trace_type"):
             self.trace_type = "chain"
         if self.inputs is not None:

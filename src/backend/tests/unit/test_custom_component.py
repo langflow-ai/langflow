@@ -103,7 +103,7 @@ def test_custom_component_init():
     function_entrypoint_name = "build"
 
     custom_component = CustomComponent(code=code_default, function_entrypoint_name=function_entrypoint_name)
-    assert custom_component.code == code_default
+    assert custom_component._code == code_default
     assert custom_component.function_entrypoint_name == function_entrypoint_name
 
 
@@ -374,7 +374,7 @@ def test_custom_component_get_code_tree_syntax_error():
     """
     custom_component = CustomComponent(code="import os as", function_entrypoint_name="build")
     with pytest.raises(CodeSyntaxError):
-        custom_component.get_code_tree(custom_component.code)
+        custom_component.get_code_tree(custom_component._code)
 
 
 def test_custom_component_get_function_entrypoint_args_no_args():

@@ -1,5 +1,4 @@
 import operator
-import warnings
 from typing import Any, ClassVar, Optional
 
 from cachetools import TTLCache, cachedmethod
@@ -36,18 +35,13 @@ class BaseComponent:
             else:
                 setattr(self, key, value)
 
-    def __setattr__(self, key, value):
-        if key == "_user_id" and hasattr(self, "_user_id"):
-            warnings.warn("user_id is immutable and cannot be changed.")
-        super().__setattr__(key, value)
-
     @cachedmethod(cache=operator.attrgetter("cache"))
     def get_code_tree(self, code: str):
         parser = CodeParser(code)
         return parser.parse_code()
 
     def get_function(self):
-        if not self.code:
+        if not self._code:
             raise ComponentCodeNullError(
                 status_code=400,
                 detail={"error": self.ERROR_CODE_NULL, "traceback": ""},
@@ -62,7 +56,7 @@ class BaseComponent:
                 },
             )
 
-        return validate.create_function(self.code, self._function_entrypoint_name)
+        return validate.create_function(self._code, self._function_entrypoint_name)
 
     @staticmethod
     def get_template_config(component):
@@ -90,10 +84,10 @@ class BaseComponent:
         Returns:
             A dictionary representing the template configuration.
         """
-        if not self.code:
+        if not self._code:
             return {}
 
-        cc_class = eval_custom_component_code(self.code)
+        cc_class = eval_custom_component_code(self._code)
         component_instance = cc_class()
         template_config = self.get_template_config(component_instance)
         return template_config

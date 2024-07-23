@@ -64,7 +64,7 @@ class CustomComponent(BaseComponent):
     is_output: Optional[bool] = None
     """The output state of the component. Defaults to None.
     If True, the component must have a field named 'input_value'."""
-    code: Optional[str] = None
+    _code: Optional[str] = None
     """The code of the component. Defaults to None."""
     field_config: dict = {}
     """The field configuration of the component. Defaults to an empty dictionary."""
@@ -182,6 +182,18 @@ class CustomComponent(BaseComponent):
     def graph(self):
         return self.vertex.graph
 
+    @property
+    def user_id(self):
+        return self.graph.user_id
+
+    @property
+    def flow_id(self):
+        return self.graph.flow_id
+
+    @property
+    def flow_name(self):
+        return self.graph.flow_name
+
     def _get_field_order(self):
         return self.field_order or list(self.field_config.keys())
 
@@ -228,7 +240,7 @@ class CustomComponent(BaseComponent):
         Returns:
             dict: The code tree of the custom component.
         """
-        return self.get_code_tree(self.code or "")
+        return self.get_code_tree(self._code or "")
 
     def to_data(self, data: Any, keys: Optional[List[str]] = None, silent_errors: bool = False) -> List[Data]:
         """
@@ -328,7 +340,7 @@ class CustomComponent(BaseComponent):
         Returns:
             dict: The build method for the custom component.
         """
-        if not self.code:
+        if not self._code:
             return {}
 
         component_classes = [
@@ -381,10 +393,10 @@ class CustomComponent(BaseComponent):
         Returns:
             str: The main class name of the custom component.
         """
-        if not self.code:
+        if not self._code:
             return ""
 
-        base_name = self.code_class_base_inheritance
+        base_name = self._code_class_base_inheritance
         method_name = self.function_entrypoint_name
 
         classes = []
@@ -470,7 +482,7 @@ class CustomComponent(BaseComponent):
         Returns:
             Callable: The function associated with the custom component.
         """
-        return validate.create_function(self.code, self.function_entrypoint_name)
+        return validate.create_function(self._code, self.function_entrypoint_name)
 
     async def load_flow(self, flow_id: str, tweaks: Optional[dict] = None) -> "Graph":
         if not self._user_id:
