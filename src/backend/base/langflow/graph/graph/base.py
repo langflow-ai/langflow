@@ -158,6 +158,9 @@ class Graph:
         self._vertices.append(node)
 
     def add_edge(self, edge: EdgeData):
+        # Check if the edge already exists
+        if edge in self._edges:
+            return
         self._edges.append(edge)
 
     def initialize(self):
@@ -949,6 +952,7 @@ class Graph:
 
     def prepare(self, stop_component_id: Optional[str] = None, start_component_id: Optional[str] = None):
         self.validate_stream()
+        self.edges = self._build_edges()
         if stop_component_id or start_component_id:
             try:
                 first_layer = self.sort_vertices(stop_component_id, start_component_id)
