@@ -98,7 +98,17 @@ class Graph:
         if (start is not None and end is None) or (start is None and end is not None):
             raise ValueError("You must provide both input and output components")
 
-    def add_nodes_and_edges(self, nodes: List[Dict], edges: List[EdgeData]):
+    def to_json(self) -> GraphData:
+        if self.raw_graph_data:
+            return self.raw_graph_data
+        else:
+            # we need to convert the vertices and edges to json
+            nodes = [node.to_data() for node in self.vertices]
+            edges = [edge.to_data() for edge in self.edges]
+            self.raw_graph_data: GraphData = {"nodes": nodes, "edges": edges}
+            return self.raw_graph_data
+
+    def add_nodes_and_edges(self, nodes: List[Dict], edges: List[Dict[str, str]]):
         self._vertices = nodes
         self._edges = edges
         self.raw_graph_data = {"nodes": nodes, "edges": edges}
