@@ -167,6 +167,18 @@ class Component(CustomComponent):
     def set_vertex(self, vertex: "Vertex"):
         self.vertex = vertex
 
+    def _set_input_value(self, name: str, value: Any):
+        if name in self._inputs:
+            input_value = self._inputs[name].value
+            if callable(input_value):
+                raise ValueError(
+                    f"Input {name} is connected to {input_value.__self__.display_name}.{input_value.__name__}"
+                )
+            self._inputs[name].value = value
+            self._attributes[name] = value
+        else:
+            raise ValueError(f"Input {name} not found in {self.__class__.__name__}")
+
     def get_input(self, name: str) -> Any:
         if name in self._inputs:
             return self._inputs[name]
