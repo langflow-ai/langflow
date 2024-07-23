@@ -125,7 +125,7 @@ class Graph:
 
         if component._components:
             for _component in component._components:
-                self.add_component(_component.id, _component)
+                self.add_component(_component._id, _component)
 
     def _set_inputs_and_outputs(
         self, inputs: Union[list["Component"], "Component"], outputs: Union[list["Component"], "Component"]
