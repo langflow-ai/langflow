@@ -135,6 +135,18 @@ class Settings(BaseSettings):
     backend_only: bool = False
     """If set to True, Langflow will not serve the frontend."""
 
+    streamlit_enabled: bool = False
+    """If set to True, Streamlit integration will be active."""
+
+    streamlit_frontend_port: int = 5001
+    """Port that Streamlit frontend will be listening on."""
+
+    streamlit_backend_port: int = 7881
+    """Port that streamlit backend will be listening on."""
+
+    streamlit_folder_path: str = "./"
+    """Folder to store streamlit messages"""
+
     # Telemetry
     do_not_track: bool = False
     """If set to True, Langflow will not track telemetry."""

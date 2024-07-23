@@ -1,7 +1,10 @@
+from langflow.services.deps import get_settings_service
 from subprocess import run, PIPE
 import threading
 import sys
 import os
+
+settings = get_settings_service().settings
 
 
 def kill_process_on_port(port):
@@ -22,8 +25,8 @@ def kill_process_on_port(port):
 
 
 class StreamlitApplication:
-    port = int(os.getenv("LANGFLOW_STREAMLIT_PORT", "5001"))
-    path = os.getenv("LANGFLOW_STREAMLIT_FOLDER_PATH", "./")
+    port = settings.streamlit_frontend_port
+    path = settings.streamlit_folder_path
 
     @classmethod
     def __load_streamlit(cls):

@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Response
 from asyncio import get_running_loop, Future, wait_for
 from json import dumps, loads
-from aiohttp import ClientSession
 from langflow.streamlit.application import StreamlitApplication
 from .schemas import ChatMessageModel, ChatModel
 import os
@@ -26,13 +25,6 @@ def load_previous_chat():
 
 
 load_previous_chat()
-
-
-async def arun_flow(flow_id: str, api_key: str):
-    async with ClientSession() as session:
-        headers = {"x-api-key": api_key}
-        async with session.post(f"http://backend:7860/api/v1/run/{flow_id}", headers=headers) as r:
-            await r.json()
 
 
 @router.get("/sessions/{session_id}/messages/last")

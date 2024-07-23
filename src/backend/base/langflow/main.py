@@ -121,7 +121,7 @@ def run_streamlit_api():
     config = uvicorn.Config(
         streamlit_app,
         host="0.0.0.0",
-        port=7881,
+        port=get_settings_service().settings.streamlit_backend_port,
         workers=1,
         log_level="error",
         reload=False,
@@ -143,6 +143,7 @@ def create_app():
     configure()
     lifespan = get_lifespan(version=__version__)
     app = FastAPI(lifespan=lifespan, title="Langflow", version=__version__)
+    settings_service = get_settings_service()
     setup_sentry(app)
     origins = ["*"]
 
@@ -202,7 +203,7 @@ def create_app():
                 content={"message": str(exc)},
             )
 
-    if os.getenv("LANGFLOW_STREAMLIT_ENABLED", "false").lower() == "true":
+    if settings_service.settings.streamlit_enabled:
         from langflow.streamlit import StreamlitApplication
         from .__main__ import wait_for_server_ready
         import multiprocessing
@@ -210,6 +211,7 @@ def create_app():
         streamlit_api_process = multiprocessing.Process(target=run_streamlit_api)
         streamlit_api_process.start()
         wait_for_server_ready("localhost", 7881)
+        logger.debug("streamlit backend is running!")
         StreamlitApplication.start()
 
     FastAPIInstrumentor.instrument_app(app)
