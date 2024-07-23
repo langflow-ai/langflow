@@ -12,7 +12,6 @@ import {
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useFolderStore } from "../../../../stores/foldersStore";
 import ModalsComponent from "../../components/modalsComponent";
-import useDeleteFolder from "../../hooks/use-delete-folder";
 import useDropdownOptions from "../../hooks/use-dropdown-options";
 import { getFolderById } from "../../services";
 
