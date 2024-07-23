@@ -56,9 +56,7 @@ class AssistantsRun(Component):
         ),
     ]
 
-    outputs = [
-        Output(display_name="Assistant Response", name="assistant_response", method="process_inputs")
-    ]
+    outputs = [Output(display_name="Assistant Response", name="assistant_response", method="process_inputs")]
 
     def process_inputs(self) -> Message:
         try:
@@ -74,6 +72,7 @@ class AssistantsRun(Component):
             class EventHandler(AssistantEventHandler):
                 def __init__(self):
                     super().__init__()
+
                 def on_exception(self, exception: Exception) -> None:
                     print(f"Exception: {exception}")
                     raise exception
