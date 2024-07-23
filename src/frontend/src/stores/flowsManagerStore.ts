@@ -1,4 +1,4 @@
-import { BrokenEdgeMessage } from "@/utils/utils";
+import { brokenEdgeMessage } from "@/utils/utils";
 import { AxiosError } from "axios";
 import { cloneDeep } from "lodash";
 import pDebounce from "p-debounce";
@@ -311,7 +311,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
       if (brokenEdges.length > 0) {
         useAlertStore.getState().setErrorData({
           title: BROKEN_EDGES_WARNING,
-          list: brokenEdges.map((edge) => BrokenEdgeMessage(edge)),
+          list: brokenEdges.map((edge) => brokenEdgeMessage(edge)),
         });
       }
       useFlowStore

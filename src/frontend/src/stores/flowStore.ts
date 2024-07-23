@@ -1,5 +1,5 @@
 import { BROKEN_EDGES_WARNING } from "@/constants/constants";
-import { BrokenEdgeMessage } from "@/utils/utils";
+import { brokenEdgeMessage } from "@/utils/utils";
 import { cloneDeep, zip } from "lodash";
 import {
   Edge,
@@ -129,7 +129,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     if (brokenEdges.length > 0) {
       useAlertStore.getState().setErrorData({
         title: BROKEN_EDGES_WARNING,
-        list: brokenEdges.map((edge) => BrokenEdgeMessage(edge)),
+        list: brokenEdges.map((edge) => brokenEdgeMessage(edge)),
       });
     }
     let newEdges = cleanEdges(nodes, edges);
