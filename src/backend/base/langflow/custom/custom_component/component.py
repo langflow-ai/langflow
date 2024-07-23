@@ -112,7 +112,35 @@ class Component(CustomComponent):
 
     def __call__(self, **kwargs):
         for key, value in kwargs.items():
-            self._inputs[key].value = value
+            # if value is a callable, it must be a method from another component
+            # we need to the class owning the method
+            _input = self._inputs[key]
+            if callable(value):
+                component: Component = value.__self__
+                self._components.append(component)
+                output = component._get_output_by_method(value)
+                self._edges.append(
+                    {
+                        "source": component._id,
+                        "target": self._id,
+                        "data": {
+                            "sourceHandle": {
+                                "dataType": self.name,
+                                "id": component._id,
+                                "name": output.name,
+                                "output_types": output.types,
+                            },
+                            "targetHandle": {
+                                "fieldName": key,
+                                "id": self._id,
+                                "inputTypes": _input.input_types,
+                                "type": _input.field_type,
+                            },
+                        },
+                    }
+                )
+
+            self._attributes[key] = value
         return self
 
     async def _run(self):
