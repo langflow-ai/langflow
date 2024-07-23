@@ -97,6 +97,7 @@ class Vertex:
         self.state = VertexStates.ACTIVE
 
     def add_component_instance(self, component_instance: "Component"):
+        component_instance.set_vertex(self)
         self._custom_component = component_instance
 
     def add_result(self, name: str, result: Any):
