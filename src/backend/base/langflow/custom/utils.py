@@ -432,7 +432,7 @@ def create_component_template(component):
     component_code = component["code"]
     component_output_types = component["output_types"]
 
-    component_extractor = Component(code=component_code)
+    component_extractor = Component(config=dict(code=component_code))
 
     component_template, component_instance = build_custom_component_template(component_extractor)
     if not component_template["output_types"] and component_output_types:
