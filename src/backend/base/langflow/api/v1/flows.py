@@ -351,7 +351,7 @@ async def download_multiple_file(
     db: Session = Depends(get_session),
 ):
     """Download all flows as a zip file."""
-    flows = db.exec(select(Flow).where(and_(Flow.user_id == user.id, Flow.id.in_(flow_ids)))).all()
+    flows = db.exec(select(Flow).where(and_(Flow.user_id == user.id, Flow.id.in_(flow_ids)))).all() # type: ignore
 
     if not flows:
         raise HTTPException(status_code=404, detail="No flows found.")
