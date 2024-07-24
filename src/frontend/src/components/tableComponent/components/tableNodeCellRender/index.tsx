@@ -1,3 +1,4 @@
+import TableNodeComponent from "@/components/TableNodeComponent";
 import { CustomCellRendererProps } from "ag-grid-react";
 import { cloneDeep } from "lodash";
 import { useState } from "react";
@@ -136,6 +137,19 @@ export default function TableNodeCellRender({
             }}
             size="small"
             editNode={true}
+          />
+        );
+      case "table":
+        return (
+          <TableNodeComponent
+            description={templateData.info || "Add or edit data"}
+            columns={templateData.table_schema?.columns}
+            onChange={(value) => {
+              handleOnNewValue(value, templateData.key);
+            }}
+            editNode
+            tableTitle={templateData.display_name ?? "Table"}
+            value={templateValue}
           />
         );
 

@@ -1,3 +1,4 @@
+import TableNodeComponent from "@/components/TableNodeComponent";
 import { cloneDeep } from "lodash";
 import { ReactNode, useEffect, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
@@ -521,6 +522,17 @@ export default function ParameterComponent({
               value={data.node?.template[name]?.value ?? ""}
               rangeSpec={data.node?.template[name]?.rangeSpec}
               onChange={handleOnNewValue}
+            />
+          </div>
+        </Case>
+        <Case condition={left === true && type === "table"}>
+          <div className="mt-2 w-full">
+            <TableNodeComponent
+              description={info || "Add or edit data"}
+              columns={data.node?.template[name]?.table_schema?.columns}
+              onChange={handleOnNewValue}
+              tableTitle={data.node?.template[name]?.display_name ?? "Table"}
+              value={data.node?.template[name]?.value}
             />
           </div>
         </Case>
