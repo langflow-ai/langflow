@@ -5,7 +5,6 @@ from typing import _UnionGenericAlias  # type: ignore
 from typing import Any, Callable, Optional, Union, get_origin
 
 from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator, model_serializer, model_validator
-from typing_extensions import GenericAlias  # type: ignore
 
 from langflow.field_typing import Text
 from langflow.field_typing.range_spec import RangeSpec
