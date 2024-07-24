@@ -124,16 +124,14 @@ def test_graph_functional_start_end():
     assert len(results) == 3
     assert all(result.vertex.id in ids for result in results if hasattr(result, "vertex"))
     assert results[-1] == Finish()
+    # Now, using the same components but different start and end components
     graph = Graph(chat_input, chat_output)
     graph.prepare()
-    # Now iterate through the graph
-    # and check that the graph is running
-    # correctly
-    ids = ["chat_input", "chat_output"]
+    ids = ["chat_input", "chat_output", "text_output"]
     results = []
     for result in graph.start():
         results.append(result)
 
-    assert len(results) == 3
+    assert len(results) == 4
     assert all(result.vertex.id in ids for result in results if hasattr(result, "vertex"))
     assert results[-1] == Finish()
