@@ -33,7 +33,7 @@ async def instantiate_class(
     custom_params = get_params(vertex.params)
     code = custom_params.pop("code")
     class_object: Type["CustomComponent" | "Component"] = eval_custom_component_code(code)
-    custom_component: "CustomComponent" | "Component" = class_object(
+    custom_component: "CustomComponent" | "Component" = class_object.initialize(
         user_id=user_id,
         parameters=custom_params,
         vertex=vertex,
