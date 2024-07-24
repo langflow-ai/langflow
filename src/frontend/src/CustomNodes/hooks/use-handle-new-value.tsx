@@ -3,6 +3,7 @@ import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { APIClassType, InputFieldType } from "@/types/api";
+import { NodeType } from "@/types/flow";
 import { cloneDeep } from "lodash";
 import { mutateTemplate } from "../helpers/mutate-template";
 
@@ -23,7 +24,10 @@ const useHandleOnNewValue = ({
   node: APIClassType;
   nodeId: string;
   name: string;
-  setNode?: (id: string, update: Node | ((oldState: Node) => Node)) => void;
+  setNode?: (
+    id: string,
+    update: NodeType | ((oldState: NodeType) => NodeType),
+  ) => void;
 }) => {
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
 
