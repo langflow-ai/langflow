@@ -283,7 +283,7 @@ def get_component_instance(custom_component: CustomComponent, user_id: Optional[
         ) from exc
 
     try:
-        custom_instance = custom_class(user_id=user_id)
+        custom_instance = custom_class(_user_id=user_id)
         return custom_instance
     except Exception as exc:
         logger.error(f"Error while instantiating custom component: {str(exc)}")
@@ -317,7 +317,7 @@ def run_build_config(
         ) from exc
 
     try:
-        custom_instance = custom_class(user_id=user_id)
+        custom_instance = custom_class(_user_id=user_id)
         build_config: Dict = custom_instance.build_config()
 
         for field_name, field in build_config.copy().items():
