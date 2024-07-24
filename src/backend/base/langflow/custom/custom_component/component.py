@@ -117,7 +117,12 @@ class Component(CustomComponent):
         for key, value in kwargs.items():
             # if value is a callable, it must be a method from another component
             # we need to the class owning the method
-            _input = self._inputs[key]
+            try:
+                _input = self._inputs[key]
+            except KeyError:
+                _input = self._get_fallback_input(name=key, display_name=key)
+                self._inputs[key] = _input
+                self.inputs.append(_input)
             if callable(value):
                 component: Component = value.__self__
                 self._components.append(component)
@@ -142,6 +147,8 @@ class Component(CustomComponent):
                         },
                     }
                 )
+            else:
+                self._parameters[key] = value
 
             self._attributes[key] = value
         return self
