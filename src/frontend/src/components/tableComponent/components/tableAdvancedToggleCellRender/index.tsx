@@ -6,19 +6,23 @@ import { CustomCellRendererProps } from "ag-grid-react";
 import ToggleShadComponent from "../../../toggleShadComponent";
 
 export default function TableAdvancedToggleCellRender({
-  node: { data },
-  value: { nodeId },
+  value: { nodeId, parameterId },
 }: CustomCellRendererProps) {
   const edges = useFlowStore((state) => state.edges);
   const node = useFlowStore((state) => state.getNode(nodeId));
-  const parameter = node?.data?.node?.template?.[data.key];
+  const parameter = node?.data?.node?.template?.[parameterId];
 
-  const disabled = isTargetHandleConnected(edges, data.key, data, nodeId);
+  const disabled = isTargetHandleConnected(
+    edges,
+    parameterId,
+    parameter,
+    nodeId,
+  );
 
   const { handleOnNewValue } = useHandleOnNewValue({
     node: node?.data.node,
     nodeId,
-    name: data.key,
+    name: parameterId,
   });
 
   return (
@@ -34,7 +38,7 @@ export default function TableAdvancedToggleCellRender({
         <div>
           <div className="flex h-full items-center">
             <ToggleShadComponent
-              id={"show" + data.key}
+              id={"show" + parameterId}
               disabled={disabled}
               enabled={!parameter?.advanced ?? true}
               setEnabled={(e) => {
