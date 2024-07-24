@@ -2,10 +2,8 @@ import TableAdvancedToggleCellRender from "@/components/tableComponent/component
 import { ColDef, ValueGetterParams } from "ag-grid-community";
 import { useMemo } from "react";
 import TableNodeCellRender from "../../../components/tableComponent/components/tableNodeCellRender";
-import { APIClassType } from "../../../types/api";
 
 const useColumnDefs = (
-  nodeClass: APIClassType,
   nodeId: string,
   open: boolean,
   isTweaks?: boolean,
@@ -47,6 +45,7 @@ const useColumnDefs = (
         valueGetter: (params: ValueGetterParams) => {
           return {
             nodeId: nodeId,
+            parameterId: params.data.key,
             isTweaks,
           };
         },
@@ -65,6 +64,7 @@ const useColumnDefs = (
         valueGetter: (params: ValueGetterParams) => {
           return {
             nodeId,
+            parameterId: params.data.key,
           };
         },
         editable: false,
@@ -74,7 +74,7 @@ const useColumnDefs = (
       });
     }
     return colDefs;
-  }, [open, nodeClass]);
+  }, [open]);
 
   return columnDefs;
 };
