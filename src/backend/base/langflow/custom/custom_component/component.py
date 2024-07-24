@@ -107,10 +107,11 @@ class Component(CustomComponent):
     def _get_output_by_method(self, method: Callable):
         # method is a callable and output.method is a string
         # we need to find the output that has the same method
-        for output in self.outputs:
-            if output.method == method.__name__:
-                return output
-        return None
+        output = next((output for output in self.outputs if output.method == method.__name__), None)
+        if output is None:
+            method_name = method.__name__ if hasattr(method, "__name__") else str(method)
+            raise ValueError(f"Output with method {method_name} not found")
+        return output
 
     def __call__(self, **kwargs):
         for key, value in kwargs.items():
