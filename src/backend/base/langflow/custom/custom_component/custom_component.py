@@ -87,7 +87,18 @@ class CustomComponent(BaseComponent):
     _output_logs: dict[str, Log] = {}
     _tracing_service: Optional["TracingService"] = None
 
-    _tree: Optional[dict] = None
+    def __init__(self, **data):
+        """
+        Initializes a new instance of the CustomComponent class.
+
+        Args:
+            **data: Additional keyword arguments to initialize the custom component.
+        """
+        self.cache = TTLCache(maxsize=1024, ttl=60)
+        self._logs = []
+        self._results = {}
+        self._artifacts = {}
+        super().__init__(**data)
 
     def set_attributes(self, parameters: dict):
         pass
@@ -136,18 +147,7 @@ class CustomComponent(BaseComponent):
         except Exception as e:
             raise ValueError(f"Error getting state: {e}")
 
-    def __init__(self, **data):
-        """
-        Initializes a new instance of the CustomComponent class.
-
-        Args:
-            **data: Additional keyword arguments to initialize the custom component.
-        """
-        self.cache = TTLCache(maxsize=1024, ttl=60)
-        self._logs = []
-        self._results = {}
-        self._artifacts = {}
-        super().__init__(**data)
+    _tree: Optional[dict] = None
 
     @staticmethod
     def resolve_path(path: str) -> str:
