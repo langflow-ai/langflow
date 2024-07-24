@@ -14,6 +14,7 @@ from pydantic import BeforeValidator, ConfigDict, Field, field_serializer, field
 from langflow.base.prompts.utils import dict_values_to_string
 from langflow.schema.data import Data
 from langflow.schema.image import Image, get_file_paths, is_image_file
+from langflow.utils.async_helpers import run_until_complete
 
 
 def _timestamp_to_str(timestamp: datetime | str) -> str:
@@ -152,7 +153,11 @@ class Message(Data):
             return ""
         return value
 
-    async def get_file_content_dicts(self):
+    def get_file_content_dicts(self):
+        coro = self.aget_file_content_dicts()
+        return run_until_complete(coro)
+
+    async def aget_file_content_dicts(self):
         content_dicts = []
         files = await get_file_paths(self.files)
 
@@ -208,7 +213,7 @@ class Message(Data):
         contents = []
         for value in variables.values():
             if isinstance(value, cls) and value.files:
-                content_dicts = await value.get_file_content_dicts()
+                content_dicts = await value.aget_file_content_dicts()
                 contents.extend(content_dicts)
         if contents:
             message = HumanMessage(content=[{"type": "text", "text": text}] + contents)
