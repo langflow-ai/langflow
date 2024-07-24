@@ -16,7 +16,8 @@ export default function getPythonCode(
     }
     tweaksString = JSON.stringify(tweaksObject, null, 2)
       .replace(/true/g, "True")
-      .replace(/false/g, "False");
+      .replace(/false/g, "False")
+      .replace(/null|undefined/g, "None");
   }
 
   return `from langflow.load import run_flow_from_json
