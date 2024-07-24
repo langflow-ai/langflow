@@ -101,3 +101,39 @@ def test_graph_functional_start():
     assert len(results) == 3
     assert all(result.vertex.id in ids for result in results if hasattr(result, "vertex"))
     assert results[-1] == Finish()
+
+
+def test_graph_functional_start_end():
+    chat_input = components.inputs.ChatInput(_id="chat_input")
+    text_output = components.outputs.TextOutput.TextOutputComponent(_id="text_output")(
+        input_value=chat_input.message_response
+    )
+    chat_output = components.outputs.ChatOutput(input_value="test", _id="chat_output")(
+        input_value=text_output.text_response
+    )
+    graph = Graph(chat_input, text_output)
+    graph.prepare()
+    # Now iterate through the graph
+    # and check that the graph is running
+    # correctly
+    ids = ["chat_input", "text_output"]
+    results = []
+    for result in graph.start():
+        results.append(result)
+
+    assert len(results) == 3
+    assert all(result.vertex.id in ids for result in results if hasattr(result, "vertex"))
+    assert results[-1] == Finish()
+    graph = Graph(chat_input, chat_output)
+    graph.prepare()
+    # Now iterate through the graph
+    # and check that the graph is running
+    # correctly
+    ids = ["chat_input", "chat_output"]
+    results = []
+    for result in graph.start():
+        results.append(result)
+
+    assert len(results) == 3
+    assert all(result.vertex.id in ids for result in results if hasattr(result, "vertex"))
+    assert results[-1] == Finish()
