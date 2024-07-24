@@ -33,7 +33,7 @@ from .custom_component import CustomComponent
 if TYPE_CHECKING:
     from langflow.graph.vertex.base import Vertex
 
-BACKWARDS_COMPATIBLE_ATTRIBUTES = ["vertex", "tracing_service"]
+BACKWARDS_COMPATIBLE_ATTRIBUTES = ["user_id", "vertex", "tracing_service"]
 
 
 def recursive_serialize_or_str(obj):
