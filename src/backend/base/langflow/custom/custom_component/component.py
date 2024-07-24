@@ -14,7 +14,7 @@ from typing import (
 )
 from uuid import UUID
 
-import nanoid
+import nanoid  # type: ignore
 import yaml
 from pydantic import BaseModel
 
@@ -264,6 +264,7 @@ class Component(CustomComponent):
                 continue
             input_ = self._inputs[key]
             # BaseInputMixin has a `validate_assignment=True`
+
             input_.value = value
             params[input_.name] = input_.value
 
