@@ -432,7 +432,18 @@ class Vertex:
         """
         logger.debug(f"Building {self.display_name}")
         await self._build_each_vertex_in_params_dict(user_id)
-        await self._get_and_instantiate_class(user_id, fallback_to_env_vars)
+
+        if self.base_type is None:
+            raise ValueError(f"Base type for vertex {self.display_name} not found")
+
+        if not self._custom_component:
+            custom_component, custom_params = await loading.instantiate_class(user_id=user_id, vertex=self)
+        else:
+            custom_component = self._custom_component
+            custom_params = loading.get_params(self.params)
+
+        await self._build_results(custom_component, custom_params, fallback_to_env_vars)
+
         self._validate_built_object()
 
         self._built = True
@@ -617,7 +628,7 @@ class Vertex:
                     logger.exception(e)
                     raise ValueError(
                         f"Params {key} ({self.params[key]}) is not a list and cannot be extended with {result}"
-                        f"Error building Component {self.display_name}:\n\n{str(e)}"
+                        f"Error building Component {self.display_name}: \n\n{str(e)}"
                     ) from e
 
     def _handle_func(self, key, result):
@@ -642,25 +653,23 @@ class Vertex:
         if isinstance(self.params[key], list):
             self.params[key].extend(result)
 
-    async def _get_and_instantiate_class(self, user_id=None, fallback_to_env_vars=False):
-        """
-        Gets the class from a dictionary and instantiates it with the params.
-        """
-        if self.base_type is None:
-            raise ValueError(f"Base type for vertex {self.display_name} not found")
+    async def _build_results(self, custom_component, custom_params, fallback_to_env_vars=False):
         try:
-            result = await loading.instantiate_class(
-                user_id=user_id,
-                fallback_to_env_vars=fallback_to_env_vars,
+            result = await loading.get_instance_results(
+                custom_component=custom_component,
+                custom_params=custom_params,
                 vertex=self,
+                fallback_to_env_vars=fallback_to_env_vars,
+                base_type=self.base_type,
             )
+
             self.outputs_logs = build_output_logs(self, result)
 
             self._update_built_object_and_artifacts(result)
         except Exception as exc:
             tb = traceback.format_exc()
             logger.exception(exc)
-            raise ComponentBuildException(f"Error building Component {self.display_name}:\n\n{exc}", tb) from exc
+            raise ComponentBuildException(f"Error building Component {self.display_name}: \n\n{exc}", tb) from exc
 
     def _update_built_object_and_artifacts(self, result: Any | tuple[Any, dict] | tuple["Component", Any, dict]):
         """
