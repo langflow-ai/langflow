@@ -19,7 +19,27 @@ from .input_mixin import (
     MultilineMixin,
     RangeMixin,
     SerializableFieldTypes,
+    TableMixin,
 )
+
+
+class TableInput(BaseInputMixin, MetadataTraceMixin, TableMixin, ListableInputMixin):
+    field_type: Optional[SerializableFieldTypes] = FieldTypes.TABLE
+    is_list: bool = True
+
+    @field_validator("value")
+    @classmethod
+    def validate_value(cls, v: Any, _info):
+        # Check if value is a list of dicts
+        if not isinstance(v, list):
+            raise ValueError(f"TableInput value must be a list of dictionaries or Data. Value '{v}' is not a list.")
+
+        for item in v:
+            if not isinstance(item, (dict, Data)):
+                raise ValueError(
+                    f"TableInput value must be a list of dictionaries or Data. Item '{item}' is not a dictionary or Data."
+                )
+        return v
 
 
 class HandleInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin):
@@ -338,4 +358,5 @@ InputTypes = Union[
     StrInput,
     MessageTextInput,
     MessageInput,
+    TableInput,
 ]
