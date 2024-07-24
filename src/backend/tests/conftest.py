@@ -158,7 +158,9 @@ def get_graph(_type="basic"):
     data_graph = flow_graph["data"]
     nodes = data_graph["nodes"]
     edges = data_graph["edges"]
-    return Graph(nodes, edges)
+    graph = Graph()
+    graph.add_nodes_and_edges(nodes, edges)
+    return graph
 
 
 @pytest.fixture

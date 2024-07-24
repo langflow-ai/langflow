@@ -1,3 +1,4 @@
+import json
 from uuid import UUID, uuid4
 
 import orjson
@@ -197,26 +198,27 @@ def test_download_file(
     )
     db_manager = get_db_service()
     with session_getter(db_manager) as session:
+        saved_flows = []
         for flow in flow_list.flows:
             flow.user_id = active_user.id
             db_flow = Flow.model_validate(flow, from_attributes=True)
             session.add(db_flow)
+            saved_flows.append(db_flow)
         session.commit()
-    # Make request to endpoint
-    response = client.get("api/v1/flows/download/", headers=logged_in_headers)
+        # Make request to endpoint inside the session context
+        flow_ids = [str(db_flow.id) for db_flow in saved_flows]  # Convert UUIDs to strings
+        flow_ids_json = json.dumps(flow_ids)
+        response = client.post(
+            "api/v1/flows/download/",
+            data=flow_ids_json,
+            headers={**logged_in_headers, "Content-Type": "application/json"},
+        )
     # Check response status code
     assert response.status_code == 200, response.json()
     # Check response data
-    response_data = response.json()["flows"]
-    starter_projects = load_starter_projects()
-    number_of_projects = len(starter_projects) + len(flow_list.flows)
-    assert len(response_data) == number_of_projects, response_data
-    assert response_data[0]["name"] == "Flow 1"
-    assert response_data[0]["description"] == "description"
-    assert response_data[0]["data"] == data
-    assert response_data[1]["name"] == "Flow 2"
-    assert response_data[1]["description"] == "description"
-    assert response_data[1]["data"] == data
+    # Since the endpoint now returns a zip file, we need to check the content type and the filename in the headers
+    assert response.headers["Content-Type"] == "application/x-zip-compressed"
+    assert "attachment; filename=" in response.headers["Content-Disposition"]
 
 
 def test_create_flow_with_invalid_data(client: TestClient, active_user, logged_in_headers):

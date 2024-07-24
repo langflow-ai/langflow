@@ -1,3 +1,5 @@
+import { BROKEN_EDGES_WARNING } from "@/constants/constants";
+import { brokenEdgeMessage } from "@/utils/utils";
 import { cloneDeep, zip } from "lodash";
 import {
   Edge,
@@ -29,6 +31,7 @@ import {
   checkChatInput,
   checkOldComponents,
   cleanEdges,
+  detectBrokenEdgesEdges,
   getHandleId,
   getNodeId,
   scapeJSONParse,
@@ -122,6 +125,13 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   },
   resetFlow: ({ nodes, edges, viewport }) => {
     const currentFlow = useFlowsManagerStore.getState().currentFlow;
+    let brokenEdges = detectBrokenEdgesEdges(nodes, edges);
+    if (brokenEdges.length > 0) {
+      useAlertStore.getState().setErrorData({
+        title: BROKEN_EDGES_WARNING,
+        list: brokenEdges.map((edge) => brokenEdgeMessage(edge)),
+      });
+    }
     let newEdges = cleanEdges(nodes, edges);
     const { inputs, outputs } = getInputsAndOutputs(nodes);
     set({

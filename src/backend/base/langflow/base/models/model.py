@@ -1,13 +1,16 @@
 import json
 import warnings
 from abc import abstractmethod
-from typing import Optional, Union
+from typing import Optional, Union, List
 
 from langchain_core.language_models.llms import LLM
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 
+from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.custom import Component
 from langflow.field_typing import LanguageModel
+from langflow.inputs import MessageInput, MessageTextInput
+from langflow.inputs.inputs import InputTypes, BoolInput
 from langflow.schema.message import Message
 from langflow.template.field.base import Output
 
@@ -16,6 +19,17 @@ class LCModelComponent(Component):
     display_name: str = "Model Name"
     description: str = "Model Description"
     trace_type = "llm"
+
+    _base_inputs: List[InputTypes] = [
+        MessageInput(name="input_value", display_name="Input"),
+        MessageTextInput(
+            name="system_message",
+            display_name="System Message",
+            info="System message to pass to the model.",
+            advanced=True,
+        ),
+        BoolInput(name="stream", display_name="Stream", info=STREAM_INFO_TEXT, advanced=True),
+    ]
 
     outputs = [
         Output(display_name="Text", name="text_output", method="text_response"),
@@ -142,6 +156,7 @@ class LCModelComponent(Component):
                         messages.append(input_value.to_lc_message())
             else:
                 messages.append(HumanMessage(content=input_value))
+
         inputs: Union[list, dict] = messages or {}
         try:
             runnable = runnable.with_config(  # type: ignore

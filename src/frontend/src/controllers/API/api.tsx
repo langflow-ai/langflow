@@ -2,6 +2,7 @@ import {
   LANGFLOW_ACCESS_TOKEN,
   LANGFLOW_AUTO_LOGIN_OPTION,
 } from "@/constants/constants";
+import useAuthStore from "@/stores/authStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from "axios";
 import { useContext, useEffect } from "react";
@@ -19,8 +20,9 @@ const api: AxiosInstance = axios.create({
 });
 
 function ApiInterceptor() {
+  const autoLogin = useAuthStore((state) => state.autoLogin);
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  let { accessToken, logout, authenticationErrorCount, autoLogin } =
+  let { accessToken, logout, authenticationErrorCount } =
     useContext(AuthContext);
   const cookies = new Cookies();
   const setSaveLoading = useFlowsManagerStore((state) => state.setSaveLoading);
@@ -56,6 +58,7 @@ function ApiInterceptor() {
           }
         }
         await clearBuildVerticesState(error);
+        return Promise.reject(error);
       },
     );
 

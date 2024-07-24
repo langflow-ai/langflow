@@ -1,12 +1,12 @@
+import useAuthStore from "@/stores/authStore";
 import "ace-builds/src-noconflict/ext-language_tools";
 import "ace-builds/src-noconflict/mode-python";
 import "ace-builds/src-noconflict/theme-github";
 import "ace-builds/src-noconflict/theme-twilight";
-import { ReactNode, useContext, useEffect, useState } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import CodeTabsComponent from "../../components/codeTabsComponent";
 import IconComponent from "../../components/genericIconComponent";
 import { EXPORT_CODE_DIALOG } from "../../constants/constants";
-import { AuthContext } from "../../contexts/authContext";
 import { useTweaksStore } from "../../stores/tweaksStore";
 import { FlowType } from "../../types/flow/index";
 import BaseModal from "../baseModal";
@@ -22,7 +22,7 @@ export default function ApiModal({
   open?: boolean;
   setOpen?: (a: boolean | ((o?: boolean) => boolean)) => void;
 }) {
-  const { autoLogin } = useContext(AuthContext);
+  const autoLogin = useAuthStore((state) => state.autoLogin);
   const [open, setOpen] =
     mySetOpen !== undefined && myOpen !== undefined
       ? [myOpen, mySetOpen]
