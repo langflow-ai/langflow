@@ -5,6 +5,7 @@ from typing import _UnionGenericAlias  # type: ignore
 from typing import Any, Callable, Optional, Union, get_origin
 
 from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator, model_serializer, model_validator
+from typing_extensions import GenericAlias  # type: ignore
 
 from langflow.field_typing import Text
 from langflow.field_typing.range_spec import RangeSpec
@@ -153,7 +154,7 @@ class Input(BaseModel):
         # If the user passes CustomComponent as a type insteado of "CustomComponent" we need to convert it to a string
         # this should be done for all types
         # How to check if v is a type?
-        if isinstance(v, (type, _GenericAlias, GenericAlias, _UnionGenericAlias)):
+        if isinstance(v, (type, GenericAlias, _GenericAlias)) or is_union_generic_alias(v):
             v = post_process_type(v)[0]
             v = format_type(v)
         elif not isinstance(v, str):
