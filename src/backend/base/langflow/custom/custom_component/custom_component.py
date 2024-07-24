@@ -174,6 +174,8 @@ class CustomComponent(BaseComponent):
 
     @property
     def user_id(self):
+        if hasattr(self, "_user_id"):
+            return self._user_id
         return self.graph.user_id
 
     @property
