@@ -37,8 +37,8 @@ class Graph:
 
     def __init__(
         self,
-        inputs: Union[list["Component"], "Component", None] = None,
-        outputs: Union[list["Component"], "Component", None] = None,
+        start: Optional["Component"] = None,
+        end: Optional["Component"] = None,
         flow_id: Optional[str] = None,
         flow_name: Optional[str] = None,
         user_id: Optional[str] = None,
@@ -90,8 +90,10 @@ class Graph:
         except Exception as exc:
             logger.error(f"Error getting tracing service: {exc}")
             self.tracing_service = None
-        if inputs is not None and outputs is not None:
-            self._set_inputs_and_outputs(inputs, outputs)
+        if start is not None and end is not None:
+            self._set_start_and_end(start, end)
+        if (start is not None and end is None) or (start is None and end is not None):
+            raise ValueError("You must provide both input and output components")
 
     def add_nodes_and_edges(self, nodes: List[Dict], edges: List[Dict[str, str]]):
         self._vertices = nodes
@@ -127,18 +129,13 @@ class Graph:
             for _component in component._components:
                 self.add_component(_component._id, _component)
 
-    def _set_inputs_and_outputs(
-        self, inputs: Union[list["Component"], "Component"], outputs: Union[list["Component"], "Component"]
-    ):
-        if not isinstance(inputs, list):
-            inputs = [inputs]
-        if not isinstance(outputs, list):
-            outputs = [outputs]
-        for component in inputs:
-            self.add_component(component._id, component)
-
-        for component in outputs:
-            self.add_component(component._id, component)
+    def _set_start_and_end(self, start: "Component", end: "Component"):
+        if not hasattr(start, "to_frontend_node"):
+            raise TypeError(f"start must be a Component. Got {type(start)}")
+        if not hasattr(end, "to_frontend_node"):
+            raise TypeError(f"end must be a Component. Got {type(end)}")
+        self.add_component(start._id, start)
+        self.add_component(end._id, end)
 
     def add_component_edge(self, source_id: str, output_input_tuple: Tuple[str, str], target_id: str):
         source_vertex = self.get_vertex(source_id)
