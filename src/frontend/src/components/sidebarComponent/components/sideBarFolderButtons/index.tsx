@@ -1,9 +1,9 @@
 import { usePostUploadFolders } from "@/controllers/API/queries/folders";
+import { useGetDownloadFolders } from "@/controllers/API/queries/folders/use-get-download-folders";
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { FolderType } from "../../../../pages/MainPage/entities";
 import { addFolder, updateFolder } from "../../../../pages/MainPage/services";
-import { handleDownloadFolderFn } from "../../../../pages/MainPage/utils/handle-download-folder";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useFolderStore } from "../../../../stores/foldersStore";
@@ -106,8 +106,32 @@ const SideBarFoldersButtonsComponent = ({
     };
   };
 
+  const { mutate: mutateDownloadFolder } = useGetDownloadFolders();
+
   const handleDownloadFolder = (id: string) => {
-    handleDownloadFolderFn(id);
+    mutateDownloadFolder(
+      {
+        folderId: id,
+      },
+      {
+        onSuccess: (data) => {
+          const folder = folders.find((f) => f.id === data.folderId);
+
+          data.folder_name = folder?.name || "folder";
+          data.folder_description = folder?.description || "";
+
+          const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
+            JSON.stringify(data),
+          )}`;
+
+          const link = document.createElement("a");
+          link.href = jsonString;
+          link.download = `${data.folder_name}.json`;
+
+          link.click();
+        },
+      },
+    );
   };
 
   function addNewFolder() {
