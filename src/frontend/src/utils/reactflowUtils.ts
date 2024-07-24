@@ -949,6 +949,7 @@ export function isTargetHandleConnected(
   /*
 		this function receives a flow and a handleId and check if there is a connection with this handle
 	*/
+  if (!field) return true;
   if (field.proxy) {
     if (
       edges.some(
