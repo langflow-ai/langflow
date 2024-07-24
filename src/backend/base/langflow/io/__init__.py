@@ -15,6 +15,7 @@ from langflow.inputs import (
     PromptInput,
     SecretStrInput,
     StrInput,
+    TableInput,
 )
 from langflow.template import Output
 
@@ -36,4 +37,5 @@ __all__ = [
     "StrInput",
     "MessageTextInput",
     "Output",
+    "TableInput",
 ]

@@ -7,6 +7,7 @@ import types
 from enum import Enum
 from typing import TYPE_CHECKING, Any, AsyncIterator, Callable, Dict, Iterator, List, Mapping, Optional, Set
 
+import pandas as pd
 from loguru import logger
 
 from langflow.exceptions.component import ComponentBuildException
@@ -373,6 +374,13 @@ class Vertex:
                         params[field_name] = val
                     elif isinstance(val, str):
                         params[field_name] = val != ""
+                elif field.get("type") == "table" and val is not None:
+                    # check if the value is a list of dicts
+                    # if it is, create a pandas dataframe from it
+                    if isinstance(val, list) and all(isinstance(item, dict) for item in val):
+                        params[field_name] = pd.DataFrame(val)
+                    else:
+                        raise ValueError(f"Invalid value type {type(val)} for field {field_name}")
                 elif val is not None and val != "":
                     params[field_name] = val
 

@@ -1,4 +1,3 @@
-import { ColDef, Column } from "ag-grid-community";
 import TextModal from "../../modals/textModal";
 
 export default function StringReader({
@@ -6,13 +5,14 @@ export default function StringReader({
   setValue,
   editable = false,
 }: {
-  string: string;
+  string: string | null;
   setValue: (value: string) => void;
   editable: boolean;
 }): JSX.Element {
   return (
-    <TextModal editable={editable} setValue={setValue} value={string}>
-      <span className="truncate">{string}</span>
+    <TextModal editable={editable} setValue={setValue} value={string ?? ""}>
+      {/* INVISIBLE CHARACTER TO PREVENT AGgrid bug */}
+      <span className="truncate">{string ?? "‎"}</span>
     </TextModal>
   );
 }

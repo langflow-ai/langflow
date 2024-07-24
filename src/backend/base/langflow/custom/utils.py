@@ -421,7 +421,7 @@ def build_custom_component_template(
         raise HTTPException(
             status_code=400,
             detail={
-                "error": (f"Something went wrong while building the custom component. Hints: {str(exc)}"),
+                "error": (f"Error building Component: {str(exc)}"),
                 "traceback": traceback.format_exc(),
             },
         ) from exc
