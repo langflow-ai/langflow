@@ -12,46 +12,6 @@ export async function getFolders(): Promise<FolderType[]> {
   }
 }
 
-export async function addFolder(data: AddFolderType): Promise<FolderType> {
-  const body = {
-    name: data.name,
-    description: data.description,
-    flows_list: data.flows ?? [],
-    components_list: data.components ?? [],
-  };
-
-  try {
-    const response = await api.post(`${BASE_URL_API}folders/`, body);
-    return response?.data;
-  } catch (error) {
-    throw error;
-  }
-}
-
-export async function updateFolder(
-  body: FolderType,
-  folderId: string,
-): Promise<FolderType> {
-  try {
-    const response = await api.patch(
-      `${BASE_URL_API}folders/${folderId}`,
-      body,
-    );
-    return response?.data;
-  } catch (error) {
-    throw error;
-  }
-}
-
-export async function deleteFolder(folderId: string) {
-  try {
-    const response = await api.delete(`${BASE_URL_API}folders/${folderId}`);
-    return response?.data;
-  } catch (error) {
-    throw error;
-  }
-}
-
 export async function getFolderById(folderId: string): Promise<FolderType> {
   try {
     const response = await api.get(`${BASE_URL_API}folders/${folderId}`);
