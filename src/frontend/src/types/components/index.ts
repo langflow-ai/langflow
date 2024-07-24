@@ -1,3 +1,4 @@
+import { ColDef } from "ag-grid-community";
 import { ReactElement, ReactNode, SetStateAction } from "react";
 import { ReactFlowJsonObject } from "reactflow";
 import { InputOutput } from "../../constants/enums";
@@ -9,6 +10,7 @@ import {
 } from "../api";
 import { ChatMessageType } from "../chat";
 import { FlowStyleType, FlowType, NodeDataType, NodeType } from "../flow/index";
+import { ColumnField } from "../utils/functions";
 import { sourceHandleType, targetHandleType } from "./../flow/index";
 export type InputComponentType = {
   name?: string;
@@ -132,6 +134,16 @@ export type TextAreaComponentType = {
   editNode?: boolean;
   id?: string;
   readonly?: boolean;
+};
+
+export type TableComponentType = {
+  description: string;
+  tableTitle: string;
+  onChange: (value: any[]) => void;
+  value: any[];
+  editNode?: boolean;
+  id?: string;
+  columns?: ColumnField[];
 };
 
 export type outputComponentType = {

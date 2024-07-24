@@ -58,6 +58,7 @@ function ApiInterceptor() {
           }
         }
         await clearBuildVerticesState(error);
+        return Promise.reject(error);
       },
     );
 
