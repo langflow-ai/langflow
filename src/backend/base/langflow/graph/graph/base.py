@@ -1204,7 +1204,7 @@ class Graph:
                     self.run_manager.add_to_vertices_being_run(next_v_id)
             if cache and self.flow_id is not None:
                 set_cache_coro = partial(get_chat_service().set_cache, key=self.flow_id)
-                await set_cache_coro(self, lock)
+                await set_cache_coro(data=self, lock=lock)
         return next_runnable_vertices
 
     async def _execute_tasks(self, tasks: List[asyncio.Task], lock: asyncio.Lock) -> List[str]:
