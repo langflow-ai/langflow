@@ -2,6 +2,7 @@ from langflow.base.prompts.api_utils import process_prompt_template
 from langflow.custom import Component
 from langflow.io import Output, PromptInput
 from langflow.schema.message import Message
+from langflow.template.field.prompt import DefaultPromptField
 from langflow.template.utils import update_template_values
 
 
@@ -50,3 +51,6 @@ class PromptComponent(Component):
         # and update the frontend_node with those values
         update_template_values(new_template=frontend_node, previous_template=current_frontend_node["template"])
         return frontend_node
+
+    def _get_fallback_input(self, **kwargs):
+        return DefaultPromptField(**kwargs)
