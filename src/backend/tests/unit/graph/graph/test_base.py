@@ -50,8 +50,6 @@ async def test_graph_functional():
         sender_name=chat_input.message_response
     )
     graph = Graph(chat_input, chat_output)
-    assert graph._run_queue == deque([])
-    graph.prepare()
     assert graph._run_queue == deque(["chat_input"])
     await graph.astep()
     assert graph._run_queue == deque(["chat_output"])
@@ -69,7 +67,6 @@ async def test_graph_functional_async_start():
         sender_name=chat_input.message_response
     )
     graph = Graph(chat_input, chat_output)
-    graph.prepare()
     # Now iterate through the graph
     # and check that the graph is running
     # correctly
@@ -121,7 +118,7 @@ def test_graph_functional_start_end():
     for result in graph.start():
         results.append(result)
 
-    assert len(results) == 3
+    assert len(results) == len(ids) + 1
     assert all(result.vertex.id in ids for result in results if hasattr(result, "vertex"))
     assert results[-1] == Finish()
     # Now, using the same components but different start and end components
@@ -132,6 +129,6 @@ def test_graph_functional_start_end():
     for result in graph.start():
         results.append(result)
 
-    assert len(results) == 4
+    assert len(results) == len(ids) + 1
     assert all(result.vertex.id in ids for result in results if hasattr(result, "vertex"))
     assert results[-1] == Finish()
