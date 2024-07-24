@@ -73,7 +73,7 @@ def test_component_init():
     Test the initialization of the Component class.
     """
     component = BaseComponent(code=code_default, function_entrypoint_name="build")
-    assert component.code == code_default
+    assert component._code == code_default
     assert component.function_entrypoint_name == "build"
 
 
@@ -82,7 +82,7 @@ def test_component_get_code_tree():
     Test the get_code_tree method of the Component class.
     """
     component = BaseComponent(code=code_default, function_entrypoint_name="build")
-    tree = component.get_code_tree(component.code)
+    tree = component.get_code_tree(component._code)
     assert "imports" in tree
 
 
@@ -354,7 +354,7 @@ def test_component_get_code_tree_syntax_error():
     """
     component = BaseComponent(code="import os as", function_entrypoint_name="build")
     with pytest.raises(CodeSyntaxError):
-        component.get_code_tree(component.code)
+        component.get_code_tree(component._code)
 
 
 def test_custom_component_class_template_validation_no_code():

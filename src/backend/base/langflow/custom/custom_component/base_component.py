@@ -22,7 +22,7 @@ class BaseComponent:
     ERROR_CODE_NULL: ClassVar[str] = "Python code must be provided."
     ERROR_FUNCTION_ENTRYPOINT_NAME_NULL: ClassVar[str] = "The name of the entrypoint function must be provided."
 
-    code: Optional[str] = None
+    _code: Optional[str] = None
     _function_entrypoint_name: str = "build"
     field_config: dict = {}
     _user_id: Optional[str]
