@@ -2,15 +2,12 @@
 import IconComponent from "../../../../components/genericIconComponent";
 import { Button } from "../../../../components/ui/button";
 import DeleteConfirmationModal from "../../../../modals/deleteConfirmationModal";
-import FoldersModal from "../../../../modals/foldersModal";
 import NewFlowModal from "../../../../modals/newFlowModal";
 import { cn } from "../../../../utils/utils";
 
 interface ModalsProps {
   openModal: boolean;
   setOpenModal: (value: boolean) => void;
-  openFolderModal: boolean;
-  setOpenFolderModal: (value: boolean) => void;
   openDeleteFolderModal: boolean;
   setOpenDeleteFolderModal: (value: boolean) => void;
   handleDeleteFolder: () => void;
@@ -19,17 +16,12 @@ interface ModalsProps {
 const ModalsComponent = ({
   openModal,
   setOpenModal,
-  openFolderModal,
-  setOpenFolderModal,
   openDeleteFolderModal,
   setOpenDeleteFolderModal,
   handleDeleteFolder,
 }: ModalsProps) => (
   <>
     {openModal && <NewFlowModal open={openModal} setOpen={setOpenModal} />}
-    {openFolderModal && (
-      <FoldersModal open={openFolderModal} setOpen={setOpenFolderModal} />
-    )}
     {openDeleteFolderModal && (
       <DeleteConfirmationModal
         open={openDeleteFolderModal}

@@ -115,8 +115,6 @@ export default function HomePage(): JSX.Element {
       <ModalsComponent
         openModal={openModal}
         setOpenModal={setOpenModal}
-        openFolderModal={openFolderModal}
-        setOpenFolderModal={setOpenFolderModal}
         openDeleteFolderModal={openDeleteFolderModal}
         setOpenDeleteFolderModal={setOpenDeleteFolderModal}
         handleDeleteFolder={handleDeleteFolder}
