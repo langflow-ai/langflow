@@ -46,7 +46,7 @@ async def test_graph():
 @pytest.mark.asyncio
 async def test_graph_functional():
     chat_input = components.inputs.ChatInput(_id="chat_input")
-    chat_output = components.outputs.ChatOutput(message="test", _id="chat_output")(
+    chat_output = components.outputs.ChatOutput(input_value="test", _id="chat_output")(
         sender_name=chat_input.message_response
     )
     graph = Graph(chat_input, chat_output)
