@@ -680,42 +680,25 @@ export type cardComponentPropsType = {
   button?: JSX.Element;
 };
 
-type tabsArrayType = {
+export type tabsArrayType = {
   code: string;
   image: string;
   language: string;
   mode: string;
   name: string;
   description?: string;
-};
-
-type getValueNodeType = {
-  id: string;
-  node: NodeType;
-  type: string;
-  value: null;
-};
-
-type codeTabsFuncTempType = {
-  [key: string]: string | boolean;
+  hasTweaks?: boolean;
 };
 
 export type codeTabsPropsType = {
   open: boolean;
-  isThereTweaks?: boolean;
-  isThereWH?: boolean;
-  flow?: FlowType;
   tabs: Array<tabsArrayType>;
   activeTab: string;
   setActiveTab: (value: string) => void;
   isMessage?: boolean;
-  tweaks?: {
-    tweaksList?: Array<string>;
-    buildTweaks: (node: NodeType[]) => void;
-  };
+  tweaksNodes?: Array<NodeType>;
   activeTweaks?: boolean;
   setActiveTweaks?: (value: boolean) => void;
-  allowExport?: boolean;
 };
 
 export type crashComponentPropsType = {
