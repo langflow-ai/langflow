@@ -713,9 +713,7 @@ export default function NodeToolbarComponent({
           </ConfirmationModal>
           {showModalAdvanced && (
             <EditNodeModal
-              //              setOpenWDoubleClick={setOpenWDoubleClick}
               data={data}
-              nodeLength={nodeLength}
               open={showModalAdvanced}
               setOpen={setShowModalAdvanced}
             />
