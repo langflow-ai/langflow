@@ -1,6 +1,5 @@
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, ClassVar, List, Optional, Sequence, Union
-from uuid import UUID
 
 import yaml
 from cachetools import TTLCache
@@ -80,7 +79,6 @@ class CustomComponent(BaseComponent):
     function_entrypoint_name: ClassVar[str] = "build"
     function: Optional[Callable] = None
     repr_value: Optional[Any] = ""
-    user_id: Optional[Union[UUID, str]] = None
     status: Optional[Any] = None
     """The status of the component. This is displayed on the frontend. Defaults to None."""
     _flows_data: Optional[List[Data]] = None
@@ -88,6 +86,19 @@ class CustomComponent(BaseComponent):
     _logs: List[Log] = []
     _output_logs: dict[str, Log] = {}
     tracing_service: Optional["TracingService"] = None
+
+    def __init__(self, **data):
+        """
+        Initializes a new instance of the CustomComponent class.
+
+        Args:
+            **data: Additional keyword arguments to initialize the custom component.
+        """
+        self.cache = TTLCache(maxsize=1024, ttl=60)
+        self._logs = []
+        self._results = {}
+        self._artifacts = {}
+        super().__init__(**data)
 
     def set_attributes(self, parameters: dict):
         pass
@@ -147,17 +158,6 @@ class CustomComponent(BaseComponent):
             raise ValueError(f"Error getting state: {e}")
 
     _tree: Optional[dict] = None
-
-    def __init__(self, **data):
-        """
-        Initializes a new instance of the CustomComponent class.
-
-        Args:
-            **data: Additional keyword arguments to initialize the custom component.
-        """
-        self.cache = TTLCache(maxsize=1024, ttl=60)
-        self._logs = []
-        super().__init__(**data)
 
     @staticmethod
     def resolve_path(path: str) -> str:
