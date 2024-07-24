@@ -23,6 +23,7 @@ from langflow.graph.vertex.types import ComponentVertex, InterfaceVertex, StateV
 from langflow.schema import Data
 from langflow.schema.schema import INPUT_FIELD_NAME, InputType
 from langflow.services.cache.utils import CacheMiss
+from langflow.services.chat.schema import GetCache, SetCache
 from langflow.services.deps import get_chat_service, get_tracing_service
 
 if TYPE_CHECKING:
@@ -1026,12 +1027,12 @@ class Graph:
     async def build_vertex(
         self,
         vertex_id: str,
+        get_cache: GetCache,
+        set_cache: SetCache,
         inputs_dict: Optional[Dict[str, str]] = None,
         files: Optional[list[str]] = None,
         user_id: Optional[str] = None,
         fallback_to_env_vars: bool = False,
-        get_cache: Awaitable[CacheMiss | None] = None,
-        set_cache: Awaitable[None] = None,
     ) -> VertexBuildResult:
         """
         Builds a vertex in the graph.
