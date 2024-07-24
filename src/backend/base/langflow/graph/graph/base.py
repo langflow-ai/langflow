@@ -93,6 +93,7 @@ class Graph:
             self.tracing_service = None
         if start is not None and end is not None:
             self._set_start_and_end(start, end)
+            self.prepare()
         if (start is not None and end is None) or (start is None and end is not None):
             raise ValueError("You must provide both input and output components")
 
@@ -1003,6 +1004,16 @@ class Graph:
 
         await chat_service.set_cache(str(self.flow_id or self._run_id), self)
         return vertex_build_result
+
+    def step(
+        self,
+        inputs: Optional["InputValueRequest"] = None,
+        files: Optional[list[str]] = None,
+        user_id: Optional[str] = None,
+    ):
+        # Call astep but synchronously
+        loop = asyncio.get_event_loop()
+        return loop.run_until_complete(self.astep(inputs, files, user_id))
 
     def prepare(self, stop_component_id: Optional[str] = None, start_component_id: Optional[str] = None):
         if stop_component_id and start_component_id:
