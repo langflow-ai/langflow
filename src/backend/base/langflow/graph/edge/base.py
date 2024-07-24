@@ -2,7 +2,7 @@ from typing import TYPE_CHECKING, Any
 
 from loguru import logger
 
-from langflow.graph.edge.schema import EdgeData, SourceHandle, TargetHandle
+from langflow.graph.edge.schema import EdgeData, SourceHandle, TargetHandle, TargetHandleDict
 from langflow.schema.schema import INPUT_FIELD_NAME
 from langflow.services.monitor.utils import log_message
 
@@ -14,24 +14,30 @@ class Edge:
     def __init__(self, source: "Vertex", target: "Vertex", edge: EdgeData):
         self.source_id: str = source.id if source else ""
         self.target_id: str = target.id if target else ""
+        self.target_param: str | None = None
+        self._target_handle: TargetHandleDict | str | None = None
         if data := edge.get("data", {}):
             self._source_handle = data.get("sourceHandle", {})
             self._target_handle = data.get("targetHandle", {})
             self.source_handle: SourceHandle = SourceHandle(**self._source_handle)
-            self.target_handle: TargetHandle = TargetHandle(**self._target_handle)
+            if isinstance(self._target_handle, dict):
+                self.target_handle: TargetHandle = TargetHandle(**self._target_handle)
+            else:
+                raise ValueError("Target handle is not a dictionary")
             self.target_param = self.target_handle.fieldName
             # validate handles
             self.validate_handles(source, target)
         else:
             # Logging here because this is a breaking change
             logger.error("Edge data is empty")
-            self._source_handle = edge.get("sourceHandle", "")
-            self._target_handle = edge.get("targetHandle", "")
+            self._source_handle = edge.get("sourceHandle", "")  # type: ignore
+            self._target_handle = edge.get("targetHandle", "")  # type: ignore
             # 'BaseLoader;BaseOutputParser|documents|PromptTemplate-zmTlD'
             # target_param is documents
-            self.source_handle = None
-            self.target_handle = None
-            self.target_param = self._target_handle.split("|")[1]
+            if isinstance(self._target_handle, str):
+                self.target_param = self._target_handle.split("|")[1]
+            else:
+                raise ValueError("Target handle is not a string")
         # Validate in __init__ to fail fast
         self.validate_edge(source, target)
 
@@ -159,7 +165,7 @@ class Edge:
 
 
 class ContractEdge(Edge):
-    def __init__(self, source: "Vertex", target: "Vertex", raw_edge: dict):
+    def __init__(self, source: "Vertex", target: "Vertex", raw_edge: EdgeData):
         super().__init__(source, target, raw_edge)
         self.is_fulfilled = False  # Whether the contract has been fulfilled.
         self.result: Any = None
