@@ -16,7 +16,14 @@ from langflow.schema.data import Data
 from langflow.schema.image import Image, get_file_paths, is_image_file
 
 
-def _timestamp_to_str(timestamp: datetime) -> str:
+def _timestamp_to_str(timestamp: datetime | str) -> str:
+    if isinstance(timestamp, str):
+        # Just check if the string is a valid datetime
+        try:
+            datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S")
+            return timestamp
+        except ValueError:
+            raise ValueError(f"Invalid timestamp: {timestamp}")
     return timestamp.strftime("%Y-%m-%d %H:%M:%S")
 
 
