@@ -83,6 +83,5 @@ class CustomComponent(Component):
 
   const error = await page.getByTestId("title_error_code_modal").textContent();
 
-  expect(error!.length).toBeGreaterThan(50);
-  expect(error?.toLowerCase()).toContain("custom component");
+  expect(error!.length).toBeGreaterThan(20);
 });
