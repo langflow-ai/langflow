@@ -130,6 +130,11 @@ const SideBarFoldersButtonsComponent = ({
 
           link.click();
         },
+        onError: () => {
+          setErrorData({
+            title: `Error in the download folder`,
+          });
+        },
       },
     );
   };
