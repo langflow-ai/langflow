@@ -1,8 +1,15 @@
 from collections import deque
 
+import pytest
+
 from langflow import components
 from langflow.graph import Graph
 from langflow.graph.graph.constants import Finish
+
+
+@pytest.fixture
+def client():
+    pass
 
 
 def test_memory_chatbot():
@@ -19,7 +26,8 @@ AI: """
     openai_component = components.models.OpenAIModelComponent(_id="openai")(
         input_value=prompt_component.build_prompt, max_tokens=100, temperature=0.1
     )
-    chat_output = components.outputs.ChatOutput(_id="chat_output")(input_value=openai_component._mock_response)
+    openai_component.get_output("text_output").value = "Mock response"
+    chat_output = components.outputs.ChatOutput(_id="chat_output")(input_value=openai_component.text_response)
 
     graph = Graph(chat_input, chat_output)
     # Now we run step by step
