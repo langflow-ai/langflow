@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from loguru import logger
 
@@ -18,7 +18,7 @@ class Edge:
         self._target_handle: TargetHandleDict | str | None = None
         if data := edge.get("data", {}):
             self._source_handle = data.get("sourceHandle", {})
-            self._target_handle = data.get("targetHandle", {})
+            self._target_handle = cast(TargetHandleDict, data.get("targetHandle", {}))
             self.source_handle: SourceHandle = SourceHandle(**self._source_handle)
             if isinstance(self._target_handle, dict):
                 self.target_handle: TargetHandle = TargetHandle(**self._target_handle)
