@@ -25,7 +25,7 @@ from langflow.schema.artifact import get_artifact_type, post_process_raw
 from langflow.schema.data import Data
 from langflow.schema.message import Message
 from langflow.services.tracing.schema import Log
-from langflow.template.field.base import UNDEFINED, Output
+from langflow.template.field.base import UNDEFINED, Input, Output
 from langflow.template.frontend_node.custom_components import ComponentFrontendNode
 
 from .custom_component import CustomComponent
@@ -425,3 +425,6 @@ class Component(CustomComponent):
 
     def build(self, **kwargs):
         self.set_attributes(kwargs)
+
+    def _get_fallback_input(self, **kwargs):
+        return Input(**kwargs)
