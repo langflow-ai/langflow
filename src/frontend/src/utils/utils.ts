@@ -485,7 +485,5 @@ export function brokenEdgeMessage({
     field: string;
   };
 }) {
-  console.log("source", source);
-  console.log("target", target);
   return `${source.nodeDisplayName}${source.outputDisplayName ? " | " + source.outputDisplayName : ""} -> ${target.displayName}${target.field ? " | " + target.field : ""}`;
 }
