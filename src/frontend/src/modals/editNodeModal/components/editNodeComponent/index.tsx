@@ -22,7 +22,6 @@ export function EditNodeComponent({
   const rowData = useRowData(nodeClass, open);
 
   const columnDefs: ColDef[] = useColumnDefs(
-    nodeClass,
     nodeId,
     open,
     isTweaks,
