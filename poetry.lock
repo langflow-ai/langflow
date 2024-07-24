@@ -4725,7 +4725,6 @@ tenacity = ">=8.1.0,<8.4.0 || >8.4.0,<9.0.0"
 [[package]]
 name = "langchain-core"
 version = "0.2.23"
-version = "0.2.23"
 description = "Building applications with LLMs through composability"
 optional = false
 python-versions = "<4.0,>=3.8.1"
