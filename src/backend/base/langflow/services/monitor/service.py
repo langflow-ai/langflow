@@ -166,33 +166,12 @@ class MonitorService(Service):
 
         return self.exec_query(query, read_only=False)
 
-    def get_transactions(
-        self,
-        source: str | None = None,
-        target: str | None = None,
-        status: str | None = None,
-        order_by: str | None = "timestamp",
-        flow_id: str | None = None,
-    ):
+    def get_transactions(self, limit: int = 100):
         query = (
             "SELECT index,flow_id, status, error, timestamp, vertex_id, inputs, outputs, target_id FROM transactions"
         )
-        conditions = []
-        if source:
-            conditions.append(f"source = '{source}'")
-        if target:
-            conditions.append(f"target = '{target}'")
-        if status:
-            conditions.append(f"status = '{status}'")
-        if flow_id:
-            conditions.append(f"flow_id = '{flow_id}'")
-
-        if conditions:
-            query += " WHERE " + " AND ".join(conditions)
-
-        if order_by:
-            query += f" ORDER BY {order_by} DESC"
         with duckdb.connect(str(self.db_path), read_only=True) as conn:
+
             df = conn.execute(query).df()
 
         return df.to_dict(orient="records")

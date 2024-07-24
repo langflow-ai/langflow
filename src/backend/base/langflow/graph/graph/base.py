@@ -15,6 +15,7 @@ from langflow.graph.graph.runnable_vertices_manager import RunnableVerticesManag
 from langflow.graph.graph.state_manager import GraphStateManager
 from langflow.graph.graph.utils import find_start_component_id, process_flow, sort_up_to_vertex
 from langflow.graph.schema import InterfaceComponentTypes, RunOutputs
+from langflow.graph.utils import log_transaction
 from langflow.graph.vertex.base import Vertex, VertexStates
 from langflow.graph.vertex.types import InterfaceVertex, StateVertex
 from langflow.schema import Data
@@ -22,7 +23,6 @@ from langflow.schema.schema import INPUT_FIELD_NAME, InputType
 from langflow.services.cache.utils import CacheMiss
 from langflow.services.chat.service import ChatService
 from langflow.services.deps import get_chat_service, get_tracing_service
-from langflow.services.monitor.utils import log_transaction
 
 if TYPE_CHECKING:
     from langflow.graph.schema import ResultData

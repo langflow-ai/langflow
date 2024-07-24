@@ -1,11 +1,14 @@
+import json
 from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+import duckdb
 from alembic.util.exc import CommandError
 from loguru import logger
 from sqlmodel import Session, select, text
 
+from langflow.services.database.models import TransactionTable
 from langflow.services.deps import get_monitor_service
 
 if TYPE_CHECKING:
@@ -105,7 +108,7 @@ def initialize_database(fix_migration: bool = False):
         # if "overlaps with other requested revisions" or "Can't locate revision identified by"
         # are not in the exception, we can't handle it
         if "overlaps with other requested revisions" not in str(
-            exc
+                exc
         ) and "Can't locate revision identified by" not in str(exc):
             raise exc
         # This means there's wrong revision in the DB
@@ -121,6 +124,9 @@ def initialize_database(fix_migration: bool = False):
         if "already exists" not in str(exc):
             logger.error(exc)
         raise exc
+    with session_getter(database_service) as session:
+        migrate_messages_from_monitor_service_to_database(session)
+        migrate_transactions_from_monitor_service_to_database(session)
     logger.debug("Database initialized")
 
 
@@ -148,3 +154,31 @@ class Result:
 class TableResults:
     table_name: str
     results: list[Result]
+
+
+def migrate_transactions_from_monitor_service_to_database(session: Session) -> None:
+    monitor_service = get_monitor_service()
+    batch = monitor_service.get_transactions()
+    if not batch:
+        logger.debug("No transactions to migrate.")
+        return
+    to_delete = []
+    while batch:
+        for row in batch:
+            tt = TransactionTable(
+                flow_id=row["flow_id"],
+                status=row["status"],
+                error=row["error"],
+                timestamp=row["timestamp"],
+                vertex_id=row["vertex_id"],
+                inputs=json.loads(row["inputs"]) if row["inputs"] else None,
+                outputs=json.loads(row["outputs"]) if row["outputs"] else None,
+                target_id=row["target_id"],
+            )
+            to_delete.append(row["index"])
+            session.add(tt)
+        session.commit()
+        with duckdb.connect(str(monitor_service.db_path), read_only=False) as conn:
+            conn.execute(f"DELETE FROM transactions WHERE index in ({','.join(map(str, to_delete))})")
+            conn.commit()
+        batch = monitor_service.get_transactions()
