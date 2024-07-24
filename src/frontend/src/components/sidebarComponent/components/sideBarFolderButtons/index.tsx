@@ -1,9 +1,11 @@
-import { usePostUploadFolders } from "@/controllers/API/queries/folders";
+import {
+  usePatchFolders,
+  usePostUploadFolders,
+} from "@/controllers/API/queries/folders";
 import { usePostFolders } from "@/controllers/API/queries/folders/use-post-folders";
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { FolderType } from "../../../../pages/MainPage/entities";
-import { addFolder, updateFolder } from "../../../../pages/MainPage/services";
 import { handleDownloadFolderFn } from "../../../../pages/MainPage/utils/handle-download-folder";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
@@ -52,6 +54,7 @@ const SideBarFoldersButtonsComponent = ({
   const getFolderById = useFolderStore((state) => state.getFolderById);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const getFoldersApi = useFolderStore((state) => state.getFoldersApi);
 
   const handleFolderChange = () => {
     getFolderById(folderId);
@@ -112,6 +115,7 @@ const SideBarFoldersButtonsComponent = ({
   };
 
   const { mutate: mutateAddFolder } = usePostFolders();
+  const { mutate: mutateUpdateFolder } = usePatchFolders();
 
   function addNewFolder() {
     mutateAddFolder(
@@ -123,8 +127,8 @@ const SideBarFoldersButtonsComponent = ({
         },
       },
       {
-        onSuccess: () => {
-          refreshFolders();
+        onSuccess: async () => {
+          await getFoldersApi(true);
         },
       },
     );
@@ -163,22 +167,31 @@ const SideBarFoldersButtonsComponent = ({
         flows: item.flows?.length > 0 ? item.flows : [],
         components: item.components?.length > 0 ? item.components : [],
       };
-      const updatedFolder = await updateFolder(body, item.id!);
 
-      const updatedFolderIndex = folders.findIndex(
-        (f) => f.id === updatedFolder.id,
-      );
+      mutateUpdateFolder(
+        {
+          data: body,
+          folderId: item.id!,
+        },
+        {
+          onSuccess: (updatedFolder) => {
+            const updatedFolderIndex = folders.findIndex(
+              (f) => f.id === updatedFolder.id,
+            );
 
-      const updateFolders = [...folders];
-      updateFolders[updatedFolderIndex] = updatedFolder;
+            const updateFolders = [...folders];
+            updateFolders[updatedFolderIndex] = updatedFolder;
 
-      setFolders(updateFolders);
-      setFoldersNames({});
-      setEditFolderName(
-        folders.map((obj) => ({
-          name: obj.name,
-          edit: false,
-        })),
+            setFolders(updateFolders);
+            setFoldersNames({});
+            setEditFolderName(
+              folders.map((obj) => ({
+                name: obj.name,
+                edit: false,
+              })),
+            );
+          },
+        },
       );
     } else {
       setFoldersNames((old) => ({

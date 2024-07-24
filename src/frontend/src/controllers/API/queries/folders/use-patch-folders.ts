@@ -5,17 +5,20 @@ import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
 
-interface IPatchAddFolders {
+interface IPatchPatchFolders {
   data: AddFolderType;
+  folderId: string;
 }
 
 export const usePatchFolders: useMutationFunctionType<
   undefined,
-  IPatchAddFolders
+  IPatchPatchFolders
 > = (options?) => {
   const { mutate } = UseRequestProcessor();
 
-  const addFoldersFn = async (newFolder: IPatchAddFolders): Promise<void> => {
+  const patchFoldersFn = async (
+    newFolder: IPatchPatchFolders,
+  ): Promise<void> => {
     const payload = {
       name: newFolder.data.name,
       description: newFolder.data.description,
@@ -23,12 +26,14 @@ export const usePatchFolders: useMutationFunctionType<
       components_list: newFolder.data.components ?? [],
     };
 
-    const res = await api.patch(`${getURL("FOLDERS")}/`, payload);
-    await useFolderStore.getState().getFoldersApi(true);
+    const res = await api.patch(
+      `${getURL("FOLDERS")}/${newFolder.folderId}`,
+      payload,
+    );
     return res.data;
   };
 
-  const mutation = mutate(["usePatchFolders"], addFoldersFn, options);
+  const mutation = mutate(["usePatchFolders"], patchFoldersFn, options);
 
   return mutation;
 };

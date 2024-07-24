@@ -25,7 +25,6 @@ export const usePostFolders: useMutationFunctionType<
     };
 
     const res = await api.post(`${getURL("FOLDERS")}/`, payload);
-    await useFolderStore.getState().getFoldersApi(true);
     return res.data;
   };
 
