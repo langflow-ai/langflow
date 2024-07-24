@@ -394,7 +394,7 @@ class CustomComponent(BaseComponent):
         if not self._code:
             return ""
 
-        base_name = self._code_class_base_inheritance
+        base_name = self.code_class_base_inheritance
         method_name = self.function_entrypoint_name
 
         classes = []
