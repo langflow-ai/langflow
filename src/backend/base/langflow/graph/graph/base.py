@@ -145,7 +145,7 @@ class Graph:
         if not isinstance(target_vertex, ComponentVertex):
             raise ValueError(f"Target vertex {target_id} is not a component vertex.")
         output_name, input_name = output_input_tuple
-        edge_data = {
+        edge_data: EdgeData = {
             "source": source_id,
             "target": target_id,
             "data": {
