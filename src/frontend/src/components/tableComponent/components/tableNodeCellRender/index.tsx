@@ -7,23 +7,27 @@ import useFlowStore from "../../../../stores/flowStore";
 import { isTargetHandleConnected } from "../../../../utils/reactflowUtils";
 
 export default function TableNodeCellRender({
-  node: { data },
-  value: { nodeId, isTweaks },
+  value: { nodeId, parameterId, isTweaks },
 }: CustomCellRendererProps) {
   const edges = useFlowStore((state) => state.edges);
   const node = isTweaks
     ? useTweaksStore((state) => state.getNode(nodeId))
     : useFlowStore((state) => state.getNode(nodeId));
-  const parameter = node?.data?.node?.template?.[data.key];
+  const parameter = node?.data?.node?.template?.[parameterId];
 
   const setNode = useTweaksStore((state) => state.setNode);
 
-  const disabled = isTargetHandleConnected(edges, data.key, data, nodeId);
+  const disabled = isTargetHandleConnected(
+    edges,
+    parameterId,
+    parameter,
+    nodeId,
+  );
 
   const { handleOnNewValue } = useHandleOnNewValue({
     node: node?.data.node,
     nodeId,
-    name: data.key,
+    name: parameterId,
     setNode: isTweaks ? setNode : undefined,
   });
 
@@ -39,7 +43,7 @@ export default function TableNodeCellRender({
           nodeId={nodeId}
           handleOnNewValue={handleOnNewValue}
           templateData={parameter}
-          name={data.key}
+          name={parameterId}
           templateValue={parameter.value}
           editNode={true}
           handleNodeClass={handleNodeClass}
