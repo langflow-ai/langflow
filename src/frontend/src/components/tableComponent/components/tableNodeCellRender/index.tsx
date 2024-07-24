@@ -32,8 +32,6 @@ export default function TableNodeCellRender({
     isTweaks ? setNode : undefined,
   );
 
-  console.log("oi");
-
   return (
     parameter && (
       <div className="group mx-auto flex h-full max-h-48 w-[300px] items-center justify-center overflow-auto py-2.5 custom-scroll">
