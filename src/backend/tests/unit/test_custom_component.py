@@ -72,7 +72,7 @@ def test_component_init():
     """
     Test the initialization of the Component class.
     """
-    component = BaseComponent(code=code_default, function_entrypoint_name="build")
+    component = BaseComponent(_code=code_default, function_entrypoint_name="build")
     assert component._code == code_default
     assert component.function_entrypoint_name == "build"
 
@@ -81,7 +81,7 @@ def test_component_get_code_tree():
     """
     Test the get_code_tree method of the Component class.
     """
-    component = BaseComponent(code=code_default, function_entrypoint_name="build")
+    component = BaseComponent(_code=code_default, function_entrypoint_name="build")
     tree = component.get_code_tree(component._code)
     assert "imports" in tree
 
@@ -120,7 +120,7 @@ def test_custom_component_get_function():
     """
     Test the get_function property of the CustomComponent class.
     """
-    custom_component = CustomComponent(code="def build(): pass", function_entrypoint_name="build")
+    custom_component = CustomComponent(_code="def build(): pass", function_entrypoint_name="build")
     my_function = custom_component.get_function()
     assert isinstance(my_function, types.FunctionType)
 
@@ -195,7 +195,7 @@ def test_component_get_function_valid():
     Test the get_function method of the Component
     class with valid code and function_entrypoint_name.
     """
-    component = BaseComponent(code="def build(): pass", function_entrypoint_name="build")
+    component = BaseComponent(_code="def build(): pass", function_entrypoint_name="build")
     my_function = component.get_function()
     assert callable(my_function)
 
