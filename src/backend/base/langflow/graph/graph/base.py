@@ -1191,7 +1191,7 @@ class Graph:
                     next_runnable_vertices.remove(v_id)
                 else:
                     self.run_manager.add_to_vertices_being_run(next_v_id)
-            if cache:
+            if cache and self.flow_id is not None:
                 set_cache_coro = partial(get_chat_service().set_cache, key=self.flow_id)
                 await set_cache_coro(self, lock)
         return next_runnable_vertices
