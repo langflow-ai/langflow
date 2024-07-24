@@ -186,9 +186,9 @@ async def build_custom_component(params: dict, custom_component: "CustomComponen
     raw = post_process_raw(raw, artifact_type)
     artifact = {"repr": custom_repr, "raw": raw, "type": artifact_type}
 
-    if custom_component.vertex is not None:
-        custom_component._artifacts = {custom_component.vertex.outputs[0].get("name"): artifact}
-        custom_component._results = {custom_component.vertex.outputs[0].get("name"): build_result}
+    if custom_component._vertex is not None:
+        custom_component._artifacts = {custom_component._vertex.outputs[0].get("name"): artifact}
+        custom_component._results = {custom_component._vertex.outputs[0].get("name"): build_result}
         return custom_component, build_result, artifact
 
     raise ValueError("Custom component does not have a vertex")
