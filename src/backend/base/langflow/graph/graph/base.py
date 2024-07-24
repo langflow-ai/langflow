@@ -4,7 +4,7 @@ from collections import defaultdict, deque
 from datetime import datetime, timezone
 from functools import partial
 from itertools import chain
-from typing import TYPE_CHECKING, Any, Awaitable, Dict, Generator, List, Optional, Tuple, Type, Union
+from typing import TYPE_CHECKING, Any, Dict, Generator, List, Optional, Tuple, Type, Union
 
 from loguru import logger
 
@@ -76,7 +76,7 @@ class Graph:
         self.run_manager = RunnableVerticesManager()
         self.state_manager = GraphStateManager()
         self._vertices: List[dict] = []
-        self._edges: List[dict] = []
+        self._edges: List[EdgeData] = []
         self.top_level_vertices: List[str] = []
         self.vertex_map: Dict[str, Vertex] = {}
         self.predecessor_map: Dict[str, List[str]] = defaultdict(list)
@@ -96,7 +96,7 @@ class Graph:
         if (start is not None and end is None) or (start is None and end is not None):
             raise ValueError("You must provide both input and output components")
 
-    def add_nodes_and_edges(self, nodes: List[Dict], edges: List[Dict[str, str]]):
+    def add_nodes_and_edges(self, nodes: List[Dict], edges: List[EdgeData]):
         self._vertices = nodes
         self._edges = edges
         self.raw_graph_data = {"nodes": nodes, "edges": edges}
@@ -1341,7 +1341,7 @@ class Graph:
 
         return list(edges)
 
-    def build_edge(self, edge: dict) -> ContractEdge:
+    def build_edge(self, edge: EdgeData) -> ContractEdge:
         source = self.get_vertex(edge["source"])
         target = self.get_vertex(edge["target"])
 
