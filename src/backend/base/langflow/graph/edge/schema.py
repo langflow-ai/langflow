@@ -62,7 +62,7 @@ class SourceHandle(BaseModel):
         return v
 
 
-class SourceHandleDict(TypedDict):
+class SourceHandleDict(TypedDict, total=False):
     baseClasses: list[str]
     dataType: str
     id: str
@@ -82,5 +82,7 @@ class EdgeDataDetails(TypedDict):
     targetHandle: TargetHandleDict
 
 
-class EdgeData(TypedDict):
+class EdgeData(TypedDict, total=False):
+    source: str
+    target: str
     data: EdgeDataDetails
