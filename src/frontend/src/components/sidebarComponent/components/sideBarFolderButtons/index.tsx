@@ -127,8 +127,8 @@ const SideBarFoldersButtonsComponent = ({
         },
       },
       {
-        onSuccess: async () => {
-          await getFoldersApi(true);
+        onSuccess: () => {
+          refreshFolders();
         },
       },
     );
