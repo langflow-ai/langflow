@@ -4,6 +4,8 @@ import importlib
 from types import FunctionType
 from typing import Dict, List, Optional, Union
 
+from pydantic import ValidationError
+
 from langflow.field_typing.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES
 
 
@@ -168,8 +170,12 @@ def create_class(code, class_name):
 
     class_code = extract_class_code(module, class_name)
     compiled_class = compile_class_code(class_code)
-
-    return build_class_constructor(compiled_class, exec_globals, class_name)
+    try:
+        return build_class_constructor(compiled_class, exec_globals, class_name)
+    except ValidationError as e:
+        messages = [error["msg"].split(",", 1) for error in e.errors()]
+        error_message = "\n".join([message[1] if len(message) > 1 else message[0] for message in messages])
+        raise ValueError(error_message) from e
 
 
 def create_type_ignore_class():
@@ -250,17 +256,17 @@ def build_class_constructor(compiled_class, exec_globals, class_name):
     exec_globals[class_name] = locals()[class_name]
 
     # Return a function that imports necessary modules and creates an instance of the target class
-    def build_custom_class(*args, **kwargs):
+    def build_custom_class():
         for module_name, module in exec_globals.items():
             if isinstance(module, type(importlib)):
                 globals()[module_name] = module
 
-        instance = exec_globals[class_name](*args, **kwargs)
+        exec_globals[class_name]
 
-        return instance
+        return exec_globals[class_name]
 
     build_custom_class.__globals__.update(exec_globals)
-    return build_custom_class
+    return build_custom_class()
 
 
 def get_default_imports(code_string):

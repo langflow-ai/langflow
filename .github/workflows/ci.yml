@@ -17,8 +17,9 @@ on:
         required: false
         type: string
   pull_request:
-
-
+    types: [synchronize]
+  pull_request_review:
+    types: [submitted]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -26,6 +27,8 @@ concurrency:
 
 jobs:
   path-filter:
+    if: ${{ (contains( github.event.pull_request.labels.*.name, 'lgtm') && github.event.pull_request.draft == false) || (github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call') }}
+
     name: Filter Paths
     runs-on: ubuntu-latest
     outputs:
@@ -42,21 +45,7 @@ jobs:
         id: filter
         uses: dorny/paths-filter@v3
         with:
-          filters: |
-            python:
-              - "src/backend/**"
-              - "src/backend/**.py"
-              - "pyproject.toml"
-              - "poetry.lock"
-              - "**/python_test.yml"
-            tests:
-              - "tests/**"
-              - "src/frontend/tests/**"
-            frontend:
-              - "src/frontend/**"
-              - "**/typescript_test.yml"
-            docs:
-              - "docs/**"
+          filters: ./.github/changes-filter.yaml
 
   test-backend:
     needs: path-filter
@@ -90,8 +79,7 @@ jobs:
   ci_success:
     name: "CI Success"
     needs: [test-backend, test-frontend, lint-backend, test-docs-build]
-    if: |
-      always()
+    if: always()
     runs-on: ubuntu-latest
     env:
       JOBS_JSON: ${{ toJSON(needs) }}

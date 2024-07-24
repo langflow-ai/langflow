@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+    paths:
+      - 'docs/**'
     # Review gh actions docs if you want to further define triggers, paths, etc
     # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#on
 
@@ -20,7 +22,7 @@ jobs:
           cache-dependency-path: ./docs/package-lock.json
 
       - name: Install dependencies
-        run: cd docs && npm install
+        run: cd docs && npm install --legacy-peer-deps
       - name: Build website
         run: cd docs && npm run build
 

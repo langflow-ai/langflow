@@ -9,6 +9,7 @@ from langflow.inputs.inputs import InputTypes
 from langflow.schema.artifact import get_artifact_type, post_process_raw
 from langflow.schema.data import Data
 from langflow.schema.message import Message
+from langflow.services.tracing.schema import Log
 from langflow.template.field.base import UNDEFINED, Output
 
 from .custom_component import CustomComponent
@@ -38,16 +39,20 @@ class Component(CustomComponent):
     inputs: List[InputTypes] = []
     outputs: List[Output] = []
     code_class_base_inheritance: ClassVar[str] = "Component"
+    _output_logs: dict[str, Log] = {}
 
     def __init__(self, **data):
-        super().__init__(**data)
         self._inputs: dict[str, InputTypes] = {}
         self._results: dict[str, Any] = {}
         self._attributes: dict[str, Any] = {}
+        self._parameters: dict[str, Any] = {}
+        self._output_logs = {}
+        super().__init__(**data)
         if not hasattr(self, "trace_type"):
             self.trace_type = "chain"
         if self.inputs is not None:
             self.map_inputs(self.inputs)
+        self.set_attributes(self._parameters)
 
     def __getattr__(self, name: str) -> Any:
         if "_attributes" in self.__dict__ and name in self.__dict__["_attributes"]:
@@ -121,10 +126,9 @@ class Component(CustomComponent):
     async def _build_with_tracing(self):
         inputs = self.get_trace_as_inputs()
         metadata = self.get_trace_as_metadata()
-        async with self.tracing_service.trace_context(self.trace_name, self.trace_type, inputs, metadata):
+        async with self.tracing_service.trace_context(self, self.trace_name, inputs, metadata):
             _results, _artifacts = await self._build_results()
-            trace_name = self.tracing_service.run_name
-            self.tracing_service.set_outputs(trace_name, _results)
+            self.tracing_service.set_outputs(self.trace_name, _results)
 
         return _results, _artifacts
 
@@ -185,9 +189,11 @@ class Component(CustomComponent):
                         if raw is None and isinstance(result, (dict, Data, str)):
                             raw = result.data if isinstance(result, Data) else result
                         artifact_type = get_artifact_type(artifact_value, result)
-                        raw = post_process_raw(raw, artifact_type)
+                        raw, artifact_type = post_process_raw(raw, artifact_type)
                         artifact = {"repr": custom_repr, "raw": raw, "type": artifact_type}
                         _artifacts[output.name] = artifact
+                        self._output_logs[output.name] = self._logs
+                        self._logs = []
         self._artifacts = _artifacts
         self._results = _results
         if self.tracing_service:

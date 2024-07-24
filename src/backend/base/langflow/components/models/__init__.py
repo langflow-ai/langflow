@@ -1,3 +1,4 @@
+from .AIMLModel import AIMLModelComponent
 from .AmazonBedrockModel import AmazonBedrockComponent
 from .AnthropicModel import AnthropicModelComponent
 from .AzureOpenAIModel import AzureChatOpenAIComponent
@@ -10,6 +11,7 @@ from .OpenAIModel import OpenAIModelComponent
 from .VertexAiModel import ChatVertexAIComponent
 
 __all__ = [
+    "AIMLModelComponent",
     "AmazonBedrockComponent",
     "AnthropicModelComponent",
     "AzureChatOpenAIComponent",

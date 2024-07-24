@@ -40,7 +40,7 @@ jobs:
       - name: Install Node.js dependencies
         run: |
           cd docs
-          npm install
+          npm install --legacy-peer-deps
         if: ${{ steps.setup-node.outputs.cache-hit != 'true' }}
 
       - name: Build Docs

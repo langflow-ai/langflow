@@ -84,6 +84,6 @@ def update_frontend_node_with_template_values(frontend_node, raw_frontend_node):
 
     old_code = raw_frontend_node["template"]["code"]["value"]
     new_code = frontend_node["template"]["code"]["value"]
-    frontend_node["edited"] = old_code != new_code
+    frontend_node["edited"] = raw_frontend_node["edited"] or (old_code != new_code)
 
     return frontend_node

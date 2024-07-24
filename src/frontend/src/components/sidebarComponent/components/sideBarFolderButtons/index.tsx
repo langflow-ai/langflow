@@ -1,3 +1,4 @@
+import { usePostUploadFolders } from "@/controllers/API/queries/folders";
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { FolderType } from "../../../../pages/MainPage/entities";
@@ -33,7 +34,6 @@ const SideBarFoldersButtonsComponent = ({
   const [editFolders, setEditFolderName] = useState(
     folders.map((obj) => ({ name: obj.name, edit: false })),
   );
-  const uploadFolder = useFolderStore((state) => state.uploadFolder);
   const currentFolder = pathname.split("/");
   const urlWithoutPath = pathname.split("/").length < 4;
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
@@ -61,21 +61,49 @@ const SideBarFoldersButtonsComponent = ({
     handleFolderChange,
   );
 
+  const { mutate } = usePostUploadFolders();
+
   const handleUploadFlowsToFolder = () => {
-    uploadFolder(folderId)
-      .then(() => {
-        getFolderById(folderId);
-        setSuccessData({
-          title: "Uploaded successfully",
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".json";
+    input.click();
+
+    input.onchange = (event: Event) => {
+      if (
+        (event.target as HTMLInputElement).files![0].type === "application/json"
+      ) {
+        const file = (event.target as HTMLInputElement).files![0];
+        const formData = new FormData();
+        formData.append("file", file);
+        file.text().then(async (text) => {
+          const data = JSON.parse(text);
+          if (data.data?.nodes) {
+            await useFlowsManagerStore.getState().addFlow(true, data);
+            getFolderById(folderId);
+          } else {
+            mutate(
+              { formData },
+              {
+                onSuccess: () => {
+                  getFolderById(folderId);
+                  setSuccessData({
+                    title: "Uploaded successfully",
+                  });
+                },
+                onError: (err) => {
+                  console.log(err);
+                  setErrorData({
+                    title: `Error on upload`,
+                    list: [err["response"]["data"]],
+                  });
+                },
+              },
+            );
+          }
         });
-      })
-      .catch((err) => {
-        console.log(err);
-        setErrorData({
-          title: `Error on upload`,
-          list: [err["response"]["data"]],
-        });
-      });
+      }
+    };
   };
 
   const handleDownloadFolder = (id: string) => {

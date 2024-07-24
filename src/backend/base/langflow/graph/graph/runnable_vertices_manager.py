@@ -1,10 +1,4 @@
-import asyncio
 from collections import defaultdict
-from typing import TYPE_CHECKING, Callable, Coroutine, List
-
-if TYPE_CHECKING:
-    from langflow.graph.graph.base import Graph
-    from langflow.graph.vertex.base import Vertex
 
 
 class RunnableVerticesManager:
@@ -19,6 +13,7 @@ class RunnableVerticesManager:
             "run_map": self.run_map,
             "run_predecessors": self.run_predecessors,
             "vertices_to_run": self.vertices_to_run,
+            "vertices_being_run": self.vertices_being_run,
         }
 
     @classmethod
@@ -27,6 +22,7 @@ class RunnableVerticesManager:
         instance.run_map = data["run_map"]
         instance.run_predecessors = data["run_predecessors"]
         instance.vertices_to_run = data["vertices_to_run"]
+        instance.vertices_being_run = data["vertices_being_run"]
         return instance
 
     def __getstate__(self) -> object:
@@ -34,50 +30,37 @@ class RunnableVerticesManager:
             "run_map": self.run_map,
             "run_predecessors": self.run_predecessors,
             "vertices_to_run": self.vertices_to_run,
+            "vertices_being_run": self.vertices_being_run,
         }
 
     def __setstate__(self, state: dict) -> None:
         self.run_map = state["run_map"]
         self.run_predecessors = state["run_predecessors"]
         self.vertices_to_run = state["vertices_to_run"]
+        self.vertices_being_run = state["vertices_being_run"]
+
+    def all_predecessors_are_fulfilled(self) -> bool:
+        return all(not value for value in self.run_predecessors.values())
 
     def update_run_state(self, run_predecessors: dict, vertices_to_run: set):
         self.run_predecessors.update(run_predecessors)
         self.vertices_to_run.update(vertices_to_run)
         self.build_run_map(self.run_predecessors, self.vertices_to_run)
 
-    def is_vertex_runnable(self, vertex: "Vertex") -> bool:
+    def is_vertex_runnable(self, vertex_id: str, is_active: bool) -> bool:
         """Determines if a vertex is runnable."""
-
-        return (
-            vertex.is_active() and self.are_all_predecessors_fulfilled(vertex.id) and vertex.id in self.vertices_to_run
-        )
+        if not is_active:
+            return False
+        if vertex_id in self.vertices_being_run:
+            return False
+        if vertex_id not in self.vertices_to_run:
+            return False
+        if not self.are_all_predecessors_fulfilled(vertex_id):
+            return False
+        return True
 
     def are_all_predecessors_fulfilled(self, vertex_id: str) -> bool:
         return not any(self.run_predecessors.get(vertex_id, []))
-
-    def find_runnable_predecessors_for_successors(self, vertex: "Vertex") -> List[str]:
-        """Finds runnable predecessors for the successors of a given vertex."""
-        runnable_vertices = []
-        visited = set()
-        get_vertex = vertex.graph.get_vertex
-
-        def find_runnable_predecessors(predecessor: "Vertex"):
-            predecessor_id = predecessor.id
-            if predecessor_id in visited:
-                return
-            visited.add(predecessor_id)
-            if self.is_vertex_runnable(predecessor):
-                runnable_vertices.append(predecessor_id)
-            else:
-                for pred_pred_id in self.run_predecessors.get(predecessor_id, []):
-                    find_runnable_predecessors(get_vertex(pred_pred_id))
-
-        for successor_id in self.run_map.get(vertex.id, []):
-            for predecessor_id in self.run_predecessors.get(successor_id, []):
-                find_runnable_predecessors(get_vertex(predecessor_id))
-
-        return runnable_vertices
 
     def remove_from_predecessors(self, vertex_id: str):
         """Removes a vertex from the predecessor list of its successors."""
@@ -102,71 +85,9 @@ class RunnableVerticesManager:
         else:
             self.vertices_being_run.discard(vertex_id)
 
-    async def get_next_runnable_vertices(
-        self,
-        lock: asyncio.Lock,
-        set_cache_coro: Callable[["Graph", asyncio.Lock], Coroutine],
-        graph: "Graph",
-        vertex: "Vertex",
-        cache: bool = True,
-    ) -> List[str]:
-        """
-        Retrieves the next runnable vertices in the graph for a given vertex.
-
-        Args:
-            lock (asyncio.Lock): The lock object to be used for synchronization.
-            set_cache_coro (Callable): The coroutine function to set the cache.
-            graph (Graph): The graph object containing the vertices.
-            vertex (Vertex): The vertex object for which the next runnable vertices are to be retrieved.
-            cache (bool, optional): A flag to indicate if the cache should be updated. Defaults to True.
-
-        Returns:
-            list: A list of IDs of the next runnable vertices.
-
-        """
-        async with lock:
-            self.remove_vertex_from_runnables(vertex.id)
-            direct_successors_ready = [v for v in vertex.successors_ids if self.is_vertex_runnable(graph.get_vertex(v))]
-            if not direct_successors_ready:
-                # No direct successors ready, look for runnable predecessors of successors
-                next_runnable_vertices = self.find_runnable_predecessors_for_successors(vertex)
-            else:
-                next_runnable_vertices = direct_successors_ready
-
-            for v_id in set(next_runnable_vertices):  # Use set to avoid duplicates
-                if vertex.id == v_id:
-                    next_runnable_vertices.remove(v_id)
-                else:
-                    self.add_to_vertices_being_run(v_id)
-            if cache:
-                await set_cache_coro(data=graph, lock=lock)  # type: ignore
-        return next_runnable_vertices
-
     def remove_vertex_from_runnables(self, v_id):
         self.update_vertex_run_state(v_id, is_runnable=False)
         self.remove_from_predecessors(v_id)
 
     def add_to_vertices_being_run(self, v_id):
         self.vertices_being_run.add(v_id)
-
-    @staticmethod
-    def get_top_level_vertices(graph, vertices_ids):
-        """
-        Retrieves the top-level vertices from the given graph based on the provided vertex IDs.
-
-        Args:
-            graph (Graph): The graph object containing the vertices.
-            vertices_ids (list): A list of vertex IDs.
-
-        Returns:
-            list: A list of top-level vertex IDs.
-
-        """
-        top_level_vertices = []
-        for vertex_id in vertices_ids:
-            vertex = graph.get_vertex(vertex_id)
-            if vertex.parent_is_top_level:
-                top_level_vertices.append(vertex.parent_node_id)
-            else:
-                top_level_vertices.append(vertex_id)
-        return top_level_vertices

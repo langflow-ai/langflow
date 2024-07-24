@@ -816,6 +816,10 @@ export const defaultShortcuts = [
     shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + F`,
   },
   {
+    name: "Freeze Path",
+    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + Shift + F`,
+  },
+  {
     name: "Flow Share",
     shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + B`,
   },
@@ -853,6 +857,8 @@ export const TITLE_ERROR_UPDATING_COMPONENT =
 
 export const EMPTY_INPUT_SEND_MESSAGE = "No input message provided.";
 
+export const EMPTY_OUTPUT_SEND_MESSAGE = "Message empty.";
+
 export const TABS_ORDER = [
   "run curl",
   "python api",
@@ -860,3 +866,7 @@ export const TABS_ORDER = [
   "python code",
   "chat widget html",
 ];
+
+export const LANGFLOW_ACCESS_TOKEN = "access_token_lf";
+export const LANGFLOW_API_TOKEN = "apikey_tkn_lflw";
+export const LANGFLOW_AUTO_LOGIN_OPTION = "auto_login_lf";

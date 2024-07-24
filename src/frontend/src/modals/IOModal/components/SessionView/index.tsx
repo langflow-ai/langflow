@@ -1,5 +1,9 @@
 import Loading from "@/components/ui/loading";
-import { useGetMessagesQuery } from "@/controllers/API/queries/messages";
+import {
+  useDeleteMessages,
+  useGetMessagesQuery,
+  useUpdateMessage,
+} from "@/controllers/API/queries/messages";
 import { useIsFetching } from "@tanstack/react-query";
 import {
   CellEditRequestEvent,
@@ -9,8 +13,6 @@ import {
 import cloneDeep from "lodash/cloneDeep";
 import { useMemo, useState } from "react";
 import TableComponent from "../../../../components/tableComponent";
-import useRemoveMessages from "../../../../pages/SettingsPage/pages/messagesPage/hooks/use-remove-messages";
-import useUpdateMessage from "../../../../pages/SettingsPage/pages/messagesPage/hooks/use-updateMessage";
 import useAlertStore from "../../../../stores/alertStore";
 import { useMessagesStore } from "../../../../stores/messagesStore";
 import { messagesSorter } from "../../../../utils/utils";
@@ -26,21 +28,30 @@ export default function SessionView({
   const messages = useMessagesStore((state) => state.messages);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
-
+  const updateMessage = useMessagesStore((state) => state.updateMessage);
+  const deleteMessagesStore = useMessagesStore((state) => state.removeMessages);
   const isFetching = useIsFetching({
     queryKey: ["useGetMessagesQuery"],
     exact: false,
   });
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
 
-  const { handleRemoveMessages } = useRemoveMessages(
-    setSelectedRows,
-    setSuccessData,
-    setErrorData,
-    selectedRows,
-  );
+  const { mutate: deleteMessages } = useDeleteMessages({
+    onSuccess: () => {
+      deleteMessagesStore(selectedRows);
+      setSelectedRows([]);
+      setSuccessData({
+        title: "Messages deleted successfully.",
+      });
+    },
+    onError: () => {
+      setErrorData({
+        title: "Error deleting messages.",
+      });
+    },
+  });
 
-  const { handleUpdate } = useUpdateMessage(setSuccessData, setErrorData);
+  const { mutate: updateMessageMutation } = useUpdateMessage();
 
   function handleUpdateMessage(event: NewValueParams<any, string>) {
     const newValue = event.newValue;
@@ -50,9 +61,21 @@ export default function SessionView({
       ...row,
       [field]: newValue,
     };
-    handleUpdate(data).catch((error) => {
-      event.data[field] = event.oldValue;
-      event.api.refreshCells();
+    updateMessageMutation(data, {
+      onSuccess: () => {
+        updateMessage(data);
+        // Set success message
+        setSuccessData({
+          title: "Messages updated successfully.",
+        });
+      },
+      onError: () => {
+        setErrorData({
+          title: "Error updating messages.",
+        });
+        event.data[field] = event.oldValue;
+        event.api.refreshCells();
+      },
     });
   }
 
@@ -65,6 +88,10 @@ export default function SessionView({
       : filteredMessages;
     return filteredMessages;
   }, [session, id, messages]);
+
+  function handleRemoveMessages() {
+    deleteMessages({ ids: selectedRows });
+  }
 
   return isFetching > 0 ? (
     <div className="flex h-full w-full items-center justify-center align-middle">

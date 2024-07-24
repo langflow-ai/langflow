@@ -1,5 +1,5 @@
+import sortFields from "@/CustomNodes/utils/sort-fields";
 import { useMemo } from "react";
-import { LANGFLOW_SUPPORTED_TYPES } from "../../../constants/constants";
 import { APIClassType } from "../../../types/api";
 import { NodeDataType } from "../../../types/flow";
 
@@ -15,13 +15,13 @@ const useRowData = (
         return (
           key.charAt(0) !== "_" &&
           templateParam.show &&
-          LANGFLOW_SUPPORTED_TYPES.has(templateParam.type) &&
           !(
             (key === "code" && templateParam.type === "code") ||
             (key.includes("code") && templateParam.proxy)
           )
         );
       })
+      .sort((a, b) => sortFields(a, b, myData.node?.field_order ?? []))
       .map((key: string) => {
         const templateParam = myData.node!.template[key] as any;
         return {

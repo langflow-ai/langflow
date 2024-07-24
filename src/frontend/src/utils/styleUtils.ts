@@ -1,3 +1,5 @@
+import { AIMLIcon } from "@/icons/AIML";
+import { freezeAllIcon } from "@/icons/freezeAll";
 import {
   AlertCircle,
   AlertTriangle,
@@ -132,6 +134,7 @@ import {
   SquarePen,
   Store,
   SunIcon,
+  Table,
   TerminalIcon,
   TerminalSquare,
   TextCursorInput,
@@ -167,7 +170,9 @@ import { BotMessageSquareIcon } from "../icons/BotMessageSquare";
 import { CassandraIcon } from "../icons/Cassandra";
 import { ChromaIcon } from "../icons/ChromaIcon";
 import { CohereIcon } from "../icons/Cohere";
+import { ConfluenceIcon } from "../icons/Confluence";
 import { CouchbaseIcon } from "../icons/Couchbase";
+import { CrewAiIcon } from "../icons/CrewAI";
 import { ElasticsearchIcon } from "../icons/ElasticsearchStore";
 import { EvernoteIcon } from "../icons/Evernote";
 import { FBIcon } from "../icons/FacebookMessenger";
@@ -273,6 +278,7 @@ export const nodeColors: { [char: string]: string } = {
   wrappers: "#E6277A",
   helpers: "#31A3CC",
   prototypes: "#E6277A",
+  astra_assistants: "#272541",
   langchain_utilities: "#31A3CC",
   output_parsers: "#E6A627",
   // custom_components: "#ab11ab",
@@ -314,6 +320,7 @@ export const nodeNames: { [char: string]: string } = {
   retrievers: "Retrievers",
   helpers: "Helpers",
   prototypes: "Prototypes",
+  astra_assistants: "Astra Assistants",
   langchain_utilities: "Utilities",
   output_parsers: "Output Parsers",
   custom_components: "Custom",
@@ -381,6 +388,7 @@ export const nodeIconsLucide: iconsType = {
   HuggingFace: HuggingFaceIcon,
   HuggingFaceEmbeddings: HuggingFaceIcon,
   IFixitLoader: IFixIcon,
+  CrewAI: CrewAiIcon,
   Meta: MetaIcon,
   Midjorney: MidjourneyIcon,
   MongoDBAtlasVectorSearch: MongoDBIcon,
@@ -428,6 +436,7 @@ export const nodeIconsLucide: iconsType = {
   textsplitters: Scissors,
   wrappers: Gift,
   helpers: Wand2,
+  astra_assistants: Sparkles,
   ScanEye,
   prototypes: FlaskConical,
   langchain_utilities: PocketKnife,
@@ -572,4 +581,9 @@ export const nodeIconsLucide: iconsType = {
   MistralAI: MistralIcon,
   Upstash: UpstashSvgIcon,
   PGVector: CpuIcon,
+  Confluence: ConfluenceIcon,
+  FreezeAll: freezeAllIcon,
+  Table: Table,
+  AIML: AIMLIcon,
+  "AI/ML": AIMLIcon,
 };

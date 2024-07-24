@@ -1,3 +1,4 @@
+import { usePostLikeComponent } from "@/controllers/API/queries/store";
 import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { Control } from "react-hook-form";
@@ -29,7 +30,6 @@ import { FormControl, FormField } from "../ui/form";
 import Loading from "../ui/loading";
 import useDataEffect from "./hooks/use-data-effect";
 import useInstallComponent from "./hooks/use-handle-install";
-import useLikeComponent from "./hooks/use-handle-like";
 import useDragStart from "./hooks/use-on-drag-start";
 import usePlaygroundEffect from "./hooks/use-playground-effect";
 import { convertTestName } from "./utils/convert-test-name";
@@ -43,7 +43,6 @@ export default function CollectionCardComponent({
   onDelete,
   playground,
   control,
-  is_component,
 }: {
   data: storeComponent;
   authorized?: boolean;
@@ -53,7 +52,6 @@ export default function CollectionCardComponent({
   playground?: boolean;
   onDelete?: () => void;
   control?: Control<any, any>;
-  is_component?: boolean;
 }) {
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -61,7 +59,6 @@ export default function CollectionCardComponent({
   const cleanFlowPool = useFlowStore((state) => state.CleanFlowPool);
   const isStore = false;
   const [loading, setLoading] = useState(false);
-  const [loadingLike, setLoadingLike] = useState(false);
   const [likedByUser, setLikedByUser] = useState(data?.liked_by_user ?? false);
   const [likesCount, setLikesCount] = useState(data?.liked_by_count ?? 0);
   const [downloadsCount, setDownloadsCount] = useState(
@@ -74,7 +71,6 @@ export default function CollectionCardComponent({
   const setNodes = useFlowStore((state) => state.setNodes);
   const setEdges = useFlowStore((state) => state.setEdges);
   const [openPlayground, setOpenPlayground] = useState(false);
-  const [openDelete, setOpenDelete] = useState(false);
   const setCurrentFlowId = useFlowsManagerStore(
     (state) => state.setCurrentFlowId,
   );
@@ -123,17 +119,37 @@ export default function CollectionCardComponent({
     setErrorData,
   );
 
-  const { handleLike } = useLikeComponent(
-    data,
-    name,
-    setLoadingLike,
-    likedByUser,
-    likesCount,
-    setLikedByUser,
-    setLikesCount,
-    setValidApiKey,
-    setErrorData,
-  );
+  const { mutate, isPending } = usePostLikeComponent();
+
+  const handleLikeWMutate = () => {
+    if (likedByUser !== undefined || likedByUser !== null) {
+      const temp = likedByUser;
+      const tempNum = likesCount;
+      setLikedByUser((prev) => !prev);
+      setLikesCount((prev) => (temp ? prev - 1 : prev + 1));
+      mutate(
+        { componentId: data.id },
+        {
+          onSuccess: (res) => {
+            setLikesCount(res.data.likes_count);
+            setLikedByUser(res.data.liked_by_user);
+          },
+          onError: (error) => {
+            setLikesCount(tempNum);
+            setLikedByUser(temp);
+            if (error.response.status === 403) {
+              return setValidApiKey(false);
+            }
+            console.error(error);
+            setErrorData({
+              title: `Error liking ${name}.`,
+              list: [error.response.data.detail],
+            });
+          },
+        },
+      );
+    }
+  };
 
   const isSelectedCard =
     selectedFlowsComponentsCards?.includes(data?.id) ?? false;
@@ -148,7 +164,9 @@ export default function CollectionCardComponent({
         data-testid={`card-${convertTestName(data.name)}`}
         //TODO check color schema
         className={cn(
-          "group relative flex h-[11rem] flex-col justify-between overflow-hidden hover:bg-muted/50 hover:shadow-md hover:dark:bg-[#5f5f5f0e]",
+          "group relative flex h-[11rem] flex-col justify-between overflow-hidden",
+          !data.is_component &&
+            "hover:bg-muted/50 hover:shadow-md hover:dark:bg-[#5f5f5f0e]",
           disabled ? "pointer-events-none opacity-50" : "",
           onClick ? "cursor-pointer" : "",
           isSelectedCard ? "border border-selected" : "",
@@ -365,7 +383,7 @@ export default function CollectionCardComponent({
                       }
                     >
                       <Button
-                        disabled={loadingLike}
+                        disabled={isPending}
                         variant="ghost"
                         size="icon"
                         className={
@@ -376,7 +394,7 @@ export default function CollectionCardComponent({
                           if (!authorized) {
                             return;
                           }
-                          handleLike();
+                          handleLikeWMutate();
                         }}
                         data-testid={`like-${data.name}`}
                       >
@@ -498,18 +516,6 @@ export default function CollectionCardComponent({
         >
           <></>
         </IOModal>
-      )}
-      {openDelete && (
-        <DeleteConfirmationModal
-          open={openDelete}
-          setOpen={setOpenDelete}
-          onConfirm={() => {
-            if (onDelete) onDelete();
-          }}
-          description={` ${is_component ? "component" : "flow"}`}
-        >
-          <></>
-        </DeleteConfirmationModal>
       )}
     </>
   );

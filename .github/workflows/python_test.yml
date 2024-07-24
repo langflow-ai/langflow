@@ -11,7 +11,6 @@ on:
 env:
   POETRY_VERSION: "1.8.2"
 
-
 jobs:
   build:
     name: Run Unit Tests
@@ -22,6 +21,8 @@ jobs:
           - "3.12"
           - "3.11"
           - "3.10"
+        splitCount: [5]
+        group: [1, 2, 3, 4, 5]
     env:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
     steps:
@@ -41,7 +42,29 @@ jobs:
       - name: Run unit tests
         timeout-minutes: 12
         run: |
-          make unit_tests
+          make unit_tests args="--splits ${{ matrix.splitCount }} --group ${{ matrix.group }}"
+
+  test-cli:
+    name: Test CLI
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version:
+          - "3.12"
+          - "3.11"
+          - "3.10"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python ${{ matrix.python-version }} + Poetry ${{ env.POETRY_VERSION }}
+        uses: "./.github/actions/poetry_caching"
+        with:
+          python-version: ${{ matrix.python-version }}
+          poetry-version: ${{ env.POETRY_VERSION }}
+          cache-key: ${{ runner.os }}-poetry-${{ env.POETRY_VERSION }}-${{ hashFiles('**/poetry.lock') }}
+      - name: Install Python dependencies
+        run: |
+          poetry env use ${{ matrix.python-version }}
+          poetry install
       - name: Test CLI
         run: |
           poetry run python -m langflow run --host 127.0.0.1 --port 7860 --backend-only &
