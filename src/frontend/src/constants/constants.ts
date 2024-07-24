@@ -734,6 +734,9 @@ export const AUTHORIZED_DUPLICATE_REQUESTS = [
   "/auto_login",
 ];
 
+export const BROKEN_EDGES_WARNING =
+  "Some connections were removed because they were invalid:";
+
 export const SAVE_DEBOUNCE_TIME = 300;
 
 export const IS_MAC = navigator.userAgent.toUpperCase().includes("MAC");
