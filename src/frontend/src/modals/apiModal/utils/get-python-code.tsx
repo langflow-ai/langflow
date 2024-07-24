@@ -6,18 +6,13 @@
  */
 export default function getPythonCode(
   flowName: string,
-  tweaksBuildedObject: any[],
+  tweaksBuildedObject: {},
 ): string {
   let tweaksString = "{}";
-  if (tweaksBuildedObject && tweaksBuildedObject.length > 0) {
-    const tweaksObject = tweaksBuildedObject[0];
-    if (!tweaksObject) {
-      throw new Error("expected tweaks");
-    }
-    tweaksString = JSON.stringify(tweaksObject, null, 2)
+  if (tweaksBuildedObject)
+    tweaksString = JSON.stringify(tweaksBuildedObject, null, 2)
       .replace(/true/g, "True")
       .replace(/false/g, "False");
-  }
 
   return `from langflow.load import run_flow_from_json
 TWEAKS = ${tweaksString}
