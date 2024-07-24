@@ -1090,7 +1090,9 @@ class Graph:
                 raise ValueError(f"No result found for vertex {vertex_id}")
             flow_id = self.flow_id
             log_transaction(flow_id, vertex, status="success")
-            vertex_build_result = VertexBuildResult(result_dict, params, valid, artifacts, vertex)
+            vertex_build_result = VertexBuildResult(
+                result_dict=result_dict, params=params, valid=valid, artifacts=artifacts, vertex=vertex
+            )
             return vertex_build_result
         except Exception as exc:
             if not isinstance(exc, ComponentBuildException):
