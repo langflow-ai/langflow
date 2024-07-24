@@ -36,6 +36,8 @@ class Edge:
             # target_param is documents
             if isinstance(self._target_handle, str):
                 self.target_param = self._target_handle.split("|")[1]
+                self.source_handle = None
+                self.target_handle = None
             else:
                 raise ValueError("Target handle is not a string")
         # Validate in __init__ to fail fast
