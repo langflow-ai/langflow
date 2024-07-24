@@ -1,15 +1,8 @@
 from collections import deque
 
-import pytest
-
 from langflow import components
 from langflow.graph import Graph
 from langflow.graph.graph.constants import Finish
-
-
-@pytest.fixture
-def client():
-    pass
 
 
 def test_memory_chatbot():
