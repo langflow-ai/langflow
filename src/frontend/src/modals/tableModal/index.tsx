@@ -1,0 +1,45 @@
+import ForwardedIconComponent from "@/components/genericIconComponent";
+import TableComponent, {
+  TableComponentProps,
+} from "@/components/tableComponent";
+import { Button } from "@/components/ui/button";
+import { DialogClose } from "@radix-ui/react-dialog";
+import { ElementRef, forwardRef, useState } from "react";
+import BaseModal from "../baseModal";
+
+interface TableModalProps extends TableComponentProps {
+  tableTitle: string;
+  description: string;
+  children: React.ReactNode;
+}
+
+const TableModal = forwardRef<
+  ElementRef<typeof TableComponent>,
+  TableModalProps
+>(({ tableTitle, description, children, ...props }: TableModalProps, ref) => {
+  return (
+    <BaseModal>
+      <BaseModal.Trigger asChild>{children}</BaseModal.Trigger>
+      <BaseModal.Header description={description}>
+        <span className="pr-2">{tableTitle}</span>
+        <ForwardedIconComponent name="Table" className="mr-2 h-4 w-4" />
+      </BaseModal.Header>
+      <BaseModal.Content>
+        <TableComponent
+          className="h-full w-full"
+          ref={ref}
+          {...props}
+        ></TableComponent>
+      </BaseModal.Content>
+      <BaseModal.Footer>
+        <DialogClose>
+          <div className="flex w-full justify-end gap-2 pt-2">
+            <Button>Close</Button>
+          </div>
+        </DialogClose>
+      </BaseModal.Footer>
+    </BaseModal>
+  );
+});
+
+export default TableModal;

@@ -35,7 +35,8 @@ export default function Header(): JSX.Element {
   const notificationCenter = useAlertStore((state) => state.notificationCenter);
   const location = useLocation();
 
-  const { logout, isAdmin, userData } = useContext(AuthContext);
+  const { logout, userData } = useContext(AuthContext);
+  const isAdmin = useAuthStore((state) => state.isAdmin);
   const autoLogin = useAuthStore((state) => state.autoLogin);
 
   const navigate = useNavigate();
