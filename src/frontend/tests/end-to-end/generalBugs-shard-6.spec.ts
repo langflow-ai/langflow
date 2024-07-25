@@ -77,7 +77,7 @@ class CustomComponent(Component):
   await page.locator("textarea").press("Control+a");
   await page.locator("textarea").fill(customCodeWithError);
 
-  await page.getByText("Save").click();
+  await page.getByText("Check & Save").last().click();
 
   await page.waitForTimeout(1000);
 

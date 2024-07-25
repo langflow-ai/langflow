@@ -21,56 +21,6 @@ export async function getFolderById(folderId: string): Promise<FolderType> {
   }
 }
 
-export async function downloadFlowsFromFolders(folderId: string): Promise<{
-  flows: FlowType[];
-  folder_name: string;
-  folder_description: string;
-}> {
-  try {
-    const response = await api.get(
-      `${BASE_URL_API}folders/download/${folderId}`,
-    );
-    if (response?.status !== 200) {
-      throw new Error(`HTTP error! status: ${response?.status}`);
-    }
-    console.log(response.data);
-    return response.data;
-  } catch (error) {
-    console.error(error);
-    throw error;
-  }
-}
-
-export async function uploadFlowsFromFolders(
-  flows: FormData,
-): Promise<FlowType[]> {
-  try {
-    const response = await api.post(`${BASE_URL_API}folders/upload/`, flows);
-
-    if (response?.status !== 201) {
-      throw new Error(`HTTP error! status: ${response?.status}`);
-    }
-    return response.data;
-  } catch (error) {
-    console.error(error);
-    throw error;
-  }
-}
-
-export async function moveFlowToFolder(
-  flowId: string,
-  folderId: string,
-): Promise<FlowType> {
-  try {
-    const response = await api.patch(
-      `${BASE_URL_API}folders/move_to_folder/${flowId}/${folderId}`,
-    );
-    return response?.data;
-  } catch (error) {
-    throw error;
-  }
-}
-
 export async function uploadFlowToFolder(
   flows: FormData,
   folderId: string,
