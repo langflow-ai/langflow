@@ -87,6 +87,7 @@ class BaseInputMixin(BaseModel, validate_assignment=True):
         dump = handler(self)
         if "field_type" in dump:
             dump["type"] = dump.pop("field_type")
+        dump["_input_type"] = self.__class__.__name__
         return dump
 
 
