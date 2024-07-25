@@ -17,9 +17,7 @@ on:
         required: false
         type: string
   pull_request:
-    types: [synchronize]
-  pull_request_review:
-    types: [submitted]
+    types: [synchronize, labeled]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
