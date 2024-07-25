@@ -590,7 +590,9 @@ async def custom_component_update(
         )
         if hasattr(cc_instance, "set_attributes"):
             template = code_request.get_template()
-            params = {key: value_dict["value"] for key, value_dict in template.items() if isinstance(value_dict, dict)}
+            params = {
+                key: value_dict.get("value") for key, value_dict in template.items() if isinstance(value_dict, dict)
+            }
             load_from_db_fields = [
                 field_name
                 for field_name, field_dict in template.items()

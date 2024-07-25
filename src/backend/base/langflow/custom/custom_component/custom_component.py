@@ -480,9 +480,17 @@ class CustomComponent(BaseComponent):
         inputs: Optional[Union[dict, List[dict]]] = None,
         flow_id: Optional[str] = None,
         flow_name: Optional[str] = None,
+        output_type: Optional[str] = None,
         tweaks: Optional[dict] = None,
     ) -> Any:
-        return await run_flow(inputs=inputs, flow_id=flow_id, flow_name=flow_name, tweaks=tweaks, user_id=self._user_id)
+        return await run_flow(
+            inputs=inputs,
+            output_type=output_type,
+            flow_id=flow_id,
+            flow_name=flow_name,
+            tweaks=tweaks,
+            user_id=self._user_id,
+        )
 
     def list_flows(self) -> List[Data]:
         if not self._user_id:
