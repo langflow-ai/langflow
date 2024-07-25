@@ -99,7 +99,7 @@ async def auto_login(
 
         user = get_user_by_id(db, user_id)
 
-        if user: 
+        if user:
             if user.store_api_key is None:
                 user.store_api_key = ""
 
