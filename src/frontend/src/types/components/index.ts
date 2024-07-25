@@ -650,7 +650,7 @@ export type genericModalPropsType = {
   id?: string;
   readonly?: boolean;
   password?: boolean;
-  changeVisibility?: ()=>void;
+  changeVisibility?: () => void;
 };
 
 export type newFlowModalPropsType = {

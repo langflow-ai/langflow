@@ -55,13 +55,13 @@ export default function TableNodeCellRender({
   const [errorDuplicateKey, setErrorDuplicateKey] = useState(false);
   const edges = useFlowStore((state) => state.edges);
 
-  function updateVisibility(){
+  function updateVisibility() {
     changeVisibility(templateData.key);
     setTemplateData((old) => {
       let newData = cloneDeep(old);
       newData.password = !newData.password;
       return newData;
-      });
+    });
     setTemplatePassword(!templatePassword);
   }
 
@@ -93,8 +93,8 @@ export default function TableNodeCellRender({
           templateValue,
           disabled,
           handleOnNewValue,
-          password:templatePassword,
-          updateVisibility
+          password: templatePassword,
+          updateVisibility,
         });
 
       case "NestedDict":

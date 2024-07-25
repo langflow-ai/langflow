@@ -16,7 +16,7 @@ const useColumnDefs = (
   ) => void,
   changeAdvanced: (n: string) => void,
   open: boolean,
-  changeVisibility?:(key:string)=>void,
+  changeVisibility?: (key: string) => void,
 ) => {
   const columnDefs: ColDef[] = useMemo(
     () => [

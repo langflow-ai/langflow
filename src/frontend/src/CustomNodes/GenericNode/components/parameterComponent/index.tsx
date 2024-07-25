@@ -144,12 +144,13 @@ export default function ParameterComponent({
     setIsLoading,
   );
 
-  function updateVisibility(){
-    setNode(data.id,(old)=>{
-      const newNode = cloneDeep(old)
-      newNode.data.node.template[name].password = !newNode.data.node.template[name].password
-      return newNode
-    })
+  function updateVisibility() {
+    setNode(data.id, (old) => {
+      const newNode = cloneDeep(old);
+      newNode.data.node.template[name].password =
+        !newNode.data.node.template[name].password;
+      return newNode;
+    });
   }
 
   const { handleNodeClass: handleNodeClassHook } = useHandleNodeClass(

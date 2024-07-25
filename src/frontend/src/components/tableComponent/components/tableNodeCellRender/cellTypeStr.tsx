@@ -10,7 +10,7 @@ export function renderStrType({
   disabled,
   handleOnNewValue,
   password,
-  updateVisibility
+  updateVisibility,
 }) {
   if (!templateData.options) {
     return templateData?.list ? (

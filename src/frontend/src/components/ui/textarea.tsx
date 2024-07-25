@@ -9,21 +9,19 @@ export interface TextareaProps
 
 const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
   ({ className, password, editNode, ...props }, ref) => {
-
     return (
       <div className="w-full">
-            <textarea
-              className={cn(
-                "nopan nodelete nodrag noflow textarea-primary",
-                className,
-                password? "password" : "",
-              )}
-              ref={ref}
-              {...props}
-              value={props.value as string}
-              onChange={props.onChange}
-            />
-
+        <textarea
+          className={cn(
+            "nopan nodelete nodrag noflow textarea-primary",
+            className,
+            password ? "password" : "",
+          )}
+          ref={ref}
+          {...props}
+          value={props.value as string}
+          onChange={props.onChange}
+        />
       </div>
     );
   },

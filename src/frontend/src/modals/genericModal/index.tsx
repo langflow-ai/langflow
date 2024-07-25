@@ -181,7 +181,7 @@ export default function GenericModal({
 
   return (
     <BaseModal
-      onChangeOpenModal={(open) => { }}
+      onChangeOpenModal={(open) => {}}
       open={modalOpen}
       setOpen={setModalOpen}
     >
@@ -208,21 +208,24 @@ export default function GenericModal({
               {myModalTitle}
             </span>
             <IconComponent
-              name={myModalTitle === "Edit Prompt" ? "TerminalSquare" : "FileText"}
+              name={
+                myModalTitle === "Edit Prompt" ? "TerminalSquare" : "FileText"
+              }
               className="h-6 w-6 pl-1 text-primary"
               aria-hidden="true"
             />
           </div>
           {password !== undefined && (
             <div>
-              <button onClick={() => {
-                if (changeVisibility) changeVisibility();
-              }}>
+              <button
+                onClick={() => {
+                  if (changeVisibility) changeVisibility();
+                }}
+              >
                 <IconComponent
                   name={password ? "Eye" : "EyeOff"}
-                  className="h-6 w-6 text-primary cursor-pointer"
+                  className="h-6 w-6 cursor-pointer text-primary"
                 />
-
               </button>
             </div>
           )}
@@ -261,7 +264,7 @@ export default function GenericModal({
             />
           ) : type !== TypeModal.PROMPT ? (
             <Textarea
-            password={password}
+              password={password}
               ref={textRef}
               className="form-input h-full w-full resize-none overflow-auto rounded-lg focus-visible:ring-1"
               value={inputValue}

@@ -1,4 +1,5 @@
 import { ColDef } from "ag-grid-community";
+import { cloneDeep } from "lodash";
 import { forwardRef, useState } from "react";
 import { useUpdateNodeInternals } from "reactflow";
 import TableComponent from "../../components/tableComponent";
@@ -19,7 +20,6 @@ import useHandleChangeAdvanced from "./hooks/use-handle-change-advanced";
 import useHandleOnNewValue from "./hooks/use-handle-new-value";
 import useHandleNodeClass from "./hooks/use-handle-node-class";
 import useRowData from "./hooks/use-row-data";
-import { cloneDeep } from "lodash";
 
 const EditNodeModal = forwardRef(
   (
@@ -79,14 +79,15 @@ const EditNodeModal = forwardRef(
       handleNodeClass,
       handleChangeAdvancedHook,
       open,
-      (key:string)=>{
-        console.log(key)
-        setNode(data.id,(old)=>{
-          const newNode = cloneDeep(old)
-          newNode.data.node.template[key].password = !newNode.data.node.template[key].password
-          return newNode
-        })
-      }
+      (key: string) => {
+        console.log(key);
+        setNode(data.id, (old) => {
+          const newNode = cloneDeep(old);
+          newNode.data.node.template[key].password =
+            !newNode.data.node.template[key].password;
+          return newNode;
+        });
+      },
     );
 
     return (

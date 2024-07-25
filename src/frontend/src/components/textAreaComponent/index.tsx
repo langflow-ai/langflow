@@ -25,7 +25,6 @@ export default function TextAreaComponent({
     }
   }, [disabled]);
 
-
   return (
     <div className={"flex w-full items-center" + (disabled ? "" : "")}>
       <div className="flex w-full items-center gap-3" data-testid={"div-" + id}>
@@ -85,12 +84,12 @@ export default function TextAreaComponent({
             className={classNames(
               "mb-px",
               editNode
-              ? "side-bar-button-size absolute bottom-[1.3rem] right-[5.2rem]"
-              : "side-bar-button-size absolute bottom-4 right-[4.2rem]",
+                ? "side-bar-button-size absolute bottom-[1.3rem] right-[5.2rem]"
+                : "side-bar-button-size absolute bottom-4 right-[4.2rem]",
             )}
             onClick={(event) => {
               event.preventDefault();
-              if (updateVisibility) updateVisibility()
+              if (updateVisibility) updateVisibility();
             }}
           >
             {password ? (
@@ -129,7 +128,6 @@ export default function TextAreaComponent({
             )}
           </button>
         )}
-
       </div>
     </div>
   );
