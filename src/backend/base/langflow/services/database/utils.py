@@ -90,7 +90,8 @@ def initialize_database(fix_migration: bool = False):
 
     database_service: "DatabaseService" = get_db_service()
     try:
-        database_service.create_db_and_tables()
+        pass
+        #database_service.create_db_and_tables()
     except Exception as exc:
         # if the exception involves tables already existing
         # we can ignore it
@@ -98,7 +99,8 @@ def initialize_database(fix_migration: bool = False):
             logger.error(f"Error creating DB and tables: {exc}")
             raise RuntimeError("Error creating DB and tables") from exc
     try:
-        database_service.check_schema_health()
+        #database_service.check_schema_health()
+        pass
     except Exception as exc:
         logger.error(f"Error checking schema health: {exc}")
         raise RuntimeError("Error checking schema health") from exc
@@ -124,9 +126,6 @@ def initialize_database(fix_migration: bool = False):
         if "already exists" not in str(exc):
             logger.error(exc)
         raise exc
-    with session_getter(database_service) as session:
-        migrate_messages_from_monitor_service_to_database(session)
-        migrate_transactions_from_monitor_service_to_database(session)
     logger.debug("Database initialized")
 
 
@@ -136,7 +135,7 @@ def session_getter(db_service: "DatabaseService"):
         session = Session(db_service.engine)
         yield session
     except Exception as e:
-        print("Session rollback because of exception:", e)
+        logger.error("Session rollback because of exception:", e)
         session.rollback()
         raise
     finally:
@@ -164,6 +163,7 @@ def migrate_transactions_from_monitor_service_to_database(session: Session) -> N
         return
     to_delete = []
     while batch:
+        logger.debug(f"Migrating {len(batch)} transactions")
         for row in batch:
             tt = TransactionTable(
                 flow_id=row["flow_id"],
@@ -178,7 +178,6 @@ def migrate_transactions_from_monitor_service_to_database(session: Session) -> N
             to_delete.append(row["index"])
             session.add(tt)
         session.commit()
-        with duckdb.connect(str(monitor_service.db_path), read_only=False) as conn:
-            conn.execute(f"DELETE FROM transactions WHERE index in ({','.join(map(str, to_delete))})")
-            conn.commit()
+        monitor_service.delete_transactions(to_delete)
         batch = monitor_service.get_transactions()
+    logger.debug(f"Transactions migrations completed.")

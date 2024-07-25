@@ -914,13 +914,13 @@ class Graph:
             else:
                 raise ValueError(f"No result found for vertex {vertex_id}")
             flow_id = self.flow_id
-            log_transaction(flow_id, vertex, status="success")
+            asyncio.create_task(log_transaction(flow_id, vertex, status="success"))
             return result_dict, params, valid, artifacts, vertex
         except Exception as exc:
             if not isinstance(exc, ComponentBuildException):
                 logger.exception(f"Error building Component: \n\n{exc}")
             flow_id = self.flow_id
-            log_transaction(flow_id, vertex, status="failure", error=str(exc))
+            asyncio.create_task(log_transaction(flow_id, vertex, status="failure", error=str(exc)))
             raise exc
 
     def get_vertex_edges(

@@ -1,6 +1,7 @@
+import asyncio
 import json
 from enum import Enum
-from typing import Any, Generator, Union, Optional
+from typing import TYPE_CHECKING, Any, Generator, Union, Optional
 from uuid import UUID
 
 from langchain_core.documents import Document
@@ -14,6 +15,8 @@ from langflow.services.database.models.transactions.crud import log_transaction 
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service
 from loguru import logger
+if TYPE_CHECKING:
+    from langflow.graph.vertex.base import Vertex
 
 
 
@@ -123,7 +126,7 @@ def _vertex_to_primitive_dict(target: "Vertex") -> dict:
     return params
 
 
-def log_transaction(flow_id, source: "Vertex", status, target: Optional["Vertex"] = None, error=None):
+async def log_transaction(flow_id: Union[str, UUID], source: "Vertex", status, target: Optional["Vertex"] = None, error=None) -> None:
     try:
         inputs = _vertex_to_primitive_dict(source)
         transaction = TransactionBase(
@@ -137,6 +140,7 @@ def log_transaction(flow_id, source: "Vertex", status, target: Optional["Vertex"
             flow_id=flow_id if isinstance(flow_id, UUID) else UUID(flow_id),
         )
         with session_getter(get_db_service()) as session:
-            crud_log_transaction(session, transaction)
+            inserted = crud_log_transaction(session, transaction)
+            logger.debug(f"Logged transaction: {inserted.id}")
     except Exception as e:
         logger.error(f"Error logging transaction: {e}")

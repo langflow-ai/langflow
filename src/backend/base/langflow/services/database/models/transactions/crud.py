@@ -22,10 +22,12 @@ def get_transactions_by_flow_id(db: Session, flow_id: UUID, limit: Optional[int]
     return [t for t in transactions]
 
 
-def log_transaction(db: Session, transaction: TransactionBase) -> None:
-    db.add(TransactionTable(**transaction.model_dump()))
+def log_transaction(db: Session, transaction: TransactionBase) -> TransactionTable:
+    table = TransactionTable(**transaction.model_dump())
+    db.add(table)
     try:
         db.commit()
+        return table
     except IntegrityError as e:
         db.rollback()
         raise e
