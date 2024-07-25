@@ -1,0 +1,58 @@
+name: Work in Progress
+description: Use this template to describe the new feature or improvement you are currently working on.
+labels: [enhancement]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Work in Progress
+
+        Thank you for contributing to our project! Please fill out the sections below to describe the new feature or improvement you are currently working on.
+
+  - type: input
+    id: title
+    attributes:
+      label: Title
+      description: Provide a concise title for your feature or improvement.
+      placeholder: "Short and descriptive title"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: type
+    attributes:
+      label: Type
+      description: Is this a new feature or an improvement?
+      options:
+        - New Feature
+        - Improvement
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Provide a detailed description of the feature or improvement.
+      placeholder: "Explain the feature or improvement in detail"
+    validations:
+      required: true
+
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Use Case
+      description: Describe the use case or user story that this feature or improvement addresses.
+      placeholder: "As a [user], I want to [do something] so that [benefit]."
+    validations:
+      required: false
+
+  - type: textarea
+    id: implementation
+    attributes:
+      label: Implementation Plan
+      description: Outline your plan for implementing this feature or improvement.
+      placeholder: "Describe how you plan to implement this feature or improvement."
+    validations:
+      required: false
