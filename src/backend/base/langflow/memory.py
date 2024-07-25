@@ -8,7 +8,6 @@ from sqlmodel import Session, col, select
 
 from langflow.schema.message import Message
 from langflow.services.database.models.message.model import MessageRead, MessageTable
-from langflow.services.database.utils import migrate_messages_from_monitor_service_to_database
 from langflow.services.deps import session_scope
 from langflow.field_typing import BaseChatMessageHistory
 from langchain_core.messages import BaseMessage

@@ -1,15 +1,10 @@
-from datetime import datetime, timezone
-from typing import Optional, Union
+from typing import Optional
 from uuid import UUID
 
-from fastapi import Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm.attributes import flag_modified
 from sqlmodel import Session, select
 
 from langflow.services.database.models.transactions.model import TransactionBase, TransactionTable
-from langflow.services.database.models.user.model import User, UserUpdate
-from langflow.services.deps import get_session
 
 
 def get_transactions_by_flow_id(db: Session, flow_id: UUID, limit: Optional[int] = 1000) -> list[TransactionTable]:

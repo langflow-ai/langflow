@@ -3,7 +3,6 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-import duckdb
 from alembic.util.exc import CommandError
 from loguru import logger
 from sqlmodel import Session, select, text
@@ -178,4 +177,4 @@ def migrate_transactions_from_monitor_service_to_database(session: Session) -> N
         session.commit()
         monitor_service.delete_transactions(to_delete)
         batch = monitor_service.get_transactions()
-    logger.debug(f"Transactions migrations completed.")
+    logger.debug("Transactions migrations completed.")

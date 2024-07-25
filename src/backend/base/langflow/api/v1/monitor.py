@@ -11,7 +11,7 @@ from langflow.services.database.models.transactions.crud import get_transactions
 from langflow.services.database.models.transactions.model import TransactionReadResponse
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_monitor_service, get_session
-from langflow.services.monitor.schema import MessageModelResponse, TransactionModelResponse, VertexBuildMapModel
+from langflow.services.monitor.schema import MessageModelResponse, VertexBuildMapModel
 from langflow.services.monitor.service import MonitorService
 
 router = APIRouter(prefix="/monitor", tags=["Monitor"])

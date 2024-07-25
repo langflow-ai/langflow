@@ -1,9 +1,7 @@
-import threading
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Union, List
 
-import duckdb
 from loguru import logger
 from platformdirs import user_cache_dir
 
@@ -12,7 +10,7 @@ from langflow.services.monitor.utils import add_row_to_table, drop_and_create_ta
     new_duckdb_locked_connection
 
 if TYPE_CHECKING:
-    from langflow.services.monitor.schema import DuckDbMessageModel, TransactionModel, VertexBuildModel
+    from langflow.services.monitor.schema import VertexBuildModel
     from langflow.services.settings.service import SettingsService
 
 
@@ -20,7 +18,7 @@ class MonitorService(Service):
     name = "monitor_service"
 
     def __init__(self, settings_service: "SettingsService"):
-        from langflow.services.monitor.schema import DuckDbMessageModel, TransactionModel, VertexBuildModel
+        from langflow.services.monitor.schema import VertexBuildModel
 
         self.settings_service = settings_service
         self.base_cache_dir = Path(user_cache_dir("langflow"), ensure_exists=True)
