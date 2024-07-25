@@ -134,3 +134,6 @@ class TelemetryService(Service):
             await self.client.aclose()
         except Exception as e:
             logger.error(f"Error stopping tracing service: {e}")
+
+    async def teardown(self):
+        await self.stop()
