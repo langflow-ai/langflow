@@ -11,6 +11,7 @@ export function StrRenderComponent({
   disabled,
   handleOnNewValue,
   editNode,
+  id,
 }) {
   const onChange = (value: any, dbValue?: boolean, skipSnapshot?: boolean) => {
     handleOnNewValue({ value, load_from_db: dbValue }, { skipSnapshot });
@@ -24,11 +25,11 @@ export function StrRenderComponent({
         disabled={disabled}
         value={!value || value === "" ? [""] : value}
         onChange={onChange}
+        id={`inputlist_${id}`}
       />
     ) : templateData.multiline ? (
       <TextAreaComponent
-        id={"textarea-edit-" + templateData.name}
-        data-testid={"textarea-edit-" + templateData.name}
+        id={`textarea_${id}`}
         disabled={disabled}
         editNode={editNode}
         value={value ?? ""}
@@ -52,7 +53,7 @@ export function StrRenderComponent({
         disabled={disabled}
         options={templateData.options || []}
         values={[value ?? "Choose an option"]}
-        id={"multiselect-" + templateData.name}
+        id={`multiselect_${id}`}
         onValueChange={onChange}
       />
     );
@@ -65,7 +66,7 @@ export function StrRenderComponent({
         options={templateData.options}
         onSelect={onChange}
         value={value ?? "Choose an option"}
-        id={"dropdown-edit-" + templateData.name}
+        id={`dropdown_${id}`}
       />
     );
   }

@@ -201,7 +201,7 @@ test("user must be able to freeze a path", async ({ page }) => {
       "say a random number between 1 and 100000 and a random animal that lives in the sea",
     );
 
-  await page.getByTestId("dropdown-model_name").click();
+  await page.getByTestId("dropdown_str_model_name").click();
   await page.getByTestId("gpt-4o-1-option").click();
 
   // await page.getByText("OpenAI").first().click();

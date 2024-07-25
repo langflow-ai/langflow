@@ -16,6 +16,7 @@ export default function InputFileComponent({
   disabled,
   fileTypes,
   editNode = false,
+  id,
 }: FileComponentType): JSX.Element {
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const [loading, setLoading] = useState(false);
@@ -96,6 +97,7 @@ export default function InputFileComponent({
     <div className={disabled ? "input-component-div" : "w-full"}>
       <div className="input-file-component gap-3">
         <span
+          data-testid={id}
           onClick={handleButtonClick}
           className={
             editNode

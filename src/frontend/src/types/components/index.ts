@@ -89,6 +89,7 @@ export type InputListComponentType = {
   editNode?: boolean;
   componentName?: string;
   playgroundDisabled?: boolean;
+  id?: string;
 };
 
 export type InputGlobalComponentType = {
@@ -107,6 +108,7 @@ export type KeyPairListComponentType = {
   editNode?: boolean;
   editNodeModal?: boolean;
   isList?: boolean;
+  id?: string;
 };
 
 export type DictComponentType = {
@@ -197,6 +199,7 @@ export type FileComponentType = {
   value: string;
   fileTypes: Array<string>;
   editNode?: boolean;
+  id?: string;
 };
 
 export type DisclosureComponentType = {

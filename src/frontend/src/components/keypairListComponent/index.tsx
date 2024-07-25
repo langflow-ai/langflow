@@ -17,6 +17,7 @@ export default function KeypairListComponent({
   disabled,
   editNode = false,
   isList = true,
+  id,
 }: KeyPairListComponentType): JSX.Element {
   useEffect(() => {
     if (disabled && value.length > 0 && value[0] !== "") {
@@ -119,11 +120,7 @@ export default function KeypairListComponent({
                       ? "editNodeplusbtn" + index.toString()
                       : "plusbtn" + index.toString()
                   }
-                  data-testid={
-                    editNode
-                      ? "editNodeplusbtn" + index.toString()
-                      : "plusbtn" + index.toString()
-                  }
+                  data-testid={id}
                 >
                   <IconComponent
                     name="Plus"

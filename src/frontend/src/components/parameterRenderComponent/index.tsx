@@ -37,8 +37,12 @@ export function ParameterRenderComponent({
     handleOnNewValue({ value });
   };
 
-  const id =
-    templateData.type + "-" + (editNode ? "edit-" : "") + templateData.name;
+  const id = (
+    templateData.type +
+    "_" +
+    (editNode ? "edit_" : "") +
+    templateData.name
+  ).toLowerCase();
 
   return (
     <RefreshParameterComponent
@@ -56,6 +60,7 @@ export function ParameterRenderComponent({
           name={name}
           disabled={disabled}
           handleOnNewValue={handleOnNewValue}
+          id={id}
           editNode={editNode}
         />
       ) : templateData.type === "NestedDict" ? (
@@ -64,7 +69,7 @@ export function ParameterRenderComponent({
           editNode={editNode}
           value={(templateValue || "").toString() === "{}" ? {} : templateValue}
           onChange={onChange}
-          id={editNode ? "editnode" : "" + "editnode-div-dict-input"}
+          id={`dict_${id}`}
         />
       ) : templateData.type === "dict" ? (
         <KeypairListComponent
@@ -73,10 +78,11 @@ export function ParameterRenderComponent({
           value={templateValue}
           onChange={onChange}
           isList={templateData.list ?? false}
+          id={`keypair_${id}`}
         />
       ) : templateData.type === "bool" ? (
         <ToggleShadComponent
-          id={"toggle-" + editNode ? "edit-" : "" + templateData.name}
+          id={`toggle_${id}`}
           disabled={disabled}
           enabled={templateValue}
           setEnabled={onChange}
@@ -89,11 +95,12 @@ export function ParameterRenderComponent({
           rangeSpec={templateData.rangeSpec}
           value={templateValue ?? ""}
           onChange={onChange}
+          id={`float_${id}`}
         />
       ) : templateData.type === "int" ? (
         <IntComponent
           rangeSpec={templateData.rangeSpec}
-          id={"edit-int-input-" + templateData.name}
+          id={`int_${id}`}
           disabled={disabled}
           editNode={editNode}
           value={templateValue ?? ""}
@@ -106,6 +113,7 @@ export function ParameterRenderComponent({
           value={templateValue ?? ""}
           handleOnNewValue={handleOnNewValue}
           fileTypes={templateData.fileTypes}
+          id={`inputfile_${id}`}
         />
       ) : templateData.type === "prompt" ? (
         <PromptAreaComponent
@@ -117,7 +125,7 @@ export function ParameterRenderComponent({
           setNodeClass={handleNodeClass}
           value={templateValue ?? ""}
           onChange={onChange}
-          id={"prompt-area-" + editNode ? "edit-" : "" + templateData.name}
+          id={`promptarea_${id}`}
         />
       ) : templateData.type === "code" ? (
         <CodeAreaComponent
@@ -129,7 +137,7 @@ export function ParameterRenderComponent({
           editNode={editNode}
           value={templateValue ?? ""}
           onChange={onChange}
-          id={"code-area-edit" + templateData.name}
+          id={`codearea_${id}`}
         />
       ) : templateData.type === "Any" ? (
         <>-</>
