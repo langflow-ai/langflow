@@ -46,6 +46,7 @@ class PromptComponent(Component):
         """
         frontend_node = super().post_code_processing(new_frontend_node, current_frontend_node)
         template = frontend_node["template"]["template"]["value"]
+        # Kept it duplicated for backward compatibility
         _ = process_prompt_template(
             template=template,
             name="template",
