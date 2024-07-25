@@ -346,6 +346,7 @@ InputTypes = Union[
     HandleInput,
     IntInput,
     MultilineInput,
+    MultilineSecretInput,
     NestedDictInput,
     PromptInput,
     SecretStrInput,
