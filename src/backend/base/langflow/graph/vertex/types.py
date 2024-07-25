@@ -406,7 +406,7 @@ class InterfaceVertex(ComponentVertex):
 
 class StateVertex(ComponentVertex):
     def __init__(self, data: Dict, graph):
-        super().__init__(data, graph=graph, base_type="custom_components")
+        super().__init__(data, graph=graph)
         self.steps = [self._build]
         self.is_state = False
 
