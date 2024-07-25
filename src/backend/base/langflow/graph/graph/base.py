@@ -19,6 +19,7 @@ from langflow.graph.graph.utils import find_start_component_id, process_flow, so
 from langflow.graph.schema import InterfaceComponentTypes, RunOutputs
 from langflow.graph.utils import log_transaction
 from langflow.graph.vertex.base import Vertex, VertexStates
+from langflow.graph.vertex.schema import NodeData
 from langflow.graph.vertex.types import ComponentVertex, InterfaceVertex, StateVertex
 from langflow.schema import Data
 from langflow.schema.schema import INPUT_FIELD_NAME, InputType
@@ -75,7 +76,7 @@ class Graph:
         self.vertices: List[Vertex] = []
         self.run_manager = RunnableVerticesManager()
         self.state_manager = GraphStateManager()
-        self._vertices: List[dict] = []
+        self._vertices: List[NodeData] = []
         self._edges: List[EdgeData] = []
         self.top_level_vertices: List[str] = []
         self.vertex_map: Dict[str, Vertex] = {}
@@ -86,7 +87,7 @@ class Graph:
         self._run_queue: deque[str] = deque()
         self._first_layer: List[str] = []
         self._lock = asyncio.Lock()
-        self.raw_graph_data: GraphData = {}
+        self.raw_graph_data: GraphData = {"nodes": [], "edges": []}
         try:
             self.tracing_service: "TracingService" | None = get_tracing_service()
         except Exception as exc:
@@ -105,10 +106,10 @@ class Graph:
             # we need to convert the vertices and edges to json
             nodes = [node.to_data() for node in self.vertices]
             edges = [edge.to_data() for edge in self.edges]
-            self.raw_graph_data: GraphData = {"nodes": nodes, "edges": edges}
+            self.raw_graph_data = {"nodes": nodes, "edges": edges}
             return self.raw_graph_data
 
-    def add_nodes_and_edges(self, nodes: List[Dict], edges: List[Dict[str, str]]):
+    def add_nodes_and_edges(self, nodes: List[NodeData], edges: List[EdgeData]):
         self._vertices = nodes
         self._edges = edges
         self.raw_graph_data = {"nodes": nodes, "edges": edges}
@@ -218,7 +219,7 @@ class Graph:
         self.parent_child_map[source_id].append(target_id)
 
     # TODO: Create a TypedDict to represente the node
-    def add_node(self, node: dict):
+    def add_node(self, node: NodeData):
         self._vertices.append(node)
 
     def add_edge(self, edge: EdgeData):
@@ -1409,7 +1410,7 @@ class Graph:
 
         return vertices
 
-    def _create_vertex(self, frontend_data: dict):
+    def _create_vertex(self, frontend_data: NodeData):
         vertex_data = frontend_data["data"]
         vertex_type: str = vertex_data["type"]  # type: ignore
         vertex_base_type: str = vertex_data["node"]["template"]["_type"]  # type: ignore
