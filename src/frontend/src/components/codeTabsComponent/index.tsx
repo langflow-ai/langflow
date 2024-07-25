@@ -312,7 +312,6 @@ export default function CodeTabsComponent({
                                                 <div>
                                                   <TextAreaComponent
                                                     disabled={false}
-                                                    editNode={false}
                                                     value={
                                                       !node.data.node.template[
                                                         templateField
@@ -325,11 +324,6 @@ export default function CodeTabsComponent({
                                                             .template[
                                                             templateField
                                                           ].value
-                                                    }
-                                                    password={
-                                                      node.data.node.template[
-                                                        templateField
-                                                      ].password ?? false
                                                     }
                                                     onChange={(target) => {
                                                       setData((old) => {

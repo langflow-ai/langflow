@@ -144,6 +144,14 @@ export default function ParameterComponent({
     setIsLoading,
   );
 
+  function updateVisibility(){
+    setNode(data.id,(old)=>{
+      const newNode = cloneDeep(old)
+      newNode.data.node.template[name].password = !newNode.data.node.template[name].password
+      return newNode
+    })
+  }
+
   const { handleNodeClass: handleNodeClassHook } = useHandleNodeClass(
     data,
     name,
@@ -435,10 +443,11 @@ export default function ParameterComponent({
               <div className="mt-2 flex w-full flex-col">
                 <div className="flex-grow">
                   <TextAreaComponent
+                    updateVisibility={updateVisibility}
                     disabled={disabled}
                     value={data.node!.template[name]?.value ?? ""}
                     onChange={handleOnNewValue}
-                    password={data.node?.template[name]?.password ?? false}
+                    password={data.node?.template[name]?.password}
                     id={"textarea-" + data.node!.template[name]?.name}
                     data-testid={"textarea-" + data.node!.template[name]?.name}
                   />

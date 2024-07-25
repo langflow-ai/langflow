@@ -16,6 +16,7 @@ const useColumnDefs = (
   ) => void,
   changeAdvanced: (n: string) => void,
   open: boolean,
+  changeVisibility?:(key:string)=>void,
 ) => {
   const columnDefs: ColDef[] = useMemo(
     () => [
@@ -56,6 +57,7 @@ const useColumnDefs = (
             nodeClass: nodeClass,
             handleOnNewValue: handleOnNewValue,
             handleNodeClass: handleNodeClass,
+            changeVisibility: changeVisibility,
           };
         },
         minWidth: 340,

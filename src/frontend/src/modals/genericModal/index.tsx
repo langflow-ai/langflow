@@ -41,7 +41,8 @@ export default function GenericModal({
   disabled,
   id = "",
   readonly = false,
-  password = false,
+  password,
+  changeVisibility,
 }: genericModalPropsType): JSX.Element {
   const [myButtonText] = useState(buttonText);
   const [myModalTitle] = useState(modalTitle);
@@ -180,7 +181,7 @@ export default function GenericModal({
 
   return (
     <BaseModal
-      onChangeOpenModal={(open) => {}}
+      onChangeOpenModal={(open) => { }}
       open={modalOpen}
       setOpen={setModalOpen}
     >
@@ -201,14 +202,31 @@ export default function GenericModal({
           }
         })()}
       >
-        <span className="pr-2" data-testid="modal-title">
-          {myModalTitle}
-        </span>
-        <IconComponent
-          name={myModalTitle === "Edit Prompt" ? "TerminalSquare" : "FileText"}
-          className="h-6 w-6 pl-1 text-primary"
-          aria-hidden="true"
-        />
+        <div className="flex w-full items-start gap-3">
+          <div className="flex">
+            <span className="pr-2" data-testid="modal-title">
+              {myModalTitle}
+            </span>
+            <IconComponent
+              name={myModalTitle === "Edit Prompt" ? "TerminalSquare" : "FileText"}
+              className="h-6 w-6 pl-1 text-primary"
+              aria-hidden="true"
+            />
+          </div>
+          {password !== undefined && (
+            <div>
+              <button onClick={() => {
+                if (changeVisibility) changeVisibility();
+              }}>
+                <IconComponent
+                  name={password ? "Eye" : "EyeOff"}
+                  className="h-6 w-6 text-primary cursor-pointer"
+                />
+
+              </button>
+            </div>
+          )}
+        </div>
       </BaseModal.Header>
       <BaseModal.Content overflowHidden>
         <div className={classNames("flex h-full w-full rounded-lg border")}>
@@ -243,6 +261,7 @@ export default function GenericModal({
             />
           ) : type !== TypeModal.PROMPT ? (
             <Textarea
+            password={password}
               ref={textRef}
               className="form-input h-full w-full resize-none overflow-auto rounded-lg focus-visible:ring-1"
               value={inputValue}
@@ -256,7 +275,6 @@ export default function GenericModal({
               readOnly={readonly}
               id={"text-area-modal"}
               data-testid={"text-area-modal"}
-              password={password}
             />
           ) : (
             <></>

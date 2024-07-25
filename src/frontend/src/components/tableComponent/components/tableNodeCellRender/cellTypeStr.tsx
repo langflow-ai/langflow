@@ -9,7 +9,8 @@ export function renderStrType({
   templateValue,
   disabled,
   handleOnNewValue,
-  password = false,
+  password,
+  updateVisibility
 }) {
   if (!templateData.options) {
     return templateData?.list ? (
@@ -24,15 +25,16 @@ export function renderStrType({
       />
     ) : templateData.multiline ? (
       <TextAreaComponent
+        password={password}
+        updateVisibility={updateVisibility}
         id={"textarea-edit-" + templateData.name}
         data-testid={"textarea-edit-" + templateData.name}
         disabled={disabled}
-        editNode={false}
+        editNode={true}
         value={templateValue ?? ""}
         onChange={(value: string | string[]) => {
           handleOnNewValue(value, templateData.key);
         }}
-        password={password}
       />
     ) : (
       <InputGlobalComponent

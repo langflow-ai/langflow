@@ -15,9 +15,9 @@ export default function TextAreaComponent({
   disabled,
   editNode = false,
   id = "",
-  password = false,
+  password,
+  updateVisibility,
 }: TextAreaComponentType): JSX.Element {
-  const [pwdVisible, setPwdVisible] = useState(false);
   // Clear text area
   useEffect(() => {
     if (disabled && value !== "") {
@@ -25,31 +25,31 @@ export default function TextAreaComponent({
     }
   }, [disabled]);
 
+
   return (
-    <div className={"flex w-full items-center " + (disabled ? "" : "")}>
+    <div className={"flex w-full items-center" + (disabled ? "" : "")}>
       <div className="flex w-full items-center gap-3" data-testid={"div-" + id}>
-        <Case condition={!editNode}>
-          <Input
-            id={id}
-            data-testid={id}
-            value={value}
-            disabled={disabled}
-            className={classNames(
-              password && !pwdVisible && value !== ""
-                ? "text-clip password"
-                : "",
-              editNode ? "input-edit-node" : "",
-              password && editNode ? "pr-8" : "",
-              password && !editNode ? "pr-10" : "",
-              "w-full",
-            )}
-            placeholder={"Type something..."}
-            onChange={(event) => {
-              onChange(event.target.value);
-            }}
-          />
-        </Case>
+        <Input
+          id={id}
+          data-testid={id}
+          value={value}
+          disabled={disabled}
+          className={classNames(
+            password !== undefined && !password && value !== ""
+              ? "text-clip password"
+              : "",
+            editNode ? "input-edit-node" : "",
+            password && editNode ? "pr-8" : "",
+            password && !editNode ? "pr-10" : "",
+            "w-full",
+          )}
+          placeholder={"Type something..."}
+          onChange={(event) => {
+            onChange(event.target.value);
+          }}
+        />
         <GenericModal
+          changeVisibility={updateVisibility}
           type={TypeModal.TEXT}
           buttonText="Finish Editing"
           modalTitle={EDIT_TEXT_MODAL_TITLE}
@@ -60,73 +60,46 @@ export default function TextAreaComponent({
           disabled={disabled}
           password={password}
         >
-          {!editNode ? (
-            <div
-              className={
-                "flex items-center" + (password ? "relative left-6 mb-px" : "")
-              }
-            >
-              <Button unstyled>
-                <IconComponent
-                  strokeWidth={1.5}
-                  id={id}
-                  name="ExternalLink"
-                  className={
-                    "icons-parameters-comp shrink-0" +
-                    (disabled ? " text-ring" : " hover:text-accent-foreground")
-                  }
-                />
-              </Button>
-            </div>
-          ) : (
-            <Button unstyled className="w-full">
-              <div className="flex w-full items-center gap-3">
-                <span
-                  id={id}
-                  data-testid={id}
-                  className={
-                    editNode
-                      ? "input-edit-node input-dialog"
-                      : (disabled ? "input-disable text-ring " : "") +
-                        " primary-input text-muted-foreground"
-                  }
-                >
-                  {value !== "" ? value : "Type something..."}
-                </span>
-              </div>
+          <div
+            className={
+              "flex items-center" + (password ? "relative left-6" : "")
+            }
+          >
+            <Button unstyled>
+              <IconComponent
+                strokeWidth={1.5}
+                id={id}
+                name="ExternalLink"
+                className={
+                  "icons-parameters-comp shrink-0" +
+                  (disabled ? " text-ring" : " hover:text-accent-foreground")
+                }
+              />
             </Button>
-          )}
+          </div>
         </GenericModal>
-        {password /*&& (!setSelectedOption || selectedOption === "") */ && (
+        {password !== undefined && (
           <button
             type="button"
             tabIndex={-1}
             className={classNames(
               "mb-px",
-              "relative",
-              "top-4",
-              "right-10",
               editNode
-                ? "input-component-true-button"
-                : "input-component-false-button",
+              ? "side-bar-button-size absolute bottom-[1.3rem] right-[5.2rem]"
+              : "side-bar-button-size absolute bottom-4 right-[4.2rem]",
             )}
             onClick={(event) => {
               event.preventDefault();
-              setPwdVisible(!pwdVisible);
+              if (updateVisibility) updateVisibility()
             }}
           >
-            {pwdVisible ? (
+            {password ? (
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
                 viewBox="0 0 24 24"
                 strokeWidth={1.5}
                 stroke="currentColor"
-                className={classNames(
-                  editNode
-                    ? "input-component-true-svg"
-                    : "input-component-false-svg",
-                )}
               >
                 <path
                   strokeLinecap="round"
@@ -141,11 +114,6 @@ export default function TextAreaComponent({
                 viewBox="0 0 24 24"
                 strokeWidth={1.5}
                 stroke="currentColor"
-                className={classNames(
-                  editNode
-                    ? "input-component-true-svg"
-                    : "input-component-false-svg",
-                )}
               >
                 <path
                   strokeLinecap="round"
@@ -161,6 +129,7 @@ export default function TextAreaComponent({
             )}
           </button>
         )}
+
       </div>
     </div>
   );

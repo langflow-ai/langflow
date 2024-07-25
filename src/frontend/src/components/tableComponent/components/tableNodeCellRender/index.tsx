@@ -30,6 +30,7 @@ export default function TableNodeCellRender({
     nodeClass,
     handleOnNewValue: handleOnNewValueNode,
     handleNodeClass,
+    changeVisibility,
   },
 }: CustomCellRendererProps) {
   const handleOnNewValue = (newValue: any, name: string, dbValue?: boolean) => {
@@ -44,14 +45,25 @@ export default function TableNodeCellRender({
     });
     setTemplateValue(newValue);
   };
+
   const setNodeClass = (value: APIClassType, code?: string, type?: string) => {
     handleNodeClass(value, templateData.key, code, type);
   };
-
+  const [templatePassword, setTemplatePassword] = useState(data.password);
   const [templateValue, setTemplateValue] = useState(value);
   const [templateData, setTemplateData] = useState(data);
   const [errorDuplicateKey, setErrorDuplicateKey] = useState(false);
   const edges = useFlowStore((state) => state.edges);
+
+  function updateVisibility(){
+    changeVisibility(templateData.key);
+    setTemplateData((old) => {
+      let newData = cloneDeep(old);
+      newData.password = !newData.password;
+      return newData;
+      });
+    setTemplatePassword(!templatePassword);
+  }
 
   const id = {
     inputTypes: templateData.input_types,
@@ -81,7 +93,8 @@ export default function TableNodeCellRender({
           templateValue,
           disabled,
           handleOnNewValue,
-          password,
+          password:templatePassword,
+          updateVisibility
         });
 
       case "NestedDict":

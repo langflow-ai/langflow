@@ -133,6 +133,7 @@ export type TextAreaComponentType = {
   id?: string;
   readonly?: boolean;
   password?: boolean;
+  updateVisibility?: () => void;
 };
 
 export type outputComponentType = {
@@ -648,6 +649,8 @@ export type genericModalPropsType = {
   children: ReactNode;
   id?: string;
   readonly?: boolean;
+  password?: boolean;
+  changeVisibility?: ()=>void;
 };
 
 export type newFlowModalPropsType = {
