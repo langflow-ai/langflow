@@ -120,7 +120,7 @@ async def teardown_services():
     try:
         from langflow.services.manager import service_manager
 
-        service_manager.teardown()
+        await service_manager.teardown()
     except Exception as exc:
         logger.exception(exc)
 
