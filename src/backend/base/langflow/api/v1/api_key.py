@@ -72,12 +72,7 @@ def save_store_api_key(
     settings_service=Depends(get_settings_service),
 ):
 
-    config_dir = get_storage_service().settings_service.settings.config_dir
     auth_settings = settings_service.auth_settings
-
-    if not config_dir:
-        logger.debug("No CONFIG_DIR provided, not saving secret key")
-        return api_key
 
     try:
         api_key = api_key_request.api_key
@@ -87,12 +82,6 @@ def save_store_api_key(
         current_user.store_api_key = encrypted
         db.add(current_user)
         db.commit()
-
-        secret_key_path = Path(config_dir) / "secret_key"
-
-        if encrypted:
-            logger.debug("Secret key provided")
-            write_secret_to_file(secret_key_path, encrypted)
 
         response.set_cookie(
             "apikey_tkn_lflw",

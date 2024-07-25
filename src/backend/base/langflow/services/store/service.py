@@ -110,8 +110,7 @@ class StoreService(Service):
         # If it is, return True
         # If it is not, return False
         try:
-            decrypted_api_key = auth_utils.decrypt_api_key(api_key, settings_service=self.settings_service)
-            user_data, _ = await self._get(f"{self.base_url}/users/me", decrypted_api_key, params={"fields": "id"})
+            user_data, _ = await self._get(f"{self.base_url}/users/me", api_key, params={"fields": "id"})
 
             return "id" in user_data[0]
         except HTTPStatusError as exc:

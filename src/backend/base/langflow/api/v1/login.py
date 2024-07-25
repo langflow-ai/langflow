@@ -1,6 +1,7 @@
 from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
+from langflow.services.database.models.user.crud import get_user_by_id
 from langflow.services.settings.utils import read_secret_from_file
 from sqlmodel import Session
 
@@ -59,6 +60,15 @@ async def login_to_get_access_token(
             expires=auth_settings.ACCESS_TOKEN_EXPIRE_SECONDS,
             domain=auth_settings.COOKIE_DOMAIN,
         )
+        response.set_cookie(
+            "apikey_tkn_lflw",
+            user.store_api_key,
+            httponly=auth_settings.ACCESS_HTTPONLY,
+            samesite=auth_settings.ACCESS_SAME_SITE,
+            secure=auth_settings.ACCESS_SECURE,
+            expires=None,  # Set to None to make it a session cookie
+            domain=auth_settings.COOKIE_DOMAIN,
+        )
         variable_service.initialize_user_variables(user.id, db)
         # Create default folder for user if it doesn't exist
         create_default_folder_if_it_doesnt_exist(db, user.id)
@@ -77,26 +87,23 @@ async def auto_login(
 ):
     auth_settings = settings_service.auth_settings
 
-    config_dir = get_storage_service().settings_service.settings.config_dir
-    secret_key_path = Path(config_dir) / "secret_key"
-
-    api_key = read_secret_from_file(secret_key_path)
-
-    response.set_cookie(
-        "apikey_tkn_lflw",
-        api_key,
-        httponly=auth_settings.ACCESS_HTTPONLY,
-        samesite=auth_settings.ACCESS_SAME_SITE,
-        secure=auth_settings.ACCESS_SECURE,
-        expires=None,  # Set to None to make it a session cookie
-        domain=auth_settings.COOKIE_DOMAIN,
-    )
-
     if settings_service.auth_settings.AUTO_LOGIN:
         user_id, tokens = create_user_longterm_token(db)
         response.set_cookie(
             "access_token_lf",
             tokens["access_token"],
+            httponly=auth_settings.ACCESS_HTTPONLY,
+            samesite=auth_settings.ACCESS_SAME_SITE,
+            secure=auth_settings.ACCESS_SECURE,
+            expires=None,  # Set to None to make it a session cookie
+            domain=auth_settings.COOKIE_DOMAIN,
+        )
+
+        user = get_user_by_id(db, str(user_id))
+
+        response.set_cookie(
+            "apikey_tkn_lflw",
+            user.store_api_key,
             httponly=auth_settings.ACCESS_HTTPONLY,
             samesite=auth_settings.ACCESS_SAME_SITE,
             secure=auth_settings.ACCESS_SECURE,
