@@ -49,56 +49,54 @@ export default function TextAreaComponent({
             }}
           />
         </Case>
-          <GenericModal
-            type={TypeModal.TEXT}
-            buttonText="Finish Editing"
-            modalTitle={EDIT_TEXT_MODAL_TITLE}
-            value={value}
-            setValue={(value: string) => {
-              onChange(value);
-            }}
-            disabled={disabled}
-            password={password}
-          >
-            {!editNode ? (
-              <div className={
-                "flex items-center" +
-                (password ? "mb-px relative left-6" : "")
+        <GenericModal
+          type={TypeModal.TEXT}
+          buttonText="Finish Editing"
+          modalTitle={EDIT_TEXT_MODAL_TITLE}
+          value={value}
+          setValue={(value: string) => {
+            onChange(value);
+          }}
+          disabled={disabled}
+          password={password}
+        >
+          {!editNode ? (
+            <div
+              className={
+                "flex items-center" + (password ? "relative left-6 mb-px" : "")
               }
-              >
-                <Button unstyled>
-                  <IconComponent
-                    strokeWidth={1.5}
-                    id={id}
-                    name="ExternalLink"
-                    className={
-                      "icons-parameters-comp shrink-0" +
-                      (disabled
-                        ? " text-ring"
-                        : " hover:text-accent-foreground")
-                    }
-                  />
-                </Button>
-              </div>
-            ) : (
-              <Button unstyled className="w-full">
-                <div className="flex w-full items-center gap-3">
-                  <span
-                    id={id}
-                    data-testid={id}
-                    className={
-                      editNode
-                        ? "input-edit-node input-dialog"
-                        : (disabled ? "input-disable text-ring " : "") +
-                          " primary-input text-muted-foreground"
-                    }
-                  >
-                    {value !== "" ? value : "Type something..."}
-                  </span>
-                </div>
+            >
+              <Button unstyled>
+                <IconComponent
+                  strokeWidth={1.5}
+                  id={id}
+                  name="ExternalLink"
+                  className={
+                    "icons-parameters-comp shrink-0" +
+                    (disabled ? " text-ring" : " hover:text-accent-foreground")
+                  }
+                />
               </Button>
-            )}
-          </GenericModal>
+            </div>
+          ) : (
+            <Button unstyled className="w-full">
+              <div className="flex w-full items-center gap-3">
+                <span
+                  id={id}
+                  data-testid={id}
+                  className={
+                    editNode
+                      ? "input-edit-node input-dialog"
+                      : (disabled ? "input-disable text-ring " : "") +
+                        " primary-input text-muted-foreground"
+                  }
+                >
+                  {value !== "" ? value : "Type something..."}
+                </span>
+              </div>
+            </Button>
+          )}
+        </GenericModal>
         {password /*&& (!setSelectedOption || selectedOption === "") */ && (
           <button
             type="button"
