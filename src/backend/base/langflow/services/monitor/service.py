@@ -6,8 +6,11 @@ from loguru import logger
 from platformdirs import user_cache_dir
 
 from langflow.services.base import Service
-from langflow.services.monitor.utils import add_row_to_table, drop_and_create_table_if_schema_mismatch, \
-    new_duckdb_locked_connection
+from langflow.services.monitor.utils import (
+    add_row_to_table,
+    drop_and_create_table_if_schema_mismatch,
+    new_duckdb_locked_connection,
+)
 
 if TYPE_CHECKING:
     from langflow.services.monitor.schema import VertexBuildModel
@@ -162,9 +165,7 @@ class MonitorService(Service):
         return self.exec_query(query, read_only=False)
 
     def get_transactions(self, limit: int = 100):
-        query = (
-            f"SELECT index,flow_id, status, error, timestamp, vertex_id, inputs, outputs, target_id FROM transactions LIMIT {str(limit)}"
-        )
+        query = f"SELECT index,flow_id, status, error, timestamp, vertex_id, inputs, outputs, target_id FROM transactions LIMIT {str(limit)}"
         with new_duckdb_locked_connection(self.db_path, read_only=True) as conn:
             df = conn.execute(query).df()
 

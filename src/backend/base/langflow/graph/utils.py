@@ -14,9 +14,9 @@ from langflow.services.database.models.transactions.crud import log_transaction 
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service
 from loguru import logger
+
 if TYPE_CHECKING:
     from langflow.graph.vertex.base import Vertex
-
 
 
 class UnbuiltObject:
@@ -125,7 +125,9 @@ def _vertex_to_primitive_dict(target: "Vertex") -> dict:
     return params
 
 
-async def log_transaction(flow_id: Union[str, UUID], source: "Vertex", status, target: Optional["Vertex"] = None, error=None) -> None:
+async def log_transaction(
+    flow_id: Union[str, UUID], source: "Vertex", status, target: Optional["Vertex"] = None, error=None
+) -> None:
     try:
         inputs = _vertex_to_primitive_dict(source)
         transaction = TransactionBase(

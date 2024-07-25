@@ -28,6 +28,7 @@ def delete_flow_by_id(flow_id: str, session: Session) -> None:
     session.exec(delete(MessageTable).where(MessageTable.flow_id == flow_id))
     logger.info(f"Deleted flow {flow_id}")
 
+
 def get_webhook_component_in_flow(flow_data: dict):
     """Get webhook component in flow data."""
 

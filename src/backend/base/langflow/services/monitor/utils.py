@@ -16,6 +16,7 @@ if TYPE_CHECKING:
 INDEX_KEY = "index"
 worker_lock_manager = KeyedWorkerLockManager()
 
+
 def get_table_schema_as_dict(conn: duckdb.DuckDBPyConnection, table_name: str) -> dict:
     result = conn.execute(f"PRAGMA table_info('{table_name}')").fetchall()
     schema = {row[1]: row[2].upper() for row in result}
@@ -83,6 +84,7 @@ def new_duckdb_locked_connection(db_path: Union[str, Path], read_only=False):
     with worker_lock_manager.lock("duckdb"):
         with duckdb.connect(str(db_path), read_only=read_only) as conn:
             yield conn
+
 
 def add_row_to_table(
     conn: duckdb.DuckDBPyConnection,

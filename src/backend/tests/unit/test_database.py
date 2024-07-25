@@ -14,8 +14,11 @@ from langflow.services.database.models.transactions.crud import get_transactions
 from langflow.services.database.utils import session_getter, migrate_transactions_from_monitor_service_to_database
 from langflow.services.deps import get_db_service, get_monitor_service, session_scope
 from langflow.services.monitor.schema import TransactionModel
-from langflow.services.monitor.utils import drop_and_create_table_if_schema_mismatch, new_duckdb_locked_connection, \
-    add_row_to_table
+from langflow.services.monitor.utils import (
+    drop_and_create_table_if_schema_mismatch,
+    new_duckdb_locked_connection,
+    add_row_to_table,
+)
 
 
 @pytest.fixture(scope="module")
@@ -285,6 +288,7 @@ def test_load_flows(client: TestClient, load_flows_dir):
     response = client.get("api/v1/flows/c54f9130-f2fa-4a3e-b22a-3856d946351b")
     assert response.status_code == 200
     assert response.json()["name"] == "BasicExample"
+
 
 @pytest.mark.load_flows
 def test_migrate_transactions(client: TestClient):

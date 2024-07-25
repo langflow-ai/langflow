@@ -107,7 +107,7 @@ def initialize_database(fix_migration: bool = False):
         # if "overlaps with other requested revisions" or "Can't locate revision identified by"
         # are not in the exception, we can't handle it
         if "overlaps with other requested revisions" not in str(
-                exc
+            exc
         ) and "Can't locate revision identified by" not in str(exc):
             raise exc
         # This means there's wrong revision in the DB

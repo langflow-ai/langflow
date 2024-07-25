@@ -5,6 +5,7 @@ Revises: 325180f0c4e1
 Create Date: 2024-07-24 11:37:48.532933
 
 """
+
 from typing import Sequence, Union
 
 from alembic import op
@@ -14,8 +15,8 @@ from langflow.utils import migration
 
 
 # revision identifiers, used by Alembic.
-revision: str = '90be8e2ed91e'
-down_revision: Union[str, None] = '325180f0c4e1'
+revision: str = "90be8e2ed91e"
+down_revision: Union[str, None] = "325180f0c4e1"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

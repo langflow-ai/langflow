@@ -15,8 +15,12 @@ from sqlmodel import Session, SQLModel, create_engine, select, text
 from langflow.services.base import Service
 from langflow.services.database import models  # noqa
 from langflow.services.database.models.user.crud import get_user_by_username
-from langflow.services.database.utils import Result, TableResults, migrate_messages_from_monitor_service_to_database, \
-    migrate_transactions_from_monitor_service_to_database
+from langflow.services.database.utils import (
+    Result,
+    TableResults,
+    migrate_messages_from_monitor_service_to_database,
+    migrate_transactions_from_monitor_service_to_database,
+)
 from langflow.services.deps import get_settings_service
 from langflow.services.utils import teardown_superuser
 

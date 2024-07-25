@@ -11,6 +11,7 @@ class KeyedMemoryLockManager:
     """
     A manager for acquiring and releasing memory locks based on a key
     """
+
     def __init__(self):
         self.locks = {}
         self.global_lock = threading.Lock()
@@ -49,7 +50,7 @@ class KeyedWorkerLockManager:
         Returns:
         bool: True if the string is valid, False otherwise.
         """
-        pattern = re.compile(r'^\w+$')
+        pattern = re.compile(r"^\w+$")
         return bool(pattern.match(key))
 
     @contextmanager
@@ -60,5 +61,3 @@ class KeyedWorkerLockManager:
         lock = FileLock(self.locks_dir / key)
         with lock:
             yield
-
-

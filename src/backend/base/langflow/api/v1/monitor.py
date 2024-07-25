@@ -135,7 +135,8 @@ async def get_transactions(
 ):
     try:
         transactions = get_transactions_by_flow_id(session, flow_id)
-        return [TransactionReadResponse(
+        return [
+            TransactionReadResponse(
                 transaction_id=t.id,
                 timestamp=t.timestamp,
                 vertex_id=t.vertex_id,
@@ -144,7 +145,9 @@ async def get_transactions(
                 outputs=t.outputs,
                 status=t.status,
                 error=t.error,
-                flow_id=t.flow_id
-            ) for t in transactions]
+                flow_id=t.flow_id,
+            )
+            for t in transactions
+        ]
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
