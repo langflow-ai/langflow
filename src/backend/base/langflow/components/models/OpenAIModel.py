@@ -5,7 +5,7 @@ from langchain_openai import ChatOpenAI
 from pydantic.v1 import SecretStr
 
 from langflow.base.models.model import LCModelComponent
-from langflow.base.models.openai_constants import MODEL_NAMES
+from langflow.base.models.openai_constants import OPENAI_MODEL_NAMES
 from langflow.field_typing import LanguageModel
 from langflow.inputs import (
     BoolInput,
@@ -46,7 +46,7 @@ class OpenAIModelComponent(LCModelComponent):
             info="The schema for the Output of the model. You must pass the word JSON in the prompt. If left blank, JSON mode will be disabled.",
         ),
         DropdownInput(
-            name="model_name", display_name="Model Name", advanced=False, options=MODEL_NAMES, value=MODEL_NAMES[0]
+            name="model_name", display_name="Model Name", advanced=False, options=OPENAI_MODEL_NAMES, value=OPENAI_MODEL_NAMES[0]
         ),
         StrInput(
             name="openai_api_base",

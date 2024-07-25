@@ -1,5 +1,7 @@
+from langchain_openai import OpenAIEmbeddings
 from langflow.base.embeddings.model import LCEmbeddingsModel
-from langflow.base.models.aiml_constants import EMBEDDING_MODELS
+from langflow.base.models.aiml_constants import AIML_EMBEDDING_MODELS
+from langflow.base.models.openai_constants import OPENAI_EMBEDDING_MODEL_NAMES
 from langflow.components.embeddings.util.AIMLEmbeddingsImpl import AIMLEmbeddingsImpl
 from langflow.field_typing import Embeddings
 from langflow.inputs.inputs import DropdownInput
@@ -16,7 +18,7 @@ class AIMLEmbeddingsComponent(LCEmbeddingsModel):
         DropdownInput(
             name="model_name",
             display_name="Model Name",
-            options=EMBEDDING_MODELS,
+            options=AIML_EMBEDDING_MODELS,
             required=True,
         ),
         SecretStrInput(
@@ -28,6 +30,15 @@ class AIMLEmbeddingsComponent(LCEmbeddingsModel):
     ]
 
     def build_embeddings(self) -> Embeddings:
+        # if self.model_name in OPENAI_EMBEDDING_MODEL_NAMES:
+        #     return OpenAIEmbeddings(
+        #         model=self.model_name,
+        #         api_key=self.aiml_api_key,
+        #         base_url="https://api.aimlapi.com/v1",
+        #         allowed_special="all",
+        #         disallowed_special="all",
+        #     )
+
         return AIMLEmbeddingsImpl(
             api_key=self.aiml_api_key,
             model=self.model_name,
