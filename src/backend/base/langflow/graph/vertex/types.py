@@ -408,11 +408,12 @@ class StateVertex(ComponentVertex):
     def __init__(self, data: Dict, graph):
         super().__init__(data, graph=graph, base_type="custom_components")
         self.steps = [self._build]
-        self.is_state = True
+        self.is_state = False
 
     @property
     def successors_ids(self) -> List[str]:
         if self._successors_ids is None:
+            self.is_state = False
             return super().successors_ids
         return self._successors_ids
 
