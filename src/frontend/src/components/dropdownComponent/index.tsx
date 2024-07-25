@@ -141,14 +141,14 @@ export default function Dropdown({
                         className="items-center truncate"
                         data-testid={`${option}-${id ?? ""}-option`}
                       >
-                        {option}
                         {customValue === option ? (
-                          <span className="text-xs text-muted-foreground">
-                            &nbsp;- Custom
+                          <span className="text-muted-foreground">
+                            Text:&nbsp;
                           </span>
                         ) : (
                           <></>
                         )}
+                        {option}
                         <ForwardedIconComponent
                           name="Check"
                           className={cn(
