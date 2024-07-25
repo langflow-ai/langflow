@@ -39,4 +39,9 @@ class NotifyComponent(CustomComponent):
         else:
             self.status = "No record provided."
         self.status = data
+        self._set_successors_ids()
         return data
+
+    def _set_successors_ids(self):
+        successors = self.vertex.graph.successor_map.get(self.vertex.id, [])
+        return successors + self.vertex.graph.activated_vertices
