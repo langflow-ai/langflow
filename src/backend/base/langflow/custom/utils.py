@@ -361,14 +361,15 @@ def build_custom_component_template_from_inputs(
     custom_component: Union[Component, CustomComponent], user_id: Optional[Union[str, UUID]] = None
 ):
     # The List of Inputs fills the role of the build_config and the entrypoint_args
-    field_config = custom_component.template_config
+    cc_instance = get_component_instance(custom_component, user_id=user_id)
+    field_config = cc_instance.get_template_config(cc_instance)
     frontend_node = ComponentFrontendNode.from_inputs(**field_config)
     frontend_node = add_code_field(frontend_node, custom_component._code, field_config.get("code", {}))
     # But we now need to calculate the return_type of the methods in the outputs
     for output in frontend_node.outputs:
         if output.types:
             continue
-        return_types = custom_component.get_method_return_type(output.method)
+        return_types = cc_instance.get_method_return_type(output.method)
         return_types = [format_type(return_type) for return_type in return_types]
         output.add_types(return_types)
         output.set_selected()
@@ -376,8 +377,8 @@ def build_custom_component_template_from_inputs(
     frontend_node.validate_component()
     # ! This should be removed when we have a better way to handle this
     frontend_node.set_base_classes_from_outputs()
-    reorder_fields(frontend_node, custom_component._get_field_order())
-    cc_instance = get_component_instance(custom_component, user_id=user_id)
+    reorder_fields(frontend_node, cc_instance._get_field_order())
+
     return frontend_node.to_dict(keep_name=False), cc_instance
 
 
