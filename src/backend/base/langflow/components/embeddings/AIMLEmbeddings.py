@@ -30,15 +30,6 @@ class AIMLEmbeddingsComponent(LCEmbeddingsModel):
     ]
 
     def build_embeddings(self) -> Embeddings:
-        # if self.model_name in OPENAI_EMBEDDING_MODEL_NAMES:
-        #     return OpenAIEmbeddings(
-        #         model=self.model_name,
-        #         api_key=self.aiml_api_key,
-        #         base_url="https://api.aimlapi.com/v1",
-        #         allowed_special="all",
-        #         disallowed_special="all",
-        #     )
-
         return AIMLEmbeddingsImpl(
             api_key=self.aiml_api_key,
             model=self.model_name,
