@@ -37,7 +37,7 @@ jobs:
       - run: echo "Set CI Condition"
   path-filter:
     needs: set-ci-condition
-    if: ${{ needs.set-ci-condition.outputs.should-run-ci }}
+    if: ${{ needs.set-ci-condition.outputs.should-run-ci == 'true' }}
 
     name: Filter Paths
     runs-on: ubuntu-latest
