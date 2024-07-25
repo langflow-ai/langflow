@@ -40,8 +40,8 @@ class GitLoaderComponent(Component):
             required=False,
             advanced=True,
             info="A function that takes a file path and returns a boolean indicating whether to load the file. "
-                 "Example to include only .py files: lambda file_path: file_path.endswith('.py'). "
-                 "Example to exclude .py files: lambda file_path: not file_path.endswith('.py').",
+            "Example to include only .py files: lambda file_path: file_path.endswith('.py'). "
+            "Example to exclude .py files: lambda file_path: not file_path.endswith('.py').",
         ),
     ]
 
