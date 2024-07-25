@@ -46,7 +46,11 @@ class OpenAIModelComponent(LCModelComponent):
             info="The schema for the Output of the model. You must pass the word JSON in the prompt. If left blank, JSON mode will be disabled.",
         ),
         DropdownInput(
-            name="model_name", display_name="Model Name", advanced=False, options=OPENAI_MODEL_NAMES, value=OPENAI_MODEL_NAMES[0]
+            name="model_name",
+            display_name="Model Name",
+            advanced=False,
+            options=OPENAI_MODEL_NAMES,
+            value=OPENAI_MODEL_NAMES[0],
         ),
         StrInput(
             name="openai_api_base",

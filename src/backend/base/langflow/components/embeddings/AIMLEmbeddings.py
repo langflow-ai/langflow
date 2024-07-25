@@ -1,7 +1,5 @@
-from langchain_openai import OpenAIEmbeddings
 from langflow.base.embeddings.model import LCEmbeddingsModel
 from langflow.base.models.aiml_constants import AIML_EMBEDDING_MODELS
-from langflow.base.models.openai_constants import OPENAI_EMBEDDING_MODEL_NAMES
 from langflow.components.embeddings.util.AIMLEmbeddingsImpl import AIMLEmbeddingsImpl
 from langflow.field_typing import Embeddings
 from langflow.inputs.inputs import DropdownInput

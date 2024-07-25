@@ -1,5 +1,5 @@
 import json
-from typing import Any, List, Optional
+from typing import List
 import httpx
 from langflow.field_typing import Embeddings
 from langchain_core.pydantic_v1 import BaseModel, SecretStr
@@ -13,7 +13,6 @@ class AIMLEmbeddingsImpl(BaseModel, Embeddings):
 
     api_key: SecretStr
     model: str
-
 
     def embed_documents(self, texts: List[str]) -> List[List[float]]:
         embeddings = [None] * len(texts)
