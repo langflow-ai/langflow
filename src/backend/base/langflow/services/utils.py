@@ -109,7 +109,7 @@ def teardown_superuser(settings_service, session):
             raise RuntimeError("Could not remove default superuser.") from exc
 
 
-def teardown_services():
+async def teardown_services():
     """
     Teardown all the services.
     """
