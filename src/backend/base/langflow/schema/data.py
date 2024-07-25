@@ -22,6 +22,7 @@ class Data(BaseModel):
     default_value: Optional[str] = ""
 
     @model_validator(mode="before")
+    @classmethod
     def validate_data(cls, values):
         if not values.get("data"):
             values["data"] = {}
