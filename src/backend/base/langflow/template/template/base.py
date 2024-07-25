@@ -2,7 +2,7 @@ from typing import Callable, Union, cast
 
 from pydantic import BaseModel, Field, model_serializer
 
-from langflow.inputs.inputs import InputTypes
+from langflow.inputs.inputs import InputTypes, _instantiate_input
 from langflow.template.field.base import Input
 from langflow.utils.constants import DIRECT_TYPES
 
@@ -45,7 +45,16 @@ class Template(BaseModel):
                 value["name"] = key
                 if "fields" not in data:
                     data["fields"] = []
-                data["fields"].append(Input(**value))
+                input_type = value.pop("_input_type", None)
+                if input_type:
+                    try:
+                        _input = _instantiate_input(input_type, value)
+                    except Exception as e:
+                        raise ValueError(f"Error instantiating input {input_type}: {e}")
+                else:
+                    _input = Input(**value)
+
+                data["fields"].append(_input)
         return cls(**data)
 
     # For backwards compatibility
