@@ -37,6 +37,9 @@ export function ParameterRenderComponent({
     handleOnNewValue({ value });
   };
 
+  const id =
+    templateData.type + "-" + (editNode ? "edit-" : "") + templateData.name;
+
   return (
     <RefreshParameterComponent
       templateData={templateData}
@@ -61,7 +64,7 @@ export function ParameterRenderComponent({
           editNode={editNode}
           value={(templateValue || "").toString() === "{}" ? {} : templateValue}
           onChange={onChange}
-          id="editnode-div-dict-input"
+          id={editNode ? "editnode" : "" + "editnode-div-dict-input"}
         />
       ) : templateData.type === "dict" ? (
         <KeypairListComponent
@@ -73,7 +76,7 @@ export function ParameterRenderComponent({
         />
       ) : templateData.type === "bool" ? (
         <ToggleShadComponent
-          id={"toggle-edit-" + templateData.name}
+          id={"toggle-" + editNode ? "edit-" : "" + templateData.name}
           disabled={disabled}
           enabled={templateValue}
           setEnabled={onChange}
@@ -114,8 +117,7 @@ export function ParameterRenderComponent({
           setNodeClass={handleNodeClass}
           value={templateValue ?? ""}
           onChange={onChange}
-          id={"prompt-area-edit-" + templateData.name}
-          data-testid={"modal-prompt-input-" + templateData.name}
+          id={"prompt-area-" + editNode ? "edit-" : "" + templateData.name}
         />
       ) : templateData.type === "code" ? (
         <CodeAreaComponent
