@@ -404,7 +404,7 @@ class InterfaceVertex(ComponentVertex):
         return self.vertex_type == InterfaceComponentTypes.ChatInput and self.is_input
 
 
-class StateVertex(Vertex):
+class StateVertex(ComponentVertex):
     def __init__(self, data: Dict, graph):
         super().__init__(data, graph=graph, base_type="custom_components")
         self.steps = [self._build]
@@ -412,8 +412,9 @@ class StateVertex(Vertex):
 
     @property
     def successors_ids(self) -> List[str]:
-        successors = self.graph.successor_map.get(self.id, [])
-        return successors + self.graph.activated_vertices
+        if self._successors_ids is None:
+            return super().successors_ids
+        return self._successors_ids
 
     def _built_object_repr(self):
         if self.artifacts and "repr" in self.artifacts:
