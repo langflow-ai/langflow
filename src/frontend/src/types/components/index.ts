@@ -54,6 +54,7 @@ export type DropDownComponentType = {
   disabled?: boolean;
   isLoading?: boolean;
   value: string;
+  combobox?: boolean;
   options: string[];
   onSelect: (value: string) => void;
   editNode?: boolean;
