@@ -132,7 +132,7 @@ const SideBarFoldersButtonsComponent = ({
         },
         onError: () => {
           setErrorData({
-            title: `Error in the download folder`,
+            title: `An error occurred while downloading folder.`,
           });
         },
       },
