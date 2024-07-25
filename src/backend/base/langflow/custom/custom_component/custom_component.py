@@ -357,12 +357,7 @@ class CustomComponent(BaseComponent):
         """
         return self.get_method_return_type(self.function_entrypoint_name)
 
-    def get_method_return_type(self, method_name: str):
-        build_method = self.get_method(method_name)
-        if not build_method or not build_method.get("has_return"):
-            return []
-        return_type = build_method["return_type"]
-
+    def _extract_return_type(self, return_type: Any) -> List[Any]:
         if hasattr(return_type, "__origin__") and return_type.__origin__ in [
             list,
             List,
@@ -376,6 +371,14 @@ class CustomComponent(BaseComponent):
         # If the return type is a Union, then we need to parse it
         return_type = extract_union_types_from_generic_alias(return_type)
         return return_type
+
+    def get_method_return_type(self, method_name: str):
+        build_method = self.get_method(method_name)
+        if not build_method or not build_method.get("has_return"):
+            return []
+        return_type = build_method["return_type"]
+
+        return self._extract_return_type(return_type)
 
     @property
     def get_main_class_name(self):
