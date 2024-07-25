@@ -25,6 +25,7 @@ export default function Dropdown({
   isLoading,
   value,
   options,
+  allowCustom,
   onSelect,
   editNode = false,
   id = "",
@@ -46,7 +47,7 @@ export default function Dropdown({
     const value = event.target.value;
     const searchValues = fuse.search(value);
     const filtered = searchValues.map((search) => search.item);
-    if (!filtered.includes(value)) filtered.push(value);
+    if (!filtered.includes(value) && allowCustom) filtered.push(value);
     setFilteredOptions(filtered);
     setCustomValue(value);
   };
@@ -54,7 +55,7 @@ export default function Dropdown({
   useEffect(() => {
     if (open) {
       const filtered = cloneDeep(options);
-      if (customValue === value) {
+      if (customValue === value && allowCustom) {
         filtered.push(customValue);
       }
       setFilteredOptions(filtered);
@@ -63,7 +64,7 @@ export default function Dropdown({
 
   return (
     <>
-      {Object.keys(filteredOptions ?? [])?.length > 0 ? (
+      {Object.keys(options ?? [])?.length > 0 ? (
         <>
           <Popover open={open} onOpenChange={children ? () => {} : setOpen}>
             {children ? (
