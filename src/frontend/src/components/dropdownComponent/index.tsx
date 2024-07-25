@@ -25,7 +25,7 @@ export default function Dropdown({
   isLoading,
   value,
   options,
-  allowCustom,
+  combobox,
   onSelect,
   editNode = false,
   id = "",
@@ -47,7 +47,7 @@ export default function Dropdown({
     const value = event.target.value;
     const searchValues = fuse.search(value);
     const filtered = searchValues.map((search) => search.item);
-    if (!filtered.includes(value) && allowCustom) filtered.push(value);
+    if (!filtered.includes(value) && combobox) filtered.push(value);
     setFilteredOptions(filtered);
     setCustomValue(value);
   };
@@ -55,7 +55,7 @@ export default function Dropdown({
   useEffect(() => {
     if (open) {
       const filtered = cloneDeep(options);
-      if (customValue === value && allowCustom) {
+      if (customValue === value && combobox) {
         filtered.push(customValue);
       }
       setFilteredOptions(filtered);
