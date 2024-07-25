@@ -17,9 +17,7 @@ on:
         required: false
         type: string
   pull_request:
-    types: [synchronize]
-  pull_request_review:
-    types: [submitted]
+    types: [synchronize, labeled]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -28,7 +26,6 @@ concurrency:
 
 jobs:
   set-ci-condition:
-    needs: labeler
     name: Should Run CI
     runs-on: ubuntu-latest
     outputs:
