@@ -1,5 +1,5 @@
 import base64
-import hashlib
+import random
 import warnings
 from datetime import datetime, timedelta, timezone
 from typing import Annotated, Coroutine, Optional, Union
@@ -335,25 +335,19 @@ def authenticate_user(username: str, password: str, db: Session = Depends(get_se
 def add_padding(s):
     # Calculate the number of padding characters needed
     padding_needed = 4 - len(s) % 4
-    return s + "=" * padding_needed if padding_needed != 4 else s
+    return s + "=" * padding_needed
 
 
 def ensure_valid_key(s: str) -> bytes:
-    # Hash the input string to ensure it is exactly 32 bytes long
-    hasher = hashlib.sha256()
-    hasher.update(s.encode())
-    key_bytes = hasher.digest()
-
-    # Base64 encode the hashed bytes
-    key = base64.urlsafe_b64encode(key_bytes)
-
-    # Ensure the key length is valid and add padding if needed
-    key = add_padding(key.decode())
-
-    # Ensure the key is exactly 44 characters long (32 bytes base64-encoded)
-    if len(key) != 44:
-        raise ValueError("The key must be 32 url-safe base64-encoded bytes.")
-
+    # If the key is too short, we'll use it as a seed to generate a valid key
+    if len(s) < 32:
+        # Use the input as a seed for the random number generator
+        random.seed(s)
+        # Generate 32 random bytes
+        key = bytes(random.getrandbits(8) for _ in range(32))
+        key = base64.urlsafe_b64encode(key)
+    else:
+        key = add_padding(s).encode()
     return key
 
 
@@ -366,7 +360,7 @@ def get_fernet(settings_service=Depends(get_settings_service)):
 
 def encrypt_api_key(api_key: str, settings_service=Depends(get_settings_service)):
     fernet = get_fernet(settings_service)
-    # Encrypt the API key
+    # Two-way encryption
     encrypted_key = fernet.encrypt(api_key.encode())
     return encrypted_key.decode()
 
