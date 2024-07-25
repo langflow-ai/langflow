@@ -4,7 +4,6 @@ from uuid import UUID
 
 import httpx
 from httpx import HTTPError, HTTPStatusError
-from langflow.base.prompts import api_utils
 from loguru import logger
 
 from langflow.services.base import Service
@@ -27,7 +26,6 @@ if TYPE_CHECKING:
 
 from contextlib import asynccontextmanager
 from contextvars import ContextVar
-from langflow.services.auth import utils as auth_utils
 
 user_data_var: ContextVar[Optional[Dict[str, Any]]] = ContextVar("user_data", default=None)
 

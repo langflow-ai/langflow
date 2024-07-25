@@ -1,11 +1,7 @@
-from logging import info
-from pathlib import Path
 from typing import TYPE_CHECKING
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Response
-from langflow.services.settings.utils import write_secret_to_file
-from loguru import logger
 from sqlmodel import Session
 
 from langflow.api.v1.schemas import ApiKeyCreateRequest, ApiKeysResponse
@@ -15,7 +11,7 @@ from langflow.services.auth import utils as auth_utils
 from langflow.services.database.models.api_key.crud import create_api_key, delete_api_key, get_api_keys
 from langflow.services.database.models.api_key.model import ApiKeyCreate, UnmaskedApiKeyRead
 from langflow.services.database.models.user.model import User
-from langflow.services.deps import get_session, get_settings_service, get_storage_service
+from langflow.services.deps import get_session, get_settings_service
 
 if TYPE_CHECKING:
     pass
@@ -71,7 +67,6 @@ def save_store_api_key(
     db: Session = Depends(get_session),
     settings_service=Depends(get_settings_service),
 ):
-
     auth_settings = settings_service.auth_settings
 
     try:

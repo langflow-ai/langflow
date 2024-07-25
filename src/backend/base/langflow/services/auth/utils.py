@@ -1,6 +1,5 @@
 import base64
 import hashlib
-import random
 import warnings
 from datetime import datetime, timedelta, timezone
 from typing import Annotated, Coroutine, Optional, Union
@@ -332,10 +331,12 @@ def authenticate_user(username: str, password: str, db: Session = Depends(get_se
 
     return user if verify_password(password, user.password) else None
 
+
 def add_padding(s):
     # Calculate the number of padding characters needed
     padding_needed = 4 - len(s) % 4
     return s + "=" * padding_needed if padding_needed != 4 else s
+
 
 def ensure_valid_key(s: str) -> bytes:
     # Hash the input string to ensure it is exactly 32 bytes long
@@ -354,6 +355,7 @@ def ensure_valid_key(s: str) -> bytes:
         raise ValueError("The key must be 32 url-safe base64-encoded bytes.")
 
     return key
+
 
 def get_fernet(settings_service=Depends(get_settings_service)):
     SECRET_KEY: str = settings_service.auth_settings.SECRET_KEY.get_secret_value()
