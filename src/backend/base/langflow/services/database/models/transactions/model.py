@@ -5,6 +5,10 @@ from uuid import UUID, uuid4
 from pydantic import field_validator
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
+if TYPE_CHECKING:
+    from langflow.services.database.models.flow.model import Flow
+
+
 class TransactionBase(SQLModel):
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     vertex_id: str = Field(nullable=False)
@@ -32,6 +36,7 @@ class TransactionBase(SQLModel):
 class TransactionTable(TransactionBase, table=True):
     __tablename__ = "transaction"
     id: Optional[UUID] = Field(default_factory=uuid4, primary_key=True)
+    flow: "Flow" = Relationship(back_populates="transactions")
 
 
 class TransactionReadResponse(TransactionBase):

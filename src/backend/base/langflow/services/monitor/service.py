@@ -25,7 +25,7 @@ class MonitorService(Service):
         self.settings_service = settings_service
         self.base_cache_dir = Path(user_cache_dir("langflow"), ensure_exists=True)
         self.db_path = self.base_cache_dir / "monitor.duckdb"
-        self.table_map: dict[str, type[TransactionModel | DuckDbMessageModel | VertexBuildModel]] = {
+        self.table_map: dict[str, type[VertexBuildModel]] = {
             "vertex_builds": VertexBuildModel,
         }
 
@@ -50,13 +50,9 @@ class MonitorService(Service):
         table_name: str,
         data: Union[dict, "VertexBuildModel"],
     ):
-        # Make sure the model passed matches the table
-
         model = self.table_map.get(table_name)
         if model is None:
             raise ValueError(f"Unknown table name: {table_name}")
-
-        # Connect to DuckDB and add the row
 
         with new_duckdb_locked_connection(self.db_path, read_only=False) as conn:
             add_row_to_table(conn, table_name, model, data)
