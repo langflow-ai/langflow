@@ -380,6 +380,14 @@ class CustomComponent(BaseComponent):
         return_type = extract_union_types_from_generic_alias(return_type)
         return return_type
 
+    def get_method_return_type(self, method_name: str):
+        build_method = self.get_method(method_name)
+        if not build_method or not build_method.get("has_return"):
+            return []
+        return_type = build_method["return_type"]
+
+        return self._extract_return_type(return_type)
+
     @property
     def get_main_class_name(self):
         """
