@@ -28,7 +28,6 @@ concurrency:
 
 jobs:
   labeler:
-    if : ${{ github.event_name == 'pull_request_review' && github.event.review.state == 'approved' }}
     runs-on: ubuntu-latest
     steps:
     - uses: jsryudev/pr-review-labeler@v0.2.2
