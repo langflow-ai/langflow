@@ -71,6 +71,7 @@ class Vertex:
         self._built_object = UnbuiltObject()
         self._built_result = None
         self._built = False
+        self._successors_ids: Optional[List[str]] = None
         self.artifacts: Dict[str, Any] = {}
         self.artifacts_raw: Dict[str, Any] = {}
         self.artifacts_type: Dict[str, str] = {}
