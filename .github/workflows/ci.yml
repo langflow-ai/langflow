@@ -34,7 +34,10 @@ jobs:
       should-run-ci:  ${{ (contains( github.event.pull_request.labels.*.name, 'lgtm') && github.event.pull_request.draft == false) || (github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call') }}
     steps:
       #  Do anything just to make the job run
-      - run: echo "Set CI Condition"
+      - run: echo "Debug CI Condition"
+      - run: echo "Labels -> ${{ join(github.event.pull_request.labels.*.name, ',') }}"
+      - run: echo "IsDraft -> ${{ github.event.pull_request.draft }}"
+      - run: echo "Event name -> ${{ github.event_name }}"
   path-filter:
     needs: set-ci-condition
     if: ${{ needs.set-ci-condition.outputs.should-run-ci == 'true' }}
