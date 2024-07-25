@@ -60,7 +60,7 @@ async def login_to_get_access_token(
         )
         response.set_cookie(
             "apikey_tkn_lflw",
-            user.store_api_key,
+            str(user.store_api_key),
             httponly=auth_settings.ACCESS_HTTPONLY,
             samesite=auth_settings.ACCESS_SAME_SITE,
             secure=auth_settings.ACCESS_SECURE,
@@ -97,17 +97,21 @@ async def auto_login(
             domain=auth_settings.COOKIE_DOMAIN,
         )
 
-        user = get_user_by_id(db, str(user_id))
+        user = get_user_by_id(db, user_id)
 
-        response.set_cookie(
-            "apikey_tkn_lflw",
-            user.store_api_key,
-            httponly=auth_settings.ACCESS_HTTPONLY,
-            samesite=auth_settings.ACCESS_SAME_SITE,
-            secure=auth_settings.ACCESS_SECURE,
-            expires=None,  # Set to None to make it a session cookie
-            domain=auth_settings.COOKIE_DOMAIN,
-        )
+        if user: 
+            if user.store_api_key is None:
+                user.store_api_key = ""
+
+            response.set_cookie(
+                "apikey_tkn_lflw",
+                str(user.store_api_key),  # Ensure it's a string
+                httponly=auth_settings.ACCESS_HTTPONLY,
+                samesite=auth_settings.ACCESS_SAME_SITE,
+                secure=auth_settings.ACCESS_SECURE,
+                expires=None,  # Set to None to make it a session cookie
+                domain=auth_settings.COOKIE_DOMAIN,
+            )
 
         return tokens
 
