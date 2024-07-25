@@ -45,8 +45,13 @@ class PromptComponent(Component):
         This function is called after the code validation is done.
         """
         frontend_node = super().post_code_processing(new_frontend_node, current_frontend_node)
-
-        frontend_node = self._update_template(frontend_node)
+        template = frontend_node["template"]["template"]["value"]
+        _ = process_prompt_template(
+            template=template,
+            name="template",
+            custom_fields=frontend_node["custom_fields"],
+            frontend_node_template=frontend_node["template"],
+        )
         # Now that template is updated, we need to grab any values that were set in the current_frontend_node
         # and update the frontend_node with those values
         update_template_values(new_template=frontend_node, previous_template=current_frontend_node["template"])
