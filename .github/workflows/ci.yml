@@ -35,9 +35,9 @@ jobs:
     steps:
       #  Do anything just to make the job run
       - run: echo "Debug CI Condition"
-      - run: echo "${{ github.event.pull_request.labels.*.name }}"
-      - run: echo "${{ github.event.pull_request.draft }}"
-      - run: echo "${{ github.event_name }}"
+      - run: echo "Labels -> ${{ join(github.event.pull_request.labels.*.name, ',') }}"
+      - run: echo "IsDraft -> ${{ github.event.pull_request.draft }}"
+      - run: echo "Event name -> ${{ github.event_name }}"
   path-filter:
     needs: set-ci-condition
     if: ${{ needs.set-ci-condition.outputs.should-run-ci == 'true' }}
