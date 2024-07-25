@@ -1,4 +1,5 @@
 import asyncio
+import json
 import uuid
 from collections import defaultdict, deque
 from datetime import datetime, timezone
@@ -99,15 +100,17 @@ class Graph:
         if (start is not None and end is None) or (start is None and end is not None):
             raise ValueError("You must provide both input and output components")
 
-    def to_json(self) -> GraphData:
-        if self.raw_graph_data:
-            return self.raw_graph_data
+    def dumps(self) -> str:
+        if self.raw_graph_data != {"nodes": [], "edges": []}:
+            data_dict = self.raw_graph_data
         else:
             # we need to convert the vertices and edges to json
             nodes = [node.to_data() for node in self.vertices]
             edges = [edge.to_data() for edge in self.edges]
             self.raw_graph_data = {"nodes": nodes, "edges": edges}
-            return self.raw_graph_data
+            data_dict = self.raw_graph_data
+        graph_dict = {"data": data_dict}
+        return json.dumps(graph_dict, indent=4, sort_keys=True)
 
     def add_nodes_and_edges(self, nodes: List[NodeData], edges: List[EdgeData]):
         self._vertices = nodes
