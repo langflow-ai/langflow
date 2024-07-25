@@ -1,6 +1,6 @@
 import json
 import httpx
-from langflow.base.models.aiml_constants import CHAT_MODELS
+from langflow.base.models.aiml_constants import AIML_CHAT_MODELS
 from langflow.custom.custom_component.component import Component
 
 from langflow.inputs.inputs import FloatInput, IntInput, MessageInput, SecretStrInput
@@ -29,7 +29,7 @@ class AIMLModelComponent(Component):
         DropdownInput(
             name="model_name",
             display_name="Model Name",
-            options=CHAT_MODELS,
+            options=AIML_CHAT_MODELS,
             required=True,
         ),
         SecretStrInput(
