@@ -9,6 +9,7 @@ import {
 } from "../api";
 import { ChatMessageType } from "../chat";
 import { FlowStyleType, FlowType, NodeDataType, NodeType } from "../flow/index";
+import { ColumnField } from "../utils/functions";
 import { sourceHandleType, targetHandleType } from "./../flow/index";
 export type InputComponentType = {
   name?: string;
@@ -52,6 +53,7 @@ export type DropDownComponentType = {
   disabled?: boolean;
   isLoading?: boolean;
   value: string;
+  combobox?: boolean;
   options: string[];
   onSelect: (value: string) => void;
   editNode?: boolean;
@@ -134,6 +136,16 @@ export type TextAreaComponentType = {
   readonly?: boolean;
   password?: boolean;
   updateVisibility?: () => void;
+};
+
+export type TableComponentType = {
+  description: string;
+  tableTitle: string;
+  onChange: (value: any[]) => void;
+  value: any[];
+  editNode?: boolean;
+  id?: string;
+  columns?: ColumnField[];
 };
 
 export type outputComponentType = {

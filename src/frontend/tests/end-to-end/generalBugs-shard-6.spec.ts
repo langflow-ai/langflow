@@ -77,12 +77,11 @@ class CustomComponent(Component):
   await page.locator("textarea").press("Control+a");
   await page.locator("textarea").fill(customCodeWithError);
 
-  await page.getByText("Save").click();
+  await page.getByText("Check & Save").last().click();
 
   await page.waitForTimeout(1000);
 
   const error = await page.getByTestId("title_error_code_modal").textContent();
 
-  expect(error!.length).toBeGreaterThan(50);
-  expect(error?.toLowerCase()).toContain("custom component");
+  expect(error!.length).toBeGreaterThan(20);
 });

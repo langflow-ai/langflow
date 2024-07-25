@@ -102,6 +102,100 @@ export function cleanEdges(nodes: NodeType[], edges: Edge[]) {
   return newEdges;
 }
 
+export function detectBrokenEdgesEdges(nodes: NodeType[], edges: Edge[]) {
+  function generateAlertObject(sourceNode, targetNode, edge) {
+    const targetHandleObject: targetHandleType = scapeJSONParse(
+      edge.targetHandle,
+    );
+    const sourceHandleObject: sourceHandleType = scapeJSONParse(
+      edge.sourceHandle,
+    );
+    const name = sourceHandleObject.name;
+    const output = sourceNode.data.node!.outputs?.find(
+      (output) => output.name === name,
+    );
+
+    return {
+      source: {
+        nodeDisplayName: sourceNode.data.node!.display_name,
+        outputDisplayName: output?.display_name,
+      },
+      target: {
+        displayName: targetNode.data.node!.display_name,
+        field:
+          targetNode.data.node!.template[targetHandleObject.fieldName]
+            .display_name,
+      },
+    };
+  }
+  let newEdges = cloneDeep(edges);
+  let BrokenEdges: {
+    source: {
+      nodeDisplayName: string;
+      outputDisplayName?: string;
+    };
+    target: {
+      displayName: string;
+      field: string;
+    };
+  }[] = [];
+  edges.forEach((edge) => {
+    // check if the source and target node still exists
+    const sourceNode = nodes.find((node) => node.id === edge.source);
+    const targetNode = nodes.find((node) => node.id === edge.target);
+    if (!sourceNode || !targetNode) {
+      newEdges = newEdges.filter((edg) => edg.id !== edge.id);
+      return;
+    }
+    // check if the source and target handle still exists
+    const sourceHandle = edge.sourceHandle; //right
+    const targetHandle = edge.targetHandle; //left
+    if (targetHandle) {
+      const targetHandleObject: targetHandleType = scapeJSONParse(targetHandle);
+      const field = targetHandleObject.fieldName;
+      const id: targetHandleType = {
+        type: targetNode.data.node!.template[field]?.type,
+        fieldName: field,
+        id: targetNode.data.id,
+        inputTypes: targetNode.data.node!.template[field]?.input_types,
+      };
+      if (targetNode.data.node!.template[field]?.proxy) {
+        id.proxy = targetNode.data.node!.template[field]?.proxy;
+      }
+      if (scapedJSONStringfy(id) !== targetHandle) {
+        newEdges = newEdges.filter((e) => e.id !== edge.id);
+        BrokenEdges.push(generateAlertObject(sourceNode, targetNode, edge));
+      }
+    }
+    if (sourceHandle) {
+      const parsedSourceHandle = scapeJSONParse(sourceHandle);
+      const name = parsedSourceHandle.name;
+      const output = sourceNode.data.node!.outputs?.find(
+        (output) => output.name === name,
+      );
+      if (output) {
+        const outputTypes =
+          output!.types.length === 1 ? output!.types : [output!.selected!];
+
+        const id: sourceHandleType = {
+          id: sourceNode.data.id,
+          name: name,
+          output_types: outputTypes,
+          dataType: sourceNode.data.type,
+        };
+        if (scapedJSONStringfy(id) !== sourceHandle) {
+          newEdges = newEdges.filter((e) => e.id !== edge.id);
+          BrokenEdges.push(generateAlertObject(sourceNode, targetNode, edge));
+        }
+      } else {
+        newEdges = newEdges.filter((e) => e.id !== edge.id);
+        BrokenEdges.push(generateAlertObject(sourceNode, targetNode, edge));
+      }
+    }
+  });
+  return BrokenEdges;
+}
+
 export function unselectAllNodes({ updateNodes, data }: unselectAllNodesType) {
   let newNodes = cloneDeep(data);
   newNodes.forEach((node: Node) => {
