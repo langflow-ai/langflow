@@ -1,3 +1,4 @@
+import asyncio
 import importlib
 import inspect
 from typing import TYPE_CHECKING, Dict, Optional
@@ -6,7 +7,6 @@ from loguru import logger
 
 if TYPE_CHECKING:
     from langflow.services.base import Service
-
     from langflow.services.factory import ServiceFactory
     from langflow.services.schema import ServiceType
 
@@ -93,7 +93,7 @@ class ServiceManager:
             self.services.pop(service_name, None)
             self.get(service_name)
 
-    def teardown(self):
+    async def teardown(self):
         """
         Teardown all the services.
         """
@@ -102,7 +102,9 @@ class ServiceManager:
                 continue
             logger.debug(f"Teardown service {service.name}")
             try:
-                service.teardown()
+                result = service.teardown()
+                if asyncio.iscoroutine(result):
+                    await result
             except Exception as exc:
                 logger.exception(exc)
         self.services = {}

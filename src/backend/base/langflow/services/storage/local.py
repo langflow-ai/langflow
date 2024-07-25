@@ -90,6 +90,6 @@ class LocalStorageService(StorageService):
         else:
             logger.warning(f"Attempted to delete non-existent file {file_name} in flow {flow_id}.")
 
-    def teardown(self):
+    async def teardown(self):
         """Perform any cleanup operations when the service is being torn down."""
         pass  # No specific teardown actions required for local

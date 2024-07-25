@@ -294,7 +294,7 @@ class DatabaseService(Service):
 
         logger.debug("Database and tables created successfully")
 
-    def teardown(self):
+    async def teardown(self):
         logger.debug("Tearing down database")
         try:
             settings_service = get_settings_service()
