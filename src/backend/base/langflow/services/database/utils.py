@@ -90,8 +90,7 @@ def initialize_database(fix_migration: bool = False):
 
     database_service: "DatabaseService" = get_db_service()
     try:
-        pass
-        #database_service.create_db_and_tables()
+        database_service.create_db_and_tables()
     except Exception as exc:
         # if the exception involves tables already existing
         # we can ignore it
@@ -99,8 +98,7 @@ def initialize_database(fix_migration: bool = False):
             logger.error(f"Error creating DB and tables: {exc}")
             raise RuntimeError("Error creating DB and tables") from exc
     try:
-        #database_service.check_schema_health()
-        pass
+        database_service.check_schema_health()
     except Exception as exc:
         logger.error(f"Error checking schema health: {exc}")
         raise RuntimeError("Error checking schema health") from exc
