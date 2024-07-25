@@ -23,5 +23,6 @@ class ListenComponent(CustomComponent):
         return state
 
     def _set_successors_ids(self):
+        self.vertex.is_state = True
         successors = self.vertex.graph.successor_map.get(self.vertex.id, [])
         return successors + self.vertex.graph.activated_vertices
