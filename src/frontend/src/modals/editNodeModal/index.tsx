@@ -1,6 +1,6 @@
-import useHandleNodeClass from "@/CustomNodes/hooks/use-handle-node-class";
 import { APIClassType } from "@/types/api";
-import { useState } from "react";
+import { customStringify } from "@/utils/reactflowUtils";
+import { useEffect, useState } from "react";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { useDarkStore } from "../../stores/darkStore";
@@ -21,12 +21,14 @@ const EditNodeModal = ({
 
   const [nodeClass, setNodeClass] = useState<APIClassType>(data.node!);
 
-  const { handleNodeClass: handleNodeClassHook } = useHandleNodeClass(data.id);
-
-  const handleNodeClass = (newNodeClass: APIClassType, type?: string) => {
-    handleNodeClassHook(newNodeClass, type);
-    setNodeClass(newNodeClass);
-  };
+  useEffect(() => {
+    if (
+      customStringify(Object.keys(data?.node?.template ?? {})) ===
+      customStringify(Object.keys(nodeClass?.template ?? {}))
+    )
+      return;
+    setNodeClass(data.node!);
+  }, [data.node]);
 
   return (
     <BaseModal key={data.id} open={open} setOpen={setOpen}>
@@ -42,12 +44,7 @@ const EditNodeModal = ({
         </div>
       </BaseModal.Header>
       <BaseModal.Content>
-        <EditNodeComponent
-          open={open}
-          nodeClass={nodeClass}
-          setNodeClass={handleNodeClass}
-          nodeId={data.id}
-        />
+        <EditNodeComponent open={open} nodeClass={nodeClass} nodeId={data.id} />
       </BaseModal.Content>
       <BaseModal.Footer>
         <div className="flex w-full justify-end gap-2 pt-2">

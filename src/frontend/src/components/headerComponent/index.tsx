@@ -11,6 +11,7 @@ import {
 } from "../../constants/constants";
 import { AuthContext } from "../../contexts/authContext";
 
+import useAuthStore from "@/stores/authStore";
 import useAlertStore from "../../stores/alertStore";
 import { useDarkStore } from "../../stores/darkStore";
 import useFlowStore from "../../stores/flowStore";
@@ -34,7 +35,9 @@ export default function Header(): JSX.Element {
   const notificationCenter = useAlertStore((state) => state.notificationCenter);
   const location = useLocation();
 
-  const { logout, autoLogin, isAdmin, userData } = useContext(AuthContext);
+  const { logout, userData } = useContext(AuthContext);
+  const isAdmin = useAuthStore((state) => state.isAdmin);
+  const autoLogin = useAuthStore((state) => state.autoLogin);
 
   const navigate = useNavigate();
   const removeFlow = useFlowsManagerStore((store) => store.removeFlow);

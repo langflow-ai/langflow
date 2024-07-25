@@ -1,24 +1,12 @@
-import { NodeType } from "@/types/flow";
+import TableAdvancedToggleCellRender from "@/components/tableComponent/components/tableAdvancedToggleCellRender";
 import { ColDef, ValueGetterParams } from "ag-grid-community";
 import { useMemo } from "react";
-import TableAdvancedToggleCellRender from "../../../components/tableComponent/components/tableAdvancedToggleCellRender";
 import TableNodeCellRender from "../../../components/tableComponent/components/tableNodeCellRender";
-import { APIClassType } from "../../../types/api";
 
 const useColumnDefs = (
-  nodeClass: APIClassType,
-  handleNodeClass: (
-    newNodeClass: APIClassType,
-    name: string,
-    code: string,
-    type?: string,
-  ) => void,
   nodeId: string,
   open: boolean,
-  setNode?: (
-    id: string,
-    update: NodeType | ((oldState: NodeType) => NodeType),
-  ) => void,
+  isTweaks?: boolean,
   hideVisibility?: boolean,
 ) => {
   const columnDefs: ColDef[] = useMemo(() => {
@@ -56,11 +44,9 @@ const useColumnDefs = (
         cellRenderer: TableNodeCellRender,
         valueGetter: (params: ValueGetterParams) => {
           return {
-            value: params.data.value,
             nodeId: nodeId,
-            nodeClass: nodeClass,
-            handleNodeClass,
-            setNode,
+            parameterId: params.data.key,
+            isTweaks,
           };
         },
         minWidth: 340,
@@ -77,9 +63,8 @@ const useColumnDefs = (
         cellRenderer: TableAdvancedToggleCellRender,
         valueGetter: (params: ValueGetterParams) => {
           return {
-            value: !params.data.advanced,
-            nodeId: nodeId,
-            nodeClass,
+            nodeId,
+            parameterId: params.data.key,
           };
         },
         editable: false,
@@ -89,7 +74,7 @@ const useColumnDefs = (
       });
     }
     return colDefs;
-  }, [open, nodeClass]);
+  }, [open]);
 
   return columnDefs;
 };

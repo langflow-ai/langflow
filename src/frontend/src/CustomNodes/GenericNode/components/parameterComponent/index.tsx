@@ -1,6 +1,7 @@
 import useHandleNodeClass from "@/CustomNodes/hooks/use-handle-node-class";
 import { ParameterRenderComponent } from "@/components/parameterRenderComponent";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
+import useAlertStore from "@/stores/alertStore";
 import { cloneDeep } from "lodash";
 import { ReactNode, useEffect, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
@@ -109,6 +110,8 @@ export default function ParameterComponent({
       setOpenOutputModal((state) => !state);
     }
   }
+
+  const setErrorData = useAlertStore((state) => state.setErrorData);
 
   const output = useShortcutsStore((state) => state.output);
   useHotkeys(output, handleOutputWShortcut, { preventDefault });

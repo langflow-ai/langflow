@@ -1,59 +1,56 @@
-import useHandleOnNewValue, {
-  handleOnNewValueType,
-} from "@/CustomNodes/hooks/use-handle-new-value";
+import useHandleOnNewValue from "@/CustomNodes/hooks/use-handle-new-value";
+import useHandleNodeClass from "@/CustomNodes/hooks/use-handle-node-class";
 import { ParameterRenderComponent } from "@/components/parameterRenderComponent";
+import { useTweaksStore } from "@/stores/tweaksStore";
 import { CustomCellRendererProps } from "ag-grid-react";
-import { cloneDeep } from "lodash";
-import { useState } from "react";
 import useFlowStore from "../../../../stores/flowStore";
-import { APIClassType } from "../../../../types/api";
 import { isTargetHandleConnected } from "../../../../utils/reactflowUtils";
 
 export default function TableNodeCellRender({
-  node: { data },
-  value: { value, nodeId, nodeClass, handleNodeClass, setNode },
+  value: { nodeId, parameterId, isTweaks },
 }: CustomCellRendererProps) {
-  const setNodeClass = (value: APIClassType, type?: string) => {
-    handleNodeClass(value, type);
-  };
-
-  const [templateValue, setTemplateValue] = useState(value);
-  const [templateData, setTemplateData] = useState(data);
   const edges = useFlowStore((state) => state.edges);
+  const node = isTweaks
+    ? useTweaksStore((state) => state.getNode(nodeId))
+    : useFlowStore((state) => state.getNode(nodeId));
+  const parameter = node?.data?.node?.template?.[parameterId];
 
-  const { handleOnNewValue: handleOnNewValueHook } = useHandleOnNewValue({
-    node: nodeClass,
-    nodeId: nodeId,
-    name: data.key,
-    setNode: setNode,
+  const setNode = useTweaksStore((state) => state.setNode);
+
+  const disabled = isTargetHandleConnected(
+    edges,
+    parameterId,
+    parameter,
+    nodeId,
+  );
+
+  const { handleOnNewValue } = useHandleOnNewValue({
+    node: node?.data.node,
+    nodeId,
+    name: parameterId,
+    setNode: isTweaks ? setNode : undefined,
   });
-  const handleOnNewValue: handleOnNewValueType = (data, options) => {
-    handleOnNewValueHook(data, { setNodeClass, ...options });
-    setTemplateData((old) => {
-      let newData = cloneDeep(old);
-      Object.entries(data).forEach(([key, value]) => {
-        if (value !== undefined) newData[key] = value;
-      });
-      return newData;
-    });
-    data.value && setTemplateValue(data.value);
-  };
 
-  const disabled = isTargetHandleConnected(edges, data.key, data, nodeId);
+  const { handleNodeClass } = useHandleNodeClass(
+    nodeId,
+    isTweaks ? setNode : undefined,
+  );
 
   return (
-    <div className="group mx-auto flex h-full max-h-48 w-[300px] items-center justify-center overflow-auto py-2.5 custom-scroll">
-      <ParameterRenderComponent
-        nodeId={nodeId}
-        handleOnNewValue={handleOnNewValue}
-        templateData={templateData}
-        name={templateData.key}
-        templateValue={templateValue}
-        editNode={true}
-        handleNodeClass={handleNodeClass}
-        nodeClass={nodeClass}
-        disabled={disabled}
-      />
-    </div>
+    parameter && (
+      <div className="group mx-auto flex h-full max-h-48 w-[300px] items-center justify-center overflow-auto py-2.5 custom-scroll">
+        <ParameterRenderComponent
+          nodeId={nodeId}
+          handleOnNewValue={handleOnNewValue}
+          templateData={parameter}
+          name={parameterId}
+          templateValue={parameter.value}
+          editNode={true}
+          handleNodeClass={handleNodeClass}
+          nodeClass={node?.data.node}
+          disabled={disabled}
+        />
+      </div>
+    )
   );
 }

@@ -93,25 +93,28 @@ body:
     validations:
       required: true
 
-  - type: checkboxes
+  - type: dropdown
     id: python-version
     attributes:
-      label: Python Version
+      label: "Python Version"
       description: |
-        My Python version is:
-        
-        Langflow requires Python version 3.10 or greater.
+
+        **Langflow requires Python version 3.10 or greater.**
       options:
-        - label: "3.12"
-        - label: "3.11"
-        - label: "3.10"
+        - "3.12"
+        - "3.11"
+        - "3.10"
 
-  - type: markdown
+  - type: textarea
+    id: screenshot
     attributes:
-      value: |
-        Screenshot error - If applicable, add screenshots to help explain your problem.
+      label: Screenshot
+      description: "If applicable, add screenshots to help explain your problem."
+      placeholder: "Paste your screenshot here."
 
-  - type: markdown
+  - type: textarea
+    id: flow-file
     attributes:
-      value: |
-        Flow file - Add your flow if applicable to help replicate the problem.
+      label: Flow File
+      description: "Add your flow if applicable to help replicate the problem."
+      placeholder: "Add your flow link here."

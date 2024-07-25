@@ -10,6 +10,7 @@ import {
 } from "../api";
 import { ChatMessageType } from "../chat";
 import { FlowStyleType, FlowType, NodeDataType, NodeType } from "../flow/index";
+import { ColumnField } from "../utils/functions";
 import { sourceHandleType, targetHandleType } from "./../flow/index";
 export type InputComponentType = {
   name?: string;
@@ -132,6 +133,16 @@ export type TextAreaComponentType = {
   editNode?: boolean;
   id?: string;
   readonly?: boolean;
+};
+
+export type TableComponentType = {
+  description: string;
+  tableTitle: string;
+  onChange: (value: any[]) => void;
+  value: any[];
+  editNode?: boolean;
+  id?: string;
+  columns?: ColumnField[];
 };
 
 export type outputComponentType = {
@@ -680,42 +691,25 @@ export type cardComponentPropsType = {
   button?: JSX.Element;
 };
 
-type tabsArrayType = {
+export type tabsArrayType = {
   code: string;
   image: string;
   language: string;
   mode: string;
   name: string;
   description?: string;
-};
-
-type getValueNodeType = {
-  id: string;
-  node: NodeType;
-  type: string;
-  value: null;
-};
-
-type codeTabsFuncTempType = {
-  [key: string]: string | boolean;
+  hasTweaks?: boolean;
 };
 
 export type codeTabsPropsType = {
   open: boolean;
-  isThereTweaks?: boolean;
-  isThereWH?: boolean;
-  flow?: FlowType;
   tabs: Array<tabsArrayType>;
   activeTab: string;
   setActiveTab: (value: string) => void;
   isMessage?: boolean;
-  tweaks?: {
-    tweaksList?: Array<string>;
-    buildTweaks: (node: NodeType[]) => void;
-  };
+  tweaksNodes?: Array<NodeType>;
   activeTweaks?: boolean;
   setActiveTweaks?: (value: boolean) => void;
-  allowExport?: boolean;
 };
 
 export type crashComponentPropsType = {
