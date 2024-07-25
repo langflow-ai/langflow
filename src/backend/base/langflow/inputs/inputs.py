@@ -6,6 +6,7 @@ from pydantic import Field, field_validator
 from langflow.inputs.validators import CoalesceBool
 from langflow.schema.data import Data
 from langflow.schema.message import Message
+from langflow.template.field.base import Input
 
 from .input_mixin import (
     BaseInputMixin,
@@ -345,7 +346,22 @@ class FileInput(BaseInputMixin, ListableInputMixin, FileMixin, MetadataTraceMixi
     field_type: SerializableFieldTypes = FieldTypes.FILE
 
 
+DEFAULT_PROMPT_INTUT_TYPES = ["Message", "Text"]
+
+
+class DefaultPromptField(Input):
+    name: str
+    display_name: Optional[str] = None
+    field_type: str = "str"
+
+    advanced: bool = False
+    multiline: bool = True
+    input_types: list[str] = DEFAULT_PROMPT_INTUT_TYPES
+    value: str = ""  # Set the value to empty string
+
+
 InputTypes = Union[
+    DefaultPromptField,
     BoolInput,
     DataInput,
     DictInput,
