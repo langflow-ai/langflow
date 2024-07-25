@@ -1,5 +1,7 @@
 import { PopoverAnchor } from "@radix-ui/react-popover";
-import { useRef, useState } from "react";
+import Fuse from "fuse.js";
+import { cloneDeep } from "lodash";
+import { ChangeEvent, useEffect, useRef, useState } from "react";
 import { DropDownComponentType } from "../../types/components";
 import { cn } from "../../utils/utils";
 import { default as ForwardedIconComponent } from "../genericIconComponent";
@@ -8,7 +10,6 @@ import {
   Command,
   CommandEmpty,
   CommandGroup,
-  CommandInput,
   CommandItem,
   CommandList,
 } from "../ui/command";
@@ -35,9 +36,34 @@ export default function Dropdown({
 
   const PopoverContentDropdown =
     children || editNode ? PopoverContent : PopoverContentWithoutPortal;
+
+  const [customValue, setCustomValue] = useState("");
+  const [filteredOptions, setFilteredOptions] = useState(options);
+
+  const fuse = new Fuse(options, { keys: ["name", "value"] });
+
+  const searchRoleByTerm = async (event: ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.value;
+    const searchValues = fuse.search(value);
+    const filtered = searchValues.map((search) => search.item);
+    if (!filtered.includes(value)) filtered.push(value);
+    setFilteredOptions(filtered);
+    setCustomValue(value);
+  };
+
+  useEffect(() => {
+    if (open) {
+      const filtered = cloneDeep(options);
+      if (customValue === value) {
+        filtered.push(customValue);
+      }
+      setFilteredOptions(filtered);
+    }
+  }, [open]);
+
   return (
     <>
-      {Object.keys(options ?? [])?.length > 0 ? (
+      {Object.keys(filteredOptions ?? [])?.length > 0 ? (
         <>
           <Popover open={open} onOpenChange={children ? () => {} : setOpen}>
             {children ? (
@@ -63,8 +89,8 @@ export default function Dropdown({
                   <span data-testid={`value-dropdown-` + id}>
                     {value &&
                     value !== "" &&
-                    options.find((option) => option === value)
-                      ? options.find((option) => option === value)
+                    filteredOptions.find((option) => option === value)
+                      ? filteredOptions.find((option) => option === value)
                       : "Choose an option..."}
                   </span>
 
@@ -86,11 +112,21 @@ export default function Dropdown({
               }
             >
               <Command>
-                <CommandInput placeholder="Search options..." className="h-9" />
+                <div className="flex items-center border-b px-3">
+                  <ForwardedIconComponent
+                    name="search"
+                    className="mr-2 h-4 w-4 shrink-0 opacity-50"
+                  />
+                  <input
+                    onChange={searchRoleByTerm}
+                    placeholder="Search options..."
+                    className="flex h-9 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                  />
+                </div>
                 <CommandList>
                   <CommandEmpty>No values found.</CommandEmpty>
                   <CommandGroup defaultChecked={false}>
-                    {options?.map((option, id) => (
+                    {filteredOptions?.map((option, id) => (
                       <CommandItem
                         key={id}
                         value={option}
