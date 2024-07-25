@@ -37,6 +37,7 @@ jobs:
           target-approved-count: 1
           label-to-be-added: 'lgtm'
   set-ci-condition:
+    needs: labeler
     name: Should Run CI
     runs-on: ubuntu-latest
     outputs:
