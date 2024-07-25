@@ -1,11 +1,12 @@
+import concurrent.futures
 import json
 from typing import List
+
 import httpx
-from langflow.field_typing import Embeddings
 from langchain_core.pydantic_v1 import BaseModel, SecretStr
 from loguru import logger
 
-import concurrent.futures
+from langflow.field_typing import Embeddings
 
 
 class AIMLEmbeddingsImpl(BaseModel, Embeddings):
@@ -41,7 +42,7 @@ class AIMLEmbeddingsImpl(BaseModel, Embeddings):
                         logger.error(f"Error occurred: {e}")
                         raise
 
-        return embeddings
+        return embeddings  # type: ignore
 
     def _embed_text(self, client: httpx.Client, headers: dict, text: str) -> dict:
         payload = {
