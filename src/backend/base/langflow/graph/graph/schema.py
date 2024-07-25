@@ -17,8 +17,8 @@ class ViewPort(TypedDict):
 
 
 class GraphData(TypedDict):
-    nodes: List[NodeData]
-    edges: List[EdgeData]
+    nodes: list[NodeData]
+    edges: list[EdgeData]
     viewport: NotRequired[ViewPort]
 
 
