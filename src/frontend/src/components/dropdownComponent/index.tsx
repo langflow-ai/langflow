@@ -25,7 +25,7 @@ export default function Dropdown({
   isLoading,
   value,
   options,
-  combobox,
+  combobox = true,
   onSelect,
   editNode = false,
   id = "",
@@ -48,7 +48,7 @@ export default function Dropdown({
     const searchValues = fuse.search(value);
     const filtered = searchValues.map((search) => search.item);
     if (!filtered.includes(value) && combobox) filtered.push(value);
-    setFilteredOptions(filtered);
+    setFilteredOptions(value ? filtered : options);
     setCustomValue(value);
   };
 
