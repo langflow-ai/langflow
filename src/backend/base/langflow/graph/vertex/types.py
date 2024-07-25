@@ -9,6 +9,7 @@ from loguru import logger
 from langflow.graph.schema import CHAT_COMPONENTS, RECORDS_COMPONENTS, InterfaceComponentTypes, ResultData
 from langflow.graph.utils import UnbuiltObject, log_transaction, serialize_field
 from langflow.graph.vertex.base import Vertex
+from langflow.graph.vertex.schema import NodeData
 from langflow.inputs.inputs import InputTypes
 from langflow.schema import Data
 from langflow.schema.artifact import ArtifactType
@@ -24,7 +25,7 @@ if TYPE_CHECKING:
 
 
 class CustomComponentVertex(Vertex):
-    def __init__(self, data: Dict, graph):
+    def __init__(self, data: NodeData, graph):
         super().__init__(data, graph=graph, base_type="custom_components")
 
     def _built_object_repr(self):
@@ -33,7 +34,7 @@ class CustomComponentVertex(Vertex):
 
 
 class ComponentVertex(Vertex):
-    def __init__(self, data: Dict, graph):
+    def __init__(self, data: NodeData, graph):
         super().__init__(data, graph=graph, base_type="component")
 
     def get_input(self, name: str) -> InputTypes:
@@ -175,7 +176,7 @@ class ComponentVertex(Vertex):
 
 
 class InterfaceVertex(ComponentVertex):
-    def __init__(self, data: Dict, graph):
+    def __init__(self, data: NodeData, graph):
         super().__init__(data, graph=graph)
         self.steps = [self._build, self._run]
 
