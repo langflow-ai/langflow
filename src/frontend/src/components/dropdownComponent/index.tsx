@@ -87,7 +87,10 @@ export default function Dropdown({
                     editNode ? "input-edit-node" : "py-2",
                   )}
                 >
-                  <span data-testid={`value-dropdown-` + id}>
+                  <span
+                    className="truncate"
+                    data-testid={`value-dropdown-` + id}
+                  >
                     {value &&
                     value !== "" &&
                     filteredOptions.find((option) => option === value)
@@ -135,9 +138,17 @@ export default function Dropdown({
                           onSelect(currentValue);
                           setOpen(false);
                         }}
+                        className="items-center truncate"
                         data-testid={`${option}-${id ?? ""}-option`}
                       >
                         {option}
+                        {customValue === option ? (
+                          <span className="text-xs text-muted-foreground">
+                            &nbsp;- Custom
+                          </span>
+                        ) : (
+                          <></>
+                        )}
                         <ForwardedIconComponent
                           name="Check"
                           className={cn(
