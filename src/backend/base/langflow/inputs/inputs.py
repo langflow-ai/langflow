@@ -59,7 +59,7 @@ class HandleInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin):
     field_type: SerializableFieldTypes = FieldTypes.OTHER
 
 
-class DataInput(HandleInput, InputTraceMixin):
+class DataInput(HandleInput, InputTraceMixin, ListableInputMixin):
     """
     Represents an Input that has a Handle that receives a Data object.
 
@@ -131,6 +131,8 @@ class MessageInput(StrInput, InputTraceMixin):
     @staticmethod
     def _validate_value(v: Any, _info):
         # If v is a instance of Message, then its fine
+        if isinstance(v, dict):
+            return Message(**v)
         if isinstance(v, Message):
             return v
         if isinstance(v, str):
@@ -386,6 +388,9 @@ InputTypesMap: dict[str, type[InputTypes]] = {t.__name__: t for t in get_args(In
 
 def _instantiate_input(input_type: str, data: dict) -> InputTypes:
     input_type_class = InputTypesMap.get(input_type)
+    if "type" in data:
+        # Replate with field_type
+        data["field_type"] = data.pop("type")
     if input_type_class:
         return input_type_class(**data)
     else:
