@@ -4,6 +4,7 @@ from uuid import UUID
 
 import httpx
 from httpx import HTTPError, HTTPStatusError
+from langflow.base.prompts import api_utils
 from loguru import logger
 
 from langflow.services.base import Service
@@ -26,6 +27,7 @@ if TYPE_CHECKING:
 
 from contextlib import asynccontextmanager
 from contextvars import ContextVar
+from langflow.services.auth import utils as auth_utils
 
 user_data_var: ContextVar[Optional[Dict[str, Any]]] = ContextVar("user_data", default=None)
 
@@ -108,7 +110,8 @@ class StoreService(Service):
         # If it is, return True
         # If it is not, return False
         try:
-            user_data, _ = await self._get(f"{self.base_url}/users/me", api_key, params={"fields": "id"})
+            decrypted_api_key = auth_utils.decrypt_api_key(api_key, settings_service=self.settings_service)
+            user_data, _ = await self._get(f"{self.base_url}/users/me", decrypted_api_key, params={"fields": "id"})
 
             return "id" in user_data[0]
         except HTTPStatusError as exc:

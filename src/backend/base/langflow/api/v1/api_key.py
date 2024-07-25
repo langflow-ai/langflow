@@ -1,7 +1,11 @@
+from logging import info
+from pathlib import Path
 from typing import TYPE_CHECKING
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
+from langflow.services.settings.utils import write_secret_to_file
+from loguru import logger
 from sqlmodel import Session
 
 from langflow.api.v1.schemas import ApiKeyCreateRequest, ApiKeysResponse
@@ -11,7 +15,7 @@ from langflow.services.auth import utils as auth_utils
 from langflow.services.database.models.api_key.crud import create_api_key, delete_api_key, get_api_keys
 from langflow.services.database.models.api_key.model import ApiKeyCreate, UnmaskedApiKeyRead
 from langflow.services.database.models.user.model import User
-from langflow.services.deps import get_session, get_settings_service
+from langflow.services.deps import get_session, get_settings_service, get_storage_service
 
 if TYPE_CHECKING:
     pass
@@ -62,17 +66,44 @@ def delete_api_key_route(
 @router.post("/store")
 def save_store_api_key(
     api_key_request: ApiKeyCreateRequest,
+    response: Response,
     current_user: User = Depends(auth_utils.get_current_active_user),
     db: Session = Depends(get_session),
     settings_service=Depends(get_settings_service),
 ):
+
+    config_dir = get_storage_service().settings_service.settings.config_dir
+    auth_settings = settings_service.auth_settings
+
+    if not config_dir:
+        logger.debug("No CONFIG_DIR provided, not saving secret key")
+        return api_key
+
     try:
         api_key = api_key_request.api_key
+
         # Encrypt the API key
         encrypted = auth_utils.encrypt_api_key(api_key, settings_service=settings_service)
         current_user.store_api_key = encrypted
         db.add(current_user)
         db.commit()
+
+        secret_key_path = Path(config_dir) / "secret_key"
+
+        if encrypted:
+            logger.debug("Secret key provided")
+            write_secret_to_file(secret_key_path, encrypted)
+
+        response.set_cookie(
+            "apikey_tkn_lflw",
+            encrypted,
+            httponly=auth_settings.ACCESS_HTTPONLY,
+            samesite=auth_settings.ACCESS_SAME_SITE,
+            secure=auth_settings.ACCESS_SECURE,
+            expires=None,  # Set to None to make it a session cookie
+            domain=auth_settings.COOKIE_DOMAIN,
+        )
+
         return {"detail": "API Key saved"}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e)) from e

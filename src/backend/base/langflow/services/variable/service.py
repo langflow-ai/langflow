@@ -39,10 +39,7 @@ class DatabaseVariableService(VariableService, Service):
                         value = os.environ[var]
                         if isinstance(value, str):
                             value = value.strip()
-                        # If the secret_key changes the stored value could be invalid
-                        # so we need to re-encrypt it
-                        encrypted = auth_utils.encrypt_api_key(value, settings_service=self.settings_service)
-                        found_variable.value = encrypted
+                        found_variable.value = value
                         session.add(found_variable)
                         session.commit()
                     else:

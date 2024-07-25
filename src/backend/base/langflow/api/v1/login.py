@@ -1,5 +1,7 @@
+from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
+from langflow.services.settings.utils import read_secret_from_file
 from sqlmodel import Session
 
 from langflow.api.v1.schemas import Token
@@ -10,7 +12,7 @@ from langflow.services.auth.utils import (
     create_user_tokens,
 )
 from langflow.services.database.models.folder.utils import create_default_folder_if_it_doesnt_exist
-from langflow.services.deps import get_session, get_settings_service, get_variable_service
+from langflow.services.deps import get_session, get_settings_service, get_storage_service, get_variable_service
 from langflow.services.settings.service import SettingsService
 from langflow.services.variable.service import VariableService
 
@@ -74,6 +76,22 @@ async def auto_login(
     response: Response, db: Session = Depends(get_session), settings_service=Depends(get_settings_service)
 ):
     auth_settings = settings_service.auth_settings
+
+    config_dir = get_storage_service().settings_service.settings.config_dir
+    secret_key_path = Path(config_dir) / "secret_key"
+
+    api_key = read_secret_from_file(secret_key_path)
+
+    response.set_cookie(
+        "apikey_tkn_lflw",
+        api_key,
+        httponly=auth_settings.ACCESS_HTTPONLY,
+        samesite=auth_settings.ACCESS_SAME_SITE,
+        secure=auth_settings.ACCESS_SECURE,
+        expires=None,  # Set to None to make it a session cookie
+        domain=auth_settings.COOKIE_DOMAIN,
+    )
+
     if settings_service.auth_settings.AUTO_LOGIN:
         user_id, tokens = create_user_longterm_token(db)
         response.set_cookie(
@@ -140,4 +158,5 @@ async def refresh_token(
 async def logout(response: Response):
     response.delete_cookie("refresh_token_lf")
     response.delete_cookie("access_token_lf")
+    response.delete_cookie("apikey_tkn_lflw")
     return {"message": "Logout successful"}
