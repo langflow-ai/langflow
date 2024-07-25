@@ -1,4 +1,4 @@
-from typing import Any, AsyncIterator, Iterator, Optional, Union
+from typing import Any, AsyncIterator, Iterator, Optional, Union, get_args
 
 from loguru import logger
 from pydantic import Field, field_validator
@@ -360,3 +360,13 @@ InputTypes = Union[
     MessageInput,
     TableInput,
 ]
+
+InputTypesMap: dict[str, type[InputTypes]] = {t.__name__: t for t in get_args(InputTypes)}
+
+
+def _instantiate_input(input_type: str, data: dict) -> InputTypes:
+    input_type_class = InputTypesMap.get(input_type)
+    if input_type_class:
+        return input_type_class(**data)
+    else:
+        raise ValueError(f"Invalid input type: {input_type}")
