@@ -16,7 +16,8 @@ export default function getPythonApiCode(
   if (tweaksBuildedObject)
     tweaksString = JSON.stringify(tweaksBuildedObject, null, 2)
       .replace(/true/g, "True")
-      .replace(/false/g, "False");
+      .replace(/false/g, "False")
+      .replace(/null|undefined/g, "None");
 
   return `import argparse
 import json
