@@ -41,6 +41,7 @@ export default function GenericModal({
   disabled,
   id = "",
   readonly = false,
+  password = false,
 }: genericModalPropsType): JSX.Element {
   const [myButtonText] = useState(buttonText);
   const [myModalTitle] = useState(modalTitle);
@@ -255,6 +256,7 @@ export default function GenericModal({
               readOnly={readonly}
               id={"text-area-modal"}
               data-testid={"text-area-modal"}
+              password={password}
             />
           ) : (
             <></>

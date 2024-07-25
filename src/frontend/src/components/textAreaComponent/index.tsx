@@ -49,7 +49,6 @@ export default function TextAreaComponent({
             }}
           />
         </Case>
-        {!password && (
           <GenericModal
             type={TypeModal.TEXT}
             buttonText="Finish Editing"
@@ -59,9 +58,14 @@ export default function TextAreaComponent({
               onChange(value);
             }}
             disabled={disabled}
+            password={password}
           >
             {!editNode ? (
-              <div className="flex items-center">
+              <div className={
+                "flex items-center" +
+                (password ? "mb-px relative left-6" : "")
+              }
+              >
                 <Button unstyled>
                   <IconComponent
                     strokeWidth={1.5}
@@ -95,7 +99,6 @@ export default function TextAreaComponent({
               </Button>
             )}
           </GenericModal>
-        )}
         {password /*&& (!setSelectedOption || selectedOption === "") */ && (
           <button
             type="button"
