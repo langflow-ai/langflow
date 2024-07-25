@@ -27,6 +27,15 @@ concurrency:
 
 
 jobs:
+  labeler:
+    if : ${{ github.event_name == 'pull_request_review' && github.event.review.state == 'approved' }}
+    runs-on: ubuntu-latest
+    steps:
+    - uses: jsryudev/pr-review-labeler@v0.2.2
+      with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          target-approved-count: 1
+          label-to-be-added: 'lgtm'
   set-ci-condition:
     name: Should Run CI
     runs-on: ubuntu-latest
