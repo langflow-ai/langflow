@@ -98,8 +98,6 @@ class Component(CustomComponent):
 
     def _set_output_types(self):
         for output in self.outputs:
-            if output.types:
-                continue
             return_types = self._get_method_return_type(output.method)
             output.add_types(return_types)
             output.set_selected()
@@ -233,7 +231,9 @@ class Component(CustomComponent):
 
     def _get_method_return_type(self, method_name: str) -> List[str]:
         method = getattr(self, method_name)
-        return [format_type(get_type_hints(method)["return"])]
+        return_type = get_type_hints(method)["return"]
+        extracted_return_types = self._extract_return_type(return_type)
+        return [format_type(extracted_return_type) for extracted_return_type in extracted_return_types]
 
     def _update_template(self, frontend_node: dict):
         return frontend_node
