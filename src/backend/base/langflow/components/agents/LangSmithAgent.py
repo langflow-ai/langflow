@@ -5,6 +5,7 @@ from langflow.base.agents.agent import LCToolsAgentComponent
 from langflow.inputs import MultilineInput, StrInput, SecretStrInput
 from langflow.inputs.inputs import HandleInput
 
+
 class LangSmithAgentComponent(LCToolsAgentComponent):
     display_name: str = "LangSmith Agent"
     description: str = "Agent that uses LangSmith prompts"
@@ -44,5 +45,5 @@ class LangSmithAgentComponent(LCToolsAgentComponent):
         ]
 
         prompt = ChatPromptTemplate.from_messages(messages)
-        
+
         return create_tool_calling_agent(self.llm, self.tools, prompt)
