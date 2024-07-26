@@ -25,9 +25,7 @@ class Message(Data):
     sender_name: Optional[str] = None
     files: Optional[list[str | Image]] = Field(default=[])
     session_id: Optional[str] = Field(default="")
-    timestamp: str = Field(
-        default_factory=lambda: datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
-    )
+    timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"))
     flow_id: Optional[str | UUID] = None
 
     @field_validator("flow_id", mode="before")
