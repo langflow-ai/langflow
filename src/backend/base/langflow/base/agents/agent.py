@@ -14,6 +14,7 @@ from langflow.inputs.inputs import DataInput, InputTypes
 from langflow.io import BoolInput, HandleInput, IntInput, MessageTextInput
 from langflow.schema.message import Message
 from langflow.template import Output
+from langflow.utils.constants import MESSAGE_SENDER_AI
 
 
 class LCAgentComponent(Component):
@@ -58,7 +59,7 @@ class LCAgentComponent(Component):
 
         if isinstance(result, list):
             result = "\n".join([result_dict["text"] for result_dict in result])
-        message = Message(text=result, sender="Machine")
+        message = Message(text=result, sender=MESSAGE_SENDER_AI)
         self.status = message
         return message
 

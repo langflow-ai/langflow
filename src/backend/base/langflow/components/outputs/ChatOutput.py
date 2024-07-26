@@ -3,6 +3,7 @@ from langflow.inputs import BoolInput
 from langflow.io import DropdownInput, MessageTextInput, Output
 from langflow.memory import store_message
 from langflow.schema.message import Message
+from langflow.utils.constants import MESSAGE_SENDER_NAME_AI, MESSAGE_SENDER_USER, MESSAGE_SENDER_AI
 
 
 class ChatOutput(ChatComponent):
@@ -27,16 +28,23 @@ class ChatOutput(ChatComponent):
         DropdownInput(
             name="sender",
             display_name="Sender Type",
-            options=["Machine", "User"],
-            value="Machine",
+            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],
+            value=MESSAGE_SENDER_AI,
             advanced=True,
             info="Type of sender.",
         ),
         MessageTextInput(
-            name="sender_name", display_name="Sender Name", info="Name of the sender.", value="AI", advanced=True
+            name="sender_name",
+            display_name="Sender Name",
+            info="Name of the sender.",
+            value=MESSAGE_SENDER_NAME_AI,
+            advanced=True,
         ),
         MessageTextInput(
-            name="session_id", display_name="Session ID", info="Session ID for the message.", advanced=True
+            name="session_id",
+            display_name="Session ID",
+            info="The session ID of the chat. If empty, the current session ID parameter will be used.",
+            advanced=True,
         ),
         MessageTextInput(
             name="data_template",

@@ -177,3 +177,9 @@ LOADERS_INFO: List[Dict[str, Any]] = [
         "allowdTypes": ["docx"],
     },
 ]
+
+
+MESSAGE_SENDER_AI = "Machine"
+MESSAGE_SENDER_USER = "User"
+MESSAGE_SENDER_NAME_AI = "AI"
+MESSAGE_SENDER_NAME_USER = "User"

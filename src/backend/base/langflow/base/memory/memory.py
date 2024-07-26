@@ -2,6 +2,7 @@ from typing import Optional
 
 from langflow.custom import CustomComponent
 from langflow.schema import Data
+from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
 
 
 class BaseMemoryComponent(CustomComponent):
@@ -13,7 +14,7 @@ class BaseMemoryComponent(CustomComponent):
     def build_config(self):
         return {
             "sender": {
-                "options": ["Machine", "User", "Machine and User"],
+                "options": [MESSAGE_SENDER_AI, MESSAGE_SENDER_USER, "Machine and User"],
                 "display_name": "Sender Type",
             },
             "sender_name": {"display_name": "Sender Name", "advanced": True},

@@ -8,6 +8,8 @@ from langflow.schema.message import Message
 from langflow.field_typing import BaseChatMemory
 from langchain.memory import ConversationBufferMemory
 
+from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
+
 
 class MemoryComponent(Component):
     display_name = "Chat Memory"
@@ -25,15 +27,15 @@ class MemoryComponent(Component):
         DropdownInput(
             name="sender",
             display_name="Sender Type",
-            options=["Machine", "User", "Machine and User"],
+            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER, "Machine and User"],
             value="Machine and User",
-            info="Type of sender.",
+            info="Filter by sender type.",
             advanced=True,
         ),
         MessageTextInput(
             name="sender_name",
             display_name="Sender Name",
-            info="Name of the sender.",
+            info="Filter by sender name.",
             advanced=True,
         ),
         IntInput(
@@ -46,7 +48,7 @@ class MemoryComponent(Component):
         MessageTextInput(
             name="session_id",
             display_name="Session ID",
-            info="Session ID of the chat history.",
+            info="The session ID of the chat. If empty, the current session ID parameter will be used.",
             advanced=True,
         ),
         DropdownInput(
@@ -87,14 +89,14 @@ class MemoryComponent(Component):
             self.memory.session_id = session_id
 
             stored = self.memory.messages
-            if sender:
-                expected_type = "Machine" if sender == "Machine" else "User"
-                stored = [m for m in stored if m.type == expected_type]
             if order == "ASC":
                 stored = stored[::-1]
             if n_messages:
                 stored = stored[:n_messages]
             stored = [Message.from_lc_message(m) for m in stored]
+            if sender:
+                expected_type = MESSAGE_SENDER_AI if sender == MESSAGE_SENDER_AI else MESSAGE_SENDER_USER
+                stored = [m for m in stored if m.type == expected_type]
         else:
             stored = get_messages(
                 sender=sender,

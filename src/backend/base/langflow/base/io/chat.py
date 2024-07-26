@@ -5,6 +5,7 @@ from langflow.custom import Component
 from langflow.memory import store_message
 from langflow.schema import Data
 from langflow.schema.message import Message
+from langflow.utils.constants import MESSAGE_SENDER_USER, MESSAGE_SENDER_AI
 
 
 class ChatComponent(Component):
@@ -19,7 +20,7 @@ class ChatComponent(Component):
                 "multiline": True,
             },
             "sender": {
-                "options": ["Machine", "User"],
+                "options": [MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],
                 "display_name": "Sender Type",
                 "advanced": True,
             },

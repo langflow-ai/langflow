@@ -8,6 +8,8 @@ from langchain_core.prompt_values import ImagePromptValue
 from langchain_core.prompts.image import ImagePromptTemplate
 from pydantic import BaseModel, model_serializer, model_validator
 
+from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
+
 
 class Data(BaseModel):
     """
@@ -126,10 +128,10 @@ class Data(BaseModel):
         # they are: "text", "sender"
         if not all(key in self.data for key in ["text", "sender"]):
             raise ValueError(f"Missing required keys ('text', 'sender') in Data: {self.data}")
-        sender = self.data.get("sender", "Machine")
+        sender = self.data.get("sender", MESSAGE_SENDER_AI)
         text = self.data.get("text", "")
         files = self.data.get("files", [])
-        if sender == "User":
+        if sender == MESSAGE_SENDER_USER:
             if files:
                 contents = [{"type": "text", "text": text}]
                 for file_path in files:
