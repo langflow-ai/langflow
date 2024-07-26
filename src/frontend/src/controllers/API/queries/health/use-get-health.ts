@@ -30,6 +30,7 @@ export const useGetHealthQuery: useQueryFunctionType<
   const queryResult = query(["useGetHealthQuery"], getHealthFn, {
     placeholderData: keepPreviousData,
     refetchInterval: 20000,
+    retry: false,
     ...options,
   });
 

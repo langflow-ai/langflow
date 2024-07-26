@@ -137,6 +137,7 @@ export default function App() {
               message={FETCH_ERROR_MESSAGE}
               openModal={
                 isErrorHealth ||
+                !healthData ||
                 (healthData &&
                   Object.values(healthData).some((value) => value !== "ok"))
               }
