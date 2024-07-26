@@ -1,4 +1,5 @@
 from typing import List
+from uuid import UUID
 
 import orjson
 from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
@@ -100,7 +101,7 @@ def read_folders(
 def read_folder(
     *,
     session: Session = Depends(get_session),
-    folder_id: str,
+    folder_id: UUID,
     current_user: User = Depends(get_current_active_user),
 ):
     try:
