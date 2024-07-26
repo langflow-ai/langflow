@@ -9,7 +9,7 @@ slug: /setup
 Streamlit is a powerful tool for creating interactive web applications. To integrate Streamlit components into Langflow, first ensure your Streamlit application is running. Follow the guide to set up your Streamlit application and grant access to your self-hosted Streamlit web page. Once done, you can seamlessly use Streamlit components within Langflow!
 
 
-## Step-by-step Configuration {#b912579a43984f9a92921232b67c885f}
+## Step-by-step Configuration
 
 
 ---
@@ -37,11 +37,9 @@ Once you have set up your Streamlit application and accessed the [web page](http
 
 Langflow provides the following Streamlit components:
 
-- **Chat Template**: Alters the layout of the Streamlit application, enabling the use of chat components.
-- **Send Chat Message**: Send messages to a Streamlit chat component programmatically, enhancing real-time communication.
-- **Listen to Chat Message**: Listen for incoming messages in a Streamlit chat component, enabling dynamic responses.
-- **Get Session Messages**: Retrieve all messages from a specific Streamlit session, useful for logging and analysis.
-- **Get Last Session**: Retrieve the last active session of a Streamlit application, aiding in session management and continuity.
+- **Send Chat Message**: Send messages to a Streamlit chat session.
+- **Listen to Chat Message**: Listen for incoming messages in a Streamlit chat, alters the layout of the Streamlit application.
+
 
 Refer to the individual component documentation for more details on how to use each component in your Langflow flows.
 
