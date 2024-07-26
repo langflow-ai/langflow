@@ -1,3 +1,4 @@
+import { getRightHandleId } from "@/CustomNodes/utils/get-handle-id";
 import { cloneDeep } from "lodash";
 import {
   Connection,
@@ -34,11 +35,13 @@ import {
   targetHandleType,
 } from "../types/flow";
 import {
+  addEscapedHandleIdsToEdgesType,
   findLastNodeType,
   generateFlowType,
   unselectAllNodesType,
   updateEdgesHandleIdsType,
 } from "../types/utils/reactflowUtils";
+import { getLayoutedNodes } from "./layoutUtils";
 import { createRandomKey, toTitleCase } from "./utils";
 const uid = new ShortUniqueId();
 
@@ -298,7 +301,14 @@ export const processFlows = (DbData: FlowType[], skipUpdate = true) => {
   return { data: savedComponents, flows: DbData };
 };
 
-export const processDataFromFlow = (flow: FlowType, refreshIds = true) => {
+const needsLayout = (nodes: NodeType[]) => {
+  return nodes.some((node) => !node.position);
+};
+
+export async function processDataFromFlow(
+  flow: FlowType,
+  refreshIds = true,
+): Promise<ReactFlowJsonObject | null> {
   let data = flow?.data ? flow.data : null;
   if (data) {
     processFlowEdges(flow);
@@ -308,9 +318,14 @@ export const processDataFromFlow = (flow: FlowType, refreshIds = true) => {
     updateEdges(data.edges);
     // updateNodes(data.nodes, data.edges);
     if (refreshIds) updateIds(data); // Assuming updateIds is defined elsewhere
+    // add layout to nodes if not present
+    if (needsLayout(data.nodes)) {
+      const layoutedNodes = await getLayoutedNodes(data.nodes, data.edges);
+      data.nodes = layoutedNodes;
+    }
   }
   return data;
-};
+}
 
 export function updateIds(
   { edges, nodes }: { edges: Edge[]; nodes: Node[] },
@@ -341,6 +356,7 @@ export function updateIds(
     concatedEdges.forEach((edge: Edge) => {
       edge.source = idsMap[edge.source];
       edge.target = idsMap[edge.target];
+
       const sourceHandleObject: sourceHandleType = scapeJSONParse(
         edge.sourceHandle!,
       );
