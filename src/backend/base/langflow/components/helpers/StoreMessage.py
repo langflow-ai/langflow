@@ -20,17 +20,18 @@ class StoreMessageComponent(Component):
             input_types=["BaseChatMessageHistory"],
             info="The external memory to store the message. If empty, it will use the Langflow tables.",
         ),
-        StrInput(
+        DropdownInput(
             name="sender",
-            display_name="Sender",
-            info="The sender of the message.",
+            display_name="Sender Type",
+            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],
             value=MESSAGE_SENDER_AI,
+            info="Type of sender.",
             advanced=True,
         ),
-        StrInput(
+        MessageTextInput(
             name="sender_name",
             display_name="Sender Name",
-            info="The name of the sender.",
+            info="Name of the sender.",
             value=MESSAGE_SENDER_NAME_AI,
             advanced=True,
         ),
