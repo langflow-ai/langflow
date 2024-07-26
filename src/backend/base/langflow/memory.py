@@ -8,7 +8,6 @@ from sqlmodel import Session, col, select
 
 from langflow.schema.message import Message
 from langflow.services.database.models.message.model import MessageRead, MessageTable
-from langflow.services.database.utils import migrate_messages_from_monitor_service_to_database
 from langflow.services.deps import session_scope
 from langflow.field_typing import BaseChatMessageHistory
 from langchain_core.messages import BaseMessage
@@ -36,8 +35,6 @@ def get_messages(
     Returns:
         List[Data]: A list of Data objects representing the retrieved messages.
     """
-    with session_scope() as session:
-        migrate_messages_from_monitor_service_to_database(session)
     messages_read: list[Message] = []
     with session_scope() as session:
         stmt = select(MessageTable)
