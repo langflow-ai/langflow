@@ -49,6 +49,8 @@ const useColumnDefs = (
             isTweaks,
           };
         },
+        suppressKeyboardEvent: (params) =>
+          params.event.key === "a" && params.event.ctrlKey,
         minWidth: 340,
         autoHeight: true,
         flex: 1,
