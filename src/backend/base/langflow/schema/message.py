@@ -36,7 +36,7 @@ class Message(Data):
     files: Optional[list[str | Image]] = Field(default=[])
     session_id: Optional[str] = Field(default="")
     timestamp: Annotated[str, BeforeValidator(_timestamp_to_str)] = Field(
-        default=datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+        default_factory=lambda: datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
     )
     flow_id: Optional[str | UUID] = None
 
