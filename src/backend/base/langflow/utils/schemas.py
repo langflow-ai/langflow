@@ -6,6 +6,7 @@ from pydantic import BaseModel, field_validator, model_validator
 from typing_extensions import TypedDict
 
 from langflow.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES
+from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_AI
 
 
 class File(TypedDict):
@@ -20,8 +21,8 @@ class ChatOutputResponse(BaseModel):
     """Chat output response schema."""
 
     message: Union[str, List[Union[str, Dict]]]
-    sender: Optional[str] = "Machine"
-    sender_name: Optional[str] = "AI"
+    sender: Optional[str] = MESSAGE_SENDER_AI
+    sender_name: Optional[str] = MESSAGE_SENDER_NAME_AI
     session_id: Optional[str] = None
     stream_url: Optional[str] = None
     component_id: Optional[str] = None
@@ -71,8 +72,8 @@ class ChatOutputResponse(BaseModel):
     def from_message(
         cls,
         message: BaseMessage,
-        sender: Optional[str] = "Machine",
-        sender_name: Optional[str] = "AI",
+        sender: Optional[str] = MESSAGE_SENDER_AI,
+        sender_name: Optional[str] = MESSAGE_SENDER_NAME_AI,
     ):
         """Build chat output response from message."""
         content = message.content
@@ -87,7 +88,7 @@ class ChatOutputResponse(BaseModel):
         # \n\n -> \n\n
         # \n -> \n\n
 
-        if self.sender != "Machine":
+        if self.sender != MESSAGE_SENDER_AI:
             return self
 
         # We need to make sure we don't duplicate \n

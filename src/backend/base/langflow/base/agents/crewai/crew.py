@@ -9,6 +9,7 @@ from langflow.inputs.inputs import HandleInput, InputTypes
 from langflow.io import BoolInput, IntInput, Output
 from langflow.schema.data import Data
 from langflow.schema.message import Message
+from langflow.utils.constants import MESSAGE_SENDER_AI
 
 
 class BaseCrewComponent(Component):
@@ -78,6 +79,6 @@ class BaseCrewComponent(Component):
     async def build_output(self) -> Message:
         crew = self.build_crew()
         result = await crew.kickoff_async()
-        message = Message(text=result, sender="Machine")
+        message = Message(text=result, sender=MESSAGE_SENDER_AI)
         self.status = message
         return message
