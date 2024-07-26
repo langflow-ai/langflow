@@ -18,9 +18,7 @@ import nanoid  # type: ignore
 import yaml
 from pydantic import BaseModel
 
-from langflow.graph.edge.schema import EdgeData
 from langflow.helpers.custom import format_type
-from langflow.inputs.inputs import InputTypes
 from langflow.schema.artifact import get_artifact_type, post_process_raw
 from langflow.schema.data import Data
 from langflow.schema.message import Message
@@ -31,7 +29,9 @@ from langflow.template.frontend_node.custom_components import ComponentFrontendN
 from .custom_component import CustomComponent
 
 if TYPE_CHECKING:
+    from langflow.graph.edge.schema import EdgeData
     from langflow.graph.vertex.base import Vertex
+    from langflow.inputs.inputs import InputTypes
 
 BACKWARDS_COMPATIBLE_ATTRIBUTES = ["user_id", "vertex", "tracing_service"]
 
@@ -57,7 +57,7 @@ def recursive_serialize_or_str(obj):
 
 
 class Component(CustomComponent):
-    inputs: List[InputTypes] = []
+    inputs: List["InputTypes"] = []
     outputs: List[Output] = []
     code_class_base_inheritance: ClassVar[str] = "Component"
     _output_logs: dict[str, Log] = {}
@@ -72,7 +72,7 @@ class Component(CustomComponent):
                 config[key] = value
             else:
                 inputs[key] = value
-        self._inputs: dict[str, InputTypes] = {}
+        self._inputs: dict[str, "InputTypes"] = {}
         self._outputs: dict[str, Output] = {}
         self._results: dict[str, Any] = {}
         self._attributes: dict[str, Any] = {}
@@ -206,7 +206,7 @@ class Component(CustomComponent):
                 raise ValueError("Output name cannot be None.")
             self._outputs[output.name] = output
 
-    def map_inputs(self, inputs: List[InputTypes]):
+    def map_inputs(self, inputs: List["InputTypes"]):
         self.inputs = inputs
         for input_ in inputs:
             if input_.name is None:
@@ -251,6 +251,19 @@ class Component(CustomComponent):
         self._map_parameters_on_template(frontend_node_dict["template"])
 
         frontend_node = ComponentFrontendNode.from_dict(frontend_node_dict)
+        # code_field = Input(
+        #     dynamic=True,
+        #     required=True,
+        #     placeholder="",
+        #     multiline=True,
+        #     value=raw_code,
+        #     password=False,
+        #     name="code",
+        #     advanced=True,
+        #     field_type="code",
+        #     is_list=False,
+        # )
+        # frontend_node.template.add_field(code_field)
 
         for output in frontend_node.outputs:
             if output.types:
