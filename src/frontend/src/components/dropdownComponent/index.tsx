@@ -25,7 +25,7 @@ export default function Dropdown({
   isLoading,
   value,
   options,
-  combobox = true,
+  combobox,
   onSelect,
   editNode = false,
   id = "",
