@@ -138,7 +138,7 @@ async def get_current_user_by_jwt(
             headers={"WWW-Authenticate": "Bearer"},
         ) from e
 
-    user = get_user_by_id(db, user_id)
+    user = get_user_by_id(db, UUID(user_id))
     if user is None or not user.is_active:
         logger.info("User not found or inactive.")
         raise HTTPException(
