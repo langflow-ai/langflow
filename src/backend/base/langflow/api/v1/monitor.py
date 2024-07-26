@@ -38,7 +38,7 @@ async def get_vertex_builds(
 
 @router.delete("/builds", status_code=204)
 async def delete_vertex_builds(
-    flow_id: Optional[str] = Query(None),
+    flow_id: Optional[UUID] = Query(None),
     monitor_service: MonitorService = Depends(get_monitor_service),
 ):
     try:
@@ -49,7 +49,7 @@ async def delete_vertex_builds(
 
 @router.get("/messages", response_model=List[MessageModelResponse])
 async def get_messages(
-    flow_id: Optional[str] = Query(None),
+    flow_id: Optional[UUID] = Query(None),
     session_id: Optional[str] = Query(None),
     sender: Optional[str] = Query(None),
     sender_name: Optional[str] = Query(None),
