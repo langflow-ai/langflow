@@ -40,9 +40,8 @@ export default function TableAdvancedToggleCellRender({
             <ToggleShadComponent
               id={"show" + parameterId}
               disabled={disabled}
-              enabled={!parameter?.advanced ?? true}
+              enabled={!parameter.advanced}
               setEnabled={(e) => {
-                console.log(e, parameter);
                 handleOnNewValue({ advanced: !e });
               }}
               size="small"
