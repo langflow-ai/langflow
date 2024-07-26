@@ -92,14 +92,14 @@ export function ParameterRenderComponent({
         <FloatComponent
           disabled={disabled}
           editNode={editNode}
-          rangeSpec={templateData.rangeSpec}
+          rangeSpec={templateData.range_spec}
           value={templateValue ?? ""}
           onChange={onChange}
           id={`float_${id}`}
         />
       ) : templateData.type === "int" ? (
         <IntComponent
-          rangeSpec={templateData.rangeSpec}
+          rangeSpec={templateData.range_spec}
           id={`int_${id}`}
           disabled={disabled}
           editNode={editNode}
