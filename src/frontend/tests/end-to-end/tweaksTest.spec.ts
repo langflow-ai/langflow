@@ -35,18 +35,14 @@ test("curl_api_generation", async ({ page, context }) => {
     .locator("div")
     .first()
     .click();
+
+  await page.waitForTimeout(1000);
+
   await page
-    .getByRole("textbox", { name: "Type something..." })
-    .first()
-    .click();
-  await page
-    .getByRole("textbox", { name: "Type something..." })
-    .first()
-    .press("Control+a");
-  await page
-    .getByRole("textbox", { name: "Type something..." })
+    .getByTestId("popover-anchor-input-openai_api_base-edit")
     .first()
     .fill("teste");
+
   await page.getByRole("tab", { name: "cURL" }).click();
   await page.getByTestId("icon-Copy").click();
   const handle2 = await page.evaluateHandle(() =>

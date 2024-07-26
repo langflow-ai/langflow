@@ -55,7 +55,7 @@ test("user must be able to see output inspection", async ({ page }) => {
     .getByTestId("popover-anchor-input-api_key")
     .fill(process.env.OPENAI_API_KEY ?? "");
 
-  await page.getByTestId("dropdown-model_name").click();
+  await page.getByTestId("dropdown_str_model_name").click();
   await page.getByTestId("gpt-4o-1-option").click();
 
   await page.waitForTimeout(2000);

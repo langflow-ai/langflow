@@ -1,24 +1,16 @@
+import TableAdvancedToggleCellRender from "@/components/tableComponent/components/tableAdvancedToggleCellRender";
 import { ColDef, ValueGetterParams } from "ag-grid-community";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import TableNodeCellRender from "../../../components/tableComponent/components/tableNodeCellRender";
-import TableToggleCellRender from "../../../components/tableComponent/components/tableToggleCellRender";
-import { APIClassType } from "../../../types/api";
-import { NodeDataType } from "../../../types/flow";
 
 const useColumnDefs = (
-  nodeClass: APIClassType,
-  handleOnNewValue: (newValue: any, name: string, setDb?: boolean) => void,
-  handleNodeClass: (
-    newNodeClass: APIClassType,
-    name: string,
-    code: string,
-    type?: string,
-  ) => void,
-  changeAdvanced: (n: string) => void,
+  nodeId: string,
   open: boolean,
+  isTweaks?: boolean,
+  hideVisibility?: boolean,
 ) => {
-  const columnDefs: ColDef[] = useMemo(
-    () => [
+  const columnDefs: ColDef[] = useMemo(() => {
+    const colDefs: ColDef[] = [
       {
         headerName: "Field Name",
         field: "display_name",
@@ -52,39 +44,40 @@ const useColumnDefs = (
         cellRenderer: TableNodeCellRender,
         valueGetter: (params: ValueGetterParams) => {
           return {
-            value: params.data.value,
-            nodeClass: nodeClass,
-            handleOnNewValue: handleOnNewValue,
-            handleNodeClass: handleNodeClass,
+            nodeId: nodeId,
+            parameterId: params.data.key,
+            isTweaks,
           };
         },
+        suppressKeyboardEvent: (params) =>
+          params.event.key === "a" &&
+          (params.event.ctrlKey || params.event.metaKey),
         minWidth: 340,
         autoHeight: true,
         flex: 1,
         resizable: false,
         cellClass: "no-border",
       },
-      {
+    ];
+    if (!hideVisibility) {
+      colDefs.push({
         headerName: "Show",
         field: "advanced",
-        cellRenderer: TableToggleCellRender,
+        cellRenderer: TableAdvancedToggleCellRender,
         valueGetter: (params: ValueGetterParams) => {
           return {
-            name: params.data.name,
-            enabled: !params.data.advanced,
-            setEnabled: () => {
-              changeAdvanced(params.data.key);
-            },
+            nodeId,
+            parameterId: params.data.key,
           };
         },
         editable: false,
         maxWidth: 80,
         resizable: false,
         cellClass: "no-border",
-      },
-    ],
-    [open, nodeClass],
-  );
+      });
+    }
+    return colDefs;
+  }, [open]);
 
   return columnDefs;
 };
