@@ -1,19 +1,19 @@
 from typing import Any
- 
+
 from langflow.custom import Component
-from langflow.inputs.inputs import IntInput, MessageTextInput, DictInput, StrInput
+from langflow.inputs.inputs import IntInput, MessageTextInput, DictInput
 from langflow.io import Output
- 
+
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.schema import Data
 from langflow.schema.dotdict import dotdict
- 
- 
+
+
 class CreateDataComponent(Component):
     display_name: str = "Create Data"
     description: str = "Dynamically create a Data with a specified number of fields."
     name: str = "CreateData"
- 
+
     inputs = [
         IntInput(
             name="number_of_fields",
@@ -24,11 +24,11 @@ class CreateDataComponent(Component):
         ),
         MessageTextInput(name="text_key", display_name="Text Key", info="Key to be used as text.", advanced=True),
     ]
- 
+
     outputs = [
         Output(display_name="Data", name="data", method="build_data"),
     ]
- 
+
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
         if field_name == "number_of_fields":
             default_keys = ["code", "_type", "number_of_fields", "text_key"]
@@ -45,7 +45,7 @@ class CreateDataComponent(Component):
                 for key in build_config.copy():
                     if key not in default_keys:
                         existing_fields[key] = build_config.pop(key)
- 
+
             for i in range(1, field_value_int + 1):
                 key = f"field_{i}_key"
                 if key in existing_fields:
@@ -59,10 +59,10 @@ class CreateDataComponent(Component):
                         input_types=["Text", "Data"],
                     )
                     build_config[field.name] = field.to_dict()
- 
+
             build_config["number_of_fields"]["value"] = field_value_int
         return build_config
- 
+
     async def build_data(self) -> Data:
         data = {}
         for value_dict in self._attributes.values():
@@ -75,7 +75,7 @@ class CreateDataComponent(Component):
         return_data = Data(data=data, text_key=self.text_key)
         self.status = return_data
         return return_data
- 
+
     def post_code_processing(self, new_frontend_node: dict, current_frontend_node: dict):
         """
         This function is called after the code validation is done.
