@@ -97,7 +97,7 @@ export type InputGlobalComponentType = {
   disabled: boolean;
   onChange: (value: string, dbValue: boolean, snapshot?: boolean) => void;
   name: string;
-  data: InputFieldType;
+  data: Partial<InputFieldType>;
   editNode?: boolean;
   playgroundDisabled?: boolean;
 };

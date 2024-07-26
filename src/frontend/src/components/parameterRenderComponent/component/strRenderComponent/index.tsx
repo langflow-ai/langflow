@@ -1,3 +1,5 @@
+import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
+import { InputFieldType } from "@/types/api";
 import Dropdown from "../../../dropdownComponent";
 import InputGlobalComponent from "../../../inputGlobalComponent";
 import InputListComponent from "../../../inputListComponent";
@@ -12,6 +14,14 @@ export function StrRenderComponent({
   handleOnNewValue,
   editNode,
   id,
+}: {
+  templateData: Partial<InputFieldType>;
+  value: any;
+  name: string;
+  disabled: boolean;
+  handleOnNewValue: handleOnNewValueType;
+  editNode: boolean;
+  id: string;
 }) {
   const onChange = (value: any, dbValue?: boolean, skipSnapshot?: boolean) => {
     handleOnNewValue({ value, load_from_db: dbValue }, { skipSnapshot });
@@ -65,6 +75,7 @@ export function StrRenderComponent({
         editNode={editNode}
         options={templateData.options}
         onSelect={onChange}
+        combobox={templateData.combobox}
         value={value ?? "Choose an option"}
         id={`dropdown_${id}`}
       />

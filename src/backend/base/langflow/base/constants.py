@@ -20,6 +20,7 @@ FIELD_FORMAT_ATTRIBUTES = [
     "required",
     "list",
     "multiline",
+    "combobox",
     "fileTypes",
     "password",
     "input_types",
