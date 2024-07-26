@@ -17,7 +17,6 @@ from langflow.graph.graph.schema import VertexBuildResult
 from langflow.graph.graph.state_manager import GraphStateManager
 from langflow.graph.graph.utils import find_start_component_id, process_flow, sort_up_to_vertex
 from langflow.graph.schema import InterfaceComponentTypes, RunOutputs
-from langflow.graph.utils import log_transaction
 from langflow.graph.vertex.base import Vertex, VertexStates
 from langflow.graph.vertex.types import ComponentVertex, InterfaceVertex, StateVertex
 from langflow.schema import Data
@@ -1099,8 +1098,7 @@ class Graph:
                 artifacts = vertex.artifacts
             else:
                 raise ValueError(f"No result found for vertex {vertex_id}")
-            flow_id = self.flow_id
-            log_transaction(flow_id, vertex, status="success")
+
             vertex_build_result = VertexBuildResult(
                 result_dict=result_dict, params=params, valid=valid, artifacts=artifacts, vertex=vertex
             )
