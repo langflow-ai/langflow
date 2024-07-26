@@ -1,3 +1,4 @@
+import asyncio
 import json
 from typing import TYPE_CHECKING, Any, AsyncIterator, Dict, Generator, Iterator, List
 
@@ -6,13 +7,13 @@ from langchain_core.messages import AIMessage, AIMessageChunk
 from loguru import logger
 
 from langflow.graph.schema import CHAT_COMPONENTS, RECORDS_COMPONENTS, InterfaceComponentTypes, ResultData
-from langflow.graph.utils import UnbuiltObject, serialize_field
+from langflow.graph.utils import UnbuiltObject, serialize_field, log_transaction
 from langflow.graph.vertex.base import Vertex
 from langflow.schema import Data
 from langflow.schema.artifact import ArtifactType
 from langflow.schema.message import Message
 from langflow.schema.schema import INPUT_FIELD_NAME
-from langflow.services.monitor.utils import log_transaction, log_vertex_build
+from langflow.services.monitor.utils import log_vertex_build
 from langflow.template.field.base import UNDEFINED
 from langflow.utils.schemas import ChatOutputResponse, DataOutputResponse
 from langflow.utils.util import unescape_string
@@ -81,7 +82,9 @@ class ComponentVertex(Vertex):
             The built result if use_result is True, else the built object.
         """
         if not self._built:
-            log_transaction(source=self, target=requester, flow_id=self.graph.flow_id, status="error")
+            asyncio.create_task(
+                log_transaction(source=self, target=requester, flow_id=str(self.graph.flow_id), status="error")
+            )
             raise ValueError(f"Component {self.display_name} has not been built yet")
 
         if requester is None:
@@ -101,7 +104,9 @@ class ComponentVertex(Vertex):
                 raise ValueError(f"Result not found for {edge.source_handle.name}. Results: {self.results}")
             else:
                 raise ValueError(f"Result not found for {edge.source_handle.name}")
-        log_transaction(source=self, target=requester, flow_id=self.graph.flow_id, status="success")
+        asyncio.create_task(
+            log_transaction(source=self, target=requester, flow_id=str(self.graph.flow_id), status="success")
+        )
         return result
 
     def extract_messages_from_artifacts(self, artifacts: Dict[str, Any]) -> List[dict]:
@@ -404,16 +409,18 @@ class InterfaceVertex(ComponentVertex):
         return self.vertex_type == InterfaceComponentTypes.ChatInput and self.is_input
 
 
-class StateVertex(Vertex):
+class StateVertex(ComponentVertex):
     def __init__(self, data: Dict, graph):
-        super().__init__(data, graph=graph, base_type="custom_components")
+        super().__init__(data, graph=graph)
         self.steps = [self._build]
-        self.is_state = True
+        self.is_state = False
 
     @property
     def successors_ids(self) -> List[str]:
-        successors = self.graph.successor_map.get(self.id, [])
-        return successors + self.graph.activated_vertices
+        if self._successors_ids is None:
+            self.is_state = False
+            return super().successors_ids
+        return self._successors_ids
 
     def _built_object_repr(self):
         if self.artifacts and "repr" in self.artifacts:

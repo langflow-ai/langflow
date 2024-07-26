@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlmodel import Session
 
 from langflow.api.v1.schemas import ApiKeyCreateRequest, ApiKeysResponse
@@ -62,17 +62,32 @@ def delete_api_key_route(
 @router.post("/store")
 def save_store_api_key(
     api_key_request: ApiKeyCreateRequest,
+    response: Response,
     current_user: User = Depends(auth_utils.get_current_active_user),
     db: Session = Depends(get_session),
     settings_service=Depends(get_settings_service),
 ):
+    auth_settings = settings_service.auth_settings
+
     try:
         api_key = api_key_request.api_key
+
         # Encrypt the API key
         encrypted = auth_utils.encrypt_api_key(api_key, settings_service=settings_service)
         current_user.store_api_key = encrypted
         db.add(current_user)
         db.commit()
+
+        response.set_cookie(
+            "apikey_tkn_lflw",
+            encrypted,
+            httponly=auth_settings.ACCESS_HTTPONLY,
+            samesite=auth_settings.ACCESS_SAME_SITE,
+            secure=auth_settings.ACCESS_SECURE,
+            expires=None,  # Set to None to make it a session cookie
+            domain=auth_settings.COOKIE_DOMAIN,
+        )
+
         return {"detail": "API Key saved"}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e)) from e

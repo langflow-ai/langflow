@@ -1,4 +1,3 @@
-import { ColDef } from "ag-grid-community";
 import { ReactElement, ReactNode, SetStateAction } from "react";
 import { ReactFlowJsonObject } from "reactflow";
 import { InputOutput } from "../../constants/enums";
@@ -54,6 +53,7 @@ export type DropDownComponentType = {
   disabled?: boolean;
   isLoading?: boolean;
   value: string;
+  combobox?: boolean;
   options: string[];
   onSelect: (value: string) => void;
   editNode?: boolean;
