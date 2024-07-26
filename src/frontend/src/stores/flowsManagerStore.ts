@@ -2,7 +2,6 @@ import { brokenEdgeMessage } from "@/utils/utils";
 import { AxiosError } from "axios";
 import { cloneDeep } from "lodash";
 import pDebounce from "p-debounce";
-import { useLocation } from "react-router-dom";
 import { Edge, Node, Viewport, XYPosition } from "reactflow";
 import { create } from "zustand";
 import {
@@ -217,7 +216,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
     fromDragAndDrop?: boolean,
   ): Promise<string | undefined> => {
     let flowData = flow
-      ? processDataFromFlow(flow)
+      ? await processDataFromFlow(flow)
       : { nodes: [], edges: [], viewport: { zoom: 1, x: 0, y: 0 } };
     flowData?.nodes.forEach((node) => {
       updateGroupRecursion(
