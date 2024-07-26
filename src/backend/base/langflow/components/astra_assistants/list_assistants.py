@@ -9,7 +9,11 @@ class AssistantsListAssistants(Component):
     display_name = "List Assistants"
     description = "Returns a list of assistant id's"
 
-    def build(self) -> Message:
+    outputs = [
+        Output(display_name="Assistants", name="assistants", method="process_inputs"),
+    ]
+
+    def process_inputs(self) -> Message:
         assistants = self.client.beta.assistants.list()
         id_list = [assistant.id for assistant in assistants]
         message = Message(
