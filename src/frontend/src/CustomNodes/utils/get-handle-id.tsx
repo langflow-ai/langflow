@@ -3,14 +3,14 @@ import { scapedJSONStringfy } from "@/utils/reactflowUtils";
 
 export function getRightHandleId({
   output_types,
-  conditionalPath,
+  id,
+  dataType,
   name,
 }: sourceHandleType): string {
   return scapedJSONStringfy({
     dataType,
     id,
     output_types,
-    conditionalPath,
     name,
   });
 }
