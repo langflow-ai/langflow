@@ -23,6 +23,7 @@ from langflow.services.database.models.folder.utils import create_default_folder
 from langflow.services.database.models.user.crud import get_user_by_username
 from langflow.services.deps import get_settings_service, get_storage_service, get_variable_service, session_scope
 from langflow.template.field.prompt import DEFAULT_PROMPT_INTUT_TYPES
+from langflow.utils.util import escape_json_dump
 
 STARTER_FOLDER_NAME = "Starter Projects"
 STARTER_FOLDER_DESCRIPTION = "Starter projects to help you get started in Langflow."
@@ -312,10 +313,6 @@ def update_edges_with_latest_component_versions(project_data):
             logger.error(f"Source or target node not found for edge: {edge}")
     log_node_changes(edge_changes_log)
     return project_data_copy
-
-
-def escape_json_dump(edge_dict):
-    return json.dumps(edge_dict).replace('"', "œ")
 
 
 def log_node_changes(node_changes_log):
