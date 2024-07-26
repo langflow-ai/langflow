@@ -4,12 +4,12 @@ import sys
 import time
 import warnings
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import Optional
 
 import click
 import httpx
 import typer
-from dotenv import dotenv_values, load_dotenv
+from dotenv import load_dotenv
 from multiprocess import cpu_count  # type: ignore
 from multiprocess.context import Process  # type: ignore
 from packaging import version as pkg_version
