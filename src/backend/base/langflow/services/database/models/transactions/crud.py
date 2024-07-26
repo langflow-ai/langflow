@@ -2,7 +2,7 @@ from typing import Optional
 from uuid import UUID
 
 from sqlalchemy.exc import IntegrityError
-from sqlmodel import Session, select
+from sqlmodel import Session, select, col
 
 from langflow.services.database.models.transactions.model import TransactionBase, TransactionTable
 
@@ -11,7 +11,7 @@ def get_transactions_by_flow_id(db: Session, flow_id: UUID, limit: Optional[int]
     stmt = (
         select(TransactionTable)
         .where(TransactionTable.flow_id == flow_id)
-        .order_by(TransactionTable.timestamp)
+        .order_by(col(TransactionTable.timestamp))
         .limit(limit)
     )
 

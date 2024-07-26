@@ -83,7 +83,7 @@ class ComponentVertex(Vertex):
         """
         if not self._built:
             asyncio.create_task(
-                log_transaction(source=self, target=requester, flow_id=self.graph.flow_id, status="error")
+                log_transaction(source=self, target=requester, flow_id=str(self.graph.flow_id), status="error")
             )
             raise ValueError(f"Component {self.display_name} has not been built yet")
 
@@ -105,7 +105,7 @@ class ComponentVertex(Vertex):
             else:
                 raise ValueError(f"Result not found for {edge.source_handle.name}")
         asyncio.create_task(
-            log_transaction(source=self, target=requester, flow_id=self.graph.flow_id, status="success")
+            log_transaction(source=self, target=requester, flow_id=str(self.graph.flow_id), status="success")
         )
         return result
 
