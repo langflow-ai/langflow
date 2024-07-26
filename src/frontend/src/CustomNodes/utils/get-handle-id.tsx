@@ -1,9 +1,7 @@
 import { sourceHandleType, targetHandleType } from "@/types/flow";
 import { scapedJSONStringfy } from "@/utils/reactflowUtils";
 
-export function getLeftHandleId({
-  dataType,
-  id,
+export function getRightHandleId({
   output_types,
   conditionalPath,
   name,
@@ -17,7 +15,7 @@ export function getLeftHandleId({
   });
 }
 
-export function getRightHandleId({
+export function getLeftHandleId({
   inputTypes,
   type,
   fieldName,
