@@ -65,6 +65,7 @@ export function StrRenderComponent({
         editNode={editNode}
         options={templateData.options}
         onSelect={onChange}
+        combobox={templateData.combobox}
         value={value ?? "Choose an option"}
         id={`dropdown_${id}`}
       />
