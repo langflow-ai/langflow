@@ -19,7 +19,6 @@ from langflow.graph.graph.schema import GraphData, GraphDump, VertexBuildResult
 from langflow.graph.graph.state_manager import GraphStateManager
 from langflow.graph.graph.utils import find_start_component_id, process_flow, sort_up_to_vertex
 from langflow.graph.schema import InterfaceComponentTypes, RunOutputs
-from langflow.graph.utils import log_transaction
 from langflow.graph.vertex.base import Vertex, VertexStates
 from langflow.graph.vertex.schema import NodeData
 from langflow.graph.vertex.types import ComponentVertex, InterfaceVertex, StateVertex
