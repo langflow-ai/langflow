@@ -277,7 +277,7 @@ export function updateTemplate(
 
 export const processFlows = (DbData: FlowType[], skipUpdate = true) => {
   let savedComponents: { [key: string]: APIClassType } = {};
-  DbData.forEach((flow: FlowType) => {
+  DbData.forEach(async (flow: FlowType) => {
     try {
       if (!flow.data) {
         return;
@@ -293,7 +293,9 @@ export const processFlows = (DbData: FlowType[], skipUpdate = true) => {
         ] = cloneDeep((flow.data.nodes[0].data as NodeDataType).node!);
         return;
       }
-      processDataFromFlow(flow, !skipUpdate);
+      await processDataFromFlow(flow, !skipUpdate).catch((e) => {
+        console.log(e);
+      });
     } catch (e) {
       console.log(e);
     }
