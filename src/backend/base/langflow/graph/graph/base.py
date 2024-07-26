@@ -160,7 +160,7 @@ class Graph:
                     "fieldName": input_name,
                     "id": target_vertex.id,
                     "inputTypes": target_vertex.get_input(input_name).input_types,
-                    "type": target_vertex.get_input(input_name).field_type,
+                    "type": str(target_vertex.get_input(input_name).field_type),
                 },
             },
         }
