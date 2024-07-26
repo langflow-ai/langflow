@@ -10,6 +10,7 @@ from langflow.template.field.base import Input
 
 from .input_mixin import (
     BaseInputMixin,
+    ComboboxMixin,
     DatabaseLoadMixin,
     DropDownMixin,
     FieldTypes,
