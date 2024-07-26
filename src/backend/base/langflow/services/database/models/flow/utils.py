@@ -23,9 +23,9 @@ def get_flow_by_id(session: Session = Depends(get_session), flow_id: Optional[st
 def delete_flow_by_id(flow_id: str, session: Session) -> None:
     """Delete flow by id."""
     # Manually delete flow, transactions and messages because foreign key constraints might be disabled
-    session.exec(delete(Flow).where(Flow.id == flow_id)) # type: ignore
-    session.exec(delete(TransactionTable).where(TransactionTable.flow_id == flow_id)) #  type: ignore
-    session.exec(delete(MessageTable).where(MessageTable.flow_id == flow_id)) #  type: ignore
+    session.exec(delete(Flow).where(Flow.id == flow_id))  # type: ignore
+    session.exec(delete(TransactionTable).where(TransactionTable.flow_id == flow_id))  #  type: ignore
+    session.exec(delete(MessageTable).where(MessageTable.flow_id == flow_id))  #  type: ignore
     logger.info(f"Deleted flow {flow_id}")
 
 
