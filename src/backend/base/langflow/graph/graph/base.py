@@ -15,7 +15,6 @@ from langflow.graph.graph.runnable_vertices_manager import RunnableVerticesManag
 from langflow.graph.graph.state_manager import GraphStateManager
 from langflow.graph.graph.utils import find_start_component_id, process_flow, sort_up_to_vertex
 from langflow.graph.schema import InterfaceComponentTypes, RunOutputs
-from langflow.graph.utils import log_transaction
 from langflow.graph.vertex.base import Vertex, VertexStates
 from langflow.graph.vertex.types import InterfaceVertex, StateVertex
 from langflow.schema import Data
@@ -914,13 +913,11 @@ class Graph:
             else:
                 raise ValueError(f"No result found for vertex {vertex_id}")
             flow_id = self.flow_id
-            asyncio.create_task(log_transaction(flow_id, vertex, status="success"))
             return result_dict, params, valid, artifacts, vertex
         except Exception as exc:
             if not isinstance(exc, ComponentBuildException):
                 logger.exception(f"Error building Component: \n\n{exc}")
             flow_id = self.flow_id
-            asyncio.create_task(log_transaction(flow_id, vertex, status="failure", error=str(exc)))
             raise exc
 
     def get_vertex_edges(
