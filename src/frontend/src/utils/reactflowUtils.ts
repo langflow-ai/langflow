@@ -760,6 +760,13 @@ export function checkOldEdgesHandles(edges: Edge[]): boolean {
   );
 }
 
+export function checkEdgeWithoutEscapedHandleIds(edges: Edge[]): boolean {
+  return edges.some(
+    (edge) =>
+      (!edge.sourceHandle || !edge.targetHandle) && edge.data.sourceHandle,
+  );
+}
+
 export function checkOldNodesOutput(nodes: NodeType[]): boolean {
   return nodes.some((node) => !node.data.node?.outputs);
 }
