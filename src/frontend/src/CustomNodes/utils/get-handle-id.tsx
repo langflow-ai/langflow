@@ -20,13 +20,11 @@ export function getLeftHandleId({
   type,
   fieldName,
   id,
-  proxy,
 }: targetHandleType): string {
   return scapedJSONStringfy({
     inputTypes,
+    id,
     type,
     fieldName,
-    id,
-    proxy,
   });
 }
