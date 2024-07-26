@@ -1,4 +1,7 @@
-import { getRightHandleId } from "@/CustomNodes/utils/get-handle-id";
+import {
+  getLeftHandleId,
+  getRightHandleId,
+} from "@/CustomNodes/utils/get-handle-id";
 import { cloneDeep } from "lodash";
 import {
   Connection,
@@ -507,7 +510,7 @@ export function addEscapedHandleIdsToEdges({
     }
     if (!escapedTargetHandle) {
       let targetHandle = edge.data.targetHandle;
-      escapedTargetHandle = getRightHandleId(targetHandle);
+      escapedTargetHandle = getLeftHandleId(targetHandle);
       edge.targetHandle = escapedTargetHandle;
     }
   });
@@ -1276,7 +1279,6 @@ export function updateEdgesIds(
 
 export function processFlowEdges(flow: FlowType) {
   if (!flow.data || !flow.data.edges) return;
-
   if (checkEdgeWithoutEscapedHandleIds(flow.data.edges)) {
     const newEdges = addEscapedHandleIdsToEdges({ edges: flow.data.edges });
     flow.data.edges = newEdges;
