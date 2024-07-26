@@ -136,8 +136,10 @@ class DropDownMixin(BaseModel):
     options: Optional[list[str]] = None
     """List of options for the field. Only used when is_list=True. Default is an empty list."""
 
+
 class MultilineMixin(BaseModel):
     multiline: CoalesceBool = True
+
 
 class ComboboxMixin(BaseModel):
     combobox: CoalesceBool = False
