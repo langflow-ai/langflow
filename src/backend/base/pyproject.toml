@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "langflow-base"
-version = "0.0.86"
+version = "0.0.89"
 description = "A Python package with a built-in web application"
 authors = ["Langflow <contact@langflow.org>"]
 maintainers = [
@@ -73,6 +73,8 @@ opentelemetry-instrumentation-fastapi = "^0.46b0"
 prometheus-client = "^0.20.0"
 aiofiles = "^24.1.0"
 setuptools = ">=70"
+nanoid = "^2.0.0"
+filelock = "^3.15.4"
 
 [tool.poetry.extras]
 deploy = ["celery", "redis", "flower"]
@@ -96,6 +98,7 @@ markers = ["async_test"]
 namespace_packages = true
 mypy_path = "langflow"
 ignore_missing_imports = true
+disable_error_code = ["type-var"]
 
 
 [tool.ruff]

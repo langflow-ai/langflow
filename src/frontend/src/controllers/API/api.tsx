@@ -1,4 +1,10 @@
-import axios, { AxiosError, AxiosInstance } from "axios";
+import {
+  LANGFLOW_ACCESS_TOKEN,
+  LANGFLOW_AUTO_LOGIN_OPTION,
+} from "@/constants/constants";
+import useAuthStore from "@/stores/authStore";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from "axios";
 import { useContext, useEffect } from "react";
 import { Cookies } from "react-cookie";
 import { renewAccessToken } from ".";
@@ -14,10 +20,12 @@ const api: AxiosInstance = axios.create({
 });
 
 function ApiInterceptor() {
+  const autoLogin = useAuthStore((state) => state.autoLogin);
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  let { accessToken, login, logout, authenticationErrorCount, autoLogin } =
+  let { accessToken, logout, authenticationErrorCount } =
     useContext(AuthContext);
   const cookies = new Cookies();
+  const setSaveLoading = useFlowsManagerStore((state) => state.setSaveLoading);
 
   useEffect(() => {
     const interceptor = api.interceptors.response.use(
@@ -35,15 +43,18 @@ function ApiInterceptor() {
             if (!stillRefresh) {
               return Promise.reject(error);
             }
-            const acceptedRequest = await tryToRenewAccessToken(error);
 
-            const accessToken = cookies.get("access_token_lf");
+            await tryToRenewAccessToken(error);
+
+            const accessToken = cookies.get(LANGFLOW_ACCESS_TOKEN);
 
             if (!accessToken && error?.config?.url?.includes("login")) {
               return Promise.reject(error);
             }
 
-            return acceptedRequest;
+            await remakeRequest(error);
+            setSaveLoading(false);
+            authenticationErrorCount = 0;
           }
         }
         await clearBuildVerticesState(error);
@@ -63,7 +74,6 @@ function ApiInterceptor() {
 
       try {
         const parsedURL = new URL(url);
-
         const isDomainAllowed = authorizedDomains.some(
           (domain) => parsedURL.origin === new URL(domain).origin,
         );
@@ -90,7 +100,7 @@ function ApiInterceptor() {
           console.error("Duplicate Request");
         }
 
-        const accessToken = cookies.get("access_token_lf");
+        const accessToken = cookies.get(LANGFLOW_ACCESS_TOKEN);
         if (accessToken && !isAuthorizedURL(config?.url)) {
           config.headers["Authorization"] = `Bearer ${accessToken}`;
         }
@@ -127,10 +137,7 @@ function ApiInterceptor() {
   async function tryToRenewAccessToken(error: AxiosError) {
     try {
       if (window.location.pathname.includes("/login")) return;
-      const res = await renewAccessToken();
-      if (res?.data?.access_token && res?.data?.refresh_token) {
-        login(res?.data?.access_token);
-      }
+      await renewAccessToken();
     } catch (error) {
       clearBuildVerticesState(error);
       logout();
@@ -145,6 +152,28 @@ function ApiInterceptor() {
         .getState()
         .updateBuildStatus(vertices?.verticesIds ?? [], BuildStatus.BUILT);
       useFlowStore.getState().setIsBuilding(false);
+    }
+  }
+
+  async function remakeRequest(error: AxiosError) {
+    const originalRequest = error.config as AxiosRequestConfig;
+
+    try {
+      const accessToken = cookies.get(LANGFLOW_ACCESS_TOKEN);
+      if (!accessToken) {
+        throw new Error("Access token not found in cookies");
+      }
+
+      // Modify headers in originalRequest
+      originalRequest.headers = {
+        ...(originalRequest.headers as Record<string, string>), // Cast to suppress TypeScript error
+        Authorization: `Bearer ${accessToken}`,
+      };
+
+      const response = await axios.request(originalRequest);
+      return response.data; // Or handle the response as needed
+    } catch (err) {
+      throw err; // Throw the error if request fails again
     }
   }
 

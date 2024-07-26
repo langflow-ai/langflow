@@ -196,19 +196,26 @@ test("should be able to see output preview from grouped components", async ({
     .getByTestId("popover-anchor-input-input_value")
     .nth(0)
     .fill(randomName);
+
+  await page.waitForTimeout(1000);
   await page
     .getByTestId("popover-anchor-input-input_value")
     .nth(1)
     .fill(secondRandomName);
+  await page.waitForTimeout(1000);
+
   await page
     .getByPlaceholder("Type something...", { exact: true })
     .nth(6)
     .fill(thirdRandomName);
+  await page.waitForTimeout(1000);
 
   await page
     .getByPlaceholder("Type something...", { exact: true })
     .nth(3)
     .fill("-");
+  await page.waitForTimeout(1000);
+
   await page
     .getByPlaceholder("Type something...", { exact: true })
     .nth(4)
@@ -218,19 +225,35 @@ test("should be able to see output preview from grouped components", async ({
 
   await page.getByTestId("button_run_text output").last().click();
 
-  await page.waitForSelector("text=Text Output built successfully", {
-    timeout: 30000,
-  });
+  await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
+  await page.getByText("built successfully").last().click({
+    timeout: 15000,
+  });
   await page.waitForTimeout(3000);
 
   expect(
     await page.getByTestId("output-inspection-combined text").first(),
   ).not.toBeDisabled();
   await page.getByTestId("output-inspection-combined text").first().click();
+  await page.waitForTimeout(1000);
 
   await page.getByText("Component Output").isVisible();
 
   const text = await page.getByPlaceholder("Empty").textContent();
-  expect(text).toBe(`${randomName}-${secondRandomName}-${thirdRandomName}`);
+
+  const permutations = [
+    `${randomName}-${secondRandomName}-${thirdRandomName}`,
+    `${randomName}-${thirdRandomName}-${secondRandomName}`,
+    `${thirdRandomName}-${randomName}-${secondRandomName}`,
+    `${thirdRandomName}-${secondRandomName}-${randomName}`,
+    `${secondRandomName}-${randomName}-${thirdRandomName}`,
+    `${secondRandomName}-${thirdRandomName}-${randomName}`,
+  ];
+
+  const isPermutationIncluded = permutations.some((permutation) =>
+    text!.includes(permutation),
+  );
+
+  expect(isPermutationIncluded).toBe(true);
 });

@@ -15,7 +15,12 @@ from sqlmodel import Session, SQLModel, create_engine, select, text
 from langflow.services.base import Service
 from langflow.services.database import models  # noqa
 from langflow.services.database.models.user.crud import get_user_by_username
-from langflow.services.database.utils import Result, TableResults, migrate_messages_from_monitor_service_to_database
+from langflow.services.database.utils import (
+    Result,
+    TableResults,
+    migrate_messages_from_monitor_service_to_database,
+    migrate_transactions_from_monitor_service_to_database,
+)
 from langflow.services.deps import get_settings_service
 from langflow.services.utils import teardown_superuser
 
@@ -55,7 +60,6 @@ class DatabaseService(Service):
                 max_overflow=self.settings_service.settings.max_overflow,
             )
         except sa.exc.NoSuchModuleError as exc:
-            # sqlalchemy.exc.NoSuchModuleError: Can't load plugin: sqlalchemy.dialects:postgres
             if "postgres" in str(exc) and not self.database_url.startswith("postgresql"):
                 # https://stackoverflow.com/questions/62688256/sqlalchemy-exc-nosuchmoduleerror-cant-load-plugin-sqlalchemy-dialectspostgre
                 self.database_url = self.database_url.replace("postgres://", "postgresql://")
@@ -181,14 +185,14 @@ class DatabaseService(Service):
                 logger.info("Alembic not initialized")
                 should_initialize_alembic = True
 
-            else:
-                logger.info("Alembic already initialized")
         if should_initialize_alembic:
             try:
                 self.init_alembic(alembic_cfg)
             except Exception as exc:
                 logger.error(f"Error initializing alembic: {exc}")
                 raise RuntimeError("Error initializing alembic") from exc
+        else:
+            logger.info("Alembic already initialized")
 
         logger.info(f"Running DB migrations in {self.script_location}")
 
@@ -211,6 +215,10 @@ class DatabaseService(Service):
             migrate_messages_from_monitor_service_to_database(session)
         except Exception as exc:
             logger.error(f"Error migrating messages from monitor service to database: {exc}")
+        try:
+            migrate_transactions_from_monitor_service_to_database(session)
+        except Exception as exc:
+            logger.error(f"Error migrating transactions from monitor service to database: {exc}")
 
         if fix:
             self.try_downgrade_upgrade_until_success(alembic_cfg)
@@ -266,7 +274,7 @@ class DatabaseService(Service):
 
         inspector = inspect(self.engine)
         table_names = inspector.get_table_names()
-        current_tables = ["flow", "user", "apikey"]
+        current_tables = ["flow", "user", "apikey", "folder", "message", "variable", "transaction"]
 
         if table_names and all(table in table_names for table in current_tables):
             logger.debug("Database and tables already exist")
@@ -294,7 +302,7 @@ class DatabaseService(Service):
 
         logger.debug("Database and tables created successfully")
 
-    def teardown(self):
+    async def teardown(self):
         logger.debug("Tearing down database")
         try:
             settings_service = get_settings_service()

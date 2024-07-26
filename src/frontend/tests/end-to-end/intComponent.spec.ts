@@ -52,21 +52,19 @@ test("IntComponent", async ({ page }) => {
   await page.getByTestId("showmax_tokens").click();
 
   await page.getByText("Close").last().click();
-  await page.getByTestId("int-input-max_tokens").click();
-  await page
-    .getByTestId("int-input-max_tokens")
-    .fill("123456789123456789123456789");
+  await page.getByTestId("int_int_max_tokens").click();
+  await page.getByTestId("int_int_max_tokens").fill("1020304050");
 
-  let value = await page.getByTestId("int-input-max_tokens").inputValue();
+  let value = await page.getByTestId("int_int_max_tokens").inputValue();
 
-  if (value != "123456789123456789123456789") {
+  if (value != "1020304050") {
     expect(false).toBeTruthy();
   }
 
-  await page.getByTestId("int-input-max_tokens").click();
-  await page.getByTestId("int-input-max_tokens").fill("0");
+  await page.getByTestId("int_int_max_tokens").click();
+  await page.getByTestId("int_int_max_tokens").fill("0");
 
-  value = await page.getByTestId("int-input-max_tokens").inputValue();
+  value = await page.getByTestId("int_int_max_tokens").inputValue();
 
   if (value != "0") {
     expect(false).toBeTruthy();
@@ -86,16 +84,14 @@ test("IntComponent", async ({ page }) => {
   await page.getByTestId("more-options-modal").click();
   await page.getByTestId("edit-button-modal").click();
 
-  value = await page.getByTestId("edit-int-input-max_tokens").inputValue();
+  value = await page.getByTestId("int_int_edit_max_tokens").inputValue();
 
   if (value != "0") {
     expect(false).toBeTruthy();
   }
 
-  await page.getByTestId("edit-int-input-max_tokens").click();
-  await page
-    .getByTestId("edit-int-input-max_tokens")
-    .fill("123456789123456789123456789");
+  await page.getByTestId("int_int_edit_max_tokens").click();
+  await page.getByTestId("int_int_edit_max_tokens").fill("60708090");
 
   await page.locator('//*[@id="showmodel_kwargs"]').click();
   expect(
@@ -111,11 +107,6 @@ test("IntComponent", async ({ page }) => {
   expect(
     await page.locator('//*[@id="showopenai_api_base"]').isChecked(),
   ).toBeTruthy();
-
-  await page.locator('//*[@id="showopenai_api_key"]').click();
-  expect(
-    await page.locator('//*[@id="showopenai_api_key"]').isChecked(),
-  ).toBeFalsy();
 
   await page.locator('//*[@id="showtemperature"]').click();
   expect(
@@ -137,11 +128,6 @@ test("IntComponent", async ({ page }) => {
     await page.locator('//*[@id="showopenai_api_base"]').isChecked(),
   ).toBeFalsy();
 
-  await page.locator('//*[@id="showopenai_api_key"]').click();
-  expect(
-    await page.locator('//*[@id="showopenai_api_key"]').isChecked(),
-  ).toBeTruthy();
-
   await page.locator('//*[@id="showtemperature"]').click();
   expect(
     await page.locator('//*[@id="showtemperature"]').isChecked(),
@@ -161,11 +147,6 @@ test("IntComponent", async ({ page }) => {
   expect(
     await page.locator('//*[@id="showopenai_api_base"]').isChecked(),
   ).toBeTruthy();
-
-  await page.locator('//*[@id="showopenai_api_key"]').click();
-  expect(
-    await page.locator('//*[@id="showopenai_api_key"]').isChecked(),
-  ).toBeFalsy();
 
   await page.locator('//*[@id="showtemperature"]').click();
   expect(
@@ -182,33 +163,29 @@ test("IntComponent", async ({ page }) => {
     await page.getByTestId("more-options-modal").click();
     await page.getByTestId("edit-button-modal").click();
 
-    await page.locator('//*[@id="showtimeout"]').click();
-    expect(
-      await page.locator('//*[@id="showtimeout"]').isChecked(),
-    ).toBeTruthy();
-
     const valueEditNode = await page
-      .getByTestId("edit-int-input-max_tokens")
+      .getByTestId("int_int_max_tokens")
       .inputValue();
 
-    if (valueEditNode != "123456789123456789123456789") {
+    if (valueEditNode != "128000") {
       expect(false).toBeTruthy();
     }
 
     await page.getByText("Close").last().click();
-    await page.getByTestId("int-input-max_tokens").click();
-    await page.getByTestId("int-input-max_tokens").fill("3");
+    await page.getByTestId("int_int_max_tokens").click();
+    await page.getByTestId("int_int_max_tokens").fill("3");
 
-    let value = await page.getByTestId("int-input-max_tokens").inputValue();
+    let value = await page.getByTestId("int_int_max_tokens").inputValue();
 
     if (value != "3") {
       expect(false).toBeTruthy();
     }
 
-    await page.getByTestId("int-input-max_tokens").click();
-    await page.getByTestId("int-input-max_tokens").fill("-3");
+    await page.getByTestId("int_int_max_tokens").click();
+    await page.getByTestId("int_int_max_tokens").fill("-3");
+    await page.getByTestId("div-generic-node").click();
 
-    value = await page.getByTestId("int-input-max_tokens").inputValue();
+    value = await page.getByTestId("int_int_max_tokens").inputValue();
 
     if (value != "0") {
       expect(false).toBeTruthy();

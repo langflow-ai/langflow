@@ -21,7 +21,7 @@ import UploadFileButton from "./components/uploadFileButton";
 import { getClassNamesFilePreview } from "./helpers/get-class-file-preview";
 import useAutoResizeTextArea from "./hooks/use-auto-resize-text-area";
 import useFocusOnUnlock from "./hooks/use-focus-unlock";
-export default function ChattInput({
+export default function ChatInput({
   lockChat,
   chatValue,
   sendMessage,

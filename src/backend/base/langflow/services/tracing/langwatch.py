@@ -1,8 +1,8 @@
+import os
 from typing import TYPE_CHECKING, Any, Dict, Optional, cast
 from uuid import UUID
 
 import nanoid  # type: ignore
-from langwatch.tracer import ContextSpan
 from loguru import logger
 
 from langflow.schema.data import Data
@@ -28,9 +28,8 @@ class LangWatchTracer(BaseTracer):
 
         try:
             self._ready = self.setup_langwatch()
-
-            # import after setting up langwatch so we are sure to be available
-            import nanoid  # type: ignore
+            if not self._ready:
+                return
 
             self.trace = self._client.trace(
                 trace_id=str(self.trace_id),
@@ -52,6 +51,8 @@ class LangWatchTracer(BaseTracer):
         return self._ready
 
     def setup_langwatch(self):
+        if os.getenv("LANGWATCH_API_KEY") is None:
+            return False
         try:
             import langwatch
 
@@ -78,6 +79,8 @@ class LangWatchTracer(BaseTracer):
         metadata: Dict[str, Any] | None = None,
         vertex: Optional["Vertex"] = None,
     ):
+        if not self._ready:
+            return
         # If user is not using session_id, then it becomes the same as flow_id, but
         # we don't want to have an infinite thread with all the flow messages
         if "session_id" in inputs and inputs["session_id"] != self.flow_id:
@@ -111,6 +114,8 @@ class LangWatchTracer(BaseTracer):
         error: Exception | None = None,
         logs: list[Log | dict] = [],
     ):
+        if not self._ready:
+            return
         if self.spans.get(trace_id):
             # Workaround for when model is used just as a component not actually called as an LLM,
             # to prevent LangWatch from calculating the cost based on it when it was in fact never called
@@ -131,6 +136,8 @@ class LangWatchTracer(BaseTracer):
         error: Exception | None = None,
         metadata: dict[str, Any] | None = None,
     ):
+        if not self._ready:
+            return
         self.trace.root_span.end(
             input=self._convert_to_langwatch_types(inputs),
             output=self._convert_to_langwatch_types(outputs),

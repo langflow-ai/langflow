@@ -734,6 +734,9 @@ export const AUTHORIZED_DUPLICATE_REQUESTS = [
   "/auto_login",
 ];
 
+export const BROKEN_EDGES_WARNING =
+  "Some connections were removed because they were invalid:";
+
 export const SAVE_DEBOUNCE_TIME = 300;
 
 export const IS_MAC = navigator.userAgent.toUpperCase().includes("MAC");
@@ -866,3 +869,7 @@ export const TABS_ORDER = [
   "python code",
   "chat widget html",
 ];
+
+export const LANGFLOW_ACCESS_TOKEN = "access_token_lf";
+export const LANGFLOW_API_TOKEN = "apikey_tkn_lflw";
+export const LANGFLOW_AUTO_LOGIN_OPTION = "auto_login_lf";

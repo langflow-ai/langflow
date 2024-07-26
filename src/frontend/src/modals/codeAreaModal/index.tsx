@@ -104,7 +104,8 @@ export default function CodeAreaModal({
       .then((apiReturn) => {
         const { data, type } = apiReturn.data;
         if (data && type) {
-          setNodeClass(data, code, type);
+          setValue(code);
+          setNodeClass(data, type);
           setError({ detail: { error: undefined, traceback: undefined } });
           setOpen(false);
         }
@@ -192,7 +193,12 @@ export default function CodeAreaModal({
             }
           >
             <div className="mt-5 h-full max-h-[10rem] w-full overflow-y-auto overflow-x-clip text-left custom-scroll">
-              <h1 className="text-lg text-error">{error?.detail?.error}</h1>
+              <h1
+                data-testid="title_error_code_modal"
+                className="text-lg text-error"
+              >
+                {error?.detail?.error}
+              </h1>
               <div className="ml-2 mt-2 w-full text-sm text-destructive word-break-break-word">
                 <span className="w-full word-break-break-word">
                   {error?.detail?.traceback}

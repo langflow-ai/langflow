@@ -1,4 +1,4 @@
-from typing import Any, AsyncIterator, Iterator, Optional, Union
+from typing import Any, AsyncIterator, Iterator, Optional, Union, get_args
 
 from loguru import logger
 from pydantic import Field, field_validator
@@ -11,6 +11,7 @@ from .input_mixin import (
     BaseInputMixin,
     DatabaseLoadMixin,
     DropDownMixin,
+    ComboboxMixin,
     FieldTypes,
     FileMixin,
     InputTraceMixin,
@@ -19,7 +20,27 @@ from .input_mixin import (
     MultilineMixin,
     RangeMixin,
     SerializableFieldTypes,
+    TableMixin,
 )
+
+
+class TableInput(BaseInputMixin, MetadataTraceMixin, TableMixin, ListableInputMixin):
+    field_type: Optional[SerializableFieldTypes] = FieldTypes.TABLE
+    is_list: bool = True
+
+    @field_validator("value")
+    @classmethod
+    def validate_value(cls, v: Any, _info):
+        # Check if value is a list of dicts
+        if not isinstance(v, list):
+            raise ValueError(f"TableInput value must be a list of dictionaries or Data. Value '{v}' is not a list.")
+
+        for item in v:
+            if not isinstance(item, (dict, Data)):
+                raise ValueError(
+                    f"TableInput value must be a list of dictionaries or Data. Item '{item}' is not a dictionary or Data."
+                )
+        return v
 
 
 class HandleInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin):
@@ -272,7 +293,7 @@ class DictInput(BaseInputMixin, ListableInputMixin, InputTraceMixin):
     value: Optional[dict] = {}
 
 
-class DropdownInput(BaseInputMixin, DropDownMixin, MetadataTraceMixin):
+class DropdownInput(BaseInputMixin, DropDownMixin, MetadataTraceMixin, ComboboxMixin):
     """
     Represents a dropdown input field.
 
@@ -287,6 +308,7 @@ class DropdownInput(BaseInputMixin, DropDownMixin, MetadataTraceMixin):
 
     field_type: Optional[SerializableFieldTypes] = FieldTypes.TEXT
     options: list[str] = Field(default_factory=list)
+    combobox: CoalesceBool = False
 
 
 class MultiselectInput(BaseInputMixin, ListableInputMixin, DropDownMixin, MetadataTraceMixin):
@@ -338,4 +360,15 @@ InputTypes = Union[
     StrInput,
     MessageTextInput,
     MessageInput,
+    TableInput,
 ]
+
+InputTypesMap: dict[str, type[InputTypes]] = {t.__name__: t for t in get_args(InputTypes)}
+
+
+def _instantiate_input(input_type: str, data: dict) -> InputTypes:
+    input_type_class = InputTypesMap.get(input_type)
+    if input_type_class:
+        return input_type_class(**data)
+    else:
+        raise ValueError(f"Invalid input type: {input_type}")
