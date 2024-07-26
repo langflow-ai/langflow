@@ -1462,6 +1462,13 @@ class Graph:
         immediately runnable, expanding the search to ensure progress can be made.
         """
         runnable_vertices = []
+        for successor_id in self.run_manager.run_map.get(vertex_id, []):
+            runnable_vertices.extend(self.find_runnable_predecessors_for_successor(successor_id))
+
+        return runnable_vertices
+
+    def find_runnable_predecessors_for_successor(self, vertex_id: str) -> List[str]:
+        runnable_vertices = []
         visited = set()
 
         def find_runnable_predecessors(predecessor: "Vertex"):
@@ -1476,10 +1483,8 @@ class Graph:
                 for pred_pred_id in self.run_manager.run_predecessors.get(predecessor_id, []):
                     find_runnable_predecessors(self.get_vertex(pred_pred_id))
 
-        for successor_id in self.run_manager.run_map.get(vertex_id, []):
-            for predecessor_id in self.run_manager.run_predecessors.get(successor_id, []):
+        for predecessor_id in self.run_manager.run_predecessors.get(vertex_id, []):
                 find_runnable_predecessors(self.get_vertex(predecessor_id))
-
         return runnable_vertices
 
     def remove_from_predecessors(self, vertex_id: str):
