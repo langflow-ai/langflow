@@ -1258,7 +1258,11 @@ export function updateEdgesIds(
 
 export function processFlowEdges(flow: FlowType) {
   if (!flow.data || !flow.data.edges) return;
-  if (checkOldEdgesHandles(flow.data.edges)) {
+
+  if (checkEdgeWithoutEscapedHandleIds(flow.data.edges)) {
+    const newEdges = addEscapedHandleIdsToEdges({ edges: flow.data.edges });
+    flow.data.edges = newEdges;
+  } else if (checkOldEdgesHandles(flow.data.edges)) {
     const newEdges = updateEdgesHandleIds(flow.data);
     flow.data.edges = newEdges;
   }
