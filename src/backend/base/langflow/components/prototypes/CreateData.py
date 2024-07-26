@@ -63,21 +63,16 @@ class CreateDataComponent(Component):
             build_config["number_of_fields"]["value"] = field_value_int
         return build_config
 
-    async def build_data(
-        self,
-        number_of_fields: int = 0,
-        text_key: str = "text",
-        **kwargs,
-    ) -> Data:
+    async def build_data(self) -> Data:
         data = {}
-        for value_dict in kwargs.values():
+        for value_dict in self._attributes.values():
             if isinstance(value_dict, dict):
                 # Check if the value of the value_dict is a Data
                 value_dict = {
                     key: value.get_text() if isinstance(value, Data) else value for key, value in value_dict.items()
                 }
                 data.update(value_dict)
-        return_data = Data(data=data, text_key=text_key)
+        return_data = Data(data=data, text_key=self.text_key)
         self.status = return_data
         return return_data
 
