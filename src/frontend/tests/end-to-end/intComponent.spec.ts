@@ -167,7 +167,7 @@ test("IntComponent", async ({ page }) => {
       .getByTestId("int_int_max_tokens")
       .inputValue();
 
-    if (valueEditNode != "60708090") {
+    if (valueEditNode != "128000") {
       expect(false).toBeTruthy();
     }
 
@@ -183,6 +183,7 @@ test("IntComponent", async ({ page }) => {
 
     await page.getByTestId("int_int_max_tokens").click();
     await page.getByTestId("int_int_max_tokens").fill("-3");
+    await page.getByTestId("div-generic-node").click();
 
     value = await page.getByTestId("int_int_max_tokens").inputValue();
 
