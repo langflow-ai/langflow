@@ -100,7 +100,12 @@ class Graph:
         if (start is not None and end is None) or (start is None and end is not None):
             raise ValueError("You must provide both input and output components")
 
-    def dumps(self) -> str:
+    def dumps(
+        self,
+        name: Optional[str] = None,
+        description: Optional[str] = None,
+        endpoint_name: Optional[str] = None,
+    ) -> str:
         if self.raw_graph_data != {"nodes": [], "edges": []}:
             data_dict = self.raw_graph_data
         else:
@@ -109,7 +114,16 @@ class Graph:
             edges = [edge.to_data() for edge in self.edges]
             self.raw_graph_data = {"nodes": nodes, "edges": edges}
             data_dict = self.raw_graph_data
-        graph_dict = {"data": data_dict}
+        graph_dict = {
+            "data": data_dict,
+            "is_component": len(data_dict.get("nodes", [])) == 1 and data_dict["edges"] == [],
+        }
+        if name:
+            graph_dict["name"] = name
+        if description:
+            graph_dict["description"] = description
+        if endpoint_name:
+            graph_dict["endpoint_name"] = endpoint_name
         return json.dumps(graph_dict, indent=4, sort_keys=True)
 
     def add_nodes_and_edges(self, nodes: List[NodeData], edges: List[EdgeData]):
