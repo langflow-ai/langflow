@@ -20,6 +20,7 @@ import PasswordFormComponent from "./components/PasswordForm";
 import ProfilePictureFormComponent from "./components/ProfilePictureForm";
 import useGetProfilePictures from "./components/ProfilePictureForm/components/profilePictureChooserComponent/hooks/use-get-profile-pictures";
 import StoreApiKeyFormComponent from "./components/StoreApiKeyForm";
+import FeatureFlags from "@/../feature-config.json";
 
 export const GeneralPage = () => {
   const setCurrentFlowId = useFlowsManagerStore(
@@ -101,13 +102,15 @@ export const GeneralPage = () => {
       <GeneralPageHeaderComponent />
 
       <div className="grid gap-6">
-        <ProfilePictureFormComponent
-          profilePicture={profilePicture}
-          handleInput={handleInput}
-          handlePatchProfilePicture={handlePatchProfilePicture}
-          handleGetProfilePictures={handleGetProfilePictures}
-          userData={userData}
-        />
+        {FeatureFlags.ENABLE_PROFILE_ICONS && (
+          <ProfilePictureFormComponent
+            profilePicture={profilePicture}
+            handleInput={handleInput}
+            handlePatchProfilePicture={handlePatchProfilePicture}
+            handleGetProfilePictures={handleGetProfilePictures}
+            userData={userData}
+          />
+        )}
 
         {!autoLogin && (
           <PasswordFormComponent

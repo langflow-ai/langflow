@@ -11,6 +11,7 @@ import { useStoreStore } from "../../stores/storeStore";
 import { classNames, isThereModal } from "../../utils/utils";
 import ForwardedIconComponent from "../genericIconComponent";
 import { Separator } from "../ui/separator";
+import FeatureFlags from "@/../feature-config.json";
 
 export default function FlowToolbar(): JSX.Element {
   const preventDefault = true;
@@ -136,30 +137,34 @@ export default function FlowToolbar(): JSX.Element {
             <div>
               <Separator orientation="vertical" />
             </div>
-            <div className="flex cursor-pointer items-center gap-2">
-              {currentFlow && currentFlow.data && (
-                <ApiModal
-                  flow={currentFlow}
-                  open={openCodeModal}
-                  setOpen={setOpenCodeModal}
-                >
-                  <div
-                    className={classNames(
-                      "relative inline-flex w-full items-center justify-center gap-1 px-5 py-3 text-sm font-semibold text-foreground transition-all duration-150 ease-in-out hover:bg-hover",
-                    )}
-                  >
-                    <ForwardedIconComponent
-                      name="Code2"
-                      className={"h-5 w-5"}
-                    />
-                    API
-                  </div>
-                </ApiModal>
-              )}
-            </div>
-            <div>
-              <Separator orientation="vertical" />
-            </div>
+            {FeatureFlags.ENABLE_API && (
+              <>
+                <div className="flex cursor-pointer items-center gap-2">
+                  {currentFlow && currentFlow.data && (
+                    <ApiModal
+                      flow={currentFlow}
+                      open={openCodeModal}
+                      setOpen={setOpenCodeModal}
+                    >
+                      <div
+                        className={classNames(
+                          "relative inline-flex w-full items-center justify-center gap-1 px-5 py-3 text-sm font-semibold text-foreground transition-all duration-150 ease-in-out hover:bg-hover",
+                        )}
+                      >
+                        <ForwardedIconComponent
+                          name="Code2"
+                          className={"h-5 w-5"}
+                        />
+                        API
+                      </div>
+                    </ApiModal>
+                  )}
+                </div>
+                <div>
+                  <Separator orientation="vertical" />
+                </div>
+              </>
+            )}
             <div className="flex items-center gap-2">
               <div
                 className={`side-bar-button ${
