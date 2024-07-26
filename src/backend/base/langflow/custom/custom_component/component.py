@@ -131,7 +131,7 @@ class Component(CustomComponent):
                         "target": self._id,
                         "data": {
                             "sourceHandle": {
-                                "dataType": self.name,
+                                "dataType": component.name,
                                 "id": component._id,
                                 "name": output.name,
                                 "output_types": output.types,
