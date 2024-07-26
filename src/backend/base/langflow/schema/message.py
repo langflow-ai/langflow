@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from typing import Annotated, Any, AsyncIterator, Iterator, List, Optional
+from typing import Any, AsyncIterator, Iterator, List, Optional
 from uuid import UUID
 
 from fastapi.encoders import jsonable_encoder
@@ -9,15 +9,11 @@ from langchain_core.prompt_values import ImagePromptValue
 from langchain_core.prompts import BaseChatPromptTemplate, ChatPromptTemplate, PromptTemplate
 from langchain_core.prompts.image import ImagePromptTemplate
 from loguru import logger
-from pydantic import BeforeValidator, ConfigDict, Field, field_serializer, field_validator
+from pydantic import ConfigDict, Field, field_serializer, field_validator
 
 from langflow.base.prompts.utils import dict_values_to_string
 from langflow.schema.data import Data
 from langflow.schema.image import Image, get_file_paths, is_image_file
-
-
-def _timestamp_to_str(timestamp: datetime) -> str:
-    return timestamp.strftime("%Y-%m-%d %H:%M:%S")
 
 
 class Message(Data):
@@ -29,8 +25,8 @@ class Message(Data):
     sender_name: Optional[str] = None
     files: Optional[list[str | Image]] = Field(default=[])
     session_id: Optional[str] = Field(default="")
-    timestamp: Annotated[str, BeforeValidator(_timestamp_to_str)] = Field(
-        default=datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+    timestamp: str = Field(
+        default_factory=lambda: datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
     )
     flow_id: Optional[str | UUID] = None
 
