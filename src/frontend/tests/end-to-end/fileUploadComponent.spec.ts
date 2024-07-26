@@ -147,8 +147,15 @@ test("should be able to upload a file", async ({ page }) => {
   await page.mouse.up();
 
   await page.getByText("Playground", { exact: true }).click();
+
+  await page.waitForSelector("text=Run Flow", {
+    timeout: 30000,
+  });
+
   await page.getByText("Run Flow", { exact: true }).click();
+
   await page.waitForTimeout(3000);
+
   const textOutput = await page.getByPlaceholder("Empty").first().inputValue();
 
   expect(textOutput).toContain("this is a test file");

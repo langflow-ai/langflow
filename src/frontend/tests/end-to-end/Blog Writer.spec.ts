@@ -51,18 +51,18 @@ test("Blog Writer", async ({ page }) => {
     .getByTestId("popover-anchor-input-api_key")
     .fill(process.env.OPENAI_API_KEY ?? "");
 
-  await page.getByTestId("dropdown-model_name").click();
+  await page.getByTestId("dropdown_str_model_name").click();
   await page.getByTestId("gpt-4o-1-option").click();
 
   await page.waitForTimeout(2000);
   await page
-    .getByTestId("input-list-input_urls-0")
+    .getByTestId("inputlist_str_urls_0")
     .nth(0)
     .fill(
       "https://www.natgeokids.com/uk/discover/animals/sea-life/turtle-facts/",
     );
   await page
-    .getByTestId("input-list-input_urls-1")
+    .getByTestId("inputlist_str_urls_1")
     .nth(0)
     .fill("https://www.originaldiving.com/blog/top-ten-turtle-facts");
 

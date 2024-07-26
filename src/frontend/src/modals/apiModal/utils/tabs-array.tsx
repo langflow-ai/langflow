@@ -1,15 +1,18 @@
+import { tabsArrayType } from "@/types/components";
+
 export function createTabsArray(
   codes,
   includeWebhookCurl = false,
   includeTweaks = false,
 ) {
-  const tabs = [
+  const tabs: tabsArrayType[] = [
     {
       name: "Run cURL",
       mode: "bash",
       image: "https://curl.se/logo/curl-symbol-transparent.png",
       language: "sh",
       code: codes[0],
+      hasTweaks: includeTweaks,
     },
     {
       name: "Python API",
@@ -18,6 +21,7 @@ export function createTabsArray(
         "https://images.squarespace-cdn.com/content/v1/5df3d8c5d2be5962e4f87890/1628015119369-OY4TV3XJJ53ECO0W2OLQ/Python+API+Training+Logo.png?format=1000w",
       language: "py",
       code: codes[2],
+      hasTweaks: includeTweaks,
     },
     {
       name: "JS API",
@@ -25,6 +29,7 @@ export function createTabsArray(
       image: "https://cdn-icons-png.flaticon.com/512/136/136530.png",
       language: "js",
       code: codes[3],
+      hasTweaks: includeTweaks,
     },
     {
       name: "Python Code",
@@ -32,6 +37,7 @@ export function createTabsArray(
       image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
       language: "py",
       code: codes[4],
+      hasTweaks: includeTweaks,
     },
     {
       name: "Chat Widget HTML",

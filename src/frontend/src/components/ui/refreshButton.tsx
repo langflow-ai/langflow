@@ -1,30 +1,27 @@
 import IconComponent from "../../components/genericIconComponent";
-import { NodeDataType } from "../../types/flow";
 import { cn } from "../../utils/utils";
 import { Button } from "./button";
 
 function RefreshButton({
   isLoading,
   disabled,
-  name,
   button_text,
-  data,
   handleUpdateValues,
   className,
+  editNode,
   id,
 }: {
   isLoading: boolean;
   disabled: boolean;
-  name: string;
   button_text?: string;
-  data: NodeDataType;
+  editNode?: boolean;
   className?: string;
-  handleUpdateValues: (name: string, data: NodeDataType) => void;
+  handleUpdateValues: () => void;
   id: string;
 }) {
   const handleClick = async () => {
     if (disabled) return;
-    handleUpdateValues(name, data);
+    handleUpdateValues();
   };
 
   const classNames = cn(className, disabled ? "cursor-not-allowed" : "");
@@ -40,6 +37,7 @@ function RefreshButton({
       className={classNames}
       onClick={handleClick}
       id={id}
+      size={editNode ? "sm" : "default"}
       loading={isLoading}
     >
       {button_text && <span className="mr-1">{button_text}</span>}

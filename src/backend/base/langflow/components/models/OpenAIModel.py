@@ -1,6 +1,7 @@
 import operator
 from functools import reduce
 
+from langflow.field_typing.range_spec import RangeSpec
 from langchain_openai import ChatOpenAI
 from pydantic.v1 import SecretStr
 
@@ -30,6 +31,7 @@ class OpenAIModelComponent(LCModelComponent):
             display_name="Max Tokens",
             advanced=True,
             info="The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
+            range_spec=RangeSpec(min=0, max=128000),
         ),
         DictInput(name="model_kwargs", display_name="Model Kwargs", advanced=True),
         BoolInput(

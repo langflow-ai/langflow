@@ -1,4 +1,4 @@
-import { cloneDeep, get } from "lodash";
+import { cloneDeep } from "lodash";
 import {
   Connection,
   Edge,
@@ -1033,7 +1033,7 @@ export function mergeNodeTemplates({
   });
   return template;
 }
-function isTargetHandleConnected(
+export function isTargetHandleConnected(
   edges: Edge[],
   key: string,
   field: InputFieldType,
@@ -1042,6 +1042,7 @@ function isTargetHandleConnected(
   /*
 		this function receives a flow and a handleId and check if there is a connection with this handle
 	*/
+  if (!field) return true;
   if (field.proxy) {
     if (
       edges.some(

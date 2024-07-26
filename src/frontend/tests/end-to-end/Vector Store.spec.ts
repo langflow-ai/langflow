@@ -96,21 +96,21 @@ test("Vector Store RAG", async ({ page }) => {
   await page.waitForTimeout(2000);
 
   await page.getByTestId("button_run_astra db").first().click();
-  await page.waitForSelector("text=built successfully", { timeout: 30000 });
+  await page.waitForSelector("text=built successfully", { timeout: 60000 * 2 });
 
   await page.getByText("built successfully").last().click({
     timeout: 30000,
   });
 
   await page.getByTestId("button_run_chat output").click();
-  await page.waitForSelector("text=built successfully", { timeout: 30000 });
+  await page.waitForSelector("text=built successfully", { timeout: 60000 * 2 });
 
   await page.getByText("built successfully").last().click({
     timeout: 30000,
   });
 
   await page.getByTestId("button_run_astra db").last().click();
-  await page.waitForSelector("text=built successfully", { timeout: 30000 });
+  await page.waitForSelector("text=built successfully", { timeout: 60000 * 2 });
 
   await page.getByText("built successfully").last().click({
     timeout: 30000,

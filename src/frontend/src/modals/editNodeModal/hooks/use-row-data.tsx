@@ -1,17 +1,12 @@
 import sortFields from "@/CustomNodes/utils/sort-fields";
 import { useMemo } from "react";
 import { APIClassType } from "../../../types/api";
-import { NodeDataType } from "../../../types/flow";
 
-const useRowData = (
-  myData: NodeDataType,
-  nodeClass: APIClassType,
-  open: boolean,
-) => {
+const useRowData = (nodeClass: APIClassType, open: boolean) => {
   const rowData = useMemo(() => {
-    return Object.keys(myData.node!.template)
+    return Object.keys(nodeClass.template)
       .filter((key: string) => {
-        const templateParam = myData.node!.template[key] as any;
+        const templateParam = nodeClass.template[key] as any;
         return (
           key.charAt(0) !== "_" &&
           templateParam.show &&
@@ -21,9 +16,9 @@ const useRowData = (
           )
         );
       })
-      .sort((a, b) => sortFields(a, b, myData.node?.field_order ?? []))
+      .sort((a, b) => sortFields(a, b, nodeClass.field_order ?? []))
       .map((key: string) => {
-        const templateParam = myData.node!.template[key] as any;
+        const templateParam = nodeClass.template[key] as any;
         return {
           ...templateParam,
           key: key,
