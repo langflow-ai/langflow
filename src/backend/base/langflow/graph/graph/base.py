@@ -5,7 +5,7 @@ from collections import defaultdict, deque
 from datetime import datetime, timezone
 from functools import partial
 from itertools import chain
-from typing import TYPE_CHECKING, Any, Awaitable, Dict, Generator, List, Optional, Tuple, Type, Union
+from typing import TYPE_CHECKING, Any, Dict, Generator, List, Optional, Tuple, Type, Union
 
 from loguru import logger
 
@@ -181,7 +181,7 @@ class Graph:
             "target": target_id,
             "data": {
                 "sourceHandle": {
-                    "dataType": source_vertex.base_name,
+                    "dataType": source_vertex._custom_component.__class__.__name__,
                     "id": source_vertex.id,
                     "name": output_name,
                     "output_types": source_vertex.get_output(output_name).types,
