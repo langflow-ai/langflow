@@ -28,7 +28,11 @@ class StoreMessageComponent(Component):
             advanced=True,
         ),
         StrInput(
-            name="sender_name", display_name="Sender Name", info="The name of the sender.", value=MESSAGE_SENDER_NAME_AI, advanced=True
+            name="sender_name",
+            display_name="Sender Name",
+            info="The name of the sender.",
+            value=MESSAGE_SENDER_NAME_AI,
+            advanced=True,
         ),
         StrInput(
             name="session_id",

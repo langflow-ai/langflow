@@ -43,7 +43,10 @@ class ChatInput(ChatComponent):
             advanced=True,
         ),
         MessageTextInput(
-            name="session_id", display_name="Session ID", info="The session ID of the chat. If empty, the current session ID parameter will be used.", advanced=True
+            name="session_id",
+            display_name="Session ID",
+            info="The session ID of the chat. If empty, the current session ID parameter will be used.",
+            advanced=True,
         ),
         FileInput(
             name="files",

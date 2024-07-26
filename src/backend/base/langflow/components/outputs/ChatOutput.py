@@ -34,10 +34,17 @@ class ChatOutput(ChatComponent):
             info="Type of sender.",
         ),
         MessageTextInput(
-            name="sender_name", display_name="Sender Name", info="Name of the sender.", value=MESSAGE_SENDER_NAME_AI, advanced=True
+            name="sender_name",
+            display_name="Sender Name",
+            info="Name of the sender.",
+            value=MESSAGE_SENDER_NAME_AI,
+            advanced=True,
         ),
         MessageTextInput(
-            name="session_id", display_name="Session ID", info="The session ID of the chat. If empty, the current session ID parameter will be used.", advanced=True
+            name="session_id",
+            display_name="Session ID",
+            info="The session ID of the chat. If empty, the current session ID parameter will be used.",
+            advanced=True,
         ),
         MessageTextInput(
             name="data_template",

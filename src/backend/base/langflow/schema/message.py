@@ -14,14 +14,16 @@ from pydantic import BeforeValidator, ConfigDict, Field, field_serializer, field
 from langflow.base.prompts.utils import dict_values_to_string
 from langflow.schema.data import Data
 from langflow.schema.image import Image, get_file_paths, is_image_file
-from langflow.utils.constants import MESSAGE_SENDER_USER, MESSAGE_SENDER_NAME_USER, MESSAGE_SENDER_NAME_AI, \
-    MESSAGE_SENDER_AI
+from langflow.utils.constants import (
+    MESSAGE_SENDER_USER,
+    MESSAGE_SENDER_NAME_USER,
+    MESSAGE_SENDER_NAME_AI,
+    MESSAGE_SENDER_AI,
+)
 
 
 def _timestamp_to_str(timestamp: datetime) -> str:
     return timestamp.strftime("%Y-%m-%d %H:%M:%S")
-
-
 
 
 class Message(Data):
