@@ -1,3 +1,4 @@
+import json
 from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
@@ -6,6 +7,7 @@ from alembic.util.exc import CommandError
 from loguru import logger
 from sqlmodel import Session, select, text
 
+from langflow.services.database.models import TransactionTable
 from langflow.services.deps import get_monitor_service
 
 if TYPE_CHECKING:
@@ -130,7 +132,7 @@ def session_getter(db_service: "DatabaseService"):
         session = Session(db_service.engine)
         yield session
     except Exception as e:
-        print("Session rollback because of exception:", e)
+        logger.error("Session rollback because of exception:", e)
         session.rollback()
         raise
     finally:
@@ -148,3 +150,31 @@ class Result:
 class TableResults:
     table_name: str
     results: list[Result]
+
+
+def migrate_transactions_from_monitor_service_to_database(session: Session) -> None:
+    monitor_service = get_monitor_service()
+    batch = monitor_service.get_transactions()
+    if not batch:
+        logger.debug("No transactions to migrate.")
+        return
+    to_delete = []
+    while batch:
+        logger.debug(f"Migrating {len(batch)} transactions")
+        for row in batch:
+            tt = TransactionTable(
+                flow_id=row["flow_id"],
+                status=row["status"],
+                error=row["error"],
+                timestamp=row["timestamp"],
+                vertex_id=row["vertex_id"],
+                inputs=json.loads(row["inputs"]) if row["inputs"] else None,
+                outputs=json.loads(row["outputs"]) if row["outputs"] else None,
+                target_id=row["target_id"],
+            )
+            to_delete.append(row["index"])
+            session.add(tt)
+        session.commit()
+        monitor_service.delete_transactions(to_delete)
+        batch = monitor_service.get_transactions()
+    logger.debug("Transactions migrations completed.")

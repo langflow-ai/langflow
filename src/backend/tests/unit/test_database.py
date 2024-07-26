@@ -10,8 +10,15 @@ from langflow.api.v1.schemas import FlowListCreate
 from langflow.initial_setup.setup import load_starter_projects, load_flows_from_directory
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.flow import Flow, FlowCreate, FlowUpdate
-from langflow.services.database.utils import session_getter
-from langflow.services.deps import get_db_service
+from langflow.services.database.models.transactions.crud import get_transactions_by_flow_id
+from langflow.services.database.utils import session_getter, migrate_transactions_from_monitor_service_to_database
+from langflow.services.deps import get_db_service, get_monitor_service, session_scope
+from langflow.services.monitor.schema import TransactionModel
+from langflow.services.monitor.utils import (
+    drop_and_create_table_if_schema_mismatch,
+    new_duckdb_locked_connection,
+    add_row_to_table,
+)
 
 
 @pytest.fixture(scope="module")
@@ -281,3 +288,44 @@ def test_load_flows(client: TestClient, load_flows_dir):
     response = client.get("api/v1/flows/c54f9130-f2fa-4a3e-b22a-3856d946351b")
     assert response.status_code == 200
     assert response.json()["name"] == "BasicExample"
+
+
+@pytest.mark.load_flows
+def test_migrate_transactions(client: TestClient):
+    monitor_service = get_monitor_service()
+    drop_and_create_table_if_schema_mismatch(str(monitor_service.db_path), "transactions", TransactionModel)
+    flow_id = "c54f9130-f2fa-4a3e-b22a-3856d946351b"
+    data = {
+        "vertex_id": "vid",
+        "target_id": "tid",
+        "inputs": {"input_value": True},
+        "outputs": {"output_value": True},
+        "timestamp": "2021-10-10T10:10:10",
+        "status": "success",
+        "error": None,
+        "flow_id": flow_id,
+    }
+    with new_duckdb_locked_connection(str(monitor_service.db_path), read_only=False) as conn:
+        add_row_to_table(conn, "transactions", TransactionModel, data)
+    assert 1 == len(monitor_service.get_transactions())
+
+    with session_scope() as session:
+        migrate_transactions_from_monitor_service_to_database(session)
+        new_trans = get_transactions_by_flow_id(session, UUID(flow_id))
+        assert 1 == len(new_trans)
+        t = new_trans[0]
+        assert t.error is None
+        assert t.inputs == data["inputs"]
+        assert t.outputs == data["outputs"]
+        assert t.status == data["status"]
+        assert str(t.timestamp) == "2021-10-10 10:10:10"
+        assert t.vertex_id == data["vertex_id"]
+        assert t.target_id == data["target_id"]
+        assert t.flow_id == UUID(flow_id)
+
+        assert 0 == len(monitor_service.get_transactions())
+
+        client.request("DELETE", f"api/v1/flows/{flow_id}")
+    with session_scope() as session:
+        new_trans = get_transactions_by_flow_id(session, UUID(flow_id))
+        assert 0 == len(new_trans)

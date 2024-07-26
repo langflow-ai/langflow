@@ -19,6 +19,7 @@ if TYPE_CHECKING:
     from langflow.services.database.models.folder import Folder
     from langflow.services.database.models.message import MessageTable
     from langflow.services.database.models.user import User
+    from langflow.services.database.models import TransactionTable
 
 
 class FlowBase(SQLModel):
@@ -143,6 +144,7 @@ class Flow(FlowBase, table=True):
     folder_id: Optional[UUID] = Field(default=None, foreign_key="folder.id", nullable=True, index=True)
     folder: Optional["Folder"] = Relationship(back_populates="flows")
     messages: List["MessageTable"] = Relationship(back_populates="flow")
+    transactions: List["TransactionTable"] = Relationship(back_populates="flow")
 
     def to_data(self):
         serialized = self.model_dump()
