@@ -1,16 +1,19 @@
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Union, List
 
-import duckdb
 from loguru import logger
 from platformdirs import user_cache_dir
 
 from langflow.services.base import Service
-from langflow.services.monitor.utils import add_row_to_table, drop_and_create_table_if_schema_mismatch
+from langflow.services.monitor.utils import (
+    add_row_to_table,
+    drop_and_create_table_if_schema_mismatch,
+    new_duckdb_locked_connection,
+)
 
 if TYPE_CHECKING:
-    from langflow.services.monitor.schema import DuckDbMessageModel, TransactionModel, VertexBuildModel
+    from langflow.services.monitor.schema import VertexBuildModel
     from langflow.services.settings.service import SettingsService
 
 
@@ -18,14 +21,12 @@ class MonitorService(Service):
     name = "monitor_service"
 
     def __init__(self, settings_service: "SettingsService"):
-        from langflow.services.monitor.schema import DuckDbMessageModel, TransactionModel, VertexBuildModel
+        from langflow.services.monitor.schema import VertexBuildModel
 
         self.settings_service = settings_service
         self.base_cache_dir = Path(user_cache_dir("langflow"), ensure_exists=True)
         self.db_path = self.base_cache_dir / "monitor.duckdb"
-        self.table_map: dict[str, type[TransactionModel | DuckDbMessageModel | VertexBuildModel]] = {
-            "transactions": TransactionModel,
-            "messages": DuckDbMessageModel,
+        self.table_map: dict[str, type[VertexBuildModel]] = {
             "vertex_builds": VertexBuildModel,
         }
 
@@ -35,7 +36,7 @@ class MonitorService(Service):
             logger.exception(f"Error initializing monitor service: {e}")
 
     def exec_query(self, query: str, read_only: bool = False):
-        with duckdb.connect(str(self.db_path), read_only=read_only) as conn:
+        with new_duckdb_locked_connection(self.db_path, read_only=read_only) as conn:
             return conn.execute(query).df()
 
     def to_df(self, table_name):
@@ -48,20 +49,17 @@ class MonitorService(Service):
     def add_row(
         self,
         table_name: str,
-        data: Union[dict, "TransactionModel", "DuckDbMessageModel", "VertexBuildModel"],
+        data: Union[dict, "VertexBuildModel"],
     ):
-        # Make sure the model passed matches the table
-
         model = self.table_map.get(table_name)
         if model is None:
             raise ValueError(f"Unknown table name: {table_name}")
 
-        # Connect to DuckDB and add the row
-        with duckdb.connect(str(self.db_path), read_only=False) as conn:
+        with new_duckdb_locked_connection(self.db_path, read_only=False) as conn:
             add_row_to_table(conn, table_name, model, data)
 
     def load_table_as_dataframe(self, table_name):
-        with duckdb.connect(str(self.db_path)) as conn:
+        with new_duckdb_locked_connection(self.db_path, read_only=True) as conn:
             return conn.table(table_name).df()
 
     @staticmethod
@@ -99,7 +97,7 @@ class MonitorService(Service):
         if limit is not None:
             query += f" LIMIT {limit}"
 
-        with duckdb.connect(str(self.db_path), read_only=True) as conn:
+        with new_duckdb_locked_connection(self.db_path, read_only=True) as conn:
             df = conn.execute(query).df()
 
         return df
@@ -127,7 +125,7 @@ class MonitorService(Service):
         if order_by:
             query += f" ORDER BY {order_by}"
 
-        with duckdb.connect(str(self.db_path), read_only=True) as conn:
+        with new_duckdb_locked_connection(self.db_path, read_only=True) as conn:
             df = conn.execute(query).df()
 
         return df.to_dict(orient="records")
@@ -137,7 +135,7 @@ class MonitorService(Service):
         if flow_id:
             query += f" WHERE flow_id = '{flow_id}'"
 
-        with duckdb.connect(str(self.db_path), read_only=False) as conn:
+        with new_duckdb_locked_connection(self.db_path, read_only=False) as conn:
             conn.execute(query)
 
     def delete_messages_session(self, session_id: str):
@@ -166,33 +164,14 @@ class MonitorService(Service):
 
         return self.exec_query(query, read_only=False)
 
-    def get_transactions(
-        self,
-        source: str | None = None,
-        target: str | None = None,
-        status: str | None = None,
-        order_by: str | None = "timestamp",
-        flow_id: str | None = None,
-    ):
-        query = (
-            "SELECT index,flow_id, status, error, timestamp, vertex_id, inputs, outputs, target_id FROM transactions"
-        )
-        conditions = []
-        if source:
-            conditions.append(f"source = '{source}'")
-        if target:
-            conditions.append(f"target = '{target}'")
-        if status:
-            conditions.append(f"status = '{status}'")
-        if flow_id:
-            conditions.append(f"flow_id = '{flow_id}'")
-
-        if conditions:
-            query += " WHERE " + " AND ".join(conditions)
-
-        if order_by:
-            query += f" ORDER BY {order_by} DESC"
-        with duckdb.connect(str(self.db_path), read_only=True) as conn:
+    def get_transactions(self, limit: int = 100):
+        query = f"SELECT index,flow_id, status, error, timestamp, vertex_id, inputs, outputs, target_id FROM transactions LIMIT {str(limit)}"
+        with new_duckdb_locked_connection(self.db_path, read_only=True) as conn:
             df = conn.execute(query).df()
 
         return df.to_dict(orient="records")
+
+    def delete_transactions(self, ids: List[int]) -> None:
+        with new_duckdb_locked_connection(self.db_path, read_only=False) as conn:
+            conn.execute(f"DELETE FROM transactions WHERE index in ({','.join(map(str, ids))})")
+            conn.commit()

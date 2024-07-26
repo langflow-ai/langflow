@@ -14,7 +14,7 @@ import { deleteFlowPool } from "../../../../controllers/API";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
-import { VertexBuildTypeAPI, sendAllProps } from "../../../../types/api";
+import { VertexBuildTypeAPI } from "../../../../types/api";
 import { ChatMessageType } from "../../../../types/chat";
 import { FilePreviewType, chatViewProps } from "../../../../types/components";
 import { classNames } from "../../../../utils/utils";
@@ -149,12 +149,7 @@ export default function ChatView({
   const [files, setFiles] = useState<FilePreviewType[]>([]);
   const [isDragging, setIsDragging] = useState(false);
 
-  const { dragOver, dragEnter, dragLeave } = useDragAndDrop(
-    setIsDragging,
-    setFiles,
-    currentFlowId,
-    setErrorData,
-  );
+  const { dragOver, dragEnter, dragLeave } = useDragAndDrop(setIsDragging);
 
   const onDrop = (e) => {
     e.preventDefault();
