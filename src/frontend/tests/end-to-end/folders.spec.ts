@@ -71,7 +71,7 @@ test("add folder by drag and drop", async ({ page }) => {
   await page.waitForTimeout(5000); // Consider using a more reliable waiting mechanism
 
   const jsonContent = readFileSync(
-    "src/frontend/tests/end-to-end/assets/collection.json",
+    "tests/end-to-end/assets/collection.json",
     "utf-8",
   );
 
