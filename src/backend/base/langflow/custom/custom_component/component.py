@@ -95,6 +95,20 @@ class Component(CustomComponent):
             self.map_outputs(self.outputs)
         # Set output types
         self._set_output_types()
+        self.set_class_code()
+
+    def set_class_code(self):
+        # Get the source code of the calling class
+        if self._code:
+            return
+        try:
+            module = inspect.getmodule(self.__class__)
+            if module is None:
+                raise ValueError("Could not find module for class")
+            class_code = inspect.getsource(module)
+            self._code = class_code
+        except OSError:
+            raise ValueError(f"Could not find source code for {self.__class__.__name__}")
 
     def _set_output_types(self):
         for output in self.outputs:
