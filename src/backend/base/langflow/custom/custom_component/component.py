@@ -265,19 +265,21 @@ class Component(CustomComponent):
         self._map_parameters_on_template(frontend_node_dict["template"])
 
         frontend_node = ComponentFrontendNode.from_dict(frontend_node_dict)
-        # code_field = Input(
-        #     dynamic=True,
-        #     required=True,
-        #     placeholder="",
-        #     multiline=True,
-        #     value=raw_code,
-        #     password=False,
-        #     name="code",
-        #     advanced=True,
-        #     field_type="code",
-        #     is_list=False,
-        # )
-        # frontend_node.template.add_field(code_field)
+        if not self._code:
+            self.set_class_code()
+        code_field = Input(
+            dynamic=True,
+            required=True,
+            placeholder="",
+            multiline=True,
+            value=self._code,
+            password=False,
+            name="code",
+            advanced=True,
+            field_type="code",
+            is_list=False,
+        )
+        frontend_node.template.add_field(code_field)
 
         for output in frontend_node.outputs:
             if output.types:
