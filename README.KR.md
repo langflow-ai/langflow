@@ -11,7 +11,7 @@
     다중 에이전트 및 RAG 애플리케이션 구축을 위한 시각적 프레임워크
 </strong></p>
 <p align="center" style="font-size: 12px;">
-    오픈소스, Python-기반, 전체 커스텀, LLM과 vector store를 몰라도 사용 가능
+    오픈소스, Python-기반, 전체 커스텀, LLM과 Vector store를 몰라도 사용 가능
 </p>
 
 <p align="center" style="font-size: 12px;">
@@ -46,7 +46,7 @@
 
 - [📝 목차](#-content)
 - [📦 시작하기](#-get-started)
-- [🎨 흐름 만들기](#-create-flows)
+- [🎨 플로우 만들기](#-create-flows)
 - [배포](#deploy)
   - [DataStax Langflow](#datastax-langflow)
   - [Hugging Face Spaces에 Langflow 배포하기](#deploy-langflow-on-hugging-face-spaces)
@@ -66,7 +66,7 @@
 pip으로 Langflow 다운로드:
 
 ```shell
-# >=Python 3.10 이 시스템에 설치되어 있어야 합니다.
+# >=Python 3.10 이 시스템에 미리 설치되어 있어야 합니다.
 python -m pip install langflow -U
 ```
 혹은
@@ -83,15 +83,17 @@ Langflow 실행하기:
 python -m langflow run
 ```
 
-# 🎨 흐름 만들기
+# 🎨 플로우 만들기
 
-Langflow를 사용하여 흐름을 만드는 것은 쉽습니다. 사이드바의 구성 요소를 작업 공간으로 끌어다가 연결하기만 하면 응용 프로그램을 구축할 수 있습니다.
+플로우(Flow)는 전체적인 작업의 `흐름`을 표현하는것으로, 별도의 코딩작업을 최소화 하고, 시각적으로 수정/확인이 가능한 일련의 그룹을 말합니다.
+
+Langflow를 사용하여 플로우를 만드는 것은 쉽습니다. 사이드바의 구성 요소를 작업 공간으로 끌어다가 연결하기만 하면 응용 프로그램을 구축할 수 있습니다.
 
 프롬프트 매개 변수를 편집하고 구성 요소를 하나의 상위 수준 구성 요소로 그룹화하고 사용자 정의 구성 요소를 구축하여 탐색합니다.
 
-작업이 완료되면 흐름을 JSON 파일로 내보낼 수 있습니다.
+작업이 완료되면 플로우를 JSON 파일로 내보낼 수 있습니다.
 
-flow 로드하기:
+플로우 로드하기:
 
 ```python
 from langflow.load import run_flow_from_json

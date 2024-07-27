@@ -18,7 +18,7 @@ from langflow.api.v1.schemas import FlowListCreate, FlowListRead
 from langflow.initial_setup.setup import STARTER_FOLDER_NAME
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.database.models.flow import Flow, FlowCreate, FlowRead, FlowUpdate
-from langflow.services.database.models.flow.utils import get_webhook_component_in_flow
+from langflow.services.database.models.flow.utils import get_webhook_component_in_flow, delete_flow_by_id
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.user.model import User
@@ -266,7 +266,7 @@ def delete_flow(
     )
     if not flow:
         raise HTTPException(status_code=404, detail="Flow not found")
-    session.delete(flow)
+    delete_flow_by_id(str(flow_id), session)
     session.commit()
     return {"message": "Flow deleted successfully"}
 

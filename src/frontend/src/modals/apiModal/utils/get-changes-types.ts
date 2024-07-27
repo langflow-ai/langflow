@@ -1,9 +1,9 @@
-import { TemplateVariableType } from "../../../types/api";
+import { InputFieldType } from "@/types/api";
 import { convertArrayToObj } from "../../../utils/reactflowUtils";
 
 export const getChangesType = (
   changes: string | string[] | boolean | number | Object[] | Object,
-  template: TemplateVariableType,
+  template: InputFieldType,
 ) => {
   if (typeof changes === "string" && template.type === "float") {
     changes = parseFloat(changes);
