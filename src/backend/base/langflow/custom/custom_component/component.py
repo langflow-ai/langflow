@@ -125,6 +125,26 @@ class Component(CustomComponent):
             raise ValueError(f"Output with method {method_name} not found")
         return output
 
+    def _create_edgedata(self, component: "Component", output: Output, key: str, _input: "InputTypes") -> "EdgeData":
+        return {
+            "source": component._id,
+            "target": self._id,
+            "data": {
+                "sourceHandle": {
+                    "dataType": component.__class__.__name__,
+                    "id": component._id,
+                    "name": output.name,
+                    "output_types": output.types,
+                },
+                "targetHandle": {
+                    "fieldName": key,
+                    "id": self._id,
+                    "inputTypes": _input.input_types,
+                    "type": _input.field_type,
+                },
+            },
+        }
+
     def __call__(self, **kwargs):
         for key, value in kwargs.items():
             # if value is a callable, it must be a method from another component
@@ -136,29 +156,11 @@ class Component(CustomComponent):
                 self._inputs[key] = _input
                 self.inputs.append(_input)
             if callable(value):
-                component: Component = value.__self__
+                component: "Component" = value.__self__
                 self._components.append(component)
                 output = component._get_output_by_method(value)
-                self._edges.append(
-                    {
-                        "source": component._id,
-                        "target": self._id,
-                        "data": {
-                            "sourceHandle": {
-                                "dataType": component.__class__.__name__,
-                                "id": component._id,
-                                "name": output.name,
-                                "output_types": output.types,
-                            },
-                            "targetHandle": {
-                                "fieldName": key,
-                                "id": self._id,
-                                "inputTypes": _input.input_types,
-                                "type": _input.field_type,
-                            },
-                        },
-                    }
-                )
+                self._edges.append(self._create_edgedata(component, output, key, _input))
+
             else:
                 self._parameters[key] = value
 
