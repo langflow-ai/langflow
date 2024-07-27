@@ -283,7 +283,7 @@ def get_component_instance(custom_component: CustomComponent, user_id: Optional[
         ) from exc
 
     try:
-        custom_instance = custom_class(_user_id=user_id)
+        custom_instance = custom_class(_user_id=user_id, _code=custom_component._code)
         return custom_instance
     except Exception as exc:
         logger.error(f"Error while instantiating custom component: {str(exc)}")
