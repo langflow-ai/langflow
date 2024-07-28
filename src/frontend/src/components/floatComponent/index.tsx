@@ -42,8 +42,8 @@ export default function FloatComponent({
         className={editNode ? "input-edit-node" : ""}
         placeholder={
           editNode
-            ? `Enter a value between ${min} and ${max}`
-            : `Enter a value between ${min} and ${max}`
+            ? `Enter a value`
+            : `Enter a value`
         }
         onChange={(event) => {
           onChange(event.target.value);
