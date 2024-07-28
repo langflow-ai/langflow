@@ -1,6 +1,6 @@
 from langflow.code_gen.component import generate_instantiation_string, generate_script
 from langflow.code_gen.generic import generate_import_statement
-from langflow.components import components
+from langflow import components
 
 
 def test_generate_script():
