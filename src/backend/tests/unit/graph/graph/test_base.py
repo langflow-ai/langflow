@@ -1,8 +1,10 @@
-import re
 from collections import deque
 
 import pytest
 
+from langflow import components
+from langflow.code_gen.component import generate_instantiation_string, generate_script
+from langflow.code_gen.generic import generate_import_statement
 from langflow.components.inputs.ChatInput import ChatInput
 from langflow.components.outputs.ChatOutput import ChatOutput
 from langflow.components.outputs.TextOutput import TextOutputComponent
@@ -140,61 +142,6 @@ def test_graph_functional_start_end():
     assert len(results) == len(ids) + 1
     assert all(result.vertex.id in ids for result in results if hasattr(result, "vertex"))
     assert results[-1] == Finish()
-
-
-def generate_import_statement(instance):
-    class_name = instance.__class__.__name__
-    module_path = instance.__class__.__module__
-    parts = module_path.split(".")
-
-    # Construct the correct import statement
-    if len(parts) > 2:
-        module_path = ".".join(parts)
-        return f"from {module_path} import {class_name}"
-    else:
-        return f"from {module_path} import {class_name}"
-
-
-def get_variable_name(instance):
-    return re.sub(r"[^0-9a-zA-Z_]", "_", instance._id.lower())
-
-
-def generate_instantiation_string(instance):
-    class_name = instance.__class__.__name__
-    instance_id = instance._id
-    variable_name = get_variable_name(instance)
-    return f"{variable_name} = {class_name}(_id='{instance_id}')"
-
-
-def generate_call_string(instance):
-    variable_name = get_variable_name(instance)
-    if hasattr(instance, "_call_inputs"):
-        args = ", ".join(
-            f"{key}={get_variable_name(value.__self__)}.{value.__name__}" if callable(value) else f"{key}={repr(value)}"
-            for key, value in instance._call_inputs.items()
-        )
-        if args:
-            return f"{variable_name}({args})"
-
-
-def generate_script(*instances):
-    import_statements = set()
-    instantiation_strings = []
-    call_strings = []
-
-    for instance in instances:
-        import_statements.add(generate_import_statement(instance))
-        instantiation_strings.append(generate_instantiation_string(instance))
-        call_string = generate_call_string(instance)
-
-        if call_string:
-            call_strings.append(call_string)
-
-    import_code = "\n".join(sorted(import_statements))
-    instantiation_code = "\n".join(instantiation_strings)
-    call_code = "\n".join(call_strings)
-
-    return f"{import_code}\n\n{instantiation_code}\n\n{call_code}"
 
 
 def test_generate_import_statement_and_instantiation_string():
