@@ -14,6 +14,7 @@ import { AuthContext } from "../../contexts/authContext";
 import useAuthStore from "@/stores/authStore";
 import useAlertStore from "../../stores/alertStore";
 import { useDarkStore } from "../../stores/darkStore";
+import { useGridSnappingStore } from "../../stores/gridSnapping";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { useLocationStore } from "../../stores/locationStore";
@@ -48,6 +49,9 @@ export default function Header(): JSX.Element {
   const dark = useDarkStore((state) => state.dark);
   const setDark = useDarkStore((state) => state.setDark);
   const stars = useDarkStore((state) => state.stars);
+
+  const gridSnapping = useGridSnappingStore((state) => state.gridSnapping);
+  const setGridSnapping = useGridSnappingStore((state) => state.setGridSnapping);
 
   const routeHistory = useLocationStore((state) => state.routeHistory);
 
@@ -179,6 +183,20 @@ export default function Header(): JSX.Element {
               <IconComponent name="MoonIcon" className="side-bar-button-size" />
             )}
           </button>
+
+          <button
+            className="extra-side-bar-save-disable"
+            onClick={() => {
+              setGridSnapping(!gridSnapping);
+            }}
+          >
+            {gridSnapping ? (
+              <IconComponent name="Grip" className="side-bar-button-size" />
+            ) : (
+              <IconComponent name="Hand" className="side-bar-button-size" />
+            )}
+          </button>
+
           <AlertDropdown>
             <div className="extra-side-bar-save-disable relative">
               {notificationCenter && (

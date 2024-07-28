@@ -47,6 +47,7 @@ import ConnectionLineComponent from "../ConnectionLineComponent";
 import SelectionMenu from "../SelectionMenuComponent";
 import getRandomName from "./utils/get-random-name";
 import isWrappedWithClass from "./utils/is-wrapped-with-class";
+import { useGridSnappingStore } from "../../../../stores/gridSnapping";
 
 const nodeTypes = {
   genericNode: GenericNode,
@@ -150,6 +151,8 @@ export default function Page({
   }
 
   const setNode = useFlowStore((state) => state.setNode);
+  const gridSnapping = useGridSnappingStore((state) => state.gridSnapping);
+
   useEffect(() => {
     const handleMouseMove = (event) => {
       position.current = { x: event.clientX, y: event.clientY };
@@ -460,6 +463,7 @@ export default function Page({
     setFilterEdge([]);
   }, []);
 
+
   function onMouseAction(edge: Edge, color: string): void {
     const edges = useFlowStore.getState().edges;
     const newEdges = _.cloneDeep(edges);
@@ -483,7 +487,7 @@ export default function Page({
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             onConnect={onConnectMod}
-            disableKeyboardA11y={true}
+            disableKeyboardA11y={true}W
             onInit={setReactFlowInstance}
             nodeTypes={nodeTypes}
             onEdgeUpdate={onEdgeUpdate}
@@ -503,6 +507,8 @@ export default function Page({
             className="theme-attribution"
             minZoom={0.01}
             maxZoom={8}
+            snapToGrid={gridSnapping}
+            snapGrid={[20, 20]}
             zoomOnScroll={!view}
             zoomOnPinch={!view}
             panOnDrag={!view}
