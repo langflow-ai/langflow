@@ -197,6 +197,8 @@ export default function Header(): JSX.Element {
             )}
           </button>
 
+          <Separator orientation="vertical" />
+
           <AlertDropdown>
             <div className="extra-side-bar-save-disable relative">
               {notificationCenter && (
