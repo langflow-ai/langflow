@@ -115,7 +115,7 @@ class VectaraRagComponent(Component):
         )
         config = VectaraQueryConfig(
             lambda_val=self.lexical_interpolation,
-            filter=filter,
+            filter=self.filter,
             summary_config=summary_config,
             rerank_config=rerank_config,
         )
