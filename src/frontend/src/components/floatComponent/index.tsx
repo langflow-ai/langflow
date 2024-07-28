@@ -40,11 +40,7 @@ export default function FloatComponent({
         value={value ?? ""}
         disabled={disabled}
         className={editNode ? "input-edit-node" : ""}
-        placeholder={
-          editNode
-            ? `Enter a value`
-            : `Enter a value`
-        }
+        placeholder={editNode ? `Enter a value` : `Enter a value`}
         onChange={(event) => {
           onChange(event.target.value);
         }}
