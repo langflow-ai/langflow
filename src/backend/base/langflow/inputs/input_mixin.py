@@ -82,9 +82,18 @@ class BaseInputMixin(BaseModel, validate_assignment=True):
     @field_validator("field_type", mode="before")
     @classmethod
     def validate_field_type(cls, v):
-        if v not in FieldTypes:
-            return FieldTypes.OTHER
-        return FieldTypes(v)
+        # note: in 3.12 TypeError will no longer be raised, and True will also be
+        # returned if member is the value of a member in this enum
+        try:
+            if v not in FieldTypes:
+                return FieldTypes.OTHER
+            return FieldTypes(v)
+        except TypeError:
+            # try/except for 3.11 compatibility
+            # TypeError means v is not a member of FieldTypes
+            if v not in FieldTypes.__members__.values():
+                return FieldTypes.OTHER
+            return FieldTypes(v)
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
