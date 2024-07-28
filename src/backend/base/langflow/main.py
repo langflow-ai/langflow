@@ -1,7 +1,5 @@
 import asyncio
 import os
-import signal
-import sys
 import warnings
 from contextlib import asynccontextmanager
 from http import HTTPStatus
