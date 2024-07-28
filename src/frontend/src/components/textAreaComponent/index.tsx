@@ -57,6 +57,7 @@ export default function TextAreaComponent({
             onChange(value);
           }}
           disabled={disabled}
+          // don't know why this work, but it does, without it the modal is always one state behind
           password={!password}
         >
           <div
