@@ -1,6 +1,6 @@
+from langflow import components
 from langflow.code_gen.component import generate_instantiation_string, generate_script
 from langflow.code_gen.generic import generate_import_statement
-from langflow import components
 
 
 def test_generate_script():
@@ -25,5 +25,5 @@ def test_generate_import_statement_and_instantiation_string():
     chat_input_instance = components.inputs.ChatInput(_id="chatInput-1230")
     import_statement = generate_import_statement(chat_input_instance)
     instantiation_string = generate_instantiation_string(chat_input_instance)
-    assert import_statement == "from langflow.components.inputs import ChatInput"
+    assert import_statement == "from langflow.components.inputs.ChatInput import ChatInput"
     assert instantiation_string == "chatinput_1230 = ChatInput(_id='chatInput-1230')"
