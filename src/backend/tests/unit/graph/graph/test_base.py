@@ -197,7 +197,7 @@ def generate_script(*instances):
     return f"{import_code}\n\n{instantiation_code}\n\n{call_code}"
 
 
-def test_generate_code():
+def test_generate_import_statement_and_instantiation_string():
     chat_input_instance = components.inputs.ChatInput(_id="chatInput-1230")
     import_statement = generate_import_statement(chat_input_instance)
     instantiation_string = generate_instantiation_string(chat_input_instance)
