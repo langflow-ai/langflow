@@ -10,9 +10,9 @@ from langflow.template.field.base import Input
 
 from .input_mixin import (
     BaseInputMixin,
+    ComboboxMixin,
     DatabaseLoadMixin,
     DropDownMixin,
-    ComboboxMixin,
     FieldTypes,
     FileMixin,
     InputTraceMixin,
@@ -363,6 +363,7 @@ class DefaultPromptField(Input):
 
 
 InputTypes = Union[
+    Input,
     DefaultPromptField,
     BoolInput,
     DataInput,
