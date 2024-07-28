@@ -2,9 +2,9 @@ import traceback
 
 from fastapi import HTTPException
 
-from backend.base.langflow.custom.utils import build_custom_component_template, get_instance_name
-from backend.base.langflow.inputs.inputs import MessageTextInput
 from langflow.custom import Component
+from langflow.custom.utils import build_custom_component_template, get_instance_name
+from langflow.inputs.inputs import MessageTextInput
 from langflow.schema import Data
 
 
