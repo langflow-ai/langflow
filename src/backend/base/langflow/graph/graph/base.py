@@ -1627,12 +1627,11 @@ class Graph:
         vertex_ids = sort_up_to_vertex(dictionaryized_graph, vertex_id, is_start)
         return [self.get_vertex(vertex_id) for vertex_id in vertex_ids]
 
-    def sort_vertices(
+    def _sort_vertices(
         self,
         stop_component_id: Optional[str] = None,
         start_component_id: Optional[str] = None,
-    ) -> List[str]:
-        """Sorts the vertices in the graph."""
+    ):
         self.mark_all_vertices("ACTIVE")
         if stop_component_id is not None:
             self.stop_vertex = stop_component_id
@@ -1653,6 +1652,17 @@ class Graph:
         # Now we should sort each layer in a way that we make sure
         # vertex V does not depend on vertex V+1
         vertices_layers = self.sort_layer_by_dependency(vertices_layers)
+        return vertices_layers
+
+    def sort_vertices(
+        self,
+        stop_component_id: Optional[str] = None,
+        start_component_id: Optional[str] = None,
+    ) -> List[str]:
+        """Sorts the vertices in the graph."""
+        vertices_layers = self._sort_vertices(
+            stop_component_id=stop_component_id, start_component_id=start_component_id
+        )
         self.increment_run_count()
         self._sorted_vertices_layers = vertices_layers
         first_layer = vertices_layers[0]
