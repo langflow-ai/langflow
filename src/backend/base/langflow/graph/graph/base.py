@@ -1657,6 +1657,19 @@ class Graph:
             vertices_layers = chain.from_iterable(vertices_layers)
         return vertices_layers
 
+    def sort_components(
+        self, stop_component_id: Optional[str] = None, start_component_id: Optional[str] = None
+    ) -> List[str]:
+        """Sorts the vertices in the graph."""
+        vertices_layers = self._sort_vertices(
+            stop_component_id=stop_component_id, start_component_id=start_component_id, flatten=True
+        )
+        # Now get all the vertices instances
+        vertices = [self.get_vertex(vertex_id) for vertex_id in vertices_layers]
+        # Now we need to get the components
+        components = [vertex._custom_component for vertex in vertices if hasattr(vertex, "_custom_component")]
+        return components
+
     def sort_vertices(
         self,
         stop_component_id: Optional[str] = None,
