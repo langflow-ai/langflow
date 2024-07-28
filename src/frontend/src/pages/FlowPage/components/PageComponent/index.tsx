@@ -29,6 +29,7 @@ import {
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
+import { useGridSnappingStore } from "../../../../stores/gridSnapping";
 import { useShortcutsStore } from "../../../../stores/shortcuts";
 import { useTypesStore } from "../../../../stores/typesStore";
 import { APIClassType } from "../../../../types/api";
@@ -47,7 +48,6 @@ import ConnectionLineComponent from "../ConnectionLineComponent";
 import SelectionMenu from "../SelectionMenuComponent";
 import getRandomName from "./utils/get-random-name";
 import isWrappedWithClass from "./utils/is-wrapped-with-class";
-import { useGridSnappingStore } from "../../../../stores/gridSnapping";
 
 const nodeTypes = {
   genericNode: GenericNode,
@@ -463,7 +463,6 @@ export default function Page({
     setFilterEdge([]);
   }, []);
 
-
   function onMouseAction(edge: Edge, color: string): void {
     const edges = useFlowStore.getState().edges;
     const newEdges = _.cloneDeep(edges);
@@ -487,7 +486,8 @@ export default function Page({
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             onConnect={onConnectMod}
-            disableKeyboardA11y={true}W
+            disableKeyboardA11y={true}
+            W
             onInit={setReactFlowInstance}
             nodeTypes={nodeTypes}
             onEdgeUpdate={onEdgeUpdate}
