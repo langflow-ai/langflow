@@ -1,4 +1,6 @@
 from .CombineText import CombineTextComponent
+from .component_code_validator import ComponentCodeValidator
+from .CreateList import CreateListComponent
 from .CustomComponent import CustomComponent
 from .FilterData import FilterDataComponent
 from .IDGenerator import IDGeneratorComponent
@@ -7,8 +9,6 @@ from .MergeData import MergeDataComponent
 from .ParseData import ParseDataComponent
 from .SplitText import SplitTextComponent
 from .StoreMessage import StoreMessageComponent
-from .CreateList import CreateListComponent
-
 
 __all__ = [
     "CreateListComponent",
@@ -22,4 +22,5 @@ __all__ = [
     "SplitTextComponent",
     "StoreMessageComponent",
     "ListComponent",
+    "ComponentCodeValidator",
 ]
