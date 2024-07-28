@@ -84,7 +84,7 @@ export default function TextAreaComponent({
             className={classNames(
               "mb-px",
               editNode
-                ? "side-bar-button-size absolute bottom-[1.3rem] right-[5.2rem]"
+                ? "side-bar-button-size absolute bottom-[1.3rem] right-[4.2rem]"
                 : "side-bar-button-size absolute bottom-4 right-[4.2rem]",
             )}
             onClick={(event) => {
