@@ -1631,6 +1631,7 @@ class Graph:
         self,
         stop_component_id: Optional[str] = None,
         start_component_id: Optional[str] = None,
+        flatten: bool = False,
     ):
         self.mark_all_vertices("ACTIVE")
         if stop_component_id is not None:
@@ -1652,6 +1653,11 @@ class Graph:
         # Now we should sort each layer in a way that we make sure
         # vertex V does not depend on vertex V+1
         vertices_layers = self.sort_layer_by_dependency(vertices_layers)
+        if flatten:
+            layer = []
+            for layer_ in vertices_layers:
+                layer.extend(layer_)
+            vertices_layers = [layer]
         return vertices_layers
 
     def sort_vertices(
