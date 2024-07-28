@@ -1654,10 +1654,7 @@ class Graph:
         # vertex V does not depend on vertex V+1
         vertices_layers = self.sort_layer_by_dependency(vertices_layers)
         if flatten:
-            layer = []
-            for layer_ in vertices_layers:
-                layer.extend(layer_)
-            vertices_layers = [layer]
+            vertices_layers = chain.from_iterable(vertices_layers)
         return vertices_layers
 
     def sort_vertices(
