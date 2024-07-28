@@ -57,7 +57,7 @@ export default function TextAreaComponent({
             onChange(value);
           }}
           disabled={disabled}
-          password={password}
+          password={!password}
         >
           <div
             className={
