@@ -38,7 +38,7 @@ export default function TextAreaComponent({
               ? "text-clip password"
               : "",
             editNode ? "input-edit-node" : "",
-            password!=undefined ? "pr-8" : "",
+            password != undefined ? "pr-8" : "",
             "w-full",
           )}
           placeholder={"Type something..."}
