@@ -33,7 +33,7 @@ export function StrRenderComponent({
         componentName={name ?? undefined}
         editNode={editNode}
         disabled={disabled}
-        value={!value || value === "" ? [""] : value}
+        value={value || [""]}
         onChange={onChange}
         id={`inputlist_${id}`}
       />
@@ -76,7 +76,11 @@ export function StrRenderComponent({
             : [templateData.options]) || []
         }
         combobox={templateData.combobox}
-        value={value || []}
+        value={
+          (Array.isArray(templateData.value)
+            ? templateData.value
+            : [templateData.value]) || []
+        }
         id={`multiselect_${id}`}
         onSelect={onChange}
       />
