@@ -4,21 +4,14 @@ import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
 
-interface AutoLoginParams {
-  abortSignal: AbortSignal;
-}
 
 export const useAutoLogin: useMutationFunctionType<undefined, any> = (
   options?,
 ) => {
   const { mutate } = UseRequestProcessor();
 
-  const autoLoginFn = async ({
-    abortSignal,
-  }: AutoLoginParams): Promise<any> => {
-    const res = await api.get(`${getURL("AUTOLOGIN")}`, {
-      signal: abortSignal,
-    });
+  const autoLoginFn = async (): Promise<any> => {
+    const res = await api.get(`${getURL("AUTOLOGIN")}`);
     return res.data;
   };
 

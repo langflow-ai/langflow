@@ -59,11 +59,10 @@ export default function App() {
   }, [dark]);
 
   useEffect(() => {
-    const abortController = new AbortController();
     const isLoginPage = location.pathname.includes("login");
 
     mutateAutoLogin(
-      { abortSignal: abortController.signal },
+      {},
       {
         onSuccess: (user) => {
           if (user && user["access_token"]) {
@@ -96,12 +95,6 @@ export default function App() {
         },
       },
     );
-    /*
-      Abort the request as it isn't needed anymore, the component being
-      unmounted. It helps avoid, among other things, the well-known "can't
-      perform a React state update on an unmounted component" warning.
-    */
-    return () => abortController.abort();
   }, []);
   const fetchAllData = async () => {
     setTimeout(async () => {
