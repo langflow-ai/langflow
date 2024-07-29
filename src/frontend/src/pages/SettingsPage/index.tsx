@@ -1,12 +1,12 @@
+import FeatureFlags from "@/../feature-config.json";
+import useAuthStore from "@/stores/authStore";
+import { useStoreStore } from "@/stores/storeStore";
 import { useEffect } from "react";
 import { Outlet } from "react-router-dom";
 import ForwardedIconComponent from "../../components/genericIconComponent";
 import PageLayout from "../../components/pageLayout";
 import SidebarNav from "../../components/sidebarComponent";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
-import useAuthStore from "@/stores/authStore";
-import { useStoreStore } from "@/stores/storeStore";
-import FeatureFlags from "@/../feature-config.json";
 
 export default function SettingsPage(): JSX.Element {
   const pathname = location.pathname;
@@ -18,8 +18,9 @@ export default function SettingsPage(): JSX.Element {
   const hasStore = useStoreStore((state) => state.hasStore);
 
   // Hides the General settings if there is nothing to show
-  const showGeneralSettings = FeatureFlags.ENABLE_PROFILE_ICONS || hasStore || !autoLogin;
-  
+  const showGeneralSettings =
+    FeatureFlags.ENABLE_PROFILE_ICONS || hasStore || !autoLogin;
+
   useEffect(() => {
     setCurrentFlowId("");
   }, [pathname]);
@@ -42,7 +43,7 @@ export default function SettingsPage(): JSX.Element {
       ),
     });
   }
-  
+
   sidebarNavItems.push(
     {
       title: "Global Variables",

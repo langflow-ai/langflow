@@ -1,3 +1,6 @@
+import FeatureFlags from "@/../feature-config.json";
+import useAuthStore from "@/stores/authStore";
+import { useStoreStore } from "@/stores/storeStore";
 import { Suspense, lazy } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { ProtectedAdminRoute } from "./components/authAdminGuard";
@@ -7,9 +10,6 @@ import { CatchAllRoute } from "./components/catchAllRoutes";
 import LoadingComponent from "./components/loadingComponent";
 import { StoreGuard } from "./components/storeGuard";
 import MessagesPage from "./pages/SettingsPage/pages/messagesPage";
-import useAuthStore from "@/stores/authStore";
-import { useStoreStore } from "@/stores/storeStore";
-import FeatureFlags from "@/../feature-config.json";
 
 const AdminPage = lazy(() => import("./pages/AdminPage"));
 const LoginAdminPage = lazy(() => import("./pages/AdminPage/LoginPage"));
@@ -42,7 +42,8 @@ const autoLogin = useAuthStore((state) => state.autoLogin);
 const hasStore = useStoreStore((state) => state.hasStore);
 
 // Hides the General settings if there is nothing to show
-const showGeneralSettings = FeatureFlags.ENABLE_PROFILE_ICONS || hasStore || !autoLogin;
+const showGeneralSettings =
+  FeatureFlags.ENABLE_PROFILE_ICONS || hasStore || !autoLogin;
 
 const Router = () => {
   return (
@@ -86,10 +87,20 @@ const Router = () => {
             </ProtectedRoute>
           }
         >
-          <Route index element={<Navigate replace to={showGeneralSettings ? "general" : "global-variables"} />} />
+          <Route
+            index
+            element={
+              <Navigate
+                replace
+                to={showGeneralSettings ? "general" : "global-variables"}
+              />
+            }
+          />
           <Route path="global-variables" element={<GlobalVariablesPage />} />
           <Route path="api-keys" element={<ApiKeysPage />} />
-          {showGeneralSettings && <Route path="general/:scrollId?" element={<GeneralPage />} />}
+          {showGeneralSettings && (
+            <Route path="general/:scrollId?" element={<GeneralPage />} />
+          )}
           <Route path="shortcuts" element={<ShortcutsPage />} />
           <Route path="messages" element={<MessagesPage />} />
         </Route>
