@@ -1,4 +1,7 @@
-import { BROKEN_EDGES_WARNING, componentsToIgnoreUpdate } from "@/constants/constants";
+import {
+  BROKEN_EDGES_WARNING,
+  componentsToIgnoreUpdate,
+} from "@/constants/constants";
 import { brokenEdgeMessage } from "@/utils/utils";
 import { cloneDeep, zip } from "lodash";
 import {
@@ -49,16 +52,21 @@ import { useTypesStore } from "./typesStore";
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
 const useFlowStore = create<FlowStoreType>((set, get) => ({
   componentsToUpdate: false,
-  updateComponentsToUpdate:(nodes)=>{
+  updateComponentsToUpdate: (nodes) => {
     let outdatedNodes = false;
     const templates = useTypesStore.getState().templates;
     for (let i = 0; i < nodes.length; i++) {
       const currentCode = templates[nodes[i].data?.type]?.template?.code?.value;
       const thisNodesCode = nodes[i].data?.node!.template?.code?.value;
-      outdatedNodes = currentCode && thisNodesCode && currentCode!==thisNodesCode && !nodes[i].data?.node?.edited && !componentsToIgnoreUpdate.includes(nodes[i].data?.type)
-      if(outdatedNodes) break;
+      outdatedNodes =
+        currentCode &&
+        thisNodesCode &&
+        currentCode !== thisNodesCode &&
+        !nodes[i].data?.node?.edited &&
+        !componentsToIgnoreUpdate.includes(nodes[i].data?.type);
+      if (outdatedNodes) break;
     }
-    set({componentsToUpdate:outdatedNodes})
+    set({ componentsToUpdate: outdatedNodes });
   },
   onFlowPage: false,
   lockChat: false,
@@ -647,7 +655,11 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           .map((element) => element.id)
           .filter(Boolean) as string[];
         useFlowStore.getState().updateBuildStatus(idList, BuildStatus.BUILT);
-        if(get().componentsToUpdate) setErrorData({title:"There are outdated components in the flow. The error may be related."})
+        if (get().componentsToUpdate)
+          setErrorData({
+            title:
+              "There are outdated components in the flow. The error may be related.",
+          });
         setErrorData({ list, title });
         get().setIsBuilding(false);
         get().setLockChat(false);

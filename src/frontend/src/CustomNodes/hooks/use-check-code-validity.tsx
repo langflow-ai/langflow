@@ -1,7 +1,7 @@
+import { componentsToIgnoreUpdate } from "@/constants/constants";
 import { useEffect } from "react";
 import { NodeDataType } from "../../types/flow";
 import { nodeNames } from "../../utils/styleUtils";
-import { componentsToIgnoreUpdate } from "@/constants/constants";
 
 const useCheckCodeValidity = (
   data: NodeDataType,
@@ -21,7 +21,7 @@ const useCheckCodeValidity = (
       currentCode &&
         thisNodesCode &&
         currentCode !== thisNodesCode &&
-        !componentsToIgnoreUpdate.includes(data.type)
+        !componentsToIgnoreUpdate.includes(data.type),
     );
     setIsUserEdited(data.node?.edited ?? false);
     // template.code can be undefined
