@@ -49,6 +49,17 @@ import { useTypesStore } from "./typesStore";
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
 const useFlowStore = create<FlowStoreType>((set, get) => ({
   componentsToUpdate: false,
+  updateComponentsToUpdate:(nodes)=>{
+    let outdatedNodes = false;
+    const templates = useTypesStore.getState().templates;
+    for (let i = 0; i < nodes.length; i++) {
+      const currentCode = templates[nodes[i].data?.type]?.template?.code?.value;
+      const thisNodesCode = nodes[i].data?.node!.template?.code?.value;
+      outdatedNodes = currentCode && thisNodesCode && currentCode!==thisNodesCode && !nodes[i].data?.node?.edited && !componentsToIgnoreUpdate.includes(nodes[i].data?.type)
+      if(outdatedNodes) break;
+    }
+    set({componentsToUpdate:outdatedNodes})
+  },
   onFlowPage: false,
   lockChat: false,
   setLockChat: (lockChat) => {
@@ -136,6 +147,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     }
     let newEdges = cleanEdges(nodes, edges);
     const { inputs, outputs } = getInputsAndOutputs(nodes);
+    get().updateComponentsToUpdate(nodes);
     set({
       nodes,
       edges: newEdges,
@@ -181,19 +193,11 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     let newChange = typeof change === "function" ? change(get().nodes) : change;
     let newEdges = cleanEdges(newChange, get().edges);
     const { inputs, outputs } = getInputsAndOutputs(newChange);
-    let outdatedNodes = false;
-    const templates = useTypesStore.getState().templates;
-    for (let i = 0; i < newChange.length; i++) {
-      const currentCode = templates[newChange[i].data?.type]?.template?.code?.value;
-      const thisNodesCode = newChange[i].data?.node!.template?.code?.value;
-      outdatedNodes = currentCode && thisNodesCode && currentCode!==thisNodesCode && !newChange[i].data?.node?.edited && !componentsToIgnoreUpdate.includes(newChange[i].data?.type)
-      if(outdatedNodes) break;
-    }
+    get().updateComponentsToUpdate(newChange);
     set({
       edges: newEdges,
       nodes: newChange,
       flowState: undefined,
-      componentsToUpdate: outdatedNodes,
       inputs,
       outputs,
       hasIO: inputs.length > 0 || outputs.length > 0,
@@ -634,7 +638,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           .map((element) => element.id)
           .filter(Boolean) as string[];
         useFlowStore.getState().updateBuildStatus(idList, BuildStatus.BUILT);
-        setErrorData({title:"There are outdated components in the flow. The error may be related."})
+        if(get().componentsToUpdate) setErrorData({title:"There are outdated components in the flow. The error may be related."})
         setErrorData({ list, title });
         get().setIsBuilding(false);
         get().setLockChat(false);
