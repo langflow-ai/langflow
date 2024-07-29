@@ -51,7 +51,7 @@ jobs:
           last_released_version=$(curl -s "https://pypi.org/pypi/langflow-base/json" | jq -r '.releases | keys | .[]' | sort -V | tail -n 1)
           if [ "$version" = "$last_released_version" ]; then
             echo "Version $version is already released. Skipping release."
-            exit 1
+            exit 0
           else
             echo version=$version >> $GITHUB_OUTPUT
           fi
