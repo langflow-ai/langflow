@@ -1,3 +1,4 @@
+import FeatureFlags from "@/../feature-config.json";
 import { usePostAddApiKey } from "@/controllers/API/queries/api-keys";
 import { useGetProfilePicturesQuery } from "@/controllers/API/queries/files";
 import useAuthStore from "@/stores/authStore";
@@ -20,7 +21,6 @@ import PasswordFormComponent from "./components/PasswordForm";
 import ProfilePictureFormComponent from "./components/ProfilePictureForm";
 import useGetProfilePictures from "./components/ProfilePictureForm/components/profilePictureChooserComponent/hooks/use-get-profile-pictures";
 import StoreApiKeyFormComponent from "./components/StoreApiKeyForm";
-import FeatureFlags from "@/../feature-config.json";
 
 export const GeneralPage = () => {
   const setCurrentFlowId = useFlowsManagerStore(
