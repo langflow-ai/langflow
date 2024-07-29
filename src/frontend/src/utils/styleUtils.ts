@@ -46,6 +46,7 @@ import {
   Edit,
   Ellipsis,
   Eraser,
+  Expand,
   ExternalLink,
   Eye,
   EyeOff,
@@ -586,4 +587,5 @@ export const nodeIconsLucide: iconsType = {
   Table: Table,
   AIML: AIMLIcon,
   "AI/ML": AIMLIcon,
+  Expand,
 };
