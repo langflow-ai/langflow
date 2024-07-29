@@ -147,6 +147,8 @@ export type TextAreaComponentType = {
   editNode?: boolean;
   id?: string;
   readonly?: boolean;
+  password?: boolean;
+  updateVisibility?: () => void;
 };
 
 export type TableComponentType = {
@@ -664,6 +666,8 @@ export type genericModalPropsType = {
   children: ReactNode;
   id?: string;
   readonly?: boolean;
+  password?: boolean;
+  changeVisibility?: () => void;
 };
 
 export type newFlowModalPropsType = {

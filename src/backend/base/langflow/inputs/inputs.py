@@ -198,6 +198,20 @@ class MultilineInput(MessageTextInput, MultilineMixin, InputTraceMixin):
     multiline: CoalesceBool = True
 
 
+class MultilineSecretInput(MessageTextInput, MultilineMixin, InputTraceMixin):
+    """
+    Represents a multiline input field.
+
+    Attributes:
+        field_type (Optional[SerializableFieldTypes]): The type of the field. Defaults to FieldTypes.TEXT.
+        multiline (CoalesceBool): Indicates whether the input field should support multiple lines. Defaults to True.
+    """
+
+    field_type: Optional[SerializableFieldTypes] = FieldTypes.PASSWORD
+    multiline: CoalesceBool = True
+    password: CoalesceBool = Field(default=True)
+
+
 class SecretStrInput(BaseInputMixin, DatabaseLoadMixin):
     """
     Represents a field with password field type.
@@ -354,6 +368,7 @@ InputTypes = Union[
     HandleInput,
     IntInput,
     MultilineInput,
+    MultilineSecretInput,
     NestedDictInput,
     PromptInput,
     SecretStrInput,
