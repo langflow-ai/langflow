@@ -4,6 +4,7 @@ import ForwardedIconComponent from "../../components/genericIconComponent";
 import PageLayout from "../../components/pageLayout";
 import SidebarNav from "../../components/sidebarComponent";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
+import useAuthStore from "@/stores/authStore";
 import { useStoreStore } from "@/stores/storeStore";
 import FeatureFlags from "@/../feature-config.json";
 
@@ -12,7 +13,13 @@ export default function SettingsPage(): JSX.Element {
   const setCurrentFlowId = useFlowsManagerStore(
     (state) => state.setCurrentFlowId,
   );
+
+  const autoLogin = useAuthStore((state) => state.autoLogin);
   const hasStore = useStoreStore((state) => state.hasStore);
+
+  // Hides the General settings if there is nothing to show
+  const showGeneralSettings = FeatureFlags.ENABLE_PROFILE_ICONS || hasStore || !autoLogin;
+  
   useEffect(() => {
     setCurrentFlowId("");
   }, [pathname]);
@@ -23,7 +30,7 @@ export default function SettingsPage(): JSX.Element {
     icon: React.ReactNode;
   }[] = [];
 
-  if (FeatureFlags.ENABLE_PROFILE_ICONS || hasStore) {
+  if (showGeneralSettings) {
     sidebarNavItems.push({
       title: "General",
       href: "/settings/general",

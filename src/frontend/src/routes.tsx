@@ -7,6 +7,7 @@ import { CatchAllRoute } from "./components/catchAllRoutes";
 import LoadingComponent from "./components/loadingComponent";
 import { StoreGuard } from "./components/storeGuard";
 import MessagesPage from "./pages/SettingsPage/pages/messagesPage";
+import useAuthStore from "@/stores/authStore";
 import { useStoreStore } from "@/stores/storeStore";
 import FeatureFlags from "@/../feature-config.json";
 
@@ -37,7 +38,11 @@ const SignUp = lazy(() => import("./pages/SignUpPage"));
 const StorePage = lazy(() => import("./pages/StorePage"));
 const ViewPage = lazy(() => import("./pages/ViewPage"));
 
-const showGeneralSettings = FeatureFlags.ENABLE_PROFILE_ICONS || useStoreStore((state) => state.hasStore);
+const autoLogin = useAuthStore((state) => state.autoLogin);
+const hasStore = useStoreStore((state) => state.hasStore);
+
+// Hides the General settings if there is nothing to show
+const showGeneralSettings = FeatureFlags.ENABLE_PROFILE_ICONS || hasStore || !autoLogin;
 
 const Router = () => {
   return (
