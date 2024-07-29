@@ -44,8 +44,8 @@ class PythonCodeStructuredTool(Component):
         "bool": {"annotation": bool, "field": BoolInput},
         "NoneType": {"annotation": None},
     }
-    display_name = "Python Code Tool"
-    description = "structuredtool dataclass code to tool"
+    display_name = "Python Method Tool"
+    description = "Python method to tool"
     documentation = "https://python.langchain.com/docs/modules/tools/custom_tools/#structuredtool-dataclass"
     name = "PythonCodeStructuredTool"
     icon = "🐍"
