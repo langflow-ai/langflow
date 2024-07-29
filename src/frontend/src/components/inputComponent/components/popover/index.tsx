@@ -68,9 +68,12 @@ const CustomInputPopover = ({
   };
 
   function handleBlur(e) {
-    if (isTextarea) setIsTextArea(false)
-    if (onInputLostFocus) onInputLostFocus(e);
-
+    setTimeout(() => {
+      if (isTextarea) {
+        setIsTextArea(false);
+      }
+      if (onInputLostFocus) onInputLostFocus(e);
+    }, 100);
   }
 
   return (
@@ -93,8 +96,8 @@ const CustomInputPopover = ({
                     ? selectedOptions?.join(", ")
                     : value
               }
-              autoFocus={true}
               disabled={disabled}
+              autoFocus={autoFocus}
               onClick={() => {
                 (((selectedOption !== "" || !onChange) && setSelectedOption) ||
                   ((selectedOptions?.length !== 0 || !onChange) &&
