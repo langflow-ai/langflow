@@ -38,13 +38,13 @@ const SignUp = lazy(() => import("./pages/SignUpPage"));
 const StorePage = lazy(() => import("./pages/StorePage"));
 const ViewPage = lazy(() => import("./pages/ViewPage"));
 
-const autoLogin = useAuthStore((state) => state.autoLogin);
-const hasStore = useStoreStore((state) => state.hasStore);
-
-// Hides the General settings if there is nothing to show
-const showGeneralSettings = FeatureFlags.ENABLE_PROFILE_ICONS || hasStore || !autoLogin;
-
 const Router = () => {
+  const autoLogin = useAuthStore((state) => state.autoLogin);
+  const hasStore = useStoreStore((state) => state.hasStore);
+
+  // Hides the General settings if there is nothing to show
+  const showGeneralSettings = FeatureFlags.ENABLE_PROFILE_ICONS || hasStore || !autoLogin;
+
   return (
     <Suspense
       fallback={
