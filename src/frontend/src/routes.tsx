@@ -43,7 +43,8 @@ const Router = () => {
   const hasStore = useStoreStore((state) => state.hasStore);
 
   // Hides the General settings if there is nothing to show
-  const showGeneralSettings = FeatureFlags.ENABLE_PROFILE_ICONS || hasStore || !autoLogin;
+  const showGeneralSettings =
+    FeatureFlags.ENABLE_PROFILE_ICONS || hasStore || !autoLogin;
 
   return (
     <Suspense
