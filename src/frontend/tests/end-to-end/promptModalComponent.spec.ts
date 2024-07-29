@@ -110,9 +110,8 @@ test("PromptTemplateComponent", async ({ page }) => {
   }
 
   value =
-    (await page
-      .locator('//*[@id="textarea_str_edit_prompt1"]')
-      .inputValue()) ?? "";
+    (await page.locator('//*[@id="textarea_str_edit_prompt1"]').inputValue()) ??
+    "";
 
   if (value != "prompt_name_test_123123!@#!@#") {
     expect(false).toBeTruthy();
@@ -126,14 +125,14 @@ test("PromptTemplateComponent", async ({ page }) => {
     expect(false).toBeTruthy();
   }
 
-  await page.getByTestId('textarea_str_edit_prompt1-ExternalLink').click();
+  await page.getByTestId("textarea_str_edit_prompt1-ExternalLink").click();
   await page
     .getByTestId("text-area-modal")
     .fill("prompt_edit_test_12312312321!@#$");
 
   await page.getByText("Finish Editing", { exact: true }).click();
 
-  await page.getByTestId('textarea_str_edit_prompt-ExternalLink').click();
+  await page.getByTestId("textarea_str_edit_prompt-ExternalLink").click();
   await page
     .getByTestId("text-area-modal")
     .fill("prompt_edit_test_44444444444!@#$");
@@ -194,9 +193,8 @@ test("PromptTemplateComponent", async ({ page }) => {
   }
 
   value =
-    (await page
-      .locator('//*[@id="textarea_str_edit_prompt1"]')
-      .inputValue()) ?? "";
+    (await page.locator('//*[@id="textarea_str_edit_prompt1"]').inputValue()) ??
+    "";
 
   if (value != "prompt_edit_test_12312312321!@#$") {
     expect(false).toBeTruthy();
