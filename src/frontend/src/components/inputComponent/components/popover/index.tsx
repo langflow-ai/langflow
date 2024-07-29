@@ -15,6 +15,7 @@ import {
   PopoverContent,
   PopoverContentWithoutPortal,
 } from "../../../ui/popover";
+import { Textarea } from "@headlessui/react";
 const CustomInputPopover = ({
   id,
   refInput,
@@ -41,6 +42,8 @@ const CustomInputPopover = ({
   optionsButton,
   handleKeyDown,
   showOptions,
+  isTextarea,
+  setIsTextArea,
 }) => {
   const setErrorData = useAlertStore.getState().setErrorData;
   const PopoverContentInput = editNode
@@ -63,56 +66,102 @@ const CustomInputPopover = ({
     }
     onChange && onChange(e.target.value);
   };
+
+  function handleBlur(e) {
+    if (isTextarea) setIsTextArea(false)
+    if (onInputLostFocus) onInputLostFocus(e);
+
+  }
+
   return (
     <Popover modal open={showOptions} onOpenChange={setShowOptions}>
       <PopoverAnchor>
-        <Input
-          id={id}
-          ref={refInput}
-          type="text"
-          onBlur={onInputLostFocus}
-          value={
-            (selectedOption !== "" || !onChange) && setSelectedOption
-              ? selectedOption
-              : (selectedOptions?.length !== 0 || !onChange) &&
-                  setSelectedOptions
-                ? selectedOptions?.join(", ")
-                : value
-          }
-          autoFocus={autoFocus}
-          disabled={disabled}
-          onClick={() => {
-            (((selectedOption !== "" || !onChange) && setSelectedOption) ||
-              ((selectedOptions?.length !== 0 || !onChange) &&
-                setSelectedOptions)) &&
-              setShowOptions(true);
-          }}
-          required={required}
-          className={classNames(
-            password &&
-              (!setSelectedOption || selectedOption === "") &&
-              !pwdVisible &&
-              value !== ""
-              ? "text-clip password"
-              : "",
-            editNode ? "input-edit-node" : "",
-            password && (setSelectedOption || setSelectedOptions)
-              ? "pr-[62.9px]"
-              : "",
-            (!password && (setSelectedOption || setSelectedOptions)) ||
-              (password && !(setSelectedOption || setSelectedOptions))
-              ? "pr-8"
-              : "",
-            className!,
-          )}
-          placeholder={password && editNode ? "Key" : placeholder}
-          onChange={handleInputChange}
-          onKeyDown={(e) => {
-            handleKeyDown(e);
-            if (blurOnEnter && e.key === "Enter") refInput.current?.blur();
-          }}
-          data-testid={editNode ? id + "-edit" : id}
+        {isTextarea ? (
+          <div className="">
+            <Textarea
+              onWheel={(e) => {
+                e.stopPropagation();
+              }}
+              id={id}
+              ref={refInput}
+              onBlur={handleBlur}
+              value={
+                (selectedOption !== "" || !onChange) && setSelectedOption
+                  ? selectedOption
+                  : (selectedOptions?.length !== 0 || !onChange) &&
+                      setSelectedOptions
+                    ? selectedOptions?.join(", ")
+                    : value
+              }
+              autoFocus={true}
+              disabled={disabled}
+              onClick={() => {
+                (((selectedOption !== "" || !onChange) && setSelectedOption) ||
+                  ((selectedOptions?.length !== 0 || !onChange) &&
+                    setSelectedOptions)) &&
+                  setShowOptions(true);
+              }}
+              required={required}
+              className={"form-input block w-full h-24 min-h-min rounded-md border-border bg-background pr-12  text-left text-sm shadow-sm placeholder:text-muted-foreground focus:border-ring focus:placeholder-transparent focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 nowheel "}
+              
+              placeholder={password && editNode ? "Key" : placeholder}
+              onChange={handleInputChange}
+              onKeyDown={(e) => {
+                handleKeyDown(e);
+                if (blurOnEnter && e.key === "Enter") refInput.current?.blur();
+              }}
+              data-testid={editNode ? id + "-edit" : id}
         />
+          </div>
+        ) : (
+          <Input
+            id={id}
+            ref={refInput}
+            type="text"
+            onBlur={onInputLostFocus}
+            value={
+              (selectedOption !== "" || !onChange) && setSelectedOption
+                ? selectedOption
+                : (selectedOptions?.length !== 0 || !onChange) &&
+                    setSelectedOptions
+                  ? selectedOptions?.join(", ")
+                  : value
+            }
+            autoFocus={autoFocus}
+            disabled={disabled}
+            onClick={() => {
+              (((selectedOption !== "" || !onChange) && setSelectedOption) ||
+                ((selectedOptions?.length !== 0 || !onChange) &&
+                  setSelectedOptions)) &&
+                setShowOptions(true);
+            }}
+            required={required}
+            className={classNames(
+              password &&
+                (!setSelectedOption || selectedOption === "") &&
+                !pwdVisible &&
+                value !== ""
+                ? "text-clip password"
+                : "",
+              editNode ? "input-edit-node" : "",
+              password && (setSelectedOption || setSelectedOptions)
+                ? "pr-[62.9px]"
+                : "",
+              (!password && (setSelectedOption || setSelectedOptions)) ||
+                (password && !(setSelectedOption || setSelectedOptions))
+                ? "pr-14"
+                : "",
+              className!,
+            )}
+            placeholder={password && editNode ? "Key" : placeholder}
+            onChange={handleInputChange}
+            onKeyDown={(e) => {
+              handleKeyDown(e);
+              if (blurOnEnter && e.key === "Enter") refInput.current?.blur();
+            }}
+            data-testid={editNode ? id + "-edit" : id}
+          />
+        )}
       </PopoverAnchor>
       <PopoverContentInput
         className="noflow nowheel nopan nodelete nodrag p-0"

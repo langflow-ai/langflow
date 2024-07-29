@@ -39,6 +39,7 @@ export default function InputComponent({
   const [pwdVisible, setPwdVisible] = useState(false);
   const refInput = useRef<HTMLInputElement>(null);
   const [showOptions, setShowOptions] = useState<boolean>(false);
+  const [isTextArea, setIsTextArea] = useState<boolean>(false);
 
   useEffect(() => {
     if (disabled && value && onChange && value !== "") {
@@ -120,6 +121,8 @@ export default function InputComponent({
             />
           ) : (
             <CustomInputPopover
+              setIsTextArea={setIsTextArea}
+              isTextarea={isTextArea}
               refInput={refInput}
               handleKeyDown={handleKeyDown}
               optionButton={optionButton}
@@ -149,12 +152,28 @@ export default function InputComponent({
           )}
         </>
       )}
-
+      {!password && (
+        <button
+          className={
+            `absolute right-8  ${isTextArea ? "top-1.5" : "inset-y-0"}  ${editNode ? "pr-2.5" : "pr-1"} text-muted-foreground hover:text-accent-foreground`
+          }
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setIsTextArea((old) => !old);
+          }}
+        >
+          <ForwardedIconComponent
+            name="Expand"
+            className="w-4 h-4"
+          />
+        </button>
+      )}
       {(setSelectedOption || setSelectedOptions) && (
         <span
           className={cn(
             password && selectedOption === "" ? "right-8" : "right-0",
-            "absolute inset-y-0 flex items-center pr-2.5",
+            `absolute ${isTextArea ? "top-1.5" : "inset-y-0"} flex items-center pr-2.5`,
           )}
         >
           <button
