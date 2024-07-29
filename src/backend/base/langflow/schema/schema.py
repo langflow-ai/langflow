@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Generator, Literal, Union
+from typing import AsyncIterator, Generator, Iterator, Literal, Union
 
 from pydantic import BaseModel
 from typing_extensions import TypedDict
@@ -104,6 +104,9 @@ def build_output_logs(vertex, result) -> dict:
 
             case LogType.UNKNOWN:
                 message = ""
+
+            case LogType.ARRAY:
+                message = [recursive_serialize_or_str(item) for item in message]
         name = output.get("name", f"output_{index}")
         outputs |= {name: OutputValue(message=message, type=_type).model_dump()}
 
