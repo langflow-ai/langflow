@@ -28,11 +28,7 @@ class AmazonBedrockEmbeddingsComponent(LCModelComponent):
             advanced=True,
         ),
         MessageTextInput(name="region_name", display_name="Region Name", value="us-east-1"),
-        MessageTextInput(
-            name="endpoint_url",
-            display_name=" Endpoint URL",
-            advanced=True
-        ),
+        MessageTextInput(name="endpoint_url", display_name=" Endpoint URL", advanced=True),
     ]
 
     outputs = [
@@ -42,15 +38,18 @@ class AmazonBedrockEmbeddingsComponent(LCModelComponent):
     def build_embeddings(self) -> Embeddings:
         if self.aws_access_key:
             import boto3
+
             session = boto3.Session(
                 aws_access_key_id=self.aws_access_key,
                 aws_secret_access_key=self.aws_secret_key,
             )
         elif self.credentials_profile_name:
             import boto3
+
             session = boto3.Session(profile_name=self.credentials_profile_name)
         else:
             import boto3
+
             session = boto3.Session()
 
         client_params = {}

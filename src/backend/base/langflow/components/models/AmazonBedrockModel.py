@@ -62,15 +62,18 @@ class AmazonBedrockComponent(LCModelComponent):
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
         if self.aws_access_key:
             import boto3
+
             session = boto3.Session(
                 aws_access_key_id=self.aws_access_key,
                 aws_secret_access_key=self.aws_secret_key,
             )
         elif self.credentials_profile_name:
             import boto3
+
             session = boto3.Session(profile_name=self.credentials_profile_name)
         else:
             import boto3
+
             session = boto3.Session()
 
         client_params = {}
