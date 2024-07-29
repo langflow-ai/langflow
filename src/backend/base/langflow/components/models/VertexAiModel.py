@@ -1,3 +1,5 @@
+from typing import cast
+
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
 from langflow.inputs import MessageTextInput
@@ -19,7 +21,7 @@ class ChatVertexAIComponent(LCModelComponent):
         ),
         MessageTextInput(name="model_name", display_name="Model Name", value="gemini-1.5-pro"),
         StrInput(name="project", display_name="Project", info="The project ID.", advanced=True),
-        StrInput(name="location", display_name="Location", advanced=True),
+        StrInput(name="location", display_name="Location", value="us-central1", advanced=True),
         IntInput(name="max_output_tokens", display_name="Max Output Tokens", advanced=True),
         IntInput(name="max_retries", display_name="Max Retries", value=1, advanced=True),
         FloatInput(name="temperature", value=0.0, display_name="Temperature"),
@@ -37,8 +39,8 @@ class ChatVertexAIComponent(LCModelComponent):
             )
         location = self.location or None
         if self.credentials:
-            from google.oauth2 import service_account
             from google.cloud import aiplatform
+            from google.oauth2 import service_account
 
             credentials = service_account.Credentials.from_service_account_file(self.credentials)
             project = self.project or credentials.project_id
@@ -52,15 +54,18 @@ class ChatVertexAIComponent(LCModelComponent):
             project = self.project or None
             credentials = None
 
-        return ChatVertexAI(
-            credentials=credentials,
-            location=location,
-            project=project,
-            max_output_tokens=self.max_output_tokens,
-            max_retries=self.max_retries,
-            model_name=self.model_name,
-            temperature=self.temperature,
-            top_k=self.top_k,
-            top_p=self.top_p,
-            verbose=self.verbose,
+        return cast(
+            LanguageModel,
+            ChatVertexAI(
+                credentials=credentials,
+                location=location,
+                project=project,
+                max_output_tokens=self.max_output_tokens or None,
+                max_retries=self.max_retries,
+                model_name=self.model_name,
+                temperature=self.temperature,
+                top_k=self.top_k or None,
+                top_p=self.top_p,
+                verbose=self.verbose,
+            ),
         )

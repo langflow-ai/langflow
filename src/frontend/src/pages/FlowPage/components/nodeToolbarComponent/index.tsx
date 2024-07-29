@@ -396,18 +396,10 @@ export default function NodeToolbarComponent({
     handleOnNewValueHook({ value });
   };
 
-  const { handleNodeClass: handleNodeClassHook } = useHandleNodeClass(
-    takeSnapshot,
-    setNode,
-    data.id,
-  );
+  const { handleNodeClass: handleNodeClassHook } = useHandleNodeClass(data.id);
 
-  const handleNodeClass = (
-    newNodeClass: APIClassType,
-    code: string,
-    type: string,
-  ) => {
-    handleNodeClassHook(newNodeClass, name, code, type);
+  const handleNodeClass = (newNodeClass: APIClassType, type: string) => {
+    handleNodeClassHook(newNodeClass, type);
   };
 
   const [openModal, setOpenModal] = useState(false);
@@ -721,9 +713,7 @@ export default function NodeToolbarComponent({
           </ConfirmationModal>
           {showModalAdvanced && (
             <EditNodeModal
-              //              setOpenWDoubleClick={setOpenWDoubleClick}
               data={data}
-              nodeLength={nodeLength}
               open={showModalAdvanced}
               setOpen={setShowModalAdvanced}
             />

@@ -35,22 +35,35 @@ test("should able to see and interact with logs", async ({ page }) => {
   await page.getByRole("heading", { name: "Basic Prompting" }).click();
   await page.waitForTimeout(2000);
 
+  let outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
+
+  while (outdatedComponents > 0) {
+    await page.getByTestId("icon-AlertTriangle").first().click();
+    await page.waitForTimeout(1000);
+    outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
+  }
+
   await page.getByTestId("icon-ChevronDown").click();
   await page.getByText("Logs").click();
   await page.getByText("No Data Available", { exact: true }).isVisible();
   await page.keyboard.press("Escape");
 
   await page
-    .getByTestId("popover-anchor-input-openai_api_key")
+    .getByTestId("popover-anchor-input-api_key")
     .fill(process.env.OPENAI_API_KEY ?? "");
 
-  await page.getByTestId("dropdown-model_name").click();
-  await page.getByTestId("gpt-4o-0-option").click();
+  await page.getByTestId("dropdown_str_model_name").click();
+  await page.getByTestId("gpt-4o-1-option").click();
 
   await page.waitForTimeout(2000);
   await page.getByTestId("button_run_chat output").first().click();
 
-  await page.waitForTimeout(2000);
+  await page.waitForSelector("text=built successfully", { timeout: 30000 });
+
+  await page.getByText("built successfully").last().click({
+    timeout: 15000,
+  });
+
   await page
     .getByText("Chat Output built successfully", { exact: true })
     .isVisible();

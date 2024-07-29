@@ -22,7 +22,7 @@ class Service(ABC):
             }
         return schema
 
-    def teardown(self):
+    async def teardown(self):
         pass
 
     def set_ready(self):

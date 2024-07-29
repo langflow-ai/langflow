@@ -1,4 +1,5 @@
 // authStore.js
+import { LANGFLOW_ACCESS_TOKEN } from "@/constants/constants";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { AuthStoreType } from "@/types/zustand/auth";
 import { useNavigate } from "react-router-dom";
@@ -19,8 +20,8 @@ const cookies = new Cookies();
 
 const useAuthStore = create<AuthStoreType>((set, get) => ({
   isAdmin: false,
-  isAuthenticated: !!cookies.get("access_token_lf"),
-  accessToken: cookies.get("access_token_lf") ?? null,
+  isAuthenticated: !!cookies.get(LANGFLOW_ACCESS_TOKEN),
+  accessToken: cookies.get(LANGFLOW_ACCESS_TOKEN) ?? null,
   userData: null,
   autoLogin: false,
   apiKey: cookies.get("apikey_tkn_lflw"),

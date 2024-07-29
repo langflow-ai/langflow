@@ -25,11 +25,11 @@ from langflow.api.v1.schemas import (
 )
 from langflow.exceptions.component import ComponentBuildException
 from langflow.graph.graph.base import Graph
+from langflow.graph.utils import log_vertex_build
 from langflow.schema.schema import OutputValue
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.chat.service import ChatService
 from langflow.services.deps import get_chat_service, get_session, get_session_service, get_telemetry_service
-from langflow.services.monitor.utils import log_vertex_build
 from langflow.services.telemetry.schema import ComponentPayload, PlaygroundPayload
 from langflow.services.telemetry.service import TelemetryService
 
@@ -233,7 +233,7 @@ async def build_vertex(
             background_tasks.add_task(
                 log_vertex_build,
                 flow_id=flow_id_str,
-                vertex_id=vertex_id.split("-")[0],
+                vertex_id=vertex_id,
                 valid=valid,
                 params=params,
                 data=result_data_response,
@@ -258,7 +258,7 @@ async def build_vertex(
         if graph.stop_vertex and graph.stop_vertex in next_runnable_vertices:
             next_runnable_vertices = [graph.stop_vertex]
 
-        if not graph.run_manager.vertices_to_run and not next_runnable_vertices:
+        if not graph.run_manager.vertices_being_run and not next_runnable_vertices:
             background_tasks.add_task(graph.end_all_traces)
 
         build_response = VertexBuildResponse(

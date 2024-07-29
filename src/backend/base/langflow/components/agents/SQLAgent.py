@@ -13,8 +13,15 @@ class SQLAgentComponent(LCAgentComponent):
     name = "SQLAgent"
 
     inputs = LCAgentComponent._base_inputs + [
-        MessageTextInput(name="database_uri", display_name="Database URI", required=True),
         HandleInput(name="llm", display_name="Language Model", input_types=["LanguageModel"], required=True),
+        MessageTextInput(name="database_uri", display_name="Database URI", required=True),
+        HandleInput(
+            name="extra_tools",
+            display_name="Extra Tools",
+            input_types=["Tool", "BaseTool"],
+            is_list=True,
+            advanced=True,
+        ),
     ]
 
     def build_agent(self) -> AgentExecutor:
@@ -23,4 +30,4 @@ class SQLAgentComponent(LCAgentComponent):
         agent_args = self.get_agent_kwargs()
         agent_args["max_iterations"] = agent_args["agent_executor_kwargs"]["max_iterations"]
         del agent_args["agent_executor_kwargs"]["max_iterations"]
-        return create_sql_agent(llm=self.llm, toolkit=toolkit, **agent_args)
+        return create_sql_agent(llm=self.llm, toolkit=toolkit, extra_tools=self.extra_tools or [], **agent_args)

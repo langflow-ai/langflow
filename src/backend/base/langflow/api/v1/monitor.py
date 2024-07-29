@@ -7,40 +7,39 @@ from sqlmodel import Session, col, select
 
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.database.models.message.model import MessageRead, MessageTable, MessageUpdate
+from langflow.services.database.models.transactions.crud import get_transactions_by_flow_id
+from langflow.services.database.models.transactions.model import TransactionReadResponse
 from langflow.services.database.models.user.model import User
-from langflow.services.deps import get_monitor_service, get_session
-from langflow.services.monitor.schema import MessageModelResponse, TransactionModelResponse, VertexBuildMapModel
-from langflow.services.monitor.service import MonitorService
+from langflow.services.database.models.vertex_builds.crud import (
+    get_vertex_builds_by_flow_id,
+    delete_vertex_builds_by_flow_id,
+)
+from langflow.services.database.models.vertex_builds.model import VertexBuildMapModel
+from langflow.services.deps import get_session
+from langflow.services.monitor.schema import MessageModelResponse
 
 router = APIRouter(prefix="/monitor", tags=["Monitor"])
 
 
-# Get vertex_builds data from the monitor service
 @router.get("/builds", response_model=VertexBuildMapModel)
 async def get_vertex_builds(
-    flow_id: Optional[str] = Query(None),
-    vertex_id: Optional[str] = Query(None),
-    valid: Optional[bool] = Query(None),
-    order_by: Optional[str] = Query("timestamp"),
-    monitor_service: MonitorService = Depends(get_monitor_service),
+    flow_id: UUID = Query(),
+    session: Session = Depends(get_session),
 ):
     try:
-        vertex_build_dicts = monitor_service.get_vertex_builds(
-            flow_id=flow_id, vertex_id=vertex_id, valid=valid, order_by=order_by
-        )
-        vertex_build_map = VertexBuildMapModel.from_list_of_dicts(vertex_build_dicts)
-        return vertex_build_map
+        vertex_builds = get_vertex_builds_by_flow_id(session, flow_id)
+        return VertexBuildMapModel.from_list_of_dicts(vertex_builds)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.delete("/builds", status_code=204)
 async def delete_vertex_builds(
-    flow_id: Optional[str] = Query(None),
-    monitor_service: MonitorService = Depends(get_monitor_service),
+    flow_id: UUID = Query(),
+    session: Session = Depends(get_session),
 ):
     try:
-        monitor_service.delete_vertex_builds(flow_id=flow_id)
+        delete_vertex_builds_by_flow_id(session, flow_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -126,34 +125,26 @@ async def delete_messages_session(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/transactions", response_model=List[TransactionModelResponse])
+@router.get("/transactions", response_model=List[TransactionReadResponse])
 async def get_transactions(
-    source: Optional[str] = Query(None),
-    target: Optional[str] = Query(None),
-    status: Optional[str] = Query(None),
-    order_by: Optional[str] = Query("timestamp"),
-    flow_id: Optional[str] = Query(None),
-    monitor_service: MonitorService = Depends(get_monitor_service),
+    flow_id: UUID = Query(),
+    session: Session = Depends(get_session),
 ):
     try:
-        dicts = monitor_service.get_transactions(
-            source=source, target=target, status=status, order_by=order_by, flow_id=flow_id
-        )
-        result = []
-        for d in dicts:
-            d = TransactionModelResponse(
-                index=d["index"],
-                timestamp=d["timestamp"],
-                vertex_id=d["vertex_id"],
-                inputs=d["inputs"],
-                outputs=d["outputs"],
-                status=d["status"],
-                error=d["error"],
-                flow_id=d["flow_id"],
-                source=d["vertex_id"],
-                target=d["target_id"],
+        transactions = get_transactions_by_flow_id(session, flow_id)
+        return [
+            TransactionReadResponse(
+                transaction_id=t.id,
+                timestamp=t.timestamp,
+                vertex_id=t.vertex_id,
+                target_id=t.target_id,
+                inputs=t.inputs,
+                outputs=t.outputs,
+                status=t.status,
+                error=t.error,
+                flow_id=t.flow_id,
             )
-            result.append(d)
-        return result
+            for t in transactions
+        ]
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

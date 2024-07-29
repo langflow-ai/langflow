@@ -3,6 +3,7 @@ from langchain_core.prompts import ChatPromptTemplate, PromptTemplate, HumanMess
 
 from langflow.base.agents.agent import LCToolsAgentComponent
 from langflow.inputs import MultilineInput
+from langflow.inputs.inputs import HandleInput
 
 
 class OpenAIToolsAgentComponent(LCToolsAgentComponent):
@@ -13,6 +14,12 @@ class OpenAIToolsAgentComponent(LCToolsAgentComponent):
     name = "OpenAIToolsAgent"
 
     inputs = LCToolsAgentComponent._base_inputs + [
+        HandleInput(
+            name="llm",
+            display_name="Language Model",
+            input_types=["LanguageModel", "ToolEnabledLanguageModel"],
+            required=True,
+        ),
         MultilineInput(
             name="system_prompt",
             display_name="System Prompt",
@@ -24,7 +31,7 @@ class OpenAIToolsAgentComponent(LCToolsAgentComponent):
         ),
     ]
 
-    def creat_agent_runnable(self):
+    def create_agent_runnable(self):
         if "input" not in self.user_prompt:
             raise ValueError("Prompt must contain 'input' key.")
         messages = [

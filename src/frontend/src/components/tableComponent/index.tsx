@@ -1,9 +1,9 @@
+import { ColDef } from "ag-grid-community";
 import "ag-grid-community/styles/ag-grid.css"; // Mandatory CSS required by the grid
 import "ag-grid-community/styles/ag-theme-quartz.css"; // Optional Theme applied to the grid
 import { AgGridReact, AgGridReactProps } from "ag-grid-react";
 import cloneDeep from "lodash";
 import { ElementRef, forwardRef, useRef, useState } from "react";
-import { boolean } from "zod";
 import {
   DEFAULT_TABLE_ALERT_MSG,
   DEFAULT_TABLE_ALERT_TITLE,
@@ -16,9 +16,10 @@ import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import TableOptions from "./components/TableOptions";
 import resetGrid from "./utils/reset-grid-columns";
 
-interface TableComponentProps extends AgGridReactProps {
-  columnDefs: NonNullable<AgGridReactProps["columnDefs"]>;
+export interface TableComponentProps extends AgGridReactProps {
+  columnDefs: NonNullable<ColDef<any, any>[]>;
   rowData: NonNullable<AgGridReactProps["rowData"]>;
+  displayEmptyAlert?: boolean;
   alertTitle?: string;
   alertDescription?: string;
   editable?:
@@ -32,6 +33,7 @@ interface TableComponentProps extends AgGridReactProps {
   pagination?: boolean;
   onDelete?: () => void;
   onDuplicate?: () => void;
+  addRow?: () => void;
 }
 
 const TableComponent = forwardRef<
@@ -42,6 +44,7 @@ const TableComponent = forwardRef<
     {
       alertTitle = DEFAULT_TABLE_ALERT_TITLE,
       alertDescription = DEFAULT_TABLE_ALERT_MSG,
+      displayEmptyAlert = true,
       ...props
     },
     ref,
@@ -62,7 +65,7 @@ const TableComponent = forwardRef<
         (typeof props.editable === "boolean" && props.editable) ||
         (Array.isArray(props.editable) &&
           props.editable.every((field) => typeof field === "string") &&
-          (props.editable as Array<string>).includes(newCol.headerName ?? ""))
+          (props.editable as Array<string>).includes(newCol.field ?? ""))
       ) {
         newCol = {
           ...newCol,
@@ -79,7 +82,7 @@ const TableComponent = forwardRef<
             onUpdate: (value: any) => void;
             editableCell: boolean;
           }>
-        ).find((field) => field.field === newCol.headerName);
+        ).find((field) => field.field === newCol.field);
         if (field) {
           newCol = {
             ...newCol,
@@ -90,11 +93,9 @@ const TableComponent = forwardRef<
       }
       return newCol;
     });
-    const gridRef = useRef(null);
     // @ts-ignore
-    const realRef: React.MutableRefObject<AgGridReact> = ref?.current
-      ? ref
-      : gridRef;
+    const realRef: React.MutableRefObject<AgGridReact> =
+      useRef<AgGridReact | null>(null);
     const dark = useDarkStore((state) => state.dark);
     const initialColumnDefs = useRef(colDef);
     const [columnStateChange, setColumnStateChange] = useState(false);
@@ -132,7 +133,7 @@ const TableComponent = forwardRef<
       params.api.setGridOption("columnDefs", updatedColumnDefs);
       if (props.onColumnMoved) props.onColumnMoved(params);
     };
-    if (props.rowData.length === 0) {
+    if (props.rowData.length === 0 && displayEmptyAlert) {
       return (
         <div className="flex h-full w-full items-center justify-center rounded-md border">
           <Alert variant={"default"} className="w-fit">
@@ -161,7 +162,15 @@ const TableComponent = forwardRef<
           }}
           animateRows={false}
           columnDefs={colDef}
-          ref={realRef}
+          ref={(node) => {
+            if (!node) return;
+            realRef.current = node;
+            if (typeof ref === "function") {
+              ref(node);
+            } else if (ref) {
+              ref.current = node;
+            }
+          }}
           onGridReady={onGridReady}
           onColumnMoved={onColumnMoved}
           onStateUpdated={(e) => {
@@ -180,6 +189,7 @@ const TableComponent = forwardRef<
             hasSelection={realRef.current?.api?.getSelectedRows().length > 0}
             duplicateRow={props.onDuplicate ? props.onDuplicate : undefined}
             deleteRow={props.onDelete ? props.onDelete : undefined}
+            addRow={props.addRow ? props.addRow : undefined}
             resetGrid={() => {
               resetGrid(realRef, initialColumnDefs);
               setTimeout(() => {

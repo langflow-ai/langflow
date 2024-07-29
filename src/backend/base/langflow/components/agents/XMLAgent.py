@@ -3,6 +3,7 @@ from langchain_core.prompts import ChatPromptTemplate, PromptTemplate, HumanMess
 
 from langflow.base.agents.agent import LCToolsAgentComponent
 from langflow.inputs import MultilineInput
+from langflow.inputs.inputs import HandleInput
 
 
 class XMLAgentComponent(LCToolsAgentComponent):
@@ -13,6 +14,7 @@ class XMLAgentComponent(LCToolsAgentComponent):
     name = "XMLAgent"
 
     inputs = LCToolsAgentComponent._base_inputs + [
+        HandleInput(name="llm", display_name="Language Model", input_types=["LanguageModel"], required=True),
         MultilineInput(
             name="user_prompt",
             display_name="Prompt",
@@ -44,7 +46,7 @@ Question: {input}
         ),
     ]
 
-    def creat_agent_runnable(self):
+    def create_agent_runnable(self):
         messages = [
             HumanMessagePromptTemplate(prompt=PromptTemplate(input_variables=["input"], template=self.user_prompt))
         ]
