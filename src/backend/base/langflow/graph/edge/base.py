@@ -4,7 +4,6 @@ from loguru import logger
 from pydantic import BaseModel, Field, field_validator
 
 from langflow.schema.schema import INPUT_FIELD_NAME
-from langflow.services.monitor.utils import log_message
 
 if TYPE_CHECKING:
     from langflow.graph.vertex.base import Vertex
@@ -224,13 +223,6 @@ class ContractEdge(Edge):
         ):
             if target.params.get("message") == "":
                 return self.result
-            await log_message(
-                sender=target.params.get("sender", ""),
-                sender_name=target.params.get("sender_name", ""),
-                message=target.params.get(INPUT_FIELD_NAME, {}),
-                session_id=target.params.get("session_id", ""),
-                flow_id=target.graph.flow_id,
-            )
         return self.result
 
     def __repr__(self) -> str:

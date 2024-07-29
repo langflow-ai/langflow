@@ -244,12 +244,6 @@ class VertexBuildResponseModel(VertexBuildModel):
         return v
 
 
-def to_map(value: dict):
-    keys = list(value.keys())
-    values = list(value.values())
-    return {"key": keys, "value": values}
-
-
 class VertexBuildMapModel(BaseModel):
     vertex_builds: dict[str, list[VertexBuildResponseModel]]
 

@@ -1,70 +1,32 @@
-from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Union, List
+from typing import TYPE_CHECKING, List
 
-from loguru import logger
 from platformdirs import user_cache_dir
 
 from langflow.services.base import Service
 from langflow.services.monitor.utils import (
-    add_row_to_table,
-    drop_and_create_table_if_schema_mismatch,
     new_duckdb_locked_connection,
 )
 
 if TYPE_CHECKING:
-    from langflow.services.monitor.schema import VertexBuildModel
     from langflow.services.settings.service import SettingsService
 
 
 class MonitorService(Service):
+    """
+    Deprecated. Still connecting to duckdb to migrate old installations.
+    """
+
     name = "monitor_service"
 
     def __init__(self, settings_service: "SettingsService"):
-        from langflow.services.monitor.schema import VertexBuildModel
-
         self.settings_service = settings_service
         self.base_cache_dir = Path(user_cache_dir("langflow"), ensure_exists=True)
         self.db_path = self.base_cache_dir / "monitor.duckdb"
-        self.table_map: dict[str, type[VertexBuildModel]] = {
-            "vertex_builds": VertexBuildModel,
-        }
-
-        try:
-            self.ensure_tables_exist()
-        except Exception as e:
-            logger.exception(f"Error initializing monitor service: {e}")
 
     def exec_query(self, query: str, read_only: bool = False):
         with new_duckdb_locked_connection(self.db_path, read_only=read_only) as conn:
             return conn.execute(query).df()
-
-    def to_df(self, table_name):
-        return self.load_table_as_dataframe(table_name)
-
-    def ensure_tables_exist(self):
-        for table_name, model in self.table_map.items():
-            drop_and_create_table_if_schema_mismatch(str(self.db_path), table_name, model)
-
-    def add_row(
-        self,
-        table_name: str,
-        data: Union[dict, "VertexBuildModel"],
-    ):
-        model = self.table_map.get(table_name)
-        if model is None:
-            raise ValueError(f"Unknown table name: {table_name}")
-
-        with new_duckdb_locked_connection(self.db_path, read_only=False) as conn:
-            add_row_to_table(conn, table_name, model, data)
-
-    def load_table_as_dataframe(self, table_name):
-        with new_duckdb_locked_connection(self.db_path, read_only=True) as conn:
-            return conn.table(table_name).df()
-
-    @staticmethod
-    def get_timestamp():
-        return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     def get_messages(
         self,
@@ -102,47 +64,6 @@ class MonitorService(Service):
 
         return df
 
-    def get_vertex_builds(
-        self,
-        flow_id: str | None = None,
-        vertex_id: str | None = None,
-        valid: bool | None = None,
-        order_by: str | None = "timestamp",
-    ):
-        query = "SELECT id, index,flow_id, valid, params, data, artifacts, timestamp FROM vertex_builds"
-        conditions = []
-        if flow_id:
-            conditions.append(f"flow_id = '{flow_id}'")
-        if vertex_id:
-            conditions.append(f"id = '{vertex_id}'")
-        if valid is not None:  # Check for None because valid is a boolean
-            valid_str = "true" if valid else "false"
-            conditions.append(f"valid = {valid_str}")
-
-        if conditions:
-            query += " WHERE " + " AND ".join(conditions)
-
-        if order_by:
-            query += f" ORDER BY {order_by}"
-
-        with new_duckdb_locked_connection(self.db_path, read_only=True) as conn:
-            df = conn.execute(query).df()
-
-        return df.to_dict(orient="records")
-
-    def delete_vertex_builds(self, flow_id: str | None = None):
-        query = "DELETE FROM vertex_builds"
-        if flow_id:
-            query += f" WHERE flow_id = '{flow_id}'"
-
-        with new_duckdb_locked_connection(self.db_path, read_only=False) as conn:
-            conn.execute(query)
-
-    def delete_messages_session(self, session_id: str):
-        query = f"DELETE FROM messages WHERE session_id = '{session_id}'"
-
-        return self.exec_query(query, read_only=False)
-
     def delete_messages(self, message_ids: list[int] | str):
         if isinstance(message_ids, list):
             # If message_ids is a list, join the string representations of the integers
@@ -154,13 +75,6 @@ class MonitorService(Service):
             raise ValueError("message_ids must be a list of integers or a string")
 
         query = f"DELETE FROM messages WHERE index IN ({ids_str})"
-
-        return self.exec_query(query, read_only=False)
-
-    def update_message(self, message_id: str, **kwargs):
-        query = (
-            f"""UPDATE messages SET {', '.join(f"{k} = '{v}'" for k, v in kwargs.items())} WHERE index = {message_id}"""
-        )
 
         return self.exec_query(query, read_only=False)
 

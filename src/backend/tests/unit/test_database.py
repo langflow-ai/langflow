@@ -329,3 +329,14 @@ def test_migrate_transactions(client: TestClient):
     with session_scope() as session:
         new_trans = get_transactions_by_flow_id(session, UUID(flow_id))
         assert 0 == len(new_trans)
+
+
+@pytest.mark.load_flows
+def test_migrate_transactions_no_duckdb(client: TestClient):
+    flow_id = "c54f9130-f2fa-4a3e-b22a-3856d946351b"
+    get_monitor_service()
+
+    with session_scope() as session:
+        migrate_transactions_from_monitor_service_to_database(session)
+        new_trans = get_transactions_by_flow_id(session, UUID(flow_id))
+        assert 0 == len(new_trans)
