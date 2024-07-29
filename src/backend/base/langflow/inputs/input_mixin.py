@@ -138,8 +138,10 @@ class DropDownMixin(BaseModel):
     combobox: CoalesceBool = False
     """Variable that defines if the user can insert custom values in the dropdown."""
 
+
 class MultilineMixin(BaseModel):
     multiline: CoalesceBool = True
+
 
 class TableMixin(BaseModel):
     table_schema: Optional[TableSchema | list[Column]] = None
