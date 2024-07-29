@@ -7,6 +7,8 @@ import { CatchAllRoute } from "./components/catchAllRoutes";
 import LoadingComponent from "./components/loadingComponent";
 import { StoreGuard } from "./components/storeGuard";
 import MessagesPage from "./pages/SettingsPage/pages/messagesPage";
+import { useStoreStore } from "@/stores/storeStore";
+import FeatureFlags from "@/../feature-config.json";
 
 const AdminPage = lazy(() => import("./pages/AdminPage"));
 const LoginAdminPage = lazy(() => import("./pages/AdminPage/LoginPage"));
@@ -34,6 +36,8 @@ const ShortcutsPage = lazy(
 const SignUp = lazy(() => import("./pages/SignUpPage"));
 const StorePage = lazy(() => import("./pages/StorePage"));
 const ViewPage = lazy(() => import("./pages/ViewPage"));
+
+const showGeneralSettings = FeatureFlags.ENABLE_PROFILE_ICONS || useStoreStore((state) => state.hasStore);
 
 const Router = () => {
   return (
@@ -77,10 +81,10 @@ const Router = () => {
             </ProtectedRoute>
           }
         >
-          <Route index element={<Navigate replace to={"general"} />} />
+          <Route index element={<Navigate replace to={showGeneralSettings ? "general" : "global-variables"} />} />
           <Route path="global-variables" element={<GlobalVariablesPage />} />
           <Route path="api-keys" element={<ApiKeysPage />} />
-          <Route path="general/:scrollId?" element={<GeneralPage />} />
+          {showGeneralSettings && <Route path="general/:scrollId?" element={<GeneralPage />} />}
           <Route path="shortcuts" element={<ShortcutsPage />} />
           <Route path="messages" element={<MessagesPage />} />
         </Route>

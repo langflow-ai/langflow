@@ -4,18 +4,27 @@ import ForwardedIconComponent from "../../components/genericIconComponent";
 import PageLayout from "../../components/pageLayout";
 import SidebarNav from "../../components/sidebarComponent";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
+import { useStoreStore } from "@/stores/storeStore";
+import FeatureFlags from "@/../feature-config.json";
 
 export default function SettingsPage(): JSX.Element {
   const pathname = location.pathname;
   const setCurrentFlowId = useFlowsManagerStore(
     (state) => state.setCurrentFlowId,
   );
+  const hasStore = useStoreStore((state) => state.hasStore);
   useEffect(() => {
     setCurrentFlowId("");
   }, [pathname]);
 
-  const sidebarNavItems = [
-    {
+  const sidebarNavItems: {
+    href?: string;
+    title: string;
+    icon: React.ReactNode;
+  }[] = [];
+
+  if (FeatureFlags.ENABLE_PROFILE_ICONS || hasStore) {
+    sidebarNavItems.push({
       title: "General",
       href: "/settings/general",
       icon: (
@@ -24,7 +33,10 @@ export default function SettingsPage(): JSX.Element {
           className="w-4 flex-shrink-0 justify-start stroke-[1.5]"
         />
       ),
-    },
+    });
+  }
+  
+  sidebarNavItems.push(
     {
       title: "Global Variables",
       href: "/settings/global-variables",
@@ -65,7 +77,7 @@ export default function SettingsPage(): JSX.Element {
         />
       ),
     },
-  ];
+  );
   return (
     <PageLayout
       title="Settings"
