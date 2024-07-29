@@ -39,6 +39,15 @@ export function StrRenderComponent({
       />
     ) : templateData.multiline ? (
       <TextAreaComponent
+        password={templateData.password}
+        updateVisibility={() => {
+          if (templateData.password !== undefined) {
+            handleOnNewValue(
+              { password: !templateData.password },
+              { skipSnapshot: true },
+            );
+          }
+        }}
         id={`textarea_${id}`}
         disabled={disabled}
         editNode={editNode}
