@@ -37,6 +37,7 @@ def upgrade() -> None:
             sa.ForeignKeyConstraint(
                 ["flow_id"],
                 ["flow.id"],
+                "fk_vertex_build_flow_id",
             ),
             sa.PrimaryKeyConstraint("build_id"),
         )

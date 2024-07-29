@@ -19,6 +19,7 @@ from loguru import logger
 
 if TYPE_CHECKING:
     from langflow.graph.vertex.base import Vertex
+    from langflow.api.v1.schemas import ResultDataResponse
 
 
 class UnbuiltObject:
