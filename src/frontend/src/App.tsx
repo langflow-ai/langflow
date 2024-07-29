@@ -1,3 +1,4 @@
+import { m } from "framer-motion";
 import { useContext, useEffect, useState } from "react";
 import { Cookies } from "react-cookie";
 import { ErrorBoundary } from "react-error-boundary";
@@ -14,7 +15,7 @@ import {
   LANGFLOW_AUTO_LOGIN_OPTION,
 } from "./constants/constants";
 import { AuthContext } from "./contexts/authContext";
-import { autoLogin } from "./controllers/API";
+import { useAutoLogin } from "./controllers/API/queries/auth";
 import { useGetHealthQuery } from "./controllers/API/queries/health";
 import { useGetVersionQuery } from "./controllers/API/queries/version";
 import { setupAxiosDefaults } from "./controllers/API/utils";
@@ -36,6 +37,7 @@ export default function App() {
   const refreshStars = useDarkStore((state) => state.refreshStars);
   const dark = useDarkStore((state) => state.dark);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const { mutate: mutateAutoLogin } = useAutoLogin();
 
   useGetVersionQuery();
   const cookies = new Cookies();
@@ -61,37 +63,40 @@ export default function App() {
     const abortController = new AbortController();
     const isLoginPage = location.pathname.includes("login");
 
-    autoLogin(abortController.signal)
-      .then(async (user) => {
-        if (user && user["access_token"]) {
-          user["refresh_token"] = "auto";
-          login(user["access_token"], "auto");
-          setUserData(user);
-          setAutoLogin(true);
-          fetchAllData();
-        }
-      })
-      .catch(async (error) => {
-        if (error.name !== "CanceledError") {
-          setAutoLogin(false);
-          if (
-            cookies.get(LANGFLOW_AUTO_LOGIN_OPTION) === "auto" &&
-            isAuthenticated
-          ) {
-            logout();
-            return;
-          }
-
-          if (isAuthenticated && !isLoginPage) {
-            getUser();
+    mutateAutoLogin(
+      { abortSignal: abortController.signal },
+      {
+        onSuccess: (user) => {
+          if (user && user["access_token"]) {
+            user["refresh_token"] = "auto";
+            login(user["access_token"], "auto");
+            setUserData(user);
+            setAutoLogin(true);
             fetchAllData();
-          } else {
-            setLoading(false);
-            useFlowsManagerStore.setState({ isLoading: false });
           }
-        }
-      });
+        },
+        onError: (error) => {
+          if (error.name !== "CanceledError") {
+            setAutoLogin(false);
+            if (
+              cookies.get(LANGFLOW_AUTO_LOGIN_OPTION) === "auto" &&
+              isAuthenticated
+            ) {
+              logout();
+              return;
+            }
 
+            if (isAuthenticated && !isLoginPage) {
+              getUser();
+              fetchAllData();
+            } else {
+              setLoading(false);
+              useFlowsManagerStore.setState({ isLoading: false });
+            }
+          }
+        },
+      },
+    );
     /*
       Abort the request as it isn't needed anymore, the component being
       unmounted. It helps avoid, among other things, the well-known "can't

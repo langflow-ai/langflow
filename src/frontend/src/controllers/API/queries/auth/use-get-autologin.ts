@@ -1,20 +1,32 @@
-import { keepPreviousData } from "@tanstack/react-query";
-import { Users, useQueryFunctionType } from "../../../../types/api";
+import { UseMutationResult } from "@tanstack/react-query";
+import { useMutationFunctionType } from "../../../../types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
 
-export const useGetAutoLogin: useQueryFunctionType<undefined, Users> = () => {
-  const { query } = UseRequestProcessor();
+interface AutoLoginParams {
+  abortSignal: AbortSignal;
+}
 
-  const getIsAutoLogin = async () => {
-    const response = await api.get<Users>(`${getURL("AUTOLOGIN")}`);
-    return response["data"];
+export const useAutoLogin: useMutationFunctionType<undefined, any> = (
+  options?,
+) => {
+  const { mutate } = UseRequestProcessor();
+
+  const autoLoginFn = async ({
+    abortSignal,
+  }: AutoLoginParams): Promise<any> => {
+    const res = await api.get(`${getURL("AUTOLOGIN")}`, {
+      signal: abortSignal,
+    });
+    return res.data;
   };
 
-  const queryResult = query(["useGetAutoLogin"], getIsAutoLogin, {
-    placeholderData: keepPreviousData,
-  });
+  const mutation: UseMutationResult = mutate(
+    ["useAutoLogin"],
+    autoLoginFn,
+    options,
+  );
 
-  return queryResult;
+  return mutation;
 };
