@@ -3,7 +3,7 @@ import { InputFieldType } from "@/types/api";
 import Dropdown from "../../../dropdownComponent";
 import InputGlobalComponent from "../../../inputGlobalComponent";
 import InputListComponent from "../../../inputListComponent";
-import { Multiselect } from "../../../multiselectComponent";
+import MultiselectComponent from "../../../multiselectComponent";
 import TextAreaComponent from "../../../textAreaComponent";
 
 export function StrRenderComponent({
@@ -33,12 +33,21 @@ export function StrRenderComponent({
         componentName={name ?? undefined}
         editNode={editNode}
         disabled={disabled}
-        value={!value || value === "" ? [""] : value}
+        value={value || [""]}
         onChange={onChange}
         id={`inputlist_${id}`}
       />
     ) : templateData.multiline ? (
       <TextAreaComponent
+        password={templateData.password}
+        updateVisibility={() => {
+          if (templateData.password !== undefined) {
+            handleOnNewValue(
+              { password: !templateData.password },
+              { skipSnapshot: true },
+            );
+          }
+        }}
         id={`textarea_${id}`}
         disabled={disabled}
         editNode={editNode}
@@ -58,13 +67,22 @@ export function StrRenderComponent({
 
   if (!!templateData.options && !!templateData?.list) {
     return (
-      <Multiselect
+      <MultiselectComponent
         editNode={editNode}
         disabled={disabled}
-        options={templateData.options || []}
-        values={[value ?? "Choose an option"]}
+        options={
+          (Array.isArray(templateData.options)
+            ? templateData.options
+            : [templateData.options]) || []
+        }
+        combobox={templateData.combobox}
+        value={
+          (Array.isArray(templateData.value)
+            ? templateData.value
+            : [templateData.value]) || []
+        }
         id={`multiselect_${id}`}
-        onValueChange={onChange}
+        onSelect={onChange}
       />
     );
   }
@@ -76,7 +94,7 @@ export function StrRenderComponent({
         options={templateData.options}
         onSelect={onChange}
         combobox={templateData.combobox}
-        value={value ?? "Choose an option"}
+        value={value || ""}
         id={`dropdown_${id}`}
       />
     );

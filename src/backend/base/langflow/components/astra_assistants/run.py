@@ -1,67 +1,93 @@
-from typing import Optional
 from astra_assistants import patch  # type: ignore
+from typing import Any, Optional
+
+from langflow.custom import Component
 from openai import OpenAI
 from openai.lib.streaming import AssistantEventHandler
+from langflow.inputs import MultilineInput
+from langflow.schema import dotdict
+from langflow.schema.message import Message
+from langflow.template import Output
 
-from langflow.custom import CustomComponent
 
-
-class AssistantsRun(CustomComponent):
+class AssistantsRun(Component):
     display_name = "Run Assistant"
     description = "Executes an Assistant Run against a thread"
 
-    def build_config(self):
-        return {
-            "assistant_id": {
-                "display_name": "Assistant ID",
-                "advanced": False,
-                "info": (
-                    "The ID of the assistant to run. \n\n"
-                    "Can be retrieved using the List Assistants component or created with the Create Assistant component."
-                ),
-            },
-            "user_message": {
-                "display_name": "User Message",
-                "info": "User message to pass to the run.",
-                "advanced": False,
-            },
-            "thread_id": {
-                "display_name": "Thread ID",
-                "advanced": False,
-                "info": "Thread ID to use with the run. If not provided, a new thread will be created.",
-            },
-            "env_set": {
-                "display_name": "Environment Set",
-                "advanced": False,
-                "info": "Dummy input to allow chaining with Dotenv Component.",
-            },
-        }
+    def update_build_config(
+        self,
+        build_config: dotdict,
+        field_value: Any,
+        field_name: Optional[str] = None,
+    ):
+        if field_name == "thread_id":
+            if field_value is None:
+                thread = self.client.beta.threads.create()
+                self.thread_id = thread.id
+                field_value
+            build_config["thread_id"] = field_value
 
-    def build(
-        self, assistant_id: str, user_message: str, thread_id: Optional[str] = None, env_set: Optional[str] = None
-    ) -> str:
-        text = ""
-        client = patch(OpenAI())
+    inputs = [
+        MultilineInput(
+            name="assistant_id",
+            display_name="Assistant ID",
+            info=(
+                "The ID of the assistant to run. \n\n"
+                "Can be retrieved using the List Assistants component or created with the Create Assistant component."
+            ),
+        ),
+        MultilineInput(
+            name="user_message",
+            display_name="User Message",
+            info="User message to pass to the run.",
+        ),
+        MultilineInput(
+            name="thread_id",
+            display_name="Thread ID",
+            required=False,
+            info="Thread ID to use with the run. If not provided, a new thread will be created.",
+        ),
+        MultilineInput(
+            name="env_set",
+            display_name="Environment Set",
+            info="Dummy input to allow chaining with Dotenv Component.",
+        ),
+    ]
 
-        if thread_id is None:
-            thread = client.beta.threads.create()
-            thread_id = thread.id
+    outputs = [Output(display_name="Assistant Response", name="assistant_response", method="process_inputs")]
 
-        # add the user message
-        client.beta.threads.messages.create(thread_id=thread_id, role="user", content=user_message)
+    def process_inputs(self) -> Message:
+        patch(OpenAI())
+        try:
+            text = ""
 
-        class EventHandler(AssistantEventHandler):
-            def __init__(self):
-                super().__init__()
+            if self.thread_id is None:
+                thread = self.client.beta.threads.create()
+                self.thread_id = thread.id
 
-        event_handler = EventHandler()
-        with client.beta.threads.runs.create_and_stream(
-            thread_id=thread_id,
-            assistant_id=assistant_id,
-            event_handler=event_handler,
-        ) as stream:
-            # return stream.text_deltas
-            for part in stream.text_deltas:
-                text += part
-                print(part)
-        return text
+            # add the user message
+            self.client.beta.threads.messages.create(thread_id=self.thread_id, role="user", content=self.user_message)
+
+            class EventHandler(AssistantEventHandler):
+                def __init__(self):
+                    super().__init__()
+
+                def on_exception(self, exception: Exception) -> None:
+                    print(f"Exception: {exception}")
+                    raise exception
+
+            event_handler = EventHandler()
+            with self.client.beta.threads.runs.create_and_stream(
+                thread_id=self.thread_id,
+                assistant_id=self.assistant_id,
+                event_handler=event_handler,
+            ) as stream:
+                # return stream.text_deltas
+                for part in stream.text_deltas:
+                    text += part
+                    print(part)
+            message = Message(text=text)
+            return message
+        except Exception as e:
+            print(e)
+            raise Exception(f"Error running assistant: {e}")
