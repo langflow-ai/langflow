@@ -7,9 +7,11 @@ OPENAI_MODEL_NAMES = [
     "gpt-3.5-turbo",
     "gpt-3.5-turbo-0125",
 ]
-
 OPENAI_EMBEDDING_MODEL_NAMES = [
     "text-embedding-3-small",
     "text-embedding-3-large",
     "text-embedding-ada-002",
 ]
+
+# Backwards compatibility
+MODEL_NAMES = OPENAI_MODEL_NAMES
