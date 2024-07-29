@@ -33,7 +33,7 @@ def upgrade() -> None:
             sa.Column("params", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
             sa.Column("build_id", sqlmodel.sql.sqltypes.GUID(), nullable=False),
             sa.Column("flow_id", sqlmodel.sql.sqltypes.GUID(), nullable=False),
-            sa.Column("valid", sqlmodel.sql.sqltypes.BOOLEAN(), nullable=False),
+            sa.Column("valid", sa.BOOLEAN(), nullable=False),
             sa.ForeignKeyConstraint(
                 ["flow_id"],
                 ["flow.id"],

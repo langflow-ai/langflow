@@ -44,7 +44,7 @@ class VertexBuildMapModel(BaseModel):
 
     @classmethod
     def from_list_of_dicts(cls, vertex_build_dicts: list[VertexBuildTable]):
-        vertex_build_map = {}
+        vertex_build_map: dict[str, list[VertexBuildTable]] = {}
         for vertex_build in vertex_build_dicts:
             if vertex_build.id not in vertex_build_map:
                 vertex_build_map[vertex_build.id] = []
