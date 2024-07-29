@@ -1,3 +1,4 @@
+import { Textarea } from "@headlessui/react";
 import { PopoverAnchor } from "@radix-ui/react-popover";
 import useAlertStore from "../../../../stores/alertStore";
 import { classNames, cn } from "../../../../utils/utils";
@@ -15,7 +16,6 @@ import {
   PopoverContent,
   PopoverContentWithoutPortal,
 } from "../../../ui/popover";
-import { Textarea } from "@headlessui/react";
 import getTextAreaClasses from "./utils/get-text-area-classes";
 const CustomInputPopover = ({
   id,
@@ -109,7 +109,6 @@ const CustomInputPopover = ({
               }}
               required={required}
               className={textAreaClasses}
-              
               placeholder={password && editNode ? "Key" : placeholder}
               onChange={handleInputChange}
               onKeyDown={(e) => {
@@ -117,7 +116,7 @@ const CustomInputPopover = ({
                 if (blurOnEnter && e.key === "Enter") refInput.current?.blur();
               }}
               data-testid={editNode ? id + "-edit" : id}
-        />
+            />
           </div>
         ) : (
           <Input

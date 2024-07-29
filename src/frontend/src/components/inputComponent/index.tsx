@@ -154,19 +154,14 @@ export default function InputComponent({
       )}
       {!password && (
         <button
-          className={
-            `absolute right-8  ${isTextArea ? "top-1.5" : "inset-y-0"}  ${editNode ? "pr-2.5" : "pr-1"} text-muted-foreground hover:text-accent-foreground`
-          }
+          className={`absolute right-8 ${isTextArea ? "top-1.5" : "inset-y-0"} ${editNode ? "pr-2.5" : "pr-1"} text-muted-foreground hover:text-accent-foreground`}
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
             setIsTextArea((old) => !old);
           }}
         >
-          <ForwardedIconComponent
-            name="Expand"
-            className="w-4 h-4"
-          />
+          <ForwardedIconComponent name="Expand" className="h-4 w-4" />
         </button>
       )}
       {(setSelectedOption || setSelectedOptions) && (
