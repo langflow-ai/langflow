@@ -8,7 +8,6 @@ from langflow.template import Output
 
 
 class AssistantsGetAssistantName(Component):
-    client = patch(OpenAI())
     display_name = "Get Assistant name"
     description = "Assistant by id"
 
@@ -30,6 +29,7 @@ class AssistantsGetAssistantName(Component):
     ]
 
     def process_inputs(self) -> Message:
+        patch(OpenAI())
         assistant = self.client.beta.assistants.retrieve(
             assistant_id=self.assistant_id,
         )
