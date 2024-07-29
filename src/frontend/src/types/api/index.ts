@@ -64,7 +64,7 @@ export type InputFieldType = {
   list: boolean;
   show: boolean;
   readonly: boolean;
-  password?:boolean,
+  password?: boolean;
   multiline?: boolean;
   value?: any;
   dynamic?: boolean;
