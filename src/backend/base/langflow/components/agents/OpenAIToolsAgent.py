@@ -6,7 +6,7 @@ from langchain_core.prompts import ChatPromptTemplate, PromptTemplate, HumanMess
 from langflow.base.agents.agent import LCToolsAgentComponent
 from langflow.field_typing import Data
 from langflow.inputs import MultilineInput
-from langflow.inputs.inputs import HandleInput
+from langflow.inputs.inputs import HandleInput, DataInput
 
 
 class OpenAIToolsAgentComponent(LCToolsAgentComponent):
