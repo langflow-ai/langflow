@@ -1,4 +1,4 @@
-import { BROKEN_EDGES_WARNING } from "@/constants/constants";
+import { BROKEN_EDGES_WARNING, componentsToIgnoreUpdate } from "@/constants/constants";
 import { brokenEdgeMessage } from "@/utils/utils";
 import { cloneDeep, zip } from "lodash";
 import {
@@ -44,9 +44,11 @@ import useAlertStore from "./alertStore";
 import { useDarkStore } from "./darkStore";
 import useFlowsManagerStore from "./flowsManagerStore";
 import { useGlobalVariablesStore } from "./globalVariablesStore/globalVariables";
+import { useTypesStore } from "./typesStore";
 
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
 const useFlowStore = create<FlowStoreType>((set, get) => ({
+  componentsToUpdate: false,
   onFlowPage: false,
   lockChat: false,
   setLockChat: (lockChat) => {
@@ -179,11 +181,19 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     let newChange = typeof change === "function" ? change(get().nodes) : change;
     let newEdges = cleanEdges(newChange, get().edges);
     const { inputs, outputs } = getInputsAndOutputs(newChange);
-
+    let outdatedNodes = false;
+    const templates = useTypesStore.getState().templates;
+    for (let i = 0; i < newChange.length; i++) {
+      const currentCode = templates[newChange[i].data?.type]?.template?.code?.value;
+      const thisNodesCode = newChange[i].data?.node!.template?.code?.value;
+      outdatedNodes = currentCode && thisNodesCode && currentCode!==thisNodesCode && !newChange[i].data?.node?.edited && !componentsToIgnoreUpdate.includes(newChange[i].data?.type)
+      if(outdatedNodes) break;
+    }
     set({
       edges: newEdges,
       nodes: newChange,
       flowState: undefined,
+      componentsToUpdate: outdatedNodes,
       inputs,
       outputs,
       hasIO: inputs.length > 0 || outputs.length > 0,
@@ -624,6 +634,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           .map((element) => element.id)
           .filter(Boolean) as string[];
         useFlowStore.getState().updateBuildStatus(idList, BuildStatus.BUILT);
+        setErrorData({title:"There are outdated components in the flow. The error may be related."})
         setErrorData({ list, title });
         get().setIsBuilding(false);
         get().setLockChat(false);

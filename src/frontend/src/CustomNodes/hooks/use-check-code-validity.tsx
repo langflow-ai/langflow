@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { NodeDataType } from "../../types/flow";
 import { nodeNames } from "../../utils/styleUtils";
+import { componentsToIgnoreUpdate } from "@/constants/constants";
 
 const useCheckCodeValidity = (
   data: NodeDataType,
@@ -16,13 +17,11 @@ const useCheckCodeValidity = (
     if (!data?.node || !templates) return;
     const currentCode = templates[data.type]?.template?.code?.value;
     const thisNodesCode = data.node!.template?.code?.value;
-    const componentsToIgnore = ["CustomComponent"];
     setIsOutdated(
       currentCode &&
         thisNodesCode &&
         currentCode !== thisNodesCode &&
-        !componentsToIgnore.includes(data.type) &&
-        Object.keys(nodeNames).includes(types[data.type]),
+        !componentsToIgnoreUpdate.includes(data.type)
     );
     setIsUserEdited(data.node?.edited ?? false);
     // template.code can be undefined

@@ -53,6 +53,7 @@ export type FlowPoolType = {
 };
 
 export type FlowStoreType = {
+  componentsToUpdate:boolean;
   onFlowPage: boolean;
   setOnFlowPage: (onFlowPage: boolean) => void;
   flowPool: FlowPoolType;
