@@ -10,7 +10,6 @@ if TYPE_CHECKING:
     from langflow.services.database.models.flow.model import Flow
 
 
-
 class VertexBuildBase(SQLModel):
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     id: str = Field(nullable=False)
@@ -42,6 +41,7 @@ class VertexBuildTable(VertexBuildBase, table=True):
 
 class VertexBuildMapModel(BaseModel):
     vertex_builds: dict[str, list[VertexBuildTable]]
+
     @classmethod
     def from_list_of_dicts(cls, vertex_build_dicts: list[VertexBuildTable]):
         vertex_build_map = {}

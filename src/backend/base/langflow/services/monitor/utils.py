@@ -1,16 +1,15 @@
 from contextlib import contextmanager
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, Optional, Type, Union
+from typing import TYPE_CHECKING, Any, Dict, Type, Union
 
 import duckdb
 from loguru import logger
 from pydantic import BaseModel
 
-from langflow.services.deps import get_monitor_service
 from langflow.utils.concurrency import KeyedWorkerLockManager
 
 if TYPE_CHECKING:
-    from langflow.api.v1.schemas import ResultDataResponse
+    pass
 
 
 INDEX_KEY = "index"

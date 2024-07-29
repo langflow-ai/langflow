@@ -1,14 +1,10 @@
-from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Union, List
+from typing import TYPE_CHECKING, List
 
-from loguru import logger
 from platformdirs import user_cache_dir
 
 from langflow.services.base import Service
 from langflow.services.monitor.utils import (
-    add_row_to_table,
-    drop_and_create_table_if_schema_mismatch,
     new_duckdb_locked_connection,
 )
 
@@ -20,10 +16,10 @@ class MonitorService(Service):
     """
     Deprecated. Still connecting to duckdb to migrate old installations.
     """
+
     name = "monitor_service"
 
     def __init__(self, settings_service: "SettingsService"):
-
         self.settings_service = settings_service
         self.base_cache_dir = Path(user_cache_dir("langflow"), ensure_exists=True)
         self.db_path = self.base_cache_dir / "monitor.duckdb"

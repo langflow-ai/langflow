@@ -388,14 +388,16 @@ class InterfaceVertex(ComponentVertex):
                 if isinstance(value, (AsyncIterator, Iterator)):
                     origin_vertex.results[key] = complete_message
 
-        asyncio.create_task(log_vertex_build(
-            flow_id=self.graph.flow_id,
-            vertex_id=self.id,
-            valid=True,
-            params=self._built_object_repr(),
-            data=self.result,
-            artifacts=self.artifacts,
-        ))
+        asyncio.create_task(
+            log_vertex_build(
+                flow_id=self.graph.flow_id,
+                vertex_id=self.id,
+                valid=True,
+                params=self._built_object_repr(),
+                data=self.result,
+                artifacts=self.artifacts,
+            )
+        )
 
         self._validate_built_object()
         self._built = True

@@ -5,7 +5,6 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 from sqlalchemy import delete
 
-from langflow.services.database.models.transactions.model import TransactionBase, TransactionTable
 from langflow.services.database.models.vertex_builds.model import VertexBuildBase, VertexBuildTable
 
 

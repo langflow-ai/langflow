@@ -10,10 +10,12 @@ from langflow.services.database.models.message.model import MessageRead, Message
 from langflow.services.database.models.transactions.crud import get_transactions_by_flow_id
 from langflow.services.database.models.transactions.model import TransactionReadResponse
 from langflow.services.database.models.user.model import User
-from langflow.services.database.models.vertex_builds.crud import get_vertex_builds_by_flow_id, \
-    delete_vertex_builds_by_flow_id
+from langflow.services.database.models.vertex_builds.crud import (
+    get_vertex_builds_by_flow_id,
+    delete_vertex_builds_by_flow_id,
+)
 from langflow.services.database.models.vertex_builds.model import VertexBuildMapModel
-from langflow.services.deps import get_monitor_service, get_session
+from langflow.services.deps import get_session
 from langflow.services.monitor.schema import MessageModelResponse
 
 router = APIRouter(prefix="/monitor", tags=["Monitor"])

@@ -5,18 +5,18 @@ Revises: 90be8e2ed91e
 Create Date: 2024-07-26 11:41:31.274271
 
 """
+
 from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
 import sqlmodel
-from sqlalchemy.engine.reflection import Inspector
 from langflow.utils import migration
 
 
 # revision identifiers, used by Alembic.
-revision: str = '0d60fcbd4e8e'
-down_revision: Union[str, None] = '90be8e2ed91e'
+revision: str = "0d60fcbd4e8e"
+down_revision: Union[str, None] = "90be8e2ed91e"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
