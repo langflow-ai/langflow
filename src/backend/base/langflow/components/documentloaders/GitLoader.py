@@ -42,7 +42,7 @@ class GitLoaderComponent(Component):
             required=False,
             advanced=True,
             info="A list of patterns to filter files. Example to include only .py files: '*.py'. "
-                 "Example to exclude .py files: '!*.py'. Multiple patterns can be separated by commas.",
+            "Example to exclude .py files: '!*.py'. Multiple patterns can be separated by commas.",
         ),
         MessageTextInput(
             name="content_filter",
@@ -64,22 +64,22 @@ class GitLoaderComponent(Component):
         This is necessary because when searches are performed using
         the content_filter, binary files need to be ignored.
         """
-        with open(file_path, 'rb') as file:
-            return b'\x00' in file.read(1024)
+        with open(file_path, "rb") as file:
+            return b"\x00" in file.read(1024)
 
     def build_gitloader(self) -> GitLoader:
-        file_filter_patterns = getattr(self, 'file_filter', None)
-        content_filter_pattern = getattr(self, 'content_filter', None)
+        file_filter_patterns = getattr(self, "file_filter", None)
+        content_filter_pattern = getattr(self, "content_filter", None)
 
         file_filters = []
         if file_filter_patterns:
-            patterns = [pattern.strip() for pattern in file_filter_patterns.split(',')]
+            patterns = [pattern.strip() for pattern in file_filter_patterns.split(",")]
 
             def file_filter(file_path: Path) -> bool:
-                if len(patterns) == 1 and patterns[0].startswith('!'):
+                if len(patterns) == 1 and patterns[0].startswith("!"):
                     return not file_path.match(patterns[0][1:])
-                included = any(file_path.match(pattern) for pattern in patterns if not pattern.startswith('!'))
-                excluded = any(file_path.match(pattern[1:]) for pattern in patterns if pattern.startswith('!'))
+                included = any(file_path.match(pattern) for pattern in patterns if not pattern.startswith("!"))
+                excluded = any(file_path.match(pattern[1:]) for pattern in patterns if pattern.startswith("!"))
                 return included and not excluded
 
             file_filters.append(file_filter)
@@ -88,7 +88,7 @@ class GitLoaderComponent(Component):
             content_regex = re.compile(content_filter_pattern)
 
             def content_filter(file_path: Path) -> bool:
-                with file_path.open('r', encoding='utf-8', errors='ignore') as file:
+                with file_path.open("r", encoding="utf-8", errors="ignore") as file:
                     content = file.read()
                     return bool(content_regex.search(content))
 
