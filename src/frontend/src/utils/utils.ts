@@ -473,6 +473,21 @@ export function isEndpointNameValid(name: string, maxLength: number): boolean {
   );
 }
 
+export function brokenEdgeMessage({
+  source,
+  target,
+}: {
+  source: {
+    nodeDisplayName: string;
+    outputDisplayName?: string;
+  };
+  target: {
+    displayName: string;
+    field: string;
+  };
+}) {
+  return `${source.nodeDisplayName}${source.outputDisplayName ? " | " + source.outputDisplayName : ""} -> ${target.displayName}${target.field ? " | " + target.field : ""}`;
+}
 export function FormatColumns(columns: ColumnField[]): ColDef<any>[] {
   if (!columns) return [];
   const basic_types = new Set(["date", "number"]);

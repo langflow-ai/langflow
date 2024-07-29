@@ -339,6 +339,13 @@ ifdef main
 	make publish_langflow
 endif
 
+patch: ## bump the version in langflow and langflow-base
+	@echo 'Patching the version'
+	@poetry version patch
+	@echo 'Patching the version in langflow-base'
+	@cd src/backend/base && poetry version patch
+	@make lock
+
 check_tools: ## check for required tools
 	@command -v poetry >/dev/null 2>&1 || { echo >&2 "Poetry is not installed. Aborting."; exit 1; }
 	@command -v npm >/dev/null 2>&1 || { echo >&2 "NPM is not installed. Aborting."; exit 1; }

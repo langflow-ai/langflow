@@ -985,16 +985,11 @@ export async function downloadImage({ flowId, fileName }): Promise<any> {
 
 export async function getFlowPool({
   flowId,
-  nodeId,
 }: {
   flowId: string;
-  nodeId?: string;
 }): Promise<AxiosResponse<{ vertex_builds: FlowPoolType }>> {
   const config = {};
   config["params"] = { flow_id: flowId };
-  if (nodeId) {
-    config["params"] = { nodeId };
-  }
   return await api.get(`${BASE_URL_API}monitor/builds`, config);
 }
 
@@ -1041,19 +1036,4 @@ export async function multipleDeleteFlowsComponents(
 
   // Return the responses after all requests are completed
   return Promise.all(responses);
-}
-
-export async function getTransactionTable(
-  id: string,
-  mode: "intersection" | "union",
-  params = {},
-): Promise<{ rows: Array<object>; columns: Array<ColDef | ColGroupDef> }> {
-  const config = {};
-  config["params"] = { flow_id: id };
-  if (params) {
-    config["params"] = { ...config["params"], ...params };
-  }
-  const rows = await api.get(`${BASE_URL_API}monitor/transactions`, config);
-  const columns = extractColumnsFromRows(rows.data, mode);
-  return { rows: rows.data, columns };
 }

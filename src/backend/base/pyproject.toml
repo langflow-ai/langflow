@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "langflow-base"
-version = "0.0.88"
+version = "0.0.90"
 description = "A Python package with a built-in web application"
 authors = ["Langflow <contact@langflow.org>"]
 maintainers = [
@@ -32,6 +32,7 @@ httpx = "*"
 uvicorn = "^0.30.0"
 gunicorn = "^22.0.0"
 langchain = "~0.2.0"
+langchain-core = "0.2.23"
 langchainhub = "~0.1.15"
 sqlmodel = "^0.0.18"
 loguru = "^0.7.1"
@@ -74,6 +75,7 @@ prometheus-client = "^0.20.0"
 aiofiles = "^24.1.0"
 setuptools = ">=70"
 nanoid = "^2.0.0"
+filelock = "^3.15.4"
 
 [tool.poetry.extras]
 deploy = ["celery", "redis", "flower"]

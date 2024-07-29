@@ -1,12 +1,14 @@
+import asyncio
 import importlib
 import inspect
 from typing import TYPE_CHECKING, Dict, Optional
 
 from loguru import logger
 
+from langflow.utils.concurrency import KeyedMemoryLockManager
+
 if TYPE_CHECKING:
     from langflow.services.base import Service
-
     from langflow.services.factory import ServiceFactory
     from langflow.services.schema import ServiceType
 
@@ -24,6 +26,7 @@ class ServiceManager:
         self.services: Dict[str, "Service"] = {}
         self.factories = {}
         self.register_factories()
+        self.keyed_lock = KeyedMemoryLockManager()
 
     def register_factories(self):
         for factory in self.get_factories():
@@ -49,8 +52,9 @@ class ServiceManager:
         Get (or create) a service by its name.
         """
 
-        if service_name not in self.services:
-            self._create_service(service_name, default)
+        with self.keyed_lock.lock(service_name):
+            if service_name not in self.services:
+                self._create_service(service_name, default)
 
         return self.services[service_name]
 
@@ -93,7 +97,7 @@ class ServiceManager:
             self.services.pop(service_name, None)
             self.get(service_name)
 
-    def teardown(self):
+    async def teardown(self):
         """
         Teardown all the services.
         """
@@ -102,7 +106,9 @@ class ServiceManager:
                 continue
             logger.debug(f"Teardown service {service.name}")
             try:
-                service.teardown()
+                result = service.teardown()
+                if asyncio.iscoroutine(result):
+                    await result
             except Exception as exc:
                 logger.exception(exc)
         self.services = {}

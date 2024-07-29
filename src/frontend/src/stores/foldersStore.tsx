@@ -1,10 +1,6 @@
 import { create } from "zustand";
 import { DEFAULT_FOLDER, STARTER_FOLDER_NAME } from "../constants/constants";
-import {
-  getFolderById,
-  getFolders,
-  uploadFlowsFromFolders,
-} from "../pages/MainPage/services";
+import { getFolderById, getFolders } from "../pages/MainPage/services";
 import { FoldersStoreType } from "../types/zustand/folders";
 import useFlowsManagerStore from "./flowsManagerStore";
 import { useTypesStore } from "./typesStore";
