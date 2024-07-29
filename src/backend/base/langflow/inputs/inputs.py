@@ -315,7 +315,7 @@ class DropdownInput(BaseInputMixin, DropDownMixin, MetadataTraceMixin):
 
     Attributes:
         field_type (Optional[SerializableFieldTypes]): The field type of the input. Defaults to FieldTypes.TEXT.
-        options (Optional[Union[list[str], Callable]]): List of options for the field. Only used when is_list=True.
+        options (Optional[Union[list[str], Callable]]): List of options for the field.
             Default is None.
     """
 

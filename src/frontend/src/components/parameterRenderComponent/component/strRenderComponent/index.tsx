@@ -70,7 +70,11 @@ export function StrRenderComponent({
       <MultiselectComponent
         editNode={editNode}
         disabled={disabled}
-        options={templateData.options || []}
+        options={
+          (Array.isArray(templateData.options)
+            ? templateData.options
+            : [templateData.options]) || []
+        }
         combobox={templateData.combobox}
         value={value || []}
         id={`multiselect_${id}`}
