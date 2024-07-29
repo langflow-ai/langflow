@@ -7,13 +7,12 @@ from langchain_core.messages import AIMessage, AIMessageChunk
 from loguru import logger
 
 from langflow.graph.schema import CHAT_COMPONENTS, RECORDS_COMPONENTS, InterfaceComponentTypes, ResultData
-from langflow.graph.utils import UnbuiltObject, serialize_field, log_transaction
+from langflow.graph.utils import UnbuiltObject, serialize_field, log_transaction, log_vertex_build
 from langflow.graph.vertex.base import Vertex
 from langflow.schema import Data
 from langflow.schema.artifact import ArtifactType
 from langflow.schema.message import Message
 from langflow.schema.schema import INPUT_FIELD_NAME
-from langflow.services.monitor.utils import log_vertex_build
 from langflow.template.field.base import UNDEFINED
 from langflow.utils.schemas import ChatOutputResponse, DataOutputResponse
 from langflow.utils.util import unescape_string
@@ -389,13 +388,15 @@ class InterfaceVertex(ComponentVertex):
                 if isinstance(value, (AsyncIterator, Iterator)):
                     origin_vertex.results[key] = complete_message
 
-        await log_vertex_build(
-            flow_id=self.graph.flow_id,
-            vertex_id=self.id,
-            valid=True,
-            params=self._built_object_repr(),
-            data=self.result,
-            artifacts=self.artifacts,
+        asyncio.create_task(
+            log_vertex_build(
+                flow_id=self.graph.flow_id,
+                vertex_id=self.id,
+                valid=True,
+                params=self._built_object_repr(),
+                data=self.result,
+                artifacts=self.artifacts,
+            )
         )
 
         self._validate_built_object()

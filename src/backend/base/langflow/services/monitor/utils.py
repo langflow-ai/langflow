@@ -1,16 +1,15 @@
 from contextlib import contextmanager
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, Optional, Type, Union
+from typing import TYPE_CHECKING, Any, Dict, Type, Union
 
 import duckdb
 from loguru import logger
 from pydantic import BaseModel
 
-from langflow.services.deps import get_monitor_service
 from langflow.utils.concurrency import KeyedWorkerLockManager
 
 if TYPE_CHECKING:
-    from langflow.api.v1.schemas import ResultDataResponse
+    pass
 
 
 INDEX_KEY = "index"
@@ -124,52 +123,3 @@ def add_row_to_table(
             logger.error(f"Error adding row to {table_name}: {column_error_message}")
         else:
             logger.error(f"Error adding row to {table_name}: {e}")
-
-
-async def log_message(
-    sender: str,
-    sender_name: str,
-    message: str,
-    session_id: str,
-    files: Optional[list] = None,
-    flow_id: Optional[str] = None,
-):
-    try:
-        monitor_service = get_monitor_service()
-        row = {
-            "sender": sender,
-            "sender_name": sender_name,
-            "message": message,
-            "files": files or [],
-            "session_id": session_id,
-            "timestamp": monitor_service.get_timestamp(),
-            "flow_id": flow_id,
-        }
-        monitor_service.add_row(table_name="messages", data=row)
-    except Exception as e:
-        logger.error(f"Error logging message: {e}")
-
-
-async def log_vertex_build(
-    flow_id: str,
-    vertex_id: str,
-    valid: bool,
-    params: Any,
-    data: "ResultDataResponse",
-    artifacts: Optional[dict] = None,
-):
-    try:
-        monitor_service = get_monitor_service()
-
-        row = {
-            "flow_id": flow_id,
-            "id": vertex_id,
-            "valid": valid,
-            "params": params,
-            "data": data.model_dump(),
-            "artifacts": artifacts or {},
-            "timestamp": monitor_service.get_timestamp(),
-        }
-        monitor_service.add_row(table_name="vertex_builds", data=row)
-    except Exception as e:
-        logger.exception(f"Error logging vertex build: {e}")
