@@ -851,7 +851,7 @@ class Graph:
 
     async def build_vertex(
         self,
-        chat_service: ChatService,
+        chat_service: Optional[ChatService],
         vertex_id: str,
         inputs_dict: Optional[Dict[str, str]] = None,
         files: Optional[list[str]] = None,
@@ -881,12 +881,13 @@ class Graph:
             params = ""
             if vertex.frozen:
                 # Check the cache for the vertex
-                cached_result = await chat_service.get_cache(key=vertex.id)
+                cached_result = await chat_service.get_cache(key=vertex.id) if chat_service else CacheMiss
                 if isinstance(cached_result, CacheMiss):
                     await vertex.build(
                         user_id=user_id, inputs=inputs_dict, fallback_to_env_vars=fallback_to_env_vars, files=files
                     )
-                    await chat_service.set_cache(key=vertex.id, data=vertex)
+                    if chat_service:
+                        await chat_service.set_cache(key=vertex.id, data=vertex)
                 else:
                     cached_vertex = cached_result["result"]
                     # Now set update the vertex with the cached vertex
@@ -903,7 +904,8 @@ class Graph:
                 await vertex.build(
                     user_id=user_id, inputs=inputs_dict, fallback_to_env_vars=fallback_to_env_vars, files=files
                 )
-                await chat_service.set_cache(key=vertex.id, data=vertex)
+                if chat_service:
+                    await chat_service.set_cache(key=vertex.id, data=vertex)
 
             if vertex.result is not None:
                 params = f"{vertex._built_object_repr()}{params}"

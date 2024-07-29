@@ -122,7 +122,7 @@ def format_elapsed_time(elapsed_time: float) -> str:
         return f"{minutes} {minutes_unit}, {seconds} {seconds_unit}"
 
 
-async def build_graph_from_db(flow_id: str, session: Session, chat_service: "ChatService"):
+async def build_graph_from_db_no_cache(flow_id: str, session: Session):
     """Build and cache the graph."""
     flow: Optional[Flow] = session.get(Flow, flow_id)
     if not flow or not flow.data:
@@ -139,6 +139,11 @@ async def build_graph_from_db(flow_id: str, session: Session, chat_service: "Cha
     graph.set_run_id(run_id)
     graph.set_run_name()
     await graph.initialize_run()
+
+    return graph
+
+async def build_graph_from_db(flow_id: str, session: Session, chat_service: "ChatService"):
+    graph = await build_graph_from_db_no_cache(flow_id, session)
     await chat_service.set_cache(flow_id, graph)
     return graph
 
