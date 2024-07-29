@@ -14,6 +14,12 @@ from pydantic import BeforeValidator, ConfigDict, Field, field_serializer, field
 from langflow.base.prompts.utils import dict_values_to_string
 from langflow.schema.data import Data
 from langflow.schema.image import Image, get_file_paths, is_image_file
+from langflow.utils.constants import (
+    MESSAGE_SENDER_USER,
+    MESSAGE_SENDER_NAME_USER,
+    MESSAGE_SENDER_NAME_AI,
+    MESSAGE_SENDER_AI,
+)
 
 
 def _timestamp_to_str(timestamp: datetime) -> str:
@@ -30,7 +36,7 @@ class Message(Data):
     files: Optional[list[str | Image]] = Field(default=[])
     session_id: Optional[str] = Field(default="")
     timestamp: Annotated[str, BeforeValidator(_timestamp_to_str)] = Field(
-        default=datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+        default_factory=lambda: datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
     )
     flow_id: Optional[str | UUID] = None
 
@@ -91,7 +97,7 @@ class Message(Data):
         else:
             text = self.text
 
-        if self.sender == "User" or not self.sender:
+        if self.sender == MESSAGE_SENDER_USER or not self.sender:
             if self.files:
                 contents = [{"type": "text", "text": text}]
                 contents.extend(self.get_file_content_dicts())
@@ -105,15 +111,19 @@ class Message(Data):
     @classmethod
     def from_lc_message(cls, lc_message: BaseMessage) -> "Message":
         if lc_message.type == "human":
-            sender = "User"
+            sender = MESSAGE_SENDER_USER
+            sender_name = MESSAGE_SENDER_NAME_USER
         elif lc_message.type == "ai":
-            sender = "Machine"
+            sender = MESSAGE_SENDER_AI
+            sender_name = MESSAGE_SENDER_NAME_AI
         elif lc_message.type == "system":
             sender = "System"
+            sender_name = "System"
         else:
             sender = lc_message.type
+            sender_name = lc_message.type
 
-        return cls(text=lc_message.content, sender=sender, sender_name=sender)
+        return cls(text=lc_message.content, sender=sender, sender_name=sender_name)
 
     @classmethod
     def from_data(cls, data: "Data") -> "Message":
