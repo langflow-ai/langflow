@@ -1,8 +1,10 @@
-from typing import List, Optional, Callable
+from pathlib import Path
+from typing import List
+import re
 
 from langchain_community.document_loaders.git import GitLoader
 from langflow.custom import Component
-from langflow.io import StrInput, Output
+from langflow.io import MessageTextInput, Output
 from langflow.schema import Data
 
 
@@ -15,33 +17,39 @@ class GitLoaderComponent(Component):
     name = "GitLoader"
 
     inputs = [
-        StrInput(
+        MessageTextInput(
             name="repo_path",
             display_name="Repository Path",
             required=True,
             info="The local path to the Git repository.",
         ),
-        StrInput(
+        MessageTextInput(
             name="clone_url",
             display_name="Clone URL",
             required=False,
             info="The URL to clone the Git repository from.",
         ),
-        StrInput(
+        MessageTextInput(
             name="branch",
             display_name="Branch",
             required=False,
             value="main",
             info="The branch to load files from. Defaults to 'main'.",
         ),
-        StrInput(
+        MessageTextInput(
             name="file_filter",
             display_name="File Filter",
             required=False,
             advanced=True,
-            info="A function that takes a file path and returns a boolean indicating whether to load the file. "
-            "Example to include only .py files: lambda file_path: file_path.endswith('.py'). "
-            "Example to exclude .py files: lambda file_path: not file_path.endswith('.py').",
+            info="A list of patterns to filter files. Example to include only .py files: '*.py'. "
+                 "Example to exclude .py files: '!*.py'. Multiple patterns can be separated by commas.",
+        ),
+        MessageTextInput(
+            name="content_filter",
+            display_name="Content Filter",
+            required=False,
+            advanced=True,
+            info="A regex pattern to filter files based on their content.",
         ),
     ]
 
@@ -49,24 +57,60 @@ class GitLoaderComponent(Component):
         Output(name="data", display_name="Data", method="load_documents"),
     ]
 
+    @staticmethod
+    def is_binary(file_path: str) -> bool:
+        """
+        Check if a file is binary by looking for null bytes.
+        This is necessary because when searches are performed using
+        the content_filter, binary files need to be ignored.
+        """
+        with open(file_path, 'rb') as file:
+            return b'\x00' in file.read(1024)
+
     def build_gitloader(self) -> GitLoader:
-        file_filter: Optional[Callable[[str], bool]] = None
-        if self.file_filter and isinstance(self.file_filter, str):
-            file_filter = eval(self.file_filter)
-            if not callable(file_filter):
-                file_filter = None
+        file_filter_patterns = getattr(self, 'file_filter', None)
+        content_filter_pattern = getattr(self, 'content_filter', None)
+
+        file_filters = []
+        if file_filter_patterns:
+            patterns = [pattern.strip() for pattern in file_filter_patterns.split(',')]
+
+            def file_filter(file_path: Path) -> bool:
+                if len(patterns) == 1 and patterns[0].startswith('!'):
+                    return not file_path.match(patterns[0][1:])
+                included = any(file_path.match(pattern) for pattern in patterns if not pattern.startswith('!'))
+                excluded = any(file_path.match(pattern[1:]) for pattern in patterns if pattern.startswith('!'))
+                return included and not excluded
+
+            file_filters.append(file_filter)
+
+        if content_filter_pattern:
+            content_regex = re.compile(content_filter_pattern)
+
+            def content_filter(file_path: Path) -> bool:
+                with file_path.open('r', encoding='utf-8', errors='ignore') as file:
+                    content = file.read()
+                    return bool(content_regex.search(content))
+
+            file_filters.append(content_filter)
+
+        def combined_filter(file_path: str) -> bool:
+            path = Path(file_path)
+            if self.is_binary(file_path):
+                return False
+            return all(f(path) for f in file_filters)
 
         loader = GitLoader(
             repo_path=self.repo_path,
             clone_url=self.clone_url,
             branch=self.branch,
-            file_filter=file_filter,
+            file_filter=combined_filter,
         )
         return loader
 
     def load_documents(self) -> List[Data]:
         gitloader = self.build_gitloader()
-        documents = gitloader.lazy_load()
+        documents = list(gitloader.lazy_load())
         data = [Data.from_document(doc) for doc in documents]
         self.status = data
         return data
