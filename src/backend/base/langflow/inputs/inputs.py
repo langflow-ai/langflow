@@ -342,6 +342,17 @@ class MultiselectInput(BaseInputMixin, ListableInputMixin, DropDownMixin, Metada
     is_list: bool = Field(default=True, serialization_alias="list")
     combobox: CoalesceBool = False
 
+    @field_validator("value")
+    @classmethod
+    def validate_value(cls, v: Any, _info):
+        # Check if value is a list of dicts
+        if not isinstance(v, list):
+            raise ValueError(f"MultiselectInput value must be a list. Value: '{v}'")
+        for item in v:
+            if not isinstance(item, str):
+                raise ValueError(f"MultiselectInput value must be a list of strings. Item: '{item}' is not a string")
+        return v
+
 
 class FileInput(BaseInputMixin, ListableInputMixin, FileMixin, MetadataTraceMixin):
     """
