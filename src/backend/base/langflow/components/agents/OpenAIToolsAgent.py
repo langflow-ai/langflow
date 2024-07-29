@@ -4,9 +4,9 @@ from langchain.agents import create_openai_tools_agent
 from langchain_core.prompts import ChatPromptTemplate, PromptTemplate, HumanMessagePromptTemplate
 
 from langflow.base.agents.agent import LCToolsAgentComponent
-from langflow.field_typing import Data
 from langflow.inputs import MultilineInput
 from langflow.inputs.inputs import HandleInput, DataInput
+from langflow.schema import Data
 
 
 class OpenAIToolsAgentComponent(LCToolsAgentComponent):

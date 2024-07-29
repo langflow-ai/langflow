@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import List, Union, cast, Optional
+from typing import List, Optional, Union, cast
 
 from langchain.agents import AgentExecutor, BaseMultiActionAgent, BaseSingleActionAgent
 from langchain.agents.agent import RunnableAgent
@@ -9,9 +9,10 @@ from langchain_core.runnables import Runnable
 from langflow.base.agents.callback import AgentAsyncHandler
 from langflow.base.agents.utils import data_to_messages
 from langflow.custom import Component
-from langflow.field_typing import Text, Data
+from langflow.field_typing import Text
 from langflow.inputs.inputs import InputTypes
 from langflow.io import BoolInput, HandleInput, IntInput, MessageTextInput
+from langflow.schema import Data
 from langflow.schema.message import Message
 from langflow.template import Output
 from langflow.utils.constants import MESSAGE_SENDER_AI
