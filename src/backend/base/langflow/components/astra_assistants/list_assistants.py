@@ -1,4 +1,5 @@
 from astra_assistants import patch  # type: ignore
+from base.langflow.template.field.base import Output
 from langflow.custom import Component
 from openai import OpenAI
 from langflow.schema.message import Message
