@@ -1,10 +1,8 @@
-from typing import Union
+from typing import Sequence, Any
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.inputs import SecretStrInput, MessageTextInput, DropdownInput, StrInput
-from langflow.schema import Data
 from langchain_core.tools import StructuredTool
 from composio_langchain import ComposioToolSet, App, Action
-import typing as t
 
 
 class ComposioAPIComponent(LCToolComponent):
@@ -48,16 +46,36 @@ class ComposioAPIComponent(LCToolComponent):
         ),
     ]
 
-    def check_for_authorization(self, app):
+    def check_for_authorization(self, app: str) -> str:
+        """
+        Checks if the app is authorized.
+
+        Args:
+            app (str): The app name to check authorization for.
+
+        Returns:
+            str: The authorization status.
+        """
         toolset = self._build_wrapper()
         entity = toolset.client.get_entity(id=self.entity_id)
         try:
             entity.get_connection(app=app)
-            return app + " CONNECTED"
+            return f"{app} CONNECTED"
         except Exception:
             return self.handle_authorization_failure(toolset, entity, app)
 
-    def handle_authorization_failure(self, toolset, entity, app):
+    def handle_authorization_failure(self, toolset: ComposioToolSet, entity: Any, app: str) -> str:
+        """
+        Handles the authorization failure by attempting to process API key auth or initiate default connection.
+
+        Args:
+            toolset (ComposioToolSet): The toolset instance.
+            entity (Any): The entity instance.
+            app (str): The app name.
+
+        Returns:
+            str: The result of the authorization failure message.
+        """
         try:
             auth_schemes = toolset.client.apps.get(app).auth_schemes
             if auth_schemes[0].auth_mode == "API_KEY":
@@ -68,16 +86,26 @@ class ComposioAPIComponent(LCToolComponent):
             print(e)
             return "Error"
 
-    def process_api_key_auth(self, entity, app):
+    def process_api_key_auth(self, entity: Any, app: str) -> str:
+        """
+        Processes the API key authentication.
+
+        Args:
+            entity (Any): The entity instance.
+            app (str): The app name.
+
+        Returns:
+            str: The status of the API key authentication.
+        """
         auth_status_config = self.auth_status_config
         is_url = "http" in auth_status_config or "https" in auth_status_config
         is_different_app = "CONNECTED" in auth_status_config and app not in auth_status_config
-        is_api_key_message = "API Key" in auth_status_config
+        is_default_api_key_message = "API Key" in auth_status_config
 
-        if is_different_app or is_url or is_api_key_message:
+        if is_different_app or is_url or is_default_api_key_message:
             return "Enter API Key"
         else:
-            if not is_api_key_message:
+            if not is_default_api_key_message:
                 entity.initiate_connection(
                     app_name=app,
                     auth_mode="API_KEY",
@@ -85,62 +113,56 @@ class ComposioAPIComponent(LCToolComponent):
                     use_composio_auth=False,
                     force_new_integration=True,
                 )
-                return app + " CONNECTED"
+                return f"{app} CONNECTED"
             else:
                 return "Enter API Key"
 
-    def initiate_default_connection(self, entity, app):
+    def initiate_default_connection(self, entity: Any, app: str) -> str:
         connection = entity.initiate_connection(app_name=app, use_composio_auth=True, force_new_integration=True)
         return connection.redirectUrl
 
-    def get_connected_app_names(self):
+    def get_connected_app_names_for_entity(self) -> list[str]:
         toolset = self._build_wrapper()
         connections = toolset.client.get_entity(id=self.entity_id).get_connections()
         return list(set(connection.appUniqueId for connection in connections))
 
-    def update_app_names(self, build_config: dict):
-        connected_app_names = self.get_connected_app_names()
+    def update_app_names_with_connected_status(self, build_config: dict) -> dict:
+        connected_app_names = self.get_connected_app_names_for_entity()
 
         app_names = [
-            app_name + "_CONNECTED" for app_name in App.__annotations__ if app_name.lower() in connected_app_names
+            f"{app_name}_CONNECTED" for app_name in App.__annotations__ if app_name.lower() in connected_app_names
         ]
         non_connected_app_names = [
             app_name for app_name in App.__annotations__ if app_name.lower() not in connected_app_names
         ]
         build_config["app_names"]["options"] = app_names + non_connected_app_names
-        build_config["app_names"]["value"] = app_names[0]
+        build_config["app_names"]["value"] = app_names[0] if app_names else ""
         return build_config
 
-    def get_app_name(self):
-        app_name = self.app_names
-        return app_name.replace("_CONNECTED", "").replace("_connected", "")
+    def get_normalized_app_name(self) -> str:
+        return self.app_names.replace("_CONNECTED", "").replace("_connected", "")
 
-    def update_build_config(self, build_config: dict, field_value: t.Any, field_name: str | None = None):
+    def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:
         if field_name == "api_key":
-            build_config = self.update_app_names(build_config)
+            build_config = self.update_app_names_with_connected_status(build_config)
+            return build_config
 
-        if field_name == "app_names" or field_name == "auth_status_config" or field_name == "api_key":
-            build_config["auth_status_config"]["value"] = self.check_for_authorization(self.get_app_name())
+        if field_name in {"app_names", "auth_status_config"}:
+            build_config["auth_status_config"]["value"] = self.check_for_authorization(self.get_normalized_app_name())
+
             all_action_names = [action_name for action_name in Action.__annotations__]
-            app_action_names = []
-            for action_name in all_action_names:
-                if action_name.lower().startswith(self.get_app_name().lower() + "_"):
-                    app_action_names.append(action_name)
+            app_action_names = [
+                action_name
+                for action_name in all_action_names
+                if action_name.lower().startswith(self.get_normalized_app_name().lower() + "_")
+            ]
             build_config["action_names"]["options"] = app_action_names
         return build_config
 
-    def run_model(self) -> Union[Data, list[Data]]:
-        wrapper = self._build_wrapper()
-        results = wrapper.results(query=self.input_value, **(self.search_params or {}))
-        list_results = results.get("organic_results", [])
-        data = [Data(data=result, text=result["snippet"]) for result in list_results]
-        self.status = data
-        return data
-
-    def build_tool(self) -> t.Sequence[StructuredTool]:
+    def build_tool(self) -> Sequence[StructuredTool]:
         composio_toolset = self._build_wrapper()
         composio_tools = composio_toolset.get_actions(actions=[self.action_names], entity_id=self.entity_id)
         return composio_tools[0]
 
-    def _build_wrapper(self):
+    def _build_wrapper(self) -> ComposioToolSet:
         return ComposioToolSet(api_key=self.api_key)
