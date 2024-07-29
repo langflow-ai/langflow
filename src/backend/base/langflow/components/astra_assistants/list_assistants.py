@@ -1,12 +1,12 @@
 from astra_assistants import patch  # type: ignore
-from langflow.template.field.base import Output
-from langflow.custom import Component
 from openai import OpenAI
+
+from langflow.custom import Component
 from langflow.schema.message import Message
+from langflow.template.field.base import Output
 
 
 class AssistantsListAssistants(Component):
-    client = patch(OpenAI())
     display_name = "List Assistants"
     description = "Returns a list of assistant id's"
 
@@ -15,6 +15,7 @@ class AssistantsListAssistants(Component):
     ]
 
     def process_inputs(self) -> Message:
+        patch(OpenAI())
         assistants = self.client.beta.assistants.list()
         id_list = [assistant.id for assistant in assistants]
         message = Message(
