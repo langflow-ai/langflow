@@ -1,3 +1,4 @@
+import FeatureFlags from "@/../feature-config.json";
 import { Transition } from "@headlessui/react";
 import { useMemo, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
@@ -11,7 +12,6 @@ import { useStoreStore } from "../../stores/storeStore";
 import { classNames, isThereModal } from "../../utils/utils";
 import ForwardedIconComponent from "../genericIconComponent";
 import { Separator } from "../ui/separator";
-import FeatureFlags from "@/../feature-config.json";
 
 export default function FlowToolbar(): JSX.Element {
   const preventDefault = true;

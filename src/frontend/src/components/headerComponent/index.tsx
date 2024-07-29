@@ -11,6 +11,7 @@ import {
 } from "../../constants/constants";
 import { AuthContext } from "../../contexts/authContext";
 
+import FeatureFlags from "@/../feature-config.json";
 import useAuthStore from "@/stores/authStore";
 import useAlertStore from "../../stores/alertStore";
 import { useDarkStore } from "../../stores/darkStore";
@@ -30,7 +31,6 @@ import {
 } from "../ui/dropdown-menu";
 import { Separator } from "../ui/separator";
 import MenuBar from "./components/menuBar";
-import FeatureFlags from "@/../feature-config.json";
 
 export default function Header(): JSX.Element {
   const notificationCenter = useAlertStore((state) => state.notificationCenter);
@@ -176,9 +176,15 @@ export default function Header(): JSX.Element {
               }}
             >
               {dark ? (
-                <IconComponent name="SunIcon" className="side-bar-button-size" />
+                <IconComponent
+                  name="SunIcon"
+                  className="side-bar-button-size"
+                />
               ) : (
-                <IconComponent name="MoonIcon" className="side-bar-button-size" />
+                <IconComponent
+                  name="MoonIcon"
+                  className="side-bar-button-size"
+                />
               )}
             </button>
           )}
