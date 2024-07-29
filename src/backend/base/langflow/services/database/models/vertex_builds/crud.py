@@ -32,5 +32,5 @@ def log_vertex_build(db: Session, vertex_build: VertexBuildBase) -> VertexBuildT
 
 
 def delete_vertex_builds_by_flow_id(db: Session, flow_id: UUID) -> None:
-    delete(VertexBuildTable).where(col(VertexBuildTable.flow_id == flow_id))
+    delete(VertexBuildTable).where(VertexBuildTable.flow.has(id=flow_id))  # type: ignore
     db.commit()
