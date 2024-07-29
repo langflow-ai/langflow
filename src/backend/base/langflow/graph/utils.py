@@ -131,7 +131,6 @@ def _vertex_to_primitive_dict(target: "Vertex") -> dict:
 async def log_transaction(
     flow_id: Union[str, UUID], source: "Vertex", status, target: Optional["Vertex"] = None, error=None
 ) -> None:
-
     try:
         if not get_settings_service().settings.transactions_storage_enabled:
             return

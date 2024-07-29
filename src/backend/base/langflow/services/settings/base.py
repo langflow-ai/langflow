@@ -144,7 +144,6 @@ class Settings(BaseSettings):
     vertex_builds_storage_enabled: bool = True
     """If set to True, Langflow will keep track of each vertex builds (outputs) in the UI for any flow."""
 
-
     @field_validator("user_agent", mode="after")
     @classmethod
     def set_user_agent(cls, value):
