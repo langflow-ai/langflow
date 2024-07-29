@@ -1,6 +1,6 @@
 from typing import Sequence, Any
 from langflow.base.langchain_utilities.model import LCToolComponent
-from langflow.inputs import SecretStrInput, MessageTextInput, DropdownInput, StrInput
+from langflow.inputs import SecretStrInput, MessageTextInput, DropdownInput, StrInput, MultiselectInput
 from langchain_core.tools import StructuredTool
 from composio_langchain import ComposioToolSet, App, Action
 
@@ -26,16 +26,16 @@ class ComposioAPIComponent(LCToolComponent):
             display_name="App Name",
             options=[app_name for app_name in App.__annotations__],
             value="",
-            info="The app name to use",
+            info="The app name to use. Please refresh after selecting app name",
             refresh_button=True,
         ),
-        DropdownInput(
+        MultiselectInput(
             name="action_names",
-            display_name="Action to use",
+            display_name="Actions to use",
             required=False,
-            options=[""],
-            value="",
-            info="The action name to use",
+            options=[],
+            value=[],
+            info="The actions to pass to agent to execute",
         ),
         StrInput(
             name="auth_status_config",
@@ -157,12 +157,13 @@ class ComposioAPIComponent(LCToolComponent):
                 if action_name.lower().startswith(self.get_normalized_app_name().lower() + "_")
             ]
             build_config["action_names"]["options"] = app_action_names
+            build_config["action_names"]["value"] = [app_action_names[0]] if app_action_names else [""]
         return build_config
 
     def build_tool(self) -> Sequence[StructuredTool]:
         composio_toolset = self._build_wrapper()
-        composio_tools = composio_toolset.get_actions(actions=[self.action_names], entity_id=self.entity_id)
-        return composio_tools[0]
+        composio_tools = composio_toolset.get_actions(actions=self.action_names)
+        return composio_tools
 
     def _build_wrapper(self) -> ComposioToolSet:
         return ComposioToolSet(api_key=self.api_key)
