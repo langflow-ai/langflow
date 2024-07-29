@@ -8,6 +8,7 @@ export function RefreshParameterComponent({
   templateData,
   disabled,
   nodeClass,
+  editNode,
   handleNodeClass,
   nodeId,
   name,
@@ -29,12 +30,13 @@ export function RefreshParameterComponent({
     );
   return (
     <div className="flex w-full items-center gap-2">
-      <div className="w-full">{children}</div>
+      {children}
       {templateData.refresh_button && (
-        <div className="w-1/6">
+        <div className="shrink-0 flex-col">
           <RefreshButton
             isLoading={postTemplateValue.isPending}
             disabled={disabled}
+            editNode={editNode}
             button_text={templateData.refresh_button_text}
             handleUpdateValues={handleRefreshButtonPress}
             id={"refresh-button-" + name}

@@ -49,6 +49,7 @@ export function ParameterRenderComponent({
       templateData={templateData}
       disabled={disabled}
       nodeId={nodeId}
+      editNode={editNode}
       nodeClass={nodeClass}
       handleNodeClass={handleNodeClass}
       name={name}
