@@ -47,5 +47,5 @@ class LangSmithPromptComponent(PromptComponent):
 
         # Set the status to the messages
         self.status = str(messages)
-        
+
         return messages
