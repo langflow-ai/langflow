@@ -3,7 +3,7 @@ import { InputFieldType } from "@/types/api";
 import Dropdown from "../../../dropdownComponent";
 import InputGlobalComponent from "../../../inputGlobalComponent";
 import InputListComponent from "../../../inputListComponent";
-import { Multiselect } from "../../../multiselectComponent";
+import MultiselectComponent from "../../../multiselectComponent";
 import TextAreaComponent from "../../../textAreaComponent";
 
 export function StrRenderComponent({
@@ -58,13 +58,13 @@ export function StrRenderComponent({
 
   if (!!templateData.options && !!templateData?.list) {
     return (
-      <Multiselect
+      <MultiselectComponent
         editNode={editNode}
         disabled={disabled}
         options={templateData.options || []}
-        values={[value ?? "Choose an option"]}
+        value={value ?? "Choose an option"}
         id={`multiselect_${id}`}
-        onValueChange={onChange}
+        onSelect={onChange}
       />
     );
   }
