@@ -8,13 +8,11 @@ import zipfile
 
 from fastapi.responses import StreamingResponse
 from langflow.services.database.models.transactions.crud import get_transactions_by_flow_id
-from langflow.services.database.models.vertex_builds.crud import delete_vertex_builds_by_flow_id, get_vertex_builds_by_flow_id
-from langflow.services.database.models.vertex_builds.model import VertexBuildTable
+from langflow.services.database.models.vertex_builds.crud import get_vertex_builds_by_flow_id
 import orjson
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.encoders import jsonable_encoder
 from loguru import logger
-from sqlalchemy import Transaction
 from sqlmodel import Session, and_, col, select
 
 from langflow.api.utils import remove_api_keys, validate_is_component
@@ -340,8 +338,7 @@ async def delete_multiple_flows(
     try:
         flows_to_delete = db.exec(select(Flow).where(col(Flow.id).in_(flow_ids)).where(Flow.user_id == user.id)).all()
         for flow in flows_to_delete:
-
-            transactions_to_delete =  get_transactions_by_flow_id(db, flow.id)
+            transactions_to_delete = get_transactions_by_flow_id(db, flow.id)
             for transaction in transactions_to_delete:
                 db.delete(transaction)
 
