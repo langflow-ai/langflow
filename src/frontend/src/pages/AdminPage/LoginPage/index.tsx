@@ -39,7 +39,6 @@ export default function LoginAdminPage() {
 
     mutate(user, {
       onSuccess: (data) => {
-        console.log("admin page");
         setLoading(true);
         login(data.access_token, "login");
         navigate("/admin/");
