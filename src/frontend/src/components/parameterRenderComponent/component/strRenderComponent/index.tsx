@@ -62,6 +62,7 @@ export function StrRenderComponent({
         editNode={editNode}
         disabled={disabled}
         options={templateData.options || []}
+        combobox={templateData.combobox}
         value={value || []}
         id={`multiselect_${id}`}
         onSelect={onChange}

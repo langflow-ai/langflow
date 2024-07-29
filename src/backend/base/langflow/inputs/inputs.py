@@ -11,7 +11,6 @@ from .input_mixin import (
     BaseInputMixin,
     DatabaseLoadMixin,
     DropDownMixin,
-    ComboboxMixin,
     FieldTypes,
     FileMixin,
     InputTraceMixin,
@@ -293,7 +292,7 @@ class DictInput(BaseInputMixin, ListableInputMixin, InputTraceMixin):
     value: Optional[dict] = {}
 
 
-class DropdownInput(BaseInputMixin, DropDownMixin, MetadataTraceMixin, ComboboxMixin):
+class DropdownInput(BaseInputMixin, DropDownMixin, MetadataTraceMixin):
     """
     Represents a dropdown input field.
 
@@ -327,6 +326,7 @@ class MultiselectInput(BaseInputMixin, ListableInputMixin, DropDownMixin, Metada
     field_type: Optional[SerializableFieldTypes] = FieldTypes.TEXT
     options: list[str] = Field(default_factory=list)
     is_list: bool = Field(default=True, serialization_alias="list")
+    combobox: CoalesceBool = False
 
 
 class FileInput(BaseInputMixin, ListableInputMixin, FileMixin, MetadataTraceMixin):
