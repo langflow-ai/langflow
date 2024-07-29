@@ -102,7 +102,7 @@ test("PromptTemplateComponent", async ({ page }) => {
   await page.getByTestId("edit-button-modal").click();
 
   value =
-    (await page.locator('//*[@id="textarea_str_edit_prompt"]').textContent()) ??
+    (await page.locator('//*[@id="textarea_str_edit_prompt"]').inputValue()) ??
     "";
 
   if (value != "prompt_value_!@#!@#") {
@@ -110,9 +110,8 @@ test("PromptTemplateComponent", async ({ page }) => {
   }
 
   value =
-    (await page
-      .locator('//*[@id="textarea_str_edit_prompt1"]')
-      .textContent()) ?? "";
+    (await page.locator('//*[@id="textarea_str_edit_prompt1"]').inputValue()) ??
+    "";
 
   if (value != "prompt_name_test_123123!@#!@#") {
     expect(false).toBeTruthy();
@@ -126,14 +125,14 @@ test("PromptTemplateComponent", async ({ page }) => {
     expect(false).toBeTruthy();
   }
 
-  await page.locator('//*[@id="textarea_str_edit_prompt1"]').click();
+  await page.getByTestId("textarea_str_edit_prompt1-ExternalLink").click();
   await page
     .getByTestId("text-area-modal")
     .fill("prompt_edit_test_12312312321!@#$");
 
   await page.getByText("Finish Editing", { exact: true }).click();
 
-  await page.locator('//*[@id="textarea_str_edit_prompt"]').click();
+  await page.getByTestId("textarea_str_edit_prompt-ExternalLink").click();
   await page
     .getByTestId("text-area-modal")
     .fill("prompt_edit_test_44444444444!@#$");
@@ -186,7 +185,7 @@ test("PromptTemplateComponent", async ({ page }) => {
   expect(await page.locator('//*[@id="showprompt1"]').isChecked()).toBeTruthy();
 
   value =
-    (await page.locator('//*[@id="textarea_str_edit_prompt"]').textContent()) ??
+    (await page.locator('//*[@id="textarea_str_edit_prompt"]').inputValue()) ??
     "";
 
   if (value != "prompt_edit_test_44444444444!@#$") {
@@ -194,9 +193,8 @@ test("PromptTemplateComponent", async ({ page }) => {
   }
 
   value =
-    (await page
-      .locator('//*[@id="textarea_str_edit_prompt1"]')
-      .textContent()) ?? "";
+    (await page.locator('//*[@id="textarea_str_edit_prompt1"]').inputValue()) ??
+    "";
 
   if (value != "prompt_edit_test_12312312321!@#$") {
     expect(false).toBeTruthy();
