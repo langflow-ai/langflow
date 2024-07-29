@@ -10,7 +10,7 @@ from langflow.base.agents.callback import AgentAsyncHandler
 from langflow.base.agents.utils import data_to_messages
 from langflow.custom import Component
 from langflow.field_typing import Text, Data
-from langflow.inputs.inputs import DataInput, InputTypes
+from langflow.inputs.inputs import InputTypes
 from langflow.io import BoolInput, HandleInput, IntInput, MessageTextInput
 from langflow.schema.message import Message
 from langflow.template import Output
@@ -38,7 +38,7 @@ class LCAgentComponent(Component):
             display_name="Max Iterations",
             value=15,
             advanced=True,
-        )
+        ),
     ]
 
     outputs = [
