@@ -3,16 +3,7 @@ import json
 from typing import Any
 
 from langchain.agents import Tool
-from langflow.inputs.inputs import (
-    MultilineInput,
-    MessageTextInput,
-    BoolInput,
-    DropdownInput,
-    IntInput,
-    FloatInput,
-    HandleInput,
-    FieldTypes,
-)
+from langflow.inputs.inputs import MultilineInput, MessageTextInput, BoolInput, DropdownInput, IntInput, FloatInput, HandleInput, FieldTypes
 from langchain_core.tools import StructuredTool
 from langflow.io import Output
 
@@ -20,23 +11,12 @@ from langflow.custom import Component
 from langflow.schema.dotdict import dotdict
 from langflow.schema import Data
 
-from langchain_core.pydantic_v1 import BaseModel, Field
-from pydantic.v1.fields import ModelField
+from pydantic.v1 import Field, create_model
+from pydantic.v1.fields import Undefined
 
 
 class PythonCodeStructuredTool(Component):
-    DEFAULT_KEYS = [
-        "code",
-        "_type",
-        "text_key",
-        "tool_code",
-        "tool_name",
-        "tool_description",
-        "return_direct",
-        "tool_function",
-        "global_variables",
-        "_functions",
-    ]
+    DEFAULT_KEYS = ["code", "_type", "text_key", "tool_code", "tool_name", "tool_description", "return_direct", "tool_function", "global_variables", "_functions"]
     AVAILABLE_TYPES = {
         "str": {"annotation": str, "field": MessageTextInput},
         "int": {"annotation": int, "field": IntInput},
@@ -44,12 +24,11 @@ class PythonCodeStructuredTool(Component):
         "bool": {"annotation": bool, "field": BoolInput},
         "NoneType": {"annotation": None},
     }
-    display_name = "PythonCodeTool"
+    display_name = "Python Code Tool"
     description = "structuredtool dataclass code to tool"
     documentation = "https://python.langchain.com/docs/modules/tools/custom_tools/#structuredtool-dataclass"
     name = "PythonCodeStructuredTool"
     icon = "🐍"
-    field_order = ["name", "description", "tool_code", "return_direct", "tool_function"]
 
     inputs = [
         MultilineInput(
@@ -58,21 +37,12 @@ class PythonCodeStructuredTool(Component):
             info="Enter the dataclass code.",
             placeholder="def my_function(args):\n    pass",
             required=True,
-            # real_time_refresh=True,
+            real_time_refresh=True,
             refresh_button=True,
         ),
         MessageTextInput(name="tool_name", display_name="Tool Name", info="Enter the name of the tool.", required=True),
-        MessageTextInput(
-            name="tool_description",
-            display_name="Description",
-            info="Enter the description of the tool.",
-            required=True,
-        ),
-        BoolInput(
-            name="return_direct",
-            display_name="Return Directly",
-            info="Should the tool return the function output directly?",
-        ),
+        MessageTextInput(name="tool_description", display_name="Description", info="Enter the description of the tool.", required=True),
+        BoolInput(name="return_direct", display_name="Return Directly", info="Should the tool return the function output directly?"),
         DropdownInput(
             name="tool_function",
             display_name="Tool Function",
@@ -92,7 +62,7 @@ class PythonCodeStructuredTool(Component):
         ),
         MessageTextInput(name="_functions", display_name="Functions", advanced=True),
     ]
-
+    
     outputs = [
         Output(display_name="Tool", name="result_tool", method="build_tool"),
     ]
@@ -142,7 +112,7 @@ class PythonCodeStructuredTool(Component):
             self.status = f"Failed to extract names: {str(e)}"
             build_config["tool_function"]["options"] = ["Failed to parse", str(e)]
         return build_config
-
+    
     async def build_tool(self) -> Tool:
         local_namespace = {}  # type: ignore
         tool_code = f"from langchain_core.pydantic_v1 import BaseModel, Field\n{self.tool_code}"
@@ -153,29 +123,23 @@ class PythonCodeStructuredTool(Component):
         for from_module in modules["from_imports"]:
             for alias in from_module.names:
                 import_code += f"global {alias.name}\n"
-            import_code += (
-                f"from {from_module.module} import {', '.join([alias.name for alias in from_module.names])}\n"
-            )
+            import_code += f"from {from_module.module} import {', '.join([alias.name for alias in from_module.names])}\n"
         exec(import_code, globals())
         exec(tool_code, globals(), local_namespace)
 
         class PythonCodeToolFunc:
             params: dict = {}
-
             def run(**kwargs):
                 for key in kwargs:
                     if key not in PythonCodeToolFunc.params:
                         PythonCodeToolFunc.params[key] = kwargs[key]
                 return local_namespace[self.tool_function](**PythonCodeToolFunc.params)
 
-        class PythonCodeToolSchema(BaseModel):
-            pass
-
         _globals = globals()
         _local = {}
         _local[self.tool_function] = PythonCodeToolFunc
         _globals.update(_local)
-
+        
         if isinstance(self.global_variables, list):
             for data in self.global_variables:
                 if isinstance(data, Data):
@@ -184,6 +148,7 @@ class PythonCodeStructuredTool(Component):
             _globals.update(self.global_variables)
 
         named_functions = json.loads(self._attributes["_functions"])
+        schema_fields = {}
 
         for attr in self._attributes:
             if attr in self.DEFAULT_KEYS:
@@ -198,33 +163,24 @@ class PythonCodeStructuredTool(Component):
             field_annotations = func_arg["annotations"]
 
             field_value = self._get_value(self._attributes[attr], str)
+            schema_annotations = str
+            is_annotated = False
             for field_annotation in field_annotations:
                 if field_annotation not in self.AVAILABLE_TYPES:
                     raise Exception(f"Unsupported type: {field_name} - {field_annotation}")
-                if field_name not in PythonCodeToolSchema.__annotations__:
-                    PythonCodeToolSchema.__annotations__[field_name] = self.AVAILABLE_TYPES[field_annotation][
-                        "annotation"
-                    ]
+                if not is_annotated:
+                    schema_annotations = self.AVAILABLE_TYPES[field_annotation]["annotation"]
+                    is_annotated = True
                 else:
-                    PythonCodeToolSchema.__annotations__[field_name] |= self.AVAILABLE_TYPES[field_annotation][
-                        "annotation"
-                    ]
-            PythonCodeToolSchema.__fields__[field_name] = ModelField(
-                name=field_name,
-                type_=PythonCodeToolSchema.__annotations__[field_name],
-                required="default" not in func_arg,
-                model_config=PythonCodeToolSchema.__config__,
-                class_validators=PythonCodeToolSchema.__validators__,
-                default=func_arg["default"] if "default" in func_arg else None,
-                field_info=Field(..., description=field_value),
-            )
+                    schema_annotations |= self.AVAILABLE_TYPES[field_annotation]["annotation"]
+            schema_fields[field_name] = (schema_annotations, Field(default=func_arg["default"] if "default" in func_arg else Undefined, description=field_value))
+
+        PythonCodeToolSchema = None
+        if schema_fields:
+            PythonCodeToolSchema = create_model("PythonCodeToolSchema", **schema_fields)  # type: ignore
 
         tool = StructuredTool.from_function(
-            func=_local[self.tool_function].run,
-            args_schema=PythonCodeToolSchema,
-            name=self.tool_name,
-            description=self.tool_description,
-            return_direct=self.return_direct,
+            func=_local[self.tool_function].run, args_schema=PythonCodeToolSchema, name=self.tool_name, description=self.tool_description, return_direct=self.return_direct
         )
         return tool  # type: ignore
 
@@ -254,7 +210,10 @@ class PythonCodeStructuredTool(Component):
                 continue
             func = {"name": node.name, "args": []}
             for arg in node.args.args:
-                func_arg = {"name": arg.arg, "annotations": None}
+                func_arg = {
+                    "name": arg.arg,
+                    "annotations": None
+                }
 
                 for default in node.args.defaults:
                     if (
@@ -269,7 +228,7 @@ class PythonCodeStructuredTool(Component):
                         func_arg["default"] = default.id
                     elif isinstance(default, ast.Constant):
                         func_arg["default"] = default.value
-
+                        
                 if arg.annotation:
                     func_arg["annotations"] = self._traverse_annotation(arg.annotation)
 
@@ -277,7 +236,7 @@ class PythonCodeStructuredTool(Component):
             functions.append(func)
 
         return functions
-
+    
     def _traverse_annotation(self, annotation: Any) -> list:
         annotation_list = []
         if isinstance(annotation, ast.BinOp):
@@ -293,7 +252,7 @@ class PythonCodeStructuredTool(Component):
             else:
                 annotation_list.append(annotation.kind)
         return annotation_list
-
+    
     def _find_imports(self, code: str) -> dotdict:
         imports = []
         from_imports = []
@@ -305,10 +264,10 @@ class PythonCodeStructuredTool(Component):
             elif isinstance(node, ast.ImportFrom):
                 from_imports.append(node)
         return {"imports": imports, "from_imports": from_imports}
-
+    
     def _get_value(self, value: Any, annotation: Any) -> Any:
         return value if isinstance(value, annotation) else value["value"]
-
+    
     def _find_arg(self, named_functions: dict, func_name: str, arg_name: str) -> dict | None:
         for arg in named_functions[func_name]["args"]:
             if arg["name"] == arg_name:
