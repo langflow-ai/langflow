@@ -61,7 +61,7 @@ class AmazonBedrockComponent(LCModelComponent):
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
         if self.aws_access_key:
-            import boto3
+            import boto3  # type: ignore
 
             session = boto3.Session(
                 aws_access_key_id=self.aws_access_key,
