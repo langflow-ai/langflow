@@ -38,8 +38,7 @@ export default function TextAreaComponent({
               ? "text-clip password"
               : "",
             editNode ? "input-edit-node" : "",
-            password && editNode ? "pr-8" : "",
-            password && !editNode ? "pr-10" : "",
+            password!=undefined ? "pr-8" : "",
             "w-full",
           )}
           placeholder={"Type something..."}
@@ -78,11 +77,11 @@ export default function TextAreaComponent({
           </div>
         </GenericModal>
         {password !== undefined && (
-          <button
-            type="button"
+          <Button
+            unstyled
             tabIndex={-1}
             className={classNames(
-              "mb-px",
+              "mb-px text-muted-foreground hover:text-current",
               editNode
                 ? "side-bar-button-size absolute bottom-[1.3rem] right-[4.2rem]"
                 : "side-bar-button-size absolute bottom-4 right-[4.2rem]",
@@ -126,7 +125,7 @@ export default function TextAreaComponent({
                 />
               </svg>
             )}
-          </button>
+          </Button>
         )}
       </div>
     </div>
