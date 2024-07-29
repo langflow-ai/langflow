@@ -5010,7 +5010,7 @@ six = "*"
 
 [[package]]
 name = "langflow-base"
-version = "0.0.89"
+version = "0.0.90"
 description = "A Python package with a built-in web application"
 optional = false
 python-versions = ">=3.10,<3.13"
@@ -5029,11 +5029,13 @@ docstring-parser = "^0.16"
 duckdb = "^1.0.0"
 emoji = "^2.12.0"
 fastapi = "^0.111.0"
+filelock = "^3.15.4"
 firecrawl-py = "^0.0.16"
 gunicorn = "^22.0.0"
 httpx = "*"
 jq = {version = "^1.7.0", markers = "sys_platform != \"win32\""}
 langchain = "~0.2.0"
+langchain-core = "0.2.23"
 langchain-experimental = "^0.0.61"
 langchainhub = "~0.1.15"
 loguru = "^0.7.1"

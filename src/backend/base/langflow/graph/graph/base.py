@@ -992,10 +992,14 @@ class Graph:
         return self
 
     def find_next_runnable_vertices(self, vertex_id: str, vertex_successors_ids: List[str]) -> List[str]:
-        direct_successors_ready = [v_id for v_id in vertex_successors_ids if self.is_vertex_runnable(v_id)]
-        if not direct_successors_ready:
-            return self.find_runnable_predecessors_for_successors(vertex_id)
-        return direct_successors_ready
+        next_runnable_vertices = []
+        for v_id in vertex_successors_ids:
+            if not self.is_vertex_runnable(v_id):
+                next_runnable_vertices.extend(self.find_runnable_predecessors_for_successor(v_id))
+            else:
+                next_runnable_vertices.append(v_id)
+
+        return next_runnable_vertices
 
     async def get_next_runnable_vertices(self, lock: asyncio.Lock, vertex: "Vertex", cache: bool = True) -> List[str]:
         v_id = vertex.id
@@ -1009,7 +1013,7 @@ class Graph:
                     next_runnable_vertices.remove(v_id)
                 else:
                     self.run_manager.add_to_vertices_being_run(next_v_id)
-            if cache:
+            if cache and self.flow_id:
                 set_cache_coro = partial(get_chat_service().set_cache, key=self.flow_id)
                 await set_cache_coro(self, lock)
         return next_runnable_vertices
@@ -1462,6 +1466,13 @@ class Graph:
         immediately runnable, expanding the search to ensure progress can be made.
         """
         runnable_vertices = []
+        for successor_id in self.run_manager.run_map.get(vertex_id, []):
+            runnable_vertices.extend(self.find_runnable_predecessors_for_successor(successor_id))
+
+        return runnable_vertices
+
+    def find_runnable_predecessors_for_successor(self, vertex_id: str) -> List[str]:
+        runnable_vertices = []
         visited = set()
 
         def find_runnable_predecessors(predecessor: "Vertex"):
@@ -1476,10 +1487,8 @@ class Graph:
                 for pred_pred_id in self.run_manager.run_predecessors.get(predecessor_id, []):
                     find_runnable_predecessors(self.get_vertex(pred_pred_id))
 
-        for successor_id in self.run_manager.run_map.get(vertex_id, []):
-            for predecessor_id in self.run_manager.run_predecessors.get(successor_id, []):
-                find_runnable_predecessors(self.get_vertex(predecessor_id))
-
+        for predecessor_id in self.run_manager.run_predecessors.get(vertex_id, []):
+            find_runnable_predecessors(self.get_vertex(predecessor_id))
         return runnable_vertices
 
     def remove_from_predecessors(self, vertex_id: str):

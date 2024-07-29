@@ -11,12 +11,15 @@ from langflow.schema.data import Data
 from langflow.schema.message import Message
 from langflow.services.database.models.transactions.model import TransactionBase
 from langflow.services.database.models.transactions.crud import log_transaction as crud_log_transaction
+from langflow.services.database.models.vertex_builds.crud import log_vertex_build as crud_log_vertex_build
+from langflow.services.database.models.vertex_builds.model import VertexBuildBase
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service
 from loguru import logger
 
 if TYPE_CHECKING:
     from langflow.graph.vertex.base import Vertex
+    from langflow.api.v1.schemas import ResultDataResponse
 
 
 class UnbuiltObject:
@@ -145,3 +148,28 @@ async def log_transaction(
             logger.debug(f"Logged transaction: {inserted.id}")
     except Exception as e:
         logger.error(f"Error logging transaction: {e}")
+
+
+def log_vertex_build(
+    flow_id: str,
+    vertex_id: str,
+    valid: bool,
+    params: Any,
+    data: "ResultDataResponse",
+    artifacts: Optional[dict] = None,
+):
+    try:
+        vertex_build = VertexBuildBase(
+            flow_id=flow_id,
+            id=vertex_id,
+            valid=valid,
+            params=str(params) if params else None,
+            # ugly hack to get the model dump with weird datatypes
+            data=json.loads(data.model_dump_json()),
+            artifacts=artifacts,
+        )
+        with session_getter(get_db_service()) as session:
+            inserted = crud_log_vertex_build(session, vertex_build)
+            logger.debug(f"Logged vertex build: {inserted.build_id}")
+    except Exception as e:
+        logger.exception(f"Error logging vertex build: {e}")

@@ -3,6 +3,7 @@ from langflow.inputs import MessageInput, StrInput, HandleInput
 from langflow.schema.message import Message
 from langflow.template import Output
 from langflow.memory import get_messages, store_message
+from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_AI
 
 
 class StoreMessageComponent(Component):
@@ -22,17 +23,19 @@ class StoreMessageComponent(Component):
         StrInput(
             name="sender",
             display_name="Sender",
-            info="The sender of the message.",
-            value="AI",
+            info="The sender of the message. Might be Machine or User. If empty, the current sender parameter will be used.",
             advanced=True,
         ),
         StrInput(
-            name="sender_name", display_name="Sender Name", info="The name of the sender.", value="AI", advanced=True
+            name="sender_name",
+            display_name="Sender Name",
+            info="The name of the sender. Might be AI or User. If empty, the current sender parameter will be used.",
+            advanced=True,
         ),
         StrInput(
             name="session_id",
             display_name="Session ID",
-            info="The session ID of the chat.",
+            info="The session ID of the chat. If empty, the current session ID parameter will be used.",
             value="",
         ),
     ]
@@ -45,8 +48,8 @@ class StoreMessageComponent(Component):
         message = self.message
 
         message.session_id = self.session_id or message.session_id
-        message.sender = self.sender or message.sender
-        message.sender_name = self.sender_name or message.sender_name
+        message.sender = self.sender or message.sender or MESSAGE_SENDER_AI
+        message.sender_name = self.sender_name or message.sender_name or MESSAGE_SENDER_NAME_AI
 
         if self.memory:
             # override session_id
