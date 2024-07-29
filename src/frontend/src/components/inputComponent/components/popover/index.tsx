@@ -16,6 +16,7 @@ import {
   PopoverContentWithoutPortal,
 } from "../../../ui/popover";
 import { Textarea } from "@headlessui/react";
+import getTextAreaClasses from "./utils/get-text-area-classes";
 const CustomInputPopover = ({
   id,
   refInput,
@@ -76,6 +77,8 @@ const CustomInputPopover = ({
     }, 100);
   }
 
+  const textAreaClasses = getTextAreaClasses();
+
   return (
     <Popover modal open={showOptions} onOpenChange={setShowOptions}>
       <PopoverAnchor>
@@ -105,7 +108,7 @@ const CustomInputPopover = ({
                   setShowOptions(true);
               }}
               required={required}
-              className={"form-input block w-full h-24 min-h-min rounded-md border-border bg-background pr-12  text-left text-sm shadow-sm placeholder:text-muted-foreground focus:border-ring focus:placeholder-transparent focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 nowheel "}
+              className={textAreaClasses}
               
               placeholder={password && editNode ? "Key" : placeholder}
               onChange={handleInputChange}
