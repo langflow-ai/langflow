@@ -24,7 +24,11 @@ function RefreshButton({
     handleUpdateValues();
   };
 
-  const classNames = cn(className, disabled ? "cursor-not-allowed" : "");
+  const classNames = cn(
+    className,
+    disabled ? "cursor-not-allowed" : "",
+    !editNode ? "py-2.5 px-3" : "px-2 py-1",
+  );
 
   // icon class name should take into account the disabled state and the loading state
   const disabledIconTextClass = disabled ? "text-muted-foreground" : "";
@@ -37,7 +41,7 @@ function RefreshButton({
       className={classNames}
       onClick={handleClick}
       id={id}
-      size={editNode ? "sm" : "default"}
+      size={"icon"}
       loading={isLoading}
     >
       {button_text && <span className="mr-1">{button_text}</span>}
