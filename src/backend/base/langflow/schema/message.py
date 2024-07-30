@@ -165,7 +165,7 @@ class Message(Data):
                 content_dicts.append(file.to_content_dict())
             else:
                 image_template = ImagePromptTemplate()
-                image_prompt_value: ImagePromptValue = image_template.invoke(input={"path": file})
+                image_prompt_value: ImagePromptValue = image_template.invoke(input={"path": file}, config={"callbacks": self.get_langchain_callbacks()}) # type: ignore
                 content_dicts.append({"type": "image_url", "image_url": image_prompt_value.image_url})
         return content_dicts
 

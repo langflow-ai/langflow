@@ -2,7 +2,7 @@ import asyncio
 import os
 from collections import defaultdict
 from contextlib import asynccontextmanager
-from typing import TYPE_CHECKING, Any, Dict, Optional
+from typing import TYPE_CHECKING, Any, Dict, Optional, List
 from uuid import UUID
 
 from loguru import logger
@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from langflow.graph.vertex.base import Vertex
     from langflow.services.monitor.service import MonitorService
     from langflow.services.settings.service import SettingsService
+    from langchain.callbacks.base import BaseCallbackHandler
 
 
 def _get_langsmith_tracer():
@@ -33,7 +34,9 @@ def _get_langwatch_tracer():
 class TracingService(Service):
     name = "tracing_service"
 
-    def __init__(self, settings_service: "SettingsService", monitor_service: "MonitorService"):
+    def __init__(
+        self, settings_service: "SettingsService", monitor_service: "MonitorService"
+    ):
         self.settings_service = settings_service
         self.monitor_service = monitor_service
         self.inputs: dict[str, dict] = defaultdict(dict)
@@ -115,8 +118,7 @@ class TracingService(Service):
 
     def _initialize_langwatch_tracer(self):
         if (
-            os.getenv("LANGWATCH_API_KEY")
-            and "langwatch" not in self._tracers
+            "langwatch" not in self._tracers
             or self._tracers["langwatch"].trace_id != self.run_id  # type: ignore
         ):
             langwatch_tracer = _get_langwatch_tracer()
@@ -149,11 +151,15 @@ class TracingService(Service):
             if not tracer.ready:  # type: ignore
                 continue
             try:
-                tracer.add_trace(trace_id, trace_name, trace_type, inputs, metadata, vertex)
+                tracer.add_trace(
+                    trace_id, trace_name, trace_type, inputs, metadata, vertex
+                )
             except Exception as e:
                 logger.error(f"Error starting trace {trace_name}: {e}")
 
-    def _end_traces(self, trace_id: str, trace_name: str, error: Exception | None = None):
+    def _end_traces(
+        self, trace_id: str, trace_name: str, error: Exception | None = None
+    ):
         for tracer in self._tracers.values():
             if not tracer.ready:  # type: ignore
                 continue
@@ -173,7 +179,9 @@ class TracingService(Service):
             if not tracer.ready:  # type: ignore
                 continue
             try:
-                tracer.end(self.inputs, outputs=self.outputs, error=error, metadata=outputs)
+                tracer.end(
+                    self.inputs, outputs=self.outputs, error=error, metadata=outputs
+                )
             except Exception as e:
                 logger.error(f"Error ending all traces: {e}")
 
@@ -229,3 +237,13 @@ class TracingService(Service):
             if "api_key" in key:
                 inputs[key] = "*****"  # avoid logging api_keys for security reasons
         return inputs
+
+    def get_langchain_callbacks(self) -> List["BaseCallbackHandler"]:
+        callbacks = []
+        for tracer in self._tracers.values():
+            if not tracer.ready:
+                continue
+            langchain_callback = tracer.get_langchain_callback()
+            if langchain_callback:
+                callbacks.append(langchain_callback)
+        return callbacks

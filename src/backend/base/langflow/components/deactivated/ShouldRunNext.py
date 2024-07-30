@@ -17,7 +17,7 @@ class ShouldRunNextComponent(CustomComponent):
         chain = prompt | llm
         error_message = ""
         for i in range(retries):
-            result = chain.invoke(dict(question=question, context=context, error_message=error_message))
+            result = chain.invoke(dict(question=question, context=context, error_message=error_message), config={"callbacks": self.get_langchain_callbacks()})
             if isinstance(result, BaseMessage):
                 content = result.content
             elif isinstance(result, str):

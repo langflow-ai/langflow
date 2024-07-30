@@ -6,11 +6,14 @@ from langflow.services.tracing.schema import Log
 
 if TYPE_CHECKING:
     from langflow.graph.vertex.base import Vertex
+    from langchain.callbacks.base import BaseCallbackHandler
 
 
 class BaseTracer(ABC):
     @abstractmethod
-    def __init__(self, trace_name: str, trace_type: str, project_name: str, trace_id: UUID):
+    def __init__(
+        self, trace_name: str, trace_type: str, project_name: str, trace_id: UUID
+    ):
         raise NotImplementedError
 
     @abstractmethod
@@ -48,4 +51,8 @@ class BaseTracer(ABC):
         error: Exception | None = None,
         metadata: dict[str, Any] | None = None,
     ):
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_langchain_callback(self) -> Optional["BaseCallbackHandler"]:
         raise NotImplementedError

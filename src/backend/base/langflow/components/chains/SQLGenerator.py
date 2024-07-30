@@ -43,7 +43,7 @@ class SQLGeneratorComponent(LCChainComponent):
                 raise ValueError("Prompt must contain `{question}` to be used with Natural Language to SQL.")
             sql_query_chain = create_sql_query_chain(llm=self.llm, db=self.db, prompt=prompt_template, k=self.top_k)
         query_writer: Runnable = sql_query_chain | {"query": lambda x: x.replace("SQLQuery:", "").strip()}
-        response = query_writer.invoke({"question": self.input_value})
+        response = query_writer.invoke({"question": self.input_value}, config={"callbacks": self.get_langchain_callbacks()})
         query = response.get("query")
         self.status = query
         return query

@@ -164,7 +164,7 @@ class LCModelComponent(Component):
         inputs: Union[list, dict] = messages or {}
         try:
             runnable = runnable.with_config(  # type: ignore
-                {"run_name": self.display_name, "project_name": self._tracing_service.project_name}  # type: ignore
+                {"run_name": self.display_name, "project_name": self.tracing_service.project_name, "callbacks": self.get_langchain_callbacks()}  # type: ignore
             )
             if stream:
                 return runnable.stream(inputs)  # type: ignore
