@@ -7,7 +7,7 @@ from langflow.base.tools.flow_tool import FlowTool
 from langflow.field_typing import Tool
 from langflow.graph.graph.base import Graph
 from langflow.helpers.flow import get_flow_inputs
-from langflow.io import BoolInput, DropdownInput, StrInput
+from langflow.io import BoolInput, DropdownInput, StrInput, Output
 from langflow.schema import Data
 from langflow.schema.dotdict import dotdict
 
@@ -71,7 +71,11 @@ class FlowToolComponent(LCToolComponent):
         ),
     ]
 
-    async def build_tool(self) -> Tool:
+    outputs = [
+        Output(name="api_build_tool", display_name="Tool", method="build_tool"),
+    ]
+
+    def build_tool(self) -> Tool:
         FlowTool.update_forward_refs()
         flow_data = self.get_flow(self.flow_name)
         if not flow_data:
