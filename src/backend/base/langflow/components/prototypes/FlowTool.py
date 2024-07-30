@@ -1,6 +1,5 @@
 from typing import Any, List, Optional
 
-from loguru import logger
 
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.base.tools.flow_tool import FlowTool
