@@ -27,6 +27,8 @@ export default function PaginatorComponent({
     setMaxPageIndex(Math.ceil(totalRowsCount / size));
   }, [totalRowsCount]);
 
+  console.log(pageSize);
+
   return (
     <>
       <div className="flex items-center justify-between px-2">
@@ -47,6 +49,7 @@ export default function PaginatorComponent({
                 paginate(Number(pageSize), 1);
               }}
               value={pageSize.toString()}
+              defaultValue={pageSize.toString()}
             >
               <SelectTrigger className="w-[100px]">
                 <SelectValue placeholder="10" />
