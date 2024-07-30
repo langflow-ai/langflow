@@ -47,7 +47,7 @@ export default function Dropdown({
     const value = event.target.value;
     const searchValues = fuse.search(value);
     const filtered = searchValues.map((search) => search.item);
-    if (!filtered.includes(value) && combobox) filtered.push(value);
+    if (!filtered.includes(value) && combobox && value) filtered.push(value);
     setFilteredOptions(value ? filtered : options);
     setCustomValue(value);
   };
@@ -55,7 +55,7 @@ export default function Dropdown({
   useEffect(() => {
     if (open) {
       const filtered = cloneDeep(options);
-      if (customValue === value && combobox) {
+      if (customValue === value && value && combobox) {
         filtered.push(customValue);
       }
       setFilteredOptions(filtered);
@@ -64,7 +64,7 @@ export default function Dropdown({
 
   return (
     <>
-      {Object.keys(options ?? [])?.length > 0 ? (
+      {Object.keys(options ?? [])?.length > 0 || combobox ? (
         <>
           <Popover open={open} onOpenChange={children ? () => {} : setOpen}>
             {children ? (
