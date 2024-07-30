@@ -180,6 +180,20 @@ async def test_delete_flows_with_transaction_and_build(
     assert response.status_code == 200, response.content
     assert response.json().get("deleted") == number_of_flows
 
+    for flow_id in flow_ids:
+        response = client.request(
+            "GET", "api/v1/monitor/transactions", params={"flow_id": flow_id}, headers=logged_in_headers
+        )
+        assert response.status_code == 200
+        assert response.json() == []
+
+    for flow_id in flow_ids:
+        response = client.request(
+            "GET", "api/v1/monitor/builds", params={"flow_id": flow_id}, headers=logged_in_headers
+        )
+        assert response.status_code == 200
+        assert response.json() == {"vertex_builds": {}}
+
 
 def test_create_flows(client: TestClient, session: Session, json_flow: str, logged_in_headers):
     flow = orjson.loads(json_flow)
