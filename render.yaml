@@ -13,6 +13,6 @@ services:
         value: sqlite:////app/data/.cache/langflow/langflow.db
       - key: LANGFLOW_HOST
         value: 0.0.0.0
-#    disk:
-#      name: langflow-data
-#      mountPath: /app/data/.cache/langflow
+    disk:
+      name: langflow-data
+      mountPath: /app/data/.cache/langflow
