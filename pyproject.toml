@@ -44,8 +44,8 @@ ctransformers = { version = "^0.2.27", optional = true }
 faiss-cpu = "^1.8.0"
 supabase = "^2.3.0"
 certifi = ">=2023.11.17,<2025.0.0"
-psycopg = "3.1.9"
-psycopg-binary = "3.1.9"
+psycopg = "3.2.1"
+psycopg-binary = "3.2.1"
 fastavro = "^1.8.0"
 celery = { extras = ["redis"], version = "^5.3.6", optional = true }
 redis = "^5.0.1"
