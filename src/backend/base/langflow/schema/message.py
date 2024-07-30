@@ -15,10 +15,10 @@ from langflow.base.prompts.utils import dict_values_to_string
 from langflow.schema.data import Data
 from langflow.schema.image import Image, get_file_paths, is_image_file
 from langflow.utils.constants import (
-    MESSAGE_SENDER_USER,
-    MESSAGE_SENDER_NAME_USER,
-    MESSAGE_SENDER_NAME_AI,
     MESSAGE_SENDER_AI,
+    MESSAGE_SENDER_NAME_AI,
+    MESSAGE_SENDER_NAME_USER,
+    MESSAGE_SENDER_USER,
 )
 
 
@@ -219,7 +219,7 @@ class Message(Data):
         if contents:
             message = HumanMessage(content=[{"type": "text", "text": text}] + contents)
 
-        prompt_template = ChatPromptTemplate.from_messages([message])  # type: ignore
+        prompt_template = ChatPromptTemplate([message])  # type: ignore
         instance.prompt = jsonable_encoder(prompt_template.to_json())
         instance.messages = instance.prompt.get("kwargs", {}).get("messages", [])
         return instance
