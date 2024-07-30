@@ -171,20 +171,23 @@ class Message(Data):
     def load_lc_prompt(self):
         if "prompt" not in self:
             raise ValueError("Prompt is required.")
-        loaded_prompt = load(self.prompt)
-        # Rebuild HumanMessages if they are instance of BaseMessage
-        if isinstance(loaded_prompt, ChatPromptTemplate):
-            messages = []
-            for message in loaded_prompt.messages:
-                if isinstance(message, HumanMessage):
+        # self.prompt was passed through jsonable_encoder
+        # so inner messages are not BaseMessage
+        # we need to convert them to BaseMessage
+        messages = []
+        for message in self.prompt.get("kwargs", {}).get("messages", []):
+            match message:
+                case HumanMessage():
                     messages.append(message)
-                elif message.type == "human":
-                    messages.append(HumanMessage(content=message.content))
-                elif message.type == "system":
-                    messages.append(SystemMessage(content=message.content))
-                elif message.type == "ai":
-                    messages.append(AIMessage(content=message.content))
-            loaded_prompt.messages = messages
+                case _ if message.get("type") == "human":
+                    messages.append(HumanMessage(content=message.get("content")))
+                case _ if message.get("type") == "system":
+                    messages.append(SystemMessage(content=message.get("content")))
+                case _ if message.get("type") == "ai":
+                    messages.append(AIMessage(content=message.get("content")))
+
+        self.prompt["kwargs"]["messages"] = messages
+        loaded_prompt = load(self.prompt)
         return loaded_prompt
 
     @classmethod
