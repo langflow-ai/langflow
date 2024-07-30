@@ -207,7 +207,7 @@ class Message(Data):
         return formatted_prompt
 
     @classmethod
-    async def async_from_template_and_variables(cls, template: str, **variables):
+    async def from_template_and_variables(cls, template: str, **variables):
         instance = cls(template=template, variables=variables)
         text = instance.format_text()
         # Get all Message instances from the kwargs
@@ -226,11 +226,11 @@ class Message(Data):
         return instance
 
     @classmethod
-    def from_template_and_variables(cls, template: str, **variables):
+    def sync_from_template_and_variables(cls, template: str, **variables):
         # Run the async version in a sync way
         try:
             loop = asyncio.get_running_loop()
         except RuntimeError:
-            return asyncio.run(cls.async_from_template_and_variables(template, **variables))
+            return asyncio.run(cls.from_template_and_variables(template, **variables))
         else:
-            return loop.run_until_complete(cls.async_from_template_and_variables(template, **variables))
+            return loop.run_until_complete(cls.from_template_and_variables(template, **variables))
