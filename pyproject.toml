@@ -78,7 +78,7 @@ langchain-anthropic = "^0.1.6"
 langchain-astradb = "^0.3.3"
 langchain-openai = "^0.1.1"
 zep-python = { version = "^2.0.0rc5", allow-prereleases = true }
-langchain-google-vertexai = "^1.0.3"
+langchain-google-vertexai = "1.0.7"
 langchain-groq = "^0.1.3"
 langchain-pinecone = "^0.1.0"
 langchain-mistralai = "^0.1.6"
