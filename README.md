@@ -85,7 +85,7 @@ If you prefer to run Langflow from a cloned repository rather than installing it
 First, clone the Langflow repository from GitHub:
 
 ```shell
-git clone https://github.com/langflow/langflow.git
+git clone https://github.com/langflow-ai/langflow.git
 ```
 
 Navigate into the cloned directory:
