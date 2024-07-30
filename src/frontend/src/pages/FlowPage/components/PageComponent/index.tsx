@@ -1,3 +1,5 @@
+import { useGetBuildsQuery } from "@/controllers/API/queries/_builds";
+import { getInputsAndOutputs } from "@/utils/storeUtils";
 import _, { cloneDeep } from "lodash";
 import {
   KeyboardEvent,
@@ -35,6 +37,7 @@ import { APIClassType } from "../../../../types/api";
 import { FlowType, NodeType } from "../../../../types/flow";
 import {
   checkOldComponents,
+  cleanEdges,
   generateFlow,
   generateNodeFromFlow,
   getNodeId,
@@ -88,7 +91,6 @@ export default function Page({
   const redo = useFlowsManagerStore((state) => state.redo);
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
   const paste = useFlowStore((state) => state.paste);
-  const resetFlow = useFlowStore((state) => state.resetFlow);
   const lastCopiedSelection = useFlowStore(
     (state) => state.lastCopiedSelection,
   );
@@ -106,6 +108,13 @@ export default function Page({
   const [lastSelection, setLastSelection] =
     useState<OnSelectionChangeParams | null>(null);
 
+  const setFlowState = useFlowStore((state) => state.setFlowState);
+  const setInputs = useFlowStore((state) => state.setInputs);
+  const setOutputs = useFlowStore((state) => state.setOutputs);
+  const setHasIO = useFlowStore((state) => state.setHasIO);
+  const { inputs, outputs } = getInputsAndOutputs(flow.data!.nodes);
+  const viewport = flow?.data?.viewport ?? { zoom: 1, x: 0, y: 0 };
+
   function handleGroupNode() {
     takeSnapshot();
     if (validateSelection(lastSelection!, edges).length === 0) {
@@ -113,14 +122,15 @@ export default function Page({
       const clonedEdges = cloneDeep(edges);
       const clonedSelection = cloneDeep(lastSelection);
       updateIds({ nodes: clonedNodes, edges: clonedEdges }, clonedSelection!);
-      const { newFlow, removedEdges } = generateFlow(
+      const { newFlow } = generateFlow(
         clonedSelection!,
         clonedNodes,
         clonedEdges,
         getRandomName(),
       );
+
       const newGroupNode = generateNodeFromFlow(newFlow, getNodeId);
-      // const newEdges = reconnectEdges(newGroupNode, removedEdges);
+
       setNodes([
         ...clonedNodes.filter(
           (oldNodes) =>
@@ -130,17 +140,6 @@ export default function Page({
         ),
         newGroupNode,
       ]);
-      // setEdges([
-      //   ...clonedEdges.filter(
-      //     (oldEdge) =>
-      //       !clonedSelection!.nodes.some(
-      //         (selectionNode) =>
-      //           selectionNode.id === oldEdge.target ||
-      //           selectionNode.id === oldEdge.source,
-      //       ),
-      //   ),
-      //   ...newEdges,
-      // ]);
     } else {
       setErrorData({
         title: INVALID_SELECTION_ERROR_ALERT,
@@ -149,7 +148,6 @@ export default function Page({
     }
   }
 
-  const setNode = useFlowStore((state) => state.setNode);
   useEffect(() => {
     const handleMouseMove = (event) => {
       position.current = { x: event.clientX, y: event.clientY };
@@ -164,13 +162,23 @@ export default function Page({
 
   useEffect(() => {
     if (reactFlowInstance && currentFlowId) {
-      resetFlow({
-        nodes: flow?.data?.nodes ?? [],
-        edges: flow?.data?.edges ?? [],
-        viewport: flow?.data?.viewport ?? { zoom: 1, x: 0, y: 0 },
-      });
+      reactFlowInstance!.setViewport(viewport);
     }
   }, [currentFlowId, reactFlowInstance]);
+
+  const { isFetching } = useGetBuildsQuery({});
+
+  useEffect(() => {
+    if (!isFetching) {
+      let newEdges = cleanEdges(flow.data!.nodes, flow.data!.edges);
+      setNodes(flow.data!.nodes);
+      setEdges(newEdges);
+      setFlowState(undefined);
+      setInputs(inputs);
+      setOutputs(outputs);
+      setHasIO(inputs.length > 0 || outputs.length > 0);
+    }
+  }, [isFetching]);
 
   useEffect(() => {
     if (checkOldComponents({ nodes: flow?.data?.nodes ?? [] })) {
