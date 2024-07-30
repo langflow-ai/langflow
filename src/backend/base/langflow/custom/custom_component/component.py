@@ -15,6 +15,7 @@ from langflow.schema.message import Message
 from langflow.services.tracing.schema import Log
 from langflow.template.field.base import UNDEFINED, Input, Output
 from langflow.template.frontend_node.custom_components import ComponentFrontendNode
+from langflow.utils.async_helpers import run_until_complete
 
 from .custom_component import CustomComponent
 
@@ -134,7 +135,8 @@ class Component(CustomComponent):
 
     def __call__(self, **kwargs):
         self.connect(**kwargs)
-        return self
+
+        return run_until_complete(self.run())
 
     async def _run(self):
         # Resolve callable inputs
