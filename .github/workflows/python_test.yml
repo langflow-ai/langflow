@@ -13,7 +13,7 @@ env:
 
 jobs:
   build:
-    name: Run Unit Tests
+    name: Unit Tests - Python ${{ matrix.python-version }} - Group ${{ matrix.group }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -45,7 +45,7 @@ jobs:
           make unit_tests args="--splits ${{ matrix.splitCount }} --group ${{ matrix.group }}"
 
   test-cli:
-    name: Test CLI
+    name: Test CLI - Python ${{ matrix.python-version }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -61,13 +61,16 @@ jobs:
           python-version: ${{ matrix.python-version }}
           poetry-version: ${{ env.POETRY_VERSION }}
           cache-key: ${{ runner.os }}-poetry-${{ env.POETRY_VERSION }}-${{ hashFiles('**/poetry.lock') }}
-      - name: Install Python dependencies
+      - name: Build wheel
         run: |
           poetry env use ${{ matrix.python-version }}
-          poetry install
+          make build main=true
+      - name: Install wheel
+        run: |
+          python -m pip install dist/*.whl
       - name: Test CLI
         run: |
-          poetry run python -m langflow run --host 127.0.0.1 --port 7860 --backend-only &
+          python -m langflow run --host 127.0.0.1 --port 7860 --backend-only &
           SERVER_PID=$!
           # Wait for the server to start
           timeout 120 bash -c 'until curl -f http://127.0.0.1:7860/api/v1/auto_login; do sleep 5; done' || (echo "Server did not start in time" && kill $SERVER_PID && exit 1)
