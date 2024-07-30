@@ -68,6 +68,7 @@ def build_data_from_result_data(result_data: ResultData, get_final_results_only:
 
     if isinstance(result_data.results, dict):
         for name, result in result_data.results.items():
+            dataobj: Data | Message | None = None
             if isinstance(result, Message):
                 dataobj = result
             else:
