@@ -658,7 +658,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         if (get().componentsToUpdate)
           setErrorData({
             title:
-              "There are outdated components in the flow. The error may be related.",
+              "There are outdated components in the flow. The error could be related to them.",
           });
         setErrorData({ list, title });
         get().setIsBuilding(false);
