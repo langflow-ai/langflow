@@ -315,7 +315,7 @@ build_langflow_backup:
 
 build_langflow:
 	cd ./scripts && poetry run python update_dependencies.py
-	poetry lock
+	poetry lock --no-update
 	poetry build
 ifdef restore
 	mv pyproject.toml.bak pyproject.toml
