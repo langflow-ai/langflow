@@ -849,6 +849,8 @@ export const MODAL_CLASSES =
 
 export const ALLOWED_IMAGE_INPUT_EXTENSIONS = ["png", "jpg", "jpeg"];
 
+export const componentsToIgnoreUpdate = ["CustomComponent"];
+
 export const FS_ERROR_TEXT =
   "Please ensure your file has one of the following extensions:";
 export const SN_ERROR_TEXT = ALLOWED_IMAGE_INPUT_EXTENSIONS.join(", ");
