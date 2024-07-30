@@ -46,18 +46,18 @@ function ApiInterceptor() {
             await tryToRenewAccessToken(error);
 
             const accessToken = cookies.get(LANGFLOW_ACCESS_TOKEN);
-
             if (!accessToken && error?.config?.url?.includes("login")) {
               return Promise.reject(error);
             }
-
-            await remakeRequest(error);
-            setSaveLoading(false);
-            authenticationErrorCount = 0;
           }
         }
         await clearBuildVerticesState(error);
-        return Promise.reject(error);
+        if (
+          error?.response?.status !== 401 &&
+          error?.response?.status !== 403
+        ) {
+          return Promise.reject(error);
+        }
       },
     );
 
@@ -141,21 +141,30 @@ function ApiInterceptor() {
   }
 
   async function tryToRenewAccessToken(error: AxiosError) {
-    try {
-      if (window.location.pathname.includes("/login")) return;
-      mutationRenewAccessToken({});
-    } catch (error) {
-      clearBuildVerticesState(error);
-      mutationLogout(undefined, {
-        onSuccess: () => {
-          logout();
+    if (window.location.pathname.includes("/login")) return;
+    mutationRenewAccessToken(
+      {},
+      {
+        onSuccess: async (data) => {
+          authenticationErrorCount = 0;
+          await remakeRequest(error);
+          setSaveLoading(false);
+          authenticationErrorCount = 0;
         },
         onError: (error) => {
           console.error(error);
+          mutationLogout(undefined, {
+            onSuccess: () => {
+              logout();
+            },
+            onError: (error) => {
+              console.error(error);
+            },
+          });
+          return Promise.reject("Authentication error");
         },
-      });
-      return Promise.reject("Authentication error");
-    }
+      },
+    );
   }
 
   async function clearBuildVerticesState(error) {
