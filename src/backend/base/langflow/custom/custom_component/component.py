@@ -325,11 +325,16 @@ class Component(CustomComponent):
         _results = {}
         _artifacts = {}
         if hasattr(self, "outputs"):
-            self._set_outputs(self._vertex.outputs)
+            if self._vertex:
+                self._set_outputs(self._vertex.outputs)
             for output in self.outputs:
                 # Build the output if it's connected to some other vertex
                 # or if it's not connected to any vertex
-                if not self._vertex.outgoing_edges or output.name in self._vertex.edges_source_names:
+                if (
+                    not self._vertex
+                    or not self._vertex.outgoing_edges
+                    or output.name in self._vertex.edges_source_names
+                ):
                     if output.method is None:
                         raise ValueError(f"Output {output.name} does not have a method defined.")
                     method: Callable = getattr(self, output.method)
@@ -341,7 +346,8 @@ class Component(CustomComponent):
                         if inspect.iscoroutinefunction(method):
                             result = await result
                         if (
-                            isinstance(result, Message)
+                            self._vertex is not None
+                            and isinstance(result, Message)
                             and result.flow_id is None
                             and self._vertex.graph.flow_id is not None
                         ):
