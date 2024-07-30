@@ -16,18 +16,18 @@ def test_memory_chatbot():
 User: {user_message}
 AI: """
     memory_component = MemoryComponent(_id="chat_memory")
-    memory_component.connect(session_id=session_id)
+    memory_component.set(session_id=session_id)
     chat_input = ChatInput(_id="chat_input")
     prompt_component = PromptComponent(_id="prompt")
-    prompt_component.connect(
+    prompt_component.set(
         template=template, user_message=chat_input.message_response, context=memory_component.retrieve_messages_as_text
     )
     openai_component = OpenAIModelComponent(_id="openai")
-    openai_component.connect(input_value=prompt_component.build_prompt, max_tokens=100, temperature=0.1)
+    openai_component.set(input_value=prompt_component.build_prompt, max_tokens=100, temperature=0.1)
     openai_component.get_output("text_output").value = "Mock response"
 
     chat_output = ChatOutput(_id="chat_output")
-    chat_output.connect(input_value=openai_component.text_response)
+    chat_output.set(input_value=openai_component.text_response)
 
     graph = Graph(chat_input, chat_output)
     # Now we run step by step

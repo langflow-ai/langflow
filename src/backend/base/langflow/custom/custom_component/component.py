@@ -65,7 +65,7 @@ class Component(CustomComponent):
         # Set output types
         self._set_output_types()
 
-    def connect(self, **kwargs):
+    def set(self, **kwargs):
         """
         Connects the component to other components or sets parameters and attributes.
 
@@ -250,7 +250,7 @@ class Component(CustomComponent):
         self._attributes[key] = value
 
     def __call__(self, **kwargs):
-        self.connect(**kwargs)
+        self.set(**kwargs)
 
         return run_until_complete(self.run())
 
