@@ -73,7 +73,7 @@ class Component(CustomComponent):
             **kwargs: Keyword arguments representing the connections, parameters, and attributes.
 
         Returns:
-            self: The component instance.
+            None
 
         Raises:
             KeyError: If the specified input name does not exist.
