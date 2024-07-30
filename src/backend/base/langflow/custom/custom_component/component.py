@@ -79,7 +79,7 @@ class Component(CustomComponent):
             raise ValueError(f"Output with method {method_name} not found")
         return output
 
-    def __call__(self, **kwargs):
+    def connect(self, **kwargs):
         for key, value in kwargs.items():
             # if value is a callable, it must be a method from another component
             # we need to the class owning the method
@@ -117,6 +117,10 @@ class Component(CustomComponent):
                 self._parameters[key] = value
 
             self._attributes[key] = value
+        return self
+
+    def __call__(self, **kwargs):
+        self.connect(**kwargs)
         return self
 
     async def _run(self):
