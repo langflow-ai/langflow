@@ -136,7 +136,9 @@ class Data(BaseModel):
                 contents = [{"type": "text", "text": text}]
                 for file_path in files:
                     image_template = ImagePromptTemplate()
-                    image_prompt_value: ImagePromptValue = image_template.invoke(input={"path": file_path}, config={"callbacks": self.get_langchain_callbacks()})  # type: ignore
+                    image_prompt_value: ImagePromptValue = image_template.invoke(
+                        input={"path": file_path}, config={"callbacks": self.get_langchain_callbacks()}
+                    )  # type: ignore
                     contents.append({"type": "image_url", "image_url": image_prompt_value.image_url})
                 human_message = HumanMessage(content=contents)  # type: ignore
             else:

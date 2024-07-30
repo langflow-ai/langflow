@@ -34,9 +34,7 @@ def _get_langwatch_tracer():
 class TracingService(Service):
     name = "tracing_service"
 
-    def __init__(
-        self, settings_service: "SettingsService", monitor_service: "MonitorService"
-    ):
+    def __init__(self, settings_service: "SettingsService", monitor_service: "MonitorService"):
         self.settings_service = settings_service
         self.monitor_service = monitor_service
         self.inputs: dict[str, dict] = defaultdict(dict)
@@ -118,8 +116,7 @@ class TracingService(Service):
 
     def _initialize_langwatch_tracer(self):
         if (
-            "langwatch" not in self._tracers
-            or self._tracers["langwatch"].trace_id != self.run_id  # type: ignore
+            "langwatch" not in self._tracers or self._tracers["langwatch"].trace_id != self.run_id  # type: ignore
         ):
             langwatch_tracer = _get_langwatch_tracer()
             self._tracers["langwatch"] = langwatch_tracer(
@@ -151,15 +148,11 @@ class TracingService(Service):
             if not tracer.ready:  # type: ignore
                 continue
             try:
-                tracer.add_trace(
-                    trace_id, trace_name, trace_type, inputs, metadata, vertex
-                )
+                tracer.add_trace(trace_id, trace_name, trace_type, inputs, metadata, vertex)
             except Exception as e:
                 logger.error(f"Error starting trace {trace_name}: {e}")
 
-    def _end_traces(
-        self, trace_id: str, trace_name: str, error: Exception | None = None
-    ):
+    def _end_traces(self, trace_id: str, trace_name: str, error: Exception | None = None):
         for tracer in self._tracers.values():
             if not tracer.ready:  # type: ignore
                 continue
@@ -179,9 +172,7 @@ class TracingService(Service):
             if not tracer.ready:  # type: ignore
                 continue
             try:
-                tracer.end(
-                    self.inputs, outputs=self.outputs, error=error, metadata=outputs
-                )
+                tracer.end(self.inputs, outputs=self.outputs, error=error, metadata=outputs)
             except Exception as e:
                 logger.error(f"Error ending all traces: {e}")
 

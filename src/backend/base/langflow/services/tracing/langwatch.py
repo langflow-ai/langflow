@@ -77,17 +77,17 @@ class LangWatchTracer(BaseTracer):
 
         name_without_id = " (".join(trace_name.split(" (")[0:-1])
 
-        previous_nodes = [span for key, span in self.spans.items() for edge in vertex.incoming_edges if key == edge.source_id] if vertex and len(vertex.incoming_edges) > 0 else []
+        previous_nodes = (
+            [span for key, span in self.spans.items() for edge in vertex.incoming_edges if key == edge.source_id]
+            if vertex and len(vertex.incoming_edges) > 0
+            else []
+        )
 
         span = self.trace.span(
             span_id=f"{trace_id}-{nanoid.generate(size=6)}",  # Add a nanoid to make the span_id globally unique, which is required for LangWatch for now
             name=name_without_id,
             type="component",
-            parent=(
-                previous_nodes[-1]
-                if len(previous_nodes) > 0
-                else self.trace.root_span
-            ),
+            parent=(previous_nodes[-1] if len(previous_nodes) > 0 else self.trace.root_span),
             input=self._convert_to_langwatch_types(inputs),
         )
         self.trace.set_current_span(span)

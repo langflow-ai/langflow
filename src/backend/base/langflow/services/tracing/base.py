@@ -11,9 +11,7 @@ if TYPE_CHECKING:
 
 class BaseTracer(ABC):
     @abstractmethod
-    def __init__(
-        self, trace_name: str, trace_type: str, project_name: str, trace_id: UUID
-    ):
+    def __init__(self, trace_name: str, trace_type: str, project_name: str, trace_id: UUID):
         raise NotImplementedError
 
     @abstractmethod
