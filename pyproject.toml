@@ -76,7 +76,7 @@ litellm = "^1.38.0"
 chromadb = "^0.4"
 langchain-anthropic = "^0.1.6"
 langchain-astradb = "^0.3.3"
-langchain-openai = "0.1.18"
+langchain-openai = "0.1.17"
 zep-python = { version = "^2.0.0rc5", allow-prereleases = true }
 langchain-google-vertexai = "1.0.7"
 langchain-groq = "0.1.6"
