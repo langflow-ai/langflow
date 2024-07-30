@@ -64,7 +64,7 @@ jobs:
       - name: Build wheel
         run: |
           poetry env use ${{ matrix.python-version }}
-          poetry build
+          make build main=true
       - name: Install wheel
         run: |
           python -m pip install dist/*.whl
