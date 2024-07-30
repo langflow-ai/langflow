@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime, timezone
 from typing import Annotated, Any, AsyncIterator, Iterator, List, Optional
 from uuid import UUID
@@ -206,7 +207,7 @@ class Message(Data):
         return formatted_prompt
 
     @classmethod
-    async def from_template_and_variables(cls, template: str, **variables):
+    async def async_from_template_and_variables(cls, template: str, **variables):
         instance = cls(template=template, variables=variables)
         text = instance.format_text()
         # Get all Message instances from the kwargs
@@ -223,3 +224,13 @@ class Message(Data):
         instance.prompt = jsonable_encoder(prompt_template.to_json())
         instance.messages = instance.prompt.get("kwargs", {}).get("messages", [])
         return instance
+
+    @classmethod
+    def from_template_and_variables(cls, template: str, **variables):
+        # Run the async version in a sync way
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            return asyncio.run(cls.async_from_template_and_variables(template, **variables))
+        else:
+            return loop.run_until_complete(cls.async_from_template_and_variables(template, **variables))
