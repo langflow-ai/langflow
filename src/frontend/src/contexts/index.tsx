@@ -14,7 +14,7 @@ export default function ContextWrapper({ children }: { children: ReactNode }) {
       <BrowserRouter>
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
-            <TooltipProvider>
+            <TooltipProvider skipDelayDuration={0}>
               <ReactFlowProvider>
                 <ApiInterceptor />
                 {children}
