@@ -7,14 +7,13 @@ from langchain_core.messages import AIMessage, AIMessageChunk
 from loguru import logger
 
 from langflow.graph.schema import CHAT_COMPONENTS, RECORDS_COMPONENTS, InterfaceComponentTypes, ResultData
-from langflow.graph.utils import UnbuiltObject, log_transaction, serialize_field
+from langflow.graph.utils import UnbuiltObject, log_transaction, log_vertex_build, serialize_field
 from langflow.graph.vertex.base import Vertex
 from langflow.inputs.inputs import InputTypes
 from langflow.schema import Data
 from langflow.schema.artifact import ArtifactType
 from langflow.schema.message import Message
 from langflow.schema.schema import INPUT_FIELD_NAME
-from langflow.services.monitor.utils import log_vertex_build
 from langflow.template.field.base import UNDEFINED, Output
 from langflow.utils.schemas import ChatOutputResponse, DataOutputResponse
 from langflow.utils.util import unescape_string
