@@ -136,6 +136,12 @@ class Component(CustomComponent):
             return self._outputs[name]
         raise ValueError(f"Output {name} not found in {self.__class__.__name__}")
 
+    def set_output_value(self, name: str, value: Any):
+        if name in self._outputs:
+            self._outputs[name].value = value
+        else:
+            raise ValueError(f"Output {name} not found in {self.__class__.__name__}")
+
     def map_outputs(self, outputs: List[Output]):
         """
         Maps the given list of outputs to the component.
