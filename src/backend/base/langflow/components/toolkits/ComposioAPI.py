@@ -1,9 +1,11 @@
-from typing import Sequence, Any
-from langflow.base.langchain_utilities.model import LCToolComponent
-from langflow.inputs import SecretStrInput, MessageTextInput, DropdownInput, StrInput, MultiselectInput
+from typing import Any, Sequence
+
+from composio_langchain import Action, App, ComposioToolSet  # type: ignore
 from langchain_core.tools import StructuredTool
-from composio_langchain import ComposioToolSet, App, Action
 from loguru import logger
+
+from langflow.base.langchain_utilities.model import LCToolComponent
+from langflow.inputs import DropdownInput, MessageTextInput, MultiselectInput, SecretStrInput, StrInput
 
 
 class ComposioAPIComponent(LCToolComponent):
