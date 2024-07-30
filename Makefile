@@ -56,7 +56,6 @@ help: ## show this help message
 install_backend: ## install the backend dependencies
 	@echo 'Installing backend dependencies'
 	@poetry install
-	@poetry run pre-commit install
 
 install_frontend: ## install the frontend dependencies
 	@echo 'Installing frontend dependencies'
