@@ -51,7 +51,7 @@ export default function MultiselectComponent({
     const fuse = onlySelected ? fuseValues : fuseOptions;
     const searchValues = fuse.search(v);
     let filtered: string[] = searchValues.map((search) => search.item);
-    if (!filtered.includes(v) && combobox) filtered = [v, ...filtered];
+    if (!filtered.includes(v) && combobox && v) filtered = [v, ...filtered];
     setFilteredOptions(
       v
         ? filtered
@@ -72,7 +72,7 @@ export default function MultiselectComponent({
   useEffect(() => {
     setCustomValues(value.filter((v) => !defaultOptions.includes(v)) ?? []);
     setOptions([
-      ...value.filter((v) => !defaultOptions.includes(v)),
+      ...value.filter((v) => !defaultOptions.includes(v) && v),
       ...defaultOptions,
     ]);
   }, [value]);
@@ -87,7 +87,7 @@ export default function MultiselectComponent({
 
   return (
     <>
-      {Object.keys(options ?? [])?.length > 0 ? (
+      {Object.keys(options ?? [])?.length > 0 || combobox ? (
         <>
           <Popover open={open} onOpenChange={children ? () => {} : setOpen}>
             {children ? (
