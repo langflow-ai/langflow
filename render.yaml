@@ -6,13 +6,13 @@ services:
     dockerfilePath: ./docker/render.Dockerfile
     repo: https://github.com/langflow-ai/langflow
     branch: main
-    healthCheckPath: /health
+    healthCheckPath: /health_check
     autoDeploy: false
     envVars:
       - key: LANGFLOW_DATABASE_URL
-        value: sqlite:////home/user/.cache/langflow/langflow.db
+        value: sqlite:////app/data/.cache/langflow/langflow.db
       - key: LANGFLOW_HOST
         value: 0.0.0.0
-    disk:
-      name: langflow-data
-      mountPath: /home/user/.cache/langflow
+#    disk:
+#      name: langflow-data
+#      mountPath: /app/data/.cache/langflow
