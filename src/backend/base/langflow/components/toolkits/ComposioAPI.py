@@ -1,7 +1,7 @@
 from typing import Any, Sequence
 
 from composio_langchain import Action, App, ComposioToolSet  # type: ignore
-from langchain_core.tools import StructuredTool
+from langchain_core.tools import Tool
 from loguru import logger
 
 from langflow.base.langchain_utilities.model import LCToolComponent
@@ -163,7 +163,7 @@ class ComposioAPIComponent(LCToolComponent):
             build_config["action_names"]["value"] = [app_action_names[0]] if app_action_names else [""]
         return build_config
 
-    def build_tool(self) -> Sequence[StructuredTool]:
+    def build_tool(self) -> Sequence[Tool]:
         composio_toolset = self._build_wrapper()
         composio_tools = composio_toolset.get_actions(actions=self.action_names)
         return composio_tools
