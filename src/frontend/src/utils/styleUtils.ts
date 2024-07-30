@@ -220,6 +220,7 @@ import { HackerNewsIcon } from "../icons/hackerNews";
 import { MistralIcon } from "../icons/mistral";
 import { SupabaseIcon } from "../icons/supabase";
 import { iconsType } from "../types/components";
+import { AthenaIcon } from "@/icons/athena/index";
 
 export const gradients = [
   "bg-gradient-to-br from-gray-800 via-rose-700 to-violet-900",
@@ -590,4 +591,5 @@ export const nodeIconsLucide: iconsType = {
   AIML: AIMLIcon,
   "AI/ML": AIMLIcon,
   GitLoader: GitLoaderIcon,
+  athenaIcon: AthenaIcon,
 };
