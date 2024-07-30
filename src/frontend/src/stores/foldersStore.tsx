@@ -94,6 +94,7 @@ export const useFolderStore = create<FoldersStoreType>((set, get) => ({
     if (id) {
       getFolderById(id).then((res) => {
         const setAllFlows = useFlowsManagerStore.getState().setAllFlows;
+        console.log(res);
         setAllFlows(res?.flows);
         set({ selectedFolder: res });
       });
