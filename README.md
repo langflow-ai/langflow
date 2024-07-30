@@ -69,15 +69,42 @@ You can install Langflow with pip:
 # Make sure you have >=Python 3.10 installed on your system.
 python -m pip install langflow -U
 ```
-Or
 
-If you would like to install from your cloned repo, you can build and install Langflow's frontend and backend with:
+Then, run Langflow with:
+
+```shell
+python -m langflow run
+```
+
+# Running Langflow from a Cloned Repository
+
+If you prefer to run Langflow from a cloned repository rather than installing it via pip, follow these steps:
+
+1. **Clone the Repository**
+
+First, clone the Langflow repository from GitHub:
+
+```shell
+git clone https://github.com/langflow/langflow.git
+```
+
+Navigate into the cloned directory:
+
+```shell
+cd langflow
+```
+
+2. **Build and Install Dependencies**
+
+To build and install Langflow’s frontend and backend, use the following commands:
 
 ```shell
 make install_frontend && make build_frontend && make install_backend
 ```
 
-Then, run Langflow with:
+3. **Run Langflow**
+
+Once the installation is complete, you can run Langflow with:
 
 ```shell
 python -m langflow run
