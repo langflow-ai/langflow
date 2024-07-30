@@ -179,6 +179,7 @@ import { EvernoteIcon } from "../icons/Evernote";
 import { FBIcon } from "../icons/FacebookMessenger";
 import { FirecrawlIcon } from "../icons/Firecrawl";
 import { GitBookIcon } from "../icons/GitBook";
+import { GitLoaderIcon } from "../icons/GitLoader";
 import { GoogleIcon } from "../icons/Google";
 import { GoogleGenerativeAIIcon } from "../icons/GoogleGenerativeAI";
 import {
@@ -588,4 +589,5 @@ export const nodeIconsLucide: iconsType = {
   Table: Table,
   AIML: AIMLIcon,
   "AI/ML": AIMLIcon,
+  GitLoader: GitLoaderIcon,
 };
