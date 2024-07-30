@@ -1,4 +1,5 @@
 import { AIMLIcon } from "@/icons/AIML";
+import { AthenaIcon } from "@/icons/athena/index";
 import { freezeAllIcon } from "@/icons/freezeAll";
 import {
   AlertCircle,
@@ -220,7 +221,6 @@ import { HackerNewsIcon } from "../icons/hackerNews";
 import { MistralIcon } from "../icons/mistral";
 import { SupabaseIcon } from "../icons/supabase";
 import { iconsType } from "../types/components";
-import { AthenaIcon } from "@/icons/athena/index";
 
 export const gradients = [
   "bg-gradient-to-br from-gray-800 via-rose-700 to-violet-900",
