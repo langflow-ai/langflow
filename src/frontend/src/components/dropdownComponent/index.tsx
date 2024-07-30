@@ -5,6 +5,7 @@ import { ChangeEvent, useEffect, useRef, useState } from "react";
 import { DropDownComponentType } from "../../types/components";
 import { cn } from "../../utils/utils";
 import { default as ForwardedIconComponent } from "../genericIconComponent";
+import ShadTooltip from "../shadTooltipComponent";
 import { Button } from "../ui/button";
 import {
   Command,
@@ -137,32 +138,40 @@ export default function Dropdown({
                   <CommandEmpty>No values found.</CommandEmpty>
                   <CommandGroup defaultChecked={false}>
                     {filteredOptions?.map((option, id) => (
-                      <CommandItem
+                      <ShadTooltip
+                        delayDuration={700}
                         key={id}
-                        value={option}
-                        onSelect={(currentValue) => {
-                          onSelect(currentValue);
-                          setOpen(false);
-                        }}
-                        className="items-center truncate"
-                        data-testid={`${option}-${id ?? ""}-option`}
+                        content={option}
                       >
-                        {customValue === option ? (
-                          <span className="text-muted-foreground">
-                            Text:&nbsp;
-                          </span>
-                        ) : (
-                          <></>
-                        )}
-                        {option}
-                        <ForwardedIconComponent
-                          name="Check"
-                          className={cn(
-                            "ml-auto h-4 w-4 text-primary",
-                            value === option ? "opacity-100" : "opacity-0",
-                          )}
-                        />
-                      </CommandItem>
+                        <div>
+                          <CommandItem
+                            key={id}
+                            value={option}
+                            onSelect={(currentValue) => {
+                              onSelect(currentValue);
+                              setOpen(false);
+                            }}
+                            className="items-center overflow-hidden truncate"
+                            data-testid={`${option}-${id ?? ""}-option`}
+                          >
+                            {customValue === option ? (
+                              <span className="text-muted-foreground">
+                                Text:&nbsp;
+                              </span>
+                            ) : (
+                              <></>
+                            )}
+                            <span className="truncate">{option}</span>
+                            <ForwardedIconComponent
+                              name="Check"
+                              className={cn(
+                                "ml-auto h-4 w-4 shrink-0 text-primary",
+                                value === option ? "opacity-100" : "opacity-0",
+                              )}
+                            />
+                          </CommandItem>
+                        </div>
+                      </ShadTooltip>
                     ))}
                   </CommandGroup>
                 </CommandList>
