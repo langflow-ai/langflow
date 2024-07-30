@@ -13,7 +13,7 @@ env:
 
 jobs:
   build:
-    name: Run Unit Tests
+    name: Unit Tests - Python ${{ matrix.python-version }} - Group ${{ matrix.group }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -45,7 +45,7 @@ jobs:
           make unit_tests args="--splits ${{ matrix.splitCount }} --group ${{ matrix.group }}"
 
   test-cli:
-    name: Test CLI
+    name: Test CLI - Python ${{ matrix.python-version }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
