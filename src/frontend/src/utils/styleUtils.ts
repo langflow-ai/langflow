@@ -1,4 +1,5 @@
 import { AIMLIcon } from "@/icons/AIML";
+import { AthenaIcon } from "@/icons/athena/index";
 import { freezeAllIcon } from "@/icons/freezeAll";
 import {
   AlertCircle,
@@ -592,4 +593,5 @@ export const nodeIconsLucide: iconsType = {
   AIML: AIMLIcon,
   "AI/ML": AIMLIcon,
   GitLoader: GitLoaderIcon,
+  athenaIcon: AthenaIcon,
 };
