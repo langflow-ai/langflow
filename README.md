@@ -108,7 +108,7 @@ make install_frontend && make build_frontend && make install_backend
 Once the installation is complete, you can run Langflow with:
 
 ```shell
-python -m langflow run
+poetry run python -m langflow run
 ```
 
 # 🎨 Create Flows
