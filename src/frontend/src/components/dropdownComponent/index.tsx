@@ -53,6 +53,12 @@ export default function Dropdown({
   };
 
   useEffect(() => {
+    if (disabled && value !== "") {
+      onSelect("", undefined, true);
+    }
+  }, [disabled]);
+
+  useEffect(() => {
     if (open) {
       const filtered = cloneDeep(options);
       if (customValue === value && value && combobox) {

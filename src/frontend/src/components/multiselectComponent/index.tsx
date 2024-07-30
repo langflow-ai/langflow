@@ -62,6 +62,12 @@ export default function MultiselectComponent({
   };
 
   useEffect(() => {
+    if (disabled && value.length > 0 && value[0] !== "") {
+      onSelect([], undefined, true);
+    }
+  }, [disabled]);
+
+  useEffect(() => {
     searchRoleByTerm(searchValue);
   }, [onlySelected]);
 
