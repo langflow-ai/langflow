@@ -80,6 +80,19 @@ class Component(CustomComponent):
         return output
 
     def connect(self, **kwargs):
+        """
+        Connects the component to other components or sets parameters and attributes.
+
+        Args:
+            **kwargs: Keyword arguments representing the connections, parameters, and attributes.
+
+        Returns:
+            self: The component instance.
+
+        Raises:
+            KeyError: If the specified input name does not exist.
+
+        """
         for key, value in kwargs.items():
             # if value is a callable, it must be a method from another component
             # we need to the class owning the method
