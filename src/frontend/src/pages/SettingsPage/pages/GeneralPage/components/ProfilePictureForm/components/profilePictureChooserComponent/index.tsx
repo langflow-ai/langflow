@@ -8,8 +8,8 @@ import { cn } from "../../../../../../../../utils/utils";
 import usePreloadImages from "./hooks/use-preload-images";
 
 type ProfilePictureChooserComponentProps = {
-  profilePictures?: ProfilePicturesQueryResponse | undefined;
-  loading?: boolean;
+  profilePictures?: ProfilePicturesQueryResponse;
+  loading: boolean;
   value: string;
   onChange: (value: string) => void;
 };
@@ -30,7 +30,7 @@ export default function ProfilePictureChooserComponent({
     }
   }, [ref, value]);
 
-  usePreloadImages(profilePictures!, setImagesLoaded, loading!);
+  usePreloadImages(profilePictures, setImagesLoaded, loading);
 
   return (
     <div className="flex flex-col justify-center gap-2">

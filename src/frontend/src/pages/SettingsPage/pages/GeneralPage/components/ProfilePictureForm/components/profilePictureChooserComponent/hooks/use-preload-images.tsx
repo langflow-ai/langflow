@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { BASE_URL_API } from "../../../../../../../../../constants/constants";
 
 const usePreloadImages = (
-  profilePictures: { [key: string]: string[] },
+  profilePictures?: { [key: string]: string[] },
   setImagesLoaded: (value: boolean) => void,
   loading: boolean,
 ) => {
