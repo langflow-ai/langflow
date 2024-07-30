@@ -92,46 +92,58 @@ class Component(CustomComponent):
 
         Raises:
             KeyError: If the specified input name does not exist.
-
         """
         for key, value in kwargs.items():
-            # if value is a callable, it must be a method from another component
-            # we need to the class owning the method
-            try:
-                _input = self._inputs[key]
-            except KeyError:
-                _input = self._get_fallback_input(name=key, display_name=key)
-                self._inputs[key] = _input
-                self.inputs.append(_input)
-            if callable(value):
-                component: Component = value.__self__
-                self._components.append(component)
-                output = component._get_output_by_method(value)
-                self._edges.append(
-                    {
-                        "source": component._id,
-                        "target": self._id,
-                        "data": {
-                            "sourceHandle": {
-                                "dataType": self.name,
-                                "id": component._id,
-                                "name": output.name,
-                                "output_types": output.types,
-                            },
-                            "targetHandle": {
-                                "fieldName": key,
-                                "id": self._id,
-                                "inputTypes": _input.input_types,
-                                "type": _input.field_type,
-                            },
-                        },
-                    }
-                )
-            else:
-                self._parameters[key] = value
-
-            self._attributes[key] = value
+            self._process_connection_or_parameter(key, value)
         return self
+
+    def _process_connection_or_parameter(self, key, value):
+        _input = self._get_or_create_input(key)
+        if callable(value):
+            self._connect_to_component(key, value, _input)
+        else:
+            self._set_parameter_or_attribute(key, value)
+
+    def _get_or_create_input(self, key):
+        try:
+            return self._inputs[key]
+        except KeyError:
+            _input = self._get_fallback_input(name=key, display_name=key)
+            self._inputs[key] = _input
+            self.inputs.append(_input)
+            return _input
+
+    def _connect_to_component(self, key, value, _input):
+        component = value.__self__
+        self._components.append(component)
+        output = component._get_output_by_method(value)
+        self._add_edge(component, key, output, _input)
+
+    def _add_edge(self, component, key, output, _input):
+        self._edges.append(
+            {
+                "source": component._id,
+                "target": self._id,
+                "data": {
+                    "sourceHandle": {
+                        "dataType": self.name,
+                        "id": component._id,
+                        "name": output.name,
+                        "output_types": output.types,
+                    },
+                    "targetHandle": {
+                        "fieldName": key,
+                        "id": self._id,
+                        "inputTypes": _input.input_types,
+                        "type": _input.field_type,
+                    },
+                },
+            }
+        )
+
+    def _set_parameter_or_attribute(self, key, value):
+        self._parameters[key] = value
+        self._attributes[key] = value
 
     def __call__(self, **kwargs):
         self.connect(**kwargs)
