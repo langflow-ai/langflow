@@ -41,7 +41,6 @@ class FlowToolComponent(LCToolComponent):
         return None
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
-        logger.debug(f"Updating build config with field value {field_value} and field name {field_name}")
         if field_name == "flow_name":
             build_config["flow_name"]["options"] = self.get_flow_names()
 
@@ -52,6 +51,7 @@ class FlowToolComponent(LCToolComponent):
             name="flow_name",
             display_name="Flow Name",
             info="The name of the flow to run.",
+            refresh_button=True
         ),
         StrInput(
             name="name",
