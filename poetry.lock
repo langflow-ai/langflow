@@ -4943,13 +4943,13 @@ pytz = ">=2023.3.post1"
 
 [[package]]
 name = "langchain-google-community"
-version = "1.0.6"
+version = "1.0.7"
 description = "An integration package connecting miscellaneous Google's products and LangChain"
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
-    {file = "langchain_google_community-1.0.6-py3-none-any.whl", hash = "sha256:5c2f18aebfb60b51f68dc1608d09ac3e8231743d75c545f409230f7bee641faf"},
-    {file = "langchain_google_community-1.0.6.tar.gz", hash = "sha256:081ed78702426a62187c86984c169508c432fc13cd2b08dbf5b553b40bb160b3"},
+    {file = "langchain_google_community-1.0.7-py3-none-any.whl", hash = "sha256:0ec6701d3d1934be96cf170a1058480645c6cbe8b242fedb731d8ca4bb6d72d8"},
+    {file = "langchain_google_community-1.0.7.tar.gz", hash = "sha256:baa81e2d92b5cdcff7e484ec9c505db4d19569a5625e32697dbf5003941e9e1b"},
 ]
 
 [package.dependencies]
@@ -4976,40 +4976,40 @@ vision = ["google-cloud-vision (>=3.7.2,<4.0.0)"]
 
 [[package]]
 name = "langchain-google-genai"
-version = "1.0.7"
+version = "1.0.8"
 description = "An integration package connecting Google's genai package and LangChain"
 optional = false
 python-versions = "<4.0,>=3.9"
 files = [
-    {file = "langchain_google_genai-1.0.7-py3-none-any.whl", hash = "sha256:8fc03a0b5f635d369d1eec25076921ea7a472a1cb96dbea8e8ff2c2cdce58650"},
-    {file = "langchain_google_genai-1.0.7.tar.gz", hash = "sha256:6522da59720ad551867e278d63c053e0fb65fa4fa1d65382aacedca5293930fa"},
+    {file = "langchain_google_genai-1.0.8-py3-none-any.whl", hash = "sha256:675dab1afa8f165c6169512dae984c90fd9fe2e8a54bdf7d0a0ccd826ee719d4"},
+    {file = "langchain_google_genai-1.0.8.tar.gz", hash = "sha256:4b5b074476f073f4f6f0d1e74c811bb66e4caaf2d6b57b14bf6a1eab36de8c4e"},
 ]
 
 [package.dependencies]
 google-generativeai = ">=0.7.0,<0.8.0"
-langchain-core = ">=0.2.9,<0.3"
+langchain-core = ">=0.2.17,<0.3"
 
 [package.extras]
 images = ["pillow (>=10.1.0,<11.0.0)"]
 
 [[package]]
 name = "langchain-google-vertexai"
-version = "1.0.6"
+version = "1.0.7"
 description = "An integration package connecting Google VertexAI and LangChain"
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
-    {file = "langchain_google_vertexai-1.0.6-py3-none-any.whl", hash = "sha256:240a9be3ae749335ec9a495502ca8f2bff60a432b8400a21cbd93b415e4d166d"},
-    {file = "langchain_google_vertexai-1.0.6.tar.gz", hash = "sha256:000c4cfd0dee73317e1752dfeec76a08c5bf24f7a134d79b9905a720ac886b11"},
+    {file = "langchain_google_vertexai-1.0.7-py3-none-any.whl", hash = "sha256:2c3516171fb0a6557ff03d073bdbf6e9bbb5f291cccbcd8febd97affa2e69574"},
+    {file = "langchain_google_vertexai-1.0.7.tar.gz", hash = "sha256:ac7d8ad8e832b1d5a752cb0637082d7e2c451bc33e512eec7bf9662b1aac41db"},
 ]
 
 [package.dependencies]
 google-cloud-aiplatform = ">=1.56.0,<2.0.0"
 google-cloud-storage = ">=2.17.0,<3.0.0"
-langchain-core = ">=0.2.9,<0.3"
+langchain-core = ">=0.2.17,<0.3"
 
 [package.extras]
-anthropic = ["anthropic[vertexai] (>=0.29.0,<1)"]
+anthropic = ["anthropic[vertexai] (>=0.30.0,<1)"]
 
 [[package]]
 name = "langchain-groq"
@@ -5080,13 +5080,13 @@ pymongo = ">=4.6.1,<5.0"
 
 [[package]]
 name = "langchain-nvidia-ai-endpoints"
-version = "0.1.4"
+version = "0.1.6"
 description = "An integration package connecting NVIDIA AI Endpoints and LangChain"
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
-    {file = "langchain_nvidia_ai_endpoints-0.1.4-py3-none-any.whl", hash = "sha256:e65e21b4ecdd1e5add44520399bffcd4a158194d28021a6e789f76e895fe27d6"},
-    {file = "langchain_nvidia_ai_endpoints-0.1.4.tar.gz", hash = "sha256:8b2c8b80f00d1d64f5ee25a93df0692cbb6d13e51f00e45332c2851fef77f9f3"},
+    {file = "langchain_nvidia_ai_endpoints-0.1.6-py3-none-any.whl", hash = "sha256:0cd4d7b24b74ad8da67295cb001cd51a498c0e8cde9ead112fa583f61b6cb0f2"},
+    {file = "langchain_nvidia_ai_endpoints-0.1.6.tar.gz", hash = "sha256:5f8ab60b88266326f3eae6b04cbab0a75f0d7de56e60cfa8e4e240ef2a132c3e"},
 ]
 
 [package.dependencies]
@@ -5175,7 +5175,7 @@ six = "*"
 
 [[package]]
 name = "langflow-base"
-version = "0.0.90"
+version = "0.0.92"
 description = "A Python package with a built-in web application"
 optional = false
 python-versions = ">=3.10,<3.13"
