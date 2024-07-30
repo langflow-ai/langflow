@@ -3,6 +3,7 @@ from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.inputs import SecretStrInput, MessageTextInput, DropdownInput, StrInput, MultiselectInput
 from langchain_core.tools import StructuredTool
 from composio_langchain import ComposioToolSet, App, Action
+from loguru import logger
 
 
 class ComposioAPIComponent(LCToolComponent):
@@ -82,8 +83,8 @@ class ComposioAPIComponent(LCToolComponent):
                 return self._process_api_key_auth(entity, app)
             else:
                 return self._initiate_default_connection(entity, app)
-        except Exception as e:
-            print(e)
+        except Exception as exc:
+            logger.error(f"Authorization error: {str(exc)}")
             return "Error"
 
     def _process_api_key_auth(self, entity: Any, app: str) -> str:
