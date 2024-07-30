@@ -145,6 +145,8 @@ class Component(CustomComponent):
                     result = await result
                 self._inputs[key].value = result
 
+        self.set_attributes({})
+
         return await self.build_results()
 
     async def run(self):
