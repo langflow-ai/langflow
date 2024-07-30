@@ -48,7 +48,8 @@ async def test_graph():
 @pytest.mark.asyncio
 async def test_graph_functional():
     chat_input = ChatInput(_id="chat_input")
-    chat_output = ChatOutput(input_value="test", _id="chat_output").connect(sender_name=chat_input.message_response)
+    chat_output = ChatOutput(input_value="test", _id="chat_output")
+    chat_output.connect(sender_name=chat_input.message_response)
     graph = Graph(chat_input, chat_output)
     assert graph._run_queue == deque(["chat_input"])
     await graph.astep()
@@ -63,7 +64,8 @@ async def test_graph_functional():
 @pytest.mark.asyncio
 async def test_graph_functional_async_start():
     chat_input = ChatInput(_id="chat_input")
-    chat_output = ChatOutput(input_value="test", _id="chat_output").connect(sender_name=chat_input.message_response)
+    chat_output = ChatOutput(input_value="test", _id="chat_output")
+    chat_output.connect(sender_name=chat_input.message_response)
     graph = Graph(chat_input, chat_output)
     # Now iterate through the graph
     # and check that the graph is running
@@ -80,7 +82,8 @@ async def test_graph_functional_async_start():
 
 def test_graph_functional_start():
     chat_input = ChatInput(_id="chat_input")
-    chat_output = ChatOutput(input_value="test", _id="chat_output").connect(sender_name=chat_input.message_response)
+    chat_output = ChatOutput(input_value="test", _id="chat_output")
+    chat_output.connect(sender_name=chat_input.message_response)
     graph = Graph(chat_input, chat_output)
     graph.prepare()
     # Now iterate through the graph
@@ -98,8 +101,10 @@ def test_graph_functional_start():
 
 def test_graph_functional_start_end():
     chat_input = ChatInput(_id="chat_input")
-    text_output = TextOutputComponent(_id="text_output").connect(input_value=chat_input.message_response)
-    chat_output = ChatOutput(input_value="test", _id="chat_output").connect(input_value=text_output.text_response)
+    text_output = TextOutputComponent(_id="text_output")
+    text_output.connect(input_value=chat_input.message_response)
+    chat_output = ChatOutput(input_value="test", _id="chat_output")
+    chat_output.connect(input_value=text_output.text_response)
     graph = Graph(chat_input, text_output)
     graph.prepare()
     # Now iterate through the graph
