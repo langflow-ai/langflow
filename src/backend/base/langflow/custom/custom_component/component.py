@@ -1,17 +1,5 @@
 import inspect
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    AsyncIterator,
-    Callable,
-    ClassVar,
-    Generator,
-    Iterator,
-    List,
-    Optional,
-    Union,
-    get_type_hints,
-)
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, List, Optional, Union, get_type_hints
 from uuid import UUID
 
 import nanoid  # type: ignore
@@ -34,26 +22,6 @@ if TYPE_CHECKING:
     from langflow.graph.vertex.base import Vertex
 
 BACKWARDS_COMPATIBLE_ATTRIBUTES = ["user_id", "vertex", "tracing_service"]
-
-
-def recursive_serialize_or_str(obj):
-    try:
-        if isinstance(obj, dict):
-            return {k: recursive_serialize_or_str(v) for k, v in obj.items()}
-        elif isinstance(obj, list):
-            return [recursive_serialize_or_str(v) for v in obj]
-        elif isinstance(obj, BaseModel):
-            return {k: recursive_serialize_or_str(v) for k, v in obj.model_dump().items()}
-        elif isinstance(obj, (AsyncIterator, Generator, Iterator)):
-            # contain memory addresses
-            # without consuming the iterator
-            # return list(obj) consumes the iterator
-            # return f"{obj}" this generates '<generator object BaseChatModel.stream at 0x33e9ec770>'
-            # it is not useful
-            return "Unconsumed Stream"
-        return str(obj)
-    except Exception:
-        return str(obj)
 
 
 class Component(CustomComponent):

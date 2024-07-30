@@ -985,16 +985,11 @@ export async function downloadImage({ flowId, fileName }): Promise<any> {
 
 export async function getFlowPool({
   flowId,
-  nodeId,
 }: {
   flowId: string;
-  nodeId?: string;
 }): Promise<AxiosResponse<{ vertex_builds: FlowPoolType }>> {
   const config = {};
   config["params"] = { flow_id: flowId };
-  if (nodeId) {
-    config["params"] = { nodeId };
-  }
   return await api.get(`${BASE_URL_API}monitor/builds`, config);
 }
 

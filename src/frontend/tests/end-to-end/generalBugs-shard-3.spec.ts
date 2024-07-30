@@ -196,3 +196,58 @@ test("should copy code from playground modal", async ({ page }) => {
   expect(clipboardContent.length).toBeGreaterThan(0);
   expect(clipboardContent).toContain("Hello");
 });
+
+test("playground button should be enabled or disabled", async ({ page }) => {
+  await page.goto("/");
+  await page.locator("span").filter({ hasText: "My Collection" }).isVisible();
+  await page.waitForTimeout(2000);
+
+  let modalCount = 0;
+  try {
+    const modalTitleElement = await page?.getByTestId("modal-title");
+    if (modalTitleElement) {
+      modalCount = await modalTitleElement.count();
+    }
+  } catch (error) {
+    modalCount = 0;
+  }
+
+  while (modalCount === 0) {
+    await page.getByText("New Project", { exact: true }).click();
+    await page.waitForTimeout(5000);
+    modalCount = await page.getByTestId("modal-title")?.count();
+  }
+
+  await page.waitForSelector('[data-testid="blank-flow"]', {
+    timeout: 30000,
+  });
+
+  await page.getByTestId("blank-flow").click();
+  await page.waitForSelector('[data-testid="extended-disclosure"]', {
+    timeout: 30000,
+  });
+
+  await page.getByTestId("playground-btn-flow").click({ force: true });
+
+  expect(await page.getByText("Langflow Chat").isHidden());
+
+  await page.getByPlaceholder("Search").click();
+  await page.getByPlaceholder("Search").fill("chat output");
+
+  await page.waitForTimeout(2000);
+
+  await page
+    .locator('//*[@id="outputsChat Output"]')
+    .dragTo(page.locator('//*[@id="react-flow-id"]'));
+  await page.mouse.up();
+  await page.mouse.down();
+  await page.waitForSelector('[title="fit view"]', {
+    timeout: 100000,
+  });
+
+  await page.waitForTimeout(2000);
+
+  await page.getByTestId("playground-btn-flow-io").click({ force: true });
+
+  expect(await page.getByText("Langflow Chat").isVisible());
+});

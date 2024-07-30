@@ -399,8 +399,12 @@ class InterfaceVertex(ComponentVertex):
             for key, value in origin_vertex.results.items():
                 if isinstance(value, (AsyncIterator, Iterator)):
                     origin_vertex.results[key] = complete_message
-
-        await log_vertex_build(
+        if self._custom_component:
+            if hasattr(self._custom_component, "should_store_message") and hasattr(
+                self._custom_component, "store_message"
+            ):
+                self._custom_component.store_message(message)
+        log_vertex_build(
             flow_id=self.graph.flow_id,
             vertex_id=self.id,
             valid=True,

@@ -15,7 +15,7 @@ export const useRefreshAccessToken: useMutationFunctionType<undefined, any> = (
   }
 
   const mutation: UseMutationResult = mutate(
-    ["useRefrshAccessToken"],
+    ["useRefreshAccessToken"],
     refreshAccess,
     options,
   );

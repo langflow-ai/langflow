@@ -24,7 +24,10 @@ def migrate_messages_from_monitor_service_to_database(session: Session) -> bool:
         monitor_service = get_monitor_service()
         messages_df = monitor_service.get_messages()
     except Exception as e:
-        logger.error(f"Error retrieving messages from monitor service: {e}")
+        if "Table with name messages does not exist" in str(e):
+            logger.debug(f"Error retrieving messages from monitor service: {e}")
+        else:
+            logger.warning(f"Error retrieving messages from monitor service: {e}")
         return False
 
     if messages_df.empty:
@@ -153,8 +156,16 @@ class TableResults:
 
 
 def migrate_transactions_from_monitor_service_to_database(session: Session) -> None:
-    monitor_service = get_monitor_service()
-    batch = monitor_service.get_transactions()
+    try:
+        monitor_service = get_monitor_service()
+        batch = monitor_service.get_transactions()
+    except Exception as e:
+        if "Table with name transactions does not exist" in str(e):
+            logger.debug(f"Error retrieving transactions from monitor service: {e}")
+        else:
+            logger.warning(f"Error retrieving transactions from monitor service: {e}")
+        return
+
     if not batch:
         logger.debug("No transactions to migrate.")
         return
