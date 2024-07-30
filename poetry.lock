@@ -4778,13 +4778,13 @@ pytz = ">=2023.3.post1"
 
 [[package]]
 name = "langchain-google-community"
-version = "1.0.6"
+version = "1.0.7"
 description = "An integration package connecting miscellaneous Google's products and LangChain"
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
-    {file = "langchain_google_community-1.0.6-py3-none-any.whl", hash = "sha256:5c2f18aebfb60b51f68dc1608d09ac3e8231743d75c545f409230f7bee641faf"},
-    {file = "langchain_google_community-1.0.6.tar.gz", hash = "sha256:081ed78702426a62187c86984c169508c432fc13cd2b08dbf5b553b40bb160b3"},
+    {file = "langchain_google_community-1.0.7-py3-none-any.whl", hash = "sha256:0ec6701d3d1934be96cf170a1058480645c6cbe8b242fedb731d8ca4bb6d72d8"},
+    {file = "langchain_google_community-1.0.7.tar.gz", hash = "sha256:baa81e2d92b5cdcff7e484ec9c505db4d19569a5625e32697dbf5003941e9e1b"},
 ]
 
 [package.dependencies]
@@ -4915,13 +4915,13 @@ pymongo = ">=4.6.1,<5.0"
 
 [[package]]
 name = "langchain-nvidia-ai-endpoints"
-version = "0.1.4"
+version = "0.1.6"
 description = "An integration package connecting NVIDIA AI Endpoints and LangChain"
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
-    {file = "langchain_nvidia_ai_endpoints-0.1.4-py3-none-any.whl", hash = "sha256:e65e21b4ecdd1e5add44520399bffcd4a158194d28021a6e789f76e895fe27d6"},
-    {file = "langchain_nvidia_ai_endpoints-0.1.4.tar.gz", hash = "sha256:8b2c8b80f00d1d64f5ee25a93df0692cbb6d13e51f00e45332c2851fef77f9f3"},
+    {file = "langchain_nvidia_ai_endpoints-0.1.6-py3-none-any.whl", hash = "sha256:0cd4d7b24b74ad8da67295cb001cd51a498c0e8cde9ead112fa583f61b6cb0f2"},
+    {file = "langchain_nvidia_ai_endpoints-0.1.6.tar.gz", hash = "sha256:5f8ab60b88266326f3eae6b04cbab0a75f0d7de56e60cfa8e4e240ef2a132c3e"},
 ]
 
 [package.dependencies]
@@ -4931,17 +4931,17 @@ pillow = ">=10.0.0,<11.0.0"
 
 [[package]]
 name = "langchain-openai"
-version = "0.1.17"
+version = "0.1.16"
 description = "An integration package connecting OpenAI and LangChain"
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
-    {file = "langchain_openai-0.1.17-py3-none-any.whl", hash = "sha256:30bef5574ecbbbb91b8025b2dc5a1bd81fd62157d3ad1a35d820141f31c5b443"},
-    {file = "langchain_openai-0.1.17.tar.gz", hash = "sha256:c5d70ddecdcb93e146f376bdbadbb6ec69de9ac0f402cd5b83de50b655ba85ee"},
+    {file = "langchain_openai-0.1.16-py3-none-any.whl", hash = "sha256:bff90e9d0be786495920a7851ae4d55247fb084d3a11d1b15bfe91904ce1cb0f"},
+    {file = "langchain_openai-0.1.16.tar.gz", hash = "sha256:3dedcc785a64a488ad6a313cc59b0dccea025d27413b55cec73a20dcf3ded4da"},
 ]
 
 [package.dependencies]
-langchain-core = ">=0.2.20,<0.3.0"
+langchain-core = ">=0.2.17,<0.3.0"
 openai = ">=1.32.0,<2.0.0"
 tiktoken = ">=0.7,<1"
 
@@ -11837,4 +11837,4 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-content-hash = "130de1ea817e1f6aa6bb3c94a93e488ec1311629a3a080a939350e523951708f"
+content-hash = "e4c2028a0f08fedfa5c7b1ff8ee223962a80a3eb05fd7da57af0fb388fc669f8"
