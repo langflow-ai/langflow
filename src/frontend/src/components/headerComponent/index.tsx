@@ -12,6 +12,7 @@ import {
 import { AuthContext } from "../../contexts/authContext";
 
 import FeatureFlags from "@/../feature-config.json";
+import { useLogout } from "@/controllers/API/queries/auth";
 import useAuthStore from "@/stores/authStore";
 import useAlertStore from "../../stores/alertStore";
 import { useDarkStore } from "../../stores/darkStore";
@@ -36,9 +37,12 @@ export default function Header(): JSX.Element {
   const notificationCenter = useAlertStore((state) => state.notificationCenter);
   const location = useLocation();
 
-  const { logout, userData } = useContext(AuthContext);
+  const { userData } = useContext(AuthContext);
   const isAdmin = useAuthStore((state) => state.isAdmin);
   const autoLogin = useAuthStore((state) => state.autoLogin);
+
+  const { mutate: mutationLogout } = useLogout();
+  const logout = useAuthStore((state) => state.logout);
 
   const navigate = useNavigate();
   const removeFlow = useFlowsManagerStore((store) => store.removeFlow);
@@ -83,6 +87,17 @@ export default function Header(): JSX.Element {
   const showArrowReturnIcon =
     LOCATIONS_TO_RETURN.some((path) => location.pathname.includes(path)) &&
     visitedFlowPathBefore();
+
+  const handleLogout = () => {
+    mutationLogout(undefined, {
+      onSuccess: () => {
+        logout();
+      },
+      onError: (error) => {
+        console.error(error);
+      },
+    });
+  };
 
   return (
     <div className="header-arrangement">
@@ -291,9 +306,7 @@ export default function Header(): JSX.Element {
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       className="cursor-pointer gap-2"
-                      onClick={() => {
-                        logout();
-                      }}
+                      onClick={handleLogout}
                     >
                       <ForwardedIconComponent name="LogOut" className="w-4" />
                       Log Out

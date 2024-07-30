@@ -24,7 +24,7 @@ env:
 
 jobs:
   setup-and-test:
-    name: Run Playwright Tests
+    name: Playwright Tests - Group ${{ matrix.shardIndex }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
