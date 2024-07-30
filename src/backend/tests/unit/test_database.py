@@ -22,6 +22,7 @@ from langflow.services.monitor.utils import (
 )
 from collections import namedtuple
 
+
 @pytest.fixture(scope="module")
 def json_style():
     # class FlowStyleBase(SQLModel):
@@ -135,7 +136,9 @@ def test_delete_flows(client: TestClient, json_flow: str, active_user, logged_in
 
 
 @pytest.mark.asyncio
-async def test_delete_flows_with_transaction_and_build(client: TestClient, json_flow: str, active_user, logged_in_headers):
+async def test_delete_flows_with_transaction_and_build(
+    client: TestClient, json_flow: str, active_user, logged_in_headers
+):
     # Create ten flows
     number_of_flows = 10
     flows = [FlowCreate(name=f"Flow {i}", description="description", data={}) for i in range(number_of_flows)]
@@ -148,13 +151,11 @@ async def test_delete_flows_with_transaction_and_build(client: TestClient, json_
     # Create a transaction for each flow
 
     for flow_id in flow_ids:
-        VertexTuple = namedtuple('VertexTuple', ['id'])
+        VertexTuple = namedtuple("VertexTuple", ["id"])
 
-        await log_transaction(str(flow_id), source=VertexTuple(
-            id="vid"
-        ), target=VertexTuple(
-            id="tid"
-        ), status="success")
+        await log_transaction(
+            str(flow_id), source=VertexTuple(id="vid"), target=VertexTuple(id="tid"), status="success"
+        )
 
     # Create a build for each flow
     for flow_id in flow_ids:
@@ -164,7 +165,7 @@ async def test_delete_flows_with_transaction_and_build(client: TestClient, json_
             "data": ResultDataResponse(),
             "artifacts": {},
             "vertex_id": "vid",
-            "flow_id": flow_id
+            "flow_id": flow_id,
         }
         log_vertex_build(
             flow_id=build["flow_id"],
@@ -172,9 +173,8 @@ async def test_delete_flows_with_transaction_and_build(client: TestClient, json_
             valid=build["valid"],
             params=build["params"],
             data=build["data"],
-            artifacts=build.get("artifacts")
+            artifacts=build.get("artifacts"),
         )
-
 
     response = client.request("DELETE", "api/v1/flows/", headers=logged_in_headers, json=flow_ids)
     assert response.status_code == 200, response.content
