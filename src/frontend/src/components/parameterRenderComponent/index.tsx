@@ -1,6 +1,7 @@
 import { TEXT_FIELD_TYPES } from "@/CustomNodes/GenericNode/components/parameterComponent/constants";
 import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import { APIClassType, InputFieldType } from "@/types/api";
+import { useMemo } from "react";
 import CodeAreaComponent from "../codeAreaComponent";
 import DictComponent from "../dictComponent";
 import FloatComponent from "../floatComponent";
@@ -44,107 +45,112 @@ export function ParameterRenderComponent({
     templateData.name
   ).toLowerCase();
 
-  return (
-    <RefreshParameterComponent
-      templateData={templateData}
-      disabled={disabled}
-      nodeId={nodeId}
-      editNode={editNode}
-      nodeClass={nodeClass}
-      handleNodeClass={handleNodeClass}
-      name={name}
-    >
-      {TEXT_FIELD_TYPES.includes(templateData.type ?? "") ? (
-        <StrRenderComponent
-          templateData={templateData}
-          value={templateValue}
-          name={name}
-          disabled={disabled}
-          handleOnNewValue={handleOnNewValue}
-          id={id}
-          editNode={editNode}
-        />
-      ) : templateData.type === "NestedDict" ? (
-        <DictComponent
-          disabled={disabled}
-          editNode={editNode}
-          value={(templateValue || "").toString() === "{}" ? {} : templateValue}
-          onChange={onChange}
-          id={`dict_${id}`}
-        />
-      ) : templateData.type === "dict" ? (
-        <KeypairListComponent
-          disabled={disabled}
-          editNode={editNode}
-          value={templateValue}
-          onChange={onChange}
-          isList={templateData.list ?? false}
-          id={`keypair_${id}`}
-        />
-      ) : templateData.type === "bool" ? (
-        <ToggleShadComponent
-          id={`toggle_${id}`}
-          disabled={disabled}
-          enabled={templateValue}
-          setEnabled={onChange}
-          size={editNode ? "small" : "large"}
-        />
-      ) : templateData.type === "float" ? (
-        <FloatComponent
-          disabled={disabled}
-          editNode={editNode}
-          rangeSpec={templateData.range_spec}
-          value={templateValue ?? ""}
-          onChange={onChange}
-          id={`float_${id}`}
-        />
-      ) : templateData.type === "int" ? (
-        <IntComponent
-          rangeSpec={templateData.range_spec}
-          id={`int_${id}`}
-          disabled={disabled}
-          editNode={editNode}
-          value={templateValue ?? ""}
-          onChange={onChange}
-        />
-      ) : templateData.type === "file" ? (
-        <InputFileComponent
-          editNode={editNode}
-          disabled={disabled}
-          value={templateValue ?? ""}
-          handleOnNewValue={handleOnNewValue}
-          fileTypes={templateData.fileTypes}
-          id={`inputfile_${id}`}
-        />
-      ) : templateData.type === "prompt" ? (
-        <PromptAreaComponent
-          readonly={nodeClass.flow ? true : false}
-          field_name={name}
-          editNode={editNode}
-          disabled={disabled}
-          nodeClass={nodeClass}
-          setNodeClass={handleNodeClass}
-          value={templateValue ?? ""}
-          onChange={onChange}
-          id={`promptarea_${id}`}
-        />
-      ) : templateData.type === "code" ? (
-        <CodeAreaComponent
-          readonly={nodeClass.flow && templateData.dynamic ? true : false}
-          dynamic={templateData.dynamic ?? false}
-          setNodeClass={handleNodeClass}
-          nodeClass={nodeClass}
-          disabled={disabled}
-          editNode={editNode}
-          value={templateValue ?? ""}
-          onChange={onChange}
-          id={`codearea_${id}`}
-        />
-      ) : templateData.type === "Any" ? (
-        <>-</>
-      ) : (
-        String(templateValue)
-      )}
-    </RefreshParameterComponent>
+  return useMemo(
+    () => (
+      <RefreshParameterComponent
+        templateData={templateData}
+        disabled={disabled}
+        nodeId={nodeId}
+        editNode={editNode}
+        nodeClass={nodeClass}
+        handleNodeClass={handleNodeClass}
+        name={name}
+      >
+        {TEXT_FIELD_TYPES.includes(templateData.type ?? "") ? (
+          <StrRenderComponent
+            templateData={templateData}
+            value={templateValue}
+            name={name}
+            disabled={disabled}
+            handleOnNewValue={handleOnNewValue}
+            id={id}
+            editNode={editNode}
+          />
+        ) : templateData.type === "NestedDict" ? (
+          <DictComponent
+            disabled={disabled}
+            editNode={editNode}
+            value={
+              (templateValue || "").toString() === "{}" ? {} : templateValue
+            }
+            onChange={onChange}
+            id={`dict_${id}`}
+          />
+        ) : templateData.type === "dict" ? (
+          <KeypairListComponent
+            disabled={disabled}
+            editNode={editNode}
+            value={templateValue}
+            onChange={onChange}
+            isList={templateData.list ?? false}
+            id={`keypair_${id}`}
+          />
+        ) : templateData.type === "bool" ? (
+          <ToggleShadComponent
+            id={`toggle_${id}`}
+            disabled={disabled}
+            enabled={templateValue}
+            setEnabled={onChange}
+            size={editNode ? "small" : "large"}
+          />
+        ) : templateData.type === "float" ? (
+          <FloatComponent
+            disabled={disabled}
+            editNode={editNode}
+            rangeSpec={templateData.range_spec}
+            value={templateValue ?? ""}
+            onChange={onChange}
+            id={`float_${id}`}
+          />
+        ) : templateData.type === "int" ? (
+          <IntComponent
+            rangeSpec={templateData.range_spec}
+            id={`int_${id}`}
+            disabled={disabled}
+            editNode={editNode}
+            value={templateValue ?? ""}
+            onChange={onChange}
+          />
+        ) : templateData.type === "file" ? (
+          <InputFileComponent
+            editNode={editNode}
+            disabled={disabled}
+            value={templateValue ?? ""}
+            handleOnNewValue={handleOnNewValue}
+            fileTypes={templateData.fileTypes}
+            id={`inputfile_${id}`}
+          />
+        ) : templateData.type === "prompt" ? (
+          <PromptAreaComponent
+            readonly={nodeClass.flow ? true : false}
+            field_name={name}
+            editNode={editNode}
+            disabled={disabled}
+            nodeClass={nodeClass}
+            setNodeClass={handleNodeClass}
+            value={templateValue ?? ""}
+            onChange={onChange}
+            id={`promptarea_${id}`}
+          />
+        ) : templateData.type === "code" ? (
+          <CodeAreaComponent
+            readonly={nodeClass.flow && templateData.dynamic ? true : false}
+            dynamic={templateData.dynamic ?? false}
+            setNodeClass={handleNodeClass}
+            nodeClass={nodeClass}
+            disabled={disabled}
+            editNode={editNode}
+            value={templateValue ?? ""}
+            onChange={onChange}
+            id={`codearea_${id}`}
+          />
+        ) : templateData.type === "Any" ? (
+          <>-</>
+        ) : (
+          String(templateValue)
+        )}
+      </RefreshParameterComponent>
+    ),
+    [templateData, disabled, nodeId, editNode, nodeClass, name, templateValue],
   );
 }
