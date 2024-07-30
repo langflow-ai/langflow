@@ -15,4 +15,4 @@ services:
         value: 0.0.0.0
     disk:
       name: langflow-data
-      mountPath: /app/data/.cache/langflow
+      mountPath: /app/data
