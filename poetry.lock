@@ -2692,8 +2692,8 @@ files = [
 [package.dependencies]
 cffi = {version = ">=1.12.2", markers = "platform_python_implementation == \"CPython\" and sys_platform == \"win32\""}
 greenlet = [
-    {version = ">=2.0.0", markers = "platform_python_implementation == \"CPython\" and python_version < \"3.11\""},
     {version = ">=3.0rc3", markers = "platform_python_implementation == \"CPython\" and python_version >= \"3.11\""},
+    {version = ">=2.0.0", markers = "platform_python_implementation == \"CPython\" and python_version < \"3.11\""},
 ]
 "zope.event" = "*"
 "zope.interface" = "*"
@@ -2852,12 +2852,12 @@ files = [
 google-auth = ">=2.14.1,<3.0.dev0"
 googleapis-common-protos = ">=1.56.2,<2.0.dev0"
 grpcio = [
-    {version = ">=1.33.2,<2.0dev", optional = true, markers = "python_version < \"3.11\" and extra == \"grpc\""},
     {version = ">=1.49.1,<2.0dev", optional = true, markers = "python_version >= \"3.11\" and extra == \"grpc\""},
+    {version = ">=1.33.2,<2.0dev", optional = true, markers = "python_version < \"3.11\" and extra == \"grpc\""},
 ]
 grpcio-status = [
-    {version = ">=1.33.2,<2.0.dev0", optional = true, markers = "python_version < \"3.11\" and extra == \"grpc\""},
     {version = ">=1.49.1,<2.0.dev0", optional = true, markers = "python_version >= \"3.11\" and extra == \"grpc\""},
+    {version = ">=1.33.2,<2.0.dev0", optional = true, markers = "python_version < \"3.11\" and extra == \"grpc\""},
 ]
 proto-plus = ">=1.22.3,<2.0.0dev"
 protobuf = ">=3.19.5,<3.20.0 || >3.20.0,<3.20.1 || >3.20.1,<4.21.0 || >4.21.0,<4.21.1 || >4.21.1,<4.21.2 || >4.21.2,<4.21.3 || >4.21.3,<4.21.4 || >4.21.4,<4.21.5 || >4.21.5,<6.0.0.dev0"
@@ -4580,19 +4580,19 @@ tenacity = ">=8.1.0,<8.4.0 || >8.4.0,<9.0.0"
 
 [[package]]
 name = "langchain-anthropic"
-version = "0.1.20"
+version = "0.1.21"
 description = "An integration package connecting AnthropicMessages and LangChain"
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
-    {file = "langchain_anthropic-0.1.20-py3-none-any.whl", hash = "sha256:3a0d89ac6856be98beb3ec63813393bf29af3c5134247979c055938e741b7d9d"},
-    {file = "langchain_anthropic-0.1.20.tar.gz", hash = "sha256:cb9607fecfc0f0de49b79dd0fc066790e2877873ef753abd98d2ae38d6e0f5b2"},
+    {file = "langchain_anthropic-0.1.21-py3-none-any.whl", hash = "sha256:74094162e0badd9f5d275a1e2c4019303fbb45638091c202dcaab5f88fda97aa"},
+    {file = "langchain_anthropic-0.1.21.tar.gz", hash = "sha256:04131e024f79c6a60837a4f3b1399b90440da7a9b0c984b92704e66c317f6c5b"},
 ]
 
 [package.dependencies]
 anthropic = ">=0.28.0,<1"
 defusedxml = ">=0.7.1,<0.8.0"
-langchain-core = ">=0.2.17,<0.3"
+langchain-core = ">=0.2.24,<0.3"
 
 [[package]]
 name = "langchain-astradb"
@@ -4612,18 +4612,18 @@ numpy = ">=1,<2"
 
 [[package]]
 name = "langchain-aws"
-version = "0.1.12"
+version = "0.1.6"
 description = "An integration package connecting AWS and LangChain"
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
-    {file = "langchain_aws-0.1.12-py3-none-any.whl", hash = "sha256:99dbda743cc05250eaa4ea70ee65c82332ef9a5f4b3b48d66d4e275e6159e520"},
-    {file = "langchain_aws-0.1.12.tar.gz", hash = "sha256:4f39e108fb93a42946bbb030bb409412281c603a3da549c744a7d92dcbb9bdfb"},
+    {file = "langchain_aws-0.1.6-py3-none-any.whl", hash = "sha256:a747c282c2df29281918818238fea5f7e183cfa1b28add4a08d7f3f9a4438ca9"},
+    {file = "langchain_aws-0.1.6.tar.gz", hash = "sha256:d5ceb3db72aef98b2fb2336add7932f1ed045df8824fef24cd3613d93d8b4efb"},
 ]
 
 [package.dependencies]
-boto3 = ">=1.34.131,<1.35.0"
-langchain-core = ">=0.2.17,<0.3"
+boto3 = ">=1.34.51,<1.35.0"
+langchain-core = ">=0.1.45,<0.3"
 numpy = ">=1,<2"
 
 [[package]]
@@ -4695,13 +4695,13 @@ tenacity = ">=8.1.0,<8.4.0 || >8.4.0,<9.0.0"
 
 [[package]]
 name = "langchain-core"
-version = "0.2.23"
+version = "0.2.24"
 description = "Building applications with LLMs through composability"
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
-    {file = "langchain_core-0.2.23-py3-none-any.whl", hash = "sha256:ef0b4184b37e356a27182514aedcc8c41ffacbd6348a801bc775c1ce1f608637"},
-    {file = "langchain_core-0.2.23.tar.gz", hash = "sha256:ac8165f283d8f5214576ffc38387106ef0de7eb8d2c52576d06e8dd3285294b0"},
+    {file = "langchain_core-0.2.24-py3-none-any.whl", hash = "sha256:9444fc082d21ef075d925590a684a73fe1f9688a3d90087580ec929751be55e7"},
+    {file = "langchain_core-0.2.24.tar.gz", hash = "sha256:f2e3fa200b124e8c45d270da9bf836bed9c09532612c96ff3225e59b9a232f5a"},
 ]
 
 [package.dependencies]
@@ -4820,18 +4820,18 @@ anthropic = ["anthropic[vertexai] (>=0.30.0,<1)"]
 
 [[package]]
 name = "langchain-groq"
-version = "0.1.6"
+version = "0.1.8"
 description = "An integration package connecting Groq and LangChain"
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
-    {file = "langchain_groq-0.1.6-py3-none-any.whl", hash = "sha256:c7e91f8a333299b25dad5e8c3bc555cc579560431247ac8e0c3d2705dd7411f8"},
-    {file = "langchain_groq-0.1.6.tar.gz", hash = "sha256:ecd3aac54e5e454633f3920a11d093dcb425c18830f721cc86e69e5acfbe7c85"},
+    {file = "langchain_groq-0.1.8-py3-none-any.whl", hash = "sha256:aee22aff2a63be155761aa7e94739ff9702621ede820157de5aa6ef98ebcea47"},
+    {file = "langchain_groq-0.1.8.tar.gz", hash = "sha256:255246e433531891e790f2ee506b07e3d8575a7dcb00b36816f859f236f0711e"},
 ]
 
 [package.dependencies]
 groq = ">=0.4.1,<1"
-langchain-core = ">=0.2.2,<0.3"
+langchain-core = ">=0.2.24,<0.3"
 
 [[package]]
 name = "langchain-milvus"
@@ -4854,19 +4854,19 @@ scipy = [
 
 [[package]]
 name = "langchain-mistralai"
-version = "0.1.10"
+version = "0.1.11"
 description = "An integration package connecting Mistral and LangChain"
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
-    {file = "langchain_mistralai-0.1.10-py3-none-any.whl", hash = "sha256:c0507f744cbb8d46b34b62170f977e3afe9c71606483a45b50c4b88f00cb0be5"},
-    {file = "langchain_mistralai-0.1.10.tar.gz", hash = "sha256:fbee929b891b3b6f4aa622fbe4b23f750447a831c823d459974787d825e16eaf"},
+    {file = "langchain_mistralai-0.1.11-py3-none-any.whl", hash = "sha256:2473c304aca2d8c5bdf9dda0e9b4f2ea3f50eebc74c9322b7f61e11da08be080"},
+    {file = "langchain_mistralai-0.1.11.tar.gz", hash = "sha256:092ea667f9d4a869ac9470d67bd1db36bb41531a526fc81a7d2672972ac908d8"},
 ]
 
 [package.dependencies]
 httpx = ">=0.25.2,<1"
 httpx-sse = ">=0.3.1,<1"
-langchain-core = ">=0.2.17,<0.3"
+langchain-core = ">=0.2.24,<0.3"
 tokenizers = ">=0.15.1,<1"
 
 [[package]]
@@ -4906,38 +4906,39 @@ pillow = ">=10.0.0,<11.0.0"
 
 [[package]]
 name = "langchain-openai"
-version = "0.1.17"
+version = "0.1.19"
 description = "An integration package connecting OpenAI and LangChain"
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
-    {file = "langchain_openai-0.1.17-py3-none-any.whl", hash = "sha256:30bef5574ecbbbb91b8025b2dc5a1bd81fd62157d3ad1a35d820141f31c5b443"},
-    {file = "langchain_openai-0.1.17.tar.gz", hash = "sha256:c5d70ddecdcb93e146f376bdbadbb6ec69de9ac0f402cd5b83de50b655ba85ee"},
+    {file = "langchain_openai-0.1.19-py3-none-any.whl", hash = "sha256:a7a739f1469d54cd988865420e7fc21b50fb93727b2e6da5ad30273fc61ecf19"},
+    {file = "langchain_openai-0.1.19.tar.gz", hash = "sha256:3bf342bb302d1444f4abafdf01c467dbd9b248497e1133808c4bae70396c79b3"},
 ]
 
 [package.dependencies]
-langchain-core = ">=0.2.20,<0.3.0"
+langchain-core = ">=0.2.24,<0.3.0"
 openai = ">=1.32.0,<2.0.0"
 tiktoken = ">=0.7,<1"
 
 [[package]]
 name = "langchain-pinecone"
-version = "0.1.2"
+version = "0.1.3"
 description = "An integration package connecting Pinecone and LangChain"
 optional = false
 python-versions = "<3.13,>=3.8.1"
 files = [
-    {file = "langchain_pinecone-0.1.2-py3-none-any.whl", hash = "sha256:07157885ef1e45bedadc3f7ea6bb181ec458fae5fd82dc7a6005444f67100613"},
-    {file = "langchain_pinecone-0.1.2.tar.gz", hash = "sha256:654fd93df8cefe1ff0ca7ac50cf308242df69a601ee3855019b524006b528595"},
+    {file = "langchain_pinecone-0.1.3-py3-none-any.whl", hash = "sha256:de4f88d690b28f629ef9cadb0af9b32819df4bd12171f75495f5339b7d87ae5b"},
+    {file = "langchain_pinecone-0.1.3.tar.gz", hash = "sha256:3fd23929d7d9653aeab9daeff5f324f3472feb0ac541778219fb52efcf9a88f3"},
 ]
 
 [package.dependencies]
+aiohttp = ">=3.9.5,<4.0.0"
 langchain-core = ">=0.1.52,<0.3"
 numpy = [
     {version = ">=1,<2", markers = "python_version < \"3.12\""},
     {version = ">=1.26.0,<2.0.0", markers = "python_version >= \"3.12\""},
 ]
-pinecone-client = ">=3.2.2,<5"
+pinecone-client = ">=5.0.0,<6.0.0"
 
 [[package]]
 name = "langchain-text-splitters"
@@ -4988,62 +4989,68 @@ name = "langflow-base"
 version = "0.0.91"
 description = "A Python package with a built-in web application"
 optional = false
-python-versions = "<3.13,>=3.10"
-files = [
-    {file = "langflow_base-0.0.90-py3-none-any.whl", hash = "sha256:f331a04aa513d6176853b2e7c6d75df3729037109195e9519740c2495fa9ed74"},
-    {file = "langflow_base-0.0.90.tar.gz", hash = "sha256:867781dd5ce5c5538cc838d0da7c809f30bc219cca1e2f862a03fa444e3db218"},
-]
+python-versions = ">=3.10,<3.13"
+files = []
+develop = true
 
 [package.dependencies]
-aiofiles = ">=24.1.0,<25.0.0"
-alembic = ">=1.13.0,<2.0.0"
-asyncer = ">=0.0.5,<0.0.6"
+aiofiles = "^24.1.0"
+alembic = "^1.13.0"
+asyncer = "^0.0.5"
 bcrypt = "4.0.1"
-cachetools = ">=5.3.1,<6.0.0"
-chardet = ">=5.2.0,<6.0.0"
-cryptography = ">=42.0.5,<43.0.0"
-docstring-parser = ">=0.16,<0.17"
-duckdb = ">=1.0.0,<2.0.0"
-emoji = ">=2.12.0,<3.0.0"
-fastapi = ">=0.111.0,<0.112.0"
-filelock = ">=3.15.4,<4.0.0"
-firecrawl-py = ">=0.0.16,<0.0.17"
-gunicorn = ">=22.0.0,<23.0.0"
+cachetools = "^5.3.1"
+chardet = "^5.2.0"
+cryptography = "^42.0.5"
+docstring-parser = "^0.16"
+duckdb = "^1.0.0"
+emoji = "^2.12.0"
+fastapi = "^0.111.0"
+filelock = "^3.15.4"
+firecrawl-py = "^0.0.16"
+gunicorn = "^22.0.0"
 httpx = "*"
-jq = {version = ">=1.7.0,<2.0.0", markers = "sys_platform != \"win32\""}
-langchain = ">=0.2.0,<0.3.0"
-langchain-core = "0.2.23"
-langchain-experimental = ">=0.0.61,<0.0.62"
-langchainhub = ">=0.1.15,<0.2.0"
-loguru = ">=0.7.1,<0.8.0"
-multiprocess = ">=0.70.14,<0.71.0"
-nanoid = ">=2.0.0,<3.0.0"
-nest-asyncio = ">=1.6.0,<2.0.0"
-opentelemetry-api = ">=1.25.0,<2.0.0"
-opentelemetry-exporter-prometheus = ">=0.46b0,<0.47"
-opentelemetry-instrumentation-fastapi = ">=0.46b0,<0.47"
-opentelemetry-sdk = ">=1.25.0,<2.0.0"
+jq = {version = "^1.7.0", markers = "sys_platform != \"win32\""}
+langchain = "~0.2.0"
+langchain-experimental = "^0.0.61"
+langchainhub = "~0.1.15"
+loguru = "^0.7.1"
+multiprocess = "^0.70.14"
+nanoid = "^2.0.0"
+nest-asyncio = "^1.6.0"
+opentelemetry-api = "^1.25.0"
+opentelemetry-exporter-prometheus = "^0.46b0"
+opentelemetry-instrumentation-fastapi = "^0.46b0"
+opentelemetry-sdk = "^1.25.0"
 orjson = "3.10.0"
 pandas = "2.2.2"
-passlib = ">=1.7.4,<2.0.0"
-pillow = ">=10.2.0,<11.0.0"
-platformdirs = ">=4.2.0,<5.0.0"
-prometheus-client = ">=0.20.0,<0.21.0"
-pydantic = ">=2.7.0,<3.0.0"
-pydantic-settings = ">=2.2.0,<3.0.0"
-pypdf = ">=4.2.0,<5.0.0"
-pyperclip = ">=1.8.2,<2.0.0"
-python-docx = ">=1.1.0,<2.0.0"
-python-jose = ">=3.3.0,<4.0.0"
-python-multipart = ">=0.0.7,<0.0.8"
-rich = ">=13.7.0,<14.0.0"
-sentry-sdk = {version = ">=2.5.1,<3.0.0", extras = ["fastapi", "loguru"]}
+passlib = "^1.7.4"
+pillow = "^10.2.0"
+platformdirs = "^4.2.0"
+prometheus-client = "^0.20.0"
+pydantic = "^2.7.0"
+pydantic-settings = "^2.2.0"
+pypdf = "^4.2.0"
+pyperclip = "^1.8.2"
+python-docx = "^1.1.0"
+python-jose = "^3.3.0"
+python-multipart = "^0.0.7"
+rich = "^13.7.0"
+sentry-sdk = {version = "^2.5.1", extras = ["fastapi", "loguru"]}
 setuptools = ">=70"
-sqlmodel = ">=0.0.18,<0.0.19"
-typer = ">=0.12.0,<0.13.0"
-uncurl = ">=0.0.11,<0.0.12"
-uvicorn = ">=0.30.0,<0.31.0"
+sqlmodel = "^0.0.18"
+typer = "^0.12.0"
+uncurl = "^0.0.11"
+uvicorn = "^0.30.0"
 websockets = "*"
+
+[package.extras]
+all = []
+deploy = []
+local = []
+
+[package.source]
+type = "directory"
+url = "src/backend/base"
 
 [[package]]
 name = "langfuse"
@@ -5190,8 +5197,8 @@ psutil = ">=5.9.1"
 pywin32 = {version = "*", markers = "platform_system == \"Windows\""}
 pyzmq = ">=25.0.0"
 requests = [
-    {version = ">=2.26.0", markers = "python_version <= \"3.11\""},
     {version = ">=2.32.2", markers = "python_version > \"3.11\""},
+    {version = ">=2.26.0", markers = "python_version <= \"3.11\""},
 ]
 tomli = {version = ">=1.1.0", markers = "python_version < \"3.11\""}
 typing-extensions = {version = ">=4.6.0", markers = "python_version < \"3.11\""}
@@ -7005,17 +7012,19 @@ xmp = ["defusedxml"]
 
 [[package]]
 name = "pinecone-client"
-version = "3.2.2"
+version = "5.0.0"
 description = "Pinecone client and SDK"
 optional = false
 python-versions = "<4.0,>=3.8"
 files = [
-    {file = "pinecone_client-3.2.2-py3-none-any.whl", hash = "sha256:7e492fdda23c73726bc0cb94c689bb950d06fb94e82b701a0c610c2e830db327"},
-    {file = "pinecone_client-3.2.2.tar.gz", hash = "sha256:887a12405f90ac11c396490f605fc479f31cf282361034d1ae0fccc02ac75bee"},
+    {file = "pinecone_client-5.0.0-py3-none-any.whl", hash = "sha256:243a58b761835a05629fe5bfc863ffa49c89d58e700b869e7b57ed7822c14311"},
+    {file = "pinecone_client-5.0.0.tar.gz", hash = "sha256:da2c10214a72b452e88a861a6db469ba6bf7caec22a0324467018d54188fffcd"},
 ]
 
 [package.dependencies]
 certifi = ">=2019.11.17"
+pinecone-plugin-inference = "1.0.2"
+pinecone-plugin-interface = ">=0.0.7,<0.0.8"
 tqdm = ">=4.64.1"
 typing-extensions = ">=3.7.4"
 urllib3 = [
@@ -7024,7 +7033,33 @@ urllib3 = [
 ]
 
 [package.extras]
-grpc = ["googleapis-common-protos (>=1.53.0)", "grpc-gateway-protoc-gen-openapiv2 (==0.1.0)", "grpcio (>=1.44.0)", "grpcio (>=1.59.0)", "lz4 (>=3.1.3)", "protobuf (>=3.20.0,<3.21.0)"]
+grpc = ["googleapis-common-protos (>=1.53.0)", "grpcio (>=1.44.0)", "grpcio (>=1.59.0)", "lz4 (>=3.1.3)", "protobuf (>=4.25,<5.0)", "protoc-gen-openapiv2 (>=0.0.1,<0.0.2)"]
+
+[[package]]
+name = "pinecone-plugin-inference"
+version = "1.0.2"
+description = "Embeddings plugin for Pinecone SDK"
+optional = false
+python-versions = "<4.0,>=3.8"
+files = [
+    {file = "pinecone_plugin_inference-1.0.2-py3-none-any.whl", hash = "sha256:ef94e7f51554e780408cf1507888b120bb0d185b8485a903cbeb9d0176ee03f1"},
+    {file = "pinecone_plugin_inference-1.0.2.tar.gz", hash = "sha256:dda62d9ff44dbbf191b11e6e884235f329cf0ec22edc616fe7efcb1e479e6a9a"},
+]
+
+[package.dependencies]
+pinecone-client = ">=4.1.1,<6.0.0"
+pinecone-plugin-interface = ">=0.0.7,<0.0.8"
+
+[[package]]
+name = "pinecone-plugin-interface"
+version = "0.0.7"
+description = "Plugin interface for the Pinecone python client"
+optional = false
+python-versions = "<4.0,>=3.8"
+files = [
+    {file = "pinecone_plugin_interface-0.0.7-py3-none-any.whl", hash = "sha256:875857ad9c9fc8bbc074dbe780d187a2afd21f5bfe0f3b08601924a61ef1bba8"},
+    {file = "pinecone_plugin_interface-0.0.7.tar.gz", hash = "sha256:b8e6675e41847333aa13923cc44daa3f85676d7157324682dc1640588a982846"},
+]
 
 [[package]]
 name = "platformdirs"
@@ -11761,4 +11796,4 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-content-hash = "4bbe7a1c85925a6adc5d709e101052411a69d4577f10a0a3e2b0da21a466d9bf"
+content-hash = "8a6956ecd16899574d24d8a260266d73eb59051912f0f71e32ce99ed2bae270f"
