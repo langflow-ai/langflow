@@ -61,10 +61,13 @@ jobs:
           python-version: ${{ matrix.python-version }}
           poetry-version: ${{ env.POETRY_VERSION }}
           cache-key: ${{ runner.os }}-poetry-${{ env.POETRY_VERSION }}-${{ hashFiles('**/poetry.lock') }}
-      - name: Install Python dependencies
+      - name: Build wheel
         run: |
           poetry env use ${{ matrix.python-version }}
-          poetry install
+          poetry build
+      - name: Install wheel
+        run: |
+          python -m pip install dist/*.whl
       - name: Test CLI
         run: |
           poetry run python -m langflow run --host 127.0.0.1 --port 7860 --backend-only &
