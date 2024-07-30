@@ -65,21 +65,6 @@ class Component(CustomComponent):
         # Set output types
         self._set_output_types()
 
-    def _set_output_types(self):
-        for output in self.outputs:
-            return_types = self._get_method_return_type(output.method)
-            output.add_types(return_types)
-            output.set_selected()
-
-    def _get_output_by_method(self, method: Callable):
-        # method is a callable and output.method is a string
-        # we need to find the output that has the same method
-        output = next((output for output in self.outputs if output.method == method.__name__), None)
-        if output is None:
-            method_name = method.__name__ if hasattr(method, "__name__") else str(method)
-            raise ValueError(f"Output with method {method_name} not found")
-        return output
-
     def connect(self, **kwargs):
         """
         Connects the component to other components or sets parameters and attributes.
@@ -96,6 +81,126 @@ class Component(CustomComponent):
         for key, value in kwargs.items():
             self._process_connection_or_parameter(key, value)
         return self
+
+    async def run(self):
+        """
+        Executes the component's logic and returns the result.
+
+        Returns:
+            The result of executing the component's logic.
+        """
+        return await self._run()
+
+    def set_vertex(self, vertex: "Vertex"):
+        """
+        Sets the vertex for the component.
+
+        Args:
+            vertex (Vertex): The vertex to set.
+
+        Returns:
+            None
+        """
+        self._vertex = vertex
+
+    def get_input(self, name: str) -> Any:
+        """
+        Retrieves the value of the input with the specified name.
+
+        Args:
+            name (str): The name of the input.
+
+        Returns:
+            Any: The value of the input.
+
+        Raises:
+            ValueError: If the input with the specified name is not found.
+        """
+        if name in self._inputs:
+            return self._inputs[name]
+        raise ValueError(f"Input {name} not found in {self.__class__.__name__}")
+
+    def get_output(self, name: str) -> Any:
+        """
+        Retrieves the output with the specified name.
+
+        Args:
+            name (str): The name of the output to retrieve.
+
+        Returns:
+            Any: The output value.
+
+        Raises:
+            ValueError: If the output with the specified name is not found.
+        """
+        if name in self._outputs:
+            return self._outputs[name]
+        raise ValueError(f"Output {name} not found in {self.__class__.__name__}")
+
+    def map_outputs(self, outputs: List[Output]):
+        """
+        Maps the given list of outputs to the component.
+
+        Args:
+            outputs (List[Output]): The list of outputs to be mapped.
+
+        Raises:
+            ValueError: If the output name is None.
+
+        Returns:
+            None
+        """
+        self.outputs = outputs
+        for output in outputs:
+            if output.name is None:
+                raise ValueError("Output name cannot be None.")
+            self._outputs[output.name] = output
+
+    def map_inputs(self, inputs: List[InputTypes]):
+        """
+        Maps the given inputs to the component.
+
+        Args:
+            inputs (List[InputTypes]): A list of InputTypes objects representing the inputs.
+
+        Raises:
+            ValueError: If the input name is None.
+
+        """
+        self.inputs = inputs
+        for input_ in inputs:
+            if input_.name is None:
+                raise ValueError("Input name cannot be None.")
+            self._inputs[input_.name] = input_
+
+    def validate(self, params: dict):
+        """
+        Validates the component parameters.
+
+        Args:
+            params (dict): A dictionary containing the component parameters.
+
+        Raises:
+            ValueError: If the inputs are not valid.
+            ValueError: If the outputs are not valid.
+        """
+        self._validate_inputs(params)
+        self._validate_outputs()
+
+    def _set_output_types(self):
+        for output in self.outputs:
+            return_types = self._get_method_return_type(output.method)
+            output.add_types(return_types)
+            output.set_selected()
+
+    def _get_output_by_method(self, method: Callable):
+        # method is a callable and output.method is a string
+        # we need to find the output that has the same method
+        output = next((output for output in self.outputs if output.method == method.__name__), None)
+        if output is None:
+            method_name = method.__name__ if hasattr(method, "__name__") else str(method)
+            raise ValueError(f"Output with method {method_name} not found")
+        return output
 
     def _process_connection_or_parameter(self, key, value):
         _input = self._get_or_create_input(key)
@@ -163,9 +268,6 @@ class Component(CustomComponent):
 
         return await self.build_results()
 
-    async def run(self):
-        return await self._run()
-
     def __getattr__(self, name: str) -> Any:
         if "_attributes" in self.__dict__ and name in self.__dict__["_attributes"]:
             return self.__dict__["_attributes"][name]
@@ -174,9 +276,6 @@ class Component(CustomComponent):
         if name in BACKWARDS_COMPATIBLE_ATTRIBUTES:
             return self.__dict__[f"_{name}"]
         raise AttributeError(f"{name} not found in {self.__class__.__name__}")
-
-    def set_vertex(self, vertex: "Vertex"):
-        self._vertex = vertex
 
     def _set_input_value(self, name: str, value: Any):
         if name in self._inputs:
@@ -189,34 +288,6 @@ class Component(CustomComponent):
             self._attributes[name] = value
         else:
             raise ValueError(f"Input {name} not found in {self.__class__.__name__}")
-
-    def get_input(self, name: str) -> Any:
-        if name in self._inputs:
-            return self._inputs[name]
-        raise ValueError(f"Input {name} not found in {self.__class__.__name__}")
-
-    def get_output(self, name: str) -> Any:
-        if name in self._outputs:
-            return self._outputs[name]
-        raise ValueError(f"Output {name} not found in {self.__class__.__name__}")
-
-    def map_outputs(self, outputs: List[Output]):
-        self.outputs = outputs
-        for output in outputs:
-            if output.name is None:
-                raise ValueError("Output name cannot be None.")
-            self._outputs[output.name] = output
-
-    def map_inputs(self, inputs: List[InputTypes]):
-        self.inputs = inputs
-        for input_ in inputs:
-            if input_.name is None:
-                raise ValueError("Input name cannot be None.")
-            self._inputs[input_.name] = input_
-
-    def validate(self, params: dict):
-        self._validate_inputs(params)
-        self._validate_outputs()
 
     def _validate_outputs(self):
         # Raise Error if some rule isn't met
