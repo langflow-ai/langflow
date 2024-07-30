@@ -33,7 +33,6 @@ const useFileDrop = (
     e.preventDefault();
     if (e.dataTransfer.types.some((type) => type === "Files")) {
       const files: FileList = e.dataTransfer.files;
-      console.log(files);
 
       const uploadPromises: Promise<any>[] = [];
 
