@@ -25,6 +25,14 @@ all: help
 # UTILITIES
 ######################
 
+# increment the patch version of the current package
+patch: ## bump the version in langflow and langflow-base
+	@echo 'Patching the version'
+	@poetry version patch
+	@echo 'Patching the version in langflow-base'
+	@cd src/backend/base && poetry version patch
+	@make lock
+
 # check for required tools
 check_tools:
 	@command -v poetry >/dev/null 2>&1 || { echo >&2 "$(RED)Poetry is not installed. Aborting.$(NC)"; exit 1; }
