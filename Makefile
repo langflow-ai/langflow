@@ -303,6 +303,9 @@ ifdef base
 endif
 
 ifdef main
+	make install_frontendci
+	make build_frontend
+	make build_langflow_base
 	make build_langflow
 endif
 
