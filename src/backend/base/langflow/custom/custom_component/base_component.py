@@ -6,6 +6,7 @@ from fastapi import HTTPException
 
 from langflow.custom.attributes import ATTR_FUNC_MAPPING
 from langflow.custom.code_parser import CodeParser
+from langflow.custom.custom_component.constants import methods_docs_map
 from langflow.custom.eval import eval_custom_component_code
 from langflow.utils import validate
 
@@ -18,7 +19,19 @@ class ComponentFunctionEntrypointNameNullError(HTTPException):
     pass
 
 
-class BaseComponent:
+class DynamicDocstringMeta(type):
+    def __new__(cls, name, bases, class_dict, methods_map):
+        for method_name, docstring in methods_map.items():
+            if method_name in class_dict:
+                method = class_dict[method_name]
+                if callable(method):
+                    inputs_names_and_types = [f"{_input.name}: {_input.input_types}" for _input in cls.inputs]
+                    inputs = "\n".join(inputs_names_and_types)
+                    method.__doc__ = docstring.format(inputs=inputs)
+        return type.__new__(cls, name, bases, class_dict)
+
+
+class BaseComponent(metaclass=DynamicDocstringMeta, methods_map=methods_docs_map):
     ERROR_CODE_NULL: ClassVar[str] = "Python code must be provided."
     ERROR_FUNCTION_ENTRYPOINT_NAME_NULL: ClassVar[str] = "The name of the entrypoint function must be provided."
 
