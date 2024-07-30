@@ -46,7 +46,7 @@ class ComposioAPIComponent(LCToolComponent):
         ),
     ]
 
-    def check_for_authorization(self, app: str) -> str:
+    def _check_for_authorization(self, app: str) -> str:
         """
         Checks if the app is authorized.
 
@@ -62,9 +62,9 @@ class ComposioAPIComponent(LCToolComponent):
             entity.get_connection(app=app)
             return f"{app} CONNECTED"
         except Exception:
-            return self.handle_authorization_failure(toolset, entity, app)
+            return self._handle_authorization_failure(toolset, entity, app)
 
-    def handle_authorization_failure(self, toolset: ComposioToolSet, entity: Any, app: str) -> str:
+    def _handle_authorization_failure(self, toolset: ComposioToolSet, entity: Any, app: str) -> str:
         """
         Handles the authorization failure by attempting to process API key auth or initiate default connection.
 
@@ -79,14 +79,14 @@ class ComposioAPIComponent(LCToolComponent):
         try:
             auth_schemes = toolset.client.apps.get(app).auth_schemes
             if auth_schemes[0].auth_mode == "API_KEY":
-                return self.process_api_key_auth(entity, app)
+                return self._process_api_key_auth(entity, app)
             else:
-                return self.initiate_default_connection(entity, app)
+                return self._initiate_default_connection(entity, app)
         except Exception as e:
             print(e)
             return "Error"
 
-    def process_api_key_auth(self, entity: Any, app: str) -> str:
+    def _process_api_key_auth(self, entity: Any, app: str) -> str:
         """
         Processes the API key authentication.
 
@@ -117,17 +117,17 @@ class ComposioAPIComponent(LCToolComponent):
             else:
                 return "Enter API Key"
 
-    def initiate_default_connection(self, entity: Any, app: str) -> str:
+    def _initiate_default_connection(self, entity: Any, app: str) -> str:
         connection = entity.initiate_connection(app_name=app, use_composio_auth=True, force_new_integration=True)
         return connection.redirectUrl
 
-    def get_connected_app_names_for_entity(self) -> list[str]:
+    def _get_connected_app_names_for_entity(self) -> list[str]:
         toolset = self._build_wrapper()
         connections = toolset.client.get_entity(id=self.entity_id).get_connections()
         return list(set(connection.appUniqueId for connection in connections))
 
-    def update_app_names_with_connected_status(self, build_config: dict) -> dict:
-        connected_app_names = self.get_connected_app_names_for_entity()
+    def _update_app_names_with_connected_status(self, build_config: dict) -> dict:
+        connected_app_names = self._get_connected_app_names_for_entity()
 
         app_names = [
             f"{app_name}_CONNECTED" for app_name in App.__annotations__ if app_name.lower() in connected_app_names
@@ -139,22 +139,22 @@ class ComposioAPIComponent(LCToolComponent):
         build_config["app_names"]["value"] = app_names[0] if app_names else ""
         return build_config
 
-    def get_normalized_app_name(self) -> str:
+    def _get_normalized_app_name(self) -> str:
         return self.app_names.replace("_CONNECTED", "").replace("_connected", "")
 
     def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:
         if field_name == "api_key":
-            build_config = self.update_app_names_with_connected_status(build_config)
+            build_config = self._update_app_names_with_connected_status(build_config)
             return build_config
 
         if field_name in {"app_names", "auth_status_config"}:
-            build_config["auth_status_config"]["value"] = self.check_for_authorization(self.get_normalized_app_name())
+            build_config["auth_status_config"]["value"] = self._check_for_authorization(self._get_normalized_app_name())
 
             all_action_names = [action_name for action_name in Action.__annotations__]
             app_action_names = [
                 action_name
                 for action_name in all_action_names
-                if action_name.lower().startswith(self.get_normalized_app_name().lower() + "_")
+                if action_name.lower().startswith(self._get_normalized_app_name().lower() + "_")
             ]
             build_config["action_names"]["options"] = app_action_names
             build_config["action_names"]["value"] = [app_action_names[0]] if app_action_names else [""]
