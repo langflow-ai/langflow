@@ -389,7 +389,7 @@ update: ## update dependencies
 	poetry update
 
 publish_base:
-	cd src/backend/base && poetry publish
+	cd src/backend/base && poetry publish --skip-existing
 
 publish_langflow:
 	poetry publish
