@@ -22,7 +22,7 @@ export const useLogout: useMutationFunctionType<undefined, void> = (
     if (autoLogin) {
       return {};
     }
-    const res = await api.patch(`${getURL("LOGOUT")}`);
+    const res = await api.post(`${getURL("LOGOUT")}`);
     return res.data;
   }
 

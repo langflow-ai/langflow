@@ -16,6 +16,7 @@ import {
   Braces,
   BrainCircuit,
   Check,
+  CheckCheck,
   CheckCircle2,
   ChevronDown,
   ChevronLeft,
@@ -178,6 +179,7 @@ import { EvernoteIcon } from "../icons/Evernote";
 import { FBIcon } from "../icons/FacebookMessenger";
 import { FirecrawlIcon } from "../icons/Firecrawl";
 import { GitBookIcon } from "../icons/GitBook";
+import { GitLoaderIcon } from "../icons/GitLoader";
 import { GoogleIcon } from "../icons/Google";
 import { GoogleGenerativeAIIcon } from "../icons/GoogleGenerativeAI";
 import {
@@ -390,6 +392,7 @@ export const nodeIconsLucide: iconsType = {
   IFixitLoader: IFixIcon,
   CrewAI: CrewAiIcon,
   Meta: MetaIcon,
+  CheckCheck,
   Midjorney: MidjourneyIcon,
   MongoDBAtlasVectorSearch: MongoDBIcon,
   MongoDB: MongoDBIcon,
@@ -586,4 +589,5 @@ export const nodeIconsLucide: iconsType = {
   Table: Table,
   AIML: AIMLIcon,
   "AI/ML": AIMLIcon,
+  GitLoader: GitLoaderIcon,
 };
