@@ -129,13 +129,14 @@ async def refresh_token(
     request: Request,
     response: Response,
     settings_service: "SettingsService" = Depends(get_settings_service),
+    db: Session = Depends(get_session),
 ):
     auth_settings = settings_service.auth_settings
 
     token = request.cookies.get("refresh_token_lf")
 
     if token:
-        tokens = create_refresh_token(token)
+        tokens = create_refresh_token(token, db)
         response.set_cookie(
             "refresh_token_lf",
             tokens["refresh_token"],
