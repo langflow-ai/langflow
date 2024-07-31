@@ -14,8 +14,9 @@ import {
   LANGFLOW_AUTO_LOGIN_OPTION,
 } from "./constants/constants";
 import { AuthContext } from "./contexts/authContext";
-import { autoLogin } from "./controllers/API";
+import { useAutoLogin } from "./controllers/API/queries/auth";
 import { useGetHealthQuery } from "./controllers/API/queries/health";
+import { useGetGlobalVariables } from "./controllers/API/queries/variables";
 import { useGetVersionQuery } from "./controllers/API/queries/version";
 import { setupAxiosDefaults } from "./controllers/API/utils";
 import useTrackLastVisitedPath from "./hooks/use-track-last-visited-path";
@@ -37,10 +38,14 @@ export default function App() {
   const dark = useDarkStore((state) => state.dark);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
+  const { mutate: mutateAutoLogin } = useAutoLogin();
+
   useGetVersionQuery();
   const cookies = new Cookies();
 
   const isLoadingFolders = useFolderStore((state) => state.isLoadingFolders);
+
+  const { mutate: mutateGetGlobalVariables } = useGetGlobalVariables();
 
   const {
     data: healthData,
@@ -58,20 +63,20 @@ export default function App() {
   }, [dark]);
 
   useEffect(() => {
-    const abortController = new AbortController();
     const isLoginPage = location.pathname.includes("login");
 
-    autoLogin(abortController.signal)
-      .then(async (user) => {
+    mutateAutoLogin(undefined, {
+      onSuccess: async (user) => {
         if (user && user["access_token"]) {
           user["refresh_token"] = "auto";
           login(user["access_token"], "auto");
+          mutateGetGlobalVariables();
           setUserData(user);
           setAutoLogin(true);
           fetchAllData();
         }
-      })
-      .catch(async (error) => {
+      },
+      onError: (error) => {
         if (error.name !== "CanceledError") {
           setAutoLogin(false);
           if (
@@ -90,15 +95,10 @@ export default function App() {
             useFlowsManagerStore.setState({ isLoading: false });
           }
         }
-      });
-
-    /*
-      Abort the request as it isn't needed anymore, the component being
-      unmounted. It helps avoid, among other things, the well-known "can't
-      perform a React state update on an unmounted component" warning.
-    */
-    return () => abortController.abort();
+      },
+    });
   }, []);
+
   const fetchAllData = async () => {
     setTimeout(async () => {
       await Promise.all([refreshStars(), fetchData()]);
