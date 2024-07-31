@@ -18,7 +18,7 @@ export default function InputListComponent({
 }: InputListComponentType): JSX.Element {
   useEffect(() => {
     if (disabled && value.length > 0 && value[0] !== "") {
-      onChange([""]);
+      onChange([""], undefined, true);
     }
   }, [disabled]);
 
