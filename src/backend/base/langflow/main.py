@@ -69,8 +69,8 @@ class JavaScriptMIMETypeMiddleware(BaseHTTPMiddleware):
             response = await call_next(request)
         except Exception as exc:
             if isinstance(exc, PydanticSerializationError):
-                messages = [error["msg"].split(",", 1) for error in e.errors()]
-                error_message = "\n".join([message[1] if len(message) > 1 else message[0] for message in messages])
+                message = "Something went wrong while serializing the response. Please share this error on our GitHub repository."
+                error_message = "\n".join([message, str(exc)])
                 raise HTTPException(status_code=HTTPStatus.INTERNAL_SERVER_ERROR, detail=error_message) from exc
             raise exc
         if "files/" not in request.url.path and request.url.path.endswith(".js") and response.status_code == 200:
