@@ -102,6 +102,7 @@ def update_projects_components_with_latest_component_versions(project_data, all_
 
                 for field_name, field_dict in latest_template.items():
                     if field_name not in node_data["template"]:
+                        node_data["template"][field_name] = field_dict
                         continue
                     # The idea here is to update some attributes of the field
                     to_check_attributes = FIELD_FORMAT_ATTRIBUTES
@@ -342,7 +343,10 @@ def load_starter_projects() -> list[tuple[Path, dict]]:
     starter_projects = []
     folder = Path(__file__).parent / "starter_projects"
     for file in folder.glob("*.json"):
-        project = orjson.loads(file.read_text(encoding="utf-8"))
+        try:
+            project = orjson.loads(file.read_text(encoding="utf-8"))
+        except orjson.JSONDecodeError as e:
+            raise ValueError(f"Error loading starter project {file}: {e}")
         starter_projects.append((file, project))
         logger.info(f"Loaded starter project {file}")
     return starter_projects

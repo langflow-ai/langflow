@@ -347,7 +347,7 @@ class CustomComponent(BaseComponent):
         """
         return self.get_method_return_type(self.function_entrypoint_name)
 
-    def _extract_return_type(self, return_type: str):
+    def _extract_return_type(self, return_type: Any):
         if hasattr(return_type, "__origin__") and return_type.__origin__ in [
             list,
             List,
