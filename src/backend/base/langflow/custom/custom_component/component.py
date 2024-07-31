@@ -6,6 +6,7 @@ import nanoid  # type: ignore
 import yaml
 from pydantic import BaseModel
 
+from langflow.graph.edge.schema import EdgeData
 from langflow.helpers.custom import format_type
 from langflow.inputs.inputs import InputTypes
 from langflow.schema.artifact import get_artifact_type, post_process_raw
@@ -40,6 +41,7 @@ class Component(CustomComponent):
         self._results: dict[str, Any] = {}
         self._attributes: dict[str, Any] = {}
         self._parameters = inputs or {}
+        self._edges: list[EdgeData] = []
         self._components: list[Component] = []
         self.set_attributes(self._parameters)
         self._output_logs = {}
