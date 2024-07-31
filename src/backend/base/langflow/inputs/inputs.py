@@ -129,6 +129,8 @@ class MessageInput(StrInput, InputTraceMixin):
     @staticmethod
     def _validate_value(v: Any, _info):
         # If v is a instance of Message, then its fine
+        if isinstance(v, dict):
+            return Message(**v)
         if isinstance(v, Message):
             return v
         if isinstance(v, str):
