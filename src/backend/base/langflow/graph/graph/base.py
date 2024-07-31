@@ -93,8 +93,7 @@ class Graph:
     def add_node(self, node: dict):
         self._vertices.append(node)
 
-    # TODO: Create a TypedDict to represente the edge
-    def add_edge(self, edge: dict):
+    def add_edge(self, edge: EdgeData):
         self._edges.append(edge)
 
     def initialize(self):
