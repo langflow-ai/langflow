@@ -315,7 +315,6 @@ async function buildVertex({
     if (!Array.isArray(errorMessage)) {
       errorMessage = [errorMessage];
     }
-    console.log(errorMessage);
     onBuildError!(
       "Error Building Component",
       errorMessage,
