@@ -135,7 +135,53 @@ class Component(CustomComponent):
         else:
             raise ValueError(f"Output {name} not found in {self.__class__.__name__}")
 
+    def map_outputs(self, outputs: List[Output]):
+        """
+        Maps the given list of outputs to the component.
+
+        Args:
+            outputs (List[Output]): The list of outputs to be mapped.
+
+        Raises:
+            ValueError: If the output name is None.
+
+        Returns:
+            None
+        """
+        self.outputs = outputs
+        for output in outputs:
+            if output.name is None:
+                raise ValueError("Output name cannot be None.")
+            self._outputs[output.name] = output
+
+    def map_inputs(self, inputs: List[InputTypes]):
+        """
+        Maps the given inputs to the component.
+
+        Args:
+            inputs (List[InputTypes]): A list of InputTypes objects representing the inputs.
+
+        Raises:
+            ValueError: If the input name is None.
+
+        """
+        self.inputs = inputs
+        for input_ in inputs:
+            if input_.name is None:
+                raise ValueError("Input name cannot be None.")
+            self._inputs[input_.name] = input_
+
     def validate(self, params: dict):
+        """
+        Validates the component parameters.
+
+        Args:
+            params (dict): A dictionary containing the component parameters.
+
+        Raises:
+            ValueError: If the inputs are not valid.
+            ValueError: If the outputs are not valid.
+        """
         self._validate_inputs(params)
         self._validate_outputs()
 
