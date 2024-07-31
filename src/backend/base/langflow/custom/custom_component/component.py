@@ -2,7 +2,7 @@ import inspect
 from typing import Any, Callable, ClassVar, List, Optional, Union
 from uuid import UUID
 
-import nanoid
+import nanoid  # type: ignore
 import yaml
 from pydantic import BaseModel
 
