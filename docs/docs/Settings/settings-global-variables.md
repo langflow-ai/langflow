@@ -82,10 +82,7 @@ To prevent this behavior, set `LANGFLOW_STORE_ENVIRONMENT_VARIABLES` to `false` 
 
 
 
-You can specify variables to get from the environment by listing them in `LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT`.
-
-
-Specify variables as a comma-separated list (e.g., _`"VARIABLE1, VARIABLE2"`_) or a JSON-encoded string (e.g., _`'["VARIABLE1", "VARIABLE2"]'`_).
+You can specify variables to get from the environment by listing them in `LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT`, as a comma-separated list (e.g., _`VARIABLE1, VARIABLE2`_).
 
 
 The default list of variables includes the ones below and more:
