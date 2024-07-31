@@ -394,7 +394,9 @@ class CustomComponent(BaseComponent):
         Returns:
             dict: The template configuration for the custom component.
         """
-        return self.build_template_config()
+        if not self._template_config:
+            self._template_config = self.build_template_config()
+        return self._template_config
 
     @property
     def variables(self):

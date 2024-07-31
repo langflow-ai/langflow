@@ -29,6 +29,7 @@ class BaseComponent:
     _function_entrypoint_name: str = "build"
     field_config: dict = {}
     _user_id: Optional[str | UUID] = None
+    _template_config: dict = {}
 
     def __init__(self, **data):
         self.cache = TTLCache(maxsize=1024, ttl=60)
