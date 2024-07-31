@@ -117,6 +117,12 @@ class Component(CustomComponent):
             return self._outputs[name]
         raise ValueError(f"Output {name} not found in {self.__class__.__name__}")
 
+    def set_output_value(self, name: str, value: Any):
+        if name in self._outputs:
+            self._outputs[name].value = value
+        else:
+            raise ValueError(f"Output {name} not found in {self.__class__.__name__}")
+
     def validate(self, params: dict):
         self._validate_inputs(params)
         self._validate_outputs()
