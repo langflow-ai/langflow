@@ -14,6 +14,8 @@ from langflow.template.field.base import UNDEFINED, Output
 
 from .custom_component import CustomComponent
 
+BACKWARDS_COMPATIBLE_ATTRIBUTES = ["user_id", "vertex", "tracing_service"]
+
 
 class Component(CustomComponent):
     inputs: List[InputTypes] = []
@@ -39,6 +41,8 @@ class Component(CustomComponent):
             return self.__dict__["_attributes"][name]
         if "_inputs" in self.__dict__ and name in self.__dict__["_inputs"]:
             return self.__dict__["_inputs"][name].value
+        if name in BACKWARDS_COMPATIBLE_ATTRIBUTES:
+            return self.__dict__[f"_{name}"]
         raise AttributeError(f"{name} not found in {self.__class__.__name__}")
 
     def map_inputs(self, inputs: List[InputTypes]):
