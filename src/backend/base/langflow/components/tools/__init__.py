@@ -5,6 +5,7 @@ from .GoogleSearchAPI import GoogleSearchAPIComponent
 from .GoogleSerperAPI import GoogleSerperAPIComponent
 from .PythonCodeStructuredTool import PythonCodeStructuredTool
 from .SearchAPI import SearchAPIComponent
+from .SearXNGTool import SearXNGToolComponent
 from .SerpAPI import SerpAPIComponent
 from .WikipediaAPI import WikipediaAPIComponent
 from .WolframAlphaAPI import WolframAlphaAPIComponent
@@ -18,6 +19,7 @@ __all__ = [
     "PythonCodeStructuredTool",
     "PythonREPLToolComponent",
     "SearchAPIComponent",
+    "SearXNGToolComponent",
     "SerpAPIComponent",
     "WikipediaAPIComponent",
     "WolframAlphaAPIComponent",
