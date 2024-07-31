@@ -23,18 +23,36 @@ class Component(CustomComponent):
     code_class_base_inheritance: ClassVar[str] = "Component"
     _output_logs: dict[str, Log] = {}
 
-    def __init__(self, **data):
+    def __init__(self, **kwargs):
+        # if key starts with _ it is a config
+        # else it is an input
+        inputs = {}
+        config = {}
+        for key, value in kwargs.items():
+            if key.startswith("_"):
+                config[key] = value
+            else:
+                inputs[key] = value
         self._inputs: dict[str, InputTypes] = {}
+        self._outputs: dict[str, Output] = {}
         self._results: dict[str, Any] = {}
         self._attributes: dict[str, Any] = {}
-        self._parameters: dict[str, Any] = {}
+        self._parameters = inputs or {}
+        self._components: list[Component] = []
+        self.set_attributes(self._parameters)
         self._output_logs = {}
-        super().__init__(**data)
+        config = config or {}
+        if "_id" not in config:
+            config |= {"_id": f"{self.__class__.__name__}-{nanoid.generate(size=5)}"}
+        super().__init__(**config)
+        if hasattr(self, "_trace_type"):
+            self.trace_type = self._trace_type
         if not hasattr(self, "trace_type"):
             self.trace_type = "chain"
         if self.inputs is not None:
             self.map_inputs(self.inputs)
-        self.set_attributes(self._parameters)
+        if self.outputs is not None:
+            self.map_outputs(self.outputs)
 
     def __getattr__(self, name: str) -> Any:
         if "_attributes" in self.__dict__ and name in self.__dict__["_attributes"]:
@@ -51,6 +69,22 @@ class Component(CustomComponent):
             if input_.name is None:
                 raise ValueError("Input name cannot be None.")
             self._inputs[input_.name] = input_
+
+    def map_outputs(self, outputs: List[Output]):
+        """
+        Maps the given list of outputs to the component.
+        Args:
+            outputs (List[Output]): The list of outputs to be mapped.
+        Raises:
+            ValueError: If the output name is None.
+        Returns:
+            None
+        """
+        self.outputs = outputs
+        for output in outputs:
+            if output.name is None:
+                raise ValueError("Output name cannot be None.")
+            self._outputs[output.name] = output
 
     def validate(self, params: dict):
         self._validate_inputs(params)
