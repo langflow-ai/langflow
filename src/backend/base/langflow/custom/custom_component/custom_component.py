@@ -1,7 +1,5 @@
 from pathlib import Path
-from turtle import st
 from typing import TYPE_CHECKING, Any, Callable, ClassVar, List, Optional, Sequence, Union
-from uuid import UUID
 
 import yaml
 from cachetools import TTLCache
@@ -269,6 +267,14 @@ class CustomComponent(BaseComponent):
 
         return data_objects
 
+    def get_method_return_type(self, method_name: str):
+        build_method = self.get_method(method_name)
+        if not build_method or not build_method.get("has_return"):
+            return []
+        return_type = build_method["return_type"]
+
+        return self._extract_return_type(return_type)
+
     def create_references_from_data(self, data: List[Data], include_data: bool = False) -> str:
         """
         Create references from a list of data.
@@ -341,12 +347,7 @@ class CustomComponent(BaseComponent):
         """
         return self.get_method_return_type(self.function_entrypoint_name)
 
-    def get_method_return_type(self, method_name: str):
-        build_method = self.get_method(method_name)
-        if not build_method or not build_method.get("has_return"):
-            return []
-        return_type = build_method["return_type"]
-
+    def _extract_return_type(self, return_type: str):
         if hasattr(return_type, "__origin__") and return_type.__origin__ in [
             list,
             List,
