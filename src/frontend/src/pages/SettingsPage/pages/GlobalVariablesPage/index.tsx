@@ -1,6 +1,7 @@
 import IconComponent from "../../../../components/genericIconComponent";
 import { Button } from "../../../../components/ui/button";
 
+import { useDeleteGlobalVariables } from "@/controllers/API/queries/variables";
 import { ColDef, ColGroupDef, SelectionChangedEvent } from "ag-grid-community";
 import { useEffect, useState } from "react";
 import AddNewVariableButton from "../../../../components/addNewVariableButtonComponent/addNewVariableButton";
@@ -8,7 +9,6 @@ import Dropdown from "../../../../components/dropdownComponent";
 import ForwardedIconComponent from "../../../../components/genericIconComponent";
 import TableComponent from "../../../../components/tableComponent";
 import { Badge } from "../../../../components/ui/badge";
-import { deleteGlobalVariable } from "../../../../controllers/API";
 import useAlertStore from "../../../../stores/alertStore";
 import { useGlobalVariablesStore } from "../../../../stores/globalVariablesStore/globalVariables";
 
@@ -108,23 +108,26 @@ export default function GlobalVariablesPage() {
 
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
 
+  const { mutate: mutateDeleteGlobalVariable } = useDeleteGlobalVariables();
+
   async function removeVariables() {
-    const deleteGlobalVariablesPromise = selectedRows.map(async (row) => {
+    selectedRows.map(async (row) => {
       const id = getVariableId(row);
-      const deleteGlobalVariables = deleteGlobalVariable(id!);
-      await deleteGlobalVariables;
+      mutateDeleteGlobalVariable(
+        { id },
+        {
+          onSuccess: () => {
+            removeGlobalVariable(row);
+          },
+          onError: () => {
+            setErrorData({
+              title: `Error deleting variable`,
+              list: [`ID not found for variable: ${row}`],
+            });
+          },
+        },
+      );
     });
-    Promise.all(deleteGlobalVariablesPromise)
-      .then(() => {
-        selectedRows.forEach((row) => {
-          removeGlobalVariable(row);
-        });
-      })
-      .catch(() => {
-        setErrorData({
-          title: `Error deleting global variables.`,
-        });
-      });
   }
 
   return (

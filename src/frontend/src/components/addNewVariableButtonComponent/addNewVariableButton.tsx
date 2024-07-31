@@ -1,5 +1,5 @@
+import { usePostGlobalVariables } from "@/controllers/API/queries/variables";
 import { useState } from "react";
-import { registerGlobalVariable } from "../../controllers/API";
 import BaseModal from "../../modals/baseModal";
 import useAlertStore from "../../stores/alertStore";
 import { useGlobalVariablesStore } from "../../stores/globalVariablesStore/globalVariables";
@@ -28,6 +28,7 @@ export default function AddNewVariableButton({
   const [open, setOpen] = useState(false);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const componentFields = useTypesStore((state) => state.ComponentFields);
+
   const unavaliableFields = new Set(
     Object.keys(
       useGlobalVariablesStore((state) => state.unavaliableFields) ?? {},
@@ -46,6 +47,9 @@ export default function AddNewVariableButton({
     (state) => state.addGlobalVariable,
   );
 
+  const { mutate: mutateAddGlobalVariable } = usePostGlobalVariables();
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
+
   function handleSaveVariable() {
     let data: {
       name: string;
@@ -58,8 +62,9 @@ export default function AddNewVariableButton({
       value,
       default_fields: fields,
     };
-    registerGlobalVariable(data)
-      .then((res) => {
+
+    mutateAddGlobalVariable(data, {
+      onSuccess: (res) => {
         const { name, id, type } = res.data;
         addGlobalVariable(name, id, type, fields);
         setKey("");
@@ -67,8 +72,12 @@ export default function AddNewVariableButton({
         setType("");
         setFields([]);
         setOpen(false);
-      })
-      .catch((error) => {
+
+        setSuccessData({
+          title: `Variable ${name} created successfully`,
+        });
+      },
+      onError: (error) => {
         let responseError = error as ResponseErrorDetailAPI;
         setErrorData({
           title: "Error creating variable",
@@ -77,8 +86,10 @@ export default function AddNewVariableButton({
               "An unexpected error occurred while adding a new variable. Please try again.",
           ],
         });
-      });
+      },
+    });
   }
+
   return (
     <BaseModal
       open={open}
