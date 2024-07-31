@@ -16,6 +16,7 @@ import {
 import { AuthContext } from "./contexts/authContext";
 import { autoLogin } from "./controllers/API";
 import { useGetHealthQuery } from "./controllers/API/queries/health";
+import { useGetGlobalVariables } from "./controllers/API/queries/variables";
 import { useGetVersionQuery } from "./controllers/API/queries/version";
 import { setupAxiosDefaults } from "./controllers/API/utils";
 import useTrackLastVisitedPath from "./hooks/use-track-last-visited-path";
@@ -42,6 +43,8 @@ export default function App() {
 
   const isLoadingFolders = useFolderStore((state) => state.isLoadingFolders);
 
+  const { mutate: mutateGetGlobalVariables } = useGetGlobalVariables();
+
   const {
     data: healthData,
     isFetching: fetchingHealth,
@@ -66,6 +69,7 @@ export default function App() {
         if (user && user["access_token"]) {
           user["refresh_token"] = "auto";
           login(user["access_token"], "auto");
+          mutateGetGlobalVariables();
           setUserData(user);
           setAutoLogin(true);
           fetchAllData();
@@ -99,6 +103,7 @@ export default function App() {
     */
     return () => abortController.abort();
   }, []);
+
   const fetchAllData = async () => {
     setTimeout(async () => {
       await Promise.all([refreshStars(), fetchData()]);
