@@ -81,6 +81,18 @@ class Component(CustomComponent):
         for key, value in kwargs.items():
             self._process_connection_or_parameter(key, value)
 
+    def list_inputs(self):
+        """
+        Returns a list of input names.
+        """
+        return [_input.name for _input in self.inputs]
+
+    def list_outputs(self):
+        """
+        Returns a list of output names.
+        """
+        return [_output.name for _output in self.outputs]
+
     async def run(self):
         """
         Executes the component's logic and returns the result.
