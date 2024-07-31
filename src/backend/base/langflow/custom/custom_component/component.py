@@ -330,3 +330,6 @@ class Component(CustomComponent):
 
     def build(self, **kwargs):
         self.set_attributes(kwargs)
+
+    def _get_fallback_input(self, **kwargs):
+        return Input(**kwargs)
