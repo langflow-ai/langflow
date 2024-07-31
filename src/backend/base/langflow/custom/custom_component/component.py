@@ -65,37 +65,54 @@ class Component(CustomComponent):
         # Set output types
         self._set_output_types()
 
-    def __getattr__(self, name: str) -> Any:
-        if "_attributes" in self.__dict__ and name in self.__dict__["_attributes"]:
-            return self.__dict__["_attributes"][name]
-        if "_inputs" in self.__dict__ and name in self.__dict__["_inputs"]:
-            return self.__dict__["_inputs"][name].value
-        if name in BACKWARDS_COMPATIBLE_ATTRIBUTES:
-            return self.__dict__[f"_{name}"]
-        raise AttributeError(f"{name} not found in {self.__class__.__name__}")
-
-    def map_inputs(self, inputs: List[InputTypes]):
-        self.inputs = inputs
-        for input_ in inputs:
-            if input_.name is None:
-                raise ValueError("Input name cannot be None.")
-            self._inputs[input_.name] = input_
-
-    def map_outputs(self, outputs: List[Output]):
+    def set(self, **kwargs):
         """
-        Maps the given list of outputs to the component.
+        Connects the component to other components or sets parameters and attributes.
+
         Args:
-            outputs (List[Output]): The list of outputs to be mapped.
+            **kwargs: Keyword arguments representing the connections, parameters, and attributes.
+
+        Returns:
+            None
+
         Raises:
-            ValueError: If the output name is None.
+            KeyError: If the specified input name does not exist.
+        """
+        for key, value in kwargs.items():
+            self._process_connection_or_parameter(key, value)
+
+    def list_inputs(self):
+        """
+        Returns a list of input names.
+        """
+        return [_input.name for _input in self.inputs]
+
+    def list_outputs(self):
+        """
+        Returns a list of output names.
+        """
+        return [_output.name for _output in self.outputs]
+
+    async def run(self):
+        """
+        Executes the component's logic and returns the result.
+
+        Returns:
+            The result of executing the component's logic.
+        """
+        return await self._run()
+
+    def set_vertex(self, vertex: "Vertex"):
+        """
+        Sets the vertex for the component.
+
+        Args:
+            vertex (Vertex): The vertex to set.
+
         Returns:
             None
         """
-        self.outputs = outputs
-        for output in outputs:
-            if output.name is None:
-                raise ValueError("Output name cannot be None.")
-            self._outputs[output.name] = output
+        self._vertex = vertex
 
     def get_input(self, name: str) -> Any:
         """
