@@ -349,8 +349,8 @@ export default function ParameterComponent({
             testIdComplement={`${data?.type?.toLowerCase()}-shownode`}
           />
         )}
-        <div className="mt-2 w-full">
-          {data.node?.template[name] !== undefined && (
+        {data.node?.template[name] !== undefined && (
+          <div className="mt-2 w-full">
             <ParameterRenderComponent
               handleOnNewValue={handleOnNewValue}
               name={name}
@@ -362,8 +362,8 @@ export default function ParameterComponent({
               nodeClass={data.node!}
               disabled={disabled}
             />
-          )}
-        </div>
+          </div>
+        )}
         {openOutputModal && (
           <OutputModal
             open={openOutputModal}
