@@ -6,6 +6,7 @@ from functools import partial
 from itertools import chain
 from typing import TYPE_CHECKING, Any, Dict, Generator, List, Optional, Tuple, Type, Union
 
+import nest_asyncio
 from loguru import logger
 
 from langflow.exceptions.component import ComponentBuildException
@@ -182,6 +183,8 @@ class Graph:
                 return
 
     def start(self, inputs: Optional[List[dict]] = None) -> Generator:
+        #! Change this soon
+        nest_asyncio.apply()
         loop = asyncio.get_event_loop()
         async_gen = self.async_start(inputs)
         async_gen_task = asyncio.ensure_future(async_gen.__anext__())
