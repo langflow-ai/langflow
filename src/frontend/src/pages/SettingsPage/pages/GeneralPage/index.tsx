@@ -12,6 +12,7 @@ import {
 } from "@/controllers/API/queries/auth";
 import { useGetProfilePicturesQuery } from "@/controllers/API/queries/files";
 import useAuthStore from "@/stores/authStore";
+import { useIsFetching } from "@tanstack/react-query";
 import { cloneDeep } from "lodash";
 import { useContext, useState } from "react";
 import { useParams } from "react-router-dom";
@@ -29,7 +30,6 @@ import GeneralPageHeaderComponent from "./components/GeneralPageHeader";
 import PasswordFormComponent from "./components/PasswordForm";
 import ProfilePictureFormComponent from "./components/ProfilePictureForm";
 import StoreApiKeyFormComponent from "./components/StoreApiKeyForm";
-import { useIsFetching } from "@tanstack/react-query";
 
 export const GeneralPage = () => {
   const setCurrentFlowId = useFlowsManagerStore(
@@ -48,15 +48,17 @@ export const GeneralPage = () => {
   const hasStore = useStoreStore((state) => state.hasStore);
   const validApiKey = useStoreStore((state) => state.validApiKey);
 
-  const isFetchingPost = useIsFetching({
-    queryKey: ["usePostAddApiKey"],
-    exact: false,
-  }) > 0;
-  const isFetchingGet = useIsFetching({
-    queryKey: ["useGetCheckApiKeysQuery"],
-    exact: false,
-  }) > 0;
-  const loadingApiKey = (isFetchingGet || isFetchingPost);
+  const isFetchingPost =
+    useIsFetching({
+      queryKey: ["usePostAddApiKey"],
+      exact: false,
+    }) > 0;
+  const isFetchingGet =
+    useIsFetching({
+      queryKey: ["useGetCheckApiKeysQuery"],
+      exact: false,
+    }) > 0;
+  const loadingApiKey = isFetchingGet || isFetchingPost;
 
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
   const { password, cnfPassword, profilePicture, apikey } = inputState;

@@ -8,6 +8,7 @@ import { SkeletonCardComponent } from "../../components/skeletonCardComponent";
 import { Button } from "../../components/ui/button";
 
 import { useGetTagsQuery } from "@/controllers/API/queries/store";
+import { useIsFetching } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import PaginatorComponent from "../../components/paginatorComponent";
 import { TagsSelector } from "../../components/tagsSelectorComponent";
@@ -35,20 +36,21 @@ import { useStoreStore } from "../../stores/storeStore";
 import { storeComponent } from "../../types/store";
 import { cn } from "../../utils/utils";
 import InputSearchComponent from "../MainPage/components/myCollectionComponent/components/inputSearchComponent";
-import { useIsFetching } from "@tanstack/react-query";
 
 export default function StorePage(): JSX.Element {
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
   const validApiKey = useStoreStore((state) => state.validApiKey);
-  const isFetchingPost = useIsFetching({
-    queryKey: ["usePostAddApiKey"],
-    exact: false,
-  }) > 0;
-  const isFetchingGet = useIsFetching({
-    queryKey: ["useGetCheckApiKeysQuery"],
-    exact: false,
-  }) > 0;
-  const loadingApiKey = (isFetchingGet || isFetchingPost);
+  const isFetchingPost =
+    useIsFetching({
+      queryKey: ["usePostAddApiKey"],
+      exact: false,
+    }) > 0;
+  const isFetchingGet =
+    useIsFetching({
+      queryKey: ["useGetCheckApiKeysQuery"],
+      exact: false,
+    }) > 0;
+  const loadingApiKey = isFetchingGet || isFetchingPost;
 
   const setValidApiKey = useStoreStore((state) => state.updateValidApiKey);
 
