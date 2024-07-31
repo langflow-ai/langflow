@@ -1,6 +1,7 @@
 import {
   useAddUser,
   useDeleteUsers,
+  useGetUsers,
   useUpdateUser,
 } from "@/controllers/API/queries/auth";
 import { cloneDeep } from "lodash";
@@ -75,34 +76,51 @@ export default function AdminPage() {
 
   const [filterUserList, setFilterUserList] = useState(userList.current);
 
+  const { mutate: mutateGetUsers } = useGetUsers({});
+
   function getUsers() {
     setLoadingUsers(true);
-    getUsersPage(index - 1, size)
-      .then((users) => {
-        setTotalRowsCount(users["total_count"]);
-        userList.current = users["users"];
-        setFilterUserList(users["users"]);
-        setLoadingUsers(false);
-      })
-      .catch((error) => {
-        setLoadingUsers(false);
-      });
+    mutateGetUsers(
+      {
+        skip: size * (index - 1),
+        limit: size,
+      },
+      {
+        onSuccess: (users) => {
+          setTotalRowsCount(users["total_count"]);
+          userList.current = users["users"];
+          setFilterUserList(users["users"]);
+          setLoadingUsers(false);
+        },
+        onError: () => {
+          setLoadingUsers(false);
+        },
+      },
+    );
   }
 
   function handleChangePagination(pageIndex: number, pageSize: number) {
     setLoadingUsers(true);
     setPageSize(pageSize);
     setPageIndex(pageIndex);
-    getUsersPage(pageSize * (pageIndex - 1), pageSize)
-      .then((users) => {
-        setTotalRowsCount(users["total_count"]);
-        userList.current = users["users"];
-        setFilterUserList(users["users"]);
-        setLoadingUsers(false);
-      })
-      .catch((error) => {
-        setLoadingUsers(false);
-      });
+
+    mutateGetUsers(
+      {
+        skip: pageSize * (pageIndex - 1),
+        limit: pageSize,
+      },
+      {
+        onSuccess: (users) => {
+          setTotalRowsCount(users["total_count"]);
+          userList.current = users["users"];
+          setFilterUserList(users["users"]);
+          setLoadingUsers(false);
+        },
+        onError: () => {
+          setLoadingUsers(false);
+        },
+      },
+    );
   }
 
   function resetFilter() {
