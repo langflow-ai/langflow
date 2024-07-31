@@ -19,23 +19,7 @@ class ComponentFunctionEntrypointNameNullError(HTTPException):
     pass
 
 
-class DynamicDocstringMeta(type):
-    def __new__(cls, name, bases, class_dict, methods_map=methods_docs_map):
-        instance = type.__new__(cls, name, bases, class_dict)
-        if name in ["CustomComponent", "Component", "BaseComponent"]:
-            return instance
-        for method_name, value_dict in methods_map.items():
-            if hasattr(instance, method_name):
-                method = getattr(instance, method_name)
-                if callable(method):
-                    docstring = value_dict["doc"]
-                    inputs_names_and_types = [f"{_input.name}: {_input.input_types}" for _input in instance.inputs]
-                    inputs = "\n\t".join(inputs_names_and_types) or value_dict.get("fallback", "")
-                    method.__doc__ = docstring.format(inputs=inputs)
-        return instance
-
-
-class BaseComponent(metaclass=DynamicDocstringMeta):
+class BaseComponent:
     ERROR_CODE_NULL: ClassVar[str] = "Python code must be provided."
     ERROR_FUNCTION_ENTRYPOINT_NAME_NULL: ClassVar[str] = "The name of the entrypoint function must be provided."
 
