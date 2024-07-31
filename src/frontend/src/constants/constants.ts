@@ -1,7 +1,6 @@
 // src/constants/constants.ts
 
 import { languageMap } from "../types/components";
-import { nodeNames } from "../utils/styleUtils";
 
 /**
  * invalid characters for flow name

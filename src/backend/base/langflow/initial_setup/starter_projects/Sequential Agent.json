@@ -2048,6 +2048,25 @@
             "pinned": false,
             "template": {
               "_type": "Component",
+              "api_key": {
+                "_input_type": "SecretStrInput",
+                "advanced": false,
+                "display_name": "OpenAI API Key",
+                "dynamic": false,
+                "info": "The OpenAI API Key to use for the OpenAI model.",
+                "input_types": [
+                  "Message"
+                ],
+                "load_from_db": true,
+                "name": "api_key",
+                "password": true,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": "OPENAI_API_KEY"
+              },
               "code": {
                 "advanced": true,
                 "dynamic": true,
@@ -2934,7 +2953,8 @@
                 "name": "api_run_model",
                 "selected": "Data",
                 "types": [
-                  "Data"
+                  "Data",
+                  "list"
                 ],
                 "value": "__UNDEFINED__"
               },
@@ -2945,7 +2965,8 @@
                 "name": "api_build_tool",
                 "selected": "Tool",
                 "types": [
-                  "Tool"
+                  "Tool",
+                  "Sequence"
                 ],
                 "value": "__UNDEFINED__"
               }
@@ -2958,7 +2979,9 @@
                 "display_name": "SearchAPI API Key",
                 "dynamic": false,
                 "info": "",
-                "input_types": [],
+                "input_types": [
+                  "Message"
+                ],
                 "load_from_db": true,
                 "name": "api_key",
                 "password": true,

@@ -17,6 +17,7 @@ export const URLs = {
   CUSTOM_COMPONENT: `custom_component`,
   FLOWS: `flows`,
   FOLDERS: `folders`,
+  VARIABLES: `variables`,
 } as const;
 
 export function getURL(key: keyof typeof URLs, params: any = {}) {
