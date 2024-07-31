@@ -230,8 +230,45 @@ class SecretStrInput(BaseInputMixin, DatabaseLoadMixin):
 
     field_type: SerializableFieldTypes = FieldTypes.PASSWORD
     password: CoalesceBool = Field(default=True)
-    input_types: list[str] = []
+    input_types: list[str] = ["Message"]
     load_from_db: CoalesceBool = True
+
+    @field_validator("value")
+    @classmethod
+    def validate_value(cls, v: Any, _info):
+        """
+        Validates the given value and returns the processed value.
+
+        Args:
+            v (Any): The value to be validated.
+            _info: Additional information about the input.
+
+        Returns:
+            The processed value.
+
+        Raises:
+            ValueError: If the value is not of a valid type or if the input is missing a required key.
+        """
+        value: str | AsyncIterator | Iterator | None = None
+        if isinstance(v, str):
+            value = v
+        elif isinstance(v, Message):
+            value = v.text
+        elif isinstance(v, Data):
+            if v.text_key in v.data:
+                value = v.data[v.text_key]
+            else:
+                keys = ", ".join(v.data.keys())
+                input_name = _info.data["name"]
+                raise ValueError(
+                    f"The input to '{input_name}' must contain the key '{v.text_key}'."
+                    f"You can set `text_key` to one of the following keys: {keys} or set the value using another Component."
+                )
+        elif isinstance(v, (AsyncIterator, Iterator)):
+            value = v
+        else:
+            raise ValueError(f"Invalid value type {type(v)}")
+        return value
 
 
 class IntInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMixin):
