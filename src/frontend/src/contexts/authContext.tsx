@@ -3,6 +3,7 @@ import {
   LANGFLOW_API_TOKEN,
   LANGFLOW_AUTO_LOGIN_OPTION,
 } from "@/constants/constants";
+import { useGetUserData } from "@/controllers/API/queries/auth";
 import useAuthStore from "@/stores/authStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { createContext, useEffect, useState } from "react";
@@ -56,6 +57,8 @@ export function AuthProvider({ children }): React.ReactElement {
   const setAllFlows = useFlowsManagerStore((state) => state.setAllFlows);
   const setSelectedFolder = useFolderStore((state) => state.setSelectedFolder);
 
+  const { mutate: mutateLoggedUser } = useGetUserData();
+
   useEffect(() => {
     const storedAccessToken = cookies.get(LANGFLOW_ACCESS_TOKEN);
     if (storedAccessToken) {
@@ -71,20 +74,25 @@ export function AuthProvider({ children }): React.ReactElement {
   }, []);
 
   function getUser() {
-    getLoggedUser()
-      .then(async (user) => {
-        setUserData(user);
-        const isSuperUser = user!.is_superuser;
-        useAuthStore.getState().setIsAdmin(isSuperUser);
-        getFoldersApi(true, true);
-        const res = await getGlobalVariables();
-        setGlobalVariables(res);
-        checkHasStore();
-        fetchApiData();
-      })
-      .catch((error) => {
-        setLoading(false);
-      });
+    mutateLoggedUser(
+      {},
+      {
+        onSuccess: async (user) => {
+          setUserData(user);
+          const isSuperUser = user!.is_superuser;
+          useAuthStore.getState().setIsAdmin(isSuperUser);
+          getFoldersApi(true, true);
+          const res = await getGlobalVariables();
+          setGlobalVariables(res);
+          checkHasStore();
+          fetchApiData();
+        },
+        onError: () => {
+          setUserData(null);
+          setLoading(false);
+        },
+      },
+    );
   }
 
   function login(newAccessToken: string, autoLogin: string) {
