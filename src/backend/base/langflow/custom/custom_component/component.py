@@ -145,12 +145,6 @@ class Component(CustomComponent):
             output.add_types(return_types)
             output.set_selected()
 
-    def _get_method_return_type(self, method_name: str) -> List[str]:
-        method = getattr(self, method_name)
-        return_type = get_type_hints(method)["return"]
-        extracted_return_types = self._extract_return_type(return_type)
-        return [format_type(extracted_return_type) for extracted_return_type in extracted_return_types]
-
     def _get_output_by_method(self, method: Callable):
         # method is a callable and output.method is a string
         # we need to find the output that has the same method
@@ -163,6 +157,54 @@ class Component(CustomComponent):
     def _validate_outputs(self):
         # Raise Error if some rule isn't met
         pass
+
+    def _map_parameters_on_frontend_node(self, frontend_node: ComponentFrontendNode):
+        for name, value in self._parameters.items():
+            frontend_node.set_field_value_in_template(name, value)
+
+    def _map_parameters_on_template(self, template: dict):
+        for name, value in self._parameters.items():
+            template[name]["value"] = value
+
+    def _get_method_return_type(self, method_name: str) -> List[str]:
+        method = getattr(self, method_name)
+        return_type = get_type_hints(method)["return"]
+        extracted_return_types = self._extract_return_type(return_type)
+        return [format_type(extracted_return_type) for extracted_return_type in extracted_return_types]
+
+    def _update_template(self, frontend_node: dict):
+        return frontend_node
+
+    def to_frontend_node(self):
+        #! This part here is clunky but we need it like this for
+        #! backwards compatibility. We can change how prompt component
+        #! works and then update this later
+        field_config = self.get_template_config(self)
+        frontend_node = ComponentFrontendNode.from_inputs(**field_config)
+        self._map_parameters_on_frontend_node(frontend_node)
+
+        frontend_node_dict = frontend_node.to_dict(keep_name=False)
+        frontend_node_dict = self._update_template(frontend_node_dict)
+        self._map_parameters_on_template(frontend_node_dict["template"])
+
+        frontend_node = ComponentFrontendNode.from_dict(frontend_node_dict)
+
+        for output in frontend_node.outputs:
+            if output.types:
+                continue
+            return_types = self._get_method_return_type(output.method)
+            output.add_types(return_types)
+            output.set_selected()
+
+        frontend_node.validate_component()
+        frontend_node.set_base_classes_from_outputs()
+        data = {
+            "data": {
+                "node": frontend_node.to_dict(keep_name=False),
+                "type": self.__class__.__name__,
+            }
+        }
+        return data
 
     def _validate_inputs(self, params: dict):
         # Params keys are the `name` attribute of the Input objects
