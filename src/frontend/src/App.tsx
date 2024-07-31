@@ -36,6 +36,7 @@ export default function App() {
   const refreshStars = useDarkStore((state) => state.refreshStars);
   const dark = useDarkStore((state) => state.dark);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+
   const { mutate: mutateAutoLogin } = useAutoLogin();
 
   useGetVersionQuery();
@@ -61,41 +62,39 @@ export default function App() {
   useEffect(() => {
     const isLoginPage = location.pathname.includes("login");
 
-    mutateAutoLogin(
-      {},
-      {
-        onSuccess: (user) => {
-          if (user && user["access_token"]) {
-            user["refresh_token"] = "auto";
-            login(user["access_token"], "auto");
-            setUserData(user);
-            setAutoLogin(true);
-            fetchAllData();
-          }
-        },
-        onError: (error) => {
-          if (error.name !== "CanceledError") {
-            setAutoLogin(false);
-            if (
-              cookies.get(LANGFLOW_AUTO_LOGIN_OPTION) === "auto" &&
-              isAuthenticated
-            ) {
-              logout();
-              return;
-            }
-
-            if (isAuthenticated && !isLoginPage) {
-              getUser();
-              fetchAllData();
-            } else {
-              setLoading(false);
-              useFlowsManagerStore.setState({ isLoading: false });
-            }
-          }
-        },
+    mutateAutoLogin(undefined, {
+      onSuccess: async (user) => {
+        if (user && user["access_token"]) {
+          user["refresh_token"] = "auto";
+          login(user["access_token"], "auto");
+          setUserData(user);
+          setAutoLogin(true);
+          fetchAllData();
+        }
       },
-    );
+      onError: (error) => {
+        if (error.name !== "CanceledError") {
+          setAutoLogin(false);
+          if (
+            cookies.get(LANGFLOW_AUTO_LOGIN_OPTION) === "auto" &&
+            isAuthenticated
+          ) {
+            logout();
+            return;
+          }
+
+          if (isAuthenticated && !isLoginPage) {
+            getUser();
+            fetchAllData();
+          } else {
+            setLoading(false);
+            useFlowsManagerStore.setState({ isLoading: false });
+          }
+        }
+      },
+    });
   }, []);
+
   const fetchAllData = async () => {
     setTimeout(async () => {
       await Promise.all([refreshStars(), fetchData()]);

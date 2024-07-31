@@ -55,6 +55,10 @@ export function AuthProvider({ children }): React.ReactElement {
   const fetchApiData = useStoreStore((state) => state.fetchApiData);
   const setAllFlows = useFlowsManagerStore((state) => state.setAllFlows);
   const setSelectedFolder = useFolderStore((state) => state.setSelectedFolder);
+  const setIsAuthenticated = useAuthStore((state) => state.setIsAuthenticated);
+  const setIsAdmin = useAuthStore((state) => state.setIsAdmin);
+  const setIsLoading = useFlowsManagerStore((state) => state.setIsLoading);
+  const autoLogin = useAuthStore((state) => state.autoLogin);
 
   useEffect(() => {
     const storedAccessToken = cookies.get(LANGFLOW_ACCESS_TOKEN);
@@ -90,26 +94,27 @@ export function AuthProvider({ children }): React.ReactElement {
   function login(newAccessToken: string, autoLogin: string) {
     cookies.set(LANGFLOW_AUTO_LOGIN_OPTION, autoLogin, { path: "/" });
     setAccessToken(newAccessToken);
-    useAuthStore.getState().setIsAuthenticated(true);
+    setIsAuthenticated(true);
     getUser();
   }
 
   async function logout() {
-    if (useAuthStore.getState().autoLogin) {
+    if (autoLogin) {
       return;
     }
     try {
       await requestLogout();
       cookies.remove(LANGFLOW_API_TOKEN, { path: "/" });
       cookies.remove(LANGFLOW_AUTO_LOGIN_OPTION, { path: "/" });
-      useAuthStore.getState().setIsAdmin(false);
+      setIsAdmin(false);
       setUserData(null);
       setAccessToken(null);
-      useAuthStore.getState().setIsAuthenticated(false);
+      setIsAuthenticated(false);
+      setIsAuthenticated(false);
       setAllFlows([]);
       setSelectedFolder(null);
       navigate("/login");
-      useFlowsManagerStore.setState({ isLoading: false });
+      setIsLoading(false);
     } catch (error) {
       console.error(error);
       throw error;
