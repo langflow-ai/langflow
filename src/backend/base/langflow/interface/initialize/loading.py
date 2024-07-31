@@ -33,11 +33,11 @@ async def instantiate_class(
     custom_params = get_params(vertex.params)
     code = custom_params.pop("code")
     class_object: Type["CustomComponent" | "Component"] = eval_custom_component_code(code)
-    custom_component: "CustomComponent" | "Component" = class_object.initialize(
-        user_id=user_id,
-        parameters=custom_params,
-        vertex=vertex,
-        tracing_service=get_tracing_service(),
+    custom_component: "CustomComponent" | "Component" = class_object(
+        _user_id=user_id,
+        _parameters=custom_params,
+        _vertex=vertex,
+        _tracing_service=get_tracing_service(),
     )
     return custom_component, custom_params
 
@@ -186,9 +186,9 @@ async def build_custom_component(params: dict, custom_component: "CustomComponen
     raw = post_process_raw(raw, artifact_type)
     artifact = {"repr": custom_repr, "raw": raw, "type": artifact_type}
 
-    if custom_component.vertex is not None:
-        custom_component._artifacts = {custom_component.vertex.outputs[0].get("name"): artifact}
-        custom_component._results = {custom_component.vertex.outputs[0].get("name"): build_result}
+    if custom_component._vertex is not None:
+        custom_component._artifacts = {custom_component._vertex.outputs[0].get("name"): artifact}
+        custom_component._results = {custom_component._vertex.outputs[0].get("name"): build_result}
         return custom_component, build_result, artifact
 
     raise ValueError("Custom component does not have a vertex")
