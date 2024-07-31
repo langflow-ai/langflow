@@ -1,5 +1,7 @@
 from typing import Any, List, Optional
 
+from loguru import logger
+
 from langflow.base.flow_processing.utils import build_data_from_result_data
 from langflow.custom import Component
 from langflow.graph.graph.base import Graph
@@ -7,8 +9,6 @@ from langflow.graph.vertex.base import Vertex
 from langflow.helpers.flow import get_flow_inputs
 from langflow.io import DropdownInput, Output
 from langflow.schema import Data, dotdict
-
-from loguru import logger
 
 
 class SubFlowComponent(Component):
@@ -58,7 +58,9 @@ class SubFlowComponent(Component):
             field_template = vertex.data["node"]["template"]
             for inp in field_template.keys():
                 if inp not in ["code", "_type"]:
-                    field_template[inp]["display_name"] = vertex.display_name + " - " + field_template[inp]["display_name"]
+                    field_template[inp]["display_name"] = (
+                        vertex.display_name + " - " + field_template[inp]["display_name"]
+                    )
                     field_template[inp]["name"] = vertex.id + "|" + inp
                     new_vertex_inputs.append(field_template[inp])
             new_fields += new_vertex_inputs
@@ -77,21 +79,15 @@ class SubFlowComponent(Component):
         ),
     ]
 
-    outputs = [
-        Output(
-            name="flow_outputs",
-            display_name="Flow Outputs",
-            method="generate_results"
-            )
-    ]
-
+    outputs = [Output(name="flow_outputs", display_name="Flow Outputs", method="generate_results")]
 
     async def generate_results(self) -> List[Data]:
         tweaks = {}
         for field in self._attributes.keys():
             if field != "flow_name":
                 [node, name] = field.split("|")
-                if node not in tweaks.keys(): tweaks[node] = {}
+                if node not in tweaks.keys():
+                    tweaks[node] = {}
                 tweaks[node][name] = self._attributes[field]
 
         run_outputs = await self.run_flow(
