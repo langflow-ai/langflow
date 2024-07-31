@@ -653,7 +653,7 @@ class Graph:
         try:
             vertices = payload["nodes"]
             edges = payload["edges"]
-            graph = cls(flow_id, flow_name, user_id)
+            graph = cls(flow_id=flow_id, flow_name=flow_name, user_id=user_id)
             graph.add_nodes_and_edges(vertices, edges)
             return graph
         except KeyError as exc:
