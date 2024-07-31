@@ -13,7 +13,7 @@ from json.decoder import JSONDecodeError
 class GoogleDriveComponent(Component):
     display_name = "Google Drive Loader"
     description = "Loads documents from Google Drive using provided credentials."
-    icon = "drive"  # You can choose an appropriate icon later
+    icon = "Google"  # You can choose an appropriate icon later
 
     inputs = [
         MessageTextInput(
