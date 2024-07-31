@@ -4,6 +4,7 @@ from http import HTTPStatus
 from typing import TYPE_CHECKING, Annotated, List, Optional, Union
 from uuid import UUID
 
+from langflow.api.utils import get_suggestion_messsage
 import sqlalchemy as sa
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Request, UploadFile, status
 from loguru import logger
@@ -23,7 +24,7 @@ from langflow.api.v1.schemas import (
 )
 from langflow.custom.custom_component.component import Component
 from langflow.custom.utils import build_custom_component_template, get_instance_name
-from langflow.exceptions.api import InvalidChatInputException
+from langflow.exceptions.api import APIException, InvalidChatInputException, exceptionBody
 from langflow.graph.graph.base import Graph
 from langflow.graph.schema import RunOutputs
 from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
@@ -33,7 +34,7 @@ from langflow.schema.graph import Tweaks
 from langflow.services.auth.utils import api_key_security, get_current_active_user
 from langflow.services.cache.utils import save_uploaded_file
 from langflow.services.database.models.flow import Flow
-from langflow.services.database.models.flow.utils import get_all_webhook_components_in_flow
+from langflow.services.database.models.flow.utils import get_all_webhook_components_in_flow, get_components_versions, get_outdated_components
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import (
     get_cache_service,
@@ -260,7 +261,12 @@ async def simplified_run_flow(
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
         else:
             logger.exception(exc)
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+            body = {"message": str(exc)}
+            outdated_components = get_outdated_components(flow)
+            if outdated_components:
+                body["suggestion"] = get_suggestion_messsage(outdated_components)
+            excep = exceptionBody(**body)
+            raise APIException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, exception=excep) from exc
     except InvalidChatInputException as exc:
         logger.error(exc)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
@@ -275,7 +281,13 @@ async def simplified_run_flow(
                 runErrorMessage=str(exc),
             ),
         )
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+        logger.exception(exc)
+        body = {"message": str(exc)}
+        outdated_components = get_outdated_components(flow)
+        if outdated_components:
+            body["suggestion"] = get_suggestion_messsage(outdated_components)
+        excep = exceptionBody(**body)
+        raise APIException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, exception=excep) from exc
 
 
 @router.post("/webhook/{flow_id_or_name}", response_model=dict, status_code=HTTPStatus.ACCEPTED)
