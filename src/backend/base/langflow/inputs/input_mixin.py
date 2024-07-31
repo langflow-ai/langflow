@@ -102,7 +102,7 @@ class MetadataTraceMixin(BaseModel):
 
 # Mixin for input fields that can be listable
 class ListableInputMixin(BaseModel):
-    is_list: bool = Field(default=False, serialization_alias="list")
+    is_list: bool = Field(default=False, alias="list")
 
 
 # Specific mixin for fields needing database interaction
@@ -113,7 +113,7 @@ class DatabaseLoadMixin(BaseModel):
 # Specific mixin for fields needing file interaction
 class FileMixin(BaseModel):
     file_path: Optional[str] = Field(default="")
-    file_types: list[str] = Field(default=[], serialization_alias="fileTypes")
+    file_types: list[str] = Field(default=[], alias="fileTypes")
 
     @field_validator("file_types")
     @classmethod
