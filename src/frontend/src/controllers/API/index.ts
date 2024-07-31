@@ -349,19 +349,6 @@ export async function uploadFile(
   return await api.post(`${BASE_URL_API}files/upload/${id}`, formData);
 }
 
-export async function getProfilePictures(): Promise<ProfilePicturesTypeAPI | null> {
-  try {
-    const res = await api.get(`${BASE_URL_API}files/profile_pictures/list`);
-
-    if (res.status === 200) {
-      return res.data;
-    }
-  } catch (error) {
-    throw error;
-  }
-  return null;
-}
-
 export async function postCustomComponent(
   code: string,
   apiClass: APIClassType,
@@ -814,53 +801,6 @@ export async function requestLogout() {
     return response?.data;
   } catch (error) {
     console.error(error);
-    throw error;
-  }
-}
-
-export async function getGlobalVariables(): Promise<{
-  [key: string]: { id: string; type: string; default_fields: string[] };
-}> {
-  const globalVariables = {};
-  (await api.get(`${BASE_URL_API}variables/`))?.data?.forEach((element) => {
-    globalVariables[element.name] = {
-      id: element.id,
-      type: element.type,
-      default_fields: element.default_fields,
-    };
-  });
-  return globalVariables;
-}
-
-export async function registerGlobalVariable({
-  name,
-  value,
-  type,
-  default_fields = [],
-}: {
-  name: string;
-  value: string;
-  type?: string;
-  default_fields?: string[];
-}): Promise<AxiosResponse<{ name: string; id: string; type: string }>> {
-  try {
-    const response = await api.post(`${BASE_URL_API}variables/`, {
-      name,
-      value,
-      type,
-      default_fields: default_fields,
-    });
-    return response;
-  } catch (error) {
-    throw error;
-  }
-}
-
-export async function deleteGlobalVariable(id: string) {
-  try {
-    const response = await api.delete(`${BASE_URL_API}variables/${id}`);
-    return response;
-  } catch (error) {
     throw error;
   }
 }
