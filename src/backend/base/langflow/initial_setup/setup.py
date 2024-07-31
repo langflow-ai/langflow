@@ -102,6 +102,7 @@ def update_projects_components_with_latest_component_versions(project_data, all_
 
                 for field_name, field_dict in latest_template.items():
                     if field_name not in node_data["template"]:
+                        node_data["template"][field_name] = field_dict
                         continue
                     # The idea here is to update some attributes of the field
                     to_check_attributes = FIELD_FORMAT_ATTRIBUTES
