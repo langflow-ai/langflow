@@ -21,14 +21,18 @@ class ComponentFunctionEntrypointNameNullError(HTTPException):
 
 class DynamicDocstringMeta(type):
     def __new__(cls, name, bases, class_dict, methods_map=methods_docs_map):
-        for method_name, docstring in methods_map.items():
-            if method_name in class_dict:
-                method = class_dict[method_name]
+        instance = type.__new__(cls, name, bases, class_dict)
+        if name in ["CustomComponent", "Component", "BaseComponent"]:
+            return instance
+        for method_name, value_dict in methods_map.items():
+            if hasattr(instance, method_name):
+                method = getattr(instance, method_name)
                 if callable(method):
-                    inputs_names_and_types = [f"{_input.name}: {_input.input_types}" for _input in cls.inputs]
-                    inputs = "\n".join(inputs_names_and_types)
+                    docstring = value_dict["doc"]
+                    inputs_names_and_types = [f"{_input.name}: {_input.input_types}" for _input in instance.inputs]
+                    inputs = "\n\t".join(inputs_names_and_types) or value_dict.get("fallback", "")
                     method.__doc__ = docstring.format(inputs=inputs)
-        return type.__new__(cls, name, bases, class_dict)
+        return instance
 
 
 class BaseComponent(metaclass=DynamicDocstringMeta):
