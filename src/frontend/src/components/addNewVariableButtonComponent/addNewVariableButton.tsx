@@ -62,7 +62,6 @@ export default function AddNewVariableButton({
       value,
       default_fields: fields,
     };
-    console.log("here");
 
     mutateAddGlobalVariable(data, {
       onSuccess: (res) => {
