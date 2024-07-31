@@ -7,6 +7,7 @@ import useFlowStore from "../stores/flowStore";
 import { VertexBuildTypeAPI } from "../types/api";
 import { isErrorLogType } from "../types/utils/typeCheckingUtils";
 import { VertexLayerElementType } from "../types/zustand/flow";
+import { tryParseJson } from "./utils";
 
 type BuildVerticesParams = {
   setLockChat?: (lock: boolean) => void;
@@ -306,12 +307,17 @@ async function buildVertex({
     buildResults.push(buildData.valid);
   } catch (error) {
     console.error(error);
+    let errorMessage: string | string[] =
+      (error as AxiosError<any>).response?.data?.detail ||
+      (error as AxiosError<any>).response?.data?.message ||
+      "An unexpected error occurred while building the Component. Please try again.";
+    errorMessage = tryParseJson(errorMessage as string) ?? errorMessage;
+    if (!Array.isArray(errorMessage)) {
+      errorMessage = [errorMessage];
+    }
     onBuildError!(
       "Error Building Component",
-      [
-        (error as AxiosError<any>).response?.data?.detail ??
-          "An unexpected error occurred while building the Component. Please try again.",
-      ],
+      errorMessage,
       verticesIds.map((id) => ({ id })),
     );
     buildResults.push(false);
