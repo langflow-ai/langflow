@@ -56,7 +56,7 @@ export function AuthProvider({ children }): React.ReactElement {
   const [apiKey, setApiKey] = useState<string | null>(
     cookies.get(LANGFLOW_API_TOKEN),
   );
-  const { refetch } = useGetCheckQuery();
+  useGetCheckQuery();
 
   const getFoldersApi = useFolderStore((state) => state.getFoldersApi);
   const setGlobalVariables = useGlobalVariablesStore(
@@ -90,7 +90,6 @@ export function AuthProvider({ children }): React.ReactElement {
         getFoldersApi(true, true);
         const res = await getGlobalVariables();
         setGlobalVariables(res);
-        refetch();
         fetchApiData();
       })
       .catch((error) => {
