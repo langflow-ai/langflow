@@ -10,6 +10,7 @@ from loguru import logger
 
 from langflow.exceptions.component import ComponentBuildException
 from langflow.graph.edge.base import ContractEdge
+from langflow.graph.edge.schema import EdgeData
 from langflow.graph.graph.constants import lazy_load_vertex_dict
 from langflow.graph.graph.runnable_vertices_manager import RunnableVerticesManager
 from langflow.graph.graph.state_manager import GraphStateManager
@@ -73,7 +74,7 @@ class Graph:
             logger.error(f"Error getting tracing service: {exc}")
             self.tracing_service = None
 
-    def add_nodes_and_edges(self, nodes: List[Dict], edges: List[Dict[str, str]]):
+    def add_nodes_and_edges(self, nodes: List[Dict], edges: List[EdgeData]):
         self._vertices = nodes
         self._edges = edges
         self.raw_graph_data = {"nodes": nodes, "edges": edges}
