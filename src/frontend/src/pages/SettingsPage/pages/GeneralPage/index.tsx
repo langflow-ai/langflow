@@ -1,3 +1,4 @@
+import FeatureFlags from "@/../feature-config.json";
 import {
   EDIT_PASSWORD_ALERT_LIST,
   EDIT_PASSWORD_ERROR_ALERT,
@@ -150,13 +151,15 @@ export const GeneralPage = () => {
       <GeneralPageHeaderComponent />
 
       <div className="grid gap-6">
-        <ProfilePictureFormComponent
-          profilePicture={profilePicture}
-          handleInput={handleInput}
-          handlePatchProfilePicture={handlePatchProfilePicture}
-          handleGetProfilePictures={handleGetProfilePictures}
-          userData={userData}
-        />
+        {FeatureFlags.ENABLE_PROFILE_ICONS && (
+          <ProfilePictureFormComponent
+            profilePicture={profilePicture}
+            handleInput={handleInput}
+            handlePatchProfilePicture={handlePatchProfilePicture}
+            handleGetProfilePictures={handleGetProfilePictures}
+            userData={userData}
+          />
+        )}
 
         {!autoLogin && (
           <PasswordFormComponent
