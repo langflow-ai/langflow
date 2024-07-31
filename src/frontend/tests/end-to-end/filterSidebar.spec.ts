@@ -60,7 +60,7 @@ test("LLMChain - Filter", async ({ page }) => {
   await expect(page.getByTestId("promptsPrompt")).toBeVisible();
   await expect(page.getByTestId("modelsAmazon Bedrock")).toBeVisible();
   await expect(page.getByTestId("helpersChat Memory")).toBeVisible();
-  await expect(page.getByTestId("agentsTool Calling Agent")).toBeVisible();
+  await expect(page.getByTestId("agentsCSVAgent")).toBeVisible();
   await expect(page.getByTestId("chainsConversationChain")).toBeVisible();
   await expect(page.getByTestId("prototypesConditional Router")).toBeVisible();
 

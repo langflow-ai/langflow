@@ -24,16 +24,41 @@ env:
 
 jobs:
   setup-and-test:
-    name: Run Playwright Tests
+    name: Playwright Tests - Group ${{ matrix.shardIndex }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        shardIndex: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
-        shardTotal: [15]
+        shardIndex:
+          [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+          ]
+        shardTotal: [20]
     env:
       OPENAI_API_KEY: ${{ inputs.openai_api_key || secrets.OPENAI_API_KEY }}
       STORE_API_KEY: ${{ inputs.store_api_key || secrets.STORE_API_KEY }}
+      BRAVE_SEARCH_API_KEY: "${{ secrets.BRAVE_SEARCH_API_KEY }}"
+      ASTRA_DB_APPLICATION_TOKEN: "${{ secrets.ASTRA_DB_APPLICATION_TOKEN }}"
+      ASTRA_DB_API_ENDPOINT: "${{ secrets.ASTRA_DB_API_ENDPOINT }}"
     outputs:
       failed: ${{ steps.check-failure.outputs.failed }}
     steps:
@@ -123,6 +148,7 @@ jobs:
   merge-reports:
     needs: setup-and-test
     runs-on: ubuntu-latest
+    if: always()
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

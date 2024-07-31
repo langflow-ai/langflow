@@ -1,23 +1,16 @@
+import TableAdvancedToggleCellRender from "@/components/tableComponent/components/tableAdvancedToggleCellRender";
 import { ColDef, ValueGetterParams } from "ag-grid-community";
 import { useMemo } from "react";
 import TableNodeCellRender from "../../../components/tableComponent/components/tableNodeCellRender";
-import TableToggleCellRender from "../../../components/tableComponent/components/tableToggleCellRender";
-import { APIClassType } from "../../../types/api";
 
 const useColumnDefs = (
-  nodeClass: APIClassType,
-  handleNodeClass: (
-    newNodeClass: APIClassType,
-    name: string,
-    code: string,
-    type?: string,
-  ) => void,
   nodeId: string,
-  changeAdvanced: (n: string) => void,
   open: boolean,
+  isTweaks?: boolean,
+  hideVisibility?: boolean,
 ) => {
-  const columnDefs: ColDef[] = useMemo(
-    () => [
+  const columnDefs: ColDef[] = useMemo(() => {
+    const colDefs: ColDef[] = [
       {
         headerName: "Field Name",
         field: "display_name",
@@ -51,39 +44,40 @@ const useColumnDefs = (
         cellRenderer: TableNodeCellRender,
         valueGetter: (params: ValueGetterParams) => {
           return {
-            value: params.data.value,
             nodeId: nodeId,
-            nodeClass: nodeClass,
-            handleNodeClass: handleNodeClass,
+            parameterId: params.data.key,
+            isTweaks,
           };
         },
+        suppressKeyboardEvent: (params) =>
+          params.event.key === "a" &&
+          (params.event.ctrlKey || params.event.metaKey),
         minWidth: 340,
         autoHeight: true,
         flex: 1,
         resizable: false,
         cellClass: "no-border",
       },
-      {
+    ];
+    if (!hideVisibility) {
+      colDefs.push({
         headerName: "Show",
         field: "advanced",
-        cellRenderer: TableToggleCellRender,
+        cellRenderer: TableAdvancedToggleCellRender,
         valueGetter: (params: ValueGetterParams) => {
           return {
-            name: params.data.name,
-            enabled: !params.data.advanced,
-            setEnabled: () => {
-              changeAdvanced(params.data.key);
-            },
+            nodeId,
+            parameterId: params.data.key,
           };
         },
         editable: false,
         maxWidth: 80,
         resizable: false,
         cellClass: "no-border",
-      },
-    ],
-    [open, nodeClass],
-  );
+      });
+    }
+    return colDefs;
+  }, [open]);
 
   return columnDefs;
 };

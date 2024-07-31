@@ -1,12 +1,12 @@
 import operator
 from functools import reduce
 
+from langflow.field_typing.range_spec import RangeSpec
 from langchain_openai import ChatOpenAI
 from pydantic.v1 import SecretStr
 
-from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
-from langflow.base.models.openai_constants import MODEL_NAMES
+from langflow.base.models.openai_constants import OPENAI_MODEL_NAMES
 from langflow.field_typing import LanguageModel
 from langflow.inputs import (
     BoolInput,
@@ -14,7 +14,6 @@ from langflow.inputs import (
     DropdownInput,
     FloatInput,
     IntInput,
-    MessageInput,
     SecretStrInput,
     StrInput,
 )
@@ -26,13 +25,13 @@ class OpenAIModelComponent(LCModelComponent):
     icon = "OpenAI"
     name = "OpenAIModel"
 
-    inputs = [
-        MessageInput(name="input_value", display_name="Input"),
+    inputs = LCModelComponent._base_inputs + [
         IntInput(
             name="max_tokens",
             display_name="Max Tokens",
             advanced=True,
             info="The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
+            range_spec=RangeSpec(min=0, max=128000),
         ),
         DictInput(name="model_kwargs", display_name="Model Kwargs", advanced=True),
         BoolInput(
@@ -49,7 +48,11 @@ class OpenAIModelComponent(LCModelComponent):
             info="The schema for the Output of the model. You must pass the word JSON in the prompt. If left blank, JSON mode will be disabled.",
         ),
         DropdownInput(
-            name="model_name", display_name="Model Name", advanced=False, options=MODEL_NAMES, value=MODEL_NAMES[0]
+            name="model_name",
+            display_name="Model Name",
+            advanced=False,
+            options=OPENAI_MODEL_NAMES,
+            value=OPENAI_MODEL_NAMES[0],
         ),
         StrInput(
             name="openai_api_base",
@@ -65,13 +68,6 @@ class OpenAIModelComponent(LCModelComponent):
             value="OPENAI_API_KEY",
         ),
         FloatInput(name="temperature", display_name="Temperature", value=0.1),
-        BoolInput(name="stream", display_name="Stream", info=STREAM_INFO_TEXT, advanced=True),
-        StrInput(
-            name="system_message",
-            display_name="System Message",
-            info="System message to pass to the model.",
-            advanced=True,
-        ),
         IntInput(
             name="seed",
             display_name="Seed",

@@ -1,7 +1,6 @@
 // src/constants/constants.ts
 
 import { languageMap } from "../types/components";
-import { nodeNames } from "../utils/styleUtils";
 
 /**
  * invalid characters for flow name
@@ -734,6 +733,9 @@ export const AUTHORIZED_DUPLICATE_REQUESTS = [
   "/auto_login",
 ];
 
+export const BROKEN_EDGES_WARNING =
+  "Some connections were removed because they were invalid:";
+
 export const SAVE_DEBOUNCE_TIME = 300;
 
 export const IS_MAC = navigator.userAgent.toUpperCase().includes("MAC");
@@ -845,6 +847,8 @@ export const MODAL_CLASSES =
   "nopan nodelete nodrag  noflow fixed inset-0 bottom-0 left-0 right-0 top-0 z-50 overflow-auto bg-blur-shared backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0";
 
 export const ALLOWED_IMAGE_INPUT_EXTENSIONS = ["png", "jpg", "jpeg"];
+
+export const componentsToIgnoreUpdate = ["CustomComponent"];
 
 export const FS_ERROR_TEXT =
   "Please ensure your file has one of the following extensions:";

@@ -61,7 +61,8 @@ class TelemetryService(Service):
         if path:
             url = f"{url}/{path}"
         try:
-            response = await self.client.get(url, params=payload.model_dump())
+            payload_dict = payload.model_dump(exclude_none=True, exclude_unset=True)
+            response = await self.client.get(url, params=payload_dict)
             if response.status_code != 200:
                 logger.error(f"Failed to send telemetry data: {response.status_code} {response.text}")
             else:
@@ -134,3 +135,6 @@ class TelemetryService(Service):
             await self.client.aclose()
         except Exception as e:
             logger.error(f"Error stopping tracing service: {e}")
+
+    async def teardown(self):
+        await self.stop()

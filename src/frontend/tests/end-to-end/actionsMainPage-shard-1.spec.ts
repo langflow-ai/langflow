@@ -36,6 +36,41 @@ test("select and delete all", async ({ page }) => {
   await page.getByText("Selected items deleted successfully").isVisible();
 });
 
+test("select and delete a flow", async ({ page }) => {
+  await page.goto("/");
+  await page.waitForTimeout(2000);
+
+  let modalCount = 0;
+  try {
+    const modalTitleElement = await page?.getByTestId("modal-title");
+    if (modalTitleElement) {
+      modalCount = await modalTitleElement.count();
+    }
+  } catch (error) {
+    modalCount = 0;
+  }
+
+  while (modalCount === 0) {
+    await page.getByText("New Project", { exact: true }).click();
+    await page.waitForTimeout(5000);
+    modalCount = await page.getByTestId("modal-title")?.count();
+  }
+  await page.getByRole("heading", { name: "Basic Prompting" }).click();
+
+  await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
+    timeout: 100000,
+  });
+
+  await page.getByTestId("icon-ChevronLeft").first().click();
+
+  await page.getByTestId("checkbox-component").first().click();
+  await page.getByTestId("icon-Trash2").click();
+  await page.getByText("Delete").last().click();
+
+  await page.waitForTimeout(1000);
+  await page.getByText("Selected items deleted successfully").isVisible();
+});
+
 test("search flows", async ({ page }) => {
   await page.goto("/");
   await page.waitForTimeout(2000);

@@ -43,12 +43,20 @@ test("user must interact with chat with Input/Output", async ({ page }) => {
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
 
+  let outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
+
+  while (outdatedComponents > 0) {
+    await page.getByTestId("icon-AlertTriangle").first().click();
+    await page.waitForTimeout(1000);
+    outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
+  }
+
   await page
-    .getByTestId("popover-anchor-input-openai_api_key")
+    .getByTestId("popover-anchor-input-api_key")
     .fill(process.env.OPENAI_API_KEY ?? "");
 
-  await page.getByTestId("dropdown-model_name").click();
-  await page.getByTestId("gpt-4o-0-option").click();
+  await page.getByTestId("dropdown_str_model_name").click();
+  await page.getByTestId("gpt-4o-1-option").click();
 
   await page.waitForTimeout(2000);
   await page.getByText("Playground", { exact: true }).click();
@@ -78,7 +86,7 @@ test("user must interact with chat with Input/Output", async ({ page }) => {
   await page.keyboard.press("Escape");
 
   await page
-    .getByTestId("textarea-input_value")
+    .getByTestId("textarea_str_input_value")
     .nth(0)
     .fill(
       "testtesttesttesttesttestte;.;.,;,.;,.;.,;,..,;;;;;;;;;;;;;;;;;;;;;,;.;,.;,.,;.,;.;.,~~çççççççççççççççççççççççççççççççççççççççisdajfdasiopjfaodisjhvoicxjiovjcxizopjviopasjioasfhjaiohf23432432432423423sttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttestççççççççççççççççççççççççççççççççç,.,.,.,.,.,.,.,.,.,.,.,.,.,.,.,.,!",

@@ -24,6 +24,7 @@ export default function FloatComponent({
     <div className="w-full">
       <Input
         id="float-input"
+        data-testid="float-input"
         type="number"
         step={step}
         min={min}
@@ -39,11 +40,7 @@ export default function FloatComponent({
         value={value ?? ""}
         disabled={disabled}
         className={editNode ? "input-edit-node" : ""}
-        placeholder={
-          editNode
-            ? `Enter a value between ${min} and ${max}`
-            : `Enter a value between ${min} and ${max}`
-        }
+        placeholder={`Enter a value`}
         onChange={(event) => {
           onChange(event.target.value);
         }}

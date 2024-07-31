@@ -22,6 +22,7 @@ class PineconeVectorStoreComponent(LCVectorStoreComponent):
     documentation = "https://python.langchain.com/v0.2/docs/integrations/vectorstores/pinecone/"
     name = "Pinecone"
     icon = "Pinecone"
+    pinecone_instance = None
 
     inputs = [
         StrInput(name="index_name", display_name="Index Name", required=True),
@@ -61,6 +62,8 @@ class PineconeVectorStoreComponent(LCVectorStoreComponent):
         return self._build_pinecone()
 
     def _build_pinecone(self) -> Pinecone:
+        if self.pinecone_instance is not None:
+            return self.pinecone_instance
         from langchain_pinecone._utilities import DistanceStrategy
         from langchain_pinecone.vectorstores import Pinecone
 
@@ -85,7 +88,7 @@ class PineconeVectorStoreComponent(LCVectorStoreComponent):
 
         if documents:
             pinecone.add_documents(documents)
-
+        self.pinecone_instance = pinecone
         return pinecone
 
     def search_documents(self) -> List[Data]:

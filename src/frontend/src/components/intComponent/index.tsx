@@ -8,11 +8,7 @@ import {
 } from "@chakra-ui/number-input";
 import { useEffect, useRef, useState } from "react";
 import { IntComponentType } from "../../types/components";
-import {
-  handleKeyDown,
-  handleOnlyIntegerInput,
-} from "../../utils/reactflowUtils";
-import { Input } from "../ui/input";
+import { handleKeyDown } from "../../utils/reactflowUtils";
 
 export default function IntComponent({
   value,
@@ -23,7 +19,6 @@ export default function IntComponent({
   id = "",
 }: IntComponentType): JSX.Element {
   const min = -Infinity;
-
   // Clear component state
   useEffect(() => {
     if (disabled && value !== "") {
@@ -47,7 +42,7 @@ export default function IntComponent({
     <div className="w-full">
       <NumberInput
         id={id}
-        step={rangeSpec?.step ?? 1}
+        step={(Number.isInteger(rangeSpec?.step) ? rangeSpec?.step : 1) ?? 1}
         min={rangeSpec?.min ?? min}
         max={rangeSpec?.max ?? undefined}
         onChange={(value) => {

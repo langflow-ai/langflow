@@ -42,7 +42,7 @@ def add_frozen(nodes, frozen):
     This function receives a list of nodes and adds a frozen to each node.
     """
     for node in nodes:
-        node["frozen"] = frozen
+        node["data"]["node"]["frozen"] = frozen
 
 
 def ungroup_node(group_node_data, base_flow):

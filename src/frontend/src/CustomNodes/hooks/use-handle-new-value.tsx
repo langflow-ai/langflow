@@ -3,20 +3,35 @@ import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { APIClassType, InputFieldType } from "@/types/api";
+import { NodeType } from "@/types/flow";
 import { cloneDeep } from "lodash";
 import { mutateTemplate } from "../helpers/mutate-template";
+
+export type handleOnNewValueType = (
+  changes: Partial<InputFieldType>,
+  options?: {
+    skipSnapshot?: boolean;
+    setNodeClass?: (node: APIClassType) => void;
+  },
+) => void;
+
 const useHandleOnNewValue = ({
   node,
   nodeId,
   name,
+  setNode: setNodeExternal,
 }: {
   node: APIClassType;
   nodeId: string;
   name: string;
+  setNode?: (
+    id: string,
+    update: NodeType | ((oldState: NodeType) => NodeType),
+  ) => void;
 }) => {
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
 
-  const setNode = useFlowStore((state) => state.setNode);
+  const setNode = setNodeExternal ?? useFlowStore((state) => state.setNode);
 
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
@@ -26,13 +41,7 @@ const useHandleOnNewValue = ({
     node: node,
   });
 
-  const handleOnNewValue = async (
-    changes: Partial<InputFieldType>,
-    options?: {
-      skipSnapshot?: boolean;
-      setNodeClass?: (node: APIClassType) => void;
-    },
-  ) => {
+  const handleOnNewValue: handleOnNewValueType = async (changes, options?) => {
     const newNode = cloneDeep(node);
     const template = newNode.template;
 
@@ -51,11 +60,10 @@ const useHandleOnNewValue = ({
     if (!options?.skipSnapshot) takeSnapshot();
 
     Object.entries(changes).forEach(([key, value]) => {
-      parameter[key] = value;
+      if (value !== undefined) parameter[key] = value;
     });
 
-    const shouldUpdate =
-      parameter.real_time_refresh && !parameter.refresh_button;
+    const shouldUpdate = parameter.real_time_refresh;
 
     const setNodeClass = (newNodeClass: APIClassType) => {
       options?.setNodeClass && options.setNodeClass(newNodeClass);

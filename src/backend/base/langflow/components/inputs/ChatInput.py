@@ -4,6 +4,7 @@ from langflow.inputs import BoolInput
 from langflow.io import DropdownInput, FileInput, MessageTextInput, MultilineInput, Output
 from langflow.memory import store_message
 from langflow.schema.message import Message
+from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER, MESSAGE_SENDER_NAME_USER
 
 
 class ChatInput(ChatComponent):
@@ -29,8 +30,8 @@ class ChatInput(ChatComponent):
         DropdownInput(
             name="sender",
             display_name="Sender Type",
-            options=["Machine", "User"],
-            value="User",
+            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],
+            value=MESSAGE_SENDER_USER,
             info="Type of sender.",
             advanced=True,
         ),
@@ -38,11 +39,14 @@ class ChatInput(ChatComponent):
             name="sender_name",
             display_name="Sender Name",
             info="Name of the sender.",
-            value="User",
+            value=MESSAGE_SENDER_NAME_USER,
             advanced=True,
         ),
         MessageTextInput(
-            name="session_id", display_name="Session ID", info="Session ID for the message.", advanced=True
+            name="session_id",
+            display_name="Session ID",
+            info="The session ID of the chat. If empty, the current session ID parameter will be used.",
+            advanced=True,
         ),
         FileInput(
             name="files",
