@@ -12,7 +12,16 @@ from langflow.services.deps import session_scope
 from langflow.field_typing import BaseChatMessageHistory
 from langchain_core.messages import BaseMessage
 
+import agentops
+from dotenv import load_dotenv
+import os
 
+# Load environment variables and initialize AgentOps
+load_dotenv()
+agentops.init(os.getenv("AGENTOPS_API_KEY"))
+
+
+@agentops.record_function("get_messages")
 def get_messages(
     sender: str | None = None,
     sender_name: str | None = None,
@@ -57,9 +66,20 @@ def get_messages(
         messages = session.exec(stmt)
         messages_read = [Message(**d.model_dump()) for d in messages]
 
+    agentops.record_event(
+        "messages_retrieved",
+        {
+            "count": len(messages_read),
+            "sender": sender,
+            "sender_name": sender_name,
+            "session_id": session_id,
+            "flow_id": str(flow_id) if flow_id else None,
+        },
+    )
     return messages_read
 
 
+@agentops.record_function("add_messages")
 def add_messages(messages: Message | list[Message], flow_id: str | None = None):
     """
     Add a message to the monitor service.
@@ -77,12 +97,22 @@ def add_messages(messages: Message | list[Message], flow_id: str | None = None):
             messages_models.append(MessageTable.from_message(msg, flow_id=flow_id))
         with session_scope() as session:
             messages_models = add_messagetables(messages_models, session)
+
+        agentops.record_event(
+            "messages_added",
+            {
+                "count": len(messages_models),
+                "flow_id": flow_id,
+            },
+        )
         return [Message(**message.model_dump()) for message in messages_models]
     except Exception as e:
         logger.exception(e)
+        agentops.record_event("add_messages_error", {"error": str(e)})
         raise e
 
 
+@agentops.record_function("add_messagetables")
 def add_messagetables(messages: list[MessageTable], session: Session):
     for message in messages:
         try:
@@ -91,10 +121,12 @@ def add_messagetables(messages: list[MessageTable], session: Session):
             session.refresh(message)
         except Exception as e:
             logger.exception(e)
+            agentops.record_event("add_messagetable_error", {"error": str(e)})
             raise e
     return [MessageRead.model_validate(message, from_attributes=True) for message in messages]
 
 
+@agentops.record_function("delete_messages")
 def delete_messages(session_id: str):
     """
     Delete messages from the monitor service based on the provided session ID.
@@ -103,14 +135,23 @@ def delete_messages(session_id: str):
         session_id (str): The session ID associated with the messages to delete.
     """
     with session_scope() as session:
-        session.exec(
+        result = session.exec(
             delete(MessageTable)
             .where(col(MessageTable.session_id) == session_id)
             .execution_options(synchronize_session="fetch")
         )
         session.commit()
 
+    agentops.record_event(
+        "messages_deleted",
+        {
+            "session_id": session_id,
+            "count": result.rowcount,
+        },
+    )
 
+
+@agentops.record_function("store_message")
 def store_message(
     message: Message,
     flow_id: str | None = None,
@@ -130,12 +171,25 @@ def store_message(
     """
     if not message:
         warnings.warn("No message provided.")
+        agentops.record_event("store_message_warning", {"warning": "No message provided"})
         return []
 
     if not message.session_id or not message.sender or not message.sender_name:
-        raise ValueError("All of session_id, sender, and sender_name must be provided.")
+        error_msg = "All of session_id, sender, and sender_name must be provided."
+        agentops.record_event("store_message_error", {"error": error_msg})
+        raise ValueError(error_msg)
 
-    return add_messages([message], flow_id=flow_id)
+    stored_messages = add_messages([message], flow_id=flow_id)
+    agentops.record_event(
+        "message_stored",
+        {
+            "session_id": message.session_id,
+            "sender": message.sender,
+            "sender_name": message.sender_name,
+            "flow_id": flow_id,
+        },
+    )
+    return stored_messages
 
 
 class LCBuiltinChatMemory(BaseChatMessageHistory):
@@ -148,17 +202,47 @@ class LCBuiltinChatMemory(BaseChatMessageHistory):
         self.session_id = session_id
 
     @property
+    @agentops.record_function("LCBuiltinChatMemory.messages")
     def messages(self) -> List[BaseMessage]:
         messages = get_messages(
             session_id=self.session_id,
         )
         return [m.to_lc_message() for m in messages]
 
+    @agentops.record_function("LCBuiltinChatMemory.add_messages")
     def add_messages(self, messages: Sequence[BaseMessage]) -> None:
         for lc_message in messages:
             message = Message.from_lc_message(lc_message)
             message.session_id = self.session_id
             store_message(message, flow_id=self.flow_id)
 
+        agentops.record_event(
+            "chat_messages_added",
+            {
+                "count": len(messages),
+                "flow_id": self.flow_id,
+                "session_id": self.session_id,
+            },
+        )
+
+    @agentops.record_function("LCBuiltinChatMemory.clear")
     def clear(self) -> None:
         delete_messages(self.session_id)
+        agentops.record_event(
+            "chat_memory_cleared",
+            {
+                "flow_id": self.flow_id,
+                "session_id": self.session_id,
+            },
+        )
+
+
+# End the session when the program exits
+import atexit
+
+
+def end_session():
+    agentops.end_session("Success")
+
+
+atexit.register(end_session)

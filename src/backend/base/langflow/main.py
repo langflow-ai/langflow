@@ -31,8 +31,16 @@ from langflow.services.plugins.langfuse_plugin import LangfuseInstance
 from langflow.services.utils import initialize_services, teardown_services
 from langflow.utils.logger import configure
 
+# AgentOps import
+import agentops
+from dotenv import load_dotenv
+
 # Ignore Pydantic deprecation warnings from Langchain
 warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
+
+# Load environment variables and initialize AgentOps
+load_dotenv()
+agentops.init(os.getenv("AGENTOPS_API_KEY"))
 
 
 class RequestCancelledMiddleware(BaseHTTPMiddleware):
@@ -57,6 +65,7 @@ class RequestCancelledMiddleware(BaseHTTPMiddleware):
             task.cancel()
 
         if cancel_task in done:
+            agentops.record_event("request_cancelled", {"path": request.url.path})
             return Response("Request was cancelled", status_code=499)
         else:
             return await handler_task
@@ -68,12 +77,14 @@ class JavaScriptMIMETypeMiddleware(BaseHTTPMiddleware):
             response = await call_next(request)
         except Exception as exc:
             logger.error(exc)
+            agentops.record_event("middleware_error", {"error": str(exc)})
             raise exc
         if "files/" not in request.url.path and request.url.path.endswith(".js") and response.status_code == 200:
             response.headers["Content-Type"] = "text/javascript"
         return response
 
 
+@agentops.record_function("lifespan")
 def get_lifespan(fix_migration=False, socketio_server=None, version=None):
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -92,18 +103,22 @@ def get_lifespan(fix_migration=False, socketio_server=None, version=None):
             await create_or_update_starter_projects(task)
             asyncio.create_task(get_telemetry_service().start())
             load_flows_from_directory()
+            agentops.record_event("langflow_started", {"version": version})
             yield
         except Exception as exc:
             if "langflow migration --fix" not in str(exc):
                 logger.error(exc)
+            agentops.record_event("langflow_startup_error", {"error": str(exc)})
             raise
         # Shutdown message
         rprint("[bold red]Shutting down Langflow...[/bold red]")
         await teardown_services()
+        agentops.record_event("langflow_shutdown")
 
     return lifespan
 
 
+@agentops.record_function("create_app")
 def create_app():
     """Create the FastAPI app and include the router."""
     try:
@@ -164,12 +179,14 @@ def create_app():
     async def exception_handler(request: Request, exc: Exception):
         if isinstance(exc, HTTPException):
             logger.error(f"HTTPException: {exc.detail}")
+            agentops.record_event("http_exception", {"status_code": exc.status_code, "detail": exc.detail})
             return JSONResponse(
                 status_code=exc.status_code,
                 content={"message": str(exc.detail)},
             )
         else:
             logger.error(f"unhandled error: {exc}")
+            agentops.record_event("unhandled_exception", {"error": str(exc)})
             return JSONResponse(
                 status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
                 content={"message": str(exc)},
@@ -180,6 +197,7 @@ def create_app():
     return app
 
 
+@agentops.record_function("setup_sentry")
 def setup_sentry(app: FastAPI):
     settings = get_settings_service().settings
     if settings.sentry_dsn:
@@ -192,8 +210,10 @@ def setup_sentry(app: FastAPI):
             profiles_sample_rate=settings.sentry_profiles_sample_rate,
         )
         app.add_middleware(SentryAsgiMiddleware)
+        agentops.record_event("sentry_initialized")
 
 
+@agentops.record_function("setup_static_files")
 def setup_static_files(app: FastAPI, static_files_dir: Path):
     """
     Setup the static files directory.
@@ -212,16 +232,19 @@ def setup_static_files(app: FastAPI, static_files_dir: Path):
         path = static_files_dir / "index.html"
 
         if not path.exists():
+            agentops.record_event("static_file_not_found", {"path": str(path)})
             raise RuntimeError(f"File at path {path} does not exist.")
         return FileResponse(path)
 
 
+@agentops.record_function("get_static_files_dir")
 def get_static_files_dir():
     """Get the static files directory relative to Langflow's main.py file."""
     frontend_path = Path(__file__).parent
     return frontend_path / "frontend"
 
 
+@agentops.record_function("setup_app")
 def setup_app(static_files_dir: Optional[Path] = None, backend_only: bool = False) -> FastAPI:
     """Setup the FastAPI app."""
     # get the directory of the current file
@@ -230,6 +253,7 @@ def setup_app(static_files_dir: Optional[Path] = None, backend_only: bool = Fals
         static_files_dir = get_static_files_dir()
 
     if not backend_only and (not static_files_dir or not static_files_dir.exists()):
+        agentops.record_event("static_files_dir_not_found", {"path": str(static_files_dir)})
         raise RuntimeError(f"Static files directory {static_files_dir} does not exist.")
     app = create_app()
     if not backend_only and static_files_dir is not None:
@@ -252,3 +276,13 @@ if __name__ == "__main__":
         reload=True,
         loop="asyncio",
     )
+
+# End the session when the program exits
+import atexit
+
+
+def end_session():
+    agentops.end_session("Success")
+
+
+atexit.register(end_session)
