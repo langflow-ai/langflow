@@ -24,7 +24,7 @@ from .input_mixin import (
 
 
 class TableInput(BaseInputMixin, MetadataTraceMixin, TableMixin, ListableInputMixin):
-    field_type: Optional[SerializableFieldTypes] = FieldTypes.TABLE
+    field_type: SerializableFieldTypes = FieldTypes.TABLE
     is_list: bool = True
 
     @field_validator("value")
@@ -50,11 +50,11 @@ class HandleInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin):
 
     Attributes:
         input_types (list[str]): A list of input types.
-        field_type (Optional[SerializableFieldTypes]): The field type of the input.
+        field_type (SerializableFieldTypes): The field type of the input.
     """
 
     input_types: list[str] = Field(default_factory=list)
-    field_type: Optional[SerializableFieldTypes] = FieldTypes.OTHER
+    field_type: SerializableFieldTypes = FieldTypes.OTHER
 
 
 class DataInput(HandleInput, InputTraceMixin):
@@ -69,12 +69,12 @@ class DataInput(HandleInput, InputTraceMixin):
 
 
 class PromptInput(BaseInputMixin, ListableInputMixin, InputTraceMixin):
-    field_type: Optional[SerializableFieldTypes] = FieldTypes.PROMPT
+    field_type: SerializableFieldTypes = FieldTypes.PROMPT
 
 
 # Applying mixins to a specific input type
 class StrInput(BaseInputMixin, ListableInputMixin, DatabaseLoadMixin, MetadataTraceMixin):
-    field_type: Optional[SerializableFieldTypes] = FieldTypes.TEXT
+    field_type: SerializableFieldTypes = FieldTypes.TEXT
     load_from_db: CoalesceBool = False
     """Defines if the field will allow the user to open a text editor. Default is False."""
 
@@ -190,11 +190,11 @@ class MultilineInput(MessageTextInput, MultilineMixin, InputTraceMixin):
     Represents a multiline input field.
 
     Attributes:
-        field_type (Optional[SerializableFieldTypes]): The type of the field. Defaults to FieldTypes.TEXT.
+        field_type (SerializableFieldTypes): The type of the field. Defaults to FieldTypes.TEXT.
         multiline (CoalesceBool): Indicates whether the input field should support multiple lines. Defaults to True.
     """
 
-    field_type: Optional[SerializableFieldTypes] = FieldTypes.TEXT
+    field_type: SerializableFieldTypes = FieldTypes.TEXT
     multiline: CoalesceBool = True
 
 
@@ -203,11 +203,11 @@ class MultilineSecretInput(MessageTextInput, MultilineMixin, InputTraceMixin):
     Represents a multiline input field.
 
     Attributes:
-        field_type (Optional[SerializableFieldTypes]): The type of the field. Defaults to FieldTypes.TEXT.
+        field_type (SerializableFieldTypes): The type of the field. Defaults to FieldTypes.TEXT.
         multiline (CoalesceBool): Indicates whether the input field should support multiple lines. Defaults to True.
     """
 
-    field_type: Optional[SerializableFieldTypes] = FieldTypes.PASSWORD
+    field_type: SerializableFieldTypes = FieldTypes.PASSWORD
     multiline: CoalesceBool = True
     password: CoalesceBool = Field(default=True)
 
@@ -219,12 +219,12 @@ class SecretStrInput(BaseInputMixin, DatabaseLoadMixin):
     This class inherits from `BaseInputMixin` and `DatabaseLoadMixin`.
 
     Attributes:
-        field_type (Optional[SerializableFieldTypes]): The field type of the input. Defaults to `FieldTypes.PASSWORD`.
+        field_type (SerializableFieldTypes): The field type of the input. Defaults to `FieldTypes.PASSWORD`.
         password (CoalesceBool): A boolean indicating whether the input is a password. Defaults to `True`.
         input_types (list[str]): A list of input types associated with this input. Defaults to an empty list.
     """
 
-    field_type: Optional[SerializableFieldTypes] = FieldTypes.PASSWORD
+    field_type: SerializableFieldTypes = FieldTypes.PASSWORD
     password: CoalesceBool = Field(default=True)
     input_types: list[str] = []
     load_from_db: CoalesceBool = True
@@ -238,10 +238,10 @@ class IntInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMixi
     It inherits from the `BaseInputMixin`, `ListableInputMixin`, and `RangeMixin` classes.
 
     Attributes:
-        field_type (Optional[SerializableFieldTypes]): The field type of the input. Defaults to FieldTypes.INTEGER.
+        field_type (SerializableFieldTypes): The field type of the input. Defaults to FieldTypes.INTEGER.
     """
 
-    field_type: Optional[SerializableFieldTypes] = FieldTypes.INTEGER
+    field_type: SerializableFieldTypes = FieldTypes.INTEGER
 
 
 class FloatInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMixin):
@@ -252,10 +252,10 @@ class FloatInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMi
     It inherits from the `BaseInputMixin`, `ListableInputMixin`, and `RangeMixin` classes.
 
     Attributes:
-        field_type (Optional[SerializableFieldTypes]): The field type of the input. Defaults to FieldTypes.FLOAT.
+        field_type (SerializableFieldTypes): The field type of the input. Defaults to FieldTypes.FLOAT.
     """
 
-    field_type: Optional[SerializableFieldTypes] = FieldTypes.FLOAT
+    field_type: SerializableFieldTypes = FieldTypes.FLOAT
 
 
 class BoolInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin):
@@ -266,11 +266,11 @@ class BoolInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin):
     It inherits from the `BaseInputMixin` and `ListableInputMixin` classes.
 
     Attributes:
-        field_type (Optional[SerializableFieldTypes]): The field type of the input. Defaults to FieldTypes.BOOLEAN.
+        field_type (SerializableFieldTypes): The field type of the input. Defaults to FieldTypes.BOOLEAN.
         value (CoalesceBool): The value of the boolean input.
     """
 
-    field_type: Optional[SerializableFieldTypes] = FieldTypes.BOOLEAN
+    field_type: SerializableFieldTypes = FieldTypes.BOOLEAN
     value: CoalesceBool = False
 
 
@@ -282,11 +282,11 @@ class NestedDictInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin, In
     It inherits from the `BaseInputMixin` and `ListableInputMixin` classes.
 
     Attributes:
-        field_type (Optional[SerializableFieldTypes]): The field type of the input. Defaults to FieldTypes.NESTED_DICT.
+        field_type (SerializableFieldTypes): The field type of the input. Defaults to FieldTypes.NESTED_DICT.
         value (Optional[dict]): The value of the input. Defaults to an empty dictionary.
     """
 
-    field_type: Optional[SerializableFieldTypes] = FieldTypes.NESTED_DICT
+    field_type: SerializableFieldTypes = FieldTypes.NESTED_DICT
     value: Optional[dict | Data] = {}
 
 
@@ -298,11 +298,11 @@ class DictInput(BaseInputMixin, ListableInputMixin, InputTraceMixin):
     It inherits from the `BaseInputMixin` and `ListableInputMixin` classes.
 
     Attributes:
-        field_type (Optional[SerializableFieldTypes]): The field type of the input. Defaults to FieldTypes.DICT.
+        field_type (SerializableFieldTypes): The field type of the input. Defaults to FieldTypes.DICT.
         value (Optional[dict]): The value of the dictionary input. Defaults to an empty dictionary.
     """
 
-    field_type: Optional[SerializableFieldTypes] = FieldTypes.DICT
+    field_type: SerializableFieldTypes = FieldTypes.DICT
     value: Optional[dict] = {}
 
 
@@ -314,12 +314,12 @@ class DropdownInput(BaseInputMixin, DropDownMixin, MetadataTraceMixin):
     It inherits from the `BaseInputMixin` and `DropDownMixin` classes.
 
     Attributes:
-        field_type (Optional[SerializableFieldTypes]): The field type of the input. Defaults to FieldTypes.TEXT.
+        field_type (SerializableFieldTypes): The field type of the input. Defaults to FieldTypes.TEXT.
         options (Optional[Union[list[str], Callable]]): List of options for the field.
             Default is None.
     """
 
-    field_type: Optional[SerializableFieldTypes] = FieldTypes.TEXT
+    field_type: SerializableFieldTypes = FieldTypes.TEXT
     options: list[str] = Field(default_factory=list)
     combobox: CoalesceBool = False
 
@@ -332,12 +332,12 @@ class MultiselectInput(BaseInputMixin, ListableInputMixin, DropDownMixin, Metada
     It inherits from the `BaseInputMixin`, `ListableInputMixin` and `DropDownMixin` classes.
 
     Attributes:
-        field_type (Optional[SerializableFieldTypes]): The field type of the input. Defaults to FieldTypes.TEXT.
+        field_type (SerializableFieldTypes): The field type of the input. Defaults to FieldTypes.TEXT.
         options (Optional[Union[list[str], Callable]]): List of options for the field. Only used when is_list=True.
             Default is None.
     """
 
-    field_type: Optional[SerializableFieldTypes] = FieldTypes.TEXT
+    field_type: SerializableFieldTypes = FieldTypes.TEXT
     options: list[str] = Field(default_factory=list)
     is_list: bool = Field(default=True, serialization_alias="list")
     combobox: CoalesceBool = False
@@ -362,10 +362,10 @@ class FileInput(BaseInputMixin, ListableInputMixin, FileMixin, MetadataTraceMixi
     It inherits from the `BaseInputMixin`, `ListableInputMixin`, and `FileMixin` classes.
 
     Attributes:
-        field_type (Optional[SerializableFieldTypes]): The field type of the input. Defaults to FieldTypes.FILE.
+        field_type (SerializableFieldTypes): The field type of the input. Defaults to FieldTypes.FILE.
     """
 
-    field_type: Optional[SerializableFieldTypes] = FieldTypes.FILE
+    field_type: SerializableFieldTypes = FieldTypes.FILE
 
 
 InputTypes = Union[
