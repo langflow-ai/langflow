@@ -82,7 +82,7 @@ class SubFlowComponent(Component):
     outputs = [Output(name="flow_outputs", display_name="Flow Outputs", method="generate_results")]
 
     async def generate_results(self) -> List[Data]:
-        tweaks: dotdict = {}
+        tweaks: dict = {}
         for field in self._attributes.keys():
             if field != "flow_name":
                 [node, name] = field.split("|")
