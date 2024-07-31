@@ -1,4 +1,5 @@
 from pathlib import Path
+from turtle import st
 from typing import TYPE_CHECKING, Any, Callable, ClassVar, List, Optional, Sequence, Union
 from uuid import UUID
 
@@ -78,7 +79,6 @@ class CustomComponent(BaseComponent):
     function_entrypoint_name: ClassVar[str] = "build"
     function: Optional[Callable] = None
     repr_value: Optional[Any] = ""
-    _user_id: Optional[Union[UUID, str]] = None
     status: Optional[Any] = None
     """The status of the component. This is displayed on the frontend. Defaults to None."""
     _flows_data: Optional[List[Data]] = None
@@ -463,7 +463,7 @@ class CustomComponent(BaseComponent):
     async def load_flow(self, flow_id: str, tweaks: Optional[dict] = None) -> "Graph":
         if not self._user_id:
             raise ValueError("Session is invalid")
-        return await load_flow(user_id=self._user_id, flow_id=flow_id, tweaks=tweaks)
+        return await load_flow(user_id=str(self._user_id), flow_id=flow_id, tweaks=tweaks)
 
     async def run_flow(
         self,
@@ -479,14 +479,14 @@ class CustomComponent(BaseComponent):
             flow_id=flow_id,
             flow_name=flow_name,
             tweaks=tweaks,
-            user_id=self._user_id,
+            user_id=str(self._user_id),
         )
 
     def list_flows(self) -> List[Data]:
         if not self._user_id:
             raise ValueError("Session is invalid")
         try:
-            return list_flows(user_id=self._user_id)
+            return list_flows(user_id=str(self._user_id))
         except Exception as e:
             raise ValueError(f"Error listing flows: {e}")
 
