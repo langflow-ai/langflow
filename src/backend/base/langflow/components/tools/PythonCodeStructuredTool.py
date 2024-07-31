@@ -1,95 +1,277 @@
 import ast
-from typing import Any, Dict, List, Optional
+import json
+from typing import Any
 
 from langchain.agents import Tool
+from langflow.inputs.inputs import MultilineInput, MessageTextInput, BoolInput, DropdownInput, IntInput, FloatInput, HandleInput, FieldTypes
 from langchain_core.tools import StructuredTool
+from langflow.io import Output
 
-from langflow.custom import CustomComponent
+from langflow.custom import Component
 from langflow.schema.dotdict import dotdict
+from langflow.schema import Data
+
+from pydantic.v1 import Field, create_model
+from pydantic.v1.fields import Undefined
 
 
-class PythonCodeStructuredTool(CustomComponent):
-    display_name = "PythonCodeTool"
+class PythonCodeStructuredTool(Component):
+    DEFAULT_KEYS = ["code", "_type", "text_key", "tool_code", "tool_name", "tool_description", "return_direct", "tool_function", "global_variables", "_functions"]
+    AVAILABLE_TYPES = {
+        "str": {"annotation": str, "field": MessageTextInput},
+        "int": {"annotation": int, "field": IntInput},
+        "float": {"annotation": float, "field": FloatInput},
+        "bool": {"annotation": bool, "field": BoolInput},
+        "NoneType": {"annotation": None},
+    }
+    display_name = "Python Code Structured Tool"
     description = "structuredtool dataclass code to tool"
     documentation = "https://python.langchain.com/docs/modules/tools/custom_tools/#structuredtool-dataclass"
     name = "PythonCodeStructuredTool"
     icon = "🐍"
-    field_order = ["name", "description", "tool_code", "return_direct", "tool_function", "tool_class"]
-
-    def build_config(self) -> Dict[str, Any]:
-        return {
-            "tool_code": {
-                "display_name": "Tool Code",
-                "info": "Enter the dataclass code.",
-                "placeholder": "def my_function(args):\n    pass",
-                "multiline": True,
-                "refresh_button": True,
-                "field_type": "code",
-            },
-            "name": {
-                "display_name": "Tool Name",
-                "info": "Enter the name of the tool.",
-            },
-            "description": {
-                "display_name": "Description",
-                "info": "Provide a brief description of what the tool does.",
-            },
-            "return_direct": {
-                "display_name": "Return Directly",
-                "info": "Should the tool return the function output directly?",
-            },
-            "tool_function": {
-                "display_name": "Tool Function",
-                "info": "Select the function for additional expressions.",
-                "options": [],
-                "refresh_button": True,
-            },
-            "tool_class": {
-                "display_name": "Tool Class",
-                "info": "Select the class for additional expressions.",
-                "options": [],
-                "refresh_button": True,
-                "required": False,
-            },
-        }
-
-    def parse_source_name(self, code: str) -> Dict:
-        parsed_code = ast.parse(code)
-        class_names = [node.name for node in parsed_code.body if isinstance(node, ast.ClassDef)]
-        function_names = [node.name for node in parsed_code.body if isinstance(node, ast.FunctionDef)]
-        return {"class": class_names, "function": function_names}
+    field_order = ["name", "description", "tool_code", "return_direct", "tool_function"]
+    
+    inputs = [
+        MultilineInput(
+            name="tool_code",
+            display_name="Tool Code",
+            info="Enter the dataclass code.",
+            placeholder="def my_function(args):\n    pass",
+            required=True,
+            real_time_refresh=True,
+            refresh_button=True,
+        ),
+        MessageTextInput(name="tool_name", display_name="Tool Name", info="Enter the name of the tool.", required=True),
+        MessageTextInput(name="tool_description", display_name="Description", info="Enter the description of the tool.", required=True),
+        BoolInput(name="return_direct", display_name="Return Directly", info="Should the tool return the function output directly?"),
+        DropdownInput(
+            name="tool_function",
+            display_name="Tool Function",
+            info="Select the function for additional expressions.",
+            options=[],
+            required=True,
+            real_time_refresh=True,
+            refresh_button=True,
+        ),
+        HandleInput(
+            name="global_variables",
+            display_name="Global Variables",
+            info="Enter the global variables or Create Data Component.",
+            input_types=["Data"],
+            field_type=FieldTypes.DICT,
+            is_list=True,
+        ),
+        MessageTextInput(name="_functions", display_name="Functions", advanced=True),
+    ]
+    
+    outputs = [
+        Output(display_name="Tool", name="result_tool", method="build_tool"),
+    ]
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:
-        if field_name == "tool_code" or field_name == "tool_function" or field_name == "tool_class":
-            try:
-                names = self.parse_source_name(build_config.tool_code.value)
-                build_config.tool_class.options = names["class"]
-                build_config.tool_function.options = names["function"]
-            except Exception as e:
-                self.status = f"Failed to extract class names: {str(e)}"
-                build_config.tool_class.options = ["Failed to parse", str(e)]
-                build_config.tool_function.options = []
+        if field_name is None:
+            return build_config
+
+        if field_name != "tool_code" and field_name != "tool_function":
+            return build_config
+
+        try:
+            named_functions = {}
+            functions = self._parse_functions(build_config["tool_code"]["value"])
+            existing_fields = {}
+            if len(build_config) > len(self.DEFAULT_KEYS):
+                for key in build_config.copy():
+                    if key not in self.DEFAULT_KEYS:
+                        existing_fields[key] = build_config.pop(key)
+
+            names = []
+            for func in functions:
+                named_functions[func["name"]] = func
+                names.append(func["name"])
+
+                for arg in func["args"]:
+                    field_name = f"{func['name']}|{arg['name']}"
+                    if field_name in existing_fields:
+                        build_config[field_name] = existing_fields[field_name]
+                        continue
+
+                    for annotation in arg["annotations"]:
+                        if annotation not in self.AVAILABLE_TYPES:
+                            raise Exception(f"Unsupported type: {func['name']}_{arg['name']} - {annotation}")
+
+                    field = MessageTextInput(
+                        display_name=f"{arg['name']}: Description",
+                        name=field_name,
+                        info=f"Enter the description for {arg['name']}",
+                        required=True,
+                    )
+                    build_config[field_name] = field.to_dict()
+
+            build_config["_functions"]["value"] = json.dumps(named_functions)
+            build_config["tool_function"]["options"] = names
+        except Exception as e:
+            self.status = f"Failed to extract names: {str(e)}"
+            build_config["tool_function"]["options"] = ["Failed to parse", str(e)]
         return build_config
-
-    async def build(
-        self,
-        tool_code: str,
-        name: str,
-        description: str,
-        tool_function: List[str],
-        return_direct: bool,
-        tool_class: Optional[List[str]] = None,
-    ) -> Tool:
+    
+    async def build_tool(self) -> Tool:
         local_namespace = {}  # type: ignore
-        exec(tool_code, globals(), local_namespace)
+        modules = self._find_imports(self.tool_code)
+        import_code = ""
+        for module in modules["imports"]:
+            import_code += f"global {module}\nimport {module}\n"
+        for from_module in modules["from_imports"]:
+            for alias in from_module.names:
+                import_code += f"global {alias.name}\n"
+            import_code += f"from {from_module.module} import {', '.join([alias.name for alias in from_module.names])}\n"
+        exec(import_code, globals())
+        exec(self.tool_code, globals(), local_namespace)
 
-        func = local_namespace[tool_function]
-        _class = None
+        class PythonCodeToolFunc:
+            params: dict = {}
+            def run(**kwargs):
+                for key in kwargs:
+                    if key not in PythonCodeToolFunc.params:
+                        PythonCodeToolFunc.params[key] = kwargs[key]
+                return local_namespace[self.tool_function](**PythonCodeToolFunc.params)
 
-        if tool_class:
-            _class = local_namespace[tool_class]
+        _globals = globals()
+        _local = {}
+        _local[self.tool_function] = PythonCodeToolFunc
+        _globals.update(_local)
+        
+        if isinstance(self.global_variables, list):
+            for data in self.global_variables:
+                if isinstance(data, Data):
+                    _globals.update(data.data)
+        elif isinstance(self.global_variables, dict):
+            _globals.update(self.global_variables)
+
+        named_functions = json.loads(self._attributes["_functions"])
+        schema_fields = {}
+
+        for attr in self._attributes:
+            if attr in self.DEFAULT_KEYS:
+                continue
+
+            func_name = attr.split("|")[0]
+            field_name = attr.split("|")[1]
+            func_arg = self._find_arg(named_functions, func_name, field_name)
+            if func_arg is None:
+                raise Exception(f"Failed to find arg: {field_name}")
+
+            field_annotations = func_arg["annotations"]
+
+            field_value = self._get_value(self._attributes[attr], str)
+            schema_annotations = str
+            is_annotated = False
+            for field_annotation in field_annotations:
+                if field_annotation not in self.AVAILABLE_TYPES:
+                    raise Exception(f"Unsupported type: {field_name} - {field_annotation}")
+                if not is_annotated:
+                    schema_annotations = self.AVAILABLE_TYPES[field_annotation]["annotation"]
+                    is_annotated = True
+                else:
+                    schema_annotations |= self.AVAILABLE_TYPES[field_annotation]["annotation"]
+            schema_fields[field_name] = (schema_annotations, Field(default=func_arg["default"] if "default" in func_arg else Undefined, description=field_value))
+
+        PythonCodeToolSchema = None
+        if schema_fields:
+            PythonCodeToolSchema = create_model("PythonCodeToolSchema", **schema_fields)  # type: ignore
 
         tool = StructuredTool.from_function(
-            func=func, args_schema=_class, name=name, description=description, return_direct=return_direct
+            func=_local[self.tool_function].run, args_schema=PythonCodeToolSchema, name=self.tool_name, description=self.tool_description, return_direct=self.return_direct
         )
         return tool  # type: ignore
+
+    def post_code_processing(self, new_frontend_node: dict, current_frontend_node: dict):
+        """
+        This function is called after the code validation is done.
+        """
+        frontend_node = super().post_code_processing(new_frontend_node, current_frontend_node)
+        frontend_node["template"] = self.update_build_config(
+            frontend_node["template"], frontend_node["template"]["tool_code"]["value"], "tool_code"
+        )
+        frontend_node = super().post_code_processing(new_frontend_node, current_frontend_node)
+        for key in frontend_node["template"]:
+            if key in self.DEFAULT_KEYS:
+                continue
+            frontend_node["template"] = self.update_build_config(
+                frontend_node["template"], frontend_node["template"][key]["value"], key
+            )
+            frontend_node = super().post_code_processing(new_frontend_node, current_frontend_node)
+        return frontend_node
+
+    def _parse_functions(self, code: str) -> list:
+        parsed_code = ast.parse(code)
+        functions = []
+        for node in parsed_code.body:
+            if not isinstance(node, ast.FunctionDef):
+                continue
+            func = {"name": node.name, "args": []}
+            for arg in node.args.args:
+                func_arg = {
+                    "name": arg.arg,
+                    "annotations": None
+                }
+
+                for default in node.args.defaults:
+                    if (
+                        arg.lineno > default.lineno
+                        or arg.col_offset > default.col_offset
+                        or arg.end_lineno < default.end_lineno
+                        or arg.end_col_offset < default.end_col_offset
+                    ):
+                        continue
+
+                    if isinstance(default, ast.Name):
+                        func_arg["default"] = default.id
+                    elif isinstance(default, ast.Constant):
+                        func_arg["default"] = default.value
+                        
+                if arg.annotation:
+                    func_arg["annotations"] = self._find_annotations(arg.annotation)
+                else:
+                    func_arg["annotations"] = ["str"]
+
+                func["args"].append(func_arg)
+            functions.append(func)
+
+        return functions
+    
+    def _find_annotations(self, annotation: Any) -> list:
+        annotation_list = []
+        if isinstance(annotation, ast.BinOp):
+            if not isinstance(annotation.op, ast.BitOr):
+                raise Exception(f"Unsupported operator: {annotation.op}")
+            annotation_list.extend(self._find_annotations(annotation.left))
+            annotation_list.extend(self._find_annotations(annotation.right))
+        elif isinstance(annotation, ast.Name):
+            annotation_list.append(annotation.id)
+        elif isinstance(annotation, ast.Constant):
+            if annotation.value is None:
+                annotation_list.append("NoneType")
+            else:
+                annotation_list.append(annotation.kind)
+        return annotation_list
+    
+    def _find_imports(self, code: str) -> dotdict:
+        imports = []
+        from_imports = []
+        parsed_code = ast.parse(code)
+        for node in parsed_code.body:
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    imports.append(alias.name)
+            elif isinstance(node, ast.ImportFrom):
+                from_imports.append(node)
+        return {"imports": imports, "from_imports": from_imports}
+    
+    def _get_value(self, value: Any, annotation: Any) -> Any:
+        return value if isinstance(value, annotation) else value["value"]
+    
+    def _find_arg(self, named_functions: dict, func_name: str, arg_name: str) -> dict | None:
+        for arg in named_functions[func_name]["args"]:
+            if arg["name"] == arg_name:
+                return arg
+        return None
