@@ -1,6 +1,7 @@
 import operator
 import warnings
 from typing import Any, ClassVar, Optional
+from uuid import UUID
 
 from cachetools import TTLCache, cachedmethod
 from fastapi import HTTPException
@@ -27,7 +28,7 @@ class BaseComponent:
     """The code of the component. Defaults to None."""
     _function_entrypoint_name: str = "build"
     field_config: dict = {}
-    _user_id: Optional[str]
+    _user_id: Optional[str | UUID]
 
     def __init__(self, **data):
         self.cache = TTLCache(maxsize=1024, ttl=60)
