@@ -1,13 +1,8 @@
 from enum import Enum
-from typing import (
-    Any,
-    Callable,
-    GenericAlias,
-    Optional,  # type: ignore
-    Union,
-    _GenericAlias,
-    _UnionGenericAlias,
-)
+from typing import GenericAlias  # type: ignore
+from typing import _GenericAlias  # type: ignore
+from typing import _UnionGenericAlias  # type: ignore
+from typing import Any, Callable, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator, model_serializer, model_validator
 
