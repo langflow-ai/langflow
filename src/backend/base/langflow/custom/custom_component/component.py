@@ -364,6 +364,27 @@ class Component(CustomComponent):
             raise ValueError(f"Output with method {method_name} not found")
         return output
 
+    def _set_output_types(self):
+        for output in self.outputs:
+            return_types = self._get_method_return_type(output.method)
+            output.add_types(return_types)
+            output.set_selected()
+
+    def _get_method_return_type(self, method_name: str) -> List[str]:
+        method = getattr(self, method_name)
+        return_type = get_type_hints(method)["return"]
+        extracted_return_types = self._extract_return_type(return_type)
+        return [format_type(extracted_return_type) for extracted_return_type in extracted_return_types]
+
+    def _get_output_by_method(self, method: Callable):
+        # method is a callable and output.method is a string
+        # we need to find the output that has the same method
+        output = next((output for output in self.outputs if output.method == method.__name__), None)
+        if output is None:
+            method_name = method.__name__ if hasattr(method, "__name__") else str(method)
+            raise ValueError(f"Output with method {method_name} not found")
+        return output
+
     def _validate_outputs(self):
         # Raise Error if some rule isn't met
         pass
