@@ -3,7 +3,16 @@ import json
 from typing import Any
 
 from langchain.agents import Tool
-from langflow.inputs.inputs import MultilineInput, MessageTextInput, BoolInput, DropdownInput, IntInput, FloatInput, HandleInput, FieldTypes
+from langflow.inputs.inputs import (
+    MultilineInput,
+    MessageTextInput,
+    BoolInput,
+    DropdownInput,
+    IntInput,
+    FloatInput,
+    HandleInput,
+    FieldTypes,
+)
 from langchain_core.tools import StructuredTool
 from langflow.io import Output
 
@@ -16,7 +25,18 @@ from pydantic.v1.fields import Undefined
 
 
 class PythonCodeStructuredTool(Component):
-    DEFAULT_KEYS = ["code", "_type", "text_key", "tool_code", "tool_name", "tool_description", "return_direct", "tool_function", "global_variables", "_functions"]
+    DEFAULT_KEYS = [
+        "code",
+        "_type",
+        "text_key",
+        "tool_code",
+        "tool_name",
+        "tool_description",
+        "return_direct",
+        "tool_function",
+        "global_variables",
+        "_functions",
+    ]
     AVAILABLE_TYPES = {
         "str": {"annotation": str, "field": MessageTextInput},
         "int": {"annotation": int, "field": IntInput},
@@ -30,7 +50,7 @@ class PythonCodeStructuredTool(Component):
     name = "PythonCodeStructuredTool"
     icon = "🐍"
     field_order = ["name", "description", "tool_code", "return_direct", "tool_function"]
-    
+
     inputs = [
         MultilineInput(
             name="tool_code",
@@ -42,8 +62,17 @@ class PythonCodeStructuredTool(Component):
             refresh_button=True,
         ),
         MessageTextInput(name="tool_name", display_name="Tool Name", info="Enter the name of the tool.", required=True),
-        MessageTextInput(name="tool_description", display_name="Description", info="Enter the description of the tool.", required=True),
-        BoolInput(name="return_direct", display_name="Return Directly", info="Should the tool return the function output directly?"),
+        MessageTextInput(
+            name="tool_description",
+            display_name="Description",
+            info="Enter the description of the tool.",
+            required=True,
+        ),
+        BoolInput(
+            name="return_direct",
+            display_name="Return Directly",
+            info="Should the tool return the function output directly?",
+        ),
         DropdownInput(
             name="tool_function",
             display_name="Tool Function",
@@ -63,7 +92,7 @@ class PythonCodeStructuredTool(Component):
         ),
         MessageTextInput(name="_functions", display_name="Functions", advanced=True),
     ]
-    
+
     outputs = [
         Output(display_name="Tool", name="result_tool", method="build_tool"),
     ]
@@ -113,7 +142,7 @@ class PythonCodeStructuredTool(Component):
             self.status = f"Failed to extract names: {str(e)}"
             build_config["tool_function"]["options"] = ["Failed to parse", str(e)]
         return build_config
-    
+
     async def build_tool(self) -> Tool:
         local_namespace = {}  # type: ignore
         modules = self._find_imports(self.tool_code)
@@ -123,12 +152,15 @@ class PythonCodeStructuredTool(Component):
         for from_module in modules["from_imports"]:
             for alias in from_module.names:
                 import_code += f"global {alias.name}\n"
-            import_code += f"from {from_module.module} import {', '.join([alias.name for alias in from_module.names])}\n"
+            import_code += (
+                f"from {from_module.module} import {', '.join([alias.name for alias in from_module.names])}\n"
+            )
         exec(import_code, globals())
         exec(self.tool_code, globals(), local_namespace)
 
         class PythonCodeToolFunc:
             params: dict = {}
+
             def run(**kwargs):
                 for key in kwargs:
                     if key not in PythonCodeToolFunc.params:
@@ -139,7 +171,7 @@ class PythonCodeStructuredTool(Component):
         _local = {}
         _local[self.tool_function] = PythonCodeToolFunc
         _globals.update(_local)
-        
+
         if isinstance(self.global_variables, list):
             for data in self.global_variables:
                 if isinstance(data, Data):
@@ -173,14 +205,21 @@ class PythonCodeStructuredTool(Component):
                     is_annotated = True
                 else:
                     schema_annotations |= self.AVAILABLE_TYPES[field_annotation]["annotation"]
-            schema_fields[field_name] = (schema_annotations, Field(default=func_arg["default"] if "default" in func_arg else Undefined, description=field_value))
+            schema_fields[field_name] = (
+                schema_annotations,
+                Field(default=func_arg["default"] if "default" in func_arg else Undefined, description=field_value),
+            )
 
         PythonCodeToolSchema = None
         if schema_fields:
             PythonCodeToolSchema = create_model("PythonCodeToolSchema", **schema_fields)  # type: ignore
 
         tool = StructuredTool.from_function(
-            func=_local[self.tool_function].run, args_schema=PythonCodeToolSchema, name=self.tool_name, description=self.tool_description, return_direct=self.return_direct
+            func=_local[self.tool_function].run,
+            args_schema=PythonCodeToolSchema,
+            name=self.tool_name,
+            description=self.tool_description,
+            return_direct=self.return_direct,
         )
         return tool  # type: ignore
 
@@ -210,10 +249,7 @@ class PythonCodeStructuredTool(Component):
                 continue
             func = {"name": node.name, "args": []}
             for arg in node.args.args:
-                func_arg = {
-                    "name": arg.arg,
-                    "annotations": None
-                }
+                func_arg = {"name": arg.arg, "annotations": None}
 
                 for default in node.args.defaults:
                     if (
@@ -228,7 +264,7 @@ class PythonCodeStructuredTool(Component):
                         func_arg["default"] = default.id
                     elif isinstance(default, ast.Constant):
                         func_arg["default"] = default.value
-                        
+
                 if arg.annotation:
                     func_arg["annotations"] = self._find_annotations(arg.annotation)
                 else:
@@ -238,7 +274,7 @@ class PythonCodeStructuredTool(Component):
             functions.append(func)
 
         return functions
-    
+
     def _find_annotations(self, annotation: Any) -> list:
         annotation_list = []
         if isinstance(annotation, ast.BinOp):
@@ -254,7 +290,7 @@ class PythonCodeStructuredTool(Component):
             else:
                 annotation_list.append(annotation.kind)
         return annotation_list
-    
+
     def _find_imports(self, code: str) -> dotdict:
         imports = []
         from_imports = []
@@ -266,10 +302,10 @@ class PythonCodeStructuredTool(Component):
             elif isinstance(node, ast.ImportFrom):
                 from_imports.append(node)
         return {"imports": imports, "from_imports": from_imports}
-    
+
     def _get_value(self, value: Any, annotation: Any) -> Any:
         return value if isinstance(value, annotation) else value["value"]
-    
+
     def _find_arg(self, named_functions: dict, func_name: str, arg_name: str) -> dict | None:
         for arg in named_functions[func_name]["args"]:
             if arg["name"] == arg_name:
