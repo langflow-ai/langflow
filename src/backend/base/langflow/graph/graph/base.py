@@ -222,6 +222,12 @@ class Graph:
                         )
 
     @property
+    def first_layer(self):
+        if self._first_layer is None:
+            raise ValueError("Graph not prepared. Call prepare() first.")
+        return self._first_layer
+
+    @property
     def run_id(self):
         """
         The ID of the current run.
