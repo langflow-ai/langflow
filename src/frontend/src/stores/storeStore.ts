@@ -9,7 +9,10 @@ export const useStoreStore = create<StoreStoreType>((set) => ({
   hasApiKey: false,
   loadingApiKey: true,
   checkHasStore: (hasStore) => {
-    set({ hasStore: FeatureFlags.ENABLE_LANGFLOW_STORE && (hasStore?.enabled ?? false) });
+    set({
+      hasStore:
+        FeatureFlags.ENABLE_LANGFLOW_STORE && (hasStore?.enabled ?? false),
+    });
   },
   updateValidApiKey: (validApiKey) => set(() => ({ validApiKey: validApiKey })),
   updateLoadingApiKey: (loadingApiKey) =>
