@@ -89,6 +89,34 @@ class Component(CustomComponent):
                 raise ValueError("Output name cannot be None.")
             self._outputs[output.name] = output
 
+    def get_input(self, name: str) -> Any:
+        """
+        Retrieves the value of the input with the specified name.
+        Args:
+            name (str): The name of the input.
+        Returns:
+            Any: The value of the input.
+        Raises:
+            ValueError: If the input with the specified name is not found.
+        """
+        if name in self._inputs:
+            return self._inputs[name]
+        raise ValueError(f"Input {name} not found in {self.__class__.__name__}")
+
+    def get_output(self, name: str) -> Any:
+        """
+        Retrieves the output with the specified name.
+        Args:
+            name (str): The name of the output to retrieve.
+        Returns:
+            Any: The output value.
+        Raises:
+            ValueError: If the output with the specified name is not found.
+        """
+        if name in self._outputs:
+            return self._outputs[name]
+        raise ValueError(f"Output {name} not found in {self.__class__.__name__}")
+
     def validate(self, params: dict):
         self._validate_inputs(params)
         self._validate_outputs()
