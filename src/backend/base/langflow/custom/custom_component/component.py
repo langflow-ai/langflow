@@ -2,6 +2,7 @@ import inspect
 from typing import Any, Callable, ClassVar, List, Optional, Union
 from uuid import UUID
 
+import nanoid
 import yaml
 from pydantic import BaseModel
 
@@ -144,9 +145,9 @@ class Component(CustomComponent):
     async def _build_with_tracing(self):
         inputs = self.get_trace_as_inputs()
         metadata = self.get_trace_as_metadata()
-        async with self.tracing_service.trace_context(self, self.trace_name, inputs, metadata):
+        async with self._tracing_service.trace_context(self, self.trace_name, inputs, metadata):
             _results, _artifacts = await self._build_results()
-            self.tracing_service.set_outputs(self.trace_name, _results)
+            self._tracing_service.set_outputs(self.trace_name, _results)
 
         return _results, _artifacts
 
@@ -154,7 +155,7 @@ class Component(CustomComponent):
         return await self._build_results()
 
     async def build_results(self):
-        if self.tracing_service:
+        if self._tracing_service:
             return await self._build_with_tracing()
         return await self._build_without_tracing()
 
@@ -162,11 +163,11 @@ class Component(CustomComponent):
         _results = {}
         _artifacts = {}
         if hasattr(self, "outputs"):
-            self._set_outputs(self.vertex.outputs)
+            self._set_outputs(self._vertex.outputs)
             for output in self.outputs:
                 # Build the output if it's connected to some other vertex
                 # or if it's not connected to any vertex
-                if not self.vertex.outgoing_edges or output.name in self.vertex.edges_source_names:
+                if not self._vertex.outgoing_edges or output.name in self._vertex.edges_source_names:
                     if output.method is None:
                         raise ValueError(f"Output {output.name} does not have a method defined.")
                     method: Callable = getattr(self, output.method)
@@ -180,9 +181,9 @@ class Component(CustomComponent):
                         if (
                             isinstance(result, Message)
                             and result.flow_id is None
-                            and self.vertex.graph.flow_id is not None
+                            and self._vertex.graph.flow_id is not None
                         ):
-                            result.set_flow_id(self.vertex.graph.flow_id)
+                            result.set_flow_id(self._vertex.graph.flow_id)
                         _results[output.name] = result
                         output.value = result
                         custom_repr = self.custom_repr()
@@ -214,8 +215,8 @@ class Component(CustomComponent):
                         self._logs = []
         self._artifacts = _artifacts
         self._results = _results
-        if self.tracing_service:
-            self.tracing_service.set_outputs(self.trace_name, _results)
+        if self._tracing_service:
+            self._tracing_service.set_outputs(self.trace_name, _results)
         return _results, _artifacts
 
     def custom_repr(self):

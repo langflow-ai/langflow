@@ -14,7 +14,7 @@ from langflow.schema.artifact import get_artifact_type
 from langflow.schema.dotdict import dotdict
 from langflow.schema.log import LoggableType
 from langflow.schema.schema import OutputValue
-from langflow.services.deps import get_storage_service, get_tracing_service, get_variable_service, session_scope
+from langflow.services.deps import get_storage_service, get_variable_service, session_scope
 from langflow.services.storage.service import StorageService
 from langflow.services.tracing.schema import Log
 from langflow.template.utils import update_frontend_node_with_template_values
@@ -72,20 +72,20 @@ class CustomComponent(BaseComponent):
     """The default frozen state of the component. Defaults to False."""
     build_parameters: Optional[dict] = None
     """The build parameters of the component. Defaults to None."""
-    vertex: Optional["Vertex"] = None
+    _vertex: Optional["Vertex"] = None
     """The edge target parameter of the component. Defaults to None."""
     code_class_base_inheritance: ClassVar[str] = "CustomComponent"
     function_entrypoint_name: ClassVar[str] = "build"
     function: Optional[Callable] = None
     repr_value: Optional[Any] = ""
-    user_id: Optional[Union[UUID, str]] = None
+    _user_id: Optional[Union[UUID, str]] = None
     status: Optional[Any] = None
     """The status of the component. This is displayed on the frontend. Defaults to None."""
     _flows_data: Optional[List[Data]] = None
     _outputs: List[OutputValue] = []
     _logs: List[Log] = []
     _output_logs: dict[str, Log] = {}
-    tracing_service: Optional["TracingService"] = None
+    _tracing_service: Optional["TracingService"] = None
 
     def set_attributes(self, parameters: dict):
         pass
@@ -94,51 +94,43 @@ class CustomComponent(BaseComponent):
         self._parameters = parameters
         self.set_attributes(self._parameters)
 
-    @classmethod
-    def initialize(cls, **kwargs):
-        user_id = kwargs.pop("user_id", None)
-        vertex = kwargs.pop("vertex", None)
-        tracing_service = kwargs.pop("tracing_service", get_tracing_service())
-        params_copy = kwargs.copy()
-        return cls(user_id=user_id, _parameters=params_copy, vertex=vertex, tracing_service=tracing_service)
-
     @property
     def trace_name(self):
-        return f"{self.display_name} ({self.vertex.id})"
+        return f"{self.display_name} ({self._vertex.id})"
 
     def update_state(self, name: str, value: Any):
-        if not self.vertex:
+        if not self._vertex:
             raise ValueError("Vertex is not set")
         try:
-            self.vertex.graph.update_state(name=name, record=value, caller=self.vertex.id)
+            self._vertex.graph.update_state(name=name, record=value, caller=self._vertex.id)
         except Exception as e:
             raise ValueError(f"Error updating state: {e}")
 
     def stop(self, output_name: str | None = None):
-        if not output_name and self.vertex and len(self.vertex.outputs) == 1:
-            output_name = self.vertex.outputs[0]["name"]
+        if not output_name and self._vertex and len(self._vertex.outputs) == 1:
+            output_name = self._vertex.outputs[0]["name"]
         elif not output_name:
             raise ValueError("You must specify an output name to call stop")
-        if not self.vertex:
+        if not self._vertex:
             raise ValueError("Vertex is not set")
         try:
-            self.graph.mark_branch(vertex_id=self.vertex.id, output_name=output_name, state="INACTIVE")
+            self.graph.mark_branch(vertex_id=self._vertex.id, output_name=output_name, state="INACTIVE")
         except Exception as e:
             raise ValueError(f"Error stopping {self.display_name}: {e}")
 
     def append_state(self, name: str, value: Any):
-        if not self.vertex:
+        if not self._vertex:
             raise ValueError("Vertex is not set")
         try:
-            self.vertex.graph.append_state(name=name, record=value, caller=self.vertex.id)
+            self._vertex.graph.append_state(name=name, record=value, caller=self._vertex.id)
         except Exception as e:
             raise ValueError(f"Error appending state: {e}")
 
     def get_state(self, name: str):
-        if not self.vertex:
+        if not self._vertex:
             raise ValueError("Vertex is not set")
         try:
-            return self.vertex.graph.get_state(name=name)
+            return self._vertex.graph.get_state(name=name)
         except Exception as e:
             raise ValueError(f"Error getting state: {e}")
 
@@ -176,7 +168,7 @@ class CustomComponent(BaseComponent):
 
     @property
     def graph(self):
-        return self.vertex.graph
+        return self._vertex.graph
 
     def _get_field_order(self):
         return self.field_order or list(self.field_config.keys())
@@ -522,8 +514,8 @@ class CustomComponent(BaseComponent):
             name = f"Log {len(self._logs) + 1}"
         log = Log(message=message, type=get_artifact_type(message), name=name)
         self._logs.append(log)
-        if self.tracing_service and self.vertex:
-            self.tracing_service.add_log(trace_name=self.trace_name, log=log)
+        if self._tracing_service and self._vertex:
+            self._tracing_service.add_log(trace_name=self.trace_name, log=log)
 
     def post_code_processing(self, new_frontend_node: dict, current_frontend_node: dict):
         """
