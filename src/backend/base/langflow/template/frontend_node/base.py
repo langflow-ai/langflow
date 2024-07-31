@@ -89,6 +89,12 @@ class FrontendNode(BaseModel):
 
         return {name: result}
 
+    @classmethod
+    def from_dict(cls, data: dict) -> "FrontendNode":
+        if "template" in data:
+            data["template"] = Template.from_dict(data["template"])
+        return cls(**data)
+
     # For backwards compatibility
     def to_dict(self, keep_name=True) -> dict:
         """Returns a dict representation of the frontend node."""
