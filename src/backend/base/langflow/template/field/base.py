@@ -185,7 +185,7 @@ class Output(BaseModel):
 
     def add_types(self, _type: list[Any]):
         for type_ in _type:
-            if type_ in self.types:
+            if self.types and type_ in self.types:
                 continue
             if self.types is None:
                 self.types = []
