@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, List, Optional
+from typing import TYPE_CHECKING, Any, List, Optional, cast
 
 from loguru import logger
 from pydantic import BaseModel, Field, field_validator
@@ -55,7 +55,7 @@ class Edge:
             self._target_handle = edge.get("targetHandle", "")  # type: ignore
             # 'BaseLoader;BaseOutputParser|documents|PromptTemplate-zmTlD'
             # target_param is documents
-            self.target_param = self._target_handle.split("|")[1]
+            self.target_param = cast(str, self._target_handle).split("|")[1]
         # Validate in __init__ to fail fast
         self.validate_edge(source, target)
 
