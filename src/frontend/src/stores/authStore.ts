@@ -7,7 +7,6 @@ import { create } from "zustand";
 import { useFolderStore } from "../stores/foldersStore";
 
 const cookies = new Cookies();
-
 const useAuthStore = create<AuthStoreType>((set, get) => ({
   isAdmin: false,
   isAuthenticated: !!cookies.get(LANGFLOW_ACCESS_TOKEN),
