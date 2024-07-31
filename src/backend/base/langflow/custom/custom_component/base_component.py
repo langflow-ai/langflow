@@ -23,7 +23,8 @@ class BaseComponent:
     ERROR_CODE_NULL: ClassVar[str] = "Python code must be provided."
     ERROR_FUNCTION_ENTRYPOINT_NAME_NULL: ClassVar[str] = "The name of the entrypoint function must be provided."
 
-    code: Optional[str] = None
+    _code: Optional[str] = None
+    """The code of the component. Defaults to None."""
     _function_entrypoint_name: str = "build"
     field_config: dict = {}
     _user_id: Optional[str]
@@ -47,7 +48,7 @@ class BaseComponent:
         return parser.parse_code()
 
     def get_function(self):
-        if not self.code:
+        if not self._code:
             raise ComponentCodeNullError(
                 status_code=400,
                 detail={"error": self.ERROR_CODE_NULL, "traceback": ""},
@@ -62,7 +63,7 @@ class BaseComponent:
                 },
             )
 
-        return validate.create_function(self.code, self._function_entrypoint_name)
+        return validate.create_function(self._code, self._function_entrypoint_name)
 
     def build_template_config(self) -> dict:
         """
@@ -71,10 +72,10 @@ class BaseComponent:
         Returns:
             A dictionary representing the template configuration.
         """
-        if not self.code:
+        if not self._code:
             return {}
 
-        cc_class = eval_custom_component_code(self.code)
+        cc_class = eval_custom_component_code(self._code)
         component_instance = cc_class()
         template_config = {}
 

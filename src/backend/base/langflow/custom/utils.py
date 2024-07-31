@@ -266,10 +266,10 @@ def run_build_inputs(
 
 def get_component_instance(custom_component: CustomComponent, user_id: Optional[Union[str, UUID]] = None):
     try:
-        if custom_component.code is None:
+        if custom_component._code is None:
             raise ValueError("Code is None")
-        elif isinstance(custom_component.code, str):
-            custom_class = eval_custom_component_code(custom_component.code)
+        elif isinstance(custom_component._code, str):
+            custom_class = eval_custom_component_code(custom_component._code)
         else:
             raise ValueError("Invalid code type")
     except Exception as exc:
@@ -300,10 +300,10 @@ def run_build_config(
     """Build the field configuration for a custom component"""
 
     try:
-        if custom_component.code is None:
+        if custom_component._code is None:
             raise ValueError("Code is None")
-        elif isinstance(custom_component.code, str):
-            custom_class = eval_custom_component_code(custom_component.code)
+        elif isinstance(custom_component._code, str):
+            custom_class = eval_custom_component_code(custom_component._code)
         else:
             raise ValueError("Invalid code type")
     except Exception as exc:
@@ -363,7 +363,7 @@ def build_custom_component_template_from_inputs(
     # The List of Inputs fills the role of the build_config and the entrypoint_args
     field_config = custom_component.template_config
     frontend_node = ComponentFrontendNode.from_inputs(**field_config)
-    frontend_node = add_code_field(frontend_node, custom_component.code, field_config.get("code", {}))
+    frontend_node = add_code_field(frontend_node, custom_component._code, field_config.get("code", {}))
     # But we now need to calculate the return_type of the methods in the outputs
     for output in frontend_node.outputs:
         if output.types:
@@ -407,7 +407,7 @@ def build_custom_component_template(
 
         add_extra_fields(frontend_node, field_config, entrypoint_args)
 
-        frontend_node = add_code_field(frontend_node, custom_component.code, field_config.get("code", {}))
+        frontend_node = add_code_field(frontend_node, custom_component._code, field_config.get("code", {}))
 
         add_base_classes(frontend_node, custom_component.get_function_entrypoint_return_type)
         add_output_types(frontend_node, custom_component.get_function_entrypoint_return_type)
@@ -432,7 +432,7 @@ def create_component_template(component):
     component_code = component["code"]
     component_output_types = component["output_types"]
 
-    component_extractor = Component(code=component_code)
+    component_extractor = Component(_code=component_code)
 
     component_template, component_instance = build_custom_component_template(component_extractor)
     if not component_template["output_types"] and component_output_types:

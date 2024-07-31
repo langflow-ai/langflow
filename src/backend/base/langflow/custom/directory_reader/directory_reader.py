@@ -373,7 +373,7 @@ class DirectoryReader:
         """
         Get the output types from the code.
         """
-        custom_component = CustomComponent(code=code)
+        custom_component = CustomComponent(_code=code)
         types_list = custom_component.get_function_entrypoint_return_type
 
         # Get the name of types classes
