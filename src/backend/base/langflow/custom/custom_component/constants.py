@@ -1,5 +1,6 @@
 methods_docs_map = {
-    "conenct": """
+    "set": {
+        "doc": """
         Connects the component to other components or sets parameters and attributes.
 
         Args:
@@ -10,5 +11,7 @@ methods_docs_map = {
 
         Raises:
             KeyError: If the specified input name does not exist.
-        """
+        """,
+        "fallback": "**kwargs: Keyword arguments representing the connections, parameters, and attributes.",
+    },
 }
