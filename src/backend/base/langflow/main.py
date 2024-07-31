@@ -1,24 +1,25 @@
-import os
 import asyncio
+import os
 import warnings
 from contextlib import asynccontextmanager
+from http import HTTPStatus
 from pathlib import Path
 from typing import Optional
 from urllib.parse import urlencode
 
 import nest_asyncio  # type: ignore
-from fastapi import FastAPI, Request, Response, HTTPException
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-from http import HTTPStatus
 from loguru import logger
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from pydantic import PydanticDeprecatedSince20
+from pydantic_core import PydanticSerializationError
 from rich import print as rprint
 from starlette.middleware.base import BaseHTTPMiddleware
-from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
-from langflow.api import router, health_check_router, log_router
+from langflow.api import health_check_router, log_router, router
 from langflow.initial_setup.setup import (
     create_or_update_starter_projects,
     initialize_super_user_if_needed,
@@ -67,7 +68,10 @@ class JavaScriptMIMETypeMiddleware(BaseHTTPMiddleware):
         try:
             response = await call_next(request)
         except Exception as exc:
-            logger.error(exc)
+            if isinstance(exc, PydanticSerializationError):
+                messages = [error["msg"].split(",", 1) for error in e.errors()]
+                error_message = "\n".join([message[1] if len(message) > 1 else message[0] for message in messages])
+                raise HTTPException(status_code=HTTPStatus.INTERNAL_SERVER_ERROR, detail=error_message) from exc
             raise exc
         if "files/" not in request.url.path and request.url.path.endswith(".js") and response.status_code == 200:
             response.headers["Content-Type"] = "text/javascript"
