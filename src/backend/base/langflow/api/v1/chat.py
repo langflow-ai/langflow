@@ -107,7 +107,7 @@ async def retrieve_vertices_order(
                 playgroundSuccess=True,
             ),
         )
-        return VerticesOrderResponse(ids=graph._first_layer, run_id=graph._run_id, vertices_to_run=vertices_to_run)
+        return VerticesOrderResponse(ids=graph.first_layer, run_id=graph.run_id, vertices_to_run=vertices_to_run)
     except Exception as exc:
         background_tasks.add_task(
             telemetry_service.log_package_playground,
