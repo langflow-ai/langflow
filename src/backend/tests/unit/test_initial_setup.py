@@ -129,6 +129,7 @@ async def test_refresh_starter_projects():
     chat_input = find_componeny_by_name(components, "ChatInput")
     chat_output = find_componeny_by_name(components, "ChatOutput")
     chat_output["template"]["code"]["value"] = "changed !"
+    del chat_output["template"]["should_store_message"]
     graph_data = {
         "nodes": [
             component_to_node("chat-input-1", "ChatInput", chat_input),
@@ -140,3 +141,6 @@ async def test_refresh_starter_projects():
     new_change = update_projects_components_with_latest_component_versions(graph_data, all_types)
     assert graph_data["nodes"][1]["data"]["node"]["template"]["code"]["value"] == "changed !"
     assert new_change["nodes"][1]["data"]["node"]["template"]["code"]["value"] != "changed !"
+
+    assert "should_store_message" not in graph_data["nodes"][1]["data"]["node"]["template"]
+    assert "should_store_message" in new_change["nodes"][1]["data"]["node"]["template"]
