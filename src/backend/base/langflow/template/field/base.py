@@ -1,5 +1,6 @@
 from enum import Enum
-from typing import Any, Callable, GenericAlias, Optional, Union, _GenericAlias, _UnionGenericAlias  # type: ignore
+from typing import Optional  # type: ignore
+from typing import Any, Callable, GenericAlias, Union, _GenericAlias, _UnionGenericAlias
 
 from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator, model_serializer, model_validator
 
@@ -182,6 +183,8 @@ class Output(BaseModel):
 
     def add_types(self, _type: list[Any]):
         for type_ in _type:
+            if type_ in self.types:
+                continue
             if self.types is None:
                 self.types = []
             self.types.append(type_)
