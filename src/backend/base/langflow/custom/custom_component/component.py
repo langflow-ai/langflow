@@ -57,6 +57,7 @@ class Component(CustomComponent):
             self.map_inputs(self.inputs)
         if self.outputs is not None:
             self.map_outputs(self.outputs)
+        # Set output types
         self._set_output_types()
 
     def __getattr__(self, name: str) -> Any:
@@ -94,10 +95,13 @@ class Component(CustomComponent):
     def get_input(self, name: str) -> Any:
         """
         Retrieves the value of the input with the specified name.
+
         Args:
             name (str): The name of the input.
+
         Returns:
             Any: The value of the input.
+
         Raises:
             ValueError: If the input with the specified name is not found.
         """
@@ -108,10 +112,13 @@ class Component(CustomComponent):
     def get_output(self, name: str) -> Any:
         """
         Retrieves the output with the specified name.
+
         Args:
             name (str): The name of the output to retrieve.
+
         Returns:
             Any: The output value.
+
         Raises:
             ValueError: If the output with the specified name is not found.
         """
@@ -161,6 +168,7 @@ class Component(CustomComponent):
                 continue
             input_ = self._inputs[key]
             # BaseInputMixin has a `validate_assignment=True`
+
             input_.value = value
             params[input_.name] = input_.value
 
@@ -168,7 +176,7 @@ class Component(CustomComponent):
         self._validate_inputs(params)
         _attributes = {}
         for key, value in params.items():
-            if key in self.__dict__:
+            if key in self.__dict__ and value != getattr(self, key):
                 raise ValueError(
                     f"{self.__class__.__name__} defines an input parameter named '{key}' "
                     f"that is a reserved word and cannot be used."
@@ -222,11 +230,16 @@ class Component(CustomComponent):
         _results = {}
         _artifacts = {}
         if hasattr(self, "outputs"):
-            self._set_outputs(self._vertex.outputs)
+            if self._vertex:
+                self._set_outputs(self._vertex.outputs)
             for output in self.outputs:
                 # Build the output if it's connected to some other vertex
                 # or if it's not connected to any vertex
-                if not self._vertex.outgoing_edges or output.name in self._vertex.edges_source_names:
+                if (
+                    not self._vertex
+                    or not self._vertex.outgoing_edges
+                    or output.name in self._vertex.edges_source_names
+                ):
                     if output.method is None:
                         raise ValueError(f"Output {output.name} does not have a method defined.")
                     method: Callable = getattr(self, output.method)
@@ -238,7 +251,8 @@ class Component(CustomComponent):
                         if inspect.iscoroutinefunction(method):
                             result = await result
                         if (
-                            isinstance(result, Message)
+                            self._vertex is not None
+                            and isinstance(result, Message)
                             and result.flow_id is None
                             and self._vertex.graph.flow_id is not None
                         ):
