@@ -16,13 +16,14 @@ class JsonAgentComponent(LCAgentComponent):
     name = "JsonAgent"
 
     inputs = LCAgentComponent._base_inputs + [
-        FileInput(name="path", display_name="File Path", file_types=["json", "yaml", "yml"], required=True),
         HandleInput(name="llm", display_name="Language Model", input_types=["LanguageModel"], required=True),
+        FileInput(name="path", display_name="File Path", file_types=["json", "yaml", "yml"], required=True),
     ]
 
     def build_agent(self) -> AgentExecutor:
         if self.path.endswith("yaml") or self.path.endswith("yml"):
-            yaml_dict = yaml.load(open(self.path, "r"), Loader=yaml.FullLoader)
+            with open(self.path, "r") as file:
+                yaml_dict = yaml.load(file, Loader=yaml.FullLoader)
             spec = JsonSpec(dict_=yaml_dict)
         else:
             spec = JsonSpec.from_file(Path(self.path))

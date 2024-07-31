@@ -4,34 +4,25 @@ import {
   LANGFLOW_AUTO_LOGIN_OPTION,
 } from "@/constants/constants";
 import { useGetCheckQuery } from "@/controllers/API/queries/store";
+import useAuthStore from "@/stores/authStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { createContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Cookies from "universal-cookie";
-import {
-  getGlobalVariables,
-  getLoggedUser,
-  requestLogout,
-} from "../controllers/API";
+import { getLoggedUser, requestLogout } from "../controllers/API";
 import useAlertStore from "../stores/alertStore";
 import { useFolderStore } from "../stores/foldersStore";
-import { useGlobalVariablesStore } from "../stores/globalVariablesStore/globalVariables";
 import { useStoreStore } from "../stores/storeStore";
 import { Users } from "../types/api";
 import { AuthContextType } from "../types/contexts/auth";
 
 const initialValue: AuthContextType = {
-  isAdmin: false,
-  setIsAdmin: () => false,
-  isAuthenticated: false,
   accessToken: null,
   login: () => {},
   logout: () => new Promise(() => {}),
   userData: null,
   setUserData: () => {},
   authenticationErrorCount: 0,
-  autoLogin: false,
-  setAutoLogin: () => {},
   setApiKey: () => {},
   apiKey: null,
   storeApiKey: () => {},
@@ -46,12 +37,7 @@ export function AuthProvider({ children }): React.ReactElement {
   const [accessToken, setAccessToken] = useState<string | null>(
     cookies.get(LANGFLOW_ACCESS_TOKEN) ?? null,
   );
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(
-    !!cookies.get(LANGFLOW_ACCESS_TOKEN),
-  );
-  const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [userData, setUserData] = useState<Users | null>(null);
-  const [autoLogin, setAutoLogin] = useState<boolean>(false);
   const setLoading = useAlertStore((state) => state.setLoading);
   const [apiKey, setApiKey] = useState<string | null>(
     cookies.get(LANGFLOW_API_TOKEN),
@@ -59,13 +45,13 @@ export function AuthProvider({ children }): React.ReactElement {
   useGetCheckQuery();
 
   const getFoldersApi = useFolderStore((state) => state.getFoldersApi);
-  const setGlobalVariables = useGlobalVariablesStore(
-    (state) => state.setGlobalVariables,
-  );
-  const checkHasStore = useStoreStore((state) => state.checkHasStore);
   const fetchApiData = useStoreStore((state) => state.fetchApiData);
   const setAllFlows = useFlowsManagerStore((state) => state.setAllFlows);
   const setSelectedFolder = useFolderStore((state) => state.setSelectedFolder);
+  const setIsAuthenticated = useAuthStore((state) => state.setIsAuthenticated);
+  const setIsAdmin = useAuthStore((state) => state.setIsAdmin);
+  const setIsLoading = useFlowsManagerStore((state) => state.setIsLoading);
+  const autoLogin = useAuthStore((state) => state.autoLogin);
 
   useEffect(() => {
     const storedAccessToken = cookies.get(LANGFLOW_ACCESS_TOKEN);
@@ -86,10 +72,8 @@ export function AuthProvider({ children }): React.ReactElement {
       .then(async (user) => {
         setUserData(user);
         const isSuperUser = user!.is_superuser;
-        setIsAdmin(isSuperUser);
+        useAuthStore.getState().setIsAdmin(isSuperUser);
         getFoldersApi(true, true);
-        const res = await getGlobalVariables();
-        setGlobalVariables(res);
         fetchApiData();
       })
       .catch((error) => {
@@ -116,10 +100,11 @@ export function AuthProvider({ children }): React.ReactElement {
       setUserData(null);
       setAccessToken(null);
       setIsAuthenticated(false);
+      setIsAuthenticated(false);
       setAllFlows([]);
       setSelectedFolder(null);
       navigate("/login");
-      useFlowsManagerStore.setState({ isLoading: false });
+      setIsLoading(false);
     } catch (error) {
       console.error(error);
       throw error;
@@ -127,7 +112,6 @@ export function AuthProvider({ children }): React.ReactElement {
   }
 
   function storeApiKey(apikey: string) {
-    cookies.set(LANGFLOW_ACCESS_TOKEN, apikey, { path: "/" });
     setApiKey(apikey);
   }
 
@@ -135,17 +119,12 @@ export function AuthProvider({ children }): React.ReactElement {
     // !! to convert string to boolean
     <AuthContext.Provider
       value={{
-        isAdmin,
-        setIsAdmin,
-        isAuthenticated,
         accessToken,
         login,
         logout,
         setUserData,
         userData,
         authenticationErrorCount: 0,
-        setAutoLogin,
-        autoLogin,
         setApiKey,
         apiKey,
         storeApiKey,

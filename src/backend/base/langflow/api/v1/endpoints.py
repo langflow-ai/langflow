@@ -552,7 +552,7 @@ async def custom_component(
     raw_code: CustomComponentRequest,
     user: User = Depends(get_current_active_user),
 ):
-    component = Component(code=raw_code.code)
+    component = Component(_code=raw_code.code)
 
     built_frontend_node, component_instance = build_custom_component_template(component, user_id=user.id)
     if raw_code.frontend_node is not None:
@@ -582,7 +582,7 @@ async def custom_component_update(
 
     """
     try:
-        component = Component(code=code_request.code)
+        component = Component(_code=code_request.code)
 
         component_node, cc_instance = build_custom_component_template(
             component,
@@ -590,7 +590,9 @@ async def custom_component_update(
         )
         if hasattr(cc_instance, "set_attributes"):
             template = code_request.get_template()
-            params = {key: value_dict["value"] for key, value_dict in template.items() if isinstance(value_dict, dict)}
+            params = {
+                key: value_dict.get("value") for key, value_dict in template.items() if isinstance(value_dict, dict)
+            }
             load_from_db_fields = [
                 field_name
                 for field_name, field_dict in template.items()

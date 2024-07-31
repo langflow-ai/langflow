@@ -1,4 +1,4 @@
-from typing import Any, AsyncIterator, Iterator, Optional, Union
+from typing import Any, AsyncIterator, Iterator, Optional, Union, get_args
 
 from loguru import logger
 from pydantic import Field, field_validator
@@ -19,7 +19,27 @@ from .input_mixin import (
     MultilineMixin,
     RangeMixin,
     SerializableFieldTypes,
+    TableMixin,
 )
+
+
+class TableInput(BaseInputMixin, MetadataTraceMixin, TableMixin, ListableInputMixin):
+    field_type: Optional[SerializableFieldTypes] = FieldTypes.TABLE
+    is_list: bool = True
+
+    @field_validator("value")
+    @classmethod
+    def validate_value(cls, v: Any, _info):
+        # Check if value is a list of dicts
+        if not isinstance(v, list):
+            raise ValueError(f"TableInput value must be a list of dictionaries or Data. Value '{v}' is not a list.")
+
+        for item in v:
+            if not isinstance(item, (dict, Data)):
+                raise ValueError(
+                    f"TableInput value must be a list of dictionaries or Data. Item '{item}' is not a dictionary or Data."
+                )
+        return v
 
 
 class HandleInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin):
@@ -178,6 +198,20 @@ class MultilineInput(MessageTextInput, MultilineMixin, InputTraceMixin):
     multiline: CoalesceBool = True
 
 
+class MultilineSecretInput(MessageTextInput, MultilineMixin, InputTraceMixin):
+    """
+    Represents a multiline input field.
+
+    Attributes:
+        field_type (Optional[SerializableFieldTypes]): The type of the field. Defaults to FieldTypes.TEXT.
+        multiline (CoalesceBool): Indicates whether the input field should support multiple lines. Defaults to True.
+    """
+
+    field_type: Optional[SerializableFieldTypes] = FieldTypes.PASSWORD
+    multiline: CoalesceBool = True
+    password: CoalesceBool = Field(default=True)
+
+
 class SecretStrInput(BaseInputMixin, DatabaseLoadMixin):
     """
     Represents a field with password field type.
@@ -192,8 +226,45 @@ class SecretStrInput(BaseInputMixin, DatabaseLoadMixin):
 
     field_type: Optional[SerializableFieldTypes] = FieldTypes.PASSWORD
     password: CoalesceBool = Field(default=True)
-    input_types: list[str] = []
+    input_types: list[str] = ["Message"]
     load_from_db: CoalesceBool = True
+
+    @field_validator("value")
+    @classmethod
+    def validate_value(cls, v: Any, _info):
+        """
+        Validates the given value and returns the processed value.
+
+        Args:
+            v (Any): The value to be validated.
+            _info: Additional information about the input.
+
+        Returns:
+            The processed value.
+
+        Raises:
+            ValueError: If the value is not of a valid type or if the input is missing a required key.
+        """
+        value: str | AsyncIterator | Iterator | None = None
+        if isinstance(v, str):
+            value = v
+        elif isinstance(v, Message):
+            value = v.text
+        elif isinstance(v, Data):
+            if v.text_key in v.data:
+                value = v.data[v.text_key]
+            else:
+                keys = ", ".join(v.data.keys())
+                input_name = _info.data["name"]
+                raise ValueError(
+                    f"The input to '{input_name}' must contain the key '{v.text_key}'."
+                    f"You can set `text_key` to one of the following keys: {keys} or set the value using another Component."
+                )
+        elif isinstance(v, (AsyncIterator, Iterator)):
+            value = v
+        else:
+            raise ValueError(f"Invalid value type {type(v)}")
+        return value
 
 
 class IntInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMixin):
@@ -281,12 +352,13 @@ class DropdownInput(BaseInputMixin, DropDownMixin, MetadataTraceMixin):
 
     Attributes:
         field_type (Optional[SerializableFieldTypes]): The field type of the input. Defaults to FieldTypes.TEXT.
-        options (Optional[Union[list[str], Callable]]): List of options for the field. Only used when is_list=True.
+        options (Optional[Union[list[str], Callable]]): List of options for the field.
             Default is None.
     """
 
     field_type: Optional[SerializableFieldTypes] = FieldTypes.TEXT
     options: list[str] = Field(default_factory=list)
+    combobox: CoalesceBool = False
 
 
 class MultiselectInput(BaseInputMixin, ListableInputMixin, DropDownMixin, MetadataTraceMixin):
@@ -305,6 +377,18 @@ class MultiselectInput(BaseInputMixin, ListableInputMixin, DropDownMixin, Metada
     field_type: Optional[SerializableFieldTypes] = FieldTypes.TEXT
     options: list[str] = Field(default_factory=list)
     is_list: bool = Field(default=True, serialization_alias="list")
+    combobox: CoalesceBool = False
+
+    @field_validator("value")
+    @classmethod
+    def validate_value(cls, v: Any, _info):
+        # Check if value is a list of dicts
+        if not isinstance(v, list):
+            raise ValueError(f"MultiselectInput value must be a list. Value: '{v}'")
+        for item in v:
+            if not isinstance(item, str):
+                raise ValueError(f"MultiselectInput value must be a list of strings. Item: '{item}' is not a string")
+        return v
 
 
 class FileInput(BaseInputMixin, ListableInputMixin, FileMixin, MetadataTraceMixin):
@@ -332,10 +416,22 @@ InputTypes = Union[
     HandleInput,
     IntInput,
     MultilineInput,
+    MultilineSecretInput,
     NestedDictInput,
     PromptInput,
     SecretStrInput,
     StrInput,
     MessageTextInput,
     MessageInput,
+    TableInput,
 ]
+
+InputTypesMap: dict[str, type[InputTypes]] = {t.__name__: t for t in get_args(InputTypes)}
+
+
+def _instantiate_input(input_type: str, data: dict) -> InputTypes:
+    input_type_class = InputTypesMap.get(input_type)
+    if input_type_class:
+        return input_type_class(**data)
+    else:
+        raise ValueError(f"Invalid input type: {input_type}")

@@ -1,6 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { KeyPairListComponentType } from "../../types/components";
 
+import {
+  convertObjToArray,
+  convertValuesToNumbers,
+  hasDuplicateKeys,
+} from "@/utils/reactflowUtils";
 import { cloneDeep } from "lodash";
 import { classNames } from "../../utils/utils";
 import IconComponent from "../genericIconComponent";
@@ -11,8 +16,8 @@ export default function KeypairListComponent({
   onChange,
   disabled,
   editNode = false,
-  duplicateKey,
   isList = true,
+  id,
 }: KeyPairListComponentType): JSX.Element {
   useEffect(() => {
     if (disabled && value.length > 0 && value[0] !== "") {
@@ -20,7 +25,22 @@ export default function KeypairListComponent({
     }
   }, [disabled]);
 
-  const myValue = Array.isArray(value) ? value : [value];
+  const [duplicateKey, setDuplicateKey] = useState(false);
+
+  const myValue =
+    Object.keys(value || {})?.length === 0 || !value
+      ? [{ "": "" }]
+      : convertObjToArray(value, "dict");
+
+  Array.isArray(value) ? value : [value];
+
+  const handleNewValue = (newValue: any) => {
+    const valueToNumbers = convertValuesToNumbers(newValue);
+    setDuplicateKey(hasDuplicateKeys(valueToNumbers));
+    if (isList) {
+      onChange(valueToNumbers);
+    } else onChange(valueToNumbers[0]);
+  };
 
   const handleChangeKey = (event, idx) => {
     const oldKey = Object.keys(myValue[idx])[0];
@@ -29,7 +49,7 @@ export default function KeypairListComponent({
     const newValue = cloneDeep(myValue);
     newValue[idx] = updatedObj;
 
-    onChange(newValue);
+    handleNewValue(newValue);
   };
 
   const handleChangeValue = (event, idx) => {
@@ -39,7 +59,7 @@ export default function KeypairListComponent({
     const newValue = cloneDeep(myValue);
     newValue[idx] = updatedObj;
 
-    onChange(newValue);
+    handleNewValue(newValue);
   };
 
   return (
@@ -100,11 +120,7 @@ export default function KeypairListComponent({
                       ? "editNodeplusbtn" + index.toString()
                       : "plusbtn" + index.toString()
                   }
-                  data-testid={
-                    editNode
-                      ? "editNodeplusbtn" + index.toString()
-                      : "plusbtn" + index.toString()
-                  }
+                  data-testid={id}
                 >
                   <IconComponent
                     name="Plus"

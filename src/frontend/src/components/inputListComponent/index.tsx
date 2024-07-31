@@ -14,10 +14,11 @@ export default function InputListComponent({
   editNode = false,
   componentName,
   playgroundDisabled,
+  id,
 }: InputListComponentType): JSX.Element {
   useEffect(() => {
     if (disabled && value.length > 0 && value[0] !== "") {
-      onChange([""]);
+      onChange([""], undefined, true);
     }
   }, [disabled]);
 
@@ -49,10 +50,7 @@ export default function InputListComponent({
                 newInputList[idx] = event.target.value;
                 onChange(newInputList);
               }}
-              data-testid={
-                `input-list-input${editNode ? "-edit" : ""}_${componentName}-` +
-                idx
-              }
+              data-testid={`${id}_` + idx}
             />
             {idx === 0 ? (
               <Button

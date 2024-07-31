@@ -1,4 +1,4 @@
-CHAT_MODELS = [
+AIML_CHAT_MODELS = [
     "zero-one-ai/Yi-34B-Chat",
     "allenai/OLMo-7B-Instruct",
     "allenai/OLMo-7B-Twin-2T",
@@ -17,6 +17,9 @@ CHAT_MODELS = [
     "codellama/CodeLlama-34b-Instruct-hf",
     "codellama/CodeLlama-70b-Instruct-hf",
     "codellama/CodeLlama-7b-Instruct-hf",
+    "meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo",
+    "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo",
+    "meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo",
     "meta-llama/Llama-2-70b-chat-hf",
     "meta-llama/Llama-2-13b-chat-hf",
     "meta-llama/Llama-2-7b-chat-hf",
@@ -70,7 +73,7 @@ CHAT_MODELS = [
     "claude-3-haiku-20240307",
 ]
 
-EMBEDDING_MODELS = [
+AIML_EMBEDDING_MODELS = [
     "text-embedding-3-small",
     "text-embedding-3-large",
     "text-embedding-ada-002",

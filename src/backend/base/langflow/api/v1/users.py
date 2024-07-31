@@ -89,8 +89,12 @@ def patch_user(
     """
     Update an existing user's data.
     """
+
+    if not user.is_superuser and user_update.is_superuser:
+        raise HTTPException(status_code=403, detail="Permission denied")
+
     if not user.is_superuser and user.id != user_id:
-        raise HTTPException(status_code=403, detail="You don't have the permission to update this user")
+        raise HTTPException(status_code=403, detail="Permission denied")
     if user_update.password:
         if not user.is_superuser:
             raise HTTPException(status_code=400, detail="You can't change your password here")
@@ -139,7 +143,7 @@ def delete_user(
     if current_user.id == user_id:
         raise HTTPException(status_code=400, detail="You can't delete your own user account")
     elif not current_user.is_superuser:
-        raise HTTPException(status_code=403, detail="You don't have the permission to delete this user")
+        raise HTTPException(status_code=403, detail="Permission denied")
 
     user_db = session.exec(select(User).where(User.id == user_id)).first()
     if not user_db:

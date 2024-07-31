@@ -14,14 +14,16 @@ import {
   LANGFLOW_AUTO_LOGIN_OPTION,
 } from "./constants/constants";
 import { AuthContext } from "./contexts/authContext";
-import { autoLogin } from "./controllers/API";
+import { useAutoLogin } from "./controllers/API/queries/auth";
 import { useGetHealthQuery } from "./controllers/API/queries/health";
+import { useGetGlobalVariables } from "./controllers/API/queries/variables";
 import { useGetVersionQuery } from "./controllers/API/queries/version";
 import { setupAxiosDefaults } from "./controllers/API/utils";
 import useTrackLastVisitedPath from "./hooks/use-track-last-visited-path";
 import Router from "./routes";
 import { Case } from "./shared/components/caseComponent";
 import useAlertStore from "./stores/alertStore";
+import useAuthStore from "./stores/authStore";
 import { useDarkStore } from "./stores/darkStore";
 import useFlowsManagerStore from "./stores/flowsManagerStore";
 import { useFolderStore } from "./stores/foldersStore";
@@ -29,16 +31,21 @@ import { useFolderStore } from "./stores/foldersStore";
 export default function App() {
   useTrackLastVisitedPath();
   const isLoading = useFlowsManagerStore((state) => state.isLoading);
-  const { isAuthenticated, login, setUserData, setAutoLogin, getUser, logout } =
-    useContext(AuthContext);
+  const { login, setUserData, getUser, logout } = useContext(AuthContext);
+  const setAutoLogin = useAuthStore((state) => state.setAutoLogin);
   const setLoading = useAlertStore((state) => state.setLoading);
   const refreshStars = useDarkStore((state) => state.refreshStars);
   const dark = useDarkStore((state) => state.dark);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+
+  const { mutate: mutateAutoLogin } = useAutoLogin();
 
   useGetVersionQuery();
   const cookies = new Cookies();
 
   const isLoadingFolders = useFolderStore((state) => state.isLoadingFolders);
+
+  const { mutate: mutateGetGlobalVariables } = useGetGlobalVariables();
 
   const {
     data: healthData,
@@ -56,20 +63,20 @@ export default function App() {
   }, [dark]);
 
   useEffect(() => {
-    const abortController = new AbortController();
     const isLoginPage = location.pathname.includes("login");
 
-    autoLogin(abortController.signal)
-      .then(async (user) => {
+    mutateAutoLogin(undefined, {
+      onSuccess: async (user) => {
         if (user && user["access_token"]) {
           user["refresh_token"] = "auto";
           login(user["access_token"], "auto");
+          mutateGetGlobalVariables();
           setUserData(user);
           setAutoLogin(true);
           fetchAllData();
         }
-      })
-      .catch(async (error) => {
+      },
+      onError: (error) => {
         if (error.name !== "CanceledError") {
           setAutoLogin(false);
           if (
@@ -88,15 +95,10 @@ export default function App() {
             useFlowsManagerStore.setState({ isLoading: false });
           }
         }
-      });
-
-    /*
-      Abort the request as it isn't needed anymore, the component being
-      unmounted. It helps avoid, among other things, the well-known "can't
-      perform a React state update on an unmounted component" warning.
-    */
-    return () => abortController.abort();
+      },
+    });
   }, []);
+
   const fetchAllData = async () => {
     setTimeout(async () => {
       await Promise.all([refreshStars(), fetchData()]);

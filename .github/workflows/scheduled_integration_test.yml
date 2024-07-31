@@ -53,6 +53,10 @@ jobs:
       ASTRA_DB_API_KEY: ${{ secrets.ASTRA_DB_API_KEY }}
       ASTRA_DB_APPLICATION_TOKEN: ${{ secrets.ASTRA_DB_APPLICATION_TOKEN }}
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || github.ref }}
       - name: Run integration tests
         timeout-minutes: 12
         run: |

@@ -1,3 +1,4 @@
+import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import { ReactElement, ReactNode, SetStateAction } from "react";
 import { ReactFlowJsonObject } from "reactflow";
 import { InputOutput } from "../../constants/enums";
@@ -9,6 +10,7 @@ import {
 } from "../api";
 import { ChatMessageType } from "../chat";
 import { FlowStyleType, FlowType, NodeDataType, NodeType } from "../flow/index";
+import { ColumnField } from "../utils/functions";
 import { sourceHandleType, targetHandleType } from "./../flow/index";
 export type InputComponentType = {
   name?: string;
@@ -52,8 +54,20 @@ export type DropDownComponentType = {
   disabled?: boolean;
   isLoading?: boolean;
   value: string;
+  combobox?: boolean;
   options: string[];
-  onSelect: (value: string) => void;
+  onSelect: (value: string, dbValue?: boolean, snapshot?: boolean) => void;
+  editNode?: boolean;
+  id?: string;
+  children?: ReactNode;
+};
+export type MultiselectComponentType = {
+  disabled?: boolean;
+  isLoading?: boolean;
+  value: string[];
+  combobox?: boolean;
+  options: string[];
+  onSelect: (value: string[], dbValue?: boolean, snapshot?: boolean) => void;
   editNode?: boolean;
   id?: string;
   children?: ReactNode;
@@ -82,18 +96,19 @@ export type ParameterComponentType = {
 };
 export type InputListComponentType = {
   value: string[];
-  onChange: (value: string[]) => void;
+  onChange: (value: string[], dbValue?: boolean, snapshot?: boolean) => void;
   disabled: boolean;
   editNode?: boolean;
   componentName?: string;
   playgroundDisabled?: boolean;
+  id?: string;
 };
 
 export type InputGlobalComponentType = {
   disabled: boolean;
   onChange: (value: string, dbValue: boolean, snapshot?: boolean) => void;
   name: string;
-  data: InputFieldType;
+  data: Partial<InputFieldType>;
   editNode?: boolean;
   playgroundDisabled?: boolean;
 };
@@ -103,9 +118,9 @@ export type KeyPairListComponentType = {
   onChange: (value: Object[]) => void;
   disabled: boolean;
   editNode?: boolean;
-  duplicateKey?: boolean;
   editNodeModal?: boolean;
   isList?: boolean;
+  id?: string;
 };
 
 export type DictComponentType = {
@@ -132,6 +147,18 @@ export type TextAreaComponentType = {
   editNode?: boolean;
   id?: string;
   readonly?: boolean;
+  password?: boolean;
+  updateVisibility?: () => void;
+};
+
+export type TableComponentType = {
+  description: string;
+  tableTitle: string;
+  onChange: (value: any[]) => void;
+  value: any[];
+  editNode?: boolean;
+  id?: string;
+  columns?: ColumnField[];
 };
 
 export type outputComponentType = {
@@ -147,7 +174,7 @@ export type outputComponentType = {
 export type PromptAreaComponentType = {
   field_name?: string;
   nodeClass?: APIClassType;
-  setNodeClass?: (value: APIClassType, code?: string) => void;
+  setNodeClass?: (value: APIClassType) => void;
   disabled: boolean;
   onChange: (
     value: string[] | string,
@@ -171,7 +198,7 @@ export type CodeAreaComponentType = {
   value: string;
   editNode?: boolean;
   nodeClass?: APIClassType;
-  setNodeClass?: (value: APIClassType, code?: string) => void;
+  setNodeClass?: (value: APIClassType, type: string) => void;
   dynamic?: boolean;
   id?: string;
   readonly?: boolean;
@@ -182,15 +209,11 @@ export type CodeAreaComponentType = {
 export type FileComponentType = {
   IOInputProps?;
   disabled: boolean;
-  onChange: (
-    value: string[] | string,
-    dbValue?: boolean,
-    skipSnapshot?: boolean,
-  ) => void;
+  handleOnNewValue: handleOnNewValueType;
   value: string;
   fileTypes: Array<string>;
-  onFileChange: (value: string) => void;
   editNode?: boolean;
+  id?: string;
 };
 
 export type DisclosureComponentType = {
@@ -428,6 +451,7 @@ export type patchUserInputStateType = {
   cnfPassword: string;
   profilePicture: string;
   apikey: string;
+  gradient?: any;
 };
 
 export type UserInputType = {
@@ -610,11 +634,7 @@ export type codeAreaModalPropsType = {
   setOpenModal?: (bool: boolean) => void;
   value: string;
   nodeClass: APIClassType | undefined;
-  setNodeClass: (
-    Class: APIClassType,
-    code?: string,
-    type?: string,
-  ) => void | undefined;
+  setNodeClass: (Class: APIClassType, type: string) => void | undefined;
   children: ReactNode;
   dynamic?: boolean;
   readonly?: boolean;
@@ -643,10 +663,12 @@ export type genericModalPropsType = {
   type: number;
   disabled?: boolean;
   nodeClass?: APIClassType;
-  setNodeClass?: (Class: APIClassType, code?: string) => void;
+  setNodeClass?: (Class: APIClassType, type?: string) => void;
   children: ReactNode;
   id?: string;
   readonly?: boolean;
+  password?: boolean;
+  changeVisibility?: () => void;
 };
 
 export type newFlowModalPropsType = {
@@ -689,53 +711,25 @@ export type cardComponentPropsType = {
   button?: JSX.Element;
 };
 
-type tabsArrayType = {
+export type tabsArrayType = {
   code: string;
   image: string;
   language: string;
   mode: string;
   name: string;
   description?: string;
-};
-
-type getValueNodeType = {
-  id: string;
-  node: NodeType;
-  type: string;
-  value: null;
-};
-
-type codeTabsFuncTempType = {
-  [key: string]: string | boolean;
+  hasTweaks?: boolean;
 };
 
 export type codeTabsPropsType = {
-  isThereTweaks?: boolean;
-  isThereWH?: boolean;
-  flow?: FlowType;
+  open: boolean;
   tabs: Array<tabsArrayType>;
   activeTab: string;
   setActiveTab: (value: string) => void;
   isMessage?: boolean;
-  tweaks?: {
-    tweak?: tweakType;
-    tweaksList?: Array<string>;
-    buildContent?: (value: string) => ReactNode;
-    getValue?: (
-      value: string,
-      node: NodeType,
-      template: InputFieldType,
-      tweak: tweakType,
-    ) => string;
-    buildTweakObject?: (
-      tw: string,
-      changes: string | string[] | boolean | number | Object[] | Object,
-      template: InputFieldType,
-    ) => Promise<string | void>;
-  };
+  tweaksNodes?: Array<NodeType>;
   activeTweaks?: boolean;
   setActiveTweaks?: (value: boolean) => void;
-  allowExport?: boolean;
 };
 
 export type crashComponentPropsType = {

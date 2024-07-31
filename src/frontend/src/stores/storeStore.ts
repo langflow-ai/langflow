@@ -1,3 +1,4 @@
+import FeatureFlags from "@/../feature-config.json";
 import { create } from "zustand";
 import { checkHasApiKey, checkHasStore } from "../controllers/API";
 import { StoreStoreType } from "../types/zustand/store";
@@ -8,7 +9,7 @@ export const useStoreStore = create<StoreStoreType>((set) => ({
   hasApiKey: false,
   loadingApiKey: true,
   checkHasStore: (hasStore) => {
-    set({ hasStore: hasStore?.enabled ?? false });
+    set({ hasStore: FeatureFlags.ENABLE_LANGFLOW_STORE && (hasStore?.enabled ?? false) });
   },
   updateValidApiKey: (validApiKey) => set(() => ({ validApiKey: validApiKey })),
   updateLoadingApiKey: (loadingApiKey) =>
