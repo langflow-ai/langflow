@@ -90,10 +90,10 @@ class FrontendNode(BaseModel):
         return {name: result}
 
     # For backwards compatibility
-    def to_dict(self, add_name=True) -> dict:
+    def to_dict(self, keep_name=True) -> dict:
         """Returns a dict representation of the frontend node."""
         dump = self.model_dump(by_alias=True, exclude_none=True)
-        if not add_name:
+        if not keep_name:
             return dump.pop(self.name)
         return dump
 
