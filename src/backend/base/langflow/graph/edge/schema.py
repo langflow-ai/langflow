@@ -1,5 +1,7 @@
-from typing import Optional, Any, List
-from pydantic import BaseModel
+from typing import Any, List, Optional
+
+from pydantic import BaseModel, Field, field_validator
+from typing_extensions import TypedDict
 
 
 class ResultPair(BaseModel):
@@ -32,3 +34,55 @@ class Payload(BaseModel):
                 for result_pair in self.result_pairs[:-1]
             ]
         )
+
+
+class TargetHandle(BaseModel):
+    fieldName: str = Field(..., description="Field name for the target handle.")
+    id: str = Field(..., description="Unique identifier for the target handle.")
+    inputTypes: Optional[List[str]] = Field(None, description="List of input types for the target handle.")
+    type: str = Field(..., description="Type of the target handle.")
+
+
+class SourceHandle(BaseModel):
+    baseClasses: list[str] = Field(default_factory=list, description="List of base classes for the source handle.")
+    dataType: str = Field(..., description="Data type for the source handle.")
+    id: str = Field(..., description="Unique identifier for the source handle.")
+    name: Optional[str] = Field(None, description="Name of the source handle.")
+    output_types: List[str] = Field(default_factory=list, description="List of output types for the source handle.")
+
+    @field_validator("name", mode="before")
+    @classmethod
+    def validate_name(cls, v, _info):
+        if _info.data["dataType"] == "GroupNode":
+            # 'OpenAIModel-u4iGV_text_output'
+            splits = v.split("_", 1)
+            if len(splits) != 2:
+                raise ValueError(f"Invalid source handle name {v}")
+            v = splits[1]
+        return v
+
+
+class SourceHandleDict(TypedDict, total=False):
+    baseClasses: list[str]
+    dataType: str
+    id: str
+    name: Optional[str]
+    output_types: List[str]
+
+
+class TargetHandleDict(TypedDict):
+    fieldName: str
+    id: str
+    inputTypes: Optional[List[str]]
+    type: str
+
+
+class EdgeDataDetails(TypedDict):
+    sourceHandle: SourceHandleDict
+    targetHandle: TargetHandleDict
+
+
+class EdgeData(TypedDict, total=False):
+    source: str
+    target: str
+    data: EdgeDataDetails
