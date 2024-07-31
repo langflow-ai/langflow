@@ -32,7 +32,7 @@ from langflow.schema import Data
 def test_uuid_generator_component():
     # Arrange
     uuid_generator_component = helpers.IDGeneratorComponent()
-    uuid_generator_component.code = open(helpers.IDGenerator.__file__, "r").read()
+    uuid_generator_component._code = open(helpers.IDGenerator.__file__, "r").read()
 
     frontend_node, _ = build_custom_component_template(uuid_generator_component)
 
