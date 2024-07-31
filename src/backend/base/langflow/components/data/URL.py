@@ -17,7 +17,7 @@ class URLComponent(Component):
         MessageTextInput(
             name="urls",
             display_name="URLs",
-            info="Enter one or more URLs, separated by commas.",
+            info="Enter one or more URLs, by clicking the '+' button.",
             is_list=True,
         ),
     ]
