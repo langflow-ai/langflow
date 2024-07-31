@@ -166,6 +166,8 @@ class MessageTextInput(StrInput, MetadataTraceMixin, InputTraceMixin):
             ValueError: If the value is not of a valid type or if the input is missing a required key.
         """
         value: str | AsyncIterator | Iterator | None = None
+        if isinstance(v, dict):
+            v = Message(**v)
         if isinstance(v, str):
             value = v
         elif isinstance(v, Message):
