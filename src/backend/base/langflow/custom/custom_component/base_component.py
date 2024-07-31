@@ -6,7 +6,6 @@ from fastapi import HTTPException
 
 from langflow.custom.attributes import ATTR_FUNC_MAPPING
 from langflow.custom.code_parser import CodeParser
-from langflow.custom.custom_component.constants import methods_docs_map
 from langflow.custom.eval import eval_custom_component_code
 from langflow.utils import validate
 
