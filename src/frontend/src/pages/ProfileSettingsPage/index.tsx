@@ -1,3 +1,7 @@
+import {
+  useResetPassword,
+  useUpdateUser,
+} from "@/controllers/API/queries/auth";
 import * as Form from "@radix-ui/react-form";
 import { cloneDeep } from "lodash";
 import { useContext, useEffect, useState } from "react";
@@ -13,7 +17,6 @@ import {
 } from "../../constants/alerts_constants";
 import { CONTROL_PATCH_USER_STATE } from "../../constants/constants";
 import { AuthContext } from "../../contexts/authContext";
-import { resetPassword, updateUser } from "../../controllers/API";
 import useAlertStore from "../../stores/alertStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import {
@@ -40,6 +43,9 @@ export default function ProfileSettingsPage(): JSX.Element {
   const { userData, setUserData } = useContext(AuthContext);
   const { password, cnfPassword, gradient } = inputState;
 
+  const { mutate: mutateResetPassword } = useResetPassword();
+  const { mutate: mutatePatchUser } = useUpdateUser();
+
   async function handlePatchUser() {
     if (password !== cnfPassword) {
       setErrorData({
@@ -48,26 +54,43 @@ export default function ProfileSettingsPage(): JSX.Element {
       });
       return;
     }
-    try {
-      if (password !== "") await resetPassword(userData!.id, { password });
-      if (gradient !== "")
-        await updateUser(userData!.id, { profile_image: gradient });
-      if (gradient !== "") {
-        let newUserData = cloneDeep(userData);
-        newUserData!.profile_image = gradient;
-
-        setUserData(newUserData);
-      }
-      handleInput({ target: { name: "password", value: "" } });
-      handleInput({ target: { name: "cnfPassword", value: "" } });
-      setSuccessData({ title: SAVE_SUCCESS_ALERT });
-    } catch (error) {
-      setErrorData({
-        title: SAVE_ERROR_ALERT,
-        list: [(error as any).response.data.detail],
-      });
+    if (password !== "") {
+      mutateResetPassword(
+        { user_id: userData!.id, password: { password } },
+        {
+          onSuccess: successUpdates,
+          onError: errorUpdates,
+        },
+      );
+    }
+    if (gradient !== "") {
+      mutatePatchUser(
+        { user_id: userData!.id, user: { profile_image: gradient } },
+        {
+          onSuccess: successUpdates,
+          onError: errorUpdates,
+        },
+      );
     }
   }
+
+  const errorUpdates = (error) => {
+    setErrorData({
+      title: SAVE_ERROR_ALERT,
+      list: [(error as any).response.data.detail],
+    });
+  };
+
+  const successUpdates = () => {
+    if (gradient !== "") {
+      let newUserData = cloneDeep(userData);
+      newUserData!.profile_image = gradient;
+      setUserData(newUserData);
+    }
+    handleInput({ target: { name: "password", value: "" } });
+    handleInput({ target: { name: "cnfPassword", value: "" } });
+    setSuccessData({ title: SAVE_SUCCESS_ALERT });
+  };
 
   function handleInput({
     target: { name, value },

@@ -303,6 +303,9 @@ ifdef base
 endif
 
 ifdef main
+	make install_frontendci
+	make build_frontend
+	make build_langflow_base
 	make build_langflow
 endif
 
@@ -389,7 +392,7 @@ update: ## update dependencies
 	poetry update
 
 publish_base:
-	cd src/backend/base && poetry publish
+	cd src/backend/base && poetry publish --skip-existing
 
 publish_langflow:
 	poetry publish
