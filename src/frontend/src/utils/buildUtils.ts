@@ -309,7 +309,7 @@ async function buildVertex({
     onBuildError!(
       "Error Building Component",
       [
-        (error as AxiosError<any>).response?.data?.detail ??
+        (error as AxiosError<any>).response?.data?.detail || (error as AxiosError<any>).response?.data?.message ||
           "An unexpected error occurred while building the Component. Please try again.",
       ],
       verticesIds.map((id) => ({ id })),

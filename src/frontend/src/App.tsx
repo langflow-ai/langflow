@@ -45,6 +45,7 @@ export default function App() {
   const {
     data: healthData,
     isFetching: fetchingHealth,
+    isLoading: isLoadingHealth,
     isError: isErrorHealth,
     refetch,
   } = useGetHealthQuery();
@@ -137,7 +138,7 @@ export default function App() {
               message={FETCH_ERROR_MESSAGE}
               openModal={
                 isErrorHealth ||
-                !healthData ||
+                (!healthData && isLoadingHealth) ||
                 (healthData &&
                   Object.values(healthData).some((value) => value !== "ok"))
               }
