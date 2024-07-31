@@ -82,7 +82,7 @@ class SubFlowComponent(Component):
     outputs = [Output(name="flow_outputs", display_name="Flow Outputs", method="generate_results")]
 
     async def generate_results(self) -> List[Data]:
-        tweaks = {}
+        tweaks: dotdict = {}
         for field in self._attributes.keys():
             if field != "flow_name":
                 [node, name] = field.split("|")
@@ -95,11 +95,11 @@ class SubFlowComponent(Component):
             flow_name=self.flow_name,
             output_type="all",
         )
+        data: list[Data] = []
         if not run_outputs:
-            return {}
+            return data
         run_output = run_outputs[0]
 
-        data = []
         if run_output is not None:
             for output in run_output.outputs:
                 if output:
