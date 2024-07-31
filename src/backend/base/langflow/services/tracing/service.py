@@ -194,8 +194,8 @@ class TracingService(Service):
         metadata: Optional[Dict[str, Any]] = None,
     ):
         trace_id = trace_name
-        if component.vertex:
-            trace_id = component.vertex.id
+        if component._vertex:
+            trace_id = component._vertex.id
         trace_type = component.trace_type
         self._start_traces(
             trace_id,
@@ -203,7 +203,7 @@ class TracingService(Service):
             trace_type,
             self._cleanup_inputs(inputs),
             metadata,
-            component.vertex,
+            component._vertex,
         )
         try:
             yield self
