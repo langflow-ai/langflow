@@ -6,7 +6,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "HierarchicalCrewComponent",
-            "id": "HierarchicalCrewComponent-Y0Uvf",
+            "id": "HierarchicalCrewComponent-nr5SU",
             "name": "output",
             "output_types": [
               "Message"
@@ -14,26 +14,26 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-VzVJK",
+            "id": "ChatOutput-gW8wQ",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-HierarchicalCrewComponent-Y0Uvf{œdataTypeœ:œHierarchicalCrewComponentœ,œidœ:œHierarchicalCrewComponent-Y0Uvfœ,œnameœ:œoutputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-VzVJK{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-VzVJKœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-HierarchicalCrewComponent-nr5SU{œdataTypeœ:œHierarchicalCrewComponentœ,œidœ:œHierarchicalCrewComponent-nr5SUœ,œnameœ:œoutputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-gW8wQ{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-gW8wQœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "HierarchicalCrewComponent-Y0Uvf",
-        "sourceHandle": "{œdataTypeœ: œHierarchicalCrewComponentœ, œidœ: œHierarchicalCrewComponent-Y0Uvfœ, œnameœ: œoutputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-VzVJK",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-VzVJKœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "HierarchicalCrewComponent-nr5SU",
+        "sourceHandle": "{œdataTypeœ: œHierarchicalCrewComponentœ, œidœ: œHierarchicalCrewComponent-nr5SUœ, œnameœ: œoutputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-gW8wQ",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-gW8wQœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "HierarchicalTaskComponent",
-            "id": "HierarchicalTaskComponent-hE8H5",
+            "id": "HierarchicalTaskComponent-AATCe",
             "name": "task_output",
             "output_types": [
               "HierarchicalTask"
@@ -41,26 +41,26 @@
           },
           "targetHandle": {
             "fieldName": "tasks",
-            "id": "HierarchicalCrewComponent-Y0Uvf",
+            "id": "HierarchicalCrewComponent-nr5SU",
             "inputTypes": [
               "HierarchicalTask"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-HierarchicalTaskComponent-hE8H5{œdataTypeœ:œHierarchicalTaskComponentœ,œidœ:œHierarchicalTaskComponent-hE8H5œ,œnameœ:œtask_outputœ,œoutput_typesœ:[œHierarchicalTaskœ]}-HierarchicalCrewComponent-Y0Uvf{œfieldNameœ:œtasksœ,œidœ:œHierarchicalCrewComponent-Y0Uvfœ,œinputTypesœ:[œHierarchicalTaskœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-HierarchicalTaskComponent-AATCe{œdataTypeœ:œHierarchicalTaskComponentœ,œidœ:œHierarchicalTaskComponent-AATCeœ,œnameœ:œtask_outputœ,œoutput_typesœ:[œHierarchicalTaskœ]}-HierarchicalCrewComponent-nr5SU{œfieldNameœ:œtasksœ,œidœ:œHierarchicalCrewComponent-nr5SUœ,œinputTypesœ:[œHierarchicalTaskœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "HierarchicalTaskComponent-hE8H5",
-        "sourceHandle": "{œdataTypeœ: œHierarchicalTaskComponentœ, œidœ: œHierarchicalTaskComponent-hE8H5œ, œnameœ: œtask_outputœ, œoutput_typesœ: [œHierarchicalTaskœ]}",
-        "target": "HierarchicalCrewComponent-Y0Uvf",
-        "targetHandle": "{œfieldNameœ: œtasksœ, œidœ: œHierarchicalCrewComponent-Y0Uvfœ, œinputTypesœ: [œHierarchicalTaskœ], œtypeœ: œotherœ}"
+        "source": "HierarchicalTaskComponent-AATCe",
+        "sourceHandle": "{œdataTypeœ: œHierarchicalTaskComponentœ, œidœ: œHierarchicalTaskComponent-AATCeœ, œnameœ: œtask_outputœ, œoutput_typesœ: [œHierarchicalTaskœ]}",
+        "target": "HierarchicalCrewComponent-nr5SU",
+        "targetHandle": "{œfieldNameœ: œtasksœ, œidœ: œHierarchicalCrewComponent-nr5SUœ, œinputTypesœ: [œHierarchicalTaskœ], œtypeœ: œotherœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "CrewAIAgentComponent",
-            "id": "CrewAIAgentComponent-EbpXd",
+            "id": "CrewAIAgentComponent-TGBpb",
             "name": "output",
             "output_types": [
               "Agent"
@@ -68,53 +68,26 @@
           },
           "targetHandle": {
             "fieldName": "agents",
-            "id": "HierarchicalCrewComponent-Y0Uvf",
+            "id": "HierarchicalCrewComponent-nr5SU",
             "inputTypes": [
               "Agent"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-CrewAIAgentComponent-EbpXd{œdataTypeœ:œCrewAIAgentComponentœ,œidœ:œCrewAIAgentComponent-EbpXdœ,œnameœ:œoutputœ,œoutput_typesœ:[œAgentœ]}-HierarchicalCrewComponent-Y0Uvf{œfieldNameœ:œagentsœ,œidœ:œHierarchicalCrewComponent-Y0Uvfœ,œinputTypesœ:[œAgentœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-CrewAIAgentComponent-TGBpb{œdataTypeœ:œCrewAIAgentComponentœ,œidœ:œCrewAIAgentComponent-TGBpbœ,œnameœ:œoutputœ,œoutput_typesœ:[œAgentœ]}-HierarchicalCrewComponent-nr5SU{œfieldNameœ:œagentsœ,œidœ:œHierarchicalCrewComponent-nr5SUœ,œinputTypesœ:[œAgentœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "CrewAIAgentComponent-EbpXd",
-        "sourceHandle": "{œdataTypeœ: œCrewAIAgentComponentœ, œidœ: œCrewAIAgentComponent-EbpXdœ, œnameœ: œoutputœ, œoutput_typesœ: [œAgentœ]}",
-        "target": "HierarchicalCrewComponent-Y0Uvf",
-        "targetHandle": "{œfieldNameœ: œagentsœ, œidœ: œHierarchicalCrewComponent-Y0Uvfœ, œinputTypesœ: [œAgentœ], œtypeœ: œotherœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "OpenAIModel",
-            "id": "OpenAIModel-Yjtpu",
-            "name": "model_output",
-            "output_types": [
-              "LanguageModel"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "llm",
-            "id": "CrewAIAgentComponent-EbpXd",
-            "inputTypes": [
-              "LanguageModel"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-OpenAIModel-Yjtpu{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-Yjtpuœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-CrewAIAgentComponent-EbpXd{œfieldNameœ:œllmœ,œidœ:œCrewAIAgentComponent-EbpXdœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
-        "selected": false,
-        "source": "OpenAIModel-Yjtpu",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-Yjtpuœ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
-        "target": "CrewAIAgentComponent-EbpXd",
-        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œCrewAIAgentComponent-EbpXdœ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
+        "source": "CrewAIAgentComponent-TGBpb",
+        "sourceHandle": "{œdataTypeœ: œCrewAIAgentComponentœ, œidœ: œCrewAIAgentComponent-TGBpbœ, œnameœ: œoutputœ, œoutput_typesœ: [œAgentœ]}",
+        "target": "HierarchicalCrewComponent-nr5SU",
+        "targetHandle": "{œfieldNameœ: œagentsœ, œidœ: œHierarchicalCrewComponent-nr5SUœ, œinputTypesœ: [œAgentœ], œtypeœ: œotherœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "CrewAIAgentComponent",
-            "id": "CrewAIAgentComponent-9D8ao",
+            "id": "CrewAIAgentComponent-Gy3ow",
             "name": "output",
             "output_types": [
               "Agent"
@@ -122,53 +95,26 @@
           },
           "targetHandle": {
             "fieldName": "manager_agent",
-            "id": "HierarchicalCrewComponent-Y0Uvf",
+            "id": "HierarchicalCrewComponent-nr5SU",
             "inputTypes": [
               "Agent"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-CrewAIAgentComponent-9D8ao{œdataTypeœ:œCrewAIAgentComponentœ,œidœ:œCrewAIAgentComponent-9D8aoœ,œnameœ:œoutputœ,œoutput_typesœ:[œAgentœ]}-HierarchicalCrewComponent-Y0Uvf{œfieldNameœ:œmanager_agentœ,œidœ:œHierarchicalCrewComponent-Y0Uvfœ,œinputTypesœ:[œAgentœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-CrewAIAgentComponent-Gy3ow{œdataTypeœ:œCrewAIAgentComponentœ,œidœ:œCrewAIAgentComponent-Gy3owœ,œnameœ:œoutputœ,œoutput_typesœ:[œAgentœ]}-HierarchicalCrewComponent-nr5SU{œfieldNameœ:œmanager_agentœ,œidœ:œHierarchicalCrewComponent-nr5SUœ,œinputTypesœ:[œAgentœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "CrewAIAgentComponent-9D8ao",
-        "sourceHandle": "{œdataTypeœ: œCrewAIAgentComponentœ, œidœ: œCrewAIAgentComponent-9D8aoœ, œnameœ: œoutputœ, œoutput_typesœ: [œAgentœ]}",
-        "target": "HierarchicalCrewComponent-Y0Uvf",
-        "targetHandle": "{œfieldNameœ: œmanager_agentœ, œidœ: œHierarchicalCrewComponent-Y0Uvfœ, œinputTypesœ: [œAgentœ], œtypeœ: œotherœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "OpenAIModel",
-            "id": "OpenAIModel-HgNnu",
-            "name": "model_output",
-            "output_types": [
-              "LanguageModel"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "llm",
-            "id": "CrewAIAgentComponent-9D8ao",
-            "inputTypes": [
-              "LanguageModel"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-OpenAIModel-HgNnu{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-HgNnuœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-CrewAIAgentComponent-9D8ao{œfieldNameœ:œllmœ,œidœ:œCrewAIAgentComponent-9D8aoœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
-        "selected": false,
-        "source": "OpenAIModel-HgNnu",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-HgNnuœ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
-        "target": "CrewAIAgentComponent-9D8ao",
-        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œCrewAIAgentComponent-9D8aoœ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
+        "source": "CrewAIAgentComponent-Gy3ow",
+        "sourceHandle": "{œdataTypeœ: œCrewAIAgentComponentœ, œidœ: œCrewAIAgentComponent-Gy3owœ, œnameœ: œoutputœ, œoutput_typesœ: [œAgentœ]}",
+        "target": "HierarchicalCrewComponent-nr5SU",
+        "targetHandle": "{œfieldNameœ: œmanager_agentœ, œidœ: œHierarchicalCrewComponent-nr5SUœ, œinputTypesœ: [œAgentœ], œtypeœ: œotherœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-eqGhn",
+            "id": "Prompt-AvEYw",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -176,25 +122,25 @@
           },
           "targetHandle": {
             "fieldName": "task_description",
-            "id": "HierarchicalTaskComponent-hE8H5",
+            "id": "HierarchicalTaskComponent-AATCe",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-eqGhn{œdataTypeœ:œPromptœ,œidœ:œPrompt-eqGhnœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-HierarchicalTaskComponent-hE8H5{œfieldNameœ:œtask_descriptionœ,œidœ:œHierarchicalTaskComponent-hE8H5œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Prompt-eqGhn",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-eqGhnœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "HierarchicalTaskComponent-hE8H5",
-        "targetHandle": "{œfieldNameœ: œtask_descriptionœ, œidœ: œHierarchicalTaskComponent-hE8H5œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-Prompt-AvEYw{œdataTypeœ:œPromptœ,œidœ:œPrompt-AvEYwœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-HierarchicalTaskComponent-AATCe{œfieldNameœ:œtask_descriptionœ,œidœ:œHierarchicalTaskComponent-AATCeœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "Prompt-AvEYw",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-AvEYwœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "HierarchicalTaskComponent-AATCe",
+        "targetHandle": "{œfieldNameœ: œtask_descriptionœ, œidœ: œHierarchicalTaskComponent-AATCeœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-xgRl9",
+            "id": "ChatInput-LSRcG",
             "name": "message",
             "output_types": [
               "Message"
@@ -202,7 +148,7 @@
           },
           "targetHandle": {
             "fieldName": "query",
-            "id": "Prompt-eqGhn",
+            "id": "Prompt-AvEYw",
             "inputTypes": [
               "Message",
               "Text"
@@ -210,18 +156,18 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-xgRl9{œdataTypeœ:œChatInputœ,œidœ:œChatInput-xgRl9œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-eqGhn{œfieldNameœ:œqueryœ,œidœ:œPrompt-eqGhnœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "ChatInput-xgRl9",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-xgRl9œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-eqGhn",
-        "targetHandle": "{œfieldNameœ: œqueryœ, œidœ: œPrompt-eqGhnœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-ChatInput-LSRcG{œdataTypeœ:œChatInputœ,œidœ:œChatInput-LSRcGœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-AvEYw{œfieldNameœ:œqueryœ,œidœ:œPrompt-AvEYwœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "ChatInput-LSRcG",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-LSRcGœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-AvEYw",
+        "targetHandle": "{œfieldNameœ: œqueryœ, œidœ: œPrompt-AvEYwœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "CrewAIAgentComponent",
-            "id": "CrewAIAgentComponent-UMpxO",
+            "id": "CrewAIAgentComponent-CElph",
             "name": "output",
             "output_types": [
               "Agent"
@@ -229,25 +175,50 @@
           },
           "targetHandle": {
             "fieldName": "agents",
-            "id": "HierarchicalCrewComponent-Y0Uvf",
+            "id": "HierarchicalCrewComponent-nr5SU",
             "inputTypes": [
               "Agent"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-CrewAIAgentComponent-UMpxO{œdataTypeœ:œCrewAIAgentComponentœ,œidœ:œCrewAIAgentComponent-UMpxOœ,œnameœ:œoutputœ,œoutput_typesœ:[œAgentœ]}-HierarchicalCrewComponent-Y0Uvf{œfieldNameœ:œagentsœ,œidœ:œHierarchicalCrewComponent-Y0Uvfœ,œinputTypesœ:[œAgentœ],œtypeœ:œotherœ}",
-        "source": "CrewAIAgentComponent-UMpxO",
-        "sourceHandle": "{œdataTypeœ: œCrewAIAgentComponentœ, œidœ: œCrewAIAgentComponent-UMpxOœ, œnameœ: œoutputœ, œoutput_typesœ: [œAgentœ]}",
-        "target": "HierarchicalCrewComponent-Y0Uvf",
-        "targetHandle": "{œfieldNameœ: œagentsœ, œidœ: œHierarchicalCrewComponent-Y0Uvfœ, œinputTypesœ: [œAgentœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-CrewAIAgentComponent-CElph{œdataTypeœ:œCrewAIAgentComponentœ,œidœ:œCrewAIAgentComponent-CElphœ,œnameœ:œoutputœ,œoutput_typesœ:[œAgentœ]}-HierarchicalCrewComponent-nr5SU{œfieldNameœ:œagentsœ,œidœ:œHierarchicalCrewComponent-nr5SUœ,œinputTypesœ:[œAgentœ],œtypeœ:œotherœ}",
+        "source": "CrewAIAgentComponent-CElph",
+        "sourceHandle": "{œdataTypeœ: œCrewAIAgentComponentœ, œidœ: œCrewAIAgentComponent-CElphœ, œnameœ: œoutputœ, œoutput_typesœ: [œAgentœ]}",
+        "target": "HierarchicalCrewComponent-nr5SU",
+        "targetHandle": "{œfieldNameœ: œagentsœ, œidœ: œHierarchicalCrewComponent-nr5SUœ, œinputTypesœ: [œAgentœ], œtypeœ: œotherœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
+            "dataType": "SearchAPI",
+            "id": "SearchAPI-rdLCH",
+            "name": "api_build_tool",
+            "output_types": [
+              "Sequence"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "tools",
+            "id": "CrewAIAgentComponent-TGBpb",
+            "inputTypes": [
+              "Tool"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-SearchAPI-rdLCH{œdataTypeœ:œSearchAPIœ,œidœ:œSearchAPI-rdLCHœ,œnameœ:œapi_build_toolœ,œoutput_typesœ:[œSequenceœ]}-CrewAIAgentComponent-TGBpb{œfieldNameœ:œtoolsœ,œidœ:œCrewAIAgentComponent-TGBpbœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "source": "SearchAPI-rdLCH",
+        "sourceHandle": "{œdataTypeœ: œSearchAPIœ, œidœ: œSearchAPI-rdLCHœ, œnameœ: œapi_build_toolœ, œoutput_typesœ: [œSequenceœ]}",
+        "target": "CrewAIAgentComponent-TGBpb",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œCrewAIAgentComponent-TGBpbœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+      },
+      {
+        "data": {
+          "sourceHandle": {
             "dataType": "OpenAIModel",
-            "id": "OpenAIModel-Yjtpu",
+            "id": "OpenAIModel-HtoB7",
             "name": "model_output",
             "output_types": [
               "LanguageModel"
@@ -255,44 +226,68 @@
           },
           "targetHandle": {
             "fieldName": "llm",
-            "id": "CrewAIAgentComponent-UMpxO",
+            "id": "CrewAIAgentComponent-TGBpb",
             "inputTypes": [
               "LanguageModel"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-OpenAIModel-Yjtpu{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-Yjtpuœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-CrewAIAgentComponent-UMpxO{œfieldNameœ:œllmœ,œidœ:œCrewAIAgentComponent-UMpxOœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
-        "source": "OpenAIModel-Yjtpu",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-Yjtpuœ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
-        "target": "CrewAIAgentComponent-UMpxO",
-        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œCrewAIAgentComponent-UMpxOœ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-OpenAIModel-HtoB7{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-HtoB7œ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-CrewAIAgentComponent-TGBpb{œfieldNameœ:œllmœ,œidœ:œCrewAIAgentComponent-TGBpbœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
+        "source": "OpenAIModel-HtoB7",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-HtoB7œ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
+        "target": "CrewAIAgentComponent-TGBpb",
+        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œCrewAIAgentComponent-TGBpbœ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
       },
       {
-        "className": "",
         "data": {
           "sourceHandle": {
-            "dataType": "SearchAPI",
-            "id": "SearchAPI-Yokat",
-            "name": "api_build_tool",
+            "dataType": "OpenAIModel",
+            "id": "OpenAIModel-HtoB7",
+            "name": "model_output",
             "output_types": [
-              "Tool"
+              "LanguageModel"
             ]
           },
           "targetHandle": {
-            "fieldName": "tools",
-            "id": "CrewAIAgentComponent-EbpXd",
+            "fieldName": "llm",
+            "id": "CrewAIAgentComponent-CElph",
             "inputTypes": [
-              "Tool"
+              "LanguageModel"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-SearchAPI-Yokat{œdataTypeœ:œSearchAPIœ,œidœ:œSearchAPI-Yokatœ,œnameœ:œapi_build_toolœ,œoutput_typesœ:[œToolœ]}-CrewAIAgentComponent-EbpXd{œfieldNameœ:œtoolsœ,œidœ:œCrewAIAgentComponent-EbpXdœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
-        "source": "SearchAPI-Yokat",
-        "sourceHandle": "{œdataTypeœ: œSearchAPIœ, œidœ: œSearchAPI-Yokatœ, œnameœ: œapi_build_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "CrewAIAgentComponent-EbpXd",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œCrewAIAgentComponent-EbpXdœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-OpenAIModel-HtoB7{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-HtoB7œ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-CrewAIAgentComponent-CElph{œfieldNameœ:œllmœ,œidœ:œCrewAIAgentComponent-CElphœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
+        "source": "OpenAIModel-HtoB7",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-HtoB7œ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
+        "target": "CrewAIAgentComponent-CElph",
+        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œCrewAIAgentComponent-CElphœ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "OpenAIModel",
+            "id": "OpenAIModel-HtoB7",
+            "name": "model_output",
+            "output_types": [
+              "LanguageModel"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "llm",
+            "id": "CrewAIAgentComponent-Gy3ow",
+            "inputTypes": [
+              "LanguageModel"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-OpenAIModel-HtoB7{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-HtoB7œ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-CrewAIAgentComponent-Gy3ow{œfieldNameœ:œllmœ,œidœ:œCrewAIAgentComponent-Gy3owœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
+        "source": "OpenAIModel-HtoB7",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-HtoB7œ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
+        "target": "CrewAIAgentComponent-Gy3ow",
+        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œCrewAIAgentComponent-Gy3owœ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
@@ -300,7 +295,7 @@
         "data": {
           "description": "Represents a group of agents, defining how they should collaborate and the tasks they should perform.",
           "display_name": "Hierarchical Crew",
-          "id": "HierarchicalCrewComponent-Y0Uvf",
+          "id": "HierarchicalCrewComponent-nr5SU",
           "node": {
             "base_classes": [
               "Message"
@@ -531,320 +526,21 @@
           "type": "HierarchicalCrewComponent"
         },
         "dragging": false,
-        "height": 516,
-        "id": "HierarchicalCrewComponent-Y0Uvf",
+        "height": 498,
+        "id": "HierarchicalCrewComponent-nr5SU",
         "position": {
           "x": 568,
           "y": 352.296875
         },
         "selected": false,
         "type": "genericNode",
-        "width": 432
-      },
-      {
-        "data": {
-          "description": "Generates text using OpenAI LLMs.",
-          "display_name": "OpenAI",
-          "id": "OpenAIModel-Yjtpu",
-          "node": {
-            "base_classes": [
-              "LanguageModel",
-              "Message"
-            ],
-            "beta": false,
-            "conditional_paths": [],
-            "custom_fields": {},
-            "description": "Generates text using OpenAI LLMs.",
-            "display_name": "OpenAI",
-            "documentation": "",
-            "edited": false,
-            "field_order": [
-              "input_value",
-              "system_message",
-              "stream",
-              "max_tokens",
-              "model_kwargs",
-              "json_mode",
-              "output_schema",
-              "model_name",
-              "openai_api_base",
-              "api_key",
-              "temperature",
-              "seed"
-            ],
-            "frozen": false,
-            "icon": "OpenAI",
-            "output_types": [],
-            "outputs": [
-              {
-                "cache": true,
-                "display_name": "Text",
-                "method": "text_response",
-                "name": "text_output",
-                "selected": "Message",
-                "types": [
-                  "Message"
-                ],
-                "value": "__UNDEFINED__"
-              },
-              {
-                "cache": true,
-                "display_name": "Language Model",
-                "method": "build_model",
-                "name": "model_output",
-                "selected": "LanguageModel",
-                "types": [
-                  "LanguageModel"
-                ],
-                "value": "__UNDEFINED__"
-              }
-            ],
-            "pinned": false,
-            "template": {
-              "_type": "Component",
-              "api_key": {
-                "advanced": false,
-                "display_name": "OpenAI API Key",
-                "dynamic": false,
-                "info": "The OpenAI API Key to use for the OpenAI model.",
-                "input_types": [],
-                "load_from_db": true,
-                "name": "api_key",
-                "password": true,
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": ""
-              },
-              "code": {
-                "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "import operator\nfrom functools import reduce\n\nfrom langflow.field_typing.range_spec import RangeSpec\nfrom langchain_openai import ChatOpenAI\nfrom pydantic.v1 import SecretStr\n\nfrom langflow.base.models.model import LCModelComponent\nfrom langflow.base.models.openai_constants import OPENAI_MODEL_NAMES\nfrom langflow.field_typing import LanguageModel\nfrom langflow.inputs import (\n    BoolInput,\n    DictInput,\n    DropdownInput,\n    FloatInput,\n    IntInput,\n    SecretStrInput,\n    StrInput,\n)\n\n\nclass OpenAIModelComponent(LCModelComponent):\n    display_name = \"OpenAI\"\n    description = \"Generates text using OpenAI LLMs.\"\n    icon = \"OpenAI\"\n    name = \"OpenAIModel\"\n\n    inputs = LCModelComponent._base_inputs + [\n        IntInput(\n            name=\"max_tokens\",\n            display_name=\"Max Tokens\",\n            advanced=True,\n            info=\"The maximum number of tokens to generate. Set to 0 for unlimited tokens.\",\n            range_spec=RangeSpec(min=0, max=128000),\n        ),\n        DictInput(name=\"model_kwargs\", display_name=\"Model Kwargs\", advanced=True),\n        BoolInput(\n            name=\"json_mode\",\n            display_name=\"JSON Mode\",\n            advanced=True,\n            info=\"If True, it will output JSON regardless of passing a schema.\",\n        ),\n        DictInput(\n            name=\"output_schema\",\n            is_list=True,\n            display_name=\"Schema\",\n            advanced=True,\n            info=\"The schema for the Output of the model. You must pass the word JSON in the prompt. If left blank, JSON mode will be disabled.\",\n        ),\n        DropdownInput(\n            name=\"model_name\",\n            display_name=\"Model Name\",\n            advanced=False,\n            options=OPENAI_MODEL_NAMES,\n            value=OPENAI_MODEL_NAMES[0],\n        ),\n        StrInput(\n            name=\"openai_api_base\",\n            display_name=\"OpenAI API Base\",\n            advanced=True,\n            info=\"The base URL of the OpenAI API. Defaults to https://api.openai.com/v1. You can change this to use other APIs like JinaChat, LocalAI and Prem.\",\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"OpenAI API Key\",\n            info=\"The OpenAI API Key to use for the OpenAI model.\",\n            advanced=False,\n            value=\"OPENAI_API_KEY\",\n        ),\n        FloatInput(name=\"temperature\", display_name=\"Temperature\", value=0.1),\n        IntInput(\n            name=\"seed\",\n            display_name=\"Seed\",\n            info=\"The seed controls the reproducibility of the job.\",\n            advanced=True,\n            value=1,\n        ),\n    ]\n\n    def build_model(self) -> LanguageModel:  # type: ignore[type-var]\n        # self.output_schema is a list of dictionaries\n        # let's convert it to a dictionary\n        output_schema_dict: dict[str, str] = reduce(operator.ior, self.output_schema or {}, {})\n        openai_api_key = self.api_key\n        temperature = self.temperature\n        model_name: str = self.model_name\n        max_tokens = self.max_tokens\n        model_kwargs = self.model_kwargs or {}\n        openai_api_base = self.openai_api_base or \"https://api.openai.com/v1\"\n        json_mode = bool(output_schema_dict) or self.json_mode\n        seed = self.seed\n\n        if openai_api_key:\n            api_key = SecretStr(openai_api_key)\n        else:\n            api_key = None\n        output = ChatOpenAI(\n            max_tokens=max_tokens or None,\n            model_kwargs=model_kwargs,\n            model=model_name,\n            base_url=openai_api_base,\n            api_key=api_key,\n            temperature=temperature or 0.1,\n            seed=seed,\n        )\n        if json_mode:\n            if output_schema_dict:\n                output = output.with_structured_output(schema=output_schema_dict, method=\"json_mode\")  # type: ignore\n            else:\n                output = output.bind(response_format={\"type\": \"json_object\"})  # type: ignore\n\n        return output  # type: ignore\n\n    def _get_exception_message(self, e: Exception):\n        \"\"\"\n        Get a message from an OpenAI exception.\n\n        Args:\n            exception (Exception): The exception to get the message from.\n\n        Returns:\n            str: The message from the exception.\n        \"\"\"\n\n        try:\n            from openai import BadRequestError\n        except ImportError:\n            return\n        if isinstance(e, BadRequestError):\n            message = e.body.get(\"message\")  # type: ignore\n            if message:\n                return message\n        return\n"
-              },
-              "input_value": {
-                "advanced": false,
-                "display_name": "Input",
-                "dynamic": false,
-                "info": "",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "load_from_db": false,
-                "name": "input_value",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "json_mode": {
-                "advanced": true,
-                "display_name": "JSON Mode",
-                "dynamic": false,
-                "info": "If True, it will output JSON regardless of passing a schema.",
-                "list": false,
-                "name": "json_mode",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": false
-              },
-              "max_tokens": {
-                "advanced": true,
-                "display_name": "Max Tokens",
-                "dynamic": false,
-                "info": "The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
-                "list": false,
-                "name": "max_tokens",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "int",
-                "value": ""
-              },
-              "model_kwargs": {
-                "advanced": true,
-                "display_name": "Model Kwargs",
-                "dynamic": false,
-                "info": "",
-                "list": false,
-                "name": "model_kwargs",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_input": true,
-                "type": "dict",
-                "value": {}
-              },
-              "model_name": {
-                "advanced": false,
-                "display_name": "Model Name",
-                "dynamic": false,
-                "info": "",
-                "load_from_db": false,
-                "name": "model_name",
-                "options": [
-                  "gpt-4o-mini",
-                  "gpt-4o",
-                  "gpt-4-turbo",
-                  "gpt-4-turbo-preview",
-                  "gpt-4",
-                  "gpt-3.5-turbo",
-                  "gpt-3.5-turbo-0125"
-                ],
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "gpt-4o"
-              },
-              "openai_api_base": {
-                "advanced": true,
-                "display_name": "OpenAI API Base",
-                "dynamic": false,
-                "info": "The base URL of the OpenAI API. Defaults to https://api.openai.com/v1. You can change this to use other APIs like JinaChat, LocalAI and Prem.",
-                "list": false,
-                "load_from_db": false,
-                "name": "openai_api_base",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "output_schema": {
-                "advanced": true,
-                "display_name": "Schema",
-                "dynamic": false,
-                "info": "The schema for the Output of the model. You must pass the word JSON in the prompt. If left blank, JSON mode will be disabled.",
-                "list": true,
-                "name": "output_schema",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_input": true,
-                "type": "dict",
-                "value": {}
-              },
-              "seed": {
-                "advanced": true,
-                "display_name": "Seed",
-                "dynamic": false,
-                "info": "The seed controls the reproducibility of the job.",
-                "list": false,
-                "name": "seed",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "int",
-                "value": 1
-              },
-              "stream": {
-                "advanced": true,
-                "display_name": "Stream",
-                "dynamic": false,
-                "info": "Stream the response from the model. Streaming works only in Chat.",
-                "list": false,
-                "name": "stream",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": false
-              },
-              "system_message": {
-                "advanced": true,
-                "display_name": "System Message",
-                "dynamic": false,
-                "info": "System message to pass to the model.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "load_from_db": false,
-                "name": "system_message",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "temperature": {
-                "advanced": false,
-                "display_name": "Temperature",
-                "dynamic": false,
-                "info": "",
-                "list": false,
-                "name": "temperature",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "float",
-                "value": 0.1
-              }
-            }
-          },
-          "type": "OpenAIModel"
-        },
-        "dragging": false,
-        "height": 700,
-        "id": "OpenAIModel-Yjtpu",
-        "position": {
-          "x": -1222.8457213471152,
-          "y": 699.9983009041272
-        },
-        "positionAbsolute": {
-          "x": -1222.8457213471152,
-          "y": 699.9983009041272
-        },
-        "selected": false,
-        "type": "genericNode",
-        "width": 432
+        "width": 384
       },
       {
         "data": {
           "description": "Display a chat message in the Playground.",
           "display_name": "Chat Output",
-          "id": "ChatOutput-VzVJK",
+          "id": "ChatOutput-gW8wQ",
           "node": {
             "base_classes": [
               "Message"
@@ -1019,8 +715,8 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "height": 347,
-        "id": "ChatOutput-VzVJK",
+        "height": 316,
+        "id": "ChatOutput-gW8wQ",
         "position": {
           "x": 1070.9148596889393,
           "y": 499.80777483894144
@@ -1031,13 +727,13 @@
         },
         "selected": false,
         "type": "genericNode",
-        "width": 432
+        "width": 384
       },
       {
         "data": {
           "description": "Each task must have a description, an expected output and an agent responsible for execution.",
           "display_name": "Hierarchical Task",
-          "id": "HierarchicalTaskComponent-hE8H5",
+          "id": "HierarchicalTaskComponent-AATCe",
           "node": {
             "base_classes": [
               "HierarchicalTask"
@@ -1156,8 +852,8 @@
           "type": "HierarchicalTaskComponent"
         },
         "dragging": false,
-        "height": 480,
-        "id": "HierarchicalTaskComponent-hE8H5",
+        "height": 434,
+        "id": "HierarchicalTaskComponent-AATCe",
         "position": {
           "x": 63.673086094601445,
           "y": -375.5883288441139
@@ -1168,13 +864,13 @@
         },
         "selected": false,
         "type": "genericNode",
-        "width": 432
+        "width": 384
       },
       {
         "data": {
           "description": "Represents an agent of CrewAI.",
           "display_name": "CrewAI Agent",
-          "id": "CrewAIAgentComponent-EbpXd",
+          "id": "CrewAIAgentComponent-TGBpb",
           "node": {
             "base_classes": [
               "Agent"
@@ -1414,8 +1110,8 @@
           "type": "CrewAIAgentComponent"
         },
         "dragging": false,
-        "height": 746,
-        "id": "CrewAIAgentComponent-EbpXd",
+        "height": 683,
+        "id": "CrewAIAgentComponent-TGBpb",
         "position": {
           "x": -479.3544836211363,
           "y": 184.85118314299666
@@ -1426,13 +1122,13 @@
         },
         "selected": false,
         "type": "genericNode",
-        "width": 432
+        "width": 384
       },
       {
         "data": {
           "description": "Represents an agent of CrewAI.",
           "display_name": "CrewAI Agent",
-          "id": "CrewAIAgentComponent-9D8ao",
+          "id": "CrewAIAgentComponent-Gy3ow",
           "node": {
             "base_classes": [
               "Agent"
@@ -1672,8 +1368,8 @@
           "type": "CrewAIAgentComponent"
         },
         "dragging": false,
-        "height": 746,
-        "id": "CrewAIAgentComponent-9D8ao",
+        "height": 683,
+        "id": "CrewAIAgentComponent-Gy3ow",
         "position": {
           "x": -451.69853654304495,
           "y": 1664.003205846104
@@ -1684,312 +1380,13 @@
         },
         "selected": false,
         "type": "genericNode",
-        "width": 432
-      },
-      {
-        "data": {
-          "description": "Generates text using OpenAI LLMs.",
-          "display_name": "OpenAI",
-          "id": "OpenAIModel-HgNnu",
-          "node": {
-            "base_classes": [
-              "LanguageModel",
-              "Message"
-            ],
-            "beta": false,
-            "conditional_paths": [],
-            "custom_fields": {},
-            "description": "Generates text using OpenAI LLMs.",
-            "display_name": "OpenAI",
-            "documentation": "",
-            "edited": false,
-            "field_order": [
-              "input_value",
-              "system_message",
-              "stream",
-              "max_tokens",
-              "model_kwargs",
-              "json_mode",
-              "output_schema",
-              "model_name",
-              "openai_api_base",
-              "api_key",
-              "temperature",
-              "seed"
-            ],
-            "frozen": false,
-            "icon": "OpenAI",
-            "output_types": [],
-            "outputs": [
-              {
-                "cache": true,
-                "display_name": "Text",
-                "method": "text_response",
-                "name": "text_output",
-                "selected": "Message",
-                "types": [
-                  "Message"
-                ],
-                "value": "__UNDEFINED__"
-              },
-              {
-                "cache": true,
-                "display_name": "Language Model",
-                "method": "build_model",
-                "name": "model_output",
-                "selected": "LanguageModel",
-                "types": [
-                  "LanguageModel"
-                ],
-                "value": "__UNDEFINED__"
-              }
-            ],
-            "pinned": false,
-            "template": {
-              "_type": "Component",
-              "api_key": {
-                "advanced": false,
-                "display_name": "OpenAI API Key",
-                "dynamic": false,
-                "info": "The OpenAI API Key to use for the OpenAI model.",
-                "input_types": [],
-                "load_from_db": true,
-                "name": "api_key",
-                "password": true,
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": ""
-              },
-              "code": {
-                "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "import operator\nfrom functools import reduce\n\nfrom langflow.field_typing.range_spec import RangeSpec\nfrom langchain_openai import ChatOpenAI\nfrom pydantic.v1 import SecretStr\n\nfrom langflow.base.models.model import LCModelComponent\nfrom langflow.base.models.openai_constants import OPENAI_MODEL_NAMES\nfrom langflow.field_typing import LanguageModel\nfrom langflow.inputs import (\n    BoolInput,\n    DictInput,\n    DropdownInput,\n    FloatInput,\n    IntInput,\n    SecretStrInput,\n    StrInput,\n)\n\n\nclass OpenAIModelComponent(LCModelComponent):\n    display_name = \"OpenAI\"\n    description = \"Generates text using OpenAI LLMs.\"\n    icon = \"OpenAI\"\n    name = \"OpenAIModel\"\n\n    inputs = LCModelComponent._base_inputs + [\n        IntInput(\n            name=\"max_tokens\",\n            display_name=\"Max Tokens\",\n            advanced=True,\n            info=\"The maximum number of tokens to generate. Set to 0 for unlimited tokens.\",\n            range_spec=RangeSpec(min=0, max=128000),\n        ),\n        DictInput(name=\"model_kwargs\", display_name=\"Model Kwargs\", advanced=True),\n        BoolInput(\n            name=\"json_mode\",\n            display_name=\"JSON Mode\",\n            advanced=True,\n            info=\"If True, it will output JSON regardless of passing a schema.\",\n        ),\n        DictInput(\n            name=\"output_schema\",\n            is_list=True,\n            display_name=\"Schema\",\n            advanced=True,\n            info=\"The schema for the Output of the model. You must pass the word JSON in the prompt. If left blank, JSON mode will be disabled.\",\n        ),\n        DropdownInput(\n            name=\"model_name\",\n            display_name=\"Model Name\",\n            advanced=False,\n            options=OPENAI_MODEL_NAMES,\n            value=OPENAI_MODEL_NAMES[0],\n        ),\n        StrInput(\n            name=\"openai_api_base\",\n            display_name=\"OpenAI API Base\",\n            advanced=True,\n            info=\"The base URL of the OpenAI API. Defaults to https://api.openai.com/v1. You can change this to use other APIs like JinaChat, LocalAI and Prem.\",\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"OpenAI API Key\",\n            info=\"The OpenAI API Key to use for the OpenAI model.\",\n            advanced=False,\n            value=\"OPENAI_API_KEY\",\n        ),\n        FloatInput(name=\"temperature\", display_name=\"Temperature\", value=0.1),\n        IntInput(\n            name=\"seed\",\n            display_name=\"Seed\",\n            info=\"The seed controls the reproducibility of the job.\",\n            advanced=True,\n            value=1,\n        ),\n    ]\n\n    def build_model(self) -> LanguageModel:  # type: ignore[type-var]\n        # self.output_schema is a list of dictionaries\n        # let's convert it to a dictionary\n        output_schema_dict: dict[str, str] = reduce(operator.ior, self.output_schema or {}, {})\n        openai_api_key = self.api_key\n        temperature = self.temperature\n        model_name: str = self.model_name\n        max_tokens = self.max_tokens\n        model_kwargs = self.model_kwargs or {}\n        openai_api_base = self.openai_api_base or \"https://api.openai.com/v1\"\n        json_mode = bool(output_schema_dict) or self.json_mode\n        seed = self.seed\n\n        if openai_api_key:\n            api_key = SecretStr(openai_api_key)\n        else:\n            api_key = None\n        output = ChatOpenAI(\n            max_tokens=max_tokens or None,\n            model_kwargs=model_kwargs,\n            model=model_name,\n            base_url=openai_api_base,\n            api_key=api_key,\n            temperature=temperature or 0.1,\n            seed=seed,\n        )\n        if json_mode:\n            if output_schema_dict:\n                output = output.with_structured_output(schema=output_schema_dict, method=\"json_mode\")  # type: ignore\n            else:\n                output = output.bind(response_format={\"type\": \"json_object\"})  # type: ignore\n\n        return output  # type: ignore\n\n    def _get_exception_message(self, e: Exception):\n        \"\"\"\n        Get a message from an OpenAI exception.\n\n        Args:\n            exception (Exception): The exception to get the message from.\n\n        Returns:\n            str: The message from the exception.\n        \"\"\"\n\n        try:\n            from openai import BadRequestError\n        except ImportError:\n            return\n        if isinstance(e, BadRequestError):\n            message = e.body.get(\"message\")  # type: ignore\n            if message:\n                return message\n        return\n"
-              },
-              "input_value": {
-                "advanced": false,
-                "display_name": "Input",
-                "dynamic": false,
-                "info": "",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "load_from_db": false,
-                "name": "input_value",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "json_mode": {
-                "advanced": true,
-                "display_name": "JSON Mode",
-                "dynamic": false,
-                "info": "If True, it will output JSON regardless of passing a schema.",
-                "list": false,
-                "name": "json_mode",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": false
-              },
-              "max_tokens": {
-                "advanced": true,
-                "display_name": "Max Tokens",
-                "dynamic": false,
-                "info": "The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
-                "list": false,
-                "name": "max_tokens",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "int",
-                "value": ""
-              },
-              "model_kwargs": {
-                "advanced": true,
-                "display_name": "Model Kwargs",
-                "dynamic": false,
-                "info": "",
-                "list": false,
-                "name": "model_kwargs",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_input": true,
-                "type": "dict",
-                "value": {}
-              },
-              "model_name": {
-                "advanced": false,
-                "display_name": "Model Name",
-                "dynamic": false,
-                "info": "",
-                "load_from_db": false,
-                "name": "model_name",
-                "options": [
-                  "gpt-4o-mini",
-                  "gpt-4o",
-                  "gpt-4-turbo",
-                  "gpt-4-turbo-preview",
-                  "gpt-4",
-                  "gpt-3.5-turbo",
-                  "gpt-3.5-turbo-0125"
-                ],
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "gpt-4o"
-              },
-              "openai_api_base": {
-                "advanced": true,
-                "display_name": "OpenAI API Base",
-                "dynamic": false,
-                "info": "The base URL of the OpenAI API. Defaults to https://api.openai.com/v1. You can change this to use other APIs like JinaChat, LocalAI and Prem.",
-                "list": false,
-                "load_from_db": false,
-                "name": "openai_api_base",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "output_schema": {
-                "advanced": true,
-                "display_name": "Schema",
-                "dynamic": false,
-                "info": "The schema for the Output of the model. You must pass the word JSON in the prompt. If left blank, JSON mode will be disabled.",
-                "list": true,
-                "name": "output_schema",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_input": true,
-                "type": "dict",
-                "value": {}
-              },
-              "seed": {
-                "advanced": true,
-                "display_name": "Seed",
-                "dynamic": false,
-                "info": "The seed controls the reproducibility of the job.",
-                "list": false,
-                "name": "seed",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "int",
-                "value": 1
-              },
-              "stream": {
-                "advanced": true,
-                "display_name": "Stream",
-                "dynamic": false,
-                "info": "Stream the response from the model. Streaming works only in Chat.",
-                "list": false,
-                "name": "stream",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": false
-              },
-              "system_message": {
-                "advanced": true,
-                "display_name": "System Message",
-                "dynamic": false,
-                "info": "System message to pass to the model.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "load_from_db": false,
-                "name": "system_message",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "temperature": {
-                "advanced": false,
-                "display_name": "Temperature",
-                "dynamic": false,
-                "info": "",
-                "list": false,
-                "name": "temperature",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "float",
-                "value": 0.1
-              }
-            }
-          },
-          "type": "OpenAIModel"
-        },
-        "dragging": false,
-        "height": 700,
-        "id": "OpenAIModel-HgNnu",
-        "position": {
-          "x": -1157.0105401589535,
-          "y": 1699.4665001507685
-        },
-        "positionAbsolute": {
-          "x": -1157.0105401589535,
-          "y": 1699.4665001507685
-        },
-        "selected": false,
-        "type": "genericNode",
-        "width": 432
+        "width": 384
       },
       {
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-eqGhn",
+          "id": "Prompt-AvEYw",
           "node": {
             "base_classes": [
               "Message"
@@ -2095,8 +1492,8 @@
           "type": "Prompt"
         },
         "dragging": false,
-        "height": 475,
-        "id": "Prompt-eqGhn",
+        "height": 430,
+        "id": "Prompt-AvEYw",
         "position": {
           "x": -561.9017558579421,
           "y": -433.5913161630874
@@ -2107,11 +1504,11 @@
         },
         "selected": false,
         "type": "genericNode",
-        "width": 432
+        "width": 384
       },
       {
         "data": {
-          "id": "ChatInput-xgRl9",
+          "id": "ChatInput-LSRcG",
           "node": {
             "base_classes": [
               "Message"
@@ -2308,8 +1705,8 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "height": 347,
-        "id": "ChatInput-xgRl9",
+        "height": 316,
+        "id": "ChatInput-LSRcG",
         "position": {
           "x": -1227.1161422332996,
           "y": -380.26504479310324
@@ -2320,13 +1717,13 @@
         },
         "selected": false,
         "type": "genericNode",
-        "width": 432
+        "width": 384
       },
       {
         "data": {
           "description": "Represents an agent of CrewAI.",
           "display_name": "CrewAI Agent",
-          "id": "CrewAIAgentComponent-UMpxO",
+          "id": "CrewAIAgentComponent-CElph",
           "node": {
             "base_classes": [
               "Agent"
@@ -2566,8 +1963,8 @@
           "type": "CrewAIAgentComponent"
         },
         "dragging": false,
-        "height": 746,
-        "id": "CrewAIAgentComponent-UMpxO",
+        "height": 683,
+        "id": "CrewAIAgentComponent-CElph",
         "position": {
           "x": -397.2627184897183,
           "y": 892.6280687419107
@@ -2578,11 +1975,11 @@
         },
         "selected": false,
         "type": "genericNode",
-        "width": 432
+        "width": 384
       },
       {
         "data": {
-          "id": "SearchAPI-Yokat",
+          "id": "SearchAPI-rdLCH",
           "node": {
             "base_classes": [
               "Data",
@@ -2611,7 +2008,8 @@
                 "name": "api_run_model",
                 "selected": "Data",
                 "types": [
-                  "Data"
+                  "Data",
+                  "list"
                 ],
                 "value": "__UNDEFINED__"
               },
@@ -2620,9 +2018,9 @@
                 "display_name": "Tool",
                 "method": "build_tool",
                 "name": "api_build_tool",
-                "selected": "Tool",
+                "selected": "Sequence",
                 "types": [
-                  "Tool"
+                  "Sequence"
                 ],
                 "value": "__UNDEFINED__"
               }
@@ -2725,8 +2123,8 @@
           "type": "SearchAPI"
         },
         "dragging": false,
-        "height": 612,
-        "id": "SearchAPI-Yokat",
+        "height": 559,
+        "id": "SearchAPI-rdLCH",
         "position": {
           "x": -1229.2392382339021,
           "y": 59.93107827969652
@@ -2737,19 +2135,334 @@
         },
         "selected": false,
         "type": "genericNode",
-        "width": 432
+        "width": 384
+      },
+      {
+        "data": {
+          "id": "OpenAIModel-HtoB7",
+          "node": {
+            "base_classes": [
+              "LanguageModel",
+              "Message"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Generates text using OpenAI LLMs.",
+            "display_name": "OpenAI",
+            "documentation": "",
+            "edited": false,
+            "field_order": [
+              "input_value",
+              "system_message",
+              "stream",
+              "max_tokens",
+              "model_kwargs",
+              "json_mode",
+              "output_schema",
+              "model_name",
+              "openai_api_base",
+              "api_key",
+              "temperature",
+              "seed"
+            ],
+            "frozen": false,
+            "icon": "OpenAI",
+            "output_types": [],
+            "outputs": [
+              {
+                "cache": true,
+                "display_name": "Text",
+                "method": "text_response",
+                "name": "text_output",
+                "selected": "Message",
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "cache": true,
+                "display_name": "Language Model",
+                "method": "build_model",
+                "name": "model_output",
+                "selected": "LanguageModel",
+                "types": [
+                  "LanguageModel"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "api_key": {
+                "_input_type": "SecretStrInput",
+                "advanced": false,
+                "display_name": "OpenAI API Key",
+                "dynamic": false,
+                "info": "The OpenAI API Key to use for the OpenAI model.",
+                "input_types": [],
+                "load_from_db": true,
+                "name": "api_key",
+                "password": true,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": "OPENAI_API_KEY"
+              },
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "import operator\nfrom functools import reduce\n\nfrom langflow.field_typing.range_spec import RangeSpec\nfrom langchain_openai import ChatOpenAI\nfrom pydantic.v1 import SecretStr\n\nfrom langflow.base.models.model import LCModelComponent\nfrom langflow.base.models.openai_constants import OPENAI_MODEL_NAMES\nfrom langflow.field_typing import LanguageModel\nfrom langflow.inputs import (\n    BoolInput,\n    DictInput,\n    DropdownInput,\n    FloatInput,\n    IntInput,\n    SecretStrInput,\n    StrInput,\n)\n\n\nclass OpenAIModelComponent(LCModelComponent):\n    display_name = \"OpenAI\"\n    description = \"Generates text using OpenAI LLMs.\"\n    icon = \"OpenAI\"\n    name = \"OpenAIModel\"\n\n    inputs = LCModelComponent._base_inputs + [\n        IntInput(\n            name=\"max_tokens\",\n            display_name=\"Max Tokens\",\n            advanced=True,\n            info=\"The maximum number of tokens to generate. Set to 0 for unlimited tokens.\",\n            range_spec=RangeSpec(min=0, max=128000),\n        ),\n        DictInput(name=\"model_kwargs\", display_name=\"Model Kwargs\", advanced=True),\n        BoolInput(\n            name=\"json_mode\",\n            display_name=\"JSON Mode\",\n            advanced=True,\n            info=\"If True, it will output JSON regardless of passing a schema.\",\n        ),\n        DictInput(\n            name=\"output_schema\",\n            is_list=True,\n            display_name=\"Schema\",\n            advanced=True,\n            info=\"The schema for the Output of the model. You must pass the word JSON in the prompt. If left blank, JSON mode will be disabled.\",\n        ),\n        DropdownInput(\n            name=\"model_name\",\n            display_name=\"Model Name\",\n            advanced=False,\n            options=OPENAI_MODEL_NAMES,\n            value=OPENAI_MODEL_NAMES[0],\n        ),\n        StrInput(\n            name=\"openai_api_base\",\n            display_name=\"OpenAI API Base\",\n            advanced=True,\n            info=\"The base URL of the OpenAI API. Defaults to https://api.openai.com/v1. You can change this to use other APIs like JinaChat, LocalAI and Prem.\",\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"OpenAI API Key\",\n            info=\"The OpenAI API Key to use for the OpenAI model.\",\n            advanced=False,\n            value=\"OPENAI_API_KEY\",\n        ),\n        FloatInput(name=\"temperature\", display_name=\"Temperature\", value=0.1),\n        IntInput(\n            name=\"seed\",\n            display_name=\"Seed\",\n            info=\"The seed controls the reproducibility of the job.\",\n            advanced=True,\n            value=1,\n        ),\n    ]\n\n    def build_model(self) -> LanguageModel:  # type: ignore[type-var]\n        # self.output_schema is a list of dictionaries\n        # let's convert it to a dictionary\n        output_schema_dict: dict[str, str] = reduce(operator.ior, self.output_schema or {}, {})\n        openai_api_key = self.api_key\n        temperature = self.temperature\n        model_name: str = self.model_name\n        max_tokens = self.max_tokens\n        model_kwargs = self.model_kwargs or {}\n        openai_api_base = self.openai_api_base or \"https://api.openai.com/v1\"\n        json_mode = bool(output_schema_dict) or self.json_mode\n        seed = self.seed\n\n        if openai_api_key:\n            api_key = SecretStr(openai_api_key)\n        else:\n            api_key = None\n        output = ChatOpenAI(\n            max_tokens=max_tokens or None,\n            model_kwargs=model_kwargs,\n            model=model_name,\n            base_url=openai_api_base,\n            api_key=api_key,\n            temperature=temperature or 0.1,\n            seed=seed,\n        )\n        if json_mode:\n            if output_schema_dict:\n                output = output.with_structured_output(schema=output_schema_dict, method=\"json_mode\")  # type: ignore\n            else:\n                output = output.bind(response_format={\"type\": \"json_object\"})  # type: ignore\n\n        return output  # type: ignore\n\n    def _get_exception_message(self, e: Exception):\n        \"\"\"\n        Get a message from an OpenAI exception.\n\n        Args:\n            exception (Exception): The exception to get the message from.\n\n        Returns:\n            str: The message from the exception.\n        \"\"\"\n\n        try:\n            from openai import BadRequestError\n        except ImportError:\n            return\n        if isinstance(e, BadRequestError):\n            message = e.body.get(\"message\")  # type: ignore\n            if message:\n                return message\n        return\n"
+              },
+              "input_value": {
+                "_input_type": "MessageInput",
+                "advanced": false,
+                "display_name": "Input",
+                "dynamic": false,
+                "info": "",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "name": "input_value",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "json_mode": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "JSON Mode",
+                "dynamic": false,
+                "info": "If True, it will output JSON regardless of passing a schema.",
+                "list": false,
+                "name": "json_mode",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
+              },
+              "max_tokens": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Max Tokens",
+                "dynamic": false,
+                "info": "The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
+                "list": false,
+                "name": "max_tokens",
+                "placeholder": "",
+                "range_spec": {
+                  "max": 128000,
+                  "min": 0,
+                  "step": 0.1,
+                  "step_type": "float"
+                },
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "int",
+                "value": ""
+              },
+              "model_kwargs": {
+                "_input_type": "DictInput",
+                "advanced": true,
+                "display_name": "Model Kwargs",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "name": "model_kwargs",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_input": true,
+                "type": "dict",
+                "value": {}
+              },
+              "model_name": {
+                "_input_type": "DropdownInput",
+                "advanced": false,
+                "combobox": false,
+                "display_name": "Model Name",
+                "dynamic": false,
+                "info": "",
+                "name": "model_name",
+                "options": [
+                  "gpt-4o-mini",
+                  "gpt-4o",
+                  "gpt-4-turbo",
+                  "gpt-4-turbo-preview",
+                  "gpt-4",
+                  "gpt-3.5-turbo",
+                  "gpt-3.5-turbo-0125"
+                ],
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "gpt-4o-mini"
+              },
+              "openai_api_base": {
+                "_input_type": "StrInput",
+                "advanced": true,
+                "display_name": "OpenAI API Base",
+                "dynamic": false,
+                "info": "The base URL of the OpenAI API. Defaults to https://api.openai.com/v1. You can change this to use other APIs like JinaChat, LocalAI and Prem.",
+                "list": false,
+                "load_from_db": false,
+                "name": "openai_api_base",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "output_schema": {
+                "_input_type": "DictInput",
+                "advanced": true,
+                "display_name": "Schema",
+                "dynamic": false,
+                "info": "The schema for the Output of the model. You must pass the word JSON in the prompt. If left blank, JSON mode will be disabled.",
+                "list": true,
+                "name": "output_schema",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_input": true,
+                "type": "dict",
+                "value": {}
+              },
+              "seed": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Seed",
+                "dynamic": false,
+                "info": "The seed controls the reproducibility of the job.",
+                "list": false,
+                "name": "seed",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "int",
+                "value": 1
+              },
+              "stream": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Stream",
+                "dynamic": false,
+                "info": "Stream the response from the model. Streaming works only in Chat.",
+                "list": false,
+                "name": "stream",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
+              },
+              "system_message": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "System Message",
+                "dynamic": false,
+                "info": "System message to pass to the model.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "name": "system_message",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "temperature": {
+                "_input_type": "FloatInput",
+                "advanced": false,
+                "display_name": "Temperature",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "name": "temperature",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "float",
+                "value": 0.1
+              }
+            }
+          },
+          "type": "OpenAIModel"
+        },
+        "dragging": false,
+        "height": 637,
+        "id": "OpenAIModel-HtoB7",
+        "position": {
+          "x": -1248.5414754551807,
+          "y": 1176.559777384366
+        },
+        "positionAbsolute": {
+          "x": -1248.5414754551807,
+          "y": 1176.559777384366
+        },
+        "selected": false,
+        "type": "genericNode",
+        "width": 384
       }
     ],
     "viewport": {
-      "x": 538.2178429916559,
-      "y": 231.5938714083456,
-      "zoom": 0.25005698994252296
+      "x": 641.7915646109938,
+      "y": 134.79043201487303,
+      "zoom": 0.2176872534505966
     }
   },
   "description": "This Agentic Flow has a Manager and a couple Workers. The manager can answer the user's question straightaway or delegate the task to other agents.",
   "endpoint_name": null,
-  "id": "6302081f-5af2-4b9f-bd19-2baaf7218ba6",
+  "id": "3077794d-368a-41da-bc8c-26315d5e3583",
   "is_component": false,
-  "last_tested_version": "1.0.12",
+  "last_tested_version": "1.0.14",
   "name": "Hierarchical Tasks Agent"
 }
