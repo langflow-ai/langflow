@@ -408,18 +408,6 @@ export async function getLoggedUser(): Promise<Users | null> {
   return null;
 }
 
-export async function addUser(user: UserInputType): Promise<Array<Users>> {
-  try {
-    const res = await api.post(`${BASE_URL_API}users/`, user);
-    if (res.status !== 201) {
-      throw new Error(res.data.detail);
-    }
-    return res.data;
-  } catch (error) {
-    throw error;
-  }
-}
-
 export async function getUsersPage(
   skip: number,
   limit: number,
@@ -435,42 +423,6 @@ export async function getUsersPage(
     throw error;
   }
   return [];
-}
-
-export async function deleteUser(user_id: string) {
-  try {
-    const res = await api.delete(`${BASE_URL_API}users/${user_id}`);
-    if (res.status === 200) {
-      return res.data;
-    }
-  } catch (error) {
-    throw error;
-  }
-}
-
-export async function updateUser(user_id: string, user: changeUser) {
-  try {
-    const res = await api.patch(`${BASE_URL_API}users/${user_id}`, user);
-    if (res.status === 200) {
-      return res.data;
-    }
-  } catch (error) {
-    throw error;
-  }
-}
-
-export async function resetPassword(user_id: string, user: resetPasswordType) {
-  try {
-    const res = await api.patch(
-      `${BASE_URL_API}users/${user_id}/reset-password`,
-      user,
-    );
-    if (res.status === 200) {
-      return res.data;
-    }
-  } catch (error) {
-    throw error;
-  }
 }
 
 export async function getApiKey() {
