@@ -71,7 +71,7 @@ async def run_flow(
     tweaks: Optional[dict] = None,
     flow_id: Optional[str] = None,
     flow_name: Optional[str] = None,
-    output_type: Optional[str] = None,
+    output_type: Optional[str] = "chat",
     user_id: Optional[str] = None,
 ) -> List[RunOutputs]:
     if user_id is None:

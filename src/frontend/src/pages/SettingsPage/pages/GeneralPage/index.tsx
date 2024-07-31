@@ -1,3 +1,4 @@
+import FeatureFlags from "@/../feature-config.json";
 import { usePostAddApiKey } from "@/controllers/API/queries/api-keys";
 import { useGetProfilePicturesQuery } from "@/controllers/API/queries/files";
 import useAuthStore from "@/stores/authStore";
@@ -101,13 +102,15 @@ export const GeneralPage = () => {
       <GeneralPageHeaderComponent />
 
       <div className="grid gap-6">
-        <ProfilePictureFormComponent
-          profilePicture={profilePicture}
-          handleInput={handleInput}
-          handlePatchProfilePicture={handlePatchProfilePicture}
-          handleGetProfilePictures={handleGetProfilePictures}
-          userData={userData}
-        />
+        {FeatureFlags.ENABLE_PROFILE_ICONS && (
+          <ProfilePictureFormComponent
+            profilePicture={profilePicture}
+            handleInput={handleInput}
+            handlePatchProfilePicture={handlePatchProfilePicture}
+            handleGetProfilePictures={handleGetProfilePictures}
+            userData={userData}
+          />
+        )}
 
         {!autoLogin && (
           <PasswordFormComponent
