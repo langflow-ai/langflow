@@ -216,22 +216,21 @@ export default function GenericNode({
   }, [data.showNode]);
 
   useEffect(() => {
-    if(buildStatus===BuildStatus.BUILT&& !isBuilding){
-      setNode(data.id,(old)=>{
+    if (buildStatus === BuildStatus.BUILT && !isBuilding) {
+      setNode(data.id, (old) => {
         return {
           ...old,
-          data:{
+          data: {
             ...old.data,
-            node:{
+            node: {
               ...old.data.node,
-              lf_version:version
-
-            }
-        }
-      }
-      })
+              lf_version: version,
+            },
+          },
+        };
+      });
     }
-  },[buildStatus,isBuilding])
+  }, [buildStatus, isBuilding]);
 
   const [loadingUpdate, setLoadingUpdate] = useState(false);
 
