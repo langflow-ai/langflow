@@ -1,4 +1,5 @@
 import asyncio
+import json
 import os
 import warnings
 from contextlib import asynccontextmanager
@@ -70,8 +71,8 @@ class JavaScriptMIMETypeMiddleware(BaseHTTPMiddleware):
         except Exception as exc:
             if isinstance(exc, PydanticSerializationError):
                 message = "Something went wrong while serializing the response. Please share this error on our GitHub repository."
-                error_message = "\n".join([message, str(exc)])
-                raise HTTPException(status_code=HTTPStatus.INTERNAL_SERVER_ERROR, detail=error_message) from exc
+                error_messages = json.dumps([message, str(exc)])
+                raise HTTPException(status_code=HTTPStatus.INTERNAL_SERVER_ERROR, detail=error_messages) from exc
             raise exc
         if "files/" not in request.url.path and request.url.path.endswith(".js") and response.status_code == 200:
             response.headers["Content-Type"] = "text/javascript"
