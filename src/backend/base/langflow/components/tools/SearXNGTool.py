@@ -11,12 +11,13 @@ from langchain_core.tools import StructuredTool
 from langflow.schema.dotdict import dotdict
 from langflow.io import Output
 
+
 class SearXNGToolComponent(LCToolComponent):
     SEARCH_HEADERS = {}
     display_name = "SearXNG Search Tool"
     description = "A component that searches for tools using SearXNG."
     name = "SearXNGTool"
-    
+
     inputs = [
         MessageTextInput(
             name="url",
@@ -76,7 +77,7 @@ class SearXNGToolComponent(LCToolComponent):
             self.status = f"Failed to extract names: {str(e)}"
             build_config["categories"]["options"] = ["Failed to parse", str(e)]
         return build_config
-    
+
     def build_tool(self) -> Tool:
         class SearxSearch:
             _url: str = ""
@@ -84,20 +85,24 @@ class SearXNGToolComponent(LCToolComponent):
             _language: str = ""
             _headers: dict[str, str] = {}
             _max_results: int = 10
-            
+
             def search(query: str, categories: list[str] = []) -> list:
                 if not SearxSearch._categories and not categories:
                     raise ValueError("No categories provided.")
-                all_categories = (SearxSearch._categories + list(set(categories) - set(SearxSearch._categories)))
+                all_categories = SearxSearch._categories + list(set(categories) - set(SearxSearch._categories))
                 try:
                     url = f"{SearxSearch._url}/"
                     headers = SearxSearch._headers.copy()
-                    response = requests.get(url=url, headers=headers, params={
-                        "q": query,
-                        "categories": ",".join(all_categories),
-                        "language": SearxSearch._language,
-                        "format": "json",
-                    }).json()
+                    response = requests.get(
+                        url=url,
+                        headers=headers,
+                        params={
+                            "q": query,
+                            "categories": ",".join(all_categories),
+                            "language": SearxSearch._language,
+                            "format": "json",
+                        },
+                    ).json()
 
                     results = []
                     num_results = min(SearxSearch._max_results, len(response["results"]))
@@ -117,7 +122,7 @@ class SearXNGToolComponent(LCToolComponent):
         _local = {}
         _local["SearxSearch"] = SearxSearch
         _globals.update(_local)
-        
+
         schema_fields = {
             "query": (str, Field(..., description="The query to search for.")),
             "categories": (list[str], Field(default=[], description="The categories to search in.")),
@@ -126,7 +131,11 @@ class SearXNGToolComponent(LCToolComponent):
         SearxSearchSchema = create_model("SearxSearchSchema", **schema_fields)  # type: ignore
 
         tool = StructuredTool.from_function(
-            func=_local["SearxSearch"].search, args_schema=SearxSearchSchema, name="searxng_search_tool", description="A tool that searches for tools using SearXNG.\nThe available categories are: " + ", ".join(self.categories),
+            func=_local["SearxSearch"].search,
+            args_schema=SearxSearchSchema,
+            name="searxng_search_tool",
+            description="A tool that searches for tools using SearXNG.\nThe available categories are: "
+            + ", ".join(self.categories),
         )
         self.status = tool
         return tool
