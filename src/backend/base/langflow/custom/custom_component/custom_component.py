@@ -489,7 +489,7 @@ class CustomComponent(BaseComponent):
         inputs: Optional[Union[dict, List[dict]]] = None,
         flow_id: Optional[str] = None,
         flow_name: Optional[str] = None,
-        output_type: Optional[str] = None,
+        output_type: Optional[str] = "chat",
         tweaks: Optional[dict] = None,
     ) -> Any:
         return await run_flow(

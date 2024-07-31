@@ -11,6 +11,7 @@ import {
 } from "../../constants/constants";
 import { AuthContext } from "../../contexts/authContext";
 
+import FeatureFlags from "@/../feature-config.json";
 import { useLogout } from "@/controllers/API/queries/auth";
 import useAuthStore from "@/stores/authStore";
 import useAlertStore from "../../stores/alertStore";
@@ -182,18 +183,26 @@ export default function Header(): JSX.Element {
           </a>
 
           <Separator orientation="vertical" />
-          <button
-            className="extra-side-bar-save-disable"
-            onClick={() => {
-              setDark(!dark);
-            }}
-          >
-            {dark ? (
-              <IconComponent name="SunIcon" className="side-bar-button-size" />
-            ) : (
-              <IconComponent name="MoonIcon" className="side-bar-button-size" />
-            )}
-          </button>
+          {FeatureFlags.ENABLE_DARK_MODE && (
+            <button
+              className="extra-side-bar-save-disable"
+              onClick={() => {
+                setDark(!dark);
+              }}
+            >
+              {dark ? (
+                <IconComponent
+                  name="SunIcon"
+                  className="side-bar-button-size"
+                />
+              ) : (
+                <IconComponent
+                  name="MoonIcon"
+                  className="side-bar-button-size"
+                />
+              )}
+            </button>
+          )}
           <AlertDropdown>
             <div className="extra-side-bar-save-disable relative">
               {notificationCenter && (
@@ -216,10 +225,17 @@ export default function Header(): JSX.Element {
                   data-testid="user-profile-settings"
                   className="shrink-0"
                 >
-                  <img
-                    src={profileImageUrl}
-                    className="h-7 w-7 shrink-0 focus-visible:outline-0"
-                  />
+                  {FeatureFlags.ENABLE_PROFILE_ICONS ? (
+                    <img
+                      src={profileImageUrl}
+                      className="h-7 w-7 shrink-0 focus-visible:outline-0"
+                    />
+                  ) : (
+                    <IconComponent
+                      name="Settings"
+                      className="side-bar-button-size"
+                    />
+                  )}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="mr-1 mt-1 min-w-40">
