@@ -374,45 +374,6 @@ export async function postCustomComponentUpdate(
   });
 }
 
-export async function onLogin(user: LoginType) {
-  try {
-    const response = await api.post(
-      `${BASE_URL_API}login`,
-      new URLSearchParams({
-        username: user.username,
-        password: user.password,
-      }).toString(),
-      {
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-      },
-    );
-
-    if (response.status === 200) {
-      const data = response?.data;
-      return data;
-    }
-  } catch (error) {
-    throw error;
-  }
-}
-
-export async function autoLogin(abortSignal) {
-  try {
-    const response = await api.get(`${BASE_URL_API}auto_login`, {
-      signal: abortSignal,
-    });
-
-    if (response.status === 200) {
-      const data = response?.data;
-      return data;
-    }
-  } catch (error) {
-    throw error;
-  }
-}
-
 export async function renewAccessToken() {
   try {
     return await api.post(`${BASE_URL_API}refresh`);
