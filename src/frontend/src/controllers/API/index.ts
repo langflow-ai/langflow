@@ -1,4 +1,3 @@
-import { ColDef, ColGroupDef } from "ag-grid-community";
 import { AxiosRequestConfig, AxiosResponse } from "axios";
 import { Edge, Node, ReactFlowJsonObject } from "reactflow";
 import { BASE_URL_API, MAX_BATCH_SIZE } from "../../constants/constants";
@@ -13,16 +12,11 @@ import {
   Users,
   VertexBuildTypeAPI,
   VerticesOrderTypeAPI,
-  changeUser,
-  resetPasswordType,
   sendAllProps,
 } from "../../types/api/index";
-import { UserInputType } from "../../types/components";
 import { FlowStyleType, FlowType } from "../../types/flow";
-import { Message } from "../../types/messages";
 import { StoreComponentResponse } from "../../types/store";
 import { FlowPoolType } from "../../types/zustand/flow";
-import { extractColumnsFromRows } from "../../utils/utils";
 import {
   APIClassType,
   BuildStatusTypeAPI,
@@ -261,32 +255,6 @@ export async function getFlowStylesFromDatabase() {
   try {
     const response = await api.get(`${BASE_URL_API}flow_styles/`);
     if (response.status !== 200) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    return response?.data;
-  } catch (error) {
-    console.error(error);
-    throw error;
-  }
-}
-
-/**
- * Saves a new flow style to the database.
- *
- * @param {FlowStyleType} flowStyle - The flow style data to save.
- * @returns {Promise<any>} The saved flow style data.
- * @throws Will throw an error if saving fails.
- */
-export async function saveFlowStyleToDatabase(flowStyle: FlowStyleType) {
-  try {
-    const response = await api.post(`${BASE_URL_API}flow_styles/`, flowStyle, {
-      headers: {
-        accept: "application/json",
-        "Content-Type": "application/json",
-      },
-    });
-
-    if (response.status !== 201) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
     return response?.data;
@@ -568,7 +536,7 @@ export async function getStoreComponents({
   limit = 9999999,
   is_component = null,
   sort = "-count(liked_by)",
-  tags = [] || null,
+  tags = [],
   liked = null,
   isPrivate = null,
   search = null,
