@@ -1,5 +1,5 @@
 import inspect
-from typing import Any, Callable, ClassVar, List, Optional, Union, get_type_hints
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, List, Optional, Union, get_type_hints
 from uuid import UUID
 
 import nanoid  # type: ignore
@@ -16,6 +16,9 @@ from langflow.services.tracing.schema import Log
 from langflow.template.field.base import UNDEFINED, Output
 
 from .custom_component import CustomComponent
+
+if TYPE_CHECKING:
+    from langflow.graph.vertex.base import Vertex
 
 BACKWARDS_COMPATIBLE_ATTRIBUTES = ["user_id", "vertex", "tracing_service"]
 
