@@ -19,6 +19,7 @@ import PasswordFormComponent from "./components/PasswordForm";
 import ProfilePictureFormComponent from "./components/ProfilePictureForm";
 import useGetProfilePictures from "./components/ProfilePictureForm/components/profilePictureChooserComponent/hooks/use-get-profile-pictures";
 import StoreApiKeyFormComponent from "./components/StoreApiKeyForm";
+import { useIsFetching } from "@tanstack/react-query";
 
 export const GeneralPage = () => {
   const setCurrentFlowId = useFlowsManagerStore(
@@ -38,8 +39,18 @@ export const GeneralPage = () => {
   const { userData, setUserData } = useContext(AuthContext);
   const hasStore = useStoreStore((state) => state.hasStore);
   const validApiKey = useStoreStore((state) => state.validApiKey);
+
+  const isFetchingPost = useIsFetching({
+    queryKey: ["usePostAddApiKey"],
+    exact: false,
+  }) > 0;
+  const isFetchingGet = useIsFetching({
+    queryKey: ["useGetCheckApiKeysQuery"],
+    exact: false,
+  }) > 0;
+  const loadingApiKey = (isFetchingGet || isFetchingPost);
+
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
-  const loadingApiKey = useStoreStore((state) => state.loadingApiKey);
   const { password, cnfPassword, profilePicture, apikey } = inputState;
 
   const { storeApiKey } = useContext(AuthContext);

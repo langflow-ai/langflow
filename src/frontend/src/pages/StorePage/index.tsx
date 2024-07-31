@@ -35,11 +35,20 @@ import { useStoreStore } from "../../stores/storeStore";
 import { storeComponent } from "../../types/store";
 import { cn } from "../../utils/utils";
 import InputSearchComponent from "../MainPage/components/myCollectionComponent/components/inputSearchComponent";
+import { useIsFetching } from "@tanstack/react-query";
 
 export default function StorePage(): JSX.Element {
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
   const validApiKey = useStoreStore((state) => state.validApiKey);
-  const loadingApiKey = useStoreStore((state) => state.loadingApiKey);
+  const isFetchingPost = useIsFetching({
+    queryKey: ["usePostAddApiKey"],
+    exact: false,
+  }) > 0;
+  const isFetchingGet = useIsFetching({
+    queryKey: ["useGetCheckApiKeysQuery"],
+    exact: false,
+  }) > 0;
+  const loadingApiKey = (isFetchingGet || isFetchingPost);
 
   const setValidApiKey = useStoreStore((state) => state.updateValidApiKey);
 

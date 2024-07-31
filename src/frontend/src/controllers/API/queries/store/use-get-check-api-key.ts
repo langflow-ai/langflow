@@ -23,10 +23,8 @@ export const useGetCheckApiKeysQuery: useQueryFunctionType<
 
   const responseFn = async () => {
     const { data } = await getCheckFn();
-    const { fetchApiData, updateLoadingApiKey } = useStoreStore.getState();
-    updateLoadingApiKey(true);
+    const { fetchApiData } = useStoreStore.getState();
     fetchApiData(data);
-    updateLoadingApiKey(false);
     return data;
   };
 
