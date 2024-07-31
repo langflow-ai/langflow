@@ -1014,7 +1014,7 @@ class Graph:
                 else:
                     self.run_manager.add_to_vertices_being_run(next_v_id)
             if cache and self.flow_id:
-                set_cache_coro = partial(get_chat_service().set_cache, key=self.flow_id)
+                set_cache_coro = partial(get_chat_service().set_cache, self.flow_id)
                 await set_cache_coro(self, lock)
         return next_runnable_vertices
 
@@ -1046,7 +1046,8 @@ class Graph:
         for v in vertices:
             next_runnable_vertices = await self.get_next_runnable_vertices(lock, vertex=v, cache=False)
             results.extend(next_runnable_vertices)
-        return results
+        no_duplicate_results = list(set(results))
+        return no_duplicate_results
 
     def topological_sort(self) -> List[Vertex]:
         """
