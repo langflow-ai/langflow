@@ -47,10 +47,7 @@ class FlowToolComponent(LCToolComponent):
 
     inputs = [
         DropdownInput(
-            name="flow_name",
-            display_name="Flow Name",
-            info="The name of the flow to run.",
-            refresh_button=True
+            name="flow_name", display_name="Flow Name", info="The name of the flow to run.", refresh_button=True
         ),
         StrInput(
             name="name",
