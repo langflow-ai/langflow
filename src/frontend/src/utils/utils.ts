@@ -546,3 +546,19 @@ export function generateBackendColumnsFromValue(rows: Object[]): ColumnField[] {
     return newColumn;
   });
 }
+
+/**
+ * Tries to parse a JSON string and returns the parsed object.
+ * If parsing fails, returns undefined.
+ *
+ * @param json - The JSON string to parse.
+ * @returns The parsed JSON object, or undefined if parsing fails.
+ */
+export function tryParseJson(json: string) {
+  try {
+    const parsedJson = JSON.parse(json);
+    return parsedJson;
+  } catch (error) {
+    return;
+  }
+}
