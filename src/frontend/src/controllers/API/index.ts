@@ -374,45 +374,6 @@ export async function postCustomComponentUpdate(
   });
 }
 
-export async function onLogin(user: LoginType) {
-  try {
-    const response = await api.post(
-      `${BASE_URL_API}login`,
-      new URLSearchParams({
-        username: user.username,
-        password: user.password,
-      }).toString(),
-      {
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-      },
-    );
-
-    if (response.status === 200) {
-      const data = response?.data;
-      return data;
-    }
-  } catch (error) {
-    throw error;
-  }
-}
-
-export async function autoLogin(abortSignal) {
-  try {
-    const response = await api.get(`${BASE_URL_API}auto_login`, {
-      signal: abortSignal,
-    });
-
-    if (response.status === 200) {
-      const data = response?.data;
-      return data;
-    }
-  } catch (error) {
-    throw error;
-  }
-}
-
 export async function renewAccessToken() {
   try {
     return await api.post(`${BASE_URL_API}refresh`);
@@ -801,53 +762,6 @@ export async function requestLogout() {
     return response?.data;
   } catch (error) {
     console.error(error);
-    throw error;
-  }
-}
-
-export async function getGlobalVariables(): Promise<{
-  [key: string]: { id: string; type: string; default_fields: string[] };
-}> {
-  const globalVariables = {};
-  (await api.get(`${BASE_URL_API}variables/`))?.data?.forEach((element) => {
-    globalVariables[element.name] = {
-      id: element.id,
-      type: element.type,
-      default_fields: element.default_fields,
-    };
-  });
-  return globalVariables;
-}
-
-export async function registerGlobalVariable({
-  name,
-  value,
-  type,
-  default_fields = [],
-}: {
-  name: string;
-  value: string;
-  type?: string;
-  default_fields?: string[];
-}): Promise<AxiosResponse<{ name: string; id: string; type: string }>> {
-  try {
-    const response = await api.post(`${BASE_URL_API}variables/`, {
-      name,
-      value,
-      type,
-      default_fields: default_fields,
-    });
-    return response;
-  } catch (error) {
-    throw error;
-  }
-}
-
-export async function deleteGlobalVariable(id: string) {
-  try {
-    const response = await api.delete(`${BASE_URL_API}variables/${id}`);
-    return response;
-  } catch (error) {
     throw error;
   }
 }
