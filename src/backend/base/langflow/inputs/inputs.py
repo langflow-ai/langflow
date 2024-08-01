@@ -94,8 +94,13 @@ class StrInput(BaseInputMixin, ListableInputMixin, DatabaseLoadMixin, MetadataTr
             ValueError: If the value is not of a valid type or if the input is missing a required key.
         """
         if not isinstance(v, str) and v is not None:
+            # Keep the warning for now, but we should change it to an error
             if _info.data.get("input_types") and v.__class__.__name__ not in _info.data.get("input_types"):
-                logger.warning(f"Invalid value type {type(v)}")
+                logger.warning(
+                    f"Invalid value type {type(v)} for input {_info.data.get('name')}. Expected types: {_info.data.get('input_types')}"
+                )
+            else:
+                logger.warning(f"Invalid value type {type(v)} for input {_info.data.get('name')}.")
         return v
 
     @field_validator("value")
