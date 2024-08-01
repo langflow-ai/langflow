@@ -25,6 +25,8 @@ class Data(BaseModel):
 
     @model_validator(mode="before")
     def validate_data(cls, values):
+        if not isinstance(values, dict):
+            raise ValueError("Data must be a dictionary")
         if not values.get("data"):
             values["data"] = {}
         # Any other keyword should be added to the data dictionary
@@ -136,7 +138,9 @@ class Data(BaseModel):
                 contents = [{"type": "text", "text": text}]
                 for file_path in files:
                     image_template = ImagePromptTemplate()
-                    image_prompt_value: ImagePromptValue = image_template.invoke(input={"path": file_path})  # type: ignore
+                    image_prompt_value: ImagePromptValue = image_template.invoke(
+                        input={"path": file_path}, config={"callbacks": self.get_langchain_callbacks()}
+                    )  # type: ignore
                     contents.append({"type": "image_url", "image_url": image_prompt_value.image_url})
                 human_message = HumanMessage(content=contents)  # type: ignore
             else:
