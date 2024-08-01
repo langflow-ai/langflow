@@ -43,7 +43,6 @@ const useAuthStore = create<AuthStoreType>((set, get) => ({
   //   getUser: () => {
   //     const setLoading = useAlertStore.getState().setLoading;
   //     const getFoldersApi = useFolderStore.getState().getFoldersApi;
-  //     const setGlobalVariables = useGlobalVariablesStore.getState().setGlobalVariables;
   //     const checkHasStore = useStoreStore.getState().checkHasStore;
   //     const fetchApiData = useStoreStore.getState().fetchApiData;
 
@@ -51,8 +50,6 @@ const useAuthStore = create<AuthStoreType>((set, get) => ({
   //       .then(async (user) => {
   //         set({ userData: user, isAdmin: user.is_superuser });
   //         getFoldersApi(true, true);
-  //         const res = await getGlobalVariables();
-  //         setGlobalVariables(res);
   //         checkHasStore();
   //         fetchApiData();
   //       })
