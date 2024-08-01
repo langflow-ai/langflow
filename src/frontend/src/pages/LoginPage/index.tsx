@@ -50,7 +50,6 @@ export default function LoginPage(): JSX.Element {
 
         setLoading(true);
         login(data.access_token, "login");
-        navigate("/admin/");
       },
       onError: (error) => {
         setErrorData({
