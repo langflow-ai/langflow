@@ -325,6 +325,28 @@ class FloatInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMi
 
     field_type: SerializableFieldTypes = FieldTypes.FLOAT
 
+    @field_validator("value")
+    @classmethod
+    def validate_value(cls, v: Any, _info):
+        """
+        Validates the given value and returns the processed value.
+
+        Args:
+            v (Any): The value to be validated.
+            _info: Additional information about the input.
+
+        Returns:
+            The processed value.
+
+        Raises:
+            ValueError: If the value is not of a valid type or if the input is missing a required key.
+        """
+        if not isinstance(v, (int, float)):
+            raise ValueError(f"Invalid value type {type(v)} for input {_info.data.get('name')}.")
+        if isinstance(v, int):
+            v = float(v)
+        return v
+
 
 class BoolInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin):
     """
