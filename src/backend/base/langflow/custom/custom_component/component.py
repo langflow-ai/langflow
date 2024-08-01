@@ -272,6 +272,7 @@ class Component(CustomComponent):
         )
 
     def _set_parameter_or_attribute(self, key, value):
+        self.set_input_value(key, value)
         self._parameters[key] = value
         self._attributes[key] = value
 
