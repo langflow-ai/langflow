@@ -5263,13 +5263,13 @@ requests = ">=2,<3"
 
 [[package]]
 name = "langwatch"
-version = "0.1.14"
+version = "0.1.16"
 description = "Python SDK for LangWatch for monitoring your LLMs"
 optional = false
 python-versions = "<4.0,>=3.9"
 files = [
-    {file = "langwatch-0.1.14-py3-none-any.whl", hash = "sha256:5b3994ce3ee06e20de999635ecaaa9e2c6393839eb90a8bf402511444edda8a8"},
-    {file = "langwatch-0.1.14.tar.gz", hash = "sha256:3f97e891a61dff43a95b6fcb12db5c5a5170ff411dd56a55eff9ef24f19be967"},
+    {file = "langwatch-0.1.16-py3-none-any.whl", hash = "sha256:61ccb1f1efbffc1b2e8bbd3b9c7ed53440d3a66b9fd741f3d1a30d31d0b936f7"},
+    {file = "langwatch-0.1.16.tar.gz", hash = "sha256:d8c453a4dcdb500bb55df19ef5fa2c43d450236d84e47fd72348fb3184cc3f6a"},
 ]
 
 [package.dependencies]
@@ -11991,4 +11991,4 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-content-hash = "360b7bde5bb4338b128efbec31990d5fbce816b6fc5d58875a488d314c86fe7b"
+content-hash = "3acb8b0235dcb5d33db0362bd5cf8a5dfcfb9cc198887dd2570b81c39a0fe46c"
