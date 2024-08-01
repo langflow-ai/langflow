@@ -30,7 +30,7 @@ export default function ProfilePictureChooserComponent({
     }
   }, [ref, value]);
 
-  usePreloadImages(profilePictures, setImagesLoaded, loading);
+  usePreloadImages(setImagesLoaded, loading, profilePictures);
 
   return (
     <div className="flex flex-col justify-center gap-2">
