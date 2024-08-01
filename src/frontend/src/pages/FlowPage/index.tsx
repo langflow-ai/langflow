@@ -1,3 +1,4 @@
+import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
 import { useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import FlowToolbar from "../../components/chatComponent";
@@ -17,6 +18,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const { id } = useParams();
   const navigate = useNavigate();
+  useGetGlobalVariables();
 
   const flows = useFlowsManagerStore((state) => state.flows);
 

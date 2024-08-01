@@ -1,5 +1,4 @@
 import { useLoginUser } from "@/controllers/API/queries/auth";
-import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useFolderStore } from "@/stores/foldersStore";
 import { useContext, useState } from "react";
@@ -23,8 +22,6 @@ export default function LoginAdminPage() {
     useState<loginInputStateType>(CONTROL_LOGIN_STATE);
   const { login } = useContext(AuthContext);
   const setLoading = useAlertStore((state) => state.setLoading);
-
-  const { mutate: mutateGetGlobalVariables } = useGetGlobalVariables();
 
   const setAllFlows = useFlowsManagerStore((state) => state.setAllFlows);
   const setSelectedFolder = useFolderStore((state) => state.setSelectedFolder);
@@ -51,11 +48,7 @@ export default function LoginAdminPage() {
         setSelectedFolder(null);
 
         setLoading(true);
-
         login(res.access_token, "login");
-        mutateGetGlobalVariables();
-
-        navigate("/admin/");
       },
       onError: (error) => {
         setErrorData({

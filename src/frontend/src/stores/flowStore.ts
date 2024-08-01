@@ -344,7 +344,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       updateGroupRecursion(
         newNode,
         selection.edges,
-        useGlobalVariablesStore.getState().unavaliableFields,
+        useGlobalVariablesStore.getState().unavailableFields,
         useGlobalVariablesStore.getState().globalVariablesEntries,
       );
 

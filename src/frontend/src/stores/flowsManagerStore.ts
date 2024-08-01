@@ -2,7 +2,6 @@ import { brokenEdgeMessage } from "@/utils/utils";
 import { AxiosError } from "axios";
 import { cloneDeep } from "lodash";
 import pDebounce from "p-debounce";
-import { useLocation } from "react-router-dom";
 import { Edge, Node, Viewport, XYPosition } from "reactflow";
 import { create } from "zustand";
 import {
@@ -223,7 +222,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
       updateGroupRecursion(
         node,
         flowData?.edges,
-        useGlobalVariablesStore.getState().unavaliableFields,
+        useGlobalVariablesStore.getState().unavailableFields,
         useGlobalVariablesStore.getState().globalVariablesEntries,
       );
     });

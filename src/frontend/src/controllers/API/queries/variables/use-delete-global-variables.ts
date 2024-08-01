@@ -12,7 +12,7 @@ export const useDeleteGlobalVariables: useMutationFunctionType<
   undefined,
   DeleteGlobalVariablesParams
 > = (options?) => {
-  const { mutate } = UseRequestProcessor();
+  const { mutate, queryClient } = UseRequestProcessor();
 
   const deleteGlobalVariables = async ({
     id,
@@ -25,7 +25,12 @@ export const useDeleteGlobalVariables: useMutationFunctionType<
     DeleteGlobalVariablesParams,
     any,
     DeleteGlobalVariablesParams
-  > = mutate(["useDeleteGlobalVariables"], deleteGlobalVariables, options);
+  > = mutate(["useDeleteGlobalVariables"], deleteGlobalVariables, {
+    onSettled: () => {
+      queryClient.refetchQueries({ queryKey: ["useGetGlobalVariables"] });
+    },
+    ...options,
+  });
 
   return mutation;
 };

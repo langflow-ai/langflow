@@ -1,11 +1,13 @@
-export default function getUnavailableFields(variables: {
-  [key: string]: { default_fields?: string[] };
-}): { [name: string]: string } {
+import { GlobalVariable } from "@/types/global_variables";
+
+export default function getUnavailableFields(variables: GlobalVariable[]): {
+  [name: string]: string;
+} {
   const unVariables: { [name: string]: string } = {};
-  Object.keys(variables).forEach((key) => {
-    if (variables[key].default_fields) {
-      variables[key].default_fields!.forEach((field) => {
-        unVariables[field] = key;
+  variables.forEach((variable) => {
+    if (variable.default_fields) {
+      variable.default_fields!.forEach((field) => {
+        unVariables[field] = variable.name;
       });
     }
   });

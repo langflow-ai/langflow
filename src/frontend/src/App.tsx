@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState } from "react";
+import { useContext, useEffect } from "react";
 import { Cookies } from "react-cookie";
 import { ErrorBoundary } from "react-error-boundary";
 import "reactflow/dist/style.css";
@@ -19,7 +19,6 @@ import {
   useRefreshAccessToken,
 } from "./controllers/API/queries/auth";
 import { useGetHealthQuery } from "./controllers/API/queries/health";
-import { useGetGlobalVariables } from "./controllers/API/queries/variables";
 import { useGetVersionQuery } from "./controllers/API/queries/version";
 import { setupAxiosDefaults } from "./controllers/API/utils";
 import useTrackLastVisitedPath from "./hooks/use-track-last-visited-path";
@@ -50,8 +49,6 @@ export default function App() {
   useGetVersionQuery();
 
   const isLoadingFolders = useFolderStore((state) => state.isLoadingFolders);
-
-  const { mutate: mutateGetGlobalVariables } = useGetGlobalVariables();
   const { mutate: mutateRefresh } = useRefreshAccessToken();
 
   const isLoginPage = location.pathname.includes("login");
@@ -77,7 +74,6 @@ export default function App() {
         if (user && user["access_token"]) {
           user["refresh_token"] = "auto";
           login(user["access_token"], "auto");
-          mutateGetGlobalVariables();
           setUserData(user);
           setAutoLogin(true);
           fetchAllData();

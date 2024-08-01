@@ -16,7 +16,7 @@ export const usePostGlobalVariables: useMutationFunctionType<
   undefined,
   PostGlobalVariablesParams
 > = (options?) => {
-  const { mutate } = UseRequestProcessor();
+  const { mutate, queryClient } = UseRequestProcessor();
 
   const postGlobalVariablesFunction = async ({
     name,
@@ -24,17 +24,22 @@ export const usePostGlobalVariables: useMutationFunctionType<
     type,
     default_fields = [],
   }): Promise<AxiosResponse<{ name: string; id: string; type: string }>> => {
-    const res = await api.post(`${getURL("VARIABLES")}`, {
+    const res = await api.post(`${getURL("VARIABLES")}/`, {
       name,
       value,
       type,
       default_fields: default_fields,
     });
-    return res;
+    return res.data;
   };
 
   const mutation: UseMutationResult<any, any, PostGlobalVariablesParams> =
-    mutate(["usePostGlobalVariables"], postGlobalVariablesFunction, options);
+    mutate(["usePostGlobalVariables"], postGlobalVariablesFunction, {
+      onSettled: () => {
+        queryClient.refetchQueries({ queryKey: ["useGetGlobalVariables"] });
+      },
+      ...options,
+    });
 
   return mutation;
 };

@@ -1,4 +1,4 @@
-import { changeUser, useMutationFunctionType } from "@/types/api";
+import { useMutationFunctionType } from "@/types/api";
 import { UseMutationResult } from "@tanstack/react-query";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
@@ -14,7 +14,7 @@ export const usePatchGlobalVariables: useMutationFunctionType<
   undefined,
   PatchGlobalVariablesParams
 > = (options?) => {
-  const { mutate } = UseRequestProcessor();
+  const { mutate, queryClient } = UseRequestProcessor();
 
   async function patchGlobalVariables({
     name,
@@ -32,7 +32,12 @@ export const usePatchGlobalVariables: useMutationFunctionType<
     PatchGlobalVariablesParams,
     any,
     PatchGlobalVariablesParams
-  > = mutate(["usePatchGlobalVariables"], patchGlobalVariables, options);
+  > = mutate(["usePatchGlobalVariables"], patchGlobalVariables, {
+    onSettled: () => {
+      queryClient.refetchQueries({ queryKey: ["useGetGlobalVariables"] });
+    },
+    ...options,
+  });
 
   return mutation;
 };

@@ -43,13 +43,18 @@ test("should interact with global variables", async ({ page }) => {
     .getByPlaceholder("Insert a value for the variable...")
     .fill("testtesttesttesttesttesttesttest");
   await page.getByTestId("popover-anchor-apply-to-fields").click();
-  await page.waitForTimeout(2000);
+
+  await page.waitForTimeout(5000);
 
   await page.getByPlaceholder("Search options...").fill("System Message");
+
+  await page.waitForSelector("text=System Message", { timeout: 30000 });
 
   await page.getByText("System Message").first().click();
 
   await page.getByPlaceholder("Search options...").fill("openAI");
+
+  await page.waitForSelector("text=OpenAI API Base", { timeout: 30000 });
 
   await page.getByText("OpenAI API Base").first().click();
 

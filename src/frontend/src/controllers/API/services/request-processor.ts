@@ -1,4 +1,5 @@
 import {
+  QueryClient,
   useMutation,
   UseMutationOptions,
   useQuery,
@@ -10,6 +11,7 @@ import { MutationFunctionType, QueryFunctionType } from "../../../types/api";
 export function UseRequestProcessor(): {
   query: QueryFunctionType;
   mutate: MutationFunctionType;
+  queryClient: QueryClient;
 } {
   const queryClient = useQueryClient();
 
@@ -41,5 +43,5 @@ export function UseRequestProcessor(): {
     });
   }
 
-  return { query, mutate };
+  return { query, mutate, queryClient };
 }
