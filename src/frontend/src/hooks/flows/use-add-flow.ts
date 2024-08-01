@@ -36,12 +36,12 @@ const useAddFlow = () => {
   const { mutate: saveFlow } = usePostSaveFlow();
 
   const addFlow = async ({
-    newProject,
+    newProject = true,
     flow,
     override,
     position,
   }: {
-    newProject: Boolean;
+    newProject?: Boolean;
     flow?: FlowType;
     override?: boolean;
     position?: XYPosition;
