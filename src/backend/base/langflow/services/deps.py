@@ -165,6 +165,7 @@ def get_session() -> Generator["Session", None, None]:
     with get_db_service().with_session() as session:
         yield session
 
+
 @contextmanager
 def session_scope() -> Generator["Session", None, None]:
     """
@@ -190,6 +191,7 @@ def session_scope() -> Generator["Session", None, None]:
             logger.exception("An error occurred during the session scope.", e)
             session.rollback()
             raise
+
 
 def get_cache_service() -> "CacheService":
     """
