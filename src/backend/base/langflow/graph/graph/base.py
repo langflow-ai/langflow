@@ -313,6 +313,20 @@ class Graph:
                 if getattr(vertex, attribute):
                     getattr(self, f"_{attribute}_vertices").append(vertex.id)
 
+    def _set_inputs(self, input_components: list[str], inputs: Dict[str, str], input_type: InputType | None):
+        for vertex_id in self._is_input_vertices:
+            vertex = self.get_vertex(vertex_id)
+            # If the vertex is not in the input_components list
+            if input_components and (vertex_id not in input_components and vertex.display_name not in input_components):
+                continue
+            # If the input_type is not any and the input_type is not in the vertex id
+            # Example: input_type = "chat" and vertex.id = "OpenAI-19ddn"
+            elif input_type is not None and input_type != "any" and input_type not in vertex.id.lower():
+                continue
+            if vertex is None:
+                raise ValueError(f"Vertex {vertex_id} not found")
+            vertex.update_raw_params(inputs, overwrite=True)
+
     async def _run(
         self,
         inputs: Dict[str, str],
