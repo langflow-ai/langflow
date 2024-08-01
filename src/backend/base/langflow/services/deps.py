@@ -1,6 +1,6 @@
 from contextlib import contextmanager
 from typing import TYPE_CHECKING, Generator
-
+from loguru import logger
 from langflow.services.schema import ServiceType
 
 if TYPE_CHECKING:
@@ -162,12 +162,12 @@ def get_session() -> Generator["Session", None, None]:
         Session: A session object.
 
     """
-    db_service = get_db_service()
-    yield from db_service.get_session()
+    with session_scope() as session:
+        yield session
 
 
 @contextmanager
-def session_scope():
+def session_scope() -> Generator["Session", None, None]:
     """
     Context manager for managing a session scope.
 
@@ -182,16 +182,15 @@ def session_scope():
         Exception: If an error occurs during the session scope.
 
     """
-    session = next(get_session())
-    try:
-        yield session
-        session.commit()
-    except:
-        session.rollback()
-        raise
-    finally:
-        session.close()
-
+    db_service = get_db_service()
+    with db_service.with_session() as session:
+        try:
+            yield session
+            session.commit()
+        except Exception as e:
+            logger.exception("An error occurred during the session scope.", e)
+            session.rollback()
+            raise
 
 def get_cache_service() -> "CacheService":
     """

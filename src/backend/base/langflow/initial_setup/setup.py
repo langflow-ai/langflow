@@ -520,14 +520,12 @@ def load_flows_from_directory():
                     existing.updated_at = datetime.utcnow()
                     existing.user_id = user_id
                     session.add(existing)
-                    session.commit()
                 else:
                     logger.info(f"Creating new flow: {flow_id} with endpoint name {flow_endpoint_name}")
                     flow["user_id"] = user_id
                     flow = Flow.model_validate(flow, from_attributes=True)
                     flow.updated_at = datetime.utcnow()
                     session.add(flow)
-                session.commit()
 
 
 def find_existing_flow(session, flow_id, flow_endpoint_name):
@@ -605,5 +603,4 @@ def initialize_super_user_if_needed():
         super_user = create_super_user(db=session, username=username, password=password)
         get_variable_service().initialize_user_variables(super_user.id, session)
         create_default_folder_if_it_doesnt_exist(session, super_user.id)
-        session.commit()
         logger.info("Super user initialized")

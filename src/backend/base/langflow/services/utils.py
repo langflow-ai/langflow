@@ -106,6 +106,7 @@ def teardown_superuser(settings_service, session):
 
         except Exception as exc:
             logger.exception(exc)
+            session.rollback()
             raise RuntimeError("Could not remove default superuser.") from exc
 
 

@@ -402,3 +402,16 @@ def test_migrate_transactions_no_duckdb(client: TestClient):
         migrate_transactions_from_monitor_service_to_database(session)
         new_trans = get_transactions_by_flow_id(session, UUID(flow_id))
         assert 0 == len(new_trans)
+
+
+
+def test_x():
+
+    def do_some(session):
+        import time
+        time.sleep(2)
+        print("done")
+
+    db_service = get_db_service()
+    session = db_service.with_session()
+    do_some(session)
