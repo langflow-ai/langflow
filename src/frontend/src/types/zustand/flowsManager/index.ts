@@ -11,13 +11,19 @@ export type FlowsManagerStoreType = {
   currentFlowId: string;
   setCurrentFlowId: (currentFlowId: string) => void;
   saveLoading: boolean;
+  setSaveLoading: (saveLoading: boolean) => void;
   isLoading: boolean;
   setIsLoading: (isLoading: boolean) => void;
   refreshFlows: () => Promise<void>;
-  saveFlow: (flow: FlowType, silent?: boolean) => Promise<void> | undefined;
+  saveFlow: (
+    flow: FlowType,
+    silent?: boolean,
+    folderId?: string,
+  ) => Promise<void> | undefined;
   saveFlowDebounce: (
     flow: FlowType,
     silent?: boolean,
+    folderId?: string,
   ) => Promise<void> | undefined;
   autoSaveCurrentFlow: (
     nodes: Node[],

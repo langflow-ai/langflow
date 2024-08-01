@@ -9,7 +9,10 @@ import Robot from "../../../../../assets/robot.png";
 import CodeTabsComponent from "../../../../../components/codeTabsComponent";
 import IconComponent from "../../../../../components/genericIconComponent";
 import SanitizedHTMLWrapper from "../../../../../components/sanitizedHTMLWrapper";
-import { EMPTY_INPUT_SEND_MESSAGE } from "../../../../../constants/constants";
+import {
+  EMPTY_INPUT_SEND_MESSAGE,
+  EMPTY_OUTPUT_SEND_MESSAGE,
+} from "../../../../../constants/constants";
 import useAlertStore from "../../../../../stores/alertStore";
 import useFlowStore from "../../../../../stores/flowStore";
 import { chatMessagePropsType } from "../../../../../types/components";
@@ -170,7 +173,10 @@ export default function ChatMessage({
               )}
               {chat.thought && chat.thought !== "" && !hidden && <br></br>}
               <div className="flex w-full flex-col">
-                <div className="flex w-full flex-col dark:text-white">
+                <div
+                  className="flex w-full flex-col dark:text-white"
+                  data-testid="div-chat-message"
+                >
                   <div
                     data-testid={
                       "chat-message-" + chat.sender_name + "-" + chatMessage
@@ -251,8 +257,8 @@ export default function ChatMessage({
                               },
                             }}
                           >
-                            {chatMessage === ""
-                              ? EMPTY_INPUT_SEND_MESSAGE
+                            {chatMessage === "" && !chat.stream_url
+                              ? EMPTY_OUTPUT_SEND_MESSAGE
                               : chatMessage}
                           </Markdown>
                         ),
@@ -286,10 +292,8 @@ export default function ChatMessage({
                   className={cn(
                     "prose word-break-break-word dark:prose-invert",
                     chatMessage !== ""
-                      ? EMPTY_INPUT_SEND_MESSAGE
-                      : chatMessage
-                        ? "text-primary"
-                        : "text-chat-trigger-disabled",
+                      ? "text-primary"
+                      : "text-chat-trigger-disabled",
                   )}
                 >
                   {promptOpen

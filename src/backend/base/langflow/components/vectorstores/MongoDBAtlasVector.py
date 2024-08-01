@@ -12,6 +12,7 @@ class MongoVectorStoreComponent(LCVectorStoreComponent):
     display_name = "MongoDB Atlas"
     description = "MongoDB Atlas Vector Store with search capabilities"
     documentation = "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/mongodb_atlas"
+    name = "MongoDBAtlasVector"
     icon = "MongoDB"
 
     inputs = [

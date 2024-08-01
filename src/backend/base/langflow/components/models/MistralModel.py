@@ -1,19 +1,18 @@
 from langchain_mistralai import ChatMistralAI
 from pydantic.v1 import SecretStr
 
-from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
-from langflow.io import BoolInput, DropdownInput, FloatInput, IntInput, MessageInput, Output, SecretStrInput, StrInput
+from langflow.io import BoolInput, DropdownInput, FloatInput, IntInput, SecretStrInput, StrInput
 
 
 class MistralAIModelComponent(LCModelComponent):
     display_name = "MistralAI"
     description = "Generates text using MistralAI LLMs."
     icon = "MistralAI"
+    name = "MistralModel"
 
-    inputs = [
-        MessageInput(name="input_value", display_name="Input"),
+    inputs = LCModelComponent._base_inputs + [
         IntInput(
             name="max_tokens",
             display_name="Max Tokens",
@@ -44,19 +43,12 @@ class MistralAIModelComponent(LCModelComponent):
             ),
         ),
         SecretStrInput(
-            name="mistral_api_key",
+            name="api_key",
             display_name="Mistral API Key",
             info="The Mistral API Key to use for the Mistral model.",
             advanced=False,
         ),
         FloatInput(name="temperature", display_name="Temperature", advanced=False, value=0.5),
-        BoolInput(name="stream", display_name="Stream", info=STREAM_INFO_TEXT, advanced=True),
-        StrInput(
-            name="system_message",
-            display_name="System Message",
-            info="System message to pass to the model.",
-            advanced=True,
-        ),
         IntInput(name="max_retries", display_name="Max Retries", advanced=True, value=5),
         IntInput(name="timeout", display_name="Timeout", advanced=True, value=60),
         IntInput(name="max_concurrent_requests", display_name="Max Concurrent Requests", advanced=True, value=3),
@@ -65,13 +57,8 @@ class MistralAIModelComponent(LCModelComponent):
         BoolInput(name="safe_mode", display_name="Safe Mode", advanced=True),
     ]
 
-    outputs = [
-        Output(display_name="Text", name="text_output", method="text_response"),
-        Output(display_name="Language Model", name="model_output", method="build_model"),
-    ]
-
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
-        mistral_api_key = self.mistral_api_key
+        mistral_api_key = self.api_key
         temperature = self.temperature
         model_name = self.model_name
         max_tokens = self.max_tokens

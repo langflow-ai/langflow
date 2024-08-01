@@ -1,47 +1,32 @@
-from typing import Optional
+from langchain.chains import LLMMathChain
 
-from langchain.chains import LLMChain, LLMMathChain
+from langflow.base.chains.model import LCChainComponent
+from langflow.field_typing import Message
+from langflow.inputs import MultilineInput, HandleInput
+from langflow.template import Output
 
-from langflow.custom import CustomComponent
-from langflow.field_typing import BaseMemory, LanguageModel, Text
 
-
-class LLMMathChainComponent(CustomComponent):
+class LLMMathChainComponent(LCChainComponent):
     display_name = "LLMMathChain"
     description = "Chain that interprets a prompt and executes python code to do math."
     documentation = "https://python.langchain.com/docs/modules/chains/additional/llm_math"
+    name = "LLMMathChain"
 
-    def build_config(self):
-        return {
-            "llm": {"display_name": "LLM"},
-            "llm_chain": {"display_name": "LLM Chain"},
-            "memory": {"display_name": "Memory"},
-            "input_key": {"display_name": "Input Key"},
-            "output_key": {"display_name": "Output Key"},
-            "input_value": {
-                "display_name": "Input Value",
-                "info": "The input value to pass to the chain.",
-            },
-        }
+    inputs = [
+        MultilineInput(
+            name="input_value", display_name="Input", info="The input value to pass to the chain.", required=True
+        ),
+        HandleInput(name="llm", display_name="Language Model", input_types=["LanguageModel"], required=True),
+    ]
 
-    def build(
-        self,
-        input_value: Text,
-        llm: LanguageModel,
-        llm_chain: LLMChain,
-        input_key: str = "question",
-        output_key: str = "answer",
-        memory: Optional[BaseMemory] = None,
-    ) -> Text:
-        chain = LLMMathChain(
-            llm=llm,
-            llm_chain=llm_chain,
-            input_key=input_key,
-            output_key=output_key,
-            memory=memory,
+    outputs = [Output(display_name="Text", name="text", method="invoke_chain")]
+
+    def invoke_chain(self) -> Message:
+        chain = LLMMathChain.from_llm(llm=self.llm)
+        response = chain.invoke(
+            {chain.input_key: self.input_value}, config={"callbacks": self.get_langchain_callbacks()}
         )
-        response = chain.invoke({input_key: input_value})
-        result = response.get(output_key)
-        result_str = str(result)
-        self.status = result_str
-        return result_str
+        result = response.get(chain.output_key, "")
+        result = str(result)
+        self.status = result
+        return Message(text=result)

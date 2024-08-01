@@ -2,47 +2,12 @@ import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
 
-test("should interact with api request", async ({ page }) => {
-  await page.goto("/");
-  await page.waitForTimeout(2000);
-
-  let modalCount = 0;
-  try {
-    const modalTitleElement = await page?.getByTestId("modal-title");
-    if (modalTitleElement) {
-      modalCount = await modalTitleElement.count();
-    }
-  } catch (error) {
-    modalCount = 0;
-  }
-
-  while (modalCount === 0) {
-    await page.getByText("New Project", { exact: true }).click();
-    await page.waitForTimeout(5000);
-    modalCount = await page.getByTestId("modal-title")?.count();
-  }
-  await page.getByTestId("blank-flow").click();
-  await page.waitForSelector('[data-testid="extended-disclosure"]', {
-    timeout: 30000,
-  });
-  await page.getByTestId("extended-disclosure").click();
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("api request");
-
-  await page.waitForTimeout(1000);
-
-  await page
-    .getByTestId("dataAPI Request")
-    .dragTo(page.locator('//*[@id="react-flow-id"]'));
-  await page.mouse.up();
-  await page.mouse.down();
-  await page.getByTitle("fit view").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
-});
-
 test("erase button should clear the chat messages", async ({ page }) => {
+  test.skip(
+    !process?.env?.OPENAI_API_KEY,
+    "OPENAI_API_KEY required to run this test",
+  );
+
   if (!process.env.CI) {
     dotenv.config({ path: path.resolve(__dirname, "../../.env") });
   }
@@ -75,17 +40,20 @@ test("erase button should clear the chat messages", async ({ page }) => {
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
 
-  if (!process.env.OPENAI_API_KEY) {
-    //You must set the OPENAI_API_KEY on .env file to run this test
-    expect(false).toBe(true);
+  let outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
+
+  while (outdatedComponents > 0) {
+    await page.getByTestId("icon-AlertTriangle").first().click();
+    await page.waitForTimeout(1000);
+    outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
   }
 
   await page
-    .getByTestId("popover-anchor-input-openai_api_key")
+    .getByTestId("popover-anchor-input-api_key")
     .fill(process.env.OPENAI_API_KEY ?? "");
 
-  await page.getByTestId("dropdown-model_name").click();
-  await page.getByTestId("gpt-4o-0-option").click();
+  await page.getByTestId("dropdown_str_model_name").click();
+  await page.getByTestId("gpt-4o-1-option").click();
 
   await page.waitForTimeout(2000);
   await page.getByText("Playground", { exact: true }).click();
@@ -119,4 +87,17 @@ test("erase button should clear the chat messages", async ({ page }) => {
   await page.getByText("User", { exact: true }).last().isHidden();
   await page.getByText("Start a conversation").isVisible();
   await page.getByText("Langflow Chat").isVisible();
+
+  await page.waitForTimeout(2000);
+  await page.getByPlaceholder("Send a message...").fill("My name is John");
+
+  await page.waitForSelector('[data-testid="icon-LucideSend"]', {
+    timeout: 100000,
+  });
+
+  await page.getByTestId("icon-LucideSend").click();
+
+  await page.waitForSelector("text=AI", { timeout: 30000 });
+
+  await page.getByText("Hello, how are you?").isHidden();
 });

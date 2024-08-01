@@ -1,14 +1,16 @@
 name: Lint Python
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened, auto_merge_enabled]
+  workflow_call:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "(Optional) Branch to checkout"
+        required: false
+        type: string
 env:
   POETRY_VERSION: "1.8.2"
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
 
 jobs:
   lint:
@@ -22,6 +24,8 @@ jobs:
           - "3.10"
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || github.ref }}
       - name: Set up Python ${{ matrix.python-version }} + Poetry ${{ env.POETRY_VERSION }}
         uses: "./.github/actions/poetry_caching"
         with:

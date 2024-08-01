@@ -5,6 +5,7 @@ from langflow.custom import Component
 from langflow.memory import store_message
 from langflow.schema import Data
 from langflow.schema.message import Message
+from langflow.utils.constants import MESSAGE_SENDER_USER, MESSAGE_SENDER_AI
 
 
 class ChatComponent(Component):
@@ -19,7 +20,7 @@ class ChatComponent(Component):
                 "multiline": True,
             },
             "sender": {
-                "options": ["Machine", "User"],
+                "options": [MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],
                 "display_name": "Sender Type",
                 "advanced": True,
             },
@@ -49,6 +50,7 @@ class ChatComponent(Component):
             },
         }
 
+    # Keep this method for backward compatibility
     def store_message(
         self,
         message: Message,
@@ -86,5 +88,9 @@ class ChatComponent(Component):
 
         self.status = message_text
         if session_id and isinstance(message, Message) and isinstance(message.text, str):
-            self.store_message(message)
+            messages = store_message(
+                message,
+                flow_id=self.graph.flow_id,
+            )
+            self.status = messages
         return message_text  # type: ignore

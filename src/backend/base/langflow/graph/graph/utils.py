@@ -1,5 +1,25 @@
-from collections import deque
 import copy
+from collections import deque
+from typing import Dict, List
+
+PRIORITY_LIST_OF_INPUTS = ["webhook", "chat"]
+
+
+def find_start_component_id(vertices):
+    """
+    Finds the component ID from a list of vertices based on a priority list of input types.
+
+    Args:
+        vertices (list): A list of vertex IDs.
+
+    Returns:
+        str or None: The component ID that matches the highest priority input type, or None if no match is found.
+    """
+    for input_type_str in PRIORITY_LIST_OF_INPUTS:
+        component_id = next((vertex_id for vertex_id in vertices if input_type_str in vertex_id.lower()), None)
+        if component_id:
+            return component_id
+    return None
 
 
 def find_last_node(nodes, edges):
@@ -17,14 +37,25 @@ def add_parent_node_id(nodes, parent_node_id):
         node["parent_node_id"] = parent_node_id
 
 
+def add_frozen(nodes, frozen):
+    """
+    This function receives a list of nodes and adds a frozen to each node.
+    """
+    for node in nodes:
+        node["data"]["node"]["frozen"] = frozen
+
+
 def ungroup_node(group_node_data, base_flow):
-    template, flow = (
+    template, flow, frozen = (
         group_node_data["node"]["template"],
         group_node_data["node"]["flow"],
+        group_node_data["node"].get("frozen", False),
     )
     parent_node_id = group_node_data["id"]
+
     g_nodes = flow["data"]["nodes"]
     add_parent_node_id(g_nodes, parent_node_id)
+    add_frozen(g_nodes, frozen)
     g_edges = flow["data"]["edges"]
 
     # Redirect edges to the correct proxy node
@@ -205,3 +236,49 @@ def get_updated_edges(base_flow, g_nodes, g_edges, group_node_id):
         if edge["target"] == group_node_id or edge["source"] == group_node_id:
             updated_edges.append(new_edge)
     return updated_edges
+
+
+def get_successors(graph: Dict[str, Dict[str, List[str]]], vertex_id: str) -> List[str]:
+    successors_result = []
+    stack = [vertex_id]
+    while stack:
+        current_id = stack.pop()
+        successors_result.append(current_id)
+        stack.extend(graph[current_id]["successors"])
+    return successors_result
+
+
+def sort_up_to_vertex(graph: Dict[str, Dict[str, List[str]]], vertex_id: str, is_start: bool = False) -> List[str]:
+    """Cuts the graph up to a given vertex and sorts the resulting subgraph."""
+    try:
+        stop_or_start_vertex = graph[vertex_id]
+    except KeyError:
+        raise ValueError(f"Vertex {vertex_id} not found into graph")
+
+    visited, excluded = set(), set()
+    stack = [vertex_id]
+    stop_predecessors = set(stop_or_start_vertex["predecessors"])
+
+    while stack:
+        current_id = stack.pop()
+        if current_id in visited or current_id in excluded:
+            continue
+
+        visited.add(current_id)
+        current_vertex = graph[current_id]
+
+        stack.extend(current_vertex["predecessors"])
+
+        if current_id == vertex_id or (current_id not in stop_predecessors and is_start):
+            for successor_id in current_vertex["successors"]:
+                if is_start:
+                    stack.append(successor_id)
+                else:
+                    excluded.add(successor_id)
+                for succ_id in get_successors(graph, successor_id):
+                    if is_start:
+                        stack.append(succ_id)
+                    else:
+                        excluded.add(succ_id)
+
+    return list(visited)

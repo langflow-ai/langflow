@@ -1,14 +1,16 @@
 import { PopoverAnchor } from "@radix-ui/react-popover";
-import { useRef, useState } from "react";
+import Fuse from "fuse.js";
+import { cloneDeep } from "lodash";
+import { ChangeEvent, useEffect, useRef, useState } from "react";
 import { DropDownComponentType } from "../../types/components";
 import { cn } from "../../utils/utils";
 import { default as ForwardedIconComponent } from "../genericIconComponent";
+import ShadTooltip from "../shadTooltipComponent";
 import { Button } from "../ui/button";
 import {
   Command,
   CommandEmpty,
   CommandGroup,
-  CommandInput,
   CommandItem,
   CommandList,
 } from "../ui/command";
@@ -24,6 +26,7 @@ export default function Dropdown({
   isLoading,
   value,
   options,
+  combobox,
   onSelect,
   editNode = false,
   id = "",
@@ -35,9 +38,40 @@ export default function Dropdown({
 
   const PopoverContentDropdown =
     children || editNode ? PopoverContent : PopoverContentWithoutPortal;
+
+  const [customValue, setCustomValue] = useState("");
+  const [filteredOptions, setFilteredOptions] = useState(options);
+
+  const fuse = new Fuse(options, { keys: ["name", "value"] });
+
+  const searchRoleByTerm = async (event: ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.value;
+    const searchValues = fuse.search(value);
+    const filtered = searchValues.map((search) => search.item);
+    if (!filtered.includes(value) && combobox && value) filtered.push(value);
+    setFilteredOptions(value ? filtered : options);
+    setCustomValue(value);
+  };
+
+  useEffect(() => {
+    if (disabled && value !== "") {
+      onSelect("", undefined, true);
+    }
+  }, [disabled]);
+
+  useEffect(() => {
+    if (open) {
+      const filtered = cloneDeep(options);
+      if (customValue === value && value && combobox) {
+        filtered.push(customValue);
+      }
+      setFilteredOptions(filtered);
+    }
+  }, [open]);
+
   return (
     <>
-      {Object.keys(options ?? [])?.length > 0 ? (
+      {Object.keys(options ?? [])?.length > 0 || combobox ? (
         <>
           <Popover open={open} onOpenChange={children ? () => {} : setOpen}>
             {children ? (
@@ -60,11 +94,14 @@ export default function Dropdown({
                     editNode ? "input-edit-node" : "py-2",
                   )}
                 >
-                  <span data-testid={`value-dropdown-` + id}>
+                  <span
+                    className="truncate"
+                    data-testid={`value-dropdown-` + id}
+                  >
                     {value &&
                     value !== "" &&
-                    options.find((option) => option === value)
-                      ? options.find((option) => option === value)
+                    filteredOptions.find((option) => option === value)
+                      ? filteredOptions.find((option) => option === value)
                       : "Choose an option..."}
                   </span>
 
@@ -78,7 +115,7 @@ export default function Dropdown({
             <PopoverContentDropdown
               side="bottom"
               avoidCollisions={!!children}
-              className="nocopy nowheel nopan nodelete nodrag noundo p-0"
+              className="noflow nowheel nopan nodelete nodrag p-0"
               style={
                 children
                   ? {}
@@ -86,29 +123,55 @@ export default function Dropdown({
               }
             >
               <Command>
-                <CommandInput placeholder="Search options..." className="h-9" />
+                <div className="flex items-center border-b px-3">
+                  <ForwardedIconComponent
+                    name="search"
+                    className="mr-2 h-4 w-4 shrink-0 opacity-50"
+                  />
+                  <input
+                    onChange={searchRoleByTerm}
+                    placeholder="Search options..."
+                    className="flex h-9 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                  />
+                </div>
                 <CommandList>
                   <CommandEmpty>No values found.</CommandEmpty>
                   <CommandGroup defaultChecked={false}>
-                    {options?.map((option, id) => (
-                      <CommandItem
+                    {filteredOptions?.map((option, id) => (
+                      <ShadTooltip
+                        delayDuration={700}
                         key={id}
-                        value={option}
-                        onSelect={(currentValue) => {
-                          onSelect(currentValue);
-                          setOpen(false);
-                        }}
-                        data-testid={`${option}-${id ?? ""}-option`}
+                        content={option}
                       >
-                        {option}
-                        <ForwardedIconComponent
-                          name="Check"
-                          className={cn(
-                            "ml-auto h-4 w-4 text-primary",
-                            value === option ? "opacity-100" : "opacity-0",
-                          )}
-                        />
-                      </CommandItem>
+                        <div>
+                          <CommandItem
+                            key={id}
+                            value={option}
+                            onSelect={(currentValue) => {
+                              onSelect(currentValue);
+                              setOpen(false);
+                            }}
+                            className="items-center overflow-hidden truncate"
+                            data-testid={`${option}-${id ?? ""}-option`}
+                          >
+                            {customValue === option ? (
+                              <span className="text-muted-foreground">
+                                Text:&nbsp;
+                              </span>
+                            ) : (
+                              <></>
+                            )}
+                            <span className="truncate">{option}</span>
+                            <ForwardedIconComponent
+                              name="Check"
+                              className={cn(
+                                "ml-auto h-4 w-4 shrink-0 text-primary",
+                                value === option ? "opacity-100" : "opacity-0",
+                              )}
+                            />
+                          </CommandItem>
+                        </div>
+                      </ShadTooltip>
                     ))}
                   </CommandGroup>
                 </CommandList>

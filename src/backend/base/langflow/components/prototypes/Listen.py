@@ -5,6 +5,7 @@ from langflow.schema import Data
 class ListenComponent(CustomComponent):
     display_name = "Listen"
     description = "A component to listen for a notification."
+    name = "Listen"
     beta: bool = True
 
     def build_config(self):
@@ -17,5 +18,11 @@ class ListenComponent(CustomComponent):
 
     def build(self, name: str) -> Data:
         state = self.get_state(name)
+        self._set_successors_ids()
         self.status = state
         return state
+
+    def _set_successors_ids(self):
+        self._vertex.is_state = True
+        successors = self._vertex.graph.successor_map.get(self._vertex.id, [])
+        return successors + self._vertex.graph.activated_vertices

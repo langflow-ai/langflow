@@ -11,12 +11,13 @@ class URLComponent(Component):
     display_name = "URL"
     description = "Fetch content from one or more URLs."
     icon = "layout-template"
+    name = "URL"
 
     inputs = [
         MessageTextInput(
             name="urls",
             display_name="URLs",
-            info="Enter one or more URLs, separated by commas.",
+            info="Enter one or more URLs, by clicking the '+' button.",
             is_list=True,
         ),
     ]

@@ -1,3 +1,8 @@
+import {
+  BROKEN_EDGES_WARNING,
+  componentsToIgnoreUpdate,
+} from "@/constants/constants";
+import { brokenEdgeMessage } from "@/utils/utils";
 import { cloneDeep, zip } from "lodash";
 import {
   Edge,
@@ -29,6 +34,7 @@ import {
   checkChatInput,
   checkOldComponents,
   cleanEdges,
+  detectBrokenEdgesEdges,
   getHandleId,
   getNodeId,
   scapeJSONParse,
@@ -41,9 +47,27 @@ import useAlertStore from "./alertStore";
 import { useDarkStore } from "./darkStore";
 import useFlowsManagerStore from "./flowsManagerStore";
 import { useGlobalVariablesStore } from "./globalVariablesStore/globalVariables";
+import { useTypesStore } from "./typesStore";
 
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
 const useFlowStore = create<FlowStoreType>((set, get) => ({
+  componentsToUpdate: false,
+  updateComponentsToUpdate: (nodes) => {
+    let outdatedNodes = false;
+    const templates = useTypesStore.getState().templates;
+    for (let i = 0; i < nodes.length; i++) {
+      const currentCode = templates[nodes[i].data?.type]?.template?.code?.value;
+      const thisNodesCode = nodes[i].data?.node!.template?.code?.value;
+      outdatedNodes =
+        currentCode &&
+        thisNodesCode &&
+        currentCode !== thisNodesCode &&
+        !nodes[i].data?.node?.edited &&
+        !componentsToIgnoreUpdate.includes(nodes[i].data?.type);
+      if (outdatedNodes) break;
+    }
+    set({ componentsToUpdate: outdatedNodes });
+  },
   onFlowPage: false,
   lockChat: false,
   setLockChat: (lockChat) => {
@@ -56,14 +80,34 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   edges: [],
   isBuilding: false,
   isPending: true,
-  hasIO: false,
+  setHasIO: (hasIO) => {
+    set({ hasIO });
+  },
   reactFlowInstance: null,
   lastCopiedSelection: null,
   flowPool: {},
+  setInputs: (inputs) => {
+    set({ inputs });
+  },
+  setOutputs: (outputs) => {
+    set({ outputs });
+  },
   inputs: [],
   outputs: [],
+  hasIO: get()?.inputs?.length > 0 || get()?.outputs?.length > 0,
   setFlowPool: (flowPool) => {
     set({ flowPool });
+  },
+  updateFreezeStatus: (nodeIds: string[], freeze: boolean) => {
+    get().setNodes((oldNodes) => {
+      const newNodes = cloneDeep(oldNodes);
+      return newNodes.map((node) => {
+        if (nodeIds.includes(node.id)) {
+          (node.data as NodeDataType).node!.frozen = freeze;
+        }
+        return node;
+      });
+    });
   },
   addDataToFlowPool: (data: VertexBuildTypeAPI, nodeId: string) => {
     let newFlowPool = cloneDeep({ ...get().flowPool });
@@ -111,8 +155,16 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   },
   resetFlow: ({ nodes, edges, viewport }) => {
     const currentFlow = useFlowsManagerStore.getState().currentFlow;
+    let brokenEdges = detectBrokenEdgesEdges(nodes, edges);
+    if (brokenEdges.length > 0) {
+      useAlertStore.getState().setErrorData({
+        title: BROKEN_EDGES_WARNING,
+        list: brokenEdges.map((edge) => brokenEdgeMessage(edge)),
+      });
+    }
     let newEdges = cleanEdges(nodes, edges);
     const { inputs, outputs } = getInputsAndOutputs(nodes);
+    get().updateComponentsToUpdate(nodes);
     set({
       nodes,
       edges: newEdges,
@@ -158,7 +210,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     let newChange = typeof change === "function" ? change(get().nodes) : change;
     let newEdges = cleanEdges(newChange, get().edges);
     const { inputs, outputs } = getInputsAndOutputs(newChange);
-
+    get().updateComponentsToUpdate(newChange);
     set({
       edges: newEdges,
       nodes: newChange,
@@ -456,6 +508,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     setLockChat?: (lock: boolean) => void;
   }) => {
     get().setIsBuilding(true);
+    get().setLockChat(true);
     const currentFlow = useFlowsManagerStore.getState().currentFlow;
     const setSuccessData = useAlertStore.getState().setSuccessData;
     const setErrorData = useAlertStore.getState().setErrorData;
@@ -476,7 +529,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         const ids = errorsObjs.map((obj) => obj.id).flat();
 
         get().updateBuildStatus(ids, BuildStatus.ERROR);
-        throw new Error("Invalid nodes");
+        throw new Error("Invalid components");
       }
     }
     function handleBuildUpdate(
@@ -509,11 +562,27 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         const top_level_vertices = vertexBuildData.top_level_vertices.filter(
           (vertex) => !vertexBuildData.inactivated_vertices?.includes(vertex),
         );
-        const nextVertices: VertexLayerElementType[] = zip(
+        let nextVertices: VertexLayerElementType[] = zip(
           next_vertices_ids,
           top_level_vertices,
         ).map(([id, reference]) => ({ id: id!, reference }));
 
+        // Now we filter nextVertices to remove any vertices that are in verticesLayers
+        // because they are already being built
+        // each layer is a list of vertexlayerelementtypes
+        let lastLayer =
+          get().verticesBuild!.verticesLayers[
+            get().verticesBuild!.verticesLayers.length - 1
+          ];
+
+        nextVertices = nextVertices.filter(
+          (vertexElement) =>
+            !lastLayer.some(
+              (layerElement) =>
+                layerElement.id === vertexElement.id &&
+                layerElement.reference === vertexElement.reference,
+            ),
+        );
         const newLayers = [
           ...get().verticesBuild!.verticesLayers,
           nextVertices,
@@ -578,6 +647,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           }
         }
         get().setIsBuilding(false);
+        get().setLockChat(false);
       },
       onBuildUpdate: handleBuildUpdate,
       onBuildError: (title: string, list: string[], elementList) => {
@@ -585,8 +655,14 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           .map((element) => element.id)
           .filter(Boolean) as string[];
         useFlowStore.getState().updateBuildStatus(idList, BuildStatus.BUILT);
+        if (get().componentsToUpdate)
+          setErrorData({
+            title:
+              "There are outdated components in the flow. The error could be related to them.",
+          });
         setErrorData({ list, title });
         get().setIsBuilding(false);
+        get().setLockChat(false);
       },
       onBuildStart: (elementList) => {
         const idList = elementList
@@ -600,6 +676,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       edges: !get().onFlowPage ? get().edges : undefined,
     });
     get().setIsBuilding(false);
+    get().setLockChat(false);
     get().revertBuiltStatusFromBuilding();
   },
   getFlow: () => {

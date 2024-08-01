@@ -4,6 +4,11 @@ import { readFileSync } from "fs";
 import path from "path";
 
 test("user must interact with chat with Input/Output", async ({ page }) => {
+  test.skip(
+    !process?.env?.OPENAI_API_KEY,
+    "OPENAI_API_KEY required to run this test",
+  );
+
   if (!process.env.CI) {
     dotenv.config({ path: path.resolve(__dirname, "../../.env") });
   }
@@ -38,17 +43,20 @@ test("user must interact with chat with Input/Output", async ({ page }) => {
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
 
-  if (!process.env.OPENAI_API_KEY) {
-    //You must set the OPENAI_API_KEY on .env file to run this test
-    expect(false).toBe(true);
+  let outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
+
+  while (outdatedComponents > 0) {
+    await page.getByTestId("icon-AlertTriangle").first().click();
+    await page.waitForTimeout(1000);
+    outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
   }
 
   await page
-    .getByTestId("popover-anchor-input-openai_api_key")
+    .getByTestId("popover-anchor-input-api_key")
     .fill(process.env.OPENAI_API_KEY ?? "");
 
-  await page.getByTestId("dropdown-model_name").click();
-  await page.getByTestId("gpt-4o-0-option").click();
+  await page.getByTestId("dropdown_str_model_name").click();
+  await page.getByTestId("gpt-4o-1-option").click();
 
   await page.waitForTimeout(2000);
   await page.getByText("Playground", { exact: true }).click();
@@ -78,7 +86,7 @@ test("user must interact with chat with Input/Output", async ({ page }) => {
   await page.keyboard.press("Escape");
 
   await page
-    .getByTestId("textarea-input_value")
+    .getByTestId("textarea_str_input_value")
     .nth(0)
     .fill(
       "testtesttesttesttesttestte;.;.,;,.;,.;.,;,..,;;;;;;;;;;;;;;;;;;;;;,;.;,.;,.,;.,;.;.,~~çççççççççççççççççççççççççççççççççççççççisdajfdasiopjfaodisjhvoicxjiovjcxizopjviopasjioasfhjaiohf23432432432423423sttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttestççççççççççççççççççççççççççççççççç,.,.,.,.,.,.,.,.,.,.,.,.,.,.,.,.,!",
@@ -94,12 +102,12 @@ test("user must interact with chat with Input/Output", async ({ page }) => {
   await page.getByText("Chat Input", { exact: true }).click();
   await page.getByTestId("advanced-button-modal").click();
   await page.getByTestId("showsender_name").click();
-  await page.getByText("Save Changes", { exact: true }).click();
+  await page.getByText("Close").last().click();
 
   await page.getByText("Chat Output", { exact: true }).click();
   await page.getByTestId("advanced-button-modal").click();
   await page.getByTestId("showsender_name").click();
-  await page.getByText("Save Changes", { exact: true }).click();
+  await page.getByText("Close").last().click();
 
   await page
     .getByTestId("popover-anchor-input-sender_name")

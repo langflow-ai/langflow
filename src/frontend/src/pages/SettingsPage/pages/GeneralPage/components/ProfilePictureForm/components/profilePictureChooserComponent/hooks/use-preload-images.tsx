@@ -1,12 +1,10 @@
 import { useEffect } from "react";
-import {
-  BACKEND_URL,
-  BASE_URL_API,
-} from "../../../../../../../../../constants/constants";
+import { BASE_URL_API } from "../../../../../../../../../constants/constants";
 
 const usePreloadImages = (
-  profilePictures: { [key: string]: string[] },
   setImagesLoaded: (value: boolean) => void,
+  loading: boolean,
+  profilePictures?: { [key: string]: string[] },
 ) => {
   const preloadImages = async (imageUrls) => {
     return Promise.all(
@@ -23,13 +21,13 @@ const usePreloadImages = (
   };
 
   useEffect(() => {
+    if (loading || !profilePictures) return;
     const imageArray: string[] = [];
-    const firstUrl = `${BACKEND_URL.slice(0, BACKEND_URL.length - 1)}`;
 
     Object.keys(profilePictures).flatMap((folder) =>
       profilePictures[folder].map((path) =>
         imageArray.push(
-          `${firstUrl}${BASE_URL_API}files/profile_pictures/${folder}/${path}`,
+          `${BASE_URL_API}files/profile_pictures/${folder}/${path}`,
         ),
       ),
     );
@@ -37,7 +35,7 @@ const usePreloadImages = (
     preloadImages(imageArray).then(() => {
       setImagesLoaded(true);
     });
-  }, [profilePictures]);
+  }, [profilePictures, loading]);
 
   return;
 };

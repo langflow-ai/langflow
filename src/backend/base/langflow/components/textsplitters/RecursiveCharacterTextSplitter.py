@@ -1,16 +1,15 @@
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-
-from langflow.custom import Component
+from typing import Any
+from langchain_text_splitters import RecursiveCharacterTextSplitter, TextSplitter
+from langflow.base.textsplitters.model import LCTextSplitterComponent
 from langflow.inputs.inputs import DataInput, IntInput, MessageTextInput
-from langflow.schema import Data
-from langflow.template.field.base import Output
-from langflow.utils.util import build_loader_repr_from_data, unescape_string
+from langflow.utils.util import unescape_string
 
 
-class RecursiveCharacterTextSplitterComponent(Component):
+class RecursiveCharacterTextSplitterComponent(LCTextSplitterComponent):
     display_name: str = "Recursive Character Text Splitter"
-    description: str = "Split text into chunks of a specified length."
+    description: str = "Split text trying to keep all related text together."
     documentation: str = "https://docs.langflow.org/components/text-splitters#recursivecharactertextsplitter"
+    name = "RecursiveCharacterTextSplitter"
 
     inputs = [
         IntInput(
@@ -38,49 +37,20 @@ class RecursiveCharacterTextSplitterComponent(Component):
             is_list=True,
         ),
     ]
-    outputs = [
-        Output(display_name="Data", name="data", method="split_data"),
-    ]
 
-    def split_data(self) -> list[Data]:
-        """
-        Split text into chunks of a specified length.
+    def get_data_input(self) -> Any:
+        return self.data_input
 
-        Args:
-            separators (list[str] | None): The characters to split on.
-            chunk_size (int): The maximum length of each chunk.
-            chunk_overlap (int): The amount of overlap between chunks.
-
-        Returns:
-            list[str]: The chunks of text.
-        """
-
-        if self.separators == "":
-            self.separators: list[str] | None = None
-        elif self.separators:
+    def build_text_splitter(self) -> TextSplitter:
+        if not self.separators:
+            separators: list[str] | None = None
+        else:
             # check if the separators list has escaped characters
             # if there are escaped characters, unescape them
-            self.separators = [unescape_string(x) for x in self.separators]
+            separators = [unescape_string(x) for x in self.separators]
 
-        # Make sure chunk_size and chunk_overlap are ints
-        if self.chunk_size:
-            self.chunk_size: int = int(self.chunk_size)
-        if self.chunk_overlap:
-            self.chunk_overlap: int = int(self.chunk_overlap)
-        splitter = RecursiveCharacterTextSplitter(
-            separators=self.separators,
+        return RecursiveCharacterTextSplitter(
+            separators=separators,
             chunk_size=self.chunk_size,
             chunk_overlap=self.chunk_overlap,
         )
-        documents = []
-        if not isinstance(self.data_input, list):
-            self.data_input: list[Data] = [self.data_input]
-        for _input in self.data_input:
-            if isinstance(_input, Data):
-                documents.append(_input.to_lc_document())
-            else:
-                documents.append(_input)
-        docs = splitter.split_documents(documents)
-        data = self.to_data(docs)
-        self.repr_value = build_loader_repr_from_data(data)
-        return data

@@ -1,4 +1,4 @@
-import { cloneDeep, get } from "lodash";
+import { cloneDeep } from "lodash";
 import {
   Connection,
   Edge,
@@ -17,7 +17,6 @@ import {
   SUCCESS_BUILD,
   specialCharsRegex,
 } from "../constants/constants";
-import { downloadFlowsFromDatabase } from "../controllers/API";
 import { DESCRIPTIONS } from "../flow_constants";
 import {
   APIClassType,
@@ -48,7 +47,6 @@ export function checkChatInput(nodes: Node[]) {
 }
 
 export function cleanEdges(nodes: NodeType[], edges: Edge[]) {
-  console.log("cleanEdges", nodes, edges);
   let newEdges = cloneDeep(edges);
   edges.forEach((edge) => {
     // check if the source and target node still exists
@@ -93,8 +91,6 @@ export function cleanEdges(nodes: NodeType[], edges: Edge[]) {
           output_types: outputTypes,
           dataType: sourceNode.data.type,
         };
-        console.log("id", id);
-        console.log("parsedSourceHandle", parsedSourceHandle);
         if (scapedJSONStringfy(id) !== sourceHandle) {
           newEdges = newEdges.filter((e) => e.id !== edge.id);
         }
@@ -104,6 +100,100 @@ export function cleanEdges(nodes: NodeType[], edges: Edge[]) {
     }
   });
   return newEdges;
+}
+
+export function detectBrokenEdgesEdges(nodes: NodeType[], edges: Edge[]) {
+  function generateAlertObject(sourceNode, targetNode, edge) {
+    const targetHandleObject: targetHandleType = scapeJSONParse(
+      edge.targetHandle,
+    );
+    const sourceHandleObject: sourceHandleType = scapeJSONParse(
+      edge.sourceHandle,
+    );
+    const name = sourceHandleObject.name;
+    const output = sourceNode.data.node!.outputs?.find(
+      (output) => output.name === name,
+    );
+
+    return {
+      source: {
+        nodeDisplayName: sourceNode.data.node!.display_name,
+        outputDisplayName: output?.display_name,
+      },
+      target: {
+        displayName: targetNode.data.node!.display_name,
+        field:
+          targetNode.data.node!.template[targetHandleObject.fieldName]
+            .display_name,
+      },
+    };
+  }
+  let newEdges = cloneDeep(edges);
+  let BrokenEdges: {
+    source: {
+      nodeDisplayName: string;
+      outputDisplayName?: string;
+    };
+    target: {
+      displayName: string;
+      field: string;
+    };
+  }[] = [];
+  edges.forEach((edge) => {
+    // check if the source and target node still exists
+    const sourceNode = nodes.find((node) => node.id === edge.source);
+    const targetNode = nodes.find((node) => node.id === edge.target);
+    if (!sourceNode || !targetNode) {
+      newEdges = newEdges.filter((edg) => edg.id !== edge.id);
+      return;
+    }
+    // check if the source and target handle still exists
+    const sourceHandle = edge.sourceHandle; //right
+    const targetHandle = edge.targetHandle; //left
+    if (targetHandle) {
+      const targetHandleObject: targetHandleType = scapeJSONParse(targetHandle);
+      const field = targetHandleObject.fieldName;
+      const id: targetHandleType = {
+        type: targetNode.data.node!.template[field]?.type,
+        fieldName: field,
+        id: targetNode.data.id,
+        inputTypes: targetNode.data.node!.template[field]?.input_types,
+      };
+      if (targetNode.data.node!.template[field]?.proxy) {
+        id.proxy = targetNode.data.node!.template[field]?.proxy;
+      }
+      if (scapedJSONStringfy(id) !== targetHandle) {
+        newEdges = newEdges.filter((e) => e.id !== edge.id);
+        BrokenEdges.push(generateAlertObject(sourceNode, targetNode, edge));
+      }
+    }
+    if (sourceHandle) {
+      const parsedSourceHandle = scapeJSONParse(sourceHandle);
+      const name = parsedSourceHandle.name;
+      const output = sourceNode.data.node!.outputs?.find(
+        (output) => output.name === name,
+      );
+      if (output) {
+        const outputTypes =
+          output!.types.length === 1 ? output!.types : [output!.selected!];
+
+        const id: sourceHandleType = {
+          id: sourceNode.data.id,
+          name: name,
+          output_types: outputTypes,
+          dataType: sourceNode.data.type,
+        };
+        if (scapedJSONStringfy(id) !== sourceHandle) {
+          newEdges = newEdges.filter((e) => e.id !== edge.id);
+          BrokenEdges.push(generateAlertObject(sourceNode, targetNode, edge));
+        }
+      } else {
+        newEdges = newEdges.filter((e) => e.id !== edge.id);
+        BrokenEdges.push(generateAlertObject(sourceNode, targetNode, edge));
+      }
+    }
+  });
+  return BrokenEdges;
 }
 
 export function unselectAllNodes({ updateNodes, data }: unselectAllNodesType) {
@@ -351,7 +441,7 @@ Array<{ id: string; errors: Array<string> }> {
       {
         id: "",
         errors: [
-          "No nodes found in the flow. Please add at least one node to the flow.",
+          "No components found in the flow. Please add at least one component to the flow.",
         ],
       },
     ];
@@ -371,7 +461,9 @@ export function updateEdges(edges: Edge[]) {
 }
 
 export function addVersionToDuplicates(flow: FlowType, flows: FlowType[]) {
-  const existingNames = flows.map((item) => item.name);
+  const flowsWithoutUpdatedFlow = flows.filter((f) => f.id !== flow.id);
+
+  const existingNames = flowsWithoutUpdatedFlow.map((item) => item.name);
   let newName = flow.name;
   let count = 1;
 
@@ -387,7 +479,6 @@ export function updateEdgesHandleIds({
   edges,
   nodes,
 }: updateEdgesHandleIdsType): Edge[] {
-  console.log("updateEdgesHandleIds");
   let newEdges = cloneDeep(edges);
   newEdges.forEach((edge) => {
     const sourceNodeId = edge.source;
@@ -766,9 +857,7 @@ export function reconnectEdges(groupNode: NodeType, excludedEdges: Edge[]) {
     }
     if (nodes.some((node) => node.id === edge.target)) {
       const targetNode = nodes.find((node) => node.id === edge.target)!;
-      console.log("targetNode", targetNode);
       const targetHandle: targetHandleType = scapeJSONParse(edge.targetHandle!);
-      console.log("targetHandle", targetHandle);
       const proxy = { id: targetNode.id, field: targetHandle.fieldName };
       let newTargetHandle: targetHandleType = cloneDeep(targetHandle);
       newTargetHandle.id = groupNode.id;
@@ -854,7 +943,7 @@ export function validateSelection(
   let errorsArray: Array<string> = [];
   // check if there is more than one node
   if (clonedSelection.nodes.length < 2) {
-    errorsArray.push("Please select more than one node");
+    errorsArray.push("Please select more than one component");
   }
   if (
     clonedSelection.nodes.some(
@@ -863,9 +952,7 @@ export function validateSelection(
         isOutputNode(node.data as NodeDataType),
     )
   ) {
-    errorsArray.push(
-      "Please select only nodes that are not input or output nodes",
-    );
+    errorsArray.push("Select non-input/output components only");
   }
   //check if there are two or more nodes with free outputs
   if (
@@ -873,7 +960,7 @@ export function validateSelection(
       (n) => !clonedSelection.edges.some((e) => e.source === n.id),
     ).length > 1
   ) {
-    errorsArray.push("Please select only one node with free outputs");
+    errorsArray.push("Select only one component with free outputs");
   }
 
   // check if there is any node that does not have any connection
@@ -884,7 +971,7 @@ export function validateSelection(
         !clonedSelection.edges.some((edge) => edge.source === node.id),
     )
   ) {
-    errorsArray.push("Please select only nodes that are connected");
+    errorsArray.push("Select only connected components");
   }
   return errorsArray;
 }
@@ -946,7 +1033,7 @@ export function mergeNodeTemplates({
   });
   return template;
 }
-function isTargetHandleConnected(
+export function isTargetHandleConnected(
   edges: Edge[],
   key: string,
   field: InputFieldType,
@@ -955,6 +1042,7 @@ function isTargetHandleConnected(
   /*
 		this function receives a flow and a handleId and check if there is a connection with this handle
 	*/
+  if (!field) return true;
   if (field.proxy) {
     if (
       edges.some(
@@ -1039,8 +1127,6 @@ function generateNodeOutputs(flow: FlowType) {
       const nodeOutputs = node.data.node.outputs;
       nodeOutputs.forEach((output) => {
         //filter outputs that are not connected
-        console.log(output);
-        console.log(edges);
         if (
           !edges.some(
             (edge) =>
@@ -1429,22 +1515,6 @@ export function downloadFlow(
 
   // simulate a click on the link element to trigger the download
   link.click();
-}
-
-export function downloadFlows() {
-  downloadFlowsFromDatabase().then((flows) => {
-    const jsonString = `data:text/json;chatset=utf-8,${encodeURIComponent(
-      JSON.stringify(flows),
-    )}`;
-
-    // create a link element and set its properties
-    const link = document.createElement("a");
-    link.href = jsonString;
-    link.download = `flows.json`;
-
-    // simulate a click on the link element to trigger the download
-    link.click();
-  });
 }
 
 export function getRandomElement<T>(array: T[]): T {

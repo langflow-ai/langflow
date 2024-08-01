@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, cast
 
 from langchain_core.documents import Document
 from loguru import logger
@@ -23,11 +23,16 @@ class LCVectorStoreComponent(Component):
             name="search_results",
             method="search_documents",
         ),
+        Output(
+            display_name="Vector Store",
+            name="vector_store",
+            method="cast_vector_store",
+        ),
     ]
 
     def _validate_outputs(self):
         # At least these three outputs must be defined
-        required_output_methods = ["build_base_retriever", "search_documents"]
+        required_output_methods = ["build_base_retriever", "search_documents", "build_vector_store"]
         output_names = [output.name for output in self.outputs]
         for method_name in required_output_methods:
             if method_name not in output_names:
@@ -67,6 +72,9 @@ class LCVectorStoreComponent(Component):
         self.status = data
         return data
 
+    def cast_vector_store(self) -> VectorStore:
+        return cast(VectorStore, self.build_vector_store())
+
     def build_vector_store(self) -> VectorStore:
         """
         Builds the Vector Store object.c
@@ -79,7 +87,7 @@ class LCVectorStoreComponent(Component):
         """
         vector_store = self.build_vector_store()
         if hasattr(vector_store, "as_retriever"):
-            retriever = vector_store.as_retriever()
+            retriever = vector_store.as_retriever(**self.get_retriever_kwargs())
             if self.status is None:
                 self.status = "Retriever built successfully."
             return retriever
@@ -88,7 +96,7 @@ class LCVectorStoreComponent(Component):
 
     def search_documents(self) -> List[Data]:
         """
-        Search for documents in the Chroma vector store.
+        Search for documents in the vector store.
         """
         search_query: str = self.search_query
         if not search_query:
@@ -106,3 +114,9 @@ class LCVectorStoreComponent(Component):
         )
         self.status = search_results
         return search_results
+
+    def get_retriever_kwargs(self):
+        """
+        Get the retriever kwargs. Implementations can override this method to provide custom retriever kwargs.
+        """
+        return {}

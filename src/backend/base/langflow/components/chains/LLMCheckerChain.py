@@ -1,31 +1,29 @@
 from langchain.chains import LLMCheckerChain
 
-from langflow.custom import CustomComponent
-from langflow.field_typing import LanguageModel, Text
+from langflow.base.chains.model import LCChainComponent
+from langflow.field_typing import Message
+from langflow.inputs import MultilineInput, HandleInput
 
 
-class LLMCheckerChainComponent(CustomComponent):
+class LLMCheckerChainComponent(LCChainComponent):
     display_name = "LLMCheckerChain"
-    description = ""
+    description = "Chain for question-answering with self-verification."
     documentation = "https://python.langchain.com/docs/modules/chains/additional/llm_checker"
+    name = "LLMCheckerChain"
 
-    def build_config(self):
-        return {
-            "llm": {"display_name": "LLM"},
-            "input_value": {
-                "display_name": "Input Value",
-                "info": "The input value to pass to the chain.",
-            },
-        }
+    inputs = [
+        MultilineInput(
+            name="input_value", display_name="Input", info="The input value to pass to the chain.", required=True
+        ),
+        HandleInput(name="llm", display_name="Language Model", input_types=["LanguageModel"], required=True),
+    ]
 
-    def build(
-        self,
-        input_value: Text,
-        llm: LanguageModel,
-    ) -> Text:
-        chain = LLMCheckerChain.from_llm(llm=llm)
-        response = chain.invoke({chain.input_key: input_value})
+    def invoke_chain(self) -> Message:
+        chain = LLMCheckerChain.from_llm(llm=self.llm)
+        response = chain.invoke(
+            {chain.input_key: self.input_value}, config={"callbacks": self.get_langchain_callbacks()}
+        )
         result = response.get(chain.output_key, "")
-        result_str = str(result)
-        self.status = result_str
-        return result_str
+        result = str(result)
+        self.status = result
+        return Message(text=result)

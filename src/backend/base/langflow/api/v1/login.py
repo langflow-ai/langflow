@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
+from langflow.services.database.models.user.crud import get_user_by_id
 from sqlmodel import Session
 
 from langflow.api.v1.schemas import Token
@@ -57,6 +58,15 @@ async def login_to_get_access_token(
             expires=auth_settings.ACCESS_TOKEN_EXPIRE_SECONDS,
             domain=auth_settings.COOKIE_DOMAIN,
         )
+        response.set_cookie(
+            "apikey_tkn_lflw",
+            str(user.store_api_key),
+            httponly=auth_settings.ACCESS_HTTPONLY,
+            samesite=auth_settings.ACCESS_SAME_SITE,
+            secure=auth_settings.ACCESS_SECURE,
+            expires=None,  # Set to None to make it a session cookie
+            domain=auth_settings.COOKIE_DOMAIN,
+        )
         variable_service.initialize_user_variables(user.id, db)
         # Create default folder for user if it doesn't exist
         create_default_folder_if_it_doesnt_exist(db, user.id)
@@ -74,6 +84,7 @@ async def auto_login(
     response: Response, db: Session = Depends(get_session), settings_service=Depends(get_settings_service)
 ):
     auth_settings = settings_service.auth_settings
+
     if settings_service.auth_settings.AUTO_LOGIN:
         user_id, tokens = create_user_longterm_token(db)
         response.set_cookie(
@@ -85,6 +96,22 @@ async def auto_login(
             expires=None,  # Set to None to make it a session cookie
             domain=auth_settings.COOKIE_DOMAIN,
         )
+
+        user = get_user_by_id(db, user_id)
+
+        if user:
+            if user.store_api_key is None:
+                user.store_api_key = ""
+
+            response.set_cookie(
+                "apikey_tkn_lflw",
+                str(user.store_api_key),  # Ensure it's a string
+                httponly=auth_settings.ACCESS_HTTPONLY,
+                samesite=auth_settings.ACCESS_SAME_SITE,
+                secure=auth_settings.ACCESS_SECURE,
+                expires=None,  # Set to None to make it a session cookie
+                domain=auth_settings.COOKIE_DOMAIN,
+            )
 
         return tokens
 
@@ -102,13 +129,14 @@ async def refresh_token(
     request: Request,
     response: Response,
     settings_service: "SettingsService" = Depends(get_settings_service),
+    db: Session = Depends(get_session),
 ):
     auth_settings = settings_service.auth_settings
 
     token = request.cookies.get("refresh_token_lf")
 
     if token:
-        tokens = create_refresh_token(token)
+        tokens = create_refresh_token(token, db)
         response.set_cookie(
             "refresh_token_lf",
             tokens["refresh_token"],
@@ -140,4 +168,5 @@ async def refresh_token(
 async def logout(response: Response):
     response.delete_cookie("refresh_token_lf")
     response.delete_cookie("access_token_lf")
+    response.delete_cookie("apikey_tkn_lflw")
     return {"message": "Logout successful"}

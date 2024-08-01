@@ -1,16 +1,14 @@
+import { ProfilePicturesQueryResponse } from "@/controllers/API/queries/files";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "../../../../../../../../components/ui/button";
 import Loading from "../../../../../../../../components/ui/loading";
-import {
-  BACKEND_URL,
-  BASE_URL_API,
-} from "../../../../../../../../constants/constants";
+import { BASE_URL_API } from "../../../../../../../../constants/constants";
 import { useDarkStore } from "../../../../../../../../stores/darkStore";
 import { cn } from "../../../../../../../../utils/utils";
 import usePreloadImages from "./hooks/use-preload-images";
 
 type ProfilePictureChooserComponentProps = {
-  profilePictures: { [key: string]: string[] };
+  profilePictures?: ProfilePicturesQueryResponse;
   loading: boolean;
   value: string;
   onChange: (value: string) => void;
@@ -32,21 +30,21 @@ export default function ProfilePictureChooserComponent({
     }
   }, [ref, value]);
 
-  usePreloadImages(profilePictures, setImagesLoaded);
+  usePreloadImages(setImagesLoaded, loading, profilePictures);
 
   return (
     <div className="flex flex-col justify-center gap-2">
       {loading || !imagesLoaded ? (
         <Loading />
       ) : (
-        Object.keys(profilePictures).map((folder, idx) => (
+        Object.keys(profilePictures!).map((folder, idx) => (
           <div className="flex flex-col gap-2">
             <div className="edit-flow-arrangement">
               <span className="font-normal">{folder}</span>
             </div>
             <div className="block overflow-hidden">
               <div className="flex items-center gap-1 overflow-x-auto rounded-lg bg-muted px-1 custom-scroll">
-                {profilePictures[folder].map((path, idx) => (
+                {profilePictures![folder].map((path, idx) => (
                   <Button
                     ref={value === folder + "/" + path ? ref : undefined}
                     unstyled
@@ -55,10 +53,7 @@ export default function ProfilePictureChooserComponent({
                   >
                     <img
                       key={idx}
-                      src={`${BACKEND_URL.slice(
-                        0,
-                        BACKEND_URL.length - 1,
-                      )}${BASE_URL_API}files/profile_pictures/${
+                      src={`${BASE_URL_API}files/profile_pictures/${
                         folder + "/" + path
                       }`}
                       style={{

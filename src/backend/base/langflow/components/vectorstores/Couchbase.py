@@ -13,6 +13,7 @@ class CouchbaseVectorStoreComponent(LCVectorStoreComponent):
     display_name = "Couchbase"
     description = "Couchbase Vector Store with search capabilities"
     documentation = "https://python.langchain.com/v0.1/docs/integrations/document_loaders/couchbase/"
+    name = "Couchbase"
     icon = "Couchbase"
 
     inputs = [

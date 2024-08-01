@@ -20,16 +20,17 @@ def upload(file_path, host, flow_id):
     """
     try:
         url = f"{host}/api/v1/upload/{flow_id}"
-        response = httpx.post(url, files={"file": open(file_path, "rb")})
-        if response.status_code == 200:
-            return response.json()
-        else:
-            raise Exception(f"Error uploading file: {response.status_code}")
+        with open(file_path, "rb") as file:
+            response = httpx.post(url, files={"file": file})
+            if response.status_code == 200:
+                return response.json()
+            else:
+                raise Exception(f"Error uploading file: {response.status_code}")
     except Exception as e:
         raise Exception(f"Error uploading file: {e}")
 
 
-def upload_file(file_path, host, flow_id, components, tweaks={}):
+def upload_file(file_path: str, host: str, flow_id: str, components: list[str], tweaks: dict | None = None):
     """
     Upload a file to Langflow and return the file path.
 
@@ -47,6 +48,8 @@ def upload_file(file_path, host, flow_id, components, tweaks={}):
     Raises:
         Exception: If an error occurs during the upload process.
     """
+    if not tweaks:
+        tweaks = {}
     try:
         response = upload(file_path, host, flow_id)
         if response["file_path"]:

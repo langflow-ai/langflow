@@ -721,19 +721,7 @@ export const PRIORITY_SIDEBAR_ORDER = [
   "models",
   "helpers",
   "vectorstores",
-  "vectorsearch",
   "embeddings",
-];
-export const NATIVE_CATEGORIES = [
-  "inputs",
-  "outputs",
-  "prompts",
-  "data",
-  "prompt",
-  "models",
-  "helpers",
-  "experimental",
-  "agents",
 ];
 
 export const AUTHORIZED_DUPLICATE_REQUESTS = [
@@ -744,6 +732,9 @@ export const AUTHORIZED_DUPLICATE_REQUESTS = [
   "/login",
   "/auto_login",
 ];
+
+export const BROKEN_EDGES_WARNING =
+  "Some connections were removed because they were invalid:";
 
 export const SAVE_DEBOUNCE_TIME = 300;
 
@@ -827,6 +818,10 @@ export const defaultShortcuts = [
     shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + F`,
   },
   {
+    name: "Freeze Path",
+    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + Shift + F`,
+  },
+  {
     name: "Flow Share",
     shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + B`,
   },
@@ -849,9 +844,11 @@ export const LOCATIONS_TO_RETURN = ["/flow/", "/settings/"];
 export const MAX_BATCH_SIZE = 50;
 
 export const MODAL_CLASSES =
-  "nopan nodelete nodrag noundo nocopy fixed inset-0 bottom-0 left-0 right-0 top-0 z-50 overflow-auto bg-blur-shared backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0";
+  "nopan nodelete nodrag  noflow fixed inset-0 bottom-0 left-0 right-0 top-0 z-50 overflow-auto bg-blur-shared backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0";
 
 export const ALLOWED_IMAGE_INPUT_EXTENSIONS = ["png", "jpg", "jpeg"];
+
+export const componentsToIgnoreUpdate = ["CustomComponent"];
 
 export const FS_ERROR_TEXT =
   "Please ensure your file has one of the following extensions:";
@@ -864,6 +861,8 @@ export const TITLE_ERROR_UPDATING_COMPONENT =
 
 export const EMPTY_INPUT_SEND_MESSAGE = "No input message provided.";
 
+export const EMPTY_OUTPUT_SEND_MESSAGE = "Message empty.";
+
 export const TABS_ORDER = [
   "run curl",
   "python api",
@@ -871,3 +870,7 @@ export const TABS_ORDER = [
   "python code",
   "chat widget html",
 ];
+
+export const LANGFLOW_ACCESS_TOKEN = "access_token_lf";
+export const LANGFLOW_API_TOKEN = "apikey_tkn_lflw";
+export const LANGFLOW_AUTO_LOGIN_OPTION = "auto_login_lf";

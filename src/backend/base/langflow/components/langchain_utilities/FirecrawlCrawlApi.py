@@ -8,6 +8,8 @@ from langflow.schema import Data
 class FirecrawlCrawlApi(CustomComponent):
     display_name: str = "FirecrawlCrawlApi"
     description: str = "Firecrawl Crawl API."
+    name = "FirecrawlCrawlApi"
+
     output_types: list[str] = ["Document"]
     documentation: str = "https://docs.firecrawl.dev/api-reference/endpoint/crawl"
     field_config = {

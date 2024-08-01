@@ -36,7 +36,7 @@ export default function AlertDropdown({
       }}
     >
       <PopoverTrigger>{children}</PopoverTrigger>
-      <PopoverContent className="nocopy nowheel nopan nodelete nodrag noundo flex h-[500px] w-[500px] flex-col">
+      <PopoverContent className="noflow nowheel nopan nodelete nodrag flex h-[500px] w-[500px] flex-col">
         <div className="text-md flex flex-row justify-between pl-3 font-medium text-foreground">
           Notifications
           <div className="flex gap-3 pr-3">

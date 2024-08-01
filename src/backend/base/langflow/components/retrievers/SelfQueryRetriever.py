@@ -12,6 +12,7 @@ from langflow.schema.message import Message
 class SelfQueryRetrieverComponent(CustomComponent):
     display_name: str = "Self Query Retriever"
     description: str = "Retriever that uses a vector store and an LLM to generate the vector store queries."
+    name = "SelfQueryRetriever"
     icon = "LangChain"
 
     def build_config(self):
@@ -63,7 +64,7 @@ class SelfQueryRetrieverComponent(CustomComponent):
 
         if not isinstance(query, str):
             raise ValueError(f"Query type {type(query)} not supported.")
-        documents = self_query_retriever.invoke(input=input_text)
+        documents = self_query_retriever.invoke(input=input_text, config={"callbacks": self.get_langchain_callbacks()})
         data = [Data.from_document(document) for document in documents]
         self.status = data
         return data

@@ -1,3 +1,7 @@
+import {
+  useDeleteMessages,
+  useGetMessagesQuery,
+} from "@/controllers/API/queries/messages";
 import { useEffect, useState } from "react";
 import AccordionComponent from "../../components/accordionComponent";
 import IconComponent from "../../components/genericIconComponent";
@@ -12,19 +16,16 @@ import {
 } from "../../components/ui/tabs";
 import { CHAT_FORM_DIALOG_SUBTITLE } from "../../constants/constants";
 import { InputOutput } from "../../constants/enums";
-import { getMessagesTable } from "../../controllers/API";
 import useAlertStore from "../../stores/alertStore";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { useMessagesStore } from "../../stores/messagesStore";
 import { IOModalPropsType } from "../../types/components";
-import { NodeDataType, NodeType } from "../../types/flow";
-import { updateVerticesOrder } from "../../utils/buildUtils";
+import { NodeType } from "../../types/flow";
 import { cn } from "../../utils/utils";
 import BaseModal from "../baseModal";
 import IOFieldView from "./components/IOFieldView";
 import SessionView from "./components/SessionView";
-import useRemoveSession from "./components/SessionView/hooks";
 import ChatView from "./components/chatView";
 
 export default function IOModal({
@@ -34,7 +35,6 @@ export default function IOModal({
   disable,
 }: IOModalPropsType): JSX.Element {
   const allNodes = useFlowStore((state) => state.nodes);
-  const setMessages = useMessagesStore((state) => state.setMessages);
   const inputs = useFlowStore((state) => state.inputs).filter(
     (input) => input.type !== "ChatInput",
   );
@@ -58,6 +58,32 @@ export default function IOModal({
   );
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const deleteSession = useMessagesStore((state) => state.deleteSession);
+
+  const { mutate: deleteSessionFunction } = useDeleteMessages();
+
+  function handleDeleteSession(session_id: string) {
+    deleteSessionFunction(
+      {
+        ids: messages
+          .filter((msg) => msg.session_id === session_id)
+          .map((msg) => msg.id),
+      },
+      {
+        onSuccess: () => {
+          setSuccessData({
+            title: "Session deleted successfully.",
+          });
+          deleteSession(session_id);
+        },
+        onError: () => {
+          setErrorData({
+            title: "Error deleting Session.",
+          });
+        },
+      },
+    );
+  }
 
   function startView() {
     if (!chatInput && !chatOutput) {
@@ -85,8 +111,12 @@ export default function IOModal({
   const setNode = useFlowStore((state) => state.setNode);
   const [sessions, setSessions] = useState<string[]>([]);
   const messages = useMessagesStore((state) => state.messages);
-  const setColumns = useMessagesStore((state) => state.setColumns);
   const flowPool = useFlowStore((state) => state.flowPool);
+
+  const { refetch } = useGetMessagesQuery({
+    mode: "union",
+    id: currentFlow?.id,
+  });
 
   async function sendMessage({
     repeat = 1,
@@ -111,12 +141,7 @@ export default function IOModal({
         setLockChat(false);
       });
     }
-    const { rows, columns } = await getMessagesTable("union", currentFlow!.id, [
-      "index",
-      "flow_id",
-    ]);
-    setMessages(rows);
-    setColumns(columns);
+    refetch();
     setLockChat(false);
     if (chatInput) {
       setNode(chatInput.id, (node: NodeType) => {
@@ -128,42 +153,21 @@ export default function IOModal({
     }
   }
 
-  const { handleRemoveSession } = useRemoveSession(
-    setSuccessData,
-    setErrorData,
-  );
-
   useEffect(() => {
     setSelectedTab(inputs.length > 0 ? 1 : outputs.length > 0 ? 2 : 0);
   }, [allNodes.length]);
 
-  const flow_sessions = allNodes.map((node) => {
-    if ((node.data as NodeDataType).node?.template["session_id"]) {
-      return {
-        id: node.id,
-        session_id: (node.data as NodeDataType).node?.template["session_id"]
-          .value,
-      };
-    }
-  });
-
   useEffect(() => {
-    setSelectedViewField(startView());
-    if (haveChat) {
-      getMessagesTable("union", currentFlow!.id, ["index", "flow_id"]).then(
-        ({ rows, columns }) => {
-          setMessages(rows);
-          setColumns(columns);
-        },
-      );
-    }
+    refetch();
   }, [open]);
 
   useEffect(() => {
     const sessions = new Set<string>();
-    messages.forEach((row) => {
-      sessions.add(row.session_id);
-    });
+    messages
+      .filter((message) => message.flow_id === currentFlow!.id)
+      .forEach((row) => {
+        sessions.add(row.session_id);
+      });
     setSessions(Array.from(sessions));
     sessions;
   }, [messages]);
@@ -353,6 +357,7 @@ export default function IOModal({
                   {sessions.map((session, index) => {
                     return (
                       <div
+                        key={index}
                         className="file-component-accordion-div cursor-pointer"
                         onClick={(event) => {
                           event.stopPropagation();
@@ -383,7 +388,7 @@ export default function IOModal({
                               onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
-                                handleRemoveSession(session);
+                                handleDeleteSession(session);
                                 if (selectedViewField?.id === session)
                                   setSelectedViewField(undefined);
                               }}
@@ -430,6 +435,11 @@ export default function IOModal({
                       </div>
                     );
                   })}
+                  {!sessions.length && (
+                    <span className="text-sm text-muted-foreground">
+                      No memories available.
+                    </span>
+                  )}
                 </TabsContent>
               </Tabs>
             </div>
@@ -480,10 +490,8 @@ export default function IOModal({
                       (session) => session === selectedViewField.id,
                     ) && (
                       <SessionView
-                        rows={messages.filter(
-                          (message) =>
-                            message.session_id === selectedViewField.id,
-                        )}
+                        session={selectedViewField.id}
+                        id={currentFlow!.id}
                       />
                     )}
                   </div>

@@ -3,16 +3,16 @@ from typing import Any
 import httpx
 from langchain_community.chat_models import ChatOllama
 
-from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
-from langflow.io import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, MessageInput, Output, StrInput
+from langflow.io import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, StrInput
 
 
 class ChatOllamaComponent(LCModelComponent):
     display_name = "Ollama"
     description = "Generate text using Ollama Local LLMs."
     icon = "Ollama"
+    name = "OllamaModel"
 
     def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None):
         if field_name == "mirostat":
@@ -33,7 +33,7 @@ class ChatOllamaComponent(LCModelComponent):
                     build_config["mirostat_eta"]["value"] = 0.1
                     build_config["mirostat_tau"]["value"] = 5
 
-        if field_name == "model":
+        if field_name == "model_name":
             base_url_dict = build_config.get("base_url", {})
             base_url_load_from_db = base_url_dict.get("load_from_db", False)
             base_url_value = base_url_dict.get("value")
@@ -41,7 +41,7 @@ class ChatOllamaComponent(LCModelComponent):
                 base_url_value = self.variables(base_url_value)
             elif not base_url_value:
                 base_url_value = "http://localhost:11434"
-            build_config["model"]["options"] = self.get_model(base_url_value + "/api/tags")
+            build_config["model_name"]["options"] = self.get_model(base_url_value + "/api/tags")
 
         if field_name == "keep_alive_flag":
             if field_value == "Keep":
@@ -67,7 +67,7 @@ class ChatOllamaComponent(LCModelComponent):
         except Exception as e:
             raise ValueError("Could not retrieve models. Please, make sure Ollama is running.") from e
 
-    inputs = [
+    inputs = LCModelComponent._base_inputs + [
         StrInput(
             name="base_url",
             display_name="Base URL",
@@ -75,9 +75,9 @@ class ChatOllamaComponent(LCModelComponent):
             value="http://localhost:11434",
         ),
         DropdownInput(
-            name="model",
+            name="model_name",
             display_name="Model Name",
-            value="llama2",
+            value="llama3",
             info="Refer to https://ollama.ai/library for more models.",
             refresh_button=True,
         ),
@@ -106,6 +106,7 @@ class ChatOllamaComponent(LCModelComponent):
             info="Enable/disable Mirostat sampling for controlling perplexity.",
             value="Disabled",
             advanced=True,
+            real_time_refresh=True,
         ),
         FloatInput(
             name="mirostat_eta",
@@ -202,25 +203,6 @@ class ChatOllamaComponent(LCModelComponent):
             info="Template to use for generating text.",
             advanced=True,
         ),
-        MessageInput(
-            name="input_value",
-            display_name="Input",
-        ),
-        BoolInput(
-            name="stream",
-            display_name="Stream",
-            info=STREAM_INFO_TEXT,
-        ),
-        StrInput(
-            name="system_message",
-            display_name="System Message",
-            info="System message to pass to the model.",
-            advanced=True,
-        ),
-    ]
-    outputs = [
-        Output(display_name="Text", name="text_output", method="text_response"),
-        Output(display_name="Language Model", name="model_output", method="build_model"),
     ]
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
@@ -241,7 +223,7 @@ class ChatOllamaComponent(LCModelComponent):
         # Mapping system settings to their corresponding values
         llm_params = {
             "base_url": self.base_url,
-            "model": self.model,
+            "model": self.model_name,
             "mirostat": mirostat_value,
             "format": self.format,
             "metadata": self.metadata,

@@ -1,21 +1,22 @@
 from typing import Any, List, Optional
 
-from loguru import logger
 
+from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.base.tools.flow_tool import FlowTool
-from langflow.custom import CustomComponent
 from langflow.field_typing import Tool
 from langflow.graph.graph.base import Graph
 from langflow.helpers.flow import get_flow_inputs
+from langflow.io import BoolInput, DropdownInput, StrInput, Output
 from langflow.schema import Data
 from langflow.schema.dotdict import dotdict
 
 
-class FlowToolComponent(CustomComponent):
+class FlowToolComponent(LCToolComponent):
     display_name = "Flow as Tool"
     description = "Construct a Tool from a function that runs the loaded Flow."
     field_order = ["flow_name", "name", "description", "return_direct"]
     trace_type = "tool"
+    name = "FlowTool"
     beta = True
 
     def get_flow_names(self) -> List[str]:
@@ -39,48 +40,49 @@ class FlowToolComponent(CustomComponent):
         return None
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
-        logger.debug(f"Updating build config with field value {field_value} and field name {field_name}")
         if field_name == "flow_name":
             build_config["flow_name"]["options"] = self.get_flow_names()
 
         return build_config
 
-    def build_config(self):
-        return {
-            "flow_name": {
-                "display_name": "Flow Name",
-                "info": "The name of the flow to run.",
-                "options": [],
-                "real_time_refresh": True,
-                "refresh_button": True,
-            },
-            "name": {
-                "display_name": "Name",
-                "description": "The name of the tool.",
-            },
-            "description": {
-                "display_name": "Description",
-                "description": "The description of the tool.",
-            },
-            "return_direct": {
-                "display_name": "Return Direct",
-                "description": "Return the result directly from the Tool.",
-                "advanced": True,
-            },
-        }
+    inputs = [
+        DropdownInput(
+            name="flow_name", display_name="Flow Name", info="The name of the flow to run.", refresh_button=True
+        ),
+        StrInput(
+            name="name",
+            display_name="Name",
+            info="The name of the tool.",
+        ),
+        StrInput(
+            name="description",
+            display_name="Description",
+            info="The description of the tool.",
+        ),
+        BoolInput(
+            name="return_direct",
+            display_name="Return Direct",
+            info="Return the result directly from the Tool.",
+            advanced=True,
+        ),
+    ]
 
-    async def build(self, flow_name: str, name: str, description: str, return_direct: bool = False) -> Tool:
+    outputs = [
+        Output(name="api_build_tool", display_name="Tool", method="build_tool"),
+    ]
+
+    def build_tool(self) -> Tool:
         FlowTool.update_forward_refs()
-        flow_data = self.get_flow(flow_name)
+        flow_data = self.get_flow(self.flow_name)
         if not flow_data:
             raise ValueError("Flow not found.")
         graph = Graph.from_payload(flow_data.data["data"])
         inputs = get_flow_inputs(graph)
         tool = FlowTool(
-            name=name,
-            description=description,
+            name=self.name,
+            description=self.description,
             graph=graph,
-            return_direct=return_direct,
+            return_direct=self.return_direct,
             inputs=inputs,
             flow_id=str(flow_data.id),
             user_id=str(self._user_id),

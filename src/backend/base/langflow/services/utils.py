@@ -97,18 +97,19 @@ def teardown_superuser(settings_service, session):
             from langflow.services.database.models.user.model import User
 
             user = session.exec(select(User).where(User.username == username)).first()
-            if user and user.is_superuser is True:
+            # Check if super was ever logged in, if not delete it
+            # if it has logged in, it means the user is using it to login
+            if user and user.is_superuser is True and not user.last_login_at:
                 session.delete(user)
                 session.commit()
                 logger.debug("Default superuser removed successfully.")
-            else:
-                logger.debug("Default superuser not found.")
+
         except Exception as exc:
             logger.exception(exc)
             raise RuntimeError("Could not remove default superuser.") from exc
 
 
-def teardown_services():
+async def teardown_services():
     """
     Teardown all the services.
     """
@@ -119,7 +120,7 @@ def teardown_services():
     try:
         from langflow.services.manager import service_manager
 
-        service_manager.teardown()
+        await service_manager.teardown()
     except Exception as exc:
         logger.exception(exc)
 

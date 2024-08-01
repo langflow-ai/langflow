@@ -1,12 +1,16 @@
 from langflow.base.io.chat import ChatComponent
+from langflow.inputs import BoolInput
 from langflow.io import DropdownInput, MessageTextInput, Output
+from langflow.memory import store_message
 from langflow.schema.message import Message
+from langflow.utils.constants import MESSAGE_SENDER_NAME_AI, MESSAGE_SENDER_USER, MESSAGE_SENDER_AI
 
 
 class ChatOutput(ChatComponent):
     display_name = "Chat Output"
     description = "Display a chat message in the Playground."
     icon = "ChatOutput"
+    name = "ChatOutput"
 
     inputs = [
         MessageTextInput(
@@ -14,19 +18,33 @@ class ChatOutput(ChatComponent):
             display_name="Text",
             info="Message to be passed as output.",
         ),
+        BoolInput(
+            name="should_store_message",
+            display_name="Store Messages",
+            info="Store the message in the history.",
+            value=True,
+            advanced=True,
+        ),
         DropdownInput(
             name="sender",
             display_name="Sender Type",
-            options=["Machine", "User"],
-            value="Machine",
+            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],
+            value=MESSAGE_SENDER_AI,
             advanced=True,
             info="Type of sender.",
         ),
         MessageTextInput(
-            name="sender_name", display_name="Sender Name", info="Name of the sender.", value="AI", advanced=True
+            name="sender_name",
+            display_name="Sender Name",
+            info="Name of the sender.",
+            value=MESSAGE_SENDER_NAME_AI,
+            advanced=True,
         ),
         MessageTextInput(
-            name="session_id", display_name="Session ID", info="Session ID for the message.", advanced=True
+            name="session_id",
+            display_name="Session ID",
+            info="The session ID of the chat. If empty, the current session ID parameter will be used.",
+            advanced=True,
         ),
         MessageTextInput(
             name="data_template",
@@ -47,8 +65,16 @@ class ChatOutput(ChatComponent):
             sender_name=self.sender_name,
             session_id=self.session_id,
         )
-        if self.session_id and isinstance(message, Message) and isinstance(message.text, str):
-            self.store_message(message)
+        if (
+            self.session_id
+            and isinstance(message, Message)
+            and isinstance(message.text, str)
+            and self.should_store_message
+        ):
+            store_message(
+                message,
+                flow_id=self.graph.flow_id,
+            )
             self.message.value = message
 
         self.status = message

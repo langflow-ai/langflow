@@ -1,18 +1,18 @@
 name: Run Frontend Tests
 
 on:
+  workflow_call:
+    secrets:
+      OPENAI_API_KEY:
+        required: true
+      STORE_API_KEY:
+        required: true
   workflow_dispatch:
     inputs:
       branch:
         description: "(Optional) Branch to checkout"
         required: false
         type: string
-  pull_request:
-    types: [opened, synchronize, reopened, auto_merge_enabled]
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
 
 env:
   POETRY_VERSION: "1.8.3"
@@ -24,16 +24,43 @@ env:
 
 jobs:
   setup-and-test:
-    name: Run Playwright Tests
+    name: Playwright Tests - Group ${{ matrix.shardIndex }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        shardIndex: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-        shardTotal: [10]
+        shardIndex:
+          [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+          ]
+        shardTotal: [20]
     env:
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-      STORE_API_KEY: ${{ secrets.STORE_API_KEY }}
+      OPENAI_API_KEY: ${{ inputs.openai_api_key || secrets.OPENAI_API_KEY }}
+      STORE_API_KEY: ${{ inputs.store_api_key || secrets.STORE_API_KEY }}
+      BRAVE_SEARCH_API_KEY: "${{ secrets.BRAVE_SEARCH_API_KEY }}"
+      ASTRA_DB_APPLICATION_TOKEN: "${{ secrets.ASTRA_DB_APPLICATION_TOKEN }}"
+      ASTRA_DB_API_ENDPOINT: "${{ secrets.ASTRA_DB_API_ENDPOINT }}"
+    outputs:
+      failed: ${{ steps.check-failure.outputs.failed }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -92,7 +119,8 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           poetry-version: ${{ env.POETRY_VERSION }}
-          cache-key: ${{ runner.os }}-poetry-${{ env.POETRY_VERSION }}-${{ hashFiles('**/poetry.lock') }}
+          cache-key: tests
+
       - name: Install Python dependencies
         run: |
           poetry env use ${{ env.PYTHON_VERSION }}
@@ -107,6 +135,7 @@ jobs:
         run: |
           cd src/frontend
           npx playwright test --trace on --shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --workers 2
+        timeout-minutes: 12
 
       - name: Upload blob report to GitHub Actions Artifacts
         if: always()

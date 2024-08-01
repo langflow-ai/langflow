@@ -2,7 +2,7 @@ import ast
 from typing import Any, Dict, List, Optional
 
 from langchain.agents import Tool
-from langchain.tools import StructuredTool
+from langchain_core.tools import StructuredTool
 
 from langflow.custom import CustomComponent
 from langflow.schema.dotdict import dotdict
@@ -12,6 +12,7 @@ class PythonCodeStructuredTool(CustomComponent):
     display_name = "PythonCodeTool"
     description = "structuredtool dataclass code to tool"
     documentation = "https://python.langchain.com/docs/modules/tools/custom_tools/#structuredtool-dataclass"
+    name = "PythonCodeStructuredTool"
     icon = "🐍"
     field_order = ["name", "description", "tool_code", "return_direct", "tool_function", "tool_class"]
 

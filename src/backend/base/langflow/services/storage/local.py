@@ -56,7 +56,7 @@ class LocalStorageService(StorageService):
             raise FileNotFoundError(f"File {file_name} not found in flow {flow_id}")
 
         with open(file_path, "rb") as f:
-            logger.info(f"File {file_name} retrieved successfully from flow {flow_id}.")
+            logger.debug(f"File {file_name} retrieved successfully from flow {flow_id}.")
             return f.read()
 
     async def list_files(self, flow_id: str):
@@ -90,6 +90,6 @@ class LocalStorageService(StorageService):
         else:
             logger.warning(f"Attempted to delete non-existent file {file_name} in flow {flow_id}.")
 
-    def teardown(self):
+    async def teardown(self):
         """Perform any cleanup operations when the service is being torn down."""
         pass  # No specific teardown actions required for local

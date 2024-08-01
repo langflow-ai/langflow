@@ -1,21 +1,26 @@
 import asyncio
+import json
+import os
 import warnings
 from contextlib import asynccontextmanager
+from http import HTTPStatus
 from pathlib import Path
 from typing import Optional
 from urllib.parse import urlencode
 
 import nest_asyncio  # type: ignore
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from loguru import logger
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from pydantic import PydanticDeprecatedSince20
+from pydantic_core import PydanticSerializationError
 from rich import print as rprint
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from langflow.api import router
+from langflow.api import health_check_router, log_router, router
 from langflow.initial_setup.setup import (
     create_or_update_starter_projects,
     initialize_super_user_if_needed,
@@ -64,7 +69,10 @@ class JavaScriptMIMETypeMiddleware(BaseHTTPMiddleware):
         try:
             response = await call_next(request)
         except Exception as exc:
-            logger.error(exc)
+            if isinstance(exc, PydanticSerializationError):
+                message = "Something went wrong while serializing the response. Please share this error on our GitHub repository."
+                error_messages = json.dumps([message, str(exc)])
+                raise HTTPException(status_code=HTTPStatus.INTERNAL_SERVER_ERROR, detail=error_messages) from exc
             raise exc
         if "files/" not in request.url.path and request.url.path.endswith(".js") and response.status_code == 200:
             response.headers["Content-Type"] = "text/javascript"
@@ -96,7 +104,7 @@ def get_lifespan(fix_migration=False, socketio_server=None, version=None):
             raise
         # Shutdown message
         rprint("[bold red]Shutting down Langflow...[/bold red]")
-        teardown_services()
+        await teardown_services()
 
     return lifespan
 
@@ -137,11 +145,42 @@ def create_app():
 
         return await call_next(request)
 
-    @app.get("/health")
-    def health():
-        return {"status": "ok"}
+    settings = get_settings_service().settings
+    if prome_port_str := os.environ.get("LANGFLOW_PROMETHEUS_PORT"):
+        # set here for create_app() entry point
+        prome_port = int(prome_port_str)
+        if prome_port > 0 or prome_port < 65535:
+            rprint(f"[bold green]Starting Prometheus server on port {prome_port}...[/bold green]")
+            settings.prometheus_enabled = True
+            settings.prometheus_port = prome_port
+        else:
+            raise ValueError(f"Invalid port number {prome_port_str}")
+
+    if settings.prometheus_enabled:
+        from prometheus_client import start_http_server
+
+        start_http_server(settings.prometheus_port)
 
     app.include_router(router)
+    app.include_router(health_check_router)
+    app.include_router(log_router)
+
+    @app.exception_handler(Exception)
+    async def exception_handler(request: Request, exc: Exception):
+        if isinstance(exc, HTTPException):
+            logger.error(f"HTTPException: {exc.detail}")
+            return JSONResponse(
+                status_code=exc.status_code,
+                content={"message": str(exc.detail)},
+            )
+        else:
+            logger.error(f"unhandled error: {exc}")
+            return JSONResponse(
+                status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+                content={"message": str(exc)},
+            )
+
+    FastAPIInstrumentor.instrument_app(app)
 
     return app
 

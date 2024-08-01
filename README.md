@@ -18,7 +18,7 @@
     <a href="https://docs.langflow.org" style="text-decoration: underline;">Docs</a> -
     <a href="https://discord.com/invite/EqksyE2EX9" style="text-decoration: underline;">Join our Discord</a> -
     <a href="https://twitter.com/langflow_ai" style="text-decoration: underline;">Follow us on X</a> -
-    <a href="https://huggingface.co/spaces/Langflow/Langflow-Preview" style="text-decoration: underline;">Live demo</a>
+    <a href="https://huggingface.co/spaces/Langflow/Langflow" style="text-decoration: underline;">Live demo</a>
 </p>
 
 <p align="center">
@@ -34,6 +34,8 @@
   <a href="./README.md"><img alt="README in English" src="https://img.shields.io/badge/English-d9d9d9"></a>
   <a href="./README.PT.md"><img alt="README in Portuguese" src="https://img.shields.io/badge/Portuguese-d9d9d9"></a>
   <a href="./README.zh_CN.md"><img alt="README in Simplified Chinese" src="https://img.shields.io/badge/简体中文-d9d9d9"></a>
+  <a href="./README.ja.md"><img alt="README in Japanese" src="https://img.shields.io/badge/日本語-d9d9d9"></a>
+  <a href="./README.KR.md"><img alt="README in KOREAN" src="https://img.shields.io/badge/한국어-d9d9d9"></a>
 </div>
 
 <p align="center">
@@ -42,11 +44,13 @@
 
 # 📝 Content
 
-- [](#)
 - [📝 Content](#-content)
 - [📦 Get Started](#-get-started)
+- [Running Langflow from a Cloned Repository](#-running-langflow-from-a-cloned-repository)
 - [🎨 Create Flows](#-create-flows)
 - [Deploy](#deploy)
+  - [DataStax Langflow](#datastax-langflow)
+  - [Deploy Langflow on Hugging Face Spaces](#deploy-langflow-on-hugging-face-spaces)
   - [Deploy Langflow on Google Cloud Platform](#deploy-langflow-on-google-cloud-platform)
   - [Deploy on Railway](#deploy-on-railway)
   - [Deploy on Render](#deploy-on-render)
@@ -73,6 +77,40 @@ Then, run Langflow with:
 python -m langflow run
 ```
 
+# Running Langflow from a Cloned Repository
+
+If you prefer to run Langflow from a cloned repository rather than installing it via pip, follow these steps:
+
+1. **Clone the Repository**
+
+First, clone the Langflow repository from GitHub:
+
+```shell
+git clone https://github.com/langflow-ai/langflow.git
+```
+
+Navigate into the cloned directory:
+
+```shell
+cd langflow
+```
+
+2. **Build and Install Dependencies**
+
+To build and install Langflow’s frontend and backend, use the following commands:
+
+```shell
+make install_frontend && make build_frontend && make install_backend
+```
+
+3. **Run Langflow**
+
+Once the installation is complete, you can run Langflow with:
+
+```shell
+poetry run python -m langflow run
+```
+
 # 🎨 Create Flows
 
 Creating flows with Langflow is easy. Simply drag components from the sidebar onto the workspace and connect them to start building your application.
@@ -92,14 +130,16 @@ results = run_flow_from_json("path/to/flow.json", input_value="Hello, World!")
 # Deploy
 
 ## DataStax Langflow
+
 DataStax Langflow is a hosted version of Langflow integrated with [AstraDB](https://www.datastax.com/products/datastax-astra). Be up and running in minutes with no installation or setup required. [Sign up for free](https://langflow.datastax.com).
 
 ## Deploy Langflow on Hugging Face Spaces
-You can also preview Langflow in [HuggingFace Spaces](https://huggingface.co/spaces/Langflow/Langflow-Preview). [Clone the space using this link](https://huggingface.co/spaces/Langflow/Langflow-Preview?duplicate=true) to create your own Langflow workspace in minutes.
+
+You can also preview Langflow in [HuggingFace Spaces](https://huggingface.co/spaces/Langflow/Langflow). [Clone the space using this link](https://huggingface.co/spaces/Langflow/Langflow?duplicate=true) to create your own Langflow workspace in minutes.
 
 ## Deploy Langflow on Google Cloud Platform
 
-Follow our step-by-step guide to deploy Langflow on Google Cloud Platform (GCP) using Google Cloud Shell. The guide is available in the [**Langflow in Google Cloud Platform**](https://github.com/langflow-ai/langflow/blob/dev/docs/docs/deployment/gcp-deployment.md) document.
+Follow our step-by-step guide to deploy Langflow on Google Cloud Platform (GCP) using Google Cloud Shell. The guide is available in the [**Langflow in Google Cloud Platform**](./docs/docs/Deployment/deployment-gcp.md) document.
 
 Alternatively, click the **"Open in Cloud Shell"** button below to launch Google Cloud Shell, clone the Langflow repository, and start an **interactive tutorial** that will guide you through the process of setting up the necessary resources and deploying Langflow on your GCP project.
 
@@ -113,14 +153,13 @@ Use this template to deploy Langflow 1.0 on Railway:
 
 ## Deploy on Render
 
-<a href="https://render.com/deploy?repo=https://github.com/langflow-ai/langflow/tree/dev">
+<a href="https://render.com/deploy?repo=https://github.com/langflow-ai/langflow/tree/main">
 <img src="https://render.com/images/deploy-to-render-button.svg" alt="Deploy to Render" />
 </a>
 
 ## Deploy on Kubernetes
 
-Follow our step-by-step guide to deploy [Langflow on Kubernetes](https://github.com/langflow-ai/langflow/blob/dev/docs/docs/deployment/kubernetes.md).
-
+Follow our step-by-step guide to deploy [Langflow on Kubernetes](./docs/docs/Deployment/deployment-kubernetes.md).
 
 # 🖥️ Command Line Interface (CLI)
 

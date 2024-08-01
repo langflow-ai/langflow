@@ -12,6 +12,7 @@ class HuggingFaceEmbeddingsComponent(LCModelComponent):
         "https://python.langchain.com/docs/modules/data_connection/text_embedding/integrations/sentence_transformers"
     )
     icon = "HuggingFace"
+    name = "HuggingFaceEmbeddings"
 
     inputs = [
         MessageTextInput(name="cache_folder", display_name="Cache Folder", advanced=True),

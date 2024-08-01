@@ -19,3 +19,22 @@ export enum InputOutput {
   INPUT = "input",
   OUTPUT = "output",
 }
+
+export enum IOInputTypes {
+  TEXT = "TextInput",
+  FILE_LOADER = "FileLoader",
+  KEYPAIR = "KeyPairInput",
+  JSON = "JsonInput",
+  STRING_LIST = "StringListInput",
+}
+
+export enum IOOutputTypes {
+  TEXT = "TextOutput",
+  PDF = "PDFOutput",
+  CSV = "CSVOutput",
+  IMAGE = "ImageOutput",
+  JSON = "JsonOutput",
+  KEY_PAIR = "KeyPairOutput",
+  STRING_LIST = "StringListOutput",
+  DATA = "DataOutput",
+}

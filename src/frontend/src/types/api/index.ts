@@ -1,3 +1,9 @@
+import {
+  UseMutationOptions,
+  UseMutationResult,
+  UseQueryOptions,
+  UseQueryResult,
+} from "@tanstack/react-query";
 import { Edge, Node, Viewport } from "reactflow";
 import { ChatInputType, ChatOutputType } from "../chat";
 import { FlowType } from "../flow";
@@ -37,6 +43,7 @@ export type APIClassType = {
   official?: boolean;
   outputs?: Array<OutputFieldType>;
   frozen?: boolean;
+  lf_version?: string;
   flow?: FlowType;
   field_order?: string[];
   [key: string]:
@@ -58,6 +65,7 @@ export type InputFieldType = {
   list: boolean;
   show: boolean;
   readonly: boolean;
+  password?: boolean;
   multiline?: boolean;
   value?: any;
   dynamic?: boolean;
@@ -68,6 +76,7 @@ export type InputFieldType = {
   real_time_refresh?: boolean;
   refresh_button?: boolean;
   refresh_button_text?: string;
+  combobox?: boolean;
   [key: string]: any;
 };
 
@@ -195,12 +204,18 @@ export type OutputLogType = {
   message: any | ErrorLogType;
   type: string;
 };
+export type LogsLogType = {
+  name: string;
+  message: any | ErrorLogType;
+  type: string;
+};
 
 // data is the object received by the API
 // it has results, artifacts, timedelta, duration
 export type VertexDataTypeAPI = {
   results: { [key: string]: string };
   outputs: { [key: string]: OutputLogType };
+  logs: { [key: string]: LogsLogType };
   messages: ChatOutputType[] | ChatInputType[];
   inactive?: boolean;
   timedelta?: number;
@@ -225,3 +240,44 @@ export type ResponseErrorTypeAPI = {
 export type ResponseErrorDetailAPI = {
   response: { data: { detail: string } };
 };
+export type useQueryFunctionType<T = undefined, R = any> = T extends undefined
+  ? (
+      params?: T,
+      options?: Omit<UseQueryOptions, "queryFn" | "queryKey">,
+    ) => UseQueryResult<R>
+  : (
+      params: T,
+      options?: Omit<UseQueryOptions, "queryFn" | "queryKey">,
+    ) => UseQueryResult<R>;
+
+export type QueryFunctionType = (
+  queryKey: UseQueryOptions["queryKey"],
+  queryFn: UseQueryOptions["queryFn"],
+  options?: Omit<UseQueryOptions, "queryKey" | "queryFn">,
+) => UseQueryResult<any>;
+
+export type MutationFunctionType = (
+  mutationKey: UseMutationOptions["mutationKey"],
+  mutationFn: UseMutationOptions<any, any, any>["mutationFn"],
+  options?: Omit<UseMutationOptions<any, any>, "mutationFn" | "mutationKey">,
+) => UseMutationResult<any, any, any, any>;
+
+export type useMutationFunctionType<
+  Params,
+  Variables = any,
+  Data = any,
+  Error = any,
+> = Params extends undefined
+  ? (
+      options?: Omit<
+        UseMutationOptions<Data, Error>,
+        "mutationFn" | "mutationKey"
+      >,
+    ) => UseMutationResult<Data, Error, Variables>
+  : (
+      params: Params,
+      options?: Omit<
+        UseMutationOptions<Data, Error>,
+        "mutationFn" | "mutationKey"
+      >,
+    ) => UseMutationResult<Data, Error, Variables>;

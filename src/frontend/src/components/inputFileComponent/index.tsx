@@ -1,9 +1,9 @@
+import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
 import { useEffect, useState } from "react";
 import {
   CONSOLE_ERROR_MSG,
   INVALID_FILE_ALERT,
 } from "../../constants/alerts_constants";
-import { uploadFile } from "../../controllers/API";
 import useAlertStore from "../../stores/alertStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { FileComponentType } from "../../types/components";
@@ -12,25 +12,22 @@ import { Button } from "../ui/button";
 
 export default function InputFileComponent({
   value,
-  onChange,
+  handleOnNewValue,
   disabled,
   fileTypes,
-  onFileChange,
   editNode = false,
+  id,
 }: FileComponentType): JSX.Element {
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
-  const [myValue, setMyValue] = useState(value);
   const [loading, setLoading] = useState(false);
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
   // Clear component state
   useEffect(() => {
     if (disabled && value !== "") {
-      setMyValue("");
-      onChange("", undefined, true);
-      onFileChange("");
+      handleOnNewValue({ value: "", file_path: "" }, { skipSnapshot: true });
     }
-  }, [disabled, onChange]);
+  }, [disabled, handleOnNewValue]);
 
   function checkFileType(fileName: string): boolean {
     if (fileTypes === undefined) return true;
@@ -42,9 +39,7 @@ export default function InputFileComponent({
     return false;
   }
 
-  useEffect(() => {
-    setMyValue(value);
-  }, [value]);
+  const { mutate } = usePostUploadFile();
 
   const handleButtonClick = (): void => {
     // Create a file input element
@@ -63,24 +58,25 @@ export default function InputFileComponent({
       // Check if the file type is correct
       if (file && checkFileType(file.name)) {
         // Upload the file
-        uploadFile(file, currentFlowId)
-          .then((res) => res.data)
-          .then((data) => {
-            // Get the file name from the response
-            const { file_path } = data;
+        mutate(
+          { file, id: currentFlowId },
+          {
+            onSuccess: (data) => {
+              // Get the file name from the response
+              const { file_path } = data;
 
-            // sets the value that goes to the backend
-            onFileChange(file_path);
-            // Update the state and callback with the name of the file
-            // sets the value to the user
-            setMyValue(file.name);
-            onChange(file.name);
-            setLoading(false);
-          })
-          .catch(() => {
-            console.error(CONSOLE_ERROR_MSG);
-            setLoading(false);
-          });
+              // sets the value that goes to the backend
+              // Update the state and on with the name of the file
+              // sets the value to the user
+              handleOnNewValue({ value: file.name, file_path });
+              setLoading(false);
+            },
+            onError: () => {
+              console.error(CONSOLE_ERROR_MSG);
+              setLoading(false);
+            },
+          },
+        );
       } else {
         // Show an error if the file type is not allowed
         setErrorData({
@@ -101,6 +97,7 @@ export default function InputFileComponent({
     <div className={disabled ? "input-component-div" : "w-full"}>
       <div className="input-file-component gap-3">
         <span
+          data-testid={id}
           onClick={handleButtonClick}
           className={
             editNode
@@ -110,7 +107,7 @@ export default function InputFileComponent({
                 : "input-dialog primary-input text-muted-foreground"
           }
         >
-          {myValue !== "" ? myValue : "No file"}
+          {value !== "" ? value : "No file"}
         </span>
         {!editNode && (
           <Button

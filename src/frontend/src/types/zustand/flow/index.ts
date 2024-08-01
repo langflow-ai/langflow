@@ -53,9 +53,18 @@ export type FlowPoolType = {
 };
 
 export type FlowStoreType = {
+  componentsToUpdate: boolean;
+  updateComponentsToUpdate: (nodes: Node[]) => void;
   onFlowPage: boolean;
   setOnFlowPage: (onFlowPage: boolean) => void;
   flowPool: FlowPoolType;
+  setHasIO: (hasIO: boolean) => void;
+  setInputs: (
+    inputs: Array<{ type: string; id: string; displayName: string }>,
+  ) => void;
+  setOutputs: (
+    outputs: Array<{ type: string; id: string; displayName: string }>,
+  ) => void;
   inputs: Array<{
     type: string;
     id: string;
@@ -163,4 +172,5 @@ export type FlowStoreType = {
   getNodePosition: (nodeId: string) => { x: number; y: number };
   setLockChat: (lock: boolean) => void;
   lockChat: boolean;
+  updateFreezeStatus: (nodeIds: string[], freeze: boolean) => void;
 };

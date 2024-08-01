@@ -13,6 +13,7 @@ class SupabaseVectorStoreComponent(LCVectorStoreComponent):
     display_name = "Supabase"
     description = "Supabase Vector Store with search capabilities"
     documentation = "https://python.langchain.com/v0.2/docs/integrations/vectorstores/supabase/"
+    name = "SupabaseVectorStore"
     icon = "Supabase"
 
     inputs = [

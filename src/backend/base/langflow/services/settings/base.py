@@ -71,11 +71,25 @@ class Settings(BaseSettings):
     pool_size: int = 10
     """The number of connections to keep open in the connection pool. If not provided, the default is 10."""
     max_overflow: int = 20
-    """The number of connections to allow that can be opened beyond the pool size. If not provided, the default is 10."""
+    """The number of connections to allow that can be opened beyond the pool size.
+    If not provided, the default is 20."""
+
+    # sqlite configuration
+    sqlite_pragmas: Optional[dict] = {"synchronous": "NORMAL", "journal_mode": "WAL"}
+    """SQLite pragmas to use when connecting to the database."""
+
+    # cache configuration
     cache_type: str = "async"
     """The cache type can be 'async' or 'redis'."""
+    cache_expire: int = 3600
+    """The cache expire in seconds."""
     variable_store: str = "db"
     """The store can be 'db' or 'kubernetes'."""
+
+    prometheus_enabled: bool = False
+    """If set to True, Langflow will expose Prometheus metrics."""
+    prometheus_port: int = 9090
+    """The port on which Langflow will expose Prometheus metrics. 9090 is the default port."""
 
     remove_api_keys: bool = False
     components_path: List[str] = []

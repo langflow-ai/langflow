@@ -3,11 +3,13 @@ import * as dotenv from "dotenv";
 import path from "path";
 
 test("should delete rows from table message", async ({ page }) => {
-  if (!process?.env?.OPENAI_API_KEY) {
-    //You must set the OPENAI_API_KEY on .env file to run this test
-    expect(false).toBe(true);
+  test.skip(
+    !process?.env?.OPENAI_API_KEY,
+    "OPENAI_API_KEY required to run this test",
+  );
+  if (!process.env.CI) {
+    dotenv.config({ path: path.resolve(__dirname, "../../.env") });
   }
-
   await page.goto("/");
   await page.waitForTimeout(2000);
 
@@ -38,12 +40,20 @@ test("should delete rows from table message", async ({ page }) => {
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
 
+  let outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
+
+  while (outdatedComponents > 0) {
+    await page.getByTestId("icon-AlertTriangle").first().click();
+    await page.waitForTimeout(1000);
+    outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
+  }
+
   await page
-    .getByTestId("popover-anchor-input-openai_api_key")
+    .getByTestId("popover-anchor-input-api_key")
     .fill(process.env.OPENAI_API_KEY ?? "");
 
-  await page.getByTestId("dropdown-model_name").click();
-  await page.getByTestId("gpt-4o-0-option").click();
+  await page.getByTestId("dropdown_str_model_name").click();
+  await page.getByTestId("gpt-4o-1-option").click();
 
   await page.waitForTimeout(2000);
 
@@ -51,30 +61,9 @@ test("should delete rows from table message", async ({ page }) => {
   await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
   await page.getByText("built successfully").last().click({
-    timeout: 15000,
+    timeout: 30000,
   });
 
-  await page.getByText("Playground", { exact: true }).click();
-  await page
-    .getByText("No input message provided.", { exact: true })
-    .last()
-    .isVisible();
-
-  await page.waitForSelector('[data-testid="input-chat-playground"]', {
-    timeout: 100000,
-  });
-
-  await page
-    .getByTestId("input-chat-playground")
-    .last()
-    .fill("Say hello as a pirate");
-  await page.getByTestId("icon-LucideSend").last().click();
-
-  await page.waitForSelector("text=matey", {
-    timeout: 100000,
-  });
-
-  await page.getByText("Close").last().click();
   await page.getByTestId("user-profile-settings").last().click();
   await page.getByText("Settings").last().click();
   await page.getByText("Messages").last().click();

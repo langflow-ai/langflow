@@ -1,7 +1,10 @@
+import json
 import logging
 import os
 import sys
 from pathlib import Path
+from collections import deque
+from threading import Lock, Semaphore
 from typing import Optional
 
 import orjson
@@ -10,6 +13,108 @@ from platformdirs import user_cache_dir
 from rich.logging import RichHandler
 
 VALID_LOG_LEVELS = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+
+
+class SizedLogBuffer:
+    def __init__(
+        self,
+        max_readers: int = 20,  # max number of concurrent readers for the buffer
+    ):
+        """
+        a buffer for storing log messages for the log retrieval API
+        the buffer can be overwritten by an env variable LANGFLOW_LOG_RETRIEVER_BUFFER_SIZE
+        because the logger is initialized before the settings_service are loaded
+        """
+        self.max: int = 0
+        env_buffer_size = os.getenv("LANGFLOW_LOG_RETRIEVER_BUFFER_SIZE", "0")
+        if env_buffer_size.isdigit():
+            self.max = int(env_buffer_size)
+
+        self.buffer: deque = deque()
+
+        self._max_readers = max_readers
+        self._wlock = Lock()
+        self._rsemaphore = Semaphore(max_readers)
+
+    def get_write_lock(self) -> Lock:
+        return self._wlock
+
+    def write(self, message: str):
+        record = json.loads(message)
+        log_entry = record["text"]
+        epoch = int(record["record"]["time"]["timestamp"] * 1000)
+        with self._wlock:
+            if len(self.buffer) >= self.max:
+                for _ in range(len(self.buffer) - self.max + 1):
+                    self.buffer.popleft()
+            self.buffer.append((epoch, log_entry))
+
+    def __len__(self):
+        return len(self.buffer)
+
+    def get_after_timestamp(self, timestamp: int, lines: int = 5) -> dict[int, str]:
+        rc = dict()
+
+        self._rsemaphore.acquire()
+        try:
+            with self._wlock:
+                for ts, msg in self.buffer:
+                    if lines == 0:
+                        break
+                    if ts >= timestamp and lines > 0:
+                        rc[ts] = msg
+                        lines -= 1
+        finally:
+            self._rsemaphore.release()
+
+        return rc
+
+    def get_before_timestamp(self, timestamp: int, lines: int = 5) -> dict[int, str]:
+        self._rsemaphore.acquire()
+        try:
+            with self._wlock:
+                as_list = list(self.buffer)
+            i = 0
+            max_index = -1
+            for ts, msg in as_list:
+                if ts >= timestamp:
+                    max_index = i
+                    break
+                i += 1
+            if max_index == -1:
+                return self.get_last_n(lines)
+            rc = {}
+            i = 0
+            start_from = max(max_index - lines, 0)
+            for ts, msg in as_list:
+                if start_from <= i < max_index:
+                    rc[ts] = msg
+                i += 1
+            return rc
+        finally:
+            self._rsemaphore.release()
+
+    def get_last_n(self, last_idx: int) -> dict[int, str]:
+        self._rsemaphore.acquire()
+        try:
+            with self._wlock:
+                as_list = list(self.buffer)
+            rc = {}
+            for ts, msg in as_list[-last_idx:]:
+                rc[ts] = msg
+            return rc
+        finally:
+            self._rsemaphore.release()
+
+    def enabled(self) -> bool:
+        return self.max > 0
+
+    def max_size(self) -> int:
+        return self.max
+
+
+# log buffer for capturing log messages
+log_buffer = SizedLogBuffer()
 
 
 def serialize_log(record):
@@ -84,6 +189,9 @@ def configure(
             )
         except Exception as exc:
             logger.error(f"Error setting up log file: {exc}")
+
+    if log_buffer.enabled():
+        logger.add(sink=log_buffer.write, format="{time} {level} {message}", serialize=True)
 
     logger.debug(f"Logger set up with log level: {log_level}")
 

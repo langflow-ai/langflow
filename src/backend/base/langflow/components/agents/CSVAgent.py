@@ -1,34 +1,27 @@
 from langchain_experimental.agents.agent_toolkits.csv.base import create_csv_agent
 
-from langflow.custom import CustomComponent
-from langflow.field_typing import AgentExecutor, LanguageModel
+from langflow.base.agents.agent import LCAgentComponent
+from langflow.field_typing import AgentExecutor
+from langflow.inputs import HandleInput, FileInput, DropdownInput
 
 
-class CSVAgentComponent(CustomComponent):
+class CSVAgentComponent(LCAgentComponent):
     display_name = "CSVAgent"
     description = "Construct a CSV agent from a CSV and tools."
     documentation = "https://python.langchain.com/docs/modules/agents/toolkits/csv"
+    name = "CSVAgent"
 
-    def build_config(self):
-        return {
-            "llm": {"display_name": "LLM", "type": LanguageModel},
-            "path": {"display_name": "Path", "field_type": "file", "suffixes": [".csv"], "file_types": [".csv"]},
-            "handle_parsing_errors": {"display_name": "Handle Parse Errors", "advanced": True},
-            "agent_type": {
-                "display_name": "Agent Type",
-                "options": ["zero-shot-react-description", "openai-functions", "openai-tools"],
-                "advanced": True,
-            },
-        }
+    inputs = LCAgentComponent._base_inputs + [
+        HandleInput(name="llm", display_name="Language Model", input_types=["LanguageModel"], required=True),
+        FileInput(name="path", display_name="File Path", file_types=["csv"], required=True),
+        DropdownInput(
+            name="agent_type",
+            display_name="Agent Type",
+            advanced=True,
+            options=["zero-shot-react-description", "openai-functions", "openai-tools"],
+            value="openai-tools",
+        ),
+    ]
 
-    def build(
-        self, llm: LanguageModel, path: str, handle_parsing_errors: bool = True, agent_type: str = "openai-tools"
-    ) -> AgentExecutor:
-        # Instantiate and return the CSV agent class with the provided llm and path
-        return create_csv_agent(
-            llm=llm,
-            path=path,
-            agent_type=agent_type,
-            verbose=True,
-            agent_executor_kwargs=dict(handle_parsing_errors=handle_parsing_errors),
-        )
+    def build_agent(self) -> AgentExecutor:
+        return create_csv_agent(llm=self.llm, path=self.path, agent_type=self.agent_type, **self.get_agent_kwargs())

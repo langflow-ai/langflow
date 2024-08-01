@@ -1,24 +1,44 @@
 from langchain.agents.agent_toolkits.vectorstore.toolkit import VectorStoreInfo
-from langchain_core.vectorstores import VectorStore
+from langflow.custom import Component
+from langflow.inputs import HandleInput, MultilineInput, MessageTextInput
+from langflow.template import Output
 
-from langflow.custom import CustomComponent
 
-
-class VectorStoreInfoComponent(CustomComponent):
+class VectorStoreInfoComponent(Component):
     display_name = "VectorStoreInfo"
     description = "Information about a VectorStore"
+    name = "VectorStoreInfo"
 
-    def build_config(self):
-        return {
-            "vectorstore": {"display_name": "VectorStore"},
-            "description": {"display_name": "Description", "multiline": True},
-            "name": {"display_name": "Name"},
+    inputs = [
+        MessageTextInput(
+            name="vectorstore_name",
+            display_name="Name",
+            info="Name of the VectorStore",
+            required=True,
+        ),
+        MultilineInput(
+            name="vectorstore_description",
+            display_name="Description",
+            info="Description of the VectorStore",
+            required=True,
+        ),
+        HandleInput(
+            name="input_vectorstore",
+            display_name="Vector Store",
+            input_types=["VectorStore"],
+            required=True,
+        ),
+    ]
+
+    outputs = [
+        Output(display_name="Vector Store Info", name="info", method="build_info"),
+    ]
+
+    def build_info(self) -> VectorStoreInfo:
+        self.status = {
+            "name": self.vectorstore_name,
+            "description": self.vectorstore_description,
         }
-
-    def build(
-        self,
-        vectorstore: VectorStore,
-        description: str,
-        name: str,
-    ) -> VectorStoreInfo:
-        return VectorStoreInfo(vectorstore=vectorstore, description=description, name=name)
+        return VectorStoreInfo(
+            vectorstore=self.input_vectorstore, description=self.vectorstore_description, name=self.vectorstore_name
+        )

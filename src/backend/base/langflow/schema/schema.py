@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Generator, Literal, Union
+from typing import AsyncIterator, Generator, Iterator, Literal, Union
 
 from pydantic import BaseModel
 from typing_extensions import TypedDict
@@ -32,7 +32,7 @@ class ErrorLog(TypedDict):
     stackTrace: str
 
 
-class OutputLog(BaseModel):
+class OutputValue(BaseModel):
     message: Union[ErrorLog, StreamURL, dict, list, str]
     type: str
 
@@ -80,7 +80,7 @@ def get_message(payload):
 
 
 def build_output_logs(vertex, result) -> dict:
-    outputs: dict[str, OutputLog] = dict()
+    outputs: dict[str, OutputValue] = dict()
     component_instance = result[0]
     for index, output in enumerate(vertex.outputs):
         if component_instance.status is None:
@@ -104,7 +104,42 @@ def build_output_logs(vertex, result) -> dict:
 
             case LogType.UNKNOWN:
                 message = ""
+
+            case LogType.ARRAY:
+                message = [recursive_serialize_or_str(item) for item in message]
         name = output.get("name", f"output_{index}")
-        outputs |= {name: OutputLog(message=message, type=_type).model_dump()}
+        outputs |= {name: OutputValue(message=message, type=_type).model_dump()}
 
     return outputs
+
+
+def recursive_serialize_or_str(obj):
+    try:
+        if isinstance(obj, dict):
+            return {k: recursive_serialize_or_str(v) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [recursive_serialize_or_str(v) for v in obj]
+        elif isinstance(obj, BaseModel):
+            if hasattr(obj, "model_dump"):
+                obj_dict = obj.model_dump()
+            elif hasattr(obj, "dict"):
+                obj_dict = obj.dict()  # type: ignore
+            return {k: recursive_serialize_or_str(v) for k, v in obj_dict.items()}
+
+        elif isinstance(obj, (AsyncIterator, Generator, Iterator)):
+            # contain memory addresses
+            # without consuming the iterator
+            # return list(obj) consumes the iterator
+            # return f"{obj}" this generates '<generator object BaseChatModel.stream at 0x33e9ec770>'
+            # it is not useful
+            return "Unconsumed Stream"
+        elif hasattr(obj, "dict"):
+            return {k: recursive_serialize_or_str(v) for k, v in obj.dict().items()}
+        elif hasattr(obj, "model_dump"):
+            return {k: recursive_serialize_or_str(v) for k, v in obj.model_dump().items()}
+        elif issubclass(obj, BaseModel):
+            # This a type BaseModel and not an instance of it
+            return repr(obj)
+        return str(obj)
+    except Exception:
+        return str(obj)

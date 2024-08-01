@@ -5,7 +5,7 @@ import {
   SN_ERROR_TEXT,
 } from "../../../../../../constants/constants";
 import useAlertStore from "../../../../../../stores/alertStore";
-import useFileUpload from "./use-file-upload";
+import handleFileUpload from "../helpers/handle-file-upload";
 
 export const useHandleFileChange = (setFiles, currentFlowId) => {
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -39,7 +39,7 @@ export const useHandleFileChange = (setFiles, currentFlowId) => {
         { file: blob, loading: true, error: false, id, type },
       ]);
 
-      useFileUpload(blob, currentFlowId, setFiles, id);
+      handleFileUpload(blob, currentFlowId, setFiles, id);
     }
 
     // Clear the file input value to ensure the change event is triggered even for the same file

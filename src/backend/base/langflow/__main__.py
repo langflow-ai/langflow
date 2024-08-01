@@ -4,13 +4,14 @@ import sys
 import time
 import warnings
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import Optional
 
 import click
 import httpx
 import typer
-from dotenv import dotenv_values, load_dotenv
-from multiprocess import Process, cpu_count  # type: ignore
+from dotenv import load_dotenv
+from multiprocess import cpu_count  # type: ignore
+from multiprocess.context import Process  # type: ignore
 from packaging import version as pkg_version
 from rich import box
 from rich import print as rprint
@@ -126,33 +127,9 @@ def run(
 
     configure(log_level=log_level, log_file=log_file)
     set_var_for_macos_issue()
-    # override env variables with .env file
 
     if env_file:
         load_dotenv(env_file, override=True)
-        env_vars = dotenv_values(env_file)
-
-        # Define a mapping of environment variables to their corresponding variables and types
-        env_var_mapping: dict[str, tuple[str, type | Callable[[Any], bool]]] = {
-            "LANGFLOW_HOST": ("host", str),
-            "LANGFLOW_PORT": ("port", int),
-            "LANGFLOW_WORKERS": ("workers", int),
-            "LANGFLOW_WORKER_TIMEOUT": ("timeout", int),
-            "LANGFLOW_COMPONENTS_PATH": ("components_path", Path),
-            "LANGFLOW_LOG_LEVEL": ("log_level", str),
-            "LANGFLOW_LOG_FILE": ("log_file", Path),
-            "LANGFLOW_LANGCHAIN_CACHE": ("cache", str),
-            "LANGFLOW_FRONTEND_PATH": ("path", str),
-            "LANGFLOW_OPEN_BROWSER": ("open_browser", lambda x: x.lower() == "true"),
-            "LANGFLOW_REMOVE_API_KEYS": ("remove_api_keys", lambda x: x.lower() == "true"),
-            "LANGFLOW_BACKEND_ONLY": ("backend_only", lambda x: x.lower() == "true"),
-            "LANGFLOW_STORE": ("store", lambda x: x.lower() == "true"),
-        }
-
-        # Update variables based on environment variables
-        for env_var, (var_name, var_type) in env_var_mapping.items():
-            if env_var in env_vars:
-                locals()[var_name] = var_type(env_vars[env_var])
 
     update_settings(
         dev=dev,
@@ -181,6 +158,7 @@ def run(
     # Define an env variable to know if we are just testing the server
     if "pytest" in sys.modules:
         return
+    process: Process | None = None
     try:
         if platform.system() in ["Windows"]:
             # Run using uvicorn on MacOS and Windows
@@ -195,7 +173,12 @@ def run(
         if process:
             process.join()
     except KeyboardInterrupt:
-        pass
+        if process is not None:
+            process.terminate()
+        sys.exit(0)
+    except Exception as e:
+        logger.exception(e)
+        sys.exit(1)
 
 
 def wait_for_server_ready(host, port):
@@ -417,29 +400,24 @@ def run_langflow(host, port, log_level, options, app):
     """
     Run Langflow server on localhost
     """
-    try:
-        if platform.system() in ["Windows"]:
-            # Run using uvicorn on MacOS and Windows
-            # Windows doesn't support gunicorn
-            # MacOS requires an env variable to be set to use gunicorn
-            import uvicorn
 
-            uvicorn.run(
-                app,
-                host=host,
-                port=port,
-                log_level=log_level.lower(),
-                loop="asyncio",
-            )
-        else:
-            from langflow.server import LangflowApplication
+    if platform.system() in ["Windows"]:
+        # Run using uvicorn on MacOS and Windows
+        # Windows doesn't support gunicorn
+        # MacOS requires an env variable to be set to use gunicorn
+        import uvicorn
 
-            LangflowApplication(app, options).run()
-    except KeyboardInterrupt:
-        pass
-    except Exception as e:
-        logger.exception(e)
-        sys.exit(1)
+        uvicorn.run(
+            app,
+            host=host,
+            port=port,
+            log_level=log_level.lower(),
+            loop="asyncio",
+        )
+    else:
+        from langflow.server import LangflowApplication
+
+        LangflowApplication(app, options).run()
 
 
 @app.command()

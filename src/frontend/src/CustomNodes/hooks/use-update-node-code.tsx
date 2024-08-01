@@ -17,10 +17,9 @@ const useUpdateNodeCode = (
 
         newNode.data = {
           ...newNode.data,
-          node: newNodeClass,
+          node: { ...newNodeClass, edited: false },
           description: newNodeClass.description ?? dataNode.description,
           display_name: newNodeClass.display_name ?? dataNode.display_name,
-          edited: false,
         };
         if (type) {
           newNode.data.type = type;

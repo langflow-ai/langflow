@@ -1,0 +1,15 @@
+# https://github.com/dorny/paths-filter
+python:
+  - "src/backend/**"
+  - "src/backend/**.py"
+  - "pyproject.toml"
+  - "poetry.lock"
+  - "**/python_test.yml"
+tests:
+  - "tests/**"
+  - "src/frontend/tests/**"
+frontend:
+  - "src/frontend/**"
+  - "**/typescript_test.yml"
+docs:
+  - "docs/**"

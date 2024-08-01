@@ -62,7 +62,7 @@ test("ToggleComponent", async ({ page }) => {
     await page.locator('//*[@id="showload_hidden"]').isChecked(),
   ).toBeTruthy();
 
-  await page.getByText("Save Changes", { exact: true }).click();
+  await page.getByText("Close").last().click();
 
   await page.waitForSelector('[title="fit view"]', {
     timeout: 100000,
@@ -70,20 +70,30 @@ test("ToggleComponent", async ({ page }) => {
 
   await page.getByTitle("fit view").click();
 
-  await page.getByTestId("toggle-load_hidden").click();
-  expect(await page.getByTestId("toggle-load_hidden").isChecked()).toBeTruthy();
+  await page.getByTestId("toggle_bool_load_hidden").click();
+  expect(
+    await page.getByTestId("toggle_bool_load_hidden").isChecked(),
+  ).toBeTruthy();
 
-  await page.getByTestId("toggle-load_hidden").click();
-  expect(await page.getByTestId("toggle-load_hidden").isChecked()).toBeFalsy();
+  await page.getByTestId("toggle_bool_load_hidden").click();
+  expect(
+    await page.getByTestId("toggle_bool_load_hidden").isChecked(),
+  ).toBeFalsy();
 
-  await page.getByTestId("toggle-load_hidden").click();
-  expect(await page.getByTestId("toggle-load_hidden").isChecked()).toBeTruthy();
+  await page.getByTestId("toggle_bool_load_hidden").click();
+  expect(
+    await page.getByTestId("toggle_bool_load_hidden").isChecked(),
+  ).toBeTruthy();
 
-  await page.getByTestId("toggle-load_hidden").click();
-  expect(await page.getByTestId("toggle-load_hidden").isChecked()).toBeFalsy();
+  await page.getByTestId("toggle_bool_load_hidden").click();
+  expect(
+    await page.getByTestId("toggle_bool_load_hidden").isChecked(),
+  ).toBeFalsy();
 
-  await page.getByTestId("toggle-load_hidden").click();
-  expect(await page.getByTestId("toggle-load_hidden").isChecked()).toBeTruthy();
+  await page.getByTestId("toggle_bool_load_hidden").click();
+  expect(
+    await page.getByTestId("toggle_bool_load_hidden").isChecked(),
+  ).toBeTruthy();
 
   await page.getByTestId("div-generic-node").click();
 
@@ -99,7 +109,9 @@ test("ToggleComponent", async ({ page }) => {
   await page.getByTestId("more-options-modal").click();
   await page.getByTestId("edit-button-modal").click();
 
-  expect(await page.getByTestId("toggle-load_hidden").isChecked()).toBeTruthy();
+  expect(
+    await page.getByTestId("toggle_bool_load_hidden").isChecked(),
+  ).toBeTruthy();
 
   await page.locator('//*[@id="showload_hidden"]').click();
   expect(
@@ -152,9 +164,9 @@ test("ToggleComponent", async ({ page }) => {
     await page.locator('//*[@id="showuse_multithreading"]').isChecked(),
   ).toBeFalsy();
 
-  await page.getByText("Save Changes", { exact: true }).click();
+  await page.getByText("Close").last().click();
 
-  const plusButtonLocator = page.getByTestId("toggle-load_hidden");
+  const plusButtonLocator = page.getByTestId("toggle_bool_load_hidden");
   const elementCount = await plusButtonLocator?.count();
   if (elementCount === 0) {
     expect(true).toBeTruthy();
@@ -170,34 +182,34 @@ test("ToggleComponent", async ({ page }) => {
     ).toBeTruthy();
 
     expect(
-      await page.getByTestId("toggle-edit-load_hidden").isChecked(),
+      await page.getByTestId("toggle_bool_load_hidden").isChecked(),
     ).toBeTruthy();
 
-    await page.getByText("Save Changes", { exact: true }).click();
+    await page.getByText("Close").last().click();
 
-    await page.getByTestId("toggle-load_hidden").click();
+    await page.getByTestId("toggle_bool_load_hidden").click();
     expect(
-      await page.getByTestId("toggle-load_hidden").isChecked(),
+      await page.getByTestId("toggle_bool_load_hidden").isChecked(),
     ).toBeFalsy();
 
-    await page.getByTestId("toggle-load_hidden").click();
+    await page.getByTestId("toggle_bool_load_hidden").click();
     expect(
-      await page.getByTestId("toggle-load_hidden").isChecked(),
+      await page.getByTestId("toggle_bool_load_hidden").isChecked(),
     ).toBeTruthy();
 
-    await page.getByTestId("toggle-load_hidden").click();
+    await page.getByTestId("toggle_bool_load_hidden").click();
     expect(
-      await page.getByTestId("toggle-load_hidden").isChecked(),
+      await page.getByTestId("toggle_bool_load_hidden").isChecked(),
     ).toBeFalsy();
 
-    await page.getByTestId("toggle-load_hidden").click();
+    await page.getByTestId("toggle_bool_load_hidden").click();
     expect(
-      await page.getByTestId("toggle-load_hidden").isChecked(),
+      await page.getByTestId("toggle_bool_load_hidden").isChecked(),
     ).toBeTruthy();
 
-    await page.getByTestId("toggle-load_hidden").click();
+    await page.getByTestId("toggle_bool_load_hidden").click();
     expect(
-      await page.getByTestId("toggle-load_hidden").isChecked(),
+      await page.getByTestId("toggle_bool_load_hidden").isChecked(),
     ).toBeFalsy();
   }
 });

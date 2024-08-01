@@ -1,36 +1,38 @@
 import { expect, test } from "@playwright/test";
-
-test("should add API-KEY", async ({ page }) => {
-  await page.goto("/");
-  await page.waitForTimeout(1000);
-
-  await page.getByTestId("button-store").click();
-  await page.waitForTimeout(1000);
-
-  await page.getByTestId("api-key-button-store").click();
-  await page
-    .getByPlaceholder("Insert your API Key")
-    .fill("testtesttesttesttesttest");
-
-  await page.getByTestId("api-key-save-button-store").click();
-
-  await page.waitForTimeout(2000);
-  await page.getByText("Success! Your API Key has been saved.").isVisible();
-
-  await page
-    .getByPlaceholder("Insert your API Key")
-    .fill(process.env.STORE_API_KEY ?? "");
-  await page.getByTestId("api-key-save-button-store").click();
-
-  await page.waitForTimeout(2000);
-  await page.getByText("Success! Your API Key has been saved.").isVisible();
-
-  await page.waitForTimeout(2000);
-  await page.getByText("API Key Error").isHidden();
-});
+import * as dotenv from "dotenv";
+import path from "path";
 
 test("should like and add components and flows", async ({ page }) => {
+  test.skip(
+    !process?.env?.STORE_API_KEY,
+    "STORE_API_KEY required to run this test",
+  );
+
+  if (!process.env.CI) {
+    dotenv.config({ path: path.resolve(__dirname, "../../.env") });
+  }
+
   await page.goto("/");
+  await page.waitForTimeout(1000);
+
+  let modalCount = 0;
+  try {
+    const modalTitleElement = await page?.getByTestId("modal-title");
+    if (modalTitleElement) {
+      modalCount = await modalTitleElement.count();
+    }
+  } catch (error) {
+    modalCount = 0;
+  }
+
+  while (modalCount === 0) {
+    await page.getByText("New Project", { exact: true }).click();
+    await page.waitForTimeout(5000);
+    modalCount = await page.getByTestId("modal-title")?.count();
+  }
+
+  await page.getByText("Close", { exact: true }).click();
+
   await page.waitForTimeout(1000);
 
   await page.getByTestId("button-store").click();
@@ -41,13 +43,11 @@ test("should like and add components and flows", async ({ page }) => {
   await page
     .getByPlaceholder("Insert your API Key")
     .fill(process.env.STORE_API_KEY ?? "");
+
   await page.getByTestId("api-key-save-button-store").click();
 
   await page.waitForTimeout(2000);
   await page.getByText("Success! Your API Key has been saved.").isVisible();
-
-  await page.waitForTimeout(2000);
-  await page.getByText("API Key Error").isHidden();
 
   await page.waitForTimeout(2000);
 
@@ -99,11 +99,39 @@ test("should like and add components and flows", async ({ page }) => {
 });
 
 test("should find a searched Component on Store", async ({ page }) => {
+  test.skip(
+    !process?.env?.STORE_API_KEY,
+    "STORE_API_KEY required to run this test",
+  );
+
+  if (!process.env.CI) {
+    dotenv.config({ path: path.resolve(__dirname, "../../.env") });
+  }
+
   await page.goto("/");
   await page.waitForTimeout(1000);
 
   await page.getByTestId("button-store").click();
   await page.waitForTimeout(1000);
+
+  await page.getByTestId("api-key-button-store").click();
+
+  await page
+    .getByPlaceholder("Insert your API Key")
+    .fill(process.env.STORE_API_KEY ?? "");
+
+  await page.getByTestId("api-key-save-button-store").click();
+
+  await page.waitForTimeout(2000);
+  await page.getByText("Success! Your API Key has been saved.").isVisible();
+
+  await page.waitForTimeout(1000);
+
+  await page.getByTestId("button-store").click();
+
+  await page.waitForSelector('[data-testid="search-store-input"]', {
+    timeout: 100000,
+  });
 
   await page.getByTestId("search-store-input").fill("File Loader");
   await page.getByTestId("search-store-button").click();

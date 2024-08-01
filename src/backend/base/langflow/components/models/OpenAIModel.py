@@ -1,12 +1,12 @@
 import operator
 from functools import reduce
 
+from langflow.field_typing.range_spec import RangeSpec
 from langchain_openai import ChatOpenAI
 from pydantic.v1 import SecretStr
 
-from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
-from langflow.base.models.openai_constants import MODEL_NAMES
+from langflow.base.models.openai_constants import OPENAI_MODEL_NAMES
 from langflow.field_typing import LanguageModel
 from langflow.inputs import (
     BoolInput,
@@ -14,7 +14,6 @@ from langflow.inputs import (
     DropdownInput,
     FloatInput,
     IntInput,
-    MessageInput,
     SecretStrInput,
     StrInput,
 )
@@ -24,14 +23,15 @@ class OpenAIModelComponent(LCModelComponent):
     display_name = "OpenAI"
     description = "Generates text using OpenAI LLMs."
     icon = "OpenAI"
+    name = "OpenAIModel"
 
-    inputs = [
-        MessageInput(name="input_value", display_name="Input"),
+    inputs = LCModelComponent._base_inputs + [
         IntInput(
             name="max_tokens",
             display_name="Max Tokens",
             advanced=True,
             info="The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
+            range_spec=RangeSpec(min=0, max=128000),
         ),
         DictInput(name="model_kwargs", display_name="Model Kwargs", advanced=True),
         BoolInput(
@@ -48,7 +48,11 @@ class OpenAIModelComponent(LCModelComponent):
             info="The schema for the Output of the model. You must pass the word JSON in the prompt. If left blank, JSON mode will be disabled.",
         ),
         DropdownInput(
-            name="model_name", display_name="Model Name", advanced=False, options=MODEL_NAMES, value=MODEL_NAMES[0]
+            name="model_name",
+            display_name="Model Name",
+            advanced=False,
+            options=OPENAI_MODEL_NAMES,
+            value=OPENAI_MODEL_NAMES[0],
         ),
         StrInput(
             name="openai_api_base",
@@ -57,20 +61,13 @@ class OpenAIModelComponent(LCModelComponent):
             info="The base URL of the OpenAI API. Defaults to https://api.openai.com/v1. You can change this to use other APIs like JinaChat, LocalAI and Prem.",
         ),
         SecretStrInput(
-            name="openai_api_key",
+            name="api_key",
             display_name="OpenAI API Key",
             info="The OpenAI API Key to use for the OpenAI model.",
             advanced=False,
             value="OPENAI_API_KEY",
         ),
         FloatInput(name="temperature", display_name="Temperature", value=0.1),
-        BoolInput(name="stream", display_name="Stream", info=STREAM_INFO_TEXT, advanced=True),
-        StrInput(
-            name="system_message",
-            display_name="System Message",
-            info="System message to pass to the model.",
-            advanced=True,
-        ),
         IntInput(
             name="seed",
             display_name="Seed",
@@ -81,10 +78,10 @@ class OpenAIModelComponent(LCModelComponent):
     ]
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
-        # self.output_schea is a list of dictionarie s
+        # self.output_schema is a list of dictionaries
         # let's convert it to a dictionary
         output_schema_dict: dict[str, str] = reduce(operator.ior, self.output_schema or {}, {})
-        openai_api_key = self.openai_api_key
+        openai_api_key = self.api_key
         temperature = self.temperature
         model_name: str = self.model_name
         max_tokens = self.max_tokens
@@ -92,7 +89,6 @@ class OpenAIModelComponent(LCModelComponent):
         openai_api_base = self.openai_api_base or "https://api.openai.com/v1"
         json_mode = bool(output_schema_dict) or self.json_mode
         seed = self.seed
-        model_kwargs["seed"] = seed
 
         if openai_api_key:
             api_key = SecretStr(openai_api_key)
@@ -105,6 +101,7 @@ class OpenAIModelComponent(LCModelComponent):
             base_url=openai_api_base,
             api_key=api_key,
             temperature=temperature or 0.1,
+            seed=seed,
         )
         if json_mode:
             if output_schema_dict:

@@ -1,13 +1,16 @@
 name: Test Docs Build
 
 on:
-  pull_request:
-    paths:
-      - "docs/**"
+  workflow_call:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "(Optional) Branch to checkout"
+        required: false
+        type: string
 
 env:
   NODE_VERSION: "21"
-
 
 jobs:
   test-docs-build:
@@ -17,7 +20,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
+        with:
+          ref: ${{ inputs.branch || github.ref }}
       - name: Setup Node.js
         uses: actions/setup-node@v4
         id: setup-node
@@ -36,7 +40,7 @@ jobs:
       - name: Install Node.js dependencies
         run: |
           cd docs
-          npm install
+          npm install --legacy-peer-deps
         if: ${{ steps.setup-node.outputs.cache-hit != 'true' }}
 
       - name: Build Docs

@@ -57,7 +57,7 @@ test("CRUD folders", async ({ page }) => {
     .last()
     .hover()
     .then(async () => {
-      await page.getByTestId("icon-trash").last().click();
+      await page.getByTestId("btn-delete-folder").last().click();
     });
 
   await page.getByText("Delete").last().click();
@@ -67,11 +67,17 @@ test("CRUD folders", async ({ page }) => {
 
 test("add folder by drag and drop", async ({ page }) => {
   await page.goto("/");
-  await page.waitForTimeout(2000);
+
+  await page.waitForTimeout(5000); // Consider using a more reliable waiting mechanism
 
   const jsonContent = readFileSync(
     "tests/end-to-end/assets/collection.json",
     "utf-8",
+  );
+
+  // Wait for the target element to be available before evaluation
+  await page.waitForSelector(
+    '//*[@id="root"]/div/div[1]/div[2]/div[3]/aside/nav/div/div[2]',
   );
 
   // Create the DataTransfer and File
@@ -117,6 +123,10 @@ test("change flow folder", async ({ page }) => {
     modalCount = await page.getByTestId("modal-title")?.count();
   }
   await page.getByRole("heading", { name: "Basic Prompting" }).click();
+
+  await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
+    timeout: 100000,
+  });
 
   await page.getByTestId("icon-ChevronLeft").first().click();
 

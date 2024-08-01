@@ -9,6 +9,7 @@ from langchain_core.tools import Tool
 class PythonREPLToolComponent(CustomComponent):
     display_name = "Python REPL Tool"
     description = "A tool for running Python code in a REPL environment."
+    name = "PythonREPLTool"
 
     def build_config(self):
         return {

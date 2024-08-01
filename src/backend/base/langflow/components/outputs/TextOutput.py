@@ -7,6 +7,7 @@ class TextOutputComponent(TextComponent):
     display_name = "Text Output"
     description = "Display a text output in the Playground."
     icon = "type"
+    name = "TextOutput"
 
     inputs = [
         MessageTextInput(

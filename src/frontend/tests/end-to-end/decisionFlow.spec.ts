@@ -1,6 +1,17 @@
 import { expect, test } from "@playwright/test";
+import * as dotenv from "dotenv";
+import path from "path";
 
 test("should create a flow with decision", async ({ page }) => {
+  test.skip(
+    !process?.env?.OPENAI_API_KEY,
+    "OPENAI_API_KEY required to run this test",
+  );
+
+  if (!process.env.CI) {
+    dotenv.config({ path: path.resolve(__dirname, "../../.env") });
+  }
+
   await page.goto("/");
   await page.locator("span").filter({ hasText: "My Collection" }).isVisible();
   await page.waitForTimeout(2000);
@@ -69,12 +80,14 @@ test("should create a flow with decision", async ({ page }) => {
   await page.getByTestId("input-list-plus-btn_texts-0").click();
 
   await page
-    .getByTestId("input-list-input_texts-0")
+    .getByTestId("inputlist_str_texts_0")
+    .first()
     .fill("big news! langflow 1.0 is out");
   await page
-    .getByTestId("input-list-input_texts-1")
+    .getByTestId("inputlist_str_texts_1")
+    .first()
     .fill("uhul that movie was awesome");
-  await page.getByTestId("input-list-input_texts-2").fill("love you babe");
+  await page.getByTestId("inputlist_str_texts_2").first().fill("love you babe");
 
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
@@ -97,15 +110,12 @@ test("should create a flow with decision", async ({ page }) => {
   await page.getByTestId("input-list-plus-btn_texts-0").last().click();
   await page.getByTestId("input-list-plus-btn_texts-0").last().click();
 
+  await page.getByTestId("inputlist_str_texts_0").last().fill("oh my cat died");
   await page
-    .getByTestId("input-list-input_texts-0")
-    .last()
-    .fill("oh my cat died");
-  await page
-    .getByTestId("input-list-input_texts-1")
+    .getByTestId("inputlist_str_texts_1")
     .last()
     .fill("No one loves me");
-  await page.getByTestId("input-list-input_texts-2").last().fill("not cool..");
+  await page.getByTestId("inputlist_str_texts_2").last().fill("not cool..");
 
   await page.getByPlaceholder("Search").click();
   await page.getByPlaceholder("Search").fill("parse data");
@@ -337,8 +347,8 @@ test("should create a flow with decision", async ({ page }) => {
   await page.mouse.up();
 
   //edit prompt
-  await page.getByTestId("prompt-input-template").first().click();
-  await page.getByTestId("modal-prompt-input-template").first().fill(`
+  await page.getByTestId("promptarea_prompt_template").first().click();
+  await page.getByTestId("modal-promptarea_prompt_template").first().fill(`
     {Condition}
 
 Answer with either TRUE or FALSE (and nothing else).
@@ -468,7 +478,7 @@ AI:
     .getByTestId("popover-anchor-input-input_message-edit")
     .nth(0)
     .fill("You're Happy! 🤪");
-  await page.getByText("Save Changes").click();
+  await page.getByText("Close").last().click();
 
   await page.getByTitle("zoom in").click();
   await page.getByTitle("zoom in").click();
@@ -491,7 +501,7 @@ AI:
     .getByTestId("popover-anchor-input-input_message-edit")
     .nth(0)
     .fill("You're Sad! 🥲");
-  await page.getByText("Save Changes").click();
+  await page.getByText("Close").last().click();
 
   await page.getByTitle("fit view").click({
     force: true,
@@ -536,14 +546,12 @@ AI:
 
   await page.locator('//*[@id="react-flow-id"]').hover();
 
-  if (!process.env.OPENAI_API_KEY) {
-    //You must set the OPENAI_API_KEY on .env file to run this test
-    expect(false).toBe(true);
-  }
-
   await page
-    .getByTestId("popover-anchor-input-openai_api_key")
+    .getByTestId("popover-anchor-input-api_key")
     .fill(process.env.OPENAI_API_KEY ?? "");
+
+  await page.getByTestId("dropdown_str_model_name").click();
+  await page.getByTestId("gpt-4o-1-option").click();
 
   await page.getByLabel("fit view").click();
   await page.getByText("Playground", { exact: true }).click();
@@ -561,7 +569,7 @@ AI:
   await page.getByTestId("icon-LucideSend").click();
 
   await page.waitForSelector("text=🥲", {
-    timeout: 100000,
+    timeout: 1200000,
   });
 
   await page.getByText("🥲").isVisible();

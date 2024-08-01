@@ -40,7 +40,7 @@ test("user should be able to see multiple edges and interact with them", async (
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
 
-  await page.getByTestId("output-inspection-retriever").first().click();
+  await page.getByTestId("input-inspection-retriever").first().click();
   await page.getByText("Retriever", { exact: true }).first().isHidden();
   await page.getByTestId("icon-ChevronDown").last().isVisible();
   await page.getByTestId("icon-ChevronDown").last().click();

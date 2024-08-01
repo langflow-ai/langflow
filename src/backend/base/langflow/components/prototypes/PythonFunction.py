@@ -9,6 +9,7 @@ class PythonFunctionComponent(CustomComponent):
     display_name = "Python Function"
     description = "Define a Python function."
     icon = "Python"
+    name = "PythonFunction"
     beta = True
 
     def build_config(self):

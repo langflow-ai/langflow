@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "langflow-base"
-version = "0.0.81"
+version = "0.0.92"
 description = "A Python package with a built-in web application"
 authors = ["Langflow <contact@langflow.org>"]
 maintainers = [
@@ -11,6 +11,7 @@ maintainers = [
     "Lucas Eduoli <lucaseduoli@gmail.com>",
     "Otávio Anovazzi <otavio2204@gmail.com>",
     "Rodrigo Nader <rodrigo@langflow.org>",
+    "Italo dos Anjos <italojohnnydosanjos@gmail.com>",
 ]
 repository = "https://github.com/langflow-ai/langflow"
 license = "MIT"
@@ -31,11 +32,12 @@ httpx = "*"
 uvicorn = "^0.30.0"
 gunicorn = "^22.0.0"
 langchain = "~0.2.0"
+langchain-core = "^0.2.24"
 langchainhub = "~0.1.15"
 sqlmodel = "^0.0.18"
 loguru = "^0.7.1"
 rich = "^13.7.0"
-langchain-experimental = "*"
+langchain-experimental = "^0.0.61"
 pydantic = "^2.7.0"
 pydantic-settings = "^2.2.0"
 websockets = "*"
@@ -48,9 +50,9 @@ alembic = "^1.13.0"
 passlib = "^1.7.4"
 bcrypt = "4.0.1"
 pillow = "^10.2.0"
-docstring-parser = "^0.15"
+docstring-parser = "^0.16"
 python-jose = "^3.3.0"
-pandas = "2.2.0"
+pandas = "2.2.2"
 multiprocess = "^0.70.14"
 duckdb = "^1.0.0"
 python-docx = "^1.1.0"
@@ -65,7 +67,15 @@ uncurl = "^0.0.11"
 sentry-sdk = {extras = ["fastapi", "loguru"], version = "^2.5.1"}
 chardet = "^5.2.0"
 firecrawl-py = "^0.0.16"
-
+opentelemetry-api = "^1.25.0"
+opentelemetry-sdk = "^1.25.0"
+opentelemetry-exporter-prometheus = "^0.46b0"
+opentelemetry-instrumentation-fastapi = "^0.46b0"
+prometheus-client = "^0.20.0"
+aiofiles = "^24.1.0"
+setuptools = ">=70"
+nanoid = "^2.0.0"
+filelock = "^3.15.4"
 
 [tool.poetry.extras]
 deploy = ["celery", "redis", "flower"]
@@ -73,9 +83,12 @@ local = ["llama-cpp-python", "sentence-transformers", "ctransformers"]
 all = ["deploy", "local"]
 
 
+[tool.poetry.group.dev.dependencies]
+pytest-split = "^0.9.0"
+
 [tool.pytest.ini_options]
 minversion = "6.0"
-addopts = "-ra"
+#addopts = "-ra"
 testpaths = ["tests", "integration"]
 console_output_style = "progress"
 filterwarnings = ["ignore::DeprecationWarning"]
@@ -86,6 +99,7 @@ markers = ["async_test"]
 namespace_packages = true
 mypy_path = "langflow"
 ignore_missing_imports = true
+disable_error_code = ["type-var"]
 
 
 [tool.ruff]

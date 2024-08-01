@@ -1,4 +1,6 @@
+from .AIMLEmbeddings import AIMLEmbeddingsComponent
 from .AmazonBedrockEmbeddings import AmazonBedrockEmbeddingsComponent
+from .AstraVectorize import AstraVectorizeComponent
 from .AzureOpenAIEmbeddings import AzureOpenAIEmbeddingsComponent
 from .CohereEmbeddings import CohereEmbeddingsComponent
 from .HuggingFaceEmbeddings import HuggingFaceEmbeddingsComponent
@@ -8,7 +10,9 @@ from .OpenAIEmbeddings import OpenAIEmbeddingsComponent
 from .VertexAIEmbeddings import VertexAIEmbeddingsComponent
 
 __all__ = [
+    "AIMLEmbeddingsComponent",
     "AmazonBedrockEmbeddingsComponent",
+    "AstraVectorizeComponent",
     "AzureOpenAIEmbeddingsComponent",
     "CohereEmbeddingsComponent",
     "HuggingFaceEmbeddingsComponent",

@@ -1,3 +1,4 @@
+import { useFolderStore } from "@/stores/foldersStore";
 import React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import CollectionCardComponent from "../../../../../../components/cardComponent";
@@ -9,9 +10,15 @@ const CollectionCard = ({ item, type, isLoading, control }) => {
   const editFlowLink = `/flow/${item.id}`;
   const editFlowButtonTestId = `edit-flow-button-${item.id}`;
 
+  const folderUrl = useFolderStore((state) => state.folderUrl);
+  const myCollectionIdFolder = useFolderStore((state) => state.myCollectionId);
+
+  const hasFolderUrl = folderUrl != null && folderUrl !== "";
+  const currentFolderUrl = hasFolderUrl ? folderUrl : myCollectionIdFolder;
+
   const handleClick = () => {
     if (!isComponent) {
-      navigate(editFlowLink);
+      navigate(editFlowLink, { state: { folderId: currentFolderUrl } });
     }
   };
 
@@ -40,7 +47,6 @@ const CollectionCard = ({ item, type, isLoading, control }) => {
 
   return (
     <CollectionCardComponent
-      is_component={type === "component"}
       data={{
         is_component: isComponent,
         ...item,

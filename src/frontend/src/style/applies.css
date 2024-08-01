@@ -80,7 +80,7 @@
     @apply w-full truncate pr-1 text-xs text-foreground;
   }
   .side-bar-components-div-form {
-    @apply flex w-full items-center justify-between rounded-md rounded-l-none border border-l-0 border-dashed border-ring  bg-white px-3 py-1 text-sm;
+    @apply flex w-full items-center justify-between rounded-md rounded-l-none border border-l-0 border-dashed border-ring bg-white px-3 py-1 text-sm;
   }
   .side-bar-components-border {
     @apply cursor-grab rounded-l-md border-l-8;
@@ -118,7 +118,7 @@
   /* Frozen state border */
   .border-ring-frozen {
     position: relative;
-    @apply rounded-md  border shadow-frozen-ring;
+    @apply rounded-md border shadow-frozen-ring;
   }
   .border-ring-frozen::before {
     content: "";
@@ -440,10 +440,10 @@
   }
 
   .unused-side-bar-aside {
-    @apply flex flex-shrink-0 flex-col overflow-hidden border-r  transition-all duration-500;
+    @apply flex flex-shrink-0 flex-col overflow-hidden border-r transition-all duration-500;
   }
   .unused-side-bar-arrangement {
-    @apply flex h-full  w-52 flex-col items-start overflow-y-auto border bg-background scrollbar-hide;
+    @apply flex h-full w-52 flex-col items-start overflow-y-auto border bg-background scrollbar-hide;
   }
   .unused-side-bar-division {
     @apply flex-max-width flex-grow flex-col;
@@ -546,6 +546,13 @@
     @apply h-5 w-5 text-primary;
   }
 
+  .multiselect-component-outline {
+    @apply input-edit-node relative pr-8;
+  }
+  .multiselect-component-false-outline {
+    @apply primary-input py-2 pl-3 pr-10 text-left;
+  }
+
   .edit-flow-arrangement {
     @apply flex justify-between;
   }
@@ -586,13 +593,13 @@
     @apply inline-flex h-9 items-center justify-center rounded-md border border-input px-3 pr-0 shadow-sm;
   }
   .header-waitlist-link-box {
-    @apply inline-flex h-9 items-center justify-center whitespace-nowrap rounded-md border border-input px-2 text-sm  font-medium text-muted-foreground shadow-sm ring-offset-background disabled:pointer-events-none disabled:opacity-50;
+    @apply inline-flex h-9 items-center justify-center whitespace-nowrap rounded-md border border-input px-2 text-sm font-medium text-muted-foreground shadow-sm ring-offset-background disabled:pointer-events-none disabled:opacity-50;
   }
   .header-waitlist-link-box:hover {
     @apply hover:bg-accent hover:text-accent-foreground;
   }
   .header-github-link {
-    @apply header-github-link-box text-sm  font-medium text-muted-foreground ring-offset-background disabled:pointer-events-none disabled:opacity-50;
+    @apply header-github-link-box text-sm font-medium text-muted-foreground ring-offset-background disabled:pointer-events-none disabled:opacity-50;
   }
   .header-github-link:focus-visible {
     @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
@@ -640,7 +647,7 @@
     @apply focus:outline-none focus:ring-1 focus:ring-primary focus:ring-offset-1;
   }
   .toggle-component-span {
-    @apply pointer-events-none relative h-5 w-5 transform rounded-full  shadow ring-0 transition duration-200 ease-in-out;
+    @apply pointer-events-none relative h-5 w-5 transform rounded-full shadow ring-0 transition duration-200 ease-in-out;
   }
   .toggle-component-second-span {
     @apply absolute inset-0 flex h-full w-full items-center justify-center transition-opacity;
@@ -651,7 +658,7 @@
   }
 
   .chat-input-modal-txtarea {
-    @apply form-input block w-full rounded-md border-ring pr-10  custom-scroll sm:text-sm;
+    @apply form-input block w-full rounded-md border-ring pr-10 custom-scroll sm:text-sm;
   }
   .chat-input-modal-div {
     @apply absolute bottom-0.5 right-3;
@@ -686,7 +693,7 @@
     @apply flex-max-width items-center text-start;
   }
   .chat-message-modal-text {
-    @apply relative w-full text-start text-sm  font-normal text-muted-foreground;
+    @apply relative w-full text-start text-sm font-normal text-muted-foreground;
   }
   .chat-message-modal-icon-div {
     @apply absolute -left-2 -top-1 cursor-pointer;
@@ -1121,7 +1128,7 @@
   }
 
   .input-invalid {
-    @apply border-destructive focus:border-destructive  focus:ring-destructive;
+    @apply border-destructive focus:border-destructive focus:ring-destructive;
   }
 
   .fade-container {

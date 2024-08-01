@@ -18,6 +18,7 @@ class VectaraSelfQueryRetriverComponent(CustomComponent):
     display_name: str = "Vectara Self Query Retriever for Vectara Vector Store"
     description: str = "Implementation of Vectara Self Query Retriever"
     documentation = "https://python.langchain.com/docs/integrations/retrievers/self_query/vectara_self_query"
+    name = "VectaraSelfQueryRetriver"
     icon = "Vectara"
 
     field_config = {

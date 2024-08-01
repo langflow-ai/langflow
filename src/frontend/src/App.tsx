@@ -1,53 +1,58 @@
 import { useContext, useEffect, useState } from "react";
+import { Cookies } from "react-cookie";
 import { ErrorBoundary } from "react-error-boundary";
 import { useNavigate } from "react-router-dom";
 import "reactflow/dist/style.css";
 import "./App.css";
 import AlertDisplayArea from "./alerts/displayArea";
-import ErrorAlert from "./alerts/error";
-import NoticeAlert from "./alerts/notice";
-import SuccessAlert from "./alerts/success";
 import CrashErrorComponent from "./components/crashErrorComponent";
 import FetchErrorComponent from "./components/fetchErrorComponent";
 import LoadingComponent from "./components/loadingComponent";
 import {
   FETCH_ERROR_DESCRIPION,
   FETCH_ERROR_MESSAGE,
+  LANGFLOW_AUTO_LOGIN_OPTION,
 } from "./constants/constants";
 import { AuthContext } from "./contexts/authContext";
-import { autoLogin, getGlobalVariables, getHealth } from "./controllers/API";
+import { useAutoLogin } from "./controllers/API/queries/auth";
+import { useGetHealthQuery } from "./controllers/API/queries/health";
+import { useGetGlobalVariables } from "./controllers/API/queries/variables";
+import { useGetVersionQuery } from "./controllers/API/queries/version";
 import { setupAxiosDefaults } from "./controllers/API/utils";
 import useTrackLastVisitedPath from "./hooks/use-track-last-visited-path";
 import Router from "./routes";
 import { Case } from "./shared/components/caseComponent";
 import useAlertStore from "./stores/alertStore";
+import useAuthStore from "./stores/authStore";
 import { useDarkStore } from "./stores/darkStore";
 import useFlowsManagerStore from "./stores/flowsManagerStore";
 import { useFolderStore } from "./stores/foldersStore";
-import { useGlobalVariablesStore } from "./stores/globalVariablesStore/globalVariables";
-import { useStoreStore } from "./stores/storeStore";
+
 export default function App() {
   useTrackLastVisitedPath();
-
-  const [fetchError, setFetchError] = useState(false);
   const isLoading = useFlowsManagerStore((state) => state.isLoading);
-
-  const { isAuthenticated, login, setUserData, setAutoLogin, getUser } =
-    useContext(AuthContext);
+  const { login, setUserData, getUser, logout } = useContext(AuthContext);
+  const setAutoLogin = useAuthStore((state) => state.setAutoLogin);
   const setLoading = useAlertStore((state) => state.setLoading);
-  const fetchApiData = useStoreStore((state) => state.fetchApiData);
-  const refreshVersion = useDarkStore((state) => state.refreshVersion);
   const refreshStars = useDarkStore((state) => state.refreshStars);
-  const setGlobalVariables = useGlobalVariablesStore(
-    (state) => state.setGlobalVariables,
-  );
-  const checkHasStore = useStoreStore((state) => state.checkHasStore);
-  const navigate = useNavigate();
   const dark = useDarkStore((state) => state.dark);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+
+  const { mutate: mutateAutoLogin } = useAutoLogin();
+
+  useGetVersionQuery();
+  const cookies = new Cookies();
 
   const isLoadingFolders = useFolderStore((state) => state.isLoadingFolders);
 
-  const [isLoadingHealth, setIsLoadingHealth] = useState(false);
+  const { mutate: mutateGetGlobalVariables } = useGetGlobalVariables();
+
+  const {
+    data: healthData,
+    isFetching: fetchingHealth,
+    isError: isErrorHealth,
+    refetch,
+  } = useGetHealthQuery();
 
   useEffect(() => {
     if (!dark) {
@@ -58,22 +63,30 @@ export default function App() {
   }, [dark]);
 
   useEffect(() => {
-    const abortController = new AbortController();
     const isLoginPage = location.pathname.includes("login");
 
-    autoLogin(abortController.signal)
-      .then(async (user) => {
+    mutateAutoLogin(undefined, {
+      onSuccess: async (user) => {
         if (user && user["access_token"]) {
           user["refresh_token"] = "auto";
-          login(user["access_token"]);
+          login(user["access_token"], "auto");
+          mutateGetGlobalVariables();
           setUserData(user);
           setAutoLogin(true);
           fetchAllData();
         }
-      })
-      .catch(async (error) => {
+      },
+      onError: (error) => {
         if (error.name !== "CanceledError") {
           setAutoLogin(false);
+          if (
+            cookies.get(LANGFLOW_AUTO_LOGIN_OPTION) === "auto" &&
+            isAuthenticated
+          ) {
+            logout();
+            return;
+          }
+
           if (isAuthenticated && !isLoginPage) {
             getUser();
             fetchAllData();
@@ -82,19 +95,13 @@ export default function App() {
             useFlowsManagerStore.setState({ isLoading: false });
           }
         }
-      });
-
-    /*
-      Abort the request as it isn't needed anymore, the component being
-      unmounted. It helps avoid, among other things, the well-known "can't
-      perform a React state update on an unmounted component" warning.
-    */
-    return () => abortController.abort();
+      },
+    });
   }, []);
 
   const fetchAllData = async () => {
     setTimeout(async () => {
-      await Promise.all([refreshStars(), refreshVersion(), fetchData()]);
+      await Promise.all([refreshStars(), fetchData()]);
     }, 1000);
   };
 
@@ -110,49 +117,6 @@ export default function App() {
         }
       }
     });
-  };
-
-  useEffect(() => {
-    checkApplicationHealth();
-    // Timer to call getHealth every 5 seconds
-    const timer = setInterval(() => {
-      getHealth()
-        .then(() => {
-          onHealthCheck();
-        })
-        .catch(() => {
-          setFetchError(true);
-        });
-    }, 20000); // 20 seconds
-
-    // Clean up the timer on component unmount
-    return () => {
-      clearInterval(timer);
-    };
-  }, []);
-
-  const checkApplicationHealth = () => {
-    setIsLoadingHealth(true);
-    getHealth()
-      .then(() => {
-        onHealthCheck();
-      })
-      .catch(() => {
-        setFetchError(true);
-      });
-
-    setTimeout(() => {
-      setIsLoadingHealth(false);
-    }, 2000);
-  };
-
-  const onHealthCheck = () => {
-    setFetchError(false);
-    //This condition is necessary to avoid infinite loop on starter page when the application is not healthy
-    if (isLoading === true && window.location.pathname === "/") {
-      navigate("/all");
-      window.location.reload();
-    }
   };
 
   const isLoadingApplication = isLoading || isLoadingFolders;
@@ -171,11 +135,15 @@ export default function App() {
             <FetchErrorComponent
               description={FETCH_ERROR_DESCRIPION}
               message={FETCH_ERROR_MESSAGE}
-              openModal={fetchError}
+              openModal={
+                isErrorHealth ||
+                (healthData &&
+                  Object.values(healthData).some((value) => value !== "ok"))
+              }
               setRetry={() => {
-                checkApplicationHealth();
+                refetch();
               }}
-              isLoadingHealth={isLoadingHealth}
+              isLoadingHealth={fetchingHealth}
             ></FetchErrorComponent>
           }
 

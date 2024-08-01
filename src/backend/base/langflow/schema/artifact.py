@@ -1,8 +1,12 @@
 from enum import Enum
 from typing import Generator
 
+from fastapi.encoders import jsonable_encoder
+from pydantic import BaseModel
+
 from langflow.schema import Data
 from langflow.schema.message import Message
+from langflow.schema.schema import recursive_serialize_or_str
 
 
 class ArtifactType(str, Enum):
@@ -49,7 +53,23 @@ def get_artifact_type(value, build_result=None) -> str:
 def post_process_raw(raw, artifact_type: str):
     if artifact_type == ArtifactType.STREAM.value:
         raw = ""
-    elif artifact_type == ArtifactType.UNKNOWN.value:
-        raw = "Built Successfully ✨"
-
-    return raw
+    elif artifact_type == ArtifactType.ARRAY.value:
+        _raw = []
+        for item in raw:
+            if hasattr(item, "dict"):
+                _raw.append(recursive_serialize_or_str(item))
+            elif hasattr(item, "model_dump"):
+                _raw.append(recursive_serialize_or_str(item))
+            else:
+                _raw.append(str(item))
+        raw = _raw
+    elif artifact_type == ArtifactType.UNKNOWN.value and raw is not None:
+        if isinstance(raw, (BaseModel, dict)):
+            try:
+                raw = jsonable_encoder(raw)
+                artifact_type = ArtifactType.OBJECT.value
+            except Exception:
+                raw = "Built Successfully ✨"
+        else:
+            raw = "Built Successfully ✨"
+    return raw, artifact_type

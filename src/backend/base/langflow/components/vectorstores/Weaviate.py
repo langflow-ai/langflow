@@ -13,6 +13,7 @@ class WeaviateVectorStoreComponent(LCVectorStoreComponent):
     display_name = "Weaviate"
     description = "Weaviate Vector Store with search capabilities"
     documentation = "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/weaviate"
+    name = "Weaviate"
     icon = "Weaviate"
 
     inputs = [

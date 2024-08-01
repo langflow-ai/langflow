@@ -1,7 +1,6 @@
 from typing import List
 
 from langchain_community.vectorstores import Qdrant
-
 from langflow.base.vectorstores.model import LCVectorStoreComponent
 from langflow.helpers.data import docs_to_data
 from langflow.io import (
@@ -13,8 +12,8 @@ from langflow.io import (
     DataInput,
     MultilineInput,
 )
-
 from langflow.schema import Data
+from langchain.embeddings.base import Embeddings
 
 
 class QdrantVectorStoreComponent(LCVectorStoreComponent):
@@ -65,19 +64,18 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
         qdrant_kwargs = {
             "collection_name": self.collection_name,
             "content_payload_key": self.content_payload_key,
-            "distance_func": self.distance_func,
             "metadata_payload_key": self.metadata_payload_key,
         }
 
         server_kwargs = {
-            "host": self.host,
-            "port": self.port,
-            "grpc_port": self.grpc_port,
+            "host": self.host if self.host else None,
+            "port": int(self.port),  # Garantir que port seja um inteiro
+            "grpc_port": int(self.grpc_port),  # Garantir que grpc_port seja um inteiro
             "api_key": self.api_key,
             "prefix": self.prefix,
-            "timeout": self.timeout,
-            "path": self.path,
-            "url": self.url,
+            "timeout": int(self.timeout) if self.timeout else None,  # Garantir que timeout seja um inteiro
+            "path": self.path if self.path else None,
+            "url": self.url if self.url else None,
         }
 
         server_kwargs = {k: v for k, v in server_kwargs.items() if v is not None}
@@ -89,13 +87,16 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
             else:
                 documents.append(_input)
 
+        if not isinstance(self.embedding, Embeddings):
+            raise ValueError("Invalid embedding object")
+
         if documents:
             qdrant = Qdrant.from_documents(documents, embedding=self.embedding, **qdrant_kwargs)
         else:
             from qdrant_client import QdrantClient
 
             client = QdrantClient(**server_kwargs)
-            qdrant = Qdrant(embedding_function=self.embedding.embed_query, client=client, **qdrant_kwargs)
+            qdrant = Qdrant(embeddings=self.embedding, client=client, **qdrant_kwargs)
 
         return qdrant
 

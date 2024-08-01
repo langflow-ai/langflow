@@ -9,19 +9,15 @@
 export default function getPythonApiCode(
   flowId: string,
   isAuth: boolean,
-  tweaksBuildedObject: any[],
+  tweaksBuildedObject?: {},
   endpointName?: string | null,
 ): string {
   let tweaksString = "{}";
-  if (tweaksBuildedObject && tweaksBuildedObject.length > 0) {
-    const tweaksObject = tweaksBuildedObject[0];
-    if (!tweaksObject) {
-      throw new Error("expected tweaks");
-    }
-    tweaksString = JSON.stringify(tweaksObject, null, 2)
+  if (tweaksBuildedObject)
+    tweaksString = JSON.stringify(tweaksBuildedObject, null, 2)
       .replace(/true/g, "True")
-      .replace(/false/g, "False");
-  }
+      .replace(/false/g, "False")
+      .replace(/null|undefined/g, "None");
 
   return `import argparse
 import json
@@ -35,7 +31,7 @@ except ImportError:
     warnings.warn("Langflow provides a function to help you upload files to the flow. Please install langflow to use it.")
     upload_file = None
 
-BASE_API_URL = "${window.location.protocol}//${window.location.host}/api/v1/run"
+BASE_API_URL = "${window.location.protocol}//${window.location.host}"
 FLOW_ID = "${flowId}"
 ENDPOINT = "${endpointName || ""}" ${
     endpointName
@@ -61,7 +57,7 @@ def run_flow(message: str,
     :param tweaks: Optional tweaks to customize the flow
     :return: The JSON response from the flow
     """
-    api_url = f"{BASE_API_URL}/{endpoint}"
+    api_url = f"{BASE_API_URL}/api/v1/run/{endpoint}"
 
     payload = {
         "input_value": message,

@@ -8,7 +8,6 @@ import {
 } from "../../../../../../constants/constants";
 import useAlertStore from "../../../../../../stores/alertStore";
 import { UploadFileTypeAPI } from "../../../../../../types/api";
-import useFileUpload from "./use-file-upload";
 
 const useUpload = (
   uploadFile: (
@@ -49,7 +48,6 @@ const useUpload = (
               ...prevFiles,
               { file: blob, loading: true, error: false, id, type },
             ]);
-            useFileUpload(blob, currentFlowId, setFiles, id);
           }
         }
       }

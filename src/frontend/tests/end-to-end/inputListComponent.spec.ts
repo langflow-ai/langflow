@@ -39,34 +39,28 @@ test("InputListComponent", async ({ page }) => {
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
 
-  await page.getByTestId("input-list-input_urls-0").fill("test test test test");
+  await page.getByTestId("inputlist_str_urls_0").fill("test test test test");
 
   await page.getByTestId("input-list-plus-btn_urls-0").click();
 
   await page.getByTestId("input-list-plus-btn_urls-0").click();
 
   await page
-    .getByTestId("input-list-input_urls-1")
+    .getByTestId("inputlist_str_urls_1")
     .fill("test1 test1 test1 test1");
 
   await page
-    .getByTestId("input-list-input_urls-2")
+    .getByTestId("inputlist_str_urls_2")
     .fill("test2 test2 test2 test2");
 
   await page.getByTestId("div-generic-node").click();
   await page.getByTestId("more-options-modal").click();
   await page.getByTestId("edit-button-modal").click();
 
-  const value0 = await page
-    .getByTestId("input-list-input-edit_urls-0")
-    .inputValue();
-  const value1 = await page
-    .getByTestId("input-list-input-edit_urls-1")
-    .inputValue();
+  const value0 = await page.getByTestId("inputlist_str_urls_0").inputValue();
+  const value1 = await page.getByTestId("inputlist_str_urls_1").inputValue();
 
-  const value2 = await page
-    .getByTestId("input-list-input-edit_urls-2")
-    .inputValue();
+  const value2 = await page.getByTestId("inputlist_str_urls_2").inputValue();
 
   if (
     value0 !== "test test test test" ||
@@ -87,22 +81,22 @@ test("InputListComponent", async ({ page }) => {
     expect(false).toBeTruthy();
   }
 
-  await page.getByText("Save Changes", { exact: true }).click();
+  await page.getByText("Close").last().click();
 
   await page.getByTestId("input-list-minus-btn_urls-2").isHidden();
 
   await page.getByTestId("input-list-plus-btn_urls-0").click();
   await page.getByTestId("input-list-plus-btn_urls-0").click();
 
-  await page.getByTestId("input-list-input_urls-0").fill("test test test test");
+  await page.getByTestId("inputlist_str_urls_0").fill("test test test test");
   await page
-    .getByTestId("input-list-input_urls-1")
+    .getByTestId("inputlist_str_urls_1")
     .fill("test1 test1 test1 test1");
   await page
-    .getByTestId("input-list-input_urls-2")
+    .getByTestId("inputlist_str_urls_2")
     .fill("test2 test2 test2 test2");
   await page
-    .getByTestId("input-list-input_urls-3")
+    .getByTestId("inputlist_str_urls_3")
     .fill("test3 test3 test3 test3");
 
   await page.getByTestId("div-generic-node").click();
@@ -110,16 +104,16 @@ test("InputListComponent", async ({ page }) => {
   await page.getByTestId("edit-button-modal").click();
 
   const value0Edit = await page
-    .getByTestId("input-list-input-edit_urls-0")
+    .getByTestId("inputlist_str_edit_urls_0")
     .inputValue();
   const value1Edit = await page
-    .getByTestId("input-list-input-edit_urls-1")
+    .getByTestId("inputlist_str_edit_urls_1")
     .inputValue();
   const value2Edit = await page
-    .getByTestId("input-list-input-edit_urls-2")
+    .getByTestId("inputlist_str_edit_urls_2")
     .inputValue();
   const value3Edit = await page
-    .getByTestId("input-list-input-edit_urls-3")
+    .getByTestId("inputlist_str_edit_urls_3")
     .inputValue();
 
   if (

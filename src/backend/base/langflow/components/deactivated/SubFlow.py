@@ -19,6 +19,7 @@ class SubFlowComponent(CustomComponent):
     )
     beta: bool = True
     field_order = ["flow_name"]
+    name = "SubFlow"
 
     def get_flow_names(self) -> List[str]:
         flow_datas = self.list_flows()

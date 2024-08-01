@@ -6,6 +6,7 @@ class MergeDataComponent(CustomComponent):
     display_name = "Merge Data"
     description = "Merges data."
     beta: bool = True
+    name = "MergeData"
 
     field_config = {
         "data": {"display_name": "Data"},

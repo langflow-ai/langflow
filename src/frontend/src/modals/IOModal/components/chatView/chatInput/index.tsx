@@ -1,9 +1,14 @@
-import { useRef, useState } from "react";
+import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
+import useAlertStore from "@/stores/alertStore";
+import { useEffect, useRef, useState } from "react";
+import ShortUniqueId from "short-unique-id";
 import {
+  ALLOWED_IMAGE_INPUT_EXTENSIONS,
   CHAT_INPUT_PLACEHOLDER,
   CHAT_INPUT_PLACEHOLDER_SEND,
+  FS_ERROR_TEXT,
+  SN_ERROR_TEXT,
 } from "../../../../../constants/constants";
-import { uploadFile } from "../../../../../controllers/API";
 import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
 import {
   ChatInputType,
@@ -16,8 +21,6 @@ import UploadFileButton from "./components/uploadFileButton";
 import { getClassNamesFilePreview } from "./helpers/get-class-file-preview";
 import useAutoResizeTextArea from "./hooks/use-auto-resize-text-area";
 import useFocusOnUnlock from "./hooks/use-focus-unlock";
-import useHandleFileChange from "./hooks/use-handle-file-change";
-import useUpload from "./hooks/use-upload";
 export default function ChatInput({
   lockChat,
   chatValue,
@@ -34,11 +37,94 @@ export default function ChatInput({
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const [inputFocus, setInputFocus] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
 
   useFocusOnUnlock(lockChat, inputRef);
   useAutoResizeTextArea(chatValue, inputRef);
-  useUpload(uploadFile, currentFlowId, setFiles, lockChat || saveLoading);
-  const { handleFileChange } = useHandleFileChange(setFiles, currentFlowId);
+
+  const { mutate, isPending } = usePostUploadFile();
+
+  const handleFileChange = async (
+    event: React.ChangeEvent<HTMLInputElement> | ClipboardEvent,
+  ) => {
+    let file: File | null = null;
+
+    if ("clipboardData" in event) {
+      const items = event.clipboardData?.items;
+      if (items) {
+        for (let i = 0; i < items.length; i++) {
+          const blob = items[i].getAsFile();
+          if (blob) {
+            file = blob;
+            break;
+          }
+        }
+      }
+    } else {
+      const fileInput = event.target as HTMLInputElement;
+      file = fileInput.files?.[0] ?? null;
+    }
+
+    if (file) {
+      const fileExtension = file.name.split(".").pop()?.toLowerCase();
+
+      if (
+        !fileExtension ||
+        !ALLOWED_IMAGE_INPUT_EXTENSIONS.includes(fileExtension)
+      ) {
+        setErrorData({
+          title: "Error uploading file",
+          list: [FS_ERROR_TEXT, SN_ERROR_TEXT],
+        });
+        return;
+      }
+
+      const uid = new ShortUniqueId();
+      const id = uid.randomUUID(10);
+
+      const type = file.type.split("/")[0];
+
+      setFiles((prevFiles) => [
+        ...prevFiles,
+        { file, loading: true, error: false, id, type },
+      ]);
+
+      mutate(
+        { file, id: currentFlowId },
+        {
+          onSuccess: (data) => {
+            setFiles((prev) => {
+              const newFiles = [...prev];
+              const updatedIndex = newFiles.findIndex((file) => file.id === id);
+              newFiles[updatedIndex].loading = false;
+              newFiles[updatedIndex].path = data.file_path;
+              return newFiles;
+            });
+          },
+          onError: () => {
+            setFiles((prev) => {
+              const newFiles = [...prev];
+              const updatedIndex = newFiles.findIndex((file) => file.id === id);
+              newFiles[updatedIndex].loading = false;
+              newFiles[updatedIndex].error = true;
+              return newFiles;
+            });
+          },
+        },
+      );
+    }
+
+    if ("target" in event && event.target instanceof HTMLInputElement) {
+      event.target.value = "";
+    }
+  };
+
+  useEffect(() => {
+    document.addEventListener("paste", handleFileChange);
+    return () => {
+      document.removeEventListener("paste", handleFileChange);
+    };
+  }, [handleFileChange, currentFlowId, lockChat]);
 
   const send = () => {
     sendMessage({

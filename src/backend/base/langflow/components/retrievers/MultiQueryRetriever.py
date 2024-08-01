@@ -10,6 +10,7 @@ class MultiQueryRetrieverComponent(CustomComponent):
     display_name = "MultiQueryRetriever"
     description = "Initialize from llm using default template."
     documentation = "https://python.langchain.com/docs/modules/data_connection/retrievers/how_to/MultiQueryRetriever"
+    name = "MultiQueryRetriever"
 
     def build_config(self):
         return {

@@ -1,5 +1,3 @@
-from typing import Optional
-
 from langchain_community.chat_models.litellm import ChatLiteLLM, ChatLiteLLMException
 
 from langflow.base.constants import STREAM_INFO_TEXT
@@ -12,7 +10,6 @@ from langflow.io import (
     FloatInput,
     IntInput,
     MessageInput,
-    Output,
     SecretStrInput,
     StrInput,
 )
@@ -35,7 +32,7 @@ class ChatLiteLLMModelComponent(LCModelComponent):
         ),
         SecretStrInput(
             name="api_key",
-            display_name="API key",
+            display_name="API Key",
             advanced=False,
             required=False,
         ),
@@ -60,24 +57,23 @@ class ChatLiteLLMModelComponent(LCModelComponent):
             value=0.7,
         ),
         DictInput(
+            name="kwargs",
+            display_name="Kwargs",
+            advanced=True,
+            required=False,
+            is_list=True,
+            value={},
+        ),
+        DictInput(
             name="model_kwargs",
             display_name="Model kwargs",
             advanced=True,
             required=False,
+            is_list=True,
             value={},
         ),
-        FloatInput(
-            name="top_p",
-            display_name="Top p",
-            advanced=True,
-            required=False,
-        ),
-        IntInput(
-            name="top_k",
-            display_name="Top k",
-            advanced=True,
-            required=False,
-        ),
+        FloatInput(name="top_p", display_name="Top p", advanced=True, required=False, value=0.5),
+        IntInput(name="top_k", display_name="Top k", advanced=True, required=False, value=35),
         IntInput(
             name="n",
             display_name="N",
@@ -122,11 +118,6 @@ class ChatLiteLLMModelComponent(LCModelComponent):
         ),
     ]
 
-    outputs = [
-        Output(display_name="Text", name="text_output", method="text_response"),
-        Output(display_name="Language Model", name="model_output", method="build_model"),
-    ]
-
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
         try:
             import litellm  # type: ignore
@@ -137,28 +128,19 @@ class ChatLiteLLMModelComponent(LCModelComponent):
             raise ChatLiteLLMException(
                 "Could not import litellm python package. " "Please install it with `pip install litellm`"
             )
-
-        provider_map = {
-            "OpenAI": "openai_api_key",
-            "Azure": "azure_api_key",
-            "Anthropic": "anthropic_api_key",
-            "Replicate": "replicate_api_key",
-            "Cohere": "cohere_api_key",
-            "OpenRouter": "openrouter_api_key",
-        }
-
-        # Set the API key based on the provider
-        api_keys: dict[str, Optional[str]] = {v: None for v in provider_map.values()}
-
-        if variable_name := provider_map.get(self.provider):
-            api_keys[variable_name] = self.api_key
-        else:
-            raise ChatLiteLLMException(
-                f"Provider {self.provider} is not supported. Supported providers are: {', '.join(provider_map.keys())}"
-            )
-
+        # Remove empty keys
+        if "" in self.kwargs:
+            del self.kwargs[""]
+        if "" in self.model_kwargs:
+            del self.model_kwargs[""]
+        # Report missing fields for Azure provider
+        if self.provider == "Azure":
+            if "api_base" not in self.kwargs:
+                raise Exception("Missing api_base on kwargs")
+            if "api_version" not in self.model_kwargs:
+                raise Exception("Missing api_version on model_kwargs")
         output = ChatLiteLLM(
-            model=self.model,
+            model=f"{self.provider.lower()}/{self.model}",
             client=None,
             streaming=self.stream,
             temperature=self.temperature,
@@ -168,12 +150,8 @@ class ChatLiteLLMModelComponent(LCModelComponent):
             n=self.n,
             max_tokens=self.max_tokens,
             max_retries=self.max_retries,
-            openai_api_key=api_keys["openai_api_key"],
-            azure_api_key=api_keys["azure_api_key"],
-            anthropic_api_key=api_keys["anthropic_api_key"],
-            replicate_api_key=api_keys["replicate_api_key"],
-            cohere_api_key=api_keys["cohere_api_key"],
-            openrouter_api_key=api_keys["openrouter_api_key"],
+            **self.kwargs,
         )
+        output.client.api_key = self.api_key
 
         return output  # type: ignore

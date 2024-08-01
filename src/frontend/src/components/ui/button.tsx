@@ -5,7 +5,7 @@ import { cn } from "../../utils/utils";
 import ForwardedIconComponent from "../genericIconComponent";
 
 const buttonVariants = cva(
-  "nocopy nowheel nopan nodelete nodrag noundo inline-flex items-center gap-2 justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none  ring-offset-background",
+  "noflow nowheel nopan nodelete nodrag  inline-flex items-center gap-2 justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none  ring-offset-background",
   {
     variants: {
       variant: {
@@ -78,7 +78,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           className={
             !unstyled
               ? buttonVariants({ variant, size, className })
-              : cn(className, "nocopy nowheel nopan nodelete nodrag noundo")
+              : cn(className, "noflow nowheel nopan nodelete nodrag")
           }
           disabled={loading || disabled}
           {...(asChild ? {} : { type: type || "button" })}
@@ -86,12 +86,12 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           {...props}
         >
           {loading ? (
-            <span className="relative">
+            <span className="relative flex items-center justify-center">
               <span className="invisible">{newChildren}</span>
-              <span className="absolute inset-0">
+              <span className="absolute inset-0 flex items-center justify-center">
                 <ForwardedIconComponent
                   name={"Loader2"}
-                  className={"m-auto h-full animate-spin"}
+                  className={"h-full w-full animate-spin"}
                 />
               </span>
             </span>

@@ -1,115 +1,58 @@
-import { ColDef, GridApi } from "ag-grid-community";
-import { cloneDeep } from "lodash";
-import { forwardRef, useEffect, useRef, useState } from "react";
-import TableComponent from "../../components/tableComponent";
+import { APIClassType } from "@/types/api";
+import { customStringify } from "@/utils/reactflowUtils";
+import { useEffect, useState } from "react";
 import { Badge } from "../../components/ui/badge";
+import { Button } from "../../components/ui/button";
 import { useDarkStore } from "../../stores/darkStore";
-import useFlowStore from "../../stores/flowStore";
 import { NodeDataType } from "../../types/flow";
 import BaseModal from "../baseModal";
-import useColumnDefs from "./hooks/use-column-defs";
-import useRowData from "./hooks/use-row-data";
+import { EditNodeComponent } from "./components/editNodeComponent";
 
-const EditNodeModal = forwardRef(
-  (
-    {
-      nodeLength,
-      open,
-      setOpen,
-      data,
-    }: {
-      nodeLength: number;
-      open: boolean;
-      setOpen: (open: boolean) => void;
-      data: NodeDataType;
-    },
-    ref,
-  ) => {
-    const myData = useRef(cloneDeep(data));
+const EditNodeModal = ({
+  open,
+  setOpen,
+  data,
+}: {
+  open: boolean;
+  setOpen: (open: boolean) => void;
+  data: NodeDataType;
+}) => {
+  const isDark = useDarkStore((state) => state.dark);
 
-    const isDark = useDarkStore((state) => state.dark);
+  const [nodeClass, setNodeClass] = useState<APIClassType>(data.node!);
 
-    const setNode = useFlowStore((state) => state.setNode);
+  useEffect(() => {
+    if (
+      customStringify(Object.keys(data?.node?.template ?? {})) ===
+      customStringify(Object.keys(nodeClass?.template ?? {}))
+    )
+      return;
+    setNodeClass(data.node!);
+  }, [data.node]);
 
-    function changeAdvanced(n) {
-      myData.current.node!.template[n].advanced =
-        !myData.current.node!.template[n]?.advanced;
-    }
-
-    const handleOnNewValue = (newValue: any, key: string, setDb?: boolean) => {
-      myData.current.node!.template[key].value = newValue;
-      if (setDb) {
-        myData.current.node!.template[key].load_from_db = newValue;
-      }
-    };
-
-    const rowData = useRowData(data, open);
-
-    const columnDefs: ColDef[] = useColumnDefs(
-      data,
-      handleOnNewValue,
-      changeAdvanced,
-      open,
-    );
-
-    const [gridApi, setGridApi] = useState<GridApi | null>(null);
-
-    useEffect(() => {
-      if (gridApi && open) {
-        myData.current = cloneDeep(data);
-        gridApi.refreshCells();
-      }
-    }, [gridApi, open]);
-
-    return (
-      <BaseModal key={data.id} open={open} setOpen={setOpen}>
-        <BaseModal.Trigger>
-          <></>
-        </BaseModal.Trigger>
-        <BaseModal.Header description={data.node?.description!}>
-          <span className="pr-2">{data.node?.display_name ?? data.type}</span>
-          <div>
-            <Badge size="sm" variant={isDark ? "gray" : "secondary"}>
-              ID: {data.id}
-            </Badge>
-          </div>
-        </BaseModal.Header>
-        <BaseModal.Content>
-          <div className="flex h-full flex-col">
-            <div className="h-full">
-              {nodeLength > 0 && (
-                <TableComponent
-                  key={"editNode"}
-                  onGridReady={(params) => {
-                    setGridApi(params.api);
-                  }}
-                  tooltipShowDelay={0.5}
-                  columnDefs={columnDefs}
-                  rowData={rowData}
-                />
-              )}
-            </div>
-          </div>
-        </BaseModal.Content>
-
-        <BaseModal.Footer
-          submit={{
-            label: "Save Changes",
-            onClick: () => {
-              setNode(data.id, (old) => ({
-                ...old,
-                data: {
-                  ...old.data,
-                  node: myData.current.node,
-                },
-              }));
-              setOpen(false);
-            },
-          }}
-        />
-      </BaseModal>
-    );
-  },
-);
+  return (
+    <BaseModal key={data.id} open={open} setOpen={setOpen}>
+      <BaseModal.Trigger>
+        <></>
+      </BaseModal.Trigger>
+      <BaseModal.Header description={data.node?.description!}>
+        <span className="pr-2">{data.node?.display_name ?? data.type}</span>
+        <div>
+          <Badge size="sm" variant={isDark ? "gray" : "secondary"}>
+            ID: {data.id}
+          </Badge>
+        </div>
+      </BaseModal.Header>
+      <BaseModal.Content>
+        <EditNodeComponent open={open} nodeClass={nodeClass} nodeId={data.id} />
+      </BaseModal.Content>
+      <BaseModal.Footer>
+        <div className="flex w-full justify-end gap-2 pt-2">
+          <Button onClick={() => setOpen(false)}>Close</Button>
+        </div>
+      </BaseModal.Footer>
+    </BaseModal>
+  );
+};
 
 export default EditNodeModal;

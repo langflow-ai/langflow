@@ -10,6 +10,7 @@ export type FoldersStoreType = {
   isLoadingFolders: boolean;
   setIsLoadingFolders: (isLoadingFolders: boolean) => void;
   selectedFolder: FolderType | null;
+  setSelectedFolder: (folder: FolderType | null) => void;
   getFolderById: (id: string) => void;
   getMyCollectionFolder: () => void;
   myCollectionFlows: FolderType | null;
@@ -21,7 +22,6 @@ export type FoldersStoreType = {
   setFolderUrl: (folderUrl: string) => void;
   folderDragging: boolean;
   setFolderDragging: (set: boolean) => void;
-  uploadFolder: (folderId: string) => Promise<void>;
   folderIdDragging: string;
   setFolderIdDragging: (id: string) => void;
   starterProjectId: string;
