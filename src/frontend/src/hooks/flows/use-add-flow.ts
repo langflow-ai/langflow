@@ -1,5 +1,5 @@
 import { BROKEN_EDGES_WARNING } from "@/constants/constants";
-import { saveFlowToDatabase } from "@/controllers/API";
+import { usePostSaveFlow } from "@/controllers/API/queries/flows/use-post-save-flow";
 import useAlertStore from "@/stores/alertStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
@@ -33,6 +33,8 @@ const useAddFlow = () => {
   );
   const setIsLoading = useFlowsManagerStore((state) => state.setIsLoading);
 
+  const { mutate: saveFlow } = usePostSaveFlow();
+
   const addFlow = async ({
     newProject,
     flow,
@@ -61,29 +63,7 @@ const useAddFlow = () => {
       const my_collection_id = useFolderStore.getState().myCollectionId;
 
       if (override) {
-        deleteComponent(flow!.name);
-        const newFlow = createNewFlow(
-          flowData!,
-          flow!,
-          folder_id || my_collection_id!,
-        );
-        const { id } = await saveFlowToDatabase(newFlow);
-        newFlow.id = id;
-        //setTimeout  to prevent update state with wrong state
-        setTimeout(() => {
-          const { data, flows: newFlows } = processFlows([newFlow, ...flows]);
-          setFlows(newFlows);
-          setIsLoading(false);
-          useTypesStore.setState((state) => ({
-            data: { ...state.data, ["saved_components"]: data },
-            ComponentFields: extractFieldsFromComponenents({
-              ...state.data,
-              ["saved_components"]: data,
-            }),
-          }));
-        }, 200);
-        // addFlowToLocalState(newFlow);
-        return;
+        await deleteComponent(flow!.name);
       }
       const newFlow = createNewFlow(
         flowData!,
@@ -92,45 +72,45 @@ const useAddFlow = () => {
       );
 
       const newName = addVersionToDuplicates(newFlow, flows);
-
       newFlow.name = newName;
       newFlow.folder_id = useFolderStore.getState().folderUrl;
 
-      try {
-        const { id } = await saveFlowToDatabase(newFlow);
-        // Change the id to the new id.
-        newFlow.id = id;
-
-        // Add the new flow to the list of flows.
-        const { data, flows: myFlows } = processFlows([newFlow, ...flows]);
-        setFlows(myFlows);
-        setIsLoading(false);
-        useTypesStore.setState((state) => ({
-          data: { ...state.data, ["saved_components"]: data },
-          ComponentFields: extractFieldsFromComponenents({
-            ...state.data,
-            ["saved_components"]: data,
-          }),
-        }));
-
-        // Return the id
-        return id;
-      } catch (error: any) {
-        if (error.response?.data?.detail) {
-          useAlertStore.getState().setErrorData({
-            title: "Could not load flows from database",
-            list: [error.response?.data?.detail],
-          });
-        } else {
-          useAlertStore.getState().setErrorData({
-            title: "Could not load flows from database",
-            list: [
-              error.message ?? "An unexpected error occurred, please try again",
-            ],
-          });
-        }
-        throw error; // Re-throw the error so the caller can handle it if needed
-      }
+      return new Promise((resolve, reject) =>
+        saveFlow(newFlow, {
+          onSuccess: ({ id }) => {
+            newFlow.id = id;
+            // Add the new flow to the list of flows.
+            const { data, flows: myFlows } = processFlows([newFlow, ...flows]);
+            setFlows(myFlows);
+            setIsLoading(false);
+            useTypesStore.setState((state) => ({
+              data: { ...state.data, ["saved_components"]: data },
+              ComponentFields: extractFieldsFromComponenents({
+                ...state.data,
+                ["saved_components"]: data,
+              }),
+            }));
+            resolve(id);
+          },
+          onError: (error) => {
+            if (error.response?.data?.detail) {
+              useAlertStore.getState().setErrorData({
+                title: "Could not load flows from database",
+                list: [error.response?.data?.detail],
+              });
+            } else {
+              useAlertStore.getState().setErrorData({
+                title: "Could not load flows from database",
+                list: [
+                  error.message ??
+                    "An unexpected error occurred, please try again",
+                ],
+              });
+            }
+            reject(error); // Re-throw the error so the caller can handle it if needed},
+          },
+        }),
+      );
     } else {
       let brokenEdges = detectBrokenEdgesEdges(
         flow!.data!.nodes,
