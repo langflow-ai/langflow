@@ -36,7 +36,7 @@ export default function AddNewVariableButton({
   const [availableFields, setAvailableFields] = useState<string[]>([]);
 
   useEffect(() => {
-    if (globalVariables) {
+    if (globalVariables && componentFields.size > 0) {
       const unavailableFields = getUnavailableFields(globalVariables);
       const fields = Array.from(componentFields).filter(
         (field) => !unavailableFields.hasOwnProperty(field),
@@ -44,7 +44,7 @@ export default function AddNewVariableButton({
 
       setAvailableFields(sortByName(fields));
     }
-  }, [globalVariables]);
+  }, [globalVariables, componentFields]);
 
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
 
