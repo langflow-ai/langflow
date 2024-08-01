@@ -55,9 +55,9 @@ export default function ErrorAlert({
             {list?.length !== 0 &&
             list?.some((item) => item !== null && item !== undefined) ? (
               <div className="error-build-message-div">
-                <ul className="error-build-message-list">
+                <ul className="error-build-message-list clamped-list">
                   {list.map((item, index) => (
-                    <li key={index} className="line-clamp-5">
+                    <li key={index} className="">
                       {item}
                     </li>
                   ))}

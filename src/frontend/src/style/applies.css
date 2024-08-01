@@ -426,7 +426,7 @@
     @apply error-build-text mt-2 text-sm;
   }
   .error-build-message-list {
-    @apply list-disc space-y-1 pl-5;
+    @apply space-y-1 pl-5;
   }
 
   .success-alert {

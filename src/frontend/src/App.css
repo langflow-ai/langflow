@@ -25,6 +25,28 @@ body {
   min-width: inherit;
 }
 
+.clamped-list {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  -webkit-line-clamp: 5;
+  position: relative;
+}
+
+.clamped-list li {
+  position: relative;
+}
+
+.clamped-list li::before {
+  content: "•";
+  position: absolute;
+  left: 0;
+  margin-left: -20px;
+  margin-top: -2px;
+  color: var(--error-foreground);
+  font-size: 20px;
+}
+
 .App-logo {
   height: 40vmin;
   pointer-events: none;
