@@ -11,7 +11,7 @@ interface IPostSaveFlow {
   description: string;
   is_component: boolean;
   folder_id: string;
-  endpoint_name: string;
+  endpoint_name: string | undefined;
 }
 
 export const usePostSaveFlow: useMutationFunctionType<
@@ -26,8 +26,8 @@ export const usePostSaveFlow: useMutationFunctionType<
       data: payload.data,
       description: payload.description,
       is_component: payload.is_component,
-      folder_id: payload.folder_id === "" ? null : payload.folder_id,
-      endpoint_name: payload.endpoint_name,
+      folder_id: payload.folder_id || null,
+      endpoint_name: payload.endpoint_name || null,
     });
 
     return response.data;
