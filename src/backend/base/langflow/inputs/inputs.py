@@ -268,7 +268,7 @@ class SecretStrInput(BaseInputMixin, DatabaseLoadMixin):
         elif isinstance(v, (AsyncIterator, Iterator)):
             value = v
         else:
-            raise ValueError(f"Invalid value type {type(v)}")
+            raise ValueError(f"Invalid value type `{type(v)}` for input `{_info.data['name']}`")
         return value
 
 
