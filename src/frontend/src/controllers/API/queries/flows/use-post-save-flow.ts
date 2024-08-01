@@ -21,7 +21,7 @@ export const usePostSaveFlow: useMutationFunctionType<
   const { mutate } = UseRequestProcessor();
 
   const postSaveFlowFn = async (payload: IPostSaveFlow): Promise<any> => {
-    const response = await api.post(`${getURL("FLOWS")}flows/`, {
+    const response = await api.post(`${getURL("FLOWS")}/`, {
       name: payload.name,
       data: payload.data,
       description: payload.description,
