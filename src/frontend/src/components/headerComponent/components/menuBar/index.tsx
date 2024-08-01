@@ -7,6 +7,7 @@ import {
   DropdownMenuTrigger,
 } from "../../../ui/dropdown-menu";
 
+import useAddFlow from "@/hooks/flows/use-add-flow";
 import { useNavigate } from "react-router-dom";
 import { UPLOAD_ERROR_ALERT } from "../../../../constants/alerts_constants";
 import { SAVED_HOVER } from "../../../../constants/constants";
@@ -26,7 +27,7 @@ import { Button } from "../../../ui/button";
 
 export const MenuBar = ({}: {}): JSX.Element => {
   const shortcuts = useShortcutsStore((state) => state.shortcuts);
-  const addFlow = useFlowsManagerStore((state) => state.addFlow);
+  const addFlow = useAddFlow();
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
@@ -47,7 +48,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
 
   function handleAddFlow() {
     try {
-      addFlow(true).then((id) => {
+      addFlow({}).then((id) => {
         navigate("/flow/" + id);
       });
     } catch (err) {

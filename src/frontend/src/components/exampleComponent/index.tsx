@@ -1,5 +1,6 @@
+import useAddFlow from "@/hooks/flows/use-add-flow";
+import emojiRegex from "emoji-regex";
 import { useNavigate } from "react-router-dom";
-import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { FlowType } from "../../types/flow";
 import { updateIds } from "../../utils/reactflowUtils";
 import { cn } from "../../utils/utils";
@@ -20,10 +21,9 @@ export default function CollectionCardComponent({
   flow: FlowType;
   authorized?: boolean;
 }) {
-  const addFlow = useFlowsManagerStore((state) => state.addFlow);
+  const addFlow = useAddFlow();
   const navigate = useNavigate();
-  const emojiRegex = /\p{Emoji}/u;
-  const isEmoji = (str: string) => emojiRegex.test(str);
+  const isEmoji = (str: string) => emojiRegex().test(str);
 
   return (
     <Card
@@ -77,7 +77,7 @@ export default function CollectionCardComponent({
             <Button
               onClick={() => {
                 updateIds(flow.data!);
-                addFlow(true, flow).then((id) => {
+                addFlow({ flow }).then((id) => {
                   navigate("/flow/" + id);
                 });
               }}

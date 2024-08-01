@@ -4,6 +4,7 @@ import {
   usePostUploadFolders,
 } from "@/controllers/API/queries/folders";
 import { useGetDownloadFolders } from "@/controllers/API/queries/folders/use-get-download-folders";
+import useAddFlow from "@/hooks/flows/use-add-flow";
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { FolderType } from "../../../../pages/MainPage/entities";
@@ -54,7 +55,7 @@ const SideBarFoldersButtonsComponent = ({
   const getFolderById = useFolderStore((state) => state.getFolderById);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
-  const getFoldersApi = useFolderStore((state) => state.getFoldersApi);
+  const addFlow = useAddFlow();
 
   const handleFolderChange = () => {
     getFolderById(folderId);
@@ -83,7 +84,7 @@ const SideBarFoldersButtonsComponent = ({
         file.text().then(async (text) => {
           const data = JSON.parse(text);
           if (data.data?.nodes) {
-            await useFlowsManagerStore.getState().addFlow(true, data);
+            await addFlow({ flow: data });
             getFolderById(folderId);
           } else {
             mutate(
