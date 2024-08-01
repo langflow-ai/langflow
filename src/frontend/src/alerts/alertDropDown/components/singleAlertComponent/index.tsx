@@ -1,18 +1,34 @@
 import { Transition } from "@headlessui/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import IconComponent from "../../../../components/genericIconComponent";
 import { SingleAlertComponentType } from "../../../../types/alerts";
+import handleClass from "./utils/handle-class";
 
 export default function SingleAlert({
   dropItem,
   removeAlert,
+  isDropdown = true,
 }: SingleAlertComponentType): JSX.Element {
   const [show, setShow] = useState(true);
   const type = dropItem.type;
 
+  useEffect(() => {
+    if (show && !isDropdown) {
+      setTimeout(() => {
+        setShow(false);
+        setTimeout(() => {
+          removeAlert(dropItem.id);
+        }, 500);
+      }, 5000);
+    }
+  }, [dropItem.id, removeAlert, show]);
+
+  const classes = handleClass(isDropdown);
+
   return (
     <Transition
+    //@ts-ignore
       className="noflow nowheel nopan nodelete nodrag relative"
       show={show}
       appear={true}
@@ -25,7 +41,7 @@ export default function SingleAlert({
     >
       {type === "error" ? (
         <div
-          className="mx-2 mb-2 flex rounded-md bg-error-background p-3"
+          className={`${classes} bg-error-background`}
           key={dropItem.id}
         >
           <div className="flex-shrink-0">
@@ -77,7 +93,7 @@ export default function SingleAlert({
         </div>
       ) : type === "notice" ? (
         <div
-          className="mx-2 mb-2 flex rounded-md bg-info-background p-3"
+          className={`${classes} bg-info-background`}
           key={dropItem.id}
         >
           <div className="flex-shrink-0 cursor-help">
@@ -128,7 +144,7 @@ export default function SingleAlert({
         </div>
       ) : (
         <div
-          className="mx-2 mb-2 flex rounded-md bg-success-background p-3"
+          className={`${classes} bg-success-background`}
           key={dropItem.id}
         >
           <div className="flex-shrink-0">

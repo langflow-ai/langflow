@@ -1,4 +1,5 @@
 import useAlertStore from "../../stores/alertStore";
+import SingleAlert from "../alertDropDown/components/singleAlertComponent";
 import ErrorAlert from "../error";
 import NoticeAlert from "../notice";
 import SuccessAlert from "../success";
@@ -18,32 +19,11 @@ export default function AlertDisplayArea() {
     <div className="flex flex-col-reverse" style={{ zIndex: 999 }}>
       {tempNotificationList.map((alert) => (
         <div key={alert.id}>
-          {alert.type === "error" ? (
-            <ErrorAlert
-              key={alert.id}
-              title={alert.title}
-              list={alert.list}
-              id={alert.id}
-              removeAlert={removeAlert}
-            />
-          ) : alert.type === "notice" ? (
-            <NoticeAlert
-              key={alert.id}
-              title={alert.title}
-              link={alert.link}
-              id={alert.id}
-              removeAlert={removeAlert}
-            />
-          ) : (
-            alert.type === "success" && (
-              <SuccessAlert
-                key={alert.id}
-                title={alert.title}
-                id={alert.id}
-                removeAlert={removeAlert}
-              />
-            )
-          )}
+          <SingleAlert
+            dropItem={alert}
+            removeAlert={removeAlert}
+            isDropdown={false}
+          />
         </div>
       ))}
     </div>
