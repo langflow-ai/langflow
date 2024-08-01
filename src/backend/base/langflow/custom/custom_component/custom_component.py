@@ -63,8 +63,6 @@ class CustomComponent(BaseComponent):
     is_output: Optional[bool] = None
     """The output state of the component. Defaults to None.
     If True, the component must have a field named 'input_value'."""
-    _code: Optional[str] = None
-    """The code of the component. Defaults to None."""
     field_config: dict = {}
     """The field configuration of the component. Defaults to an empty dictionary."""
     field_order: Optional[List[str]] = None
@@ -87,18 +85,7 @@ class CustomComponent(BaseComponent):
     _output_logs: dict[str, Log] = {}
     _tracing_service: Optional["TracingService"] = None
 
-    def __init__(self, **data):
-        """
-        Initializes a new instance of the CustomComponent class.
-
-        Args:
-            **data: Additional keyword arguments to initialize the custom component.
-        """
-        self.cache = TTLCache(maxsize=1024, ttl=60)
-        self._logs = []
-        self._results = {}
-        self._artifacts = {}
-        super().__init__(**data)
+    _tree: Optional[dict] = None
 
     def set_attributes(self, parameters: dict):
         pass
@@ -148,6 +135,19 @@ class CustomComponent(BaseComponent):
             raise ValueError(f"Error getting state: {e}")
 
     _tree: Optional[dict] = None
+
+    def __init__(self, **data):
+        """
+        Initializes a new instance of the CustomComponent class.
+
+        Args:
+            **data: Additional keyword arguments to initialize the custom component.
+        """
+        self.cache = TTLCache(maxsize=1024, ttl=60)
+        self._logs = []
+        self._results = {}
+        self._artifacts = {}
+        super().__init__(**data)
 
     @staticmethod
     def resolve_path(path: str) -> str:
@@ -285,6 +285,14 @@ class CustomComponent(BaseComponent):
 
         return data_objects
 
+    def get_method_return_type(self, method_name: str):
+        build_method = self.get_method(method_name)
+        if not build_method or not build_method.get("has_return"):
+            return []
+        return_type = build_method["return_type"]
+
+        return self._extract_return_type(return_type)
+
     def create_references_from_data(self, data: List[Data], include_data: bool = False) -> str:
         """
         Create references from a list of data.
@@ -412,7 +420,9 @@ class CustomComponent(BaseComponent):
         Returns:
             dict: The template configuration for the custom component.
         """
-        return self.build_template_config()
+        if not self._template_config:
+            self._template_config = self.build_template_config()
+        return self._template_config
 
     @property
     def variables(self):
@@ -482,14 +492,14 @@ class CustomComponent(BaseComponent):
     async def load_flow(self, flow_id: str, tweaks: Optional[dict] = None) -> "Graph":
         if not self.user_id:
             raise ValueError("Session is invalid")
-        return await load_flow(user_id=self.user_id, flow_id=flow_id, tweaks=tweaks)
+        return await load_flow(user_id=str(self._user_id), flow_id=flow_id, tweaks=tweaks)
 
     async def run_flow(
         self,
         inputs: Optional[Union[dict, List[dict]]] = None,
         flow_id: Optional[str] = None,
         flow_name: Optional[str] = None,
-        output_type: Optional[str] = None,
+        output_type: Optional[str] = "chat",
         tweaks: Optional[dict] = None,
     ) -> Any:
         return await run_flow(
@@ -498,14 +508,14 @@ class CustomComponent(BaseComponent):
             flow_id=flow_id,
             flow_name=flow_name,
             tweaks=tweaks,
-            user_id=self._user_id,
+            user_id=str(self._user_id),
         )
 
     def list_flows(self) -> List[Data]:
         if not self.user_id:
             raise ValueError("Session is invalid")
         try:
-            return list_flows(user_id=self.user_id)
+            return list_flows(user_id=str(self._user_id))
         except Exception as e:
             raise ValueError(f"Error listing flows: {e}")
 

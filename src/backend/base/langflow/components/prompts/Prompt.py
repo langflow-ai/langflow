@@ -1,5 +1,6 @@
 from langflow.base.prompts.api_utils import process_prompt_template
 from langflow.custom import Component
+from langflow.inputs.inputs import DefaultPromptField
 from langflow.io import Output, PromptInput
 from langflow.schema.message import Message
 from langflow.template.field.prompt import DefaultPromptField
@@ -46,7 +47,7 @@ class PromptComponent(Component):
         """
         frontend_node = super().post_code_processing(new_frontend_node, current_frontend_node)
         template = frontend_node["template"]["template"]["value"]
-        # Kept it duplicated for backward compatibility
+        # Kept it duplicated for backwards compatibility
         _ = process_prompt_template(
             template=template,
             name="template",

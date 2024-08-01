@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "langflow-base"
-version = "0.0.89"
+version = "0.0.92"
 description = "A Python package with a built-in web application"
 authors = ["Langflow <contact@langflow.org>"]
 maintainers = [
@@ -32,6 +32,7 @@ httpx = "*"
 uvicorn = "^0.30.0"
 gunicorn = "^22.0.0"
 langchain = "~0.2.0"
+langchain-core = "^0.2.24"
 langchainhub = "~0.1.15"
 sqlmodel = "^0.0.18"
 loguru = "^0.7.1"
@@ -116,7 +117,7 @@ pytest-split = "^0.9.0"
 
 [tool.pytest.ini_options]
 minversion = "6.0"
-addopts = "-ra"
+#addopts = "-ra"
 testpaths = ["tests", "integration"]
 console_output_style = "progress"
 filterwarnings = ["ignore::DeprecationWarning"]

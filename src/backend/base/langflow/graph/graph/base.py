@@ -7,6 +7,7 @@ from functools import partial
 from itertools import chain
 from typing import TYPE_CHECKING, Any, Dict, Generator, List, Optional, Tuple, Type, Union
 
+import nest_asyncio
 from loguru import logger
 
 from langflow.exceptions.component import ComponentBuildException
@@ -15,6 +16,7 @@ from langflow.graph.edge.schema import EdgeData
 from langflow.graph.graph.constants import Finish, lazy_load_vertex_dict
 from langflow.graph.graph.runnable_vertices_manager import RunnableVerticesManager
 from langflow.graph.graph.schema import GraphData, VertexBuildResult
+from langflow.graph.graph.schema import VertexBuildResult
 from langflow.graph.graph.state_manager import GraphStateManager
 from langflow.graph.graph.utils import find_start_component_id, process_flow, sort_up_to_vertex
 from langflow.graph.schema import InterfaceComponentTypes, RunOutputs
@@ -211,6 +213,8 @@ class Graph:
                 return
 
     def start(self, inputs: Optional[List[dict]] = None) -> Generator:
+        #! Change this ASAP
+        nest_asyncio.apply()
         loop = asyncio.get_event_loop()
         async_gen = self.async_start(inputs)
         async_gen_task = asyncio.ensure_future(async_gen.__anext__())
@@ -368,6 +372,12 @@ class Graph:
                             f"Components {vertex.display_name} and {successor.display_name} "
                             "are connected and both have stream or streaming set to True"
                         )
+
+    @property
+    def first_layer(self):
+        if self._first_layer is None:
+            raise ValueError("Graph not prepared. Call prepare() first.")
+        return self._first_layer
 
     @property
     def run_id(self):
@@ -1266,7 +1276,8 @@ class Graph:
         for v in vertices:
             next_runnable_vertices = await self.get_next_runnable_vertices(lock, vertex=v, cache=False)
             results.extend(next_runnable_vertices)
-        return results
+        no_duplicate_results = list(set(results))
+        return no_duplicate_results
 
     def topological_sort(self) -> List[Vertex]:
         """

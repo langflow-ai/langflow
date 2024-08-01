@@ -6,6 +6,10 @@ DOCKERFILE=docker/build_and_push.Dockerfile
 DOCKERFILE_BACKEND=docker/build_and_push_backend.Dockerfile
 DOCKERFILE_FRONTEND=docker/frontend/build_and_push_frontend.Dockerfile
 DOCKER_COMPOSE=docker_example/docker-compose.yml
+PYTHON_REQUIRED=$(shell grep "^python" pyproject.toml | sed -n 's/.*"\(.*\)"$$/\1/p')
+RED=\033[0;31m
+NC=\033[0m # No Color
+GREEN=\033[0;32m
 
 log_level ?= debug
 host ?= 0.0.0.0
@@ -17,33 +21,86 @@ workers ?= 1
 
 all: help
 
+######################
+# UTILITIES
+######################
+
+# increment the patch version of the current package
+patch: ## bump the version in langflow and langflow-base
+	@echo 'Patching the version'
+	@poetry version patch
+	@echo 'Patching the version in langflow-base'
+	@cd src/backend/base && poetry version patch
+	@make lock
+
+# check for required tools
+check_tools:
+	@command -v poetry >/dev/null 2>&1 || { echo >&2 "$(RED)Poetry is not installed. Aborting.$(NC)"; exit 1; }
+	@command -v npm >/dev/null 2>&1 || { echo >&2 "$(RED)NPM is not installed. Aborting.$(NC)"; exit 1; }
+	@command -v docker >/dev/null 2>&1 || { echo >&2 "$(RED)Docker is not installed. Aborting.$(NC)"; exit 1; }
+	@command -v pipx >/dev/null 2>&1 || { echo >&2 "$(RED)pipx is not installed. Aborting.$(NC)"; exit 1; }
+	@$(MAKE) check_env
+	@echo "$(GREEN)All required tools are installed.$(NC)"
+
+# check if Python version is compatible
+check_env: ## check if Python version is compatible
+	@chmod +x scripts/setup/check_env.sh
+	@PYTHON_INSTALLED=$$(scripts/setup/check_env.sh python --version 2>&1 | awk '{print $$2}'); \
+	if ! scripts/setup/check_env.sh python -c "import sys; from packaging.specifiers import SpecifierSet; from packaging.version import Version; sys.exit(not SpecifierSet('$(PYTHON_REQUIRED)').contains(Version('$$PYTHON_INSTALLED')))" 2>/dev/null; then \
+		echo "$(RED)Error: Python version $$PYTHON_INSTALLED is not compatible with the required version $(PYTHON_REQUIRED). Aborting.$(NC)"; exit 1; \
+	fi
+
+help: ## show this help message
+	@echo '----'
+	@grep -hE '^\S+:.*##' $(MAKEFILE_LIST) | \
+	awk -F ':.*##' '{printf "\033[36mmake %s\033[0m: %s\n", $$1, $$2}' | \
+	column -c2 -t -s :
+	@echo '----'
+
+######################
+# INSTALL PROJECT
+######################
+
+install_backend: ## install the backend dependencies
+	@echo 'Installing backend dependencies'
+	@poetry install
+
+install_frontend: ## install the frontend dependencies
+	@echo 'Installing frontend dependencies'
+	cd src/frontend && npm install
+
+build_frontend: ## build the frontend static files
+	cd src/frontend && CI='' npm run build
+	rm -rf src/backend/base/langflow/frontend
+	cp -r src/frontend/build src/backend/base/langflow/frontend
+
+init: check_tools clean_python_cache clean_npm_cache ## initialize the project
+	make install_backend
+	make install_frontend
+	make build_frontend
+	@echo "$(GREEN)All requirements are installed.$(NC)"
+	python -m langflow run
+
+######################
+# CLEAN PROJECT
+######################
+
 clean_python_cache:
-	@echo 'Cleaning Python cache...'
+	@echo "Cleaning Python cache..."
 	find . -type d -name '__pycache__' -exec rm -r {} +
 	find . -type f -name '*.py[cod]' -exec rm -f {} +
 	find . -type f -name '*~' -exec rm -f {} +
 	find . -type f -name '.*~' -exec rm -f {} +
-	@echo 'Python cache cleaned.'
+	@echo "$(GREEN)Python cache cleaned.$(NC)"
 
 clean_npm_cache:
-	@echo 'Cleaning npm cache...'
+	@echo "Cleaning npm cache..."
 	cd src/frontend && npm cache clean --force
-	rm -rf src/frontend/node_modules
-	rm -rf src/frontend/build
-	rm -rf src/backend/base/langflow/frontend
-	rm -f src/frontend/package-lock.json
-	@echo 'NPM cache and frontend directories cleaned.'
+	rm -rf src/frontend/node_modules src/frontend/build src/backend/base/langflow/frontend src/frontend/package-lock.json
+	@echo "$(GREEN)NPM cache and frontend directories cleaned.$(NC)"
 
-clean_all: clean_python_cache clean_npm_cache
-	@echo 'All caches and temporary directories cleaned.'
-
-codespell: ## run codespell to check spelling
-	@poetry install --with spelling
-	poetry run codespell --toml pyproject.toml
-
-fix_codespell: ## run codespell to fix spelling errors
-	@poetry install --with spelling
-	poetry run codespell --toml pyproject.toml --write
+clean_all: clean_python_cache clean_npm_cache # clean all caches and temporary directories
+	@echo "$(GREEN)All caches and temporary directories cleaned.$(NC)"
 
 setup_poetry: ## install poetry using pipx
 	pipx install poetry
@@ -62,17 +119,16 @@ ifdef base
 	cd src/backend/base && poetry add $(base)
 endif
 
-init: check_tools ## initialize the project
-	@echo 'Installing backend dependencies'
-	make install_backend
-	@echo 'Installing frontend dependencies'
-	make install_frontend
+
+
+######################
+# CODE TESTS
+######################
 
 coverage: ## run the tests and generate a coverage report
 	@poetry run coverage run
 	@poetry run coverage erase
 
-# allow passing arguments to pytest
 unit_tests: ## run unit tests
 	poetry run pytest src/backend/tests \
 		--ignore=src/backend/tests/integration \
@@ -84,6 +140,26 @@ integration_tests: ## run integration tests
 		--instafail -ra -n auto \
 		$(args)
 
+tests: ## run unit, integration, coverage tests
+	@echo 'Running Unit Tests...'
+	make unit_tests
+	@echo 'Running Integration Tests...'
+	make integration_tests
+	@echo 'Running Coverage Tests...'
+	make coverage
+
+######################
+# CODE QUALITY
+######################
+
+codespell: ## run codespell to check spelling
+	@poetry install --with spelling
+	poetry run codespell --toml pyproject.toml
+
+fix_codespell: ## run codespell to fix spelling errors
+	@poetry install --with spelling
+	poetry run codespell --toml pyproject.toml --write
+
 format: ## run code formatters
 	poetry run ruff check . --fix
 	poetry run ruff format .
@@ -91,9 +167,6 @@ format: ## run code formatters
 
 lint: ## run linters
 	poetry run mypy --namespace-packages -p "langflow"
-
-install_frontend: ## install the frontend dependencies
-	cd src/frontend && npm install
 
 install_frontendci:
 	cd src/frontend && npm ci
@@ -159,7 +232,8 @@ else
 endif
 
 setup_devcontainer: ## set up the development container
-	make init
+	make install_backend
+	make install_frontend
 	make build_frontend
 	poetry run langflow --path src/frontend/build
 
@@ -175,10 +249,7 @@ frontendc:
 	make install_frontendc
 	make run_frontend
 
-install_backend: ## install the backend dependencies
-	@echo 'Installing backend dependencies'
-	@poetry install
-	@poetry run pre-commit install
+
 
 backend: ## run the backend in development mode
 	@echo 'Setting up the environment'
@@ -222,11 +293,6 @@ build_and_install: ## build the project and install it
 	rm -rf src/backend/base/dist
 	make build && poetry run pip install dist/*.whl && pip install src/backend/base/dist/*.whl --force-reinstall
 
-build_frontend: ## build the frontend static files
-	cd src/frontend && CI='' npm run build
-	rm -rf src/backend/base/langflow/frontend
-	cp -r src/frontend/build src/backend/base/langflow/frontend
-
 build: ## build the frontend static files and package the project
 	@echo 'Building the project'
 	@make setup_env
@@ -237,6 +303,9 @@ ifdef base
 endif
 
 ifdef main
+	make install_frontendci
+	make build_frontend
+	make build_langflow_base
 	make build_langflow
 endif
 
@@ -249,7 +318,7 @@ build_langflow_backup:
 
 build_langflow:
 	cd ./scripts && poetry run python update_dependencies.py
-	poetry lock
+	poetry lock --no-update
 	poetry build
 ifdef restore
 	mv pyproject.toml.bak pyproject.toml
@@ -313,7 +382,6 @@ lock_langflow:
 	poetry lock
 
 lock: ## lock dependencies
-# Run both in parallel
 	@echo 'Locking dependencies'
 	cd src/backend/base && poetry lock --no-update
 	poetry lock --no-update
@@ -324,7 +392,7 @@ update: ## update dependencies
 	poetry update
 
 publish_base:
-	cd src/backend/base && poetry publish
+	cd src/backend/base && poetry publish --skip-existing
 
 publish_langflow:
 	poetry publish
@@ -338,24 +406,3 @@ endif
 ifdef main
 	make publish_langflow
 endif
-
-patch: ## bump the version in langflow and langflow-base
-	@echo 'Patching the version'
-	@poetry version patch
-	@echo 'Patching the version in langflow-base'
-	@cd src/backend/base && poetry version patch
-	@make lock
-
-check_tools: ## check for required tools
-	@command -v poetry >/dev/null 2>&1 || { echo >&2 "Poetry is not installed. Aborting."; exit 1; }
-	@command -v npm >/dev/null 2>&1 || { echo >&2 "NPM is not installed. Aborting."; exit 1; }
-	@command -v docker >/dev/null 2>&1 || { echo >&2 "Docker is not installed. Aborting."; exit 1; }
-	@command -v pipx >/dev/null 2>&1 || { echo >&2 "pipx is not installed. Aborting."; exit 1; }
-	@echo "All required tools are installed."
-
-help: ## show this help message
-	@echo '----'
-	@grep -hE '^\S+:.*##' $(MAKEFILE_LIST) | \
-	awk -F ':.*##' '{printf "\033[36mmake %s\033[0m: %s\n", $$1, $$2}' | \
-	column -c2 -t -s :
-	@echo '----'

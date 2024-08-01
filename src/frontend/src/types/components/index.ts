@@ -56,7 +56,18 @@ export type DropDownComponentType = {
   value: string;
   combobox?: boolean;
   options: string[];
-  onSelect: (value: string) => void;
+  onSelect: (value: string, dbValue?: boolean, snapshot?: boolean) => void;
+  editNode?: boolean;
+  id?: string;
+  children?: ReactNode;
+};
+export type MultiselectComponentType = {
+  disabled?: boolean;
+  isLoading?: boolean;
+  value: string[];
+  combobox?: boolean;
+  options: string[];
+  onSelect: (value: string[], dbValue?: boolean, snapshot?: boolean) => void;
   editNode?: boolean;
   id?: string;
   children?: ReactNode;
@@ -85,7 +96,7 @@ export type ParameterComponentType = {
 };
 export type InputListComponentType = {
   value: string[];
-  onChange: (value: string[]) => void;
+  onChange: (value: string[], dbValue?: boolean, snapshot?: boolean) => void;
   disabled: boolean;
   editNode?: boolean;
   componentName?: string;
@@ -136,6 +147,8 @@ export type TextAreaComponentType = {
   editNode?: boolean;
   id?: string;
   readonly?: boolean;
+  password?: boolean;
+  updateVisibility?: () => void;
 };
 
 export type TableComponentType = {
@@ -438,6 +451,7 @@ export type patchUserInputStateType = {
   cnfPassword: string;
   profilePicture: string;
   apikey: string;
+  gradient?: any;
 };
 
 export type UserInputType = {
@@ -653,6 +667,8 @@ export type genericModalPropsType = {
   children: ReactNode;
   id?: string;
   readonly?: boolean;
+  password?: boolean;
+  changeVisibility?: () => void;
 };
 
 export type newFlowModalPropsType = {

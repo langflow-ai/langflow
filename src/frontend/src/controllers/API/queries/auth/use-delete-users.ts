@@ -8,7 +8,7 @@ interface DeleteUserParams {
   user_id: string;
 }
 
-export const useDeleteMessages: useMutationFunctionType<
+export const useDeleteUsers: useMutationFunctionType<
   undefined,
   DeleteUserParams
 > = (options?) => {
@@ -20,7 +20,7 @@ export const useDeleteMessages: useMutationFunctionType<
   };
 
   const mutation: UseMutationResult<DeleteUserParams, any, DeleteUserParams> =
-    mutate(["useDeleteMessages"], deleteMessage, options);
+    mutate(["useDeleteUsers"], deleteMessage, options);
 
   return mutation;
 };

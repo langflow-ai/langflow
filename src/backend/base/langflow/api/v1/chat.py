@@ -25,11 +25,11 @@ from langflow.api.v1.schemas import (
 )
 from langflow.exceptions.component import ComponentBuildException
 from langflow.graph.graph.base import Graph
+from langflow.graph.utils import log_vertex_build
 from langflow.schema.schema import OutputValue
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.chat.service import ChatService
 from langflow.services.deps import get_chat_service, get_session, get_session_service, get_telemetry_service
-from langflow.services.monitor.utils import log_vertex_build
 from langflow.services.telemetry.schema import ComponentPayload, PlaygroundPayload
 from langflow.services.telemetry.service import TelemetryService
 
@@ -96,6 +96,10 @@ async def retrieve_vertices_order(
                 flow_id=flow_id_str, graph_data=data.model_dump(), chat_service=chat_service
             )
         graph = graph.prepare(stop_component_id, start_component_id)
+
+        # Now vertices is a list of lists
+        # We need to get the id of each vertex
+        # and return the same structure but only with the ids
         components_count = len(graph.vertices)
         vertices_to_run = list(graph.vertices_to_run.union(get_top_level_vertices(graph, graph.vertices_to_run)))
         await chat_service.set_cache(str(flow_id), graph)
@@ -107,7 +111,7 @@ async def retrieve_vertices_order(
                 playgroundSuccess=True,
             ),
         )
-        return VerticesOrderResponse(ids=graph._first_layer, run_id=graph._run_id, vertices_to_run=vertices_to_run)
+        return VerticesOrderResponse(ids=graph.first_layer, run_id=graph.run_id, vertices_to_run=vertices_to_run)
     except Exception as exc:
         background_tasks.add_task(
             telemetry_service.log_package_playground,
@@ -174,7 +178,6 @@ async def build_vertex(
 
         try:
             lock = chat_service._async_cache_locks[flow_id_str]
-
             vertex_build_result = await graph.build_vertex(
                 vertex_id=vertex_id,
                 user_id=current_user.id,
@@ -217,7 +220,7 @@ async def build_vertex(
             background_tasks.add_task(
                 log_vertex_build,
                 flow_id=flow_id_str,
-                vertex_id=vertex_id.split("-")[0],
+                vertex_id=vertex_id,
                 valid=valid,
                 params=params,
                 data=result_data_response,

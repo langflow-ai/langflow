@@ -1,4 +1,5 @@
 import { AIMLIcon } from "@/icons/AIML";
+import { AthenaIcon } from "@/icons/athena/index";
 import { freezeAllIcon } from "@/icons/freezeAll";
 import {
   AlertCircle,
@@ -16,6 +17,7 @@ import {
   Braces,
   BrainCircuit,
   Check,
+  CheckCheck,
   CheckCircle2,
   ChevronDown,
   ChevronLeft,
@@ -170,6 +172,7 @@ import { BotMessageSquareIcon } from "../icons/BotMessageSquare";
 import { CassandraIcon } from "../icons/Cassandra";
 import { ChromaIcon } from "../icons/ChromaIcon";
 import { CohereIcon } from "../icons/Cohere";
+import { ComposioIcon } from "../icons/Composio";
 import { ConfluenceIcon } from "../icons/Confluence";
 import { CouchbaseIcon } from "../icons/Couchbase";
 import { CrewAiIcon } from "../icons/CrewAI";
@@ -178,6 +181,7 @@ import { EvernoteIcon } from "../icons/Evernote";
 import { FBIcon } from "../icons/FacebookMessenger";
 import { FirecrawlIcon } from "../icons/Firecrawl";
 import { GitBookIcon } from "../icons/GitBook";
+import { GitLoaderIcon } from "../icons/GitLoader";
 import { GoogleIcon } from "../icons/Google";
 import { GoogleGenerativeAIIcon } from "../icons/GoogleGenerativeAI";
 import {
@@ -389,7 +393,9 @@ export const nodeIconsLucide: iconsType = {
   HuggingFaceEmbeddings: HuggingFaceIcon,
   IFixitLoader: IFixIcon,
   CrewAI: CrewAiIcon,
+  Composio: ComposioIcon,
   Meta: MetaIcon,
+  CheckCheck,
   Midjorney: MidjourneyIcon,
   MongoDBAtlasVectorSearch: MongoDBIcon,
   MongoDB: MongoDBIcon,
@@ -586,4 +592,6 @@ export const nodeIconsLucide: iconsType = {
   Table: Table,
   AIML: AIMLIcon,
   "AI/ML": AIMLIcon,
+  GitLoader: GitLoaderIcon,
+  athenaIcon: AthenaIcon,
 };

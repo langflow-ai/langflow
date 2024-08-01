@@ -11,11 +11,13 @@ from .inputs import (
     MessageInput,
     MessageTextInput,
     MultilineInput,
+    MultilineSecretInput,
     NestedDictInput,
     PromptInput,
     SecretStrInput,
     StrInput,
     TableInput,
+    DefaultPromptField,
 )
 
 __all__ = [
@@ -30,10 +32,12 @@ __all__ = [
     "IntInput",
     "MessageInput",
     "MultilineInput",
+    "MultilineSecretInput",
     "NestedDictInput",
     "PromptInput",
     "SecretStrInput",
     "StrInput",
     "MessageTextInput",
     "TableInput",
+    "DefaultPromptField",
 ]

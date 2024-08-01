@@ -1,18 +1,15 @@
-import {
-  LANGFLOW_ACCESS_TOKEN,
-  LANGFLOW_AUTO_LOGIN_OPTION,
-} from "@/constants/constants";
+import { LANGFLOW_ACCESS_TOKEN } from "@/constants/constants";
 import useAuthStore from "@/stores/authStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from "axios";
 import { useContext, useEffect } from "react";
 import { Cookies } from "react-cookie";
-import { renewAccessToken } from ".";
 import { BuildStatus } from "../../constants/enums";
 import { AuthContext } from "../../contexts/authContext";
 import useAlertStore from "../../stores/alertStore";
 import useFlowStore from "../../stores/flowStore";
 import { checkDuplicateRequestAndStoreRequest } from "./helpers/check-duplicate-requests";
+import { useLogout, useRefreshAccessToken } from "./queries/auth";
 
 // Create a new Axios instance
 const api: AxiosInstance = axios.create({
@@ -22,10 +19,12 @@ const api: AxiosInstance = axios.create({
 function ApiInterceptor() {
   const autoLogin = useAuthStore((state) => state.autoLogin);
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  let { accessToken, logout, authenticationErrorCount } =
-    useContext(AuthContext);
+  let { accessToken, authenticationErrorCount } = useContext(AuthContext);
   const cookies = new Cookies();
   const setSaveLoading = useFlowsManagerStore((state) => state.setSaveLoading);
+  const { mutate: mutationLogout } = useLogout();
+  const { mutate: mutationRenewAccessToken } = useRefreshAccessToken();
+  const logout = useAuthStore((state) => state.logout);
 
   useEffect(() => {
     const interceptor = api.interceptors.response.use(
@@ -47,18 +46,18 @@ function ApiInterceptor() {
             await tryToRenewAccessToken(error);
 
             const accessToken = cookies.get(LANGFLOW_ACCESS_TOKEN);
-
             if (!accessToken && error?.config?.url?.includes("login")) {
               return Promise.reject(error);
             }
-
-            await remakeRequest(error);
-            setSaveLoading(false);
-            authenticationErrorCount = 0;
           }
         }
         await clearBuildVerticesState(error);
-        return Promise.reject(error);
+        if (
+          error?.response?.status !== 401 &&
+          error?.response?.status !== 403
+        ) {
+          return Promise.reject(error);
+        }
       },
     );
 
@@ -127,7 +126,14 @@ function ApiInterceptor() {
 
     if (authenticationErrorCount > 3) {
       authenticationErrorCount = 0;
-      logout();
+      mutationLogout(undefined, {
+        onSuccess: () => {
+          logout();
+        },
+        onError: (error) => {
+          console.error(error);
+        },
+      });
       return false;
     }
 
@@ -135,14 +141,30 @@ function ApiInterceptor() {
   }
 
   async function tryToRenewAccessToken(error: AxiosError) {
-    try {
-      if (window.location.pathname.includes("/login")) return;
-      await renewAccessToken();
-    } catch (error) {
-      clearBuildVerticesState(error);
-      logout();
-      return Promise.reject("Authentication error");
-    }
+    if (window.location.pathname.includes("/login")) return;
+    mutationRenewAccessToken(
+      {},
+      {
+        onSuccess: async (data) => {
+          authenticationErrorCount = 0;
+          await remakeRequest(error);
+          setSaveLoading(false);
+          authenticationErrorCount = 0;
+        },
+        onError: (error) => {
+          console.error(error);
+          mutationLogout(undefined, {
+            onSuccess: () => {
+              logout();
+            },
+            onError: (error) => {
+              console.error(error);
+            },
+          });
+          return Promise.reject("Authentication error");
+        },
+      },
+    );
   }
 
   async function clearBuildVerticesState(error) {

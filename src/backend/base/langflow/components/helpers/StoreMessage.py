@@ -23,15 +23,13 @@ class StoreMessageComponent(Component):
         StrInput(
             name="sender",
             display_name="Sender",
-            info="The sender of the message.",
-            value=MESSAGE_SENDER_AI,
+            info="The sender of the message. Might be Machine or User. If empty, the current sender parameter will be used.",
             advanced=True,
         ),
         StrInput(
             name="sender_name",
             display_name="Sender Name",
-            info="The name of the sender.",
-            value=MESSAGE_SENDER_NAME_AI,
+            info="The name of the sender. Might be AI or User. If empty, the current sender parameter will be used.",
             advanced=True,
         ),
         StrInput(
@@ -50,8 +48,8 @@ class StoreMessageComponent(Component):
         message = self.message
 
         message.session_id = self.session_id or message.session_id
-        message.sender = self.sender or message.sender
-        message.sender_name = self.sender_name or message.sender_name
+        message.sender = self.sender or message.sender or MESSAGE_SENDER_AI
+        message.sender_name = self.sender_name or message.sender_name or MESSAGE_SENDER_NAME_AI
 
         if self.memory:
             # override session_id

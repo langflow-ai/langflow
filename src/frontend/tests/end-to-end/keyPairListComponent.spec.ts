@@ -88,10 +88,6 @@ test("KeypairListComponent", async ({ page }) => {
   await page.getByTestId("more-options-modal").click();
   await page.getByTestId("edit-button-modal").click();
 
-  await page.locator('//*[@id="showcredentials_profile_name"]').click();
-  expect(
-    await page.locator('//*[@id="showcredentials_profile_name"]').isChecked(),
-  ).toBeFalsy();
   await page.getByText("Close").last().click();
 
   const plusButtonLocator = page.locator('//*[@id="plusbtn0"]');
@@ -102,11 +98,6 @@ test("KeypairListComponent", async ({ page }) => {
 
     await page.getByTestId("more-options-modal").click();
     await page.getByTestId("edit-button-modal").click();
-
-    await page.locator('//*[@id="showcredentials_profile_name"]').click();
-    expect(
-      await page.locator('//*[@id="showcredentials_profile_name"]').isChecked(),
-    ).toBeTruthy();
 
     await page.locator('//*[@id="editNodekeypair0"]').click();
     await page.locator('//*[@id="editNodekeypair0"]').fill("testtesttesttest");
