@@ -17,7 +17,6 @@ import { sortFlows } from "../../utils/sort-flows";
 import EmptyComponent from "../emptyComponent";
 import HeaderComponent from "../headerComponent";
 import CollectionCard from "./components/collectionCard";
-import useDeleteMultipleFlows from "./hooks/use-delete-multiple";
 import useDescriptionModal from "./hooks/use-description-modal";
 import useFilteredFlows from "./hooks/use-filtered-flows";
 import useDuplicateFlows from "./hooks/use-handle-duplicate";
@@ -114,7 +113,6 @@ export default function ComponentsComponent({
 
   const { handleDuplicate } = useDuplicateFlows(
     selectedFlowsComponentsCards,
-    addFlow,
     allFlows,
     resetFilter,
     getFoldersApi,
