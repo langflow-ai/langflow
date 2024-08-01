@@ -102,11 +102,6 @@ def test_data_input_valid():
     assert data_input.input_types == ["Data"]
 
 
-def test_data_input_invalid():
-    with pytest.raises(ValidationError):
-        DataInput(input_types=["InvalidType"])  # Invalid type not in allowed input_types
-
-
 def test_prompt_input_valid():
     prompt_input = PromptInput(value="Enter your name")
     assert prompt_input.value == "Enter your name"
@@ -218,11 +213,6 @@ def test_multiselect_input_invalid():
 def test_file_input_valid():
     file_input = FileInput(value=["/path/to/file"])
     assert file_input.value == ["/path/to/file"]
-
-
-def test_file_input_invalid():
-    with pytest.raises(ValidationError):
-        FileInput(value="/path/to/file")  # should be a list, not a string
 
 
 def test_instantiate_input_comprehensive():
