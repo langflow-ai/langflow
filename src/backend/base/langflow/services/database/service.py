@@ -1,5 +1,4 @@
 import time
-import os
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional

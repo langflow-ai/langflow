@@ -409,5 +409,6 @@ def test_sqlite_pragmas():
 
     with db_service as session:
         from sqlalchemy import text
+
         assert "wal" == session.execute(text("PRAGMA journal_mode;")).fetchone()[0]
         assert 1 == session.execute(text("PRAGMA synchronous;")).fetchone()[0]
