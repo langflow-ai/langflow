@@ -9,14 +9,14 @@ Langflow enhances its functionality with custom components like `Listen`. This c
 
 ## Component Functionality
 
-<Admonition type="tip" title="Component Functionality">
+:::tip Component Functionality
 
 The `Listen` component allows you to:
 
 - Listen for the next message from a Streamlit chat.
 - Defines the layout of Streamlit server.
 
-</Admonition>
+:::
 
 ## Component Usage
 
@@ -166,7 +166,7 @@ class Listen(Component):
 
 ## Example Usage
 
-<Admonition type="info" title="Example Usage">
+:::info Example Usage
 
 Example of using the `Listen` component in a Langflow flow:
 
@@ -174,12 +174,12 @@ Example of using the `Listen` component in a Langflow flow:
 
 In this example, the `Listen` component connects to a text output node to display the listened message.
 
-</Admonition>
+:::
 
 
 ## Troubleshooting
 
-<Admonition type="caution" title="Troubleshooting">
+:::caution Troubleshooting
 
 If you encounter any issues while using the `Listen` component, consider the following:
 
@@ -191,4 +191,4 @@ If you encounter any issues while using the `Listen` component, consider the fol
 - Ensure the provided avatar icons are emojis.
 - Consult the Streamlit Developers APP Page for documentation updates.
 
-</Admonition>
+:::

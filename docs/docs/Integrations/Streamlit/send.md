@@ -8,13 +8,13 @@ Langflow enhances its functionality with custom components like `Send`. This com
 
 ## Component Functionality
 
-<Admonition type="tip" title="Component Functionality">
+:::tip Component Functionality
 
 The `Send` component allows you to:
 
 - Sends message to specific streamlit chat session.
 
-</Admonition>
+:::
 
 ## Component Usage
 
@@ -120,7 +120,7 @@ class Send(Component):
 
 ## Example Usage
 
-<Admonition type="info" title="Example Usage">
+:::info Example Usage
 
 Example of using the `Send` component in a Langflow flow:
 
@@ -128,12 +128,12 @@ Example of using the `Send` component in a Langflow flow:
 
 In this example, the `Send` component receives a text message from the `OpenAI` component and the sessionId from the `Listen` component as inputs, then sends the message to the Streamlit chat session.
 
-</Admonition>
+:::
 
 
 ## Troubleshooting
 
-<Admonition type="caution" title="Troubleshooting">
+:::caution Troubleshooting
 
 If you encounter any issues while using the `Send` component, consider the following:
 
@@ -141,4 +141,4 @@ If you encounter any issues while using the `Send` component, consider the follo
 - Ensure the provided role is set appropriately.
 - Consult the Streamlit Developers APP Page for documentation updates.
 
-</Admonition>
+:::
