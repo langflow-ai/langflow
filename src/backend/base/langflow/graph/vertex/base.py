@@ -96,6 +96,15 @@ class Vertex:
         self.build_times: List[float] = []
         self.state = VertexStates.ACTIVE
 
+    def set_input_value(self, name: str, value: Any):
+        if self._custom_component is None:
+            raise ValueError(f"Vertex {self.id} does not have a component instance.")
+        self._custom_component._set_input_value(name, value)
+
+    def add_component_instance(self, component_instance: "Component"):
+        component_instance.set_vertex(self)
+        self._custom_component = component_instance
+
     def add_result(self, name: str, result: Any):
         self.results[name] = result
 
