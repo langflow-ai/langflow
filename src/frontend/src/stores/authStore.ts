@@ -26,9 +26,9 @@ const useAuthStore = create<AuthStoreType>((set, get) => ({
     set({ authenticationErrorCount }),
 
   logout: async () => {
-    const setAllFlows = useFlowsManagerStore.getState().setAllFlows;
-    const setSelectedFolder = useFolderStore.getState().setSelectedFolder;
-    cookies.remove("apikey_tkn_lflw", { path: "/" });
+    get().setIsAuthenticated(false);
+    get().setIsAdmin(false);
+
     set({
       isAdmin: false,
       userData: null,
@@ -37,8 +37,8 @@ const useAuthStore = create<AuthStoreType>((set, get) => ({
       autoLogin: false,
       apiKey: null,
     });
-    setAllFlows([]);
-    setSelectedFolder(null);
+
+    window.location.href = "/login";
   },
   //   getUser: () => {
   //     const setLoading = useAlertStore.getState().setLoading;
