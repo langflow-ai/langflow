@@ -20,7 +20,7 @@ from langflow.api.utils import (
     format_elapsed_time,
     format_exception_message,
     get_top_level_vertices,
-    parse_exception, build_graph_from_db_no_cache,
+    parse_exception, build_graph_from_db_no_cache, build_graph_from_data,
 )
 from langflow.api.v1.schemas import (
     FlowDataRequest,
@@ -170,7 +170,7 @@ async def build_flow(
             if not data:
                 graph = await build_graph_from_db_no_cache(flow_id=flow_id_str, session=session)
             else:
-                graph = Graph.from_payload(data.model_dump(), flow_id_str)
+                graph = await build_graph_from_data(flow_id_str, data.model_dump())
             graph.validate_stream()
             if stop_component_id or start_component_id:
                 try:

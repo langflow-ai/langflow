@@ -1,6 +1,6 @@
 import uuid
 import warnings
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, Dict
 
 from fastapi import HTTPException
 from sqlmodel import Session
@@ -122,12 +122,9 @@ def format_elapsed_time(elapsed_time: float) -> str:
         return f"{minutes} {minutes_unit}, {seconds} {seconds_unit}"
 
 
-async def build_graph_from_db_no_cache(flow_id: str, session: Session):
+async def build_graph_from_data(flow_id: str, payload: Dict, **kwargs):
     """Build and cache the graph."""
-    flow: Optional[Flow] = session.get(Flow, flow_id)
-    if not flow or not flow.data:
-        raise ValueError("Invalid flow ID")
-    graph = Graph.from_payload(flow.data, flow_id, flow_name=flow.name, user_id=str(flow.user_id))
+    graph = Graph.from_payload(payload, flow_id, **kwargs)
     for vertex_id in graph._has_session_id_vertices:
         vertex = graph.get_vertex(vertex_id)
         if vertex is None:
@@ -139,8 +136,14 @@ async def build_graph_from_db_no_cache(flow_id: str, session: Session):
     graph.set_run_id(run_id)
     graph.set_run_name()
     await graph.initialize_run()
-
     return graph
+
+async def build_graph_from_db_no_cache(flow_id: str, session: Session):
+    """Build and cache the graph."""
+    flow: Optional[Flow] = session.get(Flow, flow_id)
+    if not flow or not flow.data:
+        raise ValueError("Invalid flow ID")
+    return await build_graph_from_data(flow_id, flow.data, flow_name=flow.name, user_id=str(flow.user_id))
 
 async def build_graph_from_db(flow_id: str, session: Session, chat_service: "ChatService"):
     graph = await build_graph_from_db_no_cache(flow_id, session)
