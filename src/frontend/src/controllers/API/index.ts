@@ -317,19 +317,6 @@ export async function uploadFile(
   return await api.post(`${BASE_URL_API}files/upload/${id}`, formData);
 }
 
-export async function getProfilePictures(): Promise<ProfilePicturesTypeAPI | null> {
-  try {
-    const res = await api.get(`${BASE_URL_API}files/profile_pictures/list`);
-
-    if (res.status === 200) {
-      return res.data;
-    }
-  } catch (error) {
-    throw error;
-  }
-  return null;
-}
-
 export async function postCustomComponent(
   code: string,
   apiClass: APIClassType,
@@ -353,45 +340,6 @@ export async function postCustomComponentUpdate(
     field,
     field_value,
   });
-}
-
-export async function onLogin(user: LoginType) {
-  try {
-    const response = await api.post(
-      `${BASE_URL_API}login`,
-      new URLSearchParams({
-        username: user.username,
-        password: user.password,
-      }).toString(),
-      {
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-      },
-    );
-
-    if (response.status === 200) {
-      const data = response?.data;
-      return data;
-    }
-  } catch (error) {
-    throw error;
-  }
-}
-
-export async function autoLogin(abortSignal) {
-  try {
-    const response = await api.get(`${BASE_URL_API}auto_login`, {
-      signal: abortSignal,
-    });
-
-    if (response.status === 200) {
-      const data = response?.data;
-      return data;
-    }
-  } catch (error) {
-    throw error;
-  }
 }
 
 export async function renewAccessToken() {
