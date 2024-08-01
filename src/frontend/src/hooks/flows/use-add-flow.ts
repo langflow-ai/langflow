@@ -37,42 +37,41 @@ const useAddFlow = () => {
     flow?: FlowType;
     override?: boolean;
   }) => {
-    let flowData = flow
-      ? processDataFromFlow(flow)
-      : { nodes: [], edges: [], viewport: { zoom: 1, x: 0, y: 0 } };
-    flowData?.nodes.forEach((node) => {
-      updateGroupRecursion(
-        node,
-        flowData?.edges,
-        unavaliableFields,
-        globalVariablesEntries,
+    return new Promise(async (resolve, reject) => {
+      let flowData = flow
+        ? processDataFromFlow(flow)
+        : { nodes: [], edges: [], viewport: { zoom: 1, x: 0, y: 0 } };
+      flowData?.nodes.forEach((node) => {
+        updateGroupRecursion(
+          node,
+          flowData?.edges,
+          unavaliableFields,
+          globalVariablesEntries,
+        );
+      });
+      // Create a new flow with a default name if no flow is provided.
+      const folder_id = useFolderStore.getState().folderUrl;
+      const my_collection_id = useFolderStore.getState().myCollectionId;
+
+      if (override) {
+        await deleteComponent(flow!.name);
+      }
+      const newFlow = createNewFlow(
+        flowData!,
+        flow!,
+        folder_id || my_collection_id!,
       );
-    });
-    // Create a new flow with a default name if no flow is provided.
-    const folder_id = useFolderStore.getState().folderUrl;
-    const my_collection_id = useFolderStore.getState().myCollectionId;
 
-    if (override) {
-      await deleteComponent(flow!.name);
-    }
-    const newFlow = createNewFlow(
-      flowData!,
-      flow!,
-      folder_id || my_collection_id!,
-    );
+      const newName = addVersionToDuplicates(newFlow, flows);
+      newFlow.name = newName;
+      newFlow.folder_id = useFolderStore.getState().folderUrl;
 
-    const newName = addVersionToDuplicates(newFlow, flows);
-    newFlow.name = newName;
-    newFlow.folder_id = useFolderStore.getState().folderUrl;
-
-    return new Promise((resolve, reject) =>
       saveFlow(newFlow, {
         onSuccess: ({ id }) => {
           newFlow.id = id;
           // Add the new flow to the list of flows.
           const { data, flows: myFlows } = processFlows([newFlow, ...flows]);
           setFlows(myFlows);
-          setIsLoading(false);
           useTypesStore.setState((state) => ({
             data: { ...state.data, ["saved_components"]: data },
             ComponentFields: extractFieldsFromComponenents({
@@ -80,6 +79,7 @@ const useAddFlow = () => {
               ["saved_components"]: data,
             }),
           }));
+          setIsLoading(false);
           resolve(id);
         },
         onError: (error) => {
@@ -97,10 +97,11 @@ const useAddFlow = () => {
               ],
             });
           }
+          setIsLoading(false);
           reject(error); // Re-throw the error so the caller can handle it if needed},
         },
-      }),
-    );
+      });
+    });
   };
 
   return addFlow;
