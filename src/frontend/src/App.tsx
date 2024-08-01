@@ -1,7 +1,6 @@
-import { useContext, useEffect, useState } from "react";
+import { useContext, useEffect } from "react";
 import { Cookies } from "react-cookie";
 import { ErrorBoundary } from "react-error-boundary";
-import { useNavigate } from "react-router-dom";
 import "reactflow/dist/style.css";
 import "./App.css";
 import AlertDisplayArea from "./alerts/displayArea";
@@ -21,12 +20,12 @@ import { useGetVersionQuery } from "./controllers/API/queries/version";
 import { setupAxiosDefaults } from "./controllers/API/utils";
 import useTrackLastVisitedPath from "./hooks/use-track-last-visited-path";
 import Router from "./routes";
-import { Case } from "./shared/components/caseComponent";
 import useAlertStore from "./stores/alertStore";
 import useAuthStore from "./stores/authStore";
 import { useDarkStore } from "./stores/darkStore";
 import useFlowsManagerStore from "./stores/flowsManagerStore";
 import { useFolderStore } from "./stores/foldersStore";
+import { cn } from "./utils/utils";
 
 export default function App() {
   useTrackLastVisitedPath();
@@ -147,15 +146,16 @@ export default function App() {
             ></FetchErrorComponent>
           }
 
-          <Case condition={isLoadingApplication}>
-            <div className="loading-page-panel">
-              <LoadingComponent remSize={50} />
-            </div>
-          </Case>
+          <div
+            className={cn(
+              "loading-page-panel absolute left-0 top-0 z-[999]",
+              isLoadingApplication ? "" : "hidden",
+            )}
+          >
+            <LoadingComponent remSize={50} />
+          </div>
 
-          <Case condition={!isLoadingApplication}>
-            <Router />
-          </Case>
+          <Router />
         </>
       </ErrorBoundary>
       <div></div>
