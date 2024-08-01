@@ -1226,8 +1226,11 @@ class Graph:
     def _build_vertices(self) -> List[Vertex]:
         """Builds the vertices of the graph."""
         vertices: List[Vertex] = []
-        for vertex in self._vertices:
-            vertex_instance = self._create_vertex(vertex)
+        for frontend_data in self._vertices:
+            try:
+                vertex_instance = self.get_vertex(frontend_data["id"])
+            except ValueError:
+                vertex_instance = self._create_vertex(frontend_data)
             vertices.append(vertex_instance)
 
         return vertices
