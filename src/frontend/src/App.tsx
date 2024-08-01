@@ -10,10 +10,14 @@ import LoadingComponent from "./components/loadingComponent";
 import {
   FETCH_ERROR_DESCRIPION,
   FETCH_ERROR_MESSAGE,
-  LANGFLOW_AUTO_LOGIN_OPTION,
+  LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS,
+  LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS_ENV,
 } from "./constants/constants";
 import { AuthContext } from "./contexts/authContext";
-import { useAutoLogin } from "./controllers/API/queries/auth";
+import {
+  useAutoLogin,
+  useRefreshAccessToken,
+} from "./controllers/API/queries/auth";
 import { useGetHealthQuery } from "./controllers/API/queries/health";
 import { useGetVersionQuery } from "./controllers/API/queries/version";
 import { setupAxiosDefaults } from "./controllers/API/utils";
@@ -29,19 +33,25 @@ import { useFolderStore } from "./stores/foldersStore";
 export default function App() {
   useTrackLastVisitedPath();
   const isLoading = useFlowsManagerStore((state) => state.isLoading);
-  const { login, setUserData, getUser, logout } = useContext(AuthContext);
+  const { login, setUserData, getUser } = useContext(AuthContext);
   const setAutoLogin = useAuthStore((state) => state.setAutoLogin);
   const setLoading = useAlertStore((state) => state.setLoading);
   const refreshStars = useDarkStore((state) => state.refreshStars);
   const dark = useDarkStore((state) => state.dark);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const cookies = new Cookies();
+  const logout = useAuthStore((state) => state.logout);
+
+  const refreshToken = cookies.get("refresh_token");
 
   const { mutate: mutateAutoLogin } = useAutoLogin();
 
   useGetVersionQuery();
-  const cookies = new Cookies();
 
   const isLoadingFolders = useFolderStore((state) => state.isLoadingFolders);
+  const { mutate: mutateRefresh } = useRefreshAccessToken();
+
+  const isLoginPage = location.pathname.includes("login");
 
   const {
     data: healthData,
@@ -59,8 +69,6 @@ export default function App() {
   }, [dark]);
 
   useEffect(() => {
-    const isLoginPage = location.pathname.includes("login");
-
     mutateAutoLogin(undefined, {
       onSuccess: async (user) => {
         if (user && user["access_token"]) {
@@ -69,30 +77,44 @@ export default function App() {
           setUserData(user);
           setAutoLogin(true);
           fetchAllData();
+          // mutateRefresh({ refresh_token: refreshToken });
         }
       },
       onError: (error) => {
         if (error.name !== "CanceledError") {
           setAutoLogin(false);
-          if (
-            cookies.get(LANGFLOW_AUTO_LOGIN_OPTION) === "auto" &&
-            isAuthenticated
-          ) {
-            logout();
-            return;
-          }
-
-          if (isAuthenticated && !isLoginPage) {
-            getUser();
-            fetchAllData();
-          } else {
-            setLoading(false);
-            useFlowsManagerStore.setState({ isLoading: false });
+          if (!isLoginPage) {
+            if (!isAuthenticated) {
+              setLoading(false);
+              useFlowsManagerStore.setState({ isLoading: false });
+              logout();
+            } else {
+              mutateRefresh({ refresh_token: refreshToken });
+              fetchAllData();
+              getUser();
+            }
           }
         }
       },
     });
   }, []);
+
+  useEffect(() => {
+    const envRefreshTime = LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS_ENV;
+    const automaticRefreshTime = LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS;
+
+    const accessTokenTimer = isNaN(envRefreshTime)
+      ? automaticRefreshTime
+      : envRefreshTime;
+
+    const intervalId = setInterval(() => {
+      if (isAuthenticated && !isLoginPage) {
+        mutateRefresh({ refresh_token: refreshToken });
+      }
+    }, accessTokenTimer * 1000);
+
+    return () => clearInterval(intervalId);
+  }, [isLoginPage]);
 
   const fetchAllData = async () => {
     setTimeout(async () => {
