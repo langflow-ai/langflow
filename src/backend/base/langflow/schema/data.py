@@ -25,6 +25,8 @@ class Data(BaseModel):
 
     @model_validator(mode="before")
     def validate_data(cls, values):
+        if not isinstance(values, dict):
+            raise ValueError("Data must be a dictionary")
         if not values.get("data"):
             values["data"] = {}
         # Any other keyword should be added to the data dictionary
