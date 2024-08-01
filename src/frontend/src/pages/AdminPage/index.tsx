@@ -35,7 +35,6 @@ import {
   ADMIN_HEADER_TITLE,
 } from "../../constants/constants";
 import { AuthContext } from "../../contexts/authContext";
-import { getUsersPage } from "../../controllers/API";
 import ConfirmationModal from "../../modals/confirmationModal";
 import UserManagementModal from "../../modals/userManagementModal";
 import useAlertStore from "../../stores/alertStore";
@@ -48,7 +47,6 @@ export default function AdminPage() {
 
   const [size, setPageSize] = useState(12);
   const [index, setPageIndex] = useState(1);
-  const [loadingUsers, setLoadingUsers] = useState(true);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const { userData } = useContext(AuthContext);
@@ -76,10 +74,9 @@ export default function AdminPage() {
 
   const [filterUserList, setFilterUserList] = useState(userList.current);
 
-  const { mutate: mutateGetUsers } = useGetUsers({});
+  const { mutate: mutateGetUsers, isPending } = useGetUsers({});
 
   function getUsers() {
-    setLoadingUsers(true);
     mutateGetUsers(
       {
         skip: size * (index - 1),
@@ -90,17 +87,13 @@ export default function AdminPage() {
           setTotalRowsCount(users["total_count"]);
           userList.current = users["users"];
           setFilterUserList(users["users"]);
-          setLoadingUsers(false);
         },
-        onError: () => {
-          setLoadingUsers(false);
-        },
+        onError: () => {},
       },
     );
   }
 
   function handleChangePagination(pageIndex: number, pageSize: number) {
-    setLoadingUsers(true);
     setPageSize(pageSize);
     setPageIndex(pageIndex);
 
@@ -114,10 +107,6 @@ export default function AdminPage() {
           setTotalRowsCount(users["total_count"]);
           userList.current = users["users"];
           setFilterUserList(users["users"]);
-          setLoadingUsers(false);
-        },
-        onError: () => {
-          setLoadingUsers(false);
         },
       },
     );
@@ -125,7 +114,7 @@ export default function AdminPage() {
 
   function resetFilter() {
     setPageIndex(1);
-    setPageSize(10);
+    setPageSize(12);
     getUsers();
   }
 
@@ -320,7 +309,7 @@ export default function AdminPage() {
               </UserManagementModal>
             </div>
           </div>
-          {loadingUsers ? (
+          {isPending ? (
             <div className="flex h-full w-full items-center justify-center">
               <LoadingComponent remSize={12} />
             </div>
@@ -335,13 +324,13 @@ export default function AdminPage() {
               <div
                 className={
                   "m-4 h-full overflow-x-hidden overflow-y-scroll rounded-md border-2 bg-background custom-scroll" +
-                  (loadingUsers ? " border-0" : "")
+                  (isPending ? " border-0" : "")
                 }
               >
                 <Table className={"table-fixed outline-1"}>
                   <TableHeader
                     className={
-                      loadingUsers ? "hidden" : "table-fixed bg-muted outline-1"
+                      isPending ? "hidden" : "table-fixed bg-muted outline-1"
                     }
                   >
                     <TableRow>
@@ -354,7 +343,7 @@ export default function AdminPage() {
                       <TableHead className="h-10 w-[100px] text-right"></TableHead>
                     </TableRow>
                   </TableHeader>
-                  {!loadingUsers && (
+                  {!isPending && (
                     <TableBody>
                       {filterUserList.map((user: UserInputType, index) => (
                         <TableRow key={index}>
