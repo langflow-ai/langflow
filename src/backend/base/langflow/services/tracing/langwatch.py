@@ -1,4 +1,3 @@
-import os
 from typing import TYPE_CHECKING, Any, Dict, Optional, cast
 from uuid import UUID
 
@@ -11,9 +10,9 @@ from langflow.services.tracing.schema import Log
 
 if TYPE_CHECKING:
     from langwatch.tracer import ContextSpan
-    from langwatch.types import SpanTypes
 
     from langflow.graph.vertex.base import Vertex
+    from langchain.callbacks.base import BaseCallbackHandler
 
 
 class LangWatchTracer(BaseTracer):
@@ -40,7 +39,7 @@ class LangWatchTracer(BaseTracer):
             self.trace.root_span.update(
                 span_id=f"{self.flow_id}-{nanoid.generate(size=6)}",  # nanoid to make the span_id globally unique, which is required for LangWatch for now
                 name=name_without_id,
-                type=self._convert_trace_type(trace_type),
+                type="workflow",
             )
         except Exception as e:
             logger.debug(f"Error setting up LangWatch tracer: {e}")
@@ -51,8 +50,6 @@ class LangWatchTracer(BaseTracer):
         return self._ready
 
     def setup_langwatch(self):
-        if os.getenv("LANGWATCH_API_KEY") is None:
-            return False
         try:
             import langwatch
 
@@ -61,14 +58,6 @@ class LangWatchTracer(BaseTracer):
             logger.error("Could not import langwatch. Please install it with `pip install langwatch`.")
             return False
         return True
-
-    def _convert_trace_type(self, trace_type: str):
-        trace_type_: "SpanTypes" = (
-            cast("SpanTypes", trace_type)
-            if trace_type in ["span", "llm", "chain", "tool", "agent", "guardrail", "rag"]
-            else "span"
-        )
-        return trace_type_
 
     def add_trace(
         self,
@@ -88,23 +77,21 @@ class LangWatchTracer(BaseTracer):
 
         name_without_id = " (".join(trace_name.split(" (")[0:-1])
 
-        trace_type_ = self._convert_trace_type(trace_type)
-        self.spans[trace_id] = self.trace.span(
-            span_id=f"{trace_id}-{nanoid.generate(size=6)}",  # Add a nanoid to make the span_id globally unique, which is required for LangWatch for now
-            name=name_without_id,
-            type=trace_type_,
-            parent=(
-                [span for key, span in self.spans.items() for edge in vertex.incoming_edges if key == edge.source_id][
-                    -1
-                ]
-                if vertex and len(vertex.incoming_edges) > 0
-                else self.trace.root_span
-            ),
-            input=self._convert_to_langwatch_types(inputs),
+        previous_nodes = (
+            [span for key, span in self.spans.items() for edge in vertex.incoming_edges if key == edge.source_id]
+            if vertex and len(vertex.incoming_edges) > 0
+            else []
         )
 
-        if trace_type_ == "llm" and "model_name" in inputs:
-            self.spans[trace_id].update(model=inputs["model_name"])
+        span = self.trace.span(
+            span_id=f"{trace_id}-{nanoid.generate(size=6)}",  # Add a nanoid to make the span_id globally unique, which is required for LangWatch for now
+            name=name_without_id,
+            type="component",
+            parent=(previous_nodes[-1] if len(previous_nodes) > 0 else self.trace.root_span),
+            input=self._convert_to_langwatch_types(inputs),
+        )
+        self.trace.set_current_span(span)
+        self.spans[trace_id] = span
 
     def end_trace(
         self,
@@ -117,16 +104,6 @@ class LangWatchTracer(BaseTracer):
         if not self._ready:
             return
         if self.spans.get(trace_id):
-            # Workaround for when model is used just as a component not actually called as an LLM,
-            # to prevent LangWatch from calculating the cost based on it when it was in fact never called
-            if (
-                self.spans[trace_id].type == "llm"
-                and outputs
-                and "model_output" in outputs
-                and "text_output" not in outputs
-            ):
-                self.spans[trace_id].update(metrics={"prompt_tokens": 0, "completion_tokens": 0})
-
             self.spans[trace_id].end(output=self._convert_to_langwatch_types(outputs), error=error)
 
     def end(
@@ -146,7 +123,9 @@ class LangWatchTracer(BaseTracer):
 
         if metadata and "flow_name" in metadata:
             self.trace.update(metadata=(self.trace.metadata or {}) | {"labels": [f"Flow: {metadata['flow_name']}"]})
-        self.trace.deferred_send_spans()
+
+        if self.trace.api_key or self._client.api_key:
+            self.trace.deferred_send_spans()
 
     def _convert_to_langwatch_types(self, io_dict: Optional[Dict[str, Any]]):
         from langwatch.utils import autoconvert_typed_values
@@ -183,3 +162,9 @@ class LangWatchTracer(BaseTracer):
         elif isinstance(value, Data):
             value = cast(dict, value.to_lc_document())
         return value
+
+    def get_langchain_callback(self) -> Optional["BaseCallbackHandler"]:
+        if self.trace is None:
+            return None
+
+        return self.trace.get_langchain_callback()
