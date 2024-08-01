@@ -45,17 +45,19 @@ def get_all_webhook_components_in_flow(flow_data: dict | None):
         return []
     return [node for node in flow_data.get("nodes", []) if "Webhook" in node.get("id")]
 
-def get_components_versions(flow:Flow):
+
+def get_components_versions(flow: Flow):
     versions = {}
     nodes = flow.data.get("nodes", [])
     for node in nodes:
         data = node.get("data", {})
         data_node = data.get("node", {})
-        if"lf_version" in data_node:
+        if "lf_version" in data_node:
             versions[node["id"]] = data_node["lf_version"]
     return versions
 
-def get_outdated_components(flow:Flow):
+
+def get_outdated_components(flow: Flow):
     component_versions = get_components_versions(flow)
     lf_version = get_version_info()["version"]
     outdated_components = []
