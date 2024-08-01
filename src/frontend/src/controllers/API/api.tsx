@@ -25,6 +25,7 @@ function ApiInterceptor() {
   const { mutate: mutationLogout } = useLogout();
   const { mutate: mutationRenewAccessToken } = useRefreshAccessToken();
   const logout = useAuthStore((state) => state.logout);
+  const isLoginPage = location.pathname.includes("login");
 
   useEffect(() => {
     const interceptor = api.interceptors.response.use(
@@ -122,6 +123,8 @@ function ApiInterceptor() {
   }, [accessToken, setErrorData]);
 
   function checkErrorCount() {
+    if (isLoginPage) return;
+
     authenticationErrorCount = authenticationErrorCount + 1;
 
     if (authenticationErrorCount > 3) {
@@ -141,7 +144,7 @@ function ApiInterceptor() {
   }
 
   async function tryToRenewAccessToken(error: AxiosError) {
-    if (window.location.pathname.includes("/login")) return;
+    if (isLoginPage) return;
     mutationRenewAccessToken(
       {},
       {

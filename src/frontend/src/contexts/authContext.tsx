@@ -18,7 +18,6 @@ import { AuthContextType } from "../types/contexts/auth";
 const initialValue: AuthContextType = {
   accessToken: null,
   login: () => {},
-  logout: () => new Promise(() => {}),
   userData: null,
   setUserData: () => {},
   authenticationErrorCount: 0,
@@ -90,29 +89,6 @@ export function AuthProvider({ children }): React.ReactElement {
     getUser();
   }
 
-  async function logout() {
-    if (autoLogin) {
-      return;
-    }
-    try {
-      await requestLogout();
-      cookies.remove(LANGFLOW_API_TOKEN, { path: "/" });
-      cookies.remove(LANGFLOW_AUTO_LOGIN_OPTION, { path: "/" });
-      setIsAdmin(false);
-      setUserData(null);
-      setAccessToken(null);
-      setIsAuthenticated(false);
-      setIsAuthenticated(false);
-      setAllFlows([]);
-      setSelectedFolder(null);
-      navigate("/login");
-      setIsLoading(false);
-    } catch (error) {
-      console.error(error);
-      throw error;
-    }
-  }
-
   function storeApiKey(apikey: string) {
     setApiKey(apikey);
   }
@@ -123,7 +99,6 @@ export function AuthProvider({ children }): React.ReactElement {
       value={{
         accessToken,
         login,
-        logout,
         setUserData,
         userData,
         authenticationErrorCount: 0,
