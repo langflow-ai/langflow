@@ -253,7 +253,6 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
             }),
           }));
         }, 200);
-        // addFlowToLocalState(newFlow);
         return;
       }
       const newFlow = createNewFlow(
