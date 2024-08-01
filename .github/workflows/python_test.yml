@@ -10,6 +10,7 @@ on:
         type: string
 env:
   POETRY_VERSION: "1.8.2"
+  NODE_VERSION: "21"
 
 jobs:
   build:
@@ -29,6 +30,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.branch || github.ref }}
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        id: setup-node
+        with:
+          node-version: ${{ env.NODE_VERSION }}
       - name: Set up Python ${{ matrix.python-version }} + Poetry ${{ env.POETRY_VERSION }}
         uses: "./.github/actions/poetry_caching"
         with:
