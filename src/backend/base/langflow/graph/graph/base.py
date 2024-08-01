@@ -6,6 +6,7 @@ from functools import partial
 from itertools import chain
 from typing import TYPE_CHECKING, Any, Dict, Generator, List, Optional, Tuple, Type, Union
 
+import nest_asyncio
 from loguru import logger
 
 from langflow.exceptions.component import ComponentBuildException
