@@ -35,10 +35,7 @@ export const usePostSaveFlow: useMutationFunctionType<
 
   const mutation: UseMutationResult<IPostSaveFlow, any, IPostSaveFlow> = mutate(
     ["usePostSaveFlow"],
-    async (payload: IPostSaveFlow) => {
-      const res = await postSaveFlowFn(payload);
-      return res;
-    },
+    postSaveFlowFn,
     options,
   );
 

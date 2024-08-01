@@ -38,10 +38,7 @@ export const usePatchUpdateFlow: useMutationFunctionType<
   const mutation: UseMutationResult<IPatchUpdateFlow, any, IPatchUpdateFlow> =
     mutate(
       ["usePatchUpdateFlow", { id: params.id }],
-      async (payload: IPatchUpdateFlow) => {
-        const res = await PatchUpdateFlowFn(payload);
-        return res;
-      },
+      PatchUpdateFlowFn,
       options,
     );
 
