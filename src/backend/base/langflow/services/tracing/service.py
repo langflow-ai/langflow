@@ -2,7 +2,7 @@ import asyncio
 import os
 from collections import defaultdict
 from contextlib import asynccontextmanager
-from typing import TYPE_CHECKING, Any, Dict, Optional
+from typing import TYPE_CHECKING, Any, Dict, Optional, List
 from uuid import UUID
 
 from loguru import logger
@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from langflow.graph.vertex.base import Vertex
     from langflow.services.monitor.service import MonitorService
     from langflow.services.settings.service import SettingsService
+    from langchain.callbacks.base import BaseCallbackHandler
 
 
 def _get_langsmith_tracer():
@@ -115,9 +116,7 @@ class TracingService(Service):
 
     def _initialize_langwatch_tracer(self):
         if (
-            os.getenv("LANGWATCH_API_KEY")
-            and "langwatch" not in self._tracers
-            or self._tracers["langwatch"].trace_id != self.run_id  # type: ignore
+            "langwatch" not in self._tracers or self._tracers["langwatch"].trace_id != self.run_id  # type: ignore
         ):
             langwatch_tracer = _get_langwatch_tracer()
             self._tracers["langwatch"] = langwatch_tracer(
@@ -229,3 +228,13 @@ class TracingService(Service):
             if "api_key" in key:
                 inputs[key] = "*****"  # avoid logging api_keys for security reasons
         return inputs
+
+    def get_langchain_callbacks(self) -> List["BaseCallbackHandler"]:
+        callbacks = []
+        for tracer in self._tracers.values():
+            if not tracer.ready:  # type: ignore
+                continue
+            langchain_callback = tracer.get_langchain_callback()
+            if langchain_callback:
+                callbacks.append(langchain_callback)
+        return callbacks
