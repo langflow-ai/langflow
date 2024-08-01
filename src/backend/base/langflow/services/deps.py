@@ -162,9 +162,8 @@ def get_session() -> Generator["Session", None, None]:
         Session: A session object.
 
     """
-    with session_scope() as session:
+    with get_db_service().with_session() as session:
         yield session
-
 
 @contextmanager
 def session_scope() -> Generator["Session", None, None]:
