@@ -1,7 +1,6 @@
-import { useContext, useEffect, useState } from "react";
+import { useContext, useEffect } from "react";
 import { Cookies } from "react-cookie";
 import { ErrorBoundary } from "react-error-boundary";
-import { useNavigate } from "react-router-dom";
 import "reactflow/dist/style.css";
 import "./App.css";
 import AlertDisplayArea from "./alerts/displayArea";
@@ -16,7 +15,6 @@ import {
 import { AuthContext } from "./contexts/authContext";
 import { useAutoLogin } from "./controllers/API/queries/auth";
 import { useGetHealthQuery } from "./controllers/API/queries/health";
-import { useGetGlobalVariables } from "./controllers/API/queries/variables";
 import { useGetVersionQuery } from "./controllers/API/queries/version";
 import { setupAxiosDefaults } from "./controllers/API/utils";
 import useTrackLastVisitedPath from "./hooks/use-track-last-visited-path";
@@ -45,8 +43,6 @@ export default function App() {
 
   const isLoadingFolders = useFolderStore((state) => state.isLoadingFolders);
 
-  const { mutate: mutateGetGlobalVariables } = useGetGlobalVariables();
-
   const {
     data: healthData,
     isFetching: fetchingHealth,
@@ -70,7 +66,6 @@ export default function App() {
         if (user && user["access_token"]) {
           user["refresh_token"] = "auto";
           login(user["access_token"], "auto");
-          mutateGetGlobalVariables();
           setUserData(user);
           setAutoLogin(true);
           fetchAllData();
