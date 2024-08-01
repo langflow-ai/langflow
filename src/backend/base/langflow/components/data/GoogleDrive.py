@@ -4,26 +4,29 @@ from google.oauth2.credentials import Credentials
 from google.auth.exceptions import RefreshError
 from langflow.custom import Component
 from langflow.inputs import MessageTextInput
+from langflow.io import SecretStrInput
 from langflow.template import Output
 from langflow.schema import Data
 from langchain_google_community import GoogleDriveLoader
+from langflow.helpers.data import docs_to_data
+
 from json.decoder import JSONDecodeError
 
 
 class GoogleDriveComponent(Component):
     display_name = "Google Drive Loader"
     description = "Loads documents from Google Drive using provided credentials."
-    icon = "Google"  # You can choose an appropriate icon later
+    icon = "Google"
 
     inputs = [
-        MessageTextInput(
+        SecretStrInput(
             name="json_string",
             display_name="JSON String of the Service Account Token",
             info="JSON string containing OAuth 2.0 access token information for service account access",
             required=True,
         ),
         MessageTextInput(
-            name="document_id", display_name="Document IDs", info="Single Google Drive document ID", required=True
+            name="document_id", display_name="Document ID", info="Single Google Drive document ID", required=True
         ),
     ]
 
@@ -77,7 +80,8 @@ class GoogleDriveComponent(Component):
             raise ValueError(f"Error loading documents: {e}") from e
 
         assert len(docs) == 1, "Expected a single document to be loaded."
-        data = [Data(text=doc.page_content, **doc.metadata) for doc in docs]
+
+        data = docs_to_data(docs)
         # Return the loaded documents
         self.status = data
         return Data(data={"text": data})
