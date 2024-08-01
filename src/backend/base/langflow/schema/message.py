@@ -101,7 +101,7 @@ class Message(Data):
         if self.sender == MESSAGE_SENDER_USER or not self.sender:
             if self.files:
                 contents = [{"type": "text", "text": text}]
-                contents.extend(self.get_file_content_dicts())
+                contents.extend(self.sync_get_file_content_dicts())
                 human_message = HumanMessage(content=contents)  # type: ignore
             else:
                 human_message = HumanMessage(content=text)
@@ -156,12 +156,12 @@ class Message(Data):
             return ""
         return value
 
-    def get_file_content_dicts(self):
+    def sync_get_file_content_dicts(self):
         coro = self.aget_file_content_dicts()
         loop = asyncio.get_event_loop()
         return loop.run_until_complete(coro)
 
-    async def aget_file_content_dicts(self):
+    async def get_file_content_dicts(self):
         content_dicts = []
         files = await get_file_paths(self.files)
 
@@ -170,9 +170,7 @@ class Message(Data):
                 content_dicts.append(file.to_content_dict())
             else:
                 image_template = ImagePromptTemplate()
-                image_prompt_value: ImagePromptValue = image_template.invoke(
-                    input={"path": file}, config={"callbacks": self.get_langchain_callbacks()}
-                )  # type: ignore
+                image_prompt_value: ImagePromptValue = image_template.invoke(input={"path": file})  # type: ignore
                 content_dicts.append({"type": "image_url", "image_url": image_prompt_value.image_url})
         return content_dicts
 
