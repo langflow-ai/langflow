@@ -1,5 +1,7 @@
 import { useLoginUser } from "@/controllers/API/queries/auth";
 import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import { useFolderStore } from "@/stores/foldersStore";
 import { useContext, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../../../components/ui/button";
@@ -24,6 +26,9 @@ export default function LoginAdminPage() {
 
   const { mutate: mutateGetGlobalVariables } = useGetGlobalVariables();
 
+  const setAllFlows = useFlowsManagerStore((state) => state.setAllFlows);
+  const setSelectedFolder = useFolderStore((state) => state.setSelectedFolder);
+
   const { password, username } = inputState;
   const setErrorData = useAlertStore((state) => state.setErrorData);
   function handleInput({
@@ -42,6 +47,9 @@ export default function LoginAdminPage() {
 
     mutate(user, {
       onSuccess: (res) => {
+        setAllFlows([]);
+        setSelectedFolder(null);
+
         setLoading(true);
 
         login(res.access_token, "login");
