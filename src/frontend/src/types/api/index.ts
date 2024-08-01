@@ -43,6 +43,7 @@ export type APIClassType = {
   official?: boolean;
   outputs?: Array<OutputFieldType>;
   frozen?: boolean;
+  lf_version?: string;
   flow?: FlowType;
   field_order?: string[];
   [key: string]:
