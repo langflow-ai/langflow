@@ -868,6 +868,70 @@ class Graph:
                     return vertex
         raise ValueError(f"Vertex {vertex_id} is not a top level vertex or no root vertex found")
 
+    async def astep(
+        self,
+        inputs: Optional["InputValueRequest"] = None,
+        files: Optional[list[str]] = None,
+        user_id: Optional[str] = None,
+    ):
+        if not self._prepared:
+            raise ValueError("Graph not prepared. Call prepare() first.")
+        if not self._run_queue:
+            asyncio.create_task(self.end_all_traces())
+            return Finish()
+        vertex_id = self._run_queue.popleft()
+        chat_service = get_chat_service()
+        vertex_build_result = await self.build_vertex(
+            vertex_id=vertex_id,
+            user_id=user_id,
+            inputs_dict=inputs.model_dump() if inputs else {},
+            files=files,
+            get_cache=chat_service.get_cache,
+            set_cache=chat_service.set_cache,
+        )
+
+        next_runnable_vertices = await self.get_next_runnable_vertices(
+            self._lock, vertex=vertex_build_result.vertex, cache=False
+        )
+        if self.stop_vertex and self.stop_vertex in next_runnable_vertices:
+            next_runnable_vertices = [self.stop_vertex]
+        self._run_queue.extend(next_runnable_vertices)
+        self.reset_inactivated_vertices()
+        self.reset_activated_vertices()
+
+        await chat_service.set_cache(str(self.flow_id or self._run_id), self)
+        return vertex_build_result
+
+    def step(
+        self,
+        inputs: Optional["InputValueRequest"] = None,
+        files: Optional[list[str]] = None,
+        user_id: Optional[str] = None,
+    ):
+        # Call astep but synchronously
+        loop = asyncio.get_event_loop()
+        return loop.run_until_complete(self.astep(inputs, files, user_id))
+
+    def prepare(self, stop_component_id: Optional[str] = None, start_component_id: Optional[str] = None):
+        if stop_component_id and start_component_id:
+            raise ValueError("You can only provide one of stop_component_id or start_component_id")
+        self.validate_stream()
+        self.edges = self._build_edges()
+        if stop_component_id or start_component_id:
+            try:
+                first_layer = self.sort_vertices(stop_component_id, start_component_id)
+            except Exception as exc:
+                logger.error(exc)
+                first_layer = self.sort_vertices()
+        else:
+            first_layer = self.sort_vertices()
+
+        for vertex_id in first_layer:
+            self.run_manager.add_to_vertices_being_run(vertex_id)
+        self._run_queue = deque(first_layer)
+        self._prepared = True
+        return self
+
     async def build_vertex(
         self,
         vertex_id: str,
@@ -1247,26 +1311,6 @@ class Graph:
         vertex_instance = VertexClass(frontend_data, graph=self)
         vertex_instance.set_top_level(self.top_level_vertices)
         return vertex_instance
-
-    def prepare(self, stop_component_id: Optional[str] = None, start_component_id: Optional[str] = None):
-        if stop_component_id and start_component_id:
-            raise ValueError("You can only provide one of stop_component_id or start_component_id")
-        self.validate_stream()
-        self.edges = self._build_edges()
-        if stop_component_id or start_component_id:
-            try:
-                first_layer = self.sort_vertices(stop_component_id, start_component_id)
-            except Exception as exc:
-                logger.error(exc)
-                first_layer = self.sort_vertices()
-        else:
-            first_layer = self.sort_vertices()
-
-        for vertex_id in first_layer:
-            self.run_manager.add_to_vertices_being_run(vertex_id)
-        self._run_queue = deque(first_layer)
-        self._prepared = True
-        return self
 
     def get_children_by_vertex_type(self, vertex: Vertex, vertex_type: str) -> List[Vertex]:
         """Returns the children of a vertex based on the vertex type."""
