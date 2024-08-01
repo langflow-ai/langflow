@@ -3,6 +3,8 @@ import warnings
 from typing import TYPE_CHECKING, Optional
 
 from fastapi import HTTPException
+from langflow.exceptions.api import exceptionBody
+from langflow.services.database.models.flow.utils import get_outdated_components
 from sqlmodel import Session
 
 from langflow.graph.graph.base import Graph
@@ -213,3 +215,12 @@ def get_suggestion_messsage(outdated_components:list[str]):
     for component in outdated_components:
         message += f"{component}, "
     return message
+
+
+def get_api_exception_body(exc:str|list[str],flow:Flow) -> exceptionBody:
+    body = {"message": str(exc)}
+    outdated_components = get_outdated_components(flow)
+    if outdated_components:
+        body["suggestion"] = get_suggestion_messsage(outdated_components)
+    excep = exceptionBody(**body)
+    return excep
