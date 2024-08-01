@@ -47,7 +47,9 @@ class DatabaseService(Service):
 
     def _create_engine(self) -> "Engine":
         """Create the engine for the database."""
-        if self.settings_service.settings.database_url and self.settings_service.settings.database_url.startswith("sqlite"):
+        if self.settings_service.settings.database_url and self.settings_service.settings.database_url.startswith(
+            "sqlite"
+        ):
             connect_args = {"check_same_thread": False}
         else:
             connect_args = {}
