@@ -46,7 +46,7 @@
 
 - [📝 Content](#-content)
 - [📦 Get Started](#-get-started)
-- [Running Langflow from a Cloned Repository](#-running-langflow-from-a-cloned-repository)
+- [Running Langflow from a Cloned Repository](#running-langflow-from-a-cloned-repository)
 - [🎨 Create Flows](#-create-flows)
 - [Deploy](#deploy)
   - [DataStax Langflow](#datastax-langflow)
