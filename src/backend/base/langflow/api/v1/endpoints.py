@@ -4,7 +4,6 @@ from http import HTTPStatus
 from typing import TYPE_CHECKING, Annotated, List, Optional, Union
 from uuid import UUID
 
-from langflow.api.utils import get_api_exception_body
 import sqlalchemy as sa
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Request, UploadFile, status
 from loguru import logger
