@@ -13,6 +13,7 @@ from langflow.services.tracing.schema import Log
 
 if TYPE_CHECKING:
     from langflow.graph.vertex.base import Vertex
+    from langchain.callbacks.base import BaseCallbackHandler
 
 
 class LangSmithTracer(BaseTracer):
@@ -158,3 +159,6 @@ class LangSmithTracer(BaseTracer):
         self._run_tree.end(outputs=outputs, error=self._error_to_string(error))
         self._run_tree.post()
         self._run_link = self._run_tree.get_url()
+
+    def get_langchain_callback(self) -> Optional["BaseCallbackHandler"]:
+        return None
