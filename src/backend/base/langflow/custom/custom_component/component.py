@@ -80,6 +80,7 @@ class Component(CustomComponent):
         """
         for key, value in kwargs.items():
             self._process_connection_or_parameter(key, value)
+        return self
 
     def list_inputs(self):
         """
