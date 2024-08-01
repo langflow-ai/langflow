@@ -2,7 +2,7 @@ import time
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 import sqlalchemy as sa
 from alembic import command, util
@@ -75,17 +75,22 @@ class DatabaseService(Service):
         from sqlite3 import Connection as sqliteConnection
 
         if isinstance(dbapi_connection, sqliteConnection):
-            logger.info("sqlite connect listener, setting pragmas")
-            val = os.environ["SQLITE_PRAGMA"]
-            if val != "":
+            pragmas: Optional[dict] = get_settings_service().settings.sqlite_pragmas
+            pragmas_list = []
+            for key, val in pragmas.items() or {}:
+                logger.info(f"sqlite pragma set {key} = {val}")
+                pragmas_list.append(f"PRAGMA {key} = {val}")
+            logger.info(f"sqlite connection, setting pragmas: {str(pragmas_list)}")
+            if pragmas_list:
+                cursor = dbapi_connection.cursor()
                 try:
-                    cursor = dbapi_connection.cursor()
-                    for pragma in val.split(","):
-                        logger.info(f"sqlite pragma set {pragma}")
-                        cursor.execute(pragma)
+                    for pragma in pragmas_list:
+                        try:
+                            cursor.execute(pragma)
+                        except OperationalError as oe:
+                            logger.error(f"Failed to set PRAGMA {pragma}: ", {oe})
+                finally:
                     cursor.close()
-                except OperationalError as oe:
-                    logger.warning("Failed to set PRAGMA: ", {oe})
 
     def __enter__(self):
         self._session = Session(self.engine)
