@@ -1232,8 +1232,8 @@ class Graph:
 
         return vertices
 
-    def _create_vertex(self, vertex: dict):
-        vertex_data = vertex["data"]
+    def _create_vertex(self, frontend_data: dict):
+        vertex_data = frontend_data["data"]
         vertex_type: str = vertex_data["type"]  # type: ignore
         vertex_base_type: str = vertex_data["node"]["template"]["_type"]  # type: ignore
         if "id" not in vertex_data:
@@ -1241,7 +1241,7 @@ class Graph:
 
         VertexClass = self._get_vertex_class(vertex_type, vertex_base_type, vertex_data["id"])
 
-        vertex_instance = VertexClass(vertex, graph=self)
+        vertex_instance = VertexClass(frontend_data, graph=self)
         vertex_instance.set_top_level(self.top_level_vertices)
         return vertex_instance
 
