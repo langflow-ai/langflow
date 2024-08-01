@@ -47,12 +47,15 @@ class DatabaseService(Service):
 
     def _create_engine(self) -> "Engine":
         """Create the engine for the database."""
-        settings_service = get_settings_service()
-        if settings_service.settings.database_url and settings_service.settings.database_url.startswith("sqlite"):
+        if self.settings_service.settings.database_url and self.settings_service.settings.database_url.startswith("sqlite"):
             connect_args = {"check_same_thread": False}
         else:
             connect_args = {}
         try:
+            # register the event listener for sqlite as part of this class.
+            # Using decorator will make the method not able to use self
+            event.listen(Engine, "connect", self.on_connection)
+
             return create_engine(
                 self.database_url,
                 connect_args=connect_args,
@@ -69,15 +72,13 @@ class DatabaseService(Service):
                 return self._create_engine()
             raise RuntimeError("Error creating database engine") from exc
 
-    @event.listens_for(Engine, "connect")
-    def on_connection(dbapi_connection, connection_record):
+    def on_connection(self, dbapi_connection, connection_record):
         from sqlite3 import Connection as sqliteConnection
 
         if isinstance(dbapi_connection, sqliteConnection):
-            pragmas: Optional[dict] = get_settings_service().settings.sqlite_pragmas
+            pragmas: Optional[dict] = self.settings_service.settings.sqlite_pragmas
             pragmas_list = []
             for key, val in pragmas.items() or {}:
-                logger.info(f"sqlite pragma set {key} = {val}")
                 pragmas_list.append(f"PRAGMA {key} = {val}")
             logger.info(f"sqlite connection, setting pragmas: {str(pragmas_list)}")
             if pragmas_list:
