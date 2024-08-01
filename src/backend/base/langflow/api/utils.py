@@ -222,5 +222,5 @@ def get_api_exception_body(exc: str | list[str], flow: Flow) -> exceptionBody:
     outdated_components = get_outdated_components(flow)
     if outdated_components:
         body["suggestion"] = get_suggestion_messsage(outdated_components)
-    excep = exceptionBody(**body)
+    excep = ExceptionBody(**body)
     return excep
