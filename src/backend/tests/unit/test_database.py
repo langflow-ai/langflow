@@ -402,3 +402,13 @@ def test_migrate_transactions_no_duckdb(client: TestClient):
         migrate_transactions_from_monitor_service_to_database(session)
         new_trans = get_transactions_by_flow_id(session, UUID(flow_id))
         assert 0 == len(new_trans)
+
+
+def test_sqlite_pragmas():
+    db_service = get_db_service()
+
+    with db_service as session:
+        from sqlalchemy import text
+
+        assert "wal" == session.execute(text("PRAGMA journal_mode;")).fetchone()[0]
+        assert 1 == session.execute(text("PRAGMA synchronous;")).fetchone()[0]
