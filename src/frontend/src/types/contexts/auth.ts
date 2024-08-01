@@ -3,7 +3,6 @@ import { Users } from "../api";
 export type AuthContextType = {
   accessToken: string | null;
   login: (accessToken: string, autoLogin: string) => void;
-  logout: () => Promise<void>;
   userData: Users | null;
   setUserData: (userData: Users | null) => void;
   authenticationErrorCount: number;

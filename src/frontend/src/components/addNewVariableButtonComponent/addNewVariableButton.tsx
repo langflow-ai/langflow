@@ -1,8 +1,11 @@
-import { usePostGlobalVariables } from "@/controllers/API/queries/variables";
-import { useState } from "react";
+import {
+  useGetGlobalVariables,
+  usePostGlobalVariables,
+} from "@/controllers/API/queries/variables";
+import getUnavailableFields from "@/stores/globalVariablesStore/utils/get-unavailable-fields";
+import { useEffect, useState } from "react";
 import BaseModal from "../../modals/baseModal";
 import useAlertStore from "../../stores/alertStore";
-import { useGlobalVariablesStore } from "../../stores/globalVariablesStore/globalVariables";
 import { useTypesStore } from "../../stores/typesStore";
 import { ResponseErrorDetailAPI } from "../../types/api";
 import ForwardedIconComponent from "../genericIconComponent";
@@ -28,26 +31,21 @@ export default function AddNewVariableButton({
   const [open, setOpen] = useState(false);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const componentFields = useTypesStore((state) => state.ComponentFields);
-
-  const unavaliableFields = new Set(
-    Object.keys(
-      useGlobalVariablesStore((state) => state.unavaliableFields) ?? {},
-    ),
-  );
-
-  const availableFields = () => {
-    const fields = Array.from(componentFields).filter(
-      (field) => !unavaliableFields.has(field),
-    );
-
-    return sortByName(fields);
-  };
-
-  const addGlobalVariable = useGlobalVariablesStore(
-    (state) => state.addGlobalVariable,
-  );
-
   const { mutate: mutateAddGlobalVariable } = usePostGlobalVariables();
+  const { data: globalVariables } = useGetGlobalVariables();
+  const [availableFields, setAvailableFields] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (globalVariables && componentFields.size > 0) {
+      const unavailableFields = getUnavailableFields(globalVariables);
+      const fields = Array.from(componentFields).filter(
+        (field) => !unavailableFields.hasOwnProperty(field),
+      );
+
+      setAvailableFields(sortByName(fields));
+    }
+  }, [globalVariables, componentFields]);
+
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
 
   function handleSaveVariable() {
@@ -65,8 +63,7 @@ export default function AddNewVariableButton({
 
     mutateAddGlobalVariable(data, {
       onSuccess: (res) => {
-        const { name, id, type } = res.data;
-        addGlobalVariable(name, id, type, fields);
+        const { name } = res;
         setKey("");
         setValue("");
         setType("");
@@ -156,7 +153,7 @@ export default function AddNewVariableButton({
           <InputComponent
             setSelectedOptions={(value) => setFields(value)}
             selectedOptions={fields}
-            options={availableFields()}
+            options={availableFields}
             password={false}
             placeholder="Choose a field for the variable..."
             id={"apply-to-fields"}

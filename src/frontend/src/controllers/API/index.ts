@@ -7,8 +7,6 @@ import {
   APITemplateType,
   Component,
   CustomComponentRequest,
-  LoginType,
-  ProfilePicturesTypeAPI,
   Users,
   VertexBuildTypeAPI,
   VerticesOrderTypeAPI,
@@ -730,23 +728,6 @@ export async function requestLogout() {
     return response?.data;
   } catch (error) {
     console.error(error);
-    throw error;
-  }
-}
-
-export async function updateGlobalVariable(
-  name: string,
-  value: string,
-  id: string,
-) {
-  try {
-    const response = api.patch(`${BASE_URL_API}variables/${id}`, {
-      name,
-      value,
-    });
-
-    return response;
-  } catch (error) {
     throw error;
   }
 }
