@@ -7,7 +7,7 @@ class InvalidChatInputException(Exception):
 
 
 # create a pidantic documentation for this class
-class exceptionBody(BaseModel):
+class ExceptionBody(BaseModel):
     message: str | list[str]
     traceback: str | list[str] | None = None
     description: str | list[str] | None = None
