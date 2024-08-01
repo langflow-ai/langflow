@@ -2,7 +2,6 @@ import { brokenEdgeMessage } from "@/utils/utils";
 import { AxiosError } from "axios";
 import { cloneDeep } from "lodash";
 import pDebounce from "p-debounce";
-import { useLocation } from "react-router-dom";
 import { Edge, Node, Viewport, XYPosition } from "reactflow";
 import { create } from "zustand";
 import {
