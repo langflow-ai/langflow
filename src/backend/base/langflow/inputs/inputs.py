@@ -1,6 +1,6 @@
+import warnings
 from typing import Any, AsyncIterator, Iterator, Optional, Union, get_args
 
-from loguru import logger
 from pydantic import Field, field_validator
 
 from langflow.inputs.validators import CoalesceBool
@@ -96,11 +96,11 @@ class StrInput(BaseInputMixin, ListableInputMixin, DatabaseLoadMixin, MetadataTr
         if not isinstance(v, str) and v is not None:
             # Keep the warning for now, but we should change it to an error
             if _info.data.get("input_types") and v.__class__.__name__ not in _info.data.get("input_types"):
-                logger.warning(
+                warnings.warn(
                     f"Invalid value type {type(v)} for input {_info.data.get('name')}. Expected types: {_info.data.get('input_types')}"
                 )
             else:
-                logger.warning(f"Invalid value type {type(v)} for input {_info.data.get('name')}.")
+                warnings.warn(f"Invalid value type {type(v)} for input {_info.data.get('name')}.")
         return v
 
     @field_validator("value")
