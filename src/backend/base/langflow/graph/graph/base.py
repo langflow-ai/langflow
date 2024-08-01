@@ -1186,18 +1186,21 @@ class Graph:
 
         edges: set[ContractEdge] = set()
         for edge in self._edges:
-            source = self.get_vertex(edge["source"])
-            target = self.get_vertex(edge["target"])
-
-            if source is None:
-                raise ValueError(f"Source vertex {edge['source']} not found")
-            if target is None:
-                raise ValueError(f"Target vertex {edge['target']} not found")
-            new_edge = ContractEdge(source, target, edge)
-
+            new_edge = self.build_edge(edge)
             edges.add(new_edge)
 
         return list(edges)
+
+    def build_edge(self, edge: EdgeData) -> ContractEdge:
+        source = self.get_vertex(edge["source"])
+        target = self.get_vertex(edge["target"])
+
+        if source is None:
+            raise ValueError(f"Source vertex {edge['source']} not found")
+        if target is None:
+            raise ValueError(f"Target vertex {edge['target']} not found")
+        new_edge = ContractEdge(source, target, edge)
+        return new_edge
 
     def _get_vertex_class(self, node_type: str, node_base_type: str, node_id: str) -> Type[Vertex]:
         """Returns the node class based on the node type."""
