@@ -232,7 +232,7 @@ class TracingService(Service):
     def get_langchain_callbacks(self) -> List["BaseCallbackHandler"]:
         callbacks = []
         for tracer in self._tracers.values():
-            if not tracer.ready:
+            if not tracer.ready:  # type: ignore
                 continue
             langchain_callback = tracer.get_langchain_callback()
             if langchain_callback:

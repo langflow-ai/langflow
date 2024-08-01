@@ -531,6 +531,6 @@ class CustomComponent(BaseComponent):
         return frontend_node
 
     def get_langchain_callbacks(self) -> List["BaseCallbackHandler"]:
-        if self.tracing_service:
-            return self.tracing_service.get_langchain_callbacks()
+        if self._tracing_service:
+            return self._tracing_service.get_langchain_callbacks()
         return []
