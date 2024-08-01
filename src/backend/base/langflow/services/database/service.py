@@ -1,4 +1,5 @@
 import time
+import os
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -75,13 +76,16 @@ class DatabaseService(Service):
 
         if isinstance(dbapi_connection, sqliteConnection):
             logger.info("sqlite connect listener, setting pragmas")
-            cursor = dbapi_connection.cursor()
-            try:
-                cursor.execute("PRAGMA synchronous = NORMAL")
-                cursor.execute("PRAGMA journal_mode = WAL")
-                cursor.close()
-            except OperationalError as oe:
-                logger.warning("Failed to set PRAGMA: ", {oe})
+            val = os.environ["SQLITE_PRAGMA"]
+            if val != "":
+                try:
+                    cursor = dbapi_connection.cursor()
+                    for pragma in val.split(","):
+                        logger.info(f"sqlite pragma set {pragma}")
+                        cursor.execute(pragma)
+                    cursor.close()
+                except OperationalError as oe:
+                    logger.warning("Failed to set PRAGMA: ", {oe})
 
     def __enter__(self):
         self._session = Session(self.engine)
