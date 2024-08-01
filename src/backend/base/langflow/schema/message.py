@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime, timezone
 from typing import Annotated, Any, AsyncIterator, Iterator, List, Optional
 from uuid import UUID
@@ -15,10 +16,10 @@ from langflow.base.prompts.utils import dict_values_to_string
 from langflow.schema.data import Data
 from langflow.schema.image import Image, get_file_paths, is_image_file
 from langflow.utils.constants import (
-    MESSAGE_SENDER_USER,
-    MESSAGE_SENDER_NAME_USER,
-    MESSAGE_SENDER_NAME_AI,
     MESSAGE_SENDER_AI,
+    MESSAGE_SENDER_NAME_AI,
+    MESSAGE_SENDER_NAME_USER,
+    MESSAGE_SENDER_USER,
 )
 
 
@@ -164,27 +165,32 @@ class Message(Data):
                 content_dicts.append(file.to_content_dict())
             else:
                 image_template = ImagePromptTemplate()
-                image_prompt_value: ImagePromptValue = image_template.invoke(input={"path": file})
+                image_prompt_value: ImagePromptValue = image_template.invoke(
+                    input={"path": file}, config={"callbacks": self.get_langchain_callbacks()}
+                )  # type: ignore
                 content_dicts.append({"type": "image_url", "image_url": image_prompt_value.image_url})
         return content_dicts
 
     def load_lc_prompt(self):
         if "prompt" not in self:
             raise ValueError("Prompt is required.")
-        loaded_prompt = load(self.prompt)
-        # Rebuild HumanMessages if they are instance of BaseMessage
-        if isinstance(loaded_prompt, ChatPromptTemplate):
-            messages = []
-            for message in loaded_prompt.messages:
-                if isinstance(message, HumanMessage):
+        # self.prompt was passed through jsonable_encoder
+        # so inner messages are not BaseMessage
+        # we need to convert them to BaseMessage
+        messages = []
+        for message in self.prompt.get("kwargs", {}).get("messages", []):
+            match message:
+                case HumanMessage():
                     messages.append(message)
-                elif message.type == "human":
-                    messages.append(HumanMessage(content=message.content))
-                elif message.type == "system":
-                    messages.append(SystemMessage(content=message.content))
-                elif message.type == "ai":
-                    messages.append(AIMessage(content=message.content))
-            loaded_prompt.messages = messages
+                case _ if message.get("type") == "human":
+                    messages.append(HumanMessage(content=message.get("content")))
+                case _ if message.get("type") == "system":
+                    messages.append(SystemMessage(content=message.get("content")))
+                case _ if message.get("type") == "ai":
+                    messages.append(AIMessage(content=message.get("content")))
+
+        self.prompt["kwargs"]["messages"] = messages
+        loaded_prompt = load(self.prompt)
         return loaded_prompt
 
     @classmethod
@@ -216,7 +222,17 @@ class Message(Data):
         if contents:
             message = HumanMessage(content=[{"type": "text", "text": text}] + contents)
 
-        prompt_template = ChatPromptTemplate.from_messages([message])  # type: ignore
+        prompt_template = ChatPromptTemplate(messages=[message])  # type: ignore
         instance.prompt = jsonable_encoder(prompt_template.to_json())
         instance.messages = instance.prompt.get("kwargs", {}).get("messages", [])
         return instance
+
+    @classmethod
+    def sync_from_template_and_variables(cls, template: str, **variables):
+        # Run the async version in a sync way
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            return asyncio.run(cls.from_template_and_variables(template, **variables))
+        else:
+            return loop.run_until_complete(cls.from_template_and_variables(template, **variables))

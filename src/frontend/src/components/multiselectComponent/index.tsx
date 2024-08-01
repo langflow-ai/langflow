@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { MultiselectComponentType } from "../../types/components";
 import { cn } from "../../utils/utils";
 import { default as ForwardedIconComponent } from "../genericIconComponent";
+import ShadTooltip from "../shadTooltipComponent";
 import { Button } from "../ui/button";
 import {
   Command,
@@ -51,7 +52,7 @@ export default function MultiselectComponent({
     const fuse = onlySelected ? fuseValues : fuseOptions;
     const searchValues = fuse.search(v);
     let filtered: string[] = searchValues.map((search) => search.item);
-    if (!filtered.includes(v) && combobox) filtered = [v, ...filtered];
+    if (!filtered.includes(v) && combobox && v) filtered = [v, ...filtered];
     setFilteredOptions(
       v
         ? filtered
@@ -60,6 +61,12 @@ export default function MultiselectComponent({
           : options,
     );
   };
+
+  useEffect(() => {
+    if (disabled && value.length > 0 && value[0] !== "") {
+      onSelect([], undefined, true);
+    }
+  }, [disabled]);
 
   useEffect(() => {
     searchRoleByTerm(searchValue);
@@ -72,7 +79,7 @@ export default function MultiselectComponent({
   useEffect(() => {
     setCustomValues(value.filter((v) => !defaultOptions.includes(v)) ?? []);
     setOptions([
-      ...value.filter((v) => !defaultOptions.includes(v)),
+      ...value.filter((v) => !defaultOptions.includes(v) && v),
       ...defaultOptions,
     ]);
   }, [value]);
@@ -87,7 +94,7 @@ export default function MultiselectComponent({
 
   return (
     <>
-      {Object.keys(options ?? [])?.length > 0 ? (
+      {Object.keys(options ?? [])?.length > 0 || combobox ? (
         <>
           <Popover open={open} onOpenChange={children ? () => {} : setOpen}>
             {children ? (
@@ -171,38 +178,48 @@ export default function MultiselectComponent({
                   <CommandEmpty>No values found.</CommandEmpty>
                   <CommandGroup defaultChecked={false}>
                     {filteredOptions?.map((option, id) => (
-                      <CommandItem
+                      <ShadTooltip
+                        delayDuration={700}
                         key={id}
-                        value={option}
-                        onSelect={(currentValue) => {
-                          if (value.includes(currentValue)) {
-                            onSelect(value.filter((v) => v !== currentValue));
-                          } else {
-                            onSelect([...value, currentValue]);
-                          }
-                        }}
-                        className="items-center truncate"
-                        data-testid={`${option}-${id ?? ""}-option`}
+                        content={option}
                       >
-                        {customValues.includes(option) ||
-                        searchValue === option ? (
-                          <span className="text-muted-foreground">
-                            Text:&nbsp;
-                          </span>
-                        ) : (
-                          <></>
-                        )}
-                        {option}
-                        <ForwardedIconComponent
-                          name="Check"
-                          className={cn(
-                            "ml-auto h-4 w-4 text-primary",
-                            value.includes(option)
-                              ? "opacity-100"
-                              : "opacity-0",
-                          )}
-                        />
-                      </CommandItem>
+                        <div>
+                          <CommandItem
+                            key={id}
+                            value={option}
+                            onSelect={(currentValue) => {
+                              if (value.includes(currentValue)) {
+                                onSelect(
+                                  value.filter((v) => v !== currentValue),
+                                );
+                              } else {
+                                onSelect([...value, currentValue]);
+                              }
+                            }}
+                            className="items-center overflow-hidden truncate"
+                            data-testid={`${option}-${id ?? ""}-option`}
+                          >
+                            {customValues.includes(option) ||
+                            searchValue === option ? (
+                              <span className="text-muted-foreground">
+                                Text:&nbsp;
+                              </span>
+                            ) : (
+                              <></>
+                            )}
+                            <span className="truncate">{option}</span>
+                            <ForwardedIconComponent
+                              name="Check"
+                              className={cn(
+                                "ml-auto h-4 w-4 shrink-0 text-primary",
+                                value.includes(option)
+                                  ? "opacity-100"
+                                  : "opacity-0",
+                              )}
+                            />
+                          </CommandItem>
+                        </div>
+                      </ShadTooltip>
                     ))}
                   </CommandGroup>
                 </CommandList>

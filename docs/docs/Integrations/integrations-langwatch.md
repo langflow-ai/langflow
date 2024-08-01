@@ -17,7 +17,7 @@ To integrate with Langflow, just add your LangWatch API as a Langflow environmen
 
 ## Step-by-step Configuration {#6f1d56ff6063417491d100d522dfcf1a}
 
-1. Obtain your LangWatch API key from [https://app.langwatch.com/](https://app.langwatch.com/)
+1. Obtain your LangWatch API key from [https://app.langwatch.ai/](https://app.langwatch.ai/)
 2. Add the following key to Langflow .env file:
 
 ```shell

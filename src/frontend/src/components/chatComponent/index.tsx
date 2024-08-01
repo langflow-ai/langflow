@@ -1,3 +1,4 @@
+import FeatureFlags from "@/../feature-config.json";
 import { Transition } from "@headlessui/react";
 import { useMemo, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
@@ -140,30 +141,34 @@ export default function FlowToolbar(): JSX.Element {
             <div>
               <Separator orientation="vertical" />
             </div>
-            <div className="flex cursor-pointer items-center gap-2">
-              {currentFlow && currentFlow.data && (
-                <ApiModal
-                  flow={currentFlow}
-                  open={openCodeModal}
-                  setOpen={setOpenCodeModal}
-                >
-                  <div
-                    className={classNames(
-                      "relative inline-flex w-full items-center justify-center gap-1 px-5 py-3 text-sm font-semibold text-foreground transition-all duration-150 ease-in-out hover:bg-hover",
-                    )}
-                  >
-                    <ForwardedIconComponent
-                      name="Code2"
-                      className={"h-5 w-5"}
-                    />
-                    API
-                  </div>
-                </ApiModal>
-              )}
-            </div>
-            <div>
-              <Separator orientation="vertical" />
-            </div>
+            {FeatureFlags.ENABLE_API && (
+              <>
+                <div className="flex cursor-pointer items-center gap-2">
+                  {currentFlow && currentFlow.data && (
+                    <ApiModal
+                      flow={currentFlow}
+                      open={openCodeModal}
+                      setOpen={setOpenCodeModal}
+                    >
+                      <div
+                        className={classNames(
+                          "relative inline-flex w-full items-center justify-center gap-1 px-5 py-3 text-sm font-semibold text-foreground transition-all duration-150 ease-in-out hover:bg-hover",
+                        )}
+                      >
+                        <ForwardedIconComponent
+                          name="Code2"
+                          className={"h-5 w-5"}
+                        />
+                        API
+                      </div>
+                    </ApiModal>
+                  )}
+                </div>
+                <div>
+                  <Separator orientation="vertical" />
+                </div>
+              </>
+            )}
             <div className="flex items-center gap-2">
               <div
                 className={`side-bar-button ${
