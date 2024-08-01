@@ -262,7 +262,7 @@ async def simplified_run_flow(
         else:
             logger.exception(exc)
             raise APIException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, exception=get_api_exception_body(exc, flow)
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, exception=from_exc_and_flow(exc, flow)
             ) from exc
     except InvalidChatInputException as exc:
         logger.error(exc)
@@ -280,7 +280,7 @@ async def simplified_run_flow(
         )
         logger.exception(exc)
         raise APIException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, exception=get_api_exception_body(exc, flow)
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, exception=from_exc_and_flow(exc, flow)
         ) from exc
 
 
