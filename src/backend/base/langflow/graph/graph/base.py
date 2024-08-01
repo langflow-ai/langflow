@@ -11,14 +11,14 @@ from loguru import logger
 from langflow.exceptions.component import ComponentBuildException
 from langflow.graph.edge.base import ContractEdge
 from langflow.graph.edge.schema import EdgeData
-from langflow.graph.graph.constants import lazy_load_vertex_dict
+from langflow.graph.graph.constants import Finish, lazy_load_vertex_dict
 from langflow.graph.graph.runnable_vertices_manager import RunnableVerticesManager
 from langflow.graph.graph.schema import VertexBuildResult
 from langflow.graph.graph.state_manager import GraphStateManager
 from langflow.graph.graph.utils import find_start_component_id, process_flow, sort_up_to_vertex
 from langflow.graph.schema import InterfaceComponentTypes, RunOutputs
 from langflow.graph.vertex.base import Vertex, VertexStates
-from langflow.graph.vertex.types import InterfaceVertex, StateVertex
+from langflow.graph.vertex.types import ComponentVertex, InterfaceVertex, StateVertex
 from langflow.schema import Data
 from langflow.schema.schema import INPUT_FIELD_NAME, InputType
 from langflow.services.cache.utils import CacheMiss
@@ -26,6 +26,8 @@ from langflow.services.chat.schema import GetCache, SetCache
 from langflow.services.deps import get_chat_service, get_tracing_service
 
 if TYPE_CHECKING:
+    from langflow.api.v1.schemas import InputValueRequest
+    from langflow.custom.custom_component.component import Component
     from langflow.graph.schema import ResultData
     from langflow.services.tracing.service import TracingService
 
@@ -35,6 +37,8 @@ class Graph:
 
     def __init__(
         self,
+        start: Optional["Component"] = None,
+        end: Optional["Component"] = None,
         flow_id: Optional[str] = None,
         flow_name: Optional[str] = None,
         user_id: Optional[str] = None,
@@ -47,6 +51,7 @@ class Graph:
             edges (List[Dict[str, str]]): A list of dictionaries representing the edges of the graph.
             flow_id (Optional[str], optional): The ID of the flow. Defaults to None.
         """
+        self._prepared = False
         self._runs = 0
         self._updates = 0
         self.flow_id = flow_id
@@ -85,6 +90,11 @@ class Graph:
         except Exception as exc:
             logger.error(f"Error getting tracing service: {exc}")
             self.tracing_service = None
+        if start is not None and end is not None:
+            self._set_start_and_end(start, end)
+            self.prepare()
+        if (start is not None and end is None) or (start is None and end is not None):
+            raise ValueError("You must provide both input and output components")
 
     def add_nodes_and_edges(self, nodes: List[Dict], edges: List[EdgeData]):
         self._vertices = nodes
@@ -100,11 +110,111 @@ class Graph:
         self._edges = self._graph_data["edges"]
         self.initialize()
 
+    def add_component(self, _id: str, component: "Component"):
+        if _id in self.vertex_map:
+            return
+        frontend_node = component.to_frontend_node()
+        frontend_node["data"]["id"] = _id
+        frontend_node["id"] = _id
+        self._vertices.append(frontend_node)
+        vertex = self._create_vertex(frontend_node)
+        vertex.add_component_instance(component)
+        self.vertices.append(vertex)
+        self.vertex_map[_id] = vertex
+
+        if component._edges:
+            for edge in component._edges:
+                self._add_edge(edge)
+
+        if component._components:
+            for _component in component._components:
+                self.add_component(_component._id, _component)
+
+    def _set_start_and_end(self, start: "Component", end: "Component"):
+        if not hasattr(start, "to_frontend_node"):
+            raise TypeError(f"start must be a Component. Got {type(start)}")
+        if not hasattr(end, "to_frontend_node"):
+            raise TypeError(f"end must be a Component. Got {type(end)}")
+        self.add_component(start._id, start)
+        self.add_component(end._id, end)
+
+    def add_component_edge(self, source_id: str, output_input_tuple: Tuple[str, str], target_id: str):
+        source_vertex = self.get_vertex(source_id)
+        if not isinstance(source_vertex, ComponentVertex):
+            raise ValueError(f"Source vertex {source_id} is not a component vertex.")
+        target_vertex = self.get_vertex(target_id)
+        if not isinstance(target_vertex, ComponentVertex):
+            raise ValueError(f"Target vertex {target_id} is not a component vertex.")
+        output_name, input_name = output_input_tuple
+        edge_data: EdgeData = {
+            "source": source_id,
+            "target": target_id,
+            "data": {
+                "sourceHandle": {
+                    "dataType": source_vertex.base_name,
+                    "id": source_vertex.id,
+                    "name": output_name,
+                    "output_types": source_vertex.get_output(output_name).types,
+                },
+                "targetHandle": {
+                    "fieldName": input_name,
+                    "id": target_vertex.id,
+                    "inputTypes": target_vertex.get_input(input_name).input_types,
+                    "type": str(target_vertex.get_input(input_name).field_type),
+                },
+            },
+        }
+        self._add_edge(edge_data)
+
+    async def async_start(self, inputs: Optional[List[dict]] = None):
+        if not self._prepared:
+            raise ValueError("Graph not prepared. Call prepare() first.")
+        # The idea is for this to return a generator that yields the result of
+        # each step call and raise StopIteration when the graph is done
+        for _input in inputs or []:
+            for key, value in _input.items():
+                vertex = self.get_vertex(key)
+                vertex.set_input_value(key, value)
+        while True:
+            result = await self.astep()
+            yield result
+            if isinstance(result, Finish):
+                return
+
+    def start(self, inputs: Optional[List[dict]] = None) -> Generator:
+        #! Change this soon
+        nest_asyncio.apply()
+        loop = asyncio.get_event_loop()
+        async_gen = self.async_start(inputs)
+        async_gen_task = asyncio.ensure_future(async_gen.__anext__())
+
+        while True:
+            try:
+                result = loop.run_until_complete(async_gen_task)
+                yield result
+                if isinstance(result, Finish):
+                    return
+                async_gen_task = asyncio.ensure_future(async_gen.__anext__())
+            except StopAsyncIteration:
+                break
+
+    def _add_edge(self, edge: EdgeData):
+        self.add_edge(edge)
+        source_id = edge["data"]["sourceHandle"]["id"]
+        target_id = edge["data"]["targetHandle"]["id"]
+        self.predecessor_map[target_id].append(source_id)
+        self.successor_map[source_id].append(target_id)
+        self.in_degree_map[target_id] += 1
+        self.parent_child_map[source_id].append(target_id)
+
     # TODO: Create a TypedDict to represente the node
     def add_node(self, node: dict):
         self._vertices.append(node)
 
     def add_edge(self, edge: EdgeData):
+        # Check if the edge already exists
+        if edge in self._edges:
+            return
         self._edges.append(edge)
 
     def initialize(self):
