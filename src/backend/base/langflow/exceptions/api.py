@@ -17,4 +17,4 @@ class ExceptionBody(BaseModel):
 
 class APIException(HTTPException):
     def __init__(self, exception: exceptionBody, status_code: int = 500):
-        super().__init__(status_code=status_code, detail=exception.model_dump())
+        super().__init__(status_code=status_code, detail=exception.model_dump_json())
