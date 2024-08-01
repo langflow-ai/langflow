@@ -28,7 +28,7 @@ class ConversationChainComponent(LCChainComponent):
         else:
             chain = ConversationChain(llm=self.llm, memory=self.memory)
 
-        result = chain.invoke({"input": self.input_value})
+        result = chain.invoke({"input": self.input_value}, config={"callbacks": self.get_langchain_callbacks()})
         if isinstance(result, dict):
             result = result.get(chain.output_key, "")  # type: ignore
 

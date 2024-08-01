@@ -58,7 +58,7 @@ class NvidiaRerankComponent(LCVectorStoreComponent):
 
     async def search_documents(self) -> List[Data]:  # type: ignore
         retriever = self.build_base_retriever()
-        documents = await retriever.ainvoke(self.search_query)
+        documents = await retriever.ainvoke(self.search_query, config={"callbacks": self.get_langchain_callbacks()})
         data = self.to_data(documents)
         self.status = data
         return data

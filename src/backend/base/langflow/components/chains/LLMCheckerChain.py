@@ -20,7 +20,9 @@ class LLMCheckerChainComponent(LCChainComponent):
 
     def invoke_chain(self) -> Message:
         chain = LLMCheckerChain.from_llm(llm=self.llm)
-        response = chain.invoke({chain.input_key: self.input_value})
+        response = chain.invoke(
+            {chain.input_key: self.input_value}, config={"callbacks": self.get_langchain_callbacks()}
+        )
         result = response.get(chain.output_key, "")
         result = str(result)
         self.status = result

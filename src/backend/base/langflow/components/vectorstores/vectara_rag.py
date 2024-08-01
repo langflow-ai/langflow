@@ -120,7 +120,7 @@ class VectaraRagComponent(Component):
             rerank_config=rerank_config,
         )
         rag = vectara.as_rag(config)
-        response = rag.invoke(self.search_query)
+        response = rag.invoke(self.search_query, config={"callbacks": self.get_langchain_callbacks()})
 
         text_output = response["answer"]
 

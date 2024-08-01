@@ -98,7 +98,9 @@ class LCAgentComponent(Component):
         self.chat_history = self.get_chat_history_data()
         if self.chat_history:
             input_dict["chat_history"] = data_to_messages(self.chat_history)
-        result = await agent.ainvoke(input_dict, config={"callbacks": [AgentAsyncHandler(self.log)]})
+        result = await agent.ainvoke(
+            input_dict, config={"callbacks": [AgentAsyncHandler(self.log)] + self.get_langchain_callbacks()}
+        )
         self.status = result
         if "output" not in result:
             raise ValueError("Output key not found in result. Tried 'output'.")
@@ -141,7 +143,10 @@ class LCToolsAgentComponent(LCAgentComponent):
         input_dict: dict[str, str | list[BaseMessage]] = {"input": self.input_value}
         if self.chat_history:
             input_dict["chat_history"] = data_to_messages(self.chat_history)
-        result = await runnable.ainvoke(input_dict, config={"callbacks": [AgentAsyncHandler(self.log)]})
+
+        result = await runnable.ainvoke(
+            input_dict, config={"callbacks": [AgentAsyncHandler(self.log)] + self.get_langchain_callbacks()}
+        )
         self.status = result
         if "output" not in result:
             raise ValueError("Output key not found in result. Tried 'output'.")
