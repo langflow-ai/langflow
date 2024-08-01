@@ -156,7 +156,12 @@ class Message(Data):
             return ""
         return value
 
-    async def get_file_content_dicts(self):
+    def get_file_content_dicts(self):
+        coro = self.aget_file_content_dicts()
+        loop = asyncio.get_event_loop()
+        return loop.run_until_complete(coro)
+
+    async def aget_file_content_dicts(self):
         content_dicts = []
         files = await get_file_paths(self.files)
 
