@@ -28,7 +28,7 @@ export default function SingleAlert({
 
   return (
     <Transition
-    //@ts-ignore
+      //@ts-ignore
       className="noflow nowheel nopan nodelete nodrag relative"
       show={show}
       appear={true}
@@ -40,10 +40,7 @@ export default function SingleAlert({
       leaveTo={"transform translate-x-[-100%]"}
     >
       {type === "error" ? (
-        <div
-          className={`${classes} bg-error-background`}
-          key={dropItem.id}
-        >
+        <div className={`${classes} bg-error-background`} key={dropItem.id}>
           <div className="flex-shrink-0">
             <IconComponent
               name="XCircle"
@@ -92,10 +89,7 @@ export default function SingleAlert({
           </div>
         </div>
       ) : type === "notice" ? (
-        <div
-          className={`${classes} bg-info-background`}
-          key={dropItem.id}
-        >
+        <div className={`${classes} bg-info-background`} key={dropItem.id}>
           <div className="flex-shrink-0 cursor-help">
             <IconComponent
               name="Info"
@@ -143,10 +137,7 @@ export default function SingleAlert({
           </div>
         </div>
       ) : (
-        <div
-          className={`${classes} bg-success-background`}
-          key={dropItem.id}
-        >
+        <div className={`${classes} bg-success-background`} key={dropItem.id}>
           <div className="flex-shrink-0">
             <IconComponent
               name="CheckCircle2"
