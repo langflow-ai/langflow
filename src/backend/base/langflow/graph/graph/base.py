@@ -359,20 +359,7 @@ class Graph:
         if not isinstance(inputs.get(INPUT_FIELD_NAME, ""), str):
             raise ValueError(f"Invalid input value: {inputs.get(INPUT_FIELD_NAME)}. Expected string")
         if inputs:
-            for vertex_id in self._is_input_vertices:
-                vertex = self.get_vertex(vertex_id)
-                # If the vertex is not in the input_components list
-                if input_components and (
-                    vertex_id not in input_components and vertex.display_name not in input_components
-                ):
-                    continue
-                # If the input_type is not any and the input_type is not in the vertex id
-                # Example: input_type = "chat" and vertex.id = "OpenAI-19ddn"
-                elif input_type is not None and input_type != "any" and input_type not in vertex.id.lower():
-                    continue
-                if vertex is None:
-                    raise ValueError(f"Vertex {vertex_id} not found")
-                vertex.update_raw_params(inputs, overwrite=True)
+            self._set_inputs(input_components, inputs, input_type)
         # Update all the vertices with the session_id
         for vertex_id in self._has_session_id_vertices:
             vertex = self.get_vertex(vertex_id)
