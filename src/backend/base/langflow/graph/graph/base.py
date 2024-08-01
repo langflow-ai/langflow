@@ -1459,6 +1459,7 @@ class Graph:
         self.vertices_to_run = {vertex_id for vertex_id in chain.from_iterable(vertices_layers)}
         self.build_run_map()
         # Return just the first layer
+        self._first_layer = first_layer
         return first_layer
 
     def sort_interface_components_first(self, vertices_layers: List[List[str]]) -> List[List[str]]:
