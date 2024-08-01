@@ -1,6 +1,7 @@
 import operator
 import warnings
 from typing import Any, ClassVar, Optional
+from uuid import UUID
 
 from cachetools import TTLCache, cachedmethod
 from fastapi import HTTPException
@@ -27,7 +28,8 @@ class BaseComponent:
     """The code of the component. Defaults to None."""
     _function_entrypoint_name: str = "build"
     field_config: dict = {}
-    _user_id: Optional[str]
+    _user_id: Optional[str | UUID] = None
+    _template_config: dict = {}
 
     def __init__(self, **data):
         self.cache = TTLCache(maxsize=1024, ttl=60)
@@ -38,7 +40,7 @@ class BaseComponent:
                 setattr(self, key, value)
 
     def __setattr__(self, key, value):
-        if key == "_user_id" and hasattr(self, "_user_id"):
+        if key == "_user_id" and hasattr(self, "_user_id") and getattr(self, "_user_id") is not None:
             warnings.warn("user_id is immutable and cannot be changed.")
         super().__setattr__(key, value)
 
@@ -65,6 +67,25 @@ class BaseComponent:
 
         return validate.create_function(self._code, self._function_entrypoint_name)
 
+    @staticmethod
+    def get_template_config(component):
+        """
+        Gets the template configuration for the custom component itself.
+        """
+        template_config = {}
+
+        for attribute, func in ATTR_FUNC_MAPPING.items():
+            if hasattr(component, attribute):
+                value = getattr(component, attribute)
+                if value is not None:
+                    template_config[attribute] = func(value=value)
+
+        for key in template_config.copy():
+            if key not in ATTR_FUNC_MAPPING.keys():
+                template_config.pop(key, None)
+
+        return template_config
+
     def build_template_config(self) -> dict:
         """
         Builds the template configuration for the custom component.
@@ -77,18 +98,7 @@ class BaseComponent:
 
         cc_class = eval_custom_component_code(self._code)
         component_instance = cc_class()
-        template_config = {}
-
-        for attribute, func in ATTR_FUNC_MAPPING.items():
-            if hasattr(component_instance, attribute):
-                value = getattr(component_instance, attribute)
-                if value is not None:
-                    template_config[attribute] = func(value=value)
-
-        for key in template_config.copy():
-            if key not in ATTR_FUNC_MAPPING.keys():
-                template_config.pop(key, None)
-
+        template_config = self.get_template_config(component_instance)
         return template_config
 
     def build(self, *args: Any, **kwargs: Any) -> Any:
