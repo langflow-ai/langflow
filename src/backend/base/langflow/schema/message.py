@@ -156,7 +156,12 @@ class Message(Data):
             return ""
         return value
 
-    async def get_file_content_dicts(self):
+    def get_file_content_dicts(self):
+        coro = self.aget_file_content_dicts()
+        loop = asyncio.get_event_loop()
+        return loop.run_until_complete(coro)
+
+    async def aget_file_content_dicts(self):
         content_dicts = []
         files = await get_file_paths(self.files)
 
@@ -165,7 +170,9 @@ class Message(Data):
                 content_dicts.append(file.to_content_dict())
             else:
                 image_template = ImagePromptTemplate()
-                image_prompt_value: ImagePromptValue = image_template.invoke(input={"path": file})
+                image_prompt_value: ImagePromptValue = image_template.invoke(
+                    input={"path": file}, config={"callbacks": self.get_langchain_callbacks()}
+                )  # type: ignore
                 content_dicts.append({"type": "image_url", "image_url": image_prompt_value.image_url})
         return content_dicts
 
