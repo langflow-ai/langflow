@@ -230,11 +230,11 @@ async function performStreamingRequest({
   if (accessToken) {
     headers["Authorization"] = `Bearer ${accessToken}`;
   }
-  const controller = new AbortController()
+  const controller = new AbortController();
   const params = {
     method: method,
     headers: headers,
-    signal: controller.signal
+    signal: controller.signal,
   };
   if (body) {
     params["body"] = JSON.stringify(body);
@@ -269,7 +269,7 @@ async function performStreamingRequest({
         const shouldContinue = await onData(data);
         if (!shouldContinue) {
           controller.abort();
-          return
+          return;
         }
       } else {
         current.push(string);
