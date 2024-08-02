@@ -195,6 +195,9 @@ line-length = 120
 plugins = ["pydantic.mypy"]
 follow_imports = "skip"
 disable_error_code = ["type-var"]
+namespace_packages = true
+mypy_path = "langflow"
+ignore_missing_imports = true
 
 [build-system]
 requires = ["poetry-core"]
