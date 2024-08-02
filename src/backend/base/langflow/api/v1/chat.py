@@ -221,7 +221,8 @@ async def build_flow(
                     artifacts,
                     vertex,
                 ) = await graph.build_vertex(
-                    chat_service=chat_service,
+                    get_cache=chat_service.get_cache,
+                    set_cache=chat_service.set_cache,
                     vertex_id=vertex_id,
                     user_id=current_user.id,
                     inputs_dict=inputs.model_dump() if inputs else {},
