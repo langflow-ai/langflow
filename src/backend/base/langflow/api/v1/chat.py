@@ -4,10 +4,9 @@ import time
 import traceback
 import typing
 import uuid
-from asyncio import QueueEmpty
 from typing import TYPE_CHECKING, Annotated, Optional
 
-from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from loguru import logger
 from starlette.background import BackgroundTask
@@ -20,7 +19,9 @@ from langflow.api.utils import (
     format_elapsed_time,
     format_exception_message,
     get_top_level_vertices,
-    parse_exception, build_graph_from_db_no_cache, build_graph_from_data,
+    parse_exception,
+    build_graph_from_db_no_cache,
+    build_graph_from_data,
 )
 from langflow.api.v1.schemas import (
     FlowDataRequest,
@@ -28,7 +29,7 @@ from langflow.api.v1.schemas import (
     ResultDataResponse,
     StreamData,
     VertexBuildResponse,
-    VerticesOrderResponse
+    VerticesOrderResponse,
 )
 from langflow.exceptions.component import ComponentBuildException
 from langflow.graph.graph.base import Graph
@@ -146,6 +147,7 @@ async def retrieve_vertices_order(
         logger.exception(exc)
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
+
 @router.post("/build/{flow_id}/flow")
 async def build_flow(
     background_tasks: BackgroundTasks,
@@ -159,9 +161,7 @@ async def build_flow(
     current_user=Depends(get_current_active_user),
     telemetry_service: "TelemetryService" = Depends(get_telemetry_service),
     session=Depends(get_session),
-
 ):
-
     async def build_graph_and_get_order() -> tuple[list[str], list[str], "Graph"]:
         start_time = time.perf_counter()
         components_count = None
@@ -213,7 +213,6 @@ async def build_flow(
             logger.error(f"Error checking build status: {exc}")
             logger.exception(exc)
             raise HTTPException(status_code=500, detail=str(exc)) from exc
-
 
     async def _build_vertex(vertex_id: str, graph: "Graph") -> VertexBuildResponse:
         flow_id_str = str(flow_id)
@@ -326,18 +325,16 @@ async def build_flow(
             message = parse_exception(exc)
             raise HTTPException(status_code=500, detail=message) from exc
 
-
     def send_event(event_type: str, value: dict, queue: asyncio.Queue) -> None:
-        json_data = {
-            "event": event_type,
-            "data": value
-        }
+        json_data = {"event": event_type, "data": value}
         event_id = uuid.uuid4()
         logger.debug(f"sending event {event_id}: {event_type}")
         str_data = json.dumps(json_data) + "\n\n"
-        queue.put_nowait((event_id, str_data.encode('utf-8'), time.time()))
+        queue.put_nowait((event_id, str_data.encode("utf-8"), time.time()))
 
-    async def build_vertices(vertex_id: str, graph: "Graph", queue: asyncio.Queue, client_consumed_queue: asyncio.Queue) -> None:
+    async def build_vertices(
+        vertex_id: str, graph: "Graph", queue: asyncio.Queue, client_consumed_queue: asyncio.Queue
+    ) -> None:
         build_task = asyncio.create_task(await asyncio.to_thread(_build_vertex, vertex_id, graph))
         try:
             await build_task
@@ -347,9 +344,7 @@ async def build_flow(
 
         vertex_build_response: VertexBuildResponse = build_task.result()
         # send built event or error event
-        send_event("end_vertex", {
-            "build_data": json.loads(vertex_build_response.model_dump_json())},
-                         queue)
+        send_event("end_vertex", {"build_data": json.loads(vertex_build_response.model_dump_json())}, queue)
         await client_consumed_queue.get()
         if vertex_build_response.valid:
             if vertex_build_response.next_vertices_ids:
@@ -364,7 +359,6 @@ async def build_flow(
                         task.cancel()
                     return
 
-
     async def event_generator(queue: asyncio.Queue, client_consumed_queue: asyncio.Queue) -> None:
         if not data:
             # using another thread since the DB query is I/O bound
@@ -378,11 +372,7 @@ async def build_flow(
             ids, vertices_to_run, graph = vertices_task.result()
         else:
             ids, vertices_to_run, graph = await build_graph_and_get_order()
-        send_event("vertices_sorted",
-                         {
-                             "ids": ids,
-                                       "to_run": vertices_to_run
-                         }, queue)
+        send_event("vertices_sorted", {"ids": ids, "to_run": vertices_to_run}, queue)
         await client_consumed_queue.get()
 
         tasks = []
@@ -407,21 +397,35 @@ async def build_flow(
             yield value
             get_time_yield = time.time()
             client_consumed_queue.put_nowait(event_id)
-            logger.debug(f"consumed event {str(event_id)} (time in queue, {get_time - put_time:.4f}, client {get_time_yield - get_time:.4f})")
+            logger.debug(
+                f"consumed event {str(event_id)} (time in queue, {get_time - put_time:.4f}, client {get_time_yield - get_time:.4f})"
+            )
 
     asyncio_queue = asyncio.Queue()
     asyncio_queue_client_consumed = asyncio.Queue()
     main_task = asyncio.create_task(event_generator(asyncio_queue, asyncio_queue_client_consumed))
+
     def on_disconnect():
         logger.debug("Client disconnected, closing tasks")
         main_task.cancel()
-    return DisconnectHandlerStreamingResponse(consume_and_yield(asyncio_queue, asyncio_queue_client_consumed), media_type="application/x-ndjson", on_disconnect=on_disconnect)
+
+    return DisconnectHandlerStreamingResponse(
+        consume_and_yield(asyncio_queue, asyncio_queue_client_consumed),
+        media_type="application/x-ndjson",
+        on_disconnect=on_disconnect,
+    )
+
 
 class DisconnectHandlerStreamingResponse(StreamingResponse):
-
-    def __init__(self,
-                 content: ContentStream, status_code: int = 200, headers: typing.Mapping[str, str] | None = None,
-                 media_type: str | None = None, background: BackgroundTask | None = None, on_disconnect: Optional[typing.Callable] = None):
+    def __init__(
+        self,
+        content: ContentStream,
+        status_code: int = 200,
+        headers: typing.Mapping[str, str] | None = None,
+        media_type: str | None = None,
+        background: BackgroundTask | None = None,
+        on_disconnect: Optional[typing.Callable] = None,
+    ):
         super().__init__(content, status_code, headers, media_type, background)
         self.on_disconnect = on_disconnect
 
@@ -432,7 +436,6 @@ class DisconnectHandlerStreamingResponse(StreamingResponse):
                 if self.on_disconnect:
                     await self.on_disconnect()
                 break
-
 
 
 @router.post("/build/{flow_id}/vertices/{vertex_id}")

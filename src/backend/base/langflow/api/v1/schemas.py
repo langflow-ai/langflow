@@ -304,7 +304,6 @@ class InputValueRequest(BaseModel):
     )
 
 
-
 class SimplifiedAPIRequest(BaseModel):
     input_value: Optional[str] = Field(default=None, description="The input value")
     input_type: Optional[InputType] = Field(default="chat", description="The input type")

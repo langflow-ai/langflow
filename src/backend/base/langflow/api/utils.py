@@ -138,12 +138,14 @@ async def build_graph_from_data(flow_id: str, payload: Dict, **kwargs):
     await graph.initialize_run()
     return graph
 
+
 async def build_graph_from_db_no_cache(flow_id: str, session: Session):
     """Build and cache the graph."""
     flow: Optional[Flow] = session.get(Flow, flow_id)
     if not flow or not flow.data:
         raise ValueError("Invalid flow ID")
     return await build_graph_from_data(flow_id, flow.data, flow_name=flow.name, user_id=str(flow.user_id))
+
 
 async def build_graph_from_db(flow_id: str, session: Session, chat_service: "ChatService"):
     graph = await build_graph_from_db_no_cache(flow_id, session)
