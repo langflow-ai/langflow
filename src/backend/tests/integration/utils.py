@@ -28,7 +28,8 @@ class MockEmbeddings(Embeddings):
 
     def embed_documents(self, texts: List[str]) -> List[List[float]]:
         self.embedded_documents = texts
-        return [self.mock_embedding(text) for text in texts]
+        mock_embedding = self.mock_embedding
+        return [mock_embedding(text) for text in texts]
 
     def embed_query(self, text: str) -> List[float]:
         self.embedded_query = text
