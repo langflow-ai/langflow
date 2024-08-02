@@ -228,7 +228,7 @@ export default function GenericNode({
             },
           },
         };
-      });
+      }, false);
     }
   }, [buildStatus, isBuilding]);
 
