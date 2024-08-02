@@ -15,13 +15,13 @@ from starlette.types import Receive
 
 from langflow.api.utils import (
     build_and_cache_graph_from_data,
+    build_graph_from_data,
     build_graph_from_db,
+    build_graph_from_db_no_cache,
     format_elapsed_time,
     format_exception_message,
     get_top_level_vertices,
     parse_exception,
-    build_graph_from_db_no_cache,
-    build_graph_from_data,
 )
 from langflow.api.v1.schemas import (
     FlowDataRequest,
@@ -221,7 +221,7 @@ async def build_flow(
                     artifacts,
                     vertex,
                 ) = await graph.build_vertex(
-                    chat_service=None,
+                    chat_service=chat_service,
                     vertex_id=vertex_id,
                     user_id=current_user.id,
                     inputs_dict=inputs.model_dump() if inputs else {},
