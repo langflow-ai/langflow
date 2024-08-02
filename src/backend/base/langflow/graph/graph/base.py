@@ -860,8 +860,8 @@ class Graph:
     async def build_vertex(
         self,
         vertex_id: str,
-        get_cache: GetCache,
-        set_cache: SetCache,
+        get_cache: GetCache | None = None,
+        set_cache: SetCache | None = None,
         inputs_dict: Optional[Dict[str, str]] = None,
         files: Optional[list[str]] = None,
         user_id: Optional[str] = None,
@@ -890,7 +890,10 @@ class Graph:
             params = ""
             if vertex.frozen:
                 # Check the cache for the vertex
-                cached_result = await get_cache(key=vertex.id)
+                if get_cache:
+                    cached_result = await get_cache(key=vertex.id)
+                else:
+                    cached_result = None
                 if isinstance(cached_result, CacheMiss):
                     await vertex.build(
                         user_id=user_id, inputs=inputs_dict, fallback_to_env_vars=fallback_to_env_vars, files=files
@@ -913,8 +916,8 @@ class Graph:
                     await vertex.build(
                         user_id=user_id, inputs=inputs_dict, fallback_to_env_vars=fallback_to_env_vars, files=files
                     )
-                    if chat_service:
-                        await chat_service.set_cache(key=vertex.id, data=vertex)
+                    if set_cache:
+                        await set_cache(key=vertex.id, data=vertex)
             else:
                 await vertex.build(
                     user_id=user_id, inputs=inputs_dict, fallback_to_env_vars=fallback_to_env_vars, files=files
