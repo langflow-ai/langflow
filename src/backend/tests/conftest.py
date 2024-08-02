@@ -53,6 +53,7 @@ def pytest_configure(config):
     pytest.TWO_OUTPUTS = data_path / "TwoOutputsTest.json"
     pytest.VECTOR_STORE_PATH = data_path / "Vector_store.json"
     pytest.SIMPLE_API_TEST = data_path / "SimpleAPITest.json"
+    pytest.MEMORY_CHATBOT_NO_LLM = data_path / "MemoryChatbotNoLLM.json"
     pytest.CODE_WITH_SYNTAX_ERROR = """
 def get_text():
     retun "Hello World"
@@ -70,6 +71,7 @@ def get_text():
         pytest.CHAT_INPUT,
         pytest.TWO_OUTPUTS,
         pytest.VECTOR_STORE_PATH,
+        pytest.MEMORY_CHATBOT_NO_LLM,
     ]:
         assert path.exists(), f"File {path} does not exist. Available files: {list(data_path.iterdir())}"
 
@@ -229,6 +231,12 @@ def json_vector_store():
 @pytest.fixture
 def json_webhook_test():
     with open(pytest.WEBHOOK_TEST, "r") as f:
+        return f.read()
+
+
+@pytest.fixture
+def json_memory_chatbot_no_llm():
+    with open(pytest.MEMORY_CHATBOT_NO_LLM, "r") as f:
         return f.read()
 
 

@@ -99,7 +99,7 @@ langchain-nvidia-ai-endpoints = "0.1.6"
 langchain-google-calendar-tools = "^0.0.1"
 langchain-milvus = "^0.1.1"
 crewai = {extras = ["tools"], version = "^0.36.0"}
-langwatch = "^0.1.10"
+langwatch = "^0.1.16"
 langsmith = "^0.1.86"
 yfinance = "^0.2.40"
 langchain-google-community = "1.0.7"
@@ -111,7 +111,7 @@ composio-langchain = "^0.3.28"
 [tool.poetry.group.dev.dependencies]
 types-redis = "^4.6.0.5"
 ipykernel = "^6.29.0"
-mypy = "^1.10.0"
+mypy = "^1.11.0"
 ruff = "^0.4.5"
 httpx = "*"
 pytest = "^8.2.0"
@@ -193,8 +193,11 @@ line-length = 120
 
 [tool.mypy]
 plugins = ["pydantic.mypy"]
-follow_imports = "silent"
+follow_imports = "skip"
 disable_error_code = ["type-var"]
+namespace_packages = true
+mypy_path = "langflow"
+ignore_missing_imports = true
 
 [build-system]
 requires = ["poetry-core"]

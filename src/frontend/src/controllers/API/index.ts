@@ -1,4 +1,3 @@
-import { ColDef, ColGroupDef } from "ag-grid-community";
 import { AxiosRequestConfig, AxiosResponse } from "axios";
 import { Edge, Node, ReactFlowJsonObject } from "reactflow";
 import { BASE_URL_API, MAX_BATCH_SIZE } from "../../constants/constants";
@@ -8,21 +7,14 @@ import {
   APITemplateType,
   Component,
   CustomComponentRequest,
-  LoginType,
-  ProfilePicturesTypeAPI,
   Users,
   VertexBuildTypeAPI,
   VerticesOrderTypeAPI,
-  changeUser,
-  resetPasswordType,
   sendAllProps,
 } from "../../types/api/index";
-import { UserInputType } from "../../types/components";
 import { FlowStyleType, FlowType } from "../../types/flow";
-import { Message } from "../../types/messages";
 import { StoreComponentResponse } from "../../types/store";
 import { FlowPoolType } from "../../types/zustand/flow";
-import { extractColumnsFromRows } from "../../utils/utils";
 import {
   APIClassType,
   BuildStatusTypeAPI,
@@ -762,23 +754,6 @@ export async function requestLogout() {
     return response?.data;
   } catch (error) {
     console.error(error);
-    throw error;
-  }
-}
-
-export async function updateGlobalVariable(
-  name: string,
-  value: string,
-  id: string,
-) {
-  try {
-    const response = api.patch(`${BASE_URL_API}variables/${id}`, {
-      name,
-      value,
-    });
-
-    return response;
-  } catch (error) {
     throw error;
   }
 }
