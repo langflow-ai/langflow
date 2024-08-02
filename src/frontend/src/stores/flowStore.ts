@@ -29,7 +29,7 @@ import {
   targetHandleType,
 } from "../types/flow";
 import { FlowStoreType, VertexLayerElementType } from "../types/zustand/flow";
-import { buildVertices } from "../utils/buildUtils";
+import { buildFlowVerticesWithFallback } from "../utils/buildUtils";
 import {
   checkChatInput,
   checkOldComponents,
@@ -245,7 +245,11 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       );
     }
   },
-  setNode: (id: string, change: Node | ((oldState: Node) => Node)) => {
+  setNode: (
+    id: string,
+    change: Node | ((oldState: Node) => Node),
+    isUserChange: boolean = true,
+  ) => {
     let newChange =
       typeof change === "function"
         ? change(get().nodes.find((node) => node.id === id)!)
@@ -253,8 +257,10 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     get().setNodes((oldNodes) =>
       oldNodes.map((node) => {
         if (node.id === id) {
-          if ((node.data as NodeDataType).node?.frozen) {
-            (newChange.data as NodeDataType).node!.frozen = false;
+          if (isUserChange) {
+            if ((node.data as NodeDataType).node?.frozen) {
+              (newChange.data as NodeDataType).node!.frozen = false;
+            }
           }
           return newChange;
         }
@@ -607,20 +613,8 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       );
 
       useFlowStore.getState().updateBuildStatus([vertexBuildData.id], status);
-
-      const verticesIds = get().verticesBuild?.verticesIds;
-      const newFlowBuildStatus = { ...get().flowBuildStatus };
-      // filter out the vertices that are not status
-
-      const verticesToUpdate = verticesIds?.filter(
-        (id) => newFlowBuildStatus[id]?.status !== BuildStatus.BUILT,
-      );
-
-      if (verticesToUpdate) {
-        useFlowStore.getState().updateBuildStatus(verticesToUpdate, status);
-      }
     }
-    await buildVertices({
+    await buildFlowVerticesWithFallback({
       input_value,
       files,
       flowId: currentFlow!.id,
@@ -672,8 +666,8 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         useFlowStore.getState().updateBuildStatus(idList, BuildStatus.BUILDING);
       },
       onValidateNodes: validateSubgraph,
-      nodes: !get().onFlowPage ? get().nodes : undefined,
-      edges: !get().onFlowPage ? get().edges : undefined,
+      nodes: get().onFlowPage ? get().nodes : undefined,
+      edges: get().onFlowPage ? get().edges : undefined,
     });
     get().setIsBuilding(false);
     get().setLockChat(false);
@@ -690,7 +684,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     vertices: {
       verticesIds: string[];
       verticesLayers: VertexLayerElementType[][];
-      runId: string;
+      runId?: string;
       verticesToRun: string[];
     } | null,
   ) => {
