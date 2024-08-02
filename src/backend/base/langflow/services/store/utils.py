@@ -52,13 +52,14 @@ def get_lf_version_from_pypi():
 
 
 def process_component_data(nodes_list):
-    names = [node["id"].split("-")[0] for node in nodes_list]
     metadata = {}
-    for name in names:
+    for node in nodes_list:
+        name = node["id"].split("-")[0]
         if name in metadata:
             metadata[name]["count"] += 1
         else:
             metadata[name] = {"count": 1}
-    metadata["total"] = len(names)
+
+    metadata["total"] = len(nodes_list)
 
     return metadata
