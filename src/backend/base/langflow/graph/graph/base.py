@@ -1240,6 +1240,7 @@ class Graph:
 
         for vertex_id in first_layer:
             self.run_manager.add_to_vertices_being_run(vertex_id)
+        self._first_layer = first_layer
         self._run_queue = deque(first_layer)
         self._prepared = True
         return self
