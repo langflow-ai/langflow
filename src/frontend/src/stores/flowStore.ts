@@ -245,7 +245,11 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       );
     }
   },
-  setNode: (id: string, change: Node | ((oldState: Node) => Node)) => {
+  setNode: (
+    id: string,
+    change: Node | ((oldState: Node) => Node),
+    isUserChange: boolean = true,
+  ) => {
     let newChange =
       typeof change === "function"
         ? change(get().nodes.find((node) => node.id === id)!)
@@ -253,8 +257,10 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     get().setNodes((oldNodes) =>
       oldNodes.map((node) => {
         if (node.id === id) {
-          if ((node.data as NodeDataType).node?.frozen) {
-            (newChange.data as NodeDataType).node!.frozen = false;
+          if (isUserChange) {
+            if ((node.data as NodeDataType).node?.frozen) {
+              (newChange.data as NodeDataType).node!.frozen = false;
+            }
           }
           return newChange;
         }
