@@ -214,20 +214,18 @@ async def build_flow(
             vertex = graph.get_vertex(vertex_id)
             try:
                 lock = chat_service._async_cache_locks[flow_id_str]
-                (
-                    result_dict,
-                    params,
-                    valid,
-                    artifacts,
-                    vertex,
-                ) = await graph.build_vertex(
-                    get_cache=chat_service.get_cache,
-                    set_cache=chat_service.set_cache,
+                vertex_build_result = await graph.build_vertex(
                     vertex_id=vertex_id,
                     user_id=current_user.id,
                     inputs_dict=inputs.model_dump() if inputs else {},
                     files=files,
+                    get_cache=chat_service.get_cache,
+                    set_cache=chat_service.set_cache,
                 )
+                result_dict = vertex_build_result.result_dict
+                params = vertex_build_result.params
+                valid = vertex_build_result.valid
+                artifacts = vertex_build_result.artifacts
                 next_runnable_vertices = await graph.get_next_runnable_vertices(lock, vertex=vertex, cache=False)
                 top_level_vertices = graph.get_top_level_vertices(next_runnable_vertices)
 
