@@ -20,6 +20,7 @@ from langflow.services.store.utils import (
     process_tags_for_post,
     update_components_with_user_data,
 )
+from langflow.services.settings.service import SettingsService
 
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
@@ -184,12 +185,15 @@ class StoreService(Service):
     def build_search_filter_conditions(query: str):
         # instead of build the param ?search=query, we will build the filter
         # that will use _icontains (case insensitive)
-        conditions: Dict[str, Any] = {"_or": []}
-        conditions["_or"].append({"name": {"_icontains": query}})
-        conditions["_or"].append({"description": {"_icontains": query}})
-        conditions["_or"].append({"tags": {"tags_id": {"name": {"_icontains": query}}}})
-        conditions["_or"].append({"user_created": {"username": {"_icontains": query}}})
-        return conditions
+        icontains_query = {"_icontains": query}
+        return {
+            "_or": [
+                {"name": icontains_query},
+                {"description": icontains_query},
+                {"tags": {"tags_id": {"name": icontains_query}}},
+                {"user_created": {"username": icontains_query}},
+            ]
+        }
 
     def build_filter_conditions(
         self,
