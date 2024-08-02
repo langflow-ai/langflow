@@ -900,8 +900,6 @@ class Graph:
                     )
                     if set_cache is not None:
                         await set_cache(key=vertex.id, data=vertex)
-                else:
-                    cached_result = None
                 if cached_result and not isinstance(cached_result, CacheMiss):
                     cached_vertex = cached_result["result"]
                     # Now set update the vertex with the cached vertex
