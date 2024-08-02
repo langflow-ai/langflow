@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING, Any, List, Optional
 from loguru import logger
 from pydantic import BaseModel, Field, field_validator
 
+from langflow.graph.edge.schema import EdgeData
 from langflow.schema.schema import INPUT_FIELD_NAME
 
 if TYPE_CHECKING:
@@ -182,7 +183,7 @@ class Edge:
 
 
 class ContractEdge(Edge):
-    def __init__(self, source: "Vertex", target: "Vertex", raw_edge: dict):
+    def __init__(self, source: "Vertex", target: "Vertex", raw_edge: EdgeData):
         super().__init__(source, target, raw_edge)
         self.is_fulfilled = False  # Whether the contract has been fulfilled.
         self.result: Any = None
