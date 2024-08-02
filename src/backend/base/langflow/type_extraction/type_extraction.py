@@ -1,4 +1,3 @@
-import re
 from types import GenericAlias
 from typing import Any, List, Union
 
@@ -16,8 +15,10 @@ def extract_inner_type(return_type: str) -> str:
     """
     Extracts the inner type from a type hint that is a list.
     """
-    if match := re.match(r"list\[(.*)\]", return_type, re.IGNORECASE):
-        return match[1]
+    prefix = "list["
+    suffix = "]"
+    if return_type.lower().startswith(prefix) and return_type.endswith(suffix):
+        return return_type[len(prefix) : -len(suffix)]
     return return_type
 
 
