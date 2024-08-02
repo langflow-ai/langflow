@@ -126,18 +126,16 @@ def validate_input(
 
 
 def apply_tweaks(node: Dict[str, Any], node_tweaks: Dict[str, Any]) -> None:
-    template_data = node.get("data", {}).get("node", {}).get("template")
-
-    if not isinstance(template_data, dict):
+    try:
+        template_data = node["data"]["node"]["template"]
+    except (KeyError, TypeError):
         logger.warning(f"Template data for node {node.get('id')} should be a dictionary")
         return
 
     for tweak_name, tweak_value in node_tweaks.items():
-        if tweak_name not in template_data:
-            continue
         if tweak_name in template_data:
-            key = "file_path" if template_data[tweak_name]["type"] == "file" else "value"
-            template_data[tweak_name][key] = tweak_value
+            tweak_entry = template_data[tweak_name]
+            tweak_entry["file_path" if tweak_entry["type"] == "file" else "value"] = tweak_value
 
 
 def apply_tweaks_on_vertex(vertex: Vertex, node_tweaks: Dict[str, Any]) -> None:
