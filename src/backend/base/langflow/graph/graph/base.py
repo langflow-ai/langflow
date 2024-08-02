@@ -890,7 +890,7 @@ class Graph:
             params = ""
             if vertex.frozen:
                 # Check the cache for the vertex
-                if get_cache:
+                if get_cache is not None:
                     cached_result = await get_cache(key=vertex.id)
                 else:
                     cached_result = None
@@ -898,7 +898,7 @@ class Graph:
                     await vertex.build(
                         user_id=user_id, inputs=inputs_dict, fallback_to_env_vars=fallback_to_env_vars, files=files
                     )
-                    if set_cache:
+                    if set_cache is not None:
                         await set_cache(key=vertex.id, data=vertex)
                 else:
                     cached_result = None
@@ -917,13 +917,13 @@ class Graph:
                     await vertex.build(
                         user_id=user_id, inputs=inputs_dict, fallback_to_env_vars=fallback_to_env_vars, files=files
                     )
-                    if set_cache:
+                    if set_cache is not None:
                         await set_cache(key=vertex.id, data=vertex)
             else:
                 await vertex.build(
                     user_id=user_id, inputs=inputs_dict, fallback_to_env_vars=fallback_to_env_vars, files=files
                 )
-                if set_cache:
+                if set_cache is not None:
                     await set_cache(key=vertex.id, data=vertex)
 
             if vertex.result is not None:
