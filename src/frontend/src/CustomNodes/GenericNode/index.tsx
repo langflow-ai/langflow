@@ -217,18 +217,22 @@ export default function GenericNode({
 
   useEffect(() => {
     if (buildStatus === BuildStatus.BUILT && !isBuilding) {
-      setNode(data.id, (old) => {
-        return {
-          ...old,
-          data: {
-            ...old.data,
-            node: {
-              ...old.data.node,
-              lf_version: version,
+      setNode(
+        data.id,
+        (old) => {
+          return {
+            ...old,
+            data: {
+              ...old.data,
+              node: {
+                ...old.data.node,
+                lf_version: version,
+              },
             },
-          },
-        };
-      }, false);
+          };
+        },
+        false,
+      );
     }
   }, [buildStatus, isBuilding]);
 

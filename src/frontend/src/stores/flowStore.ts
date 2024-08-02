@@ -245,7 +245,11 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       );
     }
   },
-  setNode: (id: string, change: Node | ((oldState: Node) => Node), isUserChange: boolean = true) => {
+  setNode: (
+    id: string,
+    change: Node | ((oldState: Node) => Node),
+    isUserChange: boolean = true,
+  ) => {
     let newChange =
       typeof change === "function"
         ? change(get().nodes.find((node) => node.id === id)!)
