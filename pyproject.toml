@@ -193,7 +193,7 @@ line-length = 120
 
 [tool.mypy]
 plugins = ["pydantic.mypy"]
-follow_imports = "silent"
+follow_imports = "skip"
 disable_error_code = ["type-var"]
 
 [build-system]
