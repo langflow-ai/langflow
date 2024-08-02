@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, List, Optional
+from typing import TYPE_CHECKING, Any, List, Optional, cast
 
 from loguru import logger
 from pydantic import BaseModel, Field, field_validator
@@ -37,7 +37,7 @@ class TargetHandle(BaseModel):
 
 
 class Edge:
-    def __init__(self, source: "Vertex", target: "Vertex", edge: dict):
+    def __init__(self, source: "Vertex", target: "Vertex", edge: EdgeData):
         self.source_id: str = source.id if source else ""
         self.target_id: str = target.id if target else ""
         if data := edge.get("data", {}):
@@ -51,11 +51,11 @@ class Edge:
         else:
             # Logging here because this is a breaking change
             logger.error("Edge data is empty")
-            self._source_handle = edge.get("sourceHandle", "")
-            self._target_handle = edge.get("targetHandle", "")
+            self._source_handle = edge.get("sourceHandle", "")  # type: ignore
+            self._target_handle = edge.get("targetHandle", "")  # type: ignore
             # 'BaseLoader;BaseOutputParser|documents|PromptTemplate-zmTlD'
             # target_param is documents
-            self.target_param = self._target_handle.split("|")[1]
+            self.target_param = cast(str, self._target_handle.split("|")[1])
         # Validate in __init__ to fail fast
         self.validate_edge(source, target)
 
