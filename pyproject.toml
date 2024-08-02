@@ -111,7 +111,7 @@ composio-langchain = "^0.3.28"
 [tool.poetry.group.dev.dependencies]
 types-redis = "^4.6.0.5"
 ipykernel = "^6.29.0"
-mypy = "^1.10.0"
+mypy = "^1.11.0"
 ruff = "^0.4.5"
 httpx = "*"
 pytest = "^8.2.0"
@@ -193,8 +193,11 @@ line-length = 120
 
 [tool.mypy]
 plugins = ["pydantic.mypy"]
-follow_imports = "silent"
+follow_imports = "skip"
 disable_error_code = ["type-var"]
+namespace_packages = true
+mypy_path = "langflow"
+ignore_missing_imports = true
 
 [build-system]
 requires = ["poetry-core"]
