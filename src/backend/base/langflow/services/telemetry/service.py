@@ -34,6 +34,7 @@ class TelemetryService(Service):
         self.telemetry_queue: asyncio.Queue = asyncio.Queue()
         self.client = httpx.AsyncClient(timeout=10.0)  # Set a reasonable timeout
         self.running = False
+        self._stopping = False
 
         self.ot = OpenTelemetry(prometheus_enabled=settings_service.settings.prometheus_enabled)
 
@@ -75,11 +76,16 @@ class TelemetryService(Service):
             logger.error(f"Unexpected error occurred: {e}")
 
     async def log_package_run(self, payload: RunPayload):
-        await self.telemetry_queue.put((self.send_telemetry_data, payload, "run"))
+        await self._queue_event((self.send_telemetry_data, payload, "run"))
 
     async def log_package_shutdown(self):
         payload = ShutdownPayload(timeRunning=(datetime.now(timezone.utc) - self._start_time).seconds)
-        await self.telemetry_queue.put((self.send_telemetry_data, payload, "shutdown"))
+        await self._queue_event(payload)
+
+    async def _queue_event(self, payload):
+        if self.do_not_track or self._stopping:
+            return
+        await self.telemetry_queue.put(payload)
 
     async def log_package_version(self):
         python_version = ".".join(platform.python_version().split(".")[:2])
@@ -95,13 +101,13 @@ class TelemetryService(Service):
             arch=architecture,
             autoLogin=self.settings_service.auth_settings.AUTO_LOGIN,
         )
-        await self.telemetry_queue.put((self.send_telemetry_data, payload, None))
+        await self._queue_event((self.send_telemetry_data, payload, None))
 
     async def log_package_playground(self, payload: PlaygroundPayload):
-        await self.telemetry_queue.put((self.send_telemetry_data, payload, "playground"))
+        await self._queue_event((self.send_telemetry_data, payload, "playground"))
 
     async def log_package_component(self, payload: ComponentPayload):
-        await self.telemetry_queue.put((self.send_telemetry_data, payload, "component"))
+        await self._queue_event((self.send_telemetry_data, payload, "component"))
 
     async def start(self):
         if self.running or self.do_not_track:
@@ -123,11 +129,13 @@ class TelemetryService(Service):
             logger.error(f"Error flushing logs: {e}")
 
     async def stop(self):
-        if self.do_not_track:
+        if self.do_not_track or self._stopping:
             return
         try:
-            self.running = False
+            self._stopping = True
+            # flush all the remaining events and then stop
             await self.flush()
+            self.running = False
             if self.worker_task:
                 self.worker_task.cancel()
                 with contextlib.suppress(asyncio.CancelledError):

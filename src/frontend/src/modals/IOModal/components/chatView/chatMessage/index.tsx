@@ -38,7 +38,6 @@ export default function ChatMessage({
   const [chatMessage, setChatMessage] = useState(chatMessageString);
   const [isStreaming, setIsStreaming] = useState(false);
   const eventSource = useRef<EventSource | undefined>(undefined);
-  const updateFlowPool = useFlowStore((state) => state.updateFlowPool);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const chatMessageRef = useRef(chatMessage);
 

@@ -16,11 +16,12 @@ const api: AxiosInstance = axios.create({
   baseURL: "",
 });
 
+const cookies = new Cookies();
 function ApiInterceptor() {
   const autoLogin = useAuthStore((state) => state.autoLogin);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   let { accessToken, authenticationErrorCount } = useContext(AuthContext);
-  const cookies = new Cookies();
+
   const setSaveLoading = useFlowsManagerStore((state) => state.setSaveLoading);
   const { mutate: mutationLogout } = useLogout();
   const { mutate: mutationRenewAccessToken } = useRefreshAccessToken();
@@ -205,4 +206,83 @@ function ApiInterceptor() {
   return null;
 }
 
-export { ApiInterceptor, api };
+export type StreamingRequestParams = {
+  method: string;
+  url: string;
+  onData: (event: object) => Promise<boolean>;
+  body?: object;
+  onError?: (statusCode: number) => void;
+};
+
+async function performStreamingRequest({
+  method,
+  url,
+  onData,
+  body,
+  onError,
+}: StreamingRequestParams) {
+  let headers = {
+    "Content-Type": "application/json",
+    // this flag is fundamental to ensure server stops tasks when client disconnects
+    Connection: "close",
+  };
+  const accessToken = cookies.get(LANGFLOW_ACCESS_TOKEN);
+  if (accessToken) {
+    headers["Authorization"] = `Bearer ${accessToken}`;
+  }
+  const controller = new AbortController();
+  const params = {
+    method: method,
+    headers: headers,
+    signal: controller.signal,
+  };
+  if (body) {
+    params["body"] = JSON.stringify(body);
+  }
+  let current: string[] = [];
+  let textDecoder = new TextDecoder();
+  const response = await fetch(url, params);
+  if (!response.ok) {
+    if (onError) {
+      onError(response.status);
+    } else {
+      throw new Error("error in streaming request");
+    }
+  }
+  if (response.body === null) {
+    return;
+  }
+  for await (const chunk of response.body) {
+    const decodedChunk = await textDecoder.decode(chunk);
+    let all = decodedChunk.split("\n\n");
+    for (const string of all) {
+      if (string.endsWith("}")) {
+        const allString = current.join("") + string;
+        let data: object;
+        try {
+          data = JSON.parse(allString);
+          current = [];
+        } catch (e) {
+          current.push(string);
+          continue;
+        }
+        const shouldContinue = await onData(data);
+        if (!shouldContinue) {
+          controller.abort();
+          return;
+        }
+      } else {
+        current.push(string);
+      }
+    }
+  }
+  if (current.length > 0) {
+    const allString = current.join("");
+    if (allString) {
+      const data = JSON.parse(current.join(""));
+      await onData(data);
+    }
+  }
+}
+
+export { ApiInterceptor, api, performStreamingRequest };

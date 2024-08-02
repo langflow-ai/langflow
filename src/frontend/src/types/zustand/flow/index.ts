@@ -147,7 +147,7 @@ export type FlowStoreType = {
     vertices: {
       verticesIds: string[];
       verticesLayers: VertexLayerElementType[][];
-      runId: string;
+      runId?: string;
       verticesToRun: string[];
     } | null,
   ) => void;
@@ -156,7 +156,7 @@ export type FlowStoreType = {
   verticesBuild: {
     verticesIds: string[];
     verticesLayers: VertexLayerElementType[][];
-    runId: string;
+    runId?: string;
     verticesToRun: string[];
   } | null;
   updateBuildStatus: (nodeId: string[], status: BuildStatus) => void;
