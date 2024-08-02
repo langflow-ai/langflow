@@ -880,15 +880,11 @@ class Graph:
         try:
             params = ""
             if vertex.frozen:
-                # Check the cache for the vertex
-                cached_result = await chat_service.get_cache(key=vertex.id) if chat_service else CacheMiss
-                if isinstance(cached_result, CacheMiss):
-                    await vertex.build(
-                        user_id=user_id, inputs=inputs_dict, fallback_to_env_vars=fallback_to_env_vars, files=files
-                    )
-                    if chat_service:
-                        await chat_service.set_cache(key=vertex.id, data=vertex)
+                if chat_service:
+                    cached_result = await chat_service.get_cache(key=vertex.id)
                 else:
+                    cached_result = None
+                if cached_result and not isinstance(cached_result, CacheMiss):
                     cached_vertex = cached_result["result"]
                     # Now set update the vertex with the cached vertex
                     vertex._built = cached_vertex._built
@@ -899,7 +895,12 @@ class Graph:
                     vertex._custom_component = cached_vertex._custom_component
                     if vertex.result is not None:
                         vertex.result.used_frozen_result = True
-
+                else:
+                    await vertex.build(
+                        user_id=user_id, inputs=inputs_dict, fallback_to_env_vars=fallback_to_env_vars, files=files
+                    )
+                    if chat_service:
+                        await chat_service.set_cache(key=vertex.id, data=vertex)
             else:
                 await vertex.build(
                     user_id=user_id, inputs=inputs_dict, fallback_to_env_vars=fallback_to_env_vars, files=files
