@@ -898,7 +898,8 @@ class Graph:
                     await vertex.build(
                         user_id=user_id, inputs=inputs_dict, fallback_to_env_vars=fallback_to_env_vars, files=files
                     )
-                    await set_cache(key=vertex.id, data=vertex)
+                    if set_cache:
+                        await set_cache(key=vertex.id, data=vertex)
                 else:
                     cached_result = None
                 if cached_result and not isinstance(cached_result, CacheMiss):
@@ -922,7 +923,8 @@ class Graph:
                 await vertex.build(
                     user_id=user_id, inputs=inputs_dict, fallback_to_env_vars=fallback_to_env_vars, files=files
                 )
-                await set_cache(key=vertex.id, data=vertex)
+                if set_cache:
+                    await set_cache(key=vertex.id, data=vertex)
 
             if vertex.result is not None:
                 params = f"{vertex._built_object_repr()}{params}"
