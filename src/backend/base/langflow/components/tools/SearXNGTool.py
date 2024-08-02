@@ -1,19 +1,19 @@
-from typing import Any
-import requests
 import json
+from typing import Any
 
+import requests
+from langchain.agents import Tool
+from langchain_core.tools import StructuredTool
 from pydantic.v1 import Field, create_model
 
-from langchain.agents import Tool
 from langflow.base.langchain_utilities.model import LCToolComponent
-from langflow.inputs import MessageTextInput, MultiselectInput, DropdownInput, IntInput
-from langchain_core.tools import StructuredTool
-from langflow.schema.dotdict import dotdict
+from langflow.inputs import DropdownInput, IntInput, MessageTextInput, MultiselectInput
 from langflow.io import Output
+from langflow.schema.dotdict import dotdict
 
 
 class SearXNGToolComponent(LCToolComponent):
-    SEARCH_HEADERS = {}
+    SEARCH_HEADERS: dict[str, str] = {}
     display_name = "SearXNG Search Tool"
     description = "A component that searches for tools using SearXNG."
     name = "SearXNGTool"
@@ -86,7 +86,8 @@ class SearXNGToolComponent(LCToolComponent):
             _headers: dict[str, str] = {}
             _max_results: int = 10
 
-            def search(query: str, categories: list[str] = []) -> list:
+            @staticmethod
+            def search(query: str, categories: list[str] = []) -> list | str:
                 if not SearxSearch._categories and not categories:
                     raise ValueError("No categories provided.")
                 all_categories = SearxSearch._categories + list(set(categories) - set(SearxSearch._categories))
