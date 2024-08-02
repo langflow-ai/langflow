@@ -296,7 +296,13 @@ def find_names_in_code(code, names):
     :param names: A list of names to check for in the code.
     :return: A set of names that are found in the code.
     """
-    found_names = {name for name in names if name in code}
+    names_set = set(names)
+    found_names = set()
+
+    for name in names_set:
+        if name in code:
+            found_names.add(name)
+
     return found_names
 
 
