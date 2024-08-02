@@ -111,7 +111,7 @@ composio-langchain = "^0.3.28"
 [tool.poetry.group.dev.dependencies]
 types-redis = "^4.6.0.5"
 ipykernel = "^6.29.0"
-mypy = "^1.10.0"
+mypy = "^1.11.0"
 ruff = "^0.4.5"
 httpx = "*"
 pytest = "^8.2.0"
