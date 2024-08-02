@@ -1,3 +1,4 @@
+import FeatureFlags from "@/../feature-config.json";
 import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
 import { useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -8,7 +9,6 @@ import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import Page from "./components/PageComponent";
 import ExtraSidebar from "./components/extraSidebarComponent";
-import FeatureFlags from "@/../feature-config.json";
 
 export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const setCurrentFlowId = useFlowsManagerStore(
@@ -60,7 +60,9 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
           href="https://medium.com/logspace/langflow-datastax-better-together-1b7462cebc4d"
           className="langflow-page-icon"
         >
-          {FeatureFlags.ENABLE_BRANDING && version && <div className="mt-1">Langflow 🤝 DataStax</div>}
+          {FeatureFlags.ENABLE_BRANDING && version && (
+            <div className="mt-1">Langflow 🤝 DataStax</div>
+          )}
           <div className={version ? "mt-2" : "mt-1"}>⛓️ v{version}</div>
         </a>
       </div>
