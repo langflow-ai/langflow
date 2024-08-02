@@ -1,8 +1,9 @@
 def _compute_non_prerelease_version(prerelease_version: str) -> str:
-    prerelease_keywords = ["a", "b", "rc", "dev", "post"]
+    prerelease_keywords = ("a", "b", "rc", "dev", "post")
     for keyword in prerelease_keywords:
-        if keyword in prerelease_version:
-            return prerelease_version.split(keyword)[0][:-1]
+        idx = prerelease_version.find(keyword)
+        if idx != -1:
+            return prerelease_version[: idx - 1]
     return prerelease_version
 
 
