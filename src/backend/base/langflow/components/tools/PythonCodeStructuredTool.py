@@ -3,25 +3,24 @@ import json
 from typing import Any
 
 from langchain.agents import Tool
-from langflow.inputs.inputs import (
-    MultilineInput,
-    MessageTextInput,
-    BoolInput,
-    DropdownInput,
-    IntInput,
-    FloatInput,
-    HandleInput,
-    FieldTypes,
-)
 from langchain_core.tools import StructuredTool
-from langflow.io import Output
-
-from langflow.custom import Component
-from langflow.schema.dotdict import dotdict
-from langflow.schema import Data
-
 from pydantic.v1 import Field, create_model
 from pydantic.v1.fields import Undefined
+
+from langflow.custom import Component
+from langflow.inputs.inputs import (
+    BoolInput,
+    DropdownInput,
+    FieldTypes,
+    FloatInput,
+    HandleInput,
+    IntInput,
+    MessageTextInput,
+    MultilineInput,
+)
+from langflow.io import Output
+from langflow.schema import Data
+from langflow.schema.dotdict import dotdict
 
 
 class PythonCodeStructuredTool(Component):
@@ -243,20 +242,20 @@ class PythonCodeStructuredTool(Component):
 
     def _parse_functions(self, code: str) -> list:
         parsed_code = ast.parse(code)
-        functions = []
+        functions: list = []
         for node in parsed_code.body:
             if not isinstance(node, ast.FunctionDef):
                 continue
             func = {"name": node.name, "args": []}
             for arg in node.args.args:
-                func_arg = {"name": arg.arg, "annotations": None}
+                func_arg: dict[str, list[str] | None] = {"name": arg.arg, "annotations": None}
 
                 for default in node.args.defaults:
                     if (
-                        arg.lineno > default.lineno
-                        or arg.col_offset > default.col_offset
-                        or arg.end_lineno < default.end_lineno
-                        or arg.end_col_offset < default.end_col_offset
+                        (default.lineno and arg.lineno > default.lineno)
+                        or (default.col_offset and arg.col_offset > default.col_offset)
+                        or (default.end_lineno and arg.end_lineno < default.end_lineno)
+                        or (default.end_col_offset and arg.end_col_offset < default.end_col_offset)
                     ):
                         continue
 
@@ -301,7 +300,7 @@ class PythonCodeStructuredTool(Component):
                     imports.append(alias.name)
             elif isinstance(node, ast.ImportFrom):
                 from_imports.append(node)
-        return {"imports": imports, "from_imports": from_imports}
+        return dotdict({"imports": imports, "from_imports": from_imports})
 
     def _get_value(self, value: Any, annotation: Any) -> Any:
         return value if isinstance(value, annotation) else value["value"]
