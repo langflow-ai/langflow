@@ -89,7 +89,8 @@ class MemoryComponent(Component):
             self.memory.session_id = session_id
 
             stored = self.memory.messages
-            if order == "ASC":
+            # langchain memories are supposed to return messages in ascending order
+            if order == "DESC":
                 stored = stored[::-1]
             if n_messages:
                 stored = stored[:n_messages]
