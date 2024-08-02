@@ -1,4 +1,9 @@
-# Listen
+---
+title: Listen
+
+sidebar_position: 2
+slug: /listen
+---
 
 Langflow enhances its functionality with custom components like `Listen`. This component listen for message of a self hosted Streamlit application.
 

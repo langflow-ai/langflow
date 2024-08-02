@@ -1,4 +1,9 @@
-# Send
+---
+title: Send
+
+sidebar_position: 3
+slug: /send
+---
 
 Langflow enhances its functionality with custom components like `Send`. This component sends messages to the specified session of a self hosted Streamlit application.
 
