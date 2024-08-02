@@ -37,8 +37,8 @@ Once you have set up your Streamlit application and accessed the [web page](http
 
 Langflow provides the following Streamlit components:
 
-- **Send Chat Message**: Send messages to a Streamlit chat session.
-- **Listen to Chat Message**: Listen for incoming messages in a Streamlit chat, alters the layout of the Streamlit application.
+- **Send**: Send messages to a Streamlit chat session.
+- **Listen**: Listen for incoming messages in a Streamlit chat, alters the layout of the Streamlit application.
 
 
 Refer to the individual component documentation for more details on how to use each component in your Langflow flows.
