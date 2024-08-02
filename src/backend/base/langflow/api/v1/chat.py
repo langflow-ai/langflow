@@ -388,7 +388,7 @@ async def build_flow(
         send_event("end", {}, queue)
         await queue.put((None, None, time.time))
 
-    async def consume_and_yield(queue: asyncio.Queue, client_consumed_queue: asyncio.Queue) -> None:
+    async def consume_and_yield(queue: asyncio.Queue, client_consumed_queue: asyncio.Queue) -> typing.AsyncGenerator:
         while True:
             event_id, value, put_time = await queue.get()
             if value is None:
@@ -401,8 +401,8 @@ async def build_flow(
                 f"consumed event {str(event_id)} (time in queue, {get_time - put_time:.4f}, client {get_time_yield - get_time:.4f})"
             )
 
-    asyncio_queue = asyncio.Queue()
-    asyncio_queue_client_consumed = asyncio.Queue()
+    asyncio_queue: asyncio.Queue = asyncio.Queue()
+    asyncio_queue_client_consumed: asyncio.Queue = asyncio.Queue()
     main_task = asyncio.create_task(event_generator(asyncio_queue, asyncio_queue_client_consumed))
 
     def on_disconnect():
