@@ -33,7 +33,7 @@ class TransactionBase(SQLModel):
         return value
 
 
-class TransactionTable(TransactionBase, table=True):
+class TransactionTable(TransactionBase, table=True):  # type: ignore
     __tablename__ = "transaction"
     id: Optional[UUID] = Field(default_factory=uuid4, primary_key=True)
     flow: "Flow" = Relationship(back_populates="transactions")

@@ -19,7 +19,7 @@ class VariableBase(SQLModel):
     type: Optional[str] = Field(None, description="Type of the variable")
 
 
-class Variable(VariableBase, table=True):
+class Variable(VariableBase, table=True):  # type: ignore
     id: Optional[UUID] = Field(
         default_factory=uuid4,
         primary_key=True,
