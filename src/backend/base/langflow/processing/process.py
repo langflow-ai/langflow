@@ -1,4 +1,7 @@
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union, cast
+
+from loguru import logger
+from pydantic import BaseModel
 
 from langflow.graph.graph.base import Graph
 from langflow.graph.schema import RunOutputs
@@ -6,8 +9,6 @@ from langflow.graph.vertex.base import Vertex
 from langflow.schema.graph import InputValue, Tweaks
 from langflow.schema.schema import INPUT_FIELD_NAME
 from langflow.services.deps import get_settings_service
-from loguru import logger
-from pydantic import BaseModel
 
 if TYPE_CHECKING:
     from langflow.api.v1.schemas import InputValueRequest
@@ -112,7 +113,7 @@ def run_graph(
 
 
 def validate_input(
-    graph_data: Dict[str, Any], tweaks: Union["Tweaks", Dict[str, Dict[str, Any]]]
+    graph_data: Dict[str, Any], tweaks: Union["Tweaks", Dict[str, str | Dict[str, Any]]]
 ) -> List[Dict[str, Any]]:
     if not isinstance(graph_data, dict) or not isinstance(tweaks, dict):
         raise ValueError("graph_data and tweaks should be dictionaries")
@@ -162,12 +163,12 @@ def process_tweaks(
     """
     tweaks_dict = {}
     if not isinstance(tweaks, dict):
-        tweaks_dict = tweaks.model_dump()
+        tweaks_dict = cast(Dict[str, Any], tweaks.model_dump())
     else:
         tweaks_dict = tweaks
     if "stream" not in tweaks_dict:
-        tweaks_dict["stream"] = stream
-    nodes = validate_input(graph_data, tweaks_dict)
+        tweaks_dict |= {"stream": stream}
+    nodes = validate_input(graph_data, cast(Dict[str, str | Dict[str, Any]], tweaks_dict))
     nodes_map = {node.get("id"): node for node in nodes}
     nodes_display_name_map = {node.get("data", {}).get("node", {}).get("display_name"): node for node in nodes}
 

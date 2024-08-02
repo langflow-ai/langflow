@@ -33,7 +33,7 @@ class VertexBuildBase(SQLModel):
         return value
 
 
-class VertexBuildTable(VertexBuildBase, table=True):
+class VertexBuildTable(VertexBuildBase, table=True):  # type: ignore
     __tablename__ = "vertex_build"
     build_id: Optional[UUID] = Field(default_factory=uuid4, primary_key=True)
     flow: "Flow" = Relationship(back_populates="vertex_builds")

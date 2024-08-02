@@ -10,6 +10,7 @@ from loguru import logger
 
 from langflow.exceptions.component import ComponentBuildException
 from langflow.graph.edge.base import ContractEdge
+from langflow.graph.edge.schema import EdgeData
 from langflow.graph.graph.constants import lazy_load_vertex_dict
 from langflow.graph.graph.runnable_vertices_manager import RunnableVerticesManager
 from langflow.graph.graph.state_manager import GraphStateManager
@@ -67,13 +68,14 @@ class Graph:
         self.vertices: List[Vertex] = []
         self.run_manager = RunnableVerticesManager()
         self.state_manager = GraphStateManager()
+        self._first_layer: List[str] = []
         try:
             self.tracing_service: "TracingService" | None = get_tracing_service()
         except Exception as exc:
             logger.error(f"Error getting tracing service: {exc}")
             self.tracing_service = None
 
-    def add_nodes_and_edges(self, nodes: List[Dict], edges: List[Dict[str, str]]):
+    def add_nodes_and_edges(self, nodes: List[Dict], edges: List[EdgeData]):
         self._vertices = nodes
         self._edges = edges
         self.raw_graph_data = {"nodes": nodes, "edges": edges}
@@ -91,8 +93,7 @@ class Graph:
     def add_node(self, node: dict):
         self._vertices.append(node)
 
-    # TODO: Create a TypedDict to represente the edge
-    def add_edge(self, edge: dict):
+    def add_edge(self, edge: EdgeData):
         self._edges.append(edge)
 
     def initialize(self):
@@ -219,6 +220,12 @@ class Graph:
                             f"Components {vertex.display_name} and {successor.display_name} "
                             "are connected and both have stream or streaming set to True"
                         )
+
+    @property
+    def first_layer(self):
+        if self._first_layer is None:
+            raise ValueError("Graph not prepared. Call prepare() first.")
+        return self._first_layer
 
     @property
     def run_id(self):
@@ -646,7 +653,7 @@ class Graph:
         try:
             vertices = payload["nodes"]
             edges = payload["edges"]
-            graph = cls(flow_id, flow_name, user_id)
+            graph = cls(flow_id=flow_id, flow_name=flow_name, user_id=user_id)
             graph.add_nodes_and_edges(vertices, edges)
             return graph
         except KeyError as exc:
@@ -1219,6 +1226,27 @@ class Graph:
         vertex_instance = VertexClass(vertex, graph=self)
         vertex_instance.set_top_level(self.top_level_vertices)
         return vertex_instance
+
+    def prepare(self, stop_component_id: Optional[str] = None, start_component_id: Optional[str] = None):
+        if stop_component_id and start_component_id:
+            raise ValueError("You can only provide one of stop_component_id or start_component_id")
+        self.validate_stream()
+        self.edges = self._build_edges()
+        if stop_component_id or start_component_id:
+            try:
+                first_layer = self.sort_vertices(stop_component_id, start_component_id)
+            except Exception as exc:
+                logger.error(exc)
+                first_layer = self.sort_vertices()
+        else:
+            first_layer = self.sort_vertices()
+
+        for vertex_id in first_layer:
+            self.run_manager.add_to_vertices_being_run(vertex_id)
+        self._first_layer = first_layer
+        self._run_queue = deque(first_layer)
+        self._prepared = True
+        return self
 
     def get_children_by_vertex_type(self, vertex: Vertex, vertex_type: str) -> List[Vertex]:
         """Returns the children of a vertex based on the vertex type."""

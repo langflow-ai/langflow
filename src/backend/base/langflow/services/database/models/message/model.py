@@ -47,7 +47,7 @@ class MessageBase(SQLModel):
         )
 
 
-class MessageTable(MessageBase, table=True):
+class MessageTable(MessageBase, table=True):  # type: ignore
     __tablename__ = "message"
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     flow_id: Optional[UUID] = Field(default=None, foreign_key="flow.id")

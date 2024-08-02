@@ -137,7 +137,7 @@ class FlowBase(SQLModel):
         return datetime.fromisoformat(v)
 
 
-class Flow(FlowBase, table=True):
+class Flow(FlowBase, table=True):  # type: ignore
     id: UUID = Field(default_factory=uuid4, primary_key=True, unique=True)
     data: Optional[Dict] = Field(default=None, sa_column=Column(JSON))
     user_id: Optional[UUID] = Field(index=True, foreign_key="user.id", nullable=True)

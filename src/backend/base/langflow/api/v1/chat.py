@@ -103,18 +103,7 @@ async def retrieve_vertices_order(
             graph = await build_and_cache_graph_from_data(
                 flow_id=flow_id_str, graph_data=data.model_dump(), chat_service=chat_service
             )
-        graph.validate_stream()
-        if stop_component_id or start_component_id:
-            try:
-                first_layer = graph.sort_vertices(stop_component_id, start_component_id)
-            except Exception as exc:
-                logger.error(exc)
-                first_layer = graph.sort_vertices()
-        else:
-            first_layer = graph.sort_vertices()
-
-        for vertex_id in first_layer:
-            graph.run_manager.add_to_vertices_being_run(vertex_id)
+        graph = graph.prepare(stop_component_id, start_component_id)
 
         # Now vertices is a list of lists
         # We need to get the id of each vertex
@@ -130,7 +119,7 @@ async def retrieve_vertices_order(
                 playgroundSuccess=True,
             ),
         )
-        return VerticesOrderResponse(ids=first_layer, run_id=graph._run_id, vertices_to_run=vertices_to_run)
+        return VerticesOrderResponse(ids=graph.first_layer, run_id=graph.run_id, vertices_to_run=vertices_to_run)
     except Exception as exc:
         background_tasks.add_task(
             telemetry_service.log_package_playground,
