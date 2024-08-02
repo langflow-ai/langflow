@@ -14,13 +14,14 @@ def test_build_flow(client, json_memory_chatbot_no_llm, logged_in_headers):
 
     check_messages(flow_id)
 
+
 def test_build_flow_from_request_data(client, json_memory_chatbot_no_llm, logged_in_headers):
     flow_id = _create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
     flow_data = client.get("api/v1/flows/" + str(flow_id), headers=logged_in_headers).json()
 
-    with client.stream("POST", f"api/v1/build/{flow_id}/flow", json={
-        "data": flow_data["data"]
-    }, headers=logged_in_headers) as r:
+    with client.stream(
+        "POST", f"api/v1/build/{flow_id}/flow", json={"data": flow_data["data"]}, headers=logged_in_headers
+    ) as r:
         consume_and_assert_stream(r)
 
     check_messages(flow_id)
@@ -31,13 +32,18 @@ def test_build_flow_with_frozen_path(client, json_memory_chatbot_no_llm, logged_
 
     flow_data = client.get("api/v1/flows/" + str(flow_id), headers=logged_in_headers).json()
     flow_data["data"]["nodes"][0]["data"]["node"]["frozen"] = True
-    response = client.patch("api/v1/flows/" + str(flow_id), json=FlowUpdate(name="Flow", description="description", data=flow_data["data"]).model_dump(), headers=logged_in_headers)
+    response = client.patch(
+        "api/v1/flows/" + str(flow_id),
+        json=FlowUpdate(name="Flow", description="description", data=flow_data["data"]).model_dump(),
+        headers=logged_in_headers,
+    )
     response.raise_for_status()
 
     with client.stream("POST", f"api/v1/build/{flow_id}/flow", json={}, headers=logged_in_headers) as r:
         consume_and_assert_stream(r)
 
     check_messages(flow_id)
+
 
 def check_messages(flow_id):
     messages = get_messages(flow_id=UUID(flow_id), order="ASC")
@@ -50,6 +56,7 @@ def check_messages(flow_id):
     assert messages[1].sender == "Machine"
     assert messages[1].sender_name == "AI"
 
+
 def consume_and_assert_stream(r):
     count = 0
     for line in r.iter_lines():
@@ -61,11 +68,11 @@ def consume_and_assert_stream(r):
             assert parsed["event"] == "vertices_sorted"
             ids = parsed["data"]["ids"]
             ids.sort()
-            assert ids == ['ChatInput-CIGht', 'Memory-amN4Z']
+            assert ids == ["ChatInput-CIGht", "Memory-amN4Z"]
 
             to_run = parsed["data"]["to_run"]
             to_run.sort()
-            assert to_run == ['ChatInput-CIGht', 'ChatOutput-QA7ej', 'Memory-amN4Z', 'Prompt-iWbCC']
+            assert to_run == ["ChatInput-CIGht", "ChatOutput-QA7ej", "Memory-amN4Z", "Prompt-iWbCC"]
         elif count > 0 and count < 5:
             assert parsed["event"] == "end_vertex"
             assert parsed["data"]["build_data"] is not None
