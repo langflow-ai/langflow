@@ -36,18 +36,15 @@ class ListComponentResponse(BaseModel):
     last_tested_version: Optional[str] = None
     private: Optional[bool] = None
 
-    # tags comes as a TagsIdResponse but we want to return a list of TagResponse
     @field_validator("tags", mode="before")
     @classmethod
     def tags_to_list(cls, v):
-        # Check if all values are have id and name
-        # if so, return v else transform to TagResponse
         if not v:
             return v
-        if all(["id" in tag and "name" in tag for tag in v]):
-            return v
-        else:
-            return [TagResponse(**tag.get("tags_id")) for tag in v if tag.get("tags_id")]
+        for tag in v:
+            if "id" not in tag or "name" not in tag:
+                return [TagResponse(**tag_dict) for tag in v for tag_dict in [tag.get("tags_id")] if tag_dict]
+        return v
 
 
 class ListComponentResponseModel(BaseModel):
