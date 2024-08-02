@@ -215,12 +215,3 @@ def get_suggestion_messsage(outdated_components: list[str]):
     for component in outdated_components:
         message += f"{component}, "
     return message
-
-
-def from_exc_and_flow(exc: str | list[str], flow: Flow) -> ExceptionBody:
-    body = {"message": str(exc)}
-    outdated_components = get_outdated_components(flow)
-    if outdated_components:
-        body["suggestion"] = get_suggestion_messsage(outdated_components)
-    excep = ExceptionBody(**body)
-    return excep
