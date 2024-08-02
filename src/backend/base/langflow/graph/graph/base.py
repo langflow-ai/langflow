@@ -6,8 +6,6 @@ from functools import partial
 from itertools import chain
 from typing import TYPE_CHECKING, Any, Dict, Generator, List, Optional, Tuple, Type, Union
 
-from loguru import logger
-
 from langflow.exceptions.component import ComponentBuildException
 from langflow.graph.edge.base import ContractEdge
 from langflow.graph.edge.schema import EdgeData
@@ -23,6 +21,7 @@ from langflow.schema.schema import INPUT_FIELD_NAME, InputType
 from langflow.services.cache.utils import CacheMiss
 from langflow.services.chat.service import ChatService
 from langflow.services.deps import get_chat_service, get_tracing_service
+from loguru import logger
 
 if TYPE_CHECKING:
     from langflow.graph.schema import ResultData
@@ -92,8 +91,7 @@ class Graph:
     def add_node(self, node: dict):
         self._vertices.append(node)
 
-    # TODO: Create a TypedDict to represente the edge
-    def add_edge(self, edge: dict):
+    def add_edge(self, edge: EdgeData):
         self._edges.append(edge)
 
     def initialize(self):
