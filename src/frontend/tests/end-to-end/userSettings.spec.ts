@@ -65,7 +65,7 @@ test("should interact with global variables", async ({ page }) => {
   await page.keyboard.press("Escape");
   await page.getByText("Save Variable", { exact: true }).click();
 
-  await page.getByText(randomName).isVisible();
+  await page.getByText(randomName).last().isVisible();
 
   const focusElementsOnBoard = async ({ page }) => {
     await page.waitForSelector(

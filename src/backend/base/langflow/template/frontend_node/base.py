@@ -89,6 +89,12 @@ class FrontendNode(BaseModel):
 
         return {name: result}
 
+    @classmethod
+    def from_dict(cls, data: dict) -> "FrontendNode":
+        if "template" in data:
+            data["template"] = Template.from_dict(data["template"])
+        return cls(**data)
+
     # For backwards compatibility
     def to_dict(self, keep_name=True) -> dict:
         """Returns a dict representation of the frontend node."""
@@ -173,3 +179,9 @@ class FrontendNode(BaseModel):
         template = Template(type_name="Component", fields=inputs)
         kwargs["template"] = template
         return cls(**kwargs)
+
+    def set_field_value_in_template(self, field_name, value):
+        for field in self.template.fields:
+            if field.name == field_name:
+                field.value = value
+                break

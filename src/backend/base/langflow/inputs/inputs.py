@@ -6,6 +6,7 @@ from pydantic import Field, field_validator
 from langflow.inputs.validators import CoalesceBool
 from langflow.schema.data import Data
 from langflow.schema.message import Message
+from langflow.template.field.base import Input
 
 from .input_mixin import (
     BaseInputMixin,
@@ -57,7 +58,7 @@ class HandleInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin):
     field_type: SerializableFieldTypes = FieldTypes.OTHER
 
 
-class DataInput(HandleInput, InputTraceMixin):
+class DataInput(HandleInput, InputTraceMixin, ListableInputMixin):
     """
     Represents an Input that has a Handle that receives a Data object.
 
@@ -459,7 +460,23 @@ class FileInput(BaseInputMixin, ListableInputMixin, FileMixin, MetadataTraceMixi
     field_type: SerializableFieldTypes = FieldTypes.FILE
 
 
+DEFAULT_PROMPT_INTUT_TYPES = ["Message", "Text"]
+
+
+class DefaultPromptField(Input):
+    name: str
+    display_name: Optional[str] = None
+    field_type: str = "str"
+
+    advanced: bool = False
+    multiline: bool = True
+    input_types: list[str] = DEFAULT_PROMPT_INTUT_TYPES
+    value: str = ""  # Set the value to empty string
+
+
 InputTypes = Union[
+    Input,
+    DefaultPromptField,
     BoolInput,
     DataInput,
     DictInput,
@@ -485,6 +502,9 @@ InputTypesMap: dict[str, type[InputTypes]] = {t.__name__: t for t in get_args(In
 
 def _instantiate_input(input_type: str, data: dict) -> InputTypes:
     input_type_class = InputTypesMap.get(input_type)
+    if "type" in data:
+        # Replate with field_type
+        data["field_type"] = data.pop("type")
     if input_type_class:
         return input_type_class(**data)
     else:
