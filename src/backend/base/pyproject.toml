@@ -88,7 +88,7 @@ pytest-split = "^0.9.0"
 
 [tool.pytest.ini_options]
 minversion = "6.0"
-addopts = "-ra"
+#addopts = "-ra"
 testpaths = ["tests", "integration"]
 console_output_style = "progress"
 filterwarnings = ["ignore::DeprecationWarning"]

@@ -37,12 +37,16 @@ def update_projects_components_with_latest_component_versions(project_data, all_
     # we want to run through each node and see if it exists in the all_types_dict
     # if so, we go into  the template key and also get the template from all_types_dict
     # and update it all
+    all_types_dict_flat = {}
+    for category in all_types_dict.values():
+        for component in category.values():
+            all_types_dict_flat[component["display_name"]] = component
     node_changes_log = defaultdict(list)
     project_data_copy = deepcopy(project_data)
     for node in project_data_copy.get("nodes", []):
         node_data = node.get("data").get("node")
-        if node_data.get("display_name") in all_types_dict:
-            latest_node = all_types_dict.get(node_data.get("display_name"))
+        if node_data.get("display_name") in all_types_dict_flat:
+            latest_node = all_types_dict_flat.get(node_data.get("display_name"))
             latest_template = latest_node.get("template")
             node_data["template"]["code"] = latest_template["code"]
 
@@ -98,9 +102,11 @@ def update_projects_components_with_latest_component_versions(project_data, all_
 
                 for field_name, field_dict in latest_template.items():
                     if field_name not in node_data["template"]:
+                        node_data["template"][field_name] = field_dict
                         continue
                     # The idea here is to update some attributes of the field
-                    for attr in FIELD_FORMAT_ATTRIBUTES:
+                    to_check_attributes = FIELD_FORMAT_ATTRIBUTES
+                    for attr in to_check_attributes:
                         if attr in field_dict and attr in node_data["template"].get(field_name):
                             # Check if it needs to be updated
                             if field_dict[attr] != node_data["template"][field_name][attr]:
@@ -112,7 +118,6 @@ def update_projects_components_with_latest_component_versions(project_data, all_
                                     }
                                 )
                                 node_data["template"][field_name][attr] = field_dict[attr]
-                            node_data["template"][field_name][attr] = field_dict[attr]
             # Remove fields that are not in the latest template
             if node_data.get("display_name") != "Prompt":
                 for field_name in list(node_data["template"].keys()):
@@ -338,9 +343,13 @@ def load_starter_projects() -> list[tuple[Path, dict]]:
     starter_projects = []
     folder = Path(__file__).parent / "starter_projects"
     for file in folder.glob("*.json"):
-        project = orjson.loads(file.read_text(encoding="utf-8"))
-        starter_projects.append((file, project))
-        logger.info(f"Loaded starter project {file}")
+        with open(file, "r", encoding="utf-8") as f:
+            try:
+                project = orjson.loads(f.read())
+                starter_projects.append((file, project))
+                logger.info(f"Loaded starter project {file}")
+            except orjson.JSONDecodeError as e:
+                raise ValueError(f"Error loading starter project {file}: {e}")
     return starter_projects
 
 

@@ -7,7 +7,6 @@ import { create } from "zustand";
 import { useFolderStore } from "../stores/foldersStore";
 
 const cookies = new Cookies();
-
 const useAuthStore = create<AuthStoreType>((set, get) => ({
   isAdmin: false,
   isAuthenticated: !!cookies.get(LANGFLOW_ACCESS_TOKEN),
@@ -27,9 +26,9 @@ const useAuthStore = create<AuthStoreType>((set, get) => ({
     set({ authenticationErrorCount }),
 
   logout: async () => {
-    const setAllFlows = useFlowsManagerStore.getState().setAllFlows;
-    const setSelectedFolder = useFolderStore.getState().setSelectedFolder;
-    cookies.remove("apikey_tkn_lflw", { path: "/" });
+    get().setIsAuthenticated(false);
+    get().setIsAdmin(false);
+
     set({
       isAdmin: false,
       userData: null,
@@ -38,13 +37,12 @@ const useAuthStore = create<AuthStoreType>((set, get) => ({
       autoLogin: false,
       apiKey: null,
     });
-    setAllFlows([]);
-    setSelectedFolder(null);
+
+    window.location.href = "/login";
   },
   //   getUser: () => {
   //     const setLoading = useAlertStore.getState().setLoading;
   //     const getFoldersApi = useFolderStore.getState().getFoldersApi;
-  //     const setGlobalVariables = useGlobalVariablesStore.getState().setGlobalVariables;
   //     const checkHasStore = useStoreStore.getState().checkHasStore;
   //     const fetchApiData = useStoreStore.getState().fetchApiData;
 
@@ -52,8 +50,6 @@ const useAuthStore = create<AuthStoreType>((set, get) => ({
   //       .then(async (user) => {
   //         set({ userData: user, isAdmin: user.is_superuser });
   //         getFoldersApi(true, true);
-  //         const res = await getGlobalVariables();
-  //         setGlobalVariables(res);
   //         checkHasStore();
   //         fetchApiData();
   //       })
