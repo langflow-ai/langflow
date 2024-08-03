@@ -12,7 +12,7 @@ from loguru import logger
 
 from langflow.exceptions.component import ComponentBuildException
 from langflow.graph.schema import INPUT_COMPONENTS, OUTPUT_COMPONENTS, InterfaceComponentTypes, ResultData
-from langflow.graph.utils import UnbuiltObject, UnbuiltResult
+from langflow.graph.utils import UnbuiltObject, UnbuiltResult, log_transaction
 from langflow.interface.initialize import loading
 from langflow.interface.listing import lazy_load_dict
 from langflow.schema.artifact import ArtifactType
@@ -20,7 +20,6 @@ from langflow.schema.data import Data
 from langflow.schema.message import Message
 from langflow.schema.schema import INPUT_FIELD_NAME, OutputValue, build_output_logs
 from langflow.services.deps import get_storage_service
-from langflow.services.monitor.utils import log_transaction
 from langflow.services.tracing.schema import Log
 from langflow.utils.constants import DIRECT_TYPES
 from langflow.utils.schemas import ChatOutputResponse
@@ -71,6 +70,7 @@ class Vertex:
         self._built_object = UnbuiltObject()
         self._built_result = None
         self._built = False
+        self._successors_ids: Optional[List[str]] = None
         self.artifacts: Dict[str, Any] = {}
         self.artifacts_raw: Dict[str, Any] = {}
         self.artifacts_type: Dict[str, str] = {}
@@ -582,11 +582,11 @@ class Vertex:
         """
         flow_id = self.graph.flow_id
         if not self._built:
-            log_transaction(flow_id, source=self, target=requester, status="error")
+            asyncio.create_task(log_transaction(str(flow_id), source=self, target=requester, status="error"))
             raise ValueError(f"Component {self.display_name} has not been built yet")
 
         result = self._built_result if self.use_result else self._built_object
-        log_transaction(flow_id, source=self, target=requester, status="success")
+        asyncio.create_task(log_transaction(str(flow_id), source=self, target=requester, status="success"))
         return result
 
     async def _build_vertex_and_update_params(self, key, vertex: "Vertex"):

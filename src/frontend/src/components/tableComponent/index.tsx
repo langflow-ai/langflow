@@ -4,7 +4,6 @@ import "ag-grid-community/styles/ag-theme-quartz.css"; // Optional Theme applied
 import { AgGridReact, AgGridReactProps } from "ag-grid-react";
 import cloneDeep from "lodash";
 import { ElementRef, forwardRef, useRef, useState } from "react";
-import { boolean } from "zod";
 import {
   DEFAULT_TABLE_ALERT_MSG,
   DEFAULT_TABLE_ALERT_TITLE,

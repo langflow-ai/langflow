@@ -11,6 +11,8 @@ import {
 } from "../../constants/constants";
 import { AuthContext } from "../../contexts/authContext";
 
+import FeatureFlags from "@/../feature-config.json";
+import { useLogout } from "@/controllers/API/queries/auth";
 import useAuthStore from "@/stores/authStore";
 import useAlertStore from "../../stores/alertStore";
 import { useDarkStore } from "../../stores/darkStore";
@@ -35,9 +37,12 @@ export default function Header(): JSX.Element {
   const notificationCenter = useAlertStore((state) => state.notificationCenter);
   const location = useLocation();
 
-  const { logout, userData } = useContext(AuthContext);
+  const { userData } = useContext(AuthContext);
   const isAdmin = useAuthStore((state) => state.isAdmin);
   const autoLogin = useAuthStore((state) => state.autoLogin);
+
+  const { mutate: mutationLogout } = useLogout();
+  const logout = useAuthStore((state) => state.logout);
 
   const navigate = useNavigate();
   const removeFlow = useFlowsManagerStore((store) => store.removeFlow);
@@ -82,6 +87,17 @@ export default function Header(): JSX.Element {
   const showArrowReturnIcon =
     LOCATIONS_TO_RETURN.some((path) => location.pathname.includes(path)) &&
     visitedFlowPathBefore();
+
+  const handleLogout = () => {
+    mutationLogout(undefined, {
+      onSuccess: () => {
+        logout();
+      },
+      onError: (error) => {
+        console.error(error);
+      },
+    });
+  };
 
   return (
     <div className="header-arrangement">
@@ -167,18 +183,26 @@ export default function Header(): JSX.Element {
           </a>
 
           <Separator orientation="vertical" />
-          <button
-            className="extra-side-bar-save-disable"
-            onClick={() => {
-              setDark(!dark);
-            }}
-          >
-            {dark ? (
-              <IconComponent name="SunIcon" className="side-bar-button-size" />
-            ) : (
-              <IconComponent name="MoonIcon" className="side-bar-button-size" />
-            )}
-          </button>
+          {FeatureFlags.ENABLE_DARK_MODE && (
+            <button
+              className="extra-side-bar-save-disable"
+              onClick={() => {
+                setDark(!dark);
+              }}
+            >
+              {dark ? (
+                <IconComponent
+                  name="SunIcon"
+                  className="side-bar-button-size"
+                />
+              ) : (
+                <IconComponent
+                  name="MoonIcon"
+                  className="side-bar-button-size"
+                />
+              )}
+            </button>
+          )}
           <AlertDropdown>
             <div className="extra-side-bar-save-disable relative">
               {notificationCenter && (
@@ -201,10 +225,17 @@ export default function Header(): JSX.Element {
                   data-testid="user-profile-settings"
                   className="shrink-0"
                 >
-                  <img
-                    src={profileImageUrl}
-                    className="h-7 w-7 shrink-0 focus-visible:outline-0"
-                  />
+                  {FeatureFlags.ENABLE_PROFILE_ICONS ? (
+                    <img
+                      src={profileImageUrl}
+                      className="h-7 w-7 shrink-0 focus-visible:outline-0"
+                    />
+                  ) : (
+                    <IconComponent
+                      name="Settings"
+                      className="side-bar-button-size"
+                    />
+                  )}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="mr-1 mt-1 min-w-40">
@@ -275,9 +306,7 @@ export default function Header(): JSX.Element {
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       className="cursor-pointer gap-2"
-                      onClick={() => {
-                        logout();
-                      }}
+                      onClick={handleLogout}
                     >
                       <ForwardedIconComponent name="LogOut" className="w-4" />
                       Log Out

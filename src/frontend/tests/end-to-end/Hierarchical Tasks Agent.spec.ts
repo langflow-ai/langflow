@@ -65,12 +65,12 @@ test("Hierarchical Tasks Agent", async ({ page }) => {
     .nth(1)
     .fill(process.env.OPENAI_API_KEY ?? "");
 
-  await page.getByTestId("dropdown-model_name").first().click();
+  await page.getByTestId("dropdown_str_model_name").first().click();
   await page.getByTestId("gpt-4o-1-option").first().click();
 
   await page.waitForTimeout(2000);
 
-  await page.getByTestId("dropdown-model_name").last().click();
+  await page.getByTestId("dropdown_str_model_name").last().click();
   await page.getByTestId("gpt-4o-1-option").last().click();
 
   await page.waitForTimeout(2000);

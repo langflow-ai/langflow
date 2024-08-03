@@ -46,22 +46,24 @@ test("dropDownComponent", async ({ page }) => {
   await page.getByTitle("zoom out").click();
   await page.getByTestId("title-Amazon Bedrock").click();
 
-  await page.getByTestId("dropdown-model_id").click();
+  await page.getByTestId("dropdown_str_model_id").click();
 
-  await page.getByTestId("value-dropdown-dropdown-model_id").click();
+  await page
+    .getByTestId("anthropic.claude-3-haiku-20240307-v1:0-10-option")
+    .click();
 
   let value = await page
-    .getByTestId("value-dropdown-dropdown-model_id")
+    .getByTestId("anthropic.claude-3-haiku-20240307-v1:0-10-option")
     .first()
     .innerText();
   if (value !== "anthropic.claude-3-haiku-20240307-v1:0") {
     expect(false).toBeTruthy();
   }
 
-  await page.getByTestId("dropdown-model_id").click();
+  await page.getByTestId("dropdown_str_model_id").click();
   await page.getByText("anthropic.claude-v2").last().click();
 
-  value = await page.getByTestId("dropdown-model_id").innerText();
+  value = await page.getByTestId("dropdown_str_model_id").innerText();
   if (value !== "anthropic.claude-v2:1") {
     expect(false).toBeTruthy();
   }
@@ -71,19 +73,31 @@ test("dropDownComponent", async ({ page }) => {
   await page.getByTestId("more-options-modal").click();
   await page.getByTestId("edit-button-modal").click();
 
-  value = await page.getByTestId("dropdown-edit-model_id").innerText();
+  value = await page
+    .getByTestId("value-dropdown-dropdown_str_edit_model_id")
+    .innerText();
   if (value !== "anthropic.claude-v2:1") {
     expect(false).toBeTruthy();
   }
 
-  await page.locator('//*[@id="showcredentials_profile_name"]').click();
+  await page.locator('//*[@id="showregion_name"]').click();
   expect(
-    await page.locator('//*[@id="showcredentials_profile_name"]').isChecked(),
+    await page.locator('//*[@id="showregion_name"]').isChecked(),
   ).toBeFalsy();
 
-  await page.locator('//*[@id="showcredentials_profile_name"]').click();
+  await page.locator('//*[@id="showregion_name"]').click();
   expect(
-    await page.locator('//*[@id="showcredentials_profile_name"]').isChecked(),
+    await page.locator('//*[@id="showregion_name"]').isChecked(),
+  ).toBeTruthy();
+
+  // showmodel_id
+  await page.locator('//*[@id="showmodel_id"]').click();
+  expect(await page.locator('//*[@id="showmodel_id"]').isChecked()).toBeFalsy();
+
+  // showmodel_id
+  await page.locator('//*[@id="showmodel_id"]').click();
+  expect(
+    await page.locator('//*[@id="showmodel_id"]').isChecked(),
   ).toBeTruthy();
 
   await page.locator('//*[@id="showregion_name"]').click();
@@ -106,47 +120,21 @@ test("dropDownComponent", async ({ page }) => {
     await page.locator('//*[@id="showmodel_id"]').isChecked(),
   ).toBeTruthy();
 
-  await page.locator('//*[@id="showcredentials_profile_name"]').click();
-  expect(
-    await page.locator('//*[@id="showcredentials_profile_name"]').isChecked(),
-  ).toBeFalsy();
-
-  await page.locator('//*[@id="showcredentials_profile_name"]').click();
-  expect(
-    await page.locator('//*[@id="showcredentials_profile_name"]').isChecked(),
-  ).toBeTruthy();
-
-  await page.locator('//*[@id="showregion_name"]').click();
-  expect(
-    await page.locator('//*[@id="showregion_name"]').isChecked(),
-  ).toBeFalsy();
-
-  await page.locator('//*[@id="showregion_name"]').click();
-  expect(
-    await page.locator('//*[@id="showregion_name"]').isChecked(),
-  ).toBeTruthy();
-
-  // showmodel_id
-  await page.locator('//*[@id="showmodel_id"]').click();
-  expect(await page.locator('//*[@id="showmodel_id"]').isChecked()).toBeFalsy();
-
-  // showmodel_id
-  await page.locator('//*[@id="showmodel_id"]').click();
-  expect(
-    await page.locator('//*[@id="showmodel_id"]').isChecked(),
-  ).toBeTruthy();
-
-  await page.getByTestId("dropdown-edit-model_id").click();
+  await page.getByTestId("value-dropdown-dropdown_str_edit_model_id").click();
   await page.getByText("cohere").last().click();
 
-  value = await page.getByTestId("dropdown-edit-model_id").innerText();
+  value = await page
+    .getByTestId("value-dropdown-dropdown_str_edit_model_id")
+    .innerText();
   if (value !== "cohere.embed-multilingual-v3") {
     expect(false).toBeTruthy();
   }
 
   await page.getByText("Close").last().click();
 
-  value = await page.getByTestId("dropdown-model_id").innerText();
+  value = await page
+    .getByTestId("value-dropdown-dropdown_str_model_id")
+    .innerText();
   if (value !== "cohere.embed-multilingual-v3") {
     expect(false).toBeTruthy();
   }

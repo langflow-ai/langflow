@@ -65,7 +65,7 @@ export default function GenericNode({
   const updateNodeInternals = useUpdateNodeInternals();
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const isDark = useDarkStore((state) => state.dark);
-
+  const version = useDarkStore((state) => state.version);
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
 
   const [inputName, setInputName] = useState(false);
@@ -214,6 +214,27 @@ export default function GenericNode({
   useEffect(() => {
     setShowNode(data.showNode ?? true);
   }, [data.showNode]);
+
+  useEffect(() => {
+    if (buildStatus === BuildStatus.BUILT && !isBuilding) {
+      setNode(
+        data.id,
+        (old) => {
+          return {
+            ...old,
+            data: {
+              ...old.data,
+              node: {
+                ...old.data.node,
+                lf_version: version,
+              },
+            },
+          };
+        },
+        false,
+      );
+    }
+  }, [buildStatus, isBuilding]);
 
   const [loadingUpdate, setLoadingUpdate] = useState(false);
 

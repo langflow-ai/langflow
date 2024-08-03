@@ -1,3 +1,4 @@
+import { useDeleteBuilds } from "@/controllers/API/queries/_builds";
 import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
 import { useEffect, useRef, useState } from "react";
 import ShortUniqueId from "short-unique-id";
@@ -14,7 +15,7 @@ import { deleteFlowPool } from "../../../../controllers/API";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
-import { VertexBuildTypeAPI, sendAllProps } from "../../../../types/api";
+import { VertexBuildTypeAPI } from "../../../../types/api";
 import { ChatMessageType } from "../../../../types/chat";
 import { FilePreviewType, chatViewProps } from "../../../../types/components";
 import { classNames } from "../../../../utils/utils";
@@ -40,6 +41,7 @@ export default function ChatView({
   const outputIds = outputs.map((obj) => obj.id);
   const updateFlowPool = useFlowStore((state) => state.updateFlowPool);
   const [id, setId] = useState<string>("");
+  const { mutate: mutateDeleteFlowPool } = useDeleteBuilds();
 
   //build chat history
   useEffect(() => {
@@ -116,9 +118,15 @@ export default function ChatView({
 
   function clearChat(): void {
     setChatHistory([]);
-    deleteFlowPool(currentFlowId).then((_) => {
-      CleanFlowPool();
-    });
+
+    mutateDeleteFlowPool(
+      { flowId: currentFlowId },
+      {
+        onSuccess: () => {
+          CleanFlowPool();
+        },
+      },
+    );
     //TODO tell backend to clear chat session
     if (lockChat) setLockChat(false);
   }
@@ -149,12 +157,7 @@ export default function ChatView({
   const [files, setFiles] = useState<FilePreviewType[]>([]);
   const [isDragging, setIsDragging] = useState(false);
 
-  const { dragOver, dragEnter, dragLeave } = useDragAndDrop(
-    setIsDragging,
-    setFiles,
-    currentFlowId,
-    setErrorData,
-  );
+  const { dragOver, dragEnter, dragLeave } = useDragAndDrop(setIsDragging);
 
   const onDrop = (e) => {
     e.preventDefault();

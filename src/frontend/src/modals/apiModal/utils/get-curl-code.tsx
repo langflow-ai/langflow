@@ -7,10 +7,12 @@
 export function getCurlRunCode(
   flowId: string,
   isAuth: boolean,
-  tweaksBuildedObject,
+  tweaksBuildedObject?: {},
   endpointName?: string | null,
 ): string {
-  const tweaksObject = tweaksBuildedObject[0];
+  let tweaksString = "{}";
+  if (tweaksBuildedObject)
+    tweaksString = JSON.stringify(tweaksBuildedObject, null, 2);
   // show the endpoint name in the curl command if it exists
   return `curl -X POST \\
     "${window.location.protocol}//${window.location.host}/api/v1/run/${
@@ -22,7 +24,7 @@ export function getCurlRunCode(
     -d '{"input_value": "message",
     "output_type": "chat",
     "input_type": "chat",
-    "tweaks": ${JSON.stringify(tweaksObject, null, 2)}}'
+    "tweaks": ${tweaksString}}'
     `;
 }
 

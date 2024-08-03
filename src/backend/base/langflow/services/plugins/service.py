@@ -53,7 +53,7 @@ class PluginService(Service):
             return plugin.get()
         return None
 
-    def teardown(self):
+    async def teardown(self):
         for plugin in self.plugins.values():
             plugin.teardown()
 

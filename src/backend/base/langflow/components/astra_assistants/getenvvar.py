@@ -1,14 +1,30 @@
 import os
-from langflow.custom import CustomComponent
+from langflow.custom import Component
+from langflow.inputs import StrInput
+from langflow.schema.message import Message
+from langflow.template import Output
 
 
-class GetEnvVar(CustomComponent):
+class GetEnvVar(Component):
     display_name = "Get env var"
     description = "Get env var"
     icon = "custom_components"
 
-    def build_config(self):
-        return {"env_var_name": {"display_name": "Env var name"}}
+    inputs = [
+        StrInput(
+            name="env_var_name",
+            display_name="Env var name",
+            info="Name of the environment variable to get",
+        )
+    ]
 
-    def build(self, env_var_name: str) -> str:
-        return os.environ[env_var_name]
+    outputs = [
+        Output(display_name="Env var value", name="env_var_value", method="process_inputs"),
+    ]
+
+    def process_inputs(self) -> Message:
+        if self.env_var_name not in os.environ:
+            raise Exception(f"Environment variable {self.env_var_name} not set")
+        else:
+            message = Message(text=os.environ[self.env_var_name])
+            return message

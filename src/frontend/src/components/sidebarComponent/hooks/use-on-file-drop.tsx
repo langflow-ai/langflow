@@ -3,10 +3,7 @@ import {
   WRONG_FILE_ERROR_ALERT,
 } from "../../../constants/alerts_constants";
 import { updateFlowInDatabase } from "../../../controllers/API";
-import {
-  uploadFlowToFolder,
-  uploadFlowsFromFolders,
-} from "../../../pages/MainPage/services";
+import { uploadFlowToFolder } from "../../../pages/MainPage/services";
 import useAlertStore from "../../../stores/alertStore";
 import useFlowsManagerStore from "../../../stores/flowsManagerStore";
 import { useFolderStore } from "../../../stores/foldersStore";

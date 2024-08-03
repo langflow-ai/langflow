@@ -1,3 +1,6 @@
+import { useLoginUser } from "@/controllers/API/queries/auth";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import { useFolderStore } from "@/stores/foldersStore";
 import { useContext, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../../../components/ui/button";
@@ -5,7 +8,6 @@ import { Input } from "../../../components/ui/input";
 import { SIGNIN_ERROR_ALERT } from "../../../constants/alerts_constants";
 import { CONTROL_LOGIN_STATE } from "../../../constants/constants";
 import { AuthContext } from "../../../contexts/authContext";
-import { onLogin } from "../../../controllers/API";
 import useAlertStore from "../../../stores/alertStore";
 import { LoginType } from "../../../types/api";
 import {
@@ -21,6 +23,9 @@ export default function LoginAdminPage() {
   const { login } = useContext(AuthContext);
   const setLoading = useAlertStore((state) => state.setLoading);
 
+  const setAllFlows = useFlowsManagerStore((state) => state.setAllFlows);
+  const setSelectedFolder = useFolderStore((state) => state.setSelectedFolder);
+
   const { password, username } = inputState;
   const setErrorData = useAlertStore((state) => state.setErrorData);
   function handleInput({
@@ -29,26 +34,29 @@ export default function LoginAdminPage() {
     setInputState((prev) => ({ ...prev, [name]: value }));
   }
 
+  const { mutate } = useLoginUser();
+
   function signIn() {
     const user: LoginType = {
       username: username,
       password: password,
     };
-    onLogin(user)
-      .then((user) => {
-        console.log("admin page");
+
+    mutate(user, {
+      onSuccess: (res) => {
+        setAllFlows([]);
+        setSelectedFolder(null);
 
         setLoading(true);
-
-        login(user.access_token, "login");
-        navigate("/admin/");
-      })
-      .catch((error) => {
+        login(res.access_token, "login");
+      },
+      onError: (error) => {
         setErrorData({
           title: SIGNIN_ERROR_ALERT,
           list: [error["response"]["data"]["detail"]],
         });
-      });
+      },
+    });
   }
 
   return (

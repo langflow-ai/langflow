@@ -9,19 +9,15 @@
 export default function getPythonApiCode(
   flowId: string,
   isAuth: boolean,
-  tweaksBuildedObject: any[],
+  tweaksBuildedObject?: {},
   endpointName?: string | null,
 ): string {
   let tweaksString = "{}";
-  if (tweaksBuildedObject && tweaksBuildedObject.length > 0) {
-    const tweaksObject = tweaksBuildedObject[0];
-    if (!tweaksObject) {
-      throw new Error("expected tweaks");
-    }
-    tweaksString = JSON.stringify(tweaksObject, null, 2)
+  if (tweaksBuildedObject)
+    tweaksString = JSON.stringify(tweaksBuildedObject, null, 2)
       .replace(/true/g, "True")
-      .replace(/false/g, "False");
-  }
+      .replace(/false/g, "False")
+      .replace(/null|undefined/g, "None");
 
   return `import argparse
 import json
