@@ -14,11 +14,13 @@ from sqlalchemy import UniqueConstraint
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
 from langflow.schema import Data
+from langflow.services.database.models.vertex_builds.model import VertexBuildTable
 
 if TYPE_CHECKING:
     from langflow.services.database.models.folder import Folder
     from langflow.services.database.models.message import MessageTable
     from langflow.services.database.models.user import User
+    from langflow.services.database.models import TransactionTable
 
 
 class FlowBase(SQLModel):
@@ -135,7 +137,7 @@ class FlowBase(SQLModel):
         return datetime.fromisoformat(v)
 
 
-class Flow(FlowBase, table=True):
+class Flow(FlowBase, table=True):  # type: ignore
     id: UUID = Field(default_factory=uuid4, primary_key=True, unique=True)
     data: Optional[Dict] = Field(default=None, sa_column=Column(JSON))
     user_id: Optional[UUID] = Field(index=True, foreign_key="user.id", nullable=True)
@@ -143,6 +145,8 @@ class Flow(FlowBase, table=True):
     folder_id: Optional[UUID] = Field(default=None, foreign_key="folder.id", nullable=True, index=True)
     folder: Optional["Folder"] = Relationship(back_populates="flows")
     messages: List["MessageTable"] = Relationship(back_populates="flow")
+    transactions: List["TransactionTable"] = Relationship(back_populates="flow")
+    vertex_builds: List["VertexBuildTable"] = Relationship(back_populates="flow")
 
     def to_data(self):
         serialized = self.model_dump()

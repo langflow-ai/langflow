@@ -1,9 +1,8 @@
 from typing import Any
 
-from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
-from langflow.inputs import BoolInput, DropdownInput, FloatInput, IntInput, MessageInput, SecretStrInput, StrInput
+from langflow.inputs import DropdownInput, FloatInput, IntInput, SecretStrInput, StrInput
 from langflow.schema.dotdict import dotdict
 
 
@@ -12,8 +11,7 @@ class NVIDIAModelComponent(LCModelComponent):
     description = "Generates text using NVIDIA LLMs."
     icon = "NVIDIA"
 
-    inputs = [
-        MessageInput(name="input_value", display_name="Input"),
+    inputs = LCModelComponent._base_inputs + [
         IntInput(
             name="max_tokens",
             display_name="Max Tokens",
@@ -42,13 +40,6 @@ class NVIDIAModelComponent(LCModelComponent):
             value="NVIDIA_API_KEY",
         ),
         FloatInput(name="temperature", display_name="Temperature", value=0.1),
-        BoolInput(name="stream", display_name="Stream", info=STREAM_INFO_TEXT, advanced=True),
-        StrInput(
-            name="system_message",
-            display_name="System Message",
-            info="System message to pass to the model.",
-            advanced=True,
-        ),
         IntInput(
             name="seed",
             display_name="Seed",

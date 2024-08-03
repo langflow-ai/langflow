@@ -15,6 +15,26 @@ test("should like and add components and flows", async ({ page }) => {
   await page.goto("/");
   await page.waitForTimeout(1000);
 
+  let modalCount = 0;
+  try {
+    const modalTitleElement = await page?.getByTestId("modal-title");
+    if (modalTitleElement) {
+      modalCount = await modalTitleElement.count();
+    }
+  } catch (error) {
+    modalCount = 0;
+  }
+
+  while (modalCount === 0) {
+    await page.getByText("New Project", { exact: true }).click();
+    await page.waitForTimeout(5000);
+    modalCount = await page.getByTestId("modal-title")?.count();
+  }
+
+  await page.getByText("Close", { exact: true }).click();
+
+  await page.waitForTimeout(1000);
+
   await page.getByTestId("button-store").click();
   await page.waitForTimeout(1000);
 

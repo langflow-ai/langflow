@@ -10,10 +10,11 @@ on:
         type: string
 env:
   POETRY_VERSION: "1.8.2"
+  NODE_VERSION: "21"
 
 jobs:
   build:
-    name: Run Unit Tests
+    name: Unit Tests - Python ${{ matrix.python-version }} - Group ${{ matrix.group }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -29,6 +30,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.branch || github.ref }}
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        id: setup-node
+        with:
+          node-version: ${{ env.NODE_VERSION }}
       - name: Set up Python ${{ matrix.python-version }} + Poetry ${{ env.POETRY_VERSION }}
         uses: "./.github/actions/poetry_caching"
         with:
@@ -40,12 +46,14 @@ jobs:
           poetry env use ${{ matrix.python-version }}
           poetry install
       - name: Run unit tests
-        timeout-minutes: 12
-        run: |
-          make unit_tests args="--splits ${{ matrix.splitCount }} --group ${{ matrix.group }}"
+        uses: nick-fields/retry@v2
+        with:
+          timeout_minutes: 12
+          max_attempts: 2
+          command: make unit_tests args="--splits ${{ matrix.splitCount }} --group ${{ matrix.group }}"
 
   test-cli:
-    name: Test CLI
+    name: Test CLI - Python ${{ matrix.python-version }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -61,13 +69,16 @@ jobs:
           python-version: ${{ matrix.python-version }}
           poetry-version: ${{ env.POETRY_VERSION }}
           cache-key: ${{ runner.os }}-poetry-${{ env.POETRY_VERSION }}-${{ hashFiles('**/poetry.lock') }}
-      - name: Install Python dependencies
+      - name: Build wheel
         run: |
           poetry env use ${{ matrix.python-version }}
-          poetry install
+          make build main=true
+      - name: Install wheel
+        run: |
+          python -m pip install dist/*.whl
       - name: Test CLI
         run: |
-          poetry run python -m langflow run --host 127.0.0.1 --port 7860 --backend-only &
+          python -m langflow run --host 127.0.0.1 --port 7860 --backend-only &
           SERVER_PID=$!
           # Wait for the server to start
           timeout 120 bash -c 'until curl -f http://127.0.0.1:7860/api/v1/auto_login; do sleep 5; done' || (echo "Server did not start in time" && kill $SERVER_PID && exit 1)

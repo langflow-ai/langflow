@@ -28,151 +28,73 @@ test("NestedComponent", async ({ page }) => {
   });
   await page.getByTestId("extended-disclosure").click();
   await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("pinecone");
+  await page.getByPlaceholder("Search").fill("api request");
 
   await page.waitForTimeout(1000);
 
   await page
-    .getByTestId("vectorstoresPinecone")
+    .getByTestId("dataAPI Request")
     .first()
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.click('//*[@id="react-flow-id"]');
 
+  await page.getByTitle("fit view").click();
+  await page.getByTitle("zoom out").click();
+  await page.getByTitle("zoom out").click();
+  await page.getByTitle("zoom out").click();
+
+  await page.getByTestId("dict_nesteddict_headers").first().click();
+  await page
+    .getByText("{")
+    .last()
+    .hover()
+    .then(async () => {
+      await page.locator(".json-view--edit").first().click();
+      await page.locator(".json-view--input").first().fill("keytest");
+      await page.locator(".json-view--edit").first().click();
+
+      await page.locator(".json-view--edit").first().click();
+      await page.locator(".json-view--input").first().fill("keytest1");
+      await page.locator(".json-view--edit").first().click();
+
+      await page.locator(".json-view--edit").first().click();
+      await page.locator(".json-view--input").first().fill("keytest2");
+      await page.locator(".json-view--edit").first().click();
+    });
+
+  await page
+    .locator(".json-view--pair")
+    .first()
+    .hover()
+    .then(async () => {
+      await page.locator(".json-view--edit").nth(2).click();
+      await page.locator(".json-view--null").first().fill("proptest1");
+      await page.locator(".json-view--edit").nth(2).click();
+    });
+
+  await page.getByText("Save").last().click();
+
+  await page.getByTestId("div-generic-node").click();
+
   await page.getByTestId("more-options-modal").click();
   await page.getByTestId("edit-button-modal").click();
 
-  // showindex_name
-  await page.locator('//*[@id="showindex_name"]').click();
+  await page.getByTestId("dict_nesteddict_edit_headers").first().click();
 
-  expect(
-    await page.locator('//*[@id="showindex_name"]').isChecked(),
-  ).toBeFalsy();
+  expect(await page.getByText("keytest", { exact: true }).count()).toBe(1);
+  expect(await page.getByText("keytest1", { exact: true }).count()).toBe(1);
+  expect(await page.getByText("keytest2", { exact: true }).count()).toBe(1);
+  expect(await page.getByText("proptest1").count()).toBe(1);
 
-  // shownamespace
-  await page.locator('//*[@id="shownamespace"]').click();
+  await page
+    .locator(".json-view--pair")
+    .first()
+    .hover()
+    .then(async () => {
+      await page.locator(".json-view--edit").nth(3).click();
+      await page.locator(".json-view--edit").nth(2).click();
+    });
 
-  expect(
-    await page.locator('//*[@id="shownamespace"]').isChecked(),
-  ).toBeFalsy();
-
-  // showpinecone_api_key
-  await page.locator('//*[@id="showpinecone_api_key"]').click();
-
-  expect(
-    await page.locator('//*[@id="showpinecone_api_key"]').isChecked(),
-  ).toBeFalsy();
-
-  // showindex_name
-  await page.locator('//*[@id="showindex_name"]').click();
-
-  expect(
-    await page.locator('//*[@id="showindex_name"]').isChecked(),
-  ).toBeTruthy();
-
-  // shownamespace
-  await page.locator('//*[@id="shownamespace"]').click();
-
-  expect(
-    await page.locator('//*[@id="shownamespace"]').isChecked(),
-  ).toBeTruthy();
-
-  // showpinecone_api_key
-  await page.locator('//*[@id="showpinecone_api_key"]').click();
-
-  expect(
-    await page.locator('//*[@id="showpinecone_api_key"]').isChecked(),
-  ).toBeTruthy();
-
-  // showindex_name
-  await page.locator('//*[@id="showindex_name"]').click();
-
-  expect(
-    await page.locator('//*[@id="showindex_name"]').isChecked(),
-  ).toBeFalsy();
-
-  // shownamespace
-  await page.locator('//*[@id="shownamespace"]').click();
-
-  expect(
-    await page.locator('//*[@id="shownamespace"]').isChecked(),
-  ).toBeFalsy();
-
-  // showpinecone_api_key
-  await page.locator('//*[@id="showpinecone_api_key"]').click();
-
-  expect(
-    await page.locator('//*[@id="showpinecone_api_key"]').isChecked(),
-  ).toBeFalsy();
-
-  // showindex_name
-  await page.locator('//*[@id="showindex_name"]').click();
-
-  expect(
-    await page.locator('//*[@id="showindex_name"]').isChecked(),
-  ).toBeTruthy();
-
-  // shownamespace
-  await page.locator('//*[@id="shownamespace"]').click();
-
-  expect(
-    await page.locator('//*[@id="shownamespace"]').isChecked(),
-  ).toBeTruthy();
-
-  // showpinecone_api_key
-  await page.locator('//*[@id="showpinecone_api_key"]').click();
-
-  expect(
-    await page.locator('//*[@id="showpinecone_api_key"]').isChecked(),
-  ).toBeTruthy();
-
-  // showindex_name
-  await page.locator('//*[@id="showindex_name"]').click();
-
-  expect(
-    await page.locator('//*[@id="showindex_name"]').isChecked(),
-  ).toBeFalsy();
-
-  // shownamespace
-  await page.locator('//*[@id="shownamespace"]').click();
-
-  expect(
-    await page.locator('//*[@id="shownamespace"]').isChecked(),
-  ).toBeFalsy();
-
-  // showpinecone_api_key
-  await page.locator('//*[@id="showpinecone_api_key"]').click();
-
-  expect(
-    await page.locator('//*[@id="showpinecone_api_key"]').isChecked(),
-  ).toBeFalsy();
-
-  // showindex_name
-  await page.locator('//*[@id="showindex_name"]').click();
-
-  expect(
-    await page.locator('//*[@id="showindex_name"]').isChecked(),
-  ).toBeTruthy();
-
-  // shownamespace
-  await page.locator('//*[@id="shownamespace"]').click();
-
-  expect(
-    await page.locator('//*[@id="shownamespace"]').isChecked(),
-  ).toBeTruthy();
-
-  // showpinecone_api_key
-  await page.locator('//*[@id="showpinecone_api_key"]').click();
-
-  expect(
-    await page.locator('//*[@id="showpinecone_api_key"]').isChecked(),
-  ).toBeTruthy();
-
-  //showtext_key
-  await page.locator('//*[@id="showtext_key"]').click();
-
-  expect(
-    await page.locator('//*[@id="showtext_key"]').isChecked(),
-  ).toBeTruthy();
-
-  await page.getByText("Close").last().click();
+  expect(await page.getByText("keytest", { exact: true }).count()).toBe(0);
+  expect(await page.getByText("proptest1").count()).toBe(0);
 });

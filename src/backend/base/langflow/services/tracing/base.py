@@ -1,10 +1,12 @@
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Dict, Optional
 from uuid import UUID
+
 from langflow.services.tracing.schema import Log
 
 if TYPE_CHECKING:
     from langflow.graph.vertex.base import Vertex
+    from langchain.callbacks.base import BaseCallbackHandler
 
 
 class BaseTracer(ABC):
@@ -47,4 +49,8 @@ class BaseTracer(ABC):
         error: Exception | None = None,
         metadata: dict[str, Any] | None = None,
     ):
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_langchain_callback(self) -> Optional["BaseCallbackHandler"]:
         raise NotImplementedError

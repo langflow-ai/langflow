@@ -1,15 +1,17 @@
+import useFlowStore from "@/stores/flowStore";
+import { NodeType } from "@/types/flow";
 import { cloneDeep } from "lodash";
 
 const useHandleNodeClass = (
-  takeSnapshot: () => void,
-  setNode: (id: string, callback: (oldNode: any) => any) => void,
   nodeId: string,
+  setMyNode?: (
+    id: string,
+    update: NodeType | ((oldState: NodeType) => NodeType),
+  ) => void,
 ) => {
-  const handleNodeClass = (newNodeClass, name, code, type?: string) => {
-    if (code) {
-      takeSnapshot();
-    }
+  const setNode = setMyNode ?? useFlowStore((state) => state.setNode);
 
+  const handleNodeClass = (newNodeClass, type?: string) => {
     setNode(nodeId, (oldNode) => {
       let newNode = cloneDeep(oldNode);
 
@@ -19,9 +21,6 @@ const useHandleNodeClass = (
       };
       if (type) {
         newNode.data.type = type;
-      }
-      if (code) {
-        newNode.data.node.template[name].value = code;
       }
 
       return newNode;

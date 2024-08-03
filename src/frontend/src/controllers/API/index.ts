@@ -1,4 +1,3 @@
-import { ColDef, ColGroupDef } from "ag-grid-community";
 import { AxiosRequestConfig, AxiosResponse } from "axios";
 import { Edge, Node, ReactFlowJsonObject } from "reactflow";
 import { BASE_URL_API, MAX_BATCH_SIZE } from "../../constants/constants";
@@ -8,21 +7,14 @@ import {
   APITemplateType,
   Component,
   CustomComponentRequest,
-  LoginType,
-  ProfilePicturesTypeAPI,
   Users,
   VertexBuildTypeAPI,
   VerticesOrderTypeAPI,
-  changeUser,
-  resetPasswordType,
   sendAllProps,
 } from "../../types/api/index";
-import { UserInputType } from "../../types/components";
 import { FlowStyleType, FlowType } from "../../types/flow";
-import { Message } from "../../types/messages";
 import { StoreComponentResponse } from "../../types/store";
 import { FlowPoolType } from "../../types/zustand/flow";
-import { extractColumnsFromRows } from "../../utils/utils";
 import {
   APIClassType,
   BuildStatusTypeAPI,
@@ -197,19 +189,6 @@ export async function readFlowsFromDatabase() {
   }
 }
 
-export async function downloadFlowsFromDatabase() {
-  try {
-    const response = await api.get(`${BASE_URL_API}flows/download/`);
-    if (response && response?.status !== 200) {
-      throw new Error(`HTTP error! status: ${response?.status}`);
-    }
-    return response?.data;
-  } catch (error) {
-    console.error(error);
-    throw error;
-  }
-}
-
 export async function uploadFlowsToDatabase(flows: FormData) {
   try {
     const response = await api.post(`${BASE_URL_API}flows/upload/`, flows);
@@ -362,19 +341,6 @@ export async function uploadFile(
   return await api.post(`${BASE_URL_API}files/upload/${id}`, formData);
 }
 
-export async function getProfilePictures(): Promise<ProfilePicturesTypeAPI | null> {
-  try {
-    const res = await api.get(`${BASE_URL_API}files/profile_pictures/list`);
-
-    if (res.status === 200) {
-      return res.data;
-    }
-  } catch (error) {
-    throw error;
-  }
-  return null;
-}
-
 export async function postCustomComponent(
   code: string,
   apiClass: APIClassType,
@@ -400,45 +366,6 @@ export async function postCustomComponentUpdate(
   });
 }
 
-export async function onLogin(user: LoginType) {
-  try {
-    const response = await api.post(
-      `${BASE_URL_API}login`,
-      new URLSearchParams({
-        username: user.username,
-        password: user.password,
-      }).toString(),
-      {
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-      },
-    );
-
-    if (response.status === 200) {
-      const data = response?.data;
-      return data;
-    }
-  } catch (error) {
-    throw error;
-  }
-}
-
-export async function autoLogin(abortSignal) {
-  try {
-    const response = await api.get(`${BASE_URL_API}auto_login`, {
-      signal: abortSignal,
-    });
-
-    if (response.status === 200) {
-      const data = response?.data;
-      return data;
-    }
-  } catch (error) {
-    throw error;
-  }
-}
-
 export async function renewAccessToken() {
   try {
     return await api.post(`${BASE_URL_API}refresh`);
@@ -460,18 +387,6 @@ export async function getLoggedUser(): Promise<Users | null> {
   return null;
 }
 
-export async function addUser(user: UserInputType): Promise<Array<Users>> {
-  try {
-    const res = await api.post(`${BASE_URL_API}users/`, user);
-    if (res.status !== 201) {
-      throw new Error(res.data.detail);
-    }
-    return res.data;
-  } catch (error) {
-    throw error;
-  }
-}
-
 export async function getUsersPage(
   skip: number,
   limit: number,
@@ -487,42 +402,6 @@ export async function getUsersPage(
     throw error;
   }
   return [];
-}
-
-export async function deleteUser(user_id: string) {
-  try {
-    const res = await api.delete(`${BASE_URL_API}users/${user_id}`);
-    if (res.status === 200) {
-      return res.data;
-    }
-  } catch (error) {
-    throw error;
-  }
-}
-
-export async function updateUser(user_id: string, user: changeUser) {
-  try {
-    const res = await api.patch(`${BASE_URL_API}users/${user_id}`, user);
-    if (res.status === 200) {
-      return res.data;
-    }
-  } catch (error) {
-    throw error;
-  }
-}
-
-export async function resetPassword(user_id: string, user: resetPasswordType) {
-  try {
-    const res = await api.patch(
-      `${BASE_URL_API}users/${user_id}/reset-password`,
-      user,
-    );
-    if (res.status === 200) {
-      return res.data;
-    }
-  } catch (error) {
-    throw error;
-  }
 }
 
 export async function getApiKey() {
@@ -879,70 +758,6 @@ export async function requestLogout() {
   }
 }
 
-export async function getGlobalVariables(): Promise<{
-  [key: string]: { id: string; type: string; default_fields: string[] };
-}> {
-  const globalVariables = {};
-  (await api.get(`${BASE_URL_API}variables/`))?.data?.forEach((element) => {
-    globalVariables[element.name] = {
-      id: element.id,
-      type: element.type,
-      default_fields: element.default_fields,
-    };
-  });
-  return globalVariables;
-}
-
-export async function registerGlobalVariable({
-  name,
-  value,
-  type,
-  default_fields = [],
-}: {
-  name: string;
-  value: string;
-  type?: string;
-  default_fields?: string[];
-}): Promise<AxiosResponse<{ name: string; id: string; type: string }>> {
-  try {
-    const response = await api.post(`${BASE_URL_API}variables/`, {
-      name,
-      value,
-      type,
-      default_fields: default_fields,
-    });
-    return response;
-  } catch (error) {
-    throw error;
-  }
-}
-
-export async function deleteGlobalVariable(id: string) {
-  try {
-    const response = await api.delete(`${BASE_URL_API}variables/${id}`);
-    return response;
-  } catch (error) {
-    throw error;
-  }
-}
-
-export async function updateGlobalVariable(
-  name: string,
-  value: string,
-  id: string,
-) {
-  try {
-    const response = api.patch(`${BASE_URL_API}variables/${id}`, {
-      name,
-      value,
-    });
-
-    return response;
-  } catch (error) {
-    throw error;
-  }
-}
-
 export async function getVerticesOrder(
   flowId: string,
   startNodeId?: string | null,
@@ -998,16 +813,11 @@ export async function downloadImage({ flowId, fileName }): Promise<any> {
 
 export async function getFlowPool({
   flowId,
-  nodeId,
 }: {
   flowId: string;
-  nodeId?: string;
 }): Promise<AxiosResponse<{ vertex_builds: FlowPoolType }>> {
   const config = {};
   config["params"] = { flow_id: flowId };
-  if (nodeId) {
-    config["params"] = { nodeId };
-  }
   return await api.get(`${BASE_URL_API}monitor/builds`, config);
 }
 
@@ -1054,19 +864,4 @@ export async function multipleDeleteFlowsComponents(
 
   // Return the responses after all requests are completed
   return Promise.all(responses);
-}
-
-export async function getTransactionTable(
-  id: string,
-  mode: "intersection" | "union",
-  params = {},
-): Promise<{ rows: Array<object>; columns: Array<ColDef | ColGroupDef> }> {
-  const config = {};
-  config["params"] = { flow_id: id };
-  if (params) {
-    config["params"] = { ...config["params"], ...params };
-  }
-  const rows = await api.get(`${BASE_URL_API}monitor/transactions`, config);
-  const columns = extractColumnsFromRows(rows.data, mode);
-  return { rows: rows.data, columns };
 }

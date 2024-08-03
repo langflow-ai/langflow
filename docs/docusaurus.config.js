@@ -81,7 +81,6 @@ const config = {
       };
     },
   ],
-  markdown: { format: "detect" },
   themeConfig:
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
     ({

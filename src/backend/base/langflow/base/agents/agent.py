@@ -9,12 +9,13 @@ from langchain_core.runnables import Runnable
 from langflow.base.agents.callback import AgentAsyncHandler
 from langflow.base.agents.utils import data_to_messages
 from langflow.custom import Component
-from langflow.field_typing import Text, Tool
-from langflow.inputs.inputs import DataInput, InputTypes
+from langflow.field_typing import Text
+from langflow.inputs.inputs import InputTypes
 from langflow.io import BoolInput, HandleInput, IntInput, MessageTextInput
 from langflow.schema import Data
 from langflow.schema.message import Message
 from langflow.template import Output
+from langflow.utils.constants import MESSAGE_SENDER_AI
 
 
 class LCAgentComponent(Component):
@@ -46,18 +47,19 @@ class LCAgentComponent(Component):
         Output(display_name="Response", name="response", method="message_response"),
     ]
 
+    @abstractmethod
+    def build_agent(self) -> AgentExecutor:
+        """Create the agent."""
+        pass
+
     async def message_response(self) -> Message:
+        """Run the agent and return the response."""
         agent = self.build_agent()
-        result = await self.run_agent(
-            agent=agent,
-            inputs=self.input_value,
-            tools=self.tools,
-            message_history=self.chat_history,
-            handle_parsing_errors=self.handle_parsing_errors,
-        )
+        result = await self.run_agent(agent=agent)
+
         if isinstance(result, list):
             result = "\n".join([result_dict["text"] for result_dict in result])
-        message = Message(text=result, sender="Machine")
+        message = Message(text=result, sender=MESSAGE_SENDER_AI)
         self.status = message
         return message
 
@@ -87,27 +89,18 @@ class LCAgentComponent(Component):
             }
         return {**base, "agent_executor_kwargs": agent_kwargs}
 
-    async def run_agent(
-        self,
-        agent: Union[Runnable, BaseSingleActionAgent, BaseMultiActionAgent, AgentExecutor],
-        inputs: str,
-        tools: List[Tool],
-        message_history: Optional[List[Data]] = None,
-        handle_parsing_errors: bool = True,
-    ) -> Text:
-        if isinstance(agent, AgentExecutor):
-            runnable = agent
-        else:
-            runnable = AgentExecutor.from_agent_and_tools(
-                agent=agent,  # type: ignore
-                tools=tools,
-                verbose=True,
-                handle_parsing_errors=handle_parsing_errors,
-            )
-        input_dict: dict[str, str | list[BaseMessage]] = {"input": inputs}
-        if message_history:
-            input_dict["chat_history"] = data_to_messages(message_history)
-        result = await runnable.ainvoke(input_dict, config={"callbacks": [AgentAsyncHandler(self.log)]})
+    def get_chat_history_data(self) -> Optional[List[Data]]:
+        # might be overridden in subclasses
+        return None
+
+    async def run_agent(self, agent: AgentExecutor) -> Text:
+        input_dict: dict[str, str | list[BaseMessage]] = {"input": self.input_value}
+        self.chat_history = self.get_chat_history_data()
+        if self.chat_history:
+            input_dict["chat_history"] = data_to_messages(self.chat_history)
+        result = await agent.ainvoke(
+            input_dict, config={"callbacks": [AgentAsyncHandler(self.log)] + self.get_langchain_callbacks()}
+        )
         self.status = result
         if "output" not in result:
             raise ValueError("Output key not found in result. Tried 'output'.")
@@ -123,24 +116,44 @@ class LCToolsAgentComponent(LCAgentComponent):
             input_types=["Tool", "BaseTool"],
             is_list=True,
         ),
-        HandleInput(
-            name="llm",
-            display_name="Language Model",
-            input_types=["LanguageModel", "ToolEnabledLanguageModel"],
-            required=True,
-        ),
-        DataInput(name="chat_history", display_name="Chat History", is_list=True),
     ]
 
     def build_agent(self) -> AgentExecutor:
-        agent = self.creat_agent_runnable()
+        agent = self.create_agent_runnable()
         return AgentExecutor.from_agent_and_tools(
             agent=RunnableAgent(runnable=agent, input_keys_arg=["input"], return_keys_arg=["output"]),
             tools=self.tools,
             **self.get_agent_kwargs(flatten=True),
         )
 
+    async def run_agent(
+        self,
+        agent: Union[Runnable, BaseSingleActionAgent, BaseMultiActionAgent, AgentExecutor],
+    ) -> Text:
+        if isinstance(agent, AgentExecutor):
+            runnable = agent
+        else:
+            runnable = AgentExecutor.from_agent_and_tools(
+                agent=agent,  # type: ignore
+                tools=self.tools,
+                handle_parsing_errors=self.handle_parsing_errors,
+                verbose=self.verbose,
+                max_iterations=self.max_iterations,
+            )
+        input_dict: dict[str, str | list[BaseMessage]] = {"input": self.input_value}
+        if self.chat_history:
+            input_dict["chat_history"] = data_to_messages(self.chat_history)
+
+        result = await runnable.ainvoke(
+            input_dict, config={"callbacks": [AgentAsyncHandler(self.log)] + self.get_langchain_callbacks()}
+        )
+        self.status = result
+        if "output" not in result:
+            raise ValueError("Output key not found in result. Tried 'output'.")
+
+        return cast(str, result.get("output"))
+
     @abstractmethod
-    def creat_agent_runnable(self) -> Runnable:
+    def create_agent_runnable(self) -> Runnable:
         """Create the agent."""
         pass

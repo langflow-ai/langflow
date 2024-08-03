@@ -1,10 +1,6 @@
 import { create } from "zustand";
 import { DEFAULT_FOLDER, STARTER_FOLDER_NAME } from "../constants/constants";
-import {
-  getFolderById,
-  getFolders,
-  uploadFlowsFromFolders,
-} from "../pages/MainPage/services";
+import { getFolderById, getFolders } from "../pages/MainPage/services";
 import { FoldersStoreType } from "../types/zustand/folders";
 import useFlowsManagerStore from "./flowsManagerStore";
 import { useTypesStore } from "./typesStore";
@@ -133,50 +129,6 @@ export const useFolderStore = create<FoldersStoreType>((set, get) => ({
   setFolderDragging: (folder) => set(() => ({ folderDragging: folder })),
   folderIdDragging: "",
   setFolderIdDragging: (id) => set(() => ({ folderIdDragging: id })),
-  uploadFolder: () => {
-    return new Promise<void>((resolve, reject) => {
-      const input = document.createElement("input");
-      input.type = "file";
-      input.accept = ".json";
-      input.onchange = (event: Event) => {
-        if (
-          (event.target as HTMLInputElement).files![0].type ===
-          "application/json"
-        ) {
-          const file = (event.target as HTMLInputElement).files![0];
-          const formData = new FormData();
-          formData.append("file", file);
-          file.text().then((text) => {
-            const data = JSON.parse(text);
-            if (data.data?.nodes) {
-              useFlowsManagerStore
-                .getState()
-                .addFlow(true, data)
-                .then(() => {
-                  resolve();
-                })
-                .catch((error) => {
-                  reject(error);
-                });
-            } else {
-              uploadFlowsFromFolders(formData)
-                .then(() => {
-                  get()
-                    .getFoldersApi(true)
-                    .then(() => {
-                      resolve();
-                    });
-                })
-                .catch((error) => {
-                  reject(error);
-                });
-            }
-          });
-        }
-      };
-      input.click();
-    });
-  },
   starterProjectId: "",
   setStarterProjectId: (id) => set(() => ({ starterProjectId: id })),
 }));

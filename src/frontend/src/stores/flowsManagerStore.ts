@@ -1,10 +1,13 @@
+import { brokenEdgeMessage } from "@/utils/utils";
 import { AxiosError } from "axios";
 import { cloneDeep } from "lodash";
 import pDebounce from "p-debounce";
-import { useLocation } from "react-router-dom";
 import { Edge, Node, Viewport, XYPosition } from "reactflow";
 import { create } from "zustand";
-import { SAVE_DEBOUNCE_TIME } from "../constants/constants";
+import {
+  BROKEN_EDGES_WARNING,
+  SAVE_DEBOUNCE_TIME,
+} from "../constants/constants";
 import {
   deleteFlowFromDatabase,
   multipleDeleteFlowsComponents,
@@ -22,6 +25,7 @@ import {
   addVersionToDuplicates,
   createFlowComponent,
   createNewFlow,
+  detectBrokenEdgesEdges,
   extractFieldsFromComponenents,
   processDataFromFlow,
   processFlows,
@@ -218,7 +222,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
       updateGroupRecursion(
         node,
         flowData?.edges,
-        useGlobalVariablesStore.getState().unavaliableFields,
+        useGlobalVariablesStore.getState().unavailableFields,
         useGlobalVariablesStore.getState().globalVariablesEntries,
       );
     });
@@ -299,6 +303,16 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
         throw error; // Re-throw the error so the caller can handle it if needed
       }
     } else {
+      let brokenEdges = detectBrokenEdgesEdges(
+        flow!.data!.nodes,
+        flow!.data!.edges,
+      );
+      if (brokenEdges.length > 0) {
+        useAlertStore.getState().setErrorData({
+          title: BROKEN_EDGES_WARNING,
+          list: brokenEdges.map((edge) => brokenEdgeMessage(edge)),
+        });
+      }
       useFlowStore
         .getState()
         .paste(

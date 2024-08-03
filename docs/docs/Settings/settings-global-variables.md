@@ -82,10 +82,7 @@ To prevent this behavior, set `LANGFLOW_STORE_ENVIRONMENT_VARIABLES` to `false` 
 
 
 
-You can specify variables to get from the environment by listing them in `LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT`.
-
-
-Specify variables as a comma-separated list (e.g., _`"VARIABLE1, VARIABLE2"`_) or a JSON-encoded string (e.g., _`'["VARIABLE1", "VARIABLE2"]'`_).
+You can specify variables to get from the environment by listing them in `LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT`, as a comma-separated list (e.g., _`VARIABLE1, VARIABLE2`_).
 
 
 The default list of variables includes the ones below and more:
@@ -112,5 +109,5 @@ The default list of variables includes the ones below and more:
 - VECTARA_CORPUS_ID
 - VECTARA_API_KEY
 
-<ReactPlayer controls url="https://prod-files-secure.s3.us-west-2.amazonaws.com/09f11537-5a5b-4f56-9e8d-de8ebcfae549/7030d3ff-3ecd-44db-8640-9c2295b4e3bc/langflow_global_variables.mp4?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=AKIAT73L2G45HZZMZUHI%2F20240717%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20240717T013013Z&X-Amz-Expires=3600&X-Amz-Signature=a4e71525118033ce6e84c7938703b0656c42333b0788afe460cc8343441e7f24&X-Amz-SignedHeaders=host&x-id=GetObject" />
+<ReactPlayer controls url="https://youtu.be/RedPOCsYNAM" />
 

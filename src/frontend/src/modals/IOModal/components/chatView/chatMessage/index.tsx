@@ -38,7 +38,6 @@ export default function ChatMessage({
   const [chatMessage, setChatMessage] = useState(chatMessageString);
   const [isStreaming, setIsStreaming] = useState(false);
   const eventSource = useRef<EventSource | undefined>(undefined);
-  const updateFlowPool = useFlowStore((state) => state.updateFlowPool);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const chatMessageRef = useRef(chatMessage);
 
@@ -173,7 +172,10 @@ export default function ChatMessage({
               )}
               {chat.thought && chat.thought !== "" && !hidden && <br></br>}
               <div className="flex w-full flex-col">
-                <div className="flex w-full flex-col dark:text-white">
+                <div
+                  className="flex w-full flex-col dark:text-white"
+                  data-testid="div-chat-message"
+                >
                   <div
                     data-testid={
                       "chat-message-" + chat.sender_name + "-" + chatMessage

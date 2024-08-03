@@ -1,9 +1,9 @@
 /** @type {import('tailwindcss').Config} */
-import { fontFamily } from "tailwindcss/defaultTheme";
 import tailwindcssForms from "@tailwindcss/forms";
-import tailwindcssAnimate from "tailwindcss-animate";
 import tailwindcssTypography from "@tailwindcss/typography";
+import tailwindcssAnimate from "tailwindcss-animate";
 import tailwindcssDottedBackground from "tailwindcss-dotted-background";
+import { fontFamily } from "tailwindcss/defaultTheme";
 
 import plugin from "tailwindcss/plugin";
 

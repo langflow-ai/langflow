@@ -24,16 +24,41 @@ env:
 
 jobs:
   setup-and-test:
-    name: Run Playwright Tests
+    name: Playwright Tests - Group ${{ matrix.shardIndex }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        shardIndex: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
-        shardTotal: [15]
+        shardIndex:
+          [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+          ]
+        shardTotal: [20]
     env:
       OPENAI_API_KEY: ${{ inputs.openai_api_key || secrets.OPENAI_API_KEY }}
       STORE_API_KEY: ${{ inputs.store_api_key || secrets.STORE_API_KEY }}
+      BRAVE_SEARCH_API_KEY: "${{ secrets.BRAVE_SEARCH_API_KEY }}"
+      ASTRA_DB_APPLICATION_TOKEN: "${{ secrets.ASTRA_DB_APPLICATION_TOKEN }}"
+      ASTRA_DB_API_ENDPOINT: "${{ secrets.ASTRA_DB_API_ENDPOINT }}"
     outputs:
       failed: ${{ steps.check-failure.outputs.failed }}
     steps:
@@ -110,14 +135,7 @@ jobs:
         run: |
           cd src/frontend
           npx playwright test --trace on --shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --workers 2
-        continue-on-error: true
         timeout-minutes: 12
-
-      # If the test fails, set a flag to indicate that the shard failed
-      - name: Set failure flag
-        id: check-failure
-        if: failure()
-        run: echo "failed=true" >> "$GITHUB_OUTPUT"
 
       - name: Upload blob report to GitHub Actions Artifacts
         if: always()
@@ -130,7 +148,7 @@ jobs:
   merge-reports:
     needs: setup-and-test
     runs-on: ubuntu-latest
-    if: ${{ needs.setup-and-test.outputs.failed == 'true' }}
+    if: always()
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -157,11 +175,3 @@ jobs:
           name: html-report--attempt-${{ github.run_attempt }}
           path: playwright-report
           retention-days: 14
-  delete-reports:
-    needs: setup-and-test
-    runs-on: ubuntu-latest
-    if: ${{ needs.setup-and-test.outputs.failed != 'true' }}
-    steps:
-      - uses: geekyeggo/delete-artifact@v5
-        with:
-          name: blob-report-*
