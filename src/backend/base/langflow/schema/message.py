@@ -5,22 +5,21 @@ from uuid import UUID
 
 from fastapi.encoders import jsonable_encoder
 from langchain_core.load import load
-from langchain_core.messages import (AIMessage, BaseMessage, HumanMessage,
-                                     SystemMessage)
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from langchain_core.prompt_values import ImagePromptValue
-from langchain_core.prompts import (BaseChatPromptTemplate, ChatPromptTemplate,
-                                    PromptTemplate)
+from langchain_core.prompts import BaseChatPromptTemplate, ChatPromptTemplate, PromptTemplate
 from langchain_core.prompts.image import ImagePromptTemplate
 from langflow.base.prompts.utils import dict_values_to_string
 from langflow.schema.data import Data
 from langflow.schema.image import Image, get_file_paths, is_image_file
-from langflow.utils.constants import (MESSAGE_SENDER_AI,
-                                      MESSAGE_SENDER_NAME_AI,
-                                      MESSAGE_SENDER_NAME_USER,
-                                      MESSAGE_SENDER_USER)
+from langflow.utils.constants import (
+    MESSAGE_SENDER_AI,
+    MESSAGE_SENDER_NAME_AI,
+    MESSAGE_SENDER_NAME_USER,
+    MESSAGE_SENDER_USER,
+)
 from loguru import logger
-from pydantic import (BeforeValidator, ConfigDict, Field, field_serializer,
-                      field_validator)
+from pydantic import BeforeValidator, ConfigDict, Field, field_serializer, field_validator
 
 
 def _timestamp_to_str(timestamp: datetime) -> str:
