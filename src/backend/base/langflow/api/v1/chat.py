@@ -254,7 +254,7 @@ async def build_flow(
                 background_tasks.add_task(
                     log_vertex_build,
                     flow_id=flow_id_str,
-                    vertex_id=vertex_id.split("-")[0],
+                    vertex_id=vertex_id,
                     valid=valid,
                     params=params,
                     data=result_data_response,
