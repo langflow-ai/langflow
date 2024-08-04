@@ -137,6 +137,7 @@ pre-commit = "^3.7.0"
 vulture = "^2.11"
 dictdiffer = "^0.9.0"
 pytest-split = "^0.9.0"
+codeflash = "^0.6.14"
 
 [tool.poetry.extras]
 deploy = ["celery", "redis", "flower"]
@@ -195,6 +196,15 @@ line-length = 120
 plugins = ["pydantic.mypy"]
 follow_imports = "silent"
 disable_error_code = ["type-var"]
+
+[tool.codeflash]
+# All paths are relative to this pyproject.toml's directory.
+module-root = "src"
+tests-root = "tests"
+test-framework = "pytest"
+ignore-paths = []
+formatter-cmds = ["ruff check --exit-zero --fix $file", "ruff format $file"]
+
 
 [build-system]
 requires = ["poetry-core"]
