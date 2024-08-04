@@ -28,8 +28,8 @@ export function getCurlRunCode(
       !isAuth ? `\n  -H 'x-api-key: <your api key>'\\` : ""
     }
     -d '{"input_value": "message",
-    "output_type": ${hasChatOutput?"chat":"text"},
-    "input_type": ${hasChatInput?"chat":"text"},
+    "output_type": ${hasChatOutput ? "chat" : "text"},
+    "input_type": ${hasChatInput ? "chat" : "text"},
     "tweaks": ${tweaksString}}'
     `;
 }
