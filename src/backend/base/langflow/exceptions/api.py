@@ -26,7 +26,7 @@ class APIException(HTTPException):
     @staticmethod
     def build_exception_body(exc: str | list[str], flow: Flow | None) -> ExceptionBody:
         body = {"message": str(exc)}
-        if(flow):
+        if flow:
             outdated_components = get_outdated_components(flow)
             if outdated_components:
                 body["suggestion"] = get_suggestion_messsage(outdated_components)
