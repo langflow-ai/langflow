@@ -24,6 +24,8 @@ from langflow.type_extraction.type_extraction import (
 from langflow.utils import validate
 
 if TYPE_CHECKING:
+    from langchain.callbacks.base import BaseCallbackHandler
+
     from langflow.graph.graph.base import Graph
     from langflow.graph.vertex.base import Vertex
     from langflow.services.storage.service import StorageService
@@ -74,7 +76,7 @@ class CustomComponent(BaseComponent):
     """The build parameters of the component. Defaults to None."""
     _vertex: Optional["Vertex"] = None
     """The edge target parameter of the component. Defaults to None."""
-    code_class_base_inheritance: ClassVar[str] = "CustomComponent"
+    _code_class_base_inheritance: ClassVar[str] = "CustomComponent"
     function_entrypoint_name: ClassVar[str] = "build"
     function: Optional[Callable] = None
     repr_value: Optional[Any] = ""
@@ -168,6 +170,20 @@ class CustomComponent(BaseComponent):
     @property
     def graph(self):
         return self._vertex.graph
+
+    @property
+    def user_id(self):
+        if hasattr(self, "_user_id"):
+            return self._user_id
+        return self.graph.user_id
+
+    @property
+    def flow_id(self):
+        return self.graph.flow_id
+
+    @property
+    def flow_name(self):
+        return self.graph.flow_name
 
     def _get_field_order(self):
         return self.field_order or list(self.field_config.keys())
@@ -305,7 +321,7 @@ class CustomComponent(BaseComponent):
         Returns:
             list: The arguments of the function entrypoint.
         """
-        build_method = self.get_method(self.function_entrypoint_name)
+        build_method = self.get_method(self._function_entrypoint_name)
         if not build_method:
             return []
 
@@ -346,9 +362,9 @@ class CustomComponent(BaseComponent):
         Returns:
             List[Any]: The return type of the function entrypoint.
         """
-        return self.get_method_return_type(self.function_entrypoint_name)
+        return self.get_method_return_type(self._function_entrypoint_name)
 
-    def _extract_return_type(self, return_type: Any):
+    def _extract_return_type(self, return_type: Any) -> List[Any]:
         if hasattr(return_type, "__origin__") and return_type.__origin__ in [
             list,
             List,
@@ -374,8 +390,8 @@ class CustomComponent(BaseComponent):
         if not self._code:
             return ""
 
-        base_name = self.code_class_base_inheritance
-        method_name = self.function_entrypoint_name
+        base_name = self._code_class_base_inheritance
+        method_name = self._function_entrypoint_name
 
         classes = []
         for item in self.tree.get("classes", []):
@@ -412,12 +428,12 @@ class CustomComponent(BaseComponent):
         """
 
         def get_variable(name: str, field: str):
-            if hasattr(self, "_user_id") and not self._user_id:
+            if hasattr(self, "_user_id") and not self.user_id:
                 raise ValueError(f"User id is not set for {self.__class__.__name__}")
             variable_service = get_variable_service()  # Get service instance
             # Retrieve and decrypt the variable by name for the current user
             with session_scope() as session:
-                user_id = self._user_id or ""
+                user_id = self.user_id or ""
                 return variable_service.get_variable(user_id=user_id, name=name, field=field, session=session)
 
         return get_variable
@@ -432,12 +448,12 @@ class CustomComponent(BaseComponent):
         Returns:
             List[str]: The names of the variables for the current user.
         """
-        if hasattr(self, "_user_id") and not self._user_id:
+        if hasattr(self, "_user_id") and not self.user_id:
             raise ValueError(f"User id is not set for {self.__class__.__name__}")
         variable_service = get_variable_service()
 
         with session_scope() as session:
-            return variable_service.list_variables(user_id=self._user_id, session=session)
+            return variable_service.list_variables(user_id=self.user_id, session=session)
 
     def index(self, value: int = 0):
         """
@@ -462,10 +478,10 @@ class CustomComponent(BaseComponent):
         Returns:
             Callable: The function associated with the custom component.
         """
-        return validate.create_function(self._code, self.function_entrypoint_name)
+        return validate.create_function(self._code, self._function_entrypoint_name)
 
     async def load_flow(self, flow_id: str, tweaks: Optional[dict] = None) -> "Graph":
-        if not self._user_id:
+        if not self.user_id:
             raise ValueError("Session is invalid")
         return await load_flow(user_id=str(self._user_id), flow_id=flow_id, tweaks=tweaks)
 
@@ -487,7 +503,7 @@ class CustomComponent(BaseComponent):
         )
 
     def list_flows(self) -> List[Data]:
-        if not self._user_id:
+        if not self.user_id:
             raise ValueError("Session is invalid")
         try:
             return list_flows(user_id=str(self._user_id))
