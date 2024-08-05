@@ -16,7 +16,7 @@ import {
 
 const useAddFlow = () => {
   const unavaliableFields = useGlobalVariablesStore(
-    (state) => state.unavaliableFields,
+    (state) => state.unavailableFields,
   );
   const globalVariablesEntries = useGlobalVariablesStore(
     (state) => state.globalVariablesEntries,
