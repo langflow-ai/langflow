@@ -1,4 +1,5 @@
 import { useGetBuildsQuery } from "@/controllers/API/queries/_builds";
+import useUploadFlow from "@/hooks/flows/use-upload-flow";
 import { getInputsAndOutputs } from "@/utils/storeUtils";
 import _, { cloneDeep } from "lodash";
 import {
@@ -62,7 +63,7 @@ export default function Page({
   flow: FlowType;
   view?: boolean;
 }): JSX.Element {
-  const uploadFlow = useFlowsManagerStore((state) => state.uploadFlow);
+  const uploadFlow = useUploadFlow();
   const autoSaveCurrentFlow = useFlowsManagerStore(
     (state) => state.autoSaveCurrentFlow,
   );
@@ -387,28 +388,24 @@ export default function Page({
         );
       } else if (event.dataTransfer.types.some((types) => types === "Files")) {
         takeSnapshot();
-        if (event.dataTransfer.files.item(0)!.type === "application/json") {
-          const position = {
-            x: event.clientX,
-            y: event.clientY,
-          };
-          uploadFlow({
-            newProject: false,
-            isComponent: false,
-            file: event.dataTransfer.files.item(0)!,
-            position: position,
-          }).catch((error) => {
-            setErrorData({
-              title: UPLOAD_ERROR_ALERT,
-              list: [error],
-            });
-          });
-        } else {
+        const position = {
+          x: event.clientX,
+          y: event.clientY,
+        };
+        uploadFlow({
+          files: Array.from(event.dataTransfer.files!),
+          position: position,
+        }).catch((error) => {
           setErrorData({
-            title: WRONG_FILE_ERROR_ALERT,
-            list: [UPLOAD_ALERT_LIST],
+            title: UPLOAD_ERROR_ALERT,
+            list: [error],
           });
-        }
+        });
+      } else {
+        setErrorData({
+          title: WRONG_FILE_ERROR_ALERT,
+          list: [UPLOAD_ALERT_LIST],
+        });
       }
     },
     // Specify dependencies for useCallback
