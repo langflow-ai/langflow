@@ -188,7 +188,7 @@ class Component(CustomComponent):
                 raise ValueError("Output name cannot be None.")
             self._outputs[output.name] = output
 
-    def map_inputs(self, inputs: List[InputTypes]):
+    def map_inputs(self, inputs: List["InputTypes"]):
         """
         Maps the given inputs to the component.
 
