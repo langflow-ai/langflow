@@ -24,9 +24,14 @@ from langflow.utils.constants import (
 
 
 def _timestamp_to_str(timestamp: datetime | str) -> str:
-    if isinstance(timestamp, datetime):
-        return timestamp.strftime("%Y-%m-%d %H:%M:%S")
-    return timestamp
+    if isinstance(timestamp, str):
+        # Just check if the string is a valid datetime
+        try:
+            datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S")
+            return timestamp
+        except ValueError:
+            raise ValueError(f"Invalid timestamp: {timestamp}")
+    return timestamp.strftime("%Y-%m-%d %H:%M:%S")
 
 
 class Message(Data):
