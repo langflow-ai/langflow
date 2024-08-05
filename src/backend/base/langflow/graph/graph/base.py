@@ -1023,26 +1023,6 @@ class Graph:
         loop = asyncio.get_event_loop()
         return loop.run_until_complete(self.astep(inputs, files, user_id))
 
-    def prepare(self, stop_component_id: Optional[str] = None, start_component_id: Optional[str] = None):
-        if stop_component_id and start_component_id:
-            raise ValueError("You can only provide one of stop_component_id or start_component_id")
-        self.validate_stream()
-        self.edges = self._build_edges()
-        if stop_component_id or start_component_id:
-            try:
-                first_layer = self.sort_vertices(stop_component_id, start_component_id)
-            except Exception as exc:
-                logger.error(exc)
-                first_layer = self.sort_vertices()
-        else:
-            first_layer = self.sort_vertices()
-
-        for vertex_id in first_layer:
-            self.run_manager.add_to_vertices_being_run(vertex_id)
-        self._run_queue = deque(first_layer)
-        self._prepared = True
-        return self
-
     async def build_vertex(
         self,
         vertex_id: str,
