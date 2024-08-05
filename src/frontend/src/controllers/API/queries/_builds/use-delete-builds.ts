@@ -8,7 +8,7 @@ interface IDeleteBuilds {
 }
 
 // add types for error handling and success
-export const useDeleteBuilds: useMutationFunctionType<IDeleteBuilds> = (
+export const useDeleteBuilds: useMutationFunctionType<undefined,IDeleteBuilds> = (
   options,
 ) => {
   const { mutate } = UseRequestProcessor();
