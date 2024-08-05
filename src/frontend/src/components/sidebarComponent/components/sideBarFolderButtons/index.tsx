@@ -4,7 +4,9 @@ import {
   usePostUploadFolders,
 } from "@/controllers/API/queries/folders";
 import { useGetDownloadFolders } from "@/controllers/API/queries/folders/use-get-download-folders";
-import useAddFlow from "@/hooks/flows/use-add-flow";
+import { createFileUpload } from "@/helpers/create-file-upload";
+import { getObjectsFromFilelist } from "@/helpers/get-objects-from-filelist";
+import useUploadFlow from "@/hooks/flows/use-upload-flow";
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { FolderType } from "../../../../pages/MainPage/entities";
@@ -55,7 +57,8 @@ const SideBarFoldersButtonsComponent = ({
   const getFolderById = useFolderStore((state) => state.getFolderById);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
-  const addFlow = useAddFlow();
+  const getFoldersApi = useFolderStore((state) => state.getFoldersApi);
+  const uploadFlow = useUploadFlow();
 
   const handleFolderChange = () => {
     getFolderById(folderId);
@@ -69,46 +72,41 @@ const SideBarFoldersButtonsComponent = ({
   const { mutate } = usePostUploadFolders();
 
   const handleUploadFlowsToFolder = () => {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = ".json";
-    input.click();
-
-    input.onchange = (event: Event) => {
-      if (
-        (event.target as HTMLInputElement).files![0].type === "application/json"
-      ) {
-        const file = (event.target as HTMLInputElement).files![0];
-        const formData = new FormData();
-        formData.append("file", file);
-        file.text().then(async (text) => {
-          const data = JSON.parse(text);
-          if (data.data?.nodes) {
-            await addFlow({ flow: data });
+    createFileUpload().then((files: File[]) => {
+      getObjectsFromFilelist<any>(files).then((objects) => {
+        if (objects.every((flow) => flow.data?.nodes)) {
+          uploadFlow({ files }).then(() => {
             getFolderById(folderId);
-          } else {
+            setSuccessData({
+              title: "Uploaded successfully",
+            });
+          });
+        } else {
+          files.forEach((folder) => {
+            const formData = new FormData();
+            formData.append("file", folder);
             mutate(
               { formData },
               {
                 onSuccess: () => {
-                  getFolderById(folderId);
+                  getFoldersApi(true);
                   setSuccessData({
-                    title: "Uploaded successfully",
+                    title: "Folder uploaded successfully.",
                   });
                 },
                 onError: (err) => {
                   console.log(err);
                   setErrorData({
                     title: `Error on upload`,
-                    list: [err["response"]["data"]],
+                    list: [err["response"]["data"]["message"]],
                   });
                 },
               },
             );
-          }
-        });
-      }
-    };
+          });
+        }
+      });
+    });
   };
 
   const { mutate: mutateDownloadFolder } = useGetDownloadFolders();
