@@ -8,12 +8,10 @@ def test_api_exception():
     mock_flow = Mock(spec=Flow)
     mock_outdated_components = ["component1", "component2"]
     mock_suggestion_message = "Update component1, component2"
-    version = get_version_info()["version"]
     mock_component_versions = {
         "component1": "1.0",
         "component2": "1.0",    }
     # Expected result
-
 
     with patch('langflow.services.database.models.flow.utils.get_outdated_components', return_value=mock_outdated_components):
         with patch('langflow.api.utils.get_suggestion_message', return_value=mock_suggestion_message):
