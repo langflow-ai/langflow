@@ -69,8 +69,6 @@ class ComponentVertex(Vertex):
         for key, value in self._built_object.items():
             self.add_result(key, value)
 
-x
-
     def get_edge_with_target(self, target_id: str) -> Generator["ContractEdge", None, None]:
         """
         Get the edge with the target id.
