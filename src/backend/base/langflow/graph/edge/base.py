@@ -44,6 +44,9 @@ class Edge:
         # Validate in __init__ to fail fast
         self.validate_edge(source, target)
 
+    def to_data(self):
+        return self._data
+
     def validate_handles(self, source, target) -> None:
         if isinstance(self._source_handle, str) or self.source_handle.baseClasses:
             self._legacy_validate_handles(source, target)
