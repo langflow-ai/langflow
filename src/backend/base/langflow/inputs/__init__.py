@@ -1,23 +1,24 @@
 from .inputs import (
     BoolInput,
     DataInput,
+    DefaultPromptField,
     DictInput,
     DropdownInput,
-    MultiselectInput,
     FileInput,
     FloatInput,
     HandleInput,
+    Input,
     IntInput,
     MessageInput,
     MessageTextInput,
     MultilineInput,
     MultilineSecretInput,
+    MultiselectInput,
     NestedDictInput,
     PromptInput,
     SecretStrInput,
     StrInput,
     TableInput,
-    DefaultPromptField,
 )
 
 __all__ = [
@@ -39,5 +40,6 @@ __all__ = [
     "StrInput",
     "MessageTextInput",
     "TableInput",
+    "Input",
     "DefaultPromptField",
 ]
