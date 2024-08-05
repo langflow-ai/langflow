@@ -18,7 +18,7 @@ env ?= .env
 open_browser ?= true
 path = src/backend/base/langflow/frontend
 workers ?= 1
-
+async ?= true
 all: help
 
 ######################
@@ -130,16 +130,25 @@ coverage: ## run the tests and generate a coverage report
 	@poetry run coverage erase
 
 unit_tests: ## run unit tests
+ifeq ($(async), true)
 	poetry run pytest src/backend/tests \
 		--ignore=src/backend/tests/integration \
-		--instafail -ra -n auto -m "not api_key_required" \
+		--instafail -n auto -ra -m "not api_key_required" \
 		--durations-path src/backend/tests/.test_durations \
 		--splitting-algorithm least_duration \
 		$(args)
+else
+	poetry run pytest src/backend/tests \
+		--ignore=src/backend/tests/integration \
+		--instafail -ra -m "not api_key_required" \
+		--durations-path src/backend/tests/.test_durations \
+		--splitting-algorithm least_duration \
+		$(args)
+endif
 
 integration_tests: ## run integration tests
 	poetry run pytest src/backend/tests/integration \
-		--instafail -ra -n auto \
+		--instafail -ra \
 		$(args)
 
 tests: ## run unit, integration, coverage tests
