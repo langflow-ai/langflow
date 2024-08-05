@@ -19,8 +19,11 @@ class ExceptionBody(BaseModel):
 
 
 class APIException(HTTPException):
-    def __init__(self, exception: ExceptionBody, status_code: int = 500):
-        super().__init__(status_code=status_code, detail=exception.model_dump_json())
+    def __init__(self, exception: Exception,flow: Flow | None = None,status_code: int = 500):
+        body = self.from_exc_and_flow(exception, flow)
+        if(flow is None):
+            body = ExceptionBody(message=str(exception))
+        super().__init__(status_code=status_code, detail=body.model_dump_json())
 
     @staticmethod
     def from_exc_and_flow(exc: str | list[str], flow: Flow) -> ExceptionBody:
