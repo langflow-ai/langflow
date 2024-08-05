@@ -1,7 +1,6 @@
 from typing import TYPE_CHECKING, Any, List, Optional, cast
 
 from loguru import logger
-from pydantic import BaseModel, Field, field_validator
 
 from langflow.graph.edge.schema import EdgeData, SourceHandle, TargetHandle, TargetHandleDict
 from langflow.schema.schema import INPUT_FIELD_NAME
@@ -14,12 +13,19 @@ class Edge:
     def __init__(self, source: "Vertex", target: "Vertex", edge: EdgeData):
         self.source_id: str = source.id if source else ""
         self.target_id: str = target.id if target else ""
+        self.valid_handles: bool = False
+        self.target_param: str | None = None
+        self._target_handle: TargetHandleDict | str | None = None
+        self._data = edge.copy()
         if data := edge.get("data", {}):
             self._source_handle = data.get("sourceHandle", {})
-            self._target_handle = data.get("targetHandle", {})
+            self._target_handle = cast(TargetHandleDict, data.get("targetHandle", {}))
             self.source_handle: SourceHandle = SourceHandle(**self._source_handle)
-            self.target_handle: TargetHandle = TargetHandle(**self._target_handle)
-            self.target_param = self.target_handle.fieldName
+            if isinstance(self._target_handle, dict):
+                self.target_handle: TargetHandle = TargetHandle(**self._target_handle)
+            else:
+                raise ValueError("Target handle is not a dictionary")
+            self.target_param = self.target_handle.field_name
             # validate handles
             self.validate_handles(source, target)
         else:
@@ -29,7 +35,12 @@ class Edge:
             self._target_handle = edge.get("targetHandle", "")  # type: ignore
             # 'BaseLoader;BaseOutputParser|documents|PromptTemplate-zmTlD'
             # target_param is documents
-            self.target_param = cast(str, self._target_handle.split("|")[1])  # type: ignore
+            if isinstance(self._target_handle, str):
+                self.target_param = self._target_handle.split("|")[1]
+                self.source_handle = None
+                self.target_handle = None
+            else:
+                raise ValueError("Target handle is not a string")
         # Validate in __init__ to fail fast
         self.validate_edge(source, target)
 
