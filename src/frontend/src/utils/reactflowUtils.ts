@@ -475,6 +475,26 @@ export function addVersionToDuplicates(flow: FlowType, flows: FlowType[]) {
   return newName;
 }
 
+export function addEscapedHandleIdsToEdges({
+  edges,
+}: addEscapedHandleIdsToEdgesType): Edge[] {
+  let newEdges = cloneDeep(edges);
+  newEdges.forEach((edge) => {
+    let escapedSourceHandle = edge.sourceHandle;
+    let escapedTargetHandle = edge.targetHandle;
+    if (!escapedSourceHandle) {
+      let sourceHandle = edge.data.sourceHandle;
+      escapedSourceHandle = getRightHandleId(sourceHandle);
+      edge.sourceHandle = escapedSourceHandle;
+    }
+    if (!escapedTargetHandle) {
+      let targetHandle = edge.data.targetHandle;
+      escapedTargetHandle = getLeftHandleId(targetHandle);
+      edge.targetHandle = escapedTargetHandle;
+    }
+  });
+  return newEdges;
+}
 export function updateEdgesHandleIds({
   edges,
   nodes,
