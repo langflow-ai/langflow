@@ -9,7 +9,10 @@ def test_get_suggestion_message():
     assert get_suggestion_message([]) == "The flow contains no outdated components."
 
     # Test case 2: One outdated component
-    assert get_suggestion_message(["component1"]) == "The flow contains 1 outdated component. We recommend updating the following component: component1."
+    assert (
+        get_suggestion_message(["component1"])
+        == "The flow contains 1 outdated component. We recommend updating the following component: component1."
+    )
 
     # Test case 3: Multiple outdated components
     outdated_components = ["component1", "component2", "component3"]
@@ -29,8 +32,10 @@ def test_get_outdated_components():
     # Expected result
     expected_outdated_components = ["component3"]
 
-    with patch('langflow.services.database.models.flow.utils.get_components_versions', return_value=mock_component_versions):
-            # Call the function with the mock flow
-            result = get_outdated_components(flow)
-            # Assert the result is as expected
-            assert result == expected_outdated_components
+    with patch(
+        "langflow.services.database.models.flow.utils.get_components_versions", return_value=mock_component_versions
+    ):
+        # Call the function with the mock flow
+        result = get_outdated_components(flow)
+        # Assert the result is as expected
+        assert result == expected_outdated_components
