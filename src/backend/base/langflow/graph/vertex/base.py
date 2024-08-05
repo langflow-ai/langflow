@@ -13,6 +13,7 @@ from loguru import logger
 from langflow.exceptions.component import ComponentBuildException
 from langflow.graph.schema import INPUT_COMPONENTS, OUTPUT_COMPONENTS, InterfaceComponentTypes, ResultData
 from langflow.graph.utils import UnbuiltObject, UnbuiltResult, log_transaction
+from langflow.graph.vertex.schema import NodeData
 from langflow.interface.initialize import loading
 from langflow.interface.listing import lazy_load_dict
 from langflow.schema.artifact import ArtifactType
@@ -42,7 +43,7 @@ class VertexStates(str, Enum):
 class Vertex:
     def __init__(
         self,
-        data: Dict,
+        data: NodeData,
         graph: "Graph",
         base_type: Optional[str] = None,
         is_task: bool = False,
@@ -63,7 +64,7 @@ class Vertex:
         self.has_external_input = False
         self.has_external_output = False
         self.graph = graph
-        self._data = data
+        self._data = data.copy()
         self.base_type: Optional[str] = base_type
         self.outputs: List[Dict] = []
         self._parse_data()
@@ -95,6 +96,18 @@ class Vertex:
         self.use_result = False
         self.build_times: List[float] = []
         self.state = VertexStates.ACTIVE
+
+    def set_input_value(self, name: str, value: Any):
+        if self._custom_component is None:
+            raise ValueError(f"Vertex {self.id} does not have a component instance.")
+        self._custom_component._set_input_value(name, value)
+
+    def to_data(self):
+        return self._data
+
+    def add_component_instance(self, component_instance: "Component"):
+        component_instance.set_vertex(self)
+        self._custom_component = component_instance
 
     def add_result(self, name: str, result: Any):
         self.results[name] = result
@@ -289,12 +302,13 @@ class Vertex:
                         # we don't know the key of the dict but we need to set the value
                         # to the vertex that is the source of the edge
                         param_dict = template_dict[param_key]["value"]
-                        if param_dict:
+                        if not param_dict or len(param_dict) != 1:
+                            params[param_key] = self.graph.get_vertex(edge.source_id)
+                        else:
                             params[param_key] = {
                                 key: self.graph.get_vertex(edge.source_id) for key in param_dict.keys()
                             }
-                        else:
-                            params[param_key] = self.graph.get_vertex(edge.source_id)
+
                     else:
                         params[param_key] = self.graph.get_vertex(edge.source_id)
 

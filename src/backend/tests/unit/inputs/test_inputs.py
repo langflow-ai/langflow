@@ -31,51 +31,44 @@ def client():
 
 
 def test_table_input_valid():
-    # Test with a valid list of dictionaries
-    data = TableInput(value=[{"key": "value"}, {"key2": "value2"}])
+    data = TableInput(name="valid_table", value=[{"key": "value"}, {"key2": "value2"}])
     assert data.value == [{"key": "value"}, {"key2": "value2"}]
 
 
 def test_table_input_invalid():
     with pytest.raises(ValidationError):
-        # Test with an invalid value
-        TableInput(value="invalid")
+        TableInput(name="invalid_table", value="invalid")
 
     with pytest.raises(ValidationError):
-        # Test with a list containing invalid item
-        TableInput(value=[{"key": "value"}, "invalid"])
+        TableInput(name="invalid_table", value=[{"key": "value"}, "invalid"])
 
 
 def test_str_input_valid():
-    data = StrInput(value="This is a string")
+    data = StrInput(name="valid_str", value="This is a string")
     assert data.value == "This is a string"
 
 
 def test_str_input_invalid():
     with pytest.warns(UserWarning):
-        # Test with an invalid value
-        StrInput(value=1234)
+        StrInput(name="invalid_str", value=1234)
 
 
 def test_message_text_input_valid():
-    # Test with a valid string
-    data = MessageTextInput(value="This is a message")
+    data = MessageTextInput(name="valid_msg", value="This is a message")
     assert data.value == "This is a message"
 
-    # Test with a valid Message object
     msg = Message(text="This is a message")
-    data = MessageTextInput(value=msg)
+    data = MessageTextInput(name="valid_msg", value=msg)
     assert data.value == "This is a message"
 
 
 def test_message_text_input_invalid():
     with pytest.raises(ValidationError):
-        # Test with an invalid value
-        MessageTextInput(value=1234)
+        MessageTextInput(name="invalid_msg", value=1234)
 
 
 def test_instantiate_input_valid():
-    data = {"value": "This is a string"}
+    data = {"name": "valid_input", "value": "This is a string"}
     input_instance = _instantiate_input("StrInput", data)
     assert isinstance(input_instance, StrInput)
     assert input_instance.value == "This is a string"
@@ -83,146 +76,145 @@ def test_instantiate_input_valid():
 
 def test_instantiate_input_invalid():
     with pytest.raises(ValueError):
-        # Test with an invalid input type
-        _instantiate_input("InvalidInput", {"value": "This is a string"})
+        _instantiate_input("InvalidInput", {"name": "invalid_input", "value": "This is a string"})
 
 
 def test_handle_input_valid():
-    data = HandleInput(input_types=["BaseLanguageModel"])
+    data = HandleInput(name="valid_handle", input_types=["BaseLanguageModel"])
     assert data.input_types == ["BaseLanguageModel"]
 
 
 def test_handle_input_invalid():
     with pytest.raises(ValidationError):
-        HandleInput(input_types="BaseLanguageModel")  # should be a list, not a string
+        HandleInput(name="invalid_handle", input_types="BaseLanguageModel")
 
 
 def test_data_input_valid():
-    data_input = DataInput(input_types=["Data"])
+    data_input = DataInput(name="valid_data", input_types=["Data"])
     assert data_input.input_types == ["Data"]
 
 
 def test_prompt_input_valid():
-    prompt_input = PromptInput(value="Enter your name")
+    prompt_input = PromptInput(name="valid_prompt", value="Enter your name")
     assert prompt_input.value == "Enter your name"
 
 
 def test_multiline_input_valid():
-    multiline_input = MultilineInput(value="This is a\nmultiline input")
+    multiline_input = MultilineInput(name="valid_multiline", value="This is a\nmultiline input")
     assert multiline_input.value == "This is a\nmultiline input"
     assert multiline_input.multiline is True
 
 
 def test_multiline_input_invalid():
     with pytest.raises(ValidationError):
-        MultilineInput(value=1234)  # should be a string, not an integer
+        MultilineInput(name="invalid_multiline", value=1234)
 
 
 def test_multiline_secret_input_valid():
-    multiline_secret_input = MultilineSecretInput(value="secret")
+    multiline_secret_input = MultilineSecretInput(name="valid_multiline_secret", value="secret")
     assert multiline_secret_input.value == "secret"
     assert multiline_secret_input.password is True
 
 
 def test_multiline_secret_input_invalid():
     with pytest.raises(ValidationError):
-        MultilineSecretInput(value=1234)  # should be a string, not an integer
+        MultilineSecretInput(name="invalid_multiline_secret", value=1234)
 
 
 def test_secret_str_input_valid():
-    secret_str_input = SecretStrInput(value="supersecret")
+    secret_str_input = SecretStrInput(name="valid_secret_str", value="supersecret")
     assert secret_str_input.value == "supersecret"
     assert secret_str_input.password is True
 
 
 def test_secret_str_input_invalid():
     with pytest.raises(ValidationError):
-        SecretStrInput(value=1234)  # should be a string, not an integer
+        SecretStrInput(name="invalid_secret_str", value=1234)
 
 
 def test_int_input_valid():
-    int_input = IntInput(value=10)
+    int_input = IntInput(name="valid_int", value=10)
     assert int_input.value == 10
 
 
 def test_int_input_invalid():
     with pytest.raises(ValidationError):
-        IntInput(value="not_an_int")  # should be an integer, not a string
+        IntInput(name="invalid_int", value="not_an_int")
 
 
 def test_float_input_valid():
-    float_input = FloatInput(value=10.5)
+    float_input = FloatInput(name="valid_float", value=10.5)
     assert float_input.value == 10.5
 
 
 def test_float_input_invalid():
     with pytest.raises(ValidationError):
-        FloatInput(value="not_a_float")  # should be a float, not a string
+        FloatInput(name="invalid_float", value="not_a_float")
 
 
 def test_bool_input_valid():
-    bool_input = BoolInput(value=True)
+    bool_input = BoolInput(name="valid_bool", value=True)
     assert bool_input.value is True
 
 
 def test_bool_input_invalid():
     with pytest.raises(ValidationError):
-        BoolInput(value="not_a_bool")  # should be a bool, not a string
+        BoolInput(name="invalid_bool", value="not_a_bool")
 
 
 def test_nested_dict_input_valid():
-    nested_dict_input = NestedDictInput(value={"key": "value"})
+    nested_dict_input = NestedDictInput(name="valid_nested_dict", value={"key": "value"})
     assert nested_dict_input.value == {"key": "value"}
 
 
 def test_nested_dict_input_invalid():
     with pytest.raises(ValidationError):
-        NestedDictInput(value="not_a_dict")  # should be a dict, not a string
+        NestedDictInput(name="invalid_nested_dict", value="not_a_dict")
 
 
 def test_dict_input_valid():
-    dict_input = DictInput(value={"key": "value"})
+    dict_input = DictInput(name="valid_dict", value={"key": "value"})
     assert dict_input.value == {"key": "value"}
 
 
 def test_dict_input_invalid():
     with pytest.raises(ValidationError):
-        DictInput(value="not_a_dict")  # should be a dict, not a string
+        DictInput(name="invalid_dict", value="not_a_dict")
 
 
 def test_dropdown_input_valid():
-    dropdown_input = DropdownInput(options=["option1", "option2"])
+    dropdown_input = DropdownInput(name="valid_dropdown", options=["option1", "option2"])
     assert dropdown_input.options == ["option1", "option2"]
 
 
 def test_dropdown_input_invalid():
     with pytest.raises(ValidationError):
-        DropdownInput(options="option1")  # should be a list, not a string
+        DropdownInput(name="invalid_dropdown", options="option1")
 
 
 def test_multiselect_input_valid():
-    multiselect_input = MultiselectInput(value=["option1", "option2"])
+    multiselect_input = MultiselectInput(name="valid_multiselect", value=["option1", "option2"])
     assert multiselect_input.value == ["option1", "option2"]
 
 
 def test_multiselect_input_invalid():
     with pytest.raises(ValidationError):
-        MultiselectInput(value="option1")  # should be a list, not a string
+        MultiselectInput(name="invalid_multiselect", value="option1")
 
 
 def test_file_input_valid():
-    file_input = FileInput(value=["/path/to/file"])
+    file_input = FileInput(name="valid_file", value=["/path/to/file"])
     assert file_input.value == ["/path/to/file"]
 
 
 def test_instantiate_input_comprehensive():
     valid_data = {
-        "StrInput": {"value": "A string"},
-        "IntInput": {"value": 10},
-        "FloatInput": {"value": 10.5},
-        "BoolInput": {"value": True},
-        "DictInput": {"value": {"key": "value"}},
-        "MultiselectInput": {"value": ["option1", "option2"]},
+        "StrInput": {"name": "str_input", "value": "A string"},
+        "IntInput": {"name": "int_input", "value": 10},
+        "FloatInput": {"name": "float_input", "value": 10.5},
+        "BoolInput": {"name": "bool_input", "value": True},
+        "DictInput": {"name": "dict_input", "value": {"key": "value"}},
+        "MultiselectInput": {"name": "multiselect_input", "value": ["option1", "option2"]},
     }
 
     for input_type, data in valid_data.items():
@@ -230,4 +222,4 @@ def test_instantiate_input_comprehensive():
         assert isinstance(input_instance, InputTypesMap[input_type])
 
     with pytest.raises(ValueError):
-        _instantiate_input("InvalidInput", {"value": "Invalid"})  # Invalid input type
+        _instantiate_input("InvalidInput", {"name": "invalid_input", "value": "Invalid"})
