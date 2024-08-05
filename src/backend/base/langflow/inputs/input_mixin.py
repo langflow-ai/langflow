@@ -75,13 +75,6 @@ class BaseInputMixin(BaseModel, validate_assignment=True):  # type: ignore
     def to_dict(self):
         return self.model_dump(exclude_none=True, by_alias=True)
 
-    @field_validator("name", mode="before")
-    @classmethod
-    def validate_name(cls, v):
-        if not v:
-            raise ValueError("name must be set")
-        return v
-
     @field_validator("field_type", mode="before")
     @classmethod
     def validate_field_type(cls, v):
