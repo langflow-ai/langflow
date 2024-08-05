@@ -5,8 +5,6 @@ import { Edge, Node, Viewport } from "reactflow";
 import { create } from "zustand";
 import { SAVE_DEBOUNCE_TIME } from "../constants/constants";
 import {
-  deleteFlowFromDatabase,
-  multipleDeleteFlowsComponents,
   readFlowsFromDatabase,
   updateFlowInDatabase,
 } from "../controllers/API";
@@ -163,66 +161,6 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
         });
     });
   }, SAVE_DEBOUNCE_TIME),
-  removeFlow: async (id: string | string[]) => {
-    return new Promise<void>((resolve, reject) => {
-      if (Array.isArray(id)) {
-        multipleDeleteFlowsComponents(id)
-          .then(() => {
-            const { data, flows } = processFlows(
-              get().flows.filter((flow) => !id.includes(flow.id)),
-            );
-            get().setFlows(flows);
-            set({ isLoading: false });
-            useTypesStore.setState((state) => ({
-              data: { ...state.data, ["saved_components"]: data },
-              ComponentFields: extractFieldsFromComponenents({
-                ...state.data,
-                ["saved_components"]: data,
-              }),
-            }));
-            resolve();
-          })
-          .catch((e) => reject(e));
-      } else {
-        const index = get().flows.findIndex((flow) => flow.id === id);
-        if (index >= 0) {
-          deleteFlowFromDatabase(id)
-            .then(() => {
-              const { data, flows } = processFlows(
-                get().flows.filter((flow) => flow.id !== id),
-              );
-              get().setFlows(flows);
-              set({ isLoading: false });
-              useTypesStore.setState((state) => ({
-                data: { ...state.data, ["saved_components"]: data },
-                ComponentFields: extractFieldsFromComponenents({
-                  ...state.data,
-                  ["saved_components"]: data,
-                }),
-              }));
-              resolve();
-            })
-            .catch((e) => reject(e));
-        }
-      }
-    });
-  },
-  deleteComponent: async (key: string) => {
-    return new Promise<void>((resolve) => {
-      let componentFlow = get().flows.find(
-        (componentFlow) =>
-          componentFlow.is_component && componentFlow.name === key,
-      );
-
-      if (componentFlow) {
-        get()
-          .removeFlow(componentFlow.id)
-          .then(() => {
-            resolve();
-          });
-      }
-    });
-  },
   takeSnapshot: () => {
     const currentFlowId = get().currentFlowId;
     // push the current graph to the past state
