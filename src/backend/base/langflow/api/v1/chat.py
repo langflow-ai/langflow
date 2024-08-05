@@ -489,7 +489,6 @@ async def build_vertex(
             artifacts = vertex_build_result.artifacts
             next_runnable_vertices = await graph.get_next_runnable_vertices(lock, vertex=vertex, cache=False)
             top_level_vertices = graph.get_top_level_vertices(next_runnable_vertices)
-
             result_data_response = ResultDataResponse.model_validate(result_dict, from_attributes=True)
         except Exception as exc:
             if isinstance(exc, ComponentBuildException):

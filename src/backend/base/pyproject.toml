@@ -83,8 +83,38 @@ local = ["llama-cpp-python", "sentence-transformers", "ctransformers"]
 all = ["deploy", "local"]
 
 
+
 [tool.poetry.group.dev.dependencies]
+types-redis = "^4.6.0.5"
+ipykernel = "^6.29.0"
+mypy = "^1.11.0"
+ruff = "^0.4.5"
+httpx = "*"
+pytest = "^8.2.0"
+types-requests = "^2.32.0"
+requests = "^2.32.0"
+pytest-cov = "^5.0.0"
+pandas-stubs = "^2.1.4.231227"
+types-pillow = "^10.2.0.20240213"
+types-pyyaml = "^6.0.12.8"
+types-python-jose = "^3.3.4.8"
+types-passlib = "^1.7.7.13"
+locust = "^2.23.1"
+pytest-mock = "^3.14.0"
+pytest-xdist = "^3.6.0"
+types-pywin32 = "^306.0.0.4"
+types-google-cloud-ndb = "^2.2.0.0"
+pytest-sugar = "^1.0.0"
+respx = "^0.21.1"
+pytest-instafail = "^0.5.0"
+pytest-asyncio = "^0.23.0"
+pytest-profiling = "^1.7.0"
+pre-commit = "^3.7.0"
+vulture = "^2.11"
+dictdiffer = "^0.9.0"
 pytest-split = "^0.9.0"
+devtools = "^0.12.2"
+
 
 [tool.pytest.ini_options]
 minversion = "6.0"

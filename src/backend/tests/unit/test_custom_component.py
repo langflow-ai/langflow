@@ -72,16 +72,16 @@ def test_component_init():
     """
     Test the initialization of the Component class.
     """
-    component = BaseComponent(_code=code_default, function_entrypoint_name="build")
+    component = BaseComponent(_code=code_default, _function_entrypoint_name="build")
     assert component._code == code_default
-    assert component.function_entrypoint_name == "build"
+    assert component._function_entrypoint_name == "build"
 
 
 def test_component_get_code_tree():
     """
     Test the get_code_tree method of the Component class.
     """
-    component = BaseComponent(_code=code_default, function_entrypoint_name="build")
+    component = BaseComponent(_code=code_default, _function_entrypoint_name="build")
     tree = component.get_code_tree(component._code)
     assert "imports" in tree
 
@@ -91,7 +91,7 @@ def test_component_code_null_error():
     Test the get_function method raises the
     ComponentCodeNullError when the code is empty.
     """
-    component = BaseComponent(_code="", function_entrypoint_name="")
+    component = BaseComponent(_code="", _function_entrypoint_name="")
     with pytest.raises(ComponentCodeNullError):
         component.get_function()
 
@@ -102,16 +102,16 @@ def test_custom_component_init():
     """
     function_entrypoint_name = "build"
 
-    custom_component = CustomComponent(_code=code_default, function_entrypoint_name=function_entrypoint_name)
+    custom_component = CustomComponent(_code=code_default, _function_entrypoint_name=function_entrypoint_name)
     assert custom_component._code == code_default
-    assert custom_component.function_entrypoint_name == function_entrypoint_name
+    assert custom_component._function_entrypoint_name == function_entrypoint_name
 
 
 def test_custom_component_build_template_config():
     """
     Test the build_template_config property of the CustomComponent class.
     """
-    custom_component = CustomComponent(_code=code_default, function_entrypoint_name="build")
+    custom_component = CustomComponent(_code=code_default, _function_entrypoint_name="build")
     config = custom_component.build_template_config()
     assert isinstance(config, dict)
 
@@ -120,7 +120,7 @@ def test_custom_component_get_function():
     """
     Test the get_function property of the CustomComponent class.
     """
-    custom_component = CustomComponent(_code="def build(): pass", function_entrypoint_name="build")
+    custom_component = CustomComponent(_code="def build(): pass", _function_entrypoint_name="build")
     my_function = custom_component.get_function()
     assert isinstance(my_function, types.FunctionType)
 
@@ -195,7 +195,7 @@ def test_component_get_function_valid():
     Test the get_function method of the Component
     class with valid code and function_entrypoint_name.
     """
-    component = BaseComponent(_code="def build(): pass", function_entrypoint_name="build")
+    component = BaseComponent(_code="def build(): pass", _function_entrypoint_name="build")
     my_function = component.get_function()
     assert callable(my_function)
 
@@ -205,7 +205,7 @@ def test_custom_component_get_function_entrypoint_args():
     Test the get_function_entrypoint_args
     property of the CustomComponent class.
     """
-    custom_component = CustomComponent(_code=code_default, function_entrypoint_name="build")
+    custom_component = CustomComponent(_code=code_default, _function_entrypoint_name="build")
     args = custom_component.get_function_entrypoint_args
     assert len(args) == 3
     assert args[0]["name"] == "self"
@@ -219,7 +219,7 @@ def test_custom_component_get_function_entrypoint_return_type():
     property of the CustomComponent class.
     """
 
-    custom_component = CustomComponent(_code=code_default, function_entrypoint_name="build")
+    custom_component = CustomComponent(_code=code_default, _function_entrypoint_name="build")
     return_type = custom_component.get_function_entrypoint_return_type
     assert return_type == [Document]
 
@@ -228,7 +228,7 @@ def test_custom_component_get_main_class_name():
     """
     Test the get_main_class_name property of the CustomComponent class.
     """
-    custom_component = CustomComponent(_code=code_default, function_entrypoint_name="build")
+    custom_component = CustomComponent(_code=code_default, _function_entrypoint_name="build")
     class_name = custom_component.get_main_class_name
     assert class_name == "YourComponent"
 
@@ -238,7 +238,7 @@ def test_custom_component_get_function_valid():
     Test the get_function property of the CustomComponent
     class with valid code and function_entrypoint_name.
     """
-    custom_component = CustomComponent(_code="def build(): pass", function_entrypoint_name="build")
+    custom_component = CustomComponent(_code="def build(): pass", _function_entrypoint_name="build")
     my_function = custom_component.get_function
     assert callable(my_function)
 
@@ -352,7 +352,7 @@ def test_component_get_code_tree_syntax_error():
     Test the get_code_tree method of the Component class
     raises the CodeSyntaxError when given incorrect syntax.
     """
-    component = BaseComponent(_code="import os as", function_entrypoint_name="build")
+    component = BaseComponent(_code="import os as", _function_entrypoint_name="build")
     with pytest.raises(CodeSyntaxError):
         component.get_code_tree(component._code)
 
@@ -362,7 +362,7 @@ def test_custom_component_class_template_validation_no_code():
     Test the _class_template_validation method of the CustomComponent class
     raises the HTTPException when the code is None.
     """
-    custom_component = CustomComponent(_code=None, function_entrypoint_name="build")
+    custom_component = CustomComponent(_code=None, _function_entrypoint_name="build")
     with pytest.raises(TypeError):
         custom_component.get_function()
 
@@ -372,7 +372,7 @@ def test_custom_component_get_code_tree_syntax_error():
     Test the get_code_tree method of the CustomComponent class
     raises the CodeSyntaxError when given incorrect syntax.
     """
-    custom_component = CustomComponent(_code="import os as", function_entrypoint_name="build")
+    custom_component = CustomComponent(_code="import os as", _function_entrypoint_name="build")
     with pytest.raises(CodeSyntaxError):
         custom_component.get_code_tree(custom_component._code)
 
@@ -387,7 +387,7 @@ class MyMainClass(CustomComponent):
     def build():
         pass"""
 
-    custom_component = CustomComponent(_code=my_code, function_entrypoint_name="build")
+    custom_component = CustomComponent(_code=my_code, _function_entrypoint_name="build")
     args = custom_component.get_function_entrypoint_args
     assert len(args) == 0
 
@@ -402,7 +402,7 @@ class MyClass(CustomComponent):
     def build():
         pass"""
 
-    custom_component = CustomComponent(_code=my_code, function_entrypoint_name="build")
+    custom_component = CustomComponent(_code=my_code, _function_entrypoint_name="build")
     return_type = custom_component.get_function_entrypoint_return_type
     assert return_type == []
 
@@ -416,7 +416,7 @@ def test_custom_component_get_main_class_name_no_main_class():
 def build():
     pass"""
 
-    custom_component = CustomComponent(_code=my_code, function_entrypoint_name="build")
+    custom_component = CustomComponent(_code=my_code, _function_entrypoint_name="build")
     class_name = custom_component.get_main_class_name
     assert class_name == ""
 
@@ -426,7 +426,7 @@ def test_custom_component_build_not_implemented():
     Test the build method of the CustomComponent
     class raises the NotImplementedError.
     """
-    custom_component = CustomComponent(_code="def build(): pass", function_entrypoint_name="build")
+    custom_component = CustomComponent(_code="def build(): pass", _function_entrypoint_name="build")
     with pytest.raises(NotImplementedError):
         custom_component.build()
 
