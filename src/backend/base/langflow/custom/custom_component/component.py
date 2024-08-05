@@ -327,7 +327,8 @@ class Component(CustomComponent):
                     f"Input {name} is connected to {input_value.__self__.display_name}.{input_value.__name__}"
                 )
             self._inputs[name].value = value
-            self._attributes[name] = value
+            if hasattr(self._inputs[name], "load_from_db"):
+                self._inputs[name].load_from_db = False
         else:
             raise ValueError(f"Input {name} not found in {self.__class__.__name__}")
 
