@@ -40,11 +40,11 @@ class BaseInputMixin(BaseModel, validate_assignment=True):  # type: ignore
     show: bool = True
     """Should the field be shown. Defaults to True."""
 
+    name: str = Field(description="Name of the field.")
+    """Name of the field. Default is an empty string."""
+
     value: Any = ""
     """The value of the field. Default is an empty string."""
-
-    name: Optional[str] = None
-    """Name of the field. Default is an empty string."""
 
     display_name: Optional[str] = None
     """Display name of the field. Defaults to None."""

@@ -80,6 +80,7 @@ class Component(CustomComponent):
         """
         for key, value in kwargs.items():
             self._process_connection_or_parameter(key, value)
+        return self
 
     def list_inputs(self):
         """
@@ -219,9 +220,32 @@ class Component(CustomComponent):
             raise ValueError(f"Output with method {method_name} not found")
         return output
 
+    def _inherits_from_component(self, method: Callable):
+        # check if the method is a method from a class that inherits from Component
+        # and that it is an output of that class
+        inherits_from_component = hasattr(method, "__self__") and isinstance(method.__self__, Component)
+        return inherits_from_component
+
+    def _method_is_valid_output(self, method: Callable):
+        # check if the method is a method from a class that inherits from Component
+        # and that it is an output of that class
+        method_is_output = (
+            hasattr(method, "__self__")
+            and isinstance(method.__self__, Component)
+            and method.__self__._get_output_by_method(method)
+        )
+        return method_is_output
+
     def _process_connection_or_parameter(self, key, value):
         _input = self._get_or_create_input(key)
-        if callable(value):
+        # We need to check if callable AND if it is a method from a class that inherits from Component
+        if callable(value) and self._inherits_from_component(value):
+            try:
+                self._method_is_valid_output(value)
+            except ValueError:
+                raise ValueError(
+                    f"Method {value.__name__} is not a valid output of {value.__self__.__class__.__name__}"
+                )
             self._connect_to_component(key, value, _input)
         else:
             self._set_parameter_or_attribute(key, value)
@@ -264,6 +288,7 @@ class Component(CustomComponent):
         )
 
     def _set_parameter_or_attribute(self, key, value):
+        self._set_input_value(key, value)
         self._parameters[key] = value
         self._attributes[key] = value
 
@@ -302,7 +327,8 @@ class Component(CustomComponent):
                     f"Input {name} is connected to {input_value.__self__.display_name}.{input_value.__name__}"
                 )
             self._inputs[name].value = value
-            self._attributes[name] = value
+            if hasattr(self._inputs[name], "load_from_db"):
+                self._inputs[name].load_from_db = False
         else:
             raise ValueError(f"Input {name} not found in {self.__class__.__name__}")
 

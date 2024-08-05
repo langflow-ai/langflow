@@ -158,7 +158,7 @@ class Input(BaseModel):
 
 
 class Output(BaseModel):
-    types: Optional[list[str]] = Field(default=[])
+    types: list[str] = Field(default=[])
     """List of output types for the field."""
 
     selected: Optional[str] = Field(default=None)

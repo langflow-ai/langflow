@@ -7,13 +7,13 @@ import orjson
 from loguru import logger
 from pydantic import PydanticDeprecatedSince20
 
-from langflow.custom import Component, CustomComponent
 from langflow.custom.eval import eval_custom_component_code
 from langflow.schema import Data
 from langflow.schema.artifact import get_artifact_type, post_process_raw
 from langflow.services.deps import get_tracing_service
 
 if TYPE_CHECKING:
+    from langflow.custom import Component, CustomComponent
     from langflow.graph.vertex.base import Vertex
 
 
@@ -54,9 +54,9 @@ async def get_instance_results(
     )
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
-        if base_type == "custom_components" and isinstance(custom_component, CustomComponent):
+        if base_type == "custom_components":
             return await build_custom_component(params=custom_params, custom_component=custom_component)
-        elif base_type == "component" and isinstance(custom_component, Component):
+        elif base_type == "component":
             return await build_component(params=custom_params, custom_component=custom_component)
         else:
             raise ValueError(f"Base type {base_type} not found.")
