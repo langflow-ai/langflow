@@ -396,25 +396,25 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
       let id;
       if (file) {
         let text = await file.text();
-        let fileData = JSON.parse(text);
+        let parsedFlowData = await JSON.parse(text);
         if (
           newProject &&
           isComponent !== null &&
-          ((!fileData.is_component && isComponent === true) ||
-            (fileData.is_component !== undefined &&
-              fileData.is_component !== isComponent))
+          ((!parsedFlowData.is_component && isComponent === true) ||
+            (parsedFlowData.is_component !== undefined &&
+              parsedFlowData.is_component !== isComponent))
         ) {
           reject("You cannot upload a component as a flow or vice versa");
         } else {
-          if (fileData.flows) {
-            fileData.flows.forEach((flow: FlowType) => {
+          if (parsedFlowData.flows) {
+            parsedFlowData.flows.forEach((flow: FlowType) => {
               id = get().addFlow(newProject, flow, undefined, position);
             });
             resolve("");
           } else {
             id = await get().addFlow(
               newProject,
-              fileData,
+              parsedFlowData,
               undefined,
               position,
               true,
@@ -434,16 +434,16 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
           ) {
             const currentfile = (e.target as HTMLInputElement).files![0];
             let text = await currentfile.text();
-            let fileData: FlowType = await JSON.parse(text);
+            let parsedFlowData: FlowType = await JSON.parse(text);
 
             if (
-              (!fileData.is_component && isComponent === true) ||
-              (fileData.is_component !== undefined &&
-                fileData.is_component !== isComponent)
+              (!parsedFlowData.is_component && isComponent === true) ||
+              (parsedFlowData.is_component !== undefined &&
+                parsedFlowData.is_component !== isComponent)
             ) {
               reject("You cannot upload a component as a flow or vice versa");
             } else {
-              id = await get().addFlow(newProject, fileData);
+              id = await get().addFlow(newProject, parsedFlowData);
               resolve(id);
             }
           }
