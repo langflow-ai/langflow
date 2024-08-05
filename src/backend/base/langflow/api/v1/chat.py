@@ -15,13 +15,13 @@ from starlette.types import Receive
 
 from langflow.api.utils import (
     build_and_cache_graph_from_data,
+    build_graph_from_data,
     build_graph_from_db,
+    build_graph_from_db_no_cache,
     format_elapsed_time,
     format_exception_message,
     get_top_level_vertices,
     parse_exception,
-    build_graph_from_db_no_cache,
-    build_graph_from_data,
 )
 from langflow.api.v1.schemas import (
     FlowDataRequest,
@@ -103,18 +103,7 @@ async def retrieve_vertices_order(
             graph = await build_and_cache_graph_from_data(
                 flow_id=flow_id_str, graph_data=data.model_dump(), chat_service=chat_service
             )
-        graph.validate_stream()
-        if stop_component_id or start_component_id:
-            try:
-                first_layer = graph.sort_vertices(stop_component_id, start_component_id)
-            except Exception as exc:
-                logger.error(exc)
-                first_layer = graph.sort_vertices()
-        else:
-            first_layer = graph.sort_vertices()
-
-        for vertex_id in first_layer:
-            graph.run_manager.add_to_vertices_being_run(vertex_id)
+        graph = graph.prepare(stop_component_id, start_component_id)
 
         # Now vertices is a list of lists
         # We need to get the id of each vertex
@@ -130,7 +119,7 @@ async def retrieve_vertices_order(
                 playgroundSuccess=True,
             ),
         )
-        return VerticesOrderResponse(ids=first_layer, run_id=graph._run_id, vertices_to_run=vertices_to_run)
+        return VerticesOrderResponse(ids=graph.first_layer, run_id=graph.run_id, vertices_to_run=vertices_to_run)
     except Exception as exc:
         background_tasks.add_task(
             telemetry_service.log_package_playground,
@@ -225,19 +214,18 @@ async def build_flow(
             vertex = graph.get_vertex(vertex_id)
             try:
                 lock = chat_service._async_cache_locks[flow_id_str]
-                (
-                    result_dict,
-                    params,
-                    valid,
-                    artifacts,
-                    vertex,
-                ) = await graph.build_vertex(
-                    chat_service=None,
+                vertex_build_result = await graph.build_vertex(
                     vertex_id=vertex_id,
                     user_id=current_user.id,
                     inputs_dict=inputs.model_dump() if inputs else {},
                     files=files,
+                    get_cache=chat_service.get_cache,
+                    set_cache=chat_service.set_cache,
                 )
+                result_dict = vertex_build_result.result_dict
+                params = vertex_build_result.params
+                valid = vertex_build_result.valid
+                artifacts = vertex_build_result.artifacts
                 next_runnable_vertices = await graph.get_next_runnable_vertices(lock, vertex=vertex, cache=False)
                 top_level_vertices = graph.get_top_level_vertices(next_runnable_vertices)
 
@@ -487,19 +475,18 @@ async def build_vertex(
 
         try:
             lock = chat_service._async_cache_locks[flow_id_str]
-            (
-                result_dict,
-                params,
-                valid,
-                artifacts,
-                vertex,
-            ) = await graph.build_vertex(
-                chat_service=chat_service,
+            vertex_build_result = await graph.build_vertex(
                 vertex_id=vertex_id,
                 user_id=current_user.id,
                 inputs_dict=inputs.model_dump() if inputs else {},
                 files=files,
+                get_cache=chat_service.get_cache,
+                set_cache=chat_service.set_cache,
             )
+            result_dict = vertex_build_result.result_dict
+            params = vertex_build_result.params
+            valid = vertex_build_result.valid
+            artifacts = vertex_build_result.artifacts
             next_runnable_vertices = await graph.get_next_runnable_vertices(lock, vertex=vertex, cache=False)
             top_level_vertices = graph.get_top_level_vertices(next_runnable_vertices)
 
