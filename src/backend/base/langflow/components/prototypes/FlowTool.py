@@ -85,7 +85,7 @@ class FlowToolComponent(LCToolComponent):
             return_direct=self.return_direct,
             inputs=inputs,
             flow_id=str(flow_data.id),
-            user_id=str(self._user_id),
+            user_id=str(self.user_id),
         )
         description_repr = repr(tool.description).strip("'")
         args_str = "\n".join([f"- {arg_name}: {arg_data['description']}" for arg_name, arg_data in tool.args.items()])
