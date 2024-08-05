@@ -168,6 +168,7 @@ class Message(Data):
         loop = asyncio.get_event_loop()
         return loop.run_until_complete(coro)
 
+    # Keep this async method for backwards compatibility
     async def get_file_content_dicts(self):
         content_dicts = []
         files = await get_file_paths(self.files)
