@@ -53,6 +53,8 @@ export type FlowPoolType = {
 };
 
 export type FlowStoreType = {
+  componentsToUpdate: boolean;
+  updateComponentsToUpdate: (nodes: Node[]) => void;
   onFlowPage: boolean;
   setOnFlowPage: (onFlowPage: boolean) => void;
   flowPool: FlowPoolType;
@@ -107,7 +109,11 @@ export type FlowStoreType = {
     update: Edge[] | ((oldState: Edge[]) => Edge[]),
     skipSave?: boolean,
   ) => void;
-  setNode: (id: string, update: Node | ((oldState: Node) => Node)) => void;
+  setNode: (
+    id: string,
+    update: Node | ((oldState: Node) => Node),
+    isUserChange: boolean,
+  ) => void;
   getNode: (id: string) => Node | undefined;
   deleteNode: (nodeId: string | Array<string>) => void;
   deleteEdge: (edgeId: string | Array<string>) => void;
@@ -145,7 +151,7 @@ export type FlowStoreType = {
     vertices: {
       verticesIds: string[];
       verticesLayers: VertexLayerElementType[][];
-      runId: string;
+      runId?: string;
       verticesToRun: string[];
     } | null,
   ) => void;
@@ -154,7 +160,7 @@ export type FlowStoreType = {
   verticesBuild: {
     verticesIds: string[];
     verticesLayers: VertexLayerElementType[][];
-    runId: string;
+    runId?: string;
     verticesToRun: string[];
   } | null;
   updateBuildStatus: (nodeId: string[], status: BuildStatus) => void;

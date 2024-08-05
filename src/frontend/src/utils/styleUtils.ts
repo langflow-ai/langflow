@@ -1,4 +1,5 @@
 import { AIMLIcon } from "@/icons/AIML";
+import { AthenaIcon } from "@/icons/athena/index";
 import { freezeAllIcon } from "@/icons/freezeAll";
 import {
   AlertCircle,
@@ -171,6 +172,7 @@ import { BotMessageSquareIcon } from "../icons/BotMessageSquare";
 import { CassandraIcon } from "../icons/Cassandra";
 import { ChromaIcon } from "../icons/ChromaIcon";
 import { CohereIcon } from "../icons/Cohere";
+import { ComposioIcon } from "../icons/Composio";
 import { ConfluenceIcon } from "../icons/Confluence";
 import { CouchbaseIcon } from "../icons/Couchbase";
 import { CrewAiIcon } from "../icons/CrewAI";
@@ -391,6 +393,7 @@ export const nodeIconsLucide: iconsType = {
   HuggingFaceEmbeddings: HuggingFaceIcon,
   IFixitLoader: IFixIcon,
   CrewAI: CrewAiIcon,
+  Composio: ComposioIcon,
   Meta: MetaIcon,
   CheckCheck,
   Midjorney: MidjourneyIcon,
@@ -590,4 +593,5 @@ export const nodeIconsLucide: iconsType = {
   AIML: AIMLIcon,
   "AI/ML": AIMLIcon,
   GitLoader: GitLoaderIcon,
+  athenaIcon: AthenaIcon,
 };

@@ -63,8 +63,7 @@ const useHandleOnNewValue = ({
       if (value !== undefined) parameter[key] = value;
     });
 
-    const shouldUpdate =
-      parameter.real_time_refresh && !parameter.refresh_button;
+    const shouldUpdate = parameter.real_time_refresh;
 
     const setNodeClass = (newNodeClass: APIClassType) => {
       options?.setNodeClass && options.setNodeClass(newNodeClass);
