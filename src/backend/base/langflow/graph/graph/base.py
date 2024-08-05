@@ -187,7 +187,7 @@ class Graph:
             "target": target_id,
             "data": {
                 "sourceHandle": {
-                    "dataType": source_vertex.base_name,
+                    "dataType": source_vertex._custom_component.__class__.__name__,
                     "id": source_vertex.id,
                     "name": output_name,
                     "output_types": source_vertex.get_output(output_name).types,
