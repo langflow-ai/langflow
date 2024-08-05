@@ -1,5 +1,5 @@
 import { usePostDownloadMultipleFlows } from "@/controllers/API/queries/flows";
-import { useDeleteFlows } from "@/controllers/API/queries/flows/use-delete-flows";
+import useDeleteFlow from "@/hooks/flows/use-delete-flow";
 import { useEffect, useMemo, useState } from "react";
 import { FormProvider, useForm, useWatch } from "react-hook-form";
 import { useLocation } from "react-router-dom";
@@ -184,35 +184,28 @@ export default function ComponentsComponent({
     handleExport,
   );
 
-  const { mutate: mutateDeleteMultipleFlows } = useDeleteFlows();
+  const deleteFlow = useDeleteFlow();
 
   const handleDeleteMultiple = () => {
-    mutateDeleteMultipleFlows(
-      {
-        flow_ids: selectedFlowsComponentsCards,
-      },
-      {
-        onSuccess: () => {
-          setAllFlows([]);
-          setSelectedFolder(null);
-
-          resetFilter();
-          getFoldersApi(true);
-          if (!folderId || folderId === myCollectionId) {
-            getFolderById(folderId ? folderId : myCollectionId);
-          }
-          setSuccessData({
-            title: "Selected items deleted successfully",
-          });
-        },
-        onError: () => {
-          setErrorData({
-            title: "Error deleting items",
-            list: ["Please try again"],
-          });
-        },
-      },
-    );
+    deleteFlow({ id: selectedFlowsComponentsCards })
+      .then(() => {
+        setAllFlows([]);
+        setSelectedFolder(null);
+        resetFilter();
+        getFoldersApi(true);
+        if (!folderId || folderId === myCollectionId) {
+          getFolderById(folderId ? folderId : myCollectionId);
+        }
+        setSuccessData({
+          title: "Selected items deleted successfully",
+        });
+      })
+      .catch((e) => {
+        setErrorData({
+          title: "Error deleting items",
+          list: ["Please try again"],
+        });
+      });
   };
 
   useSelectedFlows(entireFormValues, setSelectedFlowsComponentsCards);
