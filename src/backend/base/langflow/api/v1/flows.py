@@ -7,6 +7,8 @@ from uuid import UUID
 import zipfile
 
 from fastapi.responses import StreamingResponse
+from langflow.services.database.models.transactions.crud import get_transactions_by_flow_id
+from langflow.services.database.models.vertex_builds.crud import get_vertex_builds_by_flow_id
 import orjson
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.encoders import jsonable_encoder
@@ -334,11 +336,20 @@ async def delete_multiple_flows(
 
     """
     try:
-        deleted_flows = db.exec(select(Flow).where(col(Flow.id).in_(flow_ids)).where(Flow.user_id == user.id)).all()
-        for flow in deleted_flows:
+        flows_to_delete = db.exec(select(Flow).where(col(Flow.id).in_(flow_ids)).where(Flow.user_id == user.id)).all()
+        for flow in flows_to_delete:
+            transactions_to_delete = get_transactions_by_flow_id(db, flow.id)
+            for transaction in transactions_to_delete:
+                db.delete(transaction)
+
+            builds_to_delete = get_vertex_builds_by_flow_id(db, flow.id)
+            for build in builds_to_delete:
+                db.delete(build)
+
             db.delete(flow)
+
         db.commit()
-        return {"deleted": len(deleted_flows)}
+        return {"deleted": len(flows_to_delete)}
     except Exception as exc:
         logger.exception(exc)
         raise HTTPException(status_code=500, detail=str(exc)) from exc

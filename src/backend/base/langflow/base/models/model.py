@@ -143,24 +143,32 @@ class LCModelComponent(Component):
         messages: list[Union[BaseMessage]] = []
         if not input_value and not system_message:
             raise ValueError("The message you want to send to the model is empty.")
-        if system_message:
-            messages.append(SystemMessage(content=system_message))
+        system_message_added = False
         if input_value:
             if isinstance(input_value, Message):
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore")
                     if "prompt" in input_value:
                         prompt = input_value.load_lc_prompt()
+                        if system_message:
+                            prompt.messages = [SystemMessage(content=system_message)] + prompt.messages
+                            system_message_added = True
                         runnable = prompt | runnable
                     else:
                         messages.append(input_value.to_lc_message())
             else:
                 messages.append(HumanMessage(content=input_value))
 
+        if system_message and not system_message_added:
+            messages.append(SystemMessage(content=system_message))
         inputs: Union[list, dict] = messages or {}
         try:
             runnable = runnable.with_config(  # type: ignore
-                {"run_name": self.display_name, "project_name": self._tracing_service.project_name}  # type: ignore
+                {
+                    "run_name": self.display_name,
+                    "project_name": self._tracing_service.project_name,  # type: ignore
+                    "callbacks": self.get_langchain_callbacks(),
+                }
             )
             if stream:
                 return runnable.stream(inputs)  # type: ignore
@@ -180,9 +188,6 @@ class LCModelComponent(Component):
             if message := self._get_exception_message(e):
                 raise ValueError(message) from e
             raise e
-
-    def _mock_response(self) -> Message:
-        return Message(text=self.input_value)
 
     @abstractmethod
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]

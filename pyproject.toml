@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "langflow"
-version = "1.0.13"
+version = "1.0.14"
 description = "A Python package with a built-in web application"
 authors = ["Langflow <contact@langflow.org>"]
 maintainers = [
@@ -66,7 +66,7 @@ numexpr = "^2.8.6"
 qianfan = "0.3.5"
 pgvector = "^0.2.3"
 pyautogen = "^0.2.0"
-langchain-google-genai = "^1.0.1"
+langchain-google-genai = "1.0.8"
 langchain-cohere = "^0.1.5"
 elasticsearch = "^8.12.0"
 pytube = "^15.0.0"
@@ -76,12 +76,12 @@ litellm = "^1.38.0"
 chromadb = "^0.4"
 langchain-anthropic = "^0.1.6"
 langchain-astradb = "^0.3.3"
-langchain-openai = "^0.1.1"
+langchain-openai = "0.1.17"
 zep-python = { version = "^2.0.0rc5", allow-prereleases = true }
-langchain-google-vertexai = "^1.0.3"
-langchain-groq = "^0.1.3"
+langchain-google-vertexai = "1.0.7"
+langchain-groq = "0.1.6"
 langchain-pinecone = "^0.1.0"
-langchain-mistralai = "^0.1.6"
+langchain-mistralai = "0.1.10"
 couchbase = { extras = ["couchbase"], version = "^4.2.1", optional = true }
 youtube-transcript-api = "^0.6.2"
 markdown = "^3.6"
@@ -95,16 +95,17 @@ langchain-mongodb = "^0.1.6"
 kubernetes = "^30.1.0"
 firecrawl-py = "^0.0.16"
 json-repair = "^0.25.2"
-langchain-nvidia-ai-endpoints = "^0.1.2"
+langchain-nvidia-ai-endpoints = "0.1.6"
 langchain-google-calendar-tools = "^0.0.1"
 langchain-milvus = "^0.1.1"
 crewai = {extras = ["tools"], version = "^0.36.0"}
-langwatch = "^0.1.10"
+langwatch = "^0.1.16"
 langsmith = "^0.1.86"
 yfinance = "^0.2.40"
-langchain-google-community = "^1.0.6"
+langchain-google-community = "1.0.7"
 wolframalpha = "^5.1.3"
 astra-assistants = "^2.0.15"
+composio-langchain = "^0.3.28"
 
 
 [tool.poetry.group.dev.dependencies]
@@ -192,8 +193,11 @@ line-length = 120
 
 [tool.mypy]
 plugins = ["pydantic.mypy"]
-follow_imports = "silent"
+follow_imports = "skip"
 disable_error_code = ["type-var"]
+namespace_packages = true
+mypy_path = "langflow"
+ignore_missing_imports = true
 
 [build-system]
 requires = ["poetry-core"]

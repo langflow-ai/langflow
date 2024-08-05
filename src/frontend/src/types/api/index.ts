@@ -43,6 +43,7 @@ export type APIClassType = {
   official?: boolean;
   outputs?: Array<OutputFieldType>;
   frozen?: boolean;
+  lf_version?: string;
   flow?: FlowType;
   field_order?: string[];
   [key: string]:
@@ -64,6 +65,7 @@ export type InputFieldType = {
   list: boolean;
   show: boolean;
   readonly: boolean;
+  password?: boolean;
   multiline?: boolean;
   value?: any;
   dynamic?: boolean;

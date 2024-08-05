@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import List, Union, cast
+from typing import List, Optional, Union, cast
 
 from langchain.agents import AgentExecutor, BaseMultiActionAgent, BaseSingleActionAgent
 from langchain.agents.agent import RunnableAgent
@@ -10,10 +10,12 @@ from langflow.base.agents.callback import AgentAsyncHandler
 from langflow.base.agents.utils import data_to_messages
 from langflow.custom import Component
 from langflow.field_typing import Text
-from langflow.inputs.inputs import DataInput, InputTypes
+from langflow.inputs.inputs import InputTypes
 from langflow.io import BoolInput, HandleInput, IntInput, MessageTextInput
+from langflow.schema import Data
 from langflow.schema.message import Message
 from langflow.template import Output
+from langflow.utils.constants import MESSAGE_SENDER_AI
 
 
 class LCAgentComponent(Component):
@@ -38,7 +40,6 @@ class LCAgentComponent(Component):
             value=15,
             advanced=True,
         ),
-        DataInput(name="chat_history", display_name="Chat History", is_list=True, advanced=True),
     ]
 
     outputs = [
@@ -58,7 +59,7 @@ class LCAgentComponent(Component):
 
         if isinstance(result, list):
             result = "\n".join([result_dict["text"] for result_dict in result])
-        message = Message(text=result, sender="Machine")
+        message = Message(text=result, sender=MESSAGE_SENDER_AI)
         self.status = message
         return message
 
@@ -88,11 +89,18 @@ class LCAgentComponent(Component):
             }
         return {**base, "agent_executor_kwargs": agent_kwargs}
 
+    def get_chat_history_data(self) -> Optional[List[Data]]:
+        # might be overridden in subclasses
+        return None
+
     async def run_agent(self, agent: AgentExecutor) -> Text:
         input_dict: dict[str, str | list[BaseMessage]] = {"input": self.input_value}
+        self.chat_history = self.get_chat_history_data()
         if self.chat_history:
             input_dict["chat_history"] = data_to_messages(self.chat_history)
-        result = await agent.ainvoke(input_dict, config={"callbacks": [AgentAsyncHandler(self.log)]})
+        result = await agent.ainvoke(
+            input_dict, config={"callbacks": [AgentAsyncHandler(self.log)] + self.get_langchain_callbacks()}
+        )
         self.status = result
         if "output" not in result:
             raise ValueError("Output key not found in result. Tried 'output'.")
@@ -135,7 +143,10 @@ class LCToolsAgentComponent(LCAgentComponent):
         input_dict: dict[str, str | list[BaseMessage]] = {"input": self.input_value}
         if self.chat_history:
             input_dict["chat_history"] = data_to_messages(self.chat_history)
-        result = await runnable.ainvoke(input_dict, config={"callbacks": [AgentAsyncHandler(self.log)]})
+
+        result = await runnable.ainvoke(
+            input_dict, config={"callbacks": [AgentAsyncHandler(self.log)] + self.get_langchain_callbacks()}
+        )
         self.status = result
         if "output" not in result:
             raise ValueError("Output key not found in result. Tried 'output'.")

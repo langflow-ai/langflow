@@ -24,6 +24,8 @@ from langflow.type_extraction.type_extraction import (
 from langflow.utils import validate
 
 if TYPE_CHECKING:
+    from langchain.callbacks.base import BaseCallbackHandler
+
     from langflow.graph.graph.base import Graph
     from langflow.graph.vertex.base import Vertex
     from langflow.services.storage.service import StorageService
@@ -63,8 +65,6 @@ class CustomComponent(BaseComponent):
     is_output: Optional[bool] = None
     """The output state of the component. Defaults to None.
     If True, the component must have a field named 'input_value'."""
-    _code: Optional[str] = None
-    """The code of the component. Defaults to None."""
     field_config: dict = {}
     """The field configuration of the component. Defaults to an empty dictionary."""
     field_order: Optional[List[str]] = None
@@ -75,7 +75,7 @@ class CustomComponent(BaseComponent):
     """The build parameters of the component. Defaults to None."""
     _vertex: Optional["Vertex"] = None
     """The edge target parameter of the component. Defaults to None."""
-    code_class_base_inheritance: ClassVar[str] = "CustomComponent"
+    _code_class_base_inheritance: ClassVar[str] = "CustomComponent"
     function_entrypoint_name: ClassVar[str] = "build"
     function: Optional[Callable] = None
     repr_value: Optional[Any] = ""
@@ -285,6 +285,14 @@ class CustomComponent(BaseComponent):
 
         return data_objects
 
+    def get_method_return_type(self, method_name: str):
+        build_method = self.get_method(method_name)
+        if not build_method or not build_method.get("has_return"):
+            return []
+        return_type = build_method["return_type"]
+
+        return self._extract_return_type(return_type)
+
     def create_references_from_data(self, data: List[Data], include_data: bool = False) -> str:
         """
         Create references from a list of data.
@@ -314,7 +322,7 @@ class CustomComponent(BaseComponent):
         Returns:
             list: The arguments of the function entrypoint.
         """
-        build_method = self.get_method(self.function_entrypoint_name)
+        build_method = self.get_method(self._function_entrypoint_name)
         if not build_method:
             return []
 
@@ -355,7 +363,7 @@ class CustomComponent(BaseComponent):
         Returns:
             List[Any]: The return type of the function entrypoint.
         """
-        return self.get_method_return_type(self.function_entrypoint_name)
+        return self.get_method_return_type(self._function_entrypoint_name)
 
     def _extract_return_type(self, return_type: Any) -> List[Any]:
         if hasattr(return_type, "__origin__") and return_type.__origin__ in [
@@ -372,14 +380,6 @@ class CustomComponent(BaseComponent):
         return_type = extract_union_types_from_generic_alias(return_type)
         return return_type
 
-    def get_method_return_type(self, method_name: str):
-        build_method = self.get_method(method_name)
-        if not build_method or not build_method.get("has_return"):
-            return []
-        return_type = build_method["return_type"]
-
-        return self._extract_return_type(return_type)
-
     @property
     def get_main_class_name(self):
         """
@@ -391,8 +391,8 @@ class CustomComponent(BaseComponent):
         if not self._code:
             return ""
 
-        base_name = self.code_class_base_inheritance
-        method_name = self.function_entrypoint_name
+        base_name = self._code_class_base_inheritance
+        method_name = self._function_entrypoint_name
 
         classes = []
         for item in self.tree.get("classes", []):
@@ -412,7 +412,9 @@ class CustomComponent(BaseComponent):
         Returns:
             dict: The template configuration for the custom component.
         """
-        return self.build_template_config()
+        if not self._template_config:
+            self._template_config = self.build_template_config()
+        return self._template_config
 
     @property
     def variables(self):
@@ -477,19 +479,19 @@ class CustomComponent(BaseComponent):
         Returns:
             Callable: The function associated with the custom component.
         """
-        return validate.create_function(self._code, self.function_entrypoint_name)
+        return validate.create_function(self._code, self._function_entrypoint_name)
 
     async def load_flow(self, flow_id: str, tweaks: Optional[dict] = None) -> "Graph":
         if not self.user_id:
             raise ValueError("Session is invalid")
-        return await load_flow(user_id=self.user_id, flow_id=flow_id, tweaks=tweaks)
+        return await load_flow(user_id=str(self._user_id), flow_id=flow_id, tweaks=tweaks)
 
     async def run_flow(
         self,
         inputs: Optional[Union[dict, List[dict]]] = None,
         flow_id: Optional[str] = None,
         flow_name: Optional[str] = None,
-        output_type: Optional[str] = None,
+        output_type: Optional[str] = "chat",
         tweaks: Optional[dict] = None,
     ) -> Any:
         return await run_flow(
@@ -498,14 +500,14 @@ class CustomComponent(BaseComponent):
             flow_id=flow_id,
             flow_name=flow_name,
             tweaks=tweaks,
-            user_id=self._user_id,
+            user_id=str(self._user_id),
         )
 
     def list_flows(self) -> List[Data]:
         if not self.user_id:
             raise ValueError("Session is invalid")
         try:
-            return list_flows(user_id=self.user_id)
+            return list_flows(user_id=str(self._user_id))
         except Exception as e:
             raise ValueError(f"Error listing flows: {e}")
 
@@ -544,3 +546,8 @@ class CustomComponent(BaseComponent):
             frontend_node=new_frontend_node, raw_frontend_node=current_frontend_node
         )
         return frontend_node
+
+    def get_langchain_callbacks(self) -> List["BaseCallbackHandler"]:
+        if self._tracing_service:
+            return self._tracing_service.get_langchain_callbacks()
+        return []

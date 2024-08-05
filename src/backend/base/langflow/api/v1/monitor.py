@@ -10,39 +10,36 @@ from langflow.services.database.models.message.model import MessageRead, Message
 from langflow.services.database.models.transactions.crud import get_transactions_by_flow_id
 from langflow.services.database.models.transactions.model import TransactionReadResponse
 from langflow.services.database.models.user.model import User
-from langflow.services.deps import get_monitor_service, get_session
-from langflow.services.monitor.schema import MessageModelResponse, VertexBuildMapModel
-from langflow.services.monitor.service import MonitorService
+from langflow.services.database.models.vertex_builds.crud import (
+    get_vertex_builds_by_flow_id,
+    delete_vertex_builds_by_flow_id,
+)
+from langflow.services.database.models.vertex_builds.model import VertexBuildMapModel
+from langflow.services.deps import get_session
+from langflow.services.monitor.schema import MessageModelResponse
 
 router = APIRouter(prefix="/monitor", tags=["Monitor"])
 
 
-# Get vertex_builds data from the monitor service
 @router.get("/builds", response_model=VertexBuildMapModel)
 async def get_vertex_builds(
-    flow_id: Optional[str] = Query(None),
-    vertex_id: Optional[str] = Query(None),
-    valid: Optional[bool] = Query(None),
-    order_by: Optional[str] = Query("timestamp"),
-    monitor_service: MonitorService = Depends(get_monitor_service),
+    flow_id: UUID = Query(),
+    session: Session = Depends(get_session),
 ):
     try:
-        vertex_build_dicts = monitor_service.get_vertex_builds(
-            flow_id=flow_id, vertex_id=vertex_id, valid=valid, order_by=order_by
-        )
-        vertex_build_map = VertexBuildMapModel.from_list_of_dicts(vertex_build_dicts)
-        return vertex_build_map
+        vertex_builds = get_vertex_builds_by_flow_id(session, flow_id)
+        return VertexBuildMapModel.from_list_of_dicts(vertex_builds)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.delete("/builds", status_code=204)
 async def delete_vertex_builds(
-    flow_id: Optional[str] = Query(None),
-    monitor_service: MonitorService = Depends(get_monitor_service),
+    flow_id: UUID = Query(),
+    session: Session = Depends(get_session),
 ):
     try:
-        monitor_service.delete_vertex_builds(flow_id=flow_id)
+        delete_vertex_builds_by_flow_id(session, flow_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

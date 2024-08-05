@@ -4,7 +4,6 @@ from loguru import logger
 
 from langflow.graph.edge.schema import EdgeData, SourceHandle, TargetHandle, TargetHandleDict
 from langflow.schema.schema import INPUT_FIELD_NAME
-from langflow.services.monitor.utils import log_message
 
 if TYPE_CHECKING:
     from langflow.graph.vertex.base import Vertex
@@ -14,6 +13,7 @@ class Edge:
     def __init__(self, source: "Vertex", target: "Vertex", edge: EdgeData):
         self.source_id: str = source.id if source else ""
         self.target_id: str = target.id if target else ""
+        self.valid_handles: bool = False
         self.target_param: str | None = None
         self._target_handle: TargetHandleDict | str | None = None
         self._data = edge.copy()
@@ -25,7 +25,7 @@ class Edge:
                 self.target_handle: TargetHandle = TargetHandle(**self._target_handle)
             else:
                 raise ValueError("Target handle is not a dictionary")
-            self.target_param = self.target_handle.fieldName
+            self.target_param = self.target_handle.field_name
             # validate handles
             self.validate_handles(source, target)
         else:
@@ -48,18 +48,18 @@ class Edge:
         return self._data
 
     def validate_handles(self, source, target) -> None:
-        if isinstance(self._source_handle, str) or self.source_handle.baseClasses:
+        if isinstance(self._source_handle, str) or self.source_handle.base_classes:
             self._legacy_validate_handles(source, target)
         else:
             self._validate_handles(source, target)
 
     def _validate_handles(self, source, target) -> None:
-        if self.target_handle.inputTypes is None:
+        if self.target_handle.input_types is None:
             self.valid_handles = self.target_handle.type in self.source_handle.output_types
 
         elif self.source_handle.output_types is not None:
             self.valid_handles = (
-                any(output_type in self.target_handle.inputTypes for output_type in self.source_handle.output_types)
+                any(output_type in self.target_handle.input_types for output_type in self.source_handle.output_types)
                 or self.target_handle.type in self.source_handle.output_types
             )
 
@@ -69,12 +69,12 @@ class Edge:
             raise ValueError(f"Edge between {source.vertex_type} and {target.vertex_type} " f"has invalid handles")
 
     def _legacy_validate_handles(self, source, target) -> None:
-        if self.target_handle.inputTypes is None:
-            self.valid_handles = self.target_handle.type in self.source_handle.baseClasses
+        if self.target_handle.input_types is None:
+            self.valid_handles = self.target_handle.type in self.source_handle.base_classes
         else:
             self.valid_handles = (
-                any(baseClass in self.target_handle.inputTypes for baseClass in self.source_handle.baseClasses)
-                or self.target_handle.type in self.source_handle.baseClasses
+                any(baseClass in self.target_handle.input_types for baseClass in self.source_handle.base_classes)
+                or self.target_handle.type in self.source_handle.base_classes
             )
         if not self.valid_handles:
             logger.debug(self.source_handle)
@@ -89,9 +89,9 @@ class Edge:
         self.target_handle = state.get("target_handle")
 
     def validate_edge(self, source, target) -> None:
-        # If the self.source_handle has baseClasses, then we are using the legacy
+        # If the self.source_handle has base_classes, then we are using the legacy
         # way of defining the source and target handles
-        if isinstance(self._source_handle, str) or self.source_handle.baseClasses:
+        if isinstance(self._source_handle, str) or self.source_handle.base_classes:
             self._legacy_validate_edge(source, target)
         else:
             self._validate_edge(source, target)
@@ -212,16 +212,11 @@ class ContractEdge(Edge):
         ):
             if target.params.get("message") == "":
                 return self.result
-            await log_message(
-                sender=target.params.get("sender", ""),
-                sender_name=target.params.get("sender_name", ""),
-                message=target.params.get(INPUT_FIELD_NAME, {}),
-                session_id=target.params.get("session_id", ""),
-                flow_id=target.graph.flow_id,
-            )
         return self.result
 
     def __repr__(self) -> str:
-        if self.source_handle and self.target_handle:
-            return f"{self.source_id} -[{self.source_handle.name}->{self.target_handle.fieldName}]-> {self.target_id}"
+        if (hasattr(self, "source_handle") and self.source_handle) and (
+            hasattr(self, "target_handle") and self.target_handle
+        ):
+            return f"{self.source_id} -[{self.source_handle.name}->{self.target_handle.field_name}]-> {self.target_id}"
         return f"{self.source_id} -[{self.target_param}]-> {self.target_id}"

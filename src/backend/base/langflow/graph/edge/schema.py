@@ -1,7 +1,9 @@
 from typing import Any, List, Optional
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import ConfigDict, Field, field_validator
 from typing_extensions import TypedDict
+
+from langflow.helpers.base_model import BaseModel
 
 
 class ResultPair(BaseModel):
@@ -37,15 +39,21 @@ class Payload(BaseModel):
 
 
 class TargetHandle(BaseModel):
-    fieldName: str = Field(..., description="Field name for the target handle.")
+    model_config = ConfigDict(populate_by_name=True)
+    field_name: str = Field(..., alias="fieldName", description="Field name for the target handle.")
     id: str = Field(..., description="Unique identifier for the target handle.")
-    inputTypes: Optional[List[str]] = Field(None, description="List of input types for the target handle.")
+    input_types: List[str] = Field(
+        default_factory=list, alias="inputTypes", description="List of input types for the target handle."
+    )
     type: str = Field(..., description="Type of the target handle.")
 
 
 class SourceHandle(BaseModel):
-    baseClasses: list[str] = Field(default_factory=list, description="List of base classes for the source handle.")
-    dataType: str = Field(..., description="Data type for the source handle.")
+    model_config = ConfigDict(populate_by_name=True)
+    base_classes: list[str] = Field(
+        default_factory=list, alias="baseClasses", description="List of base classes for the source handle."
+    )
+    data_type: str = Field(..., alias="dataType", description="Data type for the source handle.")
     id: str = Field(..., description="Unique identifier for the source handle.")
     name: Optional[str] = Field(None, description="Name of the source handle.")
     output_types: List[str] = Field(default_factory=list, description="List of output types for the source handle.")
@@ -53,7 +61,7 @@ class SourceHandle(BaseModel):
     @field_validator("name", mode="before")
     @classmethod
     def validate_name(cls, v, _info):
-        if _info.data["dataType"] == "GroupNode":
+        if _info.data["data_type"] == "GroupNode":
             # 'OpenAIModel-u4iGV_text_output'
             splits = v.split("_", 1)
             if len(splits) != 2:

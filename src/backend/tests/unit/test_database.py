@@ -1,12 +1,13 @@
 import json
 from uuid import UUID, uuid4
 
+from langflow.graph.utils import log_transaction, log_vertex_build
 import orjson
 import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from langflow.api.v1.schemas import FlowListCreate
+from langflow.api.v1.schemas import FlowListCreate, ResultDataResponse
 from langflow.initial_setup.setup import load_starter_projects, load_flows_from_directory
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.flow import Flow, FlowCreate, FlowUpdate
@@ -19,6 +20,7 @@ from langflow.services.monitor.utils import (
     new_duckdb_locked_connection,
     add_row_to_table,
 )
+from collections import namedtuple
 
 
 @pytest.fixture(scope="module")
@@ -131,6 +133,66 @@ def test_delete_flows(client: TestClient, json_flow: str, active_user, logged_in
     response = client.request("DELETE", "api/v1/flows/", headers=logged_in_headers, json=flow_ids)
     assert response.status_code == 200, response.content
     assert response.json().get("deleted") == number_of_flows
+
+
+@pytest.mark.asyncio
+async def test_delete_flows_with_transaction_and_build(
+    client: TestClient, json_flow: str, active_user, logged_in_headers
+):
+    # Create ten flows
+    number_of_flows = 10
+    flows = [FlowCreate(name=f"Flow {i}", description="description", data={}) for i in range(number_of_flows)]
+    flow_ids = []
+    for flow in flows:
+        response = client.post("api/v1/flows/", json=flow.model_dump(), headers=logged_in_headers)
+        assert response.status_code == 201
+        flow_ids.append(response.json()["id"])
+
+    # Create a transaction for each flow
+
+    for flow_id in flow_ids:
+        VertexTuple = namedtuple("VertexTuple", ["id"])
+
+        await log_transaction(
+            str(flow_id), source=VertexTuple(id="vid"), target=VertexTuple(id="tid"), status="success"
+        )
+
+    # Create a build for each flow
+    for flow_id in flow_ids:
+        build = {
+            "valid": True,
+            "params": {},
+            "data": ResultDataResponse(),
+            "artifacts": {},
+            "vertex_id": "vid",
+            "flow_id": flow_id,
+        }
+        log_vertex_build(
+            flow_id=build["flow_id"],
+            vertex_id=build["vertex_id"],
+            valid=build["valid"],
+            params=build["params"],
+            data=build["data"],
+            artifacts=build.get("artifacts"),
+        )
+
+    response = client.request("DELETE", "api/v1/flows/", headers=logged_in_headers, json=flow_ids)
+    assert response.status_code == 200, response.content
+    assert response.json().get("deleted") == number_of_flows
+
+    for flow_id in flow_ids:
+        response = client.request(
+            "GET", "api/v1/monitor/transactions", params={"flow_id": flow_id}, headers=logged_in_headers
+        )
+        assert response.status_code == 200
+        assert response.json() == []
+
+    for flow_id in flow_ids:
+        response = client.request(
+            "GET", "api/v1/monitor/builds", params={"flow_id": flow_id}, headers=logged_in_headers
+        )
+        assert response.status_code == 200
+        assert response.json() == {"vertex_builds": {}}
 
 
 def test_create_flows(client: TestClient, session: Session, json_flow: str, logged_in_headers):
@@ -329,3 +391,24 @@ def test_migrate_transactions(client: TestClient):
     with session_scope() as session:
         new_trans = get_transactions_by_flow_id(session, UUID(flow_id))
         assert 0 == len(new_trans)
+
+
+@pytest.mark.load_flows
+def test_migrate_transactions_no_duckdb(client: TestClient):
+    flow_id = "c54f9130-f2fa-4a3e-b22a-3856d946351b"
+    get_monitor_service()
+
+    with session_scope() as session:
+        migrate_transactions_from_monitor_service_to_database(session)
+        new_trans = get_transactions_by_flow_id(session, UUID(flow_id))
+        assert 0 == len(new_trans)
+
+
+def test_sqlite_pragmas():
+    db_service = get_db_service()
+
+    with db_service as session:
+        from sqlalchemy import text
+
+        assert "wal" == session.execute(text("PRAGMA journal_mode;")).fetchone()[0]
+        assert 1 == session.execute(text("PRAGMA synchronous;")).fetchone()[0]

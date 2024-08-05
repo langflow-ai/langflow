@@ -1,7 +1,6 @@
 // src/constants/constants.ts
 
 import { languageMap } from "../types/components";
-import { nodeNames } from "../utils/styleUtils";
 
 /**
  * invalid characters for flow name
@@ -849,6 +848,8 @@ export const MODAL_CLASSES =
 
 export const ALLOWED_IMAGE_INPUT_EXTENSIONS = ["png", "jpg", "jpeg"];
 
+export const componentsToIgnoreUpdate = ["CustomComponent"];
+
 export const FS_ERROR_TEXT =
   "Please ensure your file has one of the following extensions:";
 export const SN_ERROR_TEXT = ALLOWED_IMAGE_INPUT_EXTENSIONS.join(", ");
@@ -873,3 +874,8 @@ export const TABS_ORDER = [
 export const LANGFLOW_ACCESS_TOKEN = "access_token_lf";
 export const LANGFLOW_API_TOKEN = "apikey_tkn_lflw";
 export const LANGFLOW_AUTO_LOGIN_OPTION = "auto_login_lf";
+
+export const LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS = 60 * 60 - 60 * 60 * 0.1;
+export const LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS_ENV =
+  Number(process.env.ACCESS_TOKEN_EXPIRE_SECONDS) -
+  Number(process.env.ACCESS_TOKEN_EXPIRE_SECONDS) * 0.1;

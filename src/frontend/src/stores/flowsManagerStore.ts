@@ -222,7 +222,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
       updateGroupRecursion(
         node,
         flowData?.edges,
-        useGlobalVariablesStore.getState().unavaliableFields,
+        useGlobalVariablesStore.getState().unavailableFields,
         useGlobalVariablesStore.getState().globalVariablesEntries,
       );
     });

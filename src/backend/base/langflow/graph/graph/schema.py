@@ -22,6 +22,14 @@ class GraphData(TypedDict):
     viewport: NotRequired[ViewPort]
 
 
+class GraphDump(TypedDict, total=False):
+    data: GraphData
+    is_component: bool
+    name: str
+    description: str
+    endpoint_name: str
+
+
 class VertexBuildResult(NamedTuple):
     result_dict: "ResultData"
     params: str

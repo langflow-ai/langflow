@@ -1,5 +1,7 @@
 import operator
 from typing import Any, ClassVar, Optional
+from uuid import UUID
+import warnings
 
 from cachetools import TTLCache, cachedmethod
 from fastapi import HTTPException
@@ -23,9 +25,11 @@ class BaseComponent:
     ERROR_FUNCTION_ENTRYPOINT_NAME_NULL: ClassVar[str] = "The name of the entrypoint function must be provided."
 
     _code: Optional[str] = None
+    """The code of the component. Defaults to None."""
     _function_entrypoint_name: str = "build"
     field_config: dict = {}
-    _user_id: Optional[str]
+    _user_id: Optional[str | UUID] = None
+    _template_config: dict = {}
 
     def __init__(self, **data):
         self.cache = TTLCache(maxsize=1024, ttl=60)
@@ -34,6 +38,11 @@ class BaseComponent:
                 setattr(self, "_user_id", value)
             else:
                 setattr(self, key, value)
+
+    def __setattr__(self, key, value):
+        if key == "_user_id" and hasattr(self, "_user_id") and getattr(self, "_user_id") is not None:
+            warnings.warn("user_id is immutable and cannot be changed.")
+        super().__setattr__(key, value)
 
     @cachedmethod(cache=operator.attrgetter("cache"))
     def get_code_tree(self, code: str):
