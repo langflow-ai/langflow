@@ -131,6 +131,19 @@ Google Cloud Shell을 사용하여 Google Cloud Platform(GCP)에 Langflow를 배
 <img src="https://render.com/images/deploy-to-render-button.svg" alt="Render에 배포하기" />
 </a>
 
+## AWS Beanstalk에 배포하기
+
+[![Launch Stack](https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png)](https://console.aws.amazon.com/cloudformation/home?#/stacks/create/review?stackName=LangFlowApp&templateURL=https://langflow-quickstart.s3.amazonaws.com/template-aws-quickstart.yaml)
+
+이 배포에 대한 자세한 정보는 [Langflow AWS Elastic Beanstalk Quickstart](https://github.com/danielgines/langflow-aws-quickstart)를 방문하십시오.
+
+## Azure App Service에 배포하기
+
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fdanielgines%2Flangflow-azure-arm-quickstart%2Fmain%2Fazure-deploy.json)
+
+이 배포에 대한 자세한 정보는 [Langflow Azure ARM Quickstart](https://github.com/danielgines/langflow-azure-arm-quickstart)를 방문하십시오.
+
+
 ## Kubernetes에 배포하기
 
 [Langflow on Kubernetes](./docs/docs/Deployment/deployment-kubernetes.md)의 가이드를 따르세요.

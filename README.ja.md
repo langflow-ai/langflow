@@ -129,6 +129,18 @@ Google Cloud Shellを使用してGoogle Cloud Platform（GCP）にLangflowをデ
 <img src="https://render.com/images/deploy-to-render-button.svg" alt="Deploy to Render" />
 </a>
 
+## AWS Beanstalkにデプロイ
+
+[![Launch Stack](https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png)](https://console.aws.amazon.com/cloudformation/home?#/stacks/create/review?stackName=LangFlowApp&templateURL=https://langflow-quickstart.s3.amazonaws.com/template-aws-quickstart.yaml)
+
+このデプロイメントに関する詳細情報については、[Langflow AWS Elastic Beanstalk Quickstart](https://github.com/danielgines/langflow-aws-quickstart)をご覧ください。
+
+## Azure App Serviceにデプロイ
+
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fdanielgines%2Flangflow-azure-arm-quickstart%2Fmain%2Fazure-deploy.json)
+
+このデプロイメントに関する詳細情報については、[Langflow Azure ARM Quickstart](https://github.com/danielgines/langflow-azure-arm-quickstart)をご覧ください。
+
 ## Kubernetesにデプロイ
 
 [KubernetesにLangflowをデプロイ](./docs/docs/Deployment/deployment-kubernetes.md)する手順については、ステップバイステップガイドをご覧ください。

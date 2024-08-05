@@ -116,6 +116,18 @@ Ou este para implantar o Langflow 0.6.x:
 <img src="https://render.com/images/deploy-to-render-button.svg" alt="Deploy to Render" />
 </a>
 
+## Deploy no AWS Beanstalk
+
+[![Launch Stack](https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png)](https://console.aws.amazon.com/cloudformation/home?#/stacks/create/review?stackName=LangFlowApp&templateURL=https://langflow-quickstart.s3.amazonaws.com/template-aws-quickstart.yaml)
+
+Para informações detalhadas sobre este deploy, visite o [Langflow AWS Elastic Beanstalk Quickstart](https://github.com/danielgines/langflow-aws-quickstart).
+
+## Deploy no Azure App Service
+
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fdanielgines%2Flangflow-azure-arm-quickstart%2Fmain%2Fazure-deploy.json)
+
+Para informações detalhadas sobre este deploy, visite o [Langflow Azure ARM Quickstart](https://github.com/danielgines/langflow-azure-arm-quickstart).
+
 # 🖥️ Interface de Linha de Comando (CLI)
 
 O Langflow fornece uma interface de linha de comando (CLI) para fácil gerenciamento e configuração.

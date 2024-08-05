@@ -157,6 +157,18 @@ Use this template to deploy Langflow 1.0 on Railway:
 <img src="https://render.com/images/deploy-to-render-button.svg" alt="Deploy to Render" />
 </a>
 
+## Deploy on AWS Beanstalk
+
+[![Launch Stack](https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png)](https://console.aws.amazon.com/cloudformation/home?#/stacks/create/review?stackName=LangFlowApp&templateURL=https://langflow-quickstart.s3.amazonaws.com/template-aws-quickstart.yaml)
+
+For detailed information about this deployment, visit the [Langflow AWS Elastic Beanstalk Quickstart](https://github.com/danielgines/langflow-aws-quickstart).
+
+## Deploy on Azure App Service
+
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fdanielgines%2Flangflow-azure-arm-quickstart%2Fmain%2Fazure-deploy.json)
+
+For detailed information about this deployment, visit the [Langflow Azure ARM Quickstart](https://github.com/danielgines/langflow-azure-arm-quickstart).
+
 ## Deploy on Kubernetes
 
 Follow our step-by-step guide to deploy [Langflow on Kubernetes](./docs/docs/Deployment/deployment-kubernetes.md).
