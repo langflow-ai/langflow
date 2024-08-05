@@ -20,16 +20,15 @@ class ExceptionBody(BaseModel):
 
 class APIException(HTTPException):
     def __init__(self, exception: Exception, flow: Flow | None = None, status_code: int = 500):
-        body = self.from_exc_and_flow(exception, flow)
-        if flow is None:
-            body = ExceptionBody(message=str(exception))
+        body = self.build_exception_body(exception, flow)
         super().__init__(status_code=status_code, detail=body.model_dump_json())
 
     @staticmethod
-    def from_exc_and_flow(exc: str | list[str], flow: Flow) -> ExceptionBody:
+    def build_exception_body(exc: str | list[str], flow: Flow | None) -> ExceptionBody:
         body = {"message": str(exc)}
-        outdated_components = get_outdated_components(flow)
-        if outdated_components:
-            body["suggestion"] = get_suggestion_messsage(outdated_components)
+        if(flow):
+            outdated_components = get_outdated_components(flow)
+            if outdated_components:
+                body["suggestion"] = get_suggestion_messsage(outdated_components)
         excep = ExceptionBody(**body)
         return excep
