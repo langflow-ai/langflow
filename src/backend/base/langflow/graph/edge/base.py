@@ -3,37 +3,11 @@ from typing import TYPE_CHECKING, Any, List, Optional, cast
 from loguru import logger
 from pydantic import BaseModel, Field, field_validator
 
-from langflow.graph.edge.schema import EdgeData
+from langflow.graph.edge.schema import EdgeData, SourceHandle, TargetHandle, TargetHandleDict
 from langflow.schema.schema import INPUT_FIELD_NAME
 
 if TYPE_CHECKING:
     from langflow.graph.vertex.base import Vertex
-
-
-class SourceHandle(BaseModel):
-    baseClasses: list[str] = Field(default_factory=list, description="List of base classes for the source handle.")
-    dataType: str = Field(..., description="Data type for the source handle.")
-    id: str = Field(..., description="Unique identifier for the source handle.")
-    name: Optional[str] = Field(None, description="Name of the source handle.")
-    output_types: List[str] = Field(default_factory=list, description="List of output types for the source handle.")
-
-    @field_validator("name", mode="before")
-    @classmethod
-    def validate_name(cls, v, _info):
-        if _info.data["dataType"] == "GroupNode":
-            # 'OpenAIModel-u4iGV_text_output'
-            splits = v.split("_", 1)
-            if len(splits) != 2:
-                raise ValueError(f"Invalid source handle name {v}")
-            v = splits[1]
-        return v
-
-
-class TargetHandle(BaseModel):
-    fieldName: str = Field(..., description="Field name for the target handle.")
-    id: str = Field(..., description="Unique identifier for the target handle.")
-    inputTypes: Optional[List[str]] = Field(None, description="List of input types for the target handle.")
-    type: str = Field(..., description="Type of the target handle.")
 
 
 class Edge:
