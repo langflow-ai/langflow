@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from langflow.services.database.models.folder import Folder
 
 
-class User(SQLModel, table=True):
+class User(SQLModel, table=True):  # type: ignore
     id: UUID = Field(default_factory=uuid4, primary_key=True, unique=True)
     username: str = Field(index=True, unique=True)
     password: str = Field()

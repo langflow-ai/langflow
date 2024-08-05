@@ -1,7 +1,7 @@
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional, Type
 
 import sqlalchemy as sa
 from alembic import command, util
@@ -47,12 +47,17 @@ class DatabaseService(Service):
 
     def _create_engine(self) -> "Engine":
         """Create the engine for the database."""
-        settings_service = get_settings_service()
-        if settings_service.settings.database_url and settings_service.settings.database_url.startswith("sqlite"):
+        if self.settings_service.settings.database_url and self.settings_service.settings.database_url.startswith(
+            "sqlite"
+        ):
             connect_args = {"check_same_thread": False}
         else:
             connect_args = {}
         try:
+            # register the event listener for sqlite as part of this class.
+            # Using decorator will make the method not able to use self
+            event.listen(Engine, "connect", self.on_connection)
+
             return create_engine(
                 self.database_url,
                 connect_args=connect_args,
@@ -69,19 +74,25 @@ class DatabaseService(Service):
                 return self._create_engine()
             raise RuntimeError("Error creating database engine") from exc
 
-    @event.listens_for(Engine, "connect")
-    def on_connection(dbapi_connection, connection_record):
+    def on_connection(self, dbapi_connection, connection_record):
         from sqlite3 import Connection as sqliteConnection
 
         if isinstance(dbapi_connection, sqliteConnection):
-            logger.info("sqlite connect listener, setting pragmas")
-            cursor = dbapi_connection.cursor()
-            try:
-                cursor.execute("PRAGMA synchronous = NORMAL")
-                cursor.execute("PRAGMA journal_mode = WAL")
-                cursor.close()
-            except OperationalError as oe:
-                logger.warning("Failed to set PRAGMA: ", {oe})
+            pragmas: Optional[dict] = self.settings_service.settings.sqlite_pragmas
+            pragmas_list = []
+            for key, val in pragmas.items() or {}:
+                pragmas_list.append(f"PRAGMA {key} = {val}")
+            logger.info(f"sqlite connection, setting pragmas: {str(pragmas_list)}")
+            if pragmas_list:
+                cursor = dbapi_connection.cursor()
+                try:
+                    for pragma in pragmas_list:
+                        try:
+                            cursor.execute(pragma)
+                        except OperationalError as oe:
+                            logger.error(f"Failed to set PRAGMA {pragma}: ", {oe})
+                finally:
+                    cursor.close()
 
     def __enter__(self):
         self._session = Session(self.engine)
@@ -122,7 +133,7 @@ class DatabaseService(Service):
     def check_schema_health(self) -> bool:
         inspector = inspect(self.engine)
 
-        model_mapping = {
+        model_mapping: dict[str, Type[SQLModel]] = {
             "flow": models.Flow,
             "user": models.User,
             "apikey": models.ApiKey,

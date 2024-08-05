@@ -1,20 +1,24 @@
-import { keepPreviousData } from "@tanstack/react-query";
-import { Users, useQueryFunctionType } from "../../../../types/api";
+import { UseMutationResult } from "@tanstack/react-query";
+import { useMutationFunctionType, Users } from "../../../../types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
 
-export const useGetUserData: useQueryFunctionType<undefined, Users> = () => {
-  const { query } = UseRequestProcessor();
+export const useGetUserData: useMutationFunctionType<undefined, any> = (
+  options?,
+) => {
+  const { mutate } = UseRequestProcessor();
 
   const getUserData = async () => {
     const response = await api.get<Users>(`${getURL("USERS")}/whoami`);
     return response["data"];
   };
 
-  const queryResult = query(["useGetUserData"], getUserData, {
-    placeholderData: keepPreviousData,
-  });
+  const mutation: UseMutationResult = mutate(
+    ["useGetUserData"],
+    getUserData,
+    options,
+  );
 
-  return queryResult;
+  return mutation;
 };

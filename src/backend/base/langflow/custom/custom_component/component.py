@@ -155,14 +155,6 @@ class Component(CustomComponent):
         else:
             raise ValueError(f"Output {name} not found in {self.__class__.__name__}")
 
-    def set_input_value(self, name: str, value: Any):
-        if name in self._inputs:
-            self._inputs[name].value = value
-            if hasattr(self._inputs[name], "load_from_db"):
-                self._inputs[name].load_from_db = False
-        else:
-            raise ValueError(f"Input {name} not found in {self.__class__.__name__}")
-
     def map_outputs(self, outputs: List[Output]):
         """
         Maps the given list of outputs to the component.
@@ -273,7 +265,7 @@ class Component(CustomComponent):
         )
 
     def _set_parameter_or_attribute(self, key, value):
-        self.set_input_value(key, value)
+        self._set_input_value(key, value)
         self._parameters[key] = value
         self._attributes[key] = value
 

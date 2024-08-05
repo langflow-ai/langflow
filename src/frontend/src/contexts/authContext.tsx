@@ -3,6 +3,7 @@ import {
   LANGFLOW_API_TOKEN,
   LANGFLOW_AUTO_LOGIN_OPTION,
 } from "@/constants/constants";
+import { useGetUserData } from "@/controllers/API/queries/auth";
 import useAuthStore from "@/stores/authStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { createContext, useEffect, useState } from "react";
@@ -18,7 +19,6 @@ import { AuthContextType } from "../types/contexts/auth";
 const initialValue: AuthContextType = {
   accessToken: null,
   login: () => {},
-  logout: () => new Promise(() => {}),
   userData: null,
   setUserData: () => {},
   authenticationErrorCount: 0,
@@ -53,6 +53,8 @@ export function AuthProvider({ children }): React.ReactElement {
   const setIsLoading = useFlowsManagerStore((state) => state.setIsLoading);
   const autoLogin = useAuthStore((state) => state.autoLogin);
 
+  const { mutate: mutateLoggedUser } = useGetUserData();
+
   useEffect(() => {
     const storedAccessToken = cookies.get(LANGFLOW_ACCESS_TOKEN);
     if (storedAccessToken) {
@@ -68,19 +70,23 @@ export function AuthProvider({ children }): React.ReactElement {
   }, []);
 
   function getUser() {
-    getLoggedUser()
-      .then(async (user) => {
-        setUserData(user);
-        const isSuperUser = user!.is_superuser;
-        useAuthStore.getState().setIsAdmin(isSuperUser);
-        getFoldersApi(true, true);
-
-        checkHasStore();
-        fetchApiData();
-      })
-      .catch((error) => {
-        setLoading(false);
-      });
+    mutateLoggedUser(
+      {},
+      {
+        onSuccess: async (user) => {
+          setUserData(user);
+          const isSuperUser = user!.is_superuser;
+          useAuthStore.getState().setIsAdmin(isSuperUser);
+          getFoldersApi(true, true);
+          checkHasStore();
+          fetchApiData();
+        },
+        onError: () => {
+          setUserData(null);
+          setLoading(false);
+        },
+      },
+    );
   }
 
   function login(newAccessToken: string, autoLogin: string) {
@@ -88,29 +94,6 @@ export function AuthProvider({ children }): React.ReactElement {
     setAccessToken(newAccessToken);
     setIsAuthenticated(true);
     getUser();
-  }
-
-  async function logout() {
-    if (autoLogin) {
-      return;
-    }
-    try {
-      await requestLogout();
-      cookies.remove(LANGFLOW_API_TOKEN, { path: "/" });
-      cookies.remove(LANGFLOW_AUTO_LOGIN_OPTION, { path: "/" });
-      setIsAdmin(false);
-      setUserData(null);
-      setAccessToken(null);
-      setIsAuthenticated(false);
-      setIsAuthenticated(false);
-      setAllFlows([]);
-      setSelectedFolder(null);
-      navigate("/login");
-      setIsLoading(false);
-    } catch (error) {
-      console.error(error);
-      throw error;
-    }
   }
 
   function storeApiKey(apikey: string) {
@@ -123,7 +106,6 @@ export function AuthProvider({ children }): React.ReactElement {
       value={{
         accessToken,
         login,
-        logout,
         setUserData,
         userData,
         authenticationErrorCount: 0,

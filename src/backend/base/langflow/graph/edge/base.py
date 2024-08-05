@@ -55,7 +55,7 @@ class Edge:
             self._target_handle = edge.get("targetHandle", "")  # type: ignore
             # 'BaseLoader;BaseOutputParser|documents|PromptTemplate-zmTlD'
             # target_param is documents
-            self.target_param = cast(str, self._target_handle).split("|")[1]
+            self.target_param = cast(str, self._target_handle.split("|")[1])  # type: ignore
         # Validate in __init__ to fail fast
         self.validate_edge(source, target)
 

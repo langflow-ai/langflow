@@ -1046,8 +1046,8 @@ class Graph:
     async def build_vertex(
         self,
         vertex_id: str,
-        get_cache: GetCache,
-        set_cache: SetCache,
+        get_cache: GetCache | None = None,
+        set_cache: SetCache | None = None,
         inputs_dict: Optional[Dict[str, str]] = None,
         files: Optional[list[str]] = None,
         user_id: Optional[str] = None,
@@ -1076,13 +1076,17 @@ class Graph:
             params = ""
             if vertex.frozen:
                 # Check the cache for the vertex
-                cached_result = await get_cache(key=vertex.id)
+                if get_cache is not None:
+                    cached_result = await get_cache(key=vertex.id)
+                else:
+                    cached_result = None
                 if isinstance(cached_result, CacheMiss):
                     await vertex.build(
                         user_id=user_id, inputs=inputs_dict, fallback_to_env_vars=fallback_to_env_vars, files=files
                     )
-                    await set_cache(key=vertex.id, data=vertex)
-                else:
+                    if set_cache is not None:
+                        await set_cache(key=vertex.id, data=vertex)
+                if cached_result and not isinstance(cached_result, CacheMiss):
                     cached_vertex = cached_result["result"]
                     # Now set update the vertex with the cached vertex
                     vertex._built = cached_vertex._built
@@ -1093,12 +1097,18 @@ class Graph:
                     vertex._custom_component = cached_vertex._custom_component
                     if vertex.result is not None:
                         vertex.result.used_frozen_result = True
-
+                else:
+                    await vertex.build(
+                        user_id=user_id, inputs=inputs_dict, fallback_to_env_vars=fallback_to_env_vars, files=files
+                    )
+                    if set_cache is not None:
+                        await set_cache(key=vertex.id, data=vertex)
             else:
                 await vertex.build(
                     user_id=user_id, inputs=inputs_dict, fallback_to_env_vars=fallback_to_env_vars, files=files
                 )
-                await set_cache(key=vertex.id, data=vertex)
+                if set_cache is not None:
+                    await set_cache(key=vertex.id, data=vertex)
 
             if vertex.result is not None:
                 params = f"{vertex._built_object_repr()}{params}"
@@ -1422,6 +1432,27 @@ class Graph:
         vertex_instance = VertexClass(frontend_data, graph=self)
         vertex_instance.set_top_level(self.top_level_vertices)
         return vertex_instance
+
+    def prepare(self, stop_component_id: Optional[str] = None, start_component_id: Optional[str] = None):
+        if stop_component_id and start_component_id:
+            raise ValueError("You can only provide one of stop_component_id or start_component_id")
+        self.validate_stream()
+        self.edges = self._build_edges()
+        if stop_component_id or start_component_id:
+            try:
+                first_layer = self.sort_vertices(stop_component_id, start_component_id)
+            except Exception as exc:
+                logger.error(exc)
+                first_layer = self.sort_vertices()
+        else:
+            first_layer = self.sort_vertices()
+
+        for vertex_id in first_layer:
+            self.run_manager.add_to_vertices_being_run(vertex_id)
+        self._first_layer = first_layer
+        self._run_queue = deque(first_layer)
+        self._prepared = True
+        return self
 
     def get_children_by_vertex_type(self, vertex: Vertex, vertex_type: str) -> List[Vertex]:
         """Returns the children of a vertex based on the vertex type."""
