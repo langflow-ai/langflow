@@ -46,7 +46,7 @@ jobs:
           poetry env use ${{ matrix.python-version }}
           poetry install
       - name: Run unit tests
-        uses: nick-fields/retry@v2
+        uses: nick-fields/retry@v3
         with:
           timeout_minutes: 12
           max_attempts: 2
