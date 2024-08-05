@@ -134,6 +134,7 @@ unit_tests: ## run unit tests
 		--ignore=src/backend/tests/integration \
 		--instafail -ra -n auto -m "not api_key_required" \
 		--durations-path src/backend/tests/.test_durations \
+		--splitting-algorithm least_duration \
 		$(args)
 
 integration_tests: ## run integration tests
