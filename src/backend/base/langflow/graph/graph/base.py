@@ -676,7 +676,7 @@ class Graph:
             "flow_name": self.flow_name,
         }
 
-    def build_graph_maps(self, edges: Optional[List[ContractEdge]] = None, vertices: Optional[List[Vertex]] = None):
+    def build_graph_maps(self, edges: Optional[List[ContractEdge]] = None, vertices: Optional[List["Vertex"]] = None):
         """
         Builds the adjacency maps for the graph.
         """
@@ -738,7 +738,7 @@ class Graph:
                 return edge
         return None
 
-    def build_parent_child_map(self, vertices: List[Vertex]):
+    def build_parent_child_map(self, vertices: List["Vertex"]):
         parent_child_map = defaultdict(list)
         for vertex in vertices:
             parent_child_map[vertex.id] = [child.id for child in self.get_successors(vertex)]
@@ -834,7 +834,7 @@ class Graph:
     # both graphs have the same vertices and edges
     # but the data of the vertices might be different
 
-    def update_edges_from_vertex(self, vertex: Vertex, other_vertex: Vertex) -> None:
+    def update_edges_from_vertex(self, vertex: "Vertex", other_vertex: "Vertex") -> None:
         """Updates the edges of a vertex in the Graph."""
         new_edges = []
         for edge in self.edges:
@@ -844,13 +844,13 @@ class Graph:
         new_edges += other_vertex.edges
         self.edges = new_edges
 
-    def vertex_data_is_identical(self, vertex: Vertex, other_vertex: Vertex) -> bool:
+    def vertex_data_is_identical(self, vertex: "Vertex", other_vertex: "Vertex") -> bool:
         data_is_equivalent = vertex == other_vertex
         if not data_is_equivalent:
             return False
         return self.vertex_edges_are_identical(vertex, other_vertex)
 
-    def vertex_edges_are_identical(self, vertex: Vertex, other_vertex: Vertex) -> bool:
+    def vertex_edges_are_identical(self, vertex: "Vertex", other_vertex: "Vertex") -> bool:
         same_length = len(vertex.edges) == len(other_vertex.edges)
         if not same_length:
             return False
@@ -909,7 +909,7 @@ class Graph:
         self.increment_update_count()
         return self
 
-    def update_vertex_from_another(self, vertex: Vertex, other_vertex: Vertex) -> None:
+    def update_vertex_from_another(self, vertex: "Vertex", other_vertex: "Vertex") -> None:
         """
         Updates a vertex from another vertex.
 
@@ -947,12 +947,12 @@ class Graph:
         self.vertices.append(vertex)
         self.vertex_map[vertex.id] = vertex
 
-    def add_vertex(self, vertex: Vertex) -> None:
+    def add_vertex(self, vertex: "Vertex") -> None:
         """Adds a new vertex to the graph."""
         self._add_vertex(vertex)
         self._update_edges(vertex)
 
-    def _update_edges(self, vertex: Vertex) -> None:
+    def _update_edges(self, vertex: "Vertex") -> None:
         """Updates the edges of a vertex."""
         # Vertex has edges, so we need to update the edges
         for edge in vertex.edges:
@@ -987,19 +987,19 @@ class Graph:
         for vertex in self.vertices:
             vertex._build_params()
 
-    def _validate_vertex(self, vertex: Vertex) -> bool:
+    def _validate_vertex(self, vertex: "Vertex") -> bool:
         """Validates a vertex."""
         # All vertices that do not have edges are invalid
         return len(self.get_vertex_edges(vertex.id)) > 0
 
-    def get_vertex(self, vertex_id: str, silent: bool = False) -> Vertex:
+    def get_vertex(self, vertex_id: str, silent: bool = False) -> "Vertex":
         """Returns a vertex by id."""
         try:
             return self.vertex_map[vertex_id]
         except KeyError:
             raise ValueError(f"Vertex {vertex_id} not found")
 
-    def get_root_of_group_node(self, vertex_id: str) -> Vertex:
+    def get_root_of_group_node(self, vertex_id: str) -> "Vertex":
         """Returns the root of a group node."""
         if vertex_id in self.top_level_vertices:
             # Get all vertices with vertex_id as .parent_node_id
@@ -1157,9 +1157,9 @@ class Graph:
             or (edge.target_id == vertex_id and is_target is not False)
         ]
 
-    def get_vertices_with_target(self, vertex_id: str) -> List[Vertex]:
+    def get_vertices_with_target(self, vertex_id: str) -> List["Vertex"]:
         """Returns the vertices connected to a vertex."""
-        vertices: List[Vertex] = []
+        vertices: List["Vertex"] = []
         for edge in self.edges:
             if edge.target_id == vertex_id:
                 vertex = self.get_vertex(edge.source_id)
@@ -1246,7 +1246,7 @@ class Graph:
         """Executes tasks in parallel, handling exceptions for each task."""
         results = []
         completed_tasks = await asyncio.gather(*tasks, return_exceptions=True)
-        vertices: List[Vertex] = []
+        vertices: List["Vertex"] = []
 
         for i, result in enumerate(completed_tasks):
             task_name = tasks[i].get_name()
@@ -1273,7 +1273,7 @@ class Graph:
         no_duplicate_results = list(set(results))
         return no_duplicate_results
 
-    def topological_sort(self) -> List[Vertex]:
+    def topological_sort(self) -> List["Vertex"]:
         """
         Performs a topological sort of the vertices in the graph.
 
@@ -1306,7 +1306,7 @@ class Graph:
 
         return list(reversed(sorted_vertices))
 
-    def generator_build(self) -> Generator[Vertex, None, None]:
+    def generator_build(self) -> Generator["Vertex", None, None]:
         """Builds each vertex in the graph and yields it."""
         sorted_vertices = self.topological_sort()
         logger.debug("There are %s vertices in the graph", len(sorted_vertices))
@@ -1316,7 +1316,7 @@ class Graph:
         """Returns the predecessors of a vertex."""
         return [self.get_vertex(source_id) for source_id in self.predecessor_map.get(vertex.id, [])]
 
-    def get_all_successors(self, vertex: Vertex, recursive=True, flat=True):
+    def get_all_successors(self, vertex: "Vertex", recursive=True, flat=True):
         # Recursively get the successors of the current vertex
         # successors = vertex.successors
         # if not successors:
@@ -1353,13 +1353,13 @@ class Graph:
                 successors_result.append([successor])
         return successors_result
 
-    def get_successors(self, vertex: Vertex) -> List[Vertex]:
+    def get_successors(self, vertex: "Vertex") -> List["Vertex"]:
         """Returns the successors of a vertex."""
         return [self.get_vertex(target_id) for target_id in self.successor_map.get(vertex.id, [])]
 
-    def get_vertex_neighbors(self, vertex: Vertex) -> Dict[Vertex, int]:
+    def get_vertex_neighbors(self, vertex: "Vertex") -> Dict["Vertex", int]:
         """Returns the neighbors of a vertex."""
-        neighbors: Dict[Vertex, int] = {}
+        neighbors: Dict["Vertex", int] = {}
         for edge in self.edges:
             if edge.source_id == vertex.id:
                 neighbor = self.get_vertex(edge.target_id)
@@ -1401,7 +1401,7 @@ class Graph:
         new_edge = ContractEdge(source, target, edge)
         return new_edge
 
-    def _get_vertex_class(self, node_type: str, node_base_type: str, node_id: str) -> Type[Vertex]:
+    def _get_vertex_class(self, node_type: str, node_base_type: str, node_id: str) -> Type["Vertex"]:
         """Returns the node class based on the node type."""
         # First we check for the node_base_type
         node_name = node_id.split("-")[0]
@@ -1418,9 +1418,9 @@ class Graph:
             return lazy_load_vertex_dict.VERTEX_TYPE_MAP[node_type]
         raise ValueError(f"Vertex type {node_type} not found")
 
-    def _build_vertices(self) -> List[Vertex]:
+    def _build_vertices(self) -> List["Vertex"]:
         """Builds the vertices of the graph."""
-        vertices: List[Vertex] = []
+        vertices: List["Vertex"] = []
         for frontend_data in self._vertices:
             try:
                 vertex_instance = self.get_vertex(frontend_data["id"])
@@ -1481,7 +1481,7 @@ class Graph:
 
     def layered_topological_sort(
         self,
-        vertices: List[Vertex],
+        vertices: List["Vertex"],
         filter_graphs: bool = False,
     ) -> List[List[str]]:
         """Performs a layered topological sort of the vertices in the graph."""
