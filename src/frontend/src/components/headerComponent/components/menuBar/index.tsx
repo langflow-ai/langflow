@@ -8,6 +8,7 @@ import {
 } from "../../../ui/dropdown-menu";
 
 import useAddFlow from "@/hooks/flows/use-add-flow";
+import useUploadFlow from "@/hooks/flows/use-upload-flow";
 import { useNavigate } from "react-router-dom";
 import { UPLOAD_ERROR_ALERT } from "../../../../constants/alerts_constants";
 import { SAVED_HOVER } from "../../../../constants/constants";
@@ -41,7 +42,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
   const saveLoading = useFlowsManagerStore((state) => state.saveLoading);
   const [openSettings, setOpenSettings] = useState(false);
   const [openLogs, setOpenLogs] = useState(false);
-  const uploadFlow = useFlowsManagerStore((state) => state.uploadFlow);
+  const uploadFlow = useUploadFlow();
   const navigate = useNavigate();
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const getTypes = useTypesStore((state) => state.getTypes);
@@ -126,14 +127,18 @@ export const MenuBar = ({}: {}): JSX.Element => {
             <DropdownMenuItem
               className="cursor-pointer"
               onClick={() => {
-                uploadFlow({ newProject: false, isComponent: false }).catch(
-                  (error) => {
+                uploadFlow({ position: { x: 300, y: 100 } })
+                  .then(() => {
+                    setSuccessData({
+                      title: "Uploaded successfully",
+                    });
+                  })
+                  .catch((error) => {
                     setErrorData({
                       title: UPLOAD_ERROR_ALERT,
-                      list: [error],
+                      list: [(error as Error).message],
                     });
-                  },
-                );
+                  });
               }}
             >
               <IconComponent name="FileUp" className="header-menu-options" />
