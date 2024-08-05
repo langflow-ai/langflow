@@ -24,11 +24,12 @@ from langflow.type_extraction.type_extraction import (
 from langflow.utils import validate
 
 if TYPE_CHECKING:
+    from langchain.callbacks.base import BaseCallbackHandler
+
     from langflow.graph.graph.base import Graph
     from langflow.graph.vertex.base import Vertex
     from langflow.services.storage.service import StorageService
     from langflow.services.tracing.service import TracingService
-    from langchain.callbacks.base import BaseCallbackHandler
 
 
 class CustomComponent(BaseComponent):
@@ -134,8 +135,6 @@ class CustomComponent(BaseComponent):
             return self._vertex.graph.get_state(name=name)
         except Exception as e:
             raise ValueError(f"Error getting state: {e}")
-
-    _tree: Optional[dict] = None
 
     def __init__(self, **data):
         """
