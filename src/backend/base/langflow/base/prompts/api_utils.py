@@ -6,7 +6,7 @@ from langchain_core.prompts import PromptTemplate
 from loguru import logger
 
 from langflow.interface.utils import extract_input_variables_from_prompt
-from langflow.template.field.prompt import DefaultPromptField
+from langflow.inputs.inputs import DefaultPromptField
 
 
 _INVALID_CHARACTERS = {

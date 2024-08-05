@@ -27,9 +27,13 @@ SerializableFieldTypes = Annotated[FieldTypes, PlainSerializer(lambda v: v.value
 
 # Base mixin for common input field attributes and methods
 class BaseInputMixin(BaseModel, validate_assignment=True):  # type: ignore
-    model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid", populate_by_name=True)
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True,
+        extra="forbid",
+        populate_by_name=True,
+    )
 
-    field_type: SerializableFieldTypes = Field(default=FieldTypes.TEXT)
+    field_type: SerializableFieldTypes = Field(default=FieldTypes.TEXT, alias="type")
 
     required: bool = False
     """Specifies if the field is required. Defaults to False."""

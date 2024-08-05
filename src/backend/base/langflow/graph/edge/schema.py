@@ -1,6 +1,6 @@
 from typing import Any, List, Optional
 
-from pydantic import Field, field_validator
+from pydantic import ConfigDict, Field, field_validator
 from typing_extensions import TypedDict
 
 from langflow.helpers.base_model import BaseModel
@@ -39,7 +39,8 @@ class Payload(BaseModel):
 
 
 class TargetHandle(BaseModel):
-    fieldName: str = Field(..., alias="fieldName", description="Field name for the target handle.")
+    model_config = ConfigDict(populate_by_name=True)
+    field_name: str = Field(..., alias="fieldName", description="Field name for the target handle.")
     id: str = Field(..., description="Unique identifier for the target handle.")
     input_types: List[str] = Field(
         default_factory=list, alias="inputTypes", description="List of input types for the target handle."
@@ -48,6 +49,7 @@ class TargetHandle(BaseModel):
 
 
 class SourceHandle(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
     base_classes: list[str] = Field(
         default_factory=list, alias="baseClasses", description="List of base classes for the source handle."
     )

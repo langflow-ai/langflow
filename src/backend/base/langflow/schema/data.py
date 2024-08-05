@@ -24,6 +24,7 @@ class Data(BaseModel):
     default_value: Optional[str] = ""
 
     @model_validator(mode="before")
+    @classmethod
     def validate_data(cls, values):
         if not isinstance(values, dict):
             raise ValueError("Data must be a dictionary")

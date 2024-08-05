@@ -1,4 +1,5 @@
 import asyncio
+import json
 import uuid
 from collections import defaultdict, deque
 from datetime import datetime, timezone
@@ -14,11 +15,12 @@ from langflow.graph.edge.base import ContractEdge
 from langflow.graph.edge.schema import EdgeData
 from langflow.graph.graph.constants import Finish, lazy_load_vertex_dict
 from langflow.graph.graph.runnable_vertices_manager import RunnableVerticesManager
-from langflow.graph.graph.schema import VertexBuildResult
+from langflow.graph.graph.schema import GraphData, GraphDump, VertexBuildResult
 from langflow.graph.graph.state_manager import GraphStateManager
 from langflow.graph.graph.utils import find_start_component_id, process_flow, sort_up_to_vertex
 from langflow.graph.schema import InterfaceComponentTypes, RunOutputs
 from langflow.graph.vertex.base import Vertex, VertexStates
+from langflow.graph.vertex.schema import NodeData
 from langflow.graph.vertex.types import ComponentVertex, InterfaceVertex, StateVertex
 from langflow.schema import Data
 from langflow.schema.schema import INPUT_FIELD_NAME, InputType
@@ -75,7 +77,7 @@ class Graph:
         self.vertices: List[Vertex] = []
         self.run_manager = RunnableVerticesManager()
         self.state_manager = GraphStateManager()
-        self._vertices: List[dict] = []
+        self._vertices: List[NodeData] = []
         self._edges: List[EdgeData] = []
         self.top_level_vertices: List[str] = []
         self.vertex_map: Dict[str, Vertex] = {}
@@ -86,6 +88,7 @@ class Graph:
         self._run_queue: deque[str] = deque()
         self._first_layer: List[str] = []
         self._lock = asyncio.Lock()
+        self.raw_graph_data: GraphData = {"nodes": [], "edges": []}
         try:
             self.tracing_service: "TracingService" | None = get_tracing_service()
         except Exception as exc:
@@ -97,7 +100,39 @@ class Graph:
         if (start is not None and end is None) or (start is None and end is not None):
             raise ValueError("You must provide both input and output components")
 
-    def add_nodes_and_edges(self, nodes: List[Dict], edges: List[EdgeData]):
+    def dumps(
+        self,
+        name: Optional[str] = None,
+        description: Optional[str] = None,
+        endpoint_name: Optional[str] = None,
+    ) -> str:
+        graph_dict = self.dump(name, description, endpoint_name)
+        return json.dumps(graph_dict, indent=4, sort_keys=True)
+
+    def dump(
+        self, name: Optional[str] = None, description: Optional[str] = None, endpoint_name: Optional[str] = None
+    ) -> GraphDump:
+        if self.raw_graph_data != {"nodes": [], "edges": []}:
+            data_dict = self.raw_graph_data
+        else:
+            # we need to convert the vertices and edges to json
+            nodes = [node.to_data() for node in self.vertices]
+            edges = [edge.to_data() for edge in self.edges]
+            self.raw_graph_data = {"nodes": nodes, "edges": edges}
+            data_dict = self.raw_graph_data
+        graph_dict: GraphDump = {
+            "data": data_dict,
+            "is_component": len(data_dict.get("nodes", [])) == 1 and data_dict["edges"] == [],
+        }
+        if name:
+            graph_dict["name"] = name
+        if description:
+            graph_dict["description"] = description
+        if endpoint_name:
+            graph_dict["endpoint_name"] = endpoint_name
+        return graph_dict
+
+    def add_nodes_and_edges(self, nodes: List[NodeData], edges: List[EdgeData]):
         self._vertices = nodes
         self._edges = edges
         self.raw_graph_data = {"nodes": nodes, "edges": edges}
@@ -183,7 +218,7 @@ class Graph:
                 return
 
     def start(self, inputs: Optional[List[dict]] = None) -> Generator:
-        #! Change this soon
+        #! Change this ASAP
         nest_asyncio.apply()
         loop = asyncio.get_event_loop()
         async_gen = self.async_start(inputs)
@@ -208,8 +243,7 @@ class Graph:
         self.in_degree_map[target_id] += 1
         self.parent_child_map[source_id].append(target_id)
 
-    # TODO: Create a TypedDict to represente the node
-    def add_node(self, node: dict):
+    def add_node(self, node: NodeData):
         self._vertices.append(node)
 
     def add_edge(self, edge: EdgeData):
@@ -1400,7 +1434,7 @@ class Graph:
 
         return vertices
 
-    def _create_vertex(self, frontend_data: dict):
+    def _create_vertex(self, frontend_data: NodeData):
         vertex_data = frontend_data["data"]
         vertex_type: str = vertex_data["type"]  # type: ignore
         vertex_base_type: str = vertex_data["node"]["template"]["_type"]  # type: ignore
