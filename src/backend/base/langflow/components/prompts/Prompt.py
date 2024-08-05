@@ -3,6 +3,7 @@ from langflow.custom import Component
 from langflow.io import Output, PromptInput
 from langflow.schema.message import Message
 from langflow.template.utils import update_template_values
+from langflow.template.field.prompt import DefaultPromptField
 
 
 class PromptComponent(Component):
