@@ -13,6 +13,11 @@ from langflow.graph.graph.schema import GraphDump
 
 
 @pytest.fixture
+def client():
+    pass
+
+
+@pytest.fixture
 def memory_chatbot_graph():
     session_id = "test_session_id"
     template = """{context}
