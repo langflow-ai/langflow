@@ -216,7 +216,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
     fromDragAndDrop?: boolean,
   ): Promise<string | undefined> => {
     let flowData = flow
-      ? processDataFromFlow(flow)
+      ? await processDataFromFlow(flow)
       : { nodes: [], edges: [], viewport: { zoom: 1, x: 0, y: 0 } };
     flowData?.nodes.forEach((node) => {
       updateGroupRecursion(
