@@ -75,7 +75,7 @@ class CustomComponent(BaseComponent):
     """The build parameters of the component. Defaults to None."""
     _vertex: Optional["Vertex"] = None
     """The edge target parameter of the component. Defaults to None."""
-    code_class_base_inheritance: ClassVar[str] = "CustomComponent"
+    _code_class_base_inheritance: ClassVar[str] = "CustomComponent"
     function_entrypoint_name: ClassVar[str] = "build"
     function: Optional[Callable] = None
     repr_value: Optional[Any] = ""
@@ -322,7 +322,7 @@ class CustomComponent(BaseComponent):
         Returns:
             list: The arguments of the function entrypoint.
         """
-        build_method = self.get_method(self.function_entrypoint_name)
+        build_method = self.get_method(self._function_entrypoint_name)
         if not build_method:
             return []
 
@@ -363,7 +363,7 @@ class CustomComponent(BaseComponent):
         Returns:
             List[Any]: The return type of the function entrypoint.
         """
-        return self.get_method_return_type(self.function_entrypoint_name)
+        return self.get_method_return_type(self._function_entrypoint_name)
 
     def _extract_return_type(self, return_type: Any) -> List[Any]:
         if hasattr(return_type, "__origin__") and return_type.__origin__ in [
@@ -392,7 +392,7 @@ class CustomComponent(BaseComponent):
             return ""
 
         base_name = self._code_class_base_inheritance
-        method_name = self.function_entrypoint_name
+        method_name = self._function_entrypoint_name
 
         classes = []
         for item in self.tree.get("classes", []):
@@ -479,7 +479,7 @@ class CustomComponent(BaseComponent):
         Returns:
             Callable: The function associated with the custom component.
         """
-        return validate.create_function(self._code, self.function_entrypoint_name)
+        return validate.create_function(self._code, self._function_entrypoint_name)
 
     async def load_flow(self, flow_id: str, tweaks: Optional[dict] = None) -> "Graph":
         if not self.user_id:
