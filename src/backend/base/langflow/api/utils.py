@@ -207,7 +207,7 @@ def parse_exception(exc):
     return str(exc)
 
 
-def get_suggestion_messsage(outdated_components: list[str]):
+def get_suggestion_message(outdated_components: list[str]):
     """Get the suggestion message for the outdated components."""
     message = f"The flow contains {len(outdated_components)} outdated components. we recommend updating the following components: "
     for component in outdated_components:

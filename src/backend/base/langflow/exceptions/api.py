@@ -1,5 +1,5 @@
 from fastapi import HTTPException
-from langflow.api.utils import get_suggestion_messsage
+from langflow.api.utils import get_suggestion_message
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.flow.utils import get_outdated_components
 from pydantic import BaseModel
@@ -29,6 +29,6 @@ class APIException(HTTPException):
         if flow:
             outdated_components = get_outdated_components(flow)
             if outdated_components:
-                body["suggestion"] = get_suggestion_messsage(outdated_components)
+                body["suggestion"] = get_suggestion_message(outdated_components)
         excep = ExceptionBody(**body)
         return excep
