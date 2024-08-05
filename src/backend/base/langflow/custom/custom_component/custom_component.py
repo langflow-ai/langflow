@@ -30,7 +30,6 @@ if TYPE_CHECKING:
     from langflow.graph.vertex.base import Vertex
     from langflow.services.storage.service import StorageService
     from langflow.services.tracing.service import TracingService
-    from langchain.callbacks.base import BaseCallbackHandler
 
 
 class CustomComponent(BaseComponent):
@@ -87,6 +86,20 @@ class CustomComponent(BaseComponent):
     _logs: List[Log] = []
     _output_logs: dict[str, Log] = {}
     _tracing_service: Optional["TracingService"] = None
+    _tree: Optional[dict] = None
+
+    def __init__(self, **data):
+        """
+        Initializes a new instance of the CustomComponent class.
+
+        Args:
+            **data: Additional keyword arguments to initialize the custom component.
+        """
+        self.cache = TTLCache(maxsize=1024, ttl=60)
+        self._logs = []
+        self._results = {}
+        self._artifacts = {}
+        super().__init__(**data)
 
     def set_attributes(self, parameters: dict):
         pass
@@ -136,17 +149,6 @@ class CustomComponent(BaseComponent):
             raise ValueError(f"Error getting state: {e}")
 
     _tree: Optional[dict] = None
-
-    def __init__(self, **data):
-        """
-        Initializes a new instance of the CustomComponent class.
-
-        Args:
-            **data: Additional keyword arguments to initialize the custom component.
-        """
-        self.cache = TTLCache(maxsize=1024, ttl=60)
-        self._logs = []
-        super().__init__(**data)
 
     @staticmethod
     def resolve_path(path: str) -> str:
