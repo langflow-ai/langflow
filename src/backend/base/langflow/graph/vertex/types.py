@@ -70,16 +70,6 @@ class ComponentVertex(Vertex):
         for key, value in self._built_object.items():
             self.add_result(key, value)
 
-    def get_input(self, name: str) -> InputTypes:
-        if self._custom_component is None:
-            raise ValueError(f"Vertex {self.id} does not have a component instance.")
-        return self._custom_component.get_input(name)
-
-    def get_output(self, name: str) -> Output:
-        if self._custom_component is None:
-            raise ValueError(f"Vertex {self.id} does not have a component instance.")
-        return self._custom_component.get_output(name)
-
     def get_edge_with_target(self, target_id: str) -> Generator["ContractEdge", None, None]:
         """
         Get the edge with the target id.
@@ -436,7 +426,7 @@ class InterfaceVertex(ComponentVertex):
 
 
 class StateVertex(ComponentVertex):
-    def __init__(self, data: Dict, graph):
+    def __init__(self, data: NodeData, graph):
         super().__init__(data, graph=graph)
         self.steps = [self._build]
         self.is_state = False
