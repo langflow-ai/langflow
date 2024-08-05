@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, List, Optional, cast
 
 from loguru import logger
 
@@ -214,6 +214,8 @@ class ContractEdge(Edge):
         return self.result
 
     def __repr__(self) -> str:
-        if self.source_handle and self.target_handle:
+        if (hasattr(self, "source_handle") and self.source_handle) and (
+            hasattr(self, "target_handle") and self.target_handle
+        ):
             return f"{self.source_id} -[{self.source_handle.name}->{self.target_handle.fieldName}]-> {self.target_id}"
         return f"{self.source_id} -[{self.target_param}]-> {self.target_id}"

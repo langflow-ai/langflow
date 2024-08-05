@@ -103,6 +103,99 @@ class Component(CustomComponent):
         """
         return await self._run()
 
+    def set_vertex(self, vertex: "Vertex"):
+        """
+        Sets the vertex for the component.
+
+        Args:
+            vertex (Vertex): The vertex to set.
+
+        Returns:
+            None
+        """
+        self._vertex = vertex
+
+    def get_input(self, name: str) -> Any:
+        """
+        Retrieves the value of the input with the specified name.
+
+        Args:
+            name (str): The name of the input.
+
+        Returns:
+            Any: The value of the input.
+
+        Raises:
+            ValueError: If the input with the specified name is not found.
+        """
+        if name in self._inputs:
+            return self._inputs[name]
+        raise ValueError(f"Input {name} not found in {self.__class__.__name__}")
+
+    def get_output(self, name: str) -> Any:
+        """
+        Retrieves the output with the specified name.
+
+        Args:
+            name (str): The name of the output to retrieve.
+
+        Returns:
+            Any: The output value.
+
+        Raises:
+            ValueError: If the output with the specified name is not found.
+        """
+        if name in self._outputs:
+            return self._outputs[name]
+        raise ValueError(f"Output {name} not found in {self.__class__.__name__}")
+
+    def set_output_value(self, name: str, value: Any):
+        if name in self._outputs:
+            self._outputs[name].value = value
+        else:
+            raise ValueError(f"Output {name} not found in {self.__class__.__name__}")
+
+    def map_outputs(self, outputs: List[Output]):
+        """
+        Maps the given list of outputs to the component.
+
+        Args:
+            outputs (List[Output]): The list of outputs to be mapped.
+
+        Raises:
+            ValueError: If the output name is None.
+
+        Returns:
+            None
+
+        Raises:
+            KeyError: If the specified input name does not exist.
+        """
+        for key, value in kwargs.items():
+            self._process_connection_or_parameter(key, value)
+        return self
+
+    def list_inputs(self):
+        """
+        Returns a list of input names.
+        """
+        return [_input.name for _input in self.inputs]
+
+    def list_outputs(self):
+        """
+        Returns a list of output names.
+        """
+        return [_output.name for _output in self.outputs]
+
+    async def run(self):
+        """
+        Executes the component's logic and returns the result.
+
+        Returns:
+            The result of executing the component's logic.
+        """
+        return await self._run()
+
     def set_output_value(self, name: str, value: Any):
         if name in self._outputs:
             self._outputs[name].value = value
@@ -195,9 +288,32 @@ class Component(CustomComponent):
             raise ValueError(f"Output with method {method_name} not found")
         return output
 
+    def _inherits_from_component(self, method: Callable):
+        # check if the method is a method from a class that inherits from Component
+        # and that it is an output of that class
+        inherits_from_component = hasattr(method, "__self__") and isinstance(method.__self__, Component)
+        return inherits_from_component
+
+    def _method_is_valid_output(self, method: Callable):
+        # check if the method is a method from a class that inherits from Component
+        # and that it is an output of that class
+        method_is_output = (
+            hasattr(method, "__self__")
+            and isinstance(method.__self__, Component)
+            and method.__self__._get_output_by_method(method)
+        )
+        return method_is_output
+
     def _process_connection_or_parameter(self, key, value):
         _input = self._get_or_create_input(key)
-        if callable(value):
+        # We need to check if callable AND if it is a method from a class that inherits from Component
+        if callable(value) and self._inherits_from_component(value):
+            try:
+                self._method_is_valid_output(value)
+            except ValueError:
+                raise ValueError(
+                    f"Method {value.__name__} is not a valid output of {value.__self__.__class__.__name__}"
+                )
             self._connect_to_component(key, value, _input)
         else:
             self._set_parameter_or_attribute(key, value)
@@ -240,7 +356,7 @@ class Component(CustomComponent):
         )
 
     def _set_parameter_or_attribute(self, key, value):
-        self.set_input_value(key, value)
+        self._set_input_value(key, value)
         self._parameters[key] = value
         self._attributes[key] = value
 
@@ -270,6 +386,19 @@ class Component(CustomComponent):
         if name in BACKWARDS_COMPATIBLE_ATTRIBUTES:
             return self.__dict__[f"_{name}"]
         raise AttributeError(f"{name} not found in {self.__class__.__name__}")
+
+    def _set_input_value(self, name: str, value: Any):
+        if name in self._inputs:
+            input_value = self._inputs[name].value
+            if callable(input_value):
+                raise ValueError(
+                    f"Input {name} is connected to {input_value.__self__.display_name}.{input_value.__name__}"
+                )
+            self._inputs[name].value = value
+            if hasattr(self._inputs[name], "load_from_db"):
+                self._inputs[name].load_from_db = False
+        else:
+            raise ValueError(f"Input {name} not found in {self.__class__.__name__}")
 
     def _validate_outputs(self):
         # Raise Error if some rule isn't met

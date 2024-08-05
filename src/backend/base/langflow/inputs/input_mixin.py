@@ -26,7 +26,7 @@ SerializableFieldTypes = Annotated[FieldTypes, PlainSerializer(lambda v: v.value
 
 
 # Base mixin for common input field attributes and methods
-class BaseInputMixin(BaseModel, validate_assignment=True):
+class BaseInputMixin(BaseModel, validate_assignment=True):  # type: ignore
     model_config = ConfigDict(
         arbitrary_types_allowed=True,
         extra="forbid",
@@ -44,11 +44,11 @@ class BaseInputMixin(BaseModel, validate_assignment=True):
     show: bool = True
     """Should the field be shown. Defaults to True."""
 
+    name: str = Field(description="Name of the field.")
+    """Name of the field. Default is an empty string."""
+
     value: Any = ""
     """The value of the field. Default is an empty string."""
-
-    name: Optional[str] = None
-    """Name of the field. Default is an empty string."""
 
     display_name: Optional[str] = None
     """Display name of the field. Defaults to None."""

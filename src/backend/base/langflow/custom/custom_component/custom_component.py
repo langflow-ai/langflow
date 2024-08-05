@@ -28,6 +28,7 @@ if TYPE_CHECKING:
     from langflow.graph.vertex.base import Vertex
     from langflow.services.storage.service import StorageService
     from langflow.services.tracing.service import TracingService
+    from langchain.callbacks.base import BaseCallbackHandler
 
 
 class CustomComponent(BaseComponent):
@@ -546,3 +547,8 @@ class CustomComponent(BaseComponent):
             frontend_node=new_frontend_node, raw_frontend_node=current_frontend_node
         )
         return frontend_node
+
+    def get_langchain_callbacks(self) -> List["BaseCallbackHandler"]:
+        if self._tracing_service:
+            return self._tracing_service.get_langchain_callbacks()
+        return []
