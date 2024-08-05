@@ -260,9 +260,7 @@ async def simplified_run_flow(
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
         else:
             logger.exception(exc)
-            raise APIException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, exception=exc, flow=flow
-            ) from exc
+            raise APIException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, exception=exc, flow=flow) from exc
     except InvalidChatInputException as exc:
         logger.error(exc)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
@@ -278,9 +276,7 @@ async def simplified_run_flow(
             ),
         )
         logger.exception(exc)
-        raise APIException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, exception=exc, flow=flow
-        ) from exc
+        raise APIException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, exception=exc, flow=flow) from exc
 
 
 @router.post("/webhook/{flow_id_or_name}", response_model=dict, status_code=HTTPStatus.ACCEPTED)
