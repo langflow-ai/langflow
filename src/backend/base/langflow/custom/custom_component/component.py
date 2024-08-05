@@ -171,36 +171,11 @@ class Component(CustomComponent):
         Raises:
             KeyError: If the specified input name does not exist.
         """
-        for key, value in kwargs.items():
-            self._process_connection_or_parameter(key, value)
-        return self
-
-    def list_inputs(self):
-        """
-        Returns a list of input names.
-        """
-        return [_input.name for _input in self.inputs]
-
-    def list_outputs(self):
-        """
-        Returns a list of output names.
-        """
-        return [_output.name for _output in self.outputs]
-
-    async def run(self):
-        """
-        Executes the component's logic and returns the result.
-
-        Returns:
-            The result of executing the component's logic.
-        """
-        return await self._run()
-
-    def set_output_value(self, name: str, value: Any):
-        if name in self._outputs:
-            self._outputs[name].value = value
-        else:
-            raise ValueError(f"Output {name} not found in {self.__class__.__name__}")
+        self.outputs = outputs
+        for output in outputs:
+            if output.name is None:
+                raise ValueError("Output name cannot be None.")
+            self._outputs[output.name] = output
 
     def set_input_value(self, name: str, value: Any):
         if name in self._inputs:
@@ -209,38 +184,6 @@ class Component(CustomComponent):
                 self._inputs[name].load_from_db = False
         else:
             raise ValueError(f"Input {name} not found in {self.__class__.__name__}")
-
-    def set_vertex(self, vertex: "Vertex"):
-        self._vertex = vertex
-
-    def _set_input_value(self, name: str, value: Any):
-        if name in self._inputs:
-            input_value = self._inputs[name].value
-            if callable(input_value):
-                raise ValueError(
-                    f"Input {name} is connected to {input_value.__self__.display_name}.{input_value.__name__}"
-                )
-            self._inputs[name].value = value
-            self._attributes[name] = value
-        else:
-            raise ValueError(f"Input {name} not found in {self.__class__.__name__}")
-
-    def get_input(self, name: str) -> Any:
-        if name in self._inputs:
-            return self._inputs[name]
-        raise ValueError(f"Input {name} not found in {self.__class__.__name__}")
-
-    def get_output(self, name: str) -> Any:
-        if name in self._outputs:
-            return self._outputs[name]
-        raise ValueError(f"Output {name} not found in {self.__class__.__name__}")
-
-    def map_outputs(self, outputs: List[Output]):
-        self.outputs = outputs
-        for output in outputs:
-            if output.name is None:
-                raise ValueError("Output name cannot be None.")
-            self._outputs[output.name] = output
 
     def map_inputs(self, inputs: List[InputTypes]):
         """
