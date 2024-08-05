@@ -15,7 +15,7 @@ from langflow.graph.edge.base import ContractEdge
 from langflow.graph.edge.schema import EdgeData
 from langflow.graph.graph.constants import Finish, lazy_load_vertex_dict
 from langflow.graph.graph.runnable_vertices_manager import RunnableVerticesManager
-from langflow.graph.graph.schema import GraphData, VertexBuildResult
+from langflow.graph.graph.schema import GraphData, GraphDump, VertexBuildResult
 from langflow.graph.graph.state_manager import GraphStateManager
 from langflow.graph.graph.utils import find_start_component_id, process_flow, sort_up_to_vertex
 from langflow.graph.schema import InterfaceComponentTypes, RunOutputs
@@ -106,6 +106,12 @@ class Graph:
         description: Optional[str] = None,
         endpoint_name: Optional[str] = None,
     ) -> str:
+        graph_dict = self.dump(name, description, endpoint_name)
+        return json.dumps(graph_dict, indent=4, sort_keys=True)
+
+    def dump(
+        self, name: Optional[str] = None, description: Optional[str] = None, endpoint_name: Optional[str] = None
+    ) -> GraphDump:
         if self.raw_graph_data != {"nodes": [], "edges": []}:
             data_dict = self.raw_graph_data
         else:
@@ -114,7 +120,7 @@ class Graph:
             edges = [edge.to_data() for edge in self.edges]
             self.raw_graph_data = {"nodes": nodes, "edges": edges}
             data_dict = self.raw_graph_data
-        graph_dict = {
+        graph_dict: GraphDump = {
             "data": data_dict,
             "is_component": len(data_dict.get("nodes", [])) == 1 and data_dict["edges"] == [],
         }
@@ -124,7 +130,7 @@ class Graph:
             graph_dict["description"] = description
         if endpoint_name:
             graph_dict["endpoint_name"] = endpoint_name
-        return json.dumps(graph_dict, indent=4, sort_keys=True)
+        return graph_dict
 
     def add_nodes_and_edges(self, nodes: List[NodeData], edges: List[EdgeData]):
         self._vertices = nodes
