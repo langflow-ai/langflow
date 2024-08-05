@@ -23,8 +23,10 @@ from langflow.utils.constants import (
 )
 
 
-def _timestamp_to_str(timestamp: datetime) -> str:
-    return timestamp.strftime("%Y-%m-%d %H:%M:%S")
+def _timestamp_to_str(timestamp: datetime | str) -> str:
+    if isinstance(timestamp, datetime):
+        return timestamp.strftime("%Y-%m-%d %H:%M:%S")
+    return timestamp
 
 
 class Message(Data):
