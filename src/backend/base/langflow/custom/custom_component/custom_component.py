@@ -148,8 +148,6 @@ class CustomComponent(BaseComponent):
         except Exception as e:
             raise ValueError(f"Error getting state: {e}")
 
-    _tree: Optional[dict] = None
-
     @staticmethod
     def resolve_path(path: str) -> str:
         """Resolves the path to an absolute path."""
