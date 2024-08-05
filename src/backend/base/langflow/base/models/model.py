@@ -189,9 +189,6 @@ class LCModelComponent(Component):
                 raise ValueError(message) from e
             raise e
 
-    def _mock_response(self) -> Message:
-        return Message(text=self.input_value)
-
     @abstractmethod
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
         """
