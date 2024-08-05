@@ -19,6 +19,7 @@ from langflow.graph.graph.state_manager import GraphStateManager
 from langflow.graph.graph.utils import find_start_component_id, process_flow, sort_up_to_vertex
 from langflow.graph.schema import InterfaceComponentTypes, RunOutputs
 from langflow.graph.vertex.base import Vertex, VertexStates
+from langflow.graph.vertex.schema import NodeData
 from langflow.graph.vertex.types import ComponentVertex, InterfaceVertex, StateVertex
 from langflow.schema import Data
 from langflow.schema.schema import INPUT_FIELD_NAME, InputType
@@ -183,7 +184,7 @@ class Graph:
                 return
 
     def start(self, inputs: Optional[List[dict]] = None) -> Generator:
-        #! Change this soon
+        #! Change this ASAP
         nest_asyncio.apply()
         loop = asyncio.get_event_loop()
         async_gen = self.async_start(inputs)
@@ -208,8 +209,7 @@ class Graph:
         self.in_degree_map[target_id] += 1
         self.parent_child_map[source_id].append(target_id)
 
-    # TODO: Create a TypedDict to represente the node
-    def add_node(self, node: dict):
+    def add_node(self, node: NodeData):
         self._vertices.append(node)
 
     def add_edge(self, edge: EdgeData):
@@ -1400,7 +1400,7 @@ class Graph:
 
         return vertices
 
-    def _create_vertex(self, frontend_data: dict):
+    def _create_vertex(self, frontend_data: NodeData):
         vertex_data = frontend_data["data"]
         vertex_type: str = vertex_data["type"]  # type: ignore
         vertex_base_type: str = vertex_data["node"]["template"]["_type"]  # type: ignore
