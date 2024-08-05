@@ -29,8 +29,6 @@ export default function ComponentsComponent({
 }: {
   type?: string;
 }) {
-  const uploadFlow = useFlowsManagerStore((state) => state.uploadFlow);
-  const removeFlow = useFlowsManagerStore((state) => state.removeFlow);
   const isLoading = useFlowsManagerStore((state) => state.isLoading);
   const setAllFlows = useFlowsManagerStore((state) => state.setAllFlows);
   const allFlows = useFlowsManagerStore((state) => state.allFlows);
@@ -54,7 +52,7 @@ export default function ComponentsComponent({
     (state) => state.selectedFlowsComponentsCards,
   );
 
-  const [handleFileDrop] = useFileDrop(uploadFlow, type)!;
+  const [handleFileDrop] = useFileDrop(type)!;
   const [pageSize, setPageSize] = useState(20);
   const [pageIndex, setPageIndex] = useState(1);
   const location = useLocation();
@@ -70,7 +68,6 @@ export default function ComponentsComponent({
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
   const getFoldersApi = useFolderStore((state) => state.getFoldersApi);
   const setFolderUrl = useFolderStore((state) => state.setFolderUrl);
-  const addFlow = useFlowsManagerStore((state) => state.addFlow);
   const isLoadingFolders = useFolderStore((state) => state.isLoadingFolders);
   const setSelectedFolder = useFolderStore((state) => state.setSelectedFolder);
 
