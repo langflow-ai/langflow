@@ -83,6 +83,8 @@ export default function NodeToolbarComponent({
   const shortcuts = useShortcutsStore((state) => state.shortcuts);
   const unselectAll = useFlowStore((state) => state.unselectAll);
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
+  const addFlow = useAddFlow();
+
   function handleMinimizeWShortcut(e: KeyboardEvent) {
     if (isWrappedWithClass(e, "noflow")) return;
     e.preventDefault();
@@ -179,8 +181,6 @@ export default function NodeToolbarComponent({
     e.preventDefault();
     FreezeAllVertices({ flowId: currentFlow!.id, stopNodeId: data.id });
   }
-
-  const addFlow = useAddFlow();
 
   const advanced = useShortcutsStore((state) => state.advanced);
   const minimize = useShortcutsStore((state) => state.minimize);
