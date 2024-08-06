@@ -109,6 +109,21 @@ export type NodeOutputFieldComponentType = {
   outputProxy?: OutputFieldProxyType;
 }
 
+export type NodeInputFieldComponentType = {
+  id: targetHandleType;
+  data: NodeDataType;
+  tooltipTitle: string | undefined;
+  title: string;
+  colors: string[];
+  type: string|undefined;
+  name: string;
+  required: boolean;
+  optionalHandle: Array<String> | undefined | null;
+  info: string;
+  proxy: { field: string; id: string } | undefined;
+  showNode: boolean;
+};
+
 export type InputListComponentType = {
   value: string[];
   onChange: (value: string[], dbValue?: boolean, snapshot?: boolean) => void;
