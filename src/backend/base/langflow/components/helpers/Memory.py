@@ -118,5 +118,5 @@ class MemoryComponent(Component):
         if self.memory:
             chat_memory = self.memory
         else:
-            chat_memory = LCBuiltinChatMemory(flow_id=self.graph.flow_id, session_id=self.session_id)
+            chat_memory = LCBuiltinChatMemory(flow_id=self.flow_id, session_id=self.session_id)
         return ConversationBufferMemory(chat_memory=chat_memory)
