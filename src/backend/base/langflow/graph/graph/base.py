@@ -1388,7 +1388,7 @@ class Graph:
         for edge in self._edges:
             new_edge = self.build_edge(edge)
             edges.add(new_edge)
-        if self.vertices and not self.edges:
+        if self.vertices and not edges:
             raise ValueError("Graph has vertices but no edges")
         return list(edges)
 
