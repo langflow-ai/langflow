@@ -277,7 +277,7 @@ def get_component_instance(custom_component: CustomComponent, user_id: Optional[
         raise HTTPException(
             status_code=400,
             detail={
-                "error": ("Invalid type convertion. Please check your code and try again."),
+                "error": (str(exc)),
                 "traceback": traceback.format_exc(),
             },
         ) from exc
@@ -311,7 +311,7 @@ def run_build_config(
         raise HTTPException(
             status_code=400,
             detail={
-                "error": ("Invalid type convertion. Please check your code and try again."),
+                "error": (str(exc)),
                 "traceback": traceback.format_exc(),
             },
         ) from exc
