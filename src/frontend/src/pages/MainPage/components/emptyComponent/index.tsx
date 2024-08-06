@@ -1,14 +1,9 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import NewFlowModal from "../../../../modals/newFlowModal";
-import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 
 type EmptyComponentProps = {};
 
 const EmptyComponent = ({}: EmptyComponentProps) => {
-  const addFlow = useFlowsManagerStore((state) => state.addFlow);
-  const navigate = useNavigate();
-
   const [openModal, setOpenModal] = useState(false);
 
   return (

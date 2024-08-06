@@ -43,7 +43,7 @@ test.describe("drag and drop test", () => {
 
     // Now dispatch
     await page.dispatchEvent(
-      '//*[@id="root"]/div/div[1]/div[2]/div[3]/div/div',
+      '//*[@id="root"]/div/div[2]/div[2]/div[3]/div',
       "drop",
       {
         dataTransfer,

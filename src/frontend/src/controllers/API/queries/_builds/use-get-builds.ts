@@ -1,8 +1,6 @@
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { FlowPoolType } from "@/types/zustand/flow";
-import { cleanEdges } from "@/utils/reactflowUtils";
-import { getInputsAndOutputs } from "@/utils/storeUtils";
 import { keepPreviousData } from "@tanstack/react-query";
 import { AxiosResponse } from "axios";
 import { useQueryFunctionType } from "../../../../types/api";
@@ -52,6 +50,7 @@ export const useGetBuildsQuery: useQueryFunctionType<
 
   const queryResult = query(["useGetBuildsQuery"], responseFn, {
     placeholderData: keepPreviousData,
+    refetchOnWindowFocus: false,
   });
 
   return queryResult;

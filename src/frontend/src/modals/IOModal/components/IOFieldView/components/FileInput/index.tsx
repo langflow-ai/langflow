@@ -1,10 +1,13 @@
 import { Button } from "../../../../../../components/ui/button";
 
 import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
+import { createFileUpload } from "@/helpers/create-file-upload";
 import { useEffect, useState } from "react";
 import IconComponent from "../../../../../../components/genericIconComponent";
-import { BASE_URL_API } from "../../../../../../constants/constants";
-import { uploadFile } from "../../../../../../controllers/API";
+import {
+  ALLOWED_IMAGE_INPUT_EXTENSIONS,
+  BASE_URL_API,
+} from "../../../../../../constants/constants";
 import useFlowsManagerStore from "../../../../../../stores/flowsManagerStore";
 import { IOFileInputProps } from "../../../../../../types/components";
 
@@ -99,18 +102,11 @@ export default function IOFileInput({ field, updateValue }: IOFileInputProps) {
   };
 
   const handleButtonClick = (): void => {
+    createFileUpload({
+      multiple: false,
+      accept: ALLOWED_IMAGE_INPUT_EXTENSIONS.join(","),
+    }).then((files) => upload(files[0]));
     // Create a file input element
-    const input = document.createElement("input");
-    input.type = "file";
-    input.style.display = "none"; // Hidden from view
-    input.multiple = false; // Allow only one file selection
-    input.onchange = (event: Event): void => {
-      // Get the selected file
-      const file = (event.target as HTMLInputElement).files?.[0];
-      upload(file);
-    };
-    // Trigger the file selection dialog
-    input.click();
   };
 
   return (

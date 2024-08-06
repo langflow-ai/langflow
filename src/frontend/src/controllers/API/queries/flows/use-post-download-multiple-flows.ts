@@ -32,10 +32,7 @@ export const usePostDownloadMultipleFlows: useMutationFunctionType<
     IPostDownloadMultipleFlows
   > = mutate(
     ["usePostDownloadMultipleFlows"],
-    async (payload: IPostDownloadMultipleFlows) => {
-      const res = await postDownloadMultipleFlowsFn(payload);
-      return res;
-    },
+    postDownloadMultipleFlowsFn,
     options,
   );
 
