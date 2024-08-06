@@ -24,7 +24,7 @@ class APIException(HTTPException):
         super().__init__(status_code=status_code, detail=body.model_dump_json())
 
     @staticmethod
-    def build_exception_body(exc: str | list[str], flow: Flow | None) -> ExceptionBody:
+    def build_exception_body(exc: str | list[str] | Exception, flow: Flow | None) -> ExceptionBody:
         body = {"message": str(exc)}
         if flow:
             outdated_components = get_outdated_components(flow)
