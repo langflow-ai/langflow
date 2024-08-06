@@ -112,7 +112,7 @@ export type FlowStoreType = {
   setNode: (
     id: string,
     update: Node | ((oldState: Node) => Node),
-    isUserChange: boolean,
+    isUserChange?: boolean,
   ) => void;
   getNode: (id: string) => Node | undefined;
   deleteNode: (nodeId: string | Array<string>) => void;
