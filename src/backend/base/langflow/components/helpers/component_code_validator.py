@@ -4,7 +4,7 @@ from fastapi import HTTPException
 
 from langflow.custom import Component
 from langflow.custom.utils import build_custom_component_template, get_instance_name
-from langflow.inputs.inputs import MessageTextInput
+from langflow.io import MultilineInput, Output
 from langflow.schema import Data
 
 
@@ -14,12 +14,16 @@ class ComponentCodeValidator(Component):
     name = "ComponentCodeValidator"
 
     inputs = [
-        MessageTextInput(name="component_code", display_name="Component Code", required=True),
+        MultilineInput(name="component_code", display_name="Component Code", required=True),
+    ]
+
+    outputs = [
+        Output(display_name="Data", name="data", method="validate_code"),
     ]
 
     def validate_code(self) -> Data:
         try:
-            component = Component(code=self.component_code)
+            component = Component(_code=self.component_code)
 
             built_frontend_node, component_instance = build_custom_component_template(component)
             _type = get_instance_name(component_instance)
