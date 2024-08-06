@@ -8,9 +8,10 @@ interface IDeleteBuilds {
 }
 
 // add types for error handling and success
-export const useDeleteBuilds: useMutationFunctionType<undefined,IDeleteBuilds> = (
-  options,
-) => {
+export const useDeleteBuilds: useMutationFunctionType<
+  undefined,
+  IDeleteBuilds
+> = (options) => {
   const { mutate } = UseRequestProcessor();
 
   const deleteBuildsFn = async (payload: IDeleteBuilds): Promise<any> => {
