@@ -178,19 +178,19 @@ def test_vector_store_rag_dump_components_and_edges(ingestion_graph, rag_graph):
     assert rag_nodes[1]["data"]["type"] == "ChatOutput"
     assert rag_nodes[1]["id"] == "chatoutput-123"
 
-    assert rag_nodes[2]["data"]["type"] == "OpenAIModelComponent"
+    assert rag_nodes[2]["data"]["type"] == "OpenAIModel"
     assert rag_nodes[2]["id"] == "openai-123"
 
-    assert rag_nodes[3]["data"]["type"] == "OpenAIEmbeddingsComponent"
+    assert rag_nodes[3]["data"]["type"] == "OpenAIEmbeddings"
     assert rag_nodes[3]["id"] == "openai-embeddings-124"
 
-    assert rag_nodes[4]["data"]["type"] == "ParseDataComponent"
+    assert rag_nodes[4]["data"]["type"] == "ParseData"
     assert rag_nodes[4]["id"] == "parse-data-123"
 
-    assert rag_nodes[5]["data"]["type"] == "PromptComponent"
+    assert rag_nodes[5]["data"]["type"] == "Prompt"
     assert rag_nodes[5]["id"] == "prompt-123"
 
-    assert rag_nodes[6]["data"]["type"] == "AstraVectorStoreComponent"
+    assert rag_nodes[6]["data"]["type"] == "AstraDB"
     assert rag_nodes[6]["id"] == "rag-vector-store-123"
 
     # Check edges in the RAG graph
