@@ -32,17 +32,14 @@ const useUploadFlow = () => {
   }: {
     files?: File[];
   }): Promise<FlowType[]> => {
-    return new Promise(async (resolve, reject) => {
-      if (files) {
-        const flows = await getFlowsFromFiles({ files });
-        resolve(flows);
-      } else {
-        const uploadedFiles = await createFileUpload();
-        const flows = await getFlowsFromFiles({
-          files: uploadedFiles,
-        });
-        resolve(flows);
-      }
+    if (!files) {
+      files = await createFileUpload();
+    }
+    if (!files.every((file) => file.type === "application/json")) {
+      throw new Error("Invalid file type");
+    }
+    return await getFlowsFromFiles({
+      files,
     });
   };
 
@@ -55,34 +52,40 @@ const useUploadFlow = () => {
     isComponent?: boolean;
     position?: { x: number; y: number };
   }): Promise<void> => {
-    let flows = await getFlowsToUpload({ files });
-    if (
-      isComponent !== undefined &&
-      flows.every(
-        (fileData) =>
-          (!fileData.is_component && isComponent === true) ||
-          (fileData.is_component !== undefined &&
-            fileData.is_component !== isComponent),
-      )
-    ) {
-      throw new Error("You cannot upload a component as a flow or vice versa");
-    } else {
-      let currentPosition = position;
-      for (const flow of flows) {
-        if (flow.data) {
-          if (currentPosition) {
-            paste(flow.data, currentPosition);
-            currentPosition = {
-              x: currentPosition.x + 50,
-              y: currentPosition.y + 50,
-            };
+    try {
+      let flows = await getFlowsToUpload({ files });
+      if (
+        isComponent !== undefined &&
+        flows.every(
+          (fileData) =>
+            (!fileData.is_component && isComponent === true) ||
+            (fileData.is_component !== undefined &&
+              fileData.is_component !== isComponent),
+        )
+      ) {
+        throw new Error(
+          "You cannot upload a component as a flow or vice versa",
+        );
+      } else {
+        let currentPosition = position;
+        for (const flow of flows) {
+          if (flow.data) {
+            if (currentPosition) {
+              paste(flow.data, currentPosition);
+              currentPosition = {
+                x: currentPosition.x + 50,
+                y: currentPosition.y + 50,
+              };
+            } else {
+              await addFlow({ flow });
+            }
           } else {
-            await addFlow({ flow });
+            throw new Error("Invalid flow data");
           }
-        } else {
-          throw new Error("Invalid flow data");
         }
       }
+    } catch (e) {
+      throw e;
     }
   };
 

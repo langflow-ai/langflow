@@ -396,7 +396,7 @@ export default function Page({
         }).catch((error) => {
           setErrorData({
             title: UPLOAD_ERROR_ALERT,
-            list: [error],
+            list: [(error as Error).message],
           });
         });
       } else {
