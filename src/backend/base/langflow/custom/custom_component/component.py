@@ -98,6 +98,7 @@ class Component(CustomComponent):
         """
         for key, value in kwargs.items():
             self._process_connection_or_parameter(key, value)
+
         return self
 
     def list_inputs(self):
@@ -267,6 +268,7 @@ class Component(CustomComponent):
             self._connect_to_component(key, value, _input)
         else:
             self._set_parameter_or_attribute(key, value)
+        self._set_call_inputs(key, value)
 
     def _get_or_create_input(self, key):
         try:
