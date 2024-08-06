@@ -87,7 +87,7 @@ def rag_graph():
     chat_output = ChatOutput(_id="chatoutput-123")
     chat_output.set(input_value=openai_component.text_response)
 
-    graph = Graph(start=chat_input, end=chat_output)
+    graph = Graph(entry=chat_input, exit=chat_output)
     return graph
 
 
