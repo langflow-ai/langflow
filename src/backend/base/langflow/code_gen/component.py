@@ -23,7 +23,11 @@ def generate_instantiation_string(instance):
     return f"{variable_name} = {class_name}(_id='{instance_id}')"
 
 
-def generate_script(*instances):
+def generate_graph_instantiation_string(entry, _exit):
+    return f"graph = Graph(entry={get_variable_name(entry)}, exit={get_variable_name(_exit)})"
+
+
+def generate_script(*, instances, entry=None, exit=None):
     import_statements = set()
     instantiation_strings = []
     call_strings = []
@@ -39,5 +43,9 @@ def generate_script(*instances):
     import_code = "\n".join(sorted(import_statements))
     instantiation_code = "\n".join(instantiation_strings)
     call_code = "\n".join(call_strings)
+    if entry is None or exit is None:
+        graph_instantiation_code = ""
+    else:
+        graph_instantiation_code = generate_graph_instantiation_string(entry, exit)
 
-    return f"{import_code}\n\n{instantiation_code}\n\n{call_code}"
+    return f"{import_code}\n\n{instantiation_code}\n\n{call_code}\n\n{graph_instantiation_code}".strip()
