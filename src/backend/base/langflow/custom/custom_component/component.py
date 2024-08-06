@@ -286,7 +286,7 @@ class Component(CustomComponent):
                 "target": self._id,
                 "data": {
                     "sourceHandle": {
-                        "dataType": self.name,
+                        "dataType": component.name or component.__class__.__name__,
                         "id": component._id,
                         "name": output.name,
                         "output_types": output.types,
@@ -408,7 +408,7 @@ class Component(CustomComponent):
         data = {
             "data": {
                 "node": frontend_node.to_dict(keep_name=False),
-                "type": self.__class__.__name__,
+                "type": self.name or self.__class__.__name__,
             }
         }
         return data
