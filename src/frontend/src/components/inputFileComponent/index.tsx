@@ -1,6 +1,6 @@
 import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
 import { createFileUpload } from "@/helpers/create-file-upload";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import {
   CONSOLE_ERROR_MSG,
   INVALID_FILE_ALERT,
@@ -20,7 +20,6 @@ export default function InputFileComponent({
   id,
 }: FileComponentType): JSX.Element {
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
-  const [loading, setLoading] = useState(false);
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
   // Clear component state
@@ -40,11 +39,9 @@ export default function InputFileComponent({
     return false;
   }
 
-  const { mutate } = usePostUploadFile();
+  const { mutate, isPending } = usePostUploadFile();
 
   const handleButtonClick = (): void => {
-    // Create a file input element
-    setLoading(true);
     createFileUpload({ multiple: false, accept: fileTypes?.join(",") }).then(
       (files) => {
         const file = files[0];
@@ -62,11 +59,9 @@ export default function InputFileComponent({
                   // Update the state and on with the name of the file
                   // sets the value to the user
                   handleOnNewValue({ value: file.name, file_path });
-                  setLoading(false);
                 },
                 onError: () => {
                   console.error(CONSOLE_ERROR_MSG);
-                  setLoading(false);
                 },
               },
             );
@@ -76,10 +71,7 @@ export default function InputFileComponent({
               title: INVALID_FILE_ALERT,
               list: fileTypes,
             });
-            setLoading(false);
           }
-        } else {
-          setLoading(false);
         }
       },
     );
@@ -106,7 +98,7 @@ export default function InputFileComponent({
             unstyled
             className="inline-flex items-center justify-center"
             onClick={handleButtonClick}
-            loading={loading}
+            loading={isPending}
             disabled={disabled}
           >
             <IconComponent
