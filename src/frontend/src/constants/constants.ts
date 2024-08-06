@@ -879,3 +879,7 @@ export const LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS = 60 * 60 - 60 * 60 * 0.1;
 export const LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS_ENV =
   Number(process.env.ACCESS_TOKEN_EXPIRE_SECONDS) -
   Number(process.env.ACCESS_TOKEN_EXPIRE_SECONDS) * 0.1;
+
+
+  export const NODE_WIDTH = 384
+  export const NODE_HEIGHT = nodeWidth*3
