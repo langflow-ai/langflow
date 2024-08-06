@@ -2,12 +2,14 @@ import copy
 import json
 from typing import Optional, cast
 
+import orjson
 from langchain_core.documents import Document
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_core.prompt_values import ImagePromptValue
 from langchain_core.prompts.image import ImagePromptTemplate
 from pydantic import BaseModel, model_serializer, model_validator
 
+from langflow.base.constants import ORJSON_OPTIONS
 from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
 
 
@@ -213,3 +215,14 @@ class Data(BaseModel):
 
     def __eq__(self, other):
         return isinstance(other, Data) and self.data == other.data
+
+    def to_dict(self):
+        return self.data
+
+    def to_json(self):
+        return orjson.dumps(self.data, option=ORJSON_OPTIONS).decode()
+
+    @classmethod
+    def from_json(cls, json_str):
+        data = orjson.loads(json_str)
+        return cls(**data)
