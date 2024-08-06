@@ -16,7 +16,6 @@ import useDropdownOptions from "../../hooks/use-dropdown-options";
 import { getFolderById } from "../../services";
 
 export default function HomePage(): JSX.Element {
-  const uploadFlow = useFlowsManagerStore((state) => state.uploadFlow);
   const setCurrentFlowId = useFlowsManagerStore(
     (state) => state.setCurrentFlowId,
   );
@@ -41,7 +40,6 @@ export default function HomePage(): JSX.Element {
   }, [pathname]);
 
   const dropdownOptions = useDropdownOptions({
-    uploadFlow,
     navigate,
     is_component,
   });
