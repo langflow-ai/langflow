@@ -9,10 +9,14 @@ def generate_call_string(instance):
             for key, value in instance._call_inputs.items()
         )
         if args:
-            return f"{variable_name}({args})"
+            return f"{variable_name}.set({args})"
 
 
 def generate_instantiation_string(instance):
+    if isinstance(instance, tuple):
+        raise ValueError(
+            "An instance of Component was expected, but a tuple was provided. You might be trying to call the component instead of calling the `set` method."
+        )
     class_name = instance.__class__.__name__
     instance_id = instance._id
     variable_name = get_variable_name(instance)
