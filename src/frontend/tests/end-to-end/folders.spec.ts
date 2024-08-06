@@ -77,7 +77,7 @@ test("add folder by drag and drop", async ({ page }) => {
 
   // Wait for the target element to be available before evaluation
   await page.waitForSelector(
-    '//*[@id="root"]/div/div[1]/div[2]/div[3]/aside/nav/div/div[2]',
+    '//*[@id="root"]/div/div[2]/div[2]/div[3]/aside/nav/div/div[2]',
   );
 
   // Create the DataTransfer and File
