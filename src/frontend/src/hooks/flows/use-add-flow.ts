@@ -13,6 +13,7 @@ import {
   processFlows,
   updateGroupRecursion,
 } from "@/utils/reactflowUtils";
+import { cloneDeep } from "lodash";
 
 const useAddFlow = () => {
   const unavaliableFields = useGlobalVariablesStore(
@@ -32,8 +33,9 @@ const useAddFlow = () => {
 
   const addFlow = async (params?: { flow?: FlowType; override?: boolean }) => {
     return new Promise(async (resolve, reject) => {
-      let flowData = params?.flow
-        ? processDataFromFlow(params.flow)
+      const flow = cloneDeep(params?.flow) ?? undefined;
+      let flowData = flow
+        ? processDataFromFlow(flow)
         : { nodes: [], edges: [], viewport: { zoom: 1, x: 0, y: 0 } };
       flowData?.nodes.forEach((node) => {
         updateGroupRecursion(
@@ -47,13 +49,13 @@ const useAddFlow = () => {
       const folder_id = useFolderStore.getState().folderUrl;
       const my_collection_id = useFolderStore.getState().myCollectionId;
 
-      if (params?.override && params?.flow) {
-        await deleteComponent(params.flow.name);
+      if (params?.override && flow) {
+        await deleteComponent(flow.name);
       }
       const newFlow = createNewFlow(
         flowData!,
         folder_id || my_collection_id!,
-        params?.flow,
+        flow,
       );
 
       const newName = addVersionToDuplicates(newFlow, flows);
