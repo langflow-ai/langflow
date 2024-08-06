@@ -93,7 +93,7 @@ test("add folder by drag and drop", async ({ page }) => {
 
   // Now dispatch
   await page.dispatchEvent(
-    '//*[@id="root"]/div/div[1]/div[2]/div[3]/aside/nav/div/div[2]',
+    '//*[@id="root"]/div/div[2]/div[2]/div[3]/aside/nav/div/div[2]',
     "drop",
     {
       dataTransfer,
