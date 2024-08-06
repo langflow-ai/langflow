@@ -47,7 +47,7 @@ def get_all_webhook_components_in_flow(flow_data: dict | None):
 
 
 def get_components_versions(flow: Flow):
-    versions: dict[str,str] = {}
+    versions: dict[str, str] = {}
     if flow.data is None:
         return versions
     nodes = flow.data.get("nodes", [])
