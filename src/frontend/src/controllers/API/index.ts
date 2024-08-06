@@ -263,32 +263,6 @@ export async function getFlowStylesFromDatabase() {
 }
 
 /**
- * Saves a new flow style to the database.
- *
- * @param {FlowStyleType} flowStyle - The flow style data to save.
- * @returns {Promise<any>} The saved flow style data.
- * @throws Will throw an error if saving fails.
- */
-export async function saveFlowStyleToDatabase(flowStyle: FlowStyleType) {
-  try {
-    const response = await api.post(`${BASE_URL_API}flow_styles/`, flowStyle, {
-      headers: {
-        accept: "application/json",
-        "Content-Type": "application/json",
-      },
-    });
-
-    if (response.status !== 201) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    return response?.data;
-  } catch (error) {
-    console.error(error);
-    throw error;
-  }
-}
-
-/**
  * Fetches the version of the API.
  *
  * @returns {Promise<AxiosResponse<any>>} A promise that resolves to an AxiosResponse containing the version information.
@@ -508,7 +482,7 @@ export async function getStoreComponents({
   limit = 9999999,
   is_component = null,
   sort = "-count(liked_by)",
-  tags = [] || null,
+  tags = [],
   liked = null,
   isPrivate = null,
   search = null,

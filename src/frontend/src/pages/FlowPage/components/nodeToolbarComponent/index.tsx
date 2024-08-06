@@ -1,6 +1,7 @@
 import useHandleOnNewValue from "@/CustomNodes/hooks/use-handle-new-value";
 import useHandleNodeClass from "@/CustomNodes/hooks/use-handle-node-class";
 import { usePostRetrieveVertexOrder } from "@/controllers/API/queries/vertex";
+import useAddFlow from "@/hooks/flows/use-add-flow";
 import { APIClassType } from "@/types/api";
 import _, { cloneDeep } from "lodash";
 import { useEffect, useState } from "react";
@@ -82,6 +83,8 @@ export default function NodeToolbarComponent({
   const shortcuts = useShortcutsStore((state) => state.shortcuts);
   const unselectAll = useFlowStore((state) => state.unselectAll);
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
+  const addFlow = useAddFlow();
+
   function handleMinimizeWShortcut(e: KeyboardEvent) {
     if (isWrappedWithClass(e, "noflow")) return;
     e.preventDefault();
@@ -134,7 +137,10 @@ export default function NodeToolbarComponent({
       return;
     }
     if (hasCode && !isSaved) {
-      saveComponent(cloneDeep(data), false);
+      addFlow({
+        flow: flowComponent,
+        override: false,
+      });
       setSuccessData({ title: `${data.id} saved successfully` });
       return;
     }
@@ -208,7 +214,6 @@ export default function NodeToolbarComponent({
   const setNodes = useFlowStore((state) => state.setNodes);
 
   const setEdges = useFlowStore((state) => state.setEdges);
-  const saveComponent = useFlowsManagerStore((state) => state.saveComponent);
   const getNodePosition = useFlowStore((state) => state.getNodePosition);
   const flows = useFlowsManagerStore((state) => state.flows);
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
@@ -257,7 +262,10 @@ export default function NodeToolbarComponent({
         if (isSaved) {
           return setShowOverrideModal(true);
         }
-        saveComponent(cloneDeep(data), false);
+        addFlow({
+          flow: flowComponent,
+          override: false,
+        });
         break;
       case "freeze":
         setNode(data.id, (old) => ({
@@ -291,7 +299,10 @@ export default function NodeToolbarComponent({
         downloadNode(flowComponent!);
         break;
       case "SaveAll":
-        saveComponent(cloneDeep(data), false);
+        addFlow({
+          flow: flowComponent,
+          override: false,
+        });
         break;
       case "documentation":
         if (data.node?.documentation) openInNewTab(data.node?.documentation);
@@ -695,12 +706,18 @@ export default function NodeToolbarComponent({
             icon={"SaveAll"}
             index={6}
             onConfirm={(index, user) => {
-              saveComponent(cloneDeep(data), true);
+              addFlow({
+                flow: flowComponent,
+                override: true,
+              });
               setSuccessData({ title: `${data.id} successfully overridden!` });
             }}
             onClose={setShowOverrideModal}
             onCancel={() => {
-              saveComponent(cloneDeep(data), false);
+              addFlow({
+                flow: flowComponent,
+                override: true,
+              });
               setSuccessData({ title: "New component successfully saved!" });
             }}
           >
