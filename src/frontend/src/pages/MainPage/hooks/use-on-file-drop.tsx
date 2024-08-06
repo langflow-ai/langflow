@@ -37,7 +37,7 @@ const useFileDrop = (type?: string) => {
         });
     }
   };
-  return [handleFileDrop];
+  return handleFileDrop;
 };
 
 export default useFileDrop;

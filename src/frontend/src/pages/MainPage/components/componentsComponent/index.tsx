@@ -52,7 +52,7 @@ export default function ComponentsComponent({
     (state) => state.selectedFlowsComponentsCards,
   );
 
-  const [handleFileDrop] = useFileDrop(type)!;
+  const handleFileDrop = useFileDrop(type);
   const [pageSize, setPageSize] = useState(20);
   const [pageIndex, setPageIndex] = useState(1);
   const location = useLocation();
