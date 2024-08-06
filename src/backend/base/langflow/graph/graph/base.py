@@ -1422,7 +1422,7 @@ class Graph:
 
         if node_type in lazy_load_vertex_dict.VERTEX_TYPE_MAP:
             return lazy_load_vertex_dict.VERTEX_TYPE_MAP[node_type]
-        raise ValueError(f"Vertex type {node_type} not found")
+        return Vertex
 
     def _build_vertices(self) -> List["Vertex"]:
         """Builds the vertices of the graph."""
