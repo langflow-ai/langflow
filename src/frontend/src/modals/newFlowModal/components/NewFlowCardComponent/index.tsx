@@ -18,7 +18,7 @@ export default function NewFlowCardComponent() {
   return (
     <Card
       onClick={() => {
-        addFlow({}).then((id) => {
+        addFlow().then((id) => {
           setFolderUrl(folderId ?? "");
           navigate(`/flow/${id}${folderId ? `/folder/${folderId}` : ""}`);
         });

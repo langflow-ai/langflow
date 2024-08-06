@@ -30,16 +30,10 @@ const useAddFlow = () => {
 
   const { mutate: postAddFlow } = usePostAddFlow();
 
-  const addFlow = async ({
-    flow,
-    override,
-  }: {
-    flow?: FlowType;
-    override?: boolean;
-  }) => {
+  const addFlow = async (params?: { flow?: FlowType; override?: boolean }) => {
     return new Promise(async (resolve, reject) => {
-      let flowData = flow
-        ? processDataFromFlow(flow)
+      let flowData = params?.flow
+        ? processDataFromFlow(params.flow)
         : { nodes: [], edges: [], viewport: { zoom: 1, x: 0, y: 0 } };
       flowData?.nodes.forEach((node) => {
         updateGroupRecursion(
@@ -53,13 +47,13 @@ const useAddFlow = () => {
       const folder_id = useFolderStore.getState().folderUrl;
       const my_collection_id = useFolderStore.getState().myCollectionId;
 
-      if (override) {
-        await deleteComponent(flow!.name);
+      if (params?.override && params?.flow) {
+        await deleteComponent(params.flow.name);
       }
       const newFlow = createNewFlow(
         flowData!,
-        flow!,
         folder_id || my_collection_id!,
+        params?.flow,
       );
 
       const newName = addVersionToDuplicates(newFlow, flows);

@@ -49,7 +49,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
 
   function handleAddFlow() {
     try {
-      addFlow({}).then((id) => {
+      addFlow().then((id) => {
         navigate("/flow/" + id);
       });
     } catch (err) {
