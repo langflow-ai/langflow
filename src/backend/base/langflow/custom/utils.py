@@ -377,8 +377,8 @@ def build_custom_component_template_from_inputs(
     frontend_node.validate_component()
     # ! This should be removed when we have a better way to handle this
     frontend_node.set_base_classes_from_outputs()
-    reorder_fields(frontend_node, custom_component._get_field_order())
-    cc_instance = get_component_instance(custom_component, user_id=user_id)
+    reorder_fields(frontend_node, cc_instance._get_field_order())
+
     return frontend_node.to_dict(keep_name=False), cc_instance
 
 

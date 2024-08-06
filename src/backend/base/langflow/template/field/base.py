@@ -184,12 +184,9 @@ class Output(BaseModel):
         return self.model_dump(by_alias=True, exclude_none=True)
 
     def add_types(self, _type: list[Any]):
-        for type_ in _type:
-            if self.types and type_ in self.types:
-                continue
-            if self.types is None:
-                self.types = []
-            self.types.append(type_)
+        if self.types is None:
+            self.types = []
+        self.types.extend([t for t in _type if t not in self.types])
 
     def set_selected(self):
         if not self.selected and self.types:
