@@ -1,4 +1,4 @@
-from typing import Any, List, Dict, Union
+from typing import Any, List, Union
 
 import httpx
 from langchain_community.chat_models import ChatOllama
