@@ -134,16 +134,16 @@ def test_vector_store_rag_dump_components_and_edges(ingestion_graph, rag_graph):
     ingestion_nodes = sorted(ingestion_nodes, key=lambda x: x["id"])
 
     # Check components in the ingestion graph
-    assert ingestion_nodes[0]["data"]["type"] == "FileComponent"
+    assert ingestion_nodes[0]["data"]["type"] == "File"
     assert ingestion_nodes[0]["id"] == "file-123"
 
-    assert ingestion_nodes[1]["data"]["type"] == "OpenAIEmbeddingsComponent"
+    assert ingestion_nodes[1]["data"]["type"] == "OpenAIEmbeddings"
     assert ingestion_nodes[1]["id"] == "openai-embeddings-123"
 
-    assert ingestion_nodes[2]["data"]["type"] == "SplitTextComponent"
+    assert ingestion_nodes[2]["data"]["type"] == "SplitText"
     assert ingestion_nodes[2]["id"] == "text-splitter-123"
 
-    assert ingestion_nodes[3]["data"]["type"] == "AstraVectorStoreComponent"
+    assert ingestion_nodes[3]["data"]["type"] == "AstraDB"
     assert ingestion_nodes[3]["id"] == "vector-store-123"
 
     # Check edges in the ingestion graph
