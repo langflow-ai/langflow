@@ -1,9 +1,9 @@
 from langflow.inputs import (
     BoolInput,
     DataInput,
+    DefaultPromptField,
     DictInput,
     DropdownInput,
-    MultiselectInput,
     FileInput,
     FloatInput,
     HandleInput,
@@ -12,14 +12,14 @@ from langflow.inputs import (
     MessageTextInput,
     MultilineInput,
     MultilineSecretInput,
+    MultiselectInput,
     NestedDictInput,
     PromptInput,
     SecretStrInput,
     StrInput,
     TableInput,
-    DefaultPromptField,
 )
-from langflow.template import Output
+from langflow.template.field.base import Output
 
 __all__ = [
     "BoolInput",
