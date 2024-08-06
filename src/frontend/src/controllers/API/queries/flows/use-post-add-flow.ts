@@ -5,7 +5,7 @@ import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
 
-interface IPostSaveFlow {
+interface IPostAddFlow {
   name: string;
   data: ReactFlowJsonObject;
   description: string;
@@ -14,13 +14,13 @@ interface IPostSaveFlow {
   endpoint_name: string | undefined;
 }
 
-export const usePostSaveFlow: useMutationFunctionType<
+export const usePostAddFlow: useMutationFunctionType<
   undefined,
-  IPostSaveFlow
+  IPostAddFlow
 > = (options?) => {
   const { mutate } = UseRequestProcessor();
 
-  const postSaveFlowFn = async (payload: IPostSaveFlow): Promise<any> => {
+  const postAddFlowFn = async (payload: IPostAddFlow): Promise<any> => {
     const response = await api.post(`${getURL("FLOWS")}/`, {
       name: payload.name,
       data: payload.data,
@@ -33,9 +33,9 @@ export const usePostSaveFlow: useMutationFunctionType<
     return response.data;
   };
 
-  const mutation: UseMutationResult<IPostSaveFlow, any, IPostSaveFlow> = mutate(
-    ["usePostSaveFlow"],
-    postSaveFlowFn,
+  const mutation: UseMutationResult<IPostAddFlow, any, IPostAddFlow> = mutate(
+    ["usePostAddFlow"],
+    postAddFlowFn,
     options,
   );
 

@@ -1,4 +1,4 @@
-import { usePostSaveFlow } from "@/controllers/API/queries/flows/use-post-save-flow";
+import { usePostAddFlow } from "@/controllers/API/queries/flows/use-post-add-flow";
 import useAlertStore from "@/stores/alertStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useFolderStore } from "@/stores/foldersStore";
@@ -28,7 +28,7 @@ const useAddFlow = () => {
   );
   const setIsLoading = useFlowsManagerStore((state) => state.setIsLoading);
 
-  const { mutate: saveFlow } = usePostSaveFlow();
+  const { mutate: postAddFlow } = usePostAddFlow();
 
   const addFlow = async ({
     flow,
@@ -66,7 +66,7 @@ const useAddFlow = () => {
       newFlow.name = newName;
       newFlow.folder_id = useFolderStore.getState().folderUrl;
 
-      saveFlow(newFlow, {
+      postAddFlow(newFlow, {
         onSuccess: ({ id }) => {
           newFlow.id = id;
           // Add the new flow to the list of flows.
