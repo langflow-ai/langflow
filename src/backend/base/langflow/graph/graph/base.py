@@ -40,8 +40,8 @@ class Graph:
 
     def __init__(
         self,
-        start: Optional["Component"] = None,
-        end: Optional["Component"] = None,
+        entry: Optional["Component"] = None,
+        exit: Optional["Component"] = None,
         flow_id: Optional[str] = None,
         flow_name: Optional[str] = None,
         user_id: Optional[str] = None,
@@ -89,15 +89,17 @@ class Graph:
         self._first_layer: List[str] = []
         self._lock = asyncio.Lock()
         self.raw_graph_data: GraphData = {"nodes": [], "edges": []}
+        self._entry = None
+        self._exit = None
         try:
             self.tracing_service: "TracingService" | None = get_tracing_service()
         except Exception as exc:
             logger.error(f"Error getting tracing service: {exc}")
             self.tracing_service = None
-        if start is not None and end is not None:
-            self._set_start_and_end(start, end)
+        if entry is not None and exit is not None:
+            self._set_entry_and_exit(entry, exit)
             self.prepare()
-        if (start is not None and end is None) or (start is None and end is not None):
+        if (entry is not None and exit is None) or (entry is None and exit is not None):
             raise ValueError("You must provide both input and output components")
 
     def dumps(
@@ -166,13 +168,27 @@ class Graph:
             for _component in component._components:
                 self.add_component(_component._id, _component)
 
-    def _set_start_and_end(self, start: "Component", end: "Component"):
-        if not hasattr(start, "to_frontend_node"):
-            raise TypeError(f"start must be a Component. Got {type(start)}")
-        if not hasattr(end, "to_frontend_node"):
-            raise TypeError(f"end must be a Component. Got {type(end)}")
-        self.add_component(start._id, start)
-        self.add_component(end._id, end)
+    @property
+    def entry(self):
+        if self._entry is None:
+            raise ValueError("Graph has no entry component")
+        return self._entry
+
+    @property
+    def exit(self):
+        if self._exit is None:
+            raise ValueError("Graph has no exit component")
+        return self._exit
+
+    def _set_entry_and_exit(self, entry: "Component", exit: "Component"):
+        if not hasattr(entry, "to_frontend_node"):
+            raise TypeError(f"start must be a Component. Got {type(entry)}")
+        if not hasattr(exit, "to_frontend_node"):
+            raise TypeError(f"end must be a Component. Got {type(exit)}")
+        self._entry = entry
+        self._exit = exit
+        self.add_component(entry._id, entry)
+        self.add_component(exit._id, exit)
 
     def add_component_edge(self, source_id: str, output_input_tuple: Tuple[str, str], target_id: str):
         source_vertex = self.get_vertex(source_id)
