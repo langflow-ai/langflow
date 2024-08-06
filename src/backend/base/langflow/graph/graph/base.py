@@ -21,7 +21,7 @@ from langflow.graph.graph.utils import find_start_component_id, process_flow, so
 from langflow.graph.schema import InterfaceComponentTypes, RunOutputs
 from langflow.graph.vertex.base import Vertex, VertexStates
 from langflow.graph.vertex.schema import NodeData
-from langflow.graph.vertex.types import ComponentVertex, InterfaceVertex, StateVertex
+from langflow.graph.vertex.types import InterfaceVertex, StateVertex
 from langflow.schema import Data
 from langflow.schema.schema import INPUT_FIELD_NAME, InputType
 from langflow.services.cache.utils import CacheMiss
@@ -1387,7 +1387,8 @@ class Graph:
         for edge in self._edges:
             new_edge = self.build_edge(edge)
             edges.add(new_edge)
-
+        if self.vertices and not self.edges:
+            raise ValueError("Graph has vertices but no edges")
         return list(edges)
 
     def build_edge(self, edge: EdgeData) -> ContractEdge:
@@ -1448,6 +1449,7 @@ class Graph:
             raise ValueError("You can only provide one of stop_component_id or start_component_id")
         self.validate_stream()
         self.edges = self._build_edges()
+
         if stop_component_id or start_component_id:
             try:
                 first_layer = self.sort_vertices(stop_component_id, start_component_id)
