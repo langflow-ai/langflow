@@ -12,10 +12,9 @@ def client():
 
 def test_generate_script():
     chat_input = components.inputs.ChatInput(_id="chatInput-1230")
-    text_output = components.outputs.TextOutput.TextOutputComponent(_id="textoutput-1231")(
-        input_value=chat_input.message_response
-    )
-    script = generate_script(chat_input, text_output)
+    text_output = components.outputs.TextOutput.TextOutputComponent(_id="textoutput-1231")
+    text_output.set(input_value=chat_input.message_response)
+    script = generate_script(instances=(chat_input, text_output), entry=chat_input, exit=text_output)
     assert (
         script
         == """from langflow.components.inputs.ChatInput import ChatInput
@@ -24,7 +23,9 @@ from langflow.components.outputs.TextOutput import TextOutputComponent
 chatinput_1230 = ChatInput(_id='chatInput-1230')
 textoutput_1231 = TextOutputComponent(_id='textoutput-1231')
 
-textoutput_1231(input_value=chatinput_1230.message_response)"""
+textoutput_1231.set(input_value=chatinput_1230.message_response)
+
+graph = Graph(entry=chatinput_1230, exit=textoutput_1231)"""
     )
 
 
