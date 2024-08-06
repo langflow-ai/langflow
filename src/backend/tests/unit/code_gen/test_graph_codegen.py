@@ -5,12 +5,11 @@ from langflow.graph.graph.base import Graph
 
 def test_gerenate_script_from_graph():
     chat_input = components.inputs.ChatInput(_id="chatInput-1230")
-    text_output = components.outputs.TextOutput.TextOutputComponent(_id="textoutput-1231")(
-        input_value=chat_input.message_response
-    )
-    chat_output = components.outputs.ChatOutput(input_value="test", _id="chatOutput-1232")(
-        input_value=text_output.text_response
-    )
+    text_output = components.outputs.TextOutput.TextOutputComponent(_id="textoutput-1231")
+    text_output.set(input_value=chat_input.message_response)
+    chat_output = components.outputs.ChatOutput(input_value="test", _id="chatOutput-1232")
+    chat_output.set(input_value=text_output.text_response)
+
     graph = Graph(chat_input, chat_output)
     script = generate_script_from_graph(graph)
     assert (
