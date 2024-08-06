@@ -155,34 +155,38 @@ export default function Header(): JSX.Element {
       </div>
       <div className="header-end-division">
         <div className="header-end-display">
-          <a
-            href="https://github.com/langflow-ai/langflow"
-            target="_blank"
-            rel="noreferrer"
-            className="header-github-link gap-2"
-          >
-            <FaGithub className="h-5 w-5" />
-            <div className="hidden lg:block">Star</div>
-            <div className="header-github-display">{stars ?? 0}</div>
-          </a>
-          <a
-            href="https://twitter.com/langflow_ai"
-            target="_blank"
-            rel="noreferrer"
-            className="text-muted-foreground"
-          >
-            <RiTwitterXFill className="side-bar-button-size" />
-          </a>
-          <a
-            href="https://discord.gg/EqksyE2EX9"
-            target="_blank"
-            rel="noreferrer"
-            className="text-muted-foreground"
-          >
-            <FaDiscord className="side-bar-button-size" />
-          </a>
+          {FeatureFlags.ENABLE_SOCIAL_LINKS && (
+            <>
+              <a
+                href="https://github.com/langflow-ai/langflow"
+                target="_blank"
+                rel="noreferrer"
+                className="header-github-link gap-2"
+              >
+                <FaGithub className="h-5 w-5" />
+                <div className="hidden lg:block">Star</div>
+                <div className="header-github-display">{stars ?? 0}</div>
+              </a>
+              <a
+                href="https://twitter.com/langflow_ai"
+                target="_blank"
+                rel="noreferrer"
+                className="text-muted-foreground"
+              >
+                <RiTwitterXFill className="side-bar-button-size" />
+              </a>
+              <a
+                href="https://discord.gg/EqksyE2EX9"
+                target="_blank"
+                rel="noreferrer"
+                className="text-muted-foreground"
+              >
+                <FaDiscord className="side-bar-button-size" />
+              </a>
 
-          <Separator orientation="vertical" />
+              <Separator orientation="vertical" />
+            </>
+          )}
           {FeatureFlags.ENABLE_DARK_MODE && (
             <button
               className="extra-side-bar-save-disable"
