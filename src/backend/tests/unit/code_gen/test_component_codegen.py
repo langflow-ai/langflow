@@ -1,6 +1,13 @@
+import pytest
+
 from langflow import components
 from langflow.code_gen.component import generate_instantiation_string, generate_script
 from langflow.code_gen.generic import generate_import_statement
+
+
+@pytest.fixture
+def client():
+    pass
 
 
 def test_generate_script():
