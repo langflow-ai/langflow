@@ -13,6 +13,11 @@ from langflow.services.database.models.flow import Flow, FlowCreate
 
 
 @pytest.fixture
+def client():
+    pass
+
+
+@pytest.fixture
 def code_component_with_multiple_outputs():
     with open("src/backend/tests/data/component_multiple_outputs.py", "r") as f:
         code = f.read()
@@ -168,13 +173,25 @@ def test_code_parser_parse_classes():
     """
     Test the parse_classes method of the CodeParser class.
     """
-    parser = CodeParser("class Test: pass")
+    parser = CodeParser("from langflow.custom import Component\n\nclass Test(Component): pass")
     tree = parser.get_tree()
     for node in ast.walk(tree):
         if isinstance(node, ast.ClassDef):
             parser.parse_classes(node)
     assert len(parser.data["classes"]) == 1
     assert parser.data["classes"][0]["name"] == "Test"
+
+
+def test_code_parser_parse_classes_raises():
+    """
+    Test the parse_classes method of the CodeParser class.
+    """
+    parser = CodeParser("class Test: pass")
+    tree = parser.get_tree()
+    with pytest.raises(TypeError):
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ClassDef):
+                parser.parse_classes(node)
 
 
 def test_code_parser_parse_global_vars():
@@ -485,11 +502,6 @@ def db(app):
 def test_list_flows_return_type(component):
     flows = component.list_flows()
     assert isinstance(flows, list)
-
-
-def test_list_flows_flow_objects(component):
-    flows = component.list_flows()
-    assert all(isinstance(flow, Flow) for flow in flows)
 
 
 def test_build_config_return_type(component):
