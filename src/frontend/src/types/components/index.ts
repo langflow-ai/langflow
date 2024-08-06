@@ -107,7 +107,7 @@ export type NodeOutputFieldComponentType = {
   type: string | undefined;
   outputName?: string;
   outputProxy?: OutputFieldProxyType;
-}
+};
 
 export type NodeInputFieldComponentType = {
   id: targetHandleType;
@@ -115,7 +115,7 @@ export type NodeInputFieldComponentType = {
   tooltipTitle: string | undefined;
   title: string;
   colors: string[];
-  type: string|undefined;
+  type: string | undefined;
   name: string;
   required: boolean;
   optionalHandle: Array<String> | undefined | null;

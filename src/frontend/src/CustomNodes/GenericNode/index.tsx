@@ -43,8 +43,8 @@ import useUpdateValidationStatus from "../hooks/use-update-validation-status";
 import useValidationStatusString from "../hooks/use-validation-status-string";
 import getFieldTitle from "../utils/get-field-title";
 import sortFields from "../utils/sort-fields";
-import NodeOutputField from "./components/NodeOutputfield";
 import NodeInputField from "./components/NodeInputField";
+import NodeOutputField from "./components/NodeOutputfield";
 
 export default function GenericNode({
   data,

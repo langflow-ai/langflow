@@ -7,10 +7,11 @@ import ShadTooltip from "../../../../components/shadTooltipComponent";
 import { LANGFLOW_SUPPORTED_TYPES } from "../../../../constants/constants";
 import useFlowStore from "../../../../stores/flowStore";
 import { useTypesStore } from "../../../../stores/typesStore";
-import { NodeInputFieldComponentType, ParameterComponentType } from "../../../../types/components";
 import {
-  scapedJSONStringfy,
-} from "../../../../utils/reactflowUtils";
+  NodeInputFieldComponentType,
+  ParameterComponentType,
+} from "../../../../types/components";
+import { scapedJSONStringfy } from "../../../../utils/reactflowUtils";
 import useFetchDataOnMount from "../../../hooks/use-fetch-data-on-mount";
 import useHandleOnNewValue from "../../../hooks/use-handle-new-value";
 import HandleRenderComponent from "../handleRenderComponent";
@@ -75,25 +76,28 @@ export default function NodeInputField({
     }
   }, [optionalHandle]);
 
-  const displayHandle = !LANGFLOW_SUPPORTED_TYPES.has(type ?? "") || optionalHandle;
+  const displayHandle =
+    !LANGFLOW_SUPPORTED_TYPES.has(type ?? "") || optionalHandle;
 
   return !showNode ? (
     displayHandle ? (
       <HandleRenderComponent
-      left={true}
-      nodes={nodes}
-      tooltipTitle={tooltipTitle}
-      proxy={proxy}
-      id={id}
-      title={title}
-      edges={edges}
-      myData={myData}
-      colors={colors}
-      setFilterEdge={setFilterEdge}
-      showNode={showNode}
-      testIdComplement={`${data?.type?.toLowerCase()}-noshownode`}
-    />
-    ):(<></>)
+        left={true}
+        nodes={nodes}
+        tooltipTitle={tooltipTitle}
+        proxy={proxy}
+        id={id}
+        title={title}
+        edges={edges}
+        myData={myData}
+        colors={colors}
+        setFilterEdge={setFilterEdge}
+        showNode={showNode}
+        testIdComplement={`${data?.type?.toLowerCase()}-noshownode`}
+      />
+    ) : (
+      <></>
+    )
   ) : (
     <div
       ref={ref}
@@ -106,18 +110,14 @@ export default function NodeInputField({
       }
     >
       <>
-        <div
-          className="flex w-full items-center truncate text-sm"
-        >
+        <div className="flex w-full items-center truncate text-sm">
           {proxy ? (
             <ShadTooltip content={<span>{proxy.id}</span>}>
               {<span>{title}</span>}
             </ShadTooltip>
           ) : (
             <div className="flex gap-2">
-              <span>
-                {<span>{title}</span>}
-              </span>
+              <span>{<span>{title}</span>}</span>
             </div>
           )}
           <span className={(required ? "ml-2 " : "") + "text-status-red"}>

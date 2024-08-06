@@ -1,4 +1,5 @@
 import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
+import { TEXT_FIELD_TYPES } from "@/constants/constants";
 import { APIClassType, InputFieldType } from "@/types/api";
 import { useMemo } from "react";
 import CodeAreaComponent from "../codeAreaComponent";
@@ -11,7 +12,6 @@ import PromptAreaComponent from "../promptComponent";
 import ToggleShadComponent from "../toggleShadComponent";
 import { RefreshParameterComponent } from "./component/refreshParameterComponent";
 import { StrRenderComponent } from "./component/strRenderComponent";
-import { TEXT_FIELD_TYPES } from "@/constants/constants";
 
 export function ParameterRenderComponent({
   handleOnNewValue,
