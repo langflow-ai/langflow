@@ -68,6 +68,7 @@ export const getLayoutedNodes = async (nodes: NodeType[], edges: Edge[]) => {
         x: layoutedNode?.x ?? 0,
         y: layoutedNode?.y ?? 0,
       },
+      type: "genericNode",
     };
   });
 
