@@ -1,51 +1,31 @@
-from typing import TYPE_CHECKING, Any, List, Optional, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from loguru import logger
-from pydantic import BaseModel, Field, field_validator
 
-from langflow.graph.edge.schema import EdgeData
+from langflow.graph.edge.schema import EdgeData, SourceHandle, TargetHandle, TargetHandleDict
 from langflow.schema.schema import INPUT_FIELD_NAME
 
 if TYPE_CHECKING:
     from langflow.graph.vertex.base import Vertex
 
 
-class SourceHandle(BaseModel):
-    baseClasses: list[str] = Field(default_factory=list, description="List of base classes for the source handle.")
-    dataType: str = Field(..., description="Data type for the source handle.")
-    id: str = Field(..., description="Unique identifier for the source handle.")
-    name: Optional[str] = Field(None, description="Name of the source handle.")
-    output_types: List[str] = Field(default_factory=list, description="List of output types for the source handle.")
-
-    @field_validator("name", mode="before")
-    @classmethod
-    def validate_name(cls, v, _info):
-        if _info.data["dataType"] == "GroupNode":
-            # 'OpenAIModel-u4iGV_text_output'
-            splits = v.split("_", 1)
-            if len(splits) != 2:
-                raise ValueError(f"Invalid source handle name {v}")
-            v = splits[1]
-        return v
-
-
-class TargetHandle(BaseModel):
-    fieldName: str = Field(..., description="Field name for the target handle.")
-    id: str = Field(..., description="Unique identifier for the target handle.")
-    inputTypes: Optional[List[str]] = Field(None, description="List of input types for the target handle.")
-    type: str = Field(..., description="Type of the target handle.")
-
-
 class Edge:
     def __init__(self, source: "Vertex", target: "Vertex", edge: EdgeData):
         self.source_id: str = source.id if source else ""
         self.target_id: str = target.id if target else ""
+        self.valid_handles: bool = False
+        self.target_param: str | None = None
+        self._target_handle: TargetHandleDict | str | None = None
+        self._data = edge.copy()
         if data := edge.get("data", {}):
             self._source_handle = data.get("sourceHandle", {})
-            self._target_handle = data.get("targetHandle", {})
+            self._target_handle = cast(TargetHandleDict, data.get("targetHandle", {}))
             self.source_handle: SourceHandle = SourceHandle(**self._source_handle)
-            self.target_handle: TargetHandle = TargetHandle(**self._target_handle)
-            self.target_param = self.target_handle.fieldName
+            if isinstance(self._target_handle, dict):
+                self.target_handle: TargetHandle = TargetHandle(**self._target_handle)
+            else:
+                raise ValueError("Target handle is not a dictionary")
+            self.target_param = self.target_handle.field_name
             # validate handles
             self.validate_handles(source, target)
         else:
@@ -55,23 +35,31 @@ class Edge:
             self._target_handle = edge.get("targetHandle", "")  # type: ignore
             # 'BaseLoader;BaseOutputParser|documents|PromptTemplate-zmTlD'
             # target_param is documents
-            self.target_param = cast(str, self._target_handle.split("|")[1])  # type: ignore
+            if isinstance(self._target_handle, str):
+                self.target_param = self._target_handle.split("|")[1]
+                self.source_handle = None
+                self.target_handle = None
+            else:
+                raise ValueError("Target handle is not a string")
         # Validate in __init__ to fail fast
         self.validate_edge(source, target)
 
+    def to_data(self):
+        return self._data
+
     def validate_handles(self, source, target) -> None:
-        if isinstance(self._source_handle, str) or self.source_handle.baseClasses:
+        if isinstance(self._source_handle, str) or self.source_handle.base_classes:
             self._legacy_validate_handles(source, target)
         else:
             self._validate_handles(source, target)
 
     def _validate_handles(self, source, target) -> None:
-        if self.target_handle.inputTypes is None:
+        if self.target_handle.input_types is None:
             self.valid_handles = self.target_handle.type in self.source_handle.output_types
 
         elif self.source_handle.output_types is not None:
             self.valid_handles = (
-                any(output_type in self.target_handle.inputTypes for output_type in self.source_handle.output_types)
+                any(output_type in self.target_handle.input_types for output_type in self.source_handle.output_types)
                 or self.target_handle.type in self.source_handle.output_types
             )
 
@@ -81,12 +69,12 @@ class Edge:
             raise ValueError(f"Edge between {source.vertex_type} and {target.vertex_type} " f"has invalid handles")
 
     def _legacy_validate_handles(self, source, target) -> None:
-        if self.target_handle.inputTypes is None:
-            self.valid_handles = self.target_handle.type in self.source_handle.baseClasses
+        if self.target_handle.input_types is None:
+            self.valid_handles = self.target_handle.type in self.source_handle.base_classes
         else:
             self.valid_handles = (
-                any(baseClass in self.target_handle.inputTypes for baseClass in self.source_handle.baseClasses)
-                or self.target_handle.type in self.source_handle.baseClasses
+                any(baseClass in self.target_handle.input_types for baseClass in self.source_handle.base_classes)
+                or self.target_handle.type in self.source_handle.base_classes
             )
         if not self.valid_handles:
             logger.debug(self.source_handle)
@@ -101,9 +89,9 @@ class Edge:
         self.target_handle = state.get("target_handle")
 
     def validate_edge(self, source, target) -> None:
-        # If the self.source_handle has baseClasses, then we are using the legacy
+        # If the self.source_handle has base_classes, then we are using the legacy
         # way of defining the source and target handles
-        if isinstance(self._source_handle, str) or self.source_handle.baseClasses:
+        if isinstance(self._source_handle, str) or self.source_handle.base_classes:
             self._legacy_validate_edge(source, target)
         else:
             self._validate_edge(source, target)
@@ -227,4 +215,8 @@ class ContractEdge(Edge):
         return self.result
 
     def __repr__(self) -> str:
+        if (hasattr(self, "source_handle") and self.source_handle) and (
+            hasattr(self, "target_handle") and self.target_handle
+        ):
+            return f"{self.source_id} -[{self.source_handle.name}->{self.target_handle.field_name}]-> {self.target_id}"
         return f"{self.source_id} -[{self.target_param}]-> {self.target_id}"

@@ -1,4 +1,4 @@
-import { Edge, Node, Viewport, XYPosition } from "reactflow";
+import { Edge, Node, Viewport } from "reactflow";
 import { FlowType } from "../../flow";
 
 export type FlowsManagerStoreType = {
@@ -30,31 +30,8 @@ export type FlowsManagerStoreType = {
     edges: Edge[],
     viewport: Viewport,
   ) => void;
-  uploadFlows: () => Promise<void>;
-  uploadFlow: ({
-    newProject,
-    file,
-    isComponent,
-    position,
-  }: {
-    newProject: boolean;
-    file?: File;
-    isComponent: boolean | null;
-    position?: XYPosition;
-  }) => Promise<string | never>;
-  addFlow: (
-    newProject: boolean,
-    flow?: FlowType,
-    override?: boolean,
-    position?: XYPosition,
-    fromDragAndDrop?: boolean,
-  ) => Promise<string | undefined>;
   deleteComponent: (key: string) => Promise<void>;
   removeFlow: (id: string | string[]) => Promise<void>;
-  saveComponent: (
-    component: any,
-    override: boolean,
-  ) => Promise<string | undefined>;
   undo: () => void;
   redo: () => void;
   takeSnapshot: () => void;
