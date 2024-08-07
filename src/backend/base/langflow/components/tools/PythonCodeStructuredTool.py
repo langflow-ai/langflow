@@ -285,7 +285,9 @@ class PythonCodeStructuredTool(Component):
                 else:
                     func_arg["annotations"] = ["str"]
 
-                func["args"].append(func_arg)
+                if isinstance(func["args"], list):
+                    func["args"].append(func_arg)
+
             functions.append(func)
 
         return functions
