@@ -145,8 +145,6 @@ export default function GenericNode({
     return names;
   };
 
-  //  const [openWDoubleCLick, setOpenWDoubleCLick] = useState(false);
-
   const getBaseBorderClass = (selected) => {
     let className = selected
       ? "border border-ring hover:shadow-node"
@@ -377,17 +375,65 @@ export default function GenericNode({
     isUserEdited,
     selected,
     shortcuts,
-    //    openWDoubleCLick,
-    //    setOpenWDoubleCLick,
   ]);
+
+  const renderInputParameter = Object.keys(data.node!.template)
+    .filter((templateField) => templateField.charAt(0) !== "_")
+    .map(
+      (templateField: string, idx) =>
+        data.node!.template[templateField]?.show &&
+        !data.node!.template[templateField]?.advanced && (
+          <NodeInputField
+            key={scapedJSONStringfy({
+              inputTypes:
+                data.node!.template[templateField].input_types,
+              type: data.node!.template[templateField].type,
+              id: data.id,
+              fieldName: templateField,
+              proxy: data.node!.template[templateField].proxy,
+            })}
+            data={data}
+            colors={getNodeInputColors(
+              data.node?.template[templateField].input_types,
+              data.node?.template[templateField].type,
+              types,
+            )}
+            title={getFieldTitle(
+              data.node?.template!,
+              templateField,
+            )}
+            info={data.node?.template[templateField].info}
+            name={templateField}
+            tooltipTitle={
+              data.node?.template[
+                templateField
+              ].input_types?.join("\n") ??
+              data.node?.template[templateField].type
+            }
+            required={
+              data.node!.template[templateField].required
+            }
+            id={{
+              inputTypes:
+                data.node!.template[templateField].input_types,
+              type: data.node!.template[templateField].type,
+              id: data.id,
+              fieldName: templateField,
+            }}
+            type={data.node?.template[templateField].type}
+            optionalHandle={
+              data.node?.template[templateField].input_types
+            }
+            proxy={data.node?.template[templateField].proxy}
+            showNode={showNode}
+          />
+        ),
+    )
+
   return (
     <>
       {memoizedNodeToolbarComponent}
       <div
-        //        onDoubleClick={(event) => {
-        //          if (!isWrappedWithClass(event, "nodoubleclick"))
-        //            setOpenWDoubleCLick(true);
-        //        }}
         className={getNodeBorderClassName(
           selected,
           showNode,
@@ -489,58 +535,7 @@ export default function GenericNode({
             <div>
               {!showNode && (
                 <>
-                  {Object.keys(data.node!.template)
-                    .filter((templateField) => templateField.charAt(0) !== "_")
-                    .map(
-                      (templateField: string, idx) =>
-                        data.node!.template[templateField]?.show &&
-                        !data.node!.template[templateField]?.advanced && (
-                          <NodeInputField
-                            key={scapedJSONStringfy({
-                              inputTypes:
-                                data.node!.template[templateField].input_types,
-                              type: data.node!.template[templateField].type,
-                              id: data.id,
-                              fieldName: templateField,
-                              proxy: data.node!.template[templateField].proxy,
-                            })}
-                            data={data}
-                            colors={getNodeInputColors(
-                              data.node?.template[templateField].input_types,
-                              data.node?.template[templateField].type,
-                              types,
-                            )}
-                            title={getFieldTitle(
-                              data.node?.template!,
-                              templateField,
-                            )}
-                            info={data.node?.template[templateField].info}
-                            name={templateField}
-                            tooltipTitle={
-                              data.node?.template[
-                                templateField
-                              ].input_types?.join("\n") ??
-                              data.node?.template[templateField].type
-                            }
-                            required={
-                              data.node!.template[templateField].required
-                            }
-                            id={{
-                              inputTypes:
-                                data.node!.template[templateField].input_types,
-                              type: data.node!.template[templateField].type,
-                              id: data.id,
-                              fieldName: templateField,
-                            }}
-                            type={data.node?.template[templateField].type}
-                            optionalHandle={
-                              data.node?.template[templateField].input_types
-                            }
-                            proxy={data.node?.template[templateField].proxy}
-                            showNode={showNode}
-                          />
-                        ),
-                    )}
+                {renderInputParameter}
                   {shownOutputs &&
                     shownOutputs.length > 0 &&
                     renderOutputParameter(shownOutputs[0], 0)}
@@ -701,59 +696,7 @@ export default function GenericNode({
               )}
             </div>
             <>
-              {Object.keys(data.node!.template)
-                .filter((templateField) => templateField.charAt(0) !== "_")
-                .sort((a, b) => sortFields(a, b, data.node?.field_order ?? []))
-                .map((templateField: string, idx) => (
-                  <div key={idx}>
-                    {data.node!.template[templateField]?.show &&
-                    !data.node!.template[templateField]?.advanced ? (
-                      <NodeInputField
-                        key={scapedJSONStringfy({
-                          inputTypes:
-                            data.node!.template[templateField].input_types,
-                          type: data.node!.template[templateField].type,
-                          id: data.id,
-                          fieldName: templateField,
-                          proxy: data.node!.template[templateField].proxy,
-                        })}
-                        data={data}
-                        colors={getNodeInputColors(
-                          data.node?.template[templateField].input_types,
-                          data.node?.template[templateField].type,
-                          types,
-                        )}
-                        title={getFieldTitle(
-                          data.node?.template!,
-                          templateField,
-                        )}
-                        info={data.node?.template[templateField].info}
-                        name={templateField}
-                        tooltipTitle={
-                          data.node?.template[templateField].input_types?.join(
-                            "\n",
-                          ) ?? data.node?.template[templateField].type
-                        }
-                        required={data.node!.template[templateField].required}
-                        id={{
-                          inputTypes:
-                            data.node!.template[templateField].input_types,
-                          type: data.node!.template[templateField].type,
-                          id: data.id,
-                          fieldName: templateField,
-                        }}
-                        type={data.node?.template[templateField].type}
-                        optionalHandle={
-                          data.node?.template[templateField].input_types
-                        }
-                        proxy={data.node?.template[templateField].proxy}
-                        showNode={showNode}
-                      />
-                    ) : (
-                      <></>
-                    )}
-                  </div>
-                ))}
+              {renderInputParameter}
               <div
                 className={classNames(
                   Object.keys(data.node!.template).length < 1 ? "hidden" : "",
