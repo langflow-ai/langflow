@@ -39,25 +39,17 @@ https://github.com/user-attachments/assets/ff288992-fe55-4031-a261-8eef25368416
 </p>
 
 # Core features 
-1. **Open-source framework:** Python-based and agnostic to models, APIs, data sources, or databases.
-
-2. **Visual canvas IDE:** Intuitive drag-and-drop interface for building and testing  workflows.
-
+1. **Open-source framework:** Python-based and agnostic to any model, API, data source, or database.
+2. **Visual canvas IDE:** Intuitive drag-and-drop interface for building and running workflows.
 3. **Playground:** Immediately test and iterate workflows with step-by-step control.
-
-4. **Conditional workflows:**  Build complex, Turing-complete workflows for powerful AI and RAG applications
-
-5. **Multi-Agent capabilities:** Advanced support for conversation management and retrieval.
-
+4. **Conditional workflows:** Build complex, Turing-complete workflows for powerful AI and RAG applications
+5. **Multi-Agent capabilities:** Create AIs with multiple agents using different models working together on tasks.
 6. **Cloud service:** Build, test, deploy and monitor AI applications in the cloud.
-
-7. **API deployment:** Publish AI workflows as back-end APIs.
-
-8. **Observability:** Real time traceability with LangSmith integration - just add a LangChain API key.
-
-9. **Security and scale:**  Deploy on DataStax cloud service to support enterprise requirements
-
-10. **Ecosystem Integrations:**  Prebuilt, reusable components to connect to any model, API, data source or database. 
+7. **Customizable Components:**  Control component execution with custom Python code.
+8. **Export JSON or API Deployment:** Export as JSON or as a JavaScript or Python API  back-end service.
+9. **Observability:** Real time traceability with LangSmith integration by adding LangChain API key.
+10. **Enterprise-ready:** Deploy on DataStax cloud service to support enterprise security and scale
+11. **Ecosystem Integrations:** Prebuilt, reusable components to connect to any model, API, data source or database.
 
 ![Integrations](https://github.com/user-attachments/assets/df4a6714-60de-4a8b-aff0-982c5aa467e3)
 
