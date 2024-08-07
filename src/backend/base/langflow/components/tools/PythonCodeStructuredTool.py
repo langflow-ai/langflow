@@ -36,7 +36,7 @@ class PythonCodeStructuredTool(Component):
         "global_variables",
         "_functions",
     ]
-    AVAILABLE_TYPES = {
+    AVAILABLE_TYPES: dict[str, dict[str, Any]] = {
         "str": {"annotation": str, "field": MessageTextInput},
         "int": {"annotation": int, "field": IntInput},
         "float": {"annotation": float, "field": FloatInput},
