@@ -59,7 +59,6 @@ export const getLayoutedNodes = async (nodes: NodeType[], edges: Edge[]) => {
       targets: [e.targetHandle || e.target],
     })),
   };
-  console.log("graph", graph);
   const layoutedGraph = await elk.layout(graph);
 
   const layoutedNodes = nodes.map((node) => {
@@ -76,6 +75,5 @@ export const getLayoutedNodes = async (nodes: NodeType[], edges: Edge[]) => {
       type: "genericNode",
     };
   });
-  console.log("layoutedNodes", layoutedNodes);
   return layoutedNodes;
 };
