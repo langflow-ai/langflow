@@ -1,26 +1,26 @@
 import json
+from collections import namedtuple
 from uuid import UUID, uuid4
 
-from langflow.graph.utils import log_transaction, log_vertex_build
 import orjson
 import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
 from langflow.api.v1.schemas import FlowListCreate, ResultDataResponse
-from langflow.initial_setup.setup import load_starter_projects, load_flows_from_directory
+from langflow.graph.utils import log_transaction, log_vertex_build
+from langflow.initial_setup.setup import load_flows_from_directory, load_starter_projects
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.flow import Flow, FlowCreate, FlowUpdate
 from langflow.services.database.models.transactions.crud import get_transactions_by_flow_id
-from langflow.services.database.utils import session_getter, migrate_transactions_from_monitor_service_to_database
+from langflow.services.database.utils import migrate_transactions_from_monitor_service_to_database, session_getter
 from langflow.services.deps import get_db_service, get_monitor_service, session_scope
 from langflow.services.monitor.schema import TransactionModel
 from langflow.services.monitor.utils import (
+    add_row_to_table,
     drop_and_create_table_if_schema_mismatch,
     new_duckdb_locked_connection,
-    add_row_to_table,
 )
-from collections import namedtuple
 
 
 @pytest.fixture(scope="module")
@@ -46,7 +46,7 @@ def test_create_flow(client: TestClient, json_flow: str, active_user, logged_in_
     assert response.json()["name"] == flow.name
     assert response.json()["data"] == flow.data
     # flow is optional so we can create a flow without a flow
-    flow = FlowCreate(name="Test Flow")
+    flow = FlowCreate(name=str(uuid4()))
     response = client.post("api/v1/flows/", json=flow.model_dump(exclude_unset=True), headers=logged_in_headers)
     assert response.status_code == 201
     assert response.json()["name"] == flow.name

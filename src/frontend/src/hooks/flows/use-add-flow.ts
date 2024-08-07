@@ -34,7 +34,7 @@ const useAddFlow = () => {
     return new Promise(async (resolve, reject) => {
       const flow = cloneDeep(params?.flow) ?? undefined;
       let flowData = flow
-        ? processDataFromFlow(flow)
+        ? await processDataFromFlow(flow)
         : { nodes: [], edges: [], viewport: { zoom: 1, x: 0, y: 0 } };
       flowData?.nodes.forEach((node) => {
         updateGroupRecursion(

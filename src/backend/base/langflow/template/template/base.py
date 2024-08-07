@@ -9,7 +9,7 @@ from langflow.utils.constants import DIRECT_TYPES
 
 class Template(BaseModel):
     type_name: str = Field(serialization_alias="_type")
-    fields: list[Union[Input, InputTypes]]
+    fields: list[InputTypes]
 
     def process_fields(
         self,

@@ -283,7 +283,7 @@ def get_component_instance(custom_component: CustomComponent, user_id: Optional[
         ) from exc
 
     try:
-        custom_instance = custom_class(_user_id=user_id)
+        custom_instance = custom_class(_user_id=user_id, _code=custom_component._code)
         return custom_instance
     except Exception as exc:
         logger.error(f"Error while instantiating custom component: {str(exc)}")
@@ -339,7 +339,7 @@ def run_build_config(
         raise exc
 
 
-def add_code_field(frontend_node: CustomComponentFrontendNode, raw_code, field_config):
+def add_code_field(frontend_node: CustomComponentFrontendNode, raw_code):
     code_field = Input(
         dynamic=True,
         required=True,
@@ -364,7 +364,7 @@ def build_custom_component_template_from_inputs(
     cc_instance = get_component_instance(custom_component, user_id=user_id)
     field_config = cc_instance.get_template_config(cc_instance)
     frontend_node = ComponentFrontendNode.from_inputs(**field_config)
-    frontend_node = add_code_field(frontend_node, custom_component._code, field_config.get("code", {}))
+    frontend_node = add_code_field(frontend_node, custom_component._code)
     # But we now need to calculate the return_type of the methods in the outputs
     for output in frontend_node.outputs:
         if output.types:
@@ -408,7 +408,7 @@ def build_custom_component_template(
 
         add_extra_fields(frontend_node, field_config, entrypoint_args)
 
-        frontend_node = add_code_field(frontend_node, custom_component._code, field_config.get("code", {}))
+        frontend_node = add_code_field(frontend_node, custom_component._code)
 
         add_base_classes(frontend_node, custom_component.get_function_entrypoint_return_type)
         add_output_types(frontend_node, custom_component.get_function_entrypoint_return_type)

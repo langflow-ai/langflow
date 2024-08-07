@@ -1,7 +1,6 @@
 {
   "version": "0.2.0",
   "configurations": [
-
     {
       "name": "Debug Backend",
       "type": "debugpy",
@@ -18,7 +17,7 @@
         "--loop",
         "asyncio",
         "--reload-include",
-        "src/backend/*"
+        "./src/backend/*"
       ],
       "jinja": true,
       "justMyCode": false,

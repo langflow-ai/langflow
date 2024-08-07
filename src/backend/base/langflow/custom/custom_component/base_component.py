@@ -97,7 +97,7 @@ class BaseComponent:
             return {}
 
         cc_class = eval_custom_component_code(self._code)
-        component_instance = cc_class()
+        component_instance = cc_class(_code=self._code)
         template_config = self.get_template_config(component_instance)
         return template_config
 

@@ -40,6 +40,7 @@
     "cmdk": "^1.0.0",
     "dompurify": "^3.1.5",
     "dotenv": "^16.4.5",
+    "elkjs": "^0.9.3",
     "emoji-regex": "^10.3.0",
     "esbuild": "^0.21.5",
     "file-saver": "^2.0.5",

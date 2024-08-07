@@ -14,7 +14,7 @@ from langflow.exceptions.component import ComponentBuildException
 from langflow.graph.schema import INPUT_COMPONENTS, OUTPUT_COMPONENTS, InterfaceComponentTypes, ResultData
 from langflow.graph.utils import UnbuiltObject, UnbuiltResult, log_transaction
 from langflow.graph.vertex.schema import NodeData
-from langflow.interface.initialize import loading
+from langflow.interface import initialize
 from langflow.interface.listing import lazy_load_dict
 from langflow.schema.artifact import ArtifactType
 from langflow.schema.data import Data
@@ -453,10 +453,10 @@ class Vertex:
             raise ValueError(f"Base type for vertex {self.display_name} not found")
 
         if not self._custom_component:
-            custom_component, custom_params = await loading.instantiate_class(user_id=user_id, vertex=self)
+            custom_component, custom_params = await initialize.loading.instantiate_class(user_id=user_id, vertex=self)
         else:
             custom_component = self._custom_component
-            custom_params = loading.get_params(self.params)
+            custom_params = initialize.loading.get_params(self.params)
 
         await self._build_results(custom_component, custom_params, fallback_to_env_vars)
 
@@ -671,7 +671,7 @@ class Vertex:
 
     async def _build_results(self, custom_component, custom_params, fallback_to_env_vars=False):
         try:
-            result = await loading.get_instance_results(
+            result = await initialize.loading.get_instance_results(
                 custom_component=custom_component,
                 custom_params=custom_params,
                 vertex=self,
