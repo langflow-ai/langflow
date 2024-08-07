@@ -8,6 +8,8 @@ def get_variable_name(instance):
 def generate_import_statement(instance):
     class_name = instance.__class__.__name__
     module_path = instance.__class__.__module__
+    if module_path == "langflow.utils.validate":
+        raise ValueError("Generating script from JSON is not yet supported.")
     parts = module_path.split(".")
 
     # Construct the correct import statement
