@@ -142,7 +142,7 @@ class Component(CustomComponent):
             KeyError: If the specified input name does not exist.
         """
         for key, value in kwargs.items():
-            self._process_connection_or_parameter(key, value)
+            self._process_connection_or_parameters(key, value)
         return self
 
     def list_inputs(self):
@@ -312,6 +312,14 @@ class Component(CustomComponent):
             self._connect_to_component(key, value, _input)
         else:
             self._set_parameter_or_attribute(key, value)
+
+    def _process_connection_or_parameters(self, key, value):
+        # if value is a list of components, we need to process each component
+        if isinstance(value, list):
+            for val in value:
+                self._process_connection_or_parameter(key, val)
+        else:
+            self._process_connection_or_parameter(key, value)
 
     def _get_or_create_input(self, key):
         try:
