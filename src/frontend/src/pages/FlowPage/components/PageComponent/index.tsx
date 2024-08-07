@@ -1,5 +1,6 @@
 import LoadingComponent from "@/components/loadingComponent";
 import { useGetBuildsQuery } from "@/controllers/API/queries/_builds";
+import useAutoSaveFlow from "@/hooks/flows/use-autosave-flow";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
 import { getInputsAndOutputs } from "@/utils/storeUtils";
 import _, { cloneDeep } from "lodash";
@@ -65,9 +66,7 @@ export default function Page({
   view?: boolean;
 }): JSX.Element {
   const uploadFlow = useUploadFlow();
-  const autoSaveCurrentFlow = useFlowsManagerStore(
-    (state) => state.autoSaveCurrentFlow,
-  );
+  const autoSaveFlow = useAutoSaveFlow();
   const types = useTypesStore((state) => state.types);
   const templates = useTypesStore((state) => state.templates);
   const setFilterEdge = useFlowStore((state) => state.setFilterEdge);
@@ -199,6 +198,12 @@ export default function Page({
       cleanFlow();
     };
   }, [currentFlowId]);
+
+  useEffect(() => {
+    if (nodes.length !== 0) {
+      autoSaveFlow();
+    }
+  }, [nodes, edges]);
 
   function handleUndo(e: KeyboardEvent) {
     if (!isWrappedWithClass(e, "noflow")) {
@@ -334,15 +339,10 @@ export default function Page({
     // 👉 you can place your event handlers here
   }, [takeSnapshot]);
 
-  const onNodeDragStop: NodeDragHandler = useCallback(() => {
-    autoSaveCurrentFlow(nodes, edges, reactFlowInstance?.getViewport()!);
-    // 👉 you can place your event handlers here
-  }, [takeSnapshot, autoSaveCurrentFlow, nodes, edges, reactFlowInstance]);
-
   const onMoveEnd: OnMove = useCallback(() => {
     // 👇 make moving the canvas undoable
-    autoSaveCurrentFlow(nodes, edges, reactFlowInstance?.getViewport()!);
-  }, [takeSnapshot, autoSaveCurrentFlow, nodes, edges, reactFlowInstance]);
+    autoSaveFlow();
+  }, [takeSnapshot, autoSaveFlow, nodes, edges, reactFlowInstance]);
 
   const onSelectionDragStart: SelectionDragHandler = useCallback(() => {
     // 👇 make dragging a selection undoable
@@ -493,7 +493,6 @@ export default function Page({
             onEdgeUpdateStart={onEdgeUpdateStart}
             onEdgeUpdateEnd={onEdgeUpdateEnd}
             onNodeDragStart={onNodeDragStart}
-            onNodeDragStop={onNodeDragStop}
             onSelectionDragStart={onSelectionDragStart}
             onSelectionEnd={onSelectionEnd}
             onSelectionStart={onSelectionStart}
