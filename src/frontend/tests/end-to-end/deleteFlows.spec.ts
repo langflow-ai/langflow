@@ -38,6 +38,7 @@ test("should delete a flow", async ({ page }) => {
 
   await page.getByTestId("install-Website Content QA").click();
 
+  await page.getByText("Flow Installed Successfully.").nth(0).click();
   await page.waitForSelector("text=My Collection", { timeout: 30000 });
 
   await page.getByText("My Collection").nth(0).click();
