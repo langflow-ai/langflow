@@ -860,7 +860,6 @@ wrapt = ">=1.10,<2"
 dev = ["PyTest", "PyTest-Cov", "bump2version (<1)", "sphinx (<2)", "tox"]
 
 [[package]]
-<<<<<<< Updated upstream
 name = "devtools"
 version = "0.12.2"
 description = "Python's missing debug print command, and more."
@@ -877,8 +876,6 @@ executing = ">=1.1.1"
 pygments = ">=2.15.0"
 
 [[package]]
-=======
->>>>>>> Stashed changes
 name = "dictdiffer"
 version = "0.9.0"
 description = "Dictdiffer is a library that helps you to diff and patch dictionaries."
@@ -5259,8 +5256,4 @@ local = []
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-<<<<<<< Updated upstream
 content-hash = "877648288f4f9d5d3304c36853d1b2c5f833d673665bf9b1c707c37bbf02e6ad"
-=======
-content-hash = "bbbc234350488c8293c4b74695db9757be15cabbf6df99ce24d569aecdcd503b"
->>>>>>> Stashed changes
