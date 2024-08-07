@@ -198,6 +198,10 @@ class Graph:
         if not isinstance(target_vertex, ComponentVertex):
             raise ValueError(f"Target vertex {target_id} is not a component vertex.")
         output_name, input_name = output_input_tuple
+        if source_vertex._custom_component is None:
+            raise ValueError(f"Source vertex {source_id} does not have a custom component.")
+        if target_vertex._custom_component is None:
+            raise ValueError(f"Target vertex {target_id} does not have a custom component.")
         edge_data: EdgeData = {
             "source": source_id,
             "target": target_id,
@@ -1434,7 +1438,7 @@ class Graph:
 
         if node_type in lazy_load_vertex_dict.VERTEX_TYPE_MAP:
             return lazy_load_vertex_dict.VERTEX_TYPE_MAP[node_type]
-        raise ValueError(f"Vertex type {node_type} not found")
+        return Vertex
 
     def _build_vertices(self) -> List["Vertex"]:
         """Builds the vertices of the graph."""

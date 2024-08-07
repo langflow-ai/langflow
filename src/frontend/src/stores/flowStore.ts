@@ -294,11 +294,17 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       selection.nodes.some((node) => node.data.type === "ChatInput") &&
       checkChatInput(get().nodes)
     ) {
-      useAlertStore.getState().setErrorData({
-        title: "Error pasting components",
-        list: ["You can only have one ChatInput component in the flow"],
+      useAlertStore.getState().setNoticeData({
+        title: "You can only have one Chat Input component in a flow.",
       });
-      return;
+      selection.nodes = selection.nodes.filter(
+        (node) => node.data.type !== "ChatInput",
+      );
+      selection.edges = selection.edges.filter(
+        (edge) =>
+          selection.nodes.some((node) => edge.source === node.id) &&
+          selection.nodes.some((node) => edge.target === node.id),
+      );
     }
     if (selection.nodes) {
       if (checkOldComponents({ nodes: selection.nodes ?? [] })) {

@@ -1,3 +1,4 @@
+import { NODE_HEIGHT, NODE_WIDTH } from "@/constants/constants";
 import { NodeType } from "@/types/flow";
 import ELK, { ElkNode } from "elkjs/lib/elk.bundled.js";
 import { cloneDeep } from "lodash";
@@ -35,11 +36,10 @@ export const getLayoutedNodes = async (nodes: NodeType[], edges: Edge[]) => {
             side: "WEST",
           },
         }));
-      const width = 384;
       return {
         id: n.id,
-        width: width,
-        height: width * 3,
+        width: NODE_WIDTH,
+        height: NODE_HEIGHT,
         // ⚠️ we need to tell elk that the ports are fixed, in order to reduce edge crossings
         properties: {
           "org.eclipse.elk.portConstraints": "FIXED_ORDER",

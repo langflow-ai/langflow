@@ -1,6 +1,6 @@
 import { AxiosRequestConfig, AxiosResponse } from "axios";
 import { Edge, Node, ReactFlowJsonObject } from "reactflow";
-import { BASE_URL_API, MAX_BATCH_SIZE } from "../../constants/constants";
+import { BASE_URL_API } from "../../constants/constants";
 import { api } from "../../controllers/API/api";
 import {
   APIObjectType,
@@ -263,32 +263,6 @@ export async function getFlowStylesFromDatabase() {
 }
 
 /**
- * Saves a new flow style to the database.
- *
- * @param {FlowStyleType} flowStyle - The flow style data to save.
- * @returns {Promise<any>} The saved flow style data.
- * @throws Will throw an error if saving fails.
- */
-export async function saveFlowStyleToDatabase(flowStyle: FlowStyleType) {
-  try {
-    const response = await api.post(`${BASE_URL_API}flow_styles/`, flowStyle, {
-      headers: {
-        accept: "application/json",
-        "Content-Type": "application/json",
-      },
-    });
-
-    if (response.status !== 201) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    return response?.data;
-  } catch (error) {
-    console.error(error);
-    throw error;
-  }
-}
-
-/**
  * Fetches the version of the API.
  *
  * @returns {Promise<AxiosResponse<any>>} A promise that resolves to an AxiosResponse containing the version information.
@@ -508,7 +482,7 @@ export async function getStoreComponents({
   limit = 9999999,
   is_component = null,
   sort = "-count(liked_by)",
-  tags = [] || null,
+  tags = [],
   liked = null,
   isPrivate = null,
   search = null,
@@ -827,41 +801,4 @@ export async function deleteFlowPool(
   const config = {};
   config["params"] = { flow_id: flowId };
   return await api.delete(`${BASE_URL_API}monitor/builds`, config);
-}
-
-/**
- * Deletes multiple flow components by their IDs.
- * @param flowIds - An array of flow IDs to be deleted.
- * @param token - The authorization token for the API request.
- * @returns A promise that resolves to an array of AxiosResponse objects representing the delete responses.
- */
-export async function multipleDeleteFlowsComponents(
-  flowIds: string[],
-): Promise<AxiosResponse<any>[]> {
-  const batches: string[][] = [];
-
-  // Split the flowIds into batches
-  for (let i = 0; i < flowIds.length; i += MAX_BATCH_SIZE) {
-    batches.push(flowIds.slice(i, i + MAX_BATCH_SIZE));
-  }
-
-  // Function to delete a batch of flow IDs
-  const deleteBatch = async (batch: string[]): Promise<AxiosResponse<any>> => {
-    try {
-      return await api.delete(`${BASE_URL_API}flows/`, {
-        data: batch,
-      });
-    } catch (error) {
-      console.error("Error deleting flows:", error);
-      throw error;
-    }
-  };
-
-  // Execute all delete requests
-  const responses: Promise<AxiosResponse<any>>[] = batches.map((batch) =>
-    deleteBatch(batch),
-  );
-
-  // Return the responses after all requests are completed
-  return Promise.all(responses);
 }

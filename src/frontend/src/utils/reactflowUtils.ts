@@ -297,10 +297,10 @@ export const processFlows = (DbData: FlowType[], skipUpdate = true) => {
         return;
       }
       await processDataFromFlow(flow, !skipUpdate).catch((e) => {
-        console.log(e);
+        console.error(e);
       });
     } catch (e) {
-      console.log(e);
+      console.error(e);
     }
   });
   return { data: savedComponents, flows: DbData };
@@ -504,12 +504,12 @@ export function addEscapedHandleIdsToEdges({
     let escapedSourceHandle = edge.sourceHandle;
     let escapedTargetHandle = edge.targetHandle;
     if (!escapedSourceHandle) {
-      let sourceHandle = edge.data.sourceHandle;
+      let sourceHandle = edge.data?.sourceHandle;
       escapedSourceHandle = getRightHandleId(sourceHandle);
       edge.sourceHandle = escapedSourceHandle;
     }
     if (!escapedTargetHandle) {
-      let targetHandle = edge.data.targetHandle;
+      let targetHandle = edge.data?.targetHandle;
       escapedTargetHandle = getLeftHandleId(targetHandle);
       edge.targetHandle = escapedTargetHandle;
     }
@@ -784,7 +784,7 @@ export function checkOldEdgesHandles(edges: Edge[]): boolean {
 export function checkEdgeWithoutEscapedHandleIds(edges: Edge[]): boolean {
   return edges.some(
     (edge) =>
-      (!edge.sourceHandle || !edge.targetHandle) && edge.data.sourceHandle,
+      (!edge.sourceHandle || !edge.targetHandle) && edge.data?.sourceHandle,
   );
 }
 
@@ -1578,8 +1578,8 @@ export function getRandomDescription(): string {
 
 export const createNewFlow = (
   flowData: ReactFlowJsonObject,
-  flow: FlowType,
   folderId: string,
+  flow?: FlowType,
 ) => {
   return {
     description: flow?.description ?? getRandomDescription(),

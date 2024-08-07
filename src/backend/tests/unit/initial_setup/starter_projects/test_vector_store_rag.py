@@ -134,16 +134,16 @@ def test_vector_store_rag_dump_components_and_edges(ingestion_graph, rag_graph):
     ingestion_nodes = sorted(ingestion_nodes, key=lambda x: x["id"])
 
     # Check components in the ingestion graph
-    assert ingestion_nodes[0]["data"]["type"] == "FileComponent"
+    assert ingestion_nodes[0]["data"]["type"] == "File"
     assert ingestion_nodes[0]["id"] == "file-123"
 
-    assert ingestion_nodes[1]["data"]["type"] == "OpenAIEmbeddingsComponent"
+    assert ingestion_nodes[1]["data"]["type"] == "OpenAIEmbeddings"
     assert ingestion_nodes[1]["id"] == "openai-embeddings-123"
 
-    assert ingestion_nodes[2]["data"]["type"] == "SplitTextComponent"
+    assert ingestion_nodes[2]["data"]["type"] == "SplitText"
     assert ingestion_nodes[2]["id"] == "text-splitter-123"
 
-    assert ingestion_nodes[3]["data"]["type"] == "AstraVectorStoreComponent"
+    assert ingestion_nodes[3]["data"]["type"] == "AstraDB"
     assert ingestion_nodes[3]["id"] == "vector-store-123"
 
     # Check edges in the ingestion graph
@@ -178,19 +178,19 @@ def test_vector_store_rag_dump_components_and_edges(ingestion_graph, rag_graph):
     assert rag_nodes[1]["data"]["type"] == "ChatOutput"
     assert rag_nodes[1]["id"] == "chatoutput-123"
 
-    assert rag_nodes[2]["data"]["type"] == "OpenAIModelComponent"
+    assert rag_nodes[2]["data"]["type"] == "OpenAIModel"
     assert rag_nodes[2]["id"] == "openai-123"
 
-    assert rag_nodes[3]["data"]["type"] == "OpenAIEmbeddingsComponent"
+    assert rag_nodes[3]["data"]["type"] == "OpenAIEmbeddings"
     assert rag_nodes[3]["id"] == "openai-embeddings-124"
 
-    assert rag_nodes[4]["data"]["type"] == "ParseDataComponent"
+    assert rag_nodes[4]["data"]["type"] == "ParseData"
     assert rag_nodes[4]["id"] == "parse-data-123"
 
-    assert rag_nodes[5]["data"]["type"] == "PromptComponent"
+    assert rag_nodes[5]["data"]["type"] == "Prompt"
     assert rag_nodes[5]["id"] == "prompt-123"
 
-    assert rag_nodes[6]["data"]["type"] == "AstraVectorStoreComponent"
+    assert rag_nodes[6]["data"]["type"] == "AstraDB"
     assert rag_nodes[6]["id"] == "rag-vector-store-123"
 
     # Check edges in the RAG graph
