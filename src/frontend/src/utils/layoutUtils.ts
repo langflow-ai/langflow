@@ -7,9 +7,14 @@ import { Edge } from "reactflow";
 const layoutOptions = {
   "elk.algorithm": "layered",
   "elk.direction": "RIGHT",
+  "elk.components.direction": "DOWN",
   "elk.layered.spacing.edgeNodeBetweenLayers": "40",
   "elk.spacing.nodeNode": "40",
-  "elk.layered.nodePlacement.strategy": "SIMPLE",
+  "elk.layered.nodePlacement.strategy": "NETWORK_SIMPLEX",
+  "elk.separateConnectedComponents": true,
+  "elk.layered.crossingMinimization.strategy": "LAYER_SWEEP",
+  "elk.spacing.componentComponent": `${NODE_WIDTH}`,
+  "elk.layered.considerModelOrder.strategy": "NODES_AND_EDGES",
 };
 const elk = new ELK();
 
@@ -54,7 +59,7 @@ export const getLayoutedNodes = async (nodes: NodeType[], edges: Edge[]) => {
       targets: [e.targetHandle || e.target],
     })),
   };
-
+  console.log("graph", graph);
   const layoutedGraph = await elk.layout(graph);
 
   const layoutedNodes = nodes.map((node) => {
@@ -71,6 +76,6 @@ export const getLayoutedNodes = async (nodes: NodeType[], edges: Edge[]) => {
       type: "genericNode",
     };
   });
-
+  console.log("layoutedNodes", layoutedNodes);
   return layoutedNodes;
 };
