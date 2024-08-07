@@ -87,6 +87,13 @@ class Edge:
         self.target_param = state["target_param"]
         self.source_handle = state.get("source_handle")
         self.target_handle = state.get("target_handle")
+        self._source_handle = state.get("_source_handle")
+        self._target_handle = state.get("_target_handle")
+        self._data = state.get("_data")
+        self.valid_handles = state.get("valid_handles")
+        self.source_types = state.get("source_types")
+        self.target_reqs = state.get("target_reqs")
+        self.matched_type = state.get("matched_type")
 
     def validate_edge(self, source, target) -> None:
         # If the self.source_handle has base_classes, then we are using the legacy
