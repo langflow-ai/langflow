@@ -168,10 +168,27 @@ class Graph:
             for _component in component._components:
                 self.add_component(_component._id, _component)
 
+    def _find_entry(self):
+        # Find a vertex with a "ChatInput" component, overriding a "TextInput" component
+        found_entry = None
+        for vertex_id in self._is_input_vertices:
+            if "ChatInput" in vertex_id:
+                found_entry = vertex_id
+                break
+            elif found_entry is None and "TextInput" in vertex_id:
+                found_entry = vertex_id
+        vertex = self.get_vertex(found_entry) if found_entry else None
+        return vertex.get_component_instance() if vertex else None
+
     @property
     def entry(self):
         if self._entry is None:
-            raise ValueError("Graph has no entry component")
+            if entry := self._find_entry():
+                self._entry = entry
+            else:
+                raise ValueError(
+                    "Graph has no entry component or couldn't find a suitable entry component (e.g. ChatInput)"
+                )
         return self._entry
 
     @property
