@@ -24,7 +24,7 @@ class AIMLModelComponent(LCModelComponent):
     description = "Generates text using AIML LLMs."
     icon = "AIML"
     name = "AIMLModel"
-    documentation = "https://docs.aimlapi.com/api-reference/examples"
+    documentation = "https://docs.aimlapi.com/api-reference"
 
     inputs = LCModelComponent._base_inputs + [
         IntInput(
