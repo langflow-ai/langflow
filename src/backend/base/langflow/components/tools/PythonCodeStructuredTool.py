@@ -199,11 +199,15 @@ class PythonCodeStructuredTool(Component):
             for field_annotation in field_annotations:
                 if field_annotation not in self.AVAILABLE_TYPES:
                     raise Exception(f"Unsupported type: {field_name} - {field_annotation}")
-                if not is_annotated:
-                    schema_annotations = self.AVAILABLE_TYPES[field_annotation]["annotation"]
+                available_type = self.AVAILABLE_TYPES[field_annotation]
+
+                if not is_annotated and "annotation" in available_type:
+                    schema_annotations = available_type["annotation"]  # type: ignore
+
                     is_annotated = True
-                else:
-                    schema_annotations |= self.AVAILABLE_TYPES[field_annotation]["annotation"]
+                elif is_annotated and "annotation" in available_type:
+                    schema_annotations |= available_type["annotation"]  # type: ignore
+
             schema_fields[field_name] = (
                 schema_annotations,
                 Field(default=func_arg["default"] if "default" in func_arg else Undefined, description=field_value),
