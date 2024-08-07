@@ -13,7 +13,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
       <div className="h-full w-full">
         <textarea
           className={cn(
-            "nopan nodelete nodrag noflow textarea-primary",
+            "nopan nodelete nodrag noflow textarea-primary nowheel",
             className,
             password ? "password" : "",
           )}

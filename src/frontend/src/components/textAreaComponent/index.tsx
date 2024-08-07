@@ -1,13 +1,12 @@
 import { classNames } from "@/utils/utils";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { EDIT_TEXT_MODAL_TITLE } from "../../constants/constants";
 import { TypeModal } from "../../constants/enums";
 import GenericModal from "../../modals/genericModal";
-import { Case } from "../../shared/components/caseComponent";
 import { TextAreaComponentType } from "../../types/components";
 import IconComponent from "../genericIconComponent";
 import { Button } from "../ui/button";
-import { Input } from "../ui/input";
+import { Textarea } from "../ui/textarea";
 
 export default function TextAreaComponent({
   value,
@@ -28,7 +27,7 @@ export default function TextAreaComponent({
   return (
     <div className={"flex w-full items-center" + (disabled ? "" : "")}>
       <div className="flex w-full items-center gap-3" data-testid={"div-" + id}>
-        <Input
+        <Textarea
           id={id}
           data-testid={id}
           value={value}
@@ -40,7 +39,9 @@ export default function TextAreaComponent({
             editNode ? "input-edit-node" : "",
             password != undefined ? "pr-8" : "",
             "w-full",
+            "resize-none",
           )}
+          rows={Math.min(3, value.split("\n").length)}
           placeholder={"Type something..."}
           onChange={(event) => {
             onChange(event.target.value);
