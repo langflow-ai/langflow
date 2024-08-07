@@ -40,12 +40,13 @@ def generate_script(*, instances, entry=None, exit=None):
         if call_string:
             call_strings.append(call_string)
 
-    import_code = "\n".join(sorted(import_statements))
-    instantiation_code = "\n".join(instantiation_strings)
-    call_code = "\n".join(call_strings)
     if entry is None or exit is None:
         graph_instantiation_code = ""
     else:
         graph_instantiation_code = generate_graph_instantiation_string(entry, exit)
-
+        # Add Graph import statement to the beginning of the script
+        import_statements.add("from langflow.graph.graph.base import Graph")
+    import_code = "\n".join(sorted(import_statements))
+    instantiation_code = "\n".join(instantiation_strings)
+    call_code = "\n".join(call_strings)
     return f"{import_code}\n\n{instantiation_code}\n\n{call_code}\n\n{graph_instantiation_code}".strip()
