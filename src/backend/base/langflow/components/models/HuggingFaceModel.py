@@ -5,13 +5,7 @@ from langchain_community.llms.huggingface_endpoint import HuggingFaceEndpoint
 
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
-from langflow.io import (
-    DictInput,
-    DropdownInput,
-    SecretStrInput,
-    StrInput,
-    IntInput
-)
+from langflow.io import DictInput, DropdownInput, SecretStrInput, StrInput, IntInput
 
 
 class HuggingFaceEndpointsComponent(LCModelComponent):
