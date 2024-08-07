@@ -803,6 +803,14 @@ class Graph:
             "vertices_to_run": self.vertices_to_run,
             "stop_vertex": self.stop_vertex,
             "vertex_map": self.vertex_map,
+            "_run_queue": self._run_queue,
+            "_first_layer": self._first_layer,
+            "_vertices": self._vertices,
+            "_edges": self._edges,
+            "_is_input_vertices": self._is_input_vertices,
+            "_is_output_vertices": self._is_output_vertices,
+            "_has_session_id_vertices": self._has_session_id_vertices,
+            "_sorted_vertices_layers": self._sorted_vertices_layers,
         }
 
     def __setstate__(self, state):
