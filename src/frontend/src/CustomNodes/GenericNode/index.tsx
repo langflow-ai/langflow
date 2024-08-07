@@ -43,7 +43,8 @@ import useUpdateValidationStatus from "../hooks/use-update-validation-status";
 import useValidationStatusString from "../hooks/use-validation-status-string";
 import getFieldTitle from "../utils/get-field-title";
 import sortFields from "../utils/sort-fields";
-import ParameterComponent from "./components/parameterComponent";
+import NodeInputField from "./components/NodeInputField";
+import NodeOutputField from "./components/NodeOutputfield";
 
 export default function GenericNode({
   data,
@@ -302,8 +303,9 @@ export default function GenericNode({
 
   const renderOutputParameter = (output: OutputFieldType, idx: number) => {
     return (
-      <ParameterComponent
+      <NodeOutputField
         index={idx}
+        selected={selected}
         key={
           scapedJSONStringfy({
             output_types: output.types,
@@ -324,7 +326,6 @@ export default function GenericNode({
           name: output.name,
         }}
         type={output.types.join("|")}
-        left={false}
         showNode={showNode}
         outputName={output.name}
       />
@@ -494,9 +495,7 @@ export default function GenericNode({
                       (templateField: string, idx) =>
                         data.node!.template[templateField]?.show &&
                         !data.node!.template[templateField]?.advanced && (
-                          <ParameterComponent
-                            selected={selected}
-                            index={idx}
+                          <NodeInputField
                             key={scapedJSONStringfy({
                               inputTypes:
                                 data.node!.template[templateField].input_types,
@@ -533,7 +532,6 @@ export default function GenericNode({
                               id: data.id,
                               fieldName: templateField,
                             }}
-                            left={true}
                             type={data.node?.template[templateField].type}
                             optionalHandle={
                               data.node?.template[templateField].input_types
@@ -710,9 +708,7 @@ export default function GenericNode({
                   <div key={idx}>
                     {data.node!.template[templateField]?.show &&
                     !data.node!.template[templateField]?.advanced ? (
-                      <ParameterComponent
-                        selected={selected}
-                        index={idx}
+                      <NodeInputField
                         key={scapedJSONStringfy({
                           inputTypes:
                             data.node!.template[templateField].input_types,
@@ -746,7 +742,6 @@ export default function GenericNode({
                           id: data.id,
                           fieldName: templateField,
                         }}
-                        left={true}
                         type={data.node?.template[templateField].type}
                         optionalHandle={
                           data.node?.template[templateField].input_types
