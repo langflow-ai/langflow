@@ -48,8 +48,12 @@ class RunFlowComponent(Component):
     ]
 
     async def generate_results(self) -> List[Data]:
+        if "flow_name" not in self._attributes or not self._attributes["flow_name"]:
+            raise ValueError("Flow name is required")
+        flow_name = self._attributes["flow_name"]
+
         results: List[Optional[RunOutputs]] = await self.run_flow(
-            inputs={"input_value": self.input_value}, flow_name=self.flow_name, tweaks=self.tweaks
+            inputs={"input_value": self.input_value}, flow_name=flow_name, tweaks=self.tweaks
         )
         if isinstance(results, list):
             data = []

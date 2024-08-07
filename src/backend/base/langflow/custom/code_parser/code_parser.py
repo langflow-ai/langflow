@@ -384,7 +384,7 @@ class CodeParser:
 
     def execute_and_inspect_classes(self, code: str):
         custom_component_class = eval_custom_component_code(code)
-        custom_component = custom_component_class()
+        custom_component = custom_component_class(_code=code)
         dunder_class = custom_component.__class__
         # Get the base classes at two levels of inheritance
         bases = []

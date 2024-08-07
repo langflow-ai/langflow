@@ -1,13 +1,13 @@
+from langchain.memory import ConversationBufferMemory
+
 from langflow.custom import Component
+from langflow.field_typing import BaseChatMemory
 from langflow.helpers.data import data_to_text
 from langflow.inputs import HandleInput
 from langflow.io import DropdownInput, IntInput, MessageTextInput, MultilineInput, Output
-from langflow.memory import get_messages, LCBuiltinChatMemory
+from langflow.memory import LCBuiltinChatMemory, get_messages
 from langflow.schema import Data
 from langflow.schema.message import Message
-from langflow.field_typing import BaseChatMemory
-from langchain.memory import ConversationBufferMemory
-
 from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
 
 
@@ -118,5 +118,5 @@ class MemoryComponent(Component):
         if self.memory:
             chat_memory = self.memory
         else:
-            chat_memory = LCBuiltinChatMemory(flow_id=self.graph.flow_id, session_id=self.session_id)
+            chat_memory = LCBuiltinChatMemory(flow_id=self.flow_id, session_id=self.session_id)
         return ConversationBufferMemory(chat_memory=chat_memory)

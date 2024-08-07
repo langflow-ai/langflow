@@ -6,6 +6,10 @@ export type unselectAllNodesType = {
   data: Node[];
 };
 
+export type addEscapedHandleIdsToEdgesType = {
+  edges: Edge[];
+};
+
 export type updateEdgesHandleIdsType = {
   nodes: NodeType[];
   edges: Edge[];
