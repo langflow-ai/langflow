@@ -206,7 +206,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       edges: applyEdgeChanges(changes, get().edges),
     });
   },
-  setNodes: (change, skipSave = false) => {
+  setNodes: (change) => {
     let newChange = typeof change === "function" ? change(get().nodes) : change;
     let newEdges = cleanEdges(newChange, get().edges);
     const { inputs, outputs } = getInputsAndOutputs(newChange);
@@ -219,31 +219,13 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       outputs,
       hasIO: inputs.length > 0 || outputs.length > 0,
     });
-
-    const flowsManager = useFlowsManagerStore.getState();
-    if (!get().isBuilding && !skipSave && get().onFlowPage) {
-      flowsManager.autoSaveCurrentFlow(
-        newChange,
-        newEdges,
-        get().reactFlowInstance?.getViewport() ?? { x: 0, y: 0, zoom: 1 },
-      );
-    }
   },
-  setEdges: (change, skipSave = false) => {
+  setEdges: (change) => {
     let newChange = typeof change === "function" ? change(get().edges) : change;
     set({
       edges: newChange,
       flowState: undefined,
     });
-
-    const flowsManager = useFlowsManagerStore.getState();
-    if (!get().isBuilding && !skipSave && get().onFlowPage) {
-      flowsManager.autoSaveCurrentFlow(
-        get().nodes,
-        newChange,
-        get().reactFlowInstance?.getViewport() ?? { x: 0, y: 0, zoom: 1 },
-      );
-    }
   },
   setNode: (
     id: string,
