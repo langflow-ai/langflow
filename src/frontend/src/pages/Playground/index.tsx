@@ -13,7 +13,6 @@ export default function PlaygroundPage() {
   const setCurrentFlowId = useFlowsManagerStore(
     (state) => state.setCurrentFlowId,
   );
-  const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
   const setNodes = useFlowStore((state) => state.setNodes);
   const setEdges = useFlowStore((state) => state.setEdges);
@@ -37,17 +36,16 @@ export default function PlaygroundPage() {
       });
     }
   }, [id]);
-
   useEffect(() => {
     if (currentFlow) {
-      setNodes(currentFlow?.data?.nodes ?? [], true);
-      setEdges(currentFlow?.data?.edges ?? [], true);
+      setNodes(currentFlow?.data?.nodes ?? []);
+      setEdges(currentFlow?.data?.edges ?? []);
       cleanFlowPool();
       setLoading(false);
     }
     return () => {
-      setNodes([], true);
-      setEdges([], true);
+      setNodes([]);
+      setEdges([]);
       cleanFlowPool();
     };
   }, [currentFlow]);

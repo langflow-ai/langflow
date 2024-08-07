@@ -6,18 +6,18 @@ const usePlaygroundEffect = (
   playground: boolean,
   openPlayground: boolean,
   currentFlow: FlowType | undefined,
-  setNodes: (value: any, value2: boolean) => void,
-  setEdges: (value: any, value2: boolean) => void,
+  setNodes: (value: any) => void,
+  setEdges: (value: any) => void,
   cleanFlowPool: () => void,
 ) => {
   useEffect(() => {
     if (currentFlowId && playground) {
       if (openPlayground) {
-        setNodes(currentFlow?.data?.nodes ?? [], true);
-        setEdges(currentFlow?.data?.edges ?? [], true);
+        setNodes(currentFlow?.data?.nodes ?? []);
+        setEdges(currentFlow?.data?.edges ?? []);
       } else {
-        setNodes([], true);
-        setEdges([], true);
+        setNodes([]);
+        setEdges([]);
       }
       cleanFlowPool();
     }
