@@ -34,7 +34,7 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
         ),
         SecretStrInput(name="huggingfacehub_api_token", display_name="API token", password=True),
         DictInput(name="model_kwargs", display_name="Model Keyword Arguments", advanced=True),
-        IntInput(name="retry_attempts", display_name="Retry Attempts"),
+        IntInput(name="retry_attempts", display_name="Retry Attempts", value=1),
     ]
 
     def create_huggingface_endpoint(self, endpoint_url, task, huggingfacehub_api_token, model_kwargs):
