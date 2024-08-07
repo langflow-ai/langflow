@@ -48,6 +48,7 @@ class Graph:
         end: Optional["Component"] = None,
         flow_id: Optional[str] = None,
         flow_name: Optional[str] = None,
+        description: Optional[str] = None,
         user_id: Optional[str] = None,
         log_config: Optional[LogConfig] = None,
     ) -> None:
@@ -70,6 +71,7 @@ class Graph:
         self._updates = 0
         self.flow_id = flow_id
         self.flow_name = flow_name
+        self.description = description
         self.user_id = user_id
         self._is_input_vertices: List[str] = []
         self._is_output_vertices: List[str] = []
@@ -168,6 +170,8 @@ class Graph:
             graph_dict["name"] = name
         if description:
             graph_dict["description"] = description
+        elif description is None and self.description:
+            graph_dict["description"] = self.description
         if endpoint_name:
             graph_dict["endpoint_name"] = endpoint_name
         return graph_dict
