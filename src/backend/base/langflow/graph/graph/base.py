@@ -1482,6 +1482,7 @@ class Graph:
         return vertex_instance
 
     def prepare(self, stop_component_id: Optional[str] = None, start_component_id: Optional[str] = None):
+        self.initialize()
         if stop_component_id and start_component_id:
             raise ValueError("You can only provide one of stop_component_id or start_component_id")
         self.validate_stream()
