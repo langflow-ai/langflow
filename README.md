@@ -28,17 +28,16 @@ https://github.com/user-attachments/assets/a1a36011-6169-4804-87ad-cfd4c5a79872
 </p>
 
 # Core features 
-1. **Open-source framework:** Python-based and agnostic to any model, API, data source, or database.
-2. **Visual canvas IDE:** Intuitive drag-and-drop interface for building and running workflows.
-3. **Playground:** Immediately test and iterate workflows with step-by-step control.
-4. **Conditional workflows:** Build complex, Turing-complete workflows for powerful AI and RAG applications
-5. **Multi-Agent capabilities:** Create AIs with multiple agents using different models working together on tasks.
-6. **Cloud service:** Build, test, deploy and monitor AI applications in the cloud.
-7. **Customizable Components:**  Control component execution with custom Python code.
-8. **Export JSON or API Deployment:** Export as JSON or as a JavaScript or Python API  back-end service.
-9. **Observability:** Real time traceability with LangSmith integration by adding LangChain API key.
-10. **Enterprise-ready:** Deploy on DataStax cloud service to support enterprise security and scale
-11. **Ecosystem Integrations:** Prebuilt, reusable components to connect to any model, API, data source or database.
+1. Python-based and agnostic to models, APIs, data sources, or databases.
+2. Visual IDE for drag-and-drop building and testing of workflows.
+3. Playground to immediately test and iterate workflows with step-by-step control.
+4. Multi-agent orchestration and conversation management and retrieval.
+5. Free cloud service - get started  in minutes with no setup.
+6. Publish workflows as back-end APIs or export as a Python application.
+7. Real time observability with LangSmith, LangFuse, or LangWatch integration.
+8. Support enterprise security and scale with free DataStax Langflow cloud service.  
+9. Prebuilt ecosystem integrations to any model, API or database.
+
 
 ![Integrations](https://github.com/user-attachments/assets/df4a6714-60de-4a8b-aff0-982c5aa467e3)
 
@@ -51,68 +50,13 @@ Star Langflow on GitHub to be instantly notified of new releases.
 # 📦 Quick Start
 
 - **Install Langflow with pip** (Python version 3.10 or greater):
-
-// python -m pip install langflow -U
-
-- **Cloud:** DataStax Langflow is a complete, hosted Langflow environment with zero setup. [Sign up for a free account.](http://langflow.datastax.com) 
-- **Self-managed:** Run Langflow in your environment. [Install Langflow](https://docs.langflow.org/getting-started-installation) to run a local Langflow server, and then use the [Quickstart](https://docs.langflow.org/getting-started-quickstart) guide to create and execute a flow.
-- **Hugging Face:** [Clone the space using this link](https://huggingface.co/spaces/Langflow/Langflow?duplicate=true) to create your own Langflow workspace in minutes.
-
-# 🎨 Create Flows
-
-Creating flows with Langflow is easy. Simply drag components from the sidebar onto the workspace and connect them to start building your application.
-
-Explore by editing prompt parameters, grouping components into a single high-level component, and building your own Custom Components.
-
-Once you’re done, you can export your flow as a JSON file.
-
-Load the flow with:
-
-```python
-from langflow.load import run_flow_from_json
-
-results = run_flow_from_json("path/to/flow.json", input_value="Hello, World!")
-```
-
-# Deploy
-
-## Deploy on Google Cloud Platform
-
-Follow our step-by-step guide to deploy Langflow on Google Cloud Platform (GCP) using Google Cloud Shell. The guide is available in the [**Langflow in Google Cloud Platform**](./docs/docs/Deployment/deployment-gcp.md) document.
-
-Alternatively, click the **"Open in Cloud Shell"** button below to launch Google Cloud Shell, clone the Langflow repository, and start an **interactive tutorial** that will guide you through the process of setting up the necessary resources and deploying Langflow on your GCP project.
-
-[![Open in Cloud Shell](https://gstatic.com/cloudssh/images/open-btn.svg)](https://console.cloud.google.com/cloudshell/open?git_repo=https://github.com/langflow-ai/langflow&working_dir=scripts/gcp&shellonly=true&tutorial=walkthroughtutorial_spot.md)
-
-## Deploy on Railway
-
-Use this template to deploy Langflow 1.0 on Railway:
-
-[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/JMXEWp?referralCode=MnPSdg)
-
-## Deploy on Render
-
-<a href="https://render.com/deploy?repo=https://github.com/langflow-ai/langflow/tree/main">
-<img src="https://render.com/images/deploy-to-render-button.svg" alt="Deploy to Render" />
-</a>
-
-## Deploy on Kubernetes
-
-Follow our step-by-step guide to deploy [Langflow on Kubernetes](./docs/docs/Deployment/deployment-kubernetes.md).
-
-# 🖥️ Command Line Interface (CLI)
-
-Langflow provides a command-line interface (CLI) for easy management and configuration.
-
-## Usage
-
-You can run the Langflow using the following command:
-
 ```shell
-langflow run [OPTIONS]
+python -m pip install langflow -U
 ```
 
-For more details on the CLI options, [follow our documentation.](https://docs.langflow.org/configuration-cli)
+- **Cloud:** DataStax Langflow is a hosted environment with zero setup. [Sign up for a free account.](http://langflow.datastax.com) 
+- **Self-managed:** Run Langflow in your environment. [Install Langflow](https://docs.langflow.org/getting-started-installation) to run a local Langflow server, and then use the [Quickstart](https://docs.langflow.org/getting-started-quickstart) guide to create and execute a flow.
+- **Hugging Face:** [Clone the space using this link](https://huggingface.co/spaces/Langflow/Langflow?duplicate=true) to create a Langflow workspace.
 
 # 👋 Contribute
 
