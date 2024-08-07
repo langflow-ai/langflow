@@ -87,6 +87,7 @@ export default function ComponentsComponent({
     setFolderUrl(folderId ?? "");
     setSelectedFlowsComponentsCards([]);
     handleSelectAll(false);
+    setShouldSelectAll(true);
     getFolderById(folderId ? folderId : myCollectionId);
   }, [location]);
 
