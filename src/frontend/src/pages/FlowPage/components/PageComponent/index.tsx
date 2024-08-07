@@ -161,7 +161,11 @@ export default function Page({
 
   useEffect(() => {
     if (reactFlowInstance && currentFlowId) {
-      reactFlowInstance!.setViewport(viewport);
+      if (viewport.x == 0 && viewport.y == 0) {
+        reactFlowInstance.fitView();
+      } else {
+        reactFlowInstance.setViewport(viewport);
+      }
     }
   }, [currentFlowId, reactFlowInstance]);
 
