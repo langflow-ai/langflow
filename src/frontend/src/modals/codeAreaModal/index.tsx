@@ -50,7 +50,7 @@ export default function CodeAreaModal({
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const [openConfirmation, setOpenConfirmation] = useState(false);
-  const codeRef = useRef<HTMLInputElement|null>(null);
+  const codeRef = useRef<ReactAce|null>(null);
   const [error, setError] = useState<{
     detail: CodeErrorDataTypeAPI;
   } | null>(null);
@@ -150,11 +150,14 @@ export default function CodeAreaModal({
   return (
     <BaseModal onEscapeKeyDown={e=>{
       e.preventDefault();
-      if(code!==value){
-        setOpenConfirmation(true);
+      if(code===value){
+        setOpen(false);
       }
       else{
-        setOpen(false);
+        if(!(codeRef.current?.editor.completer.popup && codeRef.current?.editor.completer.popup.isOpen))
+          {
+            setOpenConfirmation(true);
+          }
       }
     }} open={open} setOpen={setOpen}>
       <BaseModal.Trigger>{children}</BaseModal.Trigger>
@@ -168,7 +171,6 @@ export default function CodeAreaModal({
       </BaseModal.Header>
       <BaseModal.Content>
         <Input
-        ref={codeRef}
           value={code}
           readOnly
           className="absolute left-[500%] top-[500%]"
@@ -177,6 +179,7 @@ export default function CodeAreaModal({
         <div className="flex h-full w-full flex-col transition-all">
           <div className="h-full w-full">
             <AceEditor
+            ref={codeRef}
               readOnly={readonly}
               value={code}
               mode="python"
