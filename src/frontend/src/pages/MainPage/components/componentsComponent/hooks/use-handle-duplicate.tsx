@@ -1,16 +1,8 @@
+import useAddFlow from "@/hooks/flows/use-add-flow";
 import { useCallback } from "react";
-import { XYPosition } from "reactflow";
-import { FlowType } from "../../../../../types/flow";
 
 const useDuplicateFlows = (
   selectedFlowsComponentsCards: string[],
-  addFlow: (
-    newProject: boolean,
-    flow?: FlowType,
-    override?: boolean,
-    position?: XYPosition,
-    fromDragAndDrop?: boolean,
-  ) => Promise<string | undefined>,
   allFlows: any[],
   resetFilter: () => void,
   getFoldersApi: (
@@ -27,13 +19,11 @@ const useDuplicateFlows = (
   handleSelectAll: (select: boolean) => void,
   cardTypes: string,
 ) => {
+  const addFlow = useAddFlow();
   const handleDuplicate = useCallback(() => {
     Promise.all(
       selectedFlowsComponentsCards.map((selectedFlow) =>
-        addFlow(
-          true,
-          allFlows.find((flow) => flow.id === selectedFlow),
-        ),
+        addFlow({ flow: allFlows.find((flow) => flow.id === selectedFlow) }),
       ),
     ).then(() => {
       resetFilter();
