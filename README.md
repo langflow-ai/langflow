@@ -32,9 +32,7 @@
 
 <p align="center">
 
-
-https://github.com/user-attachments/assets/ff288992-fe55-4031-a261-8eef25368416
-
+https://github.com/user-attachments/assets/a1a36011-6169-4804-87ad-cfd4c5a79872
 
 </p>
 
