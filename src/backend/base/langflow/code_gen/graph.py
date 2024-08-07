@@ -7,5 +7,5 @@ if TYPE_CHECKING:
 
 
 def generate_script_from_graph(graph: "Graph"):
-    script = generate_script(entry=graph._entry, exit=graph._exit, instances=graph.sort_components())
+    script = generate_script(entry=graph.entry, exit=graph.exit, instances=graph.sort_components())
     return script
