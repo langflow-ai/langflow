@@ -614,18 +614,15 @@ export default function GenericNode({
 
         {showNode && (
           <div
-            className={cn(
-              showNode
-                ? data.node?.description === "" && !nameEditable
+            className={cn(data.node?.description === "" && !nameEditable
                   ? "pb-8"
-                  : "pb-8 pt-5"
-                : "",
+                  : "pb-8 pt-5",
               "relative",
             )}
           >
             {/* increase height!! */}
             <div className="generic-node-desc">
-              {showNode && nameEditable && inputDescription ? (
+              {nameEditable && inputDescription ? (
                 <Textarea
                   className="nowheel min-h-40"
                   autoFocus
