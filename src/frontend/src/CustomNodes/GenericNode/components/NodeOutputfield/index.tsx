@@ -81,10 +81,6 @@ export default function NodeOutputField({
   );
   const errorOutput = logTypeIsError(flowPoolNode?.data, internalOutputName);
 
-  if (outputProxy) {
-    console.log(logHasMessage(flowPoolNode?.data, internalOutputName));
-  }
-
   const preventDefault = true;
 
   function handleOutputWShortcut() {
@@ -101,23 +97,6 @@ export default function NodeOutputField({
   let disabledOutput =
     edges.some((edge) => edge.sourceHandle === scapedJSONStringfy(id)) ?? false;
 
-  function renderTitle() {
-    return (
-      <OutputComponent
-        proxy={outputProxy}
-        idx={index}
-        types={type?.split("|") ?? []}
-        selected={
-          data.node?.outputs![index].selected ??
-          data.node?.outputs![index].types[0] ??
-          title
-        }
-        nodeId={data.id}
-        frozen={data.node?.frozen}
-        name={title ?? type}
-      />
-    );
-  }
   const handleUpdateOutputHide = (value?: boolean) => {
     setNode(data.id, (oldNode) => {
       let newNode = cloneDeep(oldNode);
@@ -190,7 +169,19 @@ export default function NodeOutputField({
 
           <div className="flex gap-2">
             <span className={data.node?.frozen ? "text-ice" : ""}>
-              {renderTitle()}
+              <OutputComponent
+                proxy={outputProxy}
+                idx={index}
+                types={type?.split("|") ?? []}
+                selected={
+                  data.node?.outputs![index].selected ??
+                  data.node?.outputs![index].types[0] ??
+                  title
+                }
+                nodeId={data.id}
+                frozen={data.node?.frozen}
+                name={title ?? type}
+              />
             </span>
             <ShadTooltip
               content={
