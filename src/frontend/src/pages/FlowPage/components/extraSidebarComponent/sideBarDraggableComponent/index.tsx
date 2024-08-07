@@ -1,3 +1,4 @@
+import useDeleteFlow from "@/hooks/flows/use-delete-flow";
 import { DragEventHandler, forwardRef, useRef, useState } from "react";
 import IconComponent from "../../../../../components/genericIconComponent";
 import {
@@ -40,9 +41,8 @@ export const SidebarDraggableComponent = forwardRef(
     ref,
   ) => {
     const [open, setOpen] = useState(false);
-    const deleteComponent = useFlowsManagerStore(
-      (state) => state.deleteComponent,
-    );
+    const deleteFlow = useDeleteFlow();
+    const flows = useFlowsManagerStore((state) => state.flows);
 
     const version = useDarkStore((state) => state.version);
     const [cursorPos, setCursorPos] = useState({ x: 0, y: 0 });
@@ -72,7 +72,8 @@ export const SidebarDraggableComponent = forwardRef(
           );
           break;
         case "delete":
-          deleteComponent(display_name);
+          const flowId = flows.find((f) => f.name === display_name);
+          if (flowId) deleteFlow({ id: flowId.id });
           break;
       }
     }

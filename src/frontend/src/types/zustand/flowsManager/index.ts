@@ -30,8 +30,6 @@ export type FlowsManagerStoreType = {
     edges: Edge[],
     viewport: Viewport,
   ) => void;
-  deleteComponent: (key: string) => Promise<void>;
-  removeFlow: (id: string | string[]) => Promise<void>;
   undo: () => void;
   redo: () => void;
   takeSnapshot: () => void;

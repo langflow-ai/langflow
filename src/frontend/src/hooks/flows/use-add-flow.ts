@@ -14,6 +14,7 @@ import {
   updateGroupRecursion,
 } from "@/utils/reactflowUtils";
 import { cloneDeep } from "lodash";
+import useDeleteFlow from "./use-delete-flow";
 
 const useAddFlow = () => {
   const unavaliableFields = useGlobalVariablesStore(
@@ -24,9 +25,7 @@ const useAddFlow = () => {
   );
   const flows = useFlowsManagerStore((state) => state.flows);
   const setFlows = useFlowsManagerStore((state) => state.setFlows);
-  const deleteComponent = useFlowsManagerStore(
-    (state) => state.deleteComponent,
-  );
+  const deleteFlow = useDeleteFlow();
   const setIsLoading = useFlowsManagerStore((state) => state.setIsLoading);
 
   const { mutate: postAddFlow } = usePostAddFlow();
@@ -35,7 +34,7 @@ const useAddFlow = () => {
     return new Promise(async (resolve, reject) => {
       const flow = cloneDeep(params?.flow) ?? undefined;
       let flowData = flow
-        ? processDataFromFlow(flow)
+        ? await processDataFromFlow(flow)
         : { nodes: [], edges: [], viewport: { zoom: 1, x: 0, y: 0 } };
       flowData?.nodes.forEach((node) => {
         updateGroupRecursion(
@@ -50,7 +49,10 @@ const useAddFlow = () => {
       const my_collection_id = useFolderStore.getState().myCollectionId;
 
       if (params?.override && flow) {
-        await deleteComponent(flow.name);
+        const flowId = flows.find((f) => f.name === flow.name);
+        if (flowId) {
+          await deleteFlow({ id: flowId.id });
+        }
       }
       const newFlow = createNewFlow(
         flowData!,

@@ -21,13 +21,23 @@ async def test_graph_not_prepared():
     graph = Graph()
     graph.add_component("chat_input", chat_input)
     graph.add_component("chat_output", chat_output)
-    graph.add_component_edge("chat_input", (chat_input.outputs[0].name, chat_input.inputs[0].name), "chat_output")
     with pytest.raises(ValueError):
         await graph.astep()
 
 
 @pytest.mark.asyncio
 async def test_graph():
+    chat_input = ChatInput()
+    chat_output = ChatOutput()
+    graph = Graph()
+    graph.add_component("chat_input", chat_input)
+    graph.add_component("chat_output", chat_output)
+    with pytest.raises(ValueError, match="Graph has vertices but no edges"):
+        graph.prepare()
+
+
+@pytest.mark.asyncio
+async def test_graph_with_edge():
     chat_input = ChatInput()
     chat_output = ChatOutput()
     graph = Graph()
