@@ -252,14 +252,26 @@ class PythonCodeStructuredTool(Component):
                 continue
             func = {"name": node.name, "args": []}
             for arg in node.args.args:
-                func_arg: dict[str, list[str] | None] = {"name": arg.arg, "annotations": None}
+                func_arg: dict[str, list[str] | str | None] = {"name": arg.arg, "annotations": None}
 
                 for default in node.args.defaults:
                     if (
-                        (default.lineno and arg.lineno > default.lineno)
-                        or (default.col_offset and arg.col_offset > default.col_offset)
-                        or (default.end_lineno and arg.end_lineno < default.end_lineno)
-                        or (default.end_col_offset and arg.end_col_offset < default.end_col_offset)
+                        (arg.lineno is not None and default.lineno is not None and arg.lineno > default.lineno)
+                        or (
+                            arg.col_offset is not None
+                            and default.col_offset is not None
+                            and arg.col_offset > default.col_offset
+                        )
+                        or (
+                            arg.end_lineno is not None
+                            and default.end_lineno is not None
+                            and arg.end_lineno < default.end_lineno
+                        )
+                        or (
+                            arg.end_col_offset is not None
+                            and default.end_col_offset is not None
+                            and arg.end_col_offset < default.end_col_offset
+                        )
                     ):
                         continue
 
