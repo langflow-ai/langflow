@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, List, Union
 
 import httpx
 from langchain_community.chat_models import ChatOllama
@@ -14,24 +14,19 @@ class ChatOllamaComponent(LCModelComponent):
     icon = "Ollama"
     name = "OllamaModel"
 
-    def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None):
+    def update_build_config(self, build_config: dict, field_value: Any, field_name: Union[str, None] = None) -> dict:
+        """
+        Update the build configuration based on the provided field value and name.
+        """
         if field_name == "mirostat":
-            if field_value == "Disabled":
-                build_config["mirostat_eta"]["advanced"] = True
-                build_config["mirostat_tau"]["advanced"] = True
-                build_config["mirostat_eta"]["value"] = None
-                build_config["mirostat_tau"]["value"] = None
-
+            build_config["mirostat_eta"]["advanced"] = field_value != "Disabled"
+            build_config["mirostat_tau"]["advanced"] = field_value != "Disabled"
+            if field_value == "Mirostat 2.0":
+                build_config["mirostat_eta"]["value"] = 0.2
+                build_config["mirostat_tau"]["value"] = 10
             else:
-                build_config["mirostat_eta"]["advanced"] = False
-                build_config["mirostat_tau"]["advanced"] = False
-
-                if field_value == "Mirostat 2.0":
-                    build_config["mirostat_eta"]["value"] = 0.2
-                    build_config["mirostat_tau"]["value"] = 10
-                else:
-                    build_config["mirostat_eta"]["value"] = 0.1
-                    build_config["mirostat_tau"]["value"] = 5
+                build_config["mirostat_eta"]["value"] = 0.1
+                build_config["mirostat_tau"]["value"] = 5
 
         if field_name == "model_name":
             base_url_dict = build_config.get("base_url", {})
@@ -41,7 +36,7 @@ class ChatOllamaComponent(LCModelComponent):
                 base_url_value = self.variables(base_url_value)
             elif not base_url_value:
                 base_url_value = "http://localhost:11434"
-            build_config["model_name"]["options"] = self.get_model(base_url_value + "/api/tags")
+            build_config["model_name"]["options"] = self.get_model(f"{base_url_value}/api/tags")
 
         if field_name == "keep_alive_flag":
             if field_value == "Keep":
@@ -55,15 +50,15 @@ class ChatOllamaComponent(LCModelComponent):
 
         return build_config
 
-    def get_model(self, url: str) -> list[str]:
+    def get_model(self, url: str) -> List[str]:
+        """
+        Retrieve the list of available models from the specified URL.
+        """
         try:
             with httpx.Client() as client:
-                response = client.get(url)
-                response.raise_for_status()
-                data = response.json()
-
-                model_names = [model["name"] for model in data.get("models", [])]
-                return model_names
+                client.get(url).raise_for_status()
+                data = client.get(url).json()
+                return [model["name"] for model in data.get("models", [])]
         except Exception as e:
             raise ValueError("Could not retrieve models. Please, make sure Ollama is running.") from e
 
@@ -206,9 +201,11 @@ class ChatOllamaComponent(LCModelComponent):
     ]
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
+        """
+        Build the language model with the provided settings.
+        """
         # Mapping mirostat settings to their corresponding values
         mirostat_options = {"Mirostat": 1, "Mirostat 2.0": 2}
-
         # Default to 0 for 'Disabled'
         mirostat_value = mirostat_options.get(self.mirostat, 0)  # type: ignore
 

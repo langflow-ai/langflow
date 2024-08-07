@@ -427,7 +427,7 @@
             "id": "SearchAPI-yyOHb",
             "name": "api_build_tool",
             "output_types": [
-              "Tool"
+              "Sequence"
             ]
           },
           "targetHandle": {
@@ -441,7 +441,7 @@
         },
         "id": "reactflow__edge-SearchAPI-yyOHb{œdataTypeœ:œSearchAPIœ,œidœ:œSearchAPI-yyOHbœ,œnameœ:œapi_build_toolœ,œoutput_typesœ:[œToolœ]}-CrewAIAgentComponent-iOzyS{œfieldNameœ:œtoolsœ,œidœ:œCrewAIAgentComponent-iOzySœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "source": "SearchAPI-yyOHb",
-        "sourceHandle": "{œdataTypeœ: œSearchAPIœ, œidœ: œSearchAPI-yyOHbœ, œnameœ: œapi_build_toolœ, œoutput_typesœ: [œToolœ]}",
+        "sourceHandle": "{œdataTypeœ: œSearchAPIœ, œidœ: œSearchAPI-yyOHbœ, œnameœ: œapi_build_toolœ, œoutput_typesœ: [œSequenceœ]}",
         "target": "CrewAIAgentComponent-iOzyS",
         "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œCrewAIAgentComponent-iOzySœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       }
@@ -2963,10 +2963,10 @@
                 "display_name": "Tool",
                 "method": "build_tool",
                 "name": "api_build_tool",
-                "selected": "Tool",
+                "selected": "Sequence",
                 "types": [
-                  "Tool",
-                  "Sequence"
+                  "Sequence",
+                  "Tool"
                 ],
                 "value": "__UNDEFINED__"
               }

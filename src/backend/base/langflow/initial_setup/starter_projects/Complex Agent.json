@@ -579,7 +579,7 @@
             "id": "SearchAPI-nLBPg",
             "name": "api_build_tool",
             "output_types": [
-              "Tool"
+              "Sequence"
             ]
           },
           "targetHandle": {
@@ -593,7 +593,7 @@
         },
         "id": "reactflow__edge-SearchAPI-nLBPg{œdataTypeœ:œSearchAPIœ,œidœ:œSearchAPI-nLBPgœ,œnameœ:œapi_build_toolœ,œoutput_typesœ:[œToolœ]}-CrewAIAgentComponent-Qm4en{œfieldNameœ:œtoolsœ,œidœ:œCrewAIAgentComponent-Qm4enœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "source": "SearchAPI-nLBPg",
-        "sourceHandle": "{œdataTypeœ: œSearchAPIœ, œidœ: œSearchAPI-nLBPgœ, œnameœ: œapi_build_toolœ, œoutput_typesœ: [œToolœ]}",
+        "sourceHandle": "{œdataTypeœ: œSearchAPIœ, œidœ: œSearchAPI-nLBPgœ, œnameœ: œapi_build_toolœ, œoutput_typesœ: [œSequenceœ]}",
         "target": "CrewAIAgentComponent-Qm4en",
         "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œCrewAIAgentComponent-Qm4enœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       }
@@ -4047,10 +4047,10 @@
                 "display_name": "Tool",
                 "method": "build_tool",
                 "name": "api_build_tool",
-                "selected": "Tool",
+                "selected": "Sequence",
                 "types": [
-                  "Tool",
-                  "Sequence"
+                  "Sequence",
+                  "Tool"
                 ],
                 "value": "__UNDEFINED__"
               }

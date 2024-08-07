@@ -276,7 +276,7 @@
             "id": "SearchAPI-Yokat",
             "name": "api_build_tool",
             "output_types": [
-              "Tool"
+              "Sequence"
             ]
           },
           "targetHandle": {
@@ -290,7 +290,7 @@
         },
         "id": "reactflow__edge-SearchAPI-Yokat{œdataTypeœ:œSearchAPIœ,œidœ:œSearchAPI-Yokatœ,œnameœ:œapi_build_toolœ,œoutput_typesœ:[œToolœ]}-CrewAIAgentComponent-EbpXd{œfieldNameœ:œtoolsœ,œidœ:œCrewAIAgentComponent-EbpXdœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "source": "SearchAPI-Yokat",
-        "sourceHandle": "{œdataTypeœ: œSearchAPIœ, œidœ: œSearchAPI-Yokatœ, œnameœ: œapi_build_toolœ, œoutput_typesœ: [œToolœ]}",
+        "sourceHandle": "{œdataTypeœ: œSearchAPIœ, œidœ: œSearchAPI-Yokatœ, œnameœ: œapi_build_toolœ, œoutput_typesœ: [œSequenceœ]}",
         "target": "CrewAIAgentComponent-EbpXd",
         "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œCrewAIAgentComponent-EbpXdœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       }
@@ -2625,10 +2625,10 @@
                 "display_name": "Tool",
                 "method": "build_tool",
                 "name": "api_build_tool",
-                "selected": "Tool",
+                "selected": "Sequence",
                 "types": [
-                  "Tool",
-                  "Sequence"
+                  "Sequence",
+                  "Tool"
                 ],
                 "value": "__UNDEFINED__"
               }
