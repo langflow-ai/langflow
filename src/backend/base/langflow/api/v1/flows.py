@@ -395,4 +395,4 @@ async def download_multiple_file(
             headers={"Content-Disposition": f"attachment; filename={filename}"},
         )
     else:
-        return FlowListRead(flows=flows_without_api_keys)
+        return flows_without_api_keys[0]
