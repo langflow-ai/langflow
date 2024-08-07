@@ -66,22 +66,24 @@ export default function NodeInputField({
   const displayHandle =
     !LANGFLOW_SUPPORTED_TYPES.has(type ?? "") || optionalHandle;
 
+  const Handle = <HandleRenderComponent
+  left={true}
+  nodes={nodes}
+  tooltipTitle={tooltipTitle}
+  proxy={proxy}
+  id={id}
+  title={title}
+  edges={edges}
+  myData={myData}
+  colors={colors}
+  setFilterEdge={setFilterEdge}
+  showNode={showNode}
+  testIdComplement={`${data?.type?.toLowerCase()}-${showNode?"shownode":"noshownode"}`}
+/>
+
   return !showNode ? (
     displayHandle ? (
-      <HandleRenderComponent
-        left={true}
-        nodes={nodes}
-        tooltipTitle={tooltipTitle}
-        proxy={proxy}
-        id={id}
-        title={title}
-        edges={edges}
-        myData={myData}
-        colors={colors}
-        setFilterEdge={setFilterEdge}
-        showNode={showNode}
-        testIdComplement={`${data?.type?.toLowerCase()}-noshownode`}
-      />
+      Handle
     ) : (
       <></>
     )
@@ -126,20 +128,7 @@ export default function NodeInputField({
         </div>
 
         {displayHandle && (
-          <HandleRenderComponent
-            left={true}
-            nodes={nodes}
-            tooltipTitle={tooltipTitle}
-            proxy={proxy}
-            id={id}
-            title={title}
-            edges={edges}
-            myData={myData}
-            colors={colors}
-            setFilterEdge={setFilterEdge}
-            showNode={showNode}
-            testIdComplement={`${data?.type?.toLowerCase()}-shownode`}
-          />
+          Handle
         )}
         {data.node?.template[name] !== undefined && (
           <div className="mt-2 w-full">
