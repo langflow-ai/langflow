@@ -123,20 +123,22 @@ export default function NodeOutputField({
     }
   }, [disabledOutput]);
 
+  const Handle = <HandleRenderComponent
+    left={false}
+    nodes={nodes}
+    tooltipTitle={tooltipTitle}
+    id={id}
+    title={title}
+    edges={edges}
+    myData={myData}
+    colors={colors}
+    setFilterEdge={setFilterEdge}
+    showNode={showNode}
+    testIdComplement={`${data?.type?.toLowerCase()}-${showNode ? "shownode" : "noshownode"}`}
+  />
+
   return !showNode ? (
-    <HandleRenderComponent
-      left={false}
-      nodes={nodes}
-      tooltipTitle={tooltipTitle}
-      id={id}
-      title={title}
-      edges={edges}
-      myData={myData}
-      colors={colors}
-      setFilterEdge={setFilterEdge}
-      showNode={showNode}
-      testIdComplement={`${data?.type?.toLowerCase()}-noshownode`}
-    />
+    Handle
   ) : (
     <div
       ref={ref}
@@ -218,19 +220,7 @@ export default function NodeOutputField({
             </ShadTooltip>
           </div>
         </div>
-        <HandleRenderComponent
-          left={false}
-          nodes={nodes}
-          tooltipTitle={tooltipTitle}
-          id={id}
-          title={title}
-          edges={edges}
-          myData={myData}
-          colors={colors}
-          setFilterEdge={setFilterEdge}
-          showNode={showNode}
-          testIdComplement={`${data?.type?.toLowerCase()}-shownode`}
-        />
+        {Handle}
         {openOutputModal && (
           <OutputModal
             open={openOutputModal}
