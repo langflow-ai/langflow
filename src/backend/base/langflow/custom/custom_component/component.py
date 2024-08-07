@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     from langflow.inputs.inputs import InputTypes
 
 BACKWARDS_COMPATIBLE_ATTRIBUTES = ["user_id", "vertex", "tracing_service"]
-CONFIG_ATTRIBUTES = ["display_name", "description", "icon", "name"]
+CONFIG_ATTRIBUTES = ["_display_name", "_description", "_icon", "_name"]
 
 
 class Component(CustomComponent):
@@ -41,8 +41,10 @@ class Component(CustomComponent):
         inputs = {}
         config = {}
         for key, value in kwargs.items():
-            if key.startswith("_") or key in CONFIG_ATTRIBUTES:
+            if key.startswith("_"):
                 config[key] = value
+            elif key in CONFIG_ATTRIBUTES:
+                config[key[1:]] = value
             else:
                 inputs[key] = value
         self._inputs: dict[str, "InputTypes"] = {}
