@@ -456,6 +456,7 @@ export type ConfirmationModalType = {
     | "large-h-full"
     | "small-h-full"
     | "medium-h-full";
+    onEscapeKeyDown?: (e:KeyboardEvent) => void;
 };
 
 export type UserManagementType = {

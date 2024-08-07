@@ -4,7 +4,7 @@ import "ace-builds/src-noconflict/mode-python";
 import "ace-builds/src-noconflict/theme-github";
 import "ace-builds/src-noconflict/theme-twilight";
 // import "ace-builds/webpack-resolver";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import AceEditor from "react-ace";
 import IconComponent from "../../components/genericIconComponent";
 import { Button } from "../../components/ui/button";
@@ -26,6 +26,8 @@ import { useDarkStore } from "../../stores/darkStore";
 import { CodeErrorDataTypeAPI } from "../../types/api";
 import { codeAreaModalPropsType } from "../../types/components";
 import BaseModal from "../baseModal";
+import ConfirmationModal from "../confirmationModal";
+import ReactAce from "react-ace/lib/ace";
 
 export default function CodeAreaModal({
   value,
@@ -47,6 +49,8 @@ export default function CodeAreaModal({
   const [height, setHeight] = useState<string | null>(null);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
+  const [openConfirmation, setOpenConfirmation] = useState(false);
+  const codeRef = useRef<HTMLInputElement|null>(null);
   const [error, setError] = useState<{
     detail: CodeErrorDataTypeAPI;
   } | null>(null);
@@ -123,10 +127,6 @@ export default function CodeAreaModal({
     }
   }
 
-  function handleClick() {
-    processCode();
-  }
-
   useEffect(() => {
     // Function to be executed after the state changes
     const delayedFunction = setTimeout(() => {
@@ -148,7 +148,15 @@ export default function CodeAreaModal({
   }, [value, open]);
 
   return (
-    <BaseModal open={open} setOpen={setOpen}>
+    <BaseModal onEscapeKeyDown={e=>{
+      e.preventDefault();
+      if(code!==value){
+        setOpenConfirmation(true);
+      }
+      else{
+        setOpen(false);
+      }
+    }} open={open} setOpen={setOpen}>
       <BaseModal.Trigger>{children}</BaseModal.Trigger>
       <BaseModal.Header description={CODE_PROMPT_DIALOG_SUBTITLE}>
         <span className="pr-2"> {EDIT_CODE_TITLE} </span>
@@ -160,6 +168,7 @@ export default function CodeAreaModal({
       </BaseModal.Header>
       <BaseModal.Content>
         <Input
+        ref={codeRef}
           value={code}
           readOnly
           className="absolute left-[500%] top-[500%]"
@@ -209,7 +218,7 @@ export default function CodeAreaModal({
           <div className="flex h-fit w-full justify-end">
             <Button
               className="mt-3"
-              onClick={handleClick}
+              onClick={processCode}
               type="submit"
               id="checkAndSaveBtn"
               disabled={readonly}
@@ -218,6 +227,14 @@ export default function CodeAreaModal({
             </Button>
           </div>
         </div>
+        <ConfirmationModal onEscapeKeyDown={(e)=>{e.preventDefault();e.stopPropagation();setOpenConfirmation(false);}} size="x-small" open={openConfirmation} icon="AlertTriangle" confirmationText="Check & Save" cancelText="Discard Changes"   onCancel={()=>setOpen(false)} onConfirm={()=>{
+          processCode();
+          setOpenConfirmation(false);
+        }} title="Caution">
+          <ConfirmationModal.Content>
+            <p>Are you sure you want to exit without saving your changes?</p>
+          </ConfirmationModal.Content>
+        </ConfirmationModal>
       </BaseModal.Content>
     </BaseModal>
   );

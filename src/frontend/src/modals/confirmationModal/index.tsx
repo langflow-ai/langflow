@@ -8,6 +8,7 @@ import {
 } from "../../types/components";
 import { nodeIconsLucide } from "../../utils/styleUtils";
 import BaseModal from "../baseModal";
+import GenericIconComponent from "@/components/genericIconComponent";
 
 const Content: React.FC<ContentProps> = ({ children }) => {
   return <div className="h-full w-full">{children}</div>;
@@ -41,8 +42,8 @@ function ConfirmationModal({
   open,
   onClose,
   onCancel,
+  onEscapeKeyDown
 }: ConfirmationModalType) {
-  const Icon: any = nodeIconsLucide[icon];
   const [modalOpen, setModalOpen] = useState(open ?? false);
 
   useEffect(() => {
@@ -61,12 +62,12 @@ function ConfirmationModal({
   );
 
   return (
-    <BaseModal size={size} open={open} setOpen={setModalOpen}>
+    <BaseModal onEscapeKeyDown={onEscapeKeyDown} size={size} open={open} setOpen={setModalOpen}>
       <BaseModal.Trigger>{triggerChild}</BaseModal.Trigger>
       <BaseModal.Header description={titleHeader ?? null}>
         <span className="pr-2">{title}</span>
-        <Icon
-          name="icon"
+        <GenericIconComponent
+          name={icon}
           className="h-6 w-6 pl-1 text-foreground"
           aria-hidden="true"
         />
