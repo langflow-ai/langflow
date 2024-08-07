@@ -306,7 +306,7 @@ export const processFlows = (DbData: FlowType[], skipUpdate = true) => {
   return { data: savedComponents, flows: DbData };
 };
 
-const needsLayout = (nodes: NodeType[]) => {
+export const needsLayout = (nodes: NodeType[]) => {
   return nodes.some((node) => !node.position);
 };
 
