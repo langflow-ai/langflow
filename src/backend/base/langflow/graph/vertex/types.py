@@ -139,6 +139,8 @@ class ComponentVertex(Vertex):
             ) and not isinstance(artifact, Message):
                 continue
             message_dict = artifact if isinstance(artifact, dict) else artifact.model_dump()
+            if not message_dict.get("text"):
+                continue
             try:
                 messages.append(
                     ChatOutputResponse(
