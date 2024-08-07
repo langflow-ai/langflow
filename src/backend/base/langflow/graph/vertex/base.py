@@ -6,6 +6,7 @@ import traceback
 import types
 from enum import Enum
 from typing import TYPE_CHECKING, Any, AsyncIterator, Callable, Dict, Iterator, List, Mapping, Optional, Set
+from uuid import UUID
 
 import pandas as pd
 from loguru import logger
@@ -22,6 +23,7 @@ from langflow.schema.message import Message
 from langflow.schema.schema import INPUT_FIELD_NAME, OutputValue, build_output_logs
 from langflow.services.deps import get_storage_service
 from langflow.services.tracing.schema import Log
+from langflow.utils.async_helpers import run_until_complete
 from langflow.utils.constants import DIRECT_TYPES
 from langflow.utils.schemas import ChatOutputResponse
 from langflow.utils.util import sync_to_async, unescape_string
@@ -453,7 +455,7 @@ class Vertex:
             raise ValueError(f"Base type for vertex {self.display_name} not found")
 
         if not self._custom_component:
-            custom_component, custom_params = await initialize.loading.instantiate_class(user_id=user_id, vertex=self)
+            custom_component, custom_params = await self._build_instance(user_id)
         else:
             custom_component = self._custom_component
             custom_params = initialize.loading.get_params(self.params)
@@ -463,6 +465,32 @@ class Vertex:
         self._validate_built_object()
 
         self._built = True
+
+    async def _build_instance(self, user_id: Optional[str | UUID] = None):
+        """
+        Builds the instance of the component.
+        """
+        if self._custom_component is not None:
+            raise ValueError("Component is already built.")
+        custom_component, custom_params = await initialize.loading.instantiate_class(user_id=user_id, vertex=self)
+        return custom_component, custom_params
+
+    def get_component_instance(self, user_id: Optional[str | UUID] = None):
+        """
+        Retrieves the instance of the component.
+
+        Args:
+            user_id (Optional[str | UUID], optional): The user ID. Defaults to None.
+
+        Returns:
+            Any: The instance of the component.
+
+        Raises:
+            ValueError: If the component is not built.
+        """
+        if not self._custom_component:
+            self._custom_component = run_until_complete(self._build_instance(user_id))[0]
+        return self._custom_component
 
     def extract_messages_from_artifacts(self, artifacts: Dict[str, Any]) -> List[dict]:
         """
