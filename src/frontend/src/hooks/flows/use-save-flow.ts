@@ -1,7 +1,6 @@
 import { SAVE_DEBOUNCE_TIME } from "@/constants/constants";
 import { usePatchUpdateFlow } from "@/controllers/API/queries/flows/use-patch-update-flow";
 import useAlertStore from "@/stores/alertStore";
-import useAuthStore from "@/stores/authStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { FlowType } from "@/types/flow";
 import { debounce } from "lodash";
@@ -11,7 +10,6 @@ const useSaveFlow = () => {
   const setFlows = useFlowsManagerStore((state) => state.setFlows);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
-  const user = useAuthStore((state) => state.userData);
 
   const shouldAutosave = Boolean(process.env.LANGFLOW_AUTO_SAVE) ?? true;
 
