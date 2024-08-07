@@ -143,6 +143,12 @@ export default function CodeAreaModal({
     };
   }, [error, setHeight]);
 
+  useEffect(()=>{
+    if(!openConfirmation){
+      codeRef.current?.editor.focus();
+    }
+  },[openConfirmation])
+
   useEffect(() => {
     setCode(value);
   }, [value, open]);
