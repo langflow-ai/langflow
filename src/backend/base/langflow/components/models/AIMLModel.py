@@ -7,7 +7,6 @@ from pydantic.v1 import SecretStr
 
 from langflow.base.models.aiml_constants import AIML_CHAT_MODELS
 from langflow.base.models.model import LCModelComponent
-from langflow.base.models.openai_constants import OPENAI_MODEL_NAMES
 from langflow.field_typing import LanguageModel
 from langflow.inputs import (
     BoolInput,
@@ -101,7 +100,7 @@ class AIMLModelComponent(LCModelComponent):
             api_key=openai_api_key,
             base_url=aiml_api_base,
             max_tokens=max_tokens or None,
-            **model_kwargs
+            **model_kwargs,
         )
 
         return model  # type: ignore
