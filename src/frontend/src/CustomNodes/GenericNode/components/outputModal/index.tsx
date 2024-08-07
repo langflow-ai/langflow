@@ -37,11 +37,8 @@ export default function OutputModal({
           type={activeTab}
         />
       </BaseModal.Content>
-      <BaseModal.Footer close>
-      </BaseModal.Footer>
-      <BaseModal.Trigger>
-      {children}
-      </BaseModal.Trigger>
+      <BaseModal.Footer close></BaseModal.Footer>
+      <BaseModal.Trigger>{children}</BaseModal.Trigger>
     </BaseModal>
   );
 }

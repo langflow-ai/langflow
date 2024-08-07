@@ -116,13 +116,11 @@ const Footer: React.FC<{
       ) : (
         <>{children && children}</>
       )}
-      {close &&
+      {close && (
         <DialogClose asChild>
-          <Button type="button">
-            Close
-          </Button>
+          <Button type="button">Close</Button>
         </DialogClose>
-      }
+      )}
     </div>
   );
 };
@@ -136,21 +134,21 @@ interface BaseModalProps {
   open?: boolean;
   setOpen?: (open: boolean) => void;
   size?:
-  | "x-small"
-  | "smaller"
-  | "small"
-  | "medium"
-  | "medium-tall"
-  | "large"
-  | "three-cards"
-  | "large-thin"
-  | "large-h-full"
-  | "small-h-full"
-  | "medium-h-full"
-  | "md-thin"
-  | "sm-thin"
-  | "smaller-h-full"
-  | "medium-log";
+    | "x-small"
+    | "smaller"
+    | "small"
+    | "medium"
+    | "medium-tall"
+    | "large"
+    | "three-cards"
+    | "large-thin"
+    | "large-h-full"
+    | "small-h-full"
+    | "medium-h-full"
+    | "md-thin"
+    | "sm-thin"
+    | "smaller-h-full"
+    | "medium-log";
 
   disable?: boolean;
   onChangeOpenModal?: (open?: boolean) => void;
@@ -192,7 +190,6 @@ function BaseModal({
       {headerChild}
       {ContentChild}
       {ContentFooter && ContentFooter}
-
     </>
   );
 

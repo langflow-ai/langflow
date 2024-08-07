@@ -14,8 +14,8 @@ import {
 import { scapedJSONStringfy } from "../../../../utils/reactflowUtils";
 import useFetchDataOnMount from "../../../hooks/use-fetch-data-on-mount";
 import useHandleOnNewValue from "../../../hooks/use-handle-new-value";
-import HandleRenderComponent from "../handleRenderComponent";
 import NodeInputInfo from "../NodeInputInfo";
+import HandleRenderComponent from "../handleRenderComponent";
 
 export default function NodeInputField({
   id,
@@ -66,20 +66,22 @@ export default function NodeInputField({
   const displayHandle =
     !LANGFLOW_SUPPORTED_TYPES.has(type ?? "") || optionalHandle;
 
-  const Handle = <HandleRenderComponent
-  left={true}
-  nodes={nodes}
-  tooltipTitle={tooltipTitle}
-  proxy={proxy}
-  id={id}
-  title={title}
-  edges={edges}
-  myData={myData}
-  colors={colors}
-  setFilterEdge={setFilterEdge}
-  showNode={showNode}
-  testIdComplement={`${data?.type?.toLowerCase()}-${showNode?"shownode":"noshownode"}`}
-/>
+  const Handle = (
+    <HandleRenderComponent
+      left={true}
+      nodes={nodes}
+      tooltipTitle={tooltipTitle}
+      proxy={proxy}
+      id={id}
+      title={title}
+      edges={edges}
+      myData={myData}
+      colors={colors}
+      setFilterEdge={setFilterEdge}
+      showNode={showNode}
+      testIdComplement={`${data?.type?.toLowerCase()}-${showNode ? "shownode" : "noshownode"}`}
+    />
+  );
 
   return !showNode ? (
     displayHandle ? (
@@ -114,7 +116,7 @@ export default function NodeInputField({
           </span>
           <div className="">
             {info !== "" && (
-              <ShadTooltip content={<NodeInputInfo info={info}/>}>
+              <ShadTooltip content={<NodeInputInfo info={info} />}>
                 {/* put div to avoid bug that does not display tooltip */}
                 <div className="cursor-help">
                   <IconComponent
@@ -127,9 +129,7 @@ export default function NodeInputField({
           </div>
         </div>
 
-        {displayHandle && (
-          Handle
-        )}
+        {displayHandle && Handle}
         {data.node?.template[name] !== undefined && (
           <div className="mt-2 w-full">
             <ParameterRenderComponent

@@ -123,19 +123,21 @@ export default function NodeOutputField({
     }
   }, [disabledOutput]);
 
-  const Handle = <HandleRenderComponent
-    left={false}
-    nodes={nodes}
-    tooltipTitle={tooltipTitle}
-    id={id}
-    title={title}
-    edges={edges}
-    myData={myData}
-    colors={colors}
-    setFilterEdge={setFilterEdge}
-    showNode={showNode}
-    testIdComplement={`${data?.type?.toLowerCase()}-${showNode ? "shownode" : "noshownode"}`}
-  />
+  const Handle = (
+    <HandleRenderComponent
+      left={false}
+      nodes={nodes}
+      tooltipTitle={tooltipTitle}
+      id={id}
+      title={title}
+      edges={edges}
+      myData={myData}
+      colors={colors}
+      setFilterEdge={setFilterEdge}
+      showNode={showNode}
+      testIdComplement={`${data?.type?.toLowerCase()}-${showNode ? "shownode" : "noshownode"}`}
+    />
+  );
 
   return !showNode ? (
     Handle
@@ -164,9 +166,10 @@ export default function NodeOutputField({
             </Button>
           </div>
 
-          {(data.node?.frozen && <div className="pr-1">
-            <IconComponent className="h-5 w-5 text-ice" name={"Snowflake"} />
-          </div>
+          {data.node?.frozen && (
+            <div className="pr-1">
+              <IconComponent className="h-5 w-5 text-ice" name={"Snowflake"} />
+            </div>
           )}
           <div className="flex gap-2">
             <span className={data.node?.frozen ? "text-ice" : ""}>
@@ -198,28 +201,30 @@ export default function NodeOutputField({
                 nodeId={flowPoolId}
                 outputName={internalOutputName}
               >
-              <Button
-                unstyled
-                disabled={!displayOutputPreview || unknownOutput}
-                data-testid={`output-inspection-${title.toLowerCase()}`}
-              >
-                {errorOutput ? (
-                  <IconComponent
-                    className={classNames("h-5 w-5 rounded-md text-status-red")}
-                    name={"X"}
-                  />
-                ) : (
-                  <IconComponent
-                    className={classNames(
-                      "h-5 w-5 rounded-md",
-                      displayOutputPreview && !unknownOutput
-                        ? "hover:text-medium-indigo"
-                        : "cursor-not-allowed text-muted-foreground",
-                    )}
-                    name={"ScanEye"}
-                  />
-                )}
-              </Button>
+                <Button
+                  unstyled
+                  disabled={!displayOutputPreview || unknownOutput}
+                  data-testid={`output-inspection-${title.toLowerCase()}`}
+                >
+                  {errorOutput ? (
+                    <IconComponent
+                      className={classNames(
+                        "h-5 w-5 rounded-md text-status-red",
+                      )}
+                      name={"X"}
+                    />
+                  ) : (
+                    <IconComponent
+                      className={classNames(
+                        "h-5 w-5 rounded-md",
+                        displayOutputPreview && !unknownOutput
+                          ? "hover:text-medium-indigo"
+                          : "cursor-not-allowed text-muted-foreground",
+                      )}
+                      name={"ScanEye"}
+                    />
+                  )}
+                </Button>
               </OutputModal>
             </ShadTooltip>
           </div>
