@@ -1,4 +1,6 @@
+import LoadingComponent from "@/components/loadingComponent";
 import { useGetBuildsQuery } from "@/controllers/API/queries/_builds";
+import useUploadFlow from "@/hooks/flows/use-upload-flow";
 import { getInputsAndOutputs } from "@/utils/storeUtils";
 import _, { cloneDeep } from "lodash";
 import {
@@ -62,7 +64,7 @@ export default function Page({
   flow: FlowType;
   view?: boolean;
 }): JSX.Element {
-  const uploadFlow = useFlowsManagerStore((state) => state.uploadFlow);
+  const uploadFlow = useUploadFlow();
   const autoSaveCurrentFlow = useFlowsManagerStore(
     (state) => state.autoSaveCurrentFlow,
   );
@@ -70,9 +72,6 @@ export default function Page({
   const templates = useTypesStore((state) => state.templates);
   const setFilterEdge = useFlowStore((state) => state.setFilterEdge);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
-  const [showCanvas, setSHowCanvas] = useState(
-    Object.keys(templates).length > 0 && Object.keys(types).length > 0,
-  );
 
   const reactFlowInstance = useFlowStore((state) => state.reactFlowInstance);
   const setReactFlowInstance = useFlowStore(
@@ -166,7 +165,12 @@ export default function Page({
     }
   }, [currentFlowId, reactFlowInstance]);
 
-  const { isFetching } = useGetBuildsQuery({});
+  const { isFetching, refetch } = useGetBuildsQuery({});
+
+  const showCanvas =
+    Object.keys(templates).length > 0 &&
+    Object.keys(types).length > 0 &&
+    !isFetching;
 
   useEffect(() => {
     if (!isFetching) {
@@ -187,13 +191,14 @@ export default function Page({
           "Components created before Langflow 1.0 may be unstable. Ensure components are up to date.",
       });
     }
-  }, []);
+  }, [currentFlowId]);
 
   useEffect(() => {
+    refetch();
     return () => {
       cleanFlow();
     };
-  }, []);
+  }, [currentFlowId]);
 
   function handleUndo(e: KeyboardEvent) {
     if (!isWrappedWithClass(e, "noflow")) {
@@ -315,12 +320,6 @@ export default function Page({
   //@ts-ignore
   useHotkeys("delete", handleDelete);
 
-  useEffect(() => {
-    setSHowCanvas(
-      Object.keys(templates).length > 0 && Object.keys(types).length > 0,
-    );
-  }, [templates, types]);
-
   const onConnectMod = useCallback(
     (params: Connection) => {
       takeSnapshot();
@@ -387,28 +386,24 @@ export default function Page({
         );
       } else if (event.dataTransfer.types.some((types) => types === "Files")) {
         takeSnapshot();
-        if (event.dataTransfer.files.item(0)!.type === "application/json") {
-          const position = {
-            x: event.clientX,
-            y: event.clientY,
-          };
-          uploadFlow({
-            newProject: false,
-            isComponent: false,
-            file: event.dataTransfer.files.item(0)!,
-            position: position,
-          }).catch((error) => {
-            setErrorData({
-              title: UPLOAD_ERROR_ALERT,
-              list: [error],
-            });
-          });
-        } else {
+        const position = {
+          x: event.clientX,
+          y: event.clientY,
+        };
+        uploadFlow({
+          files: Array.from(event.dataTransfer.files!),
+          position: position,
+        }).catch((error) => {
           setErrorData({
-            title: WRONG_FILE_ERROR_ALERT,
-            list: [UPLOAD_ALERT_LIST],
+            title: UPLOAD_ERROR_ALERT,
+            list: [(error as Error).message],
           });
-        }
+        });
+      } else {
+        setErrorData({
+          title: WRONG_FILE_ERROR_ALERT,
+          list: [UPLOAD_ALERT_LIST],
+        });
       }
     },
     // Specify dependencies for useCallback
@@ -533,7 +528,9 @@ export default function Page({
           </ReactFlow>
         </div>
       ) : (
-        <></>
+        <div className="flex h-full w-full items-center justify-center">
+          <LoadingComponent remSize={30} />
+        </div>
       )}
     </div>
   );
