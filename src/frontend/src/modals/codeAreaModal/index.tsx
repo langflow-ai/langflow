@@ -230,7 +230,7 @@ export default function CodeAreaModal({
             </Button>
           </div>
         </div>
-        <ConfirmationModal onEscapeKeyDown={(e)=>{e.preventDefault();e.stopPropagation();setOpenConfirmation(false);}} size="x-small" open={openConfirmation} icon="AlertTriangle" confirmationText="Check & Save" cancelText="Discard Changes"   onCancel={()=>setOpen(false)} onConfirm={()=>{
+        <ConfirmationModal onClose={setOpenConfirmation} onEscapeKeyDown={(e)=>{e.stopPropagation();setOpenConfirmation(false);}} size="x-small" icon="AlertTriangle" confirmationText="Check & Save" cancelText="Discard Changes" open={openConfirmation} onCancel={()=>setOpen(false)} onConfirm={()=>{
           processCode();
           setOpenConfirmation(false);
         }} title="Caution">
