@@ -1,4 +1,5 @@
 import asyncio
+import copy
 import json
 import uuid
 from collections import defaultdict, deque
@@ -99,6 +100,29 @@ class Graph:
             self.prepare()
         if (start is not None and end is None) or (start is None and end is not None):
             raise ValueError("You must provide both input and output components")
+
+    def __add__(self, other):
+        if not isinstance(other, Graph):
+            raise TypeError("Can only add Graph objects")
+        # Add the vertices and edges from the other graph to this graph
+        new_instance = copy.deepcopy(self)
+        for vertex in other.vertices:
+            # This updates the edges as well
+            new_instance.add_vertex(vertex)
+        new_instance.build_graph_maps(new_instance.edges)
+        new_instance.define_vertices_lists()
+        return new_instance
+
+    def __iadd__(self, other):
+        if not isinstance(other, Graph):
+            raise TypeError("Can only add Graph objects")
+        # Add the vertices and edges from the other graph to this graph
+        for vertex in other.vertices:
+            # This updates the edges as well
+            self.add_vertex(vertex)
+        self.build_graph_maps(self.edges)
+        self.define_vertices_lists()
+        return self
 
     def dumps(
         self,
