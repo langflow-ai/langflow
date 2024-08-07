@@ -76,7 +76,7 @@ aiofiles = "^24.1.0"
 setuptools = ">=70"
 nanoid = "^2.0.0"
 filelock = "^3.15.4"
-
+grandalf = "^0.8.0"
 [tool.poetry.extras]
 deploy = ["celery", "redis", "flower"]
 local = ["llama-cpp-python", "sentence-transformers", "ctransformers"]
