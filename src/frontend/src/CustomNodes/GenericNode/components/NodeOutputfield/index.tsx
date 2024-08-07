@@ -163,12 +163,11 @@ export default function NodeOutputField({
               />
             </Button>
           </div>
-          <Case condition={data.node?.frozen}>
-            <div className="pr-1">
-              <IconComponent className="h-5 w-5 text-ice" name={"Snowflake"} />
-            </div>
-          </Case>
 
+          {(data.node?.frozen && <div className="pr-1">
+            <IconComponent className="h-5 w-5 text-ice" name={"Snowflake"} />
+          </div>
+          )}
           <div className="flex gap-2">
             <span className={data.node?.frozen ? "text-ice" : ""}>
               <OutputComponent
