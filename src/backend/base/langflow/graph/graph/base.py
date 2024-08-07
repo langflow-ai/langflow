@@ -1516,8 +1516,16 @@ class Graph:
 
     def __repr__(self):
         vertex_ids = [vertex.id for vertex in self.vertices]
-        edges_repr = "\n".join([f"{edge.source_id} --> {edge.target_id}" for edge in self.edges])
-        return f"Graph: \nNodes: {vertex_ids}\nConnections: \n{edges_repr}"
+        edges_repr = "\n".join([f"  {edge.source_id} --> {edge.target_id}" for edge in self.edges])
+
+        return (
+            f"Graph Representation:\n"
+            f"----------------------\n"
+            f"Vertices ({len(vertex_ids)}):\n"
+            f"  {', '.join(map(str, vertex_ids))}\n\n"
+            f"Edges ({len(self.edges)}):\n"
+            f"{edges_repr}"
+        )
 
     def layered_topological_sort(
         self,
