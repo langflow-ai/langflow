@@ -38,11 +38,10 @@ function ConfirmationModal({
   data,
   index,
   onConfirm,
-  size,
   open,
   onClose,
   onCancel,
-  onEscapeKeyDown,
+  ...props
 }: ConfirmationModalType) {
   const [modalOpen, setModalOpen] = useState(open ?? false);
 
@@ -62,12 +61,7 @@ function ConfirmationModal({
   );
 
   return (
-    <BaseModal
-      onEscapeKeyDown={onEscapeKeyDown}
-      size={size}
-      open={open}
-      setOpen={setModalOpen}
-    >
+    <BaseModal {...props} open={open} setOpen={setModalOpen}>
       <BaseModal.Trigger>{triggerChild}</BaseModal.Trigger>
       <BaseModal.Header description={titleHeader ?? null}>
         <span className="pr-2">{title}</span>
