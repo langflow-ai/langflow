@@ -191,10 +191,26 @@ class Graph:
                 )
         return self._entry
 
+    def _find_exit(self):
+        # Find a vertex with a "ChatOutput" component, overriding a "TextOutput" component
+        found_exit = None
+        for vertex_id in self._is_output_vertices:
+            if "ChatOutput" in vertex_id:
+                found_exit = vertex_id
+                break
+            elif found_exit is None and "TextOutput" in vertex_id:
+                found_exit = vertex_id
+        vertex = self.get_vertex(found_exit) if found_exit else None
+
+        return vertex.get_component_instance() if vertex else None
+
     @property
     def exit(self):
         if self._exit is None:
-            raise ValueError("Graph has no exit component")
+            if _exit := self._find_exit():
+                self._exit = _exit
+            else:
+                raise ValueError("Graph has no exit component")
         return self._exit
 
     def _set_entry_and_exit(self, entry: "Component", exit: "Component"):
