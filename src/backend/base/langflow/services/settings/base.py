@@ -146,6 +146,10 @@ class Settings(BaseSettings):
     do_not_track: bool = False
     """If set to True, Langflow will not track telemetry."""
     telemetry_base_url: str = "https://langflow.gateway.scarf.sh"
+    transactions_storage_enabled: bool = True
+    """If set to True, Langflow will track transactions between flows."""
+    vertex_builds_storage_enabled: bool = True
+    """If set to True, Langflow will keep track of each vertex builds (outputs) in the UI for any flow."""
 
     @field_validator("user_agent", mode="after")
     @classmethod

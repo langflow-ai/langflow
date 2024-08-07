@@ -14,7 +14,7 @@ from langflow.services.database.models.transactions.crud import log_transaction 
 from langflow.services.database.models.vertex_builds.crud import log_vertex_build as crud_log_vertex_build
 from langflow.services.database.models.vertex_builds.model import VertexBuildBase
 from langflow.services.database.utils import session_getter
-from langflow.services.deps import get_db_service
+from langflow.services.deps import get_db_service, get_settings_service
 from loguru import logger
 
 if TYPE_CHECKING:
@@ -132,6 +132,8 @@ async def log_transaction(
     flow_id: Union[str, UUID], source: "Vertex", status, target: Optional["Vertex"] = None, error=None
 ) -> None:
     try:
+        if not get_settings_service().settings.transactions_storage_enabled:
+            return
         inputs = _vertex_to_primitive_dict(source)
         transaction = TransactionBase(
             vertex_id=source.id,
@@ -159,6 +161,8 @@ def log_vertex_build(
     artifacts: Optional[dict] = None,
 ):
     try:
+        if not get_settings_service().settings.vertex_builds_storage_enabled:
+            return
         vertex_build = VertexBuildBase(
             flow_id=flow_id,
             id=vertex_id,
@@ -166,7 +170,8 @@ def log_vertex_build(
             params=str(params) if params else None,
             # ugly hack to get the model dump with weird datatypes
             data=json.loads(data.model_dump_json()),
-            artifacts=artifacts,
+            # ugly hack to get the model dump with weird datatypes
+            artifacts=json.loads(json.dumps(artifacts, default=str)),
         )
         with session_getter(get_db_service()) as session:
             inserted = crud_log_vertex_build(session, vertex_build)
