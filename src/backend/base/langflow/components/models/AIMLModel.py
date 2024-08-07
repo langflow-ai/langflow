@@ -100,6 +100,8 @@ class AIMLModelComponent(LCModelComponent):
             api_key=openai_api_key,
             base_url=aiml_api_base,
             max_tokens=max_tokens or None,
+            seed=seed,
+            json_mode=json_mode,
             **model_kwargs,
         )
 
