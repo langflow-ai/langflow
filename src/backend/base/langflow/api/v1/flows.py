@@ -16,7 +16,7 @@ from loguru import logger
 from sqlmodel import Session, and_, col, select
 
 from langflow.api.utils import remove_api_keys, validate_is_component
-from langflow.api.v1.schemas import FlowListCreate, FlowListRead
+from langflow.api.v1.schemas import FlowListCreate
 from langflow.initial_setup.setup import STARTER_FOLDER_NAME
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.database.models.flow import Flow, FlowCreate, FlowRead, FlowUpdate
@@ -395,4 +395,4 @@ async def download_multiple_file(
             headers={"Content-Disposition": f"attachment; filename={filename}"},
         )
     else:
-        return FlowListRead(flows=flows_without_api_keys)
+        return flows_without_api_keys[0]
