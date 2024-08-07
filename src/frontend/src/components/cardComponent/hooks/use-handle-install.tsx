@@ -1,6 +1,5 @@
-import { useState } from "react";
+import useAddFlow from "@/hooks/flows/use-add-flow";
 import { getComponent } from "../../../controllers/API";
-import useFlowsManagerStore from "../../../stores/flowsManagerStore";
 import { storeComponent } from "../../../types/store";
 import cloneFlowWithParent from "../../../utils/storeUtils";
 
@@ -14,7 +13,7 @@ const useInstallComponent = (
   setSuccessData: (value: { title: string }) => void,
   setErrorData: (value: { title: string; list: string[] }) => void,
 ) => {
-  const addFlow = useFlowsManagerStore((state) => state.addFlow);
+  const addFlow = useAddFlow();
 
   const handleInstall = () => {
     const temp = downloadsCount;
@@ -24,7 +23,7 @@ const useInstallComponent = (
     getComponent(data.id)
       .then((res) => {
         const newFlow = cloneFlowWithParent(res, res.id, data.is_component);
-        addFlow(true, newFlow)
+        addFlow({ flow: newFlow })
           .then((id) => {
             setSuccessData({
               title: `${name} ${isStore ? "Downloaded" : "Installed"} Successfully.`,

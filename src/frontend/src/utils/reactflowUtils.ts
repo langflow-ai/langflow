@@ -1578,8 +1578,8 @@ export function getRandomDescription(): string {
 
 export const createNewFlow = (
   flowData: ReactFlowJsonObject,
-  flow: FlowType,
   folderId: string,
+  flow?: FlowType,
 ) => {
   return {
     description: flow?.description ?? getRandomDescription(),
