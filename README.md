@@ -3,23 +3,14 @@
 # [![Langflow](./docs/static/img/hero.png)](https://www.langflow.org)
 
 <p align="center" style="font-size: 12px;">
-    Langflow is a visual development framework for RAG (retrieval augmented generation) and multi-agent AI applications. It’s open-source, Python-based and agnostic to any model, API, data source or database.
+    Langflow is a low-code app builder for RAG (retrieval augmented generation) and multi-agent AI applications. It’s Python-based and agnostic to any model, API, data source or database.
 </p>
 
 <p align="center" style="font-size: 12px;">
     <a href="https://docs.langflow.org" style="text-decoration: underline;">Docs</a> -
+    <a href="http://langflow.datastax.com" style="text-decoration: underline;">Free Cloud Service</a> -
     <a href="https://discord.com/invite/EqksyE2EX9" style="text-decoration: underline;">Join our Discord</a> -
-    <a href="https://twitter.com/langflow_ai" style="text-decoration: underline;">Follow us on X</a> -
-    <a href="https://huggingface.co/spaces/Langflow/Langflow" style="text-decoration: underline;">Live demo</a>
-</p>
-
-<p align="center">
-    <a href="https://github.com/langflow-ai/langflow">
-        <img src="https://img.shields.io/github/stars/langflow-ai/langflow">
-    </a>
-    <a href="https://discord.com/invite/EqksyE2EX9">
-        <img src="https://img.shields.io/discord/1116803230643527710?label=Discord">
-    </a>
+    <a href="https://twitter.com/langflow_ai" style="text-decoration: underline;">Follow us on X</a>
 </p>
 
 <div align="center">
@@ -58,6 +49,10 @@ Star Langflow on GitHub to be instantly notified of new releases.
 ![Star Langflow](https://github.com/user-attachments/assets/03168b17-a11d-4b2a-b0f7-c1cce69e5a2c)
 
 # 📦 Quick Start
+
+- **Install Langflow with pip** (Python version 3.10 or greater):
+
+// python -m pip install langflow -U
 
 - **Cloud:** DataStax Langflow is a complete, hosted Langflow environment with zero setup. [Sign up for a free account.](http://langflow.datastax.com) 
 - **Self-managed:** Run Langflow in your environment. [Install Langflow](https://docs.langflow.org/getting-started-installation) to run a local Langflow server, and then use the [Quickstart](https://docs.langflow.org/getting-started-quickstart) guide to create and execute a flow.
