@@ -41,7 +41,7 @@ export default function TextAreaComponent({
             "w-full",
             "resize-none",
           )}
-          rows={3}
+          rows={Math.min(3,value.split("\n").length)}
           placeholder={"Type something..."}
           onChange={(event) => {
             onChange(event.target.value);
