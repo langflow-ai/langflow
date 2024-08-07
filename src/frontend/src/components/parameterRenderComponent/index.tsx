@@ -1,5 +1,5 @@
-import { TEXT_FIELD_TYPES } from "@/CustomNodes/GenericNode/components/parameterComponent/constants";
 import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
+import { TEXT_FIELD_TYPES } from "@/constants/constants";
 import { APIClassType, InputFieldType } from "@/types/api";
 import { useMemo } from "react";
 import CodeAreaComponent from "../codeAreaComponent";
