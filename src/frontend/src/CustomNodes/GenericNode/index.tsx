@@ -379,6 +379,7 @@ export default function GenericNode({
 
   const renderInputParameter = Object.keys(data.node!.template)
     .filter((templateField) => templateField.charAt(0) !== "_")
+    .sort((a, b) => sortFields(a, b, data.node?.field_order ?? []))
     .map(
       (templateField: string, idx) =>
         data.node!.template[templateField]?.show &&
