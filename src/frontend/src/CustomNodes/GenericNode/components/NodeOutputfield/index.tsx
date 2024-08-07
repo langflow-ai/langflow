@@ -85,12 +85,12 @@ export default function NodeOutputField({
 
   function handleOutputWShortcut() {
     if (!displayOutputPreview || unknownOutput) return;
-    if (isThereModal() && !openOutputModal) return;
+    console.log("output shortcut");
     if (selected) {
       setOpenOutputModal((state) => !state);
     }
   }
-
+  console.log("outputName", outputName);
   const output = useShortcutsStore((state) => state.output);
   useHotkeys(output, handleOutputWShortcut, { preventDefault });
 
@@ -193,10 +193,14 @@ export default function NodeOutputField({
                   : "Please build the component first"
               }
             >
+              <OutputModal
+                disabled={!displayOutputPreview || unknownOutput}
+                nodeId={flowPoolId}
+                outputName={internalOutputName}
+              >
               <Button
                 unstyled
                 disabled={!displayOutputPreview || unknownOutput}
-                onClick={() => setOpenOutputModal(true)}
                 data-testid={`output-inspection-${title.toLowerCase()}`}
               >
                 {errorOutput ? (
@@ -216,18 +220,11 @@ export default function NodeOutputField({
                   />
                 )}
               </Button>
+              </OutputModal>
             </ShadTooltip>
           </div>
         </div>
         {Handle}
-        {openOutputModal && (
-          <OutputModal
-            open={openOutputModal}
-            nodeId={flowPoolId}
-            setOpen={setOpenOutputModal}
-            outputName={internalOutputName}
-          />
-        )}
       </>
     </div>
   );
