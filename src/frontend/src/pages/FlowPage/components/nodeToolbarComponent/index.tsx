@@ -5,7 +5,6 @@ import useAddFlow from "@/hooks/flows/use-add-flow";
 import { APIClassType } from "@/types/api";
 import _, { cloneDeep } from "lodash";
 import { useEffect, useState } from "react";
-import { useHotkeys } from "react-hotkeys-hook";
 import { useUpdateNodeInternals } from "reactflow";
 import CodeAreaComponent from "../../../../components/codeAreaComponent";
 import IconComponent from "../../../../components/genericIconComponent";
@@ -34,10 +33,11 @@ import {
   expandGroupNode,
   updateFlowPosition,
 } from "../../../../utils/reactflowUtils";
-import { classNames, cn } from "../../../../utils/utils";
+import { classNames, cn, openInNewTab } from "../../../../utils/utils";
 import isWrappedWithClass from "../PageComponent/utils/is-wrapped-with-class";
 import ToolbarSelectItem from "./toolbarSelectItem";
 import { countHandlesFn } from "@/CustomNodes/helpers/count-handles";
+import useShortcuts from "./hooks/use-shortcuts";
 
 export default function NodeToolbarComponent({
   data,
@@ -126,12 +126,10 @@ export default function NodeToolbarComponent({
   function handleAdvancedWShortcut(e: KeyboardEvent) {
     if (isWrappedWithClass(e, "noflow") && !showModalAdvanced) return;
     e.preventDefault();
-    setShowModalAdvanced((state) => !state);
+
   }
 
-  function handleSaveWShortcut(e: KeyboardEvent) {
-    if (isWrappedWithClass(e, "noflow") && !showOverrideModal) return;
-    e.preventDefault();
+  function saveComponent() {
     if (isSaved) {
       setShowOverrideModal((state) => !state);
       return;
@@ -146,8 +144,7 @@ export default function NodeToolbarComponent({
     }
   }
 
-  function handleDocsWShortcut(e: KeyboardEvent) {
-    e.preventDefault();
+  function openDocs() {
     if (data.node?.documentation) {
       return openInNewTab(data.node?.documentation);
     }
@@ -156,14 +153,7 @@ export default function NodeToolbarComponent({
     });
   }
 
-  function handleDownloadWShortcut(e: KeyboardEvent) {
-    e.preventDefault();
-    downloadNode(flowComponent!);
-  }
-
-  function handleFreeze(e: KeyboardEvent) {
-    if (isWrappedWithClass(e, "noflow")) return;
-    e.preventDefault();
+  const freezeFunction = () => {
     setNode(data.id, (old) => ({
       ...old,
       data: {
@@ -174,35 +164,18 @@ export default function NodeToolbarComponent({
         },
       },
     }));
-  }
+  };
 
-  function handleFreezeAll(e: KeyboardEvent) {
-    if (isWrappedWithClass(e, "noflow")) return;
-    e.preventDefault();
-    FreezeAllVertices({ flowId: currentFlowId, stopNodeId: data.id });
-  }
-
-  const advanced = useShortcutsStore((state) => state.advanced);
-  const minimize = useShortcutsStore((state) => state.minimize);
-  const component = useShortcutsStore((state) => state.component);
-  const save = useShortcutsStore((state) => state.save);
-  const docs = useShortcutsStore((state) => state.docs);
-  const code = useShortcutsStore((state) => state.code);
-  const group = useShortcutsStore((state) => state.group);
-  const download = useShortcutsStore((state) => state.download);
-  const freeze = useShortcutsStore((state) => state.freeze);
-  const freezeAll = useShortcutsStore((state) => state.FreezePath);
-
-  useHotkeys(minimize, handleMinimizeWShortcut, { preventDefault });
-  useHotkeys(group, handleGroupWShortcut, { preventDefault });
-  useHotkeys(component, handleShareWShortcut, { preventDefault });
-  useHotkeys(code, handleCodeWShortcut, { preventDefault });
-  useHotkeys(advanced, handleAdvancedWShortcut, { preventDefault });
-  useHotkeys(save, handleSaveWShortcut, { preventDefault });
-  useHotkeys(docs, handleDocsWShortcut, { preventDefault });
-  useHotkeys(download, handleDownloadWShortcut, { preventDefault });
-  useHotkeys(freeze, handleFreeze);
-  useHotkeys(freezeAll, handleFreezeAll);
+  useShortcuts({ showOverrideModal,
+    showModalAdvanced,
+    FreezeAllVertices: () => {
+    FreezeAllVertices({ flowId: currentFlow!.id, stopNodeId: data.id }) },
+    Freeze: freezeFunction,
+    downloadFunction:()=>downloadNode(flowComponent!),
+    displayDocs: openDocs,
+    saveComponent,
+    showAdvance:()=>setShowModalAdvanced((state) => !state),
+   });
 
   const isMinimal = countHandlesFn(data) <= 1 && numberOfOutputHandles <= 1;
   const isGroup = data.node?.flow ? true : false;
@@ -225,10 +198,6 @@ export default function NodeToolbarComponent({
       });
     },
   });
-
-  const openInNewTab = (url) => {
-    window.open(url, "_blank", "noreferrer");
-  };
 
   useEffect(() => {
     if (!showModalAdvanced) {
@@ -259,25 +228,10 @@ export default function NodeToolbarComponent({
   const handleSelectChange = (event) => {
     switch (event) {
       case "save":
-        if (isSaved) {
-          return setShowOverrideModal(true);
-        }
-        addFlow({
-          flow: flowComponent,
-          override: false,
-        });
+        saveComponent();
         break;
       case "freeze":
-        setNode(data.id, (old) => ({
-          ...old,
-          data: {
-            ...old.data,
-            node: {
-              ...old.data.node,
-              frozen: old.data?.node?.frozen ? false : true,
-            },
-          },
-        }));
+        freezeFunction();
         break;
       case "freezeAll":
         FreezeAllVertices({ flowId: currentFlowId, stopNodeId: data.id });
@@ -305,7 +259,7 @@ export default function NodeToolbarComponent({
         });
         break;
       case "documentation":
-        if (data.node?.documentation) openInNewTab(data.node?.documentation);
+        openDocs();
         break;
       case "disabled":
         break;
@@ -451,9 +405,8 @@ export default function NodeToolbarComponent({
               side="top"
             >
               <button
-                className={`${
-                  isGroup ? "rounded-l-md" : ""
-                } relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10`}
+                className={`${isGroup ? "rounded-l-md" : ""
+                  } relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10`}
                 onClick={() => {
                   setShowModalAdvanced(true);
                 }}
@@ -684,9 +637,8 @@ export default function NodeToolbarComponent({
                   />{" "}
                   <span className="">Delete</span>{" "}
                   <span
-                    className={`absolute right-2 top-2 flex items-center justify-center rounded-sm px-1 py-[0.2] ${
-                      deleteIsFocus ? " " : "bg-muted"
-                    }`}
+                    className={`absolute right-2 top-2 flex items-center justify-center rounded-sm px-1 py-[0.2] ${deleteIsFocus ? " " : "bg-muted"
+                      }`}
                   >
                     <IconComponent
                       name="Delete"
