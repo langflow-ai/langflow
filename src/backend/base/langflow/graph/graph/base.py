@@ -1125,43 +1125,53 @@ class Graph:
         self.run_manager.add_to_vertices_being_run(vertex_id)
         try:
             params = ""
-            if vertex.frozen:
+            should_build = False
+            if not vertex.frozen:
+                should_build = True
+            else:
                 # Check the cache for the vertex
                 if get_cache is not None:
                     cached_result = await get_cache(key=vertex.id)
                 else:
                     cached_result = None
                 if isinstance(cached_result, CacheMiss):
-                    await vertex.build(
-                        user_id=user_id, inputs=inputs_dict, fallback_to_env_vars=fallback_to_env_vars, files=files
-                    )
-                    if set_cache is not None:
-                        await set_cache(key=vertex.id, data=vertex)
-                if cached_result and not isinstance(cached_result, CacheMiss):
-                    cached_vertex = cached_result["result"]
-                    # Now set update the vertex with the cached vertex
-                    vertex._built = cached_vertex._built
-                    vertex.result = cached_vertex.result
-                    vertex.results = cached_vertex.results
-                    vertex.artifacts = cached_vertex.artifacts
-                    vertex._built_object = cached_vertex._built_object
-                    vertex._custom_component = cached_vertex._custom_component
-                    if vertex.result is not None:
-                        vertex.result.used_frozen_result = True
+                    should_build = True
                 else:
-                    await vertex.build(
-                        user_id=user_id, inputs=inputs_dict, fallback_to_env_vars=fallback_to_env_vars, files=files
-                    )
-                    if set_cache is not None:
-                        await set_cache(key=vertex.id, data=vertex)
-            else:
+                    try:
+                        cached_vertex_dict = cached_result["result"]
+                        # Now set update the vertex with the cached vertex
+                        vertex._built = cached_vertex_dict["_built"]
+                        vertex.artifacts = cached_vertex_dict["artifacts"]
+                        vertex._built_object = cached_vertex_dict["_built_object"]
+                        vertex._built_result = cached_vertex_dict["_built_result"]
+                        vertex._data = cached_vertex_dict["_data"]
+                        vertex.results = cached_vertex_dict["results"]
+                        try:
+                            vertex._finalize_build()
+                            if vertex.result is not None:
+                                vertex.result.used_frozen_result = True
+                        except Exception:
+                            should_build = True
+                    except KeyError:
+                        should_build = True
+
+            if should_build:
                 await vertex.build(
                     user_id=user_id, inputs=inputs_dict, fallback_to_env_vars=fallback_to_env_vars, files=files
                 )
                 if set_cache is not None:
-                    await set_cache(key=vertex.id, data=vertex)
+                    vertex_dict = {
+                        "_built": vertex._built,
+                        "results": vertex.results,
+                        "artifacts": vertex.artifacts,
+                        "_built_object": vertex._built_object,
+                        "_built_result": vertex._built_result,
+                        "_data": vertex._data,
+                    }
 
-            if vertex.result is not None:
+                    await set_cache(key=vertex.id, data=vertex_dict)
+
+            if vertex.results is not None:
                 params = f"{vertex._built_object_repr()}{params}"
                 valid = True
                 result_dict = vertex.result
