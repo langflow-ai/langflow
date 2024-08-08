@@ -370,6 +370,7 @@ async def build_flow(
         try:
             await asyncio.gather(*tasks)
         except asyncio.CancelledError:
+            background_tasks.add_task(graph.end_all_traces)
             for task in tasks:
                 task.cancel()
             return
