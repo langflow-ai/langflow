@@ -98,10 +98,11 @@ export default function NodeStatus({
   };
 
   useEffect(() => {
+    console.log(selected)
     setBorderColor(
       getNodeBorderClassName(selected, showNode, buildStatus, validationStatus),
     );
-  }, [selected, showNode, buildStatus, validationStatus]);
+  }, [selected, showNode, buildStatus, validationStatus, frozen]);
 
   useEffect(() => {
     if (buildStatus === BuildStatus.BUILT && !isBuilding) {
@@ -163,7 +164,7 @@ export default function NodeStatus({
         >
           <div className="cursor-help">{iconStatus}</div>
         </ShadTooltip>
-        <Button
+        {showNode && (<Button
           onClick={() => {
             if (buildStatus === BuildStatus.BUILDING || isBuilding) return;
             setValidationStatus(null);
@@ -180,7 +181,7 @@ export default function NodeStatus({
               }
             />
           </div>
-        </Button>
+        </Button>)}
       </div>
     </>
   );

@@ -358,7 +358,6 @@ export default function GenericNode({
                 </>
               )}
             </div>
-            {showNode && (
               <NodeStatus
                 frozen={data.node?.frozen}
                 showNode={showNode}
@@ -367,7 +366,6 @@ export default function GenericNode({
                 selected={selected}
                 setBorderColor={setBorderColor}
               />
-            )}
           </div>
         </div>
 
