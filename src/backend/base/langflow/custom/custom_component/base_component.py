@@ -1,7 +1,7 @@
 import operator
-import warnings
 from typing import Any, ClassVar, Optional
 from uuid import UUID
+import warnings
 
 from cachetools import TTLCache, cachedmethod
 from fastapi import HTTPException
@@ -97,7 +97,7 @@ class BaseComponent:
             return {}
 
         cc_class = eval_custom_component_code(self._code)
-        component_instance = cc_class()
+        component_instance = cc_class(_code=self._code)
         template_config = self.get_template_config(component_instance)
         return template_config
 

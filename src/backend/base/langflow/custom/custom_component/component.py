@@ -6,9 +6,7 @@ import nanoid  # type: ignore
 import yaml
 from pydantic import BaseModel
 
-from langflow.graph.edge.schema import EdgeData
 from langflow.helpers.custom import format_type
-from langflow.inputs.inputs import InputTypes
 from langflow.schema.artifact import get_artifact_type, post_process_raw
 from langflow.schema.data import Data
 from langflow.schema.message import Message
@@ -20,13 +18,15 @@ from langflow.utils.async_helpers import run_until_complete
 from .custom_component import CustomComponent
 
 if TYPE_CHECKING:
+    from langflow.graph.edge.schema import EdgeData
     from langflow.graph.vertex.base import Vertex
+    from langflow.inputs.inputs import InputTypes
 
 BACKWARDS_COMPATIBLE_ATTRIBUTES = ["user_id", "vertex", "tracing_service"]
 
 
 class Component(CustomComponent):
-    inputs: List[InputTypes] = []
+    inputs: List["InputTypes"] = []
     outputs: List[Output] = []
     code_class_base_inheritance: ClassVar[str] = "Component"
     _output_logs: dict[str, Log] = {}
@@ -41,7 +41,7 @@ class Component(CustomComponent):
                 config[key] = value
             else:
                 inputs[key] = value
-        self._inputs: dict[str, InputTypes] = {}
+        self._inputs: dict[str, "InputTypes"] = {}
         self._outputs: dict[str, Output] = {}
         self._results: dict[str, Any] = {}
         self._attributes: dict[str, Any] = {}
@@ -64,6 +64,20 @@ class Component(CustomComponent):
             self.map_outputs(self.outputs)
         # Set output types
         self._set_output_types()
+        self.set_class_code()
+
+    def set_class_code(self):
+        # Get the source code of the calling class
+        if self._code:
+            return
+        try:
+            module = inspect.getmodule(self.__class__)
+            if module is None:
+                raise ValueError("Could not find module for class")
+            class_code = inspect.getsource(module)
+            self._code = class_code
+        except OSError:
+            raise ValueError(f"Could not find source code for {self.__class__.__name__}")
 
     def set(self, **kwargs):
         """
@@ -80,6 +94,7 @@ class Component(CustomComponent):
         """
         for key, value in kwargs.items():
             self._process_connection_or_parameter(key, value)
+        return self
 
     def list_inputs(self):
         """
@@ -173,7 +188,7 @@ class Component(CustomComponent):
                 raise ValueError("Output name cannot be None.")
             self._outputs[output.name] = output
 
-    def map_inputs(self, inputs: List[InputTypes]):
+    def map_inputs(self, inputs: List["InputTypes"]):
         """
         Maps the given inputs to the component.
 
@@ -219,9 +234,32 @@ class Component(CustomComponent):
             raise ValueError(f"Output with method {method_name} not found")
         return output
 
+    def _inherits_from_component(self, method: Callable):
+        # check if the method is a method from a class that inherits from Component
+        # and that it is an output of that class
+        inherits_from_component = hasattr(method, "__self__") and isinstance(method.__self__, Component)
+        return inherits_from_component
+
+    def _method_is_valid_output(self, method: Callable):
+        # check if the method is a method from a class that inherits from Component
+        # and that it is an output of that class
+        method_is_output = (
+            hasattr(method, "__self__")
+            and isinstance(method.__self__, Component)
+            and method.__self__._get_output_by_method(method)
+        )
+        return method_is_output
+
     def _process_connection_or_parameter(self, key, value):
         _input = self._get_or_create_input(key)
-        if callable(value):
+        # We need to check if callable AND if it is a method from a class that inherits from Component
+        if callable(value) and self._inherits_from_component(value):
+            try:
+                self._method_is_valid_output(value)
+            except ValueError:
+                raise ValueError(
+                    f"Method {value.__name__} is not a valid output of {value.__self__.__class__.__name__}"
+                )
             self._connect_to_component(key, value, _input)
         else:
             self._set_parameter_or_attribute(key, value)
@@ -248,7 +286,7 @@ class Component(CustomComponent):
                 "target": self._id,
                 "data": {
                     "sourceHandle": {
-                        "dataType": self.name,
+                        "dataType": component.name or component.__class__.__name__,
                         "id": component._id,
                         "name": output.name,
                         "output_types": output.types,
@@ -264,6 +302,7 @@ class Component(CustomComponent):
         )
 
     def _set_parameter_or_attribute(self, key, value):
+        self._set_input_value(key, value)
         self._parameters[key] = value
         self._attributes[key] = value
 
@@ -302,7 +341,8 @@ class Component(CustomComponent):
                     f"Input {name} is connected to {input_value.__self__.display_name}.{input_value.__name__}"
                 )
             self._inputs[name].value = value
-            self._attributes[name] = value
+            if hasattr(self._inputs[name], "load_from_db"):
+                self._inputs[name].load_from_db = False
         else:
             raise ValueError(f"Input {name} not found in {self.__class__.__name__}")
 
@@ -340,6 +380,21 @@ class Component(CustomComponent):
         self._map_parameters_on_template(frontend_node_dict["template"])
 
         frontend_node = ComponentFrontendNode.from_dict(frontend_node_dict)
+        if not self._code:
+            self.set_class_code()
+        code_field = Input(
+            dynamic=True,
+            required=True,
+            placeholder="",
+            multiline=True,
+            value=self._code,
+            password=False,
+            name="code",
+            advanced=True,
+            field_type="code",
+            is_list=False,
+        )
+        frontend_node.template.add_field(code_field)
 
         for output in frontend_node.outputs:
             if output.types:
@@ -353,7 +408,7 @@ class Component(CustomComponent):
         data = {
             "data": {
                 "node": frontend_node.to_dict(keep_name=False),
-                "type": self.__class__.__name__,
+                "type": self.name or self.__class__.__name__,
             }
         }
         return data

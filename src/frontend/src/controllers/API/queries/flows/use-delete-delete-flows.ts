@@ -8,7 +8,7 @@ interface IDeleteFlows {
   flow_ids: string[];
 }
 
-export const useDeleteFlows: useMutationFunctionType<
+export const useDeleteDeleteFlows: useMutationFunctionType<
   undefined,
   IDeleteFlows
 > = (options?) => {

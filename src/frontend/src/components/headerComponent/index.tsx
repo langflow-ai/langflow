@@ -3,7 +3,6 @@ import { FaDiscord, FaGithub } from "react-icons/fa";
 import { RiTwitterXFill } from "react-icons/ri";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import AlertDropdown from "../../alerts/alertDropDown";
-import profileCircle from "../../assets/profile-circle.png";
 import {
   BASE_URL_API,
   LOCATIONS_TO_RETURN,
@@ -13,11 +12,11 @@ import { AuthContext } from "../../contexts/authContext";
 
 import FeatureFlags from "@/../feature-config.json";
 import { useLogout } from "@/controllers/API/queries/auth";
+import useDeleteFlow from "@/hooks/flows/use-delete-flow";
 import useAuthStore from "@/stores/authStore";
 import useAlertStore from "../../stores/alertStore";
 import { useDarkStore } from "../../stores/darkStore";
 import useFlowStore from "../../stores/flowStore";
-import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { useLocationStore } from "../../stores/locationStore";
 import { useStoreStore } from "../../stores/storeStore";
 import IconComponent, { ForwardedIconComponent } from "../genericIconComponent";
@@ -45,7 +44,7 @@ export default function Header(): JSX.Element {
   const logout = useAuthStore((state) => state.logout);
 
   const navigate = useNavigate();
-  const removeFlow = useFlowsManagerStore((store) => store.removeFlow);
+  const deleteFlow = useDeleteFlow();
   const hasStore = useStoreStore((state) => state.hasStore);
   const { id } = useParams();
   const nodes = useFlowStore((state) => state.nodes);
@@ -56,13 +55,12 @@ export default function Header(): JSX.Element {
 
   const routeHistory = useLocationStore((state) => state.routeHistory);
 
-  const profileImageUrl =
-    `${BASE_URL_API}files/profile_pictures/${
-      userData?.profile_image ?? "Space/046-rocket.svg"
-    }` ?? profileCircle;
+  const profileImageUrl = `${BASE_URL_API}files/profile_pictures/${
+    userData?.profile_image ?? "Space/046-rocket.svg"
+  }`;
   async function checkForChanges(): Promise<void> {
-    if (nodes.length === 0) {
-      await removeFlow(id!);
+    if (nodes.length === 0 && id) {
+      await deleteFlow({ id });
     }
   }
 
@@ -155,34 +153,38 @@ export default function Header(): JSX.Element {
       </div>
       <div className="header-end-division">
         <div className="header-end-display">
-          <a
-            href="https://github.com/langflow-ai/langflow"
-            target="_blank"
-            rel="noreferrer"
-            className="header-github-link gap-2"
-          >
-            <FaGithub className="h-5 w-5" />
-            <div className="hidden lg:block">Star</div>
-            <div className="header-github-display">{stars ?? 0}</div>
-          </a>
-          <a
-            href="https://twitter.com/langflow_ai"
-            target="_blank"
-            rel="noreferrer"
-            className="text-muted-foreground"
-          >
-            <RiTwitterXFill className="side-bar-button-size" />
-          </a>
-          <a
-            href="https://discord.gg/EqksyE2EX9"
-            target="_blank"
-            rel="noreferrer"
-            className="text-muted-foreground"
-          >
-            <FaDiscord className="side-bar-button-size" />
-          </a>
+          {FeatureFlags.ENABLE_SOCIAL_LINKS && (
+            <>
+              <a
+                href="https://github.com/langflow-ai/langflow"
+                target="_blank"
+                rel="noreferrer"
+                className="header-github-link gap-2"
+              >
+                <FaGithub className="h-5 w-5" />
+                <div className="hidden lg:block">Star</div>
+                <div className="header-github-display">{stars ?? 0}</div>
+              </a>
+              <a
+                href="https://twitter.com/langflow_ai"
+                target="_blank"
+                rel="noreferrer"
+                className="text-muted-foreground"
+              >
+                <RiTwitterXFill className="side-bar-button-size" />
+              </a>
+              <a
+                href="https://discord.gg/EqksyE2EX9"
+                target="_blank"
+                rel="noreferrer"
+                className="text-muted-foreground"
+              >
+                <FaDiscord className="side-bar-button-size" />
+              </a>
 
-          <Separator orientation="vertical" />
+              <Separator orientation="vertical" />
+            </>
+          )}
           {FeatureFlags.ENABLE_DARK_MODE && (
             <button
               className="extra-side-bar-save-disable"

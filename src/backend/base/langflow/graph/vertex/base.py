@@ -13,7 +13,8 @@ from loguru import logger
 from langflow.exceptions.component import ComponentBuildException
 from langflow.graph.schema import INPUT_COMPONENTS, OUTPUT_COMPONENTS, InterfaceComponentTypes, ResultData
 from langflow.graph.utils import UnbuiltObject, UnbuiltResult, log_transaction
-from langflow.interface.initialize import loading
+from langflow.graph.vertex.schema import NodeData
+from langflow.interface import initialize
 from langflow.interface.listing import lazy_load_dict
 from langflow.schema.artifact import ArtifactType
 from langflow.schema.data import Data
@@ -42,7 +43,7 @@ class VertexStates(str, Enum):
 class Vertex:
     def __init__(
         self,
-        data: Dict,
+        data: NodeData,
         graph: "Graph",
         base_type: Optional[str] = None,
         is_task: bool = False,
@@ -63,7 +64,7 @@ class Vertex:
         self.has_external_input = False
         self.has_external_output = False
         self.graph = graph
-        self._data = data
+        self._data = data.copy()
         self.base_type: Optional[str] = base_type
         self.outputs: List[Dict] = []
         self._parse_data()
@@ -95,6 +96,18 @@ class Vertex:
         self.use_result = False
         self.build_times: List[float] = []
         self.state = VertexStates.ACTIVE
+
+    def set_input_value(self, name: str, value: Any):
+        if self._custom_component is None:
+            raise ValueError(f"Vertex {self.id} does not have a component instance.")
+        self._custom_component._set_input_value(name, value)
+
+    def to_data(self):
+        return self._data
+
+    def add_component_instance(self, component_instance: "Component"):
+        component_instance.set_vertex(self)
+        self._custom_component = component_instance
 
     def add_result(self, name: str, result: Any):
         self.results[name] = result
@@ -289,12 +302,13 @@ class Vertex:
                         # we don't know the key of the dict but we need to set the value
                         # to the vertex that is the source of the edge
                         param_dict = template_dict[param_key]["value"]
-                        if param_dict:
+                        if not param_dict or len(param_dict) != 1:
+                            params[param_key] = self.graph.get_vertex(edge.source_id)
+                        else:
                             params[param_key] = {
                                 key: self.graph.get_vertex(edge.source_id) for key in param_dict.keys()
                             }
-                        else:
-                            params[param_key] = self.graph.get_vertex(edge.source_id)
+
                     else:
                         params[param_key] = self.graph.get_vertex(edge.source_id)
 
@@ -369,6 +383,8 @@ class Vertex:
                         params[field_name] = [unescape_string(v) for v in val]
                     elif isinstance(val, str):
                         params[field_name] = unescape_string(val)
+                    elif isinstance(val, Data):
+                        params[field_name] = unescape_string(val.get_text())
                 elif field.get("type") == "bool" and val is not None:
                     if isinstance(val, bool):
                         params[field_name] = val
@@ -437,10 +453,10 @@ class Vertex:
             raise ValueError(f"Base type for vertex {self.display_name} not found")
 
         if not self._custom_component:
-            custom_component, custom_params = await loading.instantiate_class(user_id=user_id, vertex=self)
+            custom_component, custom_params = await initialize.loading.instantiate_class(user_id=user_id, vertex=self)
         else:
             custom_component = self._custom_component
-            custom_params = loading.get_params(self.params)
+            custom_params = initialize.loading.get_params(self.params)
 
         await self._build_results(custom_component, custom_params, fallback_to_env_vars)
 
@@ -655,7 +671,7 @@ class Vertex:
 
     async def _build_results(self, custom_component, custom_params, fallback_to_env_vars=False):
         try:
-            result = await loading.get_instance_results(
+            result = await initialize.loading.get_instance_results(
                 custom_component=custom_component,
                 custom_params=custom_params,
                 vertex=self,
