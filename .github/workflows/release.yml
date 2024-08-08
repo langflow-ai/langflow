@@ -155,19 +155,34 @@ jobs:
           name: dist-main
           path: dist
 
-  call_docker_build:
-    name: Call Docker Build Workflow
-    needs: [release-base, release-main]
-    uses: langflow-ai/langflow/.github/workflows/docker-build.yml@main
+  call_docker_build_base:
+    name: Call Docker Build Workflow for Langflow Base
+    if : inputs.build_docker_base == true
+    uses: ./.github/workflows/docker-build.yml
     strategy:
       matrix:
         release_type:
           - base
+    with:
+      # version should be needs.release-base.outputs.version  if release_type is base
+      # version should be needs.release-main.outputs.version  if release_type is main
+      version: ''
+      release_type: ${{ matrix.release_type }}
+      pre_release: ${{ inputs.pre_release }}
+    secrets: inherit
+
+  call_docker_build_main:
+    name: Call Docker Build Workflow for Langflow
+    if : inputs.build_docker_main == true
+    uses: ./.github/workflows/docker-build.yml
+    strategy:
+      matrix:
+        release_type:
           - main
     with:
       # version should be needs.release-base.outputs.version  if release_type is base
       # version should be needs.release-main.outputs.version  if release_type is main
-      version: ${{ matrix.release_type == 'base' && needs.release-base.outputs.version || matrix.release_type == 'main' && needs.release-main.outputs.version }}
+      version: ''
       release_type: ${{ matrix.release_type }}
       pre_release: ${{ inputs.pre_release }}
     secrets: inherit
