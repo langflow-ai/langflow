@@ -1,5 +1,6 @@
 from typing import TYPE_CHECKING, NamedTuple
 
+from pydantic import BaseModel
 from typing_extensions import NotRequired, TypedDict
 
 from langflow.graph.edge.schema import EdgeData
@@ -36,3 +37,11 @@ class VertexBuildResult(NamedTuple):
     valid: bool
     artifacts: dict
     vertex: "Vertex"
+
+
+class GraphDumpModel(BaseModel):
+    data: GraphData
+    is_component: bool
+    name: str = ""
+    description: str = ""
+    endpoint_name: str | None = None
