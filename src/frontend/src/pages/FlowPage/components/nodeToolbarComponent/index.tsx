@@ -83,11 +83,13 @@ export default function NodeToolbarComponent({
   const shortcuts = useShortcutsStore((state) => state.shortcuts);
   const unselectAll = useFlowStore((state) => state.unselectAll);
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
+  const [openModal, setOpenModal] = useState(false);
+
   const addFlow = useAddFlow();
 
-  function handleMinimizeWShortcut(e: KeyboardEvent) {
-    if (isWrappedWithClass(e, "noflow")) return;
-    e.preventDefault();
+  const isMinimal = countHandlesFn(data) <= 1 && numberOfOutputHandles <= 1;
+
+  function minimize() {
     if (isMinimal) {
       setShowState((show) => !show);
       setShowNode(data.showNode ?? true ? false : true);
@@ -100,33 +102,33 @@ export default function NodeToolbarComponent({
     return;
   }
 
-  function handleGroupWShortcut(e: KeyboardEvent) {
-    if (isWrappedWithClass(e, "noflow")) return;
-    e.preventDefault();
+
+  function handleungroup() {
     if (isGroup) {
-      handleSelectChange("ungroup");
+      takeSnapshot();
+      expandGroupNode(
+        data.id,
+        updateFlowPosition(getNodePosition(data.id), data.node?.flow!),
+        data.node!.template,
+        nodes,
+        edges,
+        setNodes,
+        setEdges,
+        data.node?.outputs,
+      );
     }
+
   }
 
-  function handleShareWShortcut(e: KeyboardEvent) {
-    if (isWrappedWithClass(e, "noflow") && !showconfirmShare) return;
-    e.preventDefault();
+  function shareComponent() {
     if (hasApiKey || hasStore) {
       setShowconfirmShare((state) => !state);
     }
   }
 
-  function handleCodeWShortcut(e: KeyboardEvent) {
-    if (isWrappedWithClass(e, "noflow") && !openModal) return;
-    e.preventDefault();
-    if (hasCode) return setOpenModal((state) => !state);
-    setNoticeData({ title: `You can not access ${data.id} code` });
-  }
-
-  function handleAdvancedWShortcut(e: KeyboardEvent) {
-    if (isWrappedWithClass(e, "noflow") && !showModalAdvanced) return;
-    e.preventDefault();
-
+  function handleCodeModal() {
+    if (!hasCode) setNoticeData({ title: `You can not access ${data.id} code` });
+    setOpenModal((state) => !state);
   }
 
   function saveComponent() {
@@ -166,18 +168,25 @@ export default function NodeToolbarComponent({
     }));
   };
 
-  useShortcuts({ showOverrideModal,
+  useShortcuts({
+    showOverrideModal,
     showModalAdvanced,
+    openModal,
+    showconfirmShare,
     FreezeAllVertices: () => {
-    FreezeAllVertices({ flowId: currentFlow!.id, stopNodeId: data.id }) },
+      FreezeAllVertices({ flowId: currentFlow!.id, stopNodeId: data.id })
+    },
     Freeze: freezeFunction,
-    downloadFunction:()=>downloadNode(flowComponent!),
+    downloadFunction: () => downloadNode(flowComponent!),
     displayDocs: openDocs,
     saveComponent,
-    showAdvance:()=>setShowModalAdvanced((state) => !state),
-   });
+    showAdvance: () => setShowModalAdvanced((state) => !state),
+    handleCodeModal,
+    shareComponent,
+    ungroup: handleungroup,
+    minimizeFunction: minimize,
+  });
 
-  const isMinimal = countHandlesFn(data) <= 1 && numberOfOutputHandles <= 1;
   const isGroup = data.node?.flow ? true : false;
 
   const frozen = data.node?.frozen ?? false;
@@ -244,10 +253,10 @@ export default function NodeToolbarComponent({
         break;
       case "show":
         takeSnapshot();
-        setShowNode(data.showNode ?? true ? false : true);
+        minimize();
         break;
       case "Share":
-        if (hasApiKey || hasStore) setShowconfirmShare(true);
+        shareComponent();
         break;
       case "Download":
         downloadNode(flowComponent!);
@@ -267,17 +276,7 @@ export default function NodeToolbarComponent({
         unselectAll();
         break;
       case "ungroup":
-        takeSnapshot();
-        expandGroupNode(
-          data.id,
-          updateFlowPosition(getNodePosition(data.id), data.node?.flow!),
-          data.node!.template,
-          nodes,
-          edges,
-          setNodes,
-          setEdges,
-          data.node?.outputs,
-        );
+        handleungroup();
         break;
       case "override":
         setShowOverrideModal(true);
@@ -367,7 +366,6 @@ export default function NodeToolbarComponent({
     handleNodeClassHook(newNodeClass, type);
   };
 
-  const [openModal, setOpenModal] = useState(false);
   const hasCode = Object.keys(data.node!.template).includes("code");
   const [deleteIsFocus, setDeleteIsFocus] = useState(false);
 

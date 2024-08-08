@@ -6,21 +6,33 @@ export default function useShortcuts(
     {
         showOverrideModal,
         showModalAdvanced,
+        openModal,
+        showconfirmShare,
         FreezeAllVertices,
         Freeze,
         downloadFunction,
         displayDocs,
         saveComponent,
-        showAdvance
+        showAdvance,
+        handleCodeModal,
+        shareComponent,
+        ungroup,
+        minimizeFunction
     }: {
         showOverrideModal: boolean,
         showModalAdvanced: boolean,
+        openModal: boolean,
+        showconfirmShare: boolean,
         FreezeAllVertices: () => void,
         Freeze: () => void,
         downloadFunction: () => void,
         displayDocs: () => void,
         saveComponent: () => void,
-        showAdvance: () => void
+        showAdvance: () => void,
+        handleCodeModal: () => void,
+        shareComponent: () => void,
+        ungroup: () => void,
+        minimizeFunction: () => void
 
     }) {
     const advanced = useShortcutsStore((state) => state.advanced);
@@ -66,6 +78,29 @@ export default function useShortcuts(
         if (isWrappedWithClass(e, "noflow") && !showModalAdvanced) return;
         e.preventDefault();
         showAdvance();
+      }
+
+      function handleCodeWShortcut(e: KeyboardEvent) {
+        if (isWrappedWithClass(e, "noflow") && !openModal) return;
+        e.preventDefault();
+        handleCodeModal();
+      }
+
+      function handleShareWShortcut(e: KeyboardEvent) {
+        if (isWrappedWithClass(e, "noflow") && !showconfirmShare) return;
+        e.preventDefault();
+        shareComponent();
+      }
+      function handleGroupWShortcut(e: KeyboardEvent) {
+        if (isWrappedWithClass(e, "noflow")) return;
+        e.preventDefault();
+        ungroup();
+      }
+
+      function handleMinimizeWShortcut(e: KeyboardEvent) {
+        if (isWrappedWithClass(e, "noflow")) return;
+        e.preventDefault();
+        minimizeFunction();
       }
 
     useHotkeys(minimize, handleMinimizeWShortcut, { preventDefault: true });
