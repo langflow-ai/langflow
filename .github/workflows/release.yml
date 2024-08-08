@@ -28,7 +28,7 @@ on:
         description: "Pre-release"
         required: false
         type: boolean
-        default: true
+        default: false
 
 
 env:
