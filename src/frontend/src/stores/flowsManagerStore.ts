@@ -14,7 +14,6 @@ import {
   UseUndoRedoOptions,
 } from "../types/zustand/flowsManager";
 import {
-  cleanEdges,
   extractFieldsFromComponenents,
   processFlows,
 } from "../utils/reactflowUtils";
@@ -37,14 +36,15 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
     set({ examples });
   },
   currentFlowId: "",
-  setCurrentFlow: (flow: FlowType) => {
+  setCurrentFlow: (flow: FlowType | undefined) => {
     set({
       currentFlow: flow,
-      currentFlowId: flow.id,
+      currentFlowId: flow?.id ?? "",
     });
-    useFlowStore.setState({
-      nodes: flow?.data?.nodes ?? [],
+    useFlowStore.getState().resetFlow({
       edges: flow?.data?.edges ?? [],
+      nodes: flow?.data?.nodes ?? [],
+      viewport: flow?.data?.viewport ?? { zoom: 1, x: 0, y: 0 },
     });
   },
   getFlowById: (id: string) => {
@@ -52,14 +52,17 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
   },
   setCurrentFlowId: (currentFlowId: string) => {
     const flow = get().flows?.find((flow) => flow.id === currentFlowId);
-    let newEdges = cleanEdges(flow?.data!.nodes ?? [], flow?.data!.edges ?? []);
+    console.log(flow, "kakakkaka");
     set({
       currentFlowId,
       currentFlow:
         get().flows?.find((flow) => flow.id === currentFlowId) ?? undefined,
     });
-
-    useFlowStore.setState({ edges: newEdges, nodes: flow?.data?.nodes ?? [] });
+    useFlowStore.getState().resetFlow({
+      edges: flow?.data?.edges ?? [],
+      nodes: flow?.data?.nodes ?? [],
+      viewport: flow?.data?.viewport ?? { zoom: 1, x: 0, y: 0 },
+    });
   },
   flows: [],
   allFlows: [],
