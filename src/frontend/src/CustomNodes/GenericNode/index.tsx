@@ -52,7 +52,6 @@ export default function GenericNode({
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
   const [isOutdated, setIsOutdated] = useState(false);
   const [isUserEdited, setIsUserEdited] = useState(false);
-  const [handles, setHandles] = useState<number>(0);
   const [borderColor, setBorderColor] = useState<string>("");
   const [showNode, setShowNode] = useState(data.showNode ?? true);
 
@@ -108,14 +107,6 @@ export default function GenericNode({
     checkNodeIconFragment,
   );
 
-  function countHandles(): void {
-    const count = countHandlesFn(data);
-    setHandles(count);
-  }
-
-  useEffect(() => {
-    countHandles();
-  }, [data, data.node]);
 
   useEffect(() => {
     setShowNode(data.showNode ?? true);
@@ -228,7 +219,6 @@ export default function GenericNode({
             }));
           }}
           setShowState={setShowNode}
-          numberOfHandles={handles}
           numberOfOutputHandles={shownOutputs.length ?? 0}
           showNode={showNode}
           openAdvancedModal={false}
@@ -244,7 +234,6 @@ export default function GenericNode({
     takeSnapshot,
     setNode,
     setShowNode,
-    handles,
     showNode,
     updateNodeCode,
     isOutdated,

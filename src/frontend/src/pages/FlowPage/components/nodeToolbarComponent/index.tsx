@@ -37,12 +37,12 @@ import {
 import { classNames, cn } from "../../../../utils/utils";
 import isWrappedWithClass from "../PageComponent/utils/is-wrapped-with-class";
 import ToolbarSelectItem from "./toolbarSelectItem";
+import { countHandlesFn } from "@/CustomNodes/helpers/count-handles";
 
 export default function NodeToolbarComponent({
   data,
   deleteNode,
   setShowNode,
-  numberOfHandles,
   numberOfOutputHandles,
   showNode,
   name = "code",
@@ -204,7 +204,7 @@ export default function NodeToolbarComponent({
   useHotkeys(freeze, handleFreeze);
   useHotkeys(freezeAll, handleFreezeAll);
 
-  const isMinimal = numberOfHandles <= 1 && numberOfOutputHandles <= 1;
+  const isMinimal = countHandlesFn(data) <= 1 && numberOfOutputHandles <= 1;
   const isGroup = data.node?.flow ? true : false;
 
   const frozen = data.node?.frozen ?? false;
