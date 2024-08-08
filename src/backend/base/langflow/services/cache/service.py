@@ -8,9 +8,7 @@ from typing import Generic, Optional
 from loguru import logger
 
 from langflow.services.cache.base import AsyncBaseCacheService, AsyncLockType, CacheService, LockType
-from langflow.services.cache.utils import CacheMiss
-
-CACHE_MISS = CacheMiss()
+from langflow.services.cache.utils import CACHE_MISS
 
 
 class ThreadingInMemoryCache(CacheService, Generic[LockType]):  # type: ignore
