@@ -358,14 +358,14 @@ export default function GenericNode({
                 </>
               )}
             </div>
-              <NodeStatus
-                frozen={data.node?.frozen}
-                showNode={showNode}
-                display_name={data.node?.display_name!}
-                nodeId={data.id}
-                selected={selected}
-                setBorderColor={setBorderColor}
-              />
+            <NodeStatus
+              frozen={data.node?.frozen}
+              showNode={showNode}
+              display_name={data.node?.display_name!}
+              nodeId={data.id}
+              selected={selected}
+              setBorderColor={setBorderColor}
+            />
           </div>
         </div>
 

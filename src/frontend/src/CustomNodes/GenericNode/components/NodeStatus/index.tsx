@@ -98,7 +98,7 @@ export default function NodeStatus({
   };
 
   useEffect(() => {
-    console.log(selected)
+    console.log(selected);
     setBorderColor(
       getNodeBorderClassName(selected, showNode, buildStatus, validationStatus),
     );
@@ -164,24 +164,26 @@ export default function NodeStatus({
         >
           <div className="cursor-help">{iconStatus}</div>
         </ShadTooltip>
-        {showNode && (<Button
-          onClick={() => {
-            if (buildStatus === BuildStatus.BUILDING || isBuilding) return;
-            setValidationStatus(null);
-            buildFlow({ stopNodeId: nodeId });
-          }}
-          unstyled
-          className="group p-1"
-        >
-          <div data-testid={`button_run_` + display_name.toLowerCase()}>
-            <IconComponent
-              name="Play"
-              className={
-                "h-5 w-5 fill-current stroke-2 text-muted-foreground transition-all group-hover:text-medium-indigo group-hover/node:opacity-100"
-              }
-            />
-          </div>
-        </Button>)}
+        {showNode && (
+          <Button
+            onClick={() => {
+              if (buildStatus === BuildStatus.BUILDING || isBuilding) return;
+              setValidationStatus(null);
+              buildFlow({ stopNodeId: nodeId });
+            }}
+            unstyled
+            className="group p-1"
+          >
+            <div data-testid={`button_run_` + display_name.toLowerCase()}>
+              <IconComponent
+                name="Play"
+                className={
+                  "h-5 w-5 fill-current stroke-2 text-muted-foreground transition-all group-hover:text-medium-indigo group-hover/node:opacity-100"
+                }
+              />
+            </div>
+          </Button>
+        )}
       </div>
     </>
   );
