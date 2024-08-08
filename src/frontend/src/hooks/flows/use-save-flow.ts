@@ -42,6 +42,7 @@ const useSaveFlow = () => {
           { id, name, data, description, folder_id, endpoint_name },
           {
             onSuccess: (updatedFlow) => {
+              setSaveLoading(false);
               if (updatedFlow !== null) {
                 // updates flow in state
                 setFlows(
@@ -52,7 +53,6 @@ const useSaveFlow = () => {
                     return flow;
                   }),
                 );
-                setSaveLoading(false);
                 resolve();
               }
             },
