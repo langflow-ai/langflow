@@ -8,42 +8,33 @@ import IconComponent, {
 import ShadTooltip from "../../components/shadTooltipComponent";
 import { Button } from "../../components/ui/button";
 import {
-  RUN_TIMESTAMP_PREFIX,
-  STATUS_BUILD,
-  STATUS_BUILDING,
-  STATUS_INACTIVE,
   TOOLTIP_OUTDATED_NODE,
 } from "../../constants/constants";
-import { BuildStatus } from "../../constants/enums";
 import { postCustomComponent } from "../../controllers/API";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
 import useAlertStore from "../../stores/alertStore";
-import { useDarkStore } from "../../stores/darkStore";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { useShortcutsStore } from "../../stores/shortcuts";
 import { useTypesStore } from "../../stores/typesStore";
-import { OutputFieldType, VertexBuildTypeAPI } from "../../types/api";
+import { OutputFieldType } from "../../types/api";
 import { NodeDataType } from "../../types/flow";
-import { handleKeyDown, scapedJSONStringfy } from "../../utils/reactflowUtils";
+import { scapedJSONStringfy } from "../../utils/reactflowUtils";
 import { nodeColors, nodeIconsLucide } from "../../utils/styleUtils";
 import { classNames, cn } from "../../utils/utils";
 import { countHandlesFn } from "../helpers/count-handles";
-import { getSpecificClassFromBuildStatus } from "../helpers/get-class-from-build-status";
 import { getNodeInputColors } from "../helpers/get-node-input-colors";
 import { getNodeOutputColors } from "../helpers/get-node-output-colors";
 import useCheckCodeValidity from "../hooks/use-check-code-validity";
 import useIconNodeRender from "../hooks/use-icon-render";
-import useIconStatus from "../hooks/use-icons-status";
 import useUpdateNodeCode from "../hooks/use-update-node-code";
-import useUpdateValidationStatus from "../hooks/use-update-validation-status";
-import useValidationStatusString from "../hooks/use-validation-status-string";
 import getFieldTitle from "../utils/get-field-title";
 import sortFields from "../utils/sort-fields";
 import NodeInputField from "./components/NodeInputField";
 import NodeOutputField from "./components/NodeOutputfield";
 import  NodeName  from "./components/NodeName";
 import NodeDescription from "./components/NodeDescription";
+import NodeStatus from "./components/NodeStatus";
 
 export default function GenericNode({
   data,
@@ -54,37 +45,22 @@ export default function GenericNode({
   xPos?: number;
   yPos?: number;
 }): JSX.Element {
-  const preventDefault = true;
   const types = useTypesStore((state) => state.types);
   const templates = useTypesStore((state) => state.templates);
   const deleteNode = useFlowStore((state) => state.deleteNode);
-  const flowPool = useFlowStore((state) => state.flowPool);
-  const buildFlow = useFlowStore((state) => state.buildFlow);
   const setNode = useFlowStore((state) => state.setNode);
   const updateNodeInternals = useUpdateNodeInternals();
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  const isDark = useDarkStore((state) => state.dark);
-  const version = useDarkStore((state) => state.version);
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
-
-
   const [isOutdated, setIsOutdated] = useState(false);
   const [isUserEdited, setIsUserEdited] = useState(false);
+  const [handles, setHandles] = useState<number>(0);
+  const [borderColor, setBorderColor] = useState<string>("");
+  const [showNode, setShowNode] = useState(data.showNode ?? true);
+  // State for outline color
   const buildStatus = useFlowStore(
     (state) => state.flowBuildStatus[data.id]?.status,
   );
-  const lastRunTime = useFlowStore(
-    (state) => state.flowBuildStatus[data.id]?.timestamp,
-  );
-  const [validationStatus, setValidationStatus] =
-    useState<VertexBuildTypeAPI | null>(null);
-  const [handles, setHandles] = useState<number>(0);
-  const [validationString, setValidationString] = useState<string>("");
-
-  const iconStatus = useIconStatus(buildStatus, validationStatus);
-  const [showNode, setShowNode] = useState(data.showNode ?? true);
-  // State for outline color
-  const isBuilding = useFlowStore((state) => state.isBuilding);
 
   const updateNodeCode = useUpdateNodeCode(
     data?.id,
@@ -111,43 +87,7 @@ export default function GenericNode({
     );
   };
 
-  const renderIconStatus = () => {
-    return <div className="cursor-help">{iconStatus}</div>;
-  };
 
-  const getNodeBorderClassName = (
-    selected: boolean,
-    showNode: boolean,
-    buildStatus: BuildStatus | undefined,
-    validationStatus: VertexBuildTypeAPI | null,
-  ) => {
-    const specificClassFromBuildStatus = getSpecificClassFromBuildStatus(
-      buildStatus,
-      validationStatus,
-      isDark,
-    );
-
-    const baseBorderClass = getBaseBorderClass(selected);
-    const nodeSizeClass = getNodeSizeClass(showNode);
-    const names = classNames(
-      baseBorderClass,
-      nodeSizeClass,
-      "generic-node-div group/node",
-      specificClassFromBuildStatus,
-    );
-    return names;
-  };
-
-  const getBaseBorderClass = (selected) => {
-    let className = selected
-      ? "border border-ring hover:shadow-node"
-      : "border hover:shadow-node";
-    let frozenClass = selected ? "border-ring-frozen" : "border-frozen";
-    return data.node?.frozen ? frozenClass : className;
-  };
-
-  const getNodeSizeClass = (showNode) =>
-    showNode ? "w-96 rounded-lg" : "w-26 h-26 rounded-full";
 
   const isEmoji = emojiRegex().test(data?.node?.icon!);
 
@@ -164,8 +104,6 @@ export default function GenericNode({
   }
 
   useCheckCodeValidity(data, templates, setIsOutdated, setIsUserEdited, types);
-  useUpdateValidationStatus(data?.id, flowPool, setValidationStatus);
-  useValidationStatusString(validationStatus, setValidationString);
 
   const iconNodeRender = useIconNodeRender(
     data,
@@ -191,26 +129,6 @@ export default function GenericNode({
     setShowNode(data.showNode ?? true);
   }, [data.showNode]);
 
-  useEffect(() => {
-    if (buildStatus === BuildStatus.BUILT && !isBuilding) {
-      setNode(
-        data.id,
-        (old) => {
-          return {
-            ...old,
-            data: {
-              ...old.data,
-              node: {
-                ...old.data.node,
-                lf_version: version,
-              },
-            },
-          };
-        },
-        false,
-      );
-    }
-  }, [buildStatus, isBuilding]);
 
   const [loadingUpdate, setLoadingUpdate] = useState(false);
 
@@ -261,18 +179,9 @@ export default function GenericNode({
   const hiddenOutputs =
     data.node!.outputs?.filter((output) => output.hidden) ?? [];
 
-  function handlePlayWShortcut() {
-    if (buildStatus === BuildStatus.BUILDING || isBuilding || !selected) return;
-    setValidationStatus(null);
-    console.log(data.node?.display_name);
-    buildFlow({ stopNodeId: data.id });
-  }
 
   const update = useShortcutsStore((state) => state.update);
-  const play = useShortcutsStore((state) => state.play);
-
-  useHotkeys(update, handleUpdateCodeWShortcut, { preventDefault });
-  useHotkeys(play, handlePlayWShortcut, { preventDefault });
+  useHotkeys(update, handleUpdateCodeWShortcut, { preventDefault:true });
 
   const shortcuts = useShortcutsStore((state) => state.shortcuts);
 
@@ -412,12 +321,7 @@ export default function GenericNode({
     <>
       {memoizedNodeToolbarComponent}
       <div
-        className={getNodeBorderClassName(
-          selected,
-          showNode,
-          buildStatus,
-          validationStatus,
-        )}
+        className={borderColor}
       >
         {data.node?.beta && showNode && (
           <div className="beta-badge-wrapper">
@@ -474,71 +378,7 @@ export default function GenericNode({
               )}
             </div>
             {showNode && (
-              <>
-                <div className="flex flex-shrink-0 items-center gap-2">
-                  <ShadTooltip
-                    content={
-                      buildStatus === BuildStatus.BUILDING ? (
-                        <span> {STATUS_BUILDING} </span>
-                      ) : buildStatus === BuildStatus.INACTIVE ? (
-                        <span> {STATUS_INACTIVE} </span>
-                      ) : !validationStatus ? (
-                        <span className="flex">{STATUS_BUILD}</span>
-                      ) : (
-                        <div className="max-h-100 p-2">
-                          <div className="max-h-80 overflow-auto">
-                            {validationString && (
-                              <div className="ml-1 pb-2 text-status-red">
-                                {validationString}
-                              </div>
-                            )}
-                            {lastRunTime && (
-                              <div className="justify-left flex font-normal text-muted-foreground">
-                                <div>{RUN_TIMESTAMP_PREFIX}</div>
-                                <div className="ml-1 text-status-blue">
-                                  {lastRunTime}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                          <div className="justify-left flex font-normal text-muted-foreground">
-                            <div>Duration:</div>
-                            <div className="ml-1 text-status-blue">
-                              {validationStatus?.data.duration}
-                            </div>
-                          </div>
-                        </div>
-                      )
-                    }
-                    side="bottom"
-                  >
-                    {renderIconStatus()}
-                  </ShadTooltip>
-                  <Button
-                    onClick={() => {
-                      if (buildStatus === BuildStatus.BUILDING || isBuilding)
-                        return;
-                      setValidationStatus(null);
-                      buildFlow({ stopNodeId: data.id });
-                    }}
-                    unstyled
-                    className="group p-1"
-                  >
-                    <div
-                      data-testid={
-                        `button_run_` + data?.node?.display_name.toLowerCase()
-                      }
-                    >
-                      <IconComponent
-                        name="Play"
-                        className={
-                          "h-5 w-5 fill-current stroke-2 text-muted-foreground transition-all group-hover:text-medium-indigo group-hover/node:opacity-100"
-                        }
-                      />
-                    </div>
-                  </Button>
-                </div>
-              </>
+              <NodeStatus frozen={data.node?.frozen} showNode={showNode} display_name={data.node?.display_name!} nodeId={data.id} selected={selected} setBorderColor={setBorderColor}/>
             )}
           </div>
         </div>
