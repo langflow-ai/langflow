@@ -8,6 +8,7 @@ import {
 } from "../../../ui/dropdown-menu";
 
 import useAddFlow from "@/hooks/flows/use-add-flow";
+import useSaveFlow from "@/hooks/flows/use-save-flow";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
 import { useNavigate } from "react-router-dom";
 import { UPLOAD_ERROR_ALERT } from "../../../../constants/alerts_constants";
@@ -46,6 +47,20 @@ export const MenuBar = ({}: {}): JSX.Element => {
   const navigate = useNavigate();
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const getTypes = useTypesStore((state) => state.getTypes);
+  const saveFlow = useSaveFlow();
+  const shouldAutosave = process.env.LANGFLOW_AUTO_SAVE !== "false";
+  const updatedAt = currentFlow?.updated_at;
+  const currentTime = new Date();
+  const updatedTime = new Date(updatedAt ?? "");
+  const timeDifference =
+    (currentTime.getTime() - updatedTime.getTime()) / 1000 / 60; // difference in minutes
+  const savedText =
+    updatedAt && timeDifference > 1
+      ? new Date(currentFlow.updated_at ?? "").toLocaleString("en-US", {
+          hour: "numeric",
+          minute: "numeric",
+        })
+      : "Saved";
 
   function handleAddFlow() {
     try {
@@ -69,7 +84,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
     } else if (saveLoading) {
       return "Saving...";
     }
-    return "Saved";
+    return savedText;
   }
 
   return currentFlow ? (
@@ -112,6 +127,26 @@ export const MenuBar = ({}: {}): JSX.Element => {
               <IconComponent name="Settings2" className="header-menu-options" />
               Settings
             </DropdownMenuItem>
+            {!shouldAutosave && (
+              <DropdownMenuItem
+                onClick={() => {
+                  saveFlow().then(() => {
+                    setSuccessData({ title: "Saved successfully" });
+                  });
+                }}
+                className="cursor-pointer"
+              >
+                <ToolbarSelectItem
+                  value="Save"
+                  icon="Save"
+                  dataTestId=""
+                  shortcut={
+                    shortcuts.find((s) => s.name.toLowerCase() === "save")
+                      ?.shortcut!
+                  }
+                />
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem
               onClick={() => {
                 setOpenLogs(true);
@@ -221,7 +256,13 @@ export const MenuBar = ({}: {}): JSX.Element => {
           <div className="flex cursor-default items-center gap-2 text-sm text-muted-foreground transition-all">
             <div className="flex cursor-default items-center gap-1.5 text-sm text-muted-foreground transition-all">
               <IconComponent
-                name={isBuilding || saveLoading ? "Loader2" : "CheckCircle2"}
+                name={
+                  isBuilding || saveLoading
+                    ? "Loader2"
+                    : timeDifference > 1
+                      ? "Save"
+                      : "CheckCircle2"
+                }
                 className={cn(
                   "h-4 w-4",
                   isBuilding || saveLoading ? "animate-spin" : "animate-wiggle",
