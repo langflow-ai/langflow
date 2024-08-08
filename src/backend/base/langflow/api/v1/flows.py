@@ -403,7 +403,7 @@ async def download_multiple_file(
 @router.get("/starter_projects", response_model=List[GraphDump], status_code=200)
 def get_starter_projects(
     *,
-    current_user: User = Depends(get_current_active_user),
+    _: User = Depends(get_current_active_user),
 ):
     """Get a list of starter projects."""
     try:
