@@ -55,10 +55,6 @@ export default function GenericNode({
   const [handles, setHandles] = useState<number>(0);
   const [borderColor, setBorderColor] = useState<string>("");
   const [showNode, setShowNode] = useState(data.showNode ?? true);
-  // State for outline color
-  const buildStatus = useFlowStore(
-    (state) => state.flowBuildStatus[data.id]?.status,
-  );
 
   const updateNodeCode = useUpdateNodeCode(
     data?.id,
