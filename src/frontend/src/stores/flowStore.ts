@@ -19,7 +19,6 @@ import {
   MISSED_ERROR_ALERT,
 } from "../constants/alerts_constants";
 import { BuildStatus } from "../constants/enums";
-import { getFlowPool } from "../controllers/API";
 import { VertexBuildTypeAPI } from "../types/api";
 import { ChatInputType, ChatOutputType } from "../types/chat";
 import {
@@ -154,7 +153,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     set({ isPending });
   },
   resetFlow: ({ nodes, edges, viewport }) => {
-    const currentFlow = useFlowsManagerStore.getState().currentFlow;
     let brokenEdges = detectBrokenEdgesEdges(nodes, edges);
     if (brokenEdges.length > 0) {
       useAlertStore.getState().setErrorData({
@@ -172,13 +170,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       inputs,
       outputs,
       hasIO: inputs.length > 0 || outputs.length > 0,
+      flowPool: {},
     });
-    get().reactFlowInstance!.setViewport(viewport);
-    if (currentFlow) {
-      getFlowPool({ flowId: currentFlow.id }).then((flowPool) => {
-        set({ flowPool: flowPool.data.vertex_builds });
-      });
-    }
+    get().reactFlowInstance?.setViewport(viewport);
   },
   setIsBuilding: (isBuilding) => {
     set({ isBuilding });
@@ -602,6 +596,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
 
       useFlowStore.getState().updateBuildStatus([vertexBuildData.id], status);
     }
+    console.log("on flow page", get().onFlowPage, "nodes", get().nodes);
     await buildFlowVerticesWithFallback({
       input_value,
       files,
@@ -654,8 +649,8 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         useFlowStore.getState().updateBuildStatus(idList, BuildStatus.BUILDING);
       },
       onValidateNodes: validateSubgraph,
-      nodes: get().onFlowPage ? get().nodes : undefined,
-      edges: get().onFlowPage ? get().edges : undefined,
+      nodes: get().nodes || undefined,
+      edges: get().edges || undefined,
     });
     get().setIsBuilding(false);
     get().setLockChat(false);
