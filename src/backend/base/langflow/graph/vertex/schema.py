@@ -18,4 +18,3 @@ class NodeData(TypedDict):
     positionAbsolute: NotRequired[Position]
     selected: NotRequired[bool]
     parent_node_id: NotRequired[str]
-    type: str
