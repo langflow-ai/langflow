@@ -164,7 +164,7 @@ class Message(Data):
         return value
 
     def sync_get_file_content_dicts(self):
-        coro = self.aget_file_content_dicts()
+        coro = self.get_file_content_dicts()
         loop = asyncio.get_event_loop()
         return loop.run_until_complete(coro)
 
