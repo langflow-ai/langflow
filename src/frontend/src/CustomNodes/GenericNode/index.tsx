@@ -45,6 +45,7 @@ import getFieldTitle from "../utils/get-field-title";
 import sortFields from "../utils/sort-fields";
 import NodeInputField from "./components/NodeInputField";
 import NodeOutputField from "./components/NodeOutputfield";
+import { NodeName } from "./components/NodeName";
 
 export default function GenericNode({
   data,
@@ -69,8 +70,7 @@ export default function GenericNode({
   const version = useDarkStore((state) => state.version);
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
 
-  const [inputName, setInputName] = useState(false);
-  const [nodeName, setNodeName] = useState(data.node!.display_name);
+
   const [inputDescription, setInputDescription] = useState(false);
   const [nodeDescription, setNodeDescription] = useState(
     data.node?.description!,
@@ -196,7 +196,6 @@ export default function GenericNode({
 
   useEffect(() => {
     if (!selected) {
-      setInputName(false);
       setInputDescription(false);
     }
   }, [selected]);
@@ -204,10 +203,6 @@ export default function GenericNode({
   useEffect(() => {
     setNodeDescription(data.node!.description);
   }, [data.node!.description]);
-
-  useEffect(() => {
-    setNodeName(data.node!.display_name);
-  }, [data.node!.display_name]);
 
   useEffect(() => {
     setShowNode(data.showNode ?? true);
@@ -355,7 +350,7 @@ export default function GenericNode({
           numberOfOutputHandles={shownOutputs.length ?? 0}
           showNode={showNode}
           openAdvancedModal={false}
-          onCloseAdvancedModal={() => {}}
+          onCloseAdvancedModal={() => { }}
           updateNode={handleUpdateCode}
           isOutdated={isOutdated && isUserEdited}
         />
@@ -466,66 +461,21 @@ export default function GenericNode({
               {iconNodeRender()}
               {showNode && (
                 <div className="generic-node-tooltip-div">
-                  {inputName ? (
-                    <div>
-                      <InputComponent
-                        onBlur={() => {
-                          setInputName(false);
-                          if (nodeName.trim() !== "") {
-                            setNodeName(nodeName);
-                            setNode(data.id, (old) => ({
-                              ...old,
-                              data: {
-                                ...old.data,
-                                node: {
-                                  ...old.data.node,
-                                  display_name: nodeName,
-                                },
-                              },
-                            }));
-                          } else {
-                            setNodeName(data.node!.display_name);
-                          }
-                        }}
-                        value={nodeName}
-                        onChange={setNodeName}
-                        password={false}
-                        blurOnEnter={true}
-                        id={`input-title-${data.node?.display_name}`}
-                      />
-                    </div>
-                  ) : (
-                    <div className="group flex items-center gap-1">
-                      <ShadTooltip content={data.node?.display_name}>
-                        <div
-                          onDoubleClick={(event) => {
-                            setInputName(true);
-                            takeSnapshot();
-                            event.stopPropagation();
-                            event.preventDefault();
-                          }}
-                          data-testid={"title-" + data.node?.display_name}
-                          className="nodoubleclick generic-node-tooltip-div cursor-text text-primary"
-                        >
-                          {data.node?.display_name}
-                        </div>
-                      </ShadTooltip>
-                      {isOutdated && !isUserEdited && (
-                        <ShadTooltip content={TOOLTIP_OUTDATED_NODE}>
-                          <Button
-                            onClick={handleUpdateCode}
-                            unstyled
-                            className={"group p-1"}
-                            loading={loadingUpdate}
-                          >
-                            <IconComponent
-                              name="AlertTriangle"
-                              className="h-5 w-5 fill-status-yellow text-muted"
-                            />
-                          </Button>
-                        </ShadTooltip>
-                      )}
-                    </div>
+                  <NodeName display_name={data.node?.display_name} nodeId={data.id} selected={selected} />
+                  {isOutdated && !isUserEdited && (
+                    <ShadTooltip content={TOOLTIP_OUTDATED_NODE}>
+                      <Button
+                        onClick={handleUpdateCode}
+                        unstyled
+                        className={"group p-1"}
+                        loading={loadingUpdate}
+                      >
+                        <IconComponent
+                          name="AlertTriangle"
+                          className="h-5 w-5 fill-status-yellow text-muted"
+                        />
+                      </Button>
+                    </ShadTooltip>
                   )}
                 </div>
               )}
@@ -533,7 +483,7 @@ export default function GenericNode({
             <div>
               {!showNode && (
                 <>
-                {renderInputParameter}
+                  {renderInputParameter}
                   {shownOutputs &&
                     shownOutputs.length > 0 &&
                     renderOutputParameter(shownOutputs[0], 0)}
@@ -622,7 +572,6 @@ export default function GenericNode({
                   autoFocus
                   onBlur={() => {
                     setInputDescription(false);
-                    setInputName(false);
                     setNodeDescription(nodeDescription);
                     setNode(data.id, (old) => ({
                       ...old,
