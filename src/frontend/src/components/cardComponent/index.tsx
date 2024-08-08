@@ -1,12 +1,10 @@
 import { usePostLikeComponent } from "@/controllers/API/queries/store";
-import { useEffect, useState } from "react";
-import { createRoot } from "react-dom/client";
+import { useState } from "react";
 import { Control } from "react-hook-form";
-import { getComponent, postLikeComponent } from "../../controllers/API";
+import { getComponent } from "../../controllers/API";
 import IOModal from "../../modals/IOModal";
 import DeleteConfirmationModal from "../../modals/deleteConfirmationModal";
 import useAlertStore from "../../stores/alertStore";
-import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { useStoreStore } from "../../stores/storeStore";
 import { FlowType } from "../../types/flow";
@@ -31,7 +29,6 @@ import Loading from "../ui/loading";
 import useDataEffect from "./hooks/use-data-effect";
 import useInstallComponent from "./hooks/use-handle-install";
 import useDragStart from "./hooks/use-on-drag-start";
-import usePlaygroundEffect from "./hooks/use-playground-effect";
 import { convertTestName } from "./utils/convert-test-name";
 
 export default function CollectionCardComponent({
@@ -56,7 +53,6 @@ export default function CollectionCardComponent({
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setValidApiKey = useStoreStore((state) => state.updateValidApiKey);
-  const cleanFlowPool = useFlowStore((state) => state.CleanFlowPool);
   const isStore = false;
   const [loading, setLoading] = useState(false);
   const [likedByUser, setLikedByUser] = useState(data?.liked_by_user ?? false);
@@ -64,12 +60,8 @@ export default function CollectionCardComponent({
   const [downloadsCount, setDownloadsCount] = useState(
     data?.downloads_count ?? 0,
   );
-  const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
   const getFlowById = useFlowsManagerStore((state) => state.getFlowById);
-  const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
-  const setNodes = useFlowStore((state) => state.setNodes);
-  const setEdges = useFlowStore((state) => state.setEdges);
   const [openPlayground, setOpenPlayground] = useState(false);
   const setCurrentFlowId = useFlowsManagerStore(
     (state) => state.setCurrentFlowId,
@@ -95,16 +87,6 @@ export default function CollectionCardComponent({
     const { inputs, outputs } = getInputsAndOutputs(flow?.data?.nodes ?? []);
     return inputs.length > 0 || outputs.length > 0;
   }
-
-  usePlaygroundEffect(
-    currentFlowId,
-    playground!,
-    openPlayground,
-    currentFlow,
-    setNodes,
-    setEdges,
-    cleanFlowPool,
-  );
 
   useDataEffect(data, setLikedByUser, setLikesCount, setDownloadsCount);
 
@@ -510,6 +492,7 @@ export default function CollectionCardComponent({
       </Card>
       {openPlayground && (
         <IOModal
+          key={data.id}
           cleanOnClose={true}
           open={openPlayground}
           setOpen={setOpenPlayground}
