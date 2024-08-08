@@ -131,7 +131,8 @@ jobs:
       - name: Check if pre-release
         if: inputs.pre_release == true
         run: |
-          if [[ "${{ needs.release-base.outputs.version }}" =~ ^([0-9]+(\.[0-9]+)?(\.[0-9]+)?(a[0-9]+|b[0-9]+|rc[0-9]+|dev[0-9]+|post[0-9]+)?)$ ]]; then
+          version=$(poetry version --short)
+          if [[ "${version}" =~ ^([0-9]+(\.[0-9]+)?(\.[0-9]+)?(a[0-9]+|b[0-9]+|rc[0-9]+|dev[0-9]+|post[0-9]+)?)$ ]]; then
             echo "Pre-release version detected. Continuing with the release."
           else
             echo "Invalid pre-release version detected. Exiting the workflow."
