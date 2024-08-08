@@ -14,6 +14,7 @@ import {
   UseUndoRedoOptions,
 } from "../types/zustand/flowsManager";
 import {
+  cleanEdges,
   extractFieldsFromComponenents,
   processFlows,
 } from "../utils/reactflowUtils";
@@ -37,19 +38,28 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
   },
   currentFlowId: "",
   setCurrentFlow: (flow: FlowType) => {
-    set((state) => ({
+    set({
       currentFlow: flow,
       currentFlowId: flow.id,
-    }));
+    });
+    useFlowStore.setState({
+      nodes: flow?.data?.nodes ?? [],
+      edges: flow?.data?.edges ?? [],
+    });
   },
   getFlowById: (id: string) => {
     return get().flows.find((flow) => flow.id === id);
   },
   setCurrentFlowId: (currentFlowId: string) => {
-    set((state) => ({
+    const flow = get().flows?.find((flow) => flow.id === currentFlowId);
+    let newEdges = cleanEdges(flow?.data!.nodes ?? [], flow?.data!.edges ?? []);
+    set({
       currentFlowId,
-      currentFlow: state.flows.find((flow) => flow.id === currentFlowId),
-    }));
+      currentFlow:
+        get().flows?.find((flow) => flow.id === currentFlowId) ?? undefined,
+    });
+
+    useFlowStore.setState({ edges: newEdges, nodes: flow?.data?.nodes ?? [] });
   },
   flows: [],
   allFlows: [],
@@ -57,6 +67,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
     set({ allFlows });
   },
   setFlows: (flows: FlowType[]) => {
+    console.log("setando o flou", flows);
     set({
       flows,
       currentFlow: flows.find((flow) => flow.id === get().currentFlowId),
@@ -127,7 +138,6 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
       ? useFolderStore.getState().folderUrl
       : useFolderStore.getState().myCollectionId ?? "";
 
-    set({ saveLoading: true });
     return new Promise<void>((resolve, reject) => {
       updateFlowInDatabase(flow)
         .then((updatedFlow) => {
