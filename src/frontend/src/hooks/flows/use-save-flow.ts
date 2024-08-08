@@ -8,17 +8,18 @@ const useSaveFlow = () => {
   const flows = useFlowsManagerStore((state) => state.flows);
   const setFlows = useFlowsManagerStore((state) => state.setFlows);
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const reactFlowInstance = useFlowStore((state) => state.reactFlowInstance);
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
+  const setSaveLoading = useFlowsManagerStore((state) => state.setSaveLoading);
 
-  const currentFlow = flows.find((flow) => flow.id === currentFlowId);
+  const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const flowData = currentFlow?.data;
 
   const { mutate } = usePatchUpdateFlow();
 
   const saveFlow = async (flow?: FlowType): Promise<void> => {
+    setSaveLoading(true);
     return new Promise<void>((resolve, reject) => {
       if (currentFlow) {
         flow = flow || {
@@ -41,9 +42,8 @@ const useSaveFlow = () => {
           { id, name, data, description, folder_id, endpoint_name },
           {
             onSuccess: (updatedFlow) => {
-              if (updatedFlow) {
+              if (updatedFlow !== null) {
                 // updates flow in state
-                console.log("uai");
                 setFlows(
                   flows.map((flow) => {
                     if (flow.id === updatedFlow.id) {
@@ -52,6 +52,7 @@ const useSaveFlow = () => {
                     return flow;
                   }),
                 );
+                setSaveLoading(false);
                 resolve();
               }
             },
@@ -60,6 +61,7 @@ const useSaveFlow = () => {
                 title: "Failed to save flow",
                 list: [e.message],
               });
+              setSaveLoading(false);
               reject(e);
             },
           },
