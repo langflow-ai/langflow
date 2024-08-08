@@ -212,7 +212,7 @@ def test_vector_store_rag_dump_components_and_edges(ingestion_graph, rag_graph):
         assert (source, target) in expected_rag_edges, f"Edge {source} -> {target} not found"
 
 
-def test_vector_store_rag_add(ingestion_graph, rag_graph):
+def test_vector_store_rag_add(ingestion_graph: Graph, rag_graph: Graph):
     ingestion_graph_copy = copy.deepcopy(ingestion_graph)
     rag_graph_copy = copy.deepcopy(rag_graph)
     ingestion_graph_copy += rag_graph_copy
