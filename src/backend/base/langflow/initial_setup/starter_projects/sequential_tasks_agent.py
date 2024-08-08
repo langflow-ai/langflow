@@ -9,7 +9,7 @@ from langflow.components.tools.SearchAPI import SearchAPIComponent
 from langflow.graph.graph.base import Graph
 
 
-def sequential_tasks_agent():
+def sequential_tasks_agent_graph():
     llm = OpenAIModelComponent()
     search_api_tool = SearchAPIComponent()
     researcher_agent = CrewAIAgentComponent()
