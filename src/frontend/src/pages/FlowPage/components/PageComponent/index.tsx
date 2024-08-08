@@ -2,7 +2,6 @@ import LoadingComponent from "@/components/loadingComponent";
 import { useGetBuildsQuery } from "@/controllers/API/queries/_builds";
 import useAutoSaveFlow from "@/hooks/flows/use-autosave-flow";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
-import { getInputsAndOutputs } from "@/utils/storeUtils";
 import _, { cloneDeep } from "lodash";
 import {
   KeyboardEvent,
@@ -106,11 +105,8 @@ export default function Page({
     useState<OnSelectionChangeParams | null>(null);
 
   const setFlowState = useFlowStore((state) => state.setFlowState);
-  const setInputs = useFlowStore((state) => state.setInputs);
-  const setOutputs = useFlowStore((state) => state.setOutputs);
   const setHasIO = useFlowStore((state) => state.setHasIO);
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
-  const { inputs, outputs } = getInputsAndOutputs(flow.data!.nodes);
 
   function handleGroupNode() {
     takeSnapshot();
@@ -172,15 +168,7 @@ export default function Page({
     !isFetching;
 
   useEffect(() => {
-    if (!isFetching) {
-      setFlowState(undefined);
-      setInputs(inputs);
-      setOutputs(outputs);
-      setHasIO(inputs.length > 0 || outputs.length > 0);
-    }
-  }, [isFetching]);
-
-  useEffect(() => {
+    refetch();
     if (checkOldComponents({ nodes })) {
       setNoticeData({
         title:
@@ -190,14 +178,9 @@ export default function Page({
   }, [currentFlowId]);
 
   useEffect(() => {
-    refetch();
-    return () => {
-      cleanFlow();
-    };
-  }, [currentFlowId]);
-
-  useEffect(() => {
-    autoSaveFlow();
+    if (currentFlow) {
+      autoSaveFlow();
+    }
   }, [nodes, edges]);
 
   function handleUndo(e: KeyboardEvent) {
