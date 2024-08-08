@@ -3,27 +3,19 @@ import json
 from typing import Any
 
 from langchain.agents import Tool
+from langflow.base.langchain_utilities.model import LCToolComponent
+from langflow.inputs.inputs import MultilineInput, MessageTextInput, BoolInput, DropdownInput, HandleInput, FieldTypes
 from langchain_core.tools import StructuredTool
+from langflow.io import Output
+
+from langflow.schema.dotdict import dotdict
+from langflow.schema import Data
+
 from pydantic.v1 import Field, create_model
 from pydantic.v1.fields import Undefined
 
-from langflow.custom import Component
-from langflow.inputs.inputs import (
-    BoolInput,
-    DropdownInput,
-    FieldTypes,
-    FloatInput,
-    HandleInput,
-    IntInput,
-    MessageTextInput,
-    MultilineInput,
-)
-from langflow.io import Output
-from langflow.schema import Data
-from langflow.schema.dotdict import dotdict
 
-
-class PythonCodeStructuredTool(Component):
+class PythonCodeStructuredTool(LCToolComponent):
     DEFAULT_KEYS = [
         "code",
         "_type",
@@ -34,15 +26,9 @@ class PythonCodeStructuredTool(Component):
         "return_direct",
         "tool_function",
         "global_variables",
+        "_classes",
         "_functions",
     ]
-    AVAILABLE_TYPES = {
-        "str": {"annotation": str, "field": MessageTextInput},
-        "int": {"annotation": int, "field": IntInput},
-        "float": {"annotation": float, "field": FloatInput},
-        "bool": {"annotation": bool, "field": BoolInput},
-        "NoneType": {"annotation": None},
-    }
     display_name = "Python Code Structured Tool"
     description = "structuredtool dataclass code to tool"
     documentation = "https://python.langchain.com/docs/modules/tools/custom_tools/#structuredtool-dataclass"
@@ -89,6 +75,7 @@ class PythonCodeStructuredTool(Component):
             field_type=FieldTypes.DICT,
             is_list=True,
         ),
+        MessageTextInput(name="_classes", display_name="Classes", advanced=True),
         MessageTextInput(name="_functions", display_name="Functions", advanced=True),
     ]
 
@@ -105,7 +92,7 @@ class PythonCodeStructuredTool(Component):
 
         try:
             named_functions = {}
-            functions = self._parse_functions(build_config["tool_code"]["value"])
+            [classes, functions] = self._parse_code(build_config["tool_code"]["value"])
             existing_fields = {}
             if len(build_config) > len(self.DEFAULT_KEYS):
                 for key in build_config.copy():
@@ -123,10 +110,6 @@ class PythonCodeStructuredTool(Component):
                         build_config[field_name] = existing_fields[field_name]
                         continue
 
-                    for annotation in arg["annotations"]:
-                        if annotation not in self.AVAILABLE_TYPES:
-                            raise Exception(f"Unsupported type: {func['name']}_{arg['name']} - {annotation}")
-
                     field = MessageTextInput(
                         display_name=f"{arg['name']}: Description",
                         name=field_name,
@@ -134,8 +117,8 @@ class PythonCodeStructuredTool(Component):
                         required=True,
                     )
                     build_config[field_name] = field.to_dict()
-
             build_config["_functions"]["value"] = json.dumps(named_functions)
+            build_config["_classes"]["value"] = json.dumps(classes)
             build_config["tool_function"]["options"] = names
         except Exception as e:
             self.status = f"Failed to extract names: {str(e)}"
@@ -143,7 +126,7 @@ class PythonCodeStructuredTool(Component):
         return build_config
 
     async def build_tool(self) -> Tool:
-        local_namespace = {}  # type: ignore
+        _local_namespace = {}  # type: ignore
         modules = self._find_imports(self.tool_code)
         import_code = ""
         for module in modules["imports"]:
@@ -155,7 +138,7 @@ class PythonCodeStructuredTool(Component):
                 f"from {from_module.module} import {', '.join([alias.name for alias in from_module.names])}\n"
             )
         exec(import_code, globals())
-        exec(self.tool_code, globals(), local_namespace)
+        exec(self.tool_code, globals(), _local_namespace)
 
         class PythonCodeToolFunc:
             params: dict = {}
@@ -164,10 +147,10 @@ class PythonCodeStructuredTool(Component):
                 for key in kwargs:
                     if key not in PythonCodeToolFunc.params:
                         PythonCodeToolFunc.params[key] = kwargs[key]
-                return local_namespace[self.tool_function](**PythonCodeToolFunc.params)
+                return _local_namespace[self.tool_function](**PythonCodeToolFunc.params)
 
         _globals = globals()
-        _local = {}
+        _local = {}  # type: ignore
         _local[self.tool_function] = PythonCodeToolFunc
         _globals.update(_local)
 
@@ -177,6 +160,10 @@ class PythonCodeStructuredTool(Component):
                     _globals.update(data.data)
         elif isinstance(self.global_variables, dict):
             _globals.update(self.global_variables)
+
+        classes = json.loads(self._attributes["_classes"])
+        for class_dict in classes:
+            exec("\n".join(class_dict["code"]), _globals)
 
         named_functions = json.loads(self._attributes["_functions"])
         schema_fields = {}
@@ -191,23 +178,23 @@ class PythonCodeStructuredTool(Component):
             if func_arg is None:
                 raise Exception(f"Failed to find arg: {field_name}")
 
-            field_annotations = func_arg["annotations"]
+            field_annotation = func_arg["annotation"]
+            field_description = self._get_value(self._attributes[attr], str)
 
-            field_value = self._get_value(self._attributes[attr], str)
-            schema_annotations = str
-            is_annotated = False
-            for field_annotation in field_annotations:
-                if field_annotation not in self.AVAILABLE_TYPES:
-                    raise Exception(f"Unsupported type: {field_name} - {field_annotation}")
-                if not is_annotated:
-                    schema_annotations = self.AVAILABLE_TYPES[field_annotation]["annotation"]
-                    is_annotated = True
-                else:
-                    schema_annotations |= self.AVAILABLE_TYPES[field_annotation]["annotation"]
+            if field_annotation:
+                exec(f"temp_annotation_type = {field_annotation}", _globals)
+                schema_annotation = _globals["temp_annotation_type"]
+            else:
+                schema_annotation = Any
             schema_fields[field_name] = (
-                schema_annotations,
-                Field(default=func_arg["default"] if "default" in func_arg else Undefined, description=field_value),
+                schema_annotation,
+                Field(
+                    default=func_arg["default"] if "default" in func_arg else Undefined, description=field_description
+                ),
             )
+
+        if "temp_annotation_type" in _globals:
+            _globals.pop("temp_annotation_type")
 
         PythonCodeToolSchema = None
         if schema_fields:
@@ -240,22 +227,43 @@ class PythonCodeStructuredTool(Component):
             frontend_node = super().post_code_processing(new_frontend_node, current_frontend_node)
         return frontend_node
 
-    def _parse_functions(self, code: str) -> list:
+    def _parse_code(self, code: str) -> tuple[list[dict], list[dict]]:
         parsed_code = ast.parse(code)
-        functions: list = []
+        lines = code.split("\n")
+        classes = []
+        functions = []
         for node in parsed_code.body:
+            if isinstance(node, ast.ClassDef):
+                class_lines = lines[node.lineno - 1 : node.end_lineno]
+                class_lines[-1] = class_lines[-1][: node.end_col_offset]
+                class_lines[0] = class_lines[0][node.col_offset :]
+                classes.append(
+                    {
+                        "name": node.name,
+                        "code": class_lines,
+                    }
+                )
+                continue
+
             if not isinstance(node, ast.FunctionDef):
                 continue
+
             func = {"name": node.name, "args": []}
             for arg in node.args.args:
-                func_arg: dict[str, list[str] | None] = {"name": arg.arg, "annotations": None}
+                if arg.lineno != arg.end_lineno:
+                    raise Exception("Multiline arguments are not supported")
+
+                func_arg = {
+                    "name": arg.arg,
+                    "annotation": None,
+                }
 
                 for default in node.args.defaults:
                     if (
-                        (default.lineno and arg.lineno > default.lineno)
-                        or (default.col_offset and arg.col_offset > default.col_offset)
-                        or (default.end_lineno and arg.end_lineno < default.end_lineno)
-                        or (default.end_col_offset and arg.end_col_offset < default.end_col_offset)
+                        arg.lineno > default.lineno
+                        or arg.col_offset > default.col_offset
+                        or arg.end_lineno < default.end_lineno
+                        or arg.end_col_offset < default.end_col_offset
                     ):
                         continue
 
@@ -265,30 +273,17 @@ class PythonCodeStructuredTool(Component):
                         func_arg["default"] = default.value
 
                 if arg.annotation:
-                    func_arg["annotations"] = self._find_annotations(arg.annotation)
-                else:
-                    func_arg["annotations"] = ["str"]
+                    annotation_line = lines[arg.annotation.lineno - 1]
+                    annotation_line = annotation_line[: arg.annotation.end_col_offset]
+                    annotation_line = annotation_line[arg.annotation.col_offset :]
+                    func_arg["annotation"] = annotation_line
+                    if func_arg["annotation"].count("=") > 0:
+                        func_arg["annotation"] = "=".join(func_arg["annotation"].split("=")[:-1]).strip()
 
                 func["args"].append(func_arg)
             functions.append(func)
 
-        return functions
-
-    def _find_annotations(self, annotation: Any) -> list:
-        annotation_list = []
-        if isinstance(annotation, ast.BinOp):
-            if not isinstance(annotation.op, ast.BitOr):
-                raise Exception(f"Unsupported operator: {annotation.op}")
-            annotation_list.extend(self._find_annotations(annotation.left))
-            annotation_list.extend(self._find_annotations(annotation.right))
-        elif isinstance(annotation, ast.Name):
-            annotation_list.append(annotation.id)
-        elif isinstance(annotation, ast.Constant):
-            if annotation.value is None:
-                annotation_list.append("NoneType")
-            else:
-                annotation_list.append(annotation.kind)
-        return annotation_list
+        return classes, functions
 
     def _find_imports(self, code: str) -> dotdict:
         imports = []
@@ -300,7 +295,7 @@ class PythonCodeStructuredTool(Component):
                     imports.append(alias.name)
             elif isinstance(node, ast.ImportFrom):
                 from_imports.append(node)
-        return dotdict({"imports": imports, "from_imports": from_imports})
+        return {"imports": imports, "from_imports": from_imports}
 
     def _get_value(self, value: Any, annotation: Any) -> Any:
         return value if isinstance(value, annotation) else value["value"]
