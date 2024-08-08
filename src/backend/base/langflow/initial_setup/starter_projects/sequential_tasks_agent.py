@@ -13,7 +13,7 @@ def sequential_tasks_agent():
     llm = OpenAIModelComponent()
     search_api_tool = SearchAPIComponent()
     researcher_agent = CrewAIAgentComponent()
-    text_input = TextInputComponent(display_name="Topic")
+    text_input = TextInputComponent(_display_name="Topic")
     text_input.set(input_value="Agile")
     researcher_agent.set(
         tools=[search_api_tool.build_tool],
