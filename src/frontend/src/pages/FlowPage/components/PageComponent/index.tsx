@@ -40,7 +40,6 @@ import { APIClassType } from "../../../../types/api";
 import { FlowType, NodeType } from "../../../../types/flow";
 import {
   checkOldComponents,
-  cleanEdges,
   generateFlow,
   generateNodeFromFlow,
   getNodeId,
@@ -96,7 +95,8 @@ export default function Page({
     (state) => state.setLastCopiedSelection,
   );
   const onConnect = useFlowStore((state) => state.onConnect);
-  const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
+  const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
+  const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setNoticeData = useAlertStore((state) => state.setNoticeData);
   const [selectionMenuVisible, setSelectionMenuVisible] = useState(false);
@@ -110,8 +110,8 @@ export default function Page({
   const setInputs = useFlowStore((state) => state.setInputs);
   const setOutputs = useFlowStore((state) => state.setOutputs);
   const setHasIO = useFlowStore((state) => state.setHasIO);
+  const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const { inputs, outputs } = getInputsAndOutputs(flow.data!.nodes);
-  const viewport = flow?.data?.viewport ?? { zoom: 1, x: 0, y: 0 };
 
   function handleGroupNode() {
     takeSnapshot();
@@ -159,7 +159,8 @@ export default function Page({
   }, [lastCopiedSelection, lastSelection, takeSnapshot, selectionMenuVisible]);
 
   useEffect(() => {
-    if (reactFlowInstance && currentFlowId) {
+    if (reactFlowInstance && currentFlow) {
+      const viewport = currentFlow.data?.viewport ?? { zoom: 1, x: 0, y: 0 };
       reactFlowInstance!.setViewport(viewport);
     }
   }, [currentFlowId, reactFlowInstance]);
@@ -173,9 +174,6 @@ export default function Page({
 
   useEffect(() => {
     if (!isFetching) {
-      let newEdges = cleanEdges(flow.data!.nodes, flow.data!.edges);
-      setNodes(flow.data!.nodes);
-      setEdges(newEdges);
       setFlowState(undefined);
       setInputs(inputs);
       setOutputs(outputs);
@@ -184,7 +182,7 @@ export default function Page({
   }, [isFetching]);
 
   useEffect(() => {
-    if (checkOldComponents({ nodes: flow?.data?.nodes ?? [] })) {
+    if (checkOldComponents({ nodes })) {
       setNoticeData({
         title:
           "Components created before Langflow 1.0 may be unstable. Ensure components are up to date.",
@@ -200,9 +198,7 @@ export default function Page({
   }, [currentFlowId]);
 
   useEffect(() => {
-    if (nodes.length !== 0) {
-      autoSaveFlow();
-    }
+    autoSaveFlow();
   }, [nodes, edges]);
 
   function handleUndo(e: KeyboardEvent) {
