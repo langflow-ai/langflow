@@ -82,5 +82,10 @@ Build a fun blog post about this topic.""",
     chat_output = ChatOutput()
     chat_output.set(input_value=sequential_crew_component.build_output)
 
-    graph = Graph(start=text_input, end=chat_output)
+    graph = Graph(
+        start=text_input,
+        end=chat_output,
+        flow_name="Sequential Tasks Agent",
+        description="This Agent runs tasks in a predefined sequence.",
+    )
     return graph
