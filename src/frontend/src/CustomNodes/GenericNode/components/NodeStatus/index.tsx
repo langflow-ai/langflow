@@ -1,23 +1,40 @@
+import { getSpecificClassFromBuildStatus } from "@/CustomNodes/helpers/get-class-from-build-status";
+import useIconStatus from "@/CustomNodes/hooks/use-icons-status";
+import useUpdateValidationStatus from "@/CustomNodes/hooks/use-update-validation-status";
+import useValidationStatusString from "@/CustomNodes/hooks/use-validation-status-string";
 import ShadTooltip from "@/components/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
-import { STATUS_BUILDING, STATUS_INACTIVE, STATUS_BUILD, RUN_TIMESTAMP_PREFIX } from "@/constants/constants";
+import {
+  RUN_TIMESTAMP_PREFIX,
+  STATUS_BUILD,
+  STATUS_BUILDING,
+  STATUS_INACTIVE,
+} from "@/constants/constants";
 import { BuildStatus } from "@/constants/enums";
-import useIconStatus from "@/CustomNodes/hooks/use-icons-status";
-import useFlowStore from "@/stores/flowStore";
-import { VertexBuildTypeAPI } from "@/types/api";
-import { useEffect, useState } from "react";
-import IconComponent from "../../../../components/genericIconComponent";
 import { useDarkStore } from "@/stores/darkStore";
+import useFlowStore from "@/stores/flowStore";
 import { useShortcutsStore } from "@/stores/shortcuts";
-import { useHotkeys } from "react-hotkeys-hook";
-import useValidationStatusString from "@/CustomNodes/hooks/use-validation-status-string";
-import useUpdateValidationStatus from "@/CustomNodes/hooks/use-update-validation-status";
-import { getSpecificClassFromBuildStatus } from "@/CustomNodes/helpers/get-class-from-build-status";
+import { VertexBuildTypeAPI } from "@/types/api";
 import { classNames } from "@/utils/utils";
+import { useEffect, useState } from "react";
+import { useHotkeys } from "react-hotkeys-hook";
+import IconComponent from "../../../../components/genericIconComponent";
 
-
-export default function NodeStatus({ nodeId, display_name,selected, setBorderColor,frozen,showNode }: { nodeId: string, display_name: string,selected:boolean, setBorderColor: (color: string) => void,frozen?:boolean,showNode:boolean }) {
-
+export default function NodeStatus({
+  nodeId,
+  display_name,
+  selected,
+  setBorderColor,
+  frozen,
+  showNode,
+}: {
+  nodeId: string;
+  display_name: string;
+  selected: boolean;
+  setBorderColor: (color: string) => void;
+  frozen?: boolean;
+  showNode: boolean;
+}) {
   const [validationString, setValidationString] = useState<string>("");
   const [validationStatus, setValidationStatus] =
     useState<VertexBuildTypeAPI | null>(null);
@@ -34,7 +51,6 @@ export default function NodeStatus({ nodeId, display_name,selected, setBorderCol
   const version = useDarkStore((state) => state.version);
   const isDark = useDarkStore((state) => state.dark);
 
-
   function handlePlayWShortcut() {
     if (buildStatus === BuildStatus.BUILDING || isBuilding || !selected) return;
     setValidationStatus(null);
@@ -43,11 +59,9 @@ export default function NodeStatus({ nodeId, display_name,selected, setBorderCol
 
   const play = useShortcutsStore((state) => state.play);
   const flowPool = useFlowStore((state) => state.flowPool);
-  useHotkeys(play, handlePlayWShortcut, { preventDefault:true });
+  useHotkeys(play, handlePlayWShortcut, { preventDefault: true });
   useValidationStatusString(validationStatus, setValidationString);
-  useUpdateValidationStatus(  nodeId, flowPool, setValidationStatus);
-
-
+  useUpdateValidationStatus(nodeId, flowPool, setValidationStatus);
 
   const getBaseBorderClass = (selected) => {
     let className = selected
@@ -84,8 +98,10 @@ export default function NodeStatus({ nodeId, display_name,selected, setBorderCol
   };
 
   useEffect(() => {
-    setBorderColor(getNodeBorderClassName(selected, showNode, buildStatus, validationStatus));
-  }, [selected,showNode, buildStatus, validationStatus]);
+    setBorderColor(
+      getNodeBorderClassName(selected, showNode, buildStatus, validationStatus),
+    );
+  }, [selected, showNode, buildStatus, validationStatus]);
 
   useEffect(() => {
     if (buildStatus === BuildStatus.BUILT && !isBuilding) {
@@ -130,9 +146,7 @@ export default function NodeStatus({ nodeId, display_name,selected, setBorderCol
                   {lastRunTime && (
                     <div className="justify-left flex font-normal text-muted-foreground">
                       <div>{RUN_TIMESTAMP_PREFIX}</div>
-                      <div className="ml-1 text-status-blue">
-                        {lastRunTime}
-                      </div>
+                      <div className="ml-1 text-status-blue">{lastRunTime}</div>
                     </div>
                   )}
                 </div>
@@ -151,19 +165,14 @@ export default function NodeStatus({ nodeId, display_name,selected, setBorderCol
         </ShadTooltip>
         <Button
           onClick={() => {
-            if (buildStatus === BuildStatus.BUILDING || isBuilding)
-              return;
+            if (buildStatus === BuildStatus.BUILDING || isBuilding) return;
             setValidationStatus(null);
             buildFlow({ stopNodeId: nodeId });
           }}
           unstyled
           className="group p-1"
         >
-          <div
-            data-testid={
-              `button_run_` + display_name.toLowerCase()
-            }
-          >
+          <div data-testid={`button_run_` + display_name.toLowerCase()}>
             <IconComponent
               name="Play"
               className={
@@ -174,5 +183,5 @@ export default function NodeStatus({ nodeId, display_name,selected, setBorderCol
         </Button>
       </div>
     </>
-  )
+  );
 }

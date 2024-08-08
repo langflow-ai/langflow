@@ -7,9 +7,7 @@ import IconComponent, {
 } from "../../components/genericIconComponent";
 import ShadTooltip from "../../components/shadTooltipComponent";
 import { Button } from "../../components/ui/button";
-import {
-  TOOLTIP_OUTDATED_NODE,
-} from "../../constants/constants";
+import { TOOLTIP_OUTDATED_NODE } from "../../constants/constants";
 import { postCustomComponent } from "../../controllers/API";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
 import useAlertStore from "../../stores/alertStore";
@@ -30,10 +28,10 @@ import useIconNodeRender from "../hooks/use-icon-render";
 import useUpdateNodeCode from "../hooks/use-update-node-code";
 import getFieldTitle from "../utils/get-field-title";
 import sortFields from "../utils/sort-fields";
-import NodeInputField from "./components/NodeInputField";
-import NodeOutputField from "./components/NodeOutputfield";
-import  NodeName  from "./components/NodeName";
 import NodeDescription from "./components/NodeDescription";
+import NodeInputField from "./components/NodeInputField";
+import NodeName from "./components/NodeName";
+import NodeOutputField from "./components/NodeOutputfield";
 import NodeStatus from "./components/NodeStatus";
 
 export default function GenericNode({
@@ -87,8 +85,6 @@ export default function GenericNode({
     );
   };
 
-
-
   const isEmoji = emojiRegex().test(data?.node?.icon!);
 
   if (!data.node!.template) {
@@ -128,7 +124,6 @@ export default function GenericNode({
   useEffect(() => {
     setShowNode(data.showNode ?? true);
   }, [data.showNode]);
-
 
   const [loadingUpdate, setLoadingUpdate] = useState(false);
 
@@ -179,9 +174,8 @@ export default function GenericNode({
   const hiddenOutputs =
     data.node!.outputs?.filter((output) => output.hidden) ?? [];
 
-
   const update = useShortcutsStore((state) => state.update);
-  useHotkeys(update, handleUpdateCodeWShortcut, { preventDefault:true });
+  useHotkeys(update, handleUpdateCodeWShortcut, { preventDefault: true });
 
   const shortcuts = useShortcutsStore((state) => state.shortcuts);
 
@@ -242,7 +236,7 @@ export default function GenericNode({
           numberOfOutputHandles={shownOutputs.length ?? 0}
           showNode={showNode}
           openAdvancedModal={false}
-          onCloseAdvancedModal={() => { }}
+          onCloseAdvancedModal={() => {}}
           updateNode={handleUpdateCode}
           isOutdated={isOutdated && isUserEdited}
         />
@@ -272,8 +266,7 @@ export default function GenericNode({
         !data.node!.template[templateField]?.advanced && (
           <NodeInputField
             key={scapedJSONStringfy({
-              inputTypes:
-                data.node!.template[templateField].input_types,
+              inputTypes: data.node!.template[templateField].input_types,
               type: data.node!.template[templateField].type,
               id: data.id,
               fieldName: templateField,
@@ -285,44 +278,32 @@ export default function GenericNode({
               data.node?.template[templateField].type,
               types,
             )}
-            title={getFieldTitle(
-              data.node?.template!,
-              templateField,
-            )}
+            title={getFieldTitle(data.node?.template!, templateField)}
             info={data.node?.template[templateField].info}
             name={templateField}
             tooltipTitle={
-              data.node?.template[
-                templateField
-              ].input_types?.join("\n") ??
+              data.node?.template[templateField].input_types?.join("\n") ??
               data.node?.template[templateField].type
             }
-            required={
-              data.node!.template[templateField].required
-            }
+            required={data.node!.template[templateField].required}
             id={{
-              inputTypes:
-                data.node!.template[templateField].input_types,
+              inputTypes: data.node!.template[templateField].input_types,
               type: data.node!.template[templateField].type,
               id: data.id,
               fieldName: templateField,
             }}
             type={data.node?.template[templateField].type}
-            optionalHandle={
-              data.node?.template[templateField].input_types
-            }
+            optionalHandle={data.node?.template[templateField].input_types}
             proxy={data.node?.template[templateField].proxy}
             showNode={showNode}
           />
         ),
-    )
+    );
 
   return (
     <>
       {memoizedNodeToolbarComponent}
-      <div
-        className={borderColor}
-      >
+      <div className={borderColor}>
         {data.node?.beta && showNode && (
           <div className="beta-badge-wrapper">
             <div className="beta-badge-content">BETA</div>
@@ -348,7 +329,11 @@ export default function GenericNode({
               {iconNodeRender()}
               {showNode && (
                 <div className="generic-node-tooltip-div">
-                  <NodeName display_name={data.node?.display_name} nodeId={data.id} selected={selected} />
+                  <NodeName
+                    display_name={data.node?.display_name}
+                    nodeId={data.id}
+                    selected={selected}
+                  />
                   {isOutdated && !isUserEdited && (
                     <ShadTooltip content={TOOLTIP_OUTDATED_NODE}>
                       <Button
@@ -378,17 +363,26 @@ export default function GenericNode({
               )}
             </div>
             {showNode && (
-              <NodeStatus frozen={data.node?.frozen} showNode={showNode} display_name={data.node?.display_name!} nodeId={data.id} selected={selected} setBorderColor={setBorderColor}/>
+              <NodeStatus
+                frozen={data.node?.frozen}
+                showNode={showNode}
+                display_name={data.node?.display_name!}
+                nodeId={data.id}
+                selected={selected}
+                setBorderColor={setBorderColor}
+              />
             )}
           </div>
         </div>
 
         {showNode && (
-          <div
-            className="pb-8 pt-5 relative"
-          >
+          <div className="relative pb-8 pt-5">
             {/* increase height!! */}
-            <NodeDescription description={data.node?.description} nodeId={data.id} selected={selected} />
+            <NodeDescription
+              description={data.node?.description}
+              nodeId={data.id}
+              selected={selected}
+            />
             <>
               {renderInputParameter}
               <div
