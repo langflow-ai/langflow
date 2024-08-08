@@ -1,6 +1,6 @@
 import FeatureFlags from "@/../feature-config.json";
 import { Transition } from "@headlessui/react";
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import IOModal from "../../modals/IOModal";
 import ApiModal from "../../modals/apiModal";
@@ -48,8 +48,6 @@ export default function FlowToolbar(): JSX.Element {
   const validApiKey = useStoreStore((state) => state.validApiKey);
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
-
-  const prevNodesRef = useRef<any[] | undefined>();
 
   const ModalMemo = useMemo(
     () => (
