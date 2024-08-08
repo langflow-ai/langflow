@@ -156,7 +156,6 @@ export default function GenericNode({
   const getNodeSizeClass = (showNode) =>
     showNode ? "w-96 rounded-lg" : "w-26 h-26 rounded-full";
 
-  const nameEditable = true;
   const isEmoji = emojiRegex().test(data?.node?.icon!);
 
   if (!data.node!.template) {
@@ -467,7 +466,7 @@ export default function GenericNode({
               {iconNodeRender()}
               {showNode && (
                 <div className="generic-node-tooltip-div">
-                  {nameEditable && inputName ? (
+                  {inputName ? (
                     <div>
                       <InputComponent
                         onBlur={() => {
@@ -500,9 +499,7 @@ export default function GenericNode({
                       <ShadTooltip content={data.node?.display_name}>
                         <div
                           onDoubleClick={(event) => {
-                            if (nameEditable) {
-                              setInputName(true);
-                            }
+                            setInputName(true);
                             takeSnapshot();
                             event.stopPropagation();
                             event.preventDefault();
@@ -615,15 +612,11 @@ export default function GenericNode({
 
         {showNode && (
           <div
-            className={cn(data.node?.description === "" && !nameEditable
-                  ? "pb-8"
-                  : "pb-8 pt-5",
-              "relative",
-            )}
+            className="pb-8 pt-5 relative"
           >
             {/* increase height!! */}
             <div className="generic-node-desc">
-              {nameEditable && inputDescription ? (
+              {inputDescription ? (
                 <Textarea
                   className="nowheel min-h-40"
                   autoFocus
@@ -672,8 +665,7 @@ export default function GenericNode({
                   className={cn(
                     "nodoubleclick generic-node-desc-text cursor-text word-break-break-word",
                     (data.node?.description === "" ||
-                      !data.node?.description) &&
-                      nameEditable
+                      !data.node?.description)
                       ? "font-light italic"
                       : "",
                   )}
@@ -682,8 +674,7 @@ export default function GenericNode({
                     takeSnapshot();
                   }}
                 >
-                  {(data.node?.description === "" || !data.node?.description) &&
-                  nameEditable ? (
+                  {(data.node?.description === "" || !data.node?.description) ? (
                     "Double Click to Edit Description"
                   ) : (
                     <Markdown className="markdown prose flex flex-col text-primary word-break-break-word dark:prose-invert">
