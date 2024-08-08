@@ -9,7 +9,7 @@ from langflow.inputs import MessageTextInput
 from langflow.io import SecretStrInput
 from langflow.template import Output
 from langflow.schema import Data
-from langchain_community.chat_loaders.gmail import GMailLoader
+from langchain_google_community.gmail.loader import GMailLoader
 from langchain_core.chat_sessions import ChatSession
 from langchain_core.messages import HumanMessage
 from json.decoder import JSONDecodeError
