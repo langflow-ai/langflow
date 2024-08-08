@@ -1,19 +1,18 @@
-import json
 from typing import Any
-
 import requests
-from langchain.agents import Tool
-from langchain_core.tools import StructuredTool
+import json
+
 from pydantic.v1 import Field, create_model
 
+from langchain.agents import Tool
 from langflow.base.langchain_utilities.model import LCToolComponent
-from langflow.inputs import DropdownInput, IntInput, MessageTextInput, MultiselectInput
-from langflow.io import Output
+from langflow.inputs import MessageTextInput, MultiselectInput, DropdownInput, IntInput
 from langflow.schema.dotdict import dotdict
+from langflow.io import Output
 
 
 class SearXNGToolComponent(LCToolComponent):
-    SEARCH_HEADERS: dict[str, str] = {}
+    search_headers: dict = {}
     display_name = "SearXNG Search Tool"
     description = "A component that searches for tools using SearXNG."
     name = "SearXNGTool"
@@ -59,7 +58,7 @@ class SearXNGToolComponent(LCToolComponent):
         try:
             url = f"{field_value}/config"
 
-            response = requests.get(url=url, headers=self.SEARCH_HEADERS.copy())
+            response = requests.get(url=url, headers=self.search_headers.copy())
             data = None
             if response.headers.get("Content-Encoding") == "zstd":
                 data = json.loads(response.content)
@@ -83,11 +82,11 @@ class SearXNGToolComponent(LCToolComponent):
             _url: str = ""
             _categories: list[str] = []
             _language: str = ""
-            _headers: dict[str, str] = {}
+            _headers: dict = {}
             _max_results: int = 10
 
             @staticmethod
-            def search(query: str, categories: list[str] = []) -> list | str:
+            def search(query: str, categories: list[str] = []) -> list:
                 if not SearxSearch._categories and not categories:
                     raise ValueError("No categories provided.")
                 all_categories = SearxSearch._categories + list(set(categories) - set(SearxSearch._categories))
@@ -111,12 +110,12 @@ class SearXNGToolComponent(LCToolComponent):
                         results.append(response["results"][i])
                     return results
                 except Exception as e:
-                    return f"Failed to search: {str(e)}"
+                    return [f"Failed to search: {str(e)}"]
 
         SearxSearch._url = self.url
         SearxSearch._categories = self.categories.copy()
         SearxSearch._language = self.language
-        SearxSearch._headers = self.SEARCH_HEADERS.copy()
+        SearxSearch._headers = self.search_headers.copy()
         SearxSearch._max_results = self.max_results
 
         _globals = globals()
@@ -131,7 +130,7 @@ class SearXNGToolComponent(LCToolComponent):
 
         SearxSearchSchema = create_model("SearxSearchSchema", **schema_fields)  # type: ignore
 
-        tool = StructuredTool.from_function(
+        tool = Tool.from_function(
             func=_local["SearxSearch"].search,
             args_schema=SearxSearchSchema,
             name="searxng_search_tool",
