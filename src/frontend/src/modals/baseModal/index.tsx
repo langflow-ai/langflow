@@ -88,7 +88,8 @@ const Footer: React.FC<{
     dataTestId?: string;
     onClick?: () => void;
   };
-}> = ({ children, submit }) => {
+  close?: boolean;
+}> = ({ children, submit, close }) => {
   return (
     <div className="flex flex-shrink-0 flex-row-reverse">
       {submit ? (
@@ -114,6 +115,11 @@ const Footer: React.FC<{
         </div>
       ) : (
         <>{children && children}</>
+      )}
+      {close && (
+        <DialogClose asChild>
+          <Button type="button">Close</Button>
+        </DialogClose>
       )}
     </div>
   );
