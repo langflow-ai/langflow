@@ -11,7 +11,6 @@ import {
   FS_ERROR_TEXT,
   SN_ERROR_TEXT,
 } from "../../../../constants/constants";
-import { deleteFlowPool } from "../../../../controllers/API";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
