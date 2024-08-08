@@ -148,6 +148,7 @@ interface BaseModalProps {
   onChangeOpenModal?: (open?: boolean) => void;
   type?: "modal" | "dialog";
   onSubmit?: () => void;
+  onEscapeKeyDown?: (e: KeyboardEvent) => void;
 }
 function BaseModal({
   open,
@@ -157,6 +158,7 @@ function BaseModal({
   onChangeOpenModal,
   type = "dialog",
   onSubmit,
+  onEscapeKeyDown,
 }: BaseModalProps) {
   const headerChild = React.Children.toArray(children).find(
     (child) => (child as React.ReactElement).type === Header,
@@ -204,7 +206,10 @@ function BaseModal({
       ) : (
         <Dialog open={open} onOpenChange={setOpen}>
           {triggerChild}
-          <DialogContent className={contentClasses}>
+          <DialogContent
+            onEscapeKeyDown={onEscapeKeyDown}
+            className={contentClasses}
+          >
             {onSubmit ? (
               <Form.Root
                 onSubmit={(event) => {
