@@ -1,3 +1,9 @@
+import {
+  useAddUser,
+  useDeleteUsers,
+  useGetUsers,
+  useUpdateUser,
+} from "@/controllers/API/queries/auth";
 import { cloneDeep } from "lodash";
 import { useContext, useEffect, useRef, useState } from "react";
 import IconComponent from "../../components/genericIconComponent";
@@ -29,12 +35,6 @@ import {
   ADMIN_HEADER_TITLE,
 } from "../../constants/constants";
 import { AuthContext } from "../../contexts/authContext";
-import {
-  addUser,
-  deleteUser,
-  getUsersPage,
-  updateUser,
-} from "../../controllers/API";
 import ConfirmationModal from "../../modals/confirmationModal";
 import UserManagementModal from "../../modals/userManagementModal";
 import useAlertStore from "../../stores/alertStore";
@@ -45,9 +45,8 @@ import { UserInputType } from "../../types/components";
 export default function AdminPage() {
   const [inputValue, setInputValue] = useState("");
 
-  const [size, setPageSize] = useState(10);
+  const [size, setPageSize] = useState(12);
   const [index, setPageIndex] = useState(1);
-  const [loadingUsers, setLoadingUsers] = useState(true);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const { userData } = useContext(AuthContext);
@@ -55,6 +54,10 @@ export default function AdminPage() {
   const setCurrentFlowId = useFlowsManagerStore(
     (state) => state.setCurrentFlowId,
   );
+
+  const { mutate: mutateDeleteUser } = useDeleteUsers();
+  const { mutate: mutateUpdateUser } = useUpdateUser();
+  const { mutate: mutateAddUser } = useAddUser();
 
   // set null id
   useEffect(() => {
@@ -71,39 +74,47 @@ export default function AdminPage() {
 
   const [filterUserList, setFilterUserList] = useState(userList.current);
 
+  const { mutate: mutateGetUsers, isPending } = useGetUsers({});
+
   function getUsers() {
-    setLoadingUsers(true);
-    getUsersPage(index - 1, size)
-      .then((users) => {
-        setTotalRowsCount(users["total_count"]);
-        userList.current = users["users"];
-        setFilterUserList(users["users"]);
-        setLoadingUsers(false);
-      })
-      .catch((error) => {
-        setLoadingUsers(false);
-      });
+    mutateGetUsers(
+      {
+        skip: size * (index - 1),
+        limit: size,
+      },
+      {
+        onSuccess: (users) => {
+          setTotalRowsCount(users["total_count"]);
+          userList.current = users["users"];
+          setFilterUserList(users["users"]);
+        },
+        onError: () => {},
+      },
+    );
   }
 
   function handleChangePagination(pageIndex: number, pageSize: number) {
-    setLoadingUsers(true);
     setPageSize(pageSize);
     setPageIndex(pageIndex);
-    getUsersPage(pageSize * (pageIndex - 1), pageSize)
-      .then((users) => {
-        setTotalRowsCount(users["total_count"]);
-        userList.current = users["users"];
-        setFilterUserList(users["users"]);
-        setLoadingUsers(false);
-      })
-      .catch((error) => {
-        setLoadingUsers(false);
-      });
+
+    mutateGetUsers(
+      {
+        skip: pageSize * (pageIndex - 1),
+        limit: pageSize,
+      },
+      {
+        onSuccess: (users) => {
+          setTotalRowsCount(users["total_count"]);
+          userList.current = users["users"];
+          setFilterUserList(users["users"]);
+        },
+      },
+    );
   }
 
   function resetFilter() {
     setPageIndex(1);
-    setPageSize(10);
+    setPageSize(12);
     getUsers();
   }
 
@@ -121,93 +132,125 @@ export default function AdminPage() {
   }
 
   function handleDeleteUser(user) {
-    deleteUser(user.id)
-      .then((res) => {
-        resetFilter();
-        setSuccessData({
-          title: USER_DEL_SUCCESS_ALERT,
-        });
-      })
-      .catch((error) => {
-        setErrorData({
-          title: USER_DEL_ERROR_ALERT,
-          list: [error["response"]["data"]["detail"]],
-        });
-      });
+    mutateDeleteUser(
+      { user_id: user.id },
+      {
+        onSuccess: () => {
+          resetFilter();
+          setSuccessData({
+            title: USER_DEL_SUCCESS_ALERT,
+          });
+        },
+        onError: (error) => {
+          setErrorData({
+            title: USER_DEL_ERROR_ALERT,
+            list: [error["response"]["data"]["detail"]],
+          });
+        },
+      },
+    );
   }
 
   function handleEditUser(userId, user) {
-    updateUser(userId, user)
-      .then((res) => {
-        resetFilter();
-        setSuccessData({
-          title: USER_EDIT_SUCCESS_ALERT,
-        });
-      })
-      .catch((error) => {
-        setErrorData({
-          title: USER_EDIT_ERROR_ALERT,
-          list: [error["response"]["data"]["detail"]],
-        });
-      });
+    mutateUpdateUser(
+      { user_id: userId, user: user },
+      {
+        onSuccess: () => {
+          resetFilter();
+          setSuccessData({
+            title: USER_EDIT_SUCCESS_ALERT,
+          });
+        },
+        onError: (error) => {
+          setErrorData({
+            title: USER_EDIT_ERROR_ALERT,
+            list: [error["response"]["data"]["detail"]],
+          });
+        },
+      },
+    );
   }
 
   function handleDisableUser(check, userId, user) {
     const userEdit = cloneDeep(user);
     userEdit.is_active = !check;
 
-    updateUser(userId, userEdit)
-      .then((res) => {
-        resetFilter();
-        setSuccessData({
-          title: USER_EDIT_SUCCESS_ALERT,
-        });
-      })
-      .catch((error) => {
-        setErrorData({
-          title: USER_EDIT_ERROR_ALERT,
-          list: [error["response"]["data"]["detail"]],
-        });
-      });
+    mutateUpdateUser(
+      { user_id: userId, user: userEdit },
+      {
+        onSuccess: () => {
+          resetFilter();
+          setSuccessData({
+            title: USER_EDIT_SUCCESS_ALERT,
+          });
+        },
+        onError: (error) => {
+          setErrorData({
+            title: USER_EDIT_ERROR_ALERT,
+            list: [error["response"]["data"]["detail"]],
+          });
+        },
+      },
+    );
   }
 
   function handleSuperUserEdit(check, userId, user) {
     const userEdit = cloneDeep(user);
     userEdit.is_superuser = !check;
-    updateUser(userId, userEdit)
-      .then((res) => {
-        resetFilter();
-        setSuccessData({
-          title: USER_EDIT_SUCCESS_ALERT,
-        });
-      })
-      .catch((error) => {
-        setErrorData({
-          title: USER_EDIT_ERROR_ALERT,
-          list: [error["response"]["data"]["detail"]],
-        });
-      });
+
+    mutateUpdateUser(
+      { user_id: userId, user: userEdit },
+      {
+        onSuccess: () => {
+          resetFilter();
+          setSuccessData({
+            title: USER_EDIT_SUCCESS_ALERT,
+          });
+        },
+        onError: (error) => {
+          setErrorData({
+            title: USER_EDIT_ERROR_ALERT,
+            list: [error["response"]["data"]["detail"]],
+          });
+        },
+      },
+    );
   }
 
   function handleNewUser(user: UserInputType) {
-    addUser(user)
-      .then((res) => {
-        updateUser(res["id"], {
-          is_active: user.is_active,
-          is_superuser: user.is_superuser,
-        }).then((res) => {
-          resetFilter();
-          setSuccessData({
-            title: USER_ADD_SUCCESS_ALERT,
-          });
-        });
-      })
-      .catch((error) => {
+    mutateAddUser(user, {
+      onSuccess: (res) => {
+        mutateUpdateUser(
+          {
+            user_id: res["id"],
+            user: {
+              is_active: user.is_active,
+              is_superuser: user.is_superuser,
+            },
+          },
+          {
+            onSuccess: () => {
+              resetFilter();
+              setSuccessData({
+                title: USER_ADD_SUCCESS_ALERT,
+              });
+            },
+            onError: (error) => {
+              setErrorData({
+                title: USER_ADD_ERROR_ALERT,
+                list: [error["response"]["data"]["detail"]],
+              });
+            },
+          },
+        );
+      },
+      onError: (error) => {
         setErrorData({
           title: USER_ADD_ERROR_ALERT,
-          list: [error.response.data.detail],
+          list: [error["response"]["data"]["detail"]],
         });
-      });
+      },
+    });
   }
 
   return (
@@ -266,7 +309,7 @@ export default function AdminPage() {
               </UserManagementModal>
             </div>
           </div>
-          {loadingUsers ? (
+          {isPending ? (
             <div className="flex h-full w-full items-center justify-center">
               <LoadingComponent remSize={12} />
             </div>
@@ -281,13 +324,13 @@ export default function AdminPage() {
               <div
                 className={
                   "m-4 h-full overflow-x-hidden overflow-y-scroll rounded-md border-2 bg-background custom-scroll" +
-                  (loadingUsers ? " border-0" : "")
+                  (isPending ? " border-0" : "")
                 }
               >
                 <Table className={"table-fixed outline-1"}>
                   <TableHeader
                     className={
-                      loadingUsers ? "hidden" : "table-fixed bg-muted outline-1"
+                      isPending ? "hidden" : "table-fixed bg-muted outline-1"
                     }
                   >
                     <TableRow>
@@ -300,7 +343,7 @@ export default function AdminPage() {
                       <TableHead className="h-10 w-[100px] text-right"></TableHead>
                     </TableRow>
                   </TableHeader>
-                  {!loadingUsers && (
+                  {!isPending && (
                     <TableBody>
                       {filterUserList.map((user: UserInputType, index) => (
                         <TableRow key={index}>

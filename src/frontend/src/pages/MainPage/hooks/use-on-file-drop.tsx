@@ -1,64 +1,43 @@
+import useUploadFlow from "@/hooks/flows/use-upload-flow";
 import { useLocation } from "react-router-dom";
-import {
-  CONSOLE_ERROR_MSG,
-  UPLOAD_ALERT_LIST,
-  WRONG_FILE_ERROR_ALERT,
-} from "../../../constants/alerts_constants";
+import { CONSOLE_ERROR_MSG } from "../../../constants/alerts_constants";
 import useAlertStore from "../../../stores/alertStore";
 import { useFolderStore } from "../../../stores/foldersStore";
 
-const useFileDrop = (uploadFlow, type) => {
+const useFileDrop = (type?: string) => {
   const location = useLocation();
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const getFolderById = useFolderStore((state) => state.getFolderById);
   const folderId = location?.state?.folderId;
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
+  const uploadFlow = useUploadFlow();
 
   const handleFileDrop = (e) => {
     e.preventDefault();
-    if (e.dataTransfer.types.some((type) => type === "Files")) {
-      const file = e.dataTransfer.files.item(0);
-
-      if (file.type === "application/json") {
-        const reader = new FileReader();
-
-        reader.onload = (event) => {
-          const fileContent = event.target!.result;
-          const fileContentJson = JSON.parse(fileContent as string);
-          const is_component = fileContentJson.is_component;
-          uploadFlow({
-            newProject: true,
-            file: file,
-            isComponent: type === "all" ? null : type === "component",
-          })
-            .then(() => {
-              setSuccessData({
-                title: `${
-                  is_component ? "Component" : "Flow"
-                } uploaded successfully`,
-              });
-              getFolderById(folderId ? folderId : myCollectionId);
-            })
-            .catch((error) => {
-              setErrorData({
-                title: CONSOLE_ERROR_MSG,
-                list: [error],
-              });
-            });
-        };
-
-        reader.readAsText(file);
-      } else {
-        setErrorData({
-          title: WRONG_FILE_ERROR_ALERT,
-          list: [UPLOAD_ALERT_LIST],
+    if (e.dataTransfer.types.every((type) => type === "Files")) {
+      const files: File[] = Array.from(e.dataTransfer.files);
+      uploadFlow({
+        files,
+        isComponent:
+          type === "component" ? true : type === "flow" ? false : undefined,
+      })
+        .then(() => {
+          setSuccessData({
+            title: `All files uploaded successfully`,
+          });
+          getFolderById(folderId ? folderId : myCollectionId);
+        })
+        .catch((error) => {
+          console.log(error);
+          setErrorData({
+            title: CONSOLE_ERROR_MSG,
+            list: [(error as Error).message],
+          });
         });
-      }
     }
   };
-
-  return [handleFileDrop];
+  return handleFileDrop;
 };
 
 export default useFileDrop;

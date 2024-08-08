@@ -1,7 +1,6 @@
-import { useContext, useEffect, useState } from "react";
+import { useContext, useEffect } from "react";
 import { Cookies } from "react-cookie";
 import { ErrorBoundary } from "react-error-boundary";
-import { useNavigate } from "react-router-dom";
 import "reactflow/dist/style.css";
 import "./App.css";
 import AlertDisplayArea from "./alerts/displayArea";
@@ -11,36 +10,48 @@ import LoadingComponent from "./components/loadingComponent";
 import {
   FETCH_ERROR_DESCRIPION,
   FETCH_ERROR_MESSAGE,
-  LANGFLOW_AUTO_LOGIN_OPTION,
+  LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS,
+  LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS_ENV,
 } from "./constants/constants";
 import { AuthContext } from "./contexts/authContext";
-import { autoLogin } from "./controllers/API";
+import {
+  useAutoLogin,
+  useRefreshAccessToken,
+} from "./controllers/API/queries/auth";
 import { useGetHealthQuery } from "./controllers/API/queries/health";
 import { useGetVersionQuery } from "./controllers/API/queries/version";
 import { setupAxiosDefaults } from "./controllers/API/utils";
 import useTrackLastVisitedPath from "./hooks/use-track-last-visited-path";
 import Router from "./routes";
-import { Case } from "./shared/components/caseComponent";
 import useAlertStore from "./stores/alertStore";
 import useAuthStore from "./stores/authStore";
 import { useDarkStore } from "./stores/darkStore";
 import useFlowsManagerStore from "./stores/flowsManagerStore";
 import { useFolderStore } from "./stores/foldersStore";
+import { cn } from "./utils/utils";
 
 export default function App() {
   useTrackLastVisitedPath();
   const isLoading = useFlowsManagerStore((state) => state.isLoading);
-  const { login, setUserData, getUser, logout } = useContext(AuthContext);
+  const { login, setUserData, getUser } = useContext(AuthContext);
   const setAutoLogin = useAuthStore((state) => state.setAutoLogin);
   const setLoading = useAlertStore((state) => state.setLoading);
   const refreshStars = useDarkStore((state) => state.refreshStars);
   const dark = useDarkStore((state) => state.dark);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const cookies = new Cookies();
+  const logout = useAuthStore((state) => state.logout);
+
+  const refreshToken = cookies.get("refresh_token");
+
+  const { mutate: mutateAutoLogin } = useAutoLogin();
 
   useGetVersionQuery();
-  const cookies = new Cookies();
 
   const isLoadingFolders = useFolderStore((state) => state.isLoadingFolders);
+  const { mutate: mutateRefresh } = useRefreshAccessToken();
+
+  const isLoginPage = location.pathname.includes("login");
 
   const {
     data: healthData,
@@ -58,47 +69,53 @@ export default function App() {
   }, [dark]);
 
   useEffect(() => {
-    const abortController = new AbortController();
-    const isLoginPage = location.pathname.includes("login");
-
-    autoLogin(abortController.signal)
-      .then(async (user) => {
+    mutateAutoLogin(undefined, {
+      onSuccess: async (user) => {
         if (user && user["access_token"]) {
           user["refresh_token"] = "auto";
           login(user["access_token"], "auto");
           setUserData(user);
           setAutoLogin(true);
           fetchAllData();
+          // mutateRefresh({ refresh_token: refreshToken });
         }
-      })
-      .catch(async (error) => {
+      },
+      onError: (error) => {
         if (error.name !== "CanceledError") {
           setAutoLogin(false);
-          if (
-            cookies.get(LANGFLOW_AUTO_LOGIN_OPTION) === "auto" &&
-            isAuthenticated
-          ) {
-            logout();
-            return;
-          }
-
-          if (isAuthenticated && !isLoginPage) {
-            getUser();
-            fetchAllData();
-          } else {
-            setLoading(false);
-            useFlowsManagerStore.setState({ isLoading: false });
+          if (!isLoginPage) {
+            if (!isAuthenticated) {
+              setLoading(false);
+              useFlowsManagerStore.setState({ isLoading: false });
+              logout();
+            } else {
+              mutateRefresh({ refresh_token: refreshToken });
+              fetchAllData();
+              getUser();
+            }
           }
         }
-      });
-
-    /*
-      Abort the request as it isn't needed anymore, the component being
-      unmounted. It helps avoid, among other things, the well-known "can't
-      perform a React state update on an unmounted component" warning.
-    */
-    return () => abortController.abort();
+      },
+    });
   }, []);
+
+  useEffect(() => {
+    const envRefreshTime = LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS_ENV;
+    const automaticRefreshTime = LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS;
+
+    const accessTokenTimer = isNaN(envRefreshTime)
+      ? automaticRefreshTime
+      : envRefreshTime;
+
+    const intervalId = setInterval(() => {
+      if (isAuthenticated && !isLoginPage) {
+        mutateRefresh({ refresh_token: refreshToken });
+      }
+    }, accessTokenTimer * 1000);
+
+    return () => clearInterval(intervalId);
+  }, [isLoginPage]);
+
   const fetchAllData = async () => {
     setTimeout(async () => {
       await Promise.all([refreshStars(), fetchData()]);
@@ -147,15 +164,16 @@ export default function App() {
             ></FetchErrorComponent>
           }
 
-          <Case condition={isLoadingApplication}>
-            <div className="loading-page-panel">
-              <LoadingComponent remSize={50} />
-            </div>
-          </Case>
+          <div
+            className={cn(
+              "loading-page-panel absolute left-0 top-0 z-[999]",
+              isLoadingApplication ? "" : "hidden",
+            )}
+          >
+            <LoadingComponent remSize={50} />
+          </div>
 
-          <Case condition={!isLoadingApplication}>
-            <Router />
-          </Case>
+          <Router />
         </>
       </ErrorBoundary>
       <div></div>

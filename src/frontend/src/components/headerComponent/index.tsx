@@ -3,7 +3,6 @@ import { FaDiscord, FaGithub } from "react-icons/fa";
 import { RiTwitterXFill } from "react-icons/ri";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import AlertDropdown from "../../alerts/alertDropDown";
-import profileCircle from "../../assets/profile-circle.png";
 import {
   BASE_URL_API,
   LOCATIONS_TO_RETURN,
@@ -11,11 +10,13 @@ import {
 } from "../../constants/constants";
 import { AuthContext } from "../../contexts/authContext";
 
+import FeatureFlags from "@/../feature-config.json";
+import { useLogout } from "@/controllers/API/queries/auth";
+import useDeleteFlow from "@/hooks/flows/use-delete-flow";
 import useAuthStore from "@/stores/authStore";
 import useAlertStore from "../../stores/alertStore";
 import { useDarkStore } from "../../stores/darkStore";
 import useFlowStore from "../../stores/flowStore";
-import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { useLocationStore } from "../../stores/locationStore";
 import { useStoreStore } from "../../stores/storeStore";
 import IconComponent, { ForwardedIconComponent } from "../genericIconComponent";
@@ -35,11 +36,15 @@ export default function Header(): JSX.Element {
   const notificationCenter = useAlertStore((state) => state.notificationCenter);
   const location = useLocation();
 
-  const { logout, isAdmin, userData } = useContext(AuthContext);
+  const { userData } = useContext(AuthContext);
+  const isAdmin = useAuthStore((state) => state.isAdmin);
   const autoLogin = useAuthStore((state) => state.autoLogin);
 
+  const { mutate: mutationLogout } = useLogout();
+  const logout = useAuthStore((state) => state.logout);
+
   const navigate = useNavigate();
-  const removeFlow = useFlowsManagerStore((store) => store.removeFlow);
+  const deleteFlow = useDeleteFlow();
   const hasStore = useStoreStore((state) => state.hasStore);
   const { id } = useParams();
   const nodes = useFlowStore((state) => state.nodes);
@@ -50,13 +55,12 @@ export default function Header(): JSX.Element {
 
   const routeHistory = useLocationStore((state) => state.routeHistory);
 
-  const profileImageUrl =
-    `${BASE_URL_API}files/profile_pictures/${
-      userData?.profile_image ?? "Space/046-rocket.svg"
-    }` ?? profileCircle;
+  const profileImageUrl = `${BASE_URL_API}files/profile_pictures/${
+    userData?.profile_image ?? "Space/046-rocket.svg"
+  }`;
   async function checkForChanges(): Promise<void> {
-    if (nodes.length === 0) {
-      await removeFlow(id!);
+    if (nodes.length === 0 && id) {
+      await deleteFlow({ id });
     }
   }
 
@@ -81,6 +85,17 @@ export default function Header(): JSX.Element {
   const showArrowReturnIcon =
     LOCATIONS_TO_RETURN.some((path) => location.pathname.includes(path)) &&
     visitedFlowPathBefore();
+
+  const handleLogout = () => {
+    mutationLogout(undefined, {
+      onSuccess: () => {
+        logout();
+      },
+      onError: (error) => {
+        console.error(error);
+      },
+    });
+  };
 
   return (
     <div className="header-arrangement">
@@ -138,46 +153,58 @@ export default function Header(): JSX.Element {
       </div>
       <div className="header-end-division">
         <div className="header-end-display">
-          <a
-            href="https://github.com/langflow-ai/langflow"
-            target="_blank"
-            rel="noreferrer"
-            className="header-github-link gap-2"
-          >
-            <FaGithub className="h-5 w-5" />
-            <div className="hidden lg:block">Star</div>
-            <div className="header-github-display">{stars ?? 0}</div>
-          </a>
-          <a
-            href="https://twitter.com/langflow_ai"
-            target="_blank"
-            rel="noreferrer"
-            className="text-muted-foreground"
-          >
-            <RiTwitterXFill className="side-bar-button-size" />
-          </a>
-          <a
-            href="https://discord.gg/EqksyE2EX9"
-            target="_blank"
-            rel="noreferrer"
-            className="text-muted-foreground"
-          >
-            <FaDiscord className="side-bar-button-size" />
-          </a>
+          {FeatureFlags.ENABLE_SOCIAL_LINKS && (
+            <>
+              <a
+                href="https://github.com/langflow-ai/langflow"
+                target="_blank"
+                rel="noreferrer"
+                className="header-github-link gap-2"
+              >
+                <FaGithub className="h-5 w-5" />
+                <div className="hidden lg:block">Star</div>
+                <div className="header-github-display">{stars ?? 0}</div>
+              </a>
+              <a
+                href="https://twitter.com/langflow_ai"
+                target="_blank"
+                rel="noreferrer"
+                className="text-muted-foreground"
+              >
+                <RiTwitterXFill className="side-bar-button-size" />
+              </a>
+              <a
+                href="https://discord.gg/EqksyE2EX9"
+                target="_blank"
+                rel="noreferrer"
+                className="text-muted-foreground"
+              >
+                <FaDiscord className="side-bar-button-size" />
+              </a>
 
-          <Separator orientation="vertical" />
-          <button
-            className="extra-side-bar-save-disable"
-            onClick={() => {
-              setDark(!dark);
-            }}
-          >
-            {dark ? (
-              <IconComponent name="SunIcon" className="side-bar-button-size" />
-            ) : (
-              <IconComponent name="MoonIcon" className="side-bar-button-size" />
-            )}
-          </button>
+              <Separator orientation="vertical" />
+            </>
+          )}
+          {FeatureFlags.ENABLE_DARK_MODE && (
+            <button
+              className="extra-side-bar-save-disable"
+              onClick={() => {
+                setDark(!dark);
+              }}
+            >
+              {dark ? (
+                <IconComponent
+                  name="SunIcon"
+                  className="side-bar-button-size"
+                />
+              ) : (
+                <IconComponent
+                  name="MoonIcon"
+                  className="side-bar-button-size"
+                />
+              )}
+            </button>
+          )}
           <AlertDropdown>
             <div className="extra-side-bar-save-disable relative">
               {notificationCenter && (
@@ -200,10 +227,17 @@ export default function Header(): JSX.Element {
                   data-testid="user-profile-settings"
                   className="shrink-0"
                 >
-                  <img
-                    src={profileImageUrl}
-                    className="h-7 w-7 shrink-0 focus-visible:outline-0"
-                  />
+                  {FeatureFlags.ENABLE_PROFILE_ICONS ? (
+                    <img
+                      src={profileImageUrl}
+                      className="h-7 w-7 shrink-0 focus-visible:outline-0"
+                    />
+                  ) : (
+                    <IconComponent
+                      name="Settings"
+                      className="side-bar-button-size"
+                    />
+                  )}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="mr-1 mt-1 min-w-40">
@@ -274,9 +308,7 @@ export default function Header(): JSX.Element {
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       className="cursor-pointer gap-2"
-                      onClick={() => {
-                        logout();
-                      }}
+                      onClick={handleLogout}
                     >
                       <ForwardedIconComponent name="LogOut" className="w-4" />
                       Log Out

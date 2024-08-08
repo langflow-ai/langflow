@@ -22,7 +22,6 @@ export type FoldersStoreType = {
   setFolderUrl: (folderUrl: string) => void;
   folderDragging: boolean;
   setFolderDragging: (set: boolean) => void;
-  uploadFolder: (folderId: string) => Promise<void>;
   folderIdDragging: string;
   setFolderIdDragging: (id: string) => void;
   starterProjectId: string;

@@ -11,10 +11,13 @@ from langflow.inputs import (
     MessageInput,
     MessageTextInput,
     MultilineInput,
+    MultilineSecretInput,
     NestedDictInput,
     PromptInput,
     SecretStrInput,
     StrInput,
+    TableInput,
+    DefaultPromptField,
 )
 from langflow.template import Output
 
@@ -30,10 +33,13 @@ __all__ = [
     "IntInput",
     "MessageInput",
     "MultilineInput",
+    "MultilineSecretInput",
     "NestedDictInput",
     "PromptInput",
     "SecretStrInput",
     "StrInput",
     "MessageTextInput",
     "Output",
+    "TableInput",
+    "DefaultPromptField",
 ]

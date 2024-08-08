@@ -1,0 +1,8 @@
+{
+  "ENABLE_DARK_MODE": true,
+  "ENABLE_API": true,
+  "ENABLE_LANGFLOW_STORE": true,
+  "ENABLE_PROFILE_ICONS": true,
+  "ENABLE_SOCIAL_LINKS": true,
+  "ENABLE_BRANDING": true
+}

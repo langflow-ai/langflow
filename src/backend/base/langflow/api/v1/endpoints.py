@@ -23,7 +23,7 @@ from langflow.api.v1.schemas import (
 )
 from langflow.custom.custom_component.component import Component
 from langflow.custom.utils import build_custom_component_template, get_instance_name
-from langflow.exceptions.api import InvalidChatInputException
+from langflow.exceptions.api import APIException, InvalidChatInputException
 from langflow.graph.graph.base import Graph
 from langflow.graph.schema import RunOutputs
 from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
@@ -260,7 +260,7 @@ async def simplified_run_flow(
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
         else:
             logger.exception(exc)
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+            raise APIException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, exception=exc, flow=flow) from exc
     except InvalidChatInputException as exc:
         logger.error(exc)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
@@ -275,7 +275,8 @@ async def simplified_run_flow(
                 runErrorMessage=str(exc),
             ),
         )
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+        logger.exception(exc)
+        raise APIException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, exception=exc, flow=flow) from exc
 
 
 @router.post("/webhook/{flow_id_or_name}", response_model=dict, status_code=HTTPStatus.ACCEPTED)
@@ -552,7 +553,7 @@ async def custom_component(
     raw_code: CustomComponentRequest,
     user: User = Depends(get_current_active_user),
 ):
-    component = Component(code=raw_code.code)
+    component = Component(_code=raw_code.code)
 
     built_frontend_node, component_instance = build_custom_component_template(component, user_id=user.id)
     if raw_code.frontend_node is not None:
@@ -582,7 +583,7 @@ async def custom_component_update(
 
     """
     try:
-        component = Component(code=code_request.code)
+        component = Component(_code=code_request.code)
 
         component_node, cc_instance = build_custom_component_template(
             component,
@@ -590,7 +591,9 @@ async def custom_component_update(
         )
         if hasattr(cc_instance, "set_attributes"):
             template = code_request.get_template()
-            params = {key: value_dict["value"] for key, value_dict in template.items() if isinstance(value_dict, dict)}
+            params = {
+                key: value_dict.get("value") for key, value_dict in template.items() if isinstance(value_dict, dict)
+            }
             load_from_db_fields = [
                 field_name
                 for field_name, field_dict in template.items()

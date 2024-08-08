@@ -1,3 +1,4 @@
+import asyncio
 import json
 from typing import TYPE_CHECKING, Any, AsyncIterator, Dict, Generator, Iterator, List
 
@@ -6,14 +7,16 @@ from langchain_core.messages import AIMessage, AIMessageChunk
 from loguru import logger
 
 from langflow.graph.schema import CHAT_COMPONENTS, RECORDS_COMPONENTS, InterfaceComponentTypes, ResultData
-from langflow.graph.utils import UnbuiltObject, serialize_field
+from langflow.graph.utils import UnbuiltObject, log_transaction, serialize_field
 from langflow.graph.vertex.base import Vertex
+from langflow.graph.vertex.schema import NodeData
+from langflow.inputs.inputs import InputTypes
 from langflow.schema import Data
 from langflow.schema.artifact import ArtifactType
 from langflow.schema.message import Message
 from langflow.schema.schema import INPUT_FIELD_NAME
-from langflow.services.monitor.utils import log_transaction, log_vertex_build
-from langflow.template.field.base import UNDEFINED
+from langflow.graph.utils import log_vertex_build
+from langflow.template.field.base import UNDEFINED, Output
 from langflow.utils.schemas import ChatOutputResponse, DataOutputResponse
 from langflow.utils.util import unescape_string
 
@@ -22,7 +25,7 @@ if TYPE_CHECKING:
 
 
 class CustomComponentVertex(Vertex):
-    def __init__(self, data: Dict, graph):
+    def __init__(self, data: NodeData, graph):
         super().__init__(data, graph=graph, base_type="custom_components")
 
     def _built_object_repr(self):
@@ -31,8 +34,18 @@ class CustomComponentVertex(Vertex):
 
 
 class ComponentVertex(Vertex):
-    def __init__(self, data: Dict, graph):
+    def __init__(self, data: NodeData, graph):
         super().__init__(data, graph=graph, base_type="component")
+
+    def get_input(self, name: str) -> InputTypes:
+        if self._custom_component is None:
+            raise ValueError(f"Vertex {self.id} does not have a component instance.")
+        return self._custom_component.get_input(name)
+
+    def get_output(self, name: str) -> Output:
+        if self._custom_component is None:
+            raise ValueError(f"Vertex {self.id} does not have a component instance.")
+        return self._custom_component.get_output(name)
 
     def _built_object_repr(self):
         if self.artifacts and "repr" in self.artifacts:
@@ -81,7 +94,9 @@ class ComponentVertex(Vertex):
             The built result if use_result is True, else the built object.
         """
         if not self._built:
-            log_transaction(source=self, target=requester, flow_id=self.graph.flow_id, status="error")
+            asyncio.create_task(
+                log_transaction(source=self, target=requester, flow_id=str(self.graph.flow_id), status="error")
+            )
             raise ValueError(f"Component {self.display_name} has not been built yet")
 
         if requester is None:
@@ -101,7 +116,9 @@ class ComponentVertex(Vertex):
                 raise ValueError(f"Result not found for {edge.source_handle.name}. Results: {self.results}")
             else:
                 raise ValueError(f"Result not found for {edge.source_handle.name}")
-        log_transaction(source=self, target=requester, flow_id=self.graph.flow_id, status="success")
+        asyncio.create_task(
+            log_transaction(source=self, target=requester, flow_id=str(self.graph.flow_id), status="success")
+        )
         return result
 
     def extract_messages_from_artifacts(self, artifacts: Dict[str, Any]) -> List[dict]:
@@ -122,6 +139,8 @@ class ComponentVertex(Vertex):
             ) and not isinstance(artifact, Message):
                 continue
             message_dict = artifact if isinstance(artifact, dict) else artifact.model_dump()
+            if not message_dict.get("text"):
+                continue
             try:
                 messages.append(
                     ChatOutputResponse(
@@ -159,7 +178,7 @@ class ComponentVertex(Vertex):
 
 
 class InterfaceVertex(ComponentVertex):
-    def __init__(self, data: Dict, graph):
+    def __init__(self, data: NodeData, graph):
         super().__init__(data, graph=graph)
         self.steps = [self._build, self._run]
 
@@ -383,8 +402,12 @@ class InterfaceVertex(ComponentVertex):
             for key, value in origin_vertex.results.items():
                 if isinstance(value, (AsyncIterator, Iterator)):
                     origin_vertex.results[key] = complete_message
-
-        await log_vertex_build(
+        if self._custom_component:
+            if hasattr(self._custom_component, "should_store_message") and hasattr(
+                self._custom_component, "store_message"
+            ):
+                self._custom_component.store_message(message)
+        log_vertex_build(
             flow_id=self.graph.flow_id,
             vertex_id=self.id,
             valid=True,
@@ -404,16 +427,18 @@ class InterfaceVertex(ComponentVertex):
         return self.vertex_type == InterfaceComponentTypes.ChatInput and self.is_input
 
 
-class StateVertex(Vertex):
-    def __init__(self, data: Dict, graph):
-        super().__init__(data, graph=graph, base_type="custom_components")
+class StateVertex(ComponentVertex):
+    def __init__(self, data: NodeData, graph):
+        super().__init__(data, graph=graph)
         self.steps = [self._build]
-        self.is_state = True
+        self.is_state = False
 
     @property
     def successors_ids(self) -> List[str]:
-        successors = self.graph.successor_map.get(self.id, [])
-        return successors + self.graph.activated_vertices
+        if self._successors_ids is None:
+            self.is_state = False
+            return super().successors_ids
+        return self._successors_ids
 
     def _built_object_repr(self):
         if self.artifacts and "repr" in self.artifacts:

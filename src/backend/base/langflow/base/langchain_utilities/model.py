@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import Union
+from typing import Sequence, Union
 
 from langflow.custom import Component
 from langflow.field_typing import Tool
@@ -31,7 +31,7 @@ class LCToolComponent(Component):
         pass
 
     @abstractmethod
-    def build_tool(self) -> Tool:
+    def build_tool(self) -> Tool | Sequence[Tool]:
         """
         Build the tool.
         """

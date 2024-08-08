@@ -9,6 +9,7 @@ from langflow.inputs.inputs import HandleInput, InputTypes
 from langflow.io import BoolInput, IntInput, Output
 from langflow.schema.data import Data
 from langflow.schema.message import Message
+from langflow.utils.constants import MESSAGE_SENDER_AI
 
 
 class BaseCrewComponent(Component):
@@ -50,8 +51,8 @@ class BaseCrewComponent(Component):
         self,
     ) -> Callable:
         def task_callback(task_output: TaskOutput):
-            if self.vertex:
-                vertex_id = self.vertex.id
+            if self._vertex:
+                vertex_id = self._vertex.id
             else:
                 vertex_id = self.display_name or self.__class__.__name__
             self.log(task_output.model_dump(), name=f"Task (Agent: {task_output.agent}) - {vertex_id}")
@@ -62,7 +63,7 @@ class BaseCrewComponent(Component):
         self,
     ) -> Callable:
         def step_callback(agent_output: Union[AgentFinish, List[Tuple[AgentAction, str]]]):
-            _id = self.vertex.id if self.vertex else self.display_name
+            _id = self._vertex.id if self._vertex else self.display_name
             if isinstance(agent_output, AgentFinish):
                 messages = agent_output.messages
                 self.log(cast(dict, messages[0].to_json()), name=f"Finish (Agent: {_id})")
@@ -78,6 +79,6 @@ class BaseCrewComponent(Component):
     async def build_output(self) -> Message:
         crew = self.build_crew()
         result = await crew.kickoff_async()
-        message = Message(text=result, sender="Machine")
+        message = Message(text=result, sender=MESSAGE_SENDER_AI)
         self.status = message
         return message

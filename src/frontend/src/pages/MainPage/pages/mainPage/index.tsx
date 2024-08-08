@@ -1,3 +1,5 @@
+import { useDeleteFolders } from "@/controllers/API/queries/folders";
+import useAlertStore from "@/stores/alertStore";
 import { useEffect, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import DropdownButton from "../../../../components/dropdownButtonComponent";
@@ -10,11 +12,10 @@ import {
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useFolderStore } from "../../../../stores/foldersStore";
 import ModalsComponent from "../../components/modalsComponent";
-import useDeleteFolder from "../../hooks/use-delete-folder";
 import useDropdownOptions from "../../hooks/use-dropdown-options";
+import { getFolderById } from "../../services";
 
 export default function HomePage(): JSX.Element {
-  const uploadFlow = useFlowsManagerStore((state) => state.uploadFlow);
   const setCurrentFlowId = useFlowsManagerStore(
     (state) => state.setCurrentFlowId,
   );
@@ -28,17 +29,46 @@ export default function HomePage(): JSX.Element {
   const setFolderToEdit = useFolderStore((state) => state.setFolderToEdit);
   const navigate = useNavigate();
 
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
+  const folderToEdit = useFolderStore((state) => state.folderToEdit);
+  const myCollectionId = useFolderStore((state) => state.myCollectionId);
+  const getFoldersApi = useFolderStore((state) => state.getFoldersApi);
+
   useEffect(() => {
     setCurrentFlowId("");
   }, [pathname]);
 
   const dropdownOptions = useDropdownOptions({
-    uploadFlow,
     navigate,
     is_component,
   });
 
-  const { handleDeleteFolder } = useDeleteFolder({ navigate });
+  const { mutate } = useDeleteFolders();
+
+  const handleDeleteFolder = () => {
+    mutate(
+      {
+        folder_id: folderToEdit?.id!,
+      },
+      {
+        onSuccess: () => {
+          setSuccessData({
+            title: "Folder deleted successfully.",
+          });
+          getFolderById(myCollectionId!);
+          getFoldersApi(true);
+          navigate("/all");
+        },
+        onError: (err) => {
+          console.error(err);
+          setErrorData({
+            title: "Error deleting folder.",
+          });
+        },
+      },
+    );
+  };
 
   return (
     <>
@@ -83,8 +113,6 @@ export default function HomePage(): JSX.Element {
       <ModalsComponent
         openModal={openModal}
         setOpenModal={setOpenModal}
-        openFolderModal={openFolderModal}
-        setOpenFolderModal={setOpenFolderModal}
         openDeleteFolderModal={openDeleteFolderModal}
         setOpenDeleteFolderModal={setOpenDeleteFolderModal}
         handleDeleteFolder={handleDeleteFolder}

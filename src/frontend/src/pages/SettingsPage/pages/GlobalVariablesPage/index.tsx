@@ -1,30 +1,21 @@
 import IconComponent from "../../../../components/genericIconComponent";
 import { Button } from "../../../../components/ui/button";
 
+import {
+  useDeleteGlobalVariables,
+  useGetGlobalVariables,
+} from "@/controllers/API/queries/variables";
 import { ColDef, ColGroupDef, SelectionChangedEvent } from "ag-grid-community";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import AddNewVariableButton from "../../../../components/addNewVariableButtonComponent/addNewVariableButton";
 import Dropdown from "../../../../components/dropdownComponent";
 import ForwardedIconComponent from "../../../../components/genericIconComponent";
 import TableComponent from "../../../../components/tableComponent";
 import { Badge } from "../../../../components/ui/badge";
-import { deleteGlobalVariable } from "../../../../controllers/API";
 import useAlertStore from "../../../../stores/alertStore";
-import { useGlobalVariablesStore } from "../../../../stores/globalVariablesStore/globalVariables";
 
 export default function GlobalVariablesPage() {
-  const globalVariablesEntries = useGlobalVariablesStore(
-    (state) => state.globalVariablesEntries,
-  );
-  const removeGlobalVariable = useGlobalVariablesStore(
-    (state) => state.removeGlobalVariable,
-  );
-  const globalVariables = useGlobalVariablesStore(
-    (state) => state.globalVariables,
-  );
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  const getVariableId = useGlobalVariablesStore((state) => state.getVariableId);
-
   const BadgeRenderer = (props) => {
     return props.value !== "" ? (
       <div>
@@ -36,35 +27,6 @@ export default function GlobalVariablesPage() {
       <div></div>
     );
   };
-
-  const [rowData, setRowData] = useState<
-    {
-      type: string | undefined;
-      id: string;
-      name: string;
-      default_fields: string | undefined;
-    }[]
-  >([]);
-
-  useEffect(() => {
-    const rows: Array<{
-      type: string | undefined;
-      id: string;
-      name: string;
-      default_fields: string | undefined;
-    }> = [];
-    if (globalVariablesEntries === undefined) return;
-    globalVariablesEntries.forEach((entrie) => {
-      const globalVariableObj = globalVariables[entrie];
-      rows.push({
-        type: globalVariableObj.type,
-        id: globalVariableObj.id,
-        default_fields: (globalVariableObj.default_fields ?? []).join(", "),
-        name: entrie,
-      });
-    });
-    setRowData(rows);
-  }, [globalVariables]);
 
   const DropdownEditor = ({ options, value, onValueChange }) => {
     return (
@@ -108,23 +70,24 @@ export default function GlobalVariablesPage() {
 
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
 
+  const { data: globalVariables } = useGetGlobalVariables();
+  const { mutate: mutateDeleteGlobalVariable } = useDeleteGlobalVariables();
+
   async function removeVariables() {
-    const deleteGlobalVariablesPromise = selectedRows.map(async (row) => {
-      const id = getVariableId(row);
-      const deleteGlobalVariables = deleteGlobalVariable(id!);
-      await deleteGlobalVariables;
+    selectedRows.map(async (row) => {
+      const id = globalVariables?.find((variable) => variable.name === row)?.id;
+      mutateDeleteGlobalVariable(
+        { id },
+        {
+          onError: () => {
+            setErrorData({
+              title: `Error deleting variable`,
+              list: [`ID not found for variable: ${row}`],
+            });
+          },
+        },
+      );
     });
-    Promise.all(deleteGlobalVariablesPromise)
-      .then(() => {
-        selectedRows.forEach((row) => {
-          removeGlobalVariable(row);
-        });
-      })
-      .catch(() => {
-        setErrorData({
-          title: `Error deleting global variables.`,
-        });
-      });
   }
 
   return (
@@ -163,7 +126,7 @@ export default function GlobalVariablesPage() {
           suppressRowClickSelection={true}
           pagination={true}
           columnDefs={colDefs}
-          rowData={rowData}
+          rowData={globalVariables ?? []}
           onDelete={removeVariables}
         />
       </div>

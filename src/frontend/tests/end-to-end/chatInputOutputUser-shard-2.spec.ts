@@ -55,7 +55,7 @@ test("user must interact with chat with Input/Output", async ({ page }) => {
     .getByTestId("popover-anchor-input-api_key")
     .fill(process.env.OPENAI_API_KEY ?? "");
 
-  await page.getByTestId("dropdown-model_name").click();
+  await page.getByTestId("dropdown_str_model_name").click();
   await page.getByTestId("gpt-4o-1-option").click();
 
   await page.waitForTimeout(2000);
@@ -86,7 +86,7 @@ test("user must interact with chat with Input/Output", async ({ page }) => {
   await page.keyboard.press("Escape");
 
   await page
-    .getByTestId("textarea-input_value")
+    .getByTestId("textarea_str_input_value")
     .nth(0)
     .fill(
       "testtesttesttesttesttestte;.;.,;,.;,.;.,;,..,;;;;;;;;;;;;;;;;;;;;;,;.;,.;,.,;.,;.;.,~~çççççççççççççççççççççççççççççççççççççççisdajfdasiopjfaodisjhvoicxjiovjcxizopjviopasjioasfhjaiohf23432432432423423sttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttestççççççççççççççççççççççççççççççççç,.,.,.,.,.,.,.,.,.,.,.,.,.,.,.,.,!",

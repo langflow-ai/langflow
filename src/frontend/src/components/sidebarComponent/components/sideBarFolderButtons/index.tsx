@@ -1,8 +1,15 @@
+import {
+  usePatchFolders,
+  usePostFolders,
+  usePostUploadFolders,
+} from "@/controllers/API/queries/folders";
+import { useGetDownloadFolders } from "@/controllers/API/queries/folders/use-get-download-folders";
+import { createFileUpload } from "@/helpers/create-file-upload";
+import { getObjectsFromFilelist } from "@/helpers/get-objects-from-filelist";
+import useUploadFlow from "@/hooks/flows/use-upload-flow";
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { FolderType } from "../../../../pages/MainPage/entities";
-import { addFolder, updateFolder } from "../../../../pages/MainPage/services";
-import { handleDownloadFolderFn } from "../../../../pages/MainPage/utils/handle-download-folder";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useFolderStore } from "../../../../stores/foldersStore";
@@ -33,7 +40,6 @@ const SideBarFoldersButtonsComponent = ({
   const [editFolders, setEditFolderName] = useState(
     folders.map((obj) => ({ name: obj.name, edit: false })),
   );
-  const uploadFolder = useFolderStore((state) => state.uploadFolder);
   const currentFolder = pathname.split("/");
   const urlWithoutPath = pathname.split("/").length < 4;
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
@@ -51,6 +57,8 @@ const SideBarFoldersButtonsComponent = ({
   const getFolderById = useFolderStore((state) => state.getFolderById);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const getFoldersApi = useFolderStore((state) => state.getFoldersApi);
+  const uploadFlow = useUploadFlow();
 
   const handleFolderChange = () => {
     getFolderById(folderId);
@@ -61,31 +69,95 @@ const SideBarFoldersButtonsComponent = ({
     handleFolderChange,
   );
 
+  const { mutate } = usePostUploadFolders();
+
   const handleUploadFlowsToFolder = () => {
-    uploadFolder(folderId)
-      .then(() => {
-        getFolderById(folderId);
-        setSuccessData({
-          title: "Uploaded successfully",
-        });
-      })
-      .catch((err) => {
-        console.log(err);
-        setErrorData({
-          title: `Error on upload`,
-          list: [err["response"]["data"]],
-        });
+    createFileUpload().then((files: File[]) => {
+      getObjectsFromFilelist<any>(files).then((objects) => {
+        if (objects.every((flow) => flow.data?.nodes)) {
+          uploadFlow({ files }).then(() => {
+            getFolderById(folderId);
+            setSuccessData({
+              title: "Uploaded successfully",
+            });
+          });
+        } else {
+          files.forEach((folder) => {
+            const formData = new FormData();
+            formData.append("file", folder);
+            mutate(
+              { formData },
+              {
+                onSuccess: () => {
+                  getFoldersApi(true);
+                  setSuccessData({
+                    title: "Folder uploaded successfully.",
+                  });
+                },
+                onError: (err) => {
+                  console.log(err);
+                  setErrorData({
+                    title: `Error on upload`,
+                    list: [err["response"]["data"]["message"]],
+                  });
+                },
+              },
+            );
+          });
+        }
       });
+    });
   };
+
+  const { mutate: mutateDownloadFolder } = useGetDownloadFolders();
 
   const handleDownloadFolder = (id: string) => {
-    handleDownloadFolderFn(id);
+    mutateDownloadFolder(
+      {
+        folderId: id,
+      },
+      {
+        onSuccess: (data) => {
+          const folder = folders.find((f) => f.id === data.folderId);
+
+          data.folder_name = folder?.name || "folder";
+          data.folder_description = folder?.description || "";
+
+          const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
+            JSON.stringify(data),
+          )}`;
+
+          const link = document.createElement("a");
+          link.href = jsonString;
+          link.download = `${data.folder_name}.json`;
+
+          link.click();
+        },
+        onError: () => {
+          setErrorData({
+            title: `An error occurred while downloading folder.`,
+          });
+        },
+      },
+    );
   };
 
+  const { mutate: mutateAddFolder } = usePostFolders();
+  const { mutate: mutateUpdateFolder } = usePatchFolders();
+
   function addNewFolder() {
-    addFolder({ name: "New Folder", parent_id: null, description: "" }).then(
-      (res) => {
-        refreshFolders();
+    mutateAddFolder(
+      {
+        data: {
+          name: "New Folder",
+          parent_id: null,
+          description: "",
+        },
+      },
+      {
+        onSuccess: () => {
+          refreshFolders();
+        },
       },
     );
   }
@@ -123,22 +195,31 @@ const SideBarFoldersButtonsComponent = ({
         flows: item.flows?.length > 0 ? item.flows : [],
         components: item.components?.length > 0 ? item.components : [],
       };
-      const updatedFolder = await updateFolder(body, item.id!);
 
-      const updatedFolderIndex = folders.findIndex(
-        (f) => f.id === updatedFolder.id,
-      );
+      mutateUpdateFolder(
+        {
+          data: body,
+          folderId: item.id!,
+        },
+        {
+          onSuccess: (updatedFolder) => {
+            const updatedFolderIndex = folders.findIndex(
+              (f) => f.id === updatedFolder.id,
+            );
 
-      const updateFolders = [...folders];
-      updateFolders[updatedFolderIndex] = updatedFolder;
+            const updateFolders = [...folders];
+            updateFolders[updatedFolderIndex] = updatedFolder;
 
-      setFolders(updateFolders);
-      setFoldersNames({});
-      setEditFolderName(
-        folders.map((obj) => ({
-          name: obj.name,
-          edit: false,
-        })),
+            setFolders(updateFolders);
+            setFoldersNames({});
+            setEditFolderName(
+              folders.map((obj) => ({
+                name: obj.name,
+                edit: false,
+              })),
+            );
+          },
+        },
       );
     } else {
       setFoldersNames((old) => ({

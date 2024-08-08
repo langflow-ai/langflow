@@ -70,7 +70,7 @@ test("Complex Agent", async ({ page }) => {
       .nth(i)
       .fill(process.env.OPENAI_API_KEY ?? "");
 
-    await page.getByTestId("dropdown-model_name").nth(i).click();
+    await page.getByTestId("dropdown_str_model_name").nth(i).click();
     await page.getByTestId("gpt-4o-1-option").last().click();
 
     await page.waitForTimeout(1000);

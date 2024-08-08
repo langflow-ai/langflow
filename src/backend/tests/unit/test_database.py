@@ -1,3 +1,5 @@
+import json
+from collections import namedtuple
 from uuid import UUID, uuid4
 
 import orjson
@@ -5,12 +7,20 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from langflow.api.v1.schemas import FlowListCreate
-from langflow.initial_setup.setup import load_starter_projects, load_flows_from_directory
+from langflow.api.v1.schemas import FlowListCreate, ResultDataResponse
+from langflow.graph.utils import log_transaction, log_vertex_build
+from langflow.initial_setup.setup import load_flows_from_directory, load_starter_projects
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.flow import Flow, FlowCreate, FlowUpdate
-from langflow.services.database.utils import session_getter
-from langflow.services.deps import get_db_service
+from langflow.services.database.models.transactions.crud import get_transactions_by_flow_id
+from langflow.services.database.utils import migrate_transactions_from_monitor_service_to_database, session_getter
+from langflow.services.deps import get_db_service, get_monitor_service, session_scope
+from langflow.services.monitor.schema import TransactionModel
+from langflow.services.monitor.utils import (
+    add_row_to_table,
+    drop_and_create_table_if_schema_mismatch,
+    new_duckdb_locked_connection,
+)
 
 
 @pytest.fixture(scope="module")
@@ -36,7 +46,7 @@ def test_create_flow(client: TestClient, json_flow: str, active_user, logged_in_
     assert response.json()["name"] == flow.name
     assert response.json()["data"] == flow.data
     # flow is optional so we can create a flow without a flow
-    flow = FlowCreate(name="Test Flow")
+    flow = FlowCreate(name=str(uuid4()))
     response = client.post("api/v1/flows/", json=flow.model_dump(exclude_unset=True), headers=logged_in_headers)
     assert response.status_code == 201
     assert response.json()["name"] == flow.name
@@ -125,6 +135,66 @@ def test_delete_flows(client: TestClient, json_flow: str, active_user, logged_in
     assert response.json().get("deleted") == number_of_flows
 
 
+@pytest.mark.asyncio
+async def test_delete_flows_with_transaction_and_build(
+    client: TestClient, json_flow: str, active_user, logged_in_headers
+):
+    # Create ten flows
+    number_of_flows = 10
+    flows = [FlowCreate(name=f"Flow {i}", description="description", data={}) for i in range(number_of_flows)]
+    flow_ids = []
+    for flow in flows:
+        response = client.post("api/v1/flows/", json=flow.model_dump(), headers=logged_in_headers)
+        assert response.status_code == 201
+        flow_ids.append(response.json()["id"])
+
+    # Create a transaction for each flow
+
+    for flow_id in flow_ids:
+        VertexTuple = namedtuple("VertexTuple", ["id"])
+
+        await log_transaction(
+            str(flow_id), source=VertexTuple(id="vid"), target=VertexTuple(id="tid"), status="success"
+        )
+
+    # Create a build for each flow
+    for flow_id in flow_ids:
+        build = {
+            "valid": True,
+            "params": {},
+            "data": ResultDataResponse(),
+            "artifacts": {},
+            "vertex_id": "vid",
+            "flow_id": flow_id,
+        }
+        log_vertex_build(
+            flow_id=build["flow_id"],
+            vertex_id=build["vertex_id"],
+            valid=build["valid"],
+            params=build["params"],
+            data=build["data"],
+            artifacts=build.get("artifacts"),
+        )
+
+    response = client.request("DELETE", "api/v1/flows/", headers=logged_in_headers, json=flow_ids)
+    assert response.status_code == 200, response.content
+    assert response.json().get("deleted") == number_of_flows
+
+    for flow_id in flow_ids:
+        response = client.request(
+            "GET", "api/v1/monitor/transactions", params={"flow_id": flow_id}, headers=logged_in_headers
+        )
+        assert response.status_code == 200
+        assert response.json() == []
+
+    for flow_id in flow_ids:
+        response = client.request(
+            "GET", "api/v1/monitor/builds", params={"flow_id": flow_id}, headers=logged_in_headers
+        )
+        assert response.status_code == 200
+        assert response.json() == {"vertex_builds": {}}
+
+
 def test_create_flows(client: TestClient, session: Session, json_flow: str, logged_in_headers):
     flow = orjson.loads(json_flow)
     data = flow["data"]
@@ -197,26 +267,27 @@ def test_download_file(
     )
     db_manager = get_db_service()
     with session_getter(db_manager) as session:
+        saved_flows = []
         for flow in flow_list.flows:
             flow.user_id = active_user.id
             db_flow = Flow.model_validate(flow, from_attributes=True)
             session.add(db_flow)
+            saved_flows.append(db_flow)
         session.commit()
-    # Make request to endpoint
-    response = client.get("api/v1/flows/download/", headers=logged_in_headers)
+        # Make request to endpoint inside the session context
+        flow_ids = [str(db_flow.id) for db_flow in saved_flows]  # Convert UUIDs to strings
+        flow_ids_json = json.dumps(flow_ids)
+        response = client.post(
+            "api/v1/flows/download/",
+            data=flow_ids_json,
+            headers={**logged_in_headers, "Content-Type": "application/json"},
+        )
     # Check response status code
     assert response.status_code == 200, response.json()
     # Check response data
-    response_data = response.json()["flows"]
-    starter_projects = load_starter_projects()
-    number_of_projects = len(starter_projects) + len(flow_list.flows)
-    assert len(response_data) == number_of_projects, response_data
-    assert response_data[0]["name"] == "Flow 1"
-    assert response_data[0]["description"] == "description"
-    assert response_data[0]["data"] == data
-    assert response_data[1]["name"] == "Flow 2"
-    assert response_data[1]["description"] == "description"
-    assert response_data[1]["data"] == data
+    # Since the endpoint now returns a zip file, we need to check the content type and the filename in the headers
+    assert response.headers["Content-Type"] == "application/x-zip-compressed"
+    assert "attachment; filename=" in response.headers["Content-Disposition"]
 
 
 def test_create_flow_with_invalid_data(client: TestClient, active_user, logged_in_headers):
@@ -279,3 +350,65 @@ def test_load_flows(client: TestClient, load_flows_dir):
     response = client.get("api/v1/flows/c54f9130-f2fa-4a3e-b22a-3856d946351b")
     assert response.status_code == 200
     assert response.json()["name"] == "BasicExample"
+
+
+@pytest.mark.load_flows
+def test_migrate_transactions(client: TestClient):
+    monitor_service = get_monitor_service()
+    drop_and_create_table_if_schema_mismatch(str(monitor_service.db_path), "transactions", TransactionModel)
+    flow_id = "c54f9130-f2fa-4a3e-b22a-3856d946351b"
+    data = {
+        "vertex_id": "vid",
+        "target_id": "tid",
+        "inputs": {"input_value": True},
+        "outputs": {"output_value": True},
+        "timestamp": "2021-10-10T10:10:10",
+        "status": "success",
+        "error": None,
+        "flow_id": flow_id,
+    }
+    with new_duckdb_locked_connection(str(monitor_service.db_path), read_only=False) as conn:
+        add_row_to_table(conn, "transactions", TransactionModel, data)
+    assert 1 == len(monitor_service.get_transactions())
+
+    with session_scope() as session:
+        migrate_transactions_from_monitor_service_to_database(session)
+        new_trans = get_transactions_by_flow_id(session, UUID(flow_id))
+        assert 1 == len(new_trans)
+        t = new_trans[0]
+        assert t.error is None
+        assert t.inputs == data["inputs"]
+        assert t.outputs == data["outputs"]
+        assert t.status == data["status"]
+        assert str(t.timestamp) == "2021-10-10 10:10:10"
+        assert t.vertex_id == data["vertex_id"]
+        assert t.target_id == data["target_id"]
+        assert t.flow_id == UUID(flow_id)
+
+        assert 0 == len(monitor_service.get_transactions())
+
+        client.request("DELETE", f"api/v1/flows/{flow_id}")
+    with session_scope() as session:
+        new_trans = get_transactions_by_flow_id(session, UUID(flow_id))
+        assert 0 == len(new_trans)
+
+
+@pytest.mark.load_flows
+def test_migrate_transactions_no_duckdb(client: TestClient):
+    flow_id = "c54f9130-f2fa-4a3e-b22a-3856d946351b"
+    get_monitor_service()
+
+    with session_scope() as session:
+        migrate_transactions_from_monitor_service_to_database(session)
+        new_trans = get_transactions_by_flow_id(session, UUID(flow_id))
+        assert 0 == len(new_trans)
+
+
+def test_sqlite_pragmas():
+    db_service = get_db_service()
+
+    with db_service as session:
+        from sqlalchemy import text
+
+        assert "wal" == session.execute(text("PRAGMA journal_mode;")).fetchone()[0]
+        assert 1 == session.execute(text("PRAGMA synchronous;")).fetchone()[0]

@@ -17,7 +17,7 @@ class VertexAIEmbeddingsComponent(LCModelComponent):
             value="",
             file_types=["json"],
         ),
-        MessageTextInput(name="location", display_name="Location", advanced=True),
+        MessageTextInput(name="location", display_name="Location", value="us-central1", advanced=True),
         MessageTextInput(name="project", display_name="Project", info="The project ID.", advanced=True),
         IntInput(name="max_output_tokens", display_name="Max Output Tokens", advanced=True),
         IntInput(name="max_retries", display_name="Max Retries", value=1, advanced=True),
@@ -53,7 +53,7 @@ class VertexAIEmbeddingsComponent(LCModelComponent):
         return VertexAIEmbeddings(
             credentials=gcloud_credentials,
             location=self.location,
-            max_output_tokens=self.max_output_tokens,
+            max_output_tokens=self.max_output_tokens or None,
             max_retries=self.max_retries,
             model_name=self.model_name,
             n=self.n,
@@ -62,6 +62,6 @@ class VertexAIEmbeddingsComponent(LCModelComponent):
             stop=self.stop_sequences or None,
             streaming=self.streaming,
             temperature=self.temperature,
-            top_k=self.top_k,
+            top_k=self.top_k or None,
             top_p=self.top_p,
         )

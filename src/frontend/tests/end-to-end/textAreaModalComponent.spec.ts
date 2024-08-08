@@ -52,9 +52,9 @@ test("TextAreaModalComponent", async ({ page }) => {
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
-  await page.getByTestId("prompt-input-template").click();
+  await page.getByTestId("promptarea_prompt_template").click();
 
-  await page.getByTestId("modal-prompt-input-template").fill("{text}");
+  await page.getByTestId("modal-promptarea_prompt_template").fill("{text}");
 
   let valueBadgeOne = await page.locator('//*[@id="badge0"]').innerText();
   if (valueBadgeOne != "text") {
@@ -64,12 +64,12 @@ test("TextAreaModalComponent", async ({ page }) => {
   await page.getByTestId("genericModalBtnSave").click();
 
   await page
-    .getByTestId("textarea-text")
+    .getByTestId("textarea_str_text")
     .fill(
       "test test test test test test test test test test test !@#%*)( 123456789101010101010101111111111 !!!!!!!!!!",
     );
 
-  await page.getByTestId("textarea-text-ExternalLink").click();
+  await page.getByTestId("textarea_str_text-ExternalLink").click();
 
   await page.waitForTimeout(500);
 
@@ -86,7 +86,9 @@ test("TextAreaModalComponent", async ({ page }) => {
 
   await page.getByTestId("genericModalBtnSave").click();
 
-  const valueTextArea = await page.getByTestId("textarea-text").inputValue();
+  const valueTextArea = await page
+    .getByTestId("textarea_str_text")
+    .inputValue();
 
   if (valueTextArea != "test123123") {
     expect(false).toBeTruthy();

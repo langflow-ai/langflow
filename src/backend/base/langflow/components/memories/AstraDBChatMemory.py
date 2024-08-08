@@ -37,7 +37,10 @@ class AstraDBChatMemory(LCChatMemoryComponent):
             advanced=True,
         ),
         MessageTextInput(
-            name="session_id", display_name="Session ID", info="Session ID for the message.", advanced=True
+            name="session_id",
+            display_name="Session ID",
+            info="The session ID of the chat. If empty, the current session ID parameter will be used.",
+            advanced=True,
         ),
     ]
 

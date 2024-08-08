@@ -20,11 +20,12 @@ def upload(file_path, host, flow_id):
     """
     try:
         url = f"{host}/api/v1/upload/{flow_id}"
-        response = httpx.post(url, files={"file": open(file_path, "rb")})
-        if response.status_code == 200 or response.status_code == 201:
-            return response.json()
-        else:
-            raise Exception(f"Error uploading file: {response.status_code}")
+        with open(file_path, "rb") as file:
+            response = httpx.post(url, files={"file": file})
+            if response.status_code == 200 or response.status_code == 201:
+                return response.json()
+            else:
+                raise Exception(f"Error uploading file: {response.status_code}")
     except Exception as e:
         raise Exception(f"Error uploading file: {e}")
 

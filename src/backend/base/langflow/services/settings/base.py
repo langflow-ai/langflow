@@ -71,7 +71,14 @@ class Settings(BaseSettings):
     pool_size: int = 10
     """The number of connections to keep open in the connection pool. If not provided, the default is 10."""
     max_overflow: int = 20
-    """The number of connections to allow that can be opened beyond the pool size. If not provided, the default is 10."""
+    """The number of connections to allow that can be opened beyond the pool size.
+    If not provided, the default is 20."""
+
+    # sqlite configuration
+    sqlite_pragmas: Optional[dict] = {"synchronous": "NORMAL", "journal_mode": "WAL"}
+    """SQLite pragmas to use when connecting to the database."""
+
+    # cache configuration
     cache_type: str = "async"
     """The cache type can be 'async' or 'redis'."""
     cache_expire: int = 3600
@@ -139,6 +146,10 @@ class Settings(BaseSettings):
     do_not_track: bool = False
     """If set to True, Langflow will not track telemetry."""
     telemetry_base_url: str = "https://langflow.gateway.scarf.sh"
+    transactions_storage_enabled: bool = True
+    """If set to True, Langflow will track transactions between flows."""
+    vertex_builds_storage_enabled: bool = True
+    """If set to True, Langflow will keep track of each vertex builds (outputs) in the UI for any flow."""
 
     @field_validator("user_agent", mode="after")
     @classmethod

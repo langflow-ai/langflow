@@ -71,6 +71,7 @@ async def run_flow(
     tweaks: Optional[dict] = None,
     flow_id: Optional[str] = None,
     flow_name: Optional[str] = None,
+    output_type: Optional[str] = "chat",
     user_id: Optional[str] = None,
 ) -> List[RunOutputs]:
     if user_id is None:
@@ -89,10 +90,23 @@ async def run_flow(
         inputs_components.append(input_dict.get("components", []))
         types.append(input_dict.get("type", "chat"))
 
+    outputs = [
+        vertex.id
+        for vertex in graph.vertices
+        if output_type == "debug"
+        or (
+            vertex.is_output and (output_type == "any" or output_type in vertex.id.lower())  # type: ignore
+        )
+    ]
+
     fallback_to_env_vars = get_settings_service().settings.fallback_to_env_var
 
     return await graph.arun(
-        inputs_list, inputs_components=inputs_components, types=types, fallback_to_env_vars=fallback_to_env_vars
+        inputs_list,
+        outputs=outputs,
+        inputs_components=inputs_components,
+        types=types,
+        fallback_to_env_vars=fallback_to_env_vars,
     )
 
 

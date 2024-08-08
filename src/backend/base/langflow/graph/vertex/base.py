@@ -7,19 +7,20 @@ import types
 from enum import Enum
 from typing import TYPE_CHECKING, Any, AsyncIterator, Callable, Dict, Iterator, List, Mapping, Optional, Set
 
+import pandas as pd
 from loguru import logger
 
 from langflow.exceptions.component import ComponentBuildException
 from langflow.graph.schema import INPUT_COMPONENTS, OUTPUT_COMPONENTS, InterfaceComponentTypes, ResultData
-from langflow.graph.utils import UnbuiltObject, UnbuiltResult
-from langflow.interface.initialize import loading
+from langflow.graph.utils import UnbuiltObject, UnbuiltResult, log_transaction
+from langflow.graph.vertex.schema import NodeData
+from langflow.interface import initialize
 from langflow.interface.listing import lazy_load_dict
 from langflow.schema.artifact import ArtifactType
 from langflow.schema.data import Data
 from langflow.schema.message import Message
 from langflow.schema.schema import INPUT_FIELD_NAME, OutputValue, build_output_logs
 from langflow.services.deps import get_storage_service
-from langflow.services.monitor.utils import log_transaction
 from langflow.services.tracing.schema import Log
 from langflow.utils.constants import DIRECT_TYPES
 from langflow.utils.schemas import ChatOutputResponse
@@ -42,7 +43,7 @@ class VertexStates(str, Enum):
 class Vertex:
     def __init__(
         self,
-        data: Dict,
+        data: NodeData,
         graph: "Graph",
         base_type: Optional[str] = None,
         is_task: bool = False,
@@ -63,13 +64,14 @@ class Vertex:
         self.has_external_input = False
         self.has_external_output = False
         self.graph = graph
-        self._data = data
+        self._data = data.copy()
         self.base_type: Optional[str] = base_type
         self.outputs: List[Dict] = []
         self._parse_data()
         self._built_object = UnbuiltObject()
         self._built_result = None
         self._built = False
+        self._successors_ids: Optional[List[str]] = None
         self.artifacts: Dict[str, Any] = {}
         self.artifacts_raw: Dict[str, Any] = {}
         self.artifacts_type: Dict[str, str] = {}
@@ -94,6 +96,18 @@ class Vertex:
         self.use_result = False
         self.build_times: List[float] = []
         self.state = VertexStates.ACTIVE
+
+    def set_input_value(self, name: str, value: Any):
+        if self._custom_component is None:
+            raise ValueError(f"Vertex {self.id} does not have a component instance.")
+        self._custom_component._set_input_value(name, value)
+
+    def to_data(self):
+        return self._data
+
+    def add_component_instance(self, component_instance: "Component"):
+        component_instance.set_vertex(self)
+        self._custom_component = component_instance
 
     def add_result(self, name: str, result: Any):
         self.results[name] = result
@@ -288,12 +302,13 @@ class Vertex:
                         # we don't know the key of the dict but we need to set the value
                         # to the vertex that is the source of the edge
                         param_dict = template_dict[param_key]["value"]
-                        if param_dict:
+                        if not param_dict or len(param_dict) != 1:
+                            params[param_key] = self.graph.get_vertex(edge.source_id)
+                        else:
                             params[param_key] = {
                                 key: self.graph.get_vertex(edge.source_id) for key in param_dict.keys()
                             }
-                        else:
-                            params[param_key] = self.graph.get_vertex(edge.source_id)
+
                     else:
                         params[param_key] = self.graph.get_vertex(edge.source_id)
 
@@ -368,11 +383,20 @@ class Vertex:
                         params[field_name] = [unescape_string(v) for v in val]
                     elif isinstance(val, str):
                         params[field_name] = unescape_string(val)
+                    elif isinstance(val, Data):
+                        params[field_name] = unescape_string(val.get_text())
                 elif field.get("type") == "bool" and val is not None:
                     if isinstance(val, bool):
                         params[field_name] = val
                     elif isinstance(val, str):
                         params[field_name] = val != ""
+                elif field.get("type") == "table" and val is not None:
+                    # check if the value is a list of dicts
+                    # if it is, create a pandas dataframe from it
+                    if isinstance(val, list) and all(isinstance(item, dict) for item in val):
+                        params[field_name] = pd.DataFrame(val)
+                    else:
+                        raise ValueError(f"Invalid value type {type(val)} for field {field_name}")
                 elif val is not None and val != "":
                     params[field_name] = val
 
@@ -424,7 +448,18 @@ class Vertex:
         """
         logger.debug(f"Building {self.display_name}")
         await self._build_each_vertex_in_params_dict(user_id)
-        await self._get_and_instantiate_class(user_id, fallback_to_env_vars)
+
+        if self.base_type is None:
+            raise ValueError(f"Base type for vertex {self.display_name} not found")
+
+        if not self._custom_component:
+            custom_component, custom_params = await initialize.loading.instantiate_class(user_id=user_id, vertex=self)
+        else:
+            custom_component = self._custom_component
+            custom_params = initialize.loading.get_params(self.params)
+
+        await self._build_results(custom_component, custom_params, fallback_to_env_vars)
+
         self._validate_built_object()
 
         self._built = True
@@ -563,11 +598,11 @@ class Vertex:
         """
         flow_id = self.graph.flow_id
         if not self._built:
-            log_transaction(flow_id, source=self, target=requester, status="error")
+            asyncio.create_task(log_transaction(str(flow_id), source=self, target=requester, status="error"))
             raise ValueError(f"Component {self.display_name} has not been built yet")
 
         result = self._built_result if self.use_result else self._built_object
-        log_transaction(flow_id, source=self, target=requester, status="success")
+        asyncio.create_task(log_transaction(str(flow_id), source=self, target=requester, status="success"))
         return result
 
     async def _build_vertex_and_update_params(self, key, vertex: "Vertex"):
@@ -609,7 +644,7 @@ class Vertex:
                     logger.exception(e)
                     raise ValueError(
                         f"Params {key} ({self.params[key]}) is not a list and cannot be extended with {result}"
-                        f"Error building Component {self.display_name}:\n\n{str(e)}"
+                        f"Error building Component {self.display_name}: \n\n{str(e)}"
                     ) from e
 
     def _handle_func(self, key, result):
@@ -634,25 +669,23 @@ class Vertex:
         if isinstance(self.params[key], list):
             self.params[key].extend(result)
 
-    async def _get_and_instantiate_class(self, user_id=None, fallback_to_env_vars=False):
-        """
-        Gets the class from a dictionary and instantiates it with the params.
-        """
-        if self.base_type is None:
-            raise ValueError(f"Base type for vertex {self.display_name} not found")
+    async def _build_results(self, custom_component, custom_params, fallback_to_env_vars=False):
         try:
-            result = await loading.instantiate_class(
-                user_id=user_id,
-                fallback_to_env_vars=fallback_to_env_vars,
+            result = await initialize.loading.get_instance_results(
+                custom_component=custom_component,
+                custom_params=custom_params,
                 vertex=self,
+                fallback_to_env_vars=fallback_to_env_vars,
+                base_type=self.base_type,
             )
+
             self.outputs_logs = build_output_logs(self, result)
 
             self._update_built_object_and_artifacts(result)
         except Exception as exc:
             tb = traceback.format_exc()
             logger.exception(exc)
-            raise ComponentBuildException(f"Error building Component {self.display_name}:\n\n{exc}", tb) from exc
+            raise ComponentBuildException(f"Error building Component {self.display_name}: \n\n{exc}", tb) from exc
 
     def _update_built_object_and_artifacts(self, result: Any | tuple[Any, dict] | tuple["Component", Any, dict]):
         """

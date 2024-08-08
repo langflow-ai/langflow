@@ -1,31 +1,32 @@
-import {
-  LANGFLOW_ACCESS_TOKEN,
-  LANGFLOW_AUTO_LOGIN_OPTION,
-} from "@/constants/constants";
+import { LANGFLOW_ACCESS_TOKEN } from "@/constants/constants";
 import useAuthStore from "@/stores/authStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from "axios";
 import { useContext, useEffect } from "react";
 import { Cookies } from "react-cookie";
-import { renewAccessToken } from ".";
 import { BuildStatus } from "../../constants/enums";
 import { AuthContext } from "../../contexts/authContext";
 import useAlertStore from "../../stores/alertStore";
 import useFlowStore from "../../stores/flowStore";
 import { checkDuplicateRequestAndStoreRequest } from "./helpers/check-duplicate-requests";
+import { useLogout, useRefreshAccessToken } from "./queries/auth";
 
 // Create a new Axios instance
 const api: AxiosInstance = axios.create({
   baseURL: "",
 });
 
+const cookies = new Cookies();
 function ApiInterceptor() {
   const autoLogin = useAuthStore((state) => state.autoLogin);
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  let { accessToken, logout, authenticationErrorCount } =
-    useContext(AuthContext);
-  const cookies = new Cookies();
+  let { accessToken, authenticationErrorCount } = useContext(AuthContext);
+
   const setSaveLoading = useFlowsManagerStore((state) => state.setSaveLoading);
+  const { mutate: mutationLogout } = useLogout();
+  const { mutate: mutationRenewAccessToken } = useRefreshAccessToken();
+  const logout = useAuthStore((state) => state.logout);
+  const isLoginPage = location.pathname.includes("login");
 
   useEffect(() => {
     const interceptor = api.interceptors.response.use(
@@ -47,17 +48,18 @@ function ApiInterceptor() {
             await tryToRenewAccessToken(error);
 
             const accessToken = cookies.get(LANGFLOW_ACCESS_TOKEN);
-
             if (!accessToken && error?.config?.url?.includes("login")) {
               return Promise.reject(error);
             }
-
-            await remakeRequest(error);
-            setSaveLoading(false);
-            authenticationErrorCount = 0;
           }
         }
         await clearBuildVerticesState(error);
+        if (
+          error?.response?.status !== 401 &&
+          error?.response?.status !== 403
+        ) {
+          return Promise.reject(error);
+        }
       },
     );
 
@@ -122,11 +124,20 @@ function ApiInterceptor() {
   }, [accessToken, setErrorData]);
 
   function checkErrorCount() {
+    if (isLoginPage) return;
+
     authenticationErrorCount = authenticationErrorCount + 1;
 
     if (authenticationErrorCount > 3) {
       authenticationErrorCount = 0;
-      logout();
+      mutationLogout(undefined, {
+        onSuccess: () => {
+          logout();
+        },
+        onError: (error) => {
+          console.error(error);
+        },
+      });
       return false;
     }
 
@@ -134,14 +145,30 @@ function ApiInterceptor() {
   }
 
   async function tryToRenewAccessToken(error: AxiosError) {
-    try {
-      if (window.location.pathname.includes("/login")) return;
-      await renewAccessToken();
-    } catch (error) {
-      clearBuildVerticesState(error);
-      logout();
-      return Promise.reject("Authentication error");
-    }
+    if (isLoginPage) return;
+    mutationRenewAccessToken(
+      {},
+      {
+        onSuccess: async (data) => {
+          authenticationErrorCount = 0;
+          await remakeRequest(error);
+          setSaveLoading(false);
+          authenticationErrorCount = 0;
+        },
+        onError: (error) => {
+          console.error(error);
+          mutationLogout(undefined, {
+            onSuccess: () => {
+              logout();
+            },
+            onError: (error) => {
+              console.error(error);
+            },
+          });
+          return Promise.reject("Authentication error");
+        },
+      },
+    );
   }
 
   async function clearBuildVerticesState(error) {
@@ -179,4 +206,83 @@ function ApiInterceptor() {
   return null;
 }
 
-export { ApiInterceptor, api };
+export type StreamingRequestParams = {
+  method: string;
+  url: string;
+  onData: (event: object) => Promise<boolean>;
+  body?: object;
+  onError?: (statusCode: number) => void;
+};
+
+async function performStreamingRequest({
+  method,
+  url,
+  onData,
+  body,
+  onError,
+}: StreamingRequestParams) {
+  let headers = {
+    "Content-Type": "application/json",
+    // this flag is fundamental to ensure server stops tasks when client disconnects
+    Connection: "close",
+  };
+  const accessToken = cookies.get(LANGFLOW_ACCESS_TOKEN);
+  if (accessToken) {
+    headers["Authorization"] = `Bearer ${accessToken}`;
+  }
+  const controller = new AbortController();
+  const params = {
+    method: method,
+    headers: headers,
+    signal: controller.signal,
+  };
+  if (body) {
+    params["body"] = JSON.stringify(body);
+  }
+  let current: string[] = [];
+  let textDecoder = new TextDecoder();
+  const response = await fetch(url, params);
+  if (!response.ok) {
+    if (onError) {
+      onError(response.status);
+    } else {
+      throw new Error("error in streaming request");
+    }
+  }
+  if (response.body === null) {
+    return;
+  }
+  for await (const chunk of response.body) {
+    const decodedChunk = await textDecoder.decode(chunk);
+    let all = decodedChunk.split("\n\n");
+    for (const string of all) {
+      if (string.endsWith("}")) {
+        const allString = current.join("") + string;
+        let data: object;
+        try {
+          data = JSON.parse(allString);
+          current = [];
+        } catch (e) {
+          current.push(string);
+          continue;
+        }
+        const shouldContinue = await onData(data);
+        if (!shouldContinue) {
+          controller.abort();
+          return;
+        }
+      } else {
+        current.push(string);
+      }
+    }
+  }
+  if (current.length > 0) {
+    const allString = current.join("");
+    if (allString) {
+      const data = JSON.parse(current.join(""));
+      await onData(data);
+    }
+  }
+}
+
+export { ApiInterceptor, api, performStreamingRequest };

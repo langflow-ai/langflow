@@ -1,11 +1,12 @@
+import concurrent.futures
 import json
 from typing import List
 
 import httpx
-from langflow.field_typing import Embeddings
-from langchain_core.runnables.config import run_in_executor
 from langchain_core.pydantic_v1 import BaseModel, SecretStr
 from loguru import logger
+
+from langflow.field_typing import Embeddings
 
 
 class AIMLEmbeddingsImpl(BaseModel, Embeddings):
@@ -15,56 +16,47 @@ class AIMLEmbeddingsImpl(BaseModel, Embeddings):
     model: str
 
     def embed_documents(self, texts: List[str]) -> List[List[float]]:
-        result_vectors = []
-        for text in texts:
-            vector = self.embed_query(text)
-            result_vectors.append(vector)
-
-        return result_vectors
-
-    def embed_query(self, text: str) -> List[float]:
+        embeddings = [None] * len(texts)
         headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {self.api_key.get_secret_value()}",
         }
 
+        with httpx.Client() as client:
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                futures = []
+                for i, text in enumerate(texts):
+                    futures.append((i, executor.submit(self._embed_text, client, headers, text)))
+
+                for index, future in futures:
+                    try:
+                        result_data = future.result()
+                        assert len(result_data["data"]) == 1, "Expected one embedding"
+                        embeddings[index] = result_data["data"][0]["embedding"]
+                    except (
+                        httpx.HTTPStatusError,
+                        httpx.RequestError,
+                        json.JSONDecodeError,
+                        KeyError,
+                    ) as e:
+                        logger.error(f"Error occurred: {e}")
+                        raise
+
+        return embeddings  # type: ignore
+
+    def _embed_text(self, client: httpx.Client, headers: dict, text: str) -> dict:
         payload = {
             "model": self.model,
             "input": text,
         }
-        vector = []
-        try:
-            response = httpx.post(
-                self.embeddings_completion_url,
-                headers=headers,
-                json=payload,
-            )
-            try:
-                response.raise_for_status()
-                result_data = response.json()
-                vector = result_data["data"][0]["embedding"]
-            except httpx.HTTPStatusError as http_err:
-                logger.error(f"HTTP error occurred: {http_err}")
-                raise http_err
-            except httpx.RequestError as req_err:
-                logger.error(f"Request error occurred: {req_err}")
-                raise req_err
-            except json.JSONDecodeError:
-                logger.warning(f"Failed to decode JSON, response text: {response.text}")
-            except KeyError as key_err:
-                logger.warning(f"Key error: {key_err}, response content: {result_data}")
-                raise key_err
-        except httpx.TimeoutException:
-            logger.error("Request timed out.")
-            raise
-        except Exception as exc:
-            logger.error(f"Error: {exc}")
-            raise
+        response = client.post(
+            self.embeddings_completion_url,
+            headers=headers,
+            json=payload,
+        )
+        response.raise_for_status()
+        result_data = response.json()
+        return result_data
 
-        return vector
-
-    async def aembed_documents(self, texts: List[str]) -> List[List[float]]:
-        return await run_in_executor(None, self.embed_documents, texts)
-
-    async def aembed_query(self, text: str) -> List[float]:
-        return await run_in_executor(None, self.embed_query, text)
+    def embed_query(self, text: str) -> List[float]:
+        return self.embed_documents([text])[0]

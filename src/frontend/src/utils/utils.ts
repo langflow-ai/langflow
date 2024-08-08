@@ -1,3 +1,4 @@
+import { ColumnField, FormatterType } from "@/types/utils/functions";
 import { ColDef, ColGroupDef } from "ag-grid-community";
 import clsx, { ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -357,7 +358,7 @@ export function extractColumnsFromRows(
   rows: object[],
   mode: "intersection" | "union",
   excludeColumns?: Array<string>,
-): (ColDef<any> | ColGroupDef<any>)[] {
+): ColDef<any>[] {
   let columnsKeys: { [key: string]: ColDef<any> | ColGroupDef<any> } = {};
   if (rows.length === 0) {
     return [];
@@ -470,4 +471,94 @@ export function isEndpointNameValid(name: string, maxLength: number): boolean {
     // empty is also valid
     name.length === 0
   );
+}
+
+export function brokenEdgeMessage({
+  source,
+  target,
+}: {
+  source: {
+    nodeDisplayName: string;
+    outputDisplayName?: string;
+  };
+  target: {
+    displayName: string;
+    field: string;
+  };
+}) {
+  return `${source.nodeDisplayName}${source.outputDisplayName ? " | " + source.outputDisplayName : ""} -> ${target.displayName}${target.field ? " | " + target.field : ""}`;
+}
+export function FormatColumns(columns: ColumnField[]): ColDef<any>[] {
+  if (!columns) return [];
+  const basic_types = new Set(["date", "number"]);
+  const colDefs = columns.map((col, index) => {
+    let newCol: ColDef = {
+      headerName: col.display_name,
+      field: col.name,
+      sortable: col.sortable,
+      filter: col.filterable,
+    };
+    if (col.formatter) {
+      if (basic_types.has(col.formatter)) {
+        newCol.cellDataType = col.formatter;
+      } else {
+        newCol.cellRendererParams = {
+          formatter: col.formatter,
+        };
+        newCol.cellRenderer = TableAutoCellRender;
+      }
+    }
+    return newCol;
+  });
+
+  return colDefs;
+}
+
+export function generateBackendColumnsFromValue(rows: Object[]): ColumnField[] {
+  const columns = extractColumnsFromRows(rows, "union");
+  return columns.map((column) => {
+    const newColumn: ColumnField = {
+      name: column.field ?? "",
+      display_name: column.headerName ?? "",
+      sortable: true,
+      filterable: true,
+    };
+    if (rows[0] && rows[0][column.field ?? ""]) {
+      const value = rows[0][column.field ?? ""] as any;
+      if (typeof value === "string") {
+        if (isTimeStampString(value)) {
+          newColumn.formatter = FormatterType.date;
+        } else {
+          newColumn.formatter = FormatterType.text;
+        }
+      } else if (typeof value === "object" && value !== null) {
+        // Check if the object is a Date object
+        if (
+          Object.prototype.toString.call(value) === "[object Date]" ||
+          value instanceof Date
+        ) {
+          newColumn.formatter = FormatterType.date;
+        } else {
+          newColumn.formatter = FormatterType.json;
+        }
+      }
+    }
+    return newColumn;
+  });
+}
+
+/**
+ * Tries to parse a JSON string and returns the parsed object.
+ * If parsing fails, returns undefined.
+ *
+ * @param json - The JSON string to parse.
+ * @returns The parsed JSON object, or undefined if parsing fails.
+ */
+export function tryParseJson(json: string) {
+  try {
+    const parsedJson = JSON.parse(json);
+    return parsedJson;
+  } catch (error) {
+    return;
+  }
 }

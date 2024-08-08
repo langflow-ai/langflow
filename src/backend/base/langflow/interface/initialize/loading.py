@@ -7,74 +7,66 @@ import orjson
 from loguru import logger
 from pydantic import PydanticDeprecatedSince20
 
-from langflow.custom import Component, CustomComponent
 from langflow.custom.eval import eval_custom_component_code
 from langflow.schema import Data
 from langflow.schema.artifact import get_artifact_type, post_process_raw
 from langflow.services.deps import get_tracing_service
 
 if TYPE_CHECKING:
+    from langflow.custom import Component, CustomComponent
     from langflow.graph.vertex.base import Vertex
-    from langflow.services.tracing.service import TracingService
 
 
 async def instantiate_class(
     vertex: "Vertex",
-    fallback_to_env_vars,
     user_id=None,
 ) -> Any:
     """Instantiate class from module type and key, and params"""
 
     vertex_type = vertex.vertex_type
     base_type = vertex.base_type
-    params = vertex.params
-    params = convert_params_to_sets(params)
-    params = convert_kwargs(params)
     logger.debug(f"Instantiating {vertex_type} of type {base_type}")
 
     if not base_type:
         raise ValueError("No base type provided for vertex")
 
-    custom_component, build_results, artifacts = await build_component_and_get_results(
-        params=params,
-        vertex=vertex,
-        user_id=user_id,
-        tracing_service=get_tracing_service(),
-        fallback_to_env_vars=fallback_to_env_vars,
-        base_type=base_type,
+    custom_params = get_params(vertex.params)
+    code = custom_params.pop("code")
+    class_object: Type["CustomComponent" | "Component"] = eval_custom_component_code(code)
+    custom_component: "CustomComponent" | "Component" = class_object(
+        _user_id=user_id,
+        _parameters=custom_params,
+        _vertex=vertex,
+        _tracing_service=get_tracing_service(),
     )
-    return custom_component, build_results, artifacts
+    return custom_component, custom_params
 
 
-async def build_component_and_get_results(
-    params: dict,
+async def get_instance_results(
+    custom_component,
+    custom_params: dict,
     vertex: "Vertex",
-    user_id: str,
-    tracing_service: "TracingService",
     fallback_to_env_vars: bool = False,
     base_type: str = "component",
 ):
-    params_copy = params.copy()
-    # Remove code from params
-    class_object: Type["CustomComponent" | "Component"] = eval_custom_component_code(params_copy.pop("code"))
-    custom_component: "CustomComponent" | "Component" = class_object.initialize(
-        user_id=user_id,
-        parameters=params_copy,
-        vertex=vertex,
-        tracing_service=tracing_service,
+    custom_params = update_params_with_load_from_db_fields(
+        custom_component, custom_params, vertex.load_from_db_fields, fallback_to_env_vars
     )
-    params_copy = update_params_with_load_from_db_fields(
-        custom_component, params_copy, vertex.load_from_db_fields, fallback_to_env_vars
-    )
-    custom_component.set_parameters(params_copy)
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
-        if base_type == "custom_components" and isinstance(custom_component, CustomComponent):
-            return await build_custom_component(params=params_copy, custom_component=custom_component)
-        elif base_type == "component" and isinstance(custom_component, Component):
-            return await build_component(custom_component=custom_component)
+        if base_type == "custom_components":
+            return await build_custom_component(params=custom_params, custom_component=custom_component)
+        elif base_type == "component":
+            return await build_component(params=custom_params, custom_component=custom_component)
         else:
             raise ValueError(f"Base type {base_type} not found.")
+
+
+def get_params(vertex_params):
+    params = vertex_params
+    params = convert_params_to_sets(params)
+    params = convert_kwargs(params)
+    return params.copy()
 
 
 def convert_params_to_sets(params):
@@ -147,9 +139,11 @@ def update_params_with_load_from_db_fields(
 
 
 async def build_component(
+    params: dict,
     custom_component: "Component",
 ):
     # Now set the params as attributes of the custom_component
+    custom_component.set_attributes(params)
     build_results, artifacts = await custom_component.build_results()
 
     return custom_component, build_results, artifacts
@@ -192,9 +186,9 @@ async def build_custom_component(params: dict, custom_component: "CustomComponen
     raw = post_process_raw(raw, artifact_type)
     artifact = {"repr": custom_repr, "raw": raw, "type": artifact_type}
 
-    if custom_component.vertex is not None:
-        custom_component._artifacts = {custom_component.vertex.outputs[0].get("name"): artifact}
-        custom_component._results = {custom_component.vertex.outputs[0].get("name"): build_result}
+    if custom_component._vertex is not None:
+        custom_component._artifacts = {custom_component._vertex.outputs[0].get("name"): artifact}
+        custom_component._results = {custom_component._vertex.outputs[0].get("name"): build_result}
         return custom_component, build_result, artifact
 
     raise ValueError("Custom component does not have a vertex")

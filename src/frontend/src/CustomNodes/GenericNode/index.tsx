@@ -43,7 +43,8 @@ import useUpdateValidationStatus from "../hooks/use-update-validation-status";
 import useValidationStatusString from "../hooks/use-validation-status-string";
 import getFieldTitle from "../utils/get-field-title";
 import sortFields from "../utils/sort-fields";
-import ParameterComponent from "./components/parameterComponent";
+import NodeInputField from "./components/NodeInputField";
+import NodeOutputField from "./components/NodeOutputfield";
 
 export default function GenericNode({
   data,
@@ -65,7 +66,7 @@ export default function GenericNode({
   const updateNodeInternals = useUpdateNodeInternals();
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const isDark = useDarkStore((state) => state.dark);
-
+  const version = useDarkStore((state) => state.version);
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
 
   const [inputName, setInputName] = useState(false);
@@ -215,6 +216,27 @@ export default function GenericNode({
     setShowNode(data.showNode ?? true);
   }, [data.showNode]);
 
+  useEffect(() => {
+    if (buildStatus === BuildStatus.BUILT && !isBuilding) {
+      setNode(
+        data.id,
+        (old) => {
+          return {
+            ...old,
+            data: {
+              ...old.data,
+              node: {
+                ...old.data.node,
+                lf_version: version,
+              },
+            },
+          };
+        },
+        false,
+      );
+    }
+  }, [buildStatus, isBuilding]);
+
   const [loadingUpdate, setLoadingUpdate] = useState(false);
 
   const [showHiddenOutputs, setShowHiddenOutputs] = useState(false);
@@ -281,8 +303,9 @@ export default function GenericNode({
 
   const renderOutputParameter = (output: OutputFieldType, idx: number) => {
     return (
-      <ParameterComponent
+      <NodeOutputField
         index={idx}
+        selected={selected}
         key={
           scapedJSONStringfy({
             output_types: output.types,
@@ -303,7 +326,6 @@ export default function GenericNode({
           name: output.name,
         }}
         type={output.types.join("|")}
-        left={false}
         showNode={showNode}
         outputName={output.name}
       />
@@ -473,9 +495,7 @@ export default function GenericNode({
                       (templateField: string, idx) =>
                         data.node!.template[templateField]?.show &&
                         !data.node!.template[templateField]?.advanced && (
-                          <ParameterComponent
-                            selected={selected}
-                            index={idx}
+                          <NodeInputField
                             key={scapedJSONStringfy({
                               inputTypes:
                                 data.node!.template[templateField].input_types,
@@ -512,7 +532,6 @@ export default function GenericNode({
                               id: data.id,
                               fieldName: templateField,
                             }}
-                            left={true}
                             type={data.node?.template[templateField].type}
                             optionalHandle={
                               data.node?.template[templateField].input_types
@@ -689,9 +708,7 @@ export default function GenericNode({
                   <div key={idx}>
                     {data.node!.template[templateField]?.show &&
                     !data.node!.template[templateField]?.advanced ? (
-                      <ParameterComponent
-                        selected={selected}
-                        index={idx}
+                      <NodeInputField
                         key={scapedJSONStringfy({
                           inputTypes:
                             data.node!.template[templateField].input_types,
@@ -725,7 +742,6 @@ export default function GenericNode({
                           id: data.id,
                           fieldName: templateField,
                         }}
-                        left={true}
                         type={data.node?.template[templateField].type}
                         optionalHandle={
                           data.node?.template[templateField].input_types

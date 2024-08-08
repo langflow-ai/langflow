@@ -13,6 +13,11 @@ from langflow.components import data
 
 
 @pytest.fixture
+def client():
+    pass
+
+
+@pytest.fixture
 def api_request():
     # This fixture provides an instance of APIRequest for each test case
     return data.APIRequestComponent()

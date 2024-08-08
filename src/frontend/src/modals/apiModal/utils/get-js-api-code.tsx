@@ -9,17 +9,13 @@
 export default function getJsApiCode(
   flowId: string,
   isAuth: boolean,
-  tweaksBuildedObject: any[],
+  tweaksBuildedObject: {},
   endpointName?: string | null,
 ): string {
   let tweaksString = "{}";
-  if (tweaksBuildedObject && tweaksBuildedObject.length > 0) {
-    const tweaksObject = tweaksBuildedObject[0];
-    if (!tweaksObject) {
-      throw new Error("Expected tweaks object is not provided.");
-    }
-    tweaksString = JSON.stringify(tweaksObject, null, 2);
-  }
+  if (tweaksBuildedObject)
+    tweaksString = JSON.stringify(tweaksBuildedObject, null, 2);
+
   return `class LangflowClient {
     constructor(baseURL, apiKey) {
         this.baseURL = baseURL;
