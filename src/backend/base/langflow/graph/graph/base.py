@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from functools import partial
 from itertools import chain
 from typing import TYPE_CHECKING, Any, Dict, Generator, List, Optional, Tuple, Type, Union
+import warnings
 
 import nest_asyncio
 from loguru import logger
@@ -1425,7 +1426,7 @@ class Graph:
             new_edge = self.build_edge(edge)
             edges.add(new_edge)
         if self.vertices and not edges:
-            raise ValueError("Graph has vertices but no edges")
+            warnings.warn("Graph has vertices but no edges")
         return list(edges)
 
     def build_edge(self, edge: EdgeData) -> ContractEdge:
