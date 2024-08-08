@@ -4,8 +4,23 @@ run-name: Langflow Release by @${{ github.actor }}
 on:
   workflow_dispatch:
     inputs:
-      release_package:
-        description: "Release package"
+      release_package_base:
+        description: "Release Langflow Base"
+        required: true
+        type: boolean
+        default: false
+      release_package_main:
+        description: "Release Langflow"
+        required: true
+        type: boolean
+        default: false
+      build_docker_base:
+        description: "Build Docker Image for Langflow Base"
+        required: true
+        type: boolean
+        default: false
+      build_docker_main:
+        description: "Build Docker Image for Langflow"
         required: true
         type: boolean
         default: false
@@ -13,7 +28,7 @@ on:
         description: "Pre-release"
         required: false
         type: boolean
-        default: true
+        default: false
 
 
 env:
@@ -27,7 +42,7 @@ jobs:
   release-base:
     name: Release Langflow Base
     needs: [ci]
-    if: inputs.release_package == true
+    if: inputs.release_package_base == true
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.check-version.outputs.version }}
@@ -93,7 +108,7 @@ jobs:
 
   release-main:
     name: Release Langflow Main
-    if: inputs.release_package == true
+    if: inputs.release_package_main == true
     needs: [release-base]
     runs-on: ubuntu-latest
     outputs:
@@ -111,6 +126,18 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
+      # If pre-release is true, we need to check if  ["a", "b", "rc", "dev", "post"] is in the version string
+      # if the version string is incorrect, we need to exit the workflow
+      - name: Check if pre-release
+        if: inputs.pre_release == true
+        run: |
+          version=$(poetry version --short)
+          if [[ "${version}" =~ ^([0-9]+\.)?([0-9]+\.)?[0-9]+((a|b|rc|dev|post)([0-9]+))$ ]]; then
+            echo "Pre-release version detected. Continuing with the release."
+          else
+            echo "Invalid pre-release version detected. Exiting the workflow."
+            exit 1
+          fi
       - name: Check Version
         id: check-version
         run: |
@@ -155,19 +182,34 @@ jobs:
           name: dist-main
           path: dist
 
-  call_docker_build:
-    name: Call Docker Build Workflow
-    needs: [release-base, release-main]
-    uses: langflow-ai/langflow/.github/workflows/docker-build.yml@main
+  call_docker_build_base:
+    name: Call Docker Build Workflow for Langflow Base
+    if : inputs.build_docker_base == true
+    uses: ./.github/workflows/docker-build.yml
     strategy:
       matrix:
         release_type:
           - base
+    with:
+      # version should be needs.release-base.outputs.version  if release_type is base
+      # version should be needs.release-main.outputs.version  if release_type is main
+      version: ''
+      release_type: ${{ matrix.release_type }}
+      pre_release: ${{ inputs.pre_release }}
+    secrets: inherit
+
+  call_docker_build_main:
+    name: Call Docker Build Workflow for Langflow
+    if : inputs.build_docker_main == true
+    uses: ./.github/workflows/docker-build.yml
+    strategy:
+      matrix:
+        release_type:
           - main
     with:
       # version should be needs.release-base.outputs.version  if release_type is base
       # version should be needs.release-main.outputs.version  if release_type is main
-      version: ${{ matrix.release_type == 'base' && needs.release-base.outputs.version || matrix.release_type == 'main' && needs.release-main.outputs.version }}
+      version: ''
       release_type: ${{ matrix.release_type }}
       pre_release: ${{ inputs.pre_release }}
     secrets: inherit
