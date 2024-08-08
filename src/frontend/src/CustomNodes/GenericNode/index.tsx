@@ -1,15 +1,12 @@
 import emojiRegex from "emoji-regex";
 import { useEffect, useMemo, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
-import Markdown from "react-markdown";
 import { NodeToolbar, useUpdateNodeInternals } from "reactflow";
 import IconComponent, {
   ForwardedIconComponent,
 } from "../../components/genericIconComponent";
-import InputComponent from "../../components/inputComponent";
 import ShadTooltip from "../../components/shadTooltipComponent";
 import { Button } from "../../components/ui/button";
-import { Textarea } from "../../components/ui/textarea";
 import {
   RUN_TIMESTAMP_PREFIX,
   STATUS_BUILD,
@@ -45,11 +42,11 @@ import getFieldTitle from "../utils/get-field-title";
 import sortFields from "../utils/sort-fields";
 import NodeInputField from "./components/NodeInputField";
 import NodeOutputField from "./components/NodeOutputfield";
-import { NodeName } from "./components/NodeName";
+import  NodeName  from "./components/NodeName";
+import NodeDescription from "./components/NodeDescription";
 
 export default function GenericNode({
   data,
-
   selected,
 }: {
   data: NodeDataType;
@@ -71,10 +68,6 @@ export default function GenericNode({
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
 
 
-  const [inputDescription, setInputDescription] = useState(false);
-  const [nodeDescription, setNodeDescription] = useState(
-    data.node?.description!,
-  );
   const [isOutdated, setIsOutdated] = useState(false);
   const [isUserEdited, setIsUserEdited] = useState(false);
   const buildStatus = useFlowStore(
@@ -193,16 +186,6 @@ export default function GenericNode({
   useEffect(() => {
     countHandles();
   }, [data, data.node]);
-
-  useEffect(() => {
-    if (!selected) {
-      setInputDescription(false);
-    }
-  }, [selected]);
-
-  useEffect(() => {
-    setNodeDescription(data.node!.description);
-  }, [data.node!.description]);
 
   useEffect(() => {
     setShowNode(data.showNode ?? true);
@@ -565,74 +548,7 @@ export default function GenericNode({
             className="pb-8 pt-5 relative"
           >
             {/* increase height!! */}
-            <div className="generic-node-desc">
-              {inputDescription ? (
-                <Textarea
-                  className="nowheel min-h-40"
-                  autoFocus
-                  onBlur={() => {
-                    setInputDescription(false);
-                    setNodeDescription(nodeDescription);
-                    setNode(data.id, (old) => ({
-                      ...old,
-                      data: {
-                        ...old.data,
-                        node: {
-                          ...old.data.node,
-                          description: nodeDescription,
-                        },
-                      },
-                    }));
-                  }}
-                  value={nodeDescription}
-                  onChange={(e) => setNodeDescription(e.target.value)}
-                  onKeyDown={(e) => {
-                    handleKeyDown(e, nodeDescription, "");
-                    if (
-                      e.key === "Enter" &&
-                      e.shiftKey === false &&
-                      e.ctrlKey === false &&
-                      e.altKey === false
-                    ) {
-                      setInputDescription(false);
-                      setNodeDescription(nodeDescription);
-                      setNode(data.id, (old) => ({
-                        ...old,
-                        data: {
-                          ...old.data,
-                          node: {
-                            ...old.data.node,
-                            description: nodeDescription,
-                          },
-                        },
-                      }));
-                    }
-                  }}
-                />
-              ) : (
-                <div
-                  className={cn(
-                    "nodoubleclick generic-node-desc-text cursor-text word-break-break-word",
-                    (data.node?.description === "" ||
-                      !data.node?.description)
-                      ? "font-light italic"
-                      : "",
-                  )}
-                  onDoubleClick={(e) => {
-                    setInputDescription(true);
-                    takeSnapshot();
-                  }}
-                >
-                  {(data.node?.description === "" || !data.node?.description) ? (
-                    "Double Click to Edit Description"
-                  ) : (
-                    <Markdown className="markdown prose flex flex-col text-primary word-break-break-word dark:prose-invert">
-                      {String(data.node?.description)}
-                    </Markdown>
-                  )}
-                </div>
-              )}
-            </div>
+            <NodeDescription description={data.node?.description} nodeId={data.id} selected={selected} />
             <>
               {renderInputParameter}
               <div

@@ -4,7 +4,7 @@ import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
 import { useEffect, useState } from "react";
 
-export function NodeName({ display_name, selected,nodeId }: { display_name?: string, selected: boolean,nodeId: string }) {
+export default function NodeName({ display_name, selected,nodeId }: { display_name?: string, selected: boolean,nodeId: string }) {
     const [inputName, setInputName] = useState(false);
     const [nodeName, setNodeName] = useState(display_name);
     const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
@@ -20,38 +20,37 @@ export function NodeName({ display_name, selected,nodeId }: { display_name?: str
         setNodeName(display_name);
     }, [display_name]);
 
-    if(inputName){
-        return(
-        <div>
-        <InputComponent
-            onBlur={() => {
-                setInputName(false);
-                if (nodeName?.trim() !== "") {
-                    setNodeName(nodeName);
-                    setNode(nodeId, (old) => ({
-                        ...old,
-                        data: {
-                            ...old.data,
-                            node: {
-                                ...old.data.node,
-                                display_name: nodeName,
+    return( inputName?
+        (
+            <div>
+            <InputComponent
+                onBlur={() => {
+                    setInputName(false);
+                    if (nodeName?.trim() !== "") {
+                        setNodeName(nodeName);
+                        setNode(nodeId, (old) => ({
+                            ...old,
+                            data: {
+                                ...old.data,
+                                node: {
+                                    ...old.data.node,
+                                    display_name: nodeName,
+                                },
                             },
-                        },
-                    }));
-                } else {
-                    setNodeName(display_name);
-                }
-            }}
-            value={nodeName}
-            onChange={setNodeName}
-            password={false}
-            blurOnEnter={true}
-            id={`input-title-${display_name}`}
-        />
-    </div>)
-    }
-
-    return(
+                        }));
+                    } else {
+                        setNodeName(display_name);
+                    }
+                }}
+                value={nodeName}
+                autoFocus
+                onChange={setNodeName}
+                password={false}
+                blurOnEnter={true}
+                id={`input-title-${display_name}`}
+            />
+        </div>
+        ):
         <div className="group flex items-center gap-1">
             <ShadTooltip content={display_name}>
                 <div
