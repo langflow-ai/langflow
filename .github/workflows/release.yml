@@ -4,8 +4,23 @@ run-name: Langflow Release by @${{ github.actor }}
 on:
   workflow_dispatch:
     inputs:
-      release_package:
-        description: "Release package"
+      release_package_base:
+        description: "Release Langflow Base"
+        required: true
+        type: boolean
+        default: false
+      release_package_main:
+        description: "Release Langflow"
+        required: true
+        type: boolean
+        default: false
+      build_docker_base:
+        description: "Build Docker Image for Langflow Base"
+        required: true
+        type: boolean
+        default: false
+      build_docker_main:
+        description: "Build Docker Image for Langflow"
         required: true
         type: boolean
         default: false
@@ -27,7 +42,7 @@ jobs:
   release-base:
     name: Release Langflow Base
     needs: [ci]
-    if: inputs.release_package == true
+    if: inputs.release_package_base == true
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.check-version.outputs.version }}
@@ -93,7 +108,7 @@ jobs:
 
   release-main:
     name: Release Langflow Main
-    if: inputs.release_package == true
+    if: inputs.release_package_main == true
     needs: [release-base]
     runs-on: ubuntu-latest
     outputs:
