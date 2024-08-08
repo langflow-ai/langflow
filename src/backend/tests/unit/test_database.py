@@ -37,6 +37,11 @@ def json_style():
     )
 
 
+def test_get_starter_projects(client, active_user, logged_in_headers):
+    response = client.get("api/v1/flows/starter_projects/", headers=logged_in_headers)
+    assert response.status_code == 200
+
+
 def test_create_flow(client: TestClient, json_flow: str, active_user, logged_in_headers):
     flow = orjson.loads(json_flow)
     data = flow["data"]
