@@ -6,7 +6,7 @@ DOCKERFILE=docker/build_and_push.Dockerfile
 DOCKERFILE_BACKEND=docker/build_and_push_backend.Dockerfile
 DOCKERFILE_FRONTEND=docker/frontend/build_and_push_frontend.Dockerfile
 DOCKER_COMPOSE=docker_example/docker-compose.yml
-PYTHON_REQUIRED=$(shell grep "^python" pyproject.toml | sed -n 's/.*"\(.*\)"$$/\1/p')
+PYTHON_REQUIRED=$(shell grep '^python[[:space:]]*=' pyproject.toml | sed -n 's/.*"\([^"]*\)".*/\1/p')
 RED=\033[0;31m
 NC=\033[0m # No Color
 GREEN=\033[0;32m
