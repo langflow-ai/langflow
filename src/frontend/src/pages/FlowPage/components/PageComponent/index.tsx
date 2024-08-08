@@ -96,7 +96,6 @@ export default function Page({
   );
   const onConnect = useFlowStore((state) => state.onConnect);
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
-  const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setNoticeData = useAlertStore((state) => state.setNoticeData);
   const [selectionMenuVisible, setSelectionMenuVisible] = useState(false);
