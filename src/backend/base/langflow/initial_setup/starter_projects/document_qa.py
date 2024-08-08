@@ -7,7 +7,7 @@ from langflow.components.prompts.Prompt import PromptComponent
 from langflow.graph.graph.base import Graph
 
 
-def document_qa(template: str | None = None):
+def document_qa_graph(template: str | None = None):
     if template is None:
         template = """Answer user's questions based on the document below:
 
