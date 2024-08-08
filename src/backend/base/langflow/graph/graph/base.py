@@ -1171,7 +1171,7 @@ class Graph:
 
                     await set_cache(key=vertex.id, data=vertex_dict)
 
-            if vertex.results is not None:
+            if vertex.result is not None:
                 params = f"{vertex._built_object_repr()}{params}"
                 valid = True
                 result_dict = vertex.result
