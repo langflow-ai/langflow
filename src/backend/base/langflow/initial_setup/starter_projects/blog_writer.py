@@ -9,7 +9,7 @@ from langflow.components.prompts.Prompt import PromptComponent
 from langflow.graph.graph.base import Graph
 
 
-def blog_writer(template: str | None = None):
+def blog_writer_graph(template: str | None = None):
     if template is None:
         template = dedent("""Reference 1:
 
