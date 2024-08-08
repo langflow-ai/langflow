@@ -3,7 +3,7 @@ on:
   workflow_call:
     inputs:
       version:
-        required: true
+        required: false
         type: string
       release_type:
         required: true
@@ -33,8 +33,33 @@ env:
   TEST_TAG: "langflowai/langflow:test"
 
 jobs:
+  get-version:
+    name: Get Version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.get-version-input.outputs.version || steps.get-version-base.outputs.version || steps.get-version-main.outputs.version }}
+    steps:
+      - name: Get Version from Input
+        if : ${{ inputs.version != '' }}
+        id: get-version-input
+        run: |
+          version=${{ inputs.version }}
+          echo version=$version >> $GITHUB_OUTPUT
+      - name: Get Version Main
+        if : ${{ inputs.version == '' && inputs.release_type == 'base' }}
+        id: get-version-base
+        run: |
+          version=$(poetry version --short)
+          echo version=$version >> $GITHUB_OUTPUT
+      - name: Get Version Base
+        if : ${{ inputs.version == '' && inputs.release_type == 'main' }}
+        id: get-version-main
+        run: |
+          version=$(cd src/backend/base && poetry version --short)
+          echo version=$version >> $GITHUB_OUTPUT
   setup:
     runs-on: ubuntu-latest
+    needs: get-version
     outputs:
       tags: ${{ steps.set-vars.outputs.tags }}
       file: ${{ steps.set-vars.outputs.file }}
@@ -44,13 +69,13 @@ jobs:
         id: set-vars
         run: |
           if [[ "${{ inputs.release_type }}" == "base" ]]; then
-            echo "tags=langflowai/langflow:base-${{ inputs.version }},langflowai/langflow:base-latest" >> $GITHUB_OUTPUT
+            echo "tags=langflowai/langflow:base-${{ needs.get-version.outputs.version }},langflowai/langflow:base-latest" >> $GITHUB_OUTPUT
             echo "file=./docker/build_and_push_base.Dockerfile" >> $GITHUB_OUTPUT
           else
             if [[ "${{ inputs.pre_release }}" == "true" ]]; then
-              echo "tags=langflowai/langflow:${{ inputs.version }}" >> $GITHUB_OUTPUT
+              echo "tags=langflowai/langflow:${{ needs.get-version.outputs.version }}" >> $GITHUB_OUTPUT
             else
-              echo "tags=langflowai/langflow:${{ inputs.version }},langflowai/langflow:latest" >> $GITHUB_OUTPUT
+              echo "tags=langflowai/langflow:${{ needs.get-version.outputs.version }},langflowai/langflow:latest" >> $GITHUB_OUTPUT
             fi
             echo "file=./docker/build_and_push.Dockerfile" >> $GITHUB_OUTPUT
           fi
@@ -79,17 +104,17 @@ jobs:
   build_components:
     if: ${{ inputs.release_type == 'main' }}
     runs-on: ubuntu-latest
-    needs: build
+    needs: [build, get-version]
     strategy:
       matrix:
         component: [backend, frontend]
         include:
           - component: backend
             dockerfile: ./docker/build_and_push_backend.Dockerfile
-            tags: ${{ inputs.pre_release == 'true' && format('langflowai/langflow-backend:{0}', inputs.version) || format('langflowai/langflow-backend:{0},langflowai/langflow-backend:latest', inputs.version) }}
+            tags: ${{ inputs.pre_release == 'true' && format('langflowai/langflow-backend:{0}', needs.get-version.outputs.version) || format('langflowai/langflow-backend:{0},langflowai/langflow-backend:latest', needs.get-version.outputs.version) }}
           - component: frontend
             dockerfile: ./docker/frontend/build_and_push_frontend.Dockerfile
-            tags: ${{ inputs.pre_release == 'true' && format('langflowai/langflow-frontend:{0}', inputs.version) || format('langflowai/langflow-frontend:{0},langflowai/langflow-frontend:latest', inputs.version) }}
+            tags: ${{ inputs.pre_release == 'true' && format('langflowai/langflow-frontend:{0}', needs.get-version.outputs.version) || format('langflowai/langflow-frontend:{0},langflowai/langflow-frontend:latest', needs.get-version.outputs.version) }}
     steps:
       - uses: actions/checkout@v4
       - name: Set up Docker Buildx
@@ -107,7 +132,7 @@ jobs:
           context: .
           push: true
           build-args: |
-            LANGFLOW_IMAGE=langflowai/langflow:${{ inputs.version }}
+            LANGFLOW_IMAGE=langflowai/langflow:${{ needs.get-version.outputs.version }}
           file: ${{ matrix.dockerfile }}
           tags: ${{ matrix.tags }}
           # provenance: false will result in a single manifest for all platforms which makes the image pullable from arm64 machines via the emulation (e.g. Apple Silicon machines)
