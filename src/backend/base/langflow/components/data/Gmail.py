@@ -1,7 +1,7 @@
 import base64
 import re
 import json
-from typing import Any, Iterator, List, Optional
+from typing import Any, Iterator, List
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from langflow.custom import Component
@@ -13,7 +13,7 @@ from langchain_community.chat_loaders.gmail import GMailLoader
 from langchain_core.chat_sessions import ChatSession
 from langchain_core.messages import HumanMessage
 from json.decoder import JSONDecodeError
-from langflow.helpers.data import docs_to_data
+from google.auth.exceptions import RefreshError
 
 
 class GmailLoaderComponent(Component):
@@ -39,54 +39,55 @@ class GmailLoaderComponent(Component):
                 "token": "",
                 "token_uri": "https://oauth2.googleapis.com/token",
                 "universe_domain": "googleapis.com"
-            }""")
+            }"""),
         ),
         MessageTextInput(
             name="label_ids",
             display_name="Label IDs",
             info="Comma-separated list of label IDs to filter emails.",
             required=True,
-            value="INBOX,SENT,UNREAD,IMPORTANT"
+            value="INBOX,SENT,UNREAD,IMPORTANT",
         ),
         MessageTextInput(
             name="max_results",
             display_name="Max Results",
             info="Maximum number of emails to load.",
             required=True,
-            value="10"
+            value="10",
         ),
     ]
 
     outputs = [
         Output(display_name="Loaded Emails", name="emails", method="load_emails"),
     ]
-    
+
     def load_emails(self) -> Data:
         class CustomGMailLoader(GMailLoader):
-            def __init__(self, creds: Any, n: int = 100, label_ids: List[str] = None, raise_error: bool = False) -> None:
+            def __init__(
+                self, creds: Any, n: int = 100, label_ids: List[str] = None, raise_error: bool = False
+            ) -> None:
                 super().__init__(creds, n, raise_error)
                 self.label_ids = label_ids if label_ids is not None else ["SENT"]
                 # Handle any unexpected keyword arguments
                 # self.extra_args = kwargs
-            def clean_message_content(self,message):
+
+            def clean_message_content(self, message):
                 # Remove URLs
-                message = re.sub(r'http\S+|www\S+|https\S+',
-                                '',
-                                message,
-                                flags=re.MULTILINE)
+                message = re.sub(r"http\S+|www\S+|https\S+", "", message, flags=re.MULTILINE)
 
                 # Remove email addresses
-                message = re.sub(r'\S+@\S+', '', message)
+                message = re.sub(r"\S+@\S+", "", message)
 
                 # Remove special characters and excessive whitespace
-                message = re.sub(r'[^A-Za-z0-9\s]+', ' ', message)
-                message = re.sub(r'\s{2,}', ' ', message)
+                message = re.sub(r"[^A-Za-z0-9\s]+", " ", message)
+                message = re.sub(r"\s{2,}", " ", message)
 
                 # Trim leading and trailing whitespace
                 message = message.strip()
 
                 return message
-            def _extract_email_content(self,msg: Any) -> HumanMessage:
+
+            def _extract_email_content(self, msg: Any) -> HumanMessage:
                 from_email = None
                 for values in msg["payload"]["headers"]:
                     name = values["name"]
@@ -106,12 +107,14 @@ class GmailLoaderComponent(Component):
                         data = base64.urlsafe_b64decode(data).decode("utf-8")
                         pattern = re.compile(r"\r\nOn .+(\r\n)*wrote:\r\n")
                         newest_response = re.split(pattern, data)[0]
-                        message = HumanMessage(content=self.clean_message_content(newest_response),
-                                            additional_kwargs={"sender": from_email})
+                        message = HumanMessage(
+                            content=self.clean_message_content(newest_response),
+                            additional_kwargs={"sender": from_email},
+                        )
                         return message
                 raise ValueError("No plain text part found in the email.")
 
-            def _get_message_data(self,service: Any, message: Any) -> ChatSession:
+            def _get_message_data(self, service: Any, message: Any) -> ChatSession:
                 msg = service.users().messages().get(userId="me", id=message["id"]).execute()
                 message_content = self._extract_email_content(msg)
 
@@ -143,15 +146,10 @@ class GmailLoaderComponent(Component):
                 else:
                     return ChatSession(messages=[message_content])
 
-
-
             def lazy_load(self) -> Iterator[ChatSession]:
                 service = build("gmail", "v1", credentials=self.creds)
                 results = (
-                    service.users()
-                    .messages()
-                    .list(userId="me", labelIds=self.label_ids, maxResults=self.n)
-                    .execute()
+                    service.users().messages().list(userId="me", labelIds=self.label_ids, maxResults=self.n).execute()
                 )
                 messages = results.get("messages", [])
                 if not messages:
@@ -164,6 +162,7 @@ class GmailLoaderComponent(Component):
                             raise e
                         else:
                             print(f"Error processing message {message['id']}: {e}")
+
         json_string = self.json_string
         label_ids = self.label_ids.split(",") if self.label_ids else ["INBOX"]
         max_results = int(self.max_results) if self.max_results else 100
@@ -191,7 +190,7 @@ class GmailLoaderComponent(Component):
 
         # assert len(docs) != 0, "Expected a 1 or more document to be loaded."
 
-        data=docs
+        data = docs
         # Return the loaded documents
         self.status = data
         return Data(data={"text": data})
