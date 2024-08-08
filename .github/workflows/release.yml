@@ -126,6 +126,17 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
+      # If pre-release is true, we need to check if  ["a", "b", "rc", "dev", "post"] is in the version string
+      # if the version string is incorrect, we need to exit the workflow
+      - name: Check if pre-release
+        if: inputs.pre_release == true
+        run: |
+          if [[ "${{ needs.release-base.outputs.version }}" =~ ^([0-9]+(\.[0-9]+)?(\.[0-9]+)?(a[0-9]+|b[0-9]+|rc[0-9]+|dev[0-9]+|post[0-9]+)?)$ ]]; then
+            echo "Pre-release version detected. Continuing with the release."
+          else
+            echo "Invalid pre-release version detected. Exiting the workflow."
+            exit 1
+          fi
       - name: Check Version
         id: check-version
         run: |
