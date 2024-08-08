@@ -157,7 +157,7 @@ def create_app():
             raise ValueError(f"Invalid port number {prome_port_str}")
 
     if settings.prometheus_enabled:
-        from prometheus_client import start_http_server
+        from prometheus_client import start_http_server  # type: ignore
 
         start_http_server(settings.prometheus_port)
 
