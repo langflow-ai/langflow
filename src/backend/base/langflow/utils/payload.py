@@ -1,6 +1,8 @@
 import contextlib
 import re
-from typing import Dict
+from typing import Dict, Type
+
+from pydantic import BaseModel, create_model
 
 
 def extract_input_variables(nodes):
@@ -86,3 +88,23 @@ def build_json(root, graph) -> Dict:
         final_dict[key] = value
 
     return final_dict
+
+
+def model_from_typeddict(name, typed_dict: Type) -> Type[BaseModel]:
+    """
+    Create a pydantic model from a TypedDict.
+
+    Args:
+        name (str): The name of the model.
+        typed_dict (Type): The TypedDict to create the model from.
+
+    Returns:
+        Type[BaseModel]: The created model.
+    """
+    model_fields = {}
+    for field_name, field_type in typed_dict.__annotations__.items():
+        if field_type is not None:
+            model_fields[field_name] = (field_type, ...)
+        else:
+            model_fields[field_name] = None
+    return create_model(name, **model_fields)
