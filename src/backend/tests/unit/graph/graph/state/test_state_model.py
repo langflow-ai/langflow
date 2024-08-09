@@ -112,7 +112,7 @@ class TestCreateStateModel:
         with pytest.raises(ValueError, match="Method's class must have a _get_output_by_method attribute."):
             create_state_model(method_one=mock_component.method_one, method_two=mock_component.method_two)
 
-    def test_graph_functional_start(self):
+    def test_graph_functional_start_state_update(self):
         chat_input = ChatInput(_id="chat_input")
         chat_output = ChatOutput(input_value="test", _id="chat_output")
         chat_output.set(sender_name=chat_input.message_response)
