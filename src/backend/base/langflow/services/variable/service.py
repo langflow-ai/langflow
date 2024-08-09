@@ -89,8 +89,11 @@ class DatabaseVariableService(VariableService, Service):
         decrypted = auth_utils.decrypt_api_key(variable.value, settings_service=self.settings_service)
         return decrypted
 
+    def get_all(self, user_id: Union[UUID, str], session: Session = Depends(get_session)) -> list[Optional[Variable]]:
+        return list(session.exec(select(Variable).where(Variable.user_id == user_id)).all())
+
     def list_variables(self, user_id: Union[UUID, str], session: Session = Depends(get_session)) -> list[Optional[str]]:
-        variables = session.exec(select(Variable).where(Variable.user_id == user_id)).all()
+        variables = self.get_all(user_id=user_id, session=session)
         return [variable.name for variable in variables]
 
     def update_variable(
