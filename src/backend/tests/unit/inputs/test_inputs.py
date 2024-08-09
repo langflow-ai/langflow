@@ -20,7 +20,7 @@ from langflow.inputs.inputs import (
     SecretStrInput,
     StrInput,
     TableInput,
-    _instantiate_input,
+    instantiate_input,
 )
 from langflow.schema.message import Message
 
@@ -69,14 +69,14 @@ def test_message_text_input_invalid():
 
 def test_instantiate_input_valid():
     data = {"name": "valid_input", "value": "This is a string"}
-    input_instance = _instantiate_input("StrInput", data)
+    input_instance = instantiate_input("StrInput", data)
     assert isinstance(input_instance, StrInput)
     assert input_instance.value == "This is a string"
 
 
 def test_instantiate_input_invalid():
     with pytest.raises(ValueError):
-        _instantiate_input("InvalidInput", {"name": "invalid_input", "value": "This is a string"})
+        instantiate_input("InvalidInput", {"name": "invalid_input", "value": "This is a string"})
 
 
 def test_handle_input_valid():
@@ -218,8 +218,8 @@ def test_instantiate_input_comprehensive():
     }
 
     for input_type, data in valid_data.items():
-        input_instance = _instantiate_input(input_type, data)
+        input_instance = instantiate_input(input_type, data)
         assert isinstance(input_instance, InputTypesMap[input_type])
 
     with pytest.raises(ValueError):
-        _instantiate_input("InvalidInput", {"name": "invalid_input", "value": "Invalid"})
+        instantiate_input("InvalidInput", {"name": "invalid_input", "value": "Invalid"})
