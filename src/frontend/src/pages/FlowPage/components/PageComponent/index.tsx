@@ -151,9 +151,13 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
         x: 0,
         y: 0,
       };
-      reactFlowInstance!.setViewport(viewport);
+      if (viewport.x == 0 && viewport.y == 0) {
+        reactFlowInstance.fitView();
+      } else {
+        reactFlowInstance.setViewport(viewport);
+      }
     }
-  }, [currentFlowId, reactFlowInstance]);
+  }, [currentSavedFlow, reactFlowInstance]);
 
   const { isFetching, refetch } = useGetBuildsQuery({});
 

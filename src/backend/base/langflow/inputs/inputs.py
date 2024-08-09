@@ -471,7 +471,7 @@ class DefaultPromptField(Input):
     advanced: bool = False
     multiline: bool = True
     input_types: list[str] = DEFAULT_PROMPT_INTUT_TYPES
-    value: str = ""  # Set the value to empty string
+    value: Any = ""  # Set the value to empty string
 
 
 InputTypes = Union[
@@ -500,7 +500,7 @@ InputTypes = Union[
 InputTypesMap: dict[str, type[InputTypes]] = {t.__name__: t for t in get_args(InputTypes)}
 
 
-def _instantiate_input(input_type: str, data: dict) -> InputTypes:
+def instantiate_input(input_type: str, data: dict) -> InputTypes:
     input_type_class = InputTypesMap.get(input_type)
     if "type" in data:
         # Replate with field_type

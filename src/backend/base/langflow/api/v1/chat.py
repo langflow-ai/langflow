@@ -146,6 +146,7 @@ async def build_flow(
     files: Optional[list[str]] = None,
     stop_component_id: Optional[str] = None,
     start_component_id: Optional[str] = None,
+    log_builds: Optional[bool] = True,
     chat_service: "ChatService" = Depends(get_chat_service),
     current_user=Depends(get_current_active_user),
     telemetry_service: "TelemetryService" = Depends(get_telemetry_service),
@@ -250,7 +251,7 @@ async def build_flow(
             result_data_response.message = artifacts
 
             # Log the vertex build
-            if not vertex.will_stream:
+            if not vertex.will_stream and log_builds:
                 background_tasks.add_task(
                     log_vertex_build,
                     flow_id=flow_id_str,
@@ -356,10 +357,23 @@ async def build_flow(
             except asyncio.CancelledError:
                 vertices_task.cancel()
                 return
+            except Exception as e:
+                if isinstance(e, HTTPException):
+                    send_event("error", {"error": str(e.detail), "statusCode": e.status_code}, queue)
+                    raise e
+                send_event("error", {"error": str(e)}, queue)
+                raise e
 
             ids, vertices_to_run, graph = vertices_task.result()
         else:
-            ids, vertices_to_run, graph = await build_graph_and_get_order()
+            try:
+                ids, vertices_to_run, graph = await build_graph_and_get_order()
+            except Exception as e:
+                if isinstance(e, HTTPException):
+                    send_event("error", {"error": str(e.detail), "statusCode": e.status_code}, queue)
+                    raise e
+                send_event("error", {"error": str(e)}, queue)
+                raise e
         send_event("vertices_sorted", {"ids": ids, "to_run": vertices_to_run}, queue)
         await client_consumed_queue.get()
 
@@ -370,6 +384,7 @@ async def build_flow(
         try:
             await asyncio.gather(*tasks)
         except asyncio.CancelledError:
+            background_tasks.add_task(graph.end_all_traces)
             for task in tasks:
                 task.cancel()
             return

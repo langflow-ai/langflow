@@ -3,6 +3,7 @@ import { getObjectsFromFilelist } from "@/helpers/get-objects-from-filelist";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { FlowType } from "@/types/flow";
+import { processDataFromFlow } from "@/utils/reactflowUtils";
 import useAddFlow from "./use-add-flow";
 
 const useUploadFlow = () => {
@@ -56,6 +57,10 @@ const useUploadFlow = () => {
   }): Promise<void> => {
     try {
       let flows = await getFlowsToUpload({ files });
+      for (const flow of flows) {
+        await processDataFromFlow(flow);
+      }
+
       if (
         isComponent !== undefined &&
         flows.every(

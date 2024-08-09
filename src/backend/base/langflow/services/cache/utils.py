@@ -166,3 +166,6 @@ def update_build_status(cache_service, flow_id: str, status: "BuildStatus"):
     cache_service[flow_id] = cached_flow
     cached_flow["status"] = status
     cache_service[flow_id] = cached_flow
+
+
+CACHE_MISS = CacheMiss()
