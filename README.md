@@ -161,6 +161,13 @@ Use this template to deploy Langflow 1.0 on Railway:
 
 Follow our step-by-step guide to deploy [Langflow on Kubernetes](./docs/docs/Deployment/deployment-kubernetes.md).
 
+## Deploy on Azure
+
+Use this template to deploy Langflow 1.0 on Azure:
+
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fthaersaidi%2Flangflow%2Fmain%2Fscripts%2Fazure%2Fazuredeploy.json)
+
+
 # 🖥️ Command Line Interface (CLI)
 
 Langflow provides a command-line interface (CLI) for easy management and configuration.
