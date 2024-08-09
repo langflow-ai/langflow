@@ -185,7 +185,7 @@ export default function NodeToolbarComponent({
   const advanced = useShortcutsStore((state) => state.advanced);
   const minimize = useShortcutsStore((state) => state.minimize);
   const component = useShortcutsStore((state) => state.component);
-  const save = useShortcutsStore((state) => state.save);
+  const save_component = useShortcutsStore((state) => state.save_component);
   const docs = useShortcutsStore((state) => state.docs);
   const code = useShortcutsStore((state) => state.code);
   const group = useShortcutsStore((state) => state.group);
@@ -198,7 +198,7 @@ export default function NodeToolbarComponent({
   useHotkeys(component, handleShareWShortcut, { preventDefault });
   useHotkeys(code, handleCodeWShortcut, { preventDefault });
   useHotkeys(advanced, handleAdvancedWShortcut, { preventDefault });
-  useHotkeys(save, handleSaveWShortcut, { preventDefault });
+  useHotkeys(save_component, handleSaveWShortcut, { preventDefault });
   useHotkeys(docs, handleDocsWShortcut, { preventDefault });
   useHotkeys(download, handleDownloadWShortcut, { preventDefault });
   useHotkeys(freeze, handleFreeze);
@@ -712,7 +712,7 @@ export default function NodeToolbarComponent({
               });
               setSuccessData({ title: `${data.id} successfully overridden!` });
             }}
-            onClose={setShowOverrideModal}
+            onClose={() => setShowOverrideModal(false)}
             onCancel={() => {
               addFlow({
                 flow: flowComponent,
