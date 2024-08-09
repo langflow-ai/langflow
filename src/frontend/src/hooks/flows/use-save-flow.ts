@@ -12,6 +12,7 @@ const useSaveFlow = () => {
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
   const setSaveLoading = useFlowsManagerStore((state) => state.setSaveLoading);
+  const setCurrentFlow = useFlowStore((state) => state.setCurrentFlow);
 
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const flowData = currentFlow?.data;
@@ -53,6 +54,7 @@ const useSaveFlow = () => {
                     return flow;
                   }),
                 );
+                setCurrentFlow(updatedFlow);
                 resolve();
               }
             },
