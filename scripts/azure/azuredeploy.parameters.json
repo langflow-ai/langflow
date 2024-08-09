@@ -1,0 +1,34 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+      "location": {
+        "value": "swedencentral"
+      },
+      "containerAppEnvironmentName": {
+        "value": "langflow-app-environment"
+      },
+      "containerGroupName": {
+        "value": "langflow-container"
+      },
+      "storageAccountName": {
+        "value": "langflowstorage"
+      },
+      "postgresServerName": {
+        "value": "langflow-psql-server"
+      },
+      "postgresAdmin": {
+        "value": "langflowadmin"
+      },
+      "postgresPassword": {
+        "value": "04W8oQTd"
+      },
+      "logAnalyticsWorkspaceName": {
+        "value": "langflow-logs"
+      },
+      "containerRegistryName": {
+        "value": "langflowacr"
+      }
+    }
+  }
+  
