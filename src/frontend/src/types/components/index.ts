@@ -435,6 +435,7 @@ export type ConfirmationModalType = {
   title: string;
   titleHeader?: string;
   destructive?: boolean;
+  destructiveCancel?: boolean;
   modalContentTitle?: string;
   cancelText: string;
   confirmationText: string;
@@ -446,7 +447,7 @@ export type ConfirmationModalType = {
   index?: number;
   onConfirm: (index, data) => void;
   open?: boolean;
-  onClose?: (close: boolean) => void;
+  onClose?: () => void;
   size?:
     | "x-small"
     | "smaller"
