@@ -4,21 +4,38 @@ from langchain_community.vectorstores import UpstashVectorStore
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent
 from langflow.helpers.data import docs_to_data
-from langflow.io import HandleInput, IntInput, StrInput, SecretStrInput, DataInput, MultilineInput
+from langflow.io import (
+    HandleInput,
+    IntInput,
+    StrInput,
+    SecretStrInput,
+    DataInput,
+    MultilineInput,
+)
 from langflow.schema import Data
 
 
 class UpstashVectorStoreComponent(LCVectorStoreComponent):
     display_name = "Upstash"
     description = "Upstash Vector Store with search capabilities"
-    documentation = "https://python.langchain.com/v0.2/docs/integrations/vectorstores/upstash/"
+    documentation = (
+        "https://python.langchain.com/v0.2/docs/integrations/vectorstores/upstash/"
+    )
     name = "Upstash"
     icon = "Upstash"
 
     inputs = [
-        StrInput(name="index_url", display_name="Index URL", info="The URL of the Upstash index.", required=True),
+        StrInput(
+            name="index_url",
+            display_name="Index URL",
+            info="The URL of the Upstash index.",
+            required=True,
+        ),
         SecretStrInput(
-            name="index_token", display_name="Index Token", info="The token for the Upstash index.", required=True
+            name="index_token",
+            display_name="Index Token",
+            info="The token for the Upstash index.",
+            required=True,
         ),
         StrInput(
             name="text_key",
@@ -27,7 +44,17 @@ class UpstashVectorStoreComponent(LCVectorStoreComponent):
             value="text",
             advanced=True,
         ),
+        StrInput(
+            name="namespace",
+            display_name="Namespace",
+            info="Leave empty for default namespace.",
+        ),
         MultilineInput(name="search_query", display_name="Search Query"),
+        MultilineInput(
+            name="metadata_filter",
+            display_name="Metadata Filter",
+            info="Filters documents by metadata. Look at the documentation for more information.",
+        ),
         DataInput(
             name="ingest_data",
             display_name="Ingest Data",
@@ -68,6 +95,7 @@ class UpstashVectorStoreComponent(LCVectorStoreComponent):
                     text_key=self.text_key,
                     index_url=self.index_url,
                     index_token=self.index_token,
+                    namespace=self.namespace,
                 )
                 upstash_vs.add_documents(documents)
             else:
@@ -77,6 +105,7 @@ class UpstashVectorStoreComponent(LCVectorStoreComponent):
                     text_key=self.text_key,
                     index_url=self.index_url,
                     index_token=self.index_token,
+                    namespace=self.namespace,
                 )
         else:
             upstash_vs = UpstashVectorStore(
@@ -84,6 +113,7 @@ class UpstashVectorStoreComponent(LCVectorStoreComponent):
                 text_key=self.text_key,
                 index_url=self.index_url,
                 index_token=self.index_token,
+                namespace=self.namespace,
             )
 
         return upstash_vs
@@ -91,10 +121,15 @@ class UpstashVectorStoreComponent(LCVectorStoreComponent):
     def search_documents(self) -> List[Data]:
         vector_store = self._build_upstash()
 
-        if self.search_query and isinstance(self.search_query, str) and self.search_query.strip():
+        if (
+            self.search_query
+            and isinstance(self.search_query, str)
+            and self.search_query.strip()
+        ):
             docs = vector_store.similarity_search(
                 query=self.search_query,
                 k=self.number_of_results,
+                filter=self.metadata_filter,
             )
 
             data = docs_to_data(docs)
