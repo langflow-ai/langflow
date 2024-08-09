@@ -6,10 +6,10 @@
         "value": "swedencentral"
       },
       "containerAppEnvironmentName": {
-        "value": "langflow-container-app-environment"
+        "value": "langflow-app-environment"
       },
       "containerGroupName": {
-        "value": "langflow-container-group"
+        "value": "langflow-container"
       },
       "storageAccountName": {
         "value": "langflowstorage"

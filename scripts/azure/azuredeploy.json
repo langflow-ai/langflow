@@ -33,7 +33,8 @@
   "variables": {
     "uniqueStringSuffix": "[substring(uniqueString(resourceGroup().id), 0, 5)]",
     "storageAccountName": "[concat(parameters('storageAccountName'), variables('uniqueStringSuffix'))]",
-    "containerRegistryName": "[concat(parameters('containerRegistryName'), variables('uniqueStringSuffix'))]"
+    "containerRegistryName": "[concat(parameters('containerRegistryName'), variables('uniqueStringSuffix'))]",
+    "postgresServerName": "[concat(parameters('postgresServerName'), variables('uniqueStringSuffix'))]"
   },
   "resources": [
     {
@@ -51,7 +52,7 @@
     {
       "type": "Microsoft.DBforPostgreSQL/flexibleServers",
       "apiVersion": "2023-12-01-preview",
-      "name": "[parameters('postgresServerName')]",
+      "name": "[variables('postgresServerName')]",
       "location": "[parameters('location')]",
       "sku": {
         "name": "Standard_B1ms",
@@ -80,10 +81,10 @@
     {
       "type": "Microsoft.DBforPostgreSQL/flexibleServers/databases",
       "apiVersion": "2023-12-01-preview",
-      "name": "[format('{0}/{1}', parameters('postgresServerName'), 'langflow')]",
+      "name": "[format('{0}/{1}', variables('postgresServerName'), 'langflow')]",
       "location": "[parameters('location')]",
       "dependsOn": [
-        "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', parameters('postgresServerName'))]"
+        "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', variables('postgresServerName'))]"
       ],
       "properties": {
         "charset": "UTF8",
@@ -93,10 +94,10 @@
     {
       "type": "Microsoft.DBforPostgreSQL/flexibleServers/firewallRules",
       "apiVersion": "2023-12-01-preview",
-      "name": "[format('{0}/AllowAllAzureIPs', parameters('postgresServerName'))]",
+      "name": "[format('{0}/AllowAllAzureIPs', variables('postgresServerName'))]",
       "location": "[parameters('location')]",
       "dependsOn": [
-        "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', parameters('postgresServerName'))]"
+        "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', variables('postgresServerName'))]"
       ],
       "properties": {
         "startIpAddress": "0.0.0.0",
@@ -134,49 +135,6 @@
       }
     },
     {
-      "type": "Microsoft.App/containerapps",
-      "apiVersion": "2023-08-01-preview",
-      "name": "[parameters('containerGroupName')]",
-      "location": "[parameters('location')]",
-      "dependsOn": [
-        "[resourceId('Microsoft.App/managedEnvironments', parameters('containerAppEnvironmentName'))]",
-        "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', parameters('postgresServerName'))]",
-        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
-        "[resourceId('Microsoft.ContainerRegistry/registries', variables('containerRegistryName'))]"
-      ],
-      "properties": {
-        "managedEnvironmentId": "[resourceId('Microsoft.App/managedEnvironments', parameters('containerAppEnvironmentName'))]",
-        "configuration": {
-          "ingress": {
-            "external": true,
-            "targetPort": 7860
-          }
-        },
-        "template": {
-          "containers": [
-            {
-              "name": "langflow",
-              "image": "langflowai/langflow:latest",
-              "resources": {
-                "cpu": 0.5,
-                "memory": "1.0Gi"
-              },
-              "env": [
-                {
-                  "name": "LANGFLOW_DATABASE_URL",
-                  "value": "[format('postgresql://{0}:{1}@{2}.postgres.database.azure.com:5432/langflow?sslmode=require', parameters('postgresAdmin'),parameters('postgresPassword'), parameters('postgresServerName'))]"
-                },
-                {
-                  "name": "LANGFLOW_CONFIG_DIR",
-                  "value": "app/langflow"
-                }
-              ]
-            }
-          ]
-        }
-      }
-    },
-    {
       "type": "Microsoft.Storage/storageAccounts",
       "apiVersion": "2019-06-01",
       "name": "[variables('storageAccountName')]",
@@ -189,6 +147,102 @@
         "supportsHttpsTrafficOnly": true,
         "minimumTlsVersion": "TLS1_2"
       }
+    },
+    {
+      "type": "Microsoft.App/managedEnvironments/storages",
+      "apiVersion": "2023-08-01-preview",
+      "name": "[format('{0}/langflow-storage', parameters('containerAppEnvironmentName'))]",
+      "dependsOn": [
+        "[resourceId('Microsoft.App/managedEnvironments', parameters('containerAppEnvironmentName'))]",
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+      ],
+      "properties": {
+        "azureFile": {
+          "accessMode": "ReadWrite",
+          "accountName": "[variables('storageAccountName')]",
+          "accountKey": "[listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2019-06-01').keys[0].value]",
+          "shareName": "appconfig"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts/fileServices/shares",
+      "apiVersion": "2021-02-01",
+      "name": "[concat(variables('storageAccountName'), '/default/appconfig')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+      ],
+      "properties": {
+        "accessTier": "TransactionOptimized"
+      }
+    },
+{
+  "type": "Microsoft.App/containerapps",
+  "apiVersion": "2023-08-01-preview",
+  "name": "[parameters('containerGroupName')]",
+  "location": "[parameters('location')]",
+  "dependsOn": [
+    "[resourceId('Microsoft.App/managedEnvironments', parameters('containerAppEnvironmentName'))]",
+    "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
+    "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', variables('postgresServerName'))]",
+    "[resourceId('Microsoft.App/managedEnvironments/storages', parameters('containerAppEnvironmentName'), 'langflow-storage')]"
+  ],
+  "properties": {
+    "managedEnvironmentId": "[resourceId('Microsoft.App/managedEnvironments', parameters('containerAppEnvironmentName'))]",
+    "configuration": {
+      "ingress": {
+        "external": true,
+        "targetPort": 7860
+      }
+    },
+    "template": {
+      "containers": [
+        {
+          "name": "langflow",
+          "image": "langflowai/langflow:latest",
+          "resources": {
+            "cpu": "0.5",
+            "memory": "1.0Gi"
+          },
+          "env": [
+            {
+              "name": "LANGFLOW_DATABASE_URL",
+              "value": "[format('postgresql://{0}:{1}@{2}.postgres.database.azure.com:5432/langflow?sslmode=require', parameters('postgresAdmin'), parameters('postgresPassword'), variables('postgresServerName'))]"
+            },
+            {
+              "name": "LANGFLOW_CONFIG_DIR",
+              "value": "/mnt/data"
+            },
+            {
+              "name": "LANGFLOW_AUTO_LOGIN",
+              "value": "true"
+            },
+            {
+              "name": "LANGFLOW_SUPERUSER",
+              "value": "admin"
+            },
+            {
+              "name": "LANGFLOW_SUPERUSER_PASSWORD",
+              "value": "04W8oQTd"
+            }
+          ],
+          "volumeMounts": [
+            {
+              "volumeName": "appconfigvol",
+              "mountPath": "/mnt/data"
+            }
+          ]
+        }
+      ],
+      "volumes": [
+        {
+          "name": "appconfigvol",
+          "storageType": "AzureFile",
+          "storageName": "langflow-storage"
+        }
+      ]
     }
+  }
+}
   ]
 }
