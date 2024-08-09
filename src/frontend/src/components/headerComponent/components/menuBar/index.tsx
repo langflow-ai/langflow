@@ -10,6 +10,7 @@ import {
 import useAddFlow from "@/hooks/flows/use-add-flow";
 import useSaveFlow from "@/hooks/flows/use-save-flow";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
+import { useHotkeys } from "react-hotkeys-hook";
 import { useNavigate } from "react-router-dom";
 import { UPLOAD_ERROR_ALERT } from "../../../../constants/alerts_constants";
 import { SAVED_HOVER } from "../../../../constants/constants";
@@ -87,6 +88,15 @@ export const MenuBar = ({}: {}): JSX.Element => {
     return savedText;
   }
 
+  const handleSave = () => {
+    saveFlow().then(() => {
+      setSuccessData({ title: "Saved successfully" });
+    });
+  };
+
+  const save = useShortcutsStore((state) => state.save);
+  useHotkeys(save, handleSave, { preventDefault: true });
+
   return currentFlow ? (
     <div className="round-button-div">
       <div className="header-menu-bar">
@@ -128,14 +138,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
               Settings
             </DropdownMenuItem>
             {!shouldAutosave && (
-              <DropdownMenuItem
-                onClick={() => {
-                  saveFlow().then(() => {
-                    setSuccessData({ title: "Saved successfully" });
-                  });
-                }}
-                className="cursor-pointer"
-              >
+              <DropdownMenuItem onClick={handleSave} className="cursor-pointer">
                 <ToolbarSelectItem
                   value="Save"
                   icon="Save"
@@ -263,11 +266,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
                     ? "hover:text-primary"
                     : "",
                 )}
-                onClick={() => {
-                  saveFlow().then(() => {
-                    setSuccessData({ title: "Saved successfully" });
-                  });
-                }}
+                onClick={handleSave}
               >
                 <IconComponent
                   name={
