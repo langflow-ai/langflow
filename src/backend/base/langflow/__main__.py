@@ -26,7 +26,7 @@ from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service, get_settings_service, session_scope
 from langflow.services.settings.constants import DEFAULT_SUPERUSER
 from langflow.services.utils import initialize_services
-from langflow.utils.logger import configure, logger
+from langflow.logging.logger import configure, logger
 from langflow.utils.util import update_settings
 
 console = Console()

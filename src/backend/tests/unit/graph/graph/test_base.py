@@ -32,7 +32,7 @@ async def test_graph():
     graph = Graph()
     graph.add_component("chat_input", chat_input)
     graph.add_component("chat_output", chat_output)
-    with pytest.raises(ValueError, match="Graph has vertices but no edges"):
+    with pytest.warns(UserWarning, match="Graph has vertices but no edges"):
         graph.prepare()
 
 
