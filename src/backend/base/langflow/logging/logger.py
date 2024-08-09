@@ -2,8 +2,8 @@ import json
 import logging
 import os
 import sys
-from pathlib import Path
 from collections import deque
+from pathlib import Path
 from threading import Lock, Semaphore
 from typing import Optional
 
