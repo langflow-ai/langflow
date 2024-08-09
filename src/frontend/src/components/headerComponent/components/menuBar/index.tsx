@@ -55,8 +55,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
   const updatedAt = currentSavedFlow?.updated_at;
 
   const changesNotSaved =
-    customStringify(currentFlow?.data) !==
-    customStringify(currentSavedFlow?.data);
+    customStringify(currentFlow) !== customStringify(currentSavedFlow);
 
   const savedText =
     updatedAt && changesNotSaved
