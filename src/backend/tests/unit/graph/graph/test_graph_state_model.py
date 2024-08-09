@@ -6,6 +6,7 @@ from langflow.components.models.OpenAIModel import OpenAIModelComponent
 from langflow.components.outputs.ChatOutput import ChatOutput
 from langflow.components.prompts.Prompt import PromptComponent
 from langflow.graph import Graph
+from langflow.graph.graph.constants import Finish
 from langflow.graph.graph.state_model import create_state_model_from_graph
 
 
