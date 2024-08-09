@@ -35,7 +35,7 @@ class Component(CustomComponent):
     def __init__(self, **kwargs):
         # if key starts with _ it is a config
         # else it is an input
-
+        self._reset_all_output_values()
         inputs = {}
         config = {}
         for key, value in kwargs.items():
@@ -69,6 +69,10 @@ class Component(CustomComponent):
         # Set output types
         self._set_output_types()
         self.set_class_code()
+
+    def _reset_all_output_values(self):
+        for output in self.outputs:
+            setattr(output, "value", UNDEFINED)
 
     def __deepcopy__(self, memo):
         if id(self) in memo:
