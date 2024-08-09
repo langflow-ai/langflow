@@ -138,7 +138,7 @@ export default function NodeInputField({
           </div>
         </div>
 
-        {displayHandle && (
+        {(Array.isArray(displayHandle) ?  displayHandle.length > 0 :   displayHandle) && (
           <HandleRenderComponent
             left={true}
             nodes={nodes}
