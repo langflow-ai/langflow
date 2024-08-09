@@ -471,7 +471,7 @@ class DefaultPromptField(Input):
     advanced: bool = False
     multiline: bool = True
     input_types: list[str] = DEFAULT_PROMPT_INTUT_TYPES
-    value: str = ""  # Set the value to empty string
+    value: Any = ""  # Set the value to empty string
 
 
 InputTypes = Union[
