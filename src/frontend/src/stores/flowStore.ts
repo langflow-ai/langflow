@@ -152,7 +152,10 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   setPending: (isPending) => {
     set({ isPending });
   },
-  resetFlow: ({ nodes, edges, viewport }) => {
+  resetFlow: (flow) => {
+    const nodes = flow?.data?.nodes ?? [];
+    const edges = flow?.data?.edges ?? [];
+    const viewport = flow?.data?.viewport ?? { zoom: 1, x: 0, y: 0 };
     let brokenEdges = detectBrokenEdgesEdges(nodes, edges);
     if (brokenEdges.length > 0) {
       useAlertStore.getState().setErrorData({
@@ -171,6 +174,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       outputs,
       hasIO: inputs.length > 0 || outputs.length > 0,
       flowPool: {},
+      currentFlow: flow,
     });
     get().reactFlowInstance?.setViewport(viewport);
   },
@@ -596,7 +600,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
 
       useFlowStore.getState().updateBuildStatus([vertexBuildData.id], status);
     }
-    console.log("on flow page", get().onFlowPage, "nodes", get().nodes);
     await buildFlowVerticesWithFallback({
       input_value,
       files,
@@ -720,6 +723,27 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       }
     });
     set({ flowBuildStatus: newFlowBuildStatus });
+  },
+  currentFlow: undefined,
+  setCurrentFlow: (flow) => {
+    set({ currentFlow: flow });
+  },
+  updateCurrentFlow: ({ nodes, edges, viewport }) => {
+    set({
+      currentFlow: {
+        ...get().currentFlow!,
+        data: {
+          nodes: nodes ?? get().currentFlow?.data?.nodes ?? [],
+          edges: edges ?? get().currentFlow?.data?.edges ?? [],
+          viewport: viewport ??
+            get().currentFlow?.data?.viewport ?? {
+              x: 0,
+              y: 0,
+              zoom: 1,
+            },
+        },
+      },
+    });
   },
 }));
 
