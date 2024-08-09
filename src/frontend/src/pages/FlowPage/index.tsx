@@ -1,7 +1,10 @@
 import FeatureFlags from "@/../feature-config.json";
 import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
+import useSaveFlow from "@/hooks/flows/use-save-flow";
+import { SaveChangesModal } from "@/modals/saveChangesModal";
+import { customStringify } from "@/utils/reactflowUtils";
 import { useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useBlocker, useNavigate, useParams } from "react-router-dom";
 import FlowToolbar from "../../components/chatComponent";
 import Header from "../../components/headerComponent";
 import { useDarkStore } from "../../stores/darkStore";
@@ -14,14 +17,41 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const setCurrentFlowId = useFlowsManagerStore(
     (state) => state.setCurrentFlowId,
   );
+  const currentFlow = useFlowStore((state) => state.currentFlow);
+  const currentSavedFlow = useFlowsManagerStore((state) => state.currentFlow);
+
+  const changesNotSaved =
+    customStringify(currentFlow?.data) !==
+    customStringify(currentSavedFlow?.data);
+
+  const blocker = useBlocker(changesNotSaved);
   const version = useDarkStore((state) => state.version);
   const setOnFlowPage = useFlowStore((state) => state.setOnFlowPage);
-  const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const { id } = useParams();
   const navigate = useNavigate();
   useGetGlobalVariables();
+  const saveFlow = useSaveFlow();
 
   const flows = useFlowsManagerStore((state) => state.flows);
+
+  const handleSave = () => {
+    saveFlow().then(() => (blocker.proceed ? blocker.proceed() : null));
+  };
+
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (changesNotSaved) {
+        event.preventDefault();
+        event.returnValue = ""; // Required for Chrome
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [changesNotSaved, navigate]);
 
   // Set flow tab id
   useEffect(() => {
@@ -39,6 +69,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
       setOnFlowPage(false);
     };
   }, [id]);
+
   return (
     <>
       <Header />
@@ -66,6 +97,13 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
           <div className={version ? "mt-2" : "mt-1"}>⛓️ v{version}</div>
         </a>
       </div>
+      {blocker.state === "blocked" && (
+        <SaveChangesModal
+          onSave={handleSave}
+          onCancel={() => (blocker.reset ? blocker.reset() : null)}
+          onProceed={() => (blocker.proceed ? blocker.proceed() : null)}
+        />
+      )}
     </>
   );
 }
