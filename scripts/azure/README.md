@@ -120,27 +120,3 @@ The Azure deployment scripts in the `/scripts/azure` directory were contributed 
 4. **Visualization**: Includes a Mermaid diagram to help users understand the architecture of the deployed resources.
 
 By providing these scripts, we aim to make it easier for users to deploy Langflow on Azure, reducing potential errors and streamlining the setup process.
-=======
-subgraph AzureDeployment["Langflow On Azure"]
-    LogAnalyticsWorkspace["Log Analytics<br/>Workspace"]
-    PostgreSQLServer["PostgreSQL <br/>Flexible Server"]
-    PostgreSQLDatabase["PostgreSQL DB"]
-    ContainerAppEnv["Container Apps<br/>Environment"]
-    ContainerGroup["Container App<br/> (Langflow)"]
-    StorageAccount["Storage Account"]
-    ContainerRegistry["Container Registry"]
-end
-
-ContainerGroup -->|uses| LogAnalyticsWorkspace
-PostgreSQLServer -->|contains| PostgreSQLDatabase
-ContainerGroup -->|dependsOn| PostgreSQLServer
-ContainerGroup -->|contains| StorageAccount
-ContainerAppEnv -->|contains| ContainerGroup
-ContainerGroup -->|uses| ContainerRegistry
-
-
-
-%% Individual node styling. Try the visual editor toolbar for easier styling!
-    style ContainerGroup color:#FFFFFF, fill:#AA00FF, stroke:#AA00FF
-
-```
