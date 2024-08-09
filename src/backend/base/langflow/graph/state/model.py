@@ -11,10 +11,11 @@ def __validate_method(method: Callable) -> None:
         raise ValueError(f"Method's class {method.__self__} must have a get_output_by_method attribute.")
 
 
-def build_output_getter(method: Callable) -> Callable:
+def build_output_getter(method: Callable, validate: bool = True) -> Callable:
     def output_getter(_):
+        if validate:
+            __validate_method(method)
         methods_class = method.__self__
-        __validate_method(method)
         output = methods_class.get_output_by_method(method)
         return output.value
 
@@ -26,10 +27,11 @@ def build_output_getter(method: Callable) -> Callable:
     return output_getter
 
 
-def build_output_setter(method: Callable) -> Callable:
+def build_output_setter(method: Callable, validate: bool = True) -> Callable:
     def output_setter(self, value):
+        if validate:
+            __validate_method(method)
         methods_class = method.__self__
-        __validate_method(method)
         output = methods_class.get_output_by_method(method)
         output.value = value
 
