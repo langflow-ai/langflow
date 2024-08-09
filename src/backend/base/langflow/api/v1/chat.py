@@ -146,6 +146,7 @@ async def build_flow(
     files: Optional[list[str]] = None,
     stop_component_id: Optional[str] = None,
     start_component_id: Optional[str] = None,
+    log_builds: Optional[bool] = True,
     chat_service: "ChatService" = Depends(get_chat_service),
     current_user=Depends(get_current_active_user),
     telemetry_service: "TelemetryService" = Depends(get_telemetry_service),
@@ -250,7 +251,7 @@ async def build_flow(
             result_data_response.message = artifacts
 
             # Log the vertex build
-            if not vertex.will_stream:
+            if not vertex.will_stream and log_builds:
                 background_tasks.add_task(
                     log_vertex_build,
                     flow_id=flow_id_str,
