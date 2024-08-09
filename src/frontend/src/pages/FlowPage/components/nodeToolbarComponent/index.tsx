@@ -185,7 +185,7 @@ export default function NodeToolbarComponent({
   const advanced = useShortcutsStore((state) => state.advanced);
   const minimize = useShortcutsStore((state) => state.minimize);
   const component = useShortcutsStore((state) => state.component);
-  const save_component = useShortcutsStore((state) => state.save_component);
+  const save = useShortcutsStore((state) => state.save);
   const docs = useShortcutsStore((state) => state.docs);
   const code = useShortcutsStore((state) => state.code);
   const group = useShortcutsStore((state) => state.group);
@@ -198,7 +198,7 @@ export default function NodeToolbarComponent({
   useHotkeys(component, handleShareWShortcut, { preventDefault });
   useHotkeys(code, handleCodeWShortcut, { preventDefault });
   useHotkeys(advanced, handleAdvancedWShortcut, { preventDefault });
-  useHotkeys(save_component, handleSaveWShortcut, { preventDefault });
+  useHotkeys(save, handleSaveWShortcut, { preventDefault });
   useHotkeys(docs, handleDocsWShortcut, { preventDefault });
   useHotkeys(download, handleDownloadWShortcut, { preventDefault });
   useHotkeys(freeze, handleFreeze);
@@ -543,7 +543,8 @@ export default function NodeToolbarComponent({
               <SelectItem value={"save"}>
                 <ToolbarSelectItem
                   shortcut={
-                    shortcuts.find((obj) => obj.name === "Save")?.shortcut!
+                    shortcuts.find((obj) => obj.name === "Save Component")
+                      ?.shortcut!
                   }
                   value={"Save"}
                   icon={"SaveAll"}
