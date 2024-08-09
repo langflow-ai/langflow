@@ -1,3 +1,4 @@
+import { useStoreStore } from "@/stores/storeStore";
 import { useEffect } from "react";
 import { useParams } from "react-router-dom";
 import LoadingComponent from "../../components/loadingComponent";
@@ -8,11 +9,13 @@ import cloneFLowWithParent from "../../utils/storeUtils";
 
 export default function PlaygroundPage() {
   const getFlowById = useFlowsManagerStore((state) => state.getFlowById);
+  const flows = useFlowsManagerStore((state) => state.flows);
   const setCurrentFlowId = useFlowsManagerStore(
     (state) => state.setCurrentFlowId,
   );
   const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
   const currentSavedFlow = useFlowsManagerStore((state) => state.currentFlow);
+  const validApiKey = useStoreStore((state) => state.validApiKey);
 
   const { id } = useParams();
   async function getFlowData() {
@@ -26,15 +29,16 @@ export default function PlaygroundPage() {
     if (getFlowById(id!)) {
       setCurrentFlowId(id!);
     } else {
-      getFlowData().then((flow) => {
-        setCurrentFlow(flow);
-      });
+      if (validApiKey)
+        getFlowData().then((flow) => {
+          setCurrentFlow(flow);
+        });
     }
-  }, [id]);
+  }, [id, flows, validApiKey]);
 
   return (
     <div className="flex h-full w-full flex-col items-center justify-center align-middle">
-      {currentSavedFlow ? (
+      {!currentSavedFlow ? (
         <div>
           <LoadingComponent remSize={24}></LoadingComponent>
         </div>
