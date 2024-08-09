@@ -20,6 +20,17 @@ def build_output_getter(method: Callable) -> Callable:
     return output_getter
 
 
+def build_output_setter(method: Callable) -> Callable:
+    def output_setter(self, value):
+        methods_class = method.__self__
+        if not hasattr(methods_class, "get_output_by_method"):
+            raise ValueError("Method's class must have a _get_output_by_method attribute.")
+        output = methods_class.get_output_by_method(method)
+        output.value = value
+
+    return output_setter
+
+
 def create_state_model(model_name: str = "State", **kwargs) -> type:
     fields = {}
 
@@ -27,7 +38,13 @@ def create_state_model(model_name: str = "State", **kwargs) -> type:
         # Extract the return type from the method's type annotations
         if callable(value):
             # Define the field with the return type
-            fields[name] = computed_field(build_output_getter(value))
+            methods_class = value.__self__
+            if not hasattr(methods_class, "get_output_by_method"):
+                raise ValueError("Method's class must have a _get_output_by_method attribute.")
+            getter = build_output_getter(value)
+            setter = build_output_setter(value)
+            property_method = property(getter, setter)
+            fields[name] = computed_field(property_method)
         elif isinstance(value, FieldInfo):
             field_tuple = (value.annotation or Any, value)
             fields[name] = field_tuple
