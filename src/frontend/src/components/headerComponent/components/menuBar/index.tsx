@@ -94,8 +94,8 @@ export const MenuBar = ({}: {}): JSX.Element => {
     });
   };
 
-  const save = useShortcutsStore((state) => state.save);
-  useHotkeys(save, handleSave, { preventDefault: true });
+  const changes = useShortcutsStore((state) => state.changes);
+  useHotkeys(changes, handleSave, { preventDefault: true });
 
   return currentFlow ? (
     <div className="round-button-div">
