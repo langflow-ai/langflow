@@ -36,7 +36,7 @@ import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useShortcutsStore } from "../../../../stores/shortcuts";
 import { useTypesStore } from "../../../../stores/typesStore";
 import { APIClassType } from "../../../../types/api";
-import { FlowType, NodeType } from "../../../../types/flow";
+import { NodeType } from "../../../../types/flow";
 import {
   checkOldComponents,
   generateFlow,
@@ -56,13 +56,7 @@ const nodeTypes = {
   genericNode: GenericNode,
 };
 
-export default function Page({
-  flow,
-  view,
-}: {
-  flow: FlowType;
-  view?: boolean;
-}): JSX.Element {
+export default function Page({ view }: { view?: boolean }): JSX.Element {
   const uploadFlow = useUploadFlow();
   const autoSaveFlow = useAutoSaveFlow();
   const types = useTypesStore((state) => state.types);
@@ -93,7 +87,7 @@ export default function Page({
     (state) => state.setLastCopiedSelection,
   );
   const onConnect = useFlowStore((state) => state.onConnect);
-  const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
+  const currentSavedFlow = useFlowsManagerStore((state) => state.currentFlow);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setNoticeData = useAlertStore((state) => state.setNoticeData);
   const updateCurrentFlow = useFlowStore((state) => state.updateCurrentFlow);
@@ -151,8 +145,12 @@ export default function Page({
   }, [lastCopiedSelection, lastSelection, takeSnapshot, selectionMenuVisible]);
 
   useEffect(() => {
-    if (reactFlowInstance && currentFlow) {
-      const viewport = currentFlow.data?.viewport ?? { zoom: 1, x: 0, y: 0 };
+    if (reactFlowInstance && currentSavedFlow) {
+      const viewport = currentSavedFlow.data?.viewport ?? {
+        zoom: 1,
+        x: 0,
+        y: 0,
+      };
       reactFlowInstance!.setViewport(viewport);
     }
   }, [currentFlowId, reactFlowInstance]);
@@ -175,7 +173,7 @@ export default function Page({
   }, [currentFlowId]);
 
   useEffect(() => {
-    if (currentFlow && reactFlowInstance) {
+    if (currentSavedFlow && reactFlowInstance) {
       autoSaveFlow();
       updateCurrentFlow({
         nodes,

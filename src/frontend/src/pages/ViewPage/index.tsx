@@ -4,7 +4,6 @@ import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import Page from "../FlowPage/components/PageComponent";
 
 export default function ViewPage() {
-  const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const setCurrentFlowId = useFlowsManagerStore(
     (state) => state.setCurrentFlowId,
   );
@@ -17,7 +16,7 @@ export default function ViewPage() {
 
   return (
     <div className="flow-page-positioning">
-      {currentFlow && <Page view flow={currentFlow} />}
+      <Page view />
     </div>
   );
 }

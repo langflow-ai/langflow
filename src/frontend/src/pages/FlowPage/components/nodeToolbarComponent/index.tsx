@@ -82,7 +82,7 @@ export default function NodeToolbarComponent({
   const validApiKey = useStoreStore((state) => state.validApiKey);
   const shortcuts = useShortcutsStore((state) => state.shortcuts);
   const unselectAll = useFlowStore((state) => state.unselectAll);
-  const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
+  const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const addFlow = useAddFlow();
 
   function handleMinimizeWShortcut(e: KeyboardEvent) {
@@ -179,7 +179,7 @@ export default function NodeToolbarComponent({
   function handleFreezeAll(e: KeyboardEvent) {
     if (isWrappedWithClass(e, "noflow")) return;
     e.preventDefault();
-    FreezeAllVertices({ flowId: currentFlow!.id, stopNodeId: data.id });
+    FreezeAllVertices({ flowId: currentFlowId, stopNodeId: data.id });
   }
 
   const advanced = useShortcutsStore((state) => state.advanced);
@@ -280,7 +280,7 @@ export default function NodeToolbarComponent({
         }));
         break;
       case "freezeAll":
-        FreezeAllVertices({ flowId: currentFlow!.id, stopNodeId: data.id });
+        FreezeAllVertices({ flowId: currentFlowId, stopNodeId: data.id });
         break;
       case "code":
         setOpenModal(!openModal);
@@ -480,7 +480,7 @@ export default function NodeToolbarComponent({
                 event.preventDefault();
                 takeSnapshot();
                 FreezeAllVertices({
-                  flowId: currentFlow!.id,
+                  flowId: currentFlowId,
                   stopNodeId: data.id,
                 });
               }}

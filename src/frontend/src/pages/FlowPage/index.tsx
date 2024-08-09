@@ -79,7 +79,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
             <main className="flex flex-1">
               {/* Primary column */}
               <div className="h-full w-full">
-                <Page flow={currentFlow} />
+                <Page />
               </div>
               {!view && <FlowToolbar />}
             </main>
