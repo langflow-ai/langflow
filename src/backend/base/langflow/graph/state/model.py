@@ -38,17 +38,23 @@ def build_output_setter(method: Callable, validate: bool = True) -> Callable:
     return output_setter
 
 
-def create_state_model(model_name: str = "State", **kwargs) -> type:
+def create_state_model(model_name: str = "State", validate: bool = True, **kwargs) -> type:
     fields = {}
 
     for name, value in kwargs.items():
         # Extract the return type from the method's type annotations
         if callable(value):
             # Define the field with the return type
-            __validate_method(value)
-            getter = build_output_getter(value)
-            setter = build_output_setter(value)
-            property_method = property(getter, setter)
+            try:
+                __validate_method(value)
+                getter = build_output_getter(value, validate)
+                setter = build_output_setter(value, validate)
+                property_method = property(getter, setter)
+            except ValueError as e:
+                # If the method is not valid,assume it is already a getter
+                if "get_output_by_method" not in str(e) and "__self__" not in str(e):
+                    raise e
+                property_method = value
             fields[name] = computed_field(property_method)
         elif isinstance(value, FieldInfo):
             field_tuple = (value.annotation or Any, value)
