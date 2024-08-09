@@ -137,7 +137,6 @@ export default function NodeInputField({
             )}
           </div>
         </div>
-
         {(Array.isArray(displayHandle)
           ? displayHandle.length > 0
           : displayHandle) && (
