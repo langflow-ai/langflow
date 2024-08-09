@@ -2,12 +2,12 @@ import asyncio
 import copy
 import json
 import uuid
+import warnings
 from collections import defaultdict, deque
 from datetime import datetime, timezone
 from functools import partial
 from itertools import chain
 from typing import TYPE_CHECKING, Any, Dict, Generator, List, Optional, Tuple, Type, Union
-import warnings
 
 import nest_asyncio
 from loguru import logger
@@ -24,6 +24,7 @@ from langflow.graph.schema import InterfaceComponentTypes, RunOutputs
 from langflow.graph.vertex.base import Vertex, VertexStates
 from langflow.graph.vertex.schema import NodeData
 from langflow.graph.vertex.types import ComponentVertex, InterfaceVertex, StateVertex
+from langflow.logging.logger import LogConfig, configure
 from langflow.schema import Data
 from langflow.schema.schema import INPUT_FIELD_NAME, InputType
 from langflow.services.cache.utils import CacheMiss
@@ -47,6 +48,7 @@ class Graph:
         flow_id: Optional[str] = None,
         flow_name: Optional[str] = None,
         user_id: Optional[str] = None,
+        log_config: Optional[LogConfig] = None,
     ) -> None:
         """
         Initializes a new instance of the Graph class.
@@ -56,6 +58,9 @@ class Graph:
             edges (List[Dict[str, str]]): A list of dictionaries representing the edges of the graph.
             flow_id (Optional[str], optional): The ID of the flow. Defaults to None.
         """
+        if not log_config:
+            log_config = {"disable": False}
+        configure(**log_config)
         self._prepared = False
         self._runs = 0
         self._updates = 0
