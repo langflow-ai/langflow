@@ -753,7 +753,7 @@ class Vertex:
                 return
 
             if self.frozen and self._built:
-                return self.get_requester_result(requester)
+                return await self.get_requester_result(requester)
             elif self._built and requester is not None:
                 # This means that the vertex has already been built
                 # and we are just getting the result for the requester

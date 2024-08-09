@@ -43,7 +43,7 @@ class ResultData(BaseModel):
                     stream_url = StreamURL(location=message["stream_url"])
                     values["outputs"].update({key: OutputValue(message=stream_url, type=message["type"])})
                 elif "type" in message:
-                    values["outputs"].update({OutputValue(message=message, type=message["type"])})
+                    values["outputs"].update({key: OutputValue(message=message, type=message["type"])})
         return values
 
 
