@@ -90,7 +90,7 @@ class Component(CustomComponent):
     def get_state_model_instance_getter(self):
         state_model = self._build_state_model()
 
-        def _instance_getter():
+        def _instance_getter(_):
             return state_model()
 
         _instance_getter.__annotations__["return"] = state_model
