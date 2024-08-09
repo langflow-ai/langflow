@@ -273,7 +273,7 @@ class Component(CustomComponent):
             output.add_types(return_types)
             output.set_selected()
 
-    def _get_output_by_method(self, method: Callable):
+    def get_output_by_method(self, method: Callable):
         # method is a callable and output.method is a string
         # we need to find the output that has the same method
         output = next((output for output in self.outputs if output.method == method.__name__), None)
@@ -294,7 +294,7 @@ class Component(CustomComponent):
         method_is_output = (
             hasattr(method, "__self__")
             and isinstance(method.__self__, Component)
-            and method.__self__._get_output_by_method(method)
+            and method.__self__.get_output_by_method(method)
         )
         return method_is_output
 
@@ -324,7 +324,7 @@ class Component(CustomComponent):
     def _connect_to_component(self, key, value, _input):
         component = value.__self__
         self._components.append(component)
-        output = component._get_output_by_method(value)
+        output = component.get_output_by_method(value)
         self._add_edge(component, key, output, _input)
 
     def _add_edge(self, component, key, output, _input):
