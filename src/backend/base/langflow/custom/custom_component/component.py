@@ -353,6 +353,8 @@ class Component(CustomComponent):
             return self.__dict__["_inputs"][name].value
         if name in BACKWARDS_COMPATIBLE_ATTRIBUTES:
             return self.__dict__[f"_{name}"]
+        if name.startswith("_") and name[1:] in BACKWARDS_COMPATIBLE_ATTRIBUTES:
+            return self.__dict__[name]
         raise AttributeError(f"{name} not found in {self.__class__.__name__}")
 
     def _set_input_value(self, name: str, value: Any):
