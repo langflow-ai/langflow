@@ -255,19 +255,36 @@ export const MenuBar = ({}: {}): JSX.Element => {
         >
           <div className="flex cursor-default items-center gap-2 text-sm text-muted-foreground transition-all">
             <div className="flex cursor-default items-center gap-1.5 text-sm text-muted-foreground transition-all">
-              <IconComponent
-                name={
-                  isBuilding || saveLoading
-                    ? "Loader2"
-                    : timeDifference > 1
-                      ? "Save"
-                      : "CheckCircle2"
-                }
+              <Button
+                unstyled
+                disabled={shouldAutosave || timeDifference <= 1}
                 className={cn(
-                  "h-4 w-4",
-                  isBuilding || saveLoading ? "animate-spin" : "animate-wiggle",
+                  !shouldAutosave && timeDifference > 1
+                    ? "hover:text-primary"
+                    : "",
                 )}
-              />
+                onClick={() => {
+                  saveFlow().then(() => {
+                    setSuccessData({ title: "Saved successfully" });
+                  });
+                }}
+              >
+                <IconComponent
+                  name={
+                    isBuilding || saveLoading
+                      ? "Loader2"
+                      : timeDifference > 1
+                        ? "Save"
+                        : "CheckCircle2"
+                  }
+                  className={cn(
+                    "h-4 w-4",
+                    isBuilding || saveLoading
+                      ? "animate-spin"
+                      : "animate-wiggle",
+                  )}
+                />
+              </Button>
               <div>{printByBuildStatus()}</div>
             </div>
             <button
