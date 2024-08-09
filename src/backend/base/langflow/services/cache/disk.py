@@ -13,6 +13,12 @@ from langflow.services.cache.utils import CACHE_MISS
 class AsyncDiskCache(AsyncBaseCacheService, Generic[AsyncLockType]):  # type: ignore
     def __init__(self, cache_dir, max_size=None, expiration_time=3600):
         self.cache = Cache(cache_dir)
+        # Let's clear the cache for now to maintain a similar
+        # behavior as the in-memory cache
+        # Later we should implement endpoints for the frontend to grab
+        # output logs from the cache
+        if len(self.cache) > 0:
+            self.cache.clear()
         self.lock = asyncio.Lock()
         self.max_size = max_size
         self.expiration_time = expiration_time
