@@ -4,11 +4,17 @@ from pydantic import ConfigDict, computed_field, create_model
 from pydantic.fields import FieldInfo
 
 
+def __validate_method(method: Callable) -> None:
+    if not hasattr(method, "__self__"):
+        raise ValueError(f"Method {method} does not have a __self__ attribute.")
+    if not hasattr(method.__self__, "get_output_by_method"):
+        raise ValueError(f"Method's class {method.__self__} must have a get_output_by_method attribute.")
+
+
 def build_output_getter(method: Callable) -> Callable:
     def output_getter(_):
         methods_class = method.__self__
-        if not hasattr(methods_class, "get_output_by_method"):
-            raise ValueError("Method's class must have a _get_output_by_method attribute.")
+        __validate_method(method)
         output = methods_class.get_output_by_method(method)
         return output.value
 
@@ -23,8 +29,7 @@ def build_output_getter(method: Callable) -> Callable:
 def build_output_setter(method: Callable) -> Callable:
     def output_setter(self, value):
         methods_class = method.__self__
-        if not hasattr(methods_class, "get_output_by_method"):
-            raise ValueError("Method's class must have a _get_output_by_method attribute.")
+        __validate_method(method)
         output = methods_class.get_output_by_method(method)
         output.value = value
 
@@ -38,9 +43,7 @@ def create_state_model(model_name: str = "State", **kwargs) -> type:
         # Extract the return type from the method's type annotations
         if callable(value):
             # Define the field with the return type
-            methods_class = value.__self__
-            if not hasattr(methods_class, "get_output_by_method"):
-                raise ValueError("Method's class must have a _get_output_by_method attribute.")
+            __validate_method(value)
             getter = build_output_getter(value)
             setter = build_output_setter(value)
             property_method = property(getter, setter)
