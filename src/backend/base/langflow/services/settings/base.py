@@ -3,7 +3,7 @@ import json
 import os
 from pathlib import Path
 from shutil import copy2
-from typing import Any, List, Optional, Tuple, Type
+from typing import Any, List, Literal, Optional, Tuple, Type
 
 import orjson
 import yaml
@@ -79,7 +79,7 @@ class Settings(BaseSettings):
     """SQLite pragmas to use when connecting to the database."""
 
     # cache configuration
-    cache_type: str = "async"
+    cache_type: Literal["async", "redis", "memory", "disk"] = "async"
     """The cache type can be 'async' or 'redis'."""
     cache_expire: int = 3600
     """The cache expire in seconds."""
