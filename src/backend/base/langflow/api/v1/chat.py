@@ -356,10 +356,23 @@ async def build_flow(
             except asyncio.CancelledError:
                 vertices_task.cancel()
                 return
+            except Exception as e:
+                if isinstance(e, HTTPException):
+                    send_event("error", {"error": str(e.detail), "statusCode": e.status_code}, queue)
+                    raise e
+                send_event("error", {"error": str(e)}, queue)
+                raise e
 
             ids, vertices_to_run, graph = vertices_task.result()
         else:
-            ids, vertices_to_run, graph = await build_graph_and_get_order()
+            try:
+                ids, vertices_to_run, graph = await build_graph_and_get_order()
+            except Exception as e:
+                if isinstance(e, HTTPException):
+                    send_event("error", {"error": str(e.detail), "statusCode": e.status_code}, queue)
+                    raise e
+                send_event("error", {"error": str(e)}, queue)
+                raise e
         send_event("vertices_sorted", {"ids": ids, "to_run": vertices_to_run}, queue)
         await client_consumed_queue.get()
 
