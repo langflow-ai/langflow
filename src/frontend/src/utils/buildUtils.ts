@@ -264,6 +264,14 @@ export async function buildFlowVertices({
         useFlowStore.getState().setIsBuilding(false);
         return true;
       }
+      case "error": {
+        const errorMessage = data.error;
+        console.log(data);
+        onBuildError!("Error Running Flow", [errorMessage], []);
+        buildResults.push(false);
+        useFlowStore.getState().setIsBuilding(false);
+        return true;
+      }
       default:
         return true;
     }
