@@ -14,7 +14,7 @@ const useSaveFlow = () => {
   const setSaveLoading = useFlowsManagerStore((state) => state.setSaveLoading);
   const setCurrentFlow = useFlowStore((state) => state.setCurrentFlow);
 
-  const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
+  const currentFlow = useFlowStore((state) => state.currentFlow);
   const flowData = currentFlow?.data;
 
   const { mutate } = usePatchUpdateFlow();
