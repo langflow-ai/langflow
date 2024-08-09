@@ -41,28 +41,19 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
       currentFlow: flow,
       currentFlowId: flow?.id ?? "",
     });
-    useFlowStore.getState().resetFlow({
-      edges: flow?.data?.edges ?? [],
-      nodes: flow?.data?.nodes ?? [],
-      viewport: flow?.data?.viewport ?? { zoom: 1, x: 0, y: 0 },
-    });
+    useFlowStore.getState().resetFlow(flow);
   },
   getFlowById: (id: string) => {
     return get().flows.find((flow) => flow.id === id);
   },
   setCurrentFlowId: (currentFlowId: string) => {
     const flow = get().flows?.find((flow) => flow.id === currentFlowId);
-    console.log(flow, "kakakkaka");
     set({
       currentFlowId,
       currentFlow:
         get().flows?.find((flow) => flow.id === currentFlowId) ?? undefined,
     });
-    useFlowStore.getState().resetFlow({
-      edges: flow?.data?.edges ?? [],
-      nodes: flow?.data?.nodes ?? [],
-      viewport: flow?.data?.viewport ?? { zoom: 1, x: 0, y: 0 },
-    });
+    useFlowStore.getState().resetFlow(flow);
   },
   flows: [],
   allFlows: [],
@@ -70,7 +61,6 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
     set({ allFlows });
   },
   setFlows: (flows: FlowType[]) => {
-    console.log("setando o flou", flows);
     set({
       flows,
       currentFlow: flows.find((flow) => flow.id === get().currentFlowId),
