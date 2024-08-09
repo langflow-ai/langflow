@@ -21,4 +21,5 @@ def component(client, active_user):
 def test_list_flows_flow_objects(component):
     flows = component.list_flows()
     are_flows = [isinstance(flow, Data) for flow in flows]
-    assert all(are_flows), f"Expected all flows to be Data objects, got {flows}"
+    flow_types = [type(flow) for flow in flows]
+    assert all(are_flows), f"Expected all flows to be Data objects, got {flow_types}"
