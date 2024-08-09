@@ -24,6 +24,7 @@ if TYPE_CHECKING:
     from langflow.inputs.inputs import InputTypes
 
 BACKWARDS_COMPATIBLE_ATTRIBUTES = ["user_id", "vertex", "tracing_service"]
+CONFIG_ATTRIBUTES = ["_display_name", "_description", "_icon", "_name"]
 
 
 class Component(CustomComponent):
@@ -41,6 +42,8 @@ class Component(CustomComponent):
         for key, value in kwargs.items():
             if key.startswith("_"):
                 config[key] = value
+            elif key in CONFIG_ATTRIBUTES:
+                config[key[1:]] = value
             else:
                 inputs[key] = value
         self._inputs: dict[str, "InputTypes"] = {}
@@ -115,7 +118,7 @@ class Component(CustomComponent):
             KeyError: If the specified input name does not exist.
         """
         for key, value in kwargs.items():
-            self._process_connection_or_parameter(key, value)
+            self._process_connection_or_parameters(key, value)
         return self
 
     def list_inputs(self):
@@ -285,6 +288,14 @@ class Component(CustomComponent):
             self._connect_to_component(key, value, _input)
         else:
             self._set_parameter_or_attribute(key, value)
+
+    def _process_connection_or_parameters(self, key, value):
+        # if value is a list of components, we need to process each component
+        if isinstance(value, list):
+            for val in value:
+                self._process_connection_or_parameter(key, val)
+        else:
+            self._process_connection_or_parameter(key, value)
 
     def _get_or_create_input(self, key):
         try:
