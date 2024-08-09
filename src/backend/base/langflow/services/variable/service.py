@@ -76,6 +76,9 @@ class DatabaseVariableService(VariableService, Service):
         # credential = session.query(Variable).filter(Variable.user_id == user_id, Variable.name == name).first()
         variable = session.exec(select(Variable).where(Variable.user_id == user_id, Variable.name == name)).first()
 
+        if not variable or not variable.value:
+            raise ValueError(f"{name} variable not found.")
+
         if variable.type == CREDENTIAL_TYPE and field == "session_id":  # type: ignore
             raise TypeError(
                 f"variable {name} of type 'Credential' cannot be used in a Session ID field "
@@ -83,8 +86,6 @@ class DatabaseVariableService(VariableService, Service):
             )
 
         # we decrypt the value
-        if not variable or not variable.value:
-            raise ValueError(f"{name} variable not found.")
         decrypted = auth_utils.decrypt_api_key(variable.value, settings_service=self.settings_service)
         return decrypted
 
