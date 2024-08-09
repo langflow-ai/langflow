@@ -33,6 +33,7 @@ export default function IOModal({
   open,
   setOpen,
   disable,
+  isPlayground,
 }: IOModalPropsType): JSX.Element {
   const allNodes = useFlowStore((state) => state.nodes);
   const inputs = useFlowStore((state) => state.inputs).filter(
@@ -178,6 +179,7 @@ export default function IOModal({
       open={open}
       setOpen={setOpen}
       disable={disable}
+      type={isPlayground ? "modal" : undefined}
       onSubmit={() => sendMessage({ repeat: 1 })}
     >
       <BaseModal.Trigger>{children}</BaseModal.Trigger>
