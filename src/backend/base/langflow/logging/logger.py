@@ -5,12 +5,13 @@ import sys
 from collections import deque
 from pathlib import Path
 from threading import Lock, Semaphore
-from typing import NotRequired, Optional, TypedDict
+from typing import Optional, TypedDict
 
 import orjson
 from loguru import logger
 from platformdirs import user_cache_dir
 from rich.logging import RichHandler
+from typing_extensions import NotRequired
 
 from langflow.settings import DEV
 
