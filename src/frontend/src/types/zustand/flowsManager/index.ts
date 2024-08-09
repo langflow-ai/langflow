@@ -1,4 +1,3 @@
-import { Edge, Node, Viewport } from "reactflow";
 import { FlowType } from "../../flow";
 
 export type FlowsManagerStoreType = {
@@ -15,21 +14,6 @@ export type FlowsManagerStoreType = {
   isLoading: boolean;
   setIsLoading: (isLoading: boolean) => void;
   refreshFlows: () => Promise<void>;
-  saveFlow: (
-    flow: FlowType,
-    silent?: boolean,
-    folderId?: string,
-  ) => Promise<void> | undefined;
-  saveFlowDebounce: (
-    flow: FlowType,
-    silent?: boolean,
-    folderId?: string,
-  ) => Promise<void> | undefined;
-  autoSaveCurrentFlow: (
-    nodes: Node[],
-    edges: Edge[],
-    viewport: Viewport,
-  ) => void;
   undo: () => void;
   redo: () => void;
   takeSnapshot: () => void;
