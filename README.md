@@ -3,14 +3,13 @@
 # [![Langflow](./docs/static/img/hero.png)](https://www.langflow.org)
 
 <p align="center" style="font-size: 12px;">
-    Langflow is a low-code app builder for RAG (retrieval augmented generation) and multi-agent AI applications. It’s Python-based and agnostic to any model, API, data source or database.
+    Langflow is a low-code app builder for RAG and multi-agent AI applications. It’s Python-based and agnostic to any model, API, or database.
 </p>
 
 <p align="center" style="font-size: 12px;">
     <a href="https://docs.langflow.org" style="text-decoration: underline;">Docs</a> -
-    <a href="http://langflow.datastax.com" style="text-decoration: underline;">Free Cloud Service</a> -
-    <a href="https://discord.com/invite/EqksyE2EX9" style="text-decoration: underline;">Join our Discord</a> -
-    <a href="https://twitter.com/langflow_ai" style="text-decoration: underline;">Follow us on X</a>
+    <a href="http://langflow.datastax.com" style="text-decoration: underline;">Free Cloud Service</a>  
+    
 </p>
 
 <div align="center">
@@ -27,31 +26,32 @@ https://github.com/user-attachments/assets/a1a36011-6169-4804-87ad-cfd4c5a79872
 
 </p>
 
-# Core features 
-1. Python-based and agnostic to models, APIs, data sources, or databases.
-2. Visual IDE for drag-and-drop building and testing of workflows.
-3. Playground to immediately test and iterate workflows with step-by-step control.
-4. Multi-agent orchestration and conversation management and retrieval.
-5. Free cloud service - get started  in minutes with no setup.
-6. Publish workflows as back-end APIs or export as a Python application.
-7. Real time observability with LangSmith, LangFuse, or LangWatch integration.
-8. Support enterprise security and scale with free DataStax Langflow cloud service.  
-9. Prebuilt ecosystem integrations to any model, API or database.
+# 🔧 Core features 
+1. **Python-based** and agnostic to models, APIs, data sources, or databases.
+2. **Visual IDE** for drag-and-drop building and testing of workflows.
+3. **Playground** to immediately test and iterate workflows with step-by-step control.
+4. **Multi-agent** orchestration and conversation management and retrieval.
+5. **Free cloud service** to get started in minutes with no setup.
+6. **Publish as an API** or export as a Python application.
+7. **Observability** with LangSmith, LangFuse, or LangWatch integration.
+8. **Enterprise-grade** security and scalability with free DataStax Langflow cloud service.  
+9. **Customize workflows** or create flows entirely just using Python.
+10. **Ecosystem integrations** as reusable components for any model, API or database.
 
 
 ![Integrations](https://github.com/user-attachments/assets/df4a6714-60de-4a8b-aff0-982c5aa467e3)
 
-# Stay up-to-date
+# 📅 Stay up-to-date
 
 Star Langflow on GitHub to be instantly notified of new releases.
 
 ![Star Langflow](https://github.com/user-attachments/assets/03168b17-a11d-4b2a-b0f7-c1cce69e5a2c)
 
-# 📦 Quick Start
+# 📦 Quickstart
 
 - **Install Langflow with pip** (Python version 3.10 or greater):
 ```shell
-python -m pip install langflow -U
+pip install langflow -U
 ```
 
 - **Cloud:** DataStax Langflow is a hosted environment with zero setup. [Sign up for a free account.](http://langflow.datastax.com) 
