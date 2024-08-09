@@ -18,9 +18,7 @@ from langflow.schema import Data
 class UpstashVectorStoreComponent(LCVectorStoreComponent):
     display_name = "Upstash"
     description = "Upstash Vector Store with search capabilities"
-    documentation = (
-        "https://python.langchain.com/v0.2/docs/integrations/vectorstores/upstash/"
-    )
+    documentation = "https://python.langchain.com/v0.2/docs/integrations/vectorstores/upstash/"
     name = "Upstash"
     icon = "Upstash"
 
@@ -121,11 +119,7 @@ class UpstashVectorStoreComponent(LCVectorStoreComponent):
     def search_documents(self) -> List[Data]:
         vector_store = self._build_upstash()
 
-        if (
-            self.search_query
-            and isinstance(self.search_query, str)
-            and self.search_query.strip()
-        ):
+        if self.search_query and isinstance(self.search_query, str) and self.search_query.strip():
             docs = vector_store.similarity_search(
                 query=self.search_query,
                 k=self.number_of_results,
