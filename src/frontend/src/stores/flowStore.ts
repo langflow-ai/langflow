@@ -465,13 +465,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
 
       return newEdges;
     });
-    useFlowsManagerStore
-      .getState()
-      .autoSaveCurrentFlow(
-        get().nodes,
-        newEdges,
-        get().reactFlowInstance?.getViewport() ?? { x: 0, y: 0, zoom: 1 },
-      );
   },
   unselectAll: () => {
     let newNodes = cloneDeep(get().nodes);
