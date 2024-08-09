@@ -53,6 +53,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
   const currentFlow = useFlowStore((state) => state.currentFlow);
   const currentSavedFlow = useFlowsManagerStore((state) => state.currentFlow);
   const updatedAt = currentSavedFlow?.updated_at;
+  const onFlowPage = useFlowStore((state) => state.onFlowPage);
 
   const changesNotSaved =
     customStringify(currentFlow) !== customStringify(currentSavedFlow);
@@ -99,7 +100,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
   const changes = useShortcutsStore((state) => state.changes);
   useHotkeys(changes, handleSave, { preventDefault: true });
 
-  return currentFlow ? (
+  return currentFlow && onFlowPage ? (
     <div className="round-button-div">
       <div className="header-menu-bar">
         <DropdownMenu>
