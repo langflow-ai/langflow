@@ -147,8 +147,9 @@ export const MenuBar = ({}: {}): JSX.Element => {
                   icon="Save"
                   dataTestId=""
                   shortcut={
-                    shortcuts.find((s) => s.name.toLowerCase() === "save")
-                      ?.shortcut!
+                    shortcuts.find(
+                      (s) => s.name.toLowerCase() === "changes save",
+                    )?.shortcut!
                   }
                 />
               </DropdownMenuItem>
