@@ -108,7 +108,6 @@ def delete_messages(session_id: str):
             .where(col(MessageTable.session_id) == session_id)
             .execution_options(synchronize_session="fetch")
         )
-        session.commit()
 
 
 def store_message(
