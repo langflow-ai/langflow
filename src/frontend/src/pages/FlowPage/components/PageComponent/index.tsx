@@ -80,7 +80,6 @@ export default function Page({
   const onEdgesChange = useFlowStore((state) => state.onEdgesChange);
   const setNodes = useFlowStore((state) => state.setNodes);
   const setEdges = useFlowStore((state) => state.setEdges);
-  const cleanFlow = useFlowStore((state) => state.cleanFlow);
   const deleteNode = useFlowStore((state) => state.deleteNode);
   const deleteEdge = useFlowStore((state) => state.deleteEdge);
   const undo = useFlowsManagerStore((state) => state.undo);
@@ -97,15 +96,13 @@ export default function Page({
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setNoticeData = useAlertStore((state) => state.setNoticeData);
+  const updateCurrentFlow = useFlowStore((state) => state.updateCurrentFlow);
   const [selectionMenuVisible, setSelectionMenuVisible] = useState(false);
   const edgeUpdateSuccessful = useRef(true);
 
   const position = useRef({ x: 0, y: 0 });
   const [lastSelection, setLastSelection] =
     useState<OnSelectionChangeParams | null>(null);
-
-  const setFlowState = useFlowStore((state) => state.setFlowState);
-  const setHasIO = useFlowStore((state) => state.setHasIO);
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
 
   function handleGroupNode() {
@@ -178,8 +175,12 @@ export default function Page({
   }, [currentFlowId]);
 
   useEffect(() => {
-    if (currentFlow) {
+    if (currentFlow && reactFlowInstance) {
       autoSaveFlow();
+      updateCurrentFlow({
+        nodes,
+        edges,
+      });
     }
   }, [nodes, edges]);
 
@@ -320,7 +321,17 @@ export default function Page({
   const onMoveEnd: OnMove = useCallback(() => {
     // 👇 make moving the canvas undoable
     autoSaveFlow();
-  }, [takeSnapshot, autoSaveFlow, nodes, edges, reactFlowInstance]);
+    updateCurrentFlow({
+      viewport: reactFlowInstance?.getViewport(),
+    });
+  }, [
+    takeSnapshot,
+    autoSaveFlow,
+    updateCurrentFlow,
+    nodes,
+    edges,
+    reactFlowInstance,
+  ]);
 
   const onSelectionDragStart: SelectionDragHandler = useCallback(() => {
     // 👇 make dragging a selection undoable
