@@ -21,6 +21,7 @@ export const useShortcutsStore = create<shortcutsStoreType>((set, get) => ({
   component: "mod+shift+s",
   docs: "mod+shift+d",
   save: "mod+s",
+  save_component: "mod+shift+e",
   delete: "backspace",
   group: "mod+g",
   cut: "mod+x",
