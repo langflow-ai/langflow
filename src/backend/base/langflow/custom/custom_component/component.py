@@ -1,4 +1,5 @@
 import inspect
+from copy import deepcopy
 from typing import TYPE_CHECKING, Any, Callable, ClassVar, List, Optional, Union, get_type_hints
 from uuid import UUID
 
@@ -34,6 +35,7 @@ class Component(CustomComponent):
     def __init__(self, **kwargs):
         # if key starts with _ it is a config
         # else it is an input
+
         inputs = {}
         config = {}
         for key, value in kwargs.items():
@@ -53,6 +55,8 @@ class Component(CustomComponent):
         config = config or {}
         if "_id" not in config:
             config |= {"_id": f"{self.__class__.__name__}-{nanoid.generate(size=5)}"}
+        self.__inputs = inputs
+        self.__config = config
         super().__init__(**config)
         if hasattr(self, "_trace_type"):
             self.trace_type = self._trace_type
@@ -65,6 +69,24 @@ class Component(CustomComponent):
         # Set output types
         self._set_output_types()
         self.set_class_code()
+
+    def __deepcopy__(self, memo):
+        if id(self) in memo:
+            return memo[id(self)]
+        kwargs = deepcopy(self.__config)
+        kwargs["inputs"] = deepcopy(self.__inputs)
+        new_component = type(self)(**kwargs)
+        new_component._code = self._code
+        new_component._outputs = self._outputs
+        new_component._inputs = self._inputs
+        new_component._edges = self._edges
+        new_component._components = self._components
+        new_component._parameters = self._parameters
+        new_component._attributes = self._attributes
+        new_component._output_logs = self._output_logs
+        new_component._logs = self._logs
+        memo[id(self)] = new_component
+        return new_component
 
     def set_class_code(self):
         # Get the source code of the calling class
@@ -331,6 +353,8 @@ class Component(CustomComponent):
             return self.__dict__["_inputs"][name].value
         if name in BACKWARDS_COMPATIBLE_ATTRIBUTES:
             return self.__dict__[f"_{name}"]
+        if name.startswith("_") and name[1:] in BACKWARDS_COMPATIBLE_ATTRIBUTES:
+            return self.__dict__[name]
         raise AttributeError(f"{name} not found in {self.__class__.__name__}")
 
     def _set_input_value(self, name: str, value: Any):

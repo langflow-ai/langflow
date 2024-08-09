@@ -31,7 +31,7 @@ from langflow.interface.utils import setup_llm_caching
 from langflow.services.deps import get_cache_service, get_settings_service, get_telemetry_service
 from langflow.services.plugins.langfuse_plugin import LangfuseInstance
 from langflow.services.utils import initialize_services, teardown_services
-from langflow.utils.logger import configure
+from langflow.logging.logger import configure
 
 # Ignore Pydantic deprecation warnings from Langchain
 warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)

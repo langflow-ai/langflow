@@ -2,15 +2,18 @@ import json
 import logging
 import os
 import sys
-from pathlib import Path
 from collections import deque
+from pathlib import Path
 from threading import Lock, Semaphore
-from typing import Optional
+from typing import Optional, TypedDict
 
 import orjson
 from loguru import logger
 from platformdirs import user_cache_dir
 from rich.logging import RichHandler
+from typing_extensions import NotRequired
+
+from langflow.settings import DEV
 
 VALID_LOG_LEVELS = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 
@@ -129,6 +132,15 @@ def serialize_log(record):
 
 def patching(record):
     record["extra"]["serialized"] = serialize_log(record)
+    if DEV is False:
+        record.pop("exception", None)
+
+
+class LogConfig(TypedDict):
+    log_level: NotRequired[str]
+    log_file: NotRequired[Path]
+    disable: NotRequired[bool]
+    log_env: NotRequired[str]
 
 
 def configure(
