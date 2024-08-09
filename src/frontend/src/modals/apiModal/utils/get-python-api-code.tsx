@@ -95,7 +95,7 @@ def main():
             raise ImportError("Langflow is not installed. Please install it to use the upload_file function.")
         elif not args.components:
             raise ValueError("You need to provide the components to upload the file to.")
-        tweaks = upload_file(file_path=args.upload_file, host=BASE_API_URL, flow_id=ENDPOINT, components=args.components, tweaks=tweaks)
+        tweaks = upload_file(file_path=args.upload_file, host=BASE_API_URL, flow_id=args.endpoint, components=[args.components], tweaks=tweaks)
 
     response = run_flow(
         message=args.message,
