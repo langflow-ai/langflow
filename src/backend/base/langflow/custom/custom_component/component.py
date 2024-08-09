@@ -7,6 +7,7 @@ import nanoid  # type: ignore
 import yaml
 from pydantic import BaseModel
 
+from langflow.graph.state.model import create_state_model
 from langflow.helpers.custom import format_type
 from langflow.schema.artifact import get_artifact_type, post_process_raw
 from langflow.schema.data import Data
@@ -50,6 +51,7 @@ class Component(CustomComponent):
         self._parameters = inputs or {}
         self._edges: list[EdgeData] = []
         self._components: list[Component] = []
+        self._state_model = None
         self.set_attributes(self._parameters)
         self._output_logs = {}
         config = config or {}
@@ -73,6 +75,26 @@ class Component(CustomComponent):
     def _reset_all_output_values(self):
         for output in self.outputs:
             setattr(output, "value", UNDEFINED)
+
+    def _build_state_model(self):
+        if self._state_model:
+            return self._state_model
+        name = self.name or self.__class__.__name__
+        model_name = f"{name}StateModel"
+        fields = {}
+        for output in self.outputs:
+            fields[output.name] = getattr(self, output.method)
+        self._state_model = create_state_model(model_name=model_name, **fields)
+        return self._state_model
+
+    def get_state_model_instance_getter(self):
+        state_model = self._build_state_model()
+
+        def _instance_getter():
+            return state_model()
+
+        _instance_getter.__annotations__["return"] = state_model
+        return _instance_getter
 
     def __deepcopy__(self, memo):
         if id(self) in memo:
