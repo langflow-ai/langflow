@@ -54,14 +54,19 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
 
   // Set flow tab id
   useEffect(() => {
-    const isAnExistingFlow = flows.some((flow) => flow.id === id);
+    if (flows) {
+      const isAnExistingFlow = flows.some((flow) => flow.id === id);
 
-    if (!isAnExistingFlow) {
-      navigate("/all");
-      return;
+      if (!isAnExistingFlow) {
+        navigate("/all");
+        return;
+      }
+
+      setCurrentFlowId(id!);
     }
+  }, [id, flows]);
 
-    setCurrentFlowId(id!);
+  useEffect(() => {
     setOnFlowPage(true);
 
     return () => {

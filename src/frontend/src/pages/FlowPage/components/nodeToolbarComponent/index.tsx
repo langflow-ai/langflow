@@ -355,7 +355,7 @@ export default function NodeToolbarComponent({
     }
   };
 
-  const isSaved = flows.some((flow) =>
+  const isSaved = flows?.some((flow) =>
     Object.values(flow).includes(data.node?.display_name!),
   );
 

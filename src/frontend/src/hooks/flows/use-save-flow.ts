@@ -44,7 +44,7 @@ const useSaveFlow = () => {
           {
             onSuccess: (updatedFlow) => {
               setSaveLoading(false);
-              if (updatedFlow !== null) {
+              if (updatedFlow !== null && flows) {
                 // updates flow in state
                 setFlows(
                   flows.map((flow) => {

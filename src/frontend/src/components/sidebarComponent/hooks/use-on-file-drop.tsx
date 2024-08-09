@@ -106,14 +106,14 @@ const useFileDrop = (
   };
 
   const uploadFromDragCard = (flowId, folderId) => {
-    const selectedFlow = flows.find((flow) => flow.id === flowId);
+    const selectedFlow = flows?.find((flow) => flow.id === flowId);
 
     if (!selectedFlow) {
       throw new Error("Flow not found");
     }
     const updatedFlow = { ...selectedFlow, folder_id: folderId };
 
-    const newName = addVersionToDuplicates(updatedFlow, flows);
+    const newName = addVersionToDuplicates(updatedFlow, flows ?? []);
 
     updatedFlow.name = newName;
 

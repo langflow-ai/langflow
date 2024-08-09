@@ -65,11 +65,14 @@ export default function FlowSettingsModal({
   const [nameLists, setNameList] = useState<string[]>([]);
 
   useEffect(() => {
-    const tempNameList: string[] = [];
-    flows.forEach((flow: FlowType) => {
-      if ((flow.is_component ?? false) === false) tempNameList.push(flow.name);
-    });
-    setNameList(tempNameList.filter((name) => name !== currentFlow!.name));
+    if (flows) {
+      const tempNameList: string[] = [];
+      flows.forEach((flow: FlowType) => {
+        if ((flow.is_component ?? false) === false)
+          tempNameList.push(flow.name);
+      });
+      setNameList(tempNameList.filter((name) => name !== currentFlow!.name));
+    }
   }, [flows]);
 
   useEffect(() => {

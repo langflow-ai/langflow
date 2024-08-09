@@ -26,13 +26,15 @@ export default function PlaygroundPage() {
 
   // Set flow tab id
   useEffect(() => {
-    if (getFlowById(id!)) {
-      setCurrentFlowId(id!);
-    } else {
-      if (validApiKey)
-        getFlowData().then((flow) => {
-          setCurrentFlow(flow);
-        });
+    if (flows) {
+      if (getFlowById(id!)) {
+        setCurrentFlowId(id!);
+      } else {
+        if (validApiKey)
+          getFlowData().then((flow) => {
+            setCurrentFlow(flow);
+          });
+      }
     }
   }, [id, flows, validApiKey]);
 
