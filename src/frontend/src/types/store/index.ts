@@ -39,6 +39,7 @@ export type shortcutsStoreType = {
   component: string;
   docs: string;
   save: string;
+  save_component: string;
   delete: string;
   update: string;
   download: string;
