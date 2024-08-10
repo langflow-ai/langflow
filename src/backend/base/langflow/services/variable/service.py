@@ -1,6 +1,7 @@
 import os
 from typing import TYPE_CHECKING, Optional, Union
 from uuid import UUID
+from datetime import datetime, timezone
 
 from fastapi import Depends
 from loguru import logger
@@ -8,7 +9,7 @@ from sqlmodel import Session, select
 
 from langflow.services.auth import utils as auth_utils
 from langflow.services.base import Service
-from langflow.services.database.models.variable.model import Variable, VariableCreate
+from langflow.services.database.models.variable.model import Variable, VariableCreate, VariableUpdate
 from langflow.services.deps import get_session
 from langflow.services.variable.base import VariableService
 
@@ -112,6 +113,28 @@ class DatabaseVariableService(VariableService, Service):
         session.commit()
         session.refresh(variable)
         return variable
+
+    def update_variable_fields(
+        self,
+        user_id: Union[UUID, str],
+        variable_id: Union[UUID, str],
+        variable: VariableUpdate,
+        session: Session = Depends(get_session),
+    ):
+        query = select(Variable).where(Variable.id == variable_id, Variable.user_id == user_id)
+        db_variable = session.exec(query).one()
+
+        variable_data = variable.model_dump(exclude_unset=True)
+        for key, value in variable_data.items():
+            setattr(db_variable, key, value)
+        db_variable.updated_at = datetime.now(timezone.utc)
+        encrypted = auth_utils.encrypt_api_key(db_variable.value, settings_service=self.settings_service)
+        variable.value = encrypted
+
+        session.add(db_variable)
+        session.commit()
+        session.refresh(db_variable)
+        return db_variable
 
     def delete_variable(
         self,
