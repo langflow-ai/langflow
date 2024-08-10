@@ -109,7 +109,7 @@ class TestCreateStateModel:
                 return 123
 
         mock_component = MockComponent()
-        with pytest.raises(ValueError, match="Method's class must have a _get_output_by_method attribute."):
+        with pytest.raises(ValueError, match="get_output_by_method"):
             create_state_model(method_one=mock_component.method_one, method_two=mock_component.method_two)
 
     def test_graph_functional_start_state_update(self):
@@ -128,7 +128,7 @@ class TestCreateStateModel:
         # correctly
         ids = ["chat_input", "chat_output"]
         results = []
-        for result in graph.start():
+        for result in graph.start(verbose=True):
             results.append(result)
 
         assert len(results) == 3
