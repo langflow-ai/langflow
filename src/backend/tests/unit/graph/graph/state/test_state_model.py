@@ -128,7 +128,7 @@ class TestCreateStateModel:
         # correctly
         ids = ["chat_input", "chat_output"]
         results = []
-        for result in graph.start(verbose=True):
+        for result in graph.start():
             results.append(result)
 
         assert len(results) == 3
