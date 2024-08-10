@@ -2,8 +2,7 @@ from spider.spider import Spider
 
 from langflow.base.langchain_utilities.spider_constants import MODES
 from langflow.custom import Component
-from langflow.io import (BoolInput, DictInput, DropdownInput, IntInput, Output,
-                         SecretStrInput, StrInput)
+from langflow.io import BoolInput, DictInput, DropdownInput, IntInput, Output, SecretStrInput, StrInput
 from langflow.schema import Data
 
 
@@ -90,7 +89,7 @@ class SpiderTool(Component):
 
     def crawl(self) -> list[Data]:
         if self.params:
-            parameters = self.params['data']
+            parameters = self.params["data"]
         else:
             parameters = {
                 "limit": self.limit if self.limit else None,
@@ -119,7 +118,9 @@ class SpiderTool(Component):
 
         for record in result:
             if self.metadata:
-                records.append(Data(data={"content": record["content"], "url": record["url"], "metadata": record["metadata"]}))
+                records.append(
+                    Data(data={"content": record["content"], "url": record["url"], "metadata": record["metadata"]})
+                )
             else:
                 records.append(Data(data={"content": record["content"], "url": record["url"]}))
         return records
