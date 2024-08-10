@@ -22,4 +22,4 @@ def create_state_model_from_graph(graph):
         camel_to_snake(vertex.id): state_model_getter
         for vertex, state_model_getter in zip(graph.vertices, state_model_getters)
     }
-    return create_state_model(model_name="GraphStateModel", **fields)
+    return create_state_model(model_name="GraphStateModel", validate=False, **fields)
