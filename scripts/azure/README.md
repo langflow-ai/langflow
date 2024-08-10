@@ -38,7 +38,7 @@ Langflow is deployed using Azure Resource Manager templates or Bicep. The applic
 
 Use the arm template to deploy Langflow 1.0 on Azure:
 
-[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fthaersaidi%2Flangflow%2Fmain%2Fscripts%2Fazure%2Fazuredeploy.json)
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Flangflow-ai%2Flangflow%2Fmain%2Fscripts%2Fazure%2Fazuredeploy.json)
 
 ## How to set up your environment and deploy Langflow
 
