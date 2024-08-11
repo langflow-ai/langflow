@@ -8,7 +8,8 @@
 
 <p align="center" style="font-size: 12px;">
     <a href="https://docs.langflow.org" style="text-decoration: underline;">Docs</a> -
-    <a href="http://langflow.datastax.com" style="text-decoration: underline;">Free Cloud Service</a>  
+    <a href="http://langflow.datastax.com" style="text-decoration: underline;">Free Cloud Service</a> -
+    <a href="https://docs.langflow.org/getting-started-installation" style="text-decoration: underline;">Self Managed</a>
     
 </p>
 
@@ -20,13 +21,7 @@
   <a href="./README.KR.md"><img alt="README in KOREAN" src="https://img.shields.io/badge/한국어-d9d9d9"></a>
 </div>
 
-<p align="center">
-
-https://github.com/user-attachments/assets/a1a36011-6169-4804-87ad-cfd4c5a79872
-
-</p>
-
-# 🔧 Core features 
+## ✨ Core features 
 1. **Python-based** and agnostic to models, APIs, data sources, or databases.
 2. **Visual IDE** for drag-and-drop building and testing of workflows.
 3. **Playground** to immediately test and iterate workflows with step-by-step control.
@@ -41,35 +36,33 @@ https://github.com/user-attachments/assets/a1a36011-6169-4804-87ad-cfd4c5a79872
 
 ![Integrations](https://github.com/user-attachments/assets/df4a6714-60de-4a8b-aff0-982c5aa467e3)
 
-# 📅 Stay up-to-date
+## ⭐ Stay up-to-date
 
 Star Langflow on GitHub to be instantly notified of new releases.
 
 ![Star Langflow](https://github.com/user-attachments/assets/03168b17-a11d-4b2a-b0f7-c1cce69e5a2c)
 
-# 📦 Quickstart
+## 📦 Quickstart
 
-- **Install Langflow with pip** (Python version 3.10 or greater):
+- **Install with pip** (Python 3.10 or greater):
 ```shell
-pip install langflow -U
+pip install langflow
 ```
 
 - **Cloud:** DataStax Langflow is a hosted environment with zero setup. [Sign up for a free account.](http://langflow.datastax.com) 
 - **Self-managed:** Run Langflow in your environment. [Install Langflow](https://docs.langflow.org/getting-started-installation) to run a local Langflow server, and then use the [Quickstart](https://docs.langflow.org/getting-started-quickstart) guide to create and execute a flow.
 - **Hugging Face:** [Clone the space using this link](https://huggingface.co/spaces/Langflow/Langflow?duplicate=true) to create a Langflow workspace.
 
-# 👋 Contribute
+[![Getting Started](https://github.com/user-attachments/assets/f1adfbe7-3c35-43a4-b265-661f3d4f875f)](https://www.youtube.com/watch?v=kinngWhaUKM)
 
-We welcome contributions from developers of all levels to our open-source project on GitHub. If you'd like to contribute, please check our [contributing guidelines](./CONTRIBUTING.md) and help make Langflow more accessible.
+## 👋 Contribute
+
+We welcome contributions from developers of all levels. If you'd like to contribute, please check our [contributing guidelines](./CONTRIBUTING.md) and help make Langflow more accessible.
 
 ---
 
 [![Star History Chart](https://api.star-history.com/svg?repos=langflow-ai/langflow&type=Timeline)](https://star-history.com/#langflow-ai/langflow&Date)
 
-# 🌟 Contributors
+## ❤️ Contributors
 
 [![langflow contributors](https://contrib.rocks/image?repo=langflow-ai/langflow)](https://github.com/langflow-ai/langflow/graphs/contributors)
-
-# 📄 License
-
-Langflow is released under the MIT License. See the [LICENSE](LICENSE) file for details.
