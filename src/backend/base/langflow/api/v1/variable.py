@@ -1,15 +1,14 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlmodel import Session
 from sqlalchemy.exc import NoResultFound
+from sqlmodel import Session
 
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.database.models.user.model import User
 from langflow.services.database.models.variable import VariableCreate, VariableRead, VariableUpdate
 from langflow.services.deps import get_session, get_settings_service, get_variable_service
 from langflow.services.variable.service import GENERIC_TYPE, DatabaseVariableService
-
 
 router = APIRouter(prefix="/variables", tags=["Variables"])
 
@@ -100,12 +99,6 @@ def delete_variable(
 ):
     """Delete a variable."""
     try:
-        all_variables = variable_service.get_all(user_id=current_user.id, session=session)
-        variable = next((v for v in all_variables if v and v.id == variable_id), None)
-        if not variable:
-            raise HTTPException(status_code=404, detail="Variable not found")
-
-        variable_service.delete_variable(user_id=current_user.id, name=variable.name, session=session)
-
+        variable_service.delete_variable(user_id=current_user.id, variable_id=variable_id, session=session)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
