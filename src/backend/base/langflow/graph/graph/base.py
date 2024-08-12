@@ -1619,7 +1619,7 @@ class Graph:
         """Performs a layered topological sort of the vertices in the graph."""
         vertices_ids = {vertex.id for vertex in vertices}
         # Queue for vertices with no incoming edges
-        if all(self.in_degree_map.values()):
+        if self.is_cyclic and all(self.in_degree_map.values()):
             # This means we have a cycle because all vertex have in_degree_map > 0
             # because of this we set the queue to start on the ._start if it exists
             if self._start is not None:
