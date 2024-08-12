@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Optional
 from uuid import UUID, uuid4
 
-from pydantic import field_validator, BaseModel
+from pydantic import field_serializer, field_validator, BaseModel
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
 
@@ -30,6 +30,13 @@ class VertexBuildBase(SQLModel):
             return value
         if isinstance(value, str):
             value = UUID(value)
+        return value
+
+    @field_serializer("timestamp")
+    @classmethod
+    def serialize_timestamp(cls, value):
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
         return value
 
 
