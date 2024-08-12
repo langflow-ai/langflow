@@ -164,7 +164,7 @@
             "output_types": [],
             "outputs": [
               {
-                "cache": true,
+                "cache": false,
                 "display_name": "Prompt Message",
                 "method": "build_prompt",
                 "name": "prompt",
@@ -308,7 +308,7 @@
             "output_types": [],
             "outputs": [
               {
-                "cache": true,
+                "cache": false,
                 "display_name": "Message",
                 "method": "message_response",
                 "name": "message",
@@ -524,7 +524,7 @@
             "output_types": [],
             "outputs": [
               {
-                "cache": true,
+                "cache": false,
                 "display_name": "Message",
                 "method": "message_response",
                 "name": "message",
@@ -725,7 +725,7 @@
             "output_types": [],
             "outputs": [
               {
-                "cache": true,
+                "cache": false,
                 "display_name": "Text",
                 "method": "text_response",
                 "name": "text_output",
@@ -736,7 +736,7 @@
                 "value": "__UNDEFINED__"
               },
               {
-                "cache": true,
+                "cache": false,
                 "display_name": "Language Model",
                 "method": "build_model",
                 "name": "model_output",
@@ -1012,7 +1012,7 @@
             "output_types": [],
             "outputs": [
               {
-                "cache": true,
+                "cache": false,
                 "display_name": "Text",
                 "method": "parse_data",
                 "name": "text",
@@ -1144,7 +1144,7 @@
             "output_types": [],
             "outputs": [
               {
-                "cache": true,
+                "cache": false,
                 "display_name": "Data",
                 "method": "load_file",
                 "name": "data",

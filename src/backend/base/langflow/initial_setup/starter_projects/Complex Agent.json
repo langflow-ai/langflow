@@ -632,7 +632,7 @@
             "output_types": [],
             "outputs": [
               {
-                "cache": true,
+                "cache": false,
                 "display_name": "Output",
                 "method": "build_output",
                 "name": "output",
@@ -877,7 +877,7 @@
             "output_types": [],
             "outputs": [
               {
-                "cache": true,
+                "cache": false,
                 "display_name": "Text",
                 "method": "text_response",
                 "name": "text_output",
@@ -888,7 +888,7 @@
                 "value": "__UNDEFINED__"
               },
               {
-                "cache": true,
+                "cache": false,
                 "display_name": "Language Model",
                 "method": "build_model",
                 "name": "model_output",
@@ -1167,7 +1167,7 @@
             "output_types": [],
             "outputs": [
               {
-                "cache": true,
+                "cache": false,
                 "display_name": "Message",
                 "method": "message_response",
                 "name": "message",
@@ -1352,7 +1352,7 @@
             "output_types": [],
             "outputs": [
               {
-                "cache": true,
+                "cache": false,
                 "display_name": "Task",
                 "method": "build_task",
                 "name": "task_output",
@@ -1491,7 +1491,7 @@
             "output_types": [],
             "outputs": [
               {
-                "cache": true,
+                "cache": false,
                 "display_name": "Agent",
                 "method": "build_output",
                 "name": "output",
@@ -1745,7 +1745,7 @@
             "output_types": [],
             "outputs": [
               {
-                "cache": true,
+                "cache": false,
                 "display_name": "Agent",
                 "method": "build_output",
                 "name": "output",
@@ -2004,7 +2004,7 @@
             "output_types": [],
             "outputs": [
               {
-                "cache": true,
+                "cache": false,
                 "display_name": "Text",
                 "method": "text_response",
                 "name": "text_output",
@@ -2015,7 +2015,7 @@
                 "value": "__UNDEFINED__"
               },
               {
-                "cache": true,
+                "cache": false,
                 "display_name": "Language Model",
                 "method": "build_model",
                 "name": "model_output",
@@ -2299,7 +2299,7 @@
             "output_types": [],
             "outputs": [
               {
-                "cache": true,
+                "cache": false,
                 "display_name": "Prompt Message",
                 "method": "build_prompt",
                 "name": "prompt",
@@ -2412,7 +2412,7 @@
             "output_types": [],
             "outputs": [
               {
-                "cache": true,
+                "cache": false,
                 "display_name": "Message",
                 "method": "message_response",
                 "name": "message",
@@ -2619,7 +2619,7 @@
             "output_types": [],
             "outputs": [
               {
-                "cache": true,
+                "cache": false,
                 "display_name": "Tool",
                 "method": "build_tool",
                 "name": "tool",
@@ -2704,7 +2704,7 @@
             "output_types": [],
             "outputs": [
               {
-                "cache": true,
+                "cache": false,
                 "display_name": "Text",
                 "method": "text_response",
                 "name": "text_output",
@@ -2715,7 +2715,7 @@
                 "value": "__UNDEFINED__"
               },
               {
-                "cache": true,
+                "cache": false,
                 "display_name": "Language Model",
                 "method": "build_model",
                 "name": "model_output",
@@ -3124,7 +3124,7 @@
             "output_types": [],
             "outputs": [
               {
-                "cache": true,
+                "cache": false,
                 "display_name": "Text",
                 "method": "text_response",
                 "name": "text_output",
@@ -3135,7 +3135,7 @@
                 "value": "__UNDEFINED__"
               },
               {
-                "cache": true,
+                "cache": false,
                 "display_name": "Language Model",
                 "method": "build_model",
                 "name": "model_output",
@@ -3569,7 +3569,7 @@
             "output_types": [],
             "outputs": [
               {
-                "cache": true,
+                "cache": false,
                 "display_name": "Text",
                 "method": "text_response",
                 "name": "text_output",
@@ -3580,7 +3580,7 @@
                 "value": "__UNDEFINED__"
               },
               {
-                "cache": true,
+                "cache": false,
                 "display_name": "Language Model",
                 "method": "build_model",
                 "name": "model_output",
@@ -3866,7 +3866,7 @@
             "output_types": [],
             "outputs": [
               {
-                "cache": true,
+                "cache": false,
                 "display_name": "Prompt Message",
                 "method": "build_prompt",
                 "name": "prompt",
@@ -4031,7 +4031,7 @@
             "output_types": [],
             "outputs": [
               {
-                "cache": true,
+                "cache": false,
                 "display_name": "Data",
                 "method": "run_model",
                 "name": "api_run_model",
@@ -4043,7 +4043,7 @@
                 "value": "__UNDEFINED__"
               },
               {
-                "cache": true,
+                "cache": false,
                 "display_name": "Tool",
                 "method": "build_tool",
                 "name": "api_build_tool",

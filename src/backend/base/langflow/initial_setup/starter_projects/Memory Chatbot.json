@@ -138,7 +138,7 @@
             "output_types": [],
             "outputs": [
               {
-                "cache": true,
+                "cache": false,
                 "display_name": "Prompt Message",
                 "method": "build_prompt",
                 "name": "prompt",
@@ -282,7 +282,7 @@
             "output_types": [],
             "outputs": [
               {
-                "cache": true,
+                "cache": false,
                 "display_name": "Message",
                 "method": "message_response",
                 "name": "message",
@@ -505,7 +505,7 @@
             "output_types": [],
             "outputs": [
               {
-                "cache": true,
+                "cache": false,
                 "display_name": "Text",
                 "method": "text_response",
                 "name": "text_output",
@@ -516,7 +516,7 @@
                 "value": "__UNDEFINED__"
               },
               {
-                "cache": true,
+                "cache": false,
                 "display_name": "Language Model",
                 "method": "build_model",
                 "name": "model_output",
@@ -795,7 +795,7 @@
             "output_types": [],
             "outputs": [
               {
-                "cache": true,
+                "cache": false,
                 "display_name": "Message",
                 "method": "message_response",
                 "name": "message",
@@ -987,7 +987,7 @@
             "output_types": [],
             "outputs": [
               {
-                "cache": true,
+                "cache": false,
                 "display_name": "Messages (Data)",
                 "method": "retrieve_messages",
                 "name": "messages",
@@ -998,7 +998,7 @@
                 "value": "__UNDEFINED__"
               },
               {
-                "cache": true,
+                "cache": false,
                 "display_name": "Messages (Text)",
                 "method": "retrieve_messages_as_text",
                 "name": "messages_text",
@@ -1009,7 +1009,7 @@
                 "value": "__UNDEFINED__"
               },
               {
-                "cache": true,
+                "cache": false,
                 "display_name": "Memory",
                 "method": "build_lc_memory",
                 "name": "lc_memory",

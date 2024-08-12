@@ -296,7 +296,7 @@
             "output_types": [],
             "outputs": [
               {
-                "cache": true,
+                "cache": false,
                 "display_name": "Message",
                 "method": "message_response",
                 "name": "message",
@@ -528,7 +528,7 @@
             "output_types": [],
             "outputs": [
               {
-                "cache": true,
+                "cache": false,
                 "display_name": "Retriever",
                 "method": "build_base_retriever",
                 "name": "base_retriever",
@@ -539,7 +539,7 @@
                 "value": "__UNDEFINED__"
               },
               {
-                "cache": true,
+                "cache": false,
                 "display_name": "Search Results",
                 "method": "search_documents",
                 "name": "search_results",
@@ -550,7 +550,7 @@
                 "value": "__UNDEFINED__"
               },
               {
-                "cache": true,
+                "cache": false,
                 "display_name": "Vector Store",
                 "method": "cast_vector_store",
                 "name": "vector_store",
@@ -979,7 +979,7 @@
             "output_types": [],
             "outputs": [
               {
-                "cache": true,
+                "cache": false,
                 "display_name": "Text",
                 "method": "parse_data",
                 "name": "text",
@@ -1115,7 +1115,7 @@
             "output_types": [],
             "outputs": [
               {
-                "cache": true,
+                "cache": false,
                 "display_name": "Prompt Message",
                 "method": "build_prompt",
                 "name": "prompt",
@@ -1259,7 +1259,7 @@
             "output_types": [],
             "outputs": [
               {
-                "cache": true,
+                "cache": false,
                 "display_name": "Message",
                 "method": "message_response",
                 "name": "message",
@@ -1450,7 +1450,7 @@
             "output_types": [],
             "outputs": [
               {
-                "cache": true,
+                "cache": false,
                 "display_name": "Chunks",
                 "method": "split_text",
                 "name": "chunks",
@@ -1594,7 +1594,7 @@
             "output_types": [],
             "outputs": [
               {
-                "cache": true,
+                "cache": false,
                 "display_name": "Data",
                 "method": "load_file",
                 "name": "data",
@@ -1742,7 +1742,7 @@
             "output_types": [],
             "outputs": [
               {
-                "cache": true,
+                "cache": false,
                 "display_name": "Retriever",
                 "method": "build_base_retriever",
                 "name": "base_retriever",
@@ -1753,7 +1753,7 @@
                 "value": "__UNDEFINED__"
               },
               {
-                "cache": true,
+                "cache": false,
                 "display_name": "Search Results",
                 "method": "search_documents",
                 "name": "search_results",
@@ -1764,7 +1764,7 @@
                 "value": "__UNDEFINED__"
               },
               {
-                "cache": true,
+                "cache": false,
                 "display_name": "Vector Store",
                 "method": "cast_vector_store",
                 "name": "vector_store",
@@ -2211,7 +2211,7 @@
             "output_types": [],
             "outputs": [
               {
-                "cache": true,
+                "cache": false,
                 "display_name": "Embeddings",
                 "method": "build_embeddings",
                 "name": "embeddings",
@@ -2664,7 +2664,7 @@
             "output_types": [],
             "outputs": [
               {
-                "cache": true,
+                "cache": false,
                 "display_name": "Embeddings",
                 "method": "build_embeddings",
                 "name": "embeddings",
@@ -3109,7 +3109,7 @@
             "output_types": [],
             "outputs": [
               {
-                "cache": true,
+                "cache": false,
                 "display_name": "Text",
                 "method": "text_response",
                 "name": "text_output",
@@ -3120,7 +3120,7 @@
                 "value": "__UNDEFINED__"
               },
               {
-                "cache": true,
+                "cache": false,
                 "display_name": "Language Model",
                 "method": "build_model",
                 "name": "model_output",
