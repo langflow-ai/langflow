@@ -421,6 +421,20 @@ class Graph:
         return self._first_layer
 
     @property
+    def is_cyclic(self):
+        """
+        Check if the graph has any cycles.
+
+        Returns:
+            bool: True if the graph has any cycles, False otherwise.
+        """
+        if self._is_cyclic is None:
+            vertices = [vertex.id for vertex in self.vertices]
+            edges = [(e["data"]["sourceHandle"]["id"], e["data"]["targetHandle"]["id"]) for e in self._edges]
+            self._is_cyclic = has_cycle(vertices, edges)
+        return self._is_cyclic
+
+    @property
     def run_id(self):
         """
         The ID of the current run.
