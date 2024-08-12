@@ -111,16 +111,15 @@ class KubernetesSecretService(VariableService, Service):
         secret_key, _ = self.resolve_variable(secret_name, user_id, name)
         return self.kubernetes_secrets.update_secret(name=secret_name, data={secret_key: value})
 
-    def delete_variable(
-        self,
-        user_id: Union[UUID, str],
-        name: str,
-        _session: Session,
-    ):
+    def delete_variable(self, user_id: Union[UUID, str], name: str, _session: Session) -> None:
         secret_name = encode_user_id(user_id)
+
         secret_key, _ = self.resolve_variable(secret_name, user_id, name)
         self.kubernetes_secrets.delete_secret_key(name=secret_name, key=secret_key)
         return
+
+    def delete_variable_by_id(self, user_id: Union[UUID, str], variable_id: UUID | str, _session: Session) -> None:
+        self.delete_variable(user_id, _session, str(variable_id))
 
     def create_variable(
         self,
