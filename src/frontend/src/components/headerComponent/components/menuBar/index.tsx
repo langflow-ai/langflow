@@ -56,7 +56,8 @@ export const MenuBar = ({}: {}): JSX.Element => {
   const onFlowPage = useFlowStore((state) => state.onFlowPage);
 
   const changesNotSaved =
-    customStringify(currentFlow) !== customStringify(currentSavedFlow);
+    customStringify(currentFlow) !== customStringify(currentSavedFlow) &&
+    !shouldAutosave;
 
   const savedText =
     updatedAt && changesNotSaved
