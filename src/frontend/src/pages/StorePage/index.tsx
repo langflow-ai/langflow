@@ -28,7 +28,7 @@ import {
 } from "../../constants/alerts_constants";
 import { STORE_DESC, STORE_TITLE } from "../../constants/constants";
 import { AuthContext } from "../../contexts/authContext";
-import { getStoreComponents, getStoreTags } from "../../controllers/API";
+import { getStoreComponents } from "../../controllers/API";
 import useAlertStore from "../../stores/alertStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { useStoreStore } from "../../stores/storeStore";
@@ -46,9 +46,6 @@ export default function StorePage(): JSX.Element {
   const { apiKey } = useContext(AuthContext);
 
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  const setCurrentFlowId = useFlowsManagerStore(
-    (state) => state.setCurrentFlowId,
-  );
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const [loading, setLoading] = useState(true);
   const { id } = useParams();
@@ -147,11 +144,6 @@ export default function StorePage(): JSX.Element {
         }
       });
   }
-
-  // Set a null id
-  useEffect(() => {
-    setCurrentFlowId("");
-  }, []);
 
   function resetPagination() {
     setPageIndex(1);

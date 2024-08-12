@@ -63,9 +63,6 @@ export default function CollectionCardComponent({
   const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
   const getFlowById = useFlowsManagerStore((state) => state.getFlowById);
   const [openPlayground, setOpenPlayground] = useState(false);
-  const setCurrentFlowId = useFlowsManagerStore(
-    (state) => state.setCurrentFlowId,
-  );
   const [loadingPlayground, setLoadingPlayground] = useState(false);
 
   const selectedFlowsComponentsCards = useFlowsManagerStore(
@@ -299,7 +296,7 @@ export default function CollectionCardComponent({
                         setLoadingPlayground(false);
                         return;
                       }
-                      setCurrentFlowId(data.id);
+                      setCurrentFlow(flow);
                       setOpenPlayground(true);
                       setLoadingPlayground(false);
                     } else {
@@ -455,7 +452,7 @@ export default function CollectionCardComponent({
                         setLoadingPlayground(false);
                         return;
                       }
-                      setCurrentFlowId(data.id);
+                      setCurrentFlow(flow);
                       setOpenPlayground(true);
                       setLoadingPlayground(false);
                     } else {

@@ -10,9 +10,6 @@ import cloneFLowWithParent from "../../utils/storeUtils";
 export default function PlaygroundPage() {
   const getFlowById = useFlowsManagerStore((state) => state.getFlowById);
   const flows = useFlowsManagerStore((state) => state.flows);
-  const setCurrentFlowId = useFlowsManagerStore(
-    (state) => state.setCurrentFlowId,
-  );
   const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
   const currentSavedFlow = useFlowsManagerStore((state) => state.currentFlow);
   const validApiKey = useStoreStore((state) => state.validApiKey);
@@ -27,8 +24,9 @@ export default function PlaygroundPage() {
   // Set flow tab id
   useEffect(() => {
     if (flows) {
-      if (getFlowById(id!)) {
-        setCurrentFlowId(id!);
+      const flow = getFlowById(id!);
+      if (flow) {
+        setCurrentFlow(flow);
       } else {
         if (validApiKey)
           getFlowData().then((flow) => {

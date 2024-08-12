@@ -14,9 +14,7 @@ import Page from "./components/PageComponent";
 import ExtraSidebar from "./components/extraSidebarComponent";
 
 export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
-  const setCurrentFlowId = useFlowsManagerStore(
-    (state) => state.setCurrentFlowId,
-  );
+  const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
   const currentFlow = useFlowStore((state) => state.currentFlow);
   const currentSavedFlow = useFlowsManagerStore((state) => state.currentFlow);
 
@@ -32,6 +30,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const saveFlow = useSaveFlow();
 
   const flows = useFlowsManagerStore((state) => state.flows);
+  const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
 
   const handleSave = () => {
     saveFlow().then(() => (blocker.proceed ? blocker.proceed() : null));
@@ -54,15 +53,15 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
 
   // Set flow tab id
   useEffect(() => {
-    if (flows) {
-      const isAnExistingFlow = flows.some((flow) => flow.id === id);
+    if (flows && currentFlowId === "") {
+      const isAnExistingFlow = flows.find((flow) => flow.id === id);
 
       if (!isAnExistingFlow) {
         navigate("/all");
         return;
       }
 
-      setCurrentFlowId(id!);
+      setCurrentFlow(isAnExistingFlow);
     }
   }, [id, flows]);
 
@@ -71,6 +70,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
 
     return () => {
       setOnFlowPage(false);
+      setCurrentFlow();
     };
   }, [id]);
 
