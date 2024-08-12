@@ -58,7 +58,7 @@ class GmailLoaderComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Loaded Emails", name="emails", method="load_emails"),
+        Output(display_name="Data", name="data", method="load_emails"),
     ]
 
     def load_emails(self) -> Data:
@@ -180,7 +180,6 @@ class GmailLoaderComponent(Component):
 
         try:
             docs = loader.load()
-        # catch google.auth.exceptions.RefreshError
         except RefreshError as e:
             raise ValueError(
                 "Authentication error: Unable to refresh authentication token. Please try to reauthenticate."
@@ -188,9 +187,6 @@ class GmailLoaderComponent(Component):
         except Exception as e:
             raise ValueError(f"Error loading documents: {e}") from e
 
-        # assert len(docs) != 0, "Expected a 1 or more document to be loaded."
-
-        data = docs
         # Return the loaded documents
-        self.status = data
-        return Data(data={"text": data})
+        self.status = docs
+        return Data(data={"text": docs})
