@@ -1,6 +1,5 @@
 import { LANGFLOW_ACCESS_TOKEN } from "@/constants/constants";
 import useAuthStore from "@/stores/authStore";
-import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from "axios";
 import { useContext, useEffect } from "react";
 import { Cookies } from "react-cookie";
@@ -21,8 +20,6 @@ function ApiInterceptor() {
   const autoLogin = useAuthStore((state) => state.autoLogin);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   let { accessToken, authenticationErrorCount } = useContext(AuthContext);
-
-  const setSaveLoading = useFlowsManagerStore((state) => state.setSaveLoading);
   const { mutate: mutationLogout } = useLogout();
   const { mutate: mutationRenewAccessToken } = useRefreshAccessToken();
   const logout = useAuthStore((state) => state.logout);
@@ -152,7 +149,6 @@ function ApiInterceptor() {
         onSuccess: async (data) => {
           authenticationErrorCount = 0;
           await remakeRequest(error);
-          setSaveLoading(false);
           authenticationErrorCount = 0;
         },
         onError: (error) => {

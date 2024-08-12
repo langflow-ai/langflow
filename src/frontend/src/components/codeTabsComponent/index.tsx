@@ -86,6 +86,7 @@ export default function CodeTabsComponent({
                   }}
                   id="tweaks-switch"
                   onCheckedChange={setActiveTweaks}
+                  checked={activeTweaks}
                   autoFocus={false}
                 />
                 <Label

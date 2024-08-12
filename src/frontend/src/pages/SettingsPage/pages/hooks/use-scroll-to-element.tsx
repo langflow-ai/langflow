@@ -1,9 +1,6 @@
 import { useEffect } from "react";
 
-const useScrollToElement = (
-  scrollId: string | null | undefined,
-  setCurrentFlowId: (currentFlowId: string) => void,
-) => {
+const useScrollToElement = (scrollId: string | null | undefined) => {
   useEffect(() => {
     const element = document.getElementById(scrollId ?? "null");
     if (element) {
@@ -11,10 +8,6 @@ const useScrollToElement = (
       element.scrollIntoView({ behavior: "smooth" });
     }
   }, [scrollId]);
-
-  useEffect(() => {
-    setCurrentFlowId("");
-  }, [setCurrentFlowId]);
 };
 
 export default useScrollToElement;

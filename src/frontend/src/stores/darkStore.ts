@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { getRepoStars, getVersion } from "../controllers/API";
+import { getRepoStars } from "../controllers/API";
 import { DarkStoreType } from "../types/zustand/dark";
 
 const startedStars = Number(window.localStorage.getItem("githubStars")) ?? 0;

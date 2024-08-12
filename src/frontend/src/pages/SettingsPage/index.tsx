@@ -1,29 +1,18 @@
 import FeatureFlags from "@/../feature-config.json";
 import useAuthStore from "@/stores/authStore";
 import { useStoreStore } from "@/stores/storeStore";
-import { useEffect } from "react";
 import { Outlet } from "react-router-dom";
 import ForwardedIconComponent from "../../components/genericIconComponent";
 import PageLayout from "../../components/pageLayout";
 import SidebarNav from "../../components/sidebarComponent";
-import useFlowsManagerStore from "../../stores/flowsManagerStore";
 
 export default function SettingsPage(): JSX.Element {
-  const pathname = location.pathname;
-  const setCurrentFlowId = useFlowsManagerStore(
-    (state) => state.setCurrentFlowId,
-  );
-
   const autoLogin = useAuthStore((state) => state.autoLogin);
   const hasStore = useStoreStore((state) => state.hasStore);
 
   // Hides the General settings if there is nothing to show
   const showGeneralSettings =
     FeatureFlags.ENABLE_PROFILE_ICONS || hasStore || !autoLogin;
-
-  useEffect(() => {
-    setCurrentFlowId("");
-  }, [pathname]);
 
   const sidebarNavItems: {
     href?: string;

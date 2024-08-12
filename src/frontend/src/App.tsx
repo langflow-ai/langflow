@@ -1,6 +1,7 @@
 import { useContext, useEffect } from "react";
 import { Cookies } from "react-cookie";
 import { ErrorBoundary } from "react-error-boundary";
+import { Outlet } from "react-router-dom";
 import "reactflow/dist/style.css";
 import "./App.css";
 import AlertDisplayArea from "./alerts/displayArea";
@@ -22,7 +23,6 @@ import { useGetHealthQuery } from "./controllers/API/queries/health";
 import { useGetVersionQuery } from "./controllers/API/queries/version";
 import { setupAxiosDefaults } from "./controllers/API/utils";
 import useTrackLastVisitedPath from "./hooks/use-track-last-visited-path";
-import Router from "./routes";
 import useAlertStore from "./stores/alertStore";
 import useAuthStore from "./stores/authStore";
 import { useDarkStore } from "./stores/darkStore";
@@ -172,8 +172,7 @@ export default function App() {
           >
             <LoadingComponent remSize={50} />
           </div>
-
-          <Router />
+          <Outlet />
         </>
       </ErrorBoundary>
       <div></div>

@@ -89,7 +89,7 @@ export default function ComponentsComponent({
     handleSelectAll(false);
     setShouldSelectAll(true);
     getFolderById(folderId ? folderId : myCollectionId);
-  }, [location]);
+  }, [location, folderId, myCollectionId]);
 
   useFilteredFlows(flowsFromFolder!, searchFlowsComponents, setAllFlows);
 

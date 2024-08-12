@@ -27,7 +27,7 @@ const useDeleteFlow = () => {
         {
           onSuccess: () => {
             const { data, flows: myFlows } = processFlows(
-              flows.filter((flow) => !id.includes(flow.id)),
+              (flows ?? []).filter((flow) => !id.includes(flow.id)),
             );
             setFlows(myFlows);
             setIsLoading(false);

@@ -72,7 +72,7 @@ export const SidebarDraggableComponent = forwardRef(
           );
           break;
         case "delete":
-          const flowId = flows.find((f) => f.name === display_name);
+          const flowId = flows?.find((f) => f.name === display_name);
           if (flowId) deleteFlow({ id: flowId.id });
           break;
       }

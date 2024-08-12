@@ -289,7 +289,6 @@ export default function GenericNode({
   function handlePlayWShortcut() {
     if (buildStatus === BuildStatus.BUILDING || isBuilding || !selected) return;
     setValidationStatus(null);
-    console.log(data.node?.display_name);
     buildFlow({ stopNodeId: data.id });
   }
 

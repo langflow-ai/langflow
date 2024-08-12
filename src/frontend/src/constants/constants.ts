@@ -770,8 +770,12 @@ export const defaultShortcuts = [
     shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + Shift + D`,
   },
   {
-    name: "Save",
+    name: "Changes Save",
     shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + S`,
+  },
+  {
+    name: "Save Component",
+    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + Alt + S`,
   },
   {
     name: "Delete",
