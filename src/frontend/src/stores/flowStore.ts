@@ -50,6 +50,7 @@ import { useTypesStore } from "./typesStore";
 
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
 const useFlowStore = create<FlowStoreType>((set, get) => ({
+  autoSaveFlow: undefined,
   componentsToUpdate: false,
   updateComponentsToUpdate: (nodes) => {
     let outdatedNodes = false;
@@ -227,6 +228,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       outputs,
       hasIO: inputs.length > 0 || outputs.length > 0,
     });
+    if (get().autoSaveFlow) {
+      get().autoSaveFlow!();
+    }
   },
   setEdges: (change) => {
     let newChange = typeof change === "function" ? change(get().edges) : change;
@@ -234,6 +238,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       edges: newChange,
       flowState: undefined,
     });
+    if (get().autoSaveFlow) {
+      get().autoSaveFlow!();
+    }
   },
   setNode: (
     id: string,

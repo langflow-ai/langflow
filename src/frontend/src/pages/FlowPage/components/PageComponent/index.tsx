@@ -153,6 +153,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
 
   useEffect(() => {
     refetch();
+    useFlowStore.setState({ autoSaveFlow });
     if (checkOldComponents({ nodes })) {
       setNoticeData({
         title:
