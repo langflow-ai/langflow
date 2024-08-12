@@ -95,7 +95,7 @@ class DatabaseVariableService(VariableService, Service):
 
     def list_variables(self, user_id: Union[UUID, str], session: Session = Depends(get_session)) -> list[Optional[str]]:
         variables = self.get_all(user_id=user_id, session=session)
-        return [variable.name for variable in variables]
+        return [variable.name for variable in variables if variable]
 
     def update_variable(
         self,
