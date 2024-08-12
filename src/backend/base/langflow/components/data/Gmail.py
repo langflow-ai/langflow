@@ -68,8 +68,6 @@ class GmailLoaderComponent(Component):
             ) -> None:
                 super().__init__(creds, n, raise_error)
                 self.label_ids = label_ids if label_ids is not None else ["SENT"]
-                # Handle any unexpected keyword arguments
-                # self.extra_args = kwargs
 
             def clean_message_content(self, message):
                 # Remove URLs
