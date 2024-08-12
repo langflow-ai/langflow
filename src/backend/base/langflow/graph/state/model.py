@@ -136,6 +136,68 @@ def build_output_setter(method: Callable, validate: bool = True) -> Callable:
 
 
 def create_state_model(model_name: str = "State", validate: bool = True, **kwargs) -> type:
+    """
+    Create a dynamic Pydantic state model based on the provided keyword arguments.
+
+    This function generates a Pydantic model class with fields corresponding to the
+    provided keyword arguments. It can handle various types of field definitions,
+    including callable methods (which are converted to properties), FieldInfo objects,
+    and type-default value tuples.
+
+    Args:
+        model_name (str, optional): The name of the model. Defaults to "State".
+        validate (bool, optional): Whether to validate the methods when converting
+                                   them to properties. Defaults to True.
+        **kwargs: Keyword arguments representing the fields of the model. Each argument
+                  can be a callable method, a FieldInfo object, or a tuple of (type, default).
+
+    Returns:
+        type: The dynamically created Pydantic state model class.
+
+    Raises:
+        ValueError: If the provided field value is invalid or cannot be processed.
+
+    Examples:
+        >>> from langflow.components.inputs import ChatInput
+        >>> from langflow.components.outputs.ChatOutput import ChatOutput
+        >>> from pydantic import Field
+        >>>
+        >>> chat_input = ChatInput()
+        >>> chat_output = ChatOutput()
+        >>>
+        >>> # Create a model with a method from a component
+        >>> StateModel = create_state_model(method_one=chat_input.message_response)
+        >>> state = StateModel()
+        >>> assert state.method_one is UNDEFINED
+        >>> chat_input.set_output_value("message", "test")
+        >>> assert state.method_one == "test"
+        >>>
+        >>> # Create a model with multiple components and a Pydantic Field
+        >>> NewStateModel = create_state_model(
+        ...     model_name="NewStateModel",
+        ...     first_method=chat_input.message_response,
+        ...     second_method=chat_output.message_response,
+        ...     my_attribute=Field(None)
+        ... )
+        >>> new_state = NewStateModel()
+        >>> new_state.first_method = "test"
+        >>> new_state.my_attribute = 123
+        >>> assert new_state.first_method == "test"
+        >>> assert new_state.my_attribute == 123
+        >>>
+        >>> # Create a model with tuple-based field definitions
+        >>> TupleStateModel = create_state_model(field_one=(str, "default"), field_two=(int, 123))
+        >>> tuple_state = TupleStateModel()
+        >>> assert tuple_state.field_one == "default"
+        >>> assert tuple_state.field_two == 123
+
+    Notes:
+        - The function handles empty keyword arguments gracefully.
+        - For tuple-based field definitions, the first element must be a valid Python type.
+        - Unsupported value types in keyword arguments will raise a ValueError.
+        - Callable methods must have proper return type annotations and belong to a class
+          with a 'get_output_by_method' attribute when validate is True.
+    """
     fields = {}
 
     for name, value in kwargs.items():
