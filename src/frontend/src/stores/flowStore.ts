@@ -647,6 +647,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       onValidateNodes: validateSubgraph,
       nodes: get().nodes || undefined,
       edges: get().edges || undefined,
+      logBuilds: get().onFlowPage,
     });
     get().setIsBuilding(false);
     get().setLockChat(false);
