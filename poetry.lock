@@ -5236,7 +5236,7 @@ python-multipart = "^0.0.7"
 rich = "^13.7.0"
 sentry-sdk = {version = "^2.5.1", extras = ["fastapi", "loguru"]}
 setuptools = ">=70"
-spider-client = "^0.0.27"
+spider-client = "^0.0.60"
 sqlmodel = "^0.0.18"
 typer = "^0.12.0"
 uncurl = "^0.0.11"
