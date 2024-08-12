@@ -1,7 +1,7 @@
 import os
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Optional, Union
 from uuid import UUID
-from datetime import datetime, timezone
 
 from fastapi import Depends
 from loguru import logger
@@ -139,10 +139,16 @@ class DatabaseVariableService(VariableService, Service):
     def delete_variable(
         self,
         user_id: Union[UUID, str],
-        name: str,
+        name: str | None = None,
+        variable_id: UUID | None = None,
         session: Session = Depends(get_session),
     ):
-        variable = session.exec(select(Variable).where(Variable.user_id == user_id, Variable.name == name)).first()
+        stmt = select(Variable).where(Variable.user_id == user_id)
+        if name:
+            stmt = stmt.where(Variable.name == name)
+        if variable_id:
+            stmt = stmt.where(Variable.id == variable_id)
+        variable = session.exec(stmt).first()
         if not variable:
             raise ValueError(f"{name} variable not found.")
         session.delete(variable)
