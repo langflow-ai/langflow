@@ -193,6 +193,16 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   },
   setReactFlowInstance: (newState) => {
     set({ reactFlowInstance: newState });
+    const viewport = get().currentFlow?.data?.viewport ?? {
+      zoom: 1,
+      x: 0,
+      y: 0,
+    };
+    if (viewport.x == 0 && viewport.y == 0) {
+      newState.fitView();
+    } else {
+      newState.setViewport(viewport);
+    }
   },
   onNodesChange: (changes: NodeChange[]) => {
     set({
