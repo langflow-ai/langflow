@@ -1,4 +1,5 @@
 import pytest
+from pydantic import BaseModel
 
 from langflow.components.helpers.Memory import MemoryComponent
 from langflow.components.inputs.ChatInput import ChatInput
@@ -105,3 +106,34 @@ def test_graph_state_model_serialization():
 
     serialized_state_model = graph_state_model.model_dump()
     assert serialized_state_model["chat_input"]["message"]["text"] == "Test Sender Name"
+
+
+def test_graph_state_model_json_schema():
+    chat_input = ChatInput(_id="chat_input")
+    chat_input.set(input_value="Test Sender Name")
+    chat_output = ChatOutput(input_value="test", _id="chat_output")
+    chat_output.set(sender_name=chat_input.message_response)
+
+    graph = Graph(chat_input, chat_output)
+    graph.prepare()
+    # Now iterate through the graph
+    # and check that the graph is running
+    # correctly
+    GraphStateModel = create_state_model_from_graph(graph)
+    graph_state_model: BaseModel = GraphStateModel()
+    json_schema = graph_state_model.model_json_schema(mode="serialization")
+    assert json_schema["title"] == "GraphStateModel"
+    assert json_schema["type"] == "object"
+
+    assert "chat_input" in json_schema["properties"]
+    assert json_schema["properties"]["chat_input"]["title"] == "ChatInputStateModel"
+    assert json_schema["properties"]["chat_input"]["type"] == "object"
+
+    assert "chat_output" in json_schema["properties"]
+    assert json_schema["properties"]["chat_output"]["title"] == "ChatOutputStateModel"
+    assert json_schema["properties"]["chat_output"]["type"] == "object"
+
+    assert "Message" in json_schema["$defs"]
+    assert "Image" in json_schema["$defs"]
+
+    assert json_schema["required"] == ["chat_input", "chat_output"]
