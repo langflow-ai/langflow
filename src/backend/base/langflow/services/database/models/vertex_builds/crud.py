@@ -2,8 +2,7 @@ from typing import Optional
 from uuid import UUID
 
 from sqlalchemy.exc import IntegrityError
-from sqlmodel import Session, select, col
-from sqlalchemy import delete
+from sqlmodel import Session, col, delete, select
 
 from langflow.services.database.models.vertex_builds.model import VertexBuildBase, VertexBuildTable
 
