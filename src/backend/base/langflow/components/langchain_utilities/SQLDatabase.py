@@ -3,6 +3,7 @@ from langflow.custom import CustomComponent
 from sqlalchemy import create_engine
 from sqlalchemy.pool import StaticPool
 
+
 class SQLDatabaseComponent(CustomComponent):
     display_name = "SQLDatabase"
     description = "SQL Database"
