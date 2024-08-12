@@ -5,6 +5,29 @@ from pydantic.fields import FieldInfo
 
 
 def __validate_method(method: Callable) -> None:
+    """
+    Validates a method by checking if it has the required attributes.
+
+    This function ensures that the given method belongs to a class with the necessary
+    structure for output handling. It checks for the presence of a __self__ attribute
+    on the method and a get_output_by_method attribute on the method's class.
+
+    Args:
+        method (Callable): The method to be validated.
+
+    Raises:
+        ValueError: If the method does not have a __self__ attribute or if the method's
+                    class does not have a get_output_by_method attribute.
+
+    Example:
+        >>> class ValidClass:
+        ...     def get_output_by_method(self):
+        ...         pass
+        ...     def valid_method(self):
+        ...         pass
+        >>> __validate_method(ValidClass().valid_method)  # This will pass
+        >>> __validate_method(lambda x: x)  # This will raise a ValueError
+    """
     if not hasattr(method, "__self__"):
         raise ValueError(f"Method {method} does not have a __self__ attribute.")
     if not hasattr(method.__self__, "get_output_by_method"):
