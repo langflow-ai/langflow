@@ -430,7 +430,10 @@ class Graph:
         """
         if self._is_cyclic is None:
             vertices = [vertex.id for vertex in self.vertices]
-            edges = [(e["data"]["sourceHandle"]["id"], e["data"]["targetHandle"]["id"]) for e in self._edges]
+            try:
+                edges = [(e["data"]["sourceHandle"]["id"], e["data"]["targetHandle"]["id"]) for e in self._edges]
+            except KeyError:
+                edges = [(e["source"], e["target"]) for e in self._edges]
             self._is_cyclic = has_cycle(vertices, edges)
         return self._is_cyclic
 
