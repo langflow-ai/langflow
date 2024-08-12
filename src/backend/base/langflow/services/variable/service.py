@@ -139,21 +139,22 @@ class DatabaseVariableService(VariableService, Service):
     def delete_variable(
         self,
         user_id: Union[UUID, str],
-        name: str | None = None,
-        variable_id: UUID | None = None,
+        name: str,
         session: Session = Depends(get_session),
     ):
-        stmt = select(Variable).where(Variable.user_id == user_id)
-        if name:
-            stmt = stmt.where(Variable.name == name)
-        if variable_id:
-            stmt = stmt.where(Variable.id == variable_id)
+        stmt = select(Variable).where(Variable.user_id == user_id).where(Variable.name == name)
         variable = session.exec(stmt).first()
         if not variable:
             raise ValueError(f"{name} variable not found.")
         session.delete(variable)
         session.commit()
-        return variable
+
+    def delete_variable_by_id(self, user_id: Union[UUID, str], variable_id: UUID, session: Session):
+        variable = session.exec(select(Variable).where(Variable.user_id == user_id, Variable.id == variable_id)).first()
+        if not variable:
+            raise ValueError(f"{variable_id} variable not found.")
+        session.delete(variable)
+        session.commit()
 
     def create_variable(
         self,
