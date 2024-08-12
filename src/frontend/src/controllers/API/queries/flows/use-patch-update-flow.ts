@@ -21,7 +21,6 @@ export const usePatchUpdateFlow: useMutationFunctionType<
   const { mutate } = UseRequestProcessor();
 
   const PatchUpdateFlowFn = async (payload: IPatchUpdateFlow): Promise<any> => {
-    if (payload.data.nodes.length === 0) return null;
     const response = await api.patch(`${getURL("FLOWS")}/${payload.id}`, {
       name: payload.name,
       data: payload.data,

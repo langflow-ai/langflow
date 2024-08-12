@@ -13,6 +13,7 @@ const useSaveFlow = () => {
   const edges = useFlowStore((state) => state.edges);
   const setSaveLoading = useFlowsManagerStore((state) => state.setSaveLoading);
   const setCurrentFlow = useFlowStore((state) => state.setCurrentFlow);
+  const currentSavedFlow = useFlowsManagerStore((state) => state.currentFlow);
 
   const currentFlow = useFlowStore((state) => state.currentFlow);
   const flowData = currentFlow?.data;
@@ -39,36 +40,55 @@ const useSaveFlow = () => {
       }
       if (flow && flow.data) {
         const { id, name, data, description, folder_id, endpoint_name } = flow;
-        mutate(
-          { id, name, data, description, folder_id, endpoint_name },
-          {
-            onSuccess: (updatedFlow) => {
-              setSaveLoading(false);
-              if (updatedFlow !== null && flows) {
-                // updates flow in state
-                setFlows(
-                  flows.map((flow) => {
-                    if (flow.id === updatedFlow.id) {
-                      return updatedFlow;
-                    }
-                    return flow;
-                  }),
-                );
-                setCurrentFlow(updatedFlow);
-                resolve();
-              }
+        if (!currentSavedFlow?.data?.nodes.length || data.nodes.length > 0) {
+          mutate(
+            { id, name, data, description, folder_id, endpoint_name },
+            {
+              onSuccess: (updatedFlow) => {
+                setSaveLoading(false);
+                if (flows) {
+                  // updates flow in state
+                  setFlows(
+                    flows.map((flow) => {
+                      if (flow.id === updatedFlow.id) {
+                        return updatedFlow;
+                      }
+                      return flow;
+                    }),
+                  );
+                  setCurrentFlow(updatedFlow);
+                  resolve();
+                } else {
+                  setErrorData({
+                    title: "Failed to save flow",
+                    list: ["Flows variable undefined"],
+                  });
+                  reject(new Error("Flows variable undefined"));
+                }
+              },
+              onError: (e) => {
+                setErrorData({
+                  title: "Failed to save flow",
+                  list: [e.message],
+                });
+                setSaveLoading(false);
+                reject(e);
+              },
             },
-            onError: (e) => {
-              setErrorData({
-                title: "Failed to save flow",
-                list: [e.message],
-              });
-              setSaveLoading(false);
-              reject(e);
-            },
-          },
-        );
+          );
+        } else {
+          setErrorData({
+            title: "Failed to save flow",
+            list: ["Can't save empty flow"],
+          });
+          setSaveLoading(false);
+          reject(new Error("Can't save empty flow"));
+        }
       } else {
+        setErrorData({
+          title: "Failed to save flow",
+          list: ["Flow not found"],
+        });
         reject(new Error("Flow not found"));
       }
     });

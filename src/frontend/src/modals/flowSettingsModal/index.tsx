@@ -5,7 +5,6 @@ import { useEffect, useState } from "react";
 import EditFlowSettings from "../../components/editFlowSettingsComponent";
 import IconComponent from "../../components/genericIconComponent";
 import { SETTINGS_DIALOG_SUBTITLE } from "../../constants/constants";
-import useAlertStore from "../../stores/alertStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { FlowSettingsPropsType } from "../../types/components";
 import { FlowType } from "../../types/flow";
@@ -47,12 +46,7 @@ export default function FlowSettingsModal({
           setOpen(false);
           setIsSaving(false);
         })
-        .catch((err) => {
-          useAlertStore.getState().setErrorData({
-            title: "Error while saving changes",
-            list: [err?.response?.data.detail ?? ""],
-          });
-          console.error(err);
+        .catch(() => {
           setIsSaving(false);
         });
     } else {
