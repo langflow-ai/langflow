@@ -35,6 +35,42 @@ def __validate_method(method: Callable) -> None:
 
 
 def build_output_getter(method: Callable, validate: bool = True) -> Callable:
+    """
+    Builds an output getter function for a given method in a graph component.
+
+    This function creates a new callable that, when invoked, retrieves the output
+    of the specified method using the get_output_by_method of the method's class.
+    It's used in creating dynamic state models for graph components.
+
+    Args:
+        method (Callable): The method for which to build the output getter.
+        validate (bool, optional): Whether to validate the method before building
+                                   the getter. Defaults to True.
+
+    Returns:
+        Callable: The output getter function. When called, this function returns
+                  the value of the output associated with the original method.
+
+    Raises:
+        ValueError: If the method has no return type annotation or if validation fails.
+
+    Notes:
+        - The getter function returns UNDEFINED if the output has not been set.
+        - When validate is True, the method must belong to a class with a
+          'get_output_by_method' attribute.
+        - This function is typically used internally by create_state_model.
+
+    Example:
+        >>> class ChatComponent:
+        ...     def get_output_by_method(self, method):
+        ...         return type('Output', (), {'value': "Hello, World!"})()
+        ...     def get_message(self) -> str:
+        ...         pass
+        >>> component = ChatComponent()
+        >>> getter = build_output_getter(component.get_message)
+        >>> print(getter(None))  # This will print "Hello, World!"
+    """
+
     def output_getter(_):
         if validate:
             __validate_method(method)
