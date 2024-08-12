@@ -49,8 +49,7 @@ pinecone-client = "^3.0.3"
 pymongo = "^4.6.0"
 supabase = "^2.3.0"
 certifi = ">=2023.11.17,<2025.0.0"
-psycopg = "^3.1.9"
-psycopg-binary = "^3.1.9"
+psycopg = { extras = ["binary"], version = "3.1.9" } # https://github.com/psycopg/psycopg/issues/858
 fastavro = "^1.8.0"
 celery = { extras = ["redis"], version = "^5.3.6", optional = true }
 redis = "^5.0.1"
