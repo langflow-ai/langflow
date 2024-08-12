@@ -1,8 +1,8 @@
+import useSaveFlow from "@/hooks/flows/use-save-flow";
 import {
   UPLOAD_ALERT_LIST,
   WRONG_FILE_ERROR_ALERT,
 } from "../../../constants/alerts_constants";
-import { updateFlowInDatabase } from "../../../controllers/API";
 import { uploadFlowToFolder } from "../../../pages/MainPage/services";
 import useAlertStore from "../../../stores/alertStore";
 import useFlowsManagerStore from "../../../stores/flowsManagerStore";
@@ -21,6 +21,7 @@ const useFileDrop = (
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const refreshFolders = useFolderStore((state) => state.refreshFolders);
   const flows = useFlowsManagerStore((state) => state.flows);
+  const saveFlow = useSaveFlow();
 
   const triggerFolderChange = (folderId) => {
     if (folderChangeCallback) {
@@ -120,7 +121,7 @@ const useFileDrop = (
     setFolderDragging(false);
     setFolderIdDragging("");
 
-    updateFlowInDatabase(updatedFlow).then(() => {
+    saveFlow(updatedFlow).then(() => {
       refreshFolders();
       triggerFolderChange(folderId);
     });
