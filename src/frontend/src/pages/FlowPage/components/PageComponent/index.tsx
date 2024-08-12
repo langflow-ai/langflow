@@ -144,21 +144,6 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
     };
   }, [lastCopiedSelection, lastSelection, takeSnapshot, selectionMenuVisible]);
 
-  useEffect(() => {
-    if (reactFlowInstance && currentSavedFlow) {
-      const viewport = currentSavedFlow.data?.viewport ?? {
-        zoom: 1,
-        x: 0,
-        y: 0,
-      };
-      if (viewport.x == 0 && viewport.y == 0) {
-        reactFlowInstance.fitView();
-      } else {
-        reactFlowInstance.setViewport(viewport);
-      }
-    }
-  }, [currentSavedFlow, reactFlowInstance]);
-
   const { isFetching, refetch } = useGetBuildsQuery({});
 
   const showCanvas =
@@ -175,16 +160,6 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
       });
     }
   }, [currentFlowId]);
-
-  useEffect(() => {
-    if (currentSavedFlow && reactFlowInstance) {
-      autoSaveFlow();
-      updateCurrentFlow({
-        nodes,
-        edges,
-      });
-    }
-  }, [nodes, edges]);
 
   function handleUndo(e: KeyboardEvent) {
     if (!isWrappedWithClass(e, "noflow")) {
@@ -323,17 +298,14 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
   const onMoveEnd: OnMove = useCallback(() => {
     // 👇 make moving the canvas undoable
     autoSaveFlow();
-    updateCurrentFlow({
-      viewport: reactFlowInstance?.getViewport(),
-    });
-  }, [
-    takeSnapshot,
-    autoSaveFlow,
-    updateCurrentFlow,
-    nodes,
-    edges,
-    reactFlowInstance,
-  ]);
+    updateCurrentFlow({ viewport: reactFlowInstance?.getViewport() });
+  }, [takeSnapshot, autoSaveFlow, nodes, edges, reactFlowInstance]);
+
+  const onNodeDragStop: NodeDragHandler = useCallback(() => {
+    // 👇 make moving the canvas undoable
+    autoSaveFlow();
+    updateCurrentFlow({ nodes });
+  }, [takeSnapshot, autoSaveFlow, nodes, edges, reactFlowInstance]);
 
   const onSelectionDragStart: SelectionDragHandler = useCallback(() => {
     // 👇 make dragging a selection undoable
@@ -490,6 +462,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
             connectionLineComponent={ConnectionLineComponent}
             onDragOver={onDragOver}
             onMoveEnd={onMoveEnd}
+            onNodeDragStop={onNodeDragStop}
             onDrop={onDrop}
             onSelectionChange={onSelectionChange}
             deleteKeyCode={[]}
