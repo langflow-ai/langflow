@@ -603,11 +603,13 @@ class Vertex:
         """
         flow_id = self.graph.flow_id
         if not self._built:
-            asyncio.create_task(log_transaction(str(flow_id), source=self, target=requester, status="error"))
+            if flow_id:
+                asyncio.create_task(log_transaction(str(flow_id), source=self, target=requester, status="error"))
             raise ValueError(f"Component {self.display_name} has not been built yet")
 
         result = self._built_result if self.use_result else self._built_object
-        asyncio.create_task(log_transaction(str(flow_id), source=self, target=requester, status="success"))
+        if flow_id:
+            asyncio.create_task(log_transaction(str(flow_id), source=self, target=requester, status="success"))
         return result
 
     async def _build_vertex_and_update_params(self, key, vertex: "Vertex"):
