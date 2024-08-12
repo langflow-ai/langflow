@@ -1511,7 +1511,10 @@ class Graph:
             raise ValueError(f"Source vertex {edge['source']} not found")
         if target is None:
             raise ValueError(f"Target vertex {edge['target']} not found")
-        new_edge = ContractEdge(source, target, edge)
+        if (source.id, target.id) in self.cycles:
+            new_edge = ContractEdge(source, target, edge)
+        else:
+            new_edge = Edge(source, target, edge)
         return new_edge
 
     def _get_vertex_class(self, node_type: str, node_base_type: str, node_id: str) -> Type["Vertex"]:
