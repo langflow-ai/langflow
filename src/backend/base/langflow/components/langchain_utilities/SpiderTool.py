@@ -1,4 +1,4 @@
-from spider.spider import Spider  # type: ignore
+from spider.spider import Spider
 
 from langflow.base.langchain_utilities.spider_constants import MODES
 from langflow.custom import Component
@@ -59,7 +59,7 @@ class SpiderTool(Component):
             advanced=True,
         ),
         BoolInput(
-            name="use_readability",
+            name="readability",
             display_name="Use Readability",
             info="Use readability to pre-process the content for reading.",
             advanced=True,
@@ -89,15 +89,15 @@ class SpiderTool(Component):
 
     def crawl(self) -> list[Data]:
         if self.params:
-            parameters = self.params.data
+            parameters = self.params["data"]
         else:
             parameters = {
-                "limit": self.limit,
-                "depth": self.depth,
-                "blacklist": self.blacklist,
-                "whitelist": self.whitelist,
-                "use_readability": self.use_readability,
-                "request_timeout": self.request_timeout,
+                "limit": self.limit if self.limit else None,
+                "depth": self.depth if self.depth else None,
+                "blacklist": self.blacklist if self.blacklist else None,
+                "whitelist": self.whitelist if self.whitelist else None,
+                "readability": self.readability,
+                "request_timeout": self.request_timeout if self.request_timeout else None,
                 "metadata": self.metadata,
                 "return_format": "markdown",
             }
@@ -117,5 +117,10 @@ class SpiderTool(Component):
         records = []
 
         for record in result:
-            records.append(Data(data={"content": record["content"], "url": record["url"]}))
+            if self.metadata:
+                records.append(
+                    Data(data={"content": record["content"], "url": record["url"], "metadata": record["metadata"]})
+                )
+            else:
+                records.append(Data(data={"content": record["content"], "url": record["url"]}))
         return records
