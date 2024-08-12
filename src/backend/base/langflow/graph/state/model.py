@@ -87,6 +87,44 @@ def build_output_getter(method: Callable, validate: bool = True) -> Callable:
 
 
 def build_output_setter(method: Callable, validate: bool = True) -> Callable:
+    """
+    Build an output setter function for a given method in a graph component.
+
+    This function creates a new callable that, when invoked, sets the output
+    of the specified method using the get_output_by_method of the method's class.
+    It's used in creating dynamic state models for graph components, allowing
+    for the modification of component states.
+
+    Args:
+        method (Callable): The method for which the output setter is being built.
+        validate (bool, optional): Flag indicating whether to validate the method
+                                   before building the setter. Defaults to True.
+
+    Returns:
+        Callable: The output setter function. When called with a value, this function
+                  sets the output associated with the original method to that value.
+
+    Raises:
+        ValueError: If validation fails when validate is True.
+
+    Notes:
+        - When validate is True, the method must belong to a class with a
+          'get_output_by_method' attribute.
+        - This function is typically used internally by create_state_model.
+        - The setter allows for dynamic updating of component states in a graph.
+
+    Example:
+        >>> class ChatComponent:
+        ...     def get_output_by_method(self, method):
+        ...         return type('Output', (), {'value': None})()
+        ...     def set_message(self):
+        ...         pass
+        >>> component = ChatComponent()
+        >>> setter = build_output_setter(component.set_message)
+        >>> setter(component, "New message")
+        >>> print(component.get_output_by_method(component.set_message).value)  # Prints "New message"
+    """
+
     def output_setter(self, value):
         if validate:
             __validate_method(method)
