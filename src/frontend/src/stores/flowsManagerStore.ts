@@ -39,15 +39,6 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
   getFlowById: (id: string) => {
     return get().flows?.find((flow) => flow.id === id);
   },
-  setCurrentFlowId: (currentFlowId: string) => {
-    const flow = get().flows?.find((flow) => flow.id === currentFlowId);
-    set({
-      currentFlowId,
-      currentFlow:
-        get().flows?.find((flow) => flow.id === currentFlowId) ?? undefined,
-    });
-    useFlowStore.getState().resetFlow(flow);
-  },
   flows: undefined,
   allFlows: [],
   setAllFlows: (allFlows: FlowType[]) => {

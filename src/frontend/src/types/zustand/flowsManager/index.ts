@@ -8,7 +8,6 @@ export type FlowsManagerStoreType = {
   setFlows: (flows: FlowType[]) => void;
   currentFlow: FlowType | undefined;
   currentFlowId: string;
-  setCurrentFlowId: (currentFlowId: string) => void;
   saveLoading: boolean;
   setSaveLoading: (saveLoading: boolean) => void;
   isLoading: boolean;
@@ -19,7 +18,7 @@ export type FlowsManagerStoreType = {
   takeSnapshot: () => void;
   examples: Array<FlowType>;
   setExamples: (examples: FlowType[]) => void;
-  setCurrentFlow: (flow: FlowType) => void;
+  setCurrentFlow: (flow?: FlowType) => void;
   setSearchFlowsComponents: (search: string) => void;
   searchFlowsComponents: string;
   selectedFlowsComponentsCards: string[];
