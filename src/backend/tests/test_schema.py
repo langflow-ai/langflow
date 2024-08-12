@@ -69,7 +69,7 @@ class TestOutput:
         output_obj = Output(name="test_output")
         assert output_obj.name == "test_output"
         assert output_obj.value == UNDEFINED
-        assert output_obj.cache is True
+        assert output_obj.cache is False
 
     def test_output_add_types(self):
         output_obj = Output(name="test_output")
@@ -87,7 +87,7 @@ class TestOutput:
             "types": [],
             "name": "test_output",
             "display_name": "test_output",
-            "cache": True,
+            "cache": False,
             "value": "__UNDEFINED__",
         }
 
