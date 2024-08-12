@@ -18,7 +18,6 @@ import { useParams } from "react-router-dom";
 import { CONTROL_PATCH_USER_STATE } from "../../../../constants/constants";
 import { AuthContext } from "../../../../contexts/authContext";
 import useAlertStore from "../../../../stores/alertStore";
-import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useStoreStore } from "../../../../stores/storeStore";
 import {
   inputHandlerEventType,
@@ -31,10 +30,6 @@ import ProfilePictureFormComponent from "./components/ProfilePictureForm";
 import StoreApiKeyFormComponent from "./components/StoreApiKeyForm";
 
 export const GeneralPage = () => {
-  const setCurrentFlowId = useFlowsManagerStore(
-    (state) => state.setCurrentFlowId,
-  );
-
   const { scrollId } = useParams();
 
   const [inputState, setInputState] = useState<patchUserInputStateType>(
@@ -112,7 +107,7 @@ export const GeneralPage = () => {
     }
   };
 
-  useScrollToElement(scrollId, setCurrentFlowId);
+  useScrollToElement(scrollId);
 
   const { mutate } = usePostAddApiKey({
     onSuccess: () => {

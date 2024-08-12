@@ -82,7 +82,7 @@ export default function NodeToolbarComponent({
   const validApiKey = useStoreStore((state) => state.validApiKey);
   const shortcuts = useShortcutsStore((state) => state.shortcuts);
   const unselectAll = useFlowStore((state) => state.unselectAll);
-  const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
+  const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const addFlow = useAddFlow();
 
   function handleMinimizeWShortcut(e: KeyboardEvent) {
@@ -179,7 +179,7 @@ export default function NodeToolbarComponent({
   function handleFreezeAll(e: KeyboardEvent) {
     if (isWrappedWithClass(e, "noflow")) return;
     e.preventDefault();
-    FreezeAllVertices({ flowId: currentFlow!.id, stopNodeId: data.id });
+    FreezeAllVertices({ flowId: currentFlowId, stopNodeId: data.id });
   }
 
   const advanced = useShortcutsStore((state) => state.advanced);
@@ -280,7 +280,7 @@ export default function NodeToolbarComponent({
         }));
         break;
       case "freezeAll":
-        FreezeAllVertices({ flowId: currentFlow!.id, stopNodeId: data.id });
+        FreezeAllVertices({ flowId: currentFlowId, stopNodeId: data.id });
         break;
       case "code":
         setOpenModal(!openModal);
@@ -355,7 +355,7 @@ export default function NodeToolbarComponent({
     }
   };
 
-  const isSaved = flows.some((flow) =>
+  const isSaved = flows?.some((flow) =>
     Object.values(flow).includes(data.node?.display_name!),
   );
 
@@ -480,7 +480,7 @@ export default function NodeToolbarComponent({
                 event.preventDefault();
                 takeSnapshot();
                 FreezeAllVertices({
-                  flowId: currentFlow!.id,
+                  flowId: currentFlowId,
                   stopNodeId: data.id,
                 });
               }}
@@ -543,7 +543,8 @@ export default function NodeToolbarComponent({
               <SelectItem value={"save"}>
                 <ToolbarSelectItem
                   shortcut={
-                    shortcuts.find((obj) => obj.name === "Save")?.shortcut!
+                    shortcuts.find((obj) => obj.name === "Save Component")
+                      ?.shortcut!
                   }
                   value={"Save"}
                   icon={"SaveAll"}
@@ -712,7 +713,7 @@ export default function NodeToolbarComponent({
               });
               setSuccessData({ title: `${data.id} successfully overridden!` });
             }}
-            onClose={setShowOverrideModal}
+            onClose={() => setShowOverrideModal(false)}
             onCancel={() => {
               addFlow({
                 flow: flowComponent,
