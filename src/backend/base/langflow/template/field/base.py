@@ -178,7 +178,7 @@ class Output(BaseModel):
 
     value: Optional[Any] = Field(default=UNDEFINED)
 
-    cache: bool = Field(default=True)
+    cache: bool = Field(default=False)
 
     def to_dict(self):
         return self.model_dump(by_alias=True, exclude_none=True)
