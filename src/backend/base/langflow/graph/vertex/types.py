@@ -115,7 +115,13 @@ class ComponentVertex(Vertex):
         edge = None
         for edge in edges:
             if edge is not None and edge.source_handle.name in self.results:
-                result = self.results[edge.source_handle.name]
+                # Get the result from the output instead of the results dict
+                output = self.get_output(edge.source_handle.name)
+                if output.value is UNDEFINED:
+                    result = self.results[edge.source_handle.name]
+                else:
+                    result = output.value
+                # result = self.results[edge.source_handle.name]
                 break
         if result is UNDEFINED:
             if edge is None:
