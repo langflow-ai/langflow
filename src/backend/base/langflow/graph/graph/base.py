@@ -1613,12 +1613,24 @@ class Graph:
         """Performs a layered topological sort of the vertices in the graph."""
         vertices_ids = {vertex.id for vertex in vertices}
         # Queue for vertices with no incoming edges
-        queue = deque(
-            vertex.id
-            for vertex in vertices
-            # if filter_graphs then only vertex.is_input will be considered
-            if self.in_degree_map[vertex.id] == 0 and (not filter_graphs or vertex.is_input)
-        )
+        if all(self.in_degree_map.values()):
+            # This means we have a cycle because all vertex have in_degree_map > 0
+            # because of this we set the queue to start on the ._start if it exists
+            if self._start is not None:
+                queue = deque([self._start._id])
+            else:
+                # Find the chat input component
+                chat_input = find_start_component_id(vertices_ids)
+                if chat_input is None:
+                    raise ValueError("No input component found and no start component provided")
+                queue = deque([chat_input])
+        else:
+            queue = deque(
+                vertex.id
+                for vertex in vertices
+                # if filter_graphs then only vertex.is_input will be considered
+                if self.in_degree_map[vertex.id] == 0 and (not filter_graphs or vertex.is_input)
+            )
         layers: List[List[str]] = []
         visited = set(queue)
 
