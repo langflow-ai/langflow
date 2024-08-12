@@ -2,12 +2,12 @@ import asyncio
 import copy
 import json
 import uuid
+import warnings
 from collections import defaultdict, deque
 from datetime import datetime, timezone
 from functools import partial
 from itertools import chain
 from typing import TYPE_CHECKING, Any, Dict, Generator, List, Optional, Tuple, Type, Union
-import warnings
 
 import nest_asyncio
 from loguru import logger
@@ -24,6 +24,7 @@ from langflow.graph.schema import InterfaceComponentTypes, RunOutputs
 from langflow.graph.vertex.base import Vertex, VertexStates
 from langflow.graph.vertex.schema import NodeData
 from langflow.graph.vertex.types import ComponentVertex, InterfaceVertex, StateVertex
+from langflow.logging.logger import LogConfig, configure
 from langflow.schema import Data
 from langflow.schema.schema import INPUT_FIELD_NAME, InputType
 from langflow.services.cache.utils import CacheMiss
@@ -47,6 +48,7 @@ class Graph:
         flow_id: Optional[str] = None,
         flow_name: Optional[str] = None,
         user_id: Optional[str] = None,
+        log_config: Optional[LogConfig] = None,
     ) -> None:
         """
         Initializes a new instance of the Graph class.
@@ -56,6 +58,11 @@ class Graph:
             edges (List[Dict[str, str]]): A list of dictionaries representing the edges of the graph.
             flow_id (Optional[str], optional): The ID of the flow. Defaults to None.
         """
+        if not log_config:
+            log_config = {"disable": False}
+        configure(**log_config)
+        self._start = start
+        self._end = end
         self._prepared = False
         self._runs = 0
         self._updates = 0
@@ -803,7 +810,6 @@ class Graph:
             "vertices_layers": self.vertices_layers,
             "vertices_to_run": self.vertices_to_run,
             "stop_vertex": self.stop_vertex,
-            "vertex_map": self.vertex_map,
             "_run_queue": self._run_queue,
             "_first_layer": self._first_layer,
             "_vertices": self._vertices,
@@ -814,6 +820,39 @@ class Graph:
             "_sorted_vertices_layers": self._sorted_vertices_layers,
         }
 
+    def __deepcopy__(self, memo):
+        # Check if we've already copied this instance
+        if id(self) in memo:
+            return memo[id(self)]
+
+        if self._start is not None and self._end is not None:
+            # Deep copy start and end components
+            start_copy = copy.deepcopy(self._start, memo)
+            end_copy = copy.deepcopy(self._end, memo)
+            new_graph = type(self)(
+                start_copy,
+                end_copy,
+                copy.deepcopy(self.flow_id, memo),
+                copy.deepcopy(self.flow_name, memo),
+                copy.deepcopy(self.user_id, memo),
+            )
+        else:
+            # Create a new graph without start and end, but copy flow_id, flow_name, and user_id
+            new_graph = type(self)(
+                None,
+                None,
+                copy.deepcopy(self.flow_id, memo),
+                copy.deepcopy(self.flow_name, memo),
+                copy.deepcopy(self.user_id, memo),
+            )
+            # Deep copy vertices and edges
+            new_graph.add_nodes_and_edges(copy.deepcopy(self._vertices, memo), copy.deepcopy(self._edges, memo))
+
+        # Store the newly created object in memo
+        memo[id(self)] = new_graph
+
+        return new_graph
+
     def __setstate__(self, state):
         run_manager = state["run_manager"]
         if isinstance(run_manager, RunnableVerticesManager):
@@ -821,6 +860,7 @@ class Graph:
         else:
             state["run_manager"] = RunnableVerticesManager.from_dict(run_manager)
         self.__dict__.update(state)
+        self.vertex_map = {vertex.id: vertex for vertex in self.vertices}
         self.state_manager = GraphStateManager()
         self.tracing_service = get_tracing_service()
         self.set_run_id(self._run_id)

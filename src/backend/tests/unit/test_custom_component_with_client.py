@@ -1,7 +1,7 @@
 import pytest
 
 from langflow.custom.custom_component.custom_component import CustomComponent
-from langflow.services.database.models.flow import Flow
+from langflow.field_typing.constants import Data
 
 
 @pytest.fixture
@@ -20,4 +20,6 @@ def component(client, active_user):
 
 def test_list_flows_flow_objects(component):
     flows = component.list_flows()
-    assert all(isinstance(flow, Flow) for flow in flows)
+    are_flows = [isinstance(flow, Data) for flow in flows]
+    flow_types = [type(flow) for flow in flows]
+    assert all(are_flows), f"Expected all flows to be Data objects, got {flow_types}"
