@@ -101,7 +101,7 @@ def delete_variable(
     """Delete a variable."""
     try:
         all_variables = variable_service.get_all(user_id=current_user.id, session=session)
-        variable = next((v for v in all_variables if v.id == variable_id), None)
+        variable = next((v for v in all_variables if v and v.id == variable_id), None)
         if not variable:
             raise HTTPException(status_code=404, detail="Variable not found")
 
