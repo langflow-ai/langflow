@@ -1479,13 +1479,23 @@ class Graph:
                 neighbors[neighbor] += 1
         return neighbors
 
+    @property
+    def cycles(self):
+        if self._cycles is None:
+            if self._start is None:
+                self._cycles = []
+            else:
+                entry_vertex = self._start._id
+                edges = [(e["data"]["sourceHandle"]["id"], e["data"]["targetHandle"]["id"]) for e in self._edges]
+                self._cycles = find_all_cycle_edges(entry_vertex, edges)
+        return self._cycles
+
     def _build_edges(self) -> List[ContractEdge]:
         """Builds the edges of the graph."""
         # Edge takes two vertices as arguments, so we need to build the vertices first
         # and then build the edges
         # if we can't find a vertex, we raise an error
-
-        edges: set[ContractEdge] = set()
+        edges: set[ContractEdge | Edge] = set()
         for edge in self._edges:
             new_edge = self.build_edge(edge)
             edges.add(new_edge)
