@@ -1,4 +1,5 @@
 import useSaveFlow from "@/hooks/flows/use-save-flow";
+import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import { cloneDeep } from "lodash";
 import { useEffect, useState } from "react";
@@ -18,6 +19,7 @@ export default function FlowSettingsModal({
   const saveFlow = useSaveFlow();
   const currentFlow = useFlowStore((state) => state.currentFlow);
   const setCurrentFlow = useFlowStore((state) => state.setCurrentFlow);
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const flows = useFlowsManagerStore((state) => state.flows);
   useEffect(() => {
     setName(currentFlow!.name);
@@ -45,6 +47,7 @@ export default function FlowSettingsModal({
         ?.then(() => {
           setOpen(false);
           setIsSaving(false);
+          setSuccessData({ title: "Changes saved successfully" });
         })
         .catch(() => {
           setIsSaving(false);
