@@ -138,6 +138,7 @@ pre-commit = "^3.7.0"
 vulture = "^2.11"
 dictdiffer = "^0.9.0"
 pytest-split = "^0.9.0"
+pytest-flakefinder = "^1.1.0"
 
 [tool.poetry.extras]
 deploy = ["celery", "redis", "flower"]
@@ -164,6 +165,8 @@ testpaths = ["tests", "integration"]
 console_output_style = "progress"
 filterwarnings = ["ignore::DeprecationWarning", "ignore::ResourceWarning"]
 log_cli = true
+log_cli_format = "%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s)"
+log_cli_date_format = "%Y-%m-%d %H:%M:%S"
 markers = ["async_test", "api_key_required"]
 
 

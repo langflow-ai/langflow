@@ -5198,6 +5198,7 @@ cachetools = "^5.3.1"
 chardet = "^5.2.0"
 crewai = "^0.36.0"
 cryptography = "^42.0.5"
+diskcache = "^5.6.3"
 docstring-parser = "^0.16"
 duckdb = "^1.0.0"
 emoji = "^2.12.0"
@@ -5236,7 +5237,7 @@ python-multipart = "^0.0.7"
 rich = "^13.7.0"
 sentry-sdk = {version = "^2.5.1", extras = ["fastapi", "loguru"]}
 setuptools = ">=70"
-spider-client = "^0.0.60"
+spider-client = "^0.0.27"
 sqlmodel = "^0.0.18"
 typer = "^0.12.0"
 uncurl = "^0.0.11"
@@ -8391,6 +8392,20 @@ pytest = ">=4.6"
 
 [package.extras]
 testing = ["fields", "hunter", "process-tests", "pytest-xdist", "virtualenv"]
+
+[[package]]
+name = "pytest-flakefinder"
+version = "1.1.0"
+description = "Runs tests multiple times to expose flakiness."
+optional = false
+python-versions = ">=3.5"
+files = [
+    {file = "pytest-flakefinder-1.1.0.tar.gz", hash = "sha256:e2412a1920bdb8e7908783b20b3d57e9dad590cc39a93e8596ffdd493b403e0e"},
+    {file = "pytest_flakefinder-1.1.0-py2.py3-none-any.whl", hash = "sha256:741e0e8eea427052f5b8c89c2b3c3019a50c39a59ce4df6a305a2c2d9ba2bd13"},
+]
+
+[package.dependencies]
+pytest = ">=2.7.1"
 
 [[package]]
 name = "pytest-instafail"
@@ -12073,4 +12088,4 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-content-hash = "6554abddd0322e28c531774986c897c560099a974f985aa48b21b36b12e2be52"
+content-hash = "101a91d9cf0eaae655b4ab9e040f44595767a0dd4ee584ccdc86406a4450a471"
