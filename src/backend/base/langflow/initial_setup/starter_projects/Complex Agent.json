@@ -877,7 +877,7 @@
             "output_types": [],
             "outputs": [
               {
-                "cache": false,
+                "cache": true,
                 "display_name": "Text",
                 "method": "text_response",
                 "name": "text_output",
@@ -2004,7 +2004,7 @@
             "output_types": [],
             "outputs": [
               {
-                "cache": false,
+                "cache": true,
                 "display_name": "Text",
                 "method": "text_response",
                 "name": "text_output",
@@ -2704,7 +2704,7 @@
             "output_types": [],
             "outputs": [
               {
-                "cache": false,
+                "cache": true,
                 "display_name": "Text",
                 "method": "text_response",
                 "name": "text_output",
@@ -3124,7 +3124,7 @@
             "output_types": [],
             "outputs": [
               {
-                "cache": false,
+                "cache": true,
                 "display_name": "Text",
                 "method": "text_response",
                 "name": "text_output",
@@ -3569,7 +3569,7 @@
             "output_types": [],
             "outputs": [
               {
-                "cache": false,
+                "cache": true,
                 "display_name": "Text",
                 "method": "text_response",
                 "name": "text_output",
