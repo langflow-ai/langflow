@@ -75,6 +75,7 @@ export default function useShortcuts(
     }
 
     function handleAdvancedWShortcut(e: KeyboardEvent) {
+      //check if there is another modal open
         if (isWrappedWithClass(e, "noflow") && !showModalAdvanced) return;
         e.preventDefault();
         showAdvance();
