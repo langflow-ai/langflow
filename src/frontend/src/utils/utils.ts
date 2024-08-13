@@ -3,7 +3,7 @@ import { ColDef, ColGroupDef } from "ag-grid-community";
 import clsx, { ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import TableAutoCellRender from "../components/tableComponent/components/tableAutoCellRender";
-import { MESSAGES_TABLE_ORDER, MODAL_CLASSES } from "../constants/constants";
+import { MESSAGES_TABLE_ORDER, MODAL_CLASSES, SHORTCUT_KEYS } from "../constants/constants";
 import { APIDataType, InputFieldType, VertexDataTypeAPI } from "../types/api";
 import {
   groupedObjType,
@@ -583,4 +583,32 @@ export function getNodeLength(data: NodeDataType) {
         data.node.template[templateField]?.type === "dict" ||
         data.node.template[templateField]?.type === "NestedDict"),
   ).length;
+}
+
+export function sortShortcuts(a: string, b: string) {
+  const order = SHORTCUT_KEYS;
+  const aTrimmed = a.trim().toLowerCase();
+  const bTrimmed = b.trim().toLowerCase();
+  const aIndex = order.indexOf(aTrimmed);
+  const bIndex = order.indexOf(bTrimmed);
+  if (aIndex === -1 && bIndex === -1) {
+    return aTrimmed.localeCompare(bTrimmed);
+  }
+  if (aIndex === -1) {
+    return 1;
+  }
+  if (bIndex === -1) {
+    return -1;
+  }
+  return aIndex - bIndex;
+}
+export function addPlusSignes(array:string[]):string[] {
+  const exceptions = SHORTCUT_KEYS;
+  // add + sign to the shortcuts beetwen characters that are not in the exceptions
+  return array.map((key, index) => {
+    if (index === 0) return key;
+    if (exceptions.includes(key.trim().toLocaleLowerCase()) || exceptions.includes(array[index-1].trim().toLocaleLowerCase())) return key;
+
+    return "+" + key;
+  });
 }
