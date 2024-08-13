@@ -2,6 +2,7 @@ import asyncio
 import copy
 import json
 import uuid
+import warnings
 from collections import defaultdict, deque
 from datetime import datetime, timezone
 from functools import partial
@@ -18,11 +19,13 @@ from langflow.graph.graph.constants import Finish, lazy_load_vertex_dict
 from langflow.graph.graph.runnable_vertices_manager import RunnableVerticesManager
 from langflow.graph.graph.schema import GraphData, GraphDump, VertexBuildResult
 from langflow.graph.graph.state_manager import GraphStateManager
+from langflow.graph.graph.state_model import create_state_model_from_graph
 from langflow.graph.graph.utils import find_start_component_id, process_flow, sort_up_to_vertex
 from langflow.graph.schema import InterfaceComponentTypes, RunOutputs
 from langflow.graph.vertex.base import Vertex, VertexStates
 from langflow.graph.vertex.schema import NodeData
 from langflow.graph.vertex.types import ComponentVertex, InterfaceVertex, StateVertex
+from langflow.logging.logger import LogConfig, configure
 from langflow.schema import Data
 from langflow.schema.schema import INPUT_FIELD_NAME, InputType
 from langflow.services.cache.utils import CacheMiss
@@ -46,6 +49,7 @@ class Graph:
         flow_id: Optional[str] = None,
         flow_name: Optional[str] = None,
         user_id: Optional[str] = None,
+        log_config: Optional[LogConfig] = None,
     ) -> None:
         """
         Initializes a new instance of the Graph class.
@@ -55,6 +59,12 @@ class Graph:
             edges (List[Dict[str, str]]): A list of dictionaries representing the edges of the graph.
             flow_id (Optional[str], optional): The ID of the flow. Defaults to None.
         """
+        if not log_config:
+            log_config = {"disable": False}
+        configure(**log_config)
+        self._start = start
+        self._state_model = None
+        self._end = end
         self._prepared = False
         self._runs = 0
         self._updates = 0
@@ -100,6 +110,12 @@ class Graph:
             self.prepare()
         if (start is not None and end is None) or (start is None and end is not None):
             raise ValueError("You must provide both input and output components")
+
+    @property
+    def state_model(self):
+        if not self._state_model:
+            self._state_model = create_state_model_from_graph(self)
+        return self._state_model
 
     def __add__(self, other):
         if not isinstance(other, Graph):
@@ -802,7 +818,6 @@ class Graph:
             "vertices_layers": self.vertices_layers,
             "vertices_to_run": self.vertices_to_run,
             "stop_vertex": self.stop_vertex,
-            "vertex_map": self.vertex_map,
             "_run_queue": self._run_queue,
             "_first_layer": self._first_layer,
             "_vertices": self._vertices,
@@ -813,6 +828,39 @@ class Graph:
             "_sorted_vertices_layers": self._sorted_vertices_layers,
         }
 
+    def __deepcopy__(self, memo):
+        # Check if we've already copied this instance
+        if id(self) in memo:
+            return memo[id(self)]
+
+        if self._start is not None and self._end is not None:
+            # Deep copy start and end components
+            start_copy = copy.deepcopy(self._start, memo)
+            end_copy = copy.deepcopy(self._end, memo)
+            new_graph = type(self)(
+                start_copy,
+                end_copy,
+                copy.deepcopy(self.flow_id, memo),
+                copy.deepcopy(self.flow_name, memo),
+                copy.deepcopy(self.user_id, memo),
+            )
+        else:
+            # Create a new graph without start and end, but copy flow_id, flow_name, and user_id
+            new_graph = type(self)(
+                None,
+                None,
+                copy.deepcopy(self.flow_id, memo),
+                copy.deepcopy(self.flow_name, memo),
+                copy.deepcopy(self.user_id, memo),
+            )
+            # Deep copy vertices and edges
+            new_graph.add_nodes_and_edges(copy.deepcopy(self._vertices, memo), copy.deepcopy(self._edges, memo))
+
+        # Store the newly created object in memo
+        memo[id(self)] = new_graph
+
+        return new_graph
+
     def __setstate__(self, state):
         run_manager = state["run_manager"]
         if isinstance(run_manager, RunnableVerticesManager):
@@ -820,6 +868,7 @@ class Graph:
         else:
             state["run_manager"] = RunnableVerticesManager.from_dict(run_manager)
         self.__dict__.update(state)
+        self.vertex_map = {vertex.id: vertex for vertex in self.vertices}
         self.state_manager = GraphStateManager()
         self.tracing_service = get_tracing_service()
         self.set_run_id(self._run_id)
@@ -1125,41 +1174,51 @@ class Graph:
         self.run_manager.add_to_vertices_being_run(vertex_id)
         try:
             params = ""
-            if vertex.frozen:
+            should_build = False
+            if not vertex.frozen:
+                should_build = True
+            else:
                 # Check the cache for the vertex
                 if get_cache is not None:
                     cached_result = await get_cache(key=vertex.id)
                 else:
                     cached_result = None
                 if isinstance(cached_result, CacheMiss):
-                    await vertex.build(
-                        user_id=user_id, inputs=inputs_dict, fallback_to_env_vars=fallback_to_env_vars, files=files
-                    )
-                    if set_cache is not None:
-                        await set_cache(key=vertex.id, data=vertex)
-                if cached_result and not isinstance(cached_result, CacheMiss):
-                    cached_vertex = cached_result["result"]
-                    # Now set update the vertex with the cached vertex
-                    vertex._built = cached_vertex._built
-                    vertex.result = cached_vertex.result
-                    vertex.results = cached_vertex.results
-                    vertex.artifacts = cached_vertex.artifacts
-                    vertex._built_object = cached_vertex._built_object
-                    vertex._custom_component = cached_vertex._custom_component
-                    if vertex.result is not None:
-                        vertex.result.used_frozen_result = True
+                    should_build = True
                 else:
-                    await vertex.build(
-                        user_id=user_id, inputs=inputs_dict, fallback_to_env_vars=fallback_to_env_vars, files=files
-                    )
-                    if set_cache is not None:
-                        await set_cache(key=vertex.id, data=vertex)
-            else:
+                    try:
+                        cached_vertex_dict = cached_result["result"]
+                        # Now set update the vertex with the cached vertex
+                        vertex._built = cached_vertex_dict["_built"]
+                        vertex.artifacts = cached_vertex_dict["artifacts"]
+                        vertex._built_object = cached_vertex_dict["_built_object"]
+                        vertex._built_result = cached_vertex_dict["_built_result"]
+                        vertex._data = cached_vertex_dict["_data"]
+                        vertex.results = cached_vertex_dict["results"]
+                        try:
+                            vertex._finalize_build()
+                            if vertex.result is not None:
+                                vertex.result.used_frozen_result = True
+                        except Exception:
+                            should_build = True
+                    except KeyError:
+                        should_build = True
+
+            if should_build:
                 await vertex.build(
                     user_id=user_id, inputs=inputs_dict, fallback_to_env_vars=fallback_to_env_vars, files=files
                 )
                 if set_cache is not None:
-                    await set_cache(key=vertex.id, data=vertex)
+                    vertex_dict = {
+                        "_built": vertex._built,
+                        "results": vertex.results,
+                        "artifacts": vertex.artifacts,
+                        "_built_object": vertex._built_object,
+                        "_built_result": vertex._built_result,
+                        "_data": vertex._data,
+                    }
+
+                    await set_cache(key=vertex.id, data=vertex_dict)
 
             if vertex.result is not None:
                 params = f"{vertex._built_object_repr()}{params}"
@@ -1425,7 +1484,7 @@ class Graph:
             new_edge = self.build_edge(edge)
             edges.add(new_edge)
         if self.vertices and not edges:
-            raise ValueError("Graph has vertices but no edges")
+            warnings.warn("Graph has vertices but no edges")
         return list(edges)
 
     def build_edge(self, edge: EdgeData) -> ContractEdge:

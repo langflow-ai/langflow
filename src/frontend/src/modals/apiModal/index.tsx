@@ -35,9 +35,6 @@ export default function ApiModal({
 
   useEffect(() => {
     if (open) initialSetup(autoLogin, flow);
-  }, [open, flow?.data?.nodes]);
-
-  useEffect(() => {
     setActiveTab("0");
   }, [open]);
 

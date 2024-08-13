@@ -1,5 +1,4 @@
 import ReactDOM from "react-dom/client";
-import App from "./App";
 import ContextWrapper from "./contexts";
 import reportWebVitals from "./reportWebVitals";
 
@@ -8,6 +7,10 @@ import "./style/index.css";
 // @ts-ignore
 import "./style/applies.css";
 // @ts-ignore
+import { Suspense } from "react";
+import { RouterProvider } from "react-router-dom";
+import LoadingComponent from "./components/loadingComponent";
+import router from "./routes";
 import "./style/classes.css";
 
 const root = ReactDOM.createRoot(
@@ -15,7 +18,15 @@ const root = ReactDOM.createRoot(
 );
 root.render(
   <ContextWrapper>
-    <App />
+    <Suspense
+      fallback={
+        <div className="loading-page-panel">
+          <LoadingComponent remSize={50} />
+        </div>
+      }
+    >
+      <RouterProvider router={router} />
+    </Suspense>
   </ContextWrapper>,
 );
 reportWebVitals();

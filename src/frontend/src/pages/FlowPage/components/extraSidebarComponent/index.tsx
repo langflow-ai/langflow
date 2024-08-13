@@ -1,17 +1,13 @@
 import { cloneDeep } from "lodash";
 import { LinkIcon, SparklesIcon } from "lucide-react";
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import IconComponent from "../../../../components/genericIconComponent";
 import ShadTooltip from "../../../../components/shadTooltipComponent";
 import { Input } from "../../../../components/ui/input";
 import { Separator } from "../../../../components/ui/separator";
 import { PRIORITY_SIDEBAR_ORDER } from "../../../../constants/constants";
-import ExportModal from "../../../../modals/exportModal";
-import ShareModal from "../../../../modals/shareModal";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
-import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
-import { useStoreStore } from "../../../../stores/storeStore";
 import { useTypesStore } from "../../../../stores/typesStore";
 import { APIClassType, APIObjectType } from "../../../../types/api";
 import {
@@ -19,7 +15,7 @@ import {
   nodeIconsLucide,
   nodeNames,
 } from "../../../../utils/styleUtils";
-import { classNames, removeCountFromString } from "../../../../utils/utils";
+import { removeCountFromString } from "../../../../utils/utils";
 import DisclosureComponent from "../DisclosureComponent";
 import ParentDisclosureComponent from "../ParentDisclosureComponent";
 import SidebarDraggableComponent from "./sideBarDraggableComponent";
@@ -31,10 +27,6 @@ export default function ExtraSidebar(): JSX.Element {
   const templates = useTypesStore((state) => state.templates);
   const getFilterEdge = useFlowStore((state) => state.getFilterEdge);
   const setFilterEdge = useFlowStore((state) => state.setFilterEdge);
-  const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
-  const hasStore = useStoreStore((state) => state.hasStore);
-  const hasApiKey = useStoreStore((state) => state.hasApiKey);
-  const validApiKey = useStoreStore((state) => state.validApiKey);
 
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const [dataFilter, setFilterData] = useState(data);
@@ -186,63 +178,6 @@ export default function ExtraSidebar(): JSX.Element {
       });
     }
   }, [getFilterEdge, data]);
-
-  const ModalMemo = useMemo(
-    () => (
-      <ShareModal
-        is_component={false}
-        component={currentFlow!}
-        disabled={!hasApiKey || !validApiKey || !hasStore}
-      >
-        <button
-          disabled={!hasApiKey || !validApiKey || !hasStore}
-          className={classNames(
-            "extra-side-bar-buttons gap-[4px] text-sm font-semibold",
-            !hasApiKey || !validApiKey || !hasStore
-              ? "button-disable cursor-default text-muted-foreground"
-              : "",
-          )}
-        >
-          <IconComponent
-            name="Share3"
-            className={classNames(
-              "-m-0.5 -ml-1 h-6 w-6",
-              !hasApiKey || !validApiKey || !hasStore
-                ? "extra-side-bar-save-disable"
-                : "",
-            )}
-          />
-          Share
-        </button>
-      </ShareModal>
-    ),
-    [hasApiKey, validApiKey, currentFlow, hasStore],
-  );
-
-  const ExportMemo = useMemo(
-    () => (
-      <ExportModal>
-        <button className={classNames("extra-side-bar-buttons")}>
-          <IconComponent name="FileDown" className="side-bar-button-size" />
-        </button>
-      </ExportModal>
-    ),
-    [],
-  );
-
-  const getIcon = useMemo(() => {
-    return (SBSectionName: string) => {
-      if (nodeIconsLucide[SBSectionName]) {
-        return (
-          <IconComponent
-            name={SBSectionName}
-            strokeWidth={1.5}
-            className="w-[22px] text-primary"
-          />
-        );
-      }
-    };
-  }, []);
 
   return (
     <div className="side-bar-arrangement">

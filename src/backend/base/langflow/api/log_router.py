@@ -5,7 +5,7 @@ from typing import List, Any
 from fastapi import APIRouter, Query, HTTPException, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 from http import HTTPStatus
-from langflow.utils.logger import log_buffer
+from langflow.logging.logger import log_buffer
 
 log_router = APIRouter(tags=["Log"])
 

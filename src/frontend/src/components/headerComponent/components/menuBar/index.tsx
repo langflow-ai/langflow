@@ -8,7 +8,10 @@ import {
 } from "../../../ui/dropdown-menu";
 
 import useAddFlow from "@/hooks/flows/use-add-flow";
+import useSaveFlow from "@/hooks/flows/use-save-flow";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
+import { customStringify } from "@/utils/reactflowUtils";
+import { useHotkeys } from "react-hotkeys-hook";
 import { useNavigate } from "react-router-dom";
 import { UPLOAD_ERROR_ALERT } from "../../../../constants/alerts_constants";
 import { SAVED_HOVER } from "../../../../constants/constants";
@@ -29,7 +32,6 @@ import { Button } from "../../../ui/button";
 export const MenuBar = ({}: {}): JSX.Element => {
   const shortcuts = useShortcutsStore((state) => state.shortcuts);
   const addFlow = useAddFlow();
-  const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setLockChat = useFlowStore((state) => state.setLockChat);
@@ -46,6 +48,24 @@ export const MenuBar = ({}: {}): JSX.Element => {
   const navigate = useNavigate();
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const getTypes = useTypesStore((state) => state.getTypes);
+  const saveFlow = useSaveFlow();
+  const shouldAutosave = process.env.LANGFLOW_AUTO_SAVE !== "false";
+  const currentFlow = useFlowStore((state) => state.currentFlow);
+  const currentSavedFlow = useFlowsManagerStore((state) => state.currentFlow);
+  const updatedAt = currentSavedFlow?.updated_at;
+  const onFlowPage = useFlowStore((state) => state.onFlowPage);
+
+  const changesNotSaved =
+    customStringify(currentFlow) !== customStringify(currentSavedFlow) &&
+    !shouldAutosave;
+
+  const savedText =
+    updatedAt && changesNotSaved
+      ? new Date(updatedAt).toLocaleString("en-US", {
+          hour: "numeric",
+          minute: "numeric",
+        })
+      : "Saved";
 
   function handleAddFlow() {
     try {
@@ -69,10 +89,19 @@ export const MenuBar = ({}: {}): JSX.Element => {
     } else if (saveLoading) {
       return "Saving...";
     }
-    return "Saved";
+    return savedText;
   }
 
-  return currentFlow ? (
+  const handleSave = () => {
+    saveFlow().then(() => {
+      setSuccessData({ title: "Saved successfully" });
+    });
+  };
+
+  const changes = useShortcutsStore((state) => state.changes);
+  useHotkeys(changes, handleSave, { preventDefault: true });
+
+  return currentFlow && onFlowPage ? (
     <div className="round-button-div">
       <div className="header-menu-bar">
         <DropdownMenu>
@@ -112,6 +141,20 @@ export const MenuBar = ({}: {}): JSX.Element => {
               <IconComponent name="Settings2" className="header-menu-options" />
               Settings
             </DropdownMenuItem>
+            {!shouldAutosave && (
+              <DropdownMenuItem onClick={handleSave} className="cursor-pointer">
+                <ToolbarSelectItem
+                  value="Save"
+                  icon="Save"
+                  dataTestId=""
+                  shortcut={
+                    shortcuts.find(
+                      (s) => s.name.toLowerCase() === "changes save",
+                    )?.shortcut!
+                  }
+                />
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem
               onClick={() => {
                 setOpenLogs(true);
@@ -205,11 +248,11 @@ export const MenuBar = ({}: {}): JSX.Element => {
         ></FlowSettingsModal>
         <FlowLogsModal open={openLogs} setOpen={setOpenLogs}></FlowLogsModal>
       </div>
-      {(currentFlow.updated_at || saveLoading) && (
+      {(updatedAt || saveLoading) && (
         <ShadTooltip
           content={
             SAVED_HOVER +
-            new Date(currentFlow.updated_at ?? "").toLocaleString("en-US", {
+            new Date(updatedAt ?? "").toLocaleString("en-US", {
               hour: "numeric",
               minute: "numeric",
               second: "numeric",
@@ -220,13 +263,32 @@ export const MenuBar = ({}: {}): JSX.Element => {
         >
           <div className="flex cursor-default items-center gap-2 text-sm text-muted-foreground transition-all">
             <div className="flex cursor-default items-center gap-1.5 text-sm text-muted-foreground transition-all">
-              <IconComponent
-                name={isBuilding || saveLoading ? "Loader2" : "CheckCircle2"}
+              <Button
+                unstyled
+                disabled={shouldAutosave || !changesNotSaved}
                 className={cn(
-                  "h-4 w-4",
-                  isBuilding || saveLoading ? "animate-spin" : "animate-wiggle",
+                  !shouldAutosave && changesNotSaved
+                    ? "hover:text-primary"
+                    : "",
                 )}
-              />
+                onClick={handleSave}
+              >
+                <IconComponent
+                  name={
+                    isBuilding || saveLoading
+                      ? "Loader2"
+                      : changesNotSaved
+                        ? "Save"
+                        : "CheckCircle2"
+                  }
+                  className={cn(
+                    "h-4 w-4",
+                    isBuilding || saveLoading
+                      ? "animate-spin"
+                      : "animate-wiggle",
+                  )}
+                />
+              </Button>
               <div>{printByBuildStatus()}</div>
             </div>
             <button
