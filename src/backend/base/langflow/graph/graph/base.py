@@ -19,6 +19,7 @@ from langflow.graph.graph.constants import Finish, lazy_load_vertex_dict
 from langflow.graph.graph.runnable_vertices_manager import RunnableVerticesManager
 from langflow.graph.graph.schema import GraphData, GraphDump, VertexBuildResult
 from langflow.graph.graph.state_manager import GraphStateManager
+from langflow.graph.graph.state_model import create_state_model_from_graph
 from langflow.graph.graph.utils import (
     find_all_cycle_edges,
     find_start_component_id,
@@ -115,6 +116,12 @@ class Graph:
             self.prepare(start_component_id=start._id)
         if (start is not None and end is None) or (start is None and end is not None):
             raise ValueError("You must provide both input and output components")
+
+    @property
+    def state_model(self):
+        if not self._state_model:
+            self._state_model = create_state_model_from_graph(self)
+        return self._state_model
 
     def __add__(self, other):
         if not isinstance(other, Graph):
