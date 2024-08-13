@@ -1,16 +1,10 @@
-import { useContext, useEffect } from "react";
+import { Suspense, useContext, useEffect } from "react";
 import { Cookies } from "react-cookie";
-import { ErrorBoundary } from "react-error-boundary";
-import { Outlet } from "react-router-dom";
+import { RouterProvider } from "react-router-dom";
 import "reactflow/dist/style.css";
 import "./App.css";
-import AlertDisplayArea from "./alerts/displayArea";
-import CrashErrorComponent from "./components/crashErrorComponent";
-import FetchErrorComponent from "./components/fetchErrorComponent";
 import LoadingComponent from "./components/loadingComponent";
 import {
-  FETCH_ERROR_DESCRIPION,
-  FETCH_ERROR_MESSAGE,
   LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS,
   LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS_ENV,
 } from "./constants/constants";
@@ -19,20 +13,15 @@ import {
   useAutoLogin,
   useRefreshAccessToken,
 } from "./controllers/API/queries/auth";
-import { useGetHealthQuery } from "./controllers/API/queries/health";
 import { useGetVersionQuery } from "./controllers/API/queries/version";
 import { setupAxiosDefaults } from "./controllers/API/utils";
-import useTrackLastVisitedPath from "./hooks/use-track-last-visited-path";
+import router from "./routes";
 import useAlertStore from "./stores/alertStore";
 import useAuthStore from "./stores/authStore";
 import { useDarkStore } from "./stores/darkStore";
 import useFlowsManagerStore from "./stores/flowsManagerStore";
-import { useFolderStore } from "./stores/foldersStore";
-import { cn } from "./utils/utils";
 
 export default function App() {
-  useTrackLastVisitedPath();
-  const isLoading = useFlowsManagerStore((state) => state.isLoading);
   const { login, setUserData, getUser } = useContext(AuthContext);
   const setAutoLogin = useAuthStore((state) => state.setAutoLogin);
   const setLoading = useAlertStore((state) => state.setLoading);
@@ -48,17 +37,9 @@ export default function App() {
 
   useGetVersionQuery();
 
-  const isLoadingFolders = useFolderStore((state) => state.isLoadingFolders);
   const { mutate: mutateRefresh } = useRefreshAccessToken();
 
   const isLoginPage = location.pathname.includes("login");
-
-  const {
-    data: healthData,
-    isFetching: fetchingHealth,
-    isError: isErrorHealth,
-    refetch,
-  } = useGetHealthQuery();
 
   useEffect(() => {
     if (!dark) {
@@ -136,49 +117,16 @@ export default function App() {
     });
   };
 
-  const isLoadingApplication = isLoading || isLoadingFolders;
-
   return (
     //need parent component with width and height
-    <div className="flex h-full flex-col">
-      <ErrorBoundary
-        onReset={() => {
-          // any reset function
-        }}
-        FallbackComponent={CrashErrorComponent}
-      >
-        <>
-          {
-            <FetchErrorComponent
-              description={FETCH_ERROR_DESCRIPION}
-              message={FETCH_ERROR_MESSAGE}
-              openModal={
-                isErrorHealth ||
-                (healthData &&
-                  Object.values(healthData).some((value) => value !== "ok"))
-              }
-              setRetry={() => {
-                refetch();
-              }}
-              isLoadingHealth={fetchingHealth}
-            ></FetchErrorComponent>
-          }
-
-          <div
-            className={cn(
-              "loading-page-panel absolute left-0 top-0 z-[999]",
-              isLoadingApplication ? "" : "hidden",
-            )}
-          >
-            <LoadingComponent remSize={50} />
-          </div>
-          <Outlet />
-        </>
-      </ErrorBoundary>
-      <div></div>
-      <div className="app-div">
-        <AlertDisplayArea />
-      </div>
-    </div>
+    <Suspense
+      fallback={
+        <div className="loading-page-panel">
+          <LoadingComponent remSize={50} />
+        </div>
+      }
+    >
+      <RouterProvider router={router} />
+    </Suspense>
   );
 }
