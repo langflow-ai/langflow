@@ -54,15 +54,15 @@ def test_cycle_in_graph():
     assert "chat_input" in graph._run_queue
     assert "router" not in graph._run_queue
     results = []
-    max_iterations = 10
-
-    for result in graph.start():
+    max_iterations = 20
+    snapshots = [graph._snapshot()]
+    for result in graph.start(max_iterations=max_iterations):
+        snapshots.append(graph._snapshot())
         results.append(result)
     results_ids = [result.vertex.id for result in results if hasattr(result, "vertex")]
-    assert len(results_ids) > len(graph.vertices)
-    assert len(results_ids) > max_iterations
-    # Check that chat_output and text_output are the last vertices in the results
     assert results_ids[-2:] == ["text_output", "chat_output"]
+    assert len(results_ids) > len(graph.vertices), snapshots
+    # Check that chat_output and text_output are the last vertices in the results
     assert results_ids == [
         "chat_input",
         "concatenate",
