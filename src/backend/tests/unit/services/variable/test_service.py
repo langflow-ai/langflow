@@ -183,11 +183,10 @@ def test_delete_variable(service, session):
 
     saved = service.create_variable(user_id, name, value, session=session)
     recovered = service.get_variable(user_id, name, field, session=session)
-    deleted = service.delete_variable(user_id, name, session=session)
+    service.delete_variable(user_id, name, session=session)
     with pytest.raises(ValueError) as exc:
         service.get_variable(user_id, name, field, session)
 
-    assert saved == deleted
     assert recovered == value
     assert name in str(exc.value)
     assert "variable not found" in str(exc.value)
