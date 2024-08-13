@@ -505,7 +505,7 @@
             "output_types": [],
             "outputs": [
               {
-                "cache": true,
+                "cache": false,
                 "display_name": "Text",
                 "method": "text_response",
                 "name": "text_output",
