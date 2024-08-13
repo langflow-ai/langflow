@@ -38,9 +38,7 @@ class UnstructuredComponent(Component):
     def build_unstructured(self) -> UnstructuredLoader:
         os.environ["UNSTRUCTURED_API_KEY"] = self.api_key
 
-        file_paths = [
-            self.file_path
-        ]
+        file_paths = [self.file_path]
 
         loader = UnstructuredLoader(file_paths)
 
