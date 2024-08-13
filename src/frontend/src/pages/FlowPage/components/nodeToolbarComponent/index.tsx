@@ -174,7 +174,7 @@ export default function NodeToolbarComponent({
     openModal,
     showconfirmShare,
     FreezeAllVertices: () => {
-      FreezeAllVertices({ flowId: currentFlow!.id, stopNodeId: data.id })
+      FreezeAllVertices({ flowId: currentFlowId, stopNodeId: data.id })
     },
     Freeze: freezeFunction,
     downloadFunction: () => downloadNode(flowComponent!),
