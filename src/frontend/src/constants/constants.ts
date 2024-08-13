@@ -887,4 +887,4 @@ export const TEXT_FIELD_TYPES: string[] = ["str", "SecretStr"];
 export const NODE_WIDTH = 400;
 export const NODE_HEIGHT = NODE_WIDTH * 3;
 
-export const SHORTCUT_KEYS = ["cmd", "ctrl", "alt", "shift"]
+export const SHORTCUT_KEYS = ["cmd", "ctrl", "alt", "shift"];

@@ -14,9 +14,7 @@ export default function ShortcutDisplay({
       <span
         className={`ml-3 flex items-center rounded-sm bg-muted px-1.5 py-[0.1em] text-lg text-muted-foreground`}
       >
-        <RenderIcons
-          filteredShortcut={fixedShortcut}
-        />
+        <RenderIcons filteredShortcut={fixedShortcut} />
       </span>
     </div>
   );

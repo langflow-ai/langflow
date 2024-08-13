@@ -3,7 +3,11 @@ import { ColDef, ColGroupDef } from "ag-grid-community";
 import clsx, { ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import TableAutoCellRender from "../components/tableComponent/components/tableAutoCellRender";
-import { MESSAGES_TABLE_ORDER, MODAL_CLASSES, SHORTCUT_KEYS } from "../constants/constants";
+import {
+  MESSAGES_TABLE_ORDER,
+  MODAL_CLASSES,
+  SHORTCUT_KEYS,
+} from "../constants/constants";
 import { APIDataType, InputFieldType, VertexDataTypeAPI } from "../types/api";
 import {
   groupedObjType,
@@ -602,12 +606,16 @@ export function sortShortcuts(a: string, b: string) {
   }
   return aIndex - bIndex;
 }
-export function addPlusSignes(array:string[]):string[] {
+export function addPlusSignes(array: string[]): string[] {
   const exceptions = SHORTCUT_KEYS;
   // add + sign to the shortcuts beetwen characters that are not in the exceptions
   return array.map((key, index) => {
     if (index === 0) return key;
-    if (exceptions.includes(key.trim().toLocaleLowerCase()) || exceptions.includes(array[index-1].trim().toLocaleLowerCase())) return key;
+    if (
+      exceptions.includes(key.trim().toLocaleLowerCase()) ||
+      exceptions.includes(array[index - 1].trim().toLocaleLowerCase())
+    )
+      return key;
 
     return "+" + key;
   });

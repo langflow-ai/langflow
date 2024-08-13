@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import useAlertStore from "../../../../../stores/alertStore";
 
+import RenderKey from "@/components/renderIconComponent/components/renderKey";
 import ForwardedIconComponent from "../../../../../components/genericIconComponent";
 import { Button } from "../../../../../components/ui/button";
 import BaseModal from "../../../../../modals/baseModal";
 import { useShortcutsStore } from "../../../../../stores/shortcuts";
 import { toTitleCase } from "../../../../../utils/utils";
-import RenderKey from "@/components/renderIconComponent/components/renderKey";
 
 export default function EditShortcutButton({
   children,
@@ -160,11 +160,10 @@ export default function EditShortcutButton({
       <BaseModal.Trigger>{children}</BaseModal.Trigger>
       <BaseModal.Content>
         <div className="align-center flex h-full w-full justify-center gap-4 rounded-md border border-border py-2">
-          <div className="flex items-center justify-center text-center text-lg font-bold gap-0.5">
-            {((key??(shortcutInitialValue??"")).split("+")).map((k, i) => (
-                <RenderKey key={i} value={k} tableRender />
-                ))
-            }
+          <div className="flex items-center justify-center gap-0.5 text-center text-lg font-bold">
+            {(key ?? shortcutInitialValue ?? "").split("+").map((k, i) => (
+              <RenderKey key={i} value={k} tableRender />
+            ))}
           </div>
         </div>
       </BaseModal.Content>

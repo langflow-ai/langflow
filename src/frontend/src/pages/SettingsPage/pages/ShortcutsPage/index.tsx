@@ -1,12 +1,12 @@
+import { ColDef } from "ag-grid-community";
 import { useEffect, useState } from "react";
 import ForwardedIconComponent from "../../../../components/genericIconComponent";
 import TableComponent from "../../../../components/tableComponent";
 import { Button } from "../../../../components/ui/button";
 import { defaultShortcuts } from "../../../../constants/constants";
 import { useShortcutsStore } from "../../../../stores/shortcuts";
-import EditShortcutButton from "./EditShortcutButton";
-import { ColDef } from "ag-grid-community";
 import CellRenderShortcuts from "./CellRenderWrapper";
+import EditShortcutButton from "./EditShortcutButton";
 
 export default function ShortcutsPage() {
   const [selectedRows, setSelectedRows] = useState<string[]>([]);

@@ -28,9 +28,7 @@ export default function ToolbarSelectItem({
       <span
         className={`absolute right-2 top-[0.43em] flex items-center rounded-sm bg-muted px-1.5 py-[0.1em] text-muted-foreground`}
       >
-        <RenderIcons
-          filteredShortcut={fixedShortcut}
-        />
+        <RenderIcons filteredShortcut={fixedShortcut} />
       </span>
     </div>
   );
