@@ -19,6 +19,7 @@ from langflow.graph.graph.constants import Finish, lazy_load_vertex_dict
 from langflow.graph.graph.runnable_vertices_manager import RunnableVerticesManager
 from langflow.graph.graph.schema import GraphData, GraphDump, VertexBuildResult
 from langflow.graph.graph.state_manager import GraphStateManager
+from langflow.graph.graph.state_model import create_state_model_from_graph
 from langflow.graph.graph.utils import find_start_component_id, process_flow, sort_up_to_vertex
 from langflow.graph.schema import InterfaceComponentTypes, RunOutputs
 from langflow.graph.vertex.base import Vertex, VertexStates
@@ -62,6 +63,7 @@ class Graph:
             log_config = {"disable": False}
         configure(**log_config)
         self._start = start
+        self._state_model = None
         self._end = end
         self._prepared = False
         self._runs = 0
@@ -108,6 +110,12 @@ class Graph:
             self.prepare()
         if (start is not None and end is None) or (start is None and end is not None):
             raise ValueError("You must provide both input and output components")
+
+    @property
+    def state_model(self):
+        if not self._state_model:
+            self._state_model = create_state_model_from_graph(self)
+        return self._state_model
 
     def __add__(self, other):
         if not isinstance(other, Graph):
