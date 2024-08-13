@@ -107,7 +107,6 @@ export default function GenericNode({
     checkNodeIconFragment,
   );
 
-
   useEffect(() => {
     setShowNode(data.showNode ?? true);
   }, [data.showNode]);
