@@ -1,3 +1,4 @@
+import GenericIconComponent from "@/components/genericIconComponent";
 import React, { useEffect, useState } from "react";
 import ShadTooltip from "../../components/shadTooltipComponent";
 import { Button } from "../../components/ui/button";
@@ -38,12 +39,11 @@ function ConfirmationModal({
   data,
   index,
   onConfirm,
-  size,
   open,
   onClose,
   onCancel,
+  ...props
 }: ConfirmationModalType) {
-  const Icon: any = nodeIconsLucide[icon];
   const [modalOpen, setModalOpen] = useState(open ?? false);
   const [flag, setFlag] = useState(false);
 
@@ -67,12 +67,12 @@ function ConfirmationModal({
   );
 
   return (
-    <BaseModal size={size} open={modalOpen} setOpen={setModalOpen}>
+    <BaseModal {...props} open={open} setOpen={setModalOpen}>
       <BaseModal.Trigger>{triggerChild}</BaseModal.Trigger>
       <BaseModal.Header description={titleHeader ?? null}>
         <span className="pr-2">{title}</span>
-        <Icon
-          name="icon"
+        <GenericIconComponent
+          name={icon}
           className="h-6 w-6 pl-1 text-foreground"
           aria-hidden="true"
         />
