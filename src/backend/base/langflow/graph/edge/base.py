@@ -182,7 +182,7 @@ class Edge:
         return self.__repr__()
 
 
-class ContractEdge(Edge):
+class CycleEdge(Edge):
     def __init__(self, source: "Vertex", target: "Vertex", raw_edge: EdgeData):
         super().__init__(source, target, raw_edge)
         self.is_fulfilled = False  # Whether the contract has been fulfilled.

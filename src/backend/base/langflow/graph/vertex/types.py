@@ -20,7 +20,7 @@ from langflow.utils.schemas import ChatOutputResponse, DataOutputResponse
 from langflow.utils.util import unescape_string
 
 if TYPE_CHECKING:
-    from langflow.graph.edge.base import ContractEdge
+    from langflow.graph.edge.base import CycleEdge
 
 
 class CustomComponentVertex(Vertex):
@@ -69,7 +69,7 @@ class ComponentVertex(Vertex):
         for key, value in self._built_object.items():
             self.add_result(key, value)
 
-    def get_edge_with_target(self, target_id: str) -> Generator["ContractEdge", None, None]:
+    def get_edge_with_target(self, target_id: str) -> Generator["CycleEdge", None, None]:
         """
         Get the edge with the target id.
 
