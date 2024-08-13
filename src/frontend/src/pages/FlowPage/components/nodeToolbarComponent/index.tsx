@@ -8,7 +8,6 @@ import { useEffect, useState } from "react";
 import { useUpdateNodeInternals } from "reactflow";
 import CodeAreaComponent from "../../../../components/codeAreaComponent";
 import IconComponent from "../../../../components/genericIconComponent";
-import RenderIcons from "../../../../components/renderIconComponent";
 import ShadTooltip from "../../../../components/shadTooltipComponent";
 import {
   Select,
@@ -33,11 +32,11 @@ import {
   expandGroupNode,
   updateFlowPosition,
 } from "../../../../utils/reactflowUtils";
-import { classNames, cn, openInNewTab } from "../../../../utils/utils";
-import isWrappedWithClass from "../PageComponent/utils/is-wrapped-with-class";
+import { classNames, cn, getNodeLength, openInNewTab } from "../../../../utils/utils";
 import ToolbarSelectItem from "./toolbarSelectItem";
 import { countHandlesFn } from "@/CustomNodes/helpers/count-handles";
 import useShortcuts from "./hooks/use-shortcuts";
+import ShortcutDisplay from "./shortcutDisplay";
 
 export default function NodeToolbarComponent({
   data,
@@ -58,25 +57,8 @@ export default function NodeToolbarComponent({
   const [flowComponent, setFlowComponent] = useState<FlowType>(
     createFlowComponent(cloneDeep(data), version),
   );
-  const preventDefault = true;
-  const isMac = navigator.platform.toUpperCase().includes("MAC");
-  const nodeLength = Object.keys(data.node!.template).filter(
-    (templateField) =>
-      templateField.charAt(0) !== "_" &&
-      data.node?.template[templateField]?.show &&
-      (data.node.template[templateField]?.type === "str" ||
-        data.node.template[templateField]?.type === "bool" ||
-        data.node.template[templateField]?.type === "float" ||
-        data.node.template[templateField]?.type === "code" ||
-        data.node.template[templateField]?.type === "prompt" ||
-        data.node.template[templateField]?.type === "file" ||
-        data.node.template[templateField]?.type === "Any" ||
-        data.node.template[templateField]?.type === "int" ||
-        data.node.template[templateField]?.type === "dict" ||
-        data.node.template[templateField]?.type === "NestedDict"),
-  ).length;
+  const nodeLength = getNodeLength(data);
   const updateFreezeStatus = useFlowStore((state) => state.updateFreezeStatus);
-
   const hasStore = useStoreStore((state) => state.hasStore);
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
   const validApiKey = useStoreStore((state) => state.validApiKey);
@@ -84,6 +66,8 @@ export default function NodeToolbarComponent({
   const unselectAll = useFlowStore((state) => state.unselectAll);
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const [openModal, setOpenModal] = useState(false);
+  const isGroup = data.node?.flow ? true : false;
+  const frozen = data.node?.frozen ?? false;
 
   const addFlow = useAddFlow();
 
@@ -101,7 +85,6 @@ export default function NodeToolbarComponent({
     });
     return;
   }
-
 
   function handleungroup() {
     if (isGroup) {
@@ -187,14 +170,10 @@ export default function NodeToolbarComponent({
     minimizeFunction: minimize,
   });
 
-  const isGroup = data.node?.flow ? true : false;
-
-  const frozen = data.node?.frozen ?? false;
   const paste = useFlowStore((state) => state.paste);
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
   const setNodes = useFlowStore((state) => state.setNodes);
-
   const setEdges = useFlowStore((state) => state.setEdges);
   const getNodePosition = useFlowStore((state) => state.getNodePosition);
   const flows = useFlowsManagerStore((state) => state.flows);
@@ -312,42 +291,6 @@ export default function NodeToolbarComponent({
     Object.values(flow).includes(data.node?.display_name!),
   );
 
-  function displayShortcut({
-    name,
-    shortcut,
-  }: {
-    name: string;
-    shortcut: string;
-  }): JSX.Element {
-    let hasShift: boolean = false;
-    const fixedShortcut = shortcut?.split("+");
-    fixedShortcut.forEach((key) => {
-      if (key.toLowerCase().includes("shift")) {
-        hasShift = true;
-      }
-    });
-    const filteredShortcut = fixedShortcut.filter(
-      (key) => !key.toLowerCase().includes("shift"),
-    );
-    let shortcutWPlus: string[] = [];
-    if (!hasShift) shortcutWPlus = filteredShortcut.join("+").split(" ");
-    return (
-      <div className="flex justify-center">
-        <span> {name} </span>
-        <span
-          className={`ml-3 flex items-center rounded-sm bg-muted px-1.5 py-[0.1em] text-lg text-muted-foreground`}
-        >
-          <RenderIcons
-            isMac={isMac}
-            hasShift={hasShift}
-            filteredShortcut={filteredShortcut}
-            shortcutWPlus={shortcutWPlus}
-          />
-        </span>
-      </div>
-    );
-  }
-
   const setNode = useFlowStore((state) => state.setNode);
 
   const { handleOnNewValue: handleOnNewValueHook } = useHandleOnNewValue({
@@ -375,11 +318,9 @@ export default function NodeToolbarComponent({
         <span className="isolate inline-flex rounded-md shadow-sm">
           {hasCode && (
             <ShadTooltip
-              content={displayShortcut(
-                shortcuts.find(
-                  ({ name }) => name.split(" ")[0].toLowerCase() === "code",
-                )!,
-              )}
+              content={<ShortcutDisplay  {...shortcuts.find(
+                ({ name }) => name.split(" ")[0].toLowerCase() === "code",
+              )!} />}
               side="top"
             >
               <button
@@ -395,11 +336,9 @@ export default function NodeToolbarComponent({
           )}
           {nodeLength > 0 && (
             <ShadTooltip
-              content={displayShortcut(
-                shortcuts.find(
-                  ({ name }) => name.split(" ")[0].toLowerCase() === "advanced",
-                )!,
-              )}
+              content={<ShortcutDisplay { ...shortcuts.find(
+                ({ name }) => name.split(" ")[0].toLowerCase() === "advanced",
+              )!}/>}
               side="top"
             >
               <button
@@ -416,11 +355,10 @@ export default function NodeToolbarComponent({
           )}
 
           <ShadTooltip
-            content={displayShortcut(
-              shortcuts.find(
+            content={<ShortcutDisplay {
+              ...shortcuts.find(
                 ({ name }) => name.toLowerCase() === "freeze path",
-              )!,
-            )}
+              )!}/>}
             side="top"
           >
             <button
