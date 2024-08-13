@@ -1637,7 +1637,8 @@ class Graph:
         """Performs a layered topological sort of the vertices in the graph."""
         vertices_ids = {vertex.id for vertex in vertices}
         # Queue for vertices with no incoming edges
-        if self.is_cyclic and all(self.in_degree_map.values()):
+        in_degree_map = self.in_degree_map.copy()
+        if self.is_cyclic and all(in_degree_map.values()):
             # This means we have a cycle because all vertex have in_degree_map > 0
             # because of this we set the queue to start on the ._start if it exists
             if self._start is not None:
@@ -1653,7 +1654,7 @@ class Graph:
                 vertex.id
                 for vertex in vertices
                 # if filter_graphs then only vertex.is_input will be considered
-                if self.in_degree_map[vertex.id] == 0 and (not filter_graphs or vertex.is_input)
+                if in_degree_map[vertex.id] == 0 and (not filter_graphs or vertex.is_input)
             )
         layers: List[List[str]] = []
         visited = set(queue)
@@ -1675,13 +1676,13 @@ class Graph:
                     if neighbor not in vertices_ids:
                         continue
 
-                    self.in_degree_map[neighbor] -= 1  # 'remove' edge
-                    if self.in_degree_map[neighbor] == 0 and neighbor not in visited:
+                    in_degree_map[neighbor] -= 1  # 'remove' edge
+                    if in_degree_map[neighbor] == 0 and neighbor not in visited:
                         queue.append(neighbor)
 
                     # if > 0 it might mean not all predecessors have added to the queue
                     # so we should process the neighbors predecessors
-                    elif self.in_degree_map[neighbor] > 0:
+                    elif in_degree_map[neighbor] > 0:
                         for predecessor in self.predecessor_map[neighbor]:
                             if predecessor not in queue and predecessor not in visited:
                                 queue.append(predecessor)
