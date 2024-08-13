@@ -61,7 +61,8 @@ export const MenuBar = ({}: {}): JSX.Element => {
 
   const savedText =
     updatedAt && changesNotSaved
-      ? new Date(updatedAt).toLocaleString("en-US", {
+      ? SAVED_HOVER +
+        new Date(updatedAt).toLocaleString("en-US", {
           hour: "numeric",
           minute: "numeric",
         })
