@@ -14,6 +14,7 @@ import {
 import { scapedJSONStringfy } from "../../../../utils/reactflowUtils";
 import useFetchDataOnMount from "../../../hooks/use-fetch-data-on-mount";
 import useHandleOnNewValue from "../../../hooks/use-handle-new-value";
+import NodeInputInfo from "../NodeInputInfo";
 import HandleRenderComponent from "../handleRenderComponent";
 
 export default function NodeInputField({
@@ -31,7 +32,6 @@ export default function NodeInputField({
   showNode,
 }: NodeInputFieldComponentType): JSX.Element {
   const ref = useRef<HTMLDivElement>(null);
-  const infoHtml = useRef<HTMLDivElement & ReactNode>(null);
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
   const myData = useTypesStore((state) => state.data);
@@ -58,43 +58,35 @@ export default function NodeInputField({
   useFetchDataOnMount(data.node!, handleNodeClass, name, postTemplateValue);
 
   useEffect(() => {
-    // @ts-ignore
-    infoHtml.current = (
-      <div className="h-full w-full break-words">
-        {info.split("\n").map((line, index) => (
-          <p key={index} className="block">
-            {line}
-          </p>
-        ))}
-      </div>
-    );
-  }, [info]);
-
-  useEffect(() => {
     if (optionalHandle && optionalHandle.length === 0) {
       optionalHandle = null;
     }
   }, [optionalHandle]);
 
   const displayHandle =
-    !LANGFLOW_SUPPORTED_TYPES.has(type ?? "") || optionalHandle;
+    !LANGFLOW_SUPPORTED_TYPES.has(type ?? "") ||
+    (optionalHandle && optionalHandle.length > 0);
+
+  const Handle = (
+    <HandleRenderComponent
+      left={true}
+      nodes={nodes}
+      tooltipTitle={tooltipTitle}
+      proxy={proxy}
+      id={id}
+      title={title}
+      edges={edges}
+      myData={myData}
+      colors={colors}
+      setFilterEdge={setFilterEdge}
+      showNode={showNode}
+      testIdComplement={`${data?.type?.toLowerCase()}-${showNode ? "shownode" : "noshownode"}`}
+    />
+  );
 
   return !showNode ? (
     displayHandle ? (
-      <HandleRenderComponent
-        left={true}
-        nodes={nodes}
-        tooltipTitle={tooltipTitle}
-        proxy={proxy}
-        id={id}
-        title={title}
-        edges={edges}
-        myData={myData}
-        colors={colors}
-        setFilterEdge={setFilterEdge}
-        showNode={showNode}
-        testIdComplement={`${data?.type?.toLowerCase()}-noshownode`}
-      />
+      Handle
     ) : (
       <></>
     )
@@ -125,7 +117,7 @@ export default function NodeInputField({
           </span>
           <div className="">
             {info !== "" && (
-              <ShadTooltip content={infoHtml.current}>
+              <ShadTooltip content={<NodeInputInfo info={info} />}>
                 {/* put div to avoid bug that does not display tooltip */}
                 <div className="cursor-help">
                   <IconComponent
@@ -137,24 +129,8 @@ export default function NodeInputField({
             )}
           </div>
         </div>
-        {(Array.isArray(displayHandle)
-          ? displayHandle.length > 0
-          : displayHandle) && (
-          <HandleRenderComponent
-            left={true}
-            nodes={nodes}
-            tooltipTitle={tooltipTitle}
-            proxy={proxy}
-            id={id}
-            title={title}
-            edges={edges}
-            myData={myData}
-            colors={colors}
-            setFilterEdge={setFilterEdge}
-            showNode={showNode}
-            testIdComplement={`${data?.type?.toLowerCase()}-shownode`}
-          />
-        )}
+
+        {displayHandle && Handle}
         {data.node?.template[name] !== undefined && (
           <div className="mt-2 w-full">
             <ParameterRenderComponent
