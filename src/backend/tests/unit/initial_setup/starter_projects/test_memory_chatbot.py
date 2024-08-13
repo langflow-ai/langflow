@@ -30,7 +30,7 @@ AI: """
     openai_component.set(
         input_value=prompt_component.build_prompt, max_tokens=100, temperature=0.1, api_key="test_api_key"
     )
-    openai_component.get_output("text_output").value = "Mock response"
+    openai_component.set_on_output(name="text_output", value="Mock response", cache=True)
 
     chat_output = ChatOutput(_id="chat_output")
     chat_output.set(input_value=openai_component.text_response)
