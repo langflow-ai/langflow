@@ -106,6 +106,8 @@ class Graph:
         self._first_layer: List[str] = []
         self._lock = asyncio.Lock()
         self.raw_graph_data: GraphData = {"nodes": [], "edges": []}
+        self._is_cyclic: Optional[bool] = None
+        self._cycles: Optional[List[tuple[str, str]]] = None
         try:
             self.tracing_service: "TracingService" | None = get_tracing_service()
         except Exception as exc:
