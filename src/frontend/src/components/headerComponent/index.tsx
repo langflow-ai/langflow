@@ -1,9 +1,8 @@
 import { useContext } from "react";
 import { FaDiscord, FaGithub } from "react-icons/fa";
 import { RiTwitterXFill } from "react-icons/ri";
-import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import AlertDropdown from "../../alerts/alertDropDown";
-import profileCircle from "../../assets/profile-circle.png";
 import {
   BASE_URL_API,
   LOCATIONS_TO_RETURN,
@@ -16,8 +15,6 @@ import { useLogout } from "@/controllers/API/queries/auth";
 import useAuthStore from "@/stores/authStore";
 import useAlertStore from "../../stores/alertStore";
 import { useDarkStore } from "../../stores/darkStore";
-import useFlowStore from "../../stores/flowStore";
-import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { useLocationStore } from "../../stores/locationStore";
 import { useStoreStore } from "../../stores/storeStore";
 import IconComponent, { ForwardedIconComponent } from "../genericIconComponent";
@@ -45,10 +42,7 @@ export default function Header(): JSX.Element {
   const logout = useAuthStore((state) => state.logout);
 
   const navigate = useNavigate();
-  const removeFlow = useFlowsManagerStore((store) => store.removeFlow);
   const hasStore = useStoreStore((state) => state.hasStore);
-  const { id } = useParams();
-  const nodes = useFlowStore((state) => state.nodes);
 
   const dark = useDarkStore((state) => state.dark);
   const setDark = useDarkStore((state) => state.setDark);
@@ -56,15 +50,9 @@ export default function Header(): JSX.Element {
 
   const routeHistory = useLocationStore((state) => state.routeHistory);
 
-  const profileImageUrl =
-    `${BASE_URL_API}files/profile_pictures/${
-      userData?.profile_image ?? "Space/046-rocket.svg"
-    }` ?? profileCircle;
-  async function checkForChanges(): Promise<void> {
-    if (nodes.length === 0) {
-      await removeFlow(id!);
-    }
-  }
+  const profileImageUrl = `${BASE_URL_API}files/profile_pictures/${
+    userData?.profile_image ?? "Space/046-rocket.svg"
+  }`;
 
   const redirectToLastLocation = () => {
     const lastFlowVisitedIndex = routeHistory
@@ -102,14 +90,13 @@ export default function Header(): JSX.Element {
   return (
     <div className="header-arrangement">
       <div className="header-start-display lg:w-[407px]">
-        <Link to="/all" className="cursor-pointer" onClick={checkForChanges}>
+        <Link to="/all" className="cursor-pointer">
           <span className="ml-4 text-2xl">⛓️</span>
         </Link>
         {showArrowReturnIcon && (
           <Button
             unstyled
             onClick={() => {
-              checkForChanges();
               redirectToLastLocation();
             }}
           >
@@ -131,7 +118,6 @@ export default function Header(): JSX.Element {
                 : "secondary"
             }
             size="sm"
-            onClick={checkForChanges}
           >
             <IconComponent name="Home" className="h-4 w-4" />
             <div className="hidden flex-1 md:block">{USER_PROJECTS_HEADER}</div>
@@ -144,7 +130,6 @@ export default function Header(): JSX.Element {
               className="gap-2"
               variant={location.pathname === "/store" ? "primary" : "secondary"}
               size="sm"
-              onClick={checkForChanges}
               data-testid="button-store"
             >
               <IconComponent name="Store" className="h-4 w-4" />

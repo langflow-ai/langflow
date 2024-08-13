@@ -16,7 +16,7 @@ class FolderBase(SQLModel):
     description: Optional[str] = Field(default=None)
 
 
-class Folder(FolderBase, table=True):
+class Folder(FolderBase, table=True):  # type: ignore
     id: Optional[UUID] = Field(default_factory=uuid4, primary_key=True)
     parent_id: Optional[UUID] = Field(default=None, foreign_key="folder.id")
 

@@ -1,5 +1,7 @@
+import LoadingComponent from "@/components/loadingComponent";
 import { useGetBuildsQuery } from "@/controllers/API/queries/_builds";
-import { getInputsAndOutputs } from "@/utils/storeUtils";
+import useAutoSaveFlow from "@/hooks/flows/use-autosave-flow";
+import useUploadFlow from "@/hooks/flows/use-upload-flow";
 import _, { cloneDeep } from "lodash";
 import {
   KeyboardEvent,
@@ -34,10 +36,9 @@ import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useShortcutsStore } from "../../../../stores/shortcuts";
 import { useTypesStore } from "../../../../stores/typesStore";
 import { APIClassType } from "../../../../types/api";
-import { FlowType, NodeType } from "../../../../types/flow";
+import { NodeType } from "../../../../types/flow";
 import {
   checkOldComponents,
-  cleanEdges,
   generateFlow,
   generateNodeFromFlow,
   getNodeId,
@@ -55,24 +56,13 @@ const nodeTypes = {
   genericNode: GenericNode,
 };
 
-export default function Page({
-  flow,
-  view,
-}: {
-  flow: FlowType;
-  view?: boolean;
-}): JSX.Element {
-  const uploadFlow = useFlowsManagerStore((state) => state.uploadFlow);
-  const autoSaveCurrentFlow = useFlowsManagerStore(
-    (state) => state.autoSaveCurrentFlow,
-  );
+export default function Page({ view }: { view?: boolean }): JSX.Element {
+  const uploadFlow = useUploadFlow();
+  const autoSaveFlow = useAutoSaveFlow();
   const types = useTypesStore((state) => state.types);
   const templates = useTypesStore((state) => state.templates);
   const setFilterEdge = useFlowStore((state) => state.setFilterEdge);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
-  const [showCanvas, setSHowCanvas] = useState(
-    Object.keys(templates).length > 0 && Object.keys(types).length > 0,
-  );
 
   const reactFlowInstance = useFlowStore((state) => state.reactFlowInstance);
   const setReactFlowInstance = useFlowStore(
@@ -84,7 +74,6 @@ export default function Page({
   const onEdgesChange = useFlowStore((state) => state.onEdgesChange);
   const setNodes = useFlowStore((state) => state.setNodes);
   const setEdges = useFlowStore((state) => state.setEdges);
-  const cleanFlow = useFlowStore((state) => state.cleanFlow);
   const deleteNode = useFlowStore((state) => state.deleteNode);
   const deleteEdge = useFlowStore((state) => state.deleteEdge);
   const undo = useFlowsManagerStore((state) => state.undo);
@@ -98,22 +87,17 @@ export default function Page({
     (state) => state.setLastCopiedSelection,
   );
   const onConnect = useFlowStore((state) => state.onConnect);
-  const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
+  const currentSavedFlow = useFlowsManagerStore((state) => state.currentFlow);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setNoticeData = useAlertStore((state) => state.setNoticeData);
+  const updateCurrentFlow = useFlowStore((state) => state.updateCurrentFlow);
   const [selectionMenuVisible, setSelectionMenuVisible] = useState(false);
   const edgeUpdateSuccessful = useRef(true);
 
   const position = useRef({ x: 0, y: 0 });
   const [lastSelection, setLastSelection] =
     useState<OnSelectionChangeParams | null>(null);
-
-  const setFlowState = useFlowStore((state) => state.setFlowState);
-  const setInputs = useFlowStore((state) => state.setInputs);
-  const setOutputs = useFlowStore((state) => state.setOutputs);
-  const setHasIO = useFlowStore((state) => state.setHasIO);
-  const { inputs, outputs } = getInputsAndOutputs(flow.data!.nodes);
-  const viewport = flow?.data?.viewport ?? { zoom: 1, x: 0, y: 0 };
+  const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
 
   function handleGroupNode() {
     takeSnapshot();
@@ -160,40 +144,23 @@ export default function Page({
     };
   }, [lastCopiedSelection, lastSelection, takeSnapshot, selectionMenuVisible]);
 
-  useEffect(() => {
-    if (reactFlowInstance && currentFlowId) {
-      reactFlowInstance!.setViewport(viewport);
-    }
-  }, [currentFlowId, reactFlowInstance]);
+  const { isFetching, refetch } = useGetBuildsQuery({});
 
-  const { isFetching } = useGetBuildsQuery({});
-
-  useEffect(() => {
-    if (!isFetching) {
-      let newEdges = cleanEdges(flow.data!.nodes, flow.data!.edges);
-      setNodes(flow.data!.nodes);
-      setEdges(newEdges);
-      setFlowState(undefined);
-      setInputs(inputs);
-      setOutputs(outputs);
-      setHasIO(inputs.length > 0 || outputs.length > 0);
-    }
-  }, [isFetching]);
+  const showCanvas =
+    Object.keys(templates).length > 0 &&
+    Object.keys(types).length > 0 &&
+    !isFetching;
 
   useEffect(() => {
-    if (checkOldComponents({ nodes: flow?.data?.nodes ?? [] })) {
+    refetch();
+    useFlowStore.setState({ autoSaveFlow });
+    if (checkOldComponents({ nodes })) {
       setNoticeData({
         title:
           "Components created before Langflow 1.0 may be unstable. Ensure components are up to date.",
       });
     }
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      cleanFlow();
-    };
-  }, []);
+  }, [currentFlowId]);
 
   function handleUndo(e: KeyboardEvent) {
     if (!isWrappedWithClass(e, "noflow")) {
@@ -315,12 +282,6 @@ export default function Page({
   //@ts-ignore
   useHotkeys("delete", handleDelete);
 
-  useEffect(() => {
-    setSHowCanvas(
-      Object.keys(templates).length > 0 && Object.keys(types).length > 0,
-    );
-  }, [templates, types]);
-
   const onConnectMod = useCallback(
     (params: Connection) => {
       takeSnapshot();
@@ -335,15 +296,17 @@ export default function Page({
     // 👉 you can place your event handlers here
   }, [takeSnapshot]);
 
-  const onNodeDragStop: NodeDragHandler = useCallback(() => {
-    autoSaveCurrentFlow(nodes, edges, reactFlowInstance?.getViewport()!);
-    // 👉 you can place your event handlers here
-  }, [takeSnapshot, autoSaveCurrentFlow, nodes, edges, reactFlowInstance]);
-
   const onMoveEnd: OnMove = useCallback(() => {
     // 👇 make moving the canvas undoable
-    autoSaveCurrentFlow(nodes, edges, reactFlowInstance?.getViewport()!);
-  }, [takeSnapshot, autoSaveCurrentFlow, nodes, edges, reactFlowInstance]);
+    autoSaveFlow();
+    updateCurrentFlow({ viewport: reactFlowInstance?.getViewport() });
+  }, [takeSnapshot, autoSaveFlow, nodes, edges, reactFlowInstance]);
+
+  const onNodeDragStop: NodeDragHandler = useCallback(() => {
+    // 👇 make moving the canvas undoable
+    autoSaveFlow();
+    updateCurrentFlow({ nodes });
+  }, [takeSnapshot, autoSaveFlow, nodes, edges, reactFlowInstance]);
 
   const onSelectionDragStart: SelectionDragHandler = useCallback(() => {
     // 👇 make dragging a selection undoable
@@ -387,28 +350,24 @@ export default function Page({
         );
       } else if (event.dataTransfer.types.some((types) => types === "Files")) {
         takeSnapshot();
-        if (event.dataTransfer.files.item(0)!.type === "application/json") {
-          const position = {
-            x: event.clientX,
-            y: event.clientY,
-          };
-          uploadFlow({
-            newProject: false,
-            isComponent: false,
-            file: event.dataTransfer.files.item(0)!,
-            position: position,
-          }).catch((error) => {
-            setErrorData({
-              title: UPLOAD_ERROR_ALERT,
-              list: [error],
-            });
-          });
-        } else {
+        const position = {
+          x: event.clientX,
+          y: event.clientY,
+        };
+        uploadFlow({
+          files: Array.from(event.dataTransfer.files!),
+          position: position,
+        }).catch((error) => {
           setErrorData({
-            title: WRONG_FILE_ERROR_ALERT,
-            list: [UPLOAD_ALERT_LIST],
+            title: UPLOAD_ERROR_ALERT,
+            list: [(error as Error).message],
           });
-        }
+        });
+      } else {
+        setErrorData({
+          title: WRONG_FILE_ERROR_ALERT,
+          list: [UPLOAD_ALERT_LIST],
+        });
       }
     },
     // Specify dependencies for useCallback
@@ -498,13 +457,13 @@ export default function Page({
             onEdgeUpdateStart={onEdgeUpdateStart}
             onEdgeUpdateEnd={onEdgeUpdateEnd}
             onNodeDragStart={onNodeDragStart}
-            onNodeDragStop={onNodeDragStop}
             onSelectionDragStart={onSelectionDragStart}
             onSelectionEnd={onSelectionEnd}
             onSelectionStart={onSelectionStart}
             connectionLineComponent={ConnectionLineComponent}
             onDragOver={onDragOver}
             onMoveEnd={onMoveEnd}
+            onNodeDragStop={onNodeDragStop}
             onDrop={onDrop}
             onSelectionChange={onSelectionChange}
             deleteKeyCode={[]}
@@ -533,7 +492,9 @@ export default function Page({
           </ReactFlow>
         </div>
       ) : (
-        <></>
+        <div className="flex h-full w-full items-center justify-center">
+          <LoadingComponent remSize={30} />
+        </div>
       )}
     </div>
   );

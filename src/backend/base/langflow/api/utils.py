@@ -215,3 +215,15 @@ def parse_exception(exc):
     if hasattr(exc, "body"):
         return exc.body["message"]
     return str(exc)
+
+
+def get_suggestion_message(outdated_components: list[str]) -> str:
+    """Get the suggestion message for the outdated components."""
+    count = len(outdated_components)
+    if count == 0:
+        return "The flow contains no outdated components."
+    elif count == 1:
+        return f"The flow contains 1 outdated component. We recommend updating the following component: {outdated_components[0]}."
+    else:
+        components = ", ".join(outdated_components)
+        return f"The flow contains {count} outdated components. We recommend updating the following components: {components}."

@@ -1,12 +1,11 @@
 from typing import Any, List, Optional
 
-
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.base.tools.flow_tool import FlowTool
 from langflow.field_typing import Tool
 from langflow.graph.graph.base import Graph
 from langflow.helpers.flow import get_flow_inputs
-from langflow.io import BoolInput, DropdownInput, StrInput, Output
+from langflow.io import BoolInput, DropdownInput, Output, StrInput
 from langflow.schema import Data
 from langflow.schema.dotdict import dotdict
 
@@ -73,7 +72,10 @@ class FlowToolComponent(LCToolComponent):
 
     def build_tool(self) -> Tool:
         FlowTool.update_forward_refs()
-        flow_data = self.get_flow(self.flow_name)
+        if "flow_name" not in self._attributes or not self._attributes["flow_name"]:
+            raise ValueError("Flow name is required")
+        flow_name = self._attributes["flow_name"]
+        flow_data = self.get_flow(flow_name)
         if not flow_data:
             raise ValueError("Flow not found.")
         graph = Graph.from_payload(flow_data.data["data"])
@@ -85,7 +87,7 @@ class FlowToolComponent(LCToolComponent):
             return_direct=self.return_direct,
             inputs=inputs,
             flow_id=str(flow_data.id),
-            user_id=str(self._user_id),
+            user_id=str(self.user_id),
         )
         description_repr = repr(tool.description).strip("'")
         args_str = "\n".join([f"- {arg_name}: {arg_data['description']}" for arg_name, arg_data in tool.args.items()])

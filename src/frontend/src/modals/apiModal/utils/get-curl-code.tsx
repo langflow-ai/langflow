@@ -1,3 +1,5 @@
+import useFlowStore from "@/stores/flowStore";
+
 /**
  * Function to get the curl code for the API
  * @param {string} flowId - The id of the flow
@@ -11,6 +13,10 @@ export function getCurlRunCode(
   endpointName?: string | null,
 ): string {
   let tweaksString = "{}";
+  const inputs = useFlowStore.getState().inputs;
+  const outputs = useFlowStore.getState().outputs;
+  const hasChatInput = inputs.some((input) => input.type === "ChatInput");
+  const hasChatOutput = outputs.some((output) => output.type === "ChatOutput");
   if (tweaksBuildedObject)
     tweaksString = JSON.stringify(tweaksBuildedObject, null, 2);
   // show the endpoint name in the curl command if it exists
@@ -22,8 +28,8 @@ export function getCurlRunCode(
       !isAuth ? `\n  -H 'x-api-key: <your api key>'\\` : ""
     }
     -d '{"input_value": "message",
-    "output_type": "chat",
-    "input_type": "chat",
+    "output_type": ${hasChatOutput ? "chat" : "text"},
+    "input_type": ${hasChatInput ? "chat" : "text"},
     "tweaks": ${tweaksString}}'
     `;
 }

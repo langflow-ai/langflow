@@ -1,5 +1,6 @@
 import importlib
 import inspect
+import json
 import re
 from functools import wraps
 from pathlib import Path
@@ -11,7 +12,7 @@ from langflow.schema import Data
 from langflow.services.deps import get_settings_service
 from langflow.template.frontend_node.constants import FORCE_SHOW_FIELDS
 from langflow.utils import constants
-from langflow.utils.logger import logger
+from langflow.logging.logger import logger
 
 
 def unescape_string(s: str):
@@ -456,3 +457,7 @@ def is_class_method(func, cls):
     Check if a function is a class method.
     """
     return inspect.ismethod(func) and func.__self__ is cls.__class__
+
+
+def escape_json_dump(edge_dict):
+    return json.dumps(edge_dict).replace('"', "œ")

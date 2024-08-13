@@ -2,8 +2,7 @@ from typing import Optional
 from uuid import UUID
 
 from sqlalchemy.exc import IntegrityError
-from sqlmodel import Session, select, col
-from sqlalchemy import delete
+from sqlmodel import Session, col, delete, select
 
 from langflow.services.database.models.vertex_builds.model import VertexBuildBase, VertexBuildTable
 
@@ -32,5 +31,5 @@ def log_vertex_build(db: Session, vertex_build: VertexBuildBase) -> VertexBuildT
 
 
 def delete_vertex_builds_by_flow_id(db: Session, flow_id: UUID) -> None:
-    delete(VertexBuildTable).where(VertexBuildTable.flow.has(id=flow_id))  # type: ignore
+    db.exec(delete(VertexBuildTable).where(VertexBuildTable.flow_id == flow_id))
     db.commit()

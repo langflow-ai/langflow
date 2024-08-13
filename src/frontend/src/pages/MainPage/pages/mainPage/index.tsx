@@ -1,6 +1,6 @@
 import { useDeleteFolders } from "@/controllers/API/queries/folders";
 import useAlertStore from "@/stores/alertStore";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import DropdownButton from "../../../../components/dropdownButtonComponent";
 import PageLayout from "../../../../components/pageLayout";
@@ -9,18 +9,12 @@ import {
   MY_COLLECTION_DESC,
   USER_PROJECTS_HEADER,
 } from "../../../../constants/constants";
-import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useFolderStore } from "../../../../stores/foldersStore";
 import ModalsComponent from "../../components/modalsComponent";
 import useDropdownOptions from "../../hooks/use-dropdown-options";
 import { getFolderById } from "../../services";
 
 export default function HomePage(): JSX.Element {
-  const uploadFlow = useFlowsManagerStore((state) => state.uploadFlow);
-  const setCurrentFlowId = useFlowsManagerStore(
-    (state) => state.setCurrentFlowId,
-  );
-
   const location = useLocation();
   const pathname = location.pathname;
   const [openModal, setOpenModal] = useState(false);
@@ -36,12 +30,7 @@ export default function HomePage(): JSX.Element {
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
   const getFoldersApi = useFolderStore((state) => state.getFoldersApi);
 
-  useEffect(() => {
-    setCurrentFlowId("");
-  }, [pathname]);
-
   const dropdownOptions = useDropdownOptions({
-    uploadFlow,
     navigate,
     is_component,
   });

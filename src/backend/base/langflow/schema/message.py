@@ -23,7 +23,14 @@ from langflow.utils.constants import (
 )
 
 
-def _timestamp_to_str(timestamp: datetime) -> str:
+def _timestamp_to_str(timestamp: datetime | str) -> str:
+    if isinstance(timestamp, str):
+        # Just check if the string is a valid datetime
+        try:
+            datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S")
+            return timestamp
+        except ValueError:
+            raise ValueError(f"Invalid timestamp: {timestamp}")
     return timestamp.strftime("%Y-%m-%d %H:%M:%S")
 
 
@@ -157,10 +164,11 @@ class Message(Data):
         return value
 
     def sync_get_file_content_dicts(self):
-        coro = self.aget_file_content_dicts()
+        coro = self.get_file_content_dicts()
         loop = asyncio.get_event_loop()
         return loop.run_until_complete(coro)
 
+    # Keep this async method for backwards compatibility
     async def get_file_content_dicts(self):
         content_dicts = []
         files = await get_file_paths(self.files)
