@@ -36,12 +36,20 @@ AI: """
     chat_output.set(input_value=openai_component.text_response)
 
     graph = Graph(chat_input, chat_output)
+    assert graph.in_degree_map == {"chat_output": 1, "prompt": 2, "openai": 1, "chat_input": 0, "chat_memory": 0}
     return graph
 
 
 def test_memory_chatbot(memory_chatbot_graph):
     # Now we run step by step
     expected_order = deque(["chat_input", "chat_memory", "prompt", "openai", "chat_output"])
+    assert memory_chatbot_graph.in_degree_map == {
+        "chat_output": 1,
+        "prompt": 2,
+        "openai": 1,
+        "chat_input": 0,
+        "chat_memory": 0,
+    }
     for step in expected_order:
         result = memory_chatbot_graph.step()
         if isinstance(result, Finish):
