@@ -211,6 +211,13 @@ class Component(CustomComponent):
             return self._outputs[name]
         raise ValueError(f"Output {name} not found in {self.__class__.__name__}")
 
+    def set_on_output(self, name: str, **kwargs):
+        output = self.get_output(name)
+        for key, value in kwargs.items():
+            if not hasattr(output, key):
+                raise ValueError(f"Output {name} does not have a method {key}")
+            setattr(output, key, value)
+
     def set_output_value(self, name: str, value: Any):
         if name in self._outputs:
             self._outputs[name].value = value
