@@ -16,7 +16,7 @@ class OllamaEmbeddingsComponent(LCModelComponent):
         MessageTextInput(
             name="model",
             display_name="Ollama Model",
-            value="llama2",
+            value="llama3.1",
         ),
         MessageTextInput(
             name="base_url",

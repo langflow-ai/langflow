@@ -77,8 +77,8 @@ class ChatOllamaComponent(LCModelComponent):
         DropdownInput(
             name="model_name",
             display_name="Model Name",
-            value="llama3",
-            info="Refer to https://ollama.ai/library for more models.",
+            value="llama3.1",
+            info="Refer to https://ollama.com/library for more models.",
             refresh_button=True,
         ),
         FloatInput(
