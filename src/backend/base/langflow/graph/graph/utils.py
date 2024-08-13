@@ -404,3 +404,9 @@ def find_all_cycle_edges(entry_point: str, edges: list[tuple[str, str]]) -> list
     rec_stack: set[str] = set()
 
     return dfs(entry_point, visited, rec_stack)
+
+
+def should_continue(yielded_counts: dict[str, int], max_iterations: int | None) -> bool:
+    if max_iterations is None:
+        return True
+    return max(yielded_counts.values(), default=0) <= max_iterations
