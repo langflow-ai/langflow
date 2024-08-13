@@ -85,12 +85,10 @@ export default function NodeOutputField({
 
   function handleOutputWShortcut() {
     if (!displayOutputPreview || unknownOutput) return;
-    console.log("output shortcut");
     if (selected) {
       setOpenOutputModal((state) => !state);
     }
   }
-  console.log("outputName", outputName);
   const output = useShortcutsStore((state) => state.output);
   useHotkeys(output, handleOutputWShortcut, { preventDefault });
 
