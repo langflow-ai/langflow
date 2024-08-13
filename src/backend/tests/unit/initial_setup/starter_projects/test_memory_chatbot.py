@@ -46,7 +46,7 @@ def test_memory_chatbot(memory_chatbot_graph):
         result = memory_chatbot_graph.step()
         if isinstance(result, Finish):
             break
-        assert step == result.vertex.id
+        assert step == result.vertex.id, memory_chatbot_graph.in_degree_map
 
 
 def test_memory_chatbot_dump_structure(memory_chatbot_graph: Graph):
