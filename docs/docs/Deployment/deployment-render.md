@@ -20,7 +20,12 @@ Deploying Langflow to Render is a straightforward process that can be completed 
 
    ![](./1861599636.png)
 
-3. **Deploy**: After selecting the configuration, proceed to deploy your Langflow instance. You can keep the default Starter instance, or change it to another instance based on your specific needs. Click Apply to deploy the instance. Render will handle the rest, including setting up the database, deploying the Langflow instance, and starting the application.
+3. **Deploy**: After selecting the configuration, proceed to deploy your Langflow instance.
+4. Select the **Standard** plan. Langflow needs at least 2 GB RAM.
+
+   ![](./render-deploy-plan.png)
+
+5. Click **Apply** to deploy the instance. Render will handle the rest, including setting up the database, deploying the Langflow instance, and starting the application.
 
    ![](./1929176153.png)
 
