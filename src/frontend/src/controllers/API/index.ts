@@ -141,34 +141,6 @@ export async function saveFlowToDatabase(newFlow: {
     throw error;
   }
 }
-/**
- * Updates an existing flow in the database.
- *
- * @param {FlowType} updatedFlow - The updated flow data.
- * @returns {Promise<any>} The updated flow data.
- * @throws Will throw an error if the update fails.
- */
-export async function updateFlowInDatabase(
-  updatedFlow: FlowType,
-): Promise<FlowType> {
-  try {
-    const response = await api.patch(`${BASE_URL_API}flows/${updatedFlow.id}`, {
-      name: updatedFlow.name,
-      data: updatedFlow.data,
-      description: updatedFlow.description,
-      folder_id: updatedFlow.folder_id === "" ? null : updatedFlow.folder_id,
-      endpoint_name: updatedFlow.endpoint_name,
-    });
-
-    if (response && response?.status !== 200) {
-      throw new Error(`HTTP error! status: ${response?.status}`);
-    }
-    return response?.data;
-  } catch (error) {
-    console.error(error);
-    throw error;
-  }
-}
 
 /**
  * Reads all flows from the database.

@@ -4,7 +4,7 @@ import {
 } from "@/controllers/API/queries/auth";
 import * as Form from "@radix-ui/react-form";
 import { cloneDeep } from "lodash";
-import { useContext, useEffect, useState } from "react";
+import { useContext, useState } from "react";
 import IconComponent from "../../components/genericIconComponent";
 import Header from "../../components/headerComponent";
 import InputComponent from "../../components/inputComponent";
@@ -18,7 +18,6 @@ import {
 import { CONTROL_PATCH_USER_STATE } from "../../constants/constants";
 import { AuthContext } from "../../contexts/authContext";
 import useAlertStore from "../../stores/alertStore";
-import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import {
   inputHandlerEventType,
   patchUserInputStateType,
@@ -26,18 +25,9 @@ import {
 import { gradients } from "../../utils/styleUtils";
 import GradientChooserComponent from "../SettingsPage/pages/GeneralPage/components/ProfilePictureForm/components/profilePictureChooserComponent";
 export default function ProfileSettingsPage(): JSX.Element {
-  const setCurrentFlowId = useFlowsManagerStore(
-    (state) => state.setCurrentFlowId,
-  );
-
   const [inputState, setInputState] = useState<patchUserInputStateType>(
     CONTROL_PATCH_USER_STATE,
   );
-
-  // set null id
-  useEffect(() => {
-    setCurrentFlowId("");
-  }, []);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const { userData, setUserData } = useContext(AuthContext);

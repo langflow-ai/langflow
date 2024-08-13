@@ -47,10 +47,6 @@ test("flowSettings", async ({ page }) => {
 
   await page.getByTestId("save-flow-settings").click();
 
-  await page.getByText("Close").last().click();
-
-  await page.waitForTimeout(1000);
-
   await page.getByText("Changes saved successfully").isVisible();
 
   await page.getByTestId("flow_name").click();
