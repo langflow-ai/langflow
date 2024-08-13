@@ -8,7 +8,7 @@
 
 <p align="center" style="font-size: 12px;">
     <a href="https://docs.langflow.org" style="text-decoration: underline;">Docs</a> -
-    <a href="http://langflow.datastax.com" style="text-decoration: underline;">Free Cloud Service</a> -
+    <a href="https://astra.datastax.com/signup?type=langflow" style="text-decoration: underline;">Free Cloud Service</a> -
     <a href="https://docs.langflow.org/getting-started-installation" style="text-decoration: underline;">Self Managed</a>
     
 </p>
