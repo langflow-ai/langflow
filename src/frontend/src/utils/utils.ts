@@ -565,9 +565,9 @@ export function tryParseJson(json: string) {
 
 export function openInNewTab(url) {
   window.open(url, "_blank", "noreferrer");
-};
+}
 
-export function getNodeLength(data:NodeDataType){
+export function getNodeLength(data: NodeDataType) {
   return Object.keys(data.node!.template).filter(
     (templateField) =>
       templateField.charAt(0) !== "_" &&
