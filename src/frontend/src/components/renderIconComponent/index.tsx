@@ -1,21 +1,20 @@
 import { IS_MAC } from "@/constants/constants";
-import { addPlusSignes, sortShortcuts } from "@/utils/utils";
+import { addPlusSignes, cn, sortShortcuts } from "@/utils/utils";
 import RenderKey from "./components/renderKey";
 
 export default function RenderIcons({
-  hasShift,
   filteredShortcut,
+  tableRender=false,
 }: {
-  isMac?: boolean;
-  hasShift: boolean;
   filteredShortcut: string[];
+  tableRender?: boolean;
 }): JSX.Element {
-  const shortcutList = addPlusSignes((hasShift? [...filteredShortcut,"shift"]: filteredShortcut).sort(sortShortcuts));
+  const shortcutList = addPlusSignes([...filteredShortcut].sort(sortShortcuts));
   return (
-    <span className="flex items-center justify-center gap-0.5 text-xs">
+    <span className={cn("flex items-center gap-0.5",tableRender?"justify-start":"justify-center text-xs")}>
       {shortcutList.map((key, index) => (
-        <span key={index} className="text-xs">
-          <RenderKey value={key} />
+        <span key={index}>
+          <RenderKey value={key} tableRender={tableRender}  />
         </span>
       ))}
     </span>

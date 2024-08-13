@@ -6,12 +6,12 @@ import { Button } from "../../../../../components/ui/button";
 import BaseModal from "../../../../../modals/baseModal";
 import { useShortcutsStore } from "../../../../../stores/shortcuts";
 import { toTitleCase } from "../../../../../utils/utils";
+import RenderKey from "@/components/renderIconComponent/components/renderKey";
 
 export default function EditShortcutButton({
   children,
   shortcut,
   defaultShortcuts,
-  defaultCombination,
   open,
   setOpen,
   disable,
@@ -20,7 +20,6 @@ export default function EditShortcutButton({
   children: JSX.Element;
   shortcut: string[];
   defaultShortcuts: Array<{ name: string; shortcut: string }>;
-  defaultCombination: string;
   open: boolean;
   setOpen: (bool: boolean) => void;
   disable?: boolean;
@@ -161,10 +160,11 @@ export default function EditShortcutButton({
       <BaseModal.Trigger>{children}</BaseModal.Trigger>
       <BaseModal.Content>
         <div className="align-center flex h-full w-full justify-center gap-4 rounded-md border border-border py-2">
-          <div className="flex items-center justify-center text-center text-lg font-bold">
-            {key === null
-              ? shortcutInitialValue?.toUpperCase()
-              : key.toUpperCase()}
+          <div className="flex items-center justify-center text-center text-lg font-bold gap-0.5">
+            {((key??(shortcutInitialValue??"")).split("+")).map((k, i) => (
+                <RenderKey key={i} value={k} tableRender />
+                ))
+            }
           </div>
         </div>
       </BaseModal.Content>

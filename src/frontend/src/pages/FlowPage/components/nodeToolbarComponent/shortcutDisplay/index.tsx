@@ -7,18 +7,7 @@ export default function ShortcutDisplay({
   name: string;
   shortcut: string;
 }): JSX.Element {
-  let hasShift: boolean = false;
   const fixedShortcut = shortcut?.split("+");
-  fixedShortcut.forEach((key) => {
-    if (key.toLowerCase().includes("shift")) {
-      hasShift = true;
-    }
-  });
-  const filteredShortcut = fixedShortcut.filter(
-    (key) => !key.toLowerCase().includes("shift"),
-  );
-  let shortcutWPlus: string[] = [];
-  if (!hasShift) shortcutWPlus = filteredShortcut.join("+").split(" ");
   return (
     <div className="flex justify-center">
       <span> {name} </span>
@@ -26,8 +15,7 @@ export default function ShortcutDisplay({
         className={`ml-3 flex items-center rounded-sm bg-muted px-1.5 py-[0.1em] text-lg text-muted-foreground`}
       >
         <RenderIcons
-          hasShift={hasShift}
-          filteredShortcut={filteredShortcut}
+          filteredShortcut={fixedShortcut}
         />
       </span>
     </div>

@@ -11,19 +11,7 @@ export default function ToolbarSelectItem({
   ping,
   shortcut,
 }: toolbarSelectItemProps) {
-  let hasShift = false;
   const fixedShortcut = shortcut?.split("+");
-  fixedShortcut.forEach((key) => {
-    if (key.toLowerCase().includes("shift")) {
-      hasShift = true;
-    }
-  });
-  const filteredShortcut = fixedShortcut.filter(
-    (key) => !key.toLowerCase().includes("shift"),
-  );
-  let shortcutWPlus: string[] = [];
-  if (!hasShift) shortcutWPlus = filteredShortcut.join("+").split(" ");
-
   return (
     <div className={`flex ${style}`} data-testid={dataTestId}>
       <ForwardedIconComponent
@@ -41,8 +29,7 @@ export default function ToolbarSelectItem({
         className={`absolute right-2 top-[0.43em] flex items-center rounded-sm bg-muted px-1.5 py-[0.1em] text-muted-foreground`}
       >
         <RenderIcons
-          hasShift={hasShift}
-          filteredShortcut={filteredShortcut}
+          filteredShortcut={fixedShortcut}
         />
       </span>
     </div>
