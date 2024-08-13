@@ -7,7 +7,7 @@ from collections import defaultdict, deque
 from datetime import datetime, timezone
 from functools import partial
 from itertools import chain
-from typing import TYPE_CHECKING, Any, Dict, Generator, List, Optional, Tuple, Type, Union
+from typing import TYPE_CHECKING, Any, Dict, Generator, Iterable, List, Optional, Set, Tuple, Type, Union, cast
 
 import nest_asyncio
 from loguru import logger
@@ -1538,15 +1538,15 @@ class Graph:
         # Edge takes two vertices as arguments, so we need to build the vertices first
         # and then build the edges
         # if we can't find a vertex, we raise an error
-        edges: set[ContractEdge | Edge] = set()
+        edges: Set[ContractEdge | Edge] = set()
         for edge in self._edges:
             new_edge = self.build_edge(edge)
             edges.add(new_edge)
         if self.vertices and not edges:
             warnings.warn("Graph has vertices but no edges")
-        return list(edges)
+        return list(cast(Iterable[ContractEdge], edges))
 
-    def build_edge(self, edge: EdgeData) -> ContractEdge:
+    def build_edge(self, edge: EdgeData) -> ContractEdge | Edge:
         source = self.get_vertex(edge["source"])
         target = self.get_vertex(edge["target"])
 
@@ -1555,7 +1555,7 @@ class Graph:
         if target is None:
             raise ValueError(f"Target vertex {edge['target']} not found")
         if (source.id, target.id) in self.cycles:
-            new_edge = ContractEdge(source, target, edge)
+            new_edge: ContractEdge | Edge = ContractEdge(source, target, edge)
         else:
             new_edge = Edge(source, target, edge)
         return new_edge

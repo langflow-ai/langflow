@@ -1,6 +1,6 @@
 import asyncio
 import json
-from typing import TYPE_CHECKING, Any, AsyncIterator, Dict, Generator, Iterator, List
+from typing import TYPE_CHECKING, Any, AsyncIterator, Dict, Generator, Iterator, List, cast
 
 import yaml
 from langchain_core.messages import AIMessage, AIMessageChunk
@@ -102,7 +102,7 @@ class ComponentVertex(Vertex):
                 # We need to check if the edge is a normal edge
                 # or a contract edge
 
-                if edge.is_cycle:
+                if edge.is_cycle and edge.target_param:
                     return requester.get_value_from_template_dict(edge.target_param)
 
             raise ValueError(f"Component {self.display_name} has not been built yet")
@@ -112,7 +112,6 @@ class ComponentVertex(Vertex):
 
         edges = self.get_edge_with_target(requester.id)
         result = UNDEFINED
-        edge = None
         for edge in edges:
             if edge is not None and edge.source_handle.name in self.results:
                 # Get the result from the output instead of the results dict
@@ -120,7 +119,7 @@ class ComponentVertex(Vertex):
                 if output.value is UNDEFINED:
                     result = self.results[edge.source_handle.name]
                 else:
-                    result = output.value
+                    result = cast(Any, output.value)
                 # result = self.results[edge.source_handle.name]
                 break
         if result is UNDEFINED:

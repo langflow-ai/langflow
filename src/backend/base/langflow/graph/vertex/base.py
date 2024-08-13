@@ -251,7 +251,10 @@ class Vertex:
                     break
 
     def get_value_from_template_dict(self, key: str):
-        return self.data.get("node").get("template").get(key).get("value")
+        template_dict = self.data.get("node", {}).get("template", {})
+        if key not in template_dict:
+            raise ValueError(f"Key {key} not found in template dict")
+        return template_dict.get(key, {}).get("value")
 
     def get_task(self):
         # using the task_id, get the task from celery
