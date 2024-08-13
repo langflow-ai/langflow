@@ -16,7 +16,7 @@ The easiest way to get started with Langflow is through the DataStax Cloud Servi
 
 
 
-**DataStax Langflow** is a hosted version of Langflow integrated with [AstraDB](https://www.datastax.com/products/datastax-astra). Be up and running in minutes with no installation or setup required. [Sign up for free](https://langflow.datastax.com/).
+**DataStax Langflow** is a hosted version of Langflow integrated with [Astra DB](https://www.datastax.com/products/datastax-astra). Be up and running in minutes with no installation or setup required. [Sign up for free](https://astra.datastax.com/signup?type=langflow).
 
 
 ![](./602374500.png)

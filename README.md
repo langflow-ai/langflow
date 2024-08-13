@@ -8,7 +8,7 @@
 
 <p align="center" style="font-size: 12px;">
     <a href="https://docs.langflow.org" style="text-decoration: underline;">Docs</a> -
-    <a href="http://langflow.datastax.com" style="text-decoration: underline;">Free Cloud Service</a> -
+    <a href="https://astra.datastax.com/signup?type=langflow" style="text-decoration: underline;">Free Cloud Service</a> -
     <a href="https://docs.langflow.org/getting-started-installation" style="text-decoration: underline;">Self Managed</a>
     
 </p>
@@ -49,7 +49,7 @@ Star Langflow on GitHub to be instantly notified of new releases.
 pip install langflow
 ```
 
-- **Cloud:** DataStax Langflow is a hosted environment with zero setup. [Sign up for a free account.](http://langflow.datastax.com) 
+- **Cloud:** DataStax Langflow is a hosted environment with zero setup. [Sign up for a free account.](https://astra.datastax.com/signup?type=langflow) 
 - **Self-managed:** Run Langflow in your environment. [Install Langflow](https://docs.langflow.org/getting-started-installation) to run a local Langflow server, and then use the [Quickstart](https://docs.langflow.org/getting-started-quickstart) guide to create and execute a flow.
 - **Hugging Face:** [Clone the space using this link](https://huggingface.co/spaces/Langflow/Langflow?duplicate=true) to create a Langflow workspace.
 
