@@ -28,7 +28,6 @@ export default function ShortcutDisplay({
         <RenderIcons
           hasShift={hasShift}
           filteredShortcut={filteredShortcut}
-          shortcutWPlus={shortcutWPlus}
         />
       </span>
     </div>

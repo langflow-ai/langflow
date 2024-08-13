@@ -41,10 +41,8 @@ export default function ToolbarSelectItem({
         className={`absolute right-2 top-[0.43em] flex items-center rounded-sm bg-muted px-1.5 py-[0.1em] text-muted-foreground`}
       >
         <RenderIcons
-          isMac={IS_MAC}
           hasShift={hasShift}
           filteredShortcut={filteredShortcut}
-          shortcutWPlus={shortcutWPlus}
         />
       </span>
     </div>
