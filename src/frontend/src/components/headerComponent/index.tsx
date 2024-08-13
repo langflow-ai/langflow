@@ -89,7 +89,7 @@ export default function Header(): JSX.Element {
 
   return (
     <div className="header-arrangement">
-      <div className="header-start-display lg:w-[407px]">
+      <div className="header-start-display lg:w-[450px]">
         <Link to="/all" className="cursor-pointer">
           <span className="ml-4 text-2xl">⛓️</span>
         </Link>

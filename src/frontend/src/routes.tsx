@@ -12,6 +12,7 @@ import { ProtectedLoginRoute } from "./components/authLoginGuard";
 import { AuthSettingsGuard } from "./components/authSettingsGuard";
 import { CatchAllRoute } from "./components/catchAllRoutes";
 import { StoreGuard } from "./components/storeGuard";
+import { AppWrapperPage } from "./pages/AppWrapperPage";
 const MessagesPage = lazy(
   () => import("./pages/SettingsPage/pages/messagesPage"),
 );
@@ -44,7 +45,7 @@ const ViewPage = lazy(() => import("./pages/ViewPage"));
 
 const router = createBrowserRouter(
   createRoutesFromElements([
-    <Route path="" element={<App />}>
+    <Route path="" element={<AppWrapperPage />}>
       <Route
         path="/"
         element={
