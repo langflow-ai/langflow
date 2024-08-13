@@ -5315,13 +5315,13 @@ requests = ">=2,<3"
 
 [[package]]
 name = "langwatch"
-version = "0.1.18"
+version = "0.1.19"
 description = "Python SDK for LangWatch for monitoring your LLMs"
 optional = false
 python-versions = "<3.13,>=3.9"
 files = [
-    {file = "langwatch-0.1.18-py3-none-any.whl", hash = "sha256:73e469fee96d1bebfc54f27b8413d2f108124139ca2df7510063e3a1ea2dc3c1"},
-    {file = "langwatch-0.1.18.tar.gz", hash = "sha256:a0e6dbfedca02502bf5abafd7cf9ef8d1bffd8c0d6bac0d932d1209c97752c0e"},
+    {file = "langwatch-0.1.19-py3-none-any.whl", hash = "sha256:65b3e2f2f011a7fefe3ec7d51aa969858356afbf6f78b1518f508593d28e2f31"},
+    {file = "langwatch-0.1.19.tar.gz", hash = "sha256:f4557bb6cb17d183ca51179a7e39b5fa9eab09bd793821aa89e66275e2f54a4b"},
 ]
 
 [package.dependencies]
@@ -5343,13 +5343,13 @@ openai = ["openai (>=1.3.7,<2.0.0)"]
 
 [[package]]
 name = "litellm"
-version = "1.43.7"
+version = "1.43.9"
 description = "Library to easily interface with LLM API providers"
 optional = false
 python-versions = "!=2.7.*,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,!=3.6.*,!=3.7.*,>=3.8"
 files = [
-    {file = "litellm-1.43.7-py3-none-any.whl", hash = "sha256:88d9d8dcb4579839106941f1ce59143ab926af986a2206cce4bcda1ae153a78c"},
-    {file = "litellm-1.43.7.tar.gz", hash = "sha256:b6ef8db0c7555d590957c37b228584efc5e9154b925ab0fffb112be26f1ab5ab"},
+    {file = "litellm-1.43.9-py3-none-any.whl", hash = "sha256:54253281139e61f130b7e1a613a11f7a5ee896c2ee8536b0ca9a5ffbfce4c5f0"},
+    {file = "litellm-1.43.9.tar.gz", hash = "sha256:c397a14c9b851f007f09c99e5a28606f7f122fdb4ae954931220f60e9edc6918"},
 ]
 
 [package.dependencies]
@@ -5371,12 +5371,12 @@ proxy = ["PyJWT (>=2.8.0,<3.0.0)", "apscheduler (>=3.10.4,<4.0.0)", "backoff", "
 
 [[package]]
 name = "llama-cpp-python"
-version = "0.2.87"
+version = "0.2.88"
 description = "Python bindings for the llama.cpp library"
 optional = true
 python-versions = ">=3.8"
 files = [
-    {file = "llama_cpp_python-0.2.87.tar.gz", hash = "sha256:4dff585f533131aa44b7d9e79a62d60172f317aef15d7bf4bafeb074b55a48c4"},
+    {file = "llama_cpp_python-0.2.88.tar.gz", hash = "sha256:b031181d069aa61b3bbec415037b1f060d6d5b36951815f438285c4c85ca693e"},
 ]
 
 [package.dependencies]
@@ -5812,15 +5812,14 @@ requests = "*"
 
 [[package]]
 name = "milvus-lite"
-version = "2.4.8"
+version = "2.4.9"
 description = "A lightweight version of Milvus wrapped with Python."
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "milvus_lite-2.4.8-py3-none-macosx_10_9_x86_64.whl", hash = "sha256:b7e90b34b214884cd44cdc112ab243d4cb197b775498355e2437b6cafea025fe"},
-    {file = "milvus_lite-2.4.8-py3-none-macosx_11_0_arm64.whl", hash = "sha256:519dfc62709d8f642d98a1c5b1dcde7080d107e6e312d677fef5a3412a40ac08"},
-    {file = "milvus_lite-2.4.8-py3-none-manylinux2014_aarch64.whl", hash = "sha256:b21f36d24cbb0e920b4faad607019bb28c1b2c88b4d04680ac8c7697a4ae8a4d"},
-    {file = "milvus_lite-2.4.8-py3-none-manylinux2014_x86_64.whl", hash = "sha256:08332a2b9abfe7c4e1d7926068937e46f8fb81f2707928b7bc02c9dc99cebe41"},
+    {file = "milvus_lite-2.4.9-py3-none-macosx_10_9_x86_64.whl", hash = "sha256:d3e617b3d68c09ad656d54bc3d8cc4ef6ef56c54015e1563d4fe4bcec6b7c90a"},
+    {file = "milvus_lite-2.4.9-py3-none-macosx_11_0_arm64.whl", hash = "sha256:6e7029282d6829b277ebb92f64e2370be72b938e34770e1eb649346bda5d1d7f"},
+    {file = "milvus_lite-2.4.9-py3-none-manylinux2014_x86_64.whl", hash = "sha256:7f53e674602101cfbcf0a4a59d19eaa139dfd5580639f3040ad73d901f24fc0b"},
 ]
 
 [package.dependencies]
@@ -10718,13 +10717,13 @@ types-setuptools = "*"
 
 [[package]]
 name = "types-google-cloud-ndb"
-version = "2.3.0.20240806"
+version = "2.3.0.20240813"
 description = "Typing stubs for google-cloud-ndb"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "types-google-cloud-ndb-2.3.0.20240806.tar.gz", hash = "sha256:a704043988bb8fe2179006f98d3b343f17d4e2a067985ab2dc571af7cc159551"},
-    {file = "types_google_cloud_ndb-2.3.0.20240806-py3-none-any.whl", hash = "sha256:1419ac1f08e437a2b1824de840c5ed8f2b5b260f61b65c6be1b63cc68e6cd1ed"},
+    {file = "types-google-cloud-ndb-2.3.0.20240813.tar.gz", hash = "sha256:f69b4f1abc4a2c423b288ffc48d2994b59358bfc151824614abc1d3f7f19f18d"},
+    {file = "types_google_cloud_ndb-2.3.0.20240813-py3-none-any.whl", hash = "sha256:79404e04e97324d0b6466f297e92e734a38fb9cd064c2f3816820311bc6c3f57"},
 ]
 
 [[package]]
@@ -10853,13 +10852,13 @@ urllib3 = ">=2"
 
 [[package]]
 name = "types-setuptools"
-version = "71.1.0.20240806"
+version = "71.1.0.20240813"
 description = "Typing stubs for setuptools"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "types-setuptools-71.1.0.20240806.tar.gz", hash = "sha256:ae5e7b4d643ab9e99fc00ac00041804118cabe72a56183c30d524fb064897ad6"},
-    {file = "types_setuptools-71.1.0.20240806-py3-none-any.whl", hash = "sha256:3bd8dd02039be0bb79ad880d8893b8eefcb022fabbeeb61245c61b20c9ab1ed0"},
+    {file = "types-setuptools-71.1.0.20240813.tar.gz", hash = "sha256:94ff4f0af18c7c24ac88932bcb0f5655fb7187a001b7c61e53a1bfdaf9877b54"},
+    {file = "types_setuptools-71.1.0.20240813-py3-none-any.whl", hash = "sha256:d9d9ba2936f5d3b47b59ae9bf65942a60063ac1d6bbee180a8a79fbb43f22ce5"},
 ]
 
 [[package]]
@@ -11196,13 +11195,13 @@ files = [
 
 [[package]]
 name = "uvicorn"
-version = "0.30.5"
+version = "0.30.6"
 description = "The lightning-fast ASGI server."
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "uvicorn-0.30.5-py3-none-any.whl", hash = "sha256:b2d86de274726e9878188fa07576c9ceeff90a839e2b6e25c917fe05f5a6c835"},
-    {file = "uvicorn-0.30.5.tar.gz", hash = "sha256:ac6fdbd4425c5fd17a9fe39daf4d4d075da6fdc80f653e5894cdc2fd98752bee"},
+    {file = "uvicorn-0.30.6-py3-none-any.whl", hash = "sha256:65fd46fe3fda5bdc1b03b94eb634923ff18cd35b2f084813ea79d1f103f711b5"},
+    {file = "uvicorn-0.30.6.tar.gz", hash = "sha256:4b15decdda1e72be08209e860a1e10e92439ad5b97cf44cc945fcbee66fc5788"},
 ]
 
 [package.dependencies]

@@ -6715,13 +6715,13 @@ types-setuptools = "*"
 
 [[package]]
 name = "types-google-cloud-ndb"
-version = "2.3.0.20240806"
+version = "2.3.0.20240813"
 description = "Typing stubs for google-cloud-ndb"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "types-google-cloud-ndb-2.3.0.20240806.tar.gz", hash = "sha256:a704043988bb8fe2179006f98d3b343f17d4e2a067985ab2dc571af7cc159551"},
-    {file = "types_google_cloud_ndb-2.3.0.20240806-py3-none-any.whl", hash = "sha256:1419ac1f08e437a2b1824de840c5ed8f2b5b260f61b65c6be1b63cc68e6cd1ed"},
+    {file = "types-google-cloud-ndb-2.3.0.20240813.tar.gz", hash = "sha256:f69b4f1abc4a2c423b288ffc48d2994b59358bfc151824614abc1d3f7f19f18d"},
+    {file = "types_google_cloud_ndb-2.3.0.20240813-py3-none-any.whl", hash = "sha256:79404e04e97324d0b6466f297e92e734a38fb9cd064c2f3816820311bc6c3f57"},
 ]
 
 [[package]]
@@ -6850,13 +6850,13 @@ urllib3 = ">=2"
 
 [[package]]
 name = "types-setuptools"
-version = "71.1.0.20240806"
+version = "71.1.0.20240813"
 description = "Typing stubs for setuptools"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "types-setuptools-71.1.0.20240806.tar.gz", hash = "sha256:ae5e7b4d643ab9e99fc00ac00041804118cabe72a56183c30d524fb064897ad6"},
-    {file = "types_setuptools-71.1.0.20240806-py3-none-any.whl", hash = "sha256:3bd8dd02039be0bb79ad880d8893b8eefcb022fabbeeb61245c61b20c9ab1ed0"},
+    {file = "types-setuptools-71.1.0.20240813.tar.gz", hash = "sha256:94ff4f0af18c7c24ac88932bcb0f5655fb7187a001b7c61e53a1bfdaf9877b54"},
+    {file = "types_setuptools-71.1.0.20240813-py3-none-any.whl", hash = "sha256:d9d9ba2936f5d3b47b59ae9bf65942a60063ac1d6bbee180a8a79fbb43f22ce5"},
 ]
 
 [[package]]
@@ -6930,13 +6930,13 @@ zstd = ["zstandard (>=0.18.0)"]
 
 [[package]]
 name = "uvicorn"
-version = "0.30.5"
+version = "0.30.6"
 description = "The lightning-fast ASGI server."
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "uvicorn-0.30.5-py3-none-any.whl", hash = "sha256:b2d86de274726e9878188fa07576c9ceeff90a839e2b6e25c917fe05f5a6c835"},
-    {file = "uvicorn-0.30.5.tar.gz", hash = "sha256:ac6fdbd4425c5fd17a9fe39daf4d4d075da6fdc80f653e5894cdc2fd98752bee"},
+    {file = "uvicorn-0.30.6-py3-none-any.whl", hash = "sha256:65fd46fe3fda5bdc1b03b94eb634923ff18cd35b2f084813ea79d1f103f711b5"},
+    {file = "uvicorn-0.30.6.tar.gz", hash = "sha256:4b15decdda1e72be08209e860a1e10e92439ad5b97cf44cc945fcbee66fc5788"},
 ]
 
 [package.dependencies]
