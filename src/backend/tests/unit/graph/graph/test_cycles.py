@@ -79,3 +79,33 @@ def test_cycle_in_graph():
         "text_output",
         "chat_output",
     ], f"Results: {results_ids}"
+
+
+def test_cycle_in_graph_max_iterations():
+    chat_input = ChatInput(_id="chat_input")
+    router = ConditionalRouterComponent(_id="router")
+    chat_input.set(input_value=router.false_response)
+    concat_component = Concatenate(_id="concatenate")
+    concat_component.set(text=chat_input.message_response)
+    router.set(
+        input_text=chat_input.message_response,
+        match_text="testtesttesttest",
+        operator="equals",
+        message=concat_component.concatenate,
+    )
+    text_output = TextOutputComponent(_id="text_output")
+    text_output.set(input_value=router.true_response)
+    chat_output = ChatOutput(_id="chat_output")
+    chat_output.set(input_value=text_output.text_response)
+
+    graph = Graph(chat_input, chat_output)
+    assert graph.is_cyclic is True
+
+    # Run queue should contain chat_input and not router
+    assert "chat_input" in graph._run_queue
+    assert "router" not in graph._run_queue
+    results = []
+
+    with pytest.raises(ValueError, match="Max iterations reached"):
+        for result in graph.start(max_iterations=1):
+            results.append(result)
