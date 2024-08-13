@@ -50,11 +50,15 @@ def test_memory_chatbot(memory_chatbot_graph):
         "chat_input": 0,
         "chat_memory": 0,
     }
+    assert memory_chatbot_graph.vertices_layers == [["prompt"], ["openai"], ["chat_output"]]
+    assert memory_chatbot_graph.first_layer == ["chat_input", "chat_memory"]
+
     for step in expected_order:
         result = memory_chatbot_graph.step()
         if isinstance(result, Finish):
             break
-        assert step == result.vertex.id, memory_chatbot_graph.in_degree_map
+
+        assert step == result.vertex.id, (memory_chatbot_graph.in_degree_map, memory_chatbot_graph.vertices_layers)
 
 
 def test_memory_chatbot_dump_structure(memory_chatbot_graph: Graph):
