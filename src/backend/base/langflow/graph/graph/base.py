@@ -13,13 +13,19 @@ import nest_asyncio
 from loguru import logger
 
 from langflow.exceptions.component import ComponentBuildException
-from langflow.graph.edge.base import ContractEdge
+from langflow.graph.edge.base import ContractEdge, Edge
 from langflow.graph.edge.schema import EdgeData
 from langflow.graph.graph.constants import Finish, lazy_load_vertex_dict
 from langflow.graph.graph.runnable_vertices_manager import RunnableVerticesManager
 from langflow.graph.graph.schema import GraphData, GraphDump, VertexBuildResult
 from langflow.graph.graph.state_manager import GraphStateManager
-from langflow.graph.graph.utils import find_start_component_id, process_flow, sort_up_to_vertex
+from langflow.graph.graph.utils import (
+    find_all_cycle_edges,
+    find_start_component_id,
+    has_cycle,
+    process_flow,
+    sort_up_to_vertex,
+)
 from langflow.graph.schema import InterfaceComponentTypes, RunOutputs
 from langflow.graph.vertex.base import Vertex, VertexStates
 from langflow.graph.vertex.schema import NodeData
