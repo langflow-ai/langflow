@@ -770,8 +770,12 @@ export const defaultShortcuts = [
     shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + Shift + D`,
   },
   {
-    name: "Save",
+    name: "Changes Save",
     shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + S`,
+  },
+  {
+    name: "Save Component",
+    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + Alt + S`,
   },
   {
     name: "Delete",
@@ -880,5 +884,5 @@ export const LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS_ENV =
   Number(process.env.ACCESS_TOKEN_EXPIRE_SECONDS) -
   Number(process.env.ACCESS_TOKEN_EXPIRE_SECONDS) * 0.1;
 export const TEXT_FIELD_TYPES: string[] = ["str", "SecretStr"];
-export const NODE_WIDTH = 384;
+export const NODE_WIDTH = 400;
 export const NODE_HEIGHT = NODE_WIDTH * 3;

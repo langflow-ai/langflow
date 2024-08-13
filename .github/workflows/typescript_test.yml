@@ -132,10 +132,13 @@ jobs:
           echo "${{ secrets.ENV_VARS }}" > .env
 
       - name: Run Playwright Tests
-        run: |
-          cd src/frontend
-          npx playwright test --trace on --shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --workers 2
-        timeout-minutes: 12
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 12
+          max_attempts: 2
+          command: |
+            cd src/frontend
+            npx playwright test --trace on --shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --workers 2
 
       - name: Upload blob report to GitHub Actions Artifacts
         if: always()

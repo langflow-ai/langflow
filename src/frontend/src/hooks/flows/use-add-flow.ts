@@ -49,7 +49,7 @@ const useAddFlow = () => {
       const my_collection_id = useFolderStore.getState().myCollectionId;
 
       if (params?.override && flow) {
-        const flowId = flows.find((f) => f.name === flow.name);
+        const flowId = flows?.find((f) => f.name === flow.name);
         if (flowId) {
           await deleteFlow({ id: flowId.id });
         }
@@ -60,7 +60,7 @@ const useAddFlow = () => {
         flow,
       );
 
-      const newName = addVersionToDuplicates(newFlow, flows);
+      const newName = addVersionToDuplicates(newFlow, flows ?? []);
       newFlow.name = newName;
       newFlow.folder_id = useFolderStore.getState().folderUrl;
 
@@ -68,7 +68,10 @@ const useAddFlow = () => {
         onSuccess: ({ id }) => {
           newFlow.id = id;
           // Add the new flow to the list of flows.
-          const { data, flows: myFlows } = processFlows([newFlow, ...flows]);
+          const { data, flows: myFlows } = processFlows([
+            newFlow,
+            ...(flows ?? []),
+          ]);
           setFlows(myFlows);
           useTypesStore.setState((state) => ({
             data: { ...state.data, ["saved_components"]: data },

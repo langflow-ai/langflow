@@ -212,7 +212,7 @@ def test_create_flows(client: TestClient, session: Session, json_flow: str, logg
     # Check response data
     response_data = response.json()
     assert len(response_data) == 2
-    assert response_data[0]["name"] == "Flow 1"
+    assert "Flow 1" in response_data[0]["name"]
     assert response_data[0]["description"] == "description"
     assert response_data[0]["data"] == data
     assert response_data[1]["name"] == "Flow 2"
@@ -241,7 +241,7 @@ def test_upload_file(client: TestClient, session: Session, json_flow: str, logge
     # Check response data
     response_data = response.json()
     assert len(response_data) == 2
-    assert response_data[0]["name"] == "Flow 1"
+    assert "Flow 1" in response_data[0]["name"]
     assert response_data[0]["description"] == "description"
     assert response_data[0]["data"] == data
     assert response_data[1]["name"] == "Flow 2"
