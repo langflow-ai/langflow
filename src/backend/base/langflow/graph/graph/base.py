@@ -68,6 +68,7 @@ class Graph:
             log_config = {"disable": False}
         configure(**log_config)
         self._start = start
+        self._state_model = None
         self._end = end
         self._prepared = False
         self._runs = 0
