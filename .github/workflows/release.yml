@@ -36,6 +36,7 @@ env:
 
 jobs:
   ci:
+    if: ${{ github.event.inputs.release_package_base == true || github.event.inputs.release_package_main == true }}
     name: CI
     uses: ./.github/workflows/ci.yml
 
