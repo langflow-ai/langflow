@@ -1,12 +1,12 @@
 import ForwardedIconComponent from "../genericIconComponent";
 
 export default function RenderIcons({
-  isMac,
+  isMac=navigator.platform.toUpperCase().includes("MAC"),
   hasShift,
   filteredShortcut,
   shortcutWPlus,
 }: {
-  isMac: boolean;
+  isMac?: boolean;
   hasShift: boolean;
   filteredShortcut: string[];
   shortcutWPlus: string[];
