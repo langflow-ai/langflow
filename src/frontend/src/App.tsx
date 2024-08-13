@@ -2,7 +2,6 @@ import { Suspense, useContext, useEffect } from "react";
 import { Cookies } from "react-cookie";
 import { RouterProvider } from "react-router-dom";
 import "reactflow/dist/style.css";
-import "./App.css";
 import LoadingComponent from "./components/loadingComponent";
 import {
   LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS,
