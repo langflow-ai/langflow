@@ -64,7 +64,8 @@ export default function NodeInputField({
   }, [optionalHandle]);
 
   const displayHandle =
-    !LANGFLOW_SUPPORTED_TYPES.has(type ?? "") || (optionalHandle && optionalHandle.length > 0);
+    !LANGFLOW_SUPPORTED_TYPES.has(type ?? "") ||
+    (optionalHandle && optionalHandle.length > 0);
 
   const Handle = (
     <HandleRenderComponent
