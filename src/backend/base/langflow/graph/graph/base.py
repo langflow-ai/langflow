@@ -17,10 +17,10 @@ from langflow.graph.edge.base import ContractEdge
 from langflow.graph.edge.schema import EdgeData
 from langflow.graph.graph.constants import Finish, lazy_load_vertex_dict
 from langflow.graph.graph.runnable_vertices_manager import RunnableVerticesManager
-from langflow.graph.graph.schema import GraphData, GraphDump, VertexBuildResult
+from langflow.graph.graph.schema import GraphData, GraphDump, StartConfigDict, VertexBuildResult
 from langflow.graph.graph.state_manager import GraphStateManager
 from langflow.graph.graph.state_model import create_state_model_from_graph
-from langflow.graph.graph.utils import find_start_component_id, process_flow, sort_up_to_vertex
+from langflow.graph.graph.utils import find_start_component_id, process_flow, should_continue, sort_up_to_vertex
 from langflow.graph.schema import InterfaceComponentTypes, RunOutputs
 from langflow.graph.vertex.base import Vertex, VertexStates
 from langflow.graph.vertex.schema import NodeData
@@ -247,7 +247,7 @@ class Graph:
         }
         self._add_edge(edge_data)
 
-    async def async_start(self, inputs: Optional[List[dict]] = None):
+    async def async_start(self, inputs: Optional[List[dict]] = None, max_iterations: Optional[int] = None):
         if not self._prepared:
             raise ValueError("Graph not prepared. Call prepare() first.")
         # The idea is for this to return a generator that yields the result of
