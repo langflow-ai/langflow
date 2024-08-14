@@ -778,7 +778,7 @@ class Graph:
                     continue
             self.mark_branch(child_id, state)
 
-    def get_edge(self, source_id: str, target_id: str) -> Optional[ContractEdge]:
+    def get_edge(self, source_id: str, target_id: str) -> Optional[CycleEdge]:
         """Returns the edge between two vertices."""
         for edge in self.edges:
             if edge.source_id == source_id and edge.target_id == target_id:
@@ -1475,13 +1475,13 @@ class Graph:
                 neighbors[neighbor] += 1
         return neighbors
 
-    def _build_edges(self) -> List[ContractEdge]:
+    def _build_edges(self) -> List[CycleEdge]:
         """Builds the edges of the graph."""
         # Edge takes two vertices as arguments, so we need to build the vertices first
         # and then build the edges
         # if we can't find a vertex, we raise an error
 
-        edges: set[ContractEdge] = set()
+        edges: set[CycleEdge] = set()
         for edge in self._edges:
             new_edge = self.build_edge(edge)
             edges.add(new_edge)
@@ -1489,7 +1489,7 @@ class Graph:
             warnings.warn("Graph has vertices but no edges")
         return list(edges)
 
-    def build_edge(self, edge: EdgeData) -> ContractEdge:
+    def build_edge(self, edge: EdgeData) -> CycleEdge:
         source = self.get_vertex(edge["source"])
         target = self.get_vertex(edge["target"])
 
@@ -1497,7 +1497,7 @@ class Graph:
             raise ValueError(f"Source vertex {edge['source']} not found")
         if target is None:
             raise ValueError(f"Target vertex {edge['target']} not found")
-        new_edge = ContractEdge(source, target, edge)
+        new_edge = CycleEdge(source, target, edge)
         return new_edge
 
     def _get_vertex_class(self, node_type: str, node_base_type: str, node_id: str) -> Type["Vertex"]:
