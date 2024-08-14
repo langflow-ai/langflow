@@ -5,12 +5,21 @@ from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
 from langflow.io import FloatInput, SecretStrInput, DropdownInput
 
+PERPLEXITY_MODEL_NAMES = [
+    "llama-3.1-sonar-small-128k-online",
+    "llama-3.1-sonar-large-128k-online",
+    "llama-3.1-sonar-huge-128k-online",
+    "llama-3.1-sonar-small-128k-chat",
+    "llama-3.1-sonar-large-128k-chat",
+    "llama-3.1-8b-instruct",
+    "llama-3.1-70b-instruct",
+]
 
 class PerplexityComponent(LCModelComponent):
     display_name = "Perplexity"
     description = "Generate text using Perplexity LLMs."
-    documentation = "https://python.langchain.com/docs/modules/model_io/models/llms/integrations/cohere"
-    icon = "Google"
+    documentation = "https://python.langchain.com/v0.2/docs/integrations/chat/perplexity/"
+    icon = "Perplexity"
     name = "PerplexityModel"
 
     inputs = LCModelComponent._base_inputs + [
@@ -18,8 +27,8 @@ class PerplexityComponent(LCModelComponent):
             name="model_name",
             display_name="Model Name",
             advanced=False,
-            options=['llama-3-sonar-small-32k-online'],
-            value="llama-3-sonar-small-32k-online",
+            options=PERPLEXITY_MODEL_NAMES,
+            value=PERPLEXITY_MODEL_NAMES[0],
         ),
         SecretStrInput(
             name="api_key",
