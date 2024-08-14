@@ -15,6 +15,7 @@ PERPLEXITY_MODEL_NAMES = [
     "llama-3.1-70b-instruct",
 ]
 
+
 class PerplexityComponent(LCModelComponent):
     display_name = "Perplexity"
     description = "Generate text using Perplexity LLMs."
