@@ -112,7 +112,7 @@ def test_vector_store_rag(ingestion_graph, rag_graph):
     ]
     for ids, graph, len_results in zip([ingestion_ids, rag_ids], [ingestion_graph, rag_graph], [5, 8]):
         results = []
-        for result in graph.start():
+        for result in graph.start(config={"output": True}):
             results.append(result)
 
         assert len(results) == len_results
