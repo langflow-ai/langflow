@@ -7,6 +7,7 @@ import nanoid  # type: ignore
 import yaml
 from pydantic import BaseModel
 
+from langflow.custom.utils import find_closest_match
 from langflow.graph.state.model import create_state_model
 from langflow.helpers.custom import format_type
 from langflow.schema.artifact import get_artifact_type, post_process_raw
@@ -417,7 +418,15 @@ class Component(CustomComponent):
 
     def _map_parameters_on_template(self, template: dict):
         for name, value in self._parameters.items():
-            template[name]["value"] = value
+            try:
+                template[name]["value"] = value
+            except KeyError:
+                close_match = find_closest_match(name, list(template.keys()))
+                if close_match:
+                    raise ValueError(
+                        f"Parameter '{name}' not found in {self.__class__.__name__}. " f"Did you mean '{close_match}'?"
+                    )
+                raise ValueError(f"Parameter {name} not found in {self.__class__.__name__}. ")
 
     def _get_method_return_type(self, method_name: str) -> List[str]:
         method = getattr(self, method_name)
