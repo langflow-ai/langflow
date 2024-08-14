@@ -23,7 +23,6 @@ export function AppWrapperPage() {
     isError: isErrorHealth,
     refetch,
   } = useGetHealthQuery();
-  const isLoadingApplication = isLoading;
   return (
     <div className="flex h-full flex-col">
       <ErrorBoundary
@@ -52,7 +51,7 @@ export function AppWrapperPage() {
           <div
             className={cn(
               "loading-page-panel absolute left-0 top-0 z-[999]",
-              isLoadingApplication ? "" : "hidden",
+              isLoading ? "" : "hidden",
             )}
           >
             <LoadingComponent remSize={50} />
