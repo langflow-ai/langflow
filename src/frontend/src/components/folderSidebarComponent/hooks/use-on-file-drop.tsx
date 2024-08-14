@@ -1,33 +1,24 @@
+import { usePostUploadFlowToFolder } from "@/controllers/API/queries/folders/use-post-upload-to-folder";
 import useSaveFlow from "@/hooks/flows/use-save-flow";
 import {
   UPLOAD_ALERT_LIST,
   WRONG_FILE_ERROR_ALERT,
 } from "../../../constants/alerts_constants";
-import { uploadFlowToFolder } from "../../../pages/MainPage/services";
 import useAlertStore from "../../../stores/alertStore";
 import useFlowsManagerStore from "../../../stores/flowsManagerStore";
 import { useFolderStore } from "../../../stores/foldersStore";
 import { addVersionToDuplicates } from "../../../utils/reactflowUtils";
 
-const useFileDrop = (
-  folderId: string,
-  folderChangeCallback: (folderId: string) => void,
-) => {
+const useFileDrop = (folderId: string) => {
   const setFolderDragging = useFolderStore((state) => state.setFolderDragging);
   const setFolderIdDragging = useFolderStore(
     (state) => state.setFolderIdDragging,
   );
 
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  const refreshFolders = useFolderStore((state) => state.refreshFolders);
   const flows = useFlowsManagerStore((state) => state.flows);
   const saveFlow = useSaveFlow();
-
-  const triggerFolderChange = (folderId) => {
-    if (folderChangeCallback) {
-      folderChangeCallback(folderId);
-    }
-  };
+  const { mutate: uploadFlowToFolder } = usePostUploadFlowToFolder();
   const handleFileDrop = async (e) => {
     if (e.dataTransfer.types.some((type) => type === "Files")) {
       if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
@@ -121,10 +112,7 @@ const useFileDrop = (
     setFolderDragging(false);
     setFolderIdDragging("");
 
-    saveFlow(updatedFlow).then(() => {
-      refreshFolders();
-      triggerFolderChange(folderId);
-    });
+    saveFlow(updatedFlow);
   };
 
   const uploadFormData = (data) => {
@@ -133,10 +121,7 @@ const useFileDrop = (
     setFolderDragging(false);
     setFolderIdDragging("");
 
-    uploadFlowToFolder(formData, folderId).then(() => {
-      refreshFolders();
-      triggerFolderChange(folderId);
-    });
+    uploadFlowToFolder({ flows: formData, folderId });
   };
 
   return {

@@ -1,5 +1,5 @@
 /// <reference types="vite-plugin-svgr/client" />
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import BlogPost from "../../../../assets/undraw_blog_post_re_fy5x.svg?react";
 import ChatBot from "../../../../assets/undraw_chat_bot_re_e2gj.svg?react";
 import PromptChaining from "../../../../assets/undraw_cloud_docs_re_xjht.svg?react";
@@ -26,12 +26,10 @@ export default function UndrawCardComponent({
 }: UndrawCardComponentProps): JSX.Element {
   const addFlow = useAddFlow();
   const navigate = useNavigate();
-  const location = useLocation();
-  const folderId = location?.state?.folderId;
-  const setFolderUrl = useFolderStore((state) => state.setFolderUrl);
+  const { folderId } = useParams();
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
 
-  const folderIdUrl = folderId || myCollectionId || "";
+  const folderIdUrl = folderId ?? myCollectionId;
 
   function selectImage() {
     switch (flow.name) {
@@ -143,7 +141,6 @@ export default function UndrawCardComponent({
       onClick={() => {
         updateIds(flow.data!);
         addFlow({ flow }).then((id) => {
-          setFolderUrl(folderId ?? "");
           navigate(`/flow/${id}/folder/${folderIdUrl}`);
         });
       }}

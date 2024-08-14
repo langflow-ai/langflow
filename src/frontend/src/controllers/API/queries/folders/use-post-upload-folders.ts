@@ -11,7 +11,7 @@ export const usePostUploadFolders: useMutationFunctionType<
   undefined,
   IPostAddUploadFolders
 > = (options?) => {
-  const { mutate } = UseRequestProcessor();
+  const { mutate, queryClient } = UseRequestProcessor();
 
   const uploadFoldersFn = async (
     payload: IPostAddUploadFolders,
@@ -23,7 +23,12 @@ export const usePostUploadFolders: useMutationFunctionType<
     return res.data;
   };
 
-  const mutation = mutate(["usePostUploadFolders"], uploadFoldersFn, options);
+  const mutation = mutate(["usePostUploadFolders"], uploadFoldersFn, {
+    ...options,
+    onSettled: () => {
+      queryClient.refetchQueries({ queryKey: ["useGetFolders"] });
+    },
+  });
 
   return mutation;
 };

@@ -1,7 +1,5 @@
 import { AddFolderType } from "@/pages/MainPage/entities";
-import useFlowsManagerStore from "@/stores/flowsManagerStore";
-import { useFolderStore } from "@/stores/foldersStore";
-import { Users, useMutationFunctionType } from "@/types/api";
+import { useMutationFunctionType } from "@/types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
@@ -14,7 +12,7 @@ export const usePostFolders: useMutationFunctionType<
   undefined,
   IPostAddFolders
 > = (options?) => {
-  const { mutate } = UseRequestProcessor();
+  const { mutate, queryClient } = UseRequestProcessor();
 
   const addFoldersFn = async (newFolder: IPostAddFolders): Promise<void> => {
     const payload = {
@@ -28,7 +26,12 @@ export const usePostFolders: useMutationFunctionType<
     return res.data;
   };
 
-  const mutation = mutate(["usePostFolders"], addFoldersFn, options);
+  const mutation = mutate(["usePostFolders"], addFoldersFn, {
+    ...options,
+    onSettled: () => {
+      queryClient.refetchQueries({ queryKey: ["useGetFolders"] });
+    },
+  });
 
   return mutation;
 };

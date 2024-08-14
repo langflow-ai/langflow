@@ -1,10 +1,7 @@
 import { useLocation } from "react-router-dom";
-import { FolderType } from "../../pages/MainPage/entities";
-import { useFolderStore } from "../../stores/foldersStore";
 import { cn } from "../../utils/utils";
 import HorizontalScrollFadeComponent from "../horizontalScrollFadeComponent";
 import SideBarButtonsComponent from "./components/sideBarButtons";
-import SideBarFoldersButtonsComponent from "./components/sideBarFolderButtons";
 
 type SidebarNavProps = {
   items: {
@@ -12,44 +9,21 @@ type SidebarNavProps = {
     title: string;
     icon: React.ReactNode;
   }[];
-  handleChangeFolder?: (id: string) => void;
-  handleEditFolder?: (item: FolderType) => void;
-  handleDeleteFolder?: (item: FolderType) => void;
   className?: string;
 };
 
 export default function SidebarNav({
   className,
   items,
-  handleChangeFolder,
-  handleEditFolder,
-  handleDeleteFolder,
   ...props
 }: SidebarNavProps) {
   const location = useLocation();
   const pathname = location.pathname;
-  const loadingFolders = useFolderStore((state) => state.isLoadingFolders);
-  const folders = useFolderStore((state) => state.folders);
-
-  const pathValues = ["folder", "components", "flows", "all"];
-  const isFolderPath = pathValues.some((value) => pathname.includes(value));
-
-  // Ensure all conditions are covered and provide a default case if necessary
-  const sidebarContent =
-    items.length > 0 ? (
-      <SideBarButtonsComponent items={items} pathname={pathname} />
-    ) : !loadingFolders && folders?.length > 0 && isFolderPath ? (
-      <SideBarFoldersButtonsComponent
-        pathname={pathname}
-        handleChangeFolder={handleChangeFolder}
-        handleDeleteFolder={handleDeleteFolder}
-      />
-    ) : null;
 
   return (
     <nav className={cn(className)} {...props}>
       <HorizontalScrollFadeComponent>
-        {sidebarContent!}
+        <SideBarButtonsComponent items={items} pathname={pathname} />
       </HorizontalScrollFadeComponent>
     </nav>
   );

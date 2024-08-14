@@ -55,16 +55,12 @@ export default function Header(): JSX.Element {
   }`;
 
   const redirectToLastLocation = () => {
-    const lastFlowVisitedIndex = routeHistory
+    const lastVisitedIndex = routeHistory
       .reverse()
-      .findIndex(
-        (path) => path.includes("/flow/") && path !== location.pathname,
-      );
+      .findIndex((path) => path !== location.pathname);
 
-    const lastFlowVisited = routeHistory[lastFlowVisitedIndex];
-    lastFlowVisited && !location.pathname.includes("/flow")
-      ? navigate(lastFlowVisited)
-      : navigate("/all");
+    const lastFlowVisited = routeHistory[lastVisitedIndex];
+    lastFlowVisited ? navigate(lastFlowVisited) : navigate("/all");
   };
 
   const visitedFlowPathBefore = () => {
@@ -108,7 +104,7 @@ export default function Header(): JSX.Element {
       </div>
 
       <div className="round-button-div">
-        <Link to="/">
+        <Link to="/all">
           <Button
             className="gap-2"
             variant={

@@ -1,16 +1,10 @@
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
-import { useLocation } from "react-router-dom";
 import { CONSOLE_ERROR_MSG } from "../../../constants/alerts_constants";
 import useAlertStore from "../../../stores/alertStore";
-import { useFolderStore } from "../../../stores/foldersStore";
 
 const useFileDrop = (type?: string) => {
-  const location = useLocation();
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  const getFolderById = useFolderStore((state) => state.getFolderById);
-  const folderId = location?.state?.folderId;
-  const myCollectionId = useFolderStore((state) => state.myCollectionId);
   const uploadFlow = useUploadFlow();
 
   const handleFileDrop = (e) => {
@@ -26,7 +20,6 @@ const useFileDrop = (type?: string) => {
           setSuccessData({
             title: `All files uploaded successfully`,
           });
-          getFolderById(folderId ? folderId : myCollectionId);
         })
         .catch((error) => {
           console.log(error);

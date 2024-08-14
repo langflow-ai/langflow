@@ -54,6 +54,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
   const currentSavedFlow = useFlowsManagerStore((state) => state.currentFlow);
   const updatedAt = currentSavedFlow?.updated_at;
   const onFlowPage = useFlowStore((state) => state.onFlowPage);
+  const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
 
   const changesNotSaved =
     customStringify(currentFlow) !== customStringify(currentSavedFlow) &&
@@ -71,6 +72,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
   function handleAddFlow() {
     try {
       addFlow().then((id) => {
+        setCurrentFlow(undefined); // Reset current flow for useEffect of flowPage to update the current flow
         navigate("/flow/" + id);
       });
     } catch (err) {

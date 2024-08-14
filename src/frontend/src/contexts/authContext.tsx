@@ -8,7 +8,6 @@ import useAuthStore from "@/stores/authStore";
 import { createContext, useEffect, useState } from "react";
 import Cookies from "universal-cookie";
 import useAlertStore from "../stores/alertStore";
-import { useFolderStore } from "../stores/foldersStore";
 import { useStoreStore } from "../stores/storeStore";
 import { Users } from "../types/api";
 import { AuthContextType } from "../types/contexts/auth";
@@ -38,8 +37,6 @@ export function AuthProvider({ children }): React.ReactElement {
     cookies.get(LANGFLOW_API_TOKEN),
   );
 
-  const getFoldersApi = useFolderStore((state) => state.getFoldersApi);
-
   const checkHasStore = useStoreStore((state) => state.checkHasStore);
   const fetchApiData = useStoreStore((state) => state.fetchApiData);
   const setIsAuthenticated = useAuthStore((state) => state.setIsAuthenticated);
@@ -68,7 +65,6 @@ export function AuthProvider({ children }): React.ReactElement {
           setUserData(user);
           const isSuperUser = user!.is_superuser;
           useAuthStore.getState().setIsAdmin(isSuperUser);
-          getFoldersApi(true, true);
           checkHasStore();
           fetchApiData();
         },

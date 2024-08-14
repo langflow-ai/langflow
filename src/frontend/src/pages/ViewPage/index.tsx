@@ -1,5 +1,6 @@
 import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
 import useFlowStore from "@/stores/flowStore";
+import { useTypesStore } from "@/stores/typesStore";
 import { useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
@@ -15,19 +16,30 @@ export default function ViewPage() {
 
   const flows = useFlowsManagerStore((state) => state.flows);
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
+  const refreshFlows = useFlowsManagerStore((state) => state.refreshFlows);
+  const setIsLoading = useFlowsManagerStore((state) => state.setIsLoading);
+  const getTypes = useTypesStore((state) => state.getTypes);
 
   // Set flow tab id
   useEffect(() => {
-    if (flows && currentFlowId === "") {
-      const isAnExistingFlow = flows.find((flow) => flow.id === id);
+    const awaitgetTypes = async () => {
+      if (flows && currentFlowId === "") {
+        const isAnExistingFlow = flows.find((flow) => flow.id === id);
 
-      if (!isAnExistingFlow) {
-        navigate("/all");
-        return;
+        if (!isAnExistingFlow) {
+          navigate("/all");
+          return;
+        }
+
+        setCurrentFlow(isAnExistingFlow);
+      } else if (!flows) {
+        setIsLoading(true);
+        await refreshFlows();
+        await getTypes();
+        setIsLoading(false);
       }
-
-      setCurrentFlow(isAnExistingFlow);
-    }
+    };
+    awaitgetTypes();
   }, [id, flows]);
 
   useEffect(() => {
@@ -35,7 +47,7 @@ export default function ViewPage() {
 
     return () => {
       setOnFlowPage(false);
-      setCurrentFlow();
+      setCurrentFlow(undefined);
     };
   }, [id]);
 

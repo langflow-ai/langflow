@@ -5,7 +5,6 @@ import {
   Navigate,
   Route,
 } from "react-router-dom";
-import App from "./App";
 import { ProtectedAdminRoute } from "./components/authAdminGuard";
 import { ProtectedRoute } from "./components/authGuard";
 import { ProtectedLoginRoute } from "./components/authLoginGuard";
@@ -56,17 +55,34 @@ const router = createBrowserRouter(
       >
         <Route index element={<Navigate replace to={"all"} />} />
         <Route
-          path="flows/*"
+          path="flows/"
           element={<MyCollectionComponent key="flows" type="flow" />}
-        />
+        >
+          <Route
+            path="folder/:folderId"
+            element={<MyCollectionComponent key="flows" type="flow" />}
+          />
+        </Route>
         <Route
-          path="components/*"
+          path="components/"
           element={<MyCollectionComponent key="components" type="component" />}
-        />
+        >
+          <Route
+            path="folder/:folderId"
+            element={
+              <MyCollectionComponent key="components" type="component" />
+            }
+          />
+        </Route>
         <Route
-          path="all/*"
+          path="all/"
           element={<MyCollectionComponent key="all" type="all" />}
-        />
+        >
+          <Route
+            path="folder/:folderId"
+            element={<MyCollectionComponent key="all" type="all" />}
+          />
+        </Route>
       </Route>
       <Route
         path="/settings"
@@ -122,7 +138,7 @@ const router = createBrowserRouter(
       </Route>
       <Route path="/flow/:id/">
         <Route
-          path="*"
+          path="folder/:folderId/"
           element={
             <ProtectedRoute>
               <FlowPage />

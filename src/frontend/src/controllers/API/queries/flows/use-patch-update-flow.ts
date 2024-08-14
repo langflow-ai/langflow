@@ -18,7 +18,7 @@ export const usePatchUpdateFlow: useMutationFunctionType<
   undefined,
   IPatchUpdateFlow
 > = (options?) => {
-  const { mutate } = UseRequestProcessor();
+  const { mutate, queryClient } = UseRequestProcessor();
 
   const PatchUpdateFlowFn = async (payload: IPatchUpdateFlow): Promise<any> => {
     const response = await api.patch(`${getURL("FLOWS")}/${payload.id}`, {
@@ -33,7 +33,14 @@ export const usePatchUpdateFlow: useMutationFunctionType<
   };
 
   const mutation: UseMutationResult<IPatchUpdateFlow, any, IPatchUpdateFlow> =
-    mutate(["usePatchUpdateFlow"], PatchUpdateFlowFn, options);
+    mutate(["usePatchUpdateFlow"], PatchUpdateFlowFn, {
+      ...options,
+      onSettled: () => {
+        queryClient.refetchQueries({
+          queryKey: ["useGetFolder"],
+        });
+      },
+    });
 
   return mutation;
 };
