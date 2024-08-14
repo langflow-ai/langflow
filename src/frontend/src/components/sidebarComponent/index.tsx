@@ -13,7 +13,6 @@ type SidebarNavProps = {
     icon: React.ReactNode;
   }[];
   handleChangeFolder?: (id: string) => void;
-  handleEditFolder?: (item: FolderType) => void;
   handleDeleteFolder?: (item: FolderType) => void;
   className?: string;
 };
@@ -22,7 +21,6 @@ export default function SidebarNav({
   className,
   items,
   handleChangeFolder,
-  handleEditFolder,
   handleDeleteFolder,
   ...props
 }: SidebarNavProps) {

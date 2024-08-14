@@ -18,7 +18,6 @@ export default function HomePage(): JSX.Element {
   const location = useLocation();
   const pathname = location.pathname;
   const [openModal, setOpenModal] = useState(false);
-  const [openFolderModal, setOpenFolderModal] = useState(false);
   const [openDeleteFolderModal, setOpenDeleteFolderModal] = useState(false);
   const is_component = pathname === "/components";
   const setFolderToEdit = useFolderStore((state) => state.setFolderToEdit);
@@ -84,10 +83,6 @@ export default function HomePage(): JSX.Element {
               items={[]}
               handleChangeFolder={(id: string) => {
                 navigate(`all/folder/${id}`, { state: { folderId: id } });
-              }}
-              handleEditFolder={(item) => {
-                setFolderToEdit(item);
-                setOpenFolderModal(true);
               }}
               handleDeleteFolder={(item) => {
                 setFolderToEdit(item);
