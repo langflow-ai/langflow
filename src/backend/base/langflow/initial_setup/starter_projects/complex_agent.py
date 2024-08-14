@@ -56,7 +56,7 @@ Backstory:""",
     )
     dynamic_agent.set(
         tools=[search_api_tool.build_tool, yahoo_search_tool.build_tool],
-        llm=llm,
+        llm=llm.build_model,
         role=role_prompt.build_prompt,
         goal=goal_prompt.build_prompt,
         backstory=backstory_prompt.build_prompt,
@@ -72,7 +72,7 @@ Respond to the user with as much as information as you can about the topic. Dele
     )
     manager_agent = CrewAIAgentComponent()
     manager_agent.set(
-        llm=manager_llm,
+        llm=manager_llm.build_model,
         role="Manager",
         goal="You can answer general questions from the User and may call others for help if needed.",
         backstory="You are polite and helpful. You've always been a beacon of politeness.",

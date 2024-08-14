@@ -17,7 +17,7 @@ def sequential_tasks_agent_graph():
     text_input.set(input_value="Agile")
     researcher_agent.set(
         tools=[search_api_tool.build_tool],
-        llm=llm,
+        llm=llm.build_model,
         role="Researcher",
         goal="Search Google to find information to complete the task.",
         backstory="Research has always been your thing. You can quickly find things on the web because of your skills.",
@@ -45,7 +45,7 @@ Revise this document.""",
         topic=text_input.text_response,
     )
     editor_agent.set(
-        llm=llm,
+        llm=llm.build_model,
         role="Editor",
         goal="You should edit the Information provided by the Researcher to make it more palatable and to not contain misleading information.",
         backstory="You are the editor of the most reputable journal in the world.",
@@ -65,7 +65,7 @@ Build a fun blog post about this topic.""",
     )
     comedian_agent = CrewAIAgentComponent()
     comedian_agent.set(
-        llm=llm,
+        llm=llm.build_model,
         role="Comedian",
         goal="You write comedic content based on the information provided by the editor.",
         backstory="Your formal occupation is Comedian-in-Chief. You write jokes, do standup comedy and write funny articles.",

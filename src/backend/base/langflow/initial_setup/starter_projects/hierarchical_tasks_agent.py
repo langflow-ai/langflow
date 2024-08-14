@@ -17,7 +17,7 @@ def hierarchical_tasks_agent_graph():
     chat_input = ChatInput()
     researcher_agent.set(
         tools=[search_api_tool.build_tool],
-        llm=llm,
+        llm=llm.build_model,
         role="Researcher",
         goal="Search for information about the User's query and answer as best as you can",
         backstory="You are a reliable researcher and journalist ",
@@ -26,7 +26,7 @@ def hierarchical_tasks_agent_graph():
     editor_agent = CrewAIAgentComponent()
 
     editor_agent.set(
-        llm=llm,
+        llm=llm.build_model,
         role="Editor",
         goal="Evaluate the information for misleading or biased data.",
         backstory="You are a reliable researcher and journalist ",
