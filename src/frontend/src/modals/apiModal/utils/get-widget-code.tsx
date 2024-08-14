@@ -8,7 +8,7 @@ export default function getWidgetCode(
   flowName: string,
   isAuth: boolean,
 ): string {
-  return `<script src="https://cdn.jsdelivr.net/gh/logspace-ai/langflow-embedded-chat@v1.0.4/dist/build/static/js/bundle.min.js""></script>
+  return `<script src="https://cdn.jsdelivr.net/gh/logspace-ai/langflow-embedded-chat@v1.0.6/dist/build/static/js/bundle.min.js""></script>
 
   <langflow-chat
     window_title="${flowName}"
