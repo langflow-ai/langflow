@@ -10,7 +10,7 @@ import {
   nodeGroupedObjType,
   tweakType,
 } from "../types/components";
-import { NodeType } from "../types/flow";
+import { NodeDataType, NodeType } from "../types/flow";
 import { FlowState } from "../types/tabs";
 import { isErrorLog } from "../types/utils/typeCheckingUtils";
 
@@ -561,4 +561,26 @@ export function tryParseJson(json: string) {
   } catch (error) {
     return;
   }
+}
+
+export function openInNewTab(url) {
+  window.open(url, "_blank", "noreferrer");
+}
+
+export function getNodeLength(data: NodeDataType) {
+  return Object.keys(data.node!.template).filter(
+    (templateField) =>
+      templateField.charAt(0) !== "_" &&
+      data.node?.template[templateField]?.show &&
+      (data.node.template[templateField]?.type === "str" ||
+        data.node.template[templateField]?.type === "bool" ||
+        data.node.template[templateField]?.type === "float" ||
+        data.node.template[templateField]?.type === "code" ||
+        data.node.template[templateField]?.type === "prompt" ||
+        data.node.template[templateField]?.type === "file" ||
+        data.node.template[templateField]?.type === "Any" ||
+        data.node.template[templateField]?.type === "int" ||
+        data.node.template[templateField]?.type === "dict" ||
+        data.node.template[templateField]?.type === "NestedDict"),
+  ).length;
 }
