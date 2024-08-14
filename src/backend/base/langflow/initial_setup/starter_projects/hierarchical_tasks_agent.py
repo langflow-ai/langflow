@@ -10,8 +10,8 @@ from langflow.graph.graph.base import Graph
 
 
 def hierarchical_tasks_agent_graph():
-    llm = OpenAIModelComponent(model="gpt-4o-mini")
-    manager_llm = OpenAIModelComponent(model="gpt-4o")
+    llm = OpenAIModelComponent(model_name="gpt-4o-mini")
+    manager_llm = OpenAIModelComponent(model_name="gpt-4o")
     search_api_tool = SearchAPIComponent()
     researcher_agent = CrewAIAgentComponent()
     chat_input = ChatInput()
@@ -42,7 +42,7 @@ Respond to the user with as much as information as you can about the topic. Dele
     )
     manager_agent = CrewAIAgentComponent()
     manager_agent.set(
-        llm=manager_llm,
+        llm=manager_llm.build_model,
         role="Manager",
         goal="You can answer general questions from the User and may call others for help if needed.",
         backstory="You are polite and helpful. You've always been a beacon of politeness.",
@@ -53,7 +53,11 @@ Respond to the user with as much as information as you can about the topic. Dele
         expected_output="Succinct response that answers the User's query.",
     )
     crew_component = HierarchicalCrewComponent()
-    crew_component.set(tasks=task.build_task, agents=[researcher_agent, editor_agent], manager_agent=manager_agent)
+    crew_component.set(
+        tasks=task.build_task,
+        agents=[researcher_agent.build_output, editor_agent.build_output],
+        manager_agent=manager_agent.build_output,
+    )
     chat_output = ChatOutput()
     chat_output.set(input_value=crew_component.build_output)
 

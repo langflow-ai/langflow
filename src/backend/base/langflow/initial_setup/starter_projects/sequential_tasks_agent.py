@@ -31,7 +31,7 @@ Build a document about this document.""",
         topic=text_input.text_response,
     )
     research_task.set(
-        agents=[researcher_agent],
+        agent=researcher_agent.build_output,
         task_description=document_prompt_component.build_prompt,
         expected_output="Bullet points and small phrases about the research topic.",
     )
@@ -51,10 +51,10 @@ Revise this document.""",
         backstory="You are the editor of the most reputable journal in the world.",
     )
     editor_task.set(
-        agents=[editor_agent],
+        agent=editor_agent.build_output,
         task_description=revision_prompt_component.build_prompt,
         expected_output="Small paragraphs and bullet points with the corrected content.",
-        task=research_task,
+        task=research_task.build_task,
     )
     blog_prompt_component = PromptComponent()
     blog_prompt_component.set(
@@ -72,10 +72,10 @@ Build a fun blog post about this topic.""",
     )
     blog_task = SequentialTaskComponent()
     blog_task.set(
-        agents=[comedian_agent],
+        agent=comedian_agent.build_output,
         task_description=blog_prompt_component.build_prompt,
         expected_output="A small blog about the topic.",
-        task=editor_task,
+        task=editor_task.build_task,
     )
     sequential_crew_component = SequentialCrewComponent()
     sequential_crew_component.set(tasks=blog_task.build_task)

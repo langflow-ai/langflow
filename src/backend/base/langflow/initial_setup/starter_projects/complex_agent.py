@@ -11,8 +11,8 @@ from langflow.graph.graph.base import Graph
 
 
 def complex_agent_graph():
-    llm = OpenAIModelComponent(model="gpt-4o-mini")
-    manager_llm = OpenAIModelComponent(model="gpt-4o")
+    llm = OpenAIModelComponent(model_name="gpt-4o-mini")
+    manager_llm = OpenAIModelComponent(model_name="gpt-4o")
     search_api_tool = SearchAPIComponent()
     yahoo_search_tool = YfinanceToolComponent()
     dynamic_agent = CrewAIAgentComponent()
@@ -83,7 +83,9 @@ Respond to the user with as much as information as you can about the topic. Dele
         expected_output="Succinct response that answers the User's query.",
     )
     crew_component = HierarchicalCrewComponent()
-    crew_component.set(tasks=task.build_task, agents=[dynamic_agent], manager_agent=manager_agent)
+    crew_component.set(
+        tasks=task.build_task, agents=[dynamic_agent.build_output], manager_agent=manager_agent.build_output
+    )
     chat_output = ChatOutput()
     chat_output.set(input_value=crew_component.build_output)
 
