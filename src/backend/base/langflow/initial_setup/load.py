@@ -2,6 +2,7 @@ from .starter_projects import (
     basic_prompting_graph,
     blog_writer_graph,
     document_qa_graph,
+    hierarchical_tasks_agent_graph,
     memory_chatbot_graph,
     sequential_tasks_agent_graph,
     vector_store_rag_graph,
@@ -16,6 +17,7 @@ def get_all_graphs():
         memory_chatbot_graph(),
         vector_store_rag_graph(),
         sequential_tasks_agent_graph(),
+        hierarchical_tasks_agent_graph(),
     ]
 
 
