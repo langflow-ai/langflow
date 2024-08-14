@@ -5,10 +5,6 @@ const useDuplicateFlows = (
   selectedFlowsComponentsCards: string[],
   allFlows: any[],
   resetFilter: () => void,
-  getFoldersApi: (
-    refetch?: boolean,
-    startupApplication?: boolean,
-  ) => Promise<void>,
   folderId: string,
   myCollectionId: string,
   getFolderById: (id: string) => void,
@@ -27,10 +23,6 @@ const useDuplicateFlows = (
       ),
     ).then(() => {
       resetFilter();
-      getFoldersApi(true);
-      if (!folderId || folderId === myCollectionId) {
-        getFolderById(folderId ? folderId : myCollectionId);
-      }
       setSuccessData({ title: `${cardTypes} duplicated successfully` });
       setSelectedFlowsComponentsCards([]);
       handleSelectAll(false);
@@ -40,7 +32,6 @@ const useDuplicateFlows = (
     addFlow,
     allFlows,
     resetFilter,
-    getFoldersApi,
     folderId,
     myCollectionId,
     getFolderById,
