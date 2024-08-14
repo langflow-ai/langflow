@@ -256,17 +256,25 @@ class Graph:
             for key, value in _input.items():
                 vertex = self.get_vertex(key)
                 vertex.set_input_value(key, value)
-        while True:
+        # I want to keep a counter of how many tyimes result.vertex.id
+        # has been yielded
+        yielded_counts: dict[str, int] = defaultdict(int)
+
+        while should_continue(yielded_counts, max_iterations):
             result = await self.astep()
             yield result
+            if hasattr(result, "vertex"):
+                yielded_counts[result.vertex.id] += 1
             if isinstance(result, Finish):
                 return
 
-    def start(self, inputs: Optional[List[dict]] = None) -> Generator:
+        raise ValueError("Max iterations reached")
+
+    def start(self, inputs: Optional[List[dict]] = None, max_iterations: Optional[int] = None) -> Generator:
         #! Change this ASAP
         nest_asyncio.apply()
         loop = asyncio.get_event_loop()
-        async_gen = self.async_start(inputs)
+        async_gen = self.async_start(inputs, max_iterations)
         async_gen_task = asyncio.ensure_future(async_gen.__anext__())
 
         while True:
