@@ -52,12 +52,10 @@ Respond to the user with as much as information as you can about the topic. Dele
         task_description=response_prompt.build_prompt,
         expected_output="Succinct response that answers the User's query.",
     )
-    sequential_crew_component = HierarchicalCrewComponent()
-    sequential_crew_component.set(
-        tasks=task.build_task, agents=[researcher_agent, editor_agent], manager_agent=manager_agent
-    )
+    crew_component = HierarchicalCrewComponent()
+    crew_component.set(tasks=task.build_task, agents=[researcher_agent, editor_agent], manager_agent=manager_agent)
     chat_output = ChatOutput()
-    chat_output.set(input_value=sequential_crew_component.build_output)
+    chat_output.set(input_value=crew_component.build_output)
 
     graph = Graph(
         start=chat_input,
