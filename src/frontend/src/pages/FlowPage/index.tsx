@@ -1,4 +1,5 @@
 import FeatureFlags from "@/../feature-config.json";
+import FeatureFlags from "@/../public/feature-config.json";
 import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
 import useSaveFlow from "@/hooks/flows/use-save-flow";
 import { SaveChangesModal } from "@/modals/saveChangesModal";
@@ -12,7 +13,6 @@ import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import Page from "./components/PageComponent";
 import ExtraSidebar from "./components/extraSidebarComponent";
-import FeatureFlags from "@/../public/feature-config.json";
 
 export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);

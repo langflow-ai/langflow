@@ -185,9 +185,7 @@ export default function Header(): JSX.Element {
                   className="side-bar-button-size"
                 />
               ) : (
-                <IconComponent
-                  name="MoonIcon"
-                />
+                <IconComponent name="MoonIcon" />
               )}
             </button>
           )}
