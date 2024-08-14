@@ -12,7 +12,7 @@ export const useDeleteFolders: useMutationFunctionType<
   undefined,
   DeleteFoldersParams
 > = (options?) => {
-  const { mutate } = UseRequestProcessor();
+  const { mutate, queryClient } = UseRequestProcessor();
 
   const deleteFolder = async ({
     folder_id,
@@ -25,7 +25,12 @@ export const useDeleteFolders: useMutationFunctionType<
     DeleteFoldersParams,
     any,
     DeleteFoldersParams
-  > = mutate(["useDeleteFolders"], deleteFolder, options);
+  > = mutate(["useDeleteFolders"], deleteFolder, {
+    ...options,
+    onSettled: () => {
+      queryClient.refetchQueries({ queryKey: ["useGetFolders"] });
+    },
+  });
 
   return mutation;
 };
