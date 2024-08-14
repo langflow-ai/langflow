@@ -45,7 +45,6 @@ export default function StoreCardComponent({
         data?.downloads_count ?? 0,
     );
     const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
-    const getFlowById = useFlowsManagerStore((state) => state.getFlowById);
     const [openPlayground, setOpenPlayground] = useState(false);
     const [loadingPlayground, setLoadingPlayground] = useState(false);
     const playground = data.last_tested_version?.includes("1.0.0") && !data.is_component
@@ -224,20 +223,6 @@ export default function StoreCardComponent({
                                         e.preventDefault();
                                         e.stopPropagation();
                                         setLoadingPlayground(true);
-                                        const flow = getFlowById(data.id);
-                                        if (flow) {
-                                            if (!hasPlayground(flow)) {
-                                                setErrorData({
-                                                    title: "Error",
-                                                    list: ["This flow doesn't have a playground."],
-                                                });
-                                                setLoadingPlayground(false);
-                                                return;
-                                            }
-                                            setCurrentFlow(flow);
-                                            setOpenPlayground(true);
-                                            setLoadingPlayground(false);
-                                        } else {
                                             getFlowData().then((res) => {
                                                 if (!hasPlayground(res)) {
                                                     setErrorData({
@@ -251,7 +236,6 @@ export default function StoreCardComponent({
                                                 setOpenPlayground(true);
                                                 setLoadingPlayground(false);
                                             });
-                                        }
                                     }}
                                 >
                                     {!loadingPlayground ? (
