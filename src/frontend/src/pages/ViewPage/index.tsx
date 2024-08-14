@@ -32,7 +32,7 @@ export default function ViewPage() {
         }
 
         setCurrentFlow(isAnExistingFlow);
-      } else {
+      } else if (!flows) {
         setIsLoading(true);
         await refreshFlows();
         await getTypes();

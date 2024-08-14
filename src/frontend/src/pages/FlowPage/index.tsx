@@ -67,7 +67,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
         }
 
         setCurrentFlow(isAnExistingFlow);
-      } else {
+      } else if (!flows) {
         setIsLoading(true);
         await refreshFlows();
         await getTypes();
