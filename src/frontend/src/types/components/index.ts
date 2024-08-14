@@ -700,6 +700,19 @@ export type genericModalPropsType = {
   changeVisibility?: () => void;
 };
 
+export type PromptModalType = {
+  field_name?: string;
+  setValue: (value: string) => void;
+  value: string;
+  disabled?: boolean;
+  nodeClass?: APIClassType;
+  setNodeClass?: (Class: APIClassType, type?: string) => void;
+  children: ReactNode;
+  id?: string;
+  readonly?: boolean;
+};
+
+
 export type newFlowModalPropsType = {
   open: boolean;
   setOpen: (open: boolean) => void;
