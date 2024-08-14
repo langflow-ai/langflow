@@ -5407,6 +5407,20 @@ pytest = ">=4.6"
 testing = ["fields", "hunter", "process-tests", "pytest-xdist", "virtualenv"]
 
 [[package]]
+name = "pytest-flakefinder"
+version = "1.1.0"
+description = "Runs tests multiple times to expose flakiness."
+optional = false
+python-versions = ">=3.5"
+files = [
+    {file = "pytest-flakefinder-1.1.0.tar.gz", hash = "sha256:e2412a1920bdb8e7908783b20b3d57e9dad590cc39a93e8596ffdd493b403e0e"},
+    {file = "pytest_flakefinder-1.1.0-py2.py3-none-any.whl", hash = "sha256:741e0e8eea427052f5b8c89c2b3c3019a50c39a59ce4df6a305a2c2d9ba2bd13"},
+]
+
+[package.dependencies]
+pytest = ">=2.7.1"
+
+[[package]]
 name = "pytest-instafail"
 version = "0.5.0"
 description = "pytest plugin to show failures instantly"
@@ -7544,4 +7558,4 @@ local = []
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-content-hash = "fe6710d7325bc2cceeaa298d94d6f1157cfe1533c2acbabe3ecdca5594d9e007"
+content-hash = "12d207ab2531a201c153cfc0ec800ae9b43c47dd34506f19f7ed97e27c032149"

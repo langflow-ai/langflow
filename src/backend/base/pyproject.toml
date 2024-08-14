@@ -119,6 +119,7 @@ vulture = "^2.11"
 dictdiffer = "^0.9.0"
 pytest-split = "^0.9.0"
 devtools = "^0.12.2"
+pytest-flakefinder = "^1.1.0"
 
 
 [tool.pytest.ini_options]
