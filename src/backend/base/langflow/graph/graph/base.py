@@ -7,20 +7,27 @@ from collections import defaultdict, deque
 from datetime import datetime, timezone
 from functools import partial
 from itertools import chain
-from typing import TYPE_CHECKING, Any, Dict, Generator, List, Optional, Tuple, Type, Union
+from typing import TYPE_CHECKING, Any, Dict, Generator, Iterable, List, Optional, Set, Tuple, Type, Union, cast
 
 import nest_asyncio
 from loguru import logger
 
 from langflow.exceptions.component import ComponentBuildException
-from langflow.graph.edge.base import ContractEdge
+from langflow.graph.edge.base import CycleEdge, Edge
 from langflow.graph.edge.schema import EdgeData
 from langflow.graph.graph.constants import Finish, lazy_load_vertex_dict
 from langflow.graph.graph.runnable_vertices_manager import RunnableVerticesManager
 from langflow.graph.graph.schema import GraphData, GraphDump, VertexBuildResult
 from langflow.graph.graph.state_manager import GraphStateManager
 from langflow.graph.graph.state_model import create_state_model_from_graph
-from langflow.graph.graph.utils import find_start_component_id, process_flow, sort_up_to_vertex
+from langflow.graph.graph.utils import (
+    find_all_cycle_edges,
+    find_start_component_id,
+    has_cycle,
+    process_flow,
+    should_continue,
+    sort_up_to_vertex,
+)
 from langflow.graph.schema import InterfaceComponentTypes, RunOutputs
 from langflow.graph.vertex.base import Vertex, VertexStates
 from langflow.graph.vertex.schema import NodeData
@@ -84,7 +91,7 @@ class Graph:
         self.vertices_to_run: set[str] = set()
         self.stop_vertex: Optional[str] = None
         self.inactive_vertices: set = set()
-        self.edges: List[ContractEdge] = []
+        self.edges: List[CycleEdge] = []
         self.vertices: List[Vertex] = []
         self.run_manager = RunnableVerticesManager()
         self.state_manager = GraphStateManager()
@@ -100,6 +107,8 @@ class Graph:
         self._first_layer: List[str] = []
         self._lock = asyncio.Lock()
         self.raw_graph_data: GraphData = {"nodes": [], "edges": []}
+        self._is_cyclic: Optional[bool] = None
+        self._cycles: Optional[List[tuple[str, str]]] = None
         try:
             self.tracing_service: "TracingService" | None = get_tracing_service()
         except Exception as exc:
@@ -107,7 +116,7 @@ class Graph:
             self.tracing_service = None
         if start is not None and end is not None:
             self._set_start_and_end(start, end)
-            self.prepare()
+            self.prepare(start_component_id=start._id)
         if (start is not None and end is None) or (start is None and end is not None):
             raise ValueError("You must provide both input and output components")
 
@@ -247,7 +256,7 @@ class Graph:
         }
         self._add_edge(edge_data)
 
-    async def async_start(self, inputs: Optional[List[dict]] = None):
+    async def async_start(self, inputs: Optional[List[dict]] = None, max_iterations: Optional[int] = None):
         if not self._prepared:
             raise ValueError("Graph not prepared. Call prepare() first.")
         # The idea is for this to return a generator that yields the result of
@@ -721,7 +730,7 @@ class Graph:
             "flow_name": self.flow_name,
         }
 
-    def build_graph_maps(self, edges: Optional[List[ContractEdge]] = None, vertices: Optional[List["Vertex"]] = None):
+    def build_graph_maps(self, edges: Optional[List[CycleEdge]] = None, vertices: Optional[List["Vertex"]] = None):
         """
         Builds the adjacency maps for the graph.
         """
@@ -1242,7 +1251,7 @@ class Graph:
         vertex_id: str,
         is_target: Optional[bool] = None,
         is_source: Optional[bool] = None,
-    ) -> List[ContractEdge]:
+    ) -> List[CycleEdge]:
         """Returns a list of edges for a given vertex."""
         # The idea here is to return the edges that have the vertex_id as source or target
         # or both
@@ -1873,13 +1882,16 @@ class Graph:
                 top_level_vertices.append(vertex_id)
         return top_level_vertices
 
-    def build_in_degree(self, edges: List[ContractEdge]) -> Dict[str, int]:
+    def build_in_degree(self, edges: List[CycleEdge]) -> Dict[str, int]:
         in_degree: Dict[str, int] = defaultdict(int)
         for edge in edges:
             in_degree[edge.target_id] += 1
+        for vertex in self.vertices:
+            if vertex.id not in in_degree:
+                in_degree[vertex.id] = 0
         return in_degree
 
-    def build_adjacency_maps(self, edges: List[ContractEdge]) -> Tuple[Dict[str, List[str]], Dict[str, List[str]]]:
+    def build_adjacency_maps(self, edges: List[CycleEdge]) -> Tuple[Dict[str, List[str]], Dict[str, List[str]]]:
         """Returns the adjacency maps for the graph."""
         predecessor_map: dict[str, list[str]] = defaultdict(list)
         successor_map: dict[str, list[str]] = defaultdict(list)
