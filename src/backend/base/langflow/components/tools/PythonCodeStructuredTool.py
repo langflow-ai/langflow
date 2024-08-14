@@ -6,8 +6,13 @@ from langchain.agents import Tool
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.inputs.inputs import MultilineInput, MessageTextInput, BoolInput, DropdownInput, HandleInput, FieldTypes
 from langchain_core.tools import StructuredTool
-from langflow.io import Output
+from pydantic.v1 import Field, create_model
+from pydantic.v1.fields import Undefined
 
+from langflow.base.langchain_utilities.model import LCToolComponent
+from langflow.inputs.inputs import BoolInput, DropdownInput, FieldTypes, HandleInput, MessageTextInput, MultilineInput
+from langflow.io import Output
+from langflow.schema import Data
 from langflow.schema.dotdict import dotdict
 from langflow.schema import Data
 
@@ -260,10 +265,22 @@ class PythonCodeStructuredTool(LCToolComponent):
 
                 for default in node.args.defaults:
                     if (
-                        arg.lineno > default.lineno
-                        or arg.col_offset > default.col_offset
-                        or arg.end_lineno < default.end_lineno
-                        or arg.end_col_offset < default.end_col_offset
+                        (arg.lineno is not None and default.lineno is not None and arg.lineno > default.lineno)
+                        or (
+                            arg.col_offset is not None
+                            and default.col_offset is not None
+                            and arg.col_offset > default.col_offset
+                        )
+                        or (
+                            arg.end_lineno is not None
+                            and default.end_lineno is not None
+                            and arg.end_lineno < default.end_lineno
+                        )
+                        or (
+                            arg.end_col_offset is not None
+                            and default.end_col_offset is not None
+                            and arg.end_col_offset < default.end_col_offset
+                        )
                     ):
                         continue
 
@@ -277,9 +294,9 @@ class PythonCodeStructuredTool(LCToolComponent):
                     annotation_line = annotation_line[: arg.annotation.end_col_offset]
                     annotation_line = annotation_line[arg.annotation.col_offset :]
                     func_arg["annotation"] = annotation_line
-                    if func_arg["annotation"].count("=") > 0:
+                    if isinstance(func_arg["annotation"], str) and func_arg["annotation"].count("=") > 0:
                         func_arg["annotation"] = "=".join(func_arg["annotation"].split("=")[:-1]).strip()
-
+            if isinstance(func["args"], list):
                 func["args"].append(func_arg)
             functions.append(func)
 
@@ -295,7 +312,7 @@ class PythonCodeStructuredTool(LCToolComponent):
                     imports.append(alias.name)
             elif isinstance(node, ast.ImportFrom):
                 from_imports.append(node)
-        return {"imports": imports, "from_imports": from_imports}
+        return dotdict({"imports": imports, "from_imports": from_imports})
 
     def _get_value(self, value: Any, annotation: Any) -> Any:
         return value if isinstance(value, annotation) else value["value"]

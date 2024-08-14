@@ -38,6 +38,7 @@ export type shortcutsStoreType = {
   duplicate: string;
   component: string;
   docs: string;
+  changes: string;
   save: string;
   delete: string;
   update: string;

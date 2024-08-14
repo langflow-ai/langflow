@@ -85,12 +85,10 @@ export default function NodeOutputField({
 
   function handleOutputWShortcut() {
     if (!displayOutputPreview || unknownOutput) return;
-    if (isThereModal() && !openOutputModal) return;
     if (selected) {
       setOpenOutputModal((state) => !state);
     }
   }
-
   const output = useShortcutsStore((state) => state.output);
   useHotkeys(output, handleOutputWShortcut, { preventDefault });
 
@@ -123,7 +121,7 @@ export default function NodeOutputField({
     }
   }, [disabledOutput]);
 
-  return !showNode ? (
+  const Handle = (
     <HandleRenderComponent
       left={false}
       nodes={nodes}
@@ -135,8 +133,12 @@ export default function NodeOutputField({
       colors={colors}
       setFilterEdge={setFilterEdge}
       showNode={showNode}
-      testIdComplement={`${data?.type?.toLowerCase()}-noshownode`}
+      testIdComplement={`${data?.type?.toLowerCase()}-${showNode ? "shownode" : "noshownode"}`}
     />
+  );
+
+  return !showNode ? (
+    Handle
   ) : (
     <div
       ref={ref}
@@ -161,12 +163,12 @@ export default function NodeOutputField({
               />
             </Button>
           </div>
-          <Case condition={data.node?.frozen}>
+
+          {data.node?.frozen && (
             <div className="pr-1">
               <IconComponent className="h-5 w-5 text-ice" name={"Snowflake"} />
             </div>
-          </Case>
-
+          )}
           <div className="flex gap-2">
             <span className={data.node?.frozen ? "text-ice" : ""}>
               <OutputComponent
@@ -192,53 +194,40 @@ export default function NodeOutputField({
                   : "Please build the component first"
               }
             >
-              <Button
-                unstyled
+              <OutputModal
                 disabled={!displayOutputPreview || unknownOutput}
-                onClick={() => setOpenOutputModal(true)}
-                data-testid={`output-inspection-${title.toLowerCase()}`}
+                nodeId={flowPoolId}
+                outputName={internalOutputName}
               >
-                {errorOutput ? (
-                  <IconComponent
-                    className={classNames("h-5 w-5 rounded-md text-status-red")}
-                    name={"X"}
-                  />
-                ) : (
-                  <IconComponent
-                    className={classNames(
-                      "h-5 w-5 rounded-md",
-                      displayOutputPreview && !unknownOutput
-                        ? "hover:text-medium-indigo"
-                        : "cursor-not-allowed text-muted-foreground",
-                    )}
-                    name={"ScanEye"}
-                  />
-                )}
-              </Button>
+                <Button
+                  unstyled
+                  disabled={!displayOutputPreview || unknownOutput}
+                  data-testid={`output-inspection-${title.toLowerCase()}`}
+                >
+                  {errorOutput ? (
+                    <IconComponent
+                      className={classNames(
+                        "h-5 w-5 rounded-md text-status-red",
+                      )}
+                      name={"X"}
+                    />
+                  ) : (
+                    <IconComponent
+                      className={classNames(
+                        "h-5 w-5 rounded-md",
+                        displayOutputPreview && !unknownOutput
+                          ? "hover:text-medium-indigo"
+                          : "cursor-not-allowed text-muted-foreground",
+                      )}
+                      name={"ScanEye"}
+                    />
+                  )}
+                </Button>
+              </OutputModal>
             </ShadTooltip>
           </div>
         </div>
-        <HandleRenderComponent
-          left={false}
-          nodes={nodes}
-          tooltipTitle={tooltipTitle}
-          id={id}
-          title={title}
-          edges={edges}
-          myData={myData}
-          colors={colors}
-          setFilterEdge={setFilterEdge}
-          showNode={showNode}
-          testIdComplement={`${data?.type?.toLowerCase()}-shownode`}
-        />
-        {openOutputModal && (
-          <OutputModal
-            open={openOutputModal}
-            nodeId={flowPoolId}
-            setOpen={setOpenOutputModal}
-            outputName={internalOutputName}
-          />
-        )}
+        {Handle}
       </>
     </div>
   );
