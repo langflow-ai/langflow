@@ -214,17 +214,21 @@ export default function ComponentsComponent({
   return (
     <>
       <div className="flex w-full gap-4 pb-5">
-        {flowsFromFolder?.length > 0 && (
-          <HeaderComponent
-            shouldSelectAll={shouldSelectAll}
-            setShouldSelectAll={setShouldSelectAll}
-            handleDelete={() => handleSelectOptionsChange("delete")}
-            handleSelectAll={handleSelectAll}
-            handleDuplicate={() => handleSelectOptionsChange("duplicate")}
-            handleExport={() => handleSelectOptionsChange("export")}
-            disableFunctions={!(selectedFlowsComponentsCards?.length > 0)}
-          />
-        )}
+        <HeaderComponent
+          disabled={
+            isLoading ||
+            isLoadingFolders ||
+            isLoadingCurrentFolder ||
+            data?.length === 0
+          }
+          shouldSelectAll={shouldSelectAll}
+          setShouldSelectAll={setShouldSelectAll}
+          handleDelete={() => handleSelectOptionsChange("delete")}
+          handleSelectAll={handleSelectAll}
+          handleDuplicate={() => handleSelectOptionsChange("duplicate")}
+          handleExport={() => handleSelectOptionsChange("export")}
+          disableFunctions={!(selectedFlowsComponentsCards?.length > 0)}
+        />
       </div>
 
       <CardsWrapComponent
