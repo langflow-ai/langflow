@@ -622,12 +622,9 @@ export type fileCardPropsType = {
 };
 
 export type nodeToolbarPropsType = {
-  //  openWDoubleClick: boolean;
-  //  setOpenWDoubleClick: (open: boolean) => void;
   data: NodeDataType;
   deleteNode: (idx: string) => void;
   setShowNode: (boolean: any) => void;
-  numberOfHandles: number;
   numberOfOutputHandles: number;
   showNode: boolean;
   name?: string;
