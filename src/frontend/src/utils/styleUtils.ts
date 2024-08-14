@@ -99,6 +99,7 @@ import {
   MoonIcon,
   MoreHorizontal,
   Network,
+  OptionIcon,
   Package2,
   Palette,
   Paperclip,
@@ -596,4 +597,6 @@ export const nodeIconsLucide: iconsType = {
   "AI/ML": AIMLIcon,
   GitLoader: GitLoaderIcon,
   athenaIcon: AthenaIcon,
+  OptionIcon: OptionIcon,
+  Option: OptionIcon,
 };
