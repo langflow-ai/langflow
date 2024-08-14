@@ -5,6 +5,7 @@ from .hierarchical_tasks_agent import hierarchical_tasks_agent_graph
 from .memory_chatbot import memory_chatbot_graph
 from .sequential_tasks_agent import sequential_tasks_agent_graph
 from .vector_store_rag import vector_store_rag_graph
+from .complex_agent import complex_agent_graph
 
 __all__ = [
     "blog_writer_graph",
