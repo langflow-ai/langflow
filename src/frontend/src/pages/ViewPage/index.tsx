@@ -47,7 +47,7 @@ export default function ViewPage() {
 
     return () => {
       setOnFlowPage(false);
-      setCurrentFlow();
+      setCurrentFlow(undefined);
     };
   }, [id]);
 

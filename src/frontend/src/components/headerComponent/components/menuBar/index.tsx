@@ -72,7 +72,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
   function handleAddFlow() {
     try {
       addFlow().then((id) => {
-        setCurrentFlow();
+        setCurrentFlow(undefined); // Reset current flow for useEffect of flowPage to update the current flow
         navigate("/flow/" + id);
       });
     } catch (err) {

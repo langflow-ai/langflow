@@ -82,7 +82,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
 
     return () => {
       setOnFlowPage(false);
-      setCurrentFlow();
+      setCurrentFlow(undefined);
     };
   }, [id]);
 
