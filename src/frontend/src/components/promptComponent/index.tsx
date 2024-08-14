@@ -1,8 +1,8 @@
+import PromptModal from "@/modals/promptModal";
 import { useEffect } from "react";
 import { PromptAreaComponentType } from "../../types/components";
 import IconComponent from "../genericIconComponent";
 import { Button } from "../ui/button";
-import PromptModal from "@/modals/promptModal";
 
 export default function PromptAreaComponent({
   field_name,

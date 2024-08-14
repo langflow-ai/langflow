@@ -178,13 +178,11 @@ export default function PromptModal({
       <BaseModal.Trigger disable={disabled} asChild>
         {children}
       </BaseModal.Trigger>
-      <BaseModal.Header
-        description={PROMPT_DIALOG_SUBTITLE}
-      >
+      <BaseModal.Header description={PROMPT_DIALOG_SUBTITLE}>
         <div className="flex w-full items-start gap-3">
           <div className="flex">
             <span className="pr-2" data-testid="modal-title">
-            Edit Prompt
+              Edit Prompt
             </span>
             <IconComponent
               name="TerminalSquare"
@@ -216,69 +214,71 @@ export default function PromptModal({
                 handleKeyDown(e, inputValue, "");
               }}
             />
-          ) :<SanitizedHTMLWrapper
+          ) : (
+            <SanitizedHTMLWrapper
               className={getClassByNumberLength() + " bg-muted"}
               content={coloredContent}
               onClick={() => {
-                if(!readonly) setIsEdit(true);
+                if (!readonly) setIsEdit(true);
               }}
               suppressWarning={true}
-            />}
+            />
+          )}
         </div>
       </BaseModal.Content>
       <BaseModal.Footer>
         <div className="flex w-full shrink-0 items-end justify-between">
           <div className="mb-auto flex-1">
-              <div className="mr-2">
-                <div
-                  ref={divRef}
-                  className="max-h-20 overflow-y-auto custom-scroll"
-                >
-                  <div className="flex flex-wrap items-center gap-2">
-                    <IconComponent
-                      name="Braces"
-                      className="flex h-4 w-4 text-primary"
-                    />
-                    <span className="text-md font-semibold text-primary">
-                      Prompt Variables:
-                    </span>
+            <div className="mr-2">
+              <div
+                ref={divRef}
+                className="max-h-20 overflow-y-auto custom-scroll"
+              >
+                <div className="flex flex-wrap items-center gap-2">
+                  <IconComponent
+                    name="Braces"
+                    className="flex h-4 w-4 text-primary"
+                  />
+                  <span className="text-md font-semibold text-primary">
+                    Prompt Variables:
+                  </span>
 
-                    {Array.from(wordsHighlight).map((word, index) => (
-                      <ShadTooltip
+                  {Array.from(wordsHighlight).map((word, index) => (
+                    <ShadTooltip
+                      key={index}
+                      content={word.replace(/[{}]/g, "")}
+                      asChild={false}
+                    >
+                      <Badge
                         key={index}
-                        content={word.replace(/[{}]/g, "")}
-                        asChild={false}
+                        variant="gray"
+                        size="md"
+                        className="max-w-[40vw] cursor-default truncate p-1 text-sm"
                       >
-                        <Badge
-                          key={index}
-                          variant="gray"
-                          size="md"
-                          className="max-w-[40vw] cursor-default truncate p-1 text-sm"
-                        >
-                          <div className="relative bottom-[1px]">
-                            <span id={"badge" + index.toString()}>
-                              {word.replace(/[{}]/g, "").length > 59
-                                ? word.replace(/[{}]/g, "").slice(0, 56) + "..."
-                                : word.replace(/[{}]/g, "")}
-                            </span>
-                          </div>
-                        </Badge>
-                      </ShadTooltip>
-                    ))}
-                  </div>
+                        <div className="relative bottom-[1px]">
+                          <span id={"badge" + index.toString()}>
+                            {word.replace(/[{}]/g, "").length > 59
+                              ? word.replace(/[{}]/g, "").slice(0, 56) + "..."
+                              : word.replace(/[{}]/g, "")}
+                          </span>
+                        </div>
+                      </Badge>
+                    </ShadTooltip>
+                  ))}
                 </div>
-                <span className="mt-2 text-xs text-muted-foreground">
-                  Prompt variables can be created with any chosen name inside
-                  curly brackets, e.g. {"{variable_name}"}
-                </span>
               </div>
+              <span className="mt-2 text-xs text-muted-foreground">
+                Prompt variables can be created with any chosen name inside
+                curly brackets, e.g. {"{variable_name}"}
+              </span>
+            </div>
           </div>
           <Button
             data-testid="genericModalBtnSave"
             id="genericModalBtnSave"
             disabled={readonly}
             onClick={() => {
-                validatePrompt(false);
+              validatePrompt(false);
             }}
             type="submit"
           >
