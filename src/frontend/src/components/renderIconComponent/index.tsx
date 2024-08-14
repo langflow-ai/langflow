@@ -1,52 +1,27 @@
-import ForwardedIconComponent from "../genericIconComponent";
+import { IS_MAC } from "@/constants/constants";
+import { addPlusSignes, cn, sortShortcuts } from "@/utils/utils";
+import RenderKey from "./components/renderKey";
 
 export default function RenderIcons({
-  isMac = navigator.platform.toUpperCase().includes("MAC"),
-  hasShift,
   filteredShortcut,
-  shortcutWPlus,
+  tableRender = false,
 }: {
-  isMac?: boolean;
-  hasShift: boolean;
   filteredShortcut: string[];
-  shortcutWPlus: string[];
+  tableRender?: boolean;
 }): JSX.Element {
-  return hasShift ? (
-    <span className="flex items-center justify-center gap-0.5 text-xs">
-      {isMac ? (
-        <ForwardedIconComponent name="Command" className="h-3 w-3" />
-      ) : (
-        filteredShortcut[0]
+  const shortcutList = addPlusSignes([...filteredShortcut].sort(sortShortcuts));
+  return (
+    <span
+      className={cn(
+        "flex items-center gap-0.5",
+        tableRender ? "justify-start" : "justify-center text-xs",
       )}
-      <ForwardedIconComponent name="ArrowBigUp" className="h-4 w-4" />
-      {filteredShortcut.map((key, idx) => {
-        if (idx > 0) {
-          return key.toUpperCase();
-        }
-        return null;
-      })}
-    </span>
-  ) : (
-    <span className="flex items-center justify-center gap-0.5 text-xs">
-      {shortcutWPlus[0].toLowerCase() === "space" ? (
-        "Space"
-      ) : shortcutWPlus[0].length <= 1 ? (
-        shortcutWPlus[0]
-      ) : isMac ? (
-        <ForwardedIconComponent name="Command" className="h-3 w-3" />
-      ) : (
-        <span className="flex items-center">{shortcutWPlus[0]}</span>
-      )}
-      {shortcutWPlus.map((key, idx) => {
-        if (idx > 0) {
-          return (
-            <span key={idx} className="flex items-center">
-              {key.toUpperCase()}
-            </span>
-          );
-        }
-        return null;
-      })}
+    >
+      {shortcutList.map((key, index) => (
+        <span key={index}>
+          <RenderKey value={key} tableRender={tableRender} />
+        </span>
+      ))}
     </span>
   );
 }
