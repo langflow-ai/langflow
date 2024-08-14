@@ -9,10 +9,7 @@ import useFlowsManagerStore from "../../../stores/flowsManagerStore";
 import { useFolderStore } from "../../../stores/foldersStore";
 import { addVersionToDuplicates } from "../../../utils/reactflowUtils";
 
-const useFileDrop = (
-  folderId: string,
-  folderChangeCallback: (folderId: string) => void,
-) => {
+const useFileDrop = (folderId: string) => {
   const setFolderDragging = useFolderStore((state) => state.setFolderDragging);
   const setFolderIdDragging = useFolderStore(
     (state) => state.setFolderIdDragging,
@@ -21,12 +18,6 @@ const useFileDrop = (
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const flows = useFlowsManagerStore((state) => state.flows);
   const saveFlow = useSaveFlow();
-
-  const triggerFolderChange = (folderId) => {
-    if (folderChangeCallback) {
-      folderChangeCallback(folderId);
-    }
-  };
   const handleFileDrop = async (e) => {
     if (e.dataTransfer.types.some((type) => type === "Files")) {
       if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
@@ -120,9 +111,7 @@ const useFileDrop = (
     setFolderDragging(false);
     setFolderIdDragging("");
 
-    saveFlow(updatedFlow).then(() => {
-      triggerFolderChange(folderId);
-    });
+    saveFlow(updatedFlow);
   };
 
   const uploadFormData = (data) => {
@@ -131,9 +120,7 @@ const useFileDrop = (
     setFolderDragging(false);
     setFolderIdDragging("");
 
-    uploadFlowToFolder(formData, folderId).then(() => {
-      triggerFolderChange(folderId);
-    });
+    uploadFlowToFolder(formData, folderId);
   };
 
   return {
