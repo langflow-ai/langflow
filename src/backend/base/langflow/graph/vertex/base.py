@@ -28,7 +28,7 @@ from langflow.utils.util import sync_to_async, unescape_string
 
 if TYPE_CHECKING:
     from langflow.custom import Component
-    from langflow.graph.edge.base import ContractEdge
+    from langflow.graph.edge.base import CycleEdge, Edge
     from langflow.graph.graph.base import Graph
 
 
@@ -162,15 +162,15 @@ class Vertex:
         pass
 
     @property
-    def edges(self) -> List["ContractEdge"]:
+    def edges(self) -> List["CycleEdge"]:
         return self.graph.get_vertex_edges(self.id)
 
     @property
-    def outgoing_edges(self) -> List["ContractEdge"]:
+    def outgoing_edges(self) -> List["CycleEdge"]:
         return [edge for edge in self.edges if edge.source_id == self.id]
 
     @property
-    def incoming_edges(self) -> List["ContractEdge"]:
+    def incoming_edges(self) -> List["CycleEdge"]:
         return [edge for edge in self.edges if edge.target_id == self.id]
 
     @property
