@@ -13,7 +13,7 @@ from fastapi.responses import StreamingResponse
 from loguru import logger
 from sqlmodel import Session, and_, col, select
 
-from langflow.api.utils import remove_api_keys, validate_is_component
+from langflow.api.utils import format_exception_message, remove_api_keys, validate_is_component
 from langflow.api.v1.schemas import FlowListCreate
 from langflow.graph.graph.schema import GraphDump, GraphDumpModel
 from langflow.initial_setup.load import get_all_graphs_dump
@@ -410,5 +410,5 @@ def get_starter_projects(
         flows = get_all_graphs_dump()
         return flows
     except Exception as exc:
-        logger.error(exc)
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+        msg = format_exception_message(exc)
+        raise HTTPException(status_code=500, detail=msg) from exc
