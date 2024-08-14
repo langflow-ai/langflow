@@ -16,12 +16,13 @@ Deploying Langflow to Render is a straightforward process that can be completed 
 
    [![Deploy to Render](./render-deploy.svg)](https://render.com/deploy?repo=https%3A%2F%2Fgithub.com%2Flangflow-ai%2Flangflow%2Ftree%2Fdev)
 
-2. **Select the Default Configuration**: Once on the Render platform, you will be prompted to provide a blueprint name and to select the default configuration for Langflow. This configuration includes all the necessary settings and resources to run Langflow efficiently. You can change the branch of the repo to “main” or “dev” based on your preference. Click “Create New Resources” to proceed.
+2. **Select the Blueprint Configuration**: Once on the Render platform, you will be prompted to provide a blueprint name and to select the branch for your `render.yaml` file in Langflow. This configuration file includes all the necessary settings and resources to deploy Langflow in Render. The default is `main`.
+3. The `render.yaml` file specifies a `standard` Render instance, because Langflow requires at least 2 GB of RAM to run. This may require a credit card to sign up. Review the pricing details on the Render platform to understand any costs involved before proceeding. If you need to change your plan later, from the Render dashboard, go to **Settings** > **Instance Type**.
 
-   ![](./1861599636.png)
+   ![](./render-deploy-plan.png)
 
-3. **Deploy**: After selecting the configuration, proceed to deploy your Langflow instance. You can keep the default Starter instance, or change it to another instance based on your specific needs. Click Apply to deploy the instance. Render will handle the rest, including setting up the database, deploying the Langflow instance, and starting the application.
+4. Click **Deploy Blueprint** to deploy Langflow. Render will handle the rest, including setting up the database, deploying the Langflow instance, and starting the application.
 
-   ![](./1929176153.png)
+   ![](./render-deployed-overview.png)
 
-By following these steps, your Langflow instance will be successfully deployed on Render. Remember to review the pricing details on the Render platform to understand any costs involved.
+By following these steps, your Langflow instance will be successfully deployed on Render.
