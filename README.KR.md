@@ -105,7 +105,7 @@ results = run_flow_from_json("path/to/flow.json", input_value="Hello, World!")
 
 ## DataStax Langflow
 
-DataStax Langflow는 [AstraDB](https://www.datastax.com/products/datastax-astra) 와 통합된 Langflow의 호스팅된 버전입니다. 별도의 설치나 설정이 필요하지 않고 몇 분 안에 실행됩니다. [무료로 가입하기](https://langflow.datastax.com).
+DataStax Langflow는 [AstraDB](https://www.datastax.com/products/datastax-astra) 와 통합된 Langflow의 호스팅된 버전입니다. 별도의 설치나 설정이 필요하지 않고 몇 분 안에 실행됩니다. [무료로 가입하기](https://astra.datastax.com/signup?type=langflow).
 
 ## Hugging Face Spaces에 Langflow 배포하기
 
