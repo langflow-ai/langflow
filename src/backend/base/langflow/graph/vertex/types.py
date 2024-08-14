@@ -113,10 +113,15 @@ class ComponentVertex(Vertex):
 
         edges = self.get_edge_with_target(requester.id)
         result = UNDEFINED
-        edge = None
         for edge in edges:
             if edge is not None and edge.source_handle.name in self.results:
-                result = self.results[edge.source_handle.name]
+                # Get the result from the output instead of the results dict
+                output = self.get_output(edge.source_handle.name)
+                if output.value is UNDEFINED:
+                    result = self.results[edge.source_handle.name]
+                else:
+                    result = cast(Any, output.value)
+                # result = self.results[edge.source_handle.name]
                 break
         if result is UNDEFINED:
             if edge is None:
@@ -124,10 +129,9 @@ class ComponentVertex(Vertex):
             elif edge.source_handle.name not in self.results:
                 raise ValueError(f"Result not found for {edge.source_handle.name}. Results: {self.results}")
             else:
-                raise ValueError(f"Result not found for {edge.source_handle.name}")
-        asyncio.create_task(
-            log_transaction(source=self, target=requester, flow_id=str(self.graph.flow_id), status="success")
-        )
+                raise ValueError(f"Result not found for {edge.source_handle.name} in {edge}")
+        if flow_id:
+            asyncio.create_task(log_transaction(source=self, target=requester, flow_id=str(flow_id), status="success"))
         return result
 
     def extract_messages_from_artifacts(self, artifacts: Dict[str, Any]) -> List[dict]:
