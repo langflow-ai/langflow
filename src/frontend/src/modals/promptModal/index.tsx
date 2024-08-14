@@ -20,7 +20,7 @@ import {
 } from "../../constants/constants";
 import { postValidatePrompt } from "../../controllers/API";
 import useAlertStore from "../../stores/alertStore";
-import { genericModalPropsType } from "../../types/components";
+import { genericModalPropsType, PromptModalType } from "../../types/components";
 import { handleKeyDown } from "../../utils/reactflowUtils";
 import { classNames } from "../../utils/utils";
 import BaseModal from "../baseModal";
@@ -36,7 +36,7 @@ export default function PromptModal({
   disabled,
   id = "",
   readonly = false,
-}: genericModalPropsType): JSX.Element {
+}: PromptModalType): JSX.Element {
   const [modalOpen, setModalOpen] = useState(false);
   const [inputValue, setInputValue] = useState(value);
   const [isEdit, setIsEdit] = useState(true);
