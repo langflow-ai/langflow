@@ -104,7 +104,7 @@ export default function Header(): JSX.Element {
       </div>
 
       <div className="round-button-div">
-        <Link to="/">
+        <Link to="/all">
           <Button
             className="gap-2"
             variant={

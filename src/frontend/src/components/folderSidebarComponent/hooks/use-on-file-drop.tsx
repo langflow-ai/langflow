@@ -1,9 +1,9 @@
+import { usePostUploadFlowToFolder } from "@/controllers/API/queries/folders/use-post-upload-to-folder";
 import useSaveFlow from "@/hooks/flows/use-save-flow";
 import {
   UPLOAD_ALERT_LIST,
   WRONG_FILE_ERROR_ALERT,
 } from "../../../constants/alerts_constants";
-import { uploadFlowToFolder } from "../../../pages/MainPage/services";
 import useAlertStore from "../../../stores/alertStore";
 import useFlowsManagerStore from "../../../stores/flowsManagerStore";
 import { useFolderStore } from "../../../stores/foldersStore";
@@ -18,6 +18,7 @@ const useFileDrop = (folderId: string) => {
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const flows = useFlowsManagerStore((state) => state.flows);
   const saveFlow = useSaveFlow();
+  const { mutate: uploadFlowToFolder } = usePostUploadFlowToFolder();
   const handleFileDrop = async (e) => {
     if (e.dataTransfer.types.some((type) => type === "Files")) {
       if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
@@ -120,7 +121,7 @@ const useFileDrop = (folderId: string) => {
     setFolderDragging(false);
     setFolderIdDragging("");
 
-    uploadFlowToFolder(formData, folderId);
+    uploadFlowToFolder({ flows: formData, folderId });
   };
 
   return {
