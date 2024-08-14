@@ -10,7 +10,6 @@ import { SIGNIN_ERROR_ALERT } from "../../constants/alerts_constants";
 import { CONTROL_LOGIN_STATE } from "../../constants/constants";
 import { AuthContext } from "../../contexts/authContext";
 import useAlertStore from "../../stores/alertStore";
-import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { LoginType } from "../../types/api";
 import {
   inputHandlerEventType,
@@ -24,7 +23,6 @@ export default function LoginPage(): JSX.Element {
   const { password, username } = inputState;
   const { login } = useContext(AuthContext);
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  const setAllFlows = useFlowsManagerStore((state) => state.setAllFlows);
   const setSelectedFolder = useFolderStore((state) => state.setSelectedFolder);
 
   function handleInput({
@@ -43,7 +41,6 @@ export default function LoginPage(): JSX.Element {
 
     mutate(user, {
       onSuccess: (data) => {
-        setAllFlows([]);
         setSelectedFolder(null);
 
         login(data.access_token, "login");
