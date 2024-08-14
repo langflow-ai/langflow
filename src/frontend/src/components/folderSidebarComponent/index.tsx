@@ -3,7 +3,6 @@ import { useLocation } from "react-router-dom";
 import { FolderType } from "../../pages/MainPage/entities";
 import { cn } from "../../utils/utils";
 import HorizontalScrollFadeComponent from "../horizontalScrollFadeComponent";
-import Loading from "../ui/loading";
 import SideBarFoldersButtonsComponent from "./components/sideBarFolderButtons";
 
 type SidebarNavProps = {
@@ -26,16 +25,13 @@ export default function FolderSidebarNav({
   return (
     <nav className={cn(className)} {...props}>
       <HorizontalScrollFadeComponent>
-        {isPending || !folders ? (
-          <Loading />
-        ) : (
-          <SideBarFoldersButtonsComponent
-            pathname={pathname}
-            handleChangeFolder={handleChangeFolder}
-            handleDeleteFolder={handleDeleteFolder}
-            folders={folders}
-          />
-        )}
+        <SideBarFoldersButtonsComponent
+          loading={isPending || !folders}
+          pathname={pathname}
+          handleChangeFolder={handleChangeFolder}
+          handleDeleteFolder={handleDeleteFolder}
+          folders={folders}
+        />
       </HorizontalScrollFadeComponent>
     </nav>
   );
