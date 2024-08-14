@@ -63,11 +63,11 @@ export default function ComponentsComponent({
   const handleFileDrop = useFileDrop(type);
   const [pageSize, setPageSize] = useState(20);
   const [pageIndex, setPageIndex] = useState(1);
-  const location = useLocation();
   const all: FlowType[] = sortFlows(filteredFlows, type);
   const start = (pageIndex - 1) * pageSize;
   const end = start + pageSize;
   const data: FlowType[] = all?.slice(start, end);
+  const location = useLocation();
 
   const name = getNameByType(type);
 
@@ -78,20 +78,20 @@ export default function ComponentsComponent({
   const [shouldSelectAll, setShouldSelectAll] = useState(true);
 
   const cardTypes = useMemo(() => {
-    if (window.location.pathname.includes("components")) {
+    if (location.pathname.includes("components")) {
       return "Components";
     }
-    if (window.location.pathname.includes("flows")) {
+    if (location.pathname.includes("flows")) {
       return "Flows";
     }
     return "Items";
-  }, [window.location]);
+  }, [location]);
 
   useEffect(() => {
     setSelectedFlowsComponentsCards([]);
     handleSelectAll(false);
     setShouldSelectAll(true);
-  }, [location, folderId, myCollectionId]);
+  }, [folderId, location, myCollectionId]);
 
   useFilteredFlows(flowsFromFolder, searchFlowsComponents, setFilteredFlows);
 
@@ -190,6 +190,9 @@ export default function ComponentsComponent({
       .then(() => {
         setSelectedFolder(null);
         resetFilter();
+        setSelectedFlowsComponentsCards([]);
+        handleSelectAll(false);
+        setShouldSelectAll(true);
         setSuccessData({
           title: "Selected items deleted successfully",
         });
