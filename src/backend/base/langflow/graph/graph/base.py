@@ -270,7 +270,22 @@ class Graph:
 
         raise ValueError("Max iterations reached")
 
-    def start(self, inputs: Optional[List[dict]] = None, max_iterations: Optional[int] = None) -> Generator:
+    def __apply_config(self, config: StartConfigDict):
+        for vertex in self.vertices:
+            if vertex._custom_component is None:
+                continue
+            for output in vertex._custom_component.outputs:
+                for key, value in config["output"].items():
+                    setattr(output, key, value)
+
+    def start(
+        self,
+        inputs: Optional[List[dict]] = None,
+        max_iterations: Optional[int] = None,
+        config: Optional[StartConfigDict] = None,
+    ) -> Generator:
+        if config is not None:
+            self.__apply_config(config)
         #! Change this ASAP
         nest_asyncio.apply()
         loop = asyncio.get_event_loop()
