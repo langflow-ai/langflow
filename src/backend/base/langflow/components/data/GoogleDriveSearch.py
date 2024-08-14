@@ -68,8 +68,9 @@ class GoogleDriveSearchComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Document URLs", name="doc_urls", method="search_doc_ids"),
-        Output(display_name="Document IDs", name="doc_ids", method="search_doc_urls"),
+        Output(display_name="Document URLs", name="doc_urls", method="search_doc_urls"),
+        Output(display_name="Document IDs", name="doc_ids", method="search_doc_ids"),
+        Output(display_name="Document Titles", name="doc_titles", method="search_doc_titles"),
         Output(display_name="Data", name="Data", method="search_data"),
     ]
 
@@ -90,6 +91,23 @@ class GoogleDriveSearchComponent(Component):
         # Automatically regenerate the query string when inputs change
         self.generate_query_string()
 
+    def generate_file_url(self, file_id: str, mime_type: str) -> str:
+        """
+        Generates the appropriate Google Drive URL for a file based on its MIME type.
+        """
+        if mime_type == "application/vnd.google-apps.document":
+            return f"https://docs.google.com/document/d/{file_id}/edit"
+        elif mime_type == "application/vnd.google-apps.spreadsheet":
+            return f"https://docs.google.com/spreadsheets/d/{file_id}/edit"
+        elif mime_type == "application/vnd.google-apps.presentation":
+            return f"https://docs.google.com/presentation/d/{file_id}/edit"
+        elif mime_type == "application/vnd.google-apps.drawing":
+            return f"https://docs.google.com/drawings/d/{file_id}/edit"
+        elif mime_type == "application/pdf":
+            return f"https://drive.google.com/file/d/{file_id}/view?usp=drivesdk"
+        else:
+            return f"https://drive.google.com/file/d/{file_id}/view?usp=drivesdk"
+
     def search_files(self) -> dict:
         # Load the token information from the JSON string
         token_info = json.loads(self.token_string)
@@ -102,20 +120,29 @@ class GoogleDriveSearchComponent(Component):
         service = build("drive", "v3", credentials=creds)
 
         # Perform the search
-        results = service.files().list(q=query, pageSize=10, fields="nextPageToken, files(id, name)").execute()
+        results = service.files().list(q=query, pageSize=5, fields="nextPageToken, files(id, name, mimeType)").execute()
         items = results.get("files", [])
 
         doc_urls = []
         doc_ids = []
+        doc_titles_urls = []
+        doc_titles = []
 
         if items:
             for item in items:
+                # Directly use the file ID, title, and MIME type to generate the URL
                 file_id = item["id"]
-                file_url = f"https://docs.google.com/document/d/{file_id}/edit"
+                file_title = item["name"]
+                mime_type = item["mimeType"]
+                file_url = self.generate_file_url(file_id, mime_type)
+
+                # Store the URL, ID, and title+URL in their respective lists
                 doc_urls.append(file_url)
                 doc_ids.append(file_id)
-        return {"doc_urls": doc_urls, "doc_ids": doc_ids, "query_string": query}
-        # return Data(data={"doc_urls": doc_urls, "doc_ids": doc_ids, "query_string": query})
+                doc_titles.append(file_title)
+                doc_titles_urls.append({"title": file_title, "url": file_url})
+
+        return {"doc_urls": doc_urls, "doc_ids": doc_ids, "doc_titles_urls": doc_titles_urls, "doc_titles": doc_titles}
 
     def search_doc_ids(self) -> List[str]:
         return self.search_files()["doc_ids"]
@@ -123,5 +150,8 @@ class GoogleDriveSearchComponent(Component):
     def search_doc_urls(self) -> List[str]:
         return self.search_files()["doc_urls"]
 
+    def search_doc_titles(self) -> List[str]:
+        return self.search_files()["doc_titles"]
+
     def search_data(self) -> Data:
-        return Data(data=self.search_files())
+        return Data(data={"text": self.search_files()["doc_titles_urls"]})
