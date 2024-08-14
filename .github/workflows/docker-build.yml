@@ -48,19 +48,19 @@ jobs:
           poetry-version: ${{ env.POETRY_VERSION }}
           cache-key: ${{ runner.os }}-poetry-${{ env.POETRY_VERSION }}-${{ hashFiles('**/poetry.lock') }}
       - name: Get Version from Input
-        if : ${{ inputs.version != '' }}
+        if: ${{ inputs.version != '' }}
         id: get-version-input
         run: |
           version=${{ inputs.version }}
           echo version=$version >> $GITHUB_OUTPUT
       - name: Get Version Main
-        if : ${{ inputs.version == '' && inputs.release_type == 'base' }}
+        if: ${{ inputs.version == '' && inputs.release_type == 'base' }}
         id: get-version-base
         run: |
           version=$(poetry version --short)
           echo version=$version >> $GITHUB_OUTPUT
       - name: Get Version Base
-        if : ${{ inputs.version == '' && inputs.release_type == 'main' }}
+        if: ${{ inputs.version == '' && inputs.release_type == 'main' }}
         id: get-version-main
         run: |
           version=$(cd src/backend/base && poetry version --short)
@@ -106,7 +106,7 @@ jobs:
           push: true
           file: ${{ needs.setup.outputs.file }}
           tags: ${{ needs.setup.outputs.tags }}
-          # provenance: false will result in a single manifest for all platforms which makes the image pullable from arm64 machines via the emulation (e.g. Apple Silicon machines)
+          platforms: linux/amd64,linux/arm64
           provenance: false
 
   build_components:
