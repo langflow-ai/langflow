@@ -93,10 +93,19 @@ class ComponentVertex(Vertex):
         Returns:
             The built result if use_result is True, else the built object.
         """
+        flow_id = self.graph.flow_id
         if not self._built:
-            asyncio.create_task(
-                log_transaction(source=self, target=requester, flow_id=str(self.graph.flow_id), status="error")
-            )
+            if flow_id:
+                asyncio.create_task(
+                    log_transaction(source=self, target=requester, flow_id=str(flow_id), status="error")
+                )
+            for edge in self.get_edge_with_target(requester.id):
+                # We need to check if the edge is a normal edge
+                # or a contract edge
+
+                if edge.is_cycle and edge.target_param:
+                    return requester.get_value_from_template_dict(edge.target_param)
+
             raise ValueError(f"Component {self.display_name} has not been built yet")
 
         if requester is None:
