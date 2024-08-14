@@ -10,7 +10,7 @@ import {
 } from "../../constants/constants";
 import { AuthContext } from "../../contexts/authContext";
 
-import FeatureFlags from "@/../feature-config.json";
+import FeatureFlags from "@/../public/feature-config.json";
 import { useLogout } from "@/controllers/API/queries/auth";
 import useAuthStore from "@/stores/authStore";
 import useAlertStore from "../../stores/alertStore";
@@ -187,7 +187,6 @@ export default function Header(): JSX.Element {
               ) : (
                 <IconComponent
                   name="MoonIcon"
-                  className="side-bar-button-size"
                 />
               )}
             </button>
@@ -206,7 +205,7 @@ export default function Header(): JSX.Element {
           </AlertDropdown>
 
           <>
-            <Separator orientation="vertical" />
+            {/* <Separator orientation="vertical" /> */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button

@@ -1,4 +1,4 @@
-import FeatureFlags from "@/../feature-config.json";
+import FeatureFlags from "@/../public/feature-config.json";
 import { create } from "zustand";
 import { checkHasApiKey, checkHasStore } from "../controllers/API";
 import { StoreStoreType } from "../types/zustand/store";

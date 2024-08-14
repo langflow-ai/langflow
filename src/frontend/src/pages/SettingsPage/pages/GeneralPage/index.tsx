@@ -1,4 +1,4 @@
-import FeatureFlags from "@/../feature-config.json";
+import FeatureFlags from "@/../public/feature-config.json";
 import {
   EDIT_PASSWORD_ALERT_LIST,
   EDIT_PASSWORD_ERROR_ALERT,

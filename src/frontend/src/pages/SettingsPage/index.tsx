@@ -1,4 +1,4 @@
-import FeatureFlags from "@/../feature-config.json";
+import FeatureFlags from "@/../public/feature-config.json";
 import useAuthStore from "@/stores/authStore";
 import { useStoreStore } from "@/stores/storeStore";
 import { Outlet } from "react-router-dom";

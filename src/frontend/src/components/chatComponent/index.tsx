@@ -1,4 +1,4 @@
-import FeatureFlags from "@/../feature-config.json";
+import FeatureFlags from "@/../public/feature-config.json";
 import { Transition } from "@headlessui/react";
 import { useMemo, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
