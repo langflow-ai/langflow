@@ -472,6 +472,27 @@ Ensure the Supabase service key, URL, and table name are properly configured.
 ---
 
 
+### Upstash Vector
+
+
+`UpstashVector` searches a Upstash Vector Store for documents similar to the input. It has it's own embedding
+model which can be used to search documents without needing an external embedding model.
+
+
+**Parameters:**
+
+- **Index URL:** The URL of the Upstash index.
+- **Index Token:** The token for the Upstash index.
+- **Text Key:** The key in the record to use as text.
+- **Namespace:** The namespace name. A new namespace is created if not found. Leave empty for default namespace.
+- **Search Query:** The search query.
+- **Metadata Filter:** The metadata filter. Filters documents by metadata. Look at the [docs](https://upstash.com/docs/vector/features/filtering) for more information.
+- **Embedding:** The embedding model used. To use Upstash's embeddings, don't provide an embedding.
+- **Number of Results:** The number of results to return.
+
+---
+
+
 ### Vectara {#b4e05230b62a47c792a89c5511af97ac}
 
 
