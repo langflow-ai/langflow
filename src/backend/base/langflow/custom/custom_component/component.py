@@ -384,6 +384,8 @@ class Component(CustomComponent):
             return self.__dict__["_attributes"][name]
         if "_inputs" in self.__dict__ and name in self.__dict__["_inputs"]:
             return self.__dict__["_inputs"][name].value
+        if "_outputs" in self.__dict__ and name in self.__dict__["_outputs"]:
+            return self.__dict__["_outputs"][name]
         if name in BACKWARDS_COMPATIBLE_ATTRIBUTES:
             return self.__dict__[f"_{name}"]
         if name.startswith("_") and name[1:] in BACKWARDS_COMPATIBLE_ATTRIBUTES:
@@ -500,6 +502,7 @@ class Component(CustomComponent):
         self.outputs = [Output(**output) for output in outputs]
         for output in self.outputs:
             setattr(self, output.name, output)
+            self._outputs[output.name] = output
 
     def get_trace_as_inputs(self):
         predefined_inputs = {
