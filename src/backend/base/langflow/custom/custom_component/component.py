@@ -362,6 +362,12 @@ class Component(CustomComponent):
         )
 
     def _set_parameter_or_attribute(self, key, value):
+        if isinstance(value, Component):
+            raise ValueError(
+                f"You set {value.display_name} as value for `{key}`. "
+                "You should pass one of the following: "
+                f"{', '.join(f"'{output.method}'" for output in value.outputs)}"
+            )
         self._set_input_value(key, value)
         self._parameters[key] = value
         self._attributes[key] = value
@@ -398,6 +404,12 @@ class Component(CustomComponent):
     def _set_input_value(self, name: str, value: Any):
         if name in self._inputs:
             input_value = self._inputs[name].value
+            if isinstance(input_value, Component):
+                raise ValueError(
+                    f"You set {input_value.display_name} as value for `{name}`. "
+                    "You should pass one of the following: "
+                    f"{", ".join(f"'{output.method}'" for output in input_value.outputs)}"
+                )
             if callable(input_value):
                 raise ValueError(
                     f"Input {name} is connected to {input_value.__self__.display_name}.{input_value.__name__}"
