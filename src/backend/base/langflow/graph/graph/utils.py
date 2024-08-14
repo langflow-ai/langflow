@@ -241,8 +241,12 @@ def get_updated_edges(base_flow, g_nodes, g_edges, group_node_id):
 def get_successors(graph: Dict[str, Dict[str, List[str]]], vertex_id: str) -> List[str]:
     successors_result = []
     stack = [vertex_id]
+    visited = set()
     while stack:
         current_id = stack.pop()
+        if current_id in visited:
+            continue
+        visited.add(current_id)
         successors_result.append(current_id)
         stack.extend(graph[current_id]["successors"])
     return successors_result

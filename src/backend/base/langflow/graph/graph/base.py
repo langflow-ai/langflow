@@ -1412,33 +1412,25 @@ class Graph:
         """Returns the predecessors of a vertex."""
         return [self.get_vertex(source_id) for source_id in self.predecessor_map.get(vertex.id, [])]
 
-    def get_all_successors(self, vertex: "Vertex", recursive=True, flat=True):
-        # Recursively get the successors of the current vertex
-        # successors = vertex.successors
-        # if not successors:
-        #     return []
-        # successors_result = []
-        # for successor in successors:
-        #     # Just return a list of successors
-        #     if recursive:
-        #         next_successors = self.get_all_successors(successor)
-        #         successors_result.extend(next_successors)
-        #     successors_result.append(successor)
-        # return successors_result
-        # The above is the version without the flat parameter
-        # The below is the version with the flat parameter
-        # the flat parameter will define if each layer of successors
-        # becomes one list or if the result is a list of lists
-        # if flat is True, the result will be a list of vertices
-        # if flat is False, the result will be a list of lists of vertices
-        # each list will represent a layer of successors
+    def get_all_successors(self, vertex: "Vertex", recursive=True, flat=True, visited=None):
+        if visited is None:
+            visited = set()
+
+        # Prevent revisiting vertices to avoid infinite loops in cyclic graphs
+        if vertex in visited:
+            return []
+
+        visited.add(vertex)
+
         successors = vertex.successors
         if not successors:
             return []
+
         successors_result = []
+
         for successor in successors:
             if recursive:
-                next_successors = self.get_all_successors(successor)
+                next_successors = self.get_all_successors(successor, recursive=recursive, flat=flat, visited=visited)
                 if flat:
                     successors_result.extend(next_successors)
                 else:
@@ -1447,6 +1439,10 @@ class Graph:
                 successors_result.append(successor)
             else:
                 successors_result.append([successor])
+
+        if not flat and successors_result:
+            return [successors] + successors_result
+
         return successors_result
 
     def get_successors(self, vertex: "Vertex") -> List["Vertex"]:
