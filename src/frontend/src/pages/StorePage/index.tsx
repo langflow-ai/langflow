@@ -35,6 +35,7 @@ import { useStoreStore } from "../../stores/storeStore";
 import { storeComponent } from "../../types/store";
 import { cn } from "../../utils/utils";
 import InputSearchComponent from "../MainPage/components/myCollectionComponent/components/inputSearchComponent";
+import StoreCardComponent from "@/components/storeCardComponent";
 
 export default function StorePage(): JSX.Element {
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
@@ -326,15 +327,11 @@ export default function StorePage(): JSX.Element {
               searchData.map((item) => {
                 return (
                   <>
-                    <CollectionCardComponent
+                    <StoreCardComponent
                       key={item.id}
                       data={item}
                       authorized={validApiKey}
                       disabled={loading}
-                      playground={
-                        item.last_tested_version?.includes("1.0.0") &&
-                        !item.is_component
-                      }
                     />
                   </>
                 );
