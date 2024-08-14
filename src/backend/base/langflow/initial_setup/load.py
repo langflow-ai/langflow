@@ -1,4 +1,5 @@
 from .starter_projects import (
+    basic_prompting_graph,
     blog_writer_graph,
     document_qa_graph,
     memory_chatbot_graph,
@@ -9,6 +10,7 @@ from .starter_projects import (
 
 def get_all_graphs():
     return [
+        basic_prompting_graph(),
         blog_writer_graph(),
         document_qa_graph(),
         memory_chatbot_graph(),
