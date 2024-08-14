@@ -20,7 +20,7 @@ import {
 } from "../../constants/constants";
 import { postValidatePrompt } from "../../controllers/API";
 import useAlertStore from "../../stores/alertStore";
-import { genericModalPropsType, PromptModalType } from "../../types/components";
+import { PromptModalType } from "../../types/components";
 import { handleKeyDown } from "../../utils/reactflowUtils";
 import { classNames } from "../../utils/utils";
 import BaseModal from "../baseModal";

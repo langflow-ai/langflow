@@ -1,7 +1,4 @@
 import { useEffect } from "react";
-
-import { TypeModal } from "../../constants/enums";
-import GenericModal from "../../modals/genericModal";
 import { PromptAreaComponentType } from "../../types/components";
 import IconComponent from "../genericIconComponent";
 import { Button } from "../ui/button";

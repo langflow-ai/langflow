@@ -1,8 +1,5 @@
 import { classNames } from "@/utils/utils";
 import { useEffect } from "react";
-import { EDIT_TEXT_MODAL_TITLE } from "../../constants/constants";
-import { TypeModal } from "../../constants/enums";
-import GenericModal from "../../modals/genericModal";
 import { TextAreaComponentType } from "../../types/components";
 import IconComponent from "../genericIconComponent";
 import { Button } from "../ui/button";
