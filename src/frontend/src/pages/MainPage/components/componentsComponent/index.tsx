@@ -236,7 +236,10 @@ export default function ComponentsComponent({
           data-testid="cards-wrapper"
         >
           <div className="flex w-full flex-col gap-4">
-            {!isLoading && !isLoadingFolders && data?.length === 0 ? (
+            {!isLoading &&
+            !isLoadingFolders &&
+            !isLoadingCurrentFolder &&
+            data?.length === 0 ? (
               <EmptyComponent />
             ) : (
               <div className="grid w-full gap-4 md:grid-cols-2 lg:grid-cols-2">
