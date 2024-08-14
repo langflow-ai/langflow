@@ -36,3 +36,11 @@ class VertexBuildResult(NamedTuple):
     valid: bool
     artifacts: dict
     vertex: "Vertex"
+
+
+class OutputConfigDict(TypedDict):
+    cache: bool
+
+
+class StartConfigDict(TypedDict):
+    output: OutputConfigDict

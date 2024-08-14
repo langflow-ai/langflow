@@ -196,7 +196,7 @@
 
   /* The same as primary-input but no-truncate */
   .textarea-primary {
-    @apply form-input block w-full rounded-md border-border bg-muted px-3 text-left shadow-sm placeholder:text-muted-foreground focus:border-ring focus:placeholder-transparent focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm;
+    @apply form-input block w-full rounded-md border-border bg-background px-3 text-left shadow-sm placeholder:text-muted-foreground focus:border-ring focus:placeholder-transparent focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm;
   }
 
   .input-edit-node {

@@ -17,6 +17,7 @@ class Edge:
         self.target_param: str | None = None
         self._target_handle: TargetHandleDict | str | None = None
         self._data = edge.copy()
+        self.is_cycle = False
         if data := edge.get("data", {}):
             self._source_handle = data.get("sourceHandle", {})
             self._target_handle = cast(TargetHandleDict, data.get("targetHandle", {}))
@@ -159,10 +160,11 @@ class Edge:
             raise ValueError(f"Edge between {source.vertex_type} and {target.vertex_type} " f"has no matched type")
 
     def __repr__(self) -> str:
-        return (
-            f"Edge(source={self.source_id}, target={self.target_id}, target_param={self.target_param}"
-            f", matched_type={self.matched_type})"
-        )
+        if (hasattr(self, "source_handle") and self.source_handle) and (
+            hasattr(self, "target_handle") and self.target_handle
+        ):
+            return f"{self.source_id} -[{self.source_handle.name}->{self.target_handle.field_name}]-> {self.target_id}"
+        return f"{self.source_id} -[{self.target_param}]-> {self.target_id}"
 
     def __hash__(self) -> int:
         return hash(self.__repr__())
@@ -176,12 +178,16 @@ class Edge:
             and self.target_param == __o.target_param
         )
 
+    def __str__(self) -> str:
+        return self.__repr__()
 
-class ContractEdge(Edge):
+
+class CycleEdge(Edge):
     def __init__(self, source: "Vertex", target: "Vertex", raw_edge: EdgeData):
         super().__init__(source, target, raw_edge)
         self.is_fulfilled = False  # Whether the contract has been fulfilled.
         self.result: Any = None
+        self.is_cycle = True
 
     async def honor(self, source: "Vertex", target: "Vertex") -> None:
         """
@@ -220,10 +226,3 @@ class ContractEdge(Edge):
             if target.params.get("message") == "":
                 return self.result
         return self.result
-
-    def __repr__(self) -> str:
-        if (hasattr(self, "source_handle") and self.source_handle) and (
-            hasattr(self, "target_handle") and self.target_handle
-        ):
-            return f"{self.source_id} -[{self.source_handle.name}->{self.target_handle.field_name}]-> {self.target_id}"
-        return f"{self.source_id} -[{self.target_param}]-> {self.target_id}"

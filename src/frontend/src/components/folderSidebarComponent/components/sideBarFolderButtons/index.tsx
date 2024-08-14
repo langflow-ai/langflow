@@ -8,7 +8,7 @@ import { createFileUpload } from "@/helpers/create-file-upload";
 import { getObjectsFromFilelist } from "@/helpers/get-objects-from-filelist";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
 import { useEffect, useRef, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { FolderType } from "../../../../pages/MainPage/entities";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
@@ -21,30 +21,32 @@ import IconComponent, {
 import { Button, buttonVariants } from "../../../ui/button";
 import { Input } from "../../../ui/input";
 import useFileDrop from "../../hooks/use-on-file-drop";
+import { SidebarFolderSkeleton } from "../sidebarFolderSkeleton";
 
 type SideBarFoldersButtonsComponentProps = {
   pathname: string;
   handleChangeFolder?: (id: string) => void;
   handleDeleteFolder?: (item: FolderType) => void;
+  folders: FolderType[] | undefined;
+  loading?: boolean;
 };
 const SideBarFoldersButtonsComponent = ({
   pathname,
   handleChangeFolder,
   handleDeleteFolder,
+  folders = [],
+  loading,
 }: SideBarFoldersButtonsComponentProps) => {
   const refInput = useRef<HTMLInputElement>(null);
-  const setFolders = useFolderStore((state) => state.setFolders);
-  const folders = useFolderStore((state) => state.folders);
   const [foldersNames, setFoldersNames] = useState({});
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
   const [editFolders, setEditFolderName] = useState(
-    folders.map((obj) => ({ name: obj.name, edit: false })),
+    folders.map((obj) => ({ name: obj.name, edit: false })) ?? [],
   );
   const currentFolder = pathname.split("/");
   const urlWithoutPath = pathname.split("/").length < 4;
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
   const folderIdDragging = useFolderStore((state) => state.folderIdDragging);
-  const refreshFolders = useFolderStore((state) => state.refreshFolders);
 
   const checkPathName = (itemId: string) => {
     if (urlWithoutPath && itemId === myCollectionId) {
@@ -52,22 +54,12 @@ const SideBarFoldersButtonsComponent = ({
     }
     return currentFolder.includes(itemId);
   };
-  const location = useLocation();
-  const folderId = location?.state?.folderId ?? myCollectionId;
-  const getFolderById = useFolderStore((state) => state.getFolderById);
+  const folderId = useParams().folderId ?? myCollectionId ?? "";
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
-  const getFoldersApi = useFolderStore((state) => state.getFoldersApi);
   const uploadFlow = useUploadFlow();
 
-  const handleFolderChange = () => {
-    getFolderById(folderId);
-  };
-
-  const { dragOver, dragEnter, dragLeave, onDrop } = useFileDrop(
-    folderId,
-    handleFolderChange,
-  );
+  const { dragOver, dragEnter, dragLeave, onDrop } = useFileDrop(folderId);
 
   const { mutate } = usePostUploadFolders();
 
@@ -76,7 +68,6 @@ const SideBarFoldersButtonsComponent = ({
       getObjectsFromFilelist<any>(files).then((objects) => {
         if (objects.every((flow) => flow.data?.nodes)) {
           uploadFlow({ files }).then(() => {
-            getFolderById(folderId);
             setSuccessData({
               title: "Uploaded successfully",
             });
@@ -89,7 +80,6 @@ const SideBarFoldersButtonsComponent = ({
               { formData },
               {
                 onSuccess: () => {
-                  getFoldersApi(true);
                   setSuccessData({
                     title: "Folder uploaded successfully.",
                   });
@@ -146,20 +136,13 @@ const SideBarFoldersButtonsComponent = ({
   const { mutate: mutateUpdateFolder } = usePatchFolders();
 
   function addNewFolder() {
-    mutateAddFolder(
-      {
-        data: {
-          name: "New Folder",
-          parent_id: null,
-          description: "",
-        },
+    mutateAddFolder({
+      data: {
+        name: "New Folder",
+        parent_id: null,
+        description: "",
       },
-      {
-        onSuccess: () => {
-          refreshFolders();
-        },
-      },
-    );
+    });
   }
 
   function handleEditFolderName(e, name): void {
@@ -173,7 +156,7 @@ const SideBarFoldersButtonsComponent = ({
   }
 
   useEffect(() => {
-    folders.map((obj) => ({ name: obj.name, edit: false }));
+    setEditFolderName(folders.map((obj) => ({ name: obj.name, edit: false })));
   }, [folders]);
 
   const handleEditNameFolder = async (item) => {
@@ -210,7 +193,6 @@ const SideBarFoldersButtonsComponent = ({
             const updateFolders = [...folders];
             updateFolders[updatedFolderIndex] = updatedFolder;
 
-            setFolders(updateFolders);
             setFoldersNames({});
             setEditFolderName(
               folders.map((obj) => ({
@@ -255,156 +237,163 @@ const SideBarFoldersButtonsComponent = ({
 
       <div className="flex gap-2 overflow-auto lg:h-[70vh] lg:flex-col">
         <>
-          {folders.map((item, index) => {
-            const editFolderName = editFolders?.filter(
-              (folder) => folder.name === item.name,
-            )[0];
-            return (
-              <div
-                onDragOver={(e) => dragOver(e, item.id!)}
-                onDragEnter={(e) => dragEnter(e, item.id!)}
-                onDragLeave={dragLeave}
-                onDrop={(e) => onDrop(e, item.id!)}
-                key={item.id}
-                data-testid={`sidebar-nav-${item.name}`}
-                className={cn(
-                  buttonVariants({ variant: "ghost" }),
-                  checkPathName(item.id!)
-                    ? "border border-border bg-muted hover:bg-muted"
-                    : "border hover:bg-transparent lg:border-transparent lg:hover:border-border",
-                  "group flex w-full shrink-0 cursor-pointer gap-2 opacity-100 lg:min-w-full",
-                  folderIdDragging === item.id! ? "bg-border" : "",
-                )}
-                onClick={() => handleChangeFolder!(item.id!)}
-              >
+          {!loading ? (
+            folders.map((item, index) => {
+              const editFolderName = editFolders?.filter(
+                (folder) => folder.name === item.name,
+              )[0];
+              return (
                 <div
-                  onDoubleClick={(event) => {
-                    if (item.name === "My Projects") {
-                      return;
-                    }
+                  onDragOver={(e) => dragOver(e, item.id!)}
+                  onDragEnter={(e) => dragEnter(e, item.id!)}
+                  onDragLeave={dragLeave}
+                  onDrop={(e) => onDrop(e, item.id!)}
+                  key={item.id}
+                  data-testid={`sidebar-nav-${item.name}`}
+                  className={cn(
+                    buttonVariants({ variant: "ghost" }),
+                    checkPathName(item.id!)
+                      ? "border border-border bg-muted hover:bg-muted"
+                      : "border hover:bg-transparent lg:border-transparent lg:hover:border-border",
+                    "group flex w-full shrink-0 cursor-pointer gap-2 opacity-100 lg:min-w-full",
+                    folderIdDragging === item.id! ? "bg-border" : "",
+                  )}
+                  onClick={() => handleChangeFolder!(item.id!)}
+                >
+                  <div
+                    onDoubleClick={(event) => {
+                      if (item.name === "My Projects") {
+                        return;
+                      }
 
-                    if (!foldersNames[item.name]) {
-                      setFoldersNames({ [item.name]: item.name });
-                    }
+                      if (!foldersNames[item.name]) {
+                        setFoldersNames({ [item.name]: item.name });
+                      }
 
-                    if (
-                      editFolders.find((obj) => obj.name === item.name)?.name
-                    ) {
-                      const newEditFolders = editFolders.map((obj) => {
-                        if (obj.name === item.name) {
-                          return { name: item.name, edit: true };
-                        }
-                        return { name: obj.name, edit: false };
-                      });
-                      setEditFolderName(newEditFolders);
+                      if (
+                        editFolders.find((obj) => obj.name === item.name)?.name
+                      ) {
+                        const newEditFolders = editFolders.map((obj) => {
+                          if (obj.name === item.name) {
+                            return { name: item.name, edit: true };
+                          }
+                          return { name: obj.name, edit: false };
+                        });
+                        setEditFolderName(newEditFolders);
+                        takeSnapshot();
+                        event.stopPropagation();
+                        event.preventDefault();
+                        return;
+                      }
+
+                      setEditFolderName((old) => [
+                        ...old,
+                        { name: item.name, edit: true },
+                      ]);
+                      setFoldersNames((oldFolder) => ({
+                        ...oldFolder,
+                        [item.name]: item.name,
+                      }));
                       takeSnapshot();
                       event.stopPropagation();
                       event.preventDefault();
-                      return;
-                    }
-
-                    setEditFolderName((old) => [
-                      ...old,
-                      { name: item.name, edit: true },
-                    ]);
-                    setFoldersNames((oldFolder) => ({
-                      ...oldFolder,
-                      [item.name]: item.name,
-                    }));
-                    takeSnapshot();
-                    event.stopPropagation();
-                    event.preventDefault();
-                  }}
-                  className="flex w-full items-center gap-2"
-                >
-                  <IconComponent
-                    name={"folder"}
-                    className="mr-2 w-4 flex-shrink-0 justify-start stroke-[1.5] opacity-100"
-                  />
-                  {editFolderName?.edit ? (
-                    <div>
-                      <Input
-                        className="w-36"
-                        onChange={(e) => {
-                          handleEditFolderName(e, item.name);
+                    }}
+                    className="flex w-full items-center gap-2"
+                  >
+                    <IconComponent
+                      name={"folder"}
+                      className="mr-2 w-4 flex-shrink-0 justify-start stroke-[1.5] opacity-100"
+                    />
+                    {editFolderName?.edit ? (
+                      <div>
+                        <Input
+                          className="w-36"
+                          onChange={(e) => {
+                            handleEditFolderName(e, item.name);
+                          }}
+                          ref={refInput}
+                          onKeyDown={(e) => {
+                            if (e.key === "Escape") {
+                              const newEditFolders = editFolders.map((obj) => {
+                                if (obj.name === item.name) {
+                                  return { name: item.name, edit: false };
+                                }
+                                return { name: obj.name, edit: false };
+                              });
+                              setEditFolderName(newEditFolders);
+                              setFoldersNames({});
+                              setEditFolderName(
+                                folders.map((obj) => ({
+                                  name: obj.name,
+                                  edit: false,
+                                })),
+                              );
+                            }
+                            if (e.key === "Enter") {
+                              refInput.current?.blur();
+                            }
+                            handleKeyDown(e, e.key, "");
+                          }}
+                          autoFocus={true}
+                          onBlur={async () => {
+                            if (refInput.current?.value !== item.name) {
+                              handleEditNameFolder(item);
+                            } else {
+                              editFolderName.edit = false;
+                            }
+                          }}
+                          value={foldersNames[item.name]}
+                          id={`input-folder-${item.name}`}
+                          data-testid={`input-folder`}
+                        />
+                      </div>
+                    ) : (
+                      <span className="block w-full truncate opacity-100">
+                        {item.name}
+                      </span>
+                    )}
+                    {index > 0 && (
+                      <Button
+                        data-testid="btn-delete-folder"
+                        className="hidden p-0 hover:bg-white group-hover:block hover:dark:bg-[#0c101a00]"
+                        onClick={(e) => {
+                          handleDeleteFolder!(item);
+                          e.stopPropagation();
+                          e.preventDefault();
                         }}
-                        ref={refInput}
-                        onKeyDown={(e) => {
-                          if (e.key === "Escape") {
-                            const newEditFolders = editFolders.map((obj) => {
-                              if (obj.name === item.name) {
-                                return { name: item.name, edit: false };
-                              }
-                              return { name: obj.name, edit: false };
-                            });
-                            setEditFolderName(newEditFolders);
-                            setFoldersNames({});
-                            setEditFolderName(
-                              folders.map((obj) => ({
-                                name: obj.name,
-                                edit: false,
-                              })),
-                            );
-                          }
-                          if (e.key === "Enter") {
-                            refInput.current?.blur();
-                          }
-                          handleKeyDown(e, e.key, "");
-                        }}
-                        autoFocus={true}
-                        onBlur={async () => {
-                          if (refInput.current?.value !== item.name) {
-                            handleEditNameFolder(item);
-                          } else {
-                            editFolderName.edit = false;
-                          }
-                        }}
-                        value={foldersNames[item.name]}
-                        id={`input-folder-${item.name}`}
-                        data-testid={`input-folder`}
-                      />
-                    </div>
-                  ) : (
-                    <span className="block w-full truncate opacity-100">
-                      {item.name}
-                    </span>
-                  )}
-                  {index > 0 && (
+                        variant={"ghost"}
+                        size={"icon"}
+                      >
+                        <IconComponent
+                          name={"trash"}
+                          className="w-4 stroke-[1.5] p-0"
+                        />
+                      </Button>
+                    )}
                     <Button
-                      data-testid="btn-delete-folder"
                       className="hidden p-0 hover:bg-white group-hover:block hover:dark:bg-[#0c101a00]"
                       onClick={(e) => {
-                        handleDeleteFolder!(item);
+                        handleDownloadFolder(item.id!);
                         e.stopPropagation();
                         e.preventDefault();
                       }}
-                      variant={"ghost"}
-                      size={"icon"}
+                      unstyled
                     >
                       <IconComponent
-                        name={"trash"}
-                        className="w-4 stroke-[1.5] p-0"
+                        name={"Download"}
+                        className="w-4 stroke-[1.5] text-white"
                       />
                     </Button>
-                  )}
-                  <Button
-                    className="hidden p-0 hover:bg-white group-hover:block hover:dark:bg-[#0c101a00]"
-                    onClick={(e) => {
-                      handleDownloadFolder(item.id!);
-                      e.stopPropagation();
-                      e.preventDefault();
-                    }}
-                    unstyled
-                  >
-                    <IconComponent
-                      name={"Download"}
-                      className="w-4 stroke-[1.5] text-white"
-                    />
-                  </Button>
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })
+          ) : (
+            <>
+              <SidebarFolderSkeleton />
+              <SidebarFolderSkeleton />
+            </>
+          )}
         </>
       </div>
     </>

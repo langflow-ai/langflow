@@ -1,5 +1,4 @@
 import { AddFolderType } from "@/pages/MainPage/entities";
-import { useFolderStore } from "@/stores/foldersStore";
 import { useMutationFunctionType } from "@/types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
@@ -14,7 +13,7 @@ export const usePatchFolders: useMutationFunctionType<
   undefined,
   IPatchPatchFolders
 > = (options?) => {
-  const { mutate } = UseRequestProcessor();
+  const { mutate, queryClient } = UseRequestProcessor();
 
   const patchFoldersFn = async (
     newFolder: IPatchPatchFolders,
@@ -33,7 +32,12 @@ export const usePatchFolders: useMutationFunctionType<
     return res.data;
   };
 
-  const mutation = mutate(["usePatchFolders"], patchFoldersFn, options);
+  const mutation = mutate(["usePatchFolders"], patchFoldersFn, {
+    ...options,
+    onSettled: () => {
+      queryClient.refetchQueries({ queryKey: ["useGetFolders"] });
+    },
+  });
 
   return mutation;
 };
