@@ -1,6 +1,6 @@
 import asyncio
 import json
-from typing import TYPE_CHECKING, Any, AsyncIterator, Dict, Generator, Iterator, List
+from typing import TYPE_CHECKING, Any, AsyncIterator, Dict, Generator, Iterator, List, cast
 
 import yaml
 from langchain_core.messages import AIMessage, AIMessageChunk

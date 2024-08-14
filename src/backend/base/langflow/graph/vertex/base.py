@@ -798,7 +798,7 @@ class Vertex:
             else await requester_edge.get_result_from_source(source=self, target=requester)
         )
 
-    def add_edge(self, edge: "ContractEdge") -> None:
+    def add_edge(self, edge: "CycleEdge") -> None:
         if edge not in self.edges:
             self.edges.append(edge)
 
