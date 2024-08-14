@@ -17,6 +17,7 @@ class Edge:
         self.target_param: str | None = None
         self._target_handle: TargetHandleDict | str | None = None
         self._data = edge.copy()
+        self.is_cycle = False
         if data := edge.get("data", {}):
             self._source_handle = data.get("sourceHandle", {})
             self._target_handle = cast(TargetHandleDict, data.get("targetHandle", {}))
@@ -177,12 +178,16 @@ class Edge:
             and self.target_param == __o.target_param
         )
 
+    def __str__(self) -> str:
+        return self.__repr__()
 
-class ContractEdge(Edge):
+
+class CycleEdge(Edge):
     def __init__(self, source: "Vertex", target: "Vertex", raw_edge: EdgeData):
         super().__init__(source, target, raw_edge)
         self.is_fulfilled = False  # Whether the contract has been fulfilled.
         self.result: Any = None
+        self.is_cycle = True
 
     async def honor(self, source: "Vertex", target: "Vertex") -> None:
         """
