@@ -788,11 +788,11 @@ class Graph:
         """Marks a branch of the graph."""
         if visited is None:
             visited = set()
+        else:
+            self.mark_vertex(vertex_id, state)
         if vertex_id in visited:
             return
         visited.add(vertex_id)
-
-        self.mark_vertex(vertex_id, state)
 
         for child_id in self.parent_child_map[vertex_id]:
             # Only child_id that have an edge with the vertex_id through the output_name
