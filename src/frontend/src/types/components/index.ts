@@ -712,6 +712,15 @@ export type PromptModalType = {
   readonly?: boolean;
 };
 
+export type textModalPropsType = {
+  setValue: (value: string) => void;
+  value: string;
+  disabled?: boolean;
+  children: ReactNode;
+  readonly?: boolean;
+  password?: boolean;
+  changeVisibility?: () => void;
+};
 
 export type newFlowModalPropsType = {
   open: boolean;
