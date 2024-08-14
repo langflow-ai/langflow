@@ -7,6 +7,7 @@ import { TextAreaComponentType } from "../../types/components";
 import IconComponent from "../genericIconComponent";
 import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";
+import ComponentTextModal from "@/modals/textAreaModal";
 
 export default function TextAreaComponent({
   value,
@@ -47,11 +48,8 @@ export default function TextAreaComponent({
             onChange(event.target.value);
           }}
         />
-        <GenericModal
+        <ComponentTextModal
           changeVisibility={updateVisibility}
-          type={TypeModal.TEXT}
-          buttonText="Finish Editing"
-          modalTitle={EDIT_TEXT_MODAL_TITLE}
           value={value}
           setValue={(value: string) => {
             onChange(value);
@@ -76,7 +74,7 @@ export default function TextAreaComponent({
               />
             </Button>
           </div>
-        </GenericModal>
+        </ComponentTextModal>
         {password !== undefined && (
           <Button
             unstyled

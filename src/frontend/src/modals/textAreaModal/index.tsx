@@ -89,7 +89,7 @@ export default function ComponentTextModal({
                 </div>
             </BaseModal.Content>
             <BaseModal.Footer>
-                <div className="flex w-full shrink-0 items-end">
+                <div className="flex w-full shrink-0 items-end justify-end">
                     <Button
                         data-testid="genericModalBtnSave"
                         id="genericModalBtnSave"
