@@ -2,7 +2,7 @@ import { useLoginUser } from "@/controllers/API/queries/auth";
 import { useFolderStore } from "@/stores/foldersStore";
 import * as Form from "@radix-ui/react-form";
 import { useContext, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import InputComponent from "../../components/inputComponent";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -23,9 +23,7 @@ export default function LoginPage(): JSX.Element {
 
   const { password, username } = inputState;
   const { login } = useContext(AuthContext);
-  const navigate = useNavigate();
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  const setLoading = useFlowsManagerStore((state) => state.setIsLoading);
   const setAllFlows = useFlowsManagerStore((state) => state.setAllFlows);
   const setSelectedFolder = useFolderStore((state) => state.setSelectedFolder);
 
@@ -48,7 +46,6 @@ export default function LoginPage(): JSX.Element {
         setAllFlows([]);
         setSelectedFolder(null);
 
-        setLoading(true);
         login(data.access_token, "login");
       },
       onError: (error) => {

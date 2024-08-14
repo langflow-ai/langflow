@@ -26,7 +26,6 @@ const useAddFlow = () => {
   const flows = useFlowsManagerStore((state) => state.flows);
   const setFlows = useFlowsManagerStore((state) => state.setFlows);
   const deleteFlow = useDeleteFlow();
-  const setIsLoading = useFlowsManagerStore((state) => state.setIsLoading);
 
   const { mutate: postAddFlow } = usePostAddFlow();
 
@@ -80,7 +79,6 @@ const useAddFlow = () => {
               ["saved_components"]: data,
             }),
           }));
-          setIsLoading(false);
           resolve(id);
         },
         onError: (error) => {
@@ -98,7 +96,6 @@ const useAddFlow = () => {
               ],
             });
           }
-          setIsLoading(false);
           reject(error); // Re-throw the error so the caller can handle it if needed},
         },
       });

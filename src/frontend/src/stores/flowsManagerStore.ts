@@ -57,8 +57,6 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
   setIsLoading: (isLoading: boolean) => set({ isLoading }),
   refreshFlows: () => {
     return new Promise<void>((resolve, reject) => {
-      set({ isLoading: true });
-
       const starterFolderId = useFolderStore.getState().starterProjectId;
 
       readFlowsFromDatabase()
@@ -82,7 +80,6 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
                 ["saved_components"]: data,
               }),
             }));
-            set({ isLoading: false });
             resolve();
           }
         })
