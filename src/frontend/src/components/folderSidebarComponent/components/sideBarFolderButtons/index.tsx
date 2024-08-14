@@ -8,7 +8,7 @@ import { createFileUpload } from "@/helpers/create-file-upload";
 import { getObjectsFromFilelist } from "@/helpers/get-objects-from-filelist";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
 import { useEffect, useRef, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { FolderType } from "../../../../pages/MainPage/entities";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
@@ -54,21 +54,12 @@ const SideBarFoldersButtonsComponent = ({
     }
     return currentFolder.includes(itemId);
   };
-  const location = useLocation();
-  const folderId = location?.state?.folderId ?? myCollectionId;
-  const getFolderById = useFolderStore((state) => state.getFolderById);
+  const folderId = useParams().folderId ?? myCollectionId ?? "";
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const uploadFlow = useUploadFlow();
 
-  const handleFolderChange = () => {
-    getFolderById(folderId);
-  };
-
-  const { dragOver, dragEnter, dragLeave, onDrop } = useFileDrop(
-    folderId,
-    handleFolderChange,
-  );
+  const { dragOver, dragEnter, dragLeave, onDrop } = useFileDrop(folderId);
 
   const { mutate } = usePostUploadFolders();
 
@@ -77,7 +68,6 @@ const SideBarFoldersButtonsComponent = ({
       getObjectsFromFilelist<any>(files).then((objects) => {
         if (objects.every((flow) => flow.data?.nodes)) {
           uploadFlow({ files }).then(() => {
-            getFolderById(folderId);
             setSuccessData({
               title: "Uploaded successfully",
             });

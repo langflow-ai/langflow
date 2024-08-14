@@ -76,7 +76,7 @@ export default function HomePage(): JSX.Element {
           <aside className="flex h-fit w-fit flex-col space-y-6">
             <FolderSidebarNav
               handleChangeFolder={(id: string) => {
-                navigate(`all/folder/${id}`, { state: { folderId: id } });
+                navigate(`all/folder/${id}`);
               }}
               handleDeleteFolder={(item) => {
                 setFolderToEdit(item);
