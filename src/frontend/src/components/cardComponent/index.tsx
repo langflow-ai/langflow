@@ -4,9 +4,7 @@ import IOModal from "../../modals/IOModal";
 import useAlertStore from "../../stores/alertStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { FlowType } from "../../types/flow";
-import {
-  getInputsAndOutputs,
-} from "../../utils/storeUtils";
+import { getInputsAndOutputs } from "../../utils/storeUtils";
 import { cn } from "../../utils/utils";
 import IconComponent from "../genericIconComponent";
 import ShadTooltip from "../shadTooltipComponent";
@@ -120,11 +118,7 @@ export default function CollectionCardComponent({
               <div className="flex w-full flex-1 flex-wrap gap-2"></div>
             </div>
             <CardDescription className="pb-2 pt-2">
-              <div
-                className="truncate-doubleline"
-              >
-                {data.description}
-              </div>
+              <div className="truncate-doubleline">{data.description}</div>
             </CardDescription>
           </CardHeader>
         </div>
@@ -133,7 +127,7 @@ export default function CollectionCardComponent({
             <div className="flex w-full flex-wrap items-end justify-end gap-2">
               {playground && (
                 <Button
-                  disabled={loadingPlayground|| !hasPlayground(data)}
+                  disabled={loadingPlayground || !hasPlayground(data)}
                   key={data.id}
                   tabIndex={-1}
                   variant="primary"
