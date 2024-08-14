@@ -37,14 +37,12 @@ class PerplexityComponent(LCModelComponent):
             advanced=False,
         ),
         FloatInput(name="temperature", display_name="Temperature", value=0.75),
-
     ]
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
         api_key = SecretStr(self.api_key).get_secret_value()
         temperature = self.temperature
         model = self.model_name
-
 
         output = ChatPerplexity(
             model=model,
