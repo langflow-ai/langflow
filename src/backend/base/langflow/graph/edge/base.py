@@ -159,10 +159,11 @@ class Edge:
             raise ValueError(f"Edge between {source.vertex_type} and {target.vertex_type} " f"has no matched type")
 
     def __repr__(self) -> str:
-        return (
-            f"Edge(source={self.source_id}, target={self.target_id}, target_param={self.target_param}"
-            f", matched_type={self.matched_type})"
-        )
+        if (hasattr(self, "source_handle") and self.source_handle) and (
+            hasattr(self, "target_handle") and self.target_handle
+        ):
+            return f"{self.source_id} -[{self.source_handle.name}->{self.target_handle.field_name}]-> {self.target_id}"
+        return f"{self.source_id} -[{self.target_param}]-> {self.target_id}"
 
     def __hash__(self) -> int:
         return hash(self.__repr__())
@@ -220,10 +221,3 @@ class ContractEdge(Edge):
             if target.params.get("message") == "":
                 return self.result
         return self.result
-
-    def __repr__(self) -> str:
-        if (hasattr(self, "source_handle") and self.source_handle) and (
-            hasattr(self, "target_handle") and self.target_handle
-        ):
-            return f"{self.source_id} -[{self.source_handle.name}->{self.target_handle.field_name}]-> {self.target_id}"
-        return f"{self.source_id} -[{self.target_param}]-> {self.target_id}"
