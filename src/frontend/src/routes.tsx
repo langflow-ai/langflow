@@ -1,4 +1,4 @@
-import { lazy } from "react";
+import React, { lazy } from "react";
 import {
   createBrowserRouter,
   createRoutesFromElements,
@@ -12,36 +12,26 @@ import { AuthSettingsGuard } from "./components/authSettingsGuard";
 import { CatchAllRoute } from "./components/catchAllRoutes";
 import { StoreGuard } from "./components/storeGuard";
 import { AppWrapperPage } from "./pages/AppWrapperPage";
-const MessagesPage = lazy(
-  () => import("./pages/SettingsPage/pages/messagesPage"),
-);
+import HomePage from "./pages/MainPage/pages/mainPage";
+import FlowPage from "./pages/FlowPage";
+import LoginPage from "./pages/LoginPage";
+import MyCollectionComponent from "./pages/MainPage/components/myCollectionComponent";
+import StorePage from "./pages/StorePage";
+import ViewPage from "./pages/ViewPage";
+import SettingsPage from "./pages/SettingsPage";
+import ApiKeysPage from "./pages/SettingsPage/pages/ApiKeysPage";
+import GeneralPage from "./pages/SettingsPage/pages/GeneralPage";
+import GlobalVariablesPage from "./pages/SettingsPage/pages/GlobalVariablesPage";
+import MessagesPage from "./pages/SettingsPage/pages/messagesPage";
+import ShortcutsPage from "./pages/SettingsPage/pages/ShortcutsPage";
+
 const AdminPage = lazy(() => import("./pages/AdminPage"));
 const LoginAdminPage = lazy(() => import("./pages/AdminPage/LoginPage"));
-const ApiKeysPage = lazy(
-  () => import("./pages/SettingsPage/pages/ApiKeysPage"),
-);
 const DeleteAccountPage = lazy(() => import("./pages/DeleteAccountPage"));
-const FlowPage = lazy(() => import("./pages/FlowPage"));
-const LoginPage = lazy(() => import("./pages/LoginPage"));
-const MyCollectionComponent = lazy(
-  () => import("./pages/MainPage/components/myCollectionComponent"),
-);
-const HomePage = lazy(() => import("./pages/MainPage/pages/mainPage"));
-const PlaygroundPage = lazy(() => import("./pages/Playground"));
-const SettingsPage = lazy(() => import("./pages/SettingsPage"));
-const GeneralPage = lazy(
-  () => import("./pages/SettingsPage/pages/GeneralPage"),
-);
-const GlobalVariablesPage = lazy(
-  () => import("./pages/SettingsPage/pages/GlobalVariablesPage"),
-);
-const ShortcutsPage = lazy(
-  () => import("./pages/SettingsPage/pages/ShortcutsPage"),
-);
-const SignUp = lazy(() => import("./pages/SignUpPage"));
-const StorePage = lazy(() => import("./pages/StorePage"));
-const ViewPage = lazy(() => import("./pages/ViewPage"));
 
+const PlaygroundPage = lazy(() => import("./pages/Playground"));
+
+const SignUp = lazy(() => import("./pages/SignUpPage"));
 const router = createBrowserRouter(
   createRoutesFromElements([
     <Route path="" element={<AppWrapperPage />}>
