@@ -136,18 +136,13 @@ const SideBarFoldersButtonsComponent = ({
   const { mutate: mutateUpdateFolder } = usePatchFolders();
 
   function addNewFolder() {
-    mutateAddFolder(
-      {
-        data: {
-          name: "New Folder",
-          parent_id: null,
-          description: "",
-        },
+    mutateAddFolder({
+      data: {
+        name: "New Folder",
+        parent_id: null,
+        description: "",
       },
-      {
-        onSuccess: () => {},
-      },
-    );
+    });
   }
 
   function handleEditFolderName(e, name): void {
