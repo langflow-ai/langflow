@@ -16,45 +16,34 @@ import {
   INVALID_CHARACTERS,
   MAX_WORDS_HIGHLIGHT,
   PROMPT_DIALOG_SUBTITLE,
-  TEXT_DIALOG_SUBTITLE,
   regexHighlight,
 } from "../../constants/constants";
-import { TypeModal } from "../../constants/enums";
 import { postValidatePrompt } from "../../controllers/API";
 import useAlertStore from "../../stores/alertStore";
-import { genericModalPropsType } from "../../types/components";
+import { PromptModalType } from "../../types/components";
 import { handleKeyDown } from "../../utils/reactflowUtils";
 import { classNames } from "../../utils/utils";
 import BaseModal from "../baseModal";
 import varHighlightHTML from "./utils/var-highlight-html";
 
-export default function GenericModal({
+export default function PromptModal({
   field_name = "",
   value,
   setValue,
-  buttonText,
-  modalTitle,
-  type,
   nodeClass,
   setNodeClass,
   children,
   disabled,
   id = "",
   readonly = false,
-  password,
-  changeVisibility,
-}: genericModalPropsType): JSX.Element {
-  const [myButtonText] = useState(buttonText);
-  const [myModalTitle] = useState(modalTitle);
+}: PromptModalType): JSX.Element {
   const [modalOpen, setModalOpen] = useState(false);
-  const [myModalType] = useState(type);
   const [inputValue, setInputValue] = useState(value);
   const [isEdit, setIsEdit] = useState(true);
   const [wordsHighlight, setWordsHighlight] = useState<Set<string>>(new Set());
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setNoticeData = useAlertStore((state) => state.setNoticeData);
-  const textRef = useRef<HTMLTextAreaElement>(null);
   const divRef = useRef(null);
   const divRefPrompt = useRef(null);
 
@@ -111,10 +100,10 @@ export default function GenericModal({
     .replace(/\n/g, "<br />");
 
   useEffect(() => {
-    if (type === TypeModal.PROMPT && inputValue && inputValue != "") {
+    if (inputValue && inputValue != "") {
       checkVariables(inputValue);
     }
-  }, [inputValue, type]);
+  }, [inputValue]);
 
   useEffect(() => {
     if (typeof value === "string") setInputValue(value);
@@ -189,52 +178,23 @@ export default function GenericModal({
       <BaseModal.Trigger disable={disabled} asChild>
         {children}
       </BaseModal.Trigger>
-      <BaseModal.Header
-        description={(() => {
-          switch (myModalTitle) {
-            case "Edit Text":
-              return TEXT_DIALOG_SUBTITLE;
-
-            case "Edit Prompt":
-              return PROMPT_DIALOG_SUBTITLE;
-
-            default:
-              return null;
-          }
-        })()}
-      >
+      <BaseModal.Header description={PROMPT_DIALOG_SUBTITLE}>
         <div className="flex w-full items-start gap-3">
           <div className="flex">
             <span className="pr-2" data-testid="modal-title">
-              {myModalTitle}
+              Edit Prompt
             </span>
             <IconComponent
-              name={
-                myModalTitle === "Edit Prompt" ? "TerminalSquare" : "FileText"
-              }
+              name="TerminalSquare"
               className="h-6 w-6 pl-1 text-primary"
               aria-hidden="true"
             />
           </div>
-          {password !== undefined && (
-            <div>
-              <button
-                onClick={() => {
-                  if (changeVisibility) changeVisibility();
-                }}
-              >
-                <IconComponent
-                  name={password ? "Eye" : "EyeOff"}
-                  className="h-6 w-6 cursor-pointer text-primary"
-                />
-              </button>
-            </div>
-          )}
         </div>
       </BaseModal.Header>
       <BaseModal.Content overflowHidden>
         <div className={classNames("flex h-full w-full rounded-lg border")}>
-          {type === TypeModal.PROMPT && isEdit && !readonly ? (
+          {isEdit && !readonly ? (
             <Textarea
               id={"modal-" + id}
               data-testid={"modal-" + id}
@@ -254,107 +214,75 @@ export default function GenericModal({
                 handleKeyDown(e, inputValue, "");
               }}
             />
-          ) : type === TypeModal.PROMPT && (!isEdit || readonly) ? (
+          ) : (
             <SanitizedHTMLWrapper
               className={getClassByNumberLength() + " bg-muted"}
               content={coloredContent}
               onClick={() => {
-                setIsEdit(true);
+                if (!readonly) setIsEdit(true);
               }}
               suppressWarning={true}
             />
-          ) : type !== TypeModal.PROMPT ? (
-            <Textarea
-              password={password}
-              ref={textRef}
-              className="form-input h-full w-full resize-none overflow-auto rounded-lg focus-visible:ring-1"
-              value={inputValue}
-              onChange={(event) => {
-                setInputValue(event.target.value);
-              }}
-              placeholder={EDIT_TEXT_PLACEHOLDER}
-              onKeyDown={(e) => {
-                handleKeyDown(e, value, "");
-              }}
-              readOnly={readonly}
-              id={"text-area-modal"}
-              data-testid={"text-area-modal"}
-            />
-          ) : (
-            <></>
           )}
         </div>
       </BaseModal.Content>
       <BaseModal.Footer>
         <div className="flex w-full shrink-0 items-end justify-between">
           <div className="mb-auto flex-1">
-            {type === TypeModal.PROMPT && (
-              <div className="mr-2">
-                <div
-                  ref={divRef}
-                  className="max-h-20 overflow-y-auto custom-scroll"
-                >
-                  <div className="flex flex-wrap items-center gap-2">
-                    <IconComponent
-                      name="Braces"
-                      className="flex h-4 w-4 text-primary"
-                    />
-                    <span className="text-md font-semibold text-primary">
-                      Prompt Variables:
-                    </span>
+            <div className="mr-2">
+              <div
+                ref={divRef}
+                className="max-h-20 overflow-y-auto custom-scroll"
+              >
+                <div className="flex flex-wrap items-center gap-2">
+                  <IconComponent
+                    name="Braces"
+                    className="flex h-4 w-4 text-primary"
+                  />
+                  <span className="text-md font-semibold text-primary">
+                    Prompt Variables:
+                  </span>
 
-                    {Array.from(wordsHighlight).map((word, index) => (
-                      <ShadTooltip
+                  {Array.from(wordsHighlight).map((word, index) => (
+                    <ShadTooltip
+                      key={index}
+                      content={word.replace(/[{}]/g, "")}
+                      asChild={false}
+                    >
+                      <Badge
                         key={index}
-                        content={word.replace(/[{}]/g, "")}
-                        asChild={false}
+                        variant="gray"
+                        size="md"
+                        className="max-w-[40vw] cursor-default truncate p-1 text-sm"
                       >
-                        <Badge
-                          key={index}
-                          variant="gray"
-                          size="md"
-                          className="max-w-[40vw] cursor-default truncate p-1 text-sm"
-                        >
-                          <div className="relative bottom-[1px]">
-                            <span id={"badge" + index.toString()}>
-                              {word.replace(/[{}]/g, "").length > 59
-                                ? word.replace(/[{}]/g, "").slice(0, 56) + "..."
-                                : word.replace(/[{}]/g, "")}
-                            </span>
-                          </div>
-                        </Badge>
-                      </ShadTooltip>
-                    ))}
-                  </div>
+                        <div className="relative bottom-[1px]">
+                          <span id={"badge" + index.toString()}>
+                            {word.replace(/[{}]/g, "").length > 59
+                              ? word.replace(/[{}]/g, "").slice(0, 56) + "..."
+                              : word.replace(/[{}]/g, "")}
+                          </span>
+                        </div>
+                      </Badge>
+                    </ShadTooltip>
+                  ))}
                 </div>
-                <span className="mt-2 text-xs text-muted-foreground">
-                  Prompt variables can be created with any chosen name inside
-                  curly brackets, e.g. {"{variable_name}"}
-                </span>
               </div>
-            )}
+              <span className="mt-2 text-xs text-muted-foreground">
+                Prompt variables can be created with any chosen name inside
+                curly brackets, e.g. {"{variable_name}"}
+              </span>
+            </div>
           </div>
           <Button
             data-testid="genericModalBtnSave"
             id="genericModalBtnSave"
             disabled={readonly}
             onClick={() => {
-              switch (myModalType) {
-                case TypeModal.TEXT:
-                  setValue(inputValue);
-                  setModalOpen(false);
-                  break;
-                case TypeModal.PROMPT:
-                  validatePrompt(false);
-                  break;
-
-                default:
-                  break;
-              }
+              validatePrompt(false);
             }}
             type="submit"
           >
-            {myButtonText}
+            Check & Save
           </Button>
         </div>
       </BaseModal.Footer>
