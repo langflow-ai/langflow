@@ -7,13 +7,13 @@ from collections import defaultdict, deque
 from datetime import datetime, timezone
 from functools import partial
 from itertools import chain
-from typing import TYPE_CHECKING, Any, Dict, Generator, Iterable, List, Optional, Set, Tuple, Type, Union, cast
+from typing import TYPE_CHECKING, Any, Dict, Generator, List, Optional, Tuple, Type, Union
 
 import nest_asyncio
 from loguru import logger
 
 from langflow.exceptions.component import ComponentBuildException
-from langflow.graph.edge.base import CycleEdge, Edge
+from langflow.graph.edge.base import CycleEdge
 from langflow.graph.edge.schema import EdgeData
 from langflow.graph.graph.constants import Finish, lazy_load_vertex_dict
 from langflow.graph.graph.runnable_vertices_manager import RunnableVerticesManager
@@ -21,11 +21,8 @@ from langflow.graph.graph.schema import GraphData, GraphDump, VertexBuildResult
 from langflow.graph.graph.state_manager import GraphStateManager
 from langflow.graph.graph.state_model import create_state_model_from_graph
 from langflow.graph.graph.utils import (
-    find_all_cycle_edges,
     find_start_component_id,
-    has_cycle,
     process_flow,
-    should_continue,
     sort_up_to_vertex,
 )
 from langflow.graph.schema import InterfaceComponentTypes, RunOutputs
