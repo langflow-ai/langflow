@@ -14,6 +14,7 @@ import {
   updateGroupRecursion,
 } from "@/utils/reactflowUtils";
 import { cloneDeep } from "lodash";
+import { useParams } from "react-router-dom";
 import useDeleteFlow from "./use-delete-flow";
 
 const useAddFlow = () => {
@@ -26,6 +27,10 @@ const useAddFlow = () => {
   const flows = useFlowsManagerStore((state) => state.flows);
   const setFlows = useFlowsManagerStore((state) => state.setFlows);
   const deleteFlow = useDeleteFlow();
+
+  const { folderId } = useParams();
+
+  const myCollectionId = useFolderStore((state) => state.myCollectionId);
 
   const { mutate: postAddFlow } = usePostAddFlow();
 
@@ -44,8 +49,7 @@ const useAddFlow = () => {
         );
       });
       // Create a new flow with a default name if no flow is provided.
-      const folder_id = useFolderStore.getState().folderUrl;
-      const my_collection_id = useFolderStore.getState().myCollectionId;
+      const folder_id = folderId ?? myCollectionId ?? "";
 
       if (params?.override && flow) {
         const flowId = flows?.find((f) => f.name === flow.name);
@@ -53,15 +57,11 @@ const useAddFlow = () => {
           await deleteFlow({ id: flowId.id });
         }
       }
-      const newFlow = createNewFlow(
-        flowData!,
-        folder_id || my_collection_id!,
-        flow,
-      );
+      const newFlow = createNewFlow(flowData!, folder_id, flow);
 
       const newName = addVersionToDuplicates(newFlow, flows ?? []);
       newFlow.name = newName;
-      newFlow.folder_id = useFolderStore.getState().folderUrl;
+      newFlow.folder_id = folder_id;
 
       postAddFlow(newFlow, {
         onSuccess: ({ id }) => {
