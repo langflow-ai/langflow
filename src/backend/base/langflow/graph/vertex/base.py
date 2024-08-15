@@ -28,7 +28,7 @@ from langflow.utils.util import sync_to_async, unescape_string
 
 if TYPE_CHECKING:
     from langflow.custom import Component
-    from langflow.graph.edge.base import CycleEdge, Edge
+    from langflow.graph.edge.base import Edge
     from langflow.graph.graph.base import Graph
 
 
