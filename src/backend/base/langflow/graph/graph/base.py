@@ -1375,14 +1375,14 @@ class Graph:
         return self
 
     def find_next_runnable_vertices(self, vertex_id: str, vertex_successors_ids: List[str]) -> List[str]:
-        next_runnable_vertices = []
+        next_runnable_vertices = set()
         for v_id in vertex_successors_ids:
             if not self.is_vertex_runnable(v_id):
-                next_runnable_vertices.extend(self.find_runnable_predecessors_for_successor(v_id))
+                next_runnable_vertices.update(self.find_runnable_predecessors_for_successor(v_id))
             else:
-                next_runnable_vertices.append(v_id)
+                next_runnable_vertices.add(v_id)
 
-        return next_runnable_vertices
+        return list(next_runnable_vertices)
 
     async def get_next_runnable_vertices(self, lock: asyncio.Lock, vertex: "Vertex", cache: bool = True) -> List[str]:
         v_id = vertex.id
