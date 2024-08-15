@@ -97,6 +97,7 @@ class StoreService(Service):
             "last_tested_version",
             "private",
         ]
+        self.timeout = 30
 
     # Create a context manager that will use the api key to
     # get the user data and all requests inside the context manager
@@ -129,7 +130,7 @@ class StoreService(Service):
             headers = {}
         async with httpx.AsyncClient() as client:
             try:
-                response = await client.get(url, headers=headers, params=params)
+                response = await client.get(url, headers=headers, params=params, timeout=self.timeout)
                 response.raise_for_status()
             except HTTPError as exc:
                 raise exc
@@ -151,7 +152,9 @@ class StoreService(Service):
         try:
             headers = {"Authorization": f"Bearer {api_key}"}
             async with httpx.AsyncClient() as client:
-                response = await client.post(webhook_url, headers=headers, json={"component_id": str(component_id)})
+                response = await client.post(
+                    webhook_url, headers=headers, json={"component_id": str(component_id)}, timeout=self.timeout
+                )
                 response.raise_for_status()
             return response.json()
         except HTTPError as exc:
@@ -359,7 +362,9 @@ class StoreService(Service):
             # response = httpx.post(self.components_url, headers=headers, json=component_dict)
             # response.raise_for_status()
             async with httpx.AsyncClient() as client:
-                response = await client.post(self.components_url, headers=headers, json=component_dict)
+                response = await client.post(
+                    self.components_url, headers=headers, json=component_dict, timeout=self.timeout
+                )
                 response.raise_for_status()
             component = response.json()["data"]
             return CreateComponentResponse(**component)
@@ -394,7 +399,7 @@ class StoreService(Service):
             # response.raise_for_status()
             async with httpx.AsyncClient() as client:
                 response = await client.patch(
-                    self.components_url + f"/{component_id}", headers=headers, json=component_dict
+                    self.components_url + f"/{component_id}", headers=headers, json=component_dict, timeout=self.timeout
                 )
                 response.raise_for_status()
             component = response.json()["data"]
@@ -463,6 +468,7 @@ class StoreService(Service):
                 self.like_webhook_url,
                 json={"component_id": str(component_id)},
                 headers=headers,
+                timeout=self.timeout,
             )
             response.raise_for_status()
         if response.status_code == 200:
