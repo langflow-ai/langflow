@@ -7,27 +7,20 @@ from collections import defaultdict, deque
 from datetime import datetime, timezone
 from functools import partial
 from itertools import chain
-from typing import TYPE_CHECKING, Any, Dict, Generator, Iterable, List, Optional, Set, Tuple, Type, Union, cast
+from typing import TYPE_CHECKING, Any, Dict, Generator, List, Optional, Tuple, Type, Union
 
 import nest_asyncio
 from loguru import logger
 
 from langflow.exceptions.component import ComponentBuildException
-from langflow.graph.edge.base import CycleEdge, Edge
+from langflow.graph.edge.base import CycleEdge
 from langflow.graph.edge.schema import EdgeData
 from langflow.graph.graph.constants import Finish, lazy_load_vertex_dict
 from langflow.graph.graph.runnable_vertices_manager import RunnableVerticesManager
 from langflow.graph.graph.schema import GraphData, GraphDump, StartConfigDict, VertexBuildResult
 from langflow.graph.graph.state_manager import GraphStateManager
 from langflow.graph.graph.state_model import create_state_model_from_graph
-from langflow.graph.graph.utils import (
-    find_all_cycle_edges,
-    find_start_component_id,
-    has_cycle,
-    process_flow,
-    should_continue,
-    sort_up_to_vertex,
-)
+from langflow.graph.graph.utils import find_start_component_id, process_flow, should_continue, sort_up_to_vertex
 from langflow.graph.schema import InterfaceComponentTypes, RunOutputs
 from langflow.graph.vertex.base import Vertex, VertexStates
 from langflow.graph.vertex.schema import NodeData
@@ -109,6 +102,8 @@ class Graph:
         self.raw_graph_data: GraphData = {"nodes": [], "edges": []}
         self._is_cyclic: Optional[bool] = None
         self._cycles: Optional[List[tuple[str, str]]] = None
+        self._call_order: List[str] = []
+        self._snapshots: List[Dict[str, Any]] = []
         try:
             self.tracing_service: "TracingService" | None = get_tracing_service()
         except Exception as exc:
@@ -459,23 +454,6 @@ class Graph:
         if self._first_layer is None:
             raise ValueError("Graph not prepared. Call prepare() first.")
         return self._first_layer
-
-    @property
-    def is_cyclic(self):
-        """
-        Check if the graph has any cycles.
-
-        Returns:
-            bool: True if the graph has any cycles, False otherwise.
-        """
-        if self._is_cyclic is None:
-            vertices = [vertex.id for vertex in self.vertices]
-            try:
-                edges = [(e["data"]["sourceHandle"]["id"], e["data"]["targetHandle"]["id"]) for e in self._edges]
-            except KeyError:
-                edges = [(e["source"], e["target"]) for e in self._edges]
-            self._is_cyclic = has_cycle(vertices, edges)
-        return self._is_cyclic
 
     @property
     def run_id(self):
@@ -1158,6 +1136,14 @@ class Graph:
                     return vertex
         raise ValueError(f"Vertex {vertex_id} is not a top level vertex or no root vertex found")
 
+    def get_next_in_queue(self):
+        if not self._run_queue:
+            return None
+        return self._run_queue.popleft()
+
+    def extend_run_queue(self, vertices: List[str]):
+        self._run_queue.extend(vertices)
+
     async def astep(
         self,
         inputs: Optional["InputValueRequest"] = None,
@@ -1169,7 +1155,7 @@ class Graph:
         if not self._run_queue:
             asyncio.create_task(self.end_all_traces())
             return Finish()
-        vertex_id = self._run_queue.popleft()
+        vertex_id = self.get_next_in_queue()
         chat_service = get_chat_service()
         vertex_build_result = await self.build_vertex(
             vertex_id=vertex_id,
@@ -1185,12 +1171,30 @@ class Graph:
         )
         if self.stop_vertex and self.stop_vertex in next_runnable_vertices:
             next_runnable_vertices = [self.stop_vertex]
-        self._run_queue.extend(next_runnable_vertices)
+        self.extend_run_queue(next_runnable_vertices)
         self.reset_inactivated_vertices()
         self.reset_activated_vertices()
 
         await chat_service.set_cache(str(self.flow_id or self._run_id), self)
+        self._record_snapshot(vertex_id)
         return vertex_build_result
+
+    def get_snapshot(self):
+        return copy.deepcopy(
+            {
+                "run_manager": self.run_manager.to_dict(),
+                "run_queue": self._run_queue,
+                "vertices_layers": self.vertices_layers,
+                "first_layer": self.first_layer,
+                "inactive_vertices": self.inactive_vertices,
+                "activated_vertices": self.activated_vertices,
+            }
+        )
+
+    def _record_snapshot(self, vertex_id: str | None = None, start: bool = False):
+        self._snapshots.append(self.get_snapshot())
+        if vertex_id:
+            self._call_order.append(vertex_id)
 
     def step(
         self,
@@ -1372,7 +1376,7 @@ class Graph:
 
     def find_next_runnable_vertices(self, vertex_id: str, vertex_successors_ids: List[str]) -> List[str]:
         next_runnable_vertices = set()
-        for v_id in sorted(vertex_successors_ids):
+        for v_id in vertex_successors_ids:
             if not self.is_vertex_runnable(v_id):
                 next_runnable_vertices.update(self.find_runnable_predecessors_for_successor(v_id))
             else:
@@ -1528,31 +1532,21 @@ class Graph:
                 neighbors[neighbor] += 1
         return neighbors
 
-    @property
-    def cycles(self):
-        if self._cycles is None:
-            if self._start is None:
-                self._cycles = []
-            else:
-                entry_vertex = self._start._id
-                edges = [(e["data"]["sourceHandle"]["id"], e["data"]["targetHandle"]["id"]) for e in self._edges]
-                self._cycles = find_all_cycle_edges(entry_vertex, edges)
-        return self._cycles
-
     def _build_edges(self) -> List[CycleEdge]:
         """Builds the edges of the graph."""
         # Edge takes two vertices as arguments, so we need to build the vertices first
         # and then build the edges
         # if we can't find a vertex, we raise an error
-        edges: Set[CycleEdge | Edge] = set()
+
+        edges: set[CycleEdge] = set()
         for edge in self._edges:
             new_edge = self.build_edge(edge)
             edges.add(new_edge)
         if self.vertices and not edges:
             warnings.warn("Graph has vertices but no edges")
-        return list(cast(Iterable[CycleEdge], edges))
+        return list(edges)
 
-    def build_edge(self, edge: EdgeData) -> CycleEdge | Edge:
+    def build_edge(self, edge: EdgeData) -> CycleEdge:
         source = self.get_vertex(edge["source"])
         target = self.get_vertex(edge["target"])
 
@@ -1560,10 +1554,7 @@ class Graph:
             raise ValueError(f"Source vertex {edge['source']} not found")
         if target is None:
             raise ValueError(f"Target vertex {edge['target']} not found")
-        if (source.id, target.id) in self.cycles:
-            new_edge: CycleEdge | Edge = CycleEdge(source, target, edge)
-        else:
-            new_edge = Edge(source, target, edge)
+        new_edge = CycleEdge(source, target, edge)
         return new_edge
 
     def _get_vertex_class(self, node_type: str, node_base_type: str, node_id: str) -> Type["Vertex"]:
@@ -1626,9 +1617,10 @@ class Graph:
 
         for vertex_id in first_layer:
             self.run_manager.add_to_vertices_being_run(vertex_id)
-        self._first_layer = sorted(first_layer)
-        self._run_queue = deque(self._first_layer)
+        self._first_layer = first_layer
+        self._run_queue = deque(first_layer)
         self._prepared = True
+        self._record_snapshot()
         return self
 
     def get_children_by_vertex_type(self, vertex: Vertex, vertex_type: str) -> List[Vertex]:
