@@ -9,15 +9,15 @@ from langflow.components.tools.SearchAPI import SearchAPIComponent
 from langflow.graph.graph.base import Graph
 
 
-def sequential_tasks_agent():
+def sequential_tasks_agent_graph():
     llm = OpenAIModelComponent()
     search_api_tool = SearchAPIComponent()
     researcher_agent = CrewAIAgentComponent()
-    text_input = TextInputComponent(display_name="Topic")
+    text_input = TextInputComponent(_display_name="Topic")
     text_input.set(input_value="Agile")
     researcher_agent.set(
         tools=[search_api_tool.build_tool],
-        llm=llm,
+        llm=llm.build_model,
         role="Researcher",
         goal="Search Google to find information to complete the task.",
         backstory="Research has always been your thing. You can quickly find things on the web because of your skills.",
@@ -31,7 +31,7 @@ Build a document about this document.""",
         topic=text_input.text_response,
     )
     research_task.set(
-        agents=[researcher_agent],
+        agent=researcher_agent.build_output,
         task_description=document_prompt_component.build_prompt,
         expected_output="Bullet points and small phrases about the research topic.",
     )
@@ -45,16 +45,16 @@ Revise this document.""",
         topic=text_input.text_response,
     )
     editor_agent.set(
-        llm=llm,
+        llm=llm.build_model,
         role="Editor",
         goal="You should edit the Information provided by the Researcher to make it more palatable and to not contain misleading information.",
         backstory="You are the editor of the most reputable journal in the world.",
     )
     editor_task.set(
-        agents=[editor_agent],
+        agent=editor_agent.build_output,
         task_description=revision_prompt_component.build_prompt,
         expected_output="Small paragraphs and bullet points with the corrected content.",
-        task=research_task,
+        task=research_task.build_task,
     )
     blog_prompt_component = PromptComponent()
     blog_prompt_component.set(
@@ -65,22 +65,27 @@ Build a fun blog post about this topic.""",
     )
     comedian_agent = CrewAIAgentComponent()
     comedian_agent.set(
-        llm=llm,
+        llm=llm.build_model,
         role="Comedian",
         goal="You write comedic content based on the information provided by the editor.",
         backstory="Your formal occupation is Comedian-in-Chief. You write jokes, do standup comedy and write funny articles.",
     )
     blog_task = SequentialTaskComponent()
     blog_task.set(
-        agents=[comedian_agent],
+        agent=comedian_agent.build_output,
         task_description=blog_prompt_component.build_prompt,
         expected_output="A small blog about the topic.",
-        task=editor_task,
+        task=editor_task.build_task,
     )
     sequential_crew_component = SequentialCrewComponent()
     sequential_crew_component.set(tasks=blog_task.build_task)
     chat_output = ChatOutput()
     chat_output.set(input_value=sequential_crew_component.build_output)
 
-    graph = Graph(start=text_input, end=chat_output)
+    graph = Graph(
+        start=text_input,
+        end=chat_output,
+        flow_name="Sequential Tasks Agent",
+        description="This Agent runs tasks in a predefined sequence.",
+    )
     return graph
