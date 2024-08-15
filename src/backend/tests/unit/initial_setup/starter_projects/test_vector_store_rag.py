@@ -27,7 +27,7 @@ def ingestion_graph():
     # Ingestion Graph
     file_component = FileComponent(_id="file-123")
     file_component.set(path="test.txt")
-    file_component.set_on_output("data", Data(text="This is a test file."))
+    file_component.set_on_output("data", value=Data(text="This is a test file."))
     text_splitter = SplitTextComponent(_id="text-splitter-123")
     text_splitter.set(data_inputs=file_component.load_file)
     openai_embeddings = OpenAIEmbeddingsComponent(_id="openai-embeddings-123")
