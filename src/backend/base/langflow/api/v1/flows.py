@@ -1,29 +1,31 @@
 import io
 import json
 import re
+import zipfile
 from datetime import datetime, timezone
 from typing import List
 from uuid import UUID
-import zipfile
 
-from fastapi.responses import StreamingResponse
-from langflow.services.database.models.transactions.crud import get_transactions_by_flow_id
-from langflow.services.database.models.vertex_builds.crud import get_vertex_builds_by_flow_id
 import orjson
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.encoders import jsonable_encoder
+from fastapi.responses import StreamingResponse
 from loguru import logger
 from sqlmodel import Session, and_, col, select
 
 from langflow.api.utils import remove_api_keys, validate_is_component
 from langflow.api.v1.schemas import FlowListCreate
+from langflow.graph.graph.schema import GraphDump
+from langflow.initial_setup.load import get_all_graphs_dump
 from langflow.initial_setup.setup import STARTER_FOLDER_NAME
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.database.models.flow import Flow, FlowCreate, FlowRead, FlowUpdate
-from langflow.services.database.models.flow.utils import get_webhook_component_in_flow, delete_flow_by_id
+from langflow.services.database.models.flow.utils import delete_flow_by_id, get_webhook_component_in_flow
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import Folder
+from langflow.services.database.models.transactions.crud import get_transactions_by_flow_id
 from langflow.services.database.models.user.model import User
+from langflow.services.database.models.vertex_builds.crud import get_vertex_builds_by_flow_id
 from langflow.services.deps import get_session, get_settings_service
 from langflow.services.settings.service import SettingsService
 
@@ -396,3 +398,17 @@ async def download_multiple_file(
         )
     else:
         return flows_without_api_keys[0]
+
+
+@router.get("/starter_projects", response_model=List[GraphDump], status_code=200)
+def get_starter_projects(
+    *,
+    current_user: User = Depends(get_current_active_user),
+):
+    """Get a list of starter projects."""
+    try:
+        flows = get_all_graphs_dump()
+        return flows
+    except Exception as exc:
+        logger.error(exc)
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
