@@ -6,6 +6,7 @@ from fastapi import status
 from fastapi.testclient import TestClient
 
 from langflow.custom.directory_reader.directory_reader import DirectoryReader
+from langflow.initial_setup.load import get_starter_projects_graphs
 from langflow.services.deps import get_settings_service
 
 
@@ -671,3 +672,9 @@ def test_invalid_flow_id(client, created_api_key):
     response = client.post(f"/api/v1/run/{flow_id}", headers=headers)
     assert response.status_code == status.HTTP_404_NOT_FOUND, response.text
     # Check if the error detail is as expected
+
+
+def test_starter_projects(client, created_api_key):
+    headers = {"x-api-key": created_api_key.api_key}
+    response = client.get("/api/v1/flows/starter-projects/", headers=headers)
+    assert response.status_code == status.HTTP_200_OK, response.text
