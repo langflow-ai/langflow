@@ -395,6 +395,8 @@ class Component(CustomComponent):
             return self.__dict__["_attributes"][name]
         if "_inputs" in self.__dict__ and name in self.__dict__["_inputs"]:
             return self.__dict__["_inputs"][name].value
+        if "_outputs" in self.__dict__ and name in self.__dict__["_outputs"]:
+            return self.__dict__["_outputs"][name]
         if name in BACKWARDS_COMPATIBLE_ATTRIBUTES:
             return self.__dict__[f"_{name}"]
         if name.startswith("_") and name[1:] in BACKWARDS_COMPATIBLE_ATTRIBUTES:
@@ -525,6 +527,7 @@ class Component(CustomComponent):
         self.outputs = [Output(**output) for output in outputs]
         for output in self.outputs:
             setattr(self, output.name, output)
+            self._outputs[output.name] = output
 
     def get_trace_as_inputs(self):
         predefined_inputs = {
@@ -564,8 +567,6 @@ class Component(CustomComponent):
         _results = {}
         _artifacts = {}
         if hasattr(self, "outputs"):
-            if self._vertex:
-                self._set_outputs(self._vertex.outputs)
             for output in self.outputs:
                 # Build the output if it's connected to some other vertex
                 # or if it's not connected to any vertex
@@ -579,6 +580,7 @@ class Component(CustomComponent):
                     method: Callable = getattr(self, output.method)
                     if output.cache and output.value != UNDEFINED:
                         _results[output.name] = output.value
+                        result = output.value
                     else:
                         result = method()
                         # If the method is asynchronous, we need to await it
@@ -593,33 +595,33 @@ class Component(CustomComponent):
                             result.set_flow_id(self._vertex.graph.flow_id)
                         _results[output.name] = result
                         output.value = result
-                        custom_repr = self.custom_repr()
-                        if custom_repr is None and isinstance(result, (dict, Data, str)):
-                            custom_repr = result
-                        if not isinstance(custom_repr, str):
-                            custom_repr = str(custom_repr)
-                        raw = result
-                        if self.status is None:
-                            artifact_value = raw
-                        else:
-                            artifact_value = self.status
-                            raw = self.status
+                    custom_repr = self.custom_repr()
+                    if custom_repr is None and isinstance(result, (dict, Data, str)):
+                        custom_repr = result
+                    if not isinstance(custom_repr, str):
+                        custom_repr = str(custom_repr)
+                    raw = result
+                    if self.status is None:
+                        artifact_value = raw
+                    else:
+                        artifact_value = self.status
+                        raw = self.status
 
-                        if hasattr(raw, "data") and raw is not None:
-                            raw = raw.data
-                        if raw is None:
-                            raw = custom_repr
+                    if hasattr(raw, "data") and raw is not None:
+                        raw = raw.data
+                    if raw is None:
+                        raw = custom_repr
 
-                        elif hasattr(raw, "model_dump") and raw is not None:
-                            raw = raw.model_dump()
-                        if raw is None and isinstance(result, (dict, Data, str)):
-                            raw = result.data if isinstance(result, Data) else result
-                        artifact_type = get_artifact_type(artifact_value, result)
-                        raw, artifact_type = post_process_raw(raw, artifact_type)
-                        artifact = {"repr": custom_repr, "raw": raw, "type": artifact_type}
-                        _artifacts[output.name] = artifact
-                        self._output_logs[output.name] = self._logs
-                        self._logs = []
+                    elif hasattr(raw, "model_dump") and raw is not None:
+                        raw = raw.model_dump()
+                    if raw is None and isinstance(result, (dict, Data, str)):
+                        raw = result.data if isinstance(result, Data) else result
+                    artifact_type = get_artifact_type(artifact_value, result)
+                    raw, artifact_type = post_process_raw(raw, artifact_type)
+                    artifact = {"repr": custom_repr, "raw": raw, "type": artifact_type}
+                    _artifacts[output.name] = artifact
+                    self._output_logs[output.name] = self._logs
+                    self._logs = []
         self._artifacts = _artifacts
         self._results = _results
         if self._tracing_service:
