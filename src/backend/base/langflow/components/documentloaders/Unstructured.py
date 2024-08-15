@@ -24,7 +24,7 @@ class UnstructuredComponent(Component):
             display_name="File",
             required=True,
             info="The path to the file with which you want to use Unstructured to parse",
-            file_types=["pdf", "docx"],  # TODO: Support all unstructured file types
+            file_types=["pdf", "docx", "txt"],  # TODO: Support all unstructured file types
         ),
         SecretStrInput(
             name="api_key",
