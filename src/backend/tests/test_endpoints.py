@@ -6,7 +6,6 @@ from fastapi import status
 from fastapi.testclient import TestClient
 
 from langflow.custom.directory_reader.directory_reader import DirectoryReader
-from langflow.initial_setup.load import get_starter_projects_graphs
 from langflow.services.deps import get_settings_service
 
 
