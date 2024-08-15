@@ -9,6 +9,7 @@ from loguru import logger
 from langflow.graph.schema import CHAT_COMPONENTS, RECORDS_COMPONENTS, InterfaceComponentTypes, ResultData
 from langflow.graph.utils import UnbuiltObject, log_transaction, log_vertex_build, serialize_field
 from langflow.graph.vertex.base import Vertex
+from langflow.graph.vertex.exceptions import NoComponentInstance
 from langflow.graph.vertex.schema import NodeData
 from langflow.inputs.inputs import InputTypes
 from langflow.schema import Data
@@ -43,7 +44,7 @@ class ComponentVertex(Vertex):
 
     def get_output(self, name: str) -> Output:
         if self._custom_component is None:
-            raise ValueError(f"Vertex {self.id} does not have a component instance.")
+            raise NoComponentInstance(self.id)
         return self._custom_component.get_output(name)
 
     def _built_object_repr(self):
@@ -122,9 +123,7 @@ class ComponentVertex(Vertex):
                         result = self.results[edge.source_handle.name]
                     else:
                         result = cast(Any, output.value)
-                except ValueError as exc:
-                    if "does not have a component instance" not in str(exc):
-                        raise exc
+                except NoComponentInstance:
                     result = self.results[edge.source_handle.name]
                 break
         if result is UNDEFINED:
