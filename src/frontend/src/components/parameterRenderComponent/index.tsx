@@ -108,7 +108,7 @@ export function ParameterRenderComponent({
             id={`int_${id}`}
             disabled={disabled}
             editNode={editNode}
-            value={templateValue ?? ""}
+            value={templateValue ?? 0}
             onChange={onChange}
           />
         ) : templateData.type === "file" ? (
