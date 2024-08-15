@@ -6,8 +6,6 @@ from langflow.field_typing import LanguageModel
 from langflow.io import FloatInput, SecretStrInput, DropdownInput
 
 
-
-
 class PerplexityComponent(LCModelComponent):
     display_name = "Perplexity"
     description = "Generate text using Perplexity LLMs."
