@@ -3,9 +3,11 @@ import os
 from typing import List
 
 from langflow.custom import Component
-from langflow.io import FileInput, SecretStrInput, Output
+from langflow.inputs import FileInput, SecretStrInput
+from langflow.template import Output
 from langflow.schema import Data
-from langchain_unstructured import UnstructuredLoader
+
+from langchain_community.document_loaders.unstructured import UnstructuredFileLoader
 
 
 class UnstructuredComponent(Component):
@@ -22,7 +24,7 @@ class UnstructuredComponent(Component):
             display_name="File",
             required=True,
             info="The path to the file with which you want to use Unstructured to parse",
-            file_types=[".pdf", ".docx"],  # TODO: Support all unstructured file types
+            file_types=["pdf", "docx"],  # TODO: Support all unstructured file types
         ),
         SecretStrInput(
             name="api_key",
@@ -36,12 +38,12 @@ class UnstructuredComponent(Component):
         Output(name="data", display_name="Data", method="load_documents"),
     ]
 
-    def build_unstructured(self) -> UnstructuredLoader:
+    def build_unstructured(self) -> UnstructuredFileLoader:
         os.environ["UNSTRUCTURED_API_KEY"] = self.api_key
 
         file_paths = [self.file]
 
-        loader = UnstructuredLoader(file_paths)
+        loader = UnstructuredFileLoader(file_paths)
 
         return loader
 
