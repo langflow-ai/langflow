@@ -269,10 +269,10 @@ export type RangeSpecType = {
 };
 
 export type IntComponentType = {
-  value: string;
+  value: number;
   disabled?: boolean;
   rangeSpec: RangeSpecType;
-  onChange: (value: string, dbValue?: boolean, skipSnapshot?: boolean) => void;
+  onChange: (value: number, dbValue?: boolean, skipSnapshot?: boolean) => void;
   editNode?: boolean;
   id?: string;
 };

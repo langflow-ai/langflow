@@ -21,8 +21,8 @@ export default function IntComponent({
   const min = -Infinity;
   // Clear component state
   useEffect(() => {
-    if (disabled && value !== "") {
-      onChange("", undefined, true);
+    if (disabled && value !== 0) {
+      onChange(0, undefined, true);
     }
   }, [disabled, onChange]);
 
@@ -35,7 +35,7 @@ export default function IntComponent({
 
   const handleChangeInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     setCursor(e.target.selectionStart);
-    onChange(e.target.value);
+    onChange(Number(e.target.value));
   };
 
   return (
@@ -46,7 +46,7 @@ export default function IntComponent({
         min={rangeSpec?.min ?? min}
         max={rangeSpec?.max ?? undefined}
         onChange={(value) => {
-          onChange(value);
+          onChange(Number(value));
         }}
         value={value ?? ""}
       >
