@@ -6,6 +6,7 @@ from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
 from langflow.inputs import DropdownInput, FloatInput, IntInput, SecretStrInput, MessageTextInput
 
+
 class IBMWatsonXComponent(LCModelComponent):
     display_name = "IBM watsonx"
     description = "Generate text using IBM watsonx."
@@ -28,7 +29,7 @@ class IBMWatsonXComponent(LCModelComponent):
                 "https://eu-gb.ml.cloud.ibm.com",
                 "https://eu-de.ml.cloud.ibm.com",
                 "https://jp-tok.ml.cloud.ibm.com",
-                ],
+            ],
             value="https://us-south.ml.cloud.ibm.com",
         ),
         MessageTextInput(
@@ -60,9 +61,8 @@ class IBMWatsonXComponent(LCModelComponent):
             advanced=True,
         ),
     ]
+
     def build_output(self) -> LanguageModel:  # type: ignore[type-var]
-
-
         api_key = SecretStr(self.watsonx_api_key).get_secret_value()
         model = self.model
         project_id = self.project_id
@@ -77,7 +77,7 @@ class IBMWatsonXComponent(LCModelComponent):
                 model_id=model,
                 url=url,
                 project_id=project_id,
-                apikey = api_key,
+                apikey=api_key,
                 max_output_tokens=max_output_tokens or None,
                 temperature=temperature or 0.1,
                 top_k=top_k or None,
