@@ -6,6 +6,7 @@ from fastapi import status
 from fastapi.testclient import TestClient
 
 from langflow.custom.directory_reader.directory_reader import DirectoryReader
+from langflow.initial_setup.load import get_starter_projects_graphs
 from langflow.services.deps import get_settings_service
 
 
@@ -676,3 +677,4 @@ def test_starter_projects(client, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     response = client.get("/api/v1/flows/starter-projects/", headers=headers)
     assert response.status_code == status.HTTP_200_OK, response.text
+    assert len(response.json()) == len(get_starter_projects_graphs())
