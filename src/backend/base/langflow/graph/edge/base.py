@@ -23,7 +23,22 @@ class Edge:
             self._target_handle = cast(TargetHandleDict, data.get("targetHandle", {}))
             self.source_handle: SourceHandle = SourceHandle(**self._source_handle)
             if isinstance(self._target_handle, dict):
-                self.target_handle: TargetHandle = TargetHandle(**self._target_handle)
+                try:
+                    self.target_handle: TargetHandle = TargetHandle(**self._target_handle)
+                except Exception as e:
+                    if "inputTypes" in self._target_handle and self._target_handle["inputTypes"] is None:
+                        # Check if self._target_handle['fieldName']
+                        if hasattr(target, "_custom_component"):
+                            raise ValueError(
+                                f"Component {target._custom_component.display_name} field '{self._target_handle['fieldName']}' might not be a valid input."
+                            ) from e
+                        else:
+                            raise ValueError(
+                                f"Field '{self._target_handle['fieldName']}' on {target.display_name} might not be a valid input."
+                            ) from e
+                    else:
+                        raise e
+
             else:
                 raise ValueError("Target handle is not a dictionary")
             self.target_param = self.target_handle.field_name
