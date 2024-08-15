@@ -149,19 +149,38 @@ jobs:
           retention-days: 1
 
   merge-reports:
+    # We need to repeat the condition at every step
+    # https://github.com/actions/runner/issues/662
     needs: setup-and-test
     runs-on: ubuntu-latest
     if: always()
+    env:
+      EXIT_CODE: ${{!contains(needs.setup-and-test.result, 'failure') && !contains(needs.setup-and-test.result, 'cancelled') && '0' || '1'}}
     steps:
+      - name: "Should Merge Reports"
+      # If the CI was successful, we don't need to merge the reports
+      # so we can skip all the steps below
+        id: should_merge_reports
+        run: |
+          if [ "$EXIT_CODE" == "0" ]; then
+            echo "should_merge_reports=false" >> $GITHUB_OUTPUT
+          else
+            echo "should_merge_reports=true" >> $GITHUB_OUTPUT
+          fi
       - name: Checkout code
+        if: ${{ steps.should_merge_reports.outputs.should_merge_reports == 'true' }}
         uses: actions/checkout@v4
 
       - name: Setup Node.js
+
+        if: ${{ steps.should_merge_reports.outputs.should_merge_reports == 'true' }}
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
 
       - name: Download blob reports from GitHub Actions Artifacts
+
+        if: ${{ steps.should_merge_reports.outputs.should_merge_reports == 'true' }}
         uses: actions/download-artifact@v4
         with:
           path: all-blob-reports
@@ -169,10 +188,14 @@ jobs:
           merge-multiple: true
 
       - name: Merge into HTML Report
+
+        if: ${{ steps.should_merge_reports.outputs.should_merge_reports == 'true' }}
         run: |
           npx playwright merge-reports --reporter html ./all-blob-reports
 
       - name: Upload HTML report
+
+        if: ${{ steps.should_merge_reports.outputs.should_merge_reports == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: html-report--attempt-${{ github.run_attempt }}
