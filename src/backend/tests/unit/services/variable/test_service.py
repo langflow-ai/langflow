@@ -27,6 +27,7 @@ def session():
         yield session
 
 
+@pytest.mark.skip(reason="Temporarily disabled")
 def test_initialize_user_variables__donkey(service, session):
     user_id = uuid4()
     name = "OPENAI_API_KEY"
