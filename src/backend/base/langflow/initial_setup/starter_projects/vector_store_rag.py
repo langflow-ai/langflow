@@ -61,5 +61,5 @@ def rag_graph():
     return graph
 
 
-def vector_store_rag():
+def vector_store_rag_graph():
     return ingestion_graph() + rag_graph()

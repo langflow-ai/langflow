@@ -9,7 +9,7 @@ from langflow.components.prompts.Prompt import PromptComponent
 from langflow.graph.graph.base import Graph
 
 
-def blog_writer(template: str | None = None):
+def blog_writer_graph(template: str | None = None):
     if template is None:
         template = dedent("""Reference 1:
 
@@ -26,7 +26,7 @@ Blog:
     parse_data_component = ParseDataComponent()
     parse_data_component.set(data=url_component.fetch_content)
 
-    text_input = TextInputComponent(display_name="Instructions")
+    text_input = TextInputComponent(_display_name="Instructions")
     text_input.set(
         input_value="Use the references above for style to write a new blog/tutorial about Langflow and AI. Suggest non-covered topics."
     )
