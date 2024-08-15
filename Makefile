@@ -249,7 +249,6 @@ setup_devcontainer: ## set up the development container
 	poetry run langflow --path src/frontend/build
 
 setup_env: ## set up the environment
-	@sh ./scripts/setup/update_poetry.sh 1.8.2
 	@sh ./scripts/setup/setup_env.sh
 
 frontend: ## run the frontend in development mode
