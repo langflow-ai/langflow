@@ -172,6 +172,8 @@ class Graph:
         }
         if name:
             graph_dict["name"] = name
+        elif name is None and self.flow_name:
+            graph_dict["name"] = self.flow_name
         if description:
             graph_dict["description"] = description
         elif description is None and self.description:
