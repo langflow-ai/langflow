@@ -115,12 +115,17 @@ class ComponentVertex(Vertex):
         for edge in edges:
             if edge is not None and edge.source_handle.name in self.results:
                 # Get the result from the output instead of the results dict
-                output = self.get_output(edge.source_handle.name)
-                if output.value is UNDEFINED:
+                try:
+                    output = self.get_output(edge.source_handle.name)
+
+                    if output.value is UNDEFINED:
+                        result = self.results[edge.source_handle.name]
+                    else:
+                        result = cast(Any, output.value)
+                except ValueError as exc:
+                    if "does not have a component instance" not in str(exc):
+                        raise exc
                     result = self.results[edge.source_handle.name]
-                else:
-                    result = cast(Any, output.value)
-                # result = self.results[edge.source_handle.name]
                 break
         if result is UNDEFINED:
             if edge is None:
