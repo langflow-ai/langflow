@@ -45,7 +45,7 @@ export default function IntComponent({
         step={(Number.isInteger(rangeSpec?.step) ? rangeSpec?.step : 1) ?? 1}
         min={rangeSpec?.min ?? min}
         max={rangeSpec?.max ?? undefined}
-        onChange={(value) => {          
+        onChange={(value) => {
           onChange(Number(value));
         }}
         value={value ?? ""}
