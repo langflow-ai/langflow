@@ -10,6 +10,7 @@ from .OllamaModel import ChatOllamaComponent
 from .OpenAIModel import OpenAIModelComponent
 from .VertexAiModel import ChatVertexAIComponent
 from .PerplexityModel import PerplexityComponent
+from .IBMWatsonxModel import IBMWatsonXComponent
 
 __all__ = [
     "AIMLModelComponent",
@@ -24,5 +25,6 @@ __all__ = [
     "OpenAIModelComponent",
     "ChatVertexAIComponent",
     "PerplexityComponent",
+    "IBMWatsonXComponent",
     "base",
 ]
