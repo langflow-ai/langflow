@@ -9,7 +9,7 @@ from .starter_projects import (
 )
 
 
-def get_all_graphs():
+def get_starter_projects_graphs():
     return [
         basic_prompting_graph(),
         blog_writer_graph(),
@@ -21,5 +21,5 @@ def get_all_graphs():
     ]
 
 
-def get_all_graphs_dump():
-    return [g.dump() for g in get_all_graphs()]
+def get_starter_projects_dump():
+    return [g.dump() for g in get_starter_projects_graphs()]

@@ -16,7 +16,7 @@ from sqlmodel import Session, and_, col, select
 from langflow.api.utils import format_exception_message, remove_api_keys, validate_is_component
 from langflow.api.v1.schemas import FlowListCreate
 from langflow.graph.graph.schema import GraphDump, GraphDumpModel
-from langflow.initial_setup.load import get_all_graphs_dump
+from langflow.initial_setup.load import get_starter_projects_dump
 from langflow.initial_setup.setup import STARTER_FOLDER_NAME
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.database.models.flow import Flow, FlowCreate, FlowRead, FlowUpdate
@@ -407,7 +407,7 @@ def get_starter_projects(
 ) -> List[GraphDump]:
     """Get a list of starter projects."""
     try:
-        flows = get_all_graphs_dump()
+        flows = get_starter_projects_dump()
         return flows
     except Exception as exc:
         msg = format_exception_message(exc)
