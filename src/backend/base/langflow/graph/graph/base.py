@@ -48,6 +48,7 @@ class Graph:
         end: Optional["Component"] = None,
         flow_id: Optional[str] = None,
         flow_name: Optional[str] = None,
+        description: Optional[str] = None,
         user_id: Optional[str] = None,
         log_config: Optional[LogConfig] = None,
     ) -> None:
@@ -70,6 +71,7 @@ class Graph:
         self._updates = 0
         self.flow_id = flow_id
         self.flow_name = flow_name
+        self.description = description
         self.user_id = user_id
         self._is_input_vertices: List[str] = []
         self._is_output_vertices: List[str] = []
@@ -170,10 +172,13 @@ class Graph:
         }
         if name:
             graph_dict["name"] = name
+        elif name is None and self.flow_name:
+            graph_dict["name"] = self.flow_name
         if description:
             graph_dict["description"] = description
-        if endpoint_name:
-            graph_dict["endpoint_name"] = endpoint_name
+        elif description is None and self.description:
+            graph_dict["description"] = self.description
+        graph_dict["endpoint_name"] = str(endpoint_name)
         return graph_dict
 
     def add_nodes_and_edges(self, nodes: List[NodeData], edges: List[EdgeData]):
@@ -841,6 +846,7 @@ class Graph:
             "edges": self.edges,
             "flow_id": self.flow_id,
             "flow_name": self.flow_name,
+            "description": self.description,
             "user_id": self.user_id,
             "raw_graph_data": self.raw_graph_data,
             "top_level_vertices": self.top_level_vertices,
@@ -1617,8 +1623,8 @@ class Graph:
 
         for vertex_id in first_layer:
             self.run_manager.add_to_vertices_being_run(vertex_id)
-        self._first_layer = first_layer
-        self._run_queue = deque(first_layer)
+        self._first_layer = sorted(first_layer)
+        self._run_queue = deque(self._first_layer)
         self._prepared = True
         self._record_snapshot()
         return self

@@ -502,15 +502,16 @@ export function FormatColumns(columns: ColumnField[]): ColDef<any>[] {
       sortable: col.sortable,
       filter: col.filterable,
     };
-    if (col.formatter) {
-      if (basic_types.has(col.formatter)) {
-        newCol.cellDataType = col.formatter;
-      } else {
-        newCol.cellRendererParams = {
-          formatter: col.formatter,
-        };
-        newCol.cellRenderer = TableAutoCellRender;
-      }
+    if (!col.formatter) {
+      col.formatter = FormatterType.text;
+    }
+    if (basic_types.has(col.formatter)) {
+      newCol.cellDataType = col.formatter;
+    } else {
+      newCol.cellRendererParams = {
+        formatter: col.formatter,
+      };
+      newCol.cellRenderer = TableAutoCellRender;
     }
     return newCol;
   });
