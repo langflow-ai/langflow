@@ -6,18 +6,18 @@ import { fileCardPropsType } from "../../../../../types/components";
 import formatFileName from "../filePreviewChat/utils/format-file-name";
 import DownloadButton from "./components/downloadButton/downloadButton";
 import getClasses from "./utils/get-classes";
-import handleDownload from "./utils/handle-download";
+import { useGetDownloadFileMutation } from "@/controllers/API/queries/files";
 
 const imgTypes = new Set(["png", "jpg", "jpeg", "gif", "webp", "image"]);
 
 export default function FileCard({
   fileName,
-  content,
+  path,
   fileType,
   showFile = true,
 }: fileCardPropsType): JSX.Element | undefined {
   const [isHovered, setIsHovered] = useState(false);
-  const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
+  const {mutate} = useGetDownloadFileMutation({filename: fileName, path: path});
   function handleMouseEnter(): void {
     setIsHovered(true);
   }
@@ -27,7 +27,7 @@ export default function FileCard({
 
   const fileWrapperClasses = getClasses(isHovered);
 
-  const imgSrc = `${BASE_URL_API}files/images/${content}`;
+  const imgSrc = `${BASE_URL_API}files/images/${path}`;
 
   if (showFile) {
     if (imgTypes.has(fileType)) {
@@ -46,7 +46,7 @@ export default function FileCard({
             />
             <DownloadButton
               isHovered={isHovered}
-              handleDownload={() => handleDownload({ fileName, content })}
+              handleDownload={() => mutate(undefined)}
             />
           </div>
         </div>
@@ -56,7 +56,7 @@ export default function FileCard({
     return (
       <div
         className={fileWrapperClasses}
-        onClick={() => handleDownload({ fileName, content })}
+        onClick={() => mutate(undefined)}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
       >
@@ -69,7 +69,7 @@ export default function FileCard({
         </div>
         <DownloadButton
           isHovered={isHovered}
-          handleDownload={() => handleDownload({ fileName, content })}
+          handleDownload={() => mutate(undefined)}
         />
       </div>
     );

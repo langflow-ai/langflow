@@ -7,17 +7,17 @@ let isDownloading = false;
 
 export default async function handleDownload({
   fileName,
-  content,
+  path,
 }: {
   fileName: string;
-  content: string;
+  path: string;
 }): Promise<void> {
   if (isDownloading) return;
 
   try {
     isDownloading = true;
 
-    const response = await fetch(`${BASE_URL_API}files/download/${content}`);
+    const response = await fetch(`${BASE_URL_API}files/download/${path}`);
     if (!response.ok) {
       throw new Error("Network response was not ok");
     }

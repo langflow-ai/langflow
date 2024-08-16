@@ -28,7 +28,7 @@ export default function FileCardWrapper({
         showFile={show}
         fileName={name}
         fileType={type}
-        content={path}
+        path={path}
       />
     </div>
   );

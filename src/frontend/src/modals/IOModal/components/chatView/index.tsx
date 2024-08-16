@@ -80,7 +80,6 @@ export default function ChatView({
 
           const is_ai =
             sender === "Machine" || sender === null || sender === undefined;
-
           return {
             isSend: !is_ai,
             message,
