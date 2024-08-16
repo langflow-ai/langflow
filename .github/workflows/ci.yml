@@ -63,6 +63,8 @@ jobs:
     name: Run Backend Tests
     if: ${{ needs.path-filter.outputs.python == 'true' || needs.path-filter.outputs.tests == 'true' }}
     uses: ./.github/workflows/python_test.yml
+    with:
+      python-versions: "['3.10']"
 
   test-frontend:
     needs: path-filter
