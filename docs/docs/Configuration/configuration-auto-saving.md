@@ -12,7 +12,7 @@ When Langflow is in Auto-saving mode, all changes are saved automatically. Auto-
 
 ![](./saving-header.png)
 
-If you try to exit the flow page before the flow can auto-save, a dialog will appear to prevent you to leave until the flow is saved.
+If you try to exit the flow page before auto-save completes, a dialog will appear to confirm you want to exit before the flow has saved.
 
 ![](./flow-saving.png)
 
