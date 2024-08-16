@@ -29,8 +29,9 @@ class Edge:
                     if "inputTypes" in self._target_handle and self._target_handle["inputTypes"] is None:
                         # Check if self._target_handle['fieldName']
                         if hasattr(target, "_custom_component"):
+                            display_name = getattr(target._custom_component, "display_name", "")
                             raise ValueError(
-                                f"Component {target._custom_component.display_name} field '{self._target_handle['fieldName']}' might not be a valid input."
+                                f"Component {display_name} field '{self._target_handle['fieldName']}' might not be a valid input."
                             ) from e
                         else:
                             raise ValueError(
