@@ -295,7 +295,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
         >
           <div className="ml-2 flex cursor-default items-center gap-2 text-sm text-muted-foreground transition-all">
             <div className="flex cursor-default items-center gap-2 text-sm text-muted-foreground transition-all">
-              {(shouldAutosave || !changesNotSaved || isBuilding) && (
+              {(saveLoading || !changesNotSaved || isBuilding) && (
                 <IconComponent
                   name={isBuilding || saveLoading ? "Loader2" : "CheckCircle2"}
                   className={cn(
@@ -307,7 +307,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
                 />
               )}
 
-              <div className="">{printByBuildStatus()}</div>
+              <div>{printByBuildStatus()}</div>
             </div>
             <button
               disabled={!isBuilding}

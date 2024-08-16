@@ -20,7 +20,10 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const currentSavedFlow = useFlowsManagerStore((state) => state.currentFlow);
 
   const changesNotSaved =
-    customStringify(currentFlow) !== customStringify(currentSavedFlow);
+    customStringify(currentFlow) !== customStringify(currentSavedFlow) &&
+    (currentFlow?.data?.nodes?.length ?? 0) > 0;
+
+  console.log(currentFlow);
 
   const blocker = useBlocker(changesNotSaved);
   const version = useDarkStore((state) => state.version);
