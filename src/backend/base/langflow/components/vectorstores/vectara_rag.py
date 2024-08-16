@@ -1,6 +1,6 @@
 from langflow.custom import Component
 from langflow.field_typing.range_spec import RangeSpec
-from langflow.io import DropdownInput, FloatInput, IntInput, MessageTextInput, SecretStrInput, Output
+from langflow.io import DropdownInput, FloatInput, IntInput, MessageTextInput, StrInput, SecretStrInput, Output
 from langflow.schema.message import Message
 
 
@@ -32,8 +32,8 @@ class VectaraRagComponent(Component):
     field_order = ["vectara_customer_id", "vectara_corpus_id", "vectara_api_key", "search_query", "reranker"]
 
     inputs = [
-        SecretStrInput(name="vectara_customer_id", display_name="Vectara Customer ID", required=True),
-        SecretStrInput(name="vectara_corpus_id", display_name="Vectara Corpus ID", required=True),
+        StrInput(name="vectara_customer_id", display_name="Vectara Customer ID", required=True),
+        StrInput(name="vectara_corpus_id", display_name="Vectara Corpus ID", required=True),
         SecretStrInput(name="vectara_api_key", display_name="Vectara API Key", required=True),
         MessageTextInput(name="search_query", display_name="Search Query", info="The query to receive an answer on."),
         FloatInput(
@@ -84,7 +84,6 @@ class VectaraRagComponent(Component):
         DropdownInput(
             name="response_lang",
             display_name="Response Language",
-            # options=["auto", "eng", "deu", "fra", "ita", "nld", "por", "rus", "spa", "zho"],
             options=RESPONSE_LANGUAGES,
             value="eng",
             advanced=True,
