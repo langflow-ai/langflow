@@ -14,7 +14,7 @@ class HuggingFaceInferenceAPIEmbeddingsComponent(LCModelComponent):
     name = "HuggingFaceInferenceAPIEmbeddings"
 
     inputs = [
-        SecretStrInput(name="api_key", display_name="API Key", advanced=True),
+        SecretStrInput(name="api_key", display_name="API Key"),
         MessageTextInput(name="api_url", display_name="API URL", advanced=True, value="http://localhost:8080"),
         MessageTextInput(name="model_name", display_name="Model Name", value="BAAI/bge-large-en-v1.5"),
     ]
