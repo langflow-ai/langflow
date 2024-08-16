@@ -256,7 +256,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
           <Button
             variant="primary"
             size="icon"
-            disabled={shouldAutosave || !changesNotSaved}
+            disabled={shouldAutosave || !changesNotSaved || isBuilding}
             className={cn("mr-1 h-9 px-2")}
             onClick={handleSave}
           >
