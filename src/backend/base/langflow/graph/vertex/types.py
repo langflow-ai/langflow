@@ -84,7 +84,7 @@ class ComponentVertex(Vertex):
             if edge.target_id == target_id:
                 yield edge
 
-    async def _get_result(self, requester: "Vertex") -> Any:
+    async def _get_result(self, requester: "Vertex", target_handle_name: str | None = None) -> Any:
         """
         Retrieves the result of the built component.
 

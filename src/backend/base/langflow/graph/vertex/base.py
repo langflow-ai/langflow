@@ -583,7 +583,7 @@ class Vertex:
         """
         return all(self._is_vertex(vertex) for vertex in value)
 
-    async def get_result(self, requester: "Vertex") -> Any:
+    async def get_result(self, requester: "Vertex", target_handle_name: Optional[str] = None) -> Any:
         """
         Retrieves the result of the vertex.
 
@@ -593,9 +593,9 @@ class Vertex:
             The result of the vertex.
         """
         async with self._lock:
-            return await self._get_result(requester)
+            return await self._get_result(requester, target_handle_name)
 
-    async def _get_result(self, requester: "Vertex") -> Any:
+    async def _get_result(self, requester: "Vertex", target_handle_name: Optional[str] = None) -> Any:
         """
         Retrieves the result of the built component.
 
@@ -620,7 +620,7 @@ class Vertex:
         Builds a given vertex and updates the params dictionary accordingly.
         """
 
-        result = await vertex.get_result(self)
+        result = await vertex.get_result(self, target_handle_name=key)
         self._handle_func(key, result)
         if isinstance(result, list):
             self._extend_params_list_with_result(key, result)
