@@ -33,7 +33,7 @@ export default function FlowSettingsModal({
   );
   const [isSaving, setIsSaving] = useState(false);
   const [disableSave, setDisableSave] = useState(true);
-  const shouldAutosave = process.env.LANGFLOW_AUTO_SAVING !== "false";
+  const autoSaving = useFlowsManagerStore((state) => state.autoSaving);
   function handleClick(): void {
     setIsSaving(true);
     if (!currentFlow) return;
@@ -42,7 +42,7 @@ export default function FlowSettingsModal({
     newFlow.description = description;
     newFlow.endpoint_name =
       endpoint_name && endpoint_name.length > 0 ? endpoint_name : null;
-    if (shouldAutosave) {
+    if (autoSaving) {
       saveFlow(newFlow)
         ?.then(() => {
           setOpen(false);

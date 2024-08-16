@@ -13,7 +13,7 @@ import {
   useRefreshAccessToken,
 } from "./controllers/API/queries/auth";
 import { useGetVersionQuery } from "./controllers/API/queries/version";
-import { setupAxiosDefaults } from "./controllers/API/utils";
+import useSaveConfig from "./hooks/use-save-config";
 import router from "./routes";
 import useAlertStore from "./stores/alertStore";
 import useAuthStore from "./stores/authStore";
@@ -56,7 +56,7 @@ export default function App() {
           login(user["access_token"], "auto");
           setUserData(user);
           setAutoLogin(true);
-          fetchAllData();
+          refreshStars();
           // mutateRefresh({ refresh_token: refreshToken });
         }
       },
@@ -70,7 +70,7 @@ export default function App() {
               logout();
             } else {
               mutateRefresh({ refresh_token: refreshToken });
-              fetchAllData();
+              refreshStars();
               getUser();
             }
           }
@@ -96,25 +96,7 @@ export default function App() {
     return () => clearInterval(intervalId);
   }, [isLoginPage]);
 
-  const fetchAllData = async () => {
-    setTimeout(async () => {
-      await Promise.all([refreshStars(), fetchData()]);
-    }, 1000);
-  };
-
-  const fetchData = async () => {
-    return new Promise<void>(async (resolve, reject) => {
-      if (isAuthenticated) {
-        try {
-          await setupAxiosDefaults();
-          resolve();
-        } catch (error) {
-          console.error("Failed to fetch data:", error);
-          reject();
-        }
-      }
-    });
-  };
+  useSaveConfig();
 
   return (
     //need parent component with width and height

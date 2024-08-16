@@ -49,7 +49,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const getTypes = useTypesStore((state) => state.getTypes);
   const saveFlow = useSaveFlow();
-  const shouldAutosave = process.env.LANGFLOW_AUTO_SAVING !== "false";
+  const autoSaving = useFlowsManagerStore((state) => state.autoSaving);
   const currentFlow = useFlowStore((state) => state.currentFlow);
   const currentSavedFlow = useFlowsManagerStore((state) => state.currentFlow);
   const updatedAt = currentSavedFlow?.updated_at;
@@ -58,7 +58,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
 
   const changesNotSaved =
     customStringify(currentFlow) !== customStringify(currentSavedFlow) &&
-    !shouldAutosave;
+    !autoSaving;
 
   const savedText =
     updatedAt && changesNotSaved
@@ -144,7 +144,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
               <IconComponent name="Settings2" className="header-menu-options" />
               Settings
             </DropdownMenuItem>
-            {!shouldAutosave && (
+            {!autoSaving && (
               <DropdownMenuItem onClick={handleSave} className="cursor-pointer">
                 <ToolbarSelectItem
                   value="Save"
@@ -252,11 +252,11 @@ export const MenuBar = ({}: {}): JSX.Element => {
         <FlowLogsModal open={openLogs} setOpen={setOpenLogs}></FlowLogsModal>
       </div>
       <div className="flex items-center">
-        {!shouldAutosave && (
+        {!autoSaving && (
           <Button
             variant="primary"
             size="icon"
-            disabled={shouldAutosave || !changesNotSaved || isBuilding}
+            disabled={autoSaving || !changesNotSaved || isBuilding}
             className={cn("mr-1 h-9 px-2")}
             onClick={handleSave}
           >
@@ -265,7 +265,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
         )}
         <ShadTooltip
           content={
-            shouldAutosave ? (
+            autoSaving ? (
               SAVED_HOVER +
               (updatedAt
                 ? new Date(updatedAt).toLocaleString("en-US", {
