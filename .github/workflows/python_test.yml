@@ -2,6 +2,12 @@ name: Python tests
 
 on:
   workflow_call:
+    inputs:
+      python-versions:
+        description: "(Optional) Python versions to test"
+        required: false
+        type: string
+        default: "['3.10', '3.11', '3.12']"
   workflow_dispatch:
     inputs:
       branch:
@@ -18,10 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version:
-          - "3.12"
-          - "3.11"
-          - "3.10"
+        python-version: ${{ fromJson(inputs.python-versions) }}
         splitCount: [5]
         group: [1, 2, 3, 4, 5]
     env:
@@ -57,10 +60,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version:
-          - "3.12"
-          - "3.11"
-          - "3.10"
+        python-version: ${{ fromJson(inputs.python-versions) }}
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python ${{ matrix.python-version }} + Poetry ${{ env.POETRY_VERSION }}
