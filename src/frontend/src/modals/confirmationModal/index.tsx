@@ -35,6 +35,7 @@ function ConfirmationModal({
   destructive = false,
   destructiveCancel = false,
   icon,
+  loading,
   data,
   index,
   onConfirm,
@@ -97,22 +98,24 @@ function ConfirmationModal({
             setModalOpen(false);
             onConfirm(index, data);
           }}
+          loading={loading}
           data-testid="replace-button"
         >
           {confirmationText}
         </Button>
-
-        <Button
-          className=""
-          variant={destructiveCancel ? "destructive" : "outline"}
-          onClick={() => {
-            setFlag(true);
-            if (onCancel) onCancel();
-            setModalOpen(false);
-          }}
-        >
-          {cancelText}
-        </Button>
+        {cancelText && onCancel && (
+          <Button
+            className=""
+            variant={destructiveCancel ? "destructive" : "outline"}
+            onClick={() => {
+              setFlag(true);
+              if (onCancel) onCancel();
+              setModalOpen(false);
+            }}
+          >
+            {cancelText}
+          </Button>
+        )}
       </BaseModal.Footer>
     </BaseModal>
   );

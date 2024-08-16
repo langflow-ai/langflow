@@ -122,7 +122,8 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
           onSave={handleSave}
           onCancel={() => (blocker.reset ? blocker.reset() : null)}
           onProceed={() => (blocker.proceed ? blocker.proceed() : null)}
-          flow={currentSavedFlow}
+          flowName={currentSavedFlow.name}
+          unsavedChanges={changesNotSaved}
           lastSaved={
             updatedAt
               ? new Date(updatedAt).toLocaleString("en-US", {

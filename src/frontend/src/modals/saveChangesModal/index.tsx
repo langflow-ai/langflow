@@ -1,5 +1,4 @@
 import ForwardedIconComponent from "@/components/genericIconComponent";
-import { FlowType } from "@/types/flow";
 import { truncate } from "lodash";
 import ConfirmationModal from "../confirmationModal";
 
@@ -7,14 +6,16 @@ export function SaveChangesModal({
   onSave,
   onProceed,
   onCancel,
-  flow,
+  flowName,
+  unsavedChanges,
   lastSaved,
   autoSave,
 }: {
   onSave: () => void;
   onProceed: () => void;
   onCancel: () => void;
-  flow: FlowType;
+  flowName: string;
+  unsavedChanges: boolean;
   lastSaved: string | undefined;
   autoSave: boolean;
 }): JSX.Element {
@@ -23,26 +24,27 @@ export function SaveChangesModal({
       open={true}
       onClose={onCancel}
       destructiveCancel
-      title={truncate(flow.name, { length: 32 }) + " has unsaved changes"}
-      cancelText={"Exit anyway"}
-      confirmationText={"Save and Exit"}
-      onConfirm={onSave}
+      title={truncate(flowName, { length: 32 }) + " has unsaved changes"}
+      cancelText={autoSave ? undefined : "Exit anyway"}
+      confirmationText={autoSave ? "Exit" : "Save and Exit"}
+      onConfirm={autoSave ? onProceed : onSave}
       onCancel={onProceed}
+      loading={autoSave ? unsavedChanges : false}
       size="x-small"
     >
       <ConfirmationModal.Content>
-        <div className="mb-4 flex w-full items-center gap-3 rounded-md bg-yellow-100 px-4 py-2 text-yellow-800">
-          <ForwardedIconComponent name="info" className="h-5 w-5" />
-          Last saved: {lastSaved ?? "Never"}
-        </div>
-
         {autoSave ? (
-          <>
-            This flow was not saved yet by auto-saving. Save and exit to ensure
-            all of your changes are saved.
-          </>
+          unsavedChanges ? (
+            "Saving flow automatically..."
+          ) : (
+            "Flow saved! Click 'Exit' to leave the page."
+          )
         ) : (
           <>
+            <div className="mb-4 flex w-full items-center gap-3 rounded-md bg-yellow-100 px-4 py-2 text-yellow-800">
+              <ForwardedIconComponent name="info" className="h-5 w-5" />
+              Last saved: {lastSaved ?? "Never"}
+            </div>
             Unsaved changes will be permanently lost.{" "}
             <a
               target="_blank"

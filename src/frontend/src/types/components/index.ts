@@ -437,7 +437,8 @@ export type ConfirmationModalType = {
   destructive?: boolean;
   destructiveCancel?: boolean;
   modalContentTitle?: string;
-  cancelText: string;
+  loading?: boolean;
+  cancelText?: string;
   confirmationText: string;
   children:
     | [React.ReactElement<ContentProps>, React.ReactElement<TriggerProps>]
