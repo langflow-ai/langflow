@@ -17,29 +17,6 @@ const CollectionCard = ({ item, type, isLoading, control }) => {
     }
   };
 
-  const renderButton = () => {
-    if (!isComponent) {
-      return (
-        <Link to={editFlowLink}>
-          <Button
-            tabIndex={-1}
-            variant="outline"
-            size="sm"
-            className="whitespace-nowrap"
-            data-testid={editFlowButtonTestId}
-          >
-            <IconComponent
-              name="ExternalLink"
-              className="main-page-nav-button select-none"
-            />
-            Edit Flow
-          </Button>
-        </Link>
-      );
-    }
-    return null;
-  };
-
   return (
     <CollectionCardComponent
       data={{
@@ -48,9 +25,7 @@ const CollectionCard = ({ item, type, isLoading, control }) => {
       }}
       disabled={isLoading}
       data-testid={editFlowButtonTestId}
-      button={renderButton()!}
       onClick={!isComponent ? handleClick : undefined}
-      playground={!isComponent}
       control={control}
     />
   );
