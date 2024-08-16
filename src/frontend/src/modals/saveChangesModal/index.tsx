@@ -35,15 +35,25 @@ export function SaveChangesModal({
           <ForwardedIconComponent name="info" className="h-5 w-5" />
           Last saved: {lastSaved ?? "Never"}
         </div>
-        Unsaved changes will be permanently lost.{" "}
-        <a
-          target="_blank"
-          className="underline"
-          href="https://docs.langflow.org/configuration-auto-saving"
-        >
-          Enable auto-saving
-        </a>{" "}
-        to avoid losing progress.
+
+        {autoSave ? (
+          <>
+            This flow was not saved yet by auto-saving. Save and exit to ensure
+            all of your changes are saved.
+          </>
+        ) : (
+          <>
+            Unsaved changes will be permanently lost.{" "}
+            <a
+              target="_blank"
+              className="underline"
+              href="https://docs.langflow.org/configuration-auto-saving"
+            >
+              Enable auto-saving
+            </a>{" "}
+            to avoid losing progress.
+          </>
+        )}
       </ConfirmationModal.Content>
     </ConfirmationModal>
   );
