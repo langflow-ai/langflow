@@ -46,6 +46,8 @@ class Component(CustomComponent):
                 config[key] = value
             elif key in CONFIG_ATTRIBUTES:
                 config[key[1:]] = value
+            else:
+                inputs[key] = value
         self._inputs: dict[str, "InputTypes"] = {}
         self._outputs: dict[str, Output] = {}
         self._results: dict[str, Any] = {}
