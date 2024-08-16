@@ -114,7 +114,11 @@ class ComponentVertex(Vertex):
         edges = self.get_edge_with_target(requester.id)
         result = UNDEFINED
         for edge in edges:
-            if edge is not None and edge.source_handle.name in self.results:
+            if (
+                edge is not None
+                and edge.source_handle.name in self.results
+                and edge.target_handle.field_name == target_handle_name
+            ):
                 # Get the result from the output instead of the results dict
                 try:
                     output = self.get_output(edge.source_handle.name)

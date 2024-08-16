@@ -568,7 +568,7 @@ class Vertex:
             if not self._is_vertex(value):
                 self.params[key][sub_key] = value
             else:
-                result = await value.get_result(self)
+                result = await value.get_result(self, target_handle_name=key)
                 self.params[key][sub_key] = result
 
     def _is_vertex(self, value):
@@ -636,7 +636,7 @@ class Vertex:
         """
         self.params[key] = []
         for vertex in vertices:
-            result = await vertex.get_result(self)
+            result = await vertex.get_result(self, target_handle_name=key)
             # Weird check to see if the params[key] is a list
             # because sometimes it is a Data and breaks the code
             if not isinstance(self.params[key], list):
