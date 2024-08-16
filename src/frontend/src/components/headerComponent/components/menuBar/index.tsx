@@ -266,40 +266,43 @@ export const MenuBar = ({}: {}): JSX.Element => {
         {(updatedAt || saveLoading) && (
           <ShadTooltip
             content={
-              <div className="flex w-48 flex-col gap-1 py-1">
-                <h2 className="text-base font-semibold">
-                  Auto-saving is disabled
-                </h2>
-                <p className="text-muted-foreground">
-                  <a
-                    href="https://docs.langflow.org/configuration-auto-saving"
-                    className="text-primary underline"
-                  >
-                    Enable auto-saving
-                  </a>{" "}
-                  to avoid losing progress.
-                </p>
-              </div>
+              shouldAutosave ? (
+                savedText
+              ) : (
+                <div className="flex w-48 flex-col gap-1 py-1">
+                  <h2 className="text-base font-semibold">
+                    Auto-saving is disabled
+                  </h2>
+                  <p className="text-muted-foreground">
+                    <a
+                      href="https://docs.langflow.org/configuration-auto-saving"
+                      className="text-primary underline"
+                    >
+                      Enable auto-saving
+                    </a>{" "}
+                    to avoid losing progress.
+                  </p>
+                </div>
+              )
             }
             side="bottom"
             styleClasses="cursor-default"
           >
             <div className="flex cursor-default items-center gap-2 text-sm text-muted-foreground transition-all">
               <div className="flex cursor-default items-center gap-2 text-sm text-muted-foreground transition-all">
-                {shouldAutosave ||
-                  (!changesNotSaved && (
-                    <IconComponent
-                      name={
-                        isBuilding || saveLoading ? "Loader2" : "CheckCircle2"
-                      }
-                      className={cn(
-                        "h-4 w-4",
-                        isBuilding || saveLoading
-                          ? "animate-spin"
-                          : "animate-wiggle",
-                      )}
-                    />
-                  ))}
+                {(shouldAutosave || !changesNotSaved || isBuilding) && (
+                  <IconComponent
+                    name={
+                      isBuilding || saveLoading ? "Loader2" : "CheckCircle2"
+                    }
+                    className={cn(
+                      "h-4 w-4",
+                      isBuilding || saveLoading
+                        ? "animate-spin"
+                        : "animate-wiggle",
+                    )}
+                  />
+                )}
 
                 <div className="">{printByBuildStatus()}</div>
               </div>
