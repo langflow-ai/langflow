@@ -7,6 +7,7 @@ import ShadTooltip from "../../components/shadTooltipComponent";
 import { SkeletonCardComponent } from "../../components/skeletonCardComponent";
 import { Button } from "../../components/ui/button";
 
+import StoreCardComponent from "@/components/storeCardComponent";
 import { useGetTagsQuery } from "@/controllers/API/queries/store";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import PaginatorComponent from "../../components/paginatorComponent";
@@ -326,15 +327,11 @@ export default function StorePage(): JSX.Element {
               searchData.map((item) => {
                 return (
                   <>
-                    <CollectionCardComponent
+                    <StoreCardComponent
                       key={item.id}
                       data={item}
                       authorized={validApiKey}
                       disabled={loading}
-                      playground={
-                        item.last_tested_version?.includes("1.0.0") &&
-                        !item.is_component
-                      }
                     />
                   </>
                 );

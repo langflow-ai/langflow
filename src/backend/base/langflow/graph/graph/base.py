@@ -17,10 +17,10 @@ from langflow.graph.edge.base import CycleEdge
 from langflow.graph.edge.schema import EdgeData
 from langflow.graph.graph.constants import Finish, lazy_load_vertex_dict
 from langflow.graph.graph.runnable_vertices_manager import RunnableVerticesManager
-from langflow.graph.graph.schema import GraphData, GraphDump, VertexBuildResult
+from langflow.graph.graph.schema import GraphData, GraphDump, StartConfigDict, VertexBuildResult
 from langflow.graph.graph.state_manager import GraphStateManager
 from langflow.graph.graph.state_model import create_state_model_from_graph
-from langflow.graph.graph.utils import find_start_component_id, process_flow, sort_up_to_vertex
+from langflow.graph.graph.utils import find_start_component_id, process_flow, should_continue, sort_up_to_vertex
 from langflow.graph.schema import InterfaceComponentTypes, RunOutputs
 from langflow.graph.vertex.base import Vertex, VertexStates
 from langflow.graph.vertex.schema import NodeData
@@ -102,6 +102,8 @@ class Graph:
         self.raw_graph_data: GraphData = {"nodes": [], "edges": []}
         self._is_cyclic: Optional[bool] = None
         self._cycles: Optional[List[tuple[str, str]]] = None
+        self._call_order: List[str] = []
+        self._snapshots: List[Dict[str, Any]] = []
         try:
             self.tracing_service: "TracingService" | None = get_tracing_service()
         except Exception as exc:
@@ -258,17 +260,40 @@ class Graph:
             for key, value in _input.items():
                 vertex = self.get_vertex(key)
                 vertex.set_input_value(key, value)
-        while True:
+        # I want to keep a counter of how many tyimes result.vertex.id
+        # has been yielded
+        yielded_counts: dict[str, int] = defaultdict(int)
+
+        while should_continue(yielded_counts, max_iterations):
             result = await self.astep()
             yield result
+            if hasattr(result, "vertex"):
+                yielded_counts[result.vertex.id] += 1
             if isinstance(result, Finish):
                 return
 
-    def start(self, inputs: Optional[List[dict]] = None) -> Generator:
+        raise ValueError("Max iterations reached")
+
+    def __apply_config(self, config: StartConfigDict):
+        for vertex in self.vertices:
+            if vertex._custom_component is None:
+                continue
+            for output in vertex._custom_component.outputs:
+                for key, value in config["output"].items():
+                    setattr(output, key, value)
+
+    def start(
+        self,
+        inputs: Optional[List[dict]] = None,
+        max_iterations: Optional[int] = None,
+        config: Optional[StartConfigDict] = None,
+    ) -> Generator:
+        if config is not None:
+            self.__apply_config(config)
         #! Change this ASAP
         nest_asyncio.apply()
         loop = asyncio.get_event_loop()
-        async_gen = self.async_start(inputs)
+        async_gen = self.async_start(inputs, max_iterations)
         async_gen_task = asyncio.ensure_future(async_gen.__anext__())
 
         while True:
@@ -759,15 +784,17 @@ class Graph:
         if state == VertexStates.INACTIVE:
             self.run_manager.remove_from_predecessors(vertex_id)
 
-    def mark_branch(self, vertex_id: str, state: str, visited: Optional[set] = None, output_name: Optional[str] = None):
+    def _mark_branch(
+        self, vertex_id: str, state: str, visited: Optional[set] = None, output_name: Optional[str] = None
+    ):
         """Marks a branch of the graph."""
         if visited is None:
             visited = set()
+        else:
+            self.mark_vertex(vertex_id, state)
         if vertex_id in visited:
             return
         visited.add(vertex_id)
-
-        self.mark_vertex(vertex_id, state)
 
         for child_id in self.parent_child_map[vertex_id]:
             # Only child_id that have an edge with the vertex_id through the output_name
@@ -776,7 +803,15 @@ class Graph:
                 edge = self.get_edge(vertex_id, child_id)
                 if edge and edge.source_handle.name != output_name:
                     continue
-            self.mark_branch(child_id, state)
+            self._mark_branch(child_id, state, visited)
+
+    def mark_branch(self, vertex_id: str, state: str, output_name: Optional[str] = None):
+        self._mark_branch(vertex_id=vertex_id, state=state, output_name=output_name)
+        new_predecessor_map, _ = self.build_adjacency_maps(self.edges)
+        self.run_manager.update_run_state(
+            run_predecessors=new_predecessor_map,
+            vertices_to_run=self.vertices_to_run,
+        )
 
     def get_edge(self, source_id: str, target_id: str) -> Optional[CycleEdge]:
         """Returns the edge between two vertices."""
@@ -1101,6 +1136,14 @@ class Graph:
                     return vertex
         raise ValueError(f"Vertex {vertex_id} is not a top level vertex or no root vertex found")
 
+    def get_next_in_queue(self):
+        if not self._run_queue:
+            return None
+        return self._run_queue.popleft()
+
+    def extend_run_queue(self, vertices: List[str]):
+        self._run_queue.extend(vertices)
+
     async def astep(
         self,
         inputs: Optional["InputValueRequest"] = None,
@@ -1112,7 +1155,7 @@ class Graph:
         if not self._run_queue:
             asyncio.create_task(self.end_all_traces())
             return Finish()
-        vertex_id = self._run_queue.popleft()
+        vertex_id = self.get_next_in_queue()
         chat_service = get_chat_service()
         vertex_build_result = await self.build_vertex(
             vertex_id=vertex_id,
@@ -1128,12 +1171,30 @@ class Graph:
         )
         if self.stop_vertex and self.stop_vertex in next_runnable_vertices:
             next_runnable_vertices = [self.stop_vertex]
-        self._run_queue.extend(next_runnable_vertices)
+        self.extend_run_queue(next_runnable_vertices)
         self.reset_inactivated_vertices()
         self.reset_activated_vertices()
 
         await chat_service.set_cache(str(self.flow_id or self._run_id), self)
+        self._record_snapshot(vertex_id)
         return vertex_build_result
+
+    def get_snapshot(self):
+        return copy.deepcopy(
+            {
+                "run_manager": self.run_manager.to_dict(),
+                "run_queue": self._run_queue,
+                "vertices_layers": self.vertices_layers,
+                "first_layer": self.first_layer,
+                "inactive_vertices": self.inactive_vertices,
+                "activated_vertices": self.activated_vertices,
+            }
+        )
+
+    def _record_snapshot(self, vertex_id: str | None = None, start: bool = False):
+        self._snapshots.append(self.get_snapshot())
+        if vertex_id:
+            self._call_order.append(vertex_id)
 
     def step(
         self,
@@ -1314,14 +1375,14 @@ class Graph:
         return self
 
     def find_next_runnable_vertices(self, vertex_id: str, vertex_successors_ids: List[str]) -> List[str]:
-        next_runnable_vertices = []
+        next_runnable_vertices = set()
         for v_id in vertex_successors_ids:
             if not self.is_vertex_runnable(v_id):
-                next_runnable_vertices.extend(self.find_runnable_predecessors_for_successor(v_id))
+                next_runnable_vertices.update(self.find_runnable_predecessors_for_successor(v_id))
             else:
-                next_runnable_vertices.append(v_id)
+                next_runnable_vertices.add(v_id)
 
-        return next_runnable_vertices
+        return list(next_runnable_vertices)
 
     async def get_next_runnable_vertices(self, lock: asyncio.Lock, vertex: "Vertex", cache: bool = True) -> List[str]:
         v_id = vertex.id
@@ -1559,6 +1620,7 @@ class Graph:
         self._first_layer = first_layer
         self._run_queue = deque(first_layer)
         self._prepared = True
+        self._record_snapshot()
         return self
 
     def get_children_by_vertex_type(self, vertex: Vertex, vertex_type: str) -> List[Vertex]:

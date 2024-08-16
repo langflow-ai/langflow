@@ -269,10 +269,10 @@ export type RangeSpecType = {
 };
 
 export type IntComponentType = {
-  value: string;
+  value: number;
   disabled?: boolean;
   rangeSpec: RangeSpecType;
-  onChange: (value: string, dbValue?: boolean, skipSnapshot?: boolean) => void;
+  onChange: (value: number, dbValue?: boolean, skipSnapshot?: boolean) => void;
   editNode?: boolean;
   id?: string;
 };
@@ -695,6 +695,28 @@ export type genericModalPropsType = {
   setNodeClass?: (Class: APIClassType, type?: string) => void;
   children: ReactNode;
   id?: string;
+  readonly?: boolean;
+  password?: boolean;
+  changeVisibility?: () => void;
+};
+
+export type PromptModalType = {
+  field_name?: string;
+  setValue: (value: string) => void;
+  value: string;
+  disabled?: boolean;
+  nodeClass?: APIClassType;
+  setNodeClass?: (Class: APIClassType, type?: string) => void;
+  children: ReactNode;
+  id?: string;
+  readonly?: boolean;
+};
+
+export type textModalPropsType = {
+  setValue: (value: string) => void;
+  value: string;
+  disabled?: boolean;
+  children: ReactNode;
   readonly?: boolean;
   password?: boolean;
   changeVisibility?: () => void;
