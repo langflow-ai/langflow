@@ -178,7 +178,7 @@ class Graph:
             graph_dict["description"] = description
         elif description is None and self.description:
             graph_dict["description"] = self.description
-        graph_dict["endpoint_name"] = endpoint_name
+        graph_dict["endpoint_name"] = str(endpoint_name)
         return graph_dict
 
     def add_nodes_and_edges(self, nodes: List[NodeData], edges: List[EdgeData]):
