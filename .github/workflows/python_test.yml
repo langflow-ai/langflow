@@ -5,7 +5,7 @@ on:
     inputs:
       python-versions:
         description: "(Optional) Python versions to test"
-        required: false
+        required: true
         type: string
         default: "['3.10', '3.11', '3.12']"
   workflow_dispatch:
