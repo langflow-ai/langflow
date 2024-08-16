@@ -427,6 +427,7 @@ def update_settings(
     remove_api_keys: bool = False,
     components_path: Optional[Path] = None,
     store: bool = True,
+    auto_save: bool = True,
 ):
     """Update the settings from a config file."""
     from langflow.services.utils import initialize_settings_service
@@ -450,6 +451,9 @@ def update_settings(
     if not store:
         logger.debug("Setting store to False")
         settings_service.settings.update_settings(store=False)
+    if not auto_save:
+        logger.debug("Setting auto_save to False")
+        settings_service.settings.update_settings(auto_save=False)
 
 
 def is_class_method(func, cls):
