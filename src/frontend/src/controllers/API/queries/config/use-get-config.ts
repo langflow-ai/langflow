@@ -15,7 +15,7 @@ export const useGetConfigQuery: useQueryFunctionType<
   const { query } = UseRequestProcessor();
 
   const getConfigFn = async () => {
-    const response = await api.get<ConfigResponse>(`${getURL("CONFIG")}/`);
+    const response = await api.get<ConfigResponse>(`${getURL("CONFIG")}`);
     return response["data"];
   };
 
