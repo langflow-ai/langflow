@@ -33,7 +33,7 @@ export default function FlowSettingsModal({
   );
   const [isSaving, setIsSaving] = useState(false);
   const [disableSave, setDisableSave] = useState(true);
-  const shouldAutosave = process.env.LANGFLOW_AUTO_SAVE !== "false";
+  const shouldAutosave = process.env.LANGFLOW_AUTO_SAVING !== "false";
   function handleClick(): void {
     setIsSaving(true);
     if (!currentFlow) return;
