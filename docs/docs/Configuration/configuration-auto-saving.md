@@ -8,7 +8,7 @@ Langflow currently supports both manual and auto-saving functionality.
 
 ## Auto-saving {#auto-saving}
 
-When Langflow is in Auto-saving mode, all changes you make are going to be saved automatically. You can see the saving progress at the left side of the top bar. When the flow is being saved, a Loading indicator will appear, indicating that the flow is being saved in the database.
+When Langflow is in Auto-saving mode, all changes are saved automatically. Auto-save progress is indicated in the left side of the top bar: when a flow is being saved, a Loading icon indicates that the flow is being saved in the database.
 
 ![](./saving-header.png)
 
