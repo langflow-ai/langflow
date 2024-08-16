@@ -4,7 +4,7 @@ sidebar_position: 6
 slug: /configuration-auto-save
 ---
 
-Langflow currently supports manual saving and auto-saving functionality. This section will introduce both of them and instruct you on how to disable or enable auto-save.
+Langflow currently supports both manual and auto-saving functionality.
 
 ## Auto-saving {#auto-saving}
 
