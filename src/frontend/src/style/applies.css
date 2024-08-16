@@ -568,7 +568,7 @@
     @apply flex items-center gap-0.5 rounded-md px-1.5 py-1 text-sm font-medium;
   }
   .header-menu-bar-display {
-    @apply flex max-w-[115px] cursor-pointer items-center gap-2 lg:max-w-[145px];
+    @apply flex max-w-[120px] cursor-pointer items-center gap-2 lg:max-w-[150px];
   }
   .header-menu-flow-name {
     @apply flex-1 truncate;

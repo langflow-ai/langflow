@@ -263,11 +263,10 @@ export const MenuBar = ({}: {}): JSX.Element => {
                 variant="primary"
                 size="icon"
                 disabled={shouldAutosave || !changesNotSaved}
-                className={cn("w-40Í mr-1 h-9")}
+                className={cn("mr-1 h-9 px-2")}
                 onClick={handleSave}
               >
                 <IconComponent name={"Save"} className={cn("h-5 w-5")} />
-                Save Changes
               </Button>
               {shouldAutosave ||
                 (!changesNotSaved && (
