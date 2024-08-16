@@ -12,6 +12,7 @@ import PromptAreaComponent from "../promptComponent";
 import ToggleShadComponent from "../toggleShadComponent";
 import { RefreshParameterComponent } from "./component/refreshParameterComponent";
 import { StrRenderComponent } from "./component/strRenderComponent";
+import TableNodeComponent from "../TableNodeComponent";
 
 export function ParameterRenderComponent({
   handleOnNewValue,
@@ -146,9 +147,15 @@ export function ParameterRenderComponent({
           />
         ) : templateData.type === "Any" ? (
           <>-</>
-        ) : (
-          String(templateValue)
-        )}
+        ) : templateData.type === "table" ? (
+          <TableNodeComponent
+            description={templateData.info || "Add or edit data"}
+            columns={templateData?.table_schema?.columns}
+            onChange={onChange}
+            tableTitle={templateData?.display_name ?? "Table"}
+            value={templateValue}
+          />
+        ) : String(templateValue)}
       </RefreshParameterComponent>
     ),
     [templateData, disabled, nodeId, editNode, nodeClass, name, templateValue],
