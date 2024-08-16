@@ -137,7 +137,7 @@ jobs:
           timeout_minutes: 12
           max_attempts: 2
           command: |
-            cd src/frontend
+            cd src/frontend/tests/end-to-end
             npx playwright test --trace on --shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --workers 2
 
       - name: Upload blob report to GitHub Actions Artifacts
@@ -158,8 +158,8 @@ jobs:
       EXIT_CODE: ${{!contains(needs.setup-and-test.result, 'failure') && !contains(needs.setup-and-test.result, 'cancelled') && '0' || '1'}}
     steps:
       - name: "Should Merge Reports"
-      # If the CI was successful, we don't need to merge the reports
-      # so we can skip all the steps below
+        # If the CI was successful, we don't need to merge the reports
+        # so we can skip all the steps below
         id: should_merge_reports
         run: |
           if [ "$EXIT_CODE" == "0" ]; then
