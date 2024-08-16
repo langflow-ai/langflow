@@ -1,5 +1,4 @@
 import useFlowStore from "@/stores/flowStore";
-import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { FlowPoolType } from "@/types/zustand/flow";
 import { keepPreviousData } from "@tanstack/react-query";
 import { AxiosResponse } from "axios";
@@ -20,7 +19,7 @@ export const useGetBuildsQuery: useQueryFunctionType<
   const { query } = UseRequestProcessor();
 
   const setFlowPool = useFlowStore((state) => state.setFlowPool);
-  const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
+  const currentFlow = useFlowStore((state) => state.currentFlow);
 
   const getBuildsFn = async (
     params: BuildsQueryParams,

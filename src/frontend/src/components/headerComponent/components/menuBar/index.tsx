@@ -8,7 +8,10 @@ import {
 } from "../../../ui/dropdown-menu";
 
 import useAddFlow from "@/hooks/flows/use-add-flow";
+import useSaveFlow from "@/hooks/flows/use-save-flow";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
+import { customStringify } from "@/utils/reactflowUtils";
+import { useHotkeys } from "react-hotkeys-hook";
 import { useNavigate } from "react-router-dom";
 import { UPLOAD_ERROR_ALERT } from "../../../../constants/alerts_constants";
 import { SAVED_HOVER } from "../../../../constants/constants";
@@ -29,7 +32,6 @@ import { Button } from "../../../ui/button";
 export const MenuBar = ({}: {}): JSX.Element => {
   const shortcuts = useShortcutsStore((state) => state.shortcuts);
   const addFlow = useAddFlow();
-  const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setLockChat = useFlowStore((state) => state.setLockChat);
@@ -46,10 +48,31 @@ export const MenuBar = ({}: {}): JSX.Element => {
   const navigate = useNavigate();
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const getTypes = useTypesStore((state) => state.getTypes);
+  const saveFlow = useSaveFlow();
+  const shouldAutosave = process.env.LANGFLOW_AUTO_SAVING !== "false";
+  const currentFlow = useFlowStore((state) => state.currentFlow);
+  const currentSavedFlow = useFlowsManagerStore((state) => state.currentFlow);
+  const updatedAt = currentSavedFlow?.updated_at;
+  const onFlowPage = useFlowStore((state) => state.onFlowPage);
+  const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
+
+  const changesNotSaved =
+    customStringify(currentFlow) !== customStringify(currentSavedFlow) &&
+    !shouldAutosave;
+
+  const savedText =
+    updatedAt && changesNotSaved
+      ? SAVED_HOVER +
+        new Date(updatedAt).toLocaleString("en-US", {
+          hour: "numeric",
+          minute: "numeric",
+        })
+      : "Saved";
 
   function handleAddFlow() {
     try {
       addFlow().then((id) => {
+        setCurrentFlow(undefined); // Reset current flow for useEffect of flowPage to update the current flow
         navigate("/flow/" + id);
       });
     } catch (err) {
@@ -69,11 +92,20 @@ export const MenuBar = ({}: {}): JSX.Element => {
     } else if (saveLoading) {
       return "Saving...";
     }
-    return "Saved";
+    return savedText;
   }
 
-  return currentFlow ? (
-    <div className="round-button-div">
+  const handleSave = () => {
+    saveFlow().then(() => {
+      setSuccessData({ title: "Saved successfully" });
+    });
+  };
+
+  const changes = useShortcutsStore((state) => state.changes);
+  useHotkeys(changes, handleSave, { preventDefault: true });
+
+  return currentFlow && onFlowPage ? (
+    <div className="flex items-center">
       <div className="header-menu-bar">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -112,6 +144,20 @@ export const MenuBar = ({}: {}): JSX.Element => {
               <IconComponent name="Settings2" className="header-menu-options" />
               Settings
             </DropdownMenuItem>
+            {!shouldAutosave && (
+              <DropdownMenuItem onClick={handleSave} className="cursor-pointer">
+                <ToolbarSelectItem
+                  value="Save"
+                  icon="Save"
+                  dataTestId=""
+                  shortcut={
+                    shortcuts.find(
+                      (s) => s.name.toLowerCase() === "changes save",
+                    )?.shortcut!
+                  }
+                />
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem
               onClick={() => {
                 setOpenLogs(true);
@@ -205,28 +251,62 @@ export const MenuBar = ({}: {}): JSX.Element => {
         ></FlowSettingsModal>
         <FlowLogsModal open={openLogs} setOpen={setOpenLogs}></FlowLogsModal>
       </div>
-      {(currentFlow.updated_at || saveLoading) && (
+      <div className="flex items-center">
+        {!shouldAutosave && (
+          <Button
+            variant="primary"
+            size="icon"
+            disabled={shouldAutosave || !changesNotSaved || isBuilding}
+            className={cn("mr-1 h-9 px-2")}
+            onClick={handleSave}
+          >
+            <IconComponent name={"Save"} className={cn("h-5 w-5")} />
+          </Button>
+        )}
         <ShadTooltip
           content={
-            SAVED_HOVER +
-            new Date(currentFlow.updated_at ?? "").toLocaleString("en-US", {
-              hour: "numeric",
-              minute: "numeric",
-              second: "numeric",
-            })
+            shouldAutosave ? (
+              SAVED_HOVER +
+              (updatedAt
+                ? new Date(updatedAt).toLocaleString("en-US", {
+                    hour: "numeric",
+                    minute: "numeric",
+                  })
+                : "Never")
+            ) : (
+              <div className="flex w-48 flex-col gap-1 py-1">
+                <h2 className="text-base font-semibold">
+                  Auto-saving is disabled
+                </h2>
+                <p className="text-muted-foreground">
+                  <a
+                    href="https://docs.langflow.org/configuration-auto-saving"
+                    className="text-primary underline"
+                  >
+                    Enable auto-saving
+                  </a>{" "}
+                  to avoid losing progress.
+                </p>
+              </div>
+            )
           }
           side="bottom"
           styleClasses="cursor-default"
         >
-          <div className="flex cursor-default items-center gap-2 text-sm text-muted-foreground transition-all">
-            <div className="flex cursor-default items-center gap-1.5 text-sm text-muted-foreground transition-all">
-              <IconComponent
-                name={isBuilding || saveLoading ? "Loader2" : "CheckCircle2"}
-                className={cn(
-                  "h-4 w-4",
-                  isBuilding || saveLoading ? "animate-spin" : "animate-wiggle",
-                )}
-              />
+          <div className="ml-2 flex cursor-default items-center gap-2 text-sm text-muted-foreground transition-all">
+            <div className="flex cursor-default items-center gap-2 text-sm text-muted-foreground transition-all">
+              {(saveLoading || !changesNotSaved || isBuilding) && (
+                <IconComponent
+                  name={isBuilding || saveLoading ? "Loader2" : "CheckCircle2"}
+                  className={cn(
+                    "h-4 w-4",
+                    isBuilding || saveLoading
+                      ? "animate-spin"
+                      : "animate-wiggle",
+                  )}
+                />
+              )}
+
               <div>{printByBuildStatus()}</div>
             </div>
             <button
@@ -241,8 +321,8 @@ export const MenuBar = ({}: {}): JSX.Element => {
               }}
               className={
                 isBuilding
-                  ? "flex items-center gap-1.5 text-status-red opacity-100 transition-all"
-                  : "opacity-0"
+                  ? "flex items-center gap-1.5 text-status-red transition-all"
+                  : "hidden"
               }
             >
               <IconComponent name="Square" className="h-4 w-4" />
@@ -250,7 +330,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
             </button>
           </div>
         </ShadTooltip>
-      )}
+      </div>
     </div>
   ) : (
     <></>

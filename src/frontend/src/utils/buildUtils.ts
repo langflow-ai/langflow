@@ -30,6 +30,7 @@ type BuildVerticesParams = {
   onValidateNodes?: (nodes: string[]) => void;
   nodes?: Node[];
   edges?: Edge[];
+  logBuilds?: boolean;
 };
 
 function getInactiveVertexData(vertexId: string): VertexBuildTypeAPI {
@@ -146,6 +147,7 @@ export async function buildFlowVertices({
   onValidateNodes,
   nodes,
   edges,
+  logBuilds,
   setLockChat,
 }: BuildVerticesParams) {
   let url = `${BASE_URL_API}build/${flowId}/flow?`;
@@ -154,6 +156,9 @@ export async function buildFlowVertices({
   }
   if (stopNodeId) {
     url = `${url}&stop_component_id=${stopNodeId}`;
+  }
+  if (logBuilds !== undefined) {
+    url = `${url}&log_builds=${logBuilds}`;
   }
   const postData = {};
   if (typeof input_value !== "undefined") {

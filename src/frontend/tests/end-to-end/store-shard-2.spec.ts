@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
 
@@ -111,7 +111,6 @@ test("should share component with share button", async ({ page }) => {
     .inputValue();
   await page.getByPlaceholder("Flow name").fill(randomName);
   await page.getByText("Save").last().click();
-  await page.getByText("Close").last().click();
 
   await page.waitForSelector('[data-testid="shared-button-flow"]', {
     timeout: 100000,

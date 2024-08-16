@@ -31,6 +31,9 @@ export default defineConfig(({ mode }) => {
       outDir: "build",
     },
     define: {
+      "process.env.LANGFLOW_AUTO_SAVING": JSON.stringify(
+        process.env.LANGFLOW_AUTO_SAVING,
+      ),
       "process.env.BACKEND_URL": JSON.stringify(process.env.BACKEND_URL),
       "process.env.ACCESS_TOKEN_EXPIRE_SECONDS": JSON.stringify(
         process.env.ACCESS_TOKEN_EXPIRE_SECONDS,

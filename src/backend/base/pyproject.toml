@@ -32,7 +32,7 @@ httpx = "*"
 uvicorn = "^0.30.0"
 gunicorn = "^22.0.0"
 langchain = "~0.2.0"
-langchain-core = "^0.2.24"
+langchain-core = "^0.2.32"
 langchainhub = "~0.1.15"
 sqlmodel = "^0.0.18"
 loguru = "^0.7.1"
@@ -119,6 +119,7 @@ vulture = "^2.11"
 dictdiffer = "^0.9.0"
 pytest-split = "^0.9.0"
 devtools = "^0.12.2"
+pytest-flakefinder = "^1.1.0"
 
 
 [tool.pytest.ini_options]

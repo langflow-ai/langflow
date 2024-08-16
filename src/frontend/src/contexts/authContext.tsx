@@ -5,13 +5,9 @@ import {
 } from "@/constants/constants";
 import { useGetUserData } from "@/controllers/API/queries/auth";
 import useAuthStore from "@/stores/authStore";
-import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { createContext, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import Cookies from "universal-cookie";
-import { getLoggedUser, requestLogout } from "../controllers/API";
 import useAlertStore from "../stores/alertStore";
-import { useFolderStore } from "../stores/foldersStore";
 import { useStoreStore } from "../stores/storeStore";
 import { Users } from "../types/api";
 import { AuthContextType } from "../types/contexts/auth";
@@ -31,7 +27,6 @@ const initialValue: AuthContextType = {
 export const AuthContext = createContext<AuthContextType>(initialValue);
 
 export function AuthProvider({ children }): React.ReactElement {
-  const navigate = useNavigate();
   const cookies = new Cookies();
   const [accessToken, setAccessToken] = useState<string | null>(
     cookies.get(LANGFLOW_ACCESS_TOKEN) ?? null,
@@ -42,16 +37,9 @@ export function AuthProvider({ children }): React.ReactElement {
     cookies.get(LANGFLOW_API_TOKEN),
   );
 
-  const getFoldersApi = useFolderStore((state) => state.getFoldersApi);
-
   const checkHasStore = useStoreStore((state) => state.checkHasStore);
   const fetchApiData = useStoreStore((state) => state.fetchApiData);
-  const setAllFlows = useFlowsManagerStore((state) => state.setAllFlows);
-  const setSelectedFolder = useFolderStore((state) => state.setSelectedFolder);
   const setIsAuthenticated = useAuthStore((state) => state.setIsAuthenticated);
-  const setIsAdmin = useAuthStore((state) => state.setIsAdmin);
-  const setIsLoading = useFlowsManagerStore((state) => state.setIsLoading);
-  const autoLogin = useAuthStore((state) => state.autoLogin);
 
   const { mutate: mutateLoggedUser } = useGetUserData();
 
@@ -77,7 +65,6 @@ export function AuthProvider({ children }): React.ReactElement {
           setUserData(user);
           const isSuperUser = user!.is_superuser;
           useAuthStore.getState().setIsAdmin(isSuperUser);
-          getFoldersApi(true, true);
           checkHasStore();
           fetchApiData();
         },

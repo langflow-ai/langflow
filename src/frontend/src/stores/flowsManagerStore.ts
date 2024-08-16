@@ -1,13 +1,6 @@
-import { AxiosError } from "axios";
 import { cloneDeep } from "lodash";
-import pDebounce from "p-debounce";
-import { Edge, Node, Viewport } from "reactflow";
 import { create } from "zustand";
-import { SAVE_DEBOUNCE_TIME } from "../constants/constants";
-import {
-  readFlowsFromDatabase,
-  updateFlowInDatabase,
-} from "../controllers/API";
+import { readFlowsFromDatabase } from "../controllers/API";
 import { FlowType } from "../types/flow";
 import {
   FlowsManagerStoreType,
@@ -36,26 +29,17 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
     set({ examples });
   },
   currentFlowId: "",
-  setCurrentFlow: (flow: FlowType) => {
-    set((state) => ({
+  setCurrentFlow: (flow: FlowType | undefined) => {
+    set({
       currentFlow: flow,
-      currentFlowId: flow.id,
-    }));
+      currentFlowId: flow?.id ?? "",
+    });
+    useFlowStore.getState().resetFlow(flow);
   },
   getFlowById: (id: string) => {
-    return get().flows.find((flow) => flow.id === id);
+    return get().flows?.find((flow) => flow.id === id);
   },
-  setCurrentFlowId: (currentFlowId: string) => {
-    set((state) => ({
-      currentFlowId,
-      currentFlow: state.flows.find((flow) => flow.id === currentFlowId),
-    }));
-  },
-  flows: [],
-  allFlows: [],
-  setAllFlows: (allFlows: FlowType[]) => {
-    set({ allFlows });
-  },
+  flows: undefined,
   setFlows: (flows: FlowType[]) => {
     set({
       flows,
@@ -69,8 +53,6 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
   setIsLoading: (isLoading: boolean) => set({ isLoading }),
   refreshFlows: () => {
     return new Promise<void>((resolve, reject) => {
-      set({ isLoading: true });
-
       const starterFolderId = useFolderStore.getState().starterProjectId;
 
       readFlowsFromDatabase()
@@ -94,7 +76,6 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
                 ["saved_components"]: data,
               }),
             }));
-            set({ isLoading: false });
             resolve();
           }
         })
@@ -107,60 +88,6 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
         });
     });
   },
-  autoSaveCurrentFlow: (nodes: Node[], edges: Edge[], viewport: Viewport) => {
-    if (get().currentFlow) {
-      get().saveFlow(
-        { ...get().currentFlow!, data: { nodes, edges, viewport } },
-        true,
-      );
-    }
-  },
-  saveFlow: (flow: FlowType, silent?: boolean) => {
-    set({ saveLoading: true }); // set saveLoading true immediately
-    return get().saveFlowDebounce(flow, silent); // call the debounced function directly
-  },
-  saveFlowDebounce: pDebounce((flow: FlowType, silent?: boolean) => {
-    const folderUrl = useFolderStore.getState().folderUrl;
-    const hasFolderUrl = folderUrl != null && folderUrl !== "";
-
-    flow.folder_id = hasFolderUrl
-      ? useFolderStore.getState().folderUrl
-      : useFolderStore.getState().myCollectionId ?? "";
-
-    set({ saveLoading: true });
-    return new Promise<void>((resolve, reject) => {
-      updateFlowInDatabase(flow)
-        .then((updatedFlow) => {
-          if (updatedFlow) {
-            // updates flow in state
-            if (!silent) {
-              useAlertStore
-                .getState()
-                .setSuccessData({ title: "Changes saved successfully" });
-            }
-            get().setFlows(
-              get().flows.map((flow) => {
-                if (flow.id === updatedFlow.id) {
-                  return updatedFlow;
-                }
-                return flow;
-              }),
-            );
-            //update tabs state
-
-            resolve();
-            set({ saveLoading: false });
-          }
-        })
-        .catch((err) => {
-          useAlertStore.getState().setErrorData({
-            title: "Error while saving changes",
-            list: [(err as AxiosError).message],
-          });
-          reject(err);
-        });
-    });
-  }, SAVE_DEBOUNCE_TIME),
   takeSnapshot: () => {
     const currentFlowId = get().currentFlowId;
     // push the current graph to the past state

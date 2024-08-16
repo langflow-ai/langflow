@@ -7,6 +7,7 @@ import nanoid  # type: ignore
 import yaml
 from pydantic import BaseModel
 
+from langflow.graph.state.model import create_state_model
 from langflow.helpers.custom import format_type
 from langflow.schema.artifact import get_artifact_type, post_process_raw
 from langflow.schema.data import Data
@@ -35,7 +36,7 @@ class Component(CustomComponent):
     def __init__(self, **kwargs):
         # if key starts with _ it is a config
         # else it is an input
-
+        self._reset_all_output_values()
         inputs = {}
         config = {}
         for key, value in kwargs.items():
@@ -50,6 +51,7 @@ class Component(CustomComponent):
         self._parameters = inputs or {}
         self._edges: list[EdgeData] = []
         self._components: list[Component] = []
+        self._state_model = None
         self.set_attributes(self._parameters)
         self._output_logs = {}
         config = config or {}
@@ -69,6 +71,30 @@ class Component(CustomComponent):
         # Set output types
         self._set_output_types()
         self.set_class_code()
+
+    def _reset_all_output_values(self):
+        for output in self.outputs:
+            setattr(output, "value", UNDEFINED)
+
+    def _build_state_model(self):
+        if self._state_model:
+            return self._state_model
+        name = self.name or self.__class__.__name__
+        model_name = f"{name}StateModel"
+        fields = {}
+        for output in self.outputs:
+            fields[output.name] = getattr(self, output.method)
+        self._state_model = create_state_model(model_name=model_name, **fields)
+        return self._state_model
+
+    def get_state_model_instance_getter(self):
+        state_model = self._build_state_model()
+
+        def _instance_getter(_):
+            return state_model()
+
+        _instance_getter.__annotations__["return"] = state_model
+        return _instance_getter
 
     def __deepcopy__(self, memo):
         if id(self) in memo:
@@ -185,6 +211,13 @@ class Component(CustomComponent):
             return self._outputs[name]
         raise ValueError(f"Output {name} not found in {self.__class__.__name__}")
 
+    def set_on_output(self, name: str, **kwargs):
+        output = self.get_output(name)
+        for key, value in kwargs.items():
+            if not hasattr(output, key):
+                raise ValueError(f"Output {name} does not have a method {key}")
+            setattr(output, key, value)
+
     def set_output_value(self, name: str, value: Any):
         if name in self._outputs:
             self._outputs[name].value = value
@@ -247,7 +280,7 @@ class Component(CustomComponent):
             output.add_types(return_types)
             output.set_selected()
 
-    def _get_output_by_method(self, method: Callable):
+    def get_output_by_method(self, method: Callable):
         # method is a callable and output.method is a string
         # we need to find the output that has the same method
         output = next((output for output in self.outputs if output.method == method.__name__), None)
@@ -268,7 +301,7 @@ class Component(CustomComponent):
         method_is_output = (
             hasattr(method, "__self__")
             and isinstance(method.__self__, Component)
-            and method.__self__._get_output_by_method(method)
+            and method.__self__.get_output_by_method(method)
         )
         return method_is_output
 
@@ -298,7 +331,7 @@ class Component(CustomComponent):
     def _connect_to_component(self, key, value, _input):
         component = value.__self__
         self._components.append(component)
-        output = component._get_output_by_method(value)
+        output = component.get_output_by_method(value)
         self._add_edge(component, key, output, _input)
 
     def _add_edge(self, component, key, output, _input):
@@ -351,6 +384,8 @@ class Component(CustomComponent):
             return self.__dict__["_attributes"][name]
         if "_inputs" in self.__dict__ and name in self.__dict__["_inputs"]:
             return self.__dict__["_inputs"][name].value
+        if "_outputs" in self.__dict__ and name in self.__dict__["_outputs"]:
+            return self.__dict__["_outputs"][name]
         if name in BACKWARDS_COMPATIBLE_ATTRIBUTES:
             return self.__dict__[f"_{name}"]
         if name.startswith("_") and name[1:] in BACKWARDS_COMPATIBLE_ATTRIBUTES:
@@ -467,6 +502,7 @@ class Component(CustomComponent):
         self.outputs = [Output(**output) for output in outputs]
         for output in self.outputs:
             setattr(self, output.name, output)
+            self._outputs[output.name] = output
 
     def get_trace_as_inputs(self):
         predefined_inputs = {
@@ -506,8 +542,6 @@ class Component(CustomComponent):
         _results = {}
         _artifacts = {}
         if hasattr(self, "outputs"):
-            if self._vertex:
-                self._set_outputs(self._vertex.outputs)
             for output in self.outputs:
                 # Build the output if it's connected to some other vertex
                 # or if it's not connected to any vertex
@@ -521,6 +555,7 @@ class Component(CustomComponent):
                     method: Callable = getattr(self, output.method)
                     if output.cache and output.value != UNDEFINED:
                         _results[output.name] = output.value
+                        result = output.value
                     else:
                         result = method()
                         # If the method is asynchronous, we need to await it
@@ -535,33 +570,33 @@ class Component(CustomComponent):
                             result.set_flow_id(self._vertex.graph.flow_id)
                         _results[output.name] = result
                         output.value = result
-                        custom_repr = self.custom_repr()
-                        if custom_repr is None and isinstance(result, (dict, Data, str)):
-                            custom_repr = result
-                        if not isinstance(custom_repr, str):
-                            custom_repr = str(custom_repr)
-                        raw = result
-                        if self.status is None:
-                            artifact_value = raw
-                        else:
-                            artifact_value = self.status
-                            raw = self.status
+                    custom_repr = self.custom_repr()
+                    if custom_repr is None and isinstance(result, (dict, Data, str)):
+                        custom_repr = result
+                    if not isinstance(custom_repr, str):
+                        custom_repr = str(custom_repr)
+                    raw = result
+                    if self.status is None:
+                        artifact_value = raw
+                    else:
+                        artifact_value = self.status
+                        raw = self.status
 
-                        if hasattr(raw, "data") and raw is not None:
-                            raw = raw.data
-                        if raw is None:
-                            raw = custom_repr
+                    if hasattr(raw, "data") and raw is not None:
+                        raw = raw.data
+                    if raw is None:
+                        raw = custom_repr
 
-                        elif hasattr(raw, "model_dump") and raw is not None:
-                            raw = raw.model_dump()
-                        if raw is None and isinstance(result, (dict, Data, str)):
-                            raw = result.data if isinstance(result, Data) else result
-                        artifact_type = get_artifact_type(artifact_value, result)
-                        raw, artifact_type = post_process_raw(raw, artifact_type)
-                        artifact = {"repr": custom_repr, "raw": raw, "type": artifact_type}
-                        _artifacts[output.name] = artifact
-                        self._output_logs[output.name] = self._logs
-                        self._logs = []
+                    elif hasattr(raw, "model_dump") and raw is not None:
+                        raw = raw.model_dump()
+                    if raw is None and isinstance(result, (dict, Data, str)):
+                        raw = result.data if isinstance(result, Data) else result
+                    artifact_type = get_artifact_type(artifact_value, result)
+                    raw, artifact_type = post_process_raw(raw, artifact_type)
+                    artifact = {"repr": custom_repr, "raw": raw, "type": artifact_type}
+                    _artifacts[output.name] = artifact
+                    self._output_logs[output.name] = self._logs
+                    self._logs = []
         self._artifacts = _artifacts
         self._results = _results
         if self._tracing_service:

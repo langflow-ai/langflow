@@ -636,7 +636,7 @@ export function handleKeyDown(
   e:
     | React.KeyboardEvent<HTMLInputElement>
     | React.KeyboardEvent<HTMLTextAreaElement>,
-  inputValue: string | string[] | null,
+  inputValue: string | number | string[] | null | undefined,
   block: string,
 ) {
   //condition to fix bug control+backspace on Windows/Linux
