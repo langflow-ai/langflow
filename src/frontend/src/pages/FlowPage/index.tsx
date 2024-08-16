@@ -38,7 +38,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
 
   const updatedAt = currentSavedFlow?.updated_at;
 
-  const shouldAutosave = process.env.LANGFLOW_AUTO_SAVE !== "false";
+  const shouldAutosave = process.env.LANGFLOW_AUTO_SAVING !== "false";
 
   const handleSave = () => {
     saveFlow().then(() => (blocker.proceed ? blocker.proceed() : null));
