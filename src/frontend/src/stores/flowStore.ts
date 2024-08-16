@@ -228,6 +228,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       outputs,
       hasIO: inputs.length > 0 || outputs.length > 0,
     });
+    get().updateCurrentFlow({ nodes: newChange, edges: newEdges });
     if (get().autoSaveFlow) {
       get().autoSaveFlow!();
     }
@@ -238,6 +239,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       edges: newChange,
       flowState: undefined,
     });
+    get().updateCurrentFlow({ edges: newChange });
     if (get().autoSaveFlow) {
       get().autoSaveFlow!();
     }
