@@ -7,12 +7,23 @@ on:
         required: true
       STORE_API_KEY:
         required: true
+    inputs:
+      tests_folder:
+        description: "(Optional) Tests to run"
+        required: false
+        type: string
+        default: "tests"
   workflow_dispatch:
     inputs:
       branch:
         description: "(Optional) Branch to checkout"
         required: false
         type: string
+      tests_folder:
+        description: "(Optional) Tests to run"
+        required: false
+        type: string
+        default: "tests"
 
 env:
   POETRY_VERSION: "1.8.3"
@@ -137,8 +148,8 @@ jobs:
           timeout_minutes: 12
           max_attempts: 2
           command: |
-            cd src/frontend/tests/end-to-end
-            npx playwright test --trace on --shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --workers 2
+            cd src/frontend
+            npx playwright test ${{ github.event.inputs.tests_folder }} --trace on --shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --workers 2
 
       - name: Upload blob report to GitHub Actions Artifacts
         if: always()
