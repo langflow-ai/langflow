@@ -16,6 +16,7 @@ from langflow.services.tracing.schema import Log
 from langflow.template.field.base import UNDEFINED, Input, Output
 from langflow.template.frontend_node.custom_components import ComponentFrontendNode
 from langflow.utils.async_helpers import run_until_complete
+from langflow.utils.util import find_closest_match
 
 from .custom_component import CustomComponent
 
@@ -415,7 +416,15 @@ class Component(CustomComponent):
 
     def _map_parameters_on_template(self, template: dict):
         for name, value in self._parameters.items():
-            template[name]["value"] = value
+            try:
+                template[name]["value"] = value
+            except KeyError:
+                close_match = find_closest_match(name, list(template.keys()))
+                if close_match:
+                    raise ValueError(
+                        f"Parameter '{name}' not found in {self.__class__.__name__}. " f"Did you mean '{close_match}'?"
+                    )
+                raise ValueError(f"Parameter {name} not found in {self.__class__.__name__}. ")
 
     def _get_method_return_type(self, method_name: str) -> List[str]:
         method = getattr(self, method_name)
