@@ -408,11 +408,11 @@ def test_get_vertices(client, added_flow_with_prompt_and_history, logged_in_head
     # The important part is before the - (ConversationBufferMemory, PromptTemplate, ChatOpenAI, LLMChain)
     ids = [_id.split("-")[0] for _id in response.json()["ids"]]
 
-    assert set(ids) == set(
+    assert set(ids) == {
         "ChatOpenAI",
         "PromptTemplate",
         "ConversationBufferMemory",
-    )
+    }
 
 
 def test_build_vertex_invalid_flow_id(client, logged_in_headers):
