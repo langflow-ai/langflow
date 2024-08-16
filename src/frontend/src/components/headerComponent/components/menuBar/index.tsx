@@ -253,46 +253,49 @@ export const MenuBar = ({}: {}): JSX.Element => {
       </div>
       {(updatedAt || saveLoading) && (
         <ShadTooltip
-          content={
-            SAVED_HOVER +
-            new Date(updatedAt ?? "").toLocaleString("en-US", {
-              hour: "numeric",
-              minute: "numeric",
-              second: "numeric",
-            })
-          }
+          content={<div className=""></div>}
           side="bottom"
           styleClasses="cursor-default"
         >
           <div className="flex cursor-default items-center gap-2 text-sm text-muted-foreground transition-all">
-            <div className="flex cursor-default items-center gap-1.5 text-sm text-muted-foreground transition-all">
+            <div className="flex cursor-default items-center gap-2 text-sm text-muted-foreground transition-all">
               <Button
-                unstyled
+                variant="primary"
+                size="icon"
                 disabled={shouldAutosave || !changesNotSaved}
-                className={cn(
-                  !shouldAutosave && changesNotSaved
-                    ? "hover:text-primary"
-                    : "",
-                )}
+                className={cn("w-40Í mr-1 h-9")}
                 onClick={handleSave}
               >
-                <IconComponent
-                  name={
-                    isBuilding || saveLoading
-                      ? "Loader2"
-                      : changesNotSaved
-                        ? "Save"
-                        : "CheckCircle2"
-                  }
-                  className={cn(
-                    "h-4 w-4",
-                    isBuilding || saveLoading
-                      ? "animate-spin"
-                      : "animate-wiggle",
-                  )}
-                />
+                <IconComponent name={"Save"} className={cn("h-5 w-5")} />
+                Save Changes
               </Button>
-              <div>{printByBuildStatus()}</div>
+              {shouldAutosave ||
+                (!changesNotSaved && (
+                  <Button
+                    unstyled
+                    disabled={shouldAutosave || !changesNotSaved}
+                    className={cn(
+                      !shouldAutosave && changesNotSaved
+                        ? "hover:text-primary"
+                        : "",
+                    )}
+                    onClick={handleSave}
+                  >
+                    <IconComponent
+                      name={
+                        isBuilding || saveLoading ? "Loader2" : "CheckCircle2"
+                      }
+                      className={cn(
+                        "h-4 w-4",
+                        isBuilding || saveLoading
+                          ? "animate-spin"
+                          : "animate-wiggle",
+                      )}
+                    />
+                  </Button>
+                ))}
+
+              <div className="">{printByBuildStatus()}</div>
             </div>
             <button
               disabled={!isBuilding}

@@ -7,7 +7,6 @@ import {
   ContentProps,
   TriggerProps,
 } from "../../types/components";
-import { nodeIconsLucide } from "../../utils/styleUtils";
 import BaseModal from "../baseModal";
 
 const Content: React.FC<ContentProps> = ({ children }) => {
@@ -71,11 +70,13 @@ function ConfirmationModal({
       <BaseModal.Trigger>{triggerChild}</BaseModal.Trigger>
       <BaseModal.Header description={titleHeader ?? null}>
         <span className="pr-2">{title}</span>
-        <GenericIconComponent
-          name={icon}
-          className="h-6 w-6 pl-1 text-foreground"
-          aria-hidden="true"
-        />
+        {icon && (
+          <GenericIconComponent
+            name={icon}
+            className="h-6 w-6 pl-1 text-foreground"
+            aria-hidden="true"
+          />
+        )}
       </BaseModal.Header>
       <BaseModal.Content>
         {modalContentTitle && modalContentTitle != "" && (

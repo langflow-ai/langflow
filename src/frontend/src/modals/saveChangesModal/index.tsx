@@ -1,21 +1,49 @@
+import ForwardedIconComponent from "@/components/genericIconComponent";
+import { FlowType } from "@/types/flow";
+import { truncate } from "lodash";
 import ConfirmationModal from "../confirmationModal";
 
-export function SaveChangesModal({ onSave, onProceed, onCancel }) {
+export function SaveChangesModal({
+  onSave,
+  onProceed,
+  onCancel,
+  flow,
+  lastSaved,
+  autoSave,
+}: {
+  onSave: () => void;
+  onProceed: () => void;
+  onCancel: () => void;
+  flow: FlowType;
+  lastSaved: string | undefined;
+  autoSave: boolean;
+}): JSX.Element {
   return (
     <ConfirmationModal
       open={true}
       onClose={onCancel}
       destructiveCancel
-      title={"Exit without saving?"}
+      title={truncate(flow.name, { length: 32 }) + " has unsaved changes"}
       cancelText={"Exit anyway"}
       confirmationText={"Save and Exit"}
-      icon={"Save"}
       onConfirm={onSave}
       onCancel={onProceed}
       size="x-small"
     >
       <ConfirmationModal.Content>
-        You have unsaved changes. Would you like to save them before exiting?
+        <div className="mb-4 flex w-full items-center gap-3 rounded-md bg-yellow-100 px-4 py-2 text-yellow-800">
+          <ForwardedIconComponent name="info" className="h-5 w-5" />
+          Last saved: {lastSaved ?? "Never"}
+        </div>
+        Unsaved changes will be permanently lost.{" "}
+        <a
+          target="_blank"
+          className="underline"
+          href="https://docs.langflow.org/auto-save"
+        >
+          Enable auto-saving
+        </a>{" "}
+        to avoid losing progress.
       </ConfirmationModal.Content>
     </ConfirmationModal>
   );

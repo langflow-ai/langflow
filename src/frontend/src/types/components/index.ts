@@ -442,7 +442,7 @@ export type ConfirmationModalType = {
   children:
     | [React.ReactElement<ContentProps>, React.ReactElement<TriggerProps>]
     | React.ReactElement<ContentProps>;
-  icon: string;
+  icon?: string;
   data?: any;
   index?: number;
   onConfirm: (index, data) => void;

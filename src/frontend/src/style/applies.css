@@ -219,7 +219,7 @@
     @apply flex h-12 w-12 cursor-pointer justify-center rounded-full bg-border px-3 py-1 shadow-md;
   }
   .round-button-div {
-    @apply flex items-center gap-3;
+    @apply flex items-center;
   }
   .build-trigger-loading-icon {
     @apply stroke-build-trigger;

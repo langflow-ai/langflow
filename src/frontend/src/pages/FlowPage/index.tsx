@@ -36,6 +36,10 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const setIsLoading = useFlowsManagerStore((state) => state.setIsLoading);
   const getTypes = useTypesStore((state) => state.getTypes);
 
+  const updatedAt = currentSavedFlow?.updated_at;
+
+  const shouldAutosave = process.env.LANGFLOW_AUTO_SAVE !== "false";
+
   const handleSave = () => {
     saveFlow().then(() => (blocker.proceed ? blocker.proceed() : null));
   };
@@ -113,11 +117,24 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
           <div className={version ? "mt-2" : "mt-1"}>⛓️ v{version}</div>
         </a>
       </div>
-      {blocker.state === "blocked" && (
+      {blocker.state === "blocked" && currentSavedFlow && (
         <SaveChangesModal
           onSave={handleSave}
           onCancel={() => (blocker.reset ? blocker.reset() : null)}
           onProceed={() => (blocker.proceed ? blocker.proceed() : null)}
+          flow={currentSavedFlow}
+          lastSaved={
+            updatedAt
+              ? new Date(updatedAt).toLocaleString("en-US", {
+                  hour: "numeric",
+                  minute: "numeric",
+                  second: "numeric",
+                  month: "numeric",
+                  day: "numeric",
+                })
+              : undefined
+          }
+          autoSave={shouldAutosave}
         />
       )}
     </>
