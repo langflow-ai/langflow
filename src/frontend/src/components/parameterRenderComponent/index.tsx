@@ -2,6 +2,7 @@ import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import { TEXT_FIELD_TYPES } from "@/constants/constants";
 import { APIClassType, InputFieldType } from "@/types/api";
 import { useMemo } from "react";
+import TableNodeComponent from "../TableNodeComponent";
 import CodeAreaComponent from "../codeAreaComponent";
 import DictComponent from "../dictComponent";
 import FloatComponent from "../floatComponent";
@@ -146,6 +147,14 @@ export function ParameterRenderComponent({
           />
         ) : templateData.type === "Any" ? (
           <>-</>
+        ) : templateData.type === "table" ? (
+          <TableNodeComponent
+            description={templateData.info || "Add or edit data"}
+            columns={templateData?.table_schema?.columns}
+            onChange={onChange}
+            tableTitle={templateData?.display_name ?? "Table"}
+            value={templateValue}
+          />
         ) : (
           String(templateValue)
         )}

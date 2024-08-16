@@ -5,7 +5,7 @@ import useSaveFlow from "./use-save-flow";
 
 const useAutoSaveFlow = () => {
   const saveFlow = useSaveFlow();
-  const shouldAutosave = process.env.LANGFLOW_AUTO_SAVE !== "false";
+  const shouldAutosave = process.env.LANGFLOW_AUTO_SAVING !== "false";
 
   const autoSaveFlow = shouldAutosave
     ? useDebounce((flow?: FlowType) => {

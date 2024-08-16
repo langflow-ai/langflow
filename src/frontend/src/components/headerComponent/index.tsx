@@ -84,8 +84,8 @@ export default function Header(): JSX.Element {
   };
 
   return (
-    <div className="header-arrangement">
-      <div className="header-start-display lg:w-[450px]">
+    <div className="header-arrangement relative">
+      <div className="header-start-display">
         <Link to="/all" className="cursor-pointer">
           <span className="ml-4 text-2xl">⛓️</span>
         </Link>
@@ -103,7 +103,7 @@ export default function Header(): JSX.Element {
         <MenuBar />
       </div>
 
-      <div className="round-button-div">
+      <div className="flex items-center xl:absolute xl:left-1/2 xl:-translate-x-1/2">
         <Link to="/all">
           <Button
             className="gap-2"
@@ -116,7 +116,7 @@ export default function Header(): JSX.Element {
             size="sm"
           >
             <IconComponent name="Home" className="h-4 w-4" />
-            <div className="hidden flex-1 md:block">{USER_PROJECTS_HEADER}</div>
+            <div className="hidden flex-1 lg:block">{USER_PROJECTS_HEADER}</div>
           </Button>
         </Link>
 
@@ -129,7 +129,7 @@ export default function Header(): JSX.Element {
               data-testid="button-store"
             >
               <IconComponent name="Store" className="h-4 w-4" />
-              <div className="flex-1">Store</div>
+              <div className="hidden flex-1 lg:block">Store</div>
             </Button>
           </Link>
         )}
