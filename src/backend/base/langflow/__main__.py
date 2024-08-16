@@ -20,13 +20,13 @@ from rich.panel import Panel
 from rich.table import Table
 from sqlmodel import select
 
+from langflow.logging.logger import configure, logger
 from langflow.main import setup_app
 from langflow.services.database.models.folder.utils import create_default_folder_if_it_doesnt_exist
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service, get_settings_service, session_scope
 from langflow.services.settings.constants import DEFAULT_SUPERUSER
 from langflow.services.utils import initialize_services
-from langflow.logging.logger import configure, logger
 from langflow.utils.util import update_settings
 
 console = Console()
@@ -120,6 +120,11 @@ def run(
         help="Enables the store features.",
         envvar="LANGFLOW_STORE",
     ),
+    auto_saving: bool = typer.Option(
+        True,
+        help="Defines if the auto save is enabled.",
+        envvar="LANGFLOW_AUTO_SAVING",
+    ),
 ):
     """
     Run Langflow.
@@ -137,6 +142,7 @@ def run(
         cache=cache,
         components_path=components_path,
         store=store,
+        auto_saving=auto_saving,
     )
     # create path object if path is provided
     static_files_dir: Optional[Path] = Path(path) if path else None
