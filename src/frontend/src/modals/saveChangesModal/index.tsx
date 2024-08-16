@@ -39,7 +39,7 @@ export function SaveChangesModal({
         <a
           target="_blank"
           className="underline"
-          href="https://docs.langflow.org/auto-save"
+          href="https://docs.langflow.org/configuration-auto-saving"
         >
           Enable auto-saving
         </a>{" "}
