@@ -153,7 +153,7 @@ class Settings(BaseSettings):
     """If set to True, Langflow will keep track of each vertex builds (outputs) in the UI for any flow."""
 
     # Config
-    auto_save: bool = True
+    auto_saving: bool = True
     """If set to True, Langflow will auto save flows."""
 
     @field_validator("dev")

@@ -120,10 +120,10 @@ def run(
         help="Enables the store features.",
         envvar="LANGFLOW_STORE",
     ),
-    auto_save: bool = typer.Option(
+    auto_saving: bool = typer.Option(
         True,
         help="Defines if the auto save is enabled.",
-        envvar="LANGFLOW_AUTO_SAVE",
+        envvar="LANGFLOW_AUTO_SAVING",
     ),
 ):
     """
@@ -142,7 +142,7 @@ def run(
         cache=cache,
         components_path=components_path,
         store=store,
-        auto_save=auto_save,
+        auto_saving=auto_saving,
     )
     # create path object if path is provided
     static_files_dir: Optional[Path] = Path(path) if path else None

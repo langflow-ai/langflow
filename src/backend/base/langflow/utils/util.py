@@ -8,11 +8,11 @@ from typing import Any, Dict, List, Optional, Union
 
 from docstring_parser import parse
 
+from langflow.logging.logger import logger
 from langflow.schema import Data
 from langflow.services.deps import get_settings_service
 from langflow.template.frontend_node.constants import FORCE_SHOW_FIELDS
 from langflow.utils import constants
-from langflow.logging.logger import logger
 
 
 def unescape_string(s: str):
@@ -427,7 +427,7 @@ def update_settings(
     remove_api_keys: bool = False,
     components_path: Optional[Path] = None,
     store: bool = True,
-    auto_save: bool = True,
+    auto_saving: bool = True,
 ):
     """Update the settings from a config file."""
     from langflow.services.utils import initialize_settings_service
@@ -451,9 +451,9 @@ def update_settings(
     if not store:
         logger.debug("Setting store to False")
         settings_service.settings.update_settings(store=False)
-    if not auto_save:
-        logger.debug("Setting auto_save to False")
-        settings_service.settings.update_settings(auto_save=False)
+    if not auto_saving:
+        logger.debug("Setting auto_saving to False")
+        settings_service.settings.update_settings(auto_saving=False)
 
 
 def is_class_method(func, cls):

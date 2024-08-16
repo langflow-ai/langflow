@@ -330,4 +330,4 @@ class FlowDataRequest(BaseModel):
 
 class ConfigResponse(BaseModel):
     frontend_timeout: int
-    auto_save: bool
+    auto_saving: bool
