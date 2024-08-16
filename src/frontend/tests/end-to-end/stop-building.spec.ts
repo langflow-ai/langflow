@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 test("user must be able to stop a building", async ({ page }) => {
   await page.goto("/");
-  await page.waitForTimeout(2000);
+  // await page.waitForTimeout(2000);
 
   let modalCount = 0;
   try {
@@ -16,7 +16,7 @@ test("user must be able to stop a building", async ({ page }) => {
 
   while (modalCount === 0) {
     await page.getByText("New Project", { exact: true }).click();
-    await page.waitForTimeout(5000);
+    // await page.waitForTimeout(5000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
 
@@ -27,7 +27,7 @@ test("user must be able to stop a building", async ({ page }) => {
   await page.getByTestId("extended-disclosure").click();
   await page.getByPlaceholder("Search").click();
   await page.getByPlaceholder("Search").fill("text input");
-  await page.waitForTimeout(1000);
+  // await page.waitForTimeout(1000);
 
   await page
     .getByTestId("inputsText Input")
@@ -49,7 +49,7 @@ test("user must be able to stop a building", async ({ page }) => {
   await page.getByTestId("extended-disclosure").click();
   await page.getByPlaceholder("Search").click();
   await page.getByPlaceholder("Search").fill("url");
-  await page.waitForTimeout(1000);
+  // await page.waitForTimeout(1000);
 
   await page
     .getByTestId("dataURL")
@@ -71,7 +71,7 @@ test("user must be able to stop a building", async ({ page }) => {
   await page.getByTestId("extended-disclosure").click();
   await page.getByPlaceholder("Search").click();
   await page.getByPlaceholder("Search").fill("split text");
-  await page.waitForTimeout(1000);
+  // await page.waitForTimeout(1000);
 
   await page
     .getByTestId("helpersSplit Text")
@@ -93,7 +93,7 @@ test("user must be able to stop a building", async ({ page }) => {
   await page.getByTestId("extended-disclosure").click();
   await page.getByPlaceholder("Search").click();
   await page.getByPlaceholder("Search").fill("parse data");
-  await page.waitForTimeout(1000);
+  // await page.waitForTimeout(1000);
 
   await page
     .getByTestId("helpersParse Data")
@@ -115,7 +115,7 @@ test("user must be able to stop a building", async ({ page }) => {
   await page.getByTestId("extended-disclosure").click();
   await page.getByPlaceholder("Search").click();
   await page.getByPlaceholder("Search").fill("chat output");
-  await page.waitForTimeout(1000);
+  // await page.waitForTimeout(1000);
 
   await page
     .getByTestId("outputsChat Output")
@@ -136,7 +136,7 @@ test("user must be able to stop a building", async ({ page }) => {
 
   while (outdatedComponents > 0) {
     await page.getByTestId("icon-AlertTriangle").first().click();
-    await page.waitForTimeout(1000);
+    // await page.waitForTimeout(1000);
     outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
   }
 
