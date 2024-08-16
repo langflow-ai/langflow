@@ -49,7 +49,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const getTypes = useTypesStore((state) => state.getTypes);
   const saveFlow = useSaveFlow();
-  const shouldAutosave = process.env.LANGFLOW_AUTO_SAVE !== "false";
+  const shouldAutosave = process.env.LANGFLOW_AUTO_SAVING !== "false";
   const currentFlow = useFlowStore((state) => state.currentFlow);
   const currentSavedFlow = useFlowsManagerStore((state) => state.currentFlow);
   const updatedAt = currentSavedFlow?.updated_at;
@@ -251,7 +251,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
         ></FlowSettingsModal>
         <FlowLogsModal open={openLogs} setOpen={setOpenLogs}></FlowLogsModal>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center">
         {!shouldAutosave && (
           <Button
             variant="primary"
@@ -263,71 +263,73 @@ export const MenuBar = ({}: {}): JSX.Element => {
             <IconComponent name={"Save"} className={cn("h-5 w-5")} />
           </Button>
         )}
-        {(updatedAt || saveLoading) && (
-          <ShadTooltip
-            content={
-              shouldAutosave ? (
-                savedText
-              ) : (
-                <div className="flex w-48 flex-col gap-1 py-1">
-                  <h2 className="text-base font-semibold">
-                    Auto-saving is disabled
-                  </h2>
-                  <p className="text-muted-foreground">
-                    <a
-                      href="https://docs.langflow.org/configuration-auto-saving"
-                      className="text-primary underline"
-                    >
-                      Enable auto-saving
-                    </a>{" "}
-                    to avoid losing progress.
-                  </p>
-                </div>
-              )
-            }
-            side="bottom"
-            styleClasses="cursor-default"
-          >
-            <div className="flex cursor-default items-center gap-2 text-sm text-muted-foreground transition-all">
-              <div className="flex cursor-default items-center gap-2 text-sm text-muted-foreground transition-all">
-                {(shouldAutosave || !changesNotSaved || isBuilding) && (
-                  <IconComponent
-                    name={
-                      isBuilding || saveLoading ? "Loader2" : "CheckCircle2"
-                    }
-                    className={cn(
-                      "h-4 w-4",
-                      isBuilding || saveLoading
-                        ? "animate-spin"
-                        : "animate-wiggle",
-                    )}
-                  />
-                )}
-
-                <div className="">{printByBuildStatus()}</div>
+        <ShadTooltip
+          content={
+            shouldAutosave ? (
+              SAVED_HOVER +
+              (updatedAt
+                ? new Date(updatedAt).toLocaleString("en-US", {
+                    hour: "numeric",
+                    minute: "numeric",
+                  })
+                : "Never")
+            ) : (
+              <div className="flex w-48 flex-col gap-1 py-1">
+                <h2 className="text-base font-semibold">
+                  Auto-saving is disabled
+                </h2>
+                <p className="text-muted-foreground">
+                  <a
+                    href="https://docs.langflow.org/configuration-auto-saving"
+                    className="text-primary underline"
+                  >
+                    Enable auto-saving
+                  </a>{" "}
+                  to avoid losing progress.
+                </p>
               </div>
-              <button
-                disabled={!isBuilding}
-                onClick={(_) => {
-                  if (isBuilding) {
-                    setIsBuilding(false);
-                    revertBuiltStatusFromBuilding();
-                    setLockChat(false);
-                    window.stop();
-                  }
-                }}
-                className={
-                  isBuilding
-                    ? "flex items-center gap-1.5 text-status-red transition-all"
-                    : "hidden"
-                }
-              >
-                <IconComponent name="Square" className="h-4 w-4" />
-                <span>Stop</span>
-              </button>
+            )
+          }
+          side="bottom"
+          styleClasses="cursor-default"
+        >
+          <div className="ml-2 flex cursor-default items-center gap-2 text-sm text-muted-foreground transition-all">
+            <div className="flex cursor-default items-center gap-2 text-sm text-muted-foreground transition-all">
+              {(shouldAutosave || !changesNotSaved || isBuilding) && (
+                <IconComponent
+                  name={isBuilding || saveLoading ? "Loader2" : "CheckCircle2"}
+                  className={cn(
+                    "h-4 w-4",
+                    isBuilding || saveLoading
+                      ? "animate-spin"
+                      : "animate-wiggle",
+                  )}
+                />
+              )}
+
+              <div className="">{printByBuildStatus()}</div>
             </div>
-          </ShadTooltip>
-        )}
+            <button
+              disabled={!isBuilding}
+              onClick={(_) => {
+                if (isBuilding) {
+                  setIsBuilding(false);
+                  revertBuiltStatusFromBuilding();
+                  setLockChat(false);
+                  window.stop();
+                }
+              }}
+              className={
+                isBuilding
+                  ? "flex items-center gap-1.5 text-status-red transition-all"
+                  : "hidden"
+              }
+            >
+              <IconComponent name="Square" className="h-4 w-4" />
+              <span>Stop</span>
+            </button>
+          </div>
+        </ShadTooltip>
       </div>
     </div>
   ) : (
