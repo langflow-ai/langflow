@@ -200,10 +200,14 @@ test("user must be able to stop a building", async ({ page }) => {
     .getByTestId("inputlist_str_urls_0")
     .fill("https://www.nature.com/articles/d41586-023-02870-5");
 
-  await page.getByTestId("int_int_chunk_size").fill("1");
-  await page.getByTestId("int_int_chunk_overlap").fill("2");
+  await page.getByTestId("int_int_chunk_size").fill("2");
+  await page.getByTestId("int_int_chunk_overlap").fill("1");
 
   await page.getByTestId("button_run_chat output").click();
+
+  await page.waitForSelector("text=Building", {
+    timeout: 100000,
+  });
 
   await page.waitForSelector('[data-testid="loading_icon"]', {
     timeout: 100000,
@@ -226,4 +230,66 @@ test("user must be able to stop a building", async ({ page }) => {
   await page.waitForSelector("text=Saved", {
     timeout: 100000,
   });
+
+  await page.getByTestId("button_run_chat output").click();
+
+  await page.waitForSelector("text=Building", {
+    timeout: 100000,
+  });
+
+  await page.waitForSelector('[data-testid="loading_icon"]', {
+    timeout: 100000,
+  });
+
+  await page.waitForSelector("text=Building", {
+    timeout: 100000,
+  });
+
+  expect(await page.getByText("Building").isVisible()).toBeTruthy();
+
+  expect(
+    await page.getByTestId("stop_building_button").isEnabled(),
+  ).toBeTruthy();
+
+  await page.waitForSelector("text=Building", {
+    timeout: 100000,
+  });
+
+  expect(await page.getByText("Building").isVisible()).toBeTruthy();
+
+  expect(
+    await page.getByTestId("stop_building_button").isEnabled(),
+  ).toBeTruthy();
+
+  await page.getByTestId("stop_building_button").click();
+
+  await page.waitForSelector("text=Saved", {
+    timeout: 100000,
+  });
+
+  await page.getByTestId("button_run_chat output").click();
+
+  await page.waitForSelector('[data-testid="loading_icon"]', {
+    timeout: 100000,
+  });
+
+  await page.waitForSelector("text=Building", {
+    timeout: 100000,
+  });
+
+  expect(await page.getByText("Building").isVisible()).toBeTruthy();
+
+  expect(
+    await page.getByTestId("stop_building_button").isEnabled(),
+  ).toBeTruthy();
+
+  await page.getByTestId("stop_building_button").click();
+
+  await page.waitForSelector("text=Saved", {
+    timeout: 100000,
+  });
+
+  expect(
+    await page.getByTestId("stop_building_button").isEnabled(),
+  ).toBeFalsy();
 });
