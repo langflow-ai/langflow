@@ -1,3 +1,4 @@
+import difflib
 import importlib
 import inspect
 import json
@@ -465,3 +466,13 @@ def is_class_method(func, cls):
 
 def escape_json_dump(edge_dict):
     return json.dumps(edge_dict).replace('"', "œ")
+
+
+def find_closest_match(string: str, list_of_strings: list[str]) -> str | None:
+    """
+    Find the closest match in a list of strings.
+    """
+    closest_match = difflib.get_close_matches(string, list_of_strings, n=1, cutoff=0.2)
+    if closest_match:
+        return closest_match[0]
+    return None
