@@ -16,7 +16,7 @@ If you try to exit the flow page before auto-save completes, a dialog will appea
 
 ![](./flow-saving.png)
 
-When the dialog indicates that the flow is successfully saved, you can click the 'Exit' button.
+When the flow has successfully saved, you can click the 'Exit' button.
 
 ![](./flow-saved.png)
 
