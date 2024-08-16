@@ -2,6 +2,7 @@ import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import { TEXT_FIELD_TYPES } from "@/constants/constants";
 import { APIClassType, InputFieldType } from "@/types/api";
 import { useMemo } from "react";
+import TableNodeComponent from "../TableNodeComponent";
 import CodeAreaComponent from "../codeAreaComponent";
 import DictComponent from "../dictComponent";
 import FloatComponent from "../floatComponent";
@@ -12,7 +13,6 @@ import PromptAreaComponent from "../promptComponent";
 import ToggleShadComponent from "../toggleShadComponent";
 import { RefreshParameterComponent } from "./component/refreshParameterComponent";
 import { StrRenderComponent } from "./component/strRenderComponent";
-import TableNodeComponent from "../TableNodeComponent";
 
 export function ParameterRenderComponent({
   handleOnNewValue,
@@ -155,7 +155,9 @@ export function ParameterRenderComponent({
             tableTitle={templateData?.display_name ?? "Table"}
             value={templateValue}
           />
-        ) : String(templateValue)}
+        ) : (
+          String(templateValue)
+        )}
       </RefreshParameterComponent>
     ),
     [templateData, disabled, nodeId, editNode, nodeClass, name, templateValue],

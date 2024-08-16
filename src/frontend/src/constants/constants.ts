@@ -646,7 +646,7 @@ export const LANGFLOW_SUPPORTED_TYPES = new Set([
   "int",
   "dict",
   "NestedDict",
-  "table"
+  "table",
 ]);
 
 export const priorityFields = new Set(["code", "template"]);

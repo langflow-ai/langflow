@@ -77,7 +77,7 @@ export type InputFieldType = {
   refresh_button?: boolean;
   refresh_button_text?: string;
   combobox?: boolean;
-  info?:string;
+  info?: string;
   [key: string]: any;
 };
 
