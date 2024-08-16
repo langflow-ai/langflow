@@ -49,7 +49,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const getTypes = useTypesStore((state) => state.getTypes);
   const saveFlow = useSaveFlow();
-  const shouldAutosave = process.env.LANGFLOW_AUTO_SAVE !== "false";
+  const autoSaving = useFlowsManagerStore((state) => state.autoSaving);
   const currentFlow = useFlowStore((state) => state.currentFlow);
   const currentSavedFlow = useFlowsManagerStore((state) => state.currentFlow);
   const updatedAt = currentSavedFlow?.updated_at;
@@ -58,7 +58,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
 
   const changesNotSaved =
     customStringify(currentFlow) !== customStringify(currentSavedFlow) &&
-    !shouldAutosave;
+    !autoSaving;
 
   const savedText =
     updatedAt && changesNotSaved
@@ -105,7 +105,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
   useHotkeys(changes, handleSave, { preventDefault: true });
 
   return currentFlow && onFlowPage ? (
-    <div className="round-button-div">
+    <div className="flex items-center">
       <div className="header-menu-bar">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -144,7 +144,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
               <IconComponent name="Settings2" className="header-menu-options" />
               Settings
             </DropdownMenuItem>
-            {!shouldAutosave && (
+            {!autoSaving && (
               <DropdownMenuItem onClick={handleSave} className="cursor-pointer">
                 <ToolbarSelectItem
                   value="Save"
@@ -251,39 +251,53 @@ export const MenuBar = ({}: {}): JSX.Element => {
         ></FlowSettingsModal>
         <FlowLogsModal open={openLogs} setOpen={setOpenLogs}></FlowLogsModal>
       </div>
-      {(updatedAt || saveLoading) && (
+      <div className="flex items-center">
+        {!autoSaving && (
+          <Button
+            variant="primary"
+            size="icon"
+            disabled={autoSaving || !changesNotSaved || isBuilding}
+            className={cn("mr-1 h-9 px-2")}
+            onClick={handleSave}
+          >
+            <IconComponent name={"Save"} className={cn("h-5 w-5")} />
+          </Button>
+        )}
         <ShadTooltip
           content={
-            SAVED_HOVER +
-            new Date(updatedAt ?? "").toLocaleString("en-US", {
-              hour: "numeric",
-              minute: "numeric",
-              second: "numeric",
-            })
+            autoSaving ? (
+              SAVED_HOVER +
+              (updatedAt
+                ? new Date(updatedAt).toLocaleString("en-US", {
+                    hour: "numeric",
+                    minute: "numeric",
+                  })
+                : "Never")
+            ) : (
+              <div className="flex w-48 flex-col gap-1 py-1">
+                <h2 className="text-base font-semibold">
+                  Auto-saving is disabled
+                </h2>
+                <p className="text-muted-foreground">
+                  <a
+                    href="https://docs.langflow.org/configuration-auto-saving"
+                    className="text-primary underline"
+                  >
+                    Enable auto-saving
+                  </a>{" "}
+                  to avoid losing progress.
+                </p>
+              </div>
+            )
           }
           side="bottom"
           styleClasses="cursor-default"
         >
-          <div className="flex cursor-default items-center gap-2 text-sm text-muted-foreground transition-all">
-            <div className="flex cursor-default items-center gap-1.5 text-sm text-muted-foreground transition-all">
-              <Button
-                unstyled
-                disabled={shouldAutosave || !changesNotSaved}
-                className={cn(
-                  !shouldAutosave && changesNotSaved
-                    ? "hover:text-primary"
-                    : "",
-                )}
-                onClick={handleSave}
-              >
+          <div className="ml-2 flex cursor-default items-center gap-2 text-sm text-muted-foreground transition-all">
+            <div className="flex cursor-default items-center gap-2 text-sm text-muted-foreground transition-all">
+              {(saveLoading || !changesNotSaved || isBuilding) && (
                 <IconComponent
-                  name={
-                    isBuilding || saveLoading
-                      ? "Loader2"
-                      : changesNotSaved
-                        ? "Save"
-                        : "CheckCircle2"
-                  }
+                  name={isBuilding || saveLoading ? "Loader2" : "CheckCircle2"}
                   className={cn(
                     "h-4 w-4",
                     isBuilding || saveLoading
@@ -291,7 +305,8 @@ export const MenuBar = ({}: {}): JSX.Element => {
                       : "animate-wiggle",
                   )}
                 />
-              </Button>
+              )}
+
               <div>{printByBuildStatus()}</div>
             </div>
             <button
@@ -306,8 +321,8 @@ export const MenuBar = ({}: {}): JSX.Element => {
               }}
               className={
                 isBuilding
-                  ? "flex items-center gap-1.5 text-status-red opacity-100 transition-all"
-                  : "opacity-0"
+                  ? "flex items-center gap-1.5 text-status-red transition-all"
+                  : "hidden"
               }
             >
               <IconComponent name="Square" className="h-4 w-4" />
@@ -315,7 +330,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
             </button>
           </div>
         </ShadTooltip>
-      )}
+      </div>
     </div>
   ) : (
     <></>

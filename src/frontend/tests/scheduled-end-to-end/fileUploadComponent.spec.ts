@@ -47,7 +47,9 @@ test("should be able to upload a file", async ({ page }) => {
   const fileChooserPromise = page.waitForEvent("filechooser");
   await page.getByTestId("icon-FileSearch2").click();
   const fileChooser = await fileChooserPromise;
-  await fileChooser.setFiles(path.join(__dirname, "/assets/test_file.txt"));
+  await fileChooser.setFiles(
+    path.join(__dirname, "../end-to-end/assets/test_file.txt"),
+  );
   await page.getByText("test_file.txt").isVisible();
 
   await page.getByPlaceholder("Search").click();

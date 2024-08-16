@@ -646,6 +646,7 @@ export const LANGFLOW_SUPPORTED_TYPES = new Set([
   "int",
   "dict",
   "NestedDict",
+  "table",
 ]);
 
 export const priorityFields = new Set(["code", "template"]);
@@ -708,7 +709,7 @@ export const CREATE_API_KEY = `Don’t have an API key? Sign up at`;
 export const STATUS_BUILD = "Build to validate status.";
 export const STATUS_INACTIVE = "Execution blocked";
 export const STATUS_BUILDING = "Building...";
-export const SAVED_HOVER = "Last saved at ";
+export const SAVED_HOVER = "Last saved: ";
 export const RUN_TIMESTAMP_PREFIX = "Last Run: ";
 export const STARTER_FOLDER_NAME = "Starter Projects";
 export const PRIORITY_SIDEBAR_ORDER = [
