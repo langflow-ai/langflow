@@ -1,6 +1,8 @@
 import { expect, test } from "@playwright/test";
 
-test("GlobalVariables", async ({ page }) => {
+test("user must be able to save or delete a global variable", async ({
+  page,
+}) => {
   await page.goto("/");
   await page.waitForTimeout(2000);
 

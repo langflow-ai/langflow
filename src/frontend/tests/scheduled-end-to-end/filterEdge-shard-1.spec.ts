@@ -1,6 +1,8 @@
 import { expect, test } from "@playwright/test";
 
-test("RetrievalQA - Filter", async ({ page }) => {
+test("user must see on handle click the possibility connections - RetrievalQA", async ({
+  page,
+}) => {
   await page.goto("/");
   await page.waitForTimeout(2000);
 

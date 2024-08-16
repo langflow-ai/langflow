@@ -1,6 +1,8 @@
 import { expect, test } from "@playwright/test";
 
-test("LLMChain - Filter", async ({ page }) => {
+test("user must see on handle click the possibility connections - LLMChain", async ({
+  page,
+}) => {
   await page.goto("/");
   await page.waitForTimeout(2000);
 
