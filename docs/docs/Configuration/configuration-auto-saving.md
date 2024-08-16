@@ -22,7 +22,7 @@ When the flow has successfully saved, you can click the 'Exit' button.
 
 ## Manual Saving {#manual-saving}
 
-When the Auto-saving mode is disabled, you need to manually save your flow if you make any changes. You can still run the flow without saving, for testing purposes.
+When auto-saving is disabled, you need to manually save your flow when making changes. You can still run the flow without saving, for testing purposes.
 
 If you make any changes and Langflow detects that the saved flow is different from the current flow, a Save button will be enabled and the last time saved will appear at the left side of the topbar. To save the flow, click the Save button, or hit Ctrl+S or Command+S.
 
