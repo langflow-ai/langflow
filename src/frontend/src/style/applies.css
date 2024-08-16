@@ -218,9 +218,6 @@
   .round-button-form {
     @apply flex h-12 w-12 cursor-pointer justify-center rounded-full bg-border px-3 py-1 shadow-md;
   }
-  .round-button-div {
-    @apply flex items-center;
-  }
   .build-trigger-loading-icon {
     @apply stroke-build-trigger;
   }
@@ -568,7 +565,7 @@
     @apply flex items-center gap-0.5 rounded-md px-1.5 py-1 text-sm font-medium;
   }
   .header-menu-bar-display {
-    @apply flex max-w-[120px] cursor-pointer items-center gap-2 lg:max-w-[150px];
+    @apply flex max-w-[110px] cursor-pointer items-center gap-2 lg:max-w-[150px];
   }
   .header-menu-flow-name {
     @apply flex-1 truncate;
@@ -581,7 +578,7 @@
     @apply flex-max-width h-12 items-center justify-between border-b border-border bg-muted;
   }
   .header-start-display {
-    @apply flex items-center justify-start gap-2;
+    @apply flex items-center gap-2;
   }
   .header-end-division {
     @apply flex justify-end px-2;

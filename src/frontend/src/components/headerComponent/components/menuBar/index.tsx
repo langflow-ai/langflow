@@ -105,7 +105,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
   useHotkeys(changes, handleSave, { preventDefault: true });
 
   return currentFlow && onFlowPage ? (
-    <div className="round-button-div">
+    <div className="flex items-center">
       <div className="header-menu-bar">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -253,7 +253,22 @@ export const MenuBar = ({}: {}): JSX.Element => {
       </div>
       {(updatedAt || saveLoading) && (
         <ShadTooltip
-          content={<div className=""></div>}
+          content={
+            <div className="flex w-48 flex-col gap-1 py-1">
+              <h2 className="text-base font-semibold">
+                Auto-saving is disabled
+              </h2>
+              <p className="text-muted-foreground">
+                <a
+                  href="https://docs.langflow.org/auto-save"
+                  className="text-primary underline"
+                >
+                  Enable auto-saving
+                </a>{" "}
+                to avoid losing progress.
+              </p>
+            </div>
+          }
           side="bottom"
           styleClasses="cursor-default"
         >
@@ -308,8 +323,8 @@ export const MenuBar = ({}: {}): JSX.Element => {
               }}
               className={
                 isBuilding
-                  ? "flex items-center gap-1.5 text-status-red opacity-100 transition-all"
-                  : "opacity-0"
+                  ? "flex items-center gap-1.5 text-status-red transition-all"
+                  : "hidden"
               }
             >
               <IconComponent name="Square" className="h-4 w-4" />
