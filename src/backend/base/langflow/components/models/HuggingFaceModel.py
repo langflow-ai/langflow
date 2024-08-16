@@ -15,20 +15,20 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
     name = "HuggingFaceModel"
 
     inputs = LCModelComponent._base_inputs + [
-        SecretStrInput(name="endpoint_url", display_name="Endpoint URL", password=True),
+        StrInput(name="endpoint_url", display_name="Endpoint URL"),
         StrInput(
             name="model_id",
-            display_name="Model Id",
-            info="Id field of endpoint_url response.",
+            display_name="Model ID",
+            info="ID field for endpoint_url response.",
         ),
         DropdownInput(
             name="task",
             display_name="Task",
-            options=["text2text-generation", "text-generation", "summarization"],
+            options=["text2text-generation", "text-generation", "summarization", "translation"],
         ),
-        SecretStrInput(name="huggingfacehub_api_token", display_name="API token", password=True),
+        SecretStrInput(name="huggingfacehub_api_token", display_name="API Token", password=True),
         DictInput(name="model_kwargs", display_name="Model Keyword Arguments", advanced=True),
-        IntInput(name="retry_attempts", display_name="Retry Attempts", value=1),
+        IntInput(name="retry_attempts", display_name="Retry Attempts", value=1, advanced=True),
     ]
 
     def create_huggingface_endpoint(self, endpoint_url, task, huggingfacehub_api_token, model_kwargs):
