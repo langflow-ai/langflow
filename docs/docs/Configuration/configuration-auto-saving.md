@@ -44,7 +44,7 @@ langflow --no-auto-saving
 python -m langflow --no-auto-saving
 ```
 
-If you installed the local version of Langflow, you can set an environment variable and load it automatically by inserting this line into the ".env" file inside the directory.
+If you installed the local version of Langflow, you can set an environment variable and load it automatically by inserting this line into the `.env` file inside the directory.
 
 ```env
 LANGFLOW_AUTO_SAVING=false
