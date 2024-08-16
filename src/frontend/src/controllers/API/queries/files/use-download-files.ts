@@ -1,30 +1,31 @@
 import { keepPreviousData } from "@tanstack/react-query";
-import { useMutationFunctionType, useQueryFunctionType } from "../../../../types/api";
+import {
+  useMutationFunctionType,
+  useQueryFunctionType,
+} from "../../../../types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
 
 interface DownloadImagesQueryParams {
-  path:string,
+  path: string;
   filename: string;
 }
 
 export const useGetDownloadFileMutation: useMutationFunctionType<
   DownloadImagesQueryParams
-> = (params,options) => {
+> = (params, options) => {
   const { mutate } = UseRequestProcessor();
 
   const getDownloadImagesFn = async () => {
     if (!params) return;
     // need to use fetch because axios convert blob data to string, and this convertion can corrupt the file
-    const response = await fetch(
-      `${getURL("FILES")}/download/${params.path}`,
-    );
-    console.log(response)
+    const response = await fetch(`${getURL("FILES")}/download/${params.path}`);
+    console.log(response);
     const blob = await response.blob();
-    console.log(blob)
+    console.log(blob);
     const url = URL.createObjectURL(blob);
-    console.log(url)
+    console.log(url);
 
     const link = document.createElement("a");
     link.href = url;
@@ -38,8 +39,10 @@ export const useGetDownloadFileMutation: useMutationFunctionType<
   };
 
   const queryResult = mutate(
-    ["useGetDownloadFileMutation",params.path],
-    getDownloadImagesFn,options);
+    ["useGetDownloadFileMutation", params.path],
+    getDownloadImagesFn,
+    options,
+  );
 
   return queryResult;
 };
