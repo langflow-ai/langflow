@@ -10,6 +10,7 @@ from langflow.utils.util import unescape_string
 class NaturalLanguageTextSplitterComponent(LCTextSplitterComponent):
     display_name = "Natural Language Text Splitter"
     description = "Split text based on natural language boundaries, optimized for a specified language."
+    documentation = "https://python.langchain.com/v0.1/docs/modules/data_connection/document_transformers/split_by_token/#nltk"
     name = "NaturalLanguageTextSplitter"
 
     inputs = [
