@@ -24,6 +24,8 @@ const past = {};
 const future = {};
 
 const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
+  autoSaving: true,
+  setAutoSaving: (autoSaving: boolean) => set({ autoSaving }),
   examples: [],
   setExamples: (examples: FlowType[]) => {
     set({ examples });
