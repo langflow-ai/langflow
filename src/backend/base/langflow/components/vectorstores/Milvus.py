@@ -102,8 +102,9 @@ class MilvusVectorStoreComponent(LCVectorStoreComponent):
             else:
                 documents.append(_input)
 
-        if documents:
+        if not hasattr(self, "_documents_added"):
             milvus_store.add_documents(documents)
+            self._documents_added = True
 
         return milvus_store
 
