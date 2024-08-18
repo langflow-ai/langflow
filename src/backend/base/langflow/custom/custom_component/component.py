@@ -653,3 +653,8 @@ class Component(CustomComponent):
 
     def _get_fallback_input(self, **kwargs):
         return Input(**kwargs)
+
+    def to_tool(self):
+        from langflow.base.tools.component_tool import ComponentTool
+
+        return ComponentTool(component=self)
