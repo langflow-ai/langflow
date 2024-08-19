@@ -1,6 +1,8 @@
 import { expect, test } from "@playwright/test";
 
-test("RetrievalQA - Tooltip", async ({ page }) => {
+test("user must see on handle hover a tooltip with possibility connections", async ({
+  page,
+}) => {
   await page.goto("/");
   await page.waitForTimeout(1000);
 
