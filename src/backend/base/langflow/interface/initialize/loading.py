@@ -1,7 +1,7 @@
 import inspect
 import os
 import warnings
-from typing import TYPE_CHECKING, Any, Type
+from typing import TYPE_CHECKING, Any, Callable, Type
 
 import orjson
 from loguru import logger
@@ -20,6 +20,7 @@ if TYPE_CHECKING:
 async def instantiate_class(
     vertex: "Vertex",
     user_id=None,
+    callback: Callable | None = None,
 ) -> Any:
     """Instantiate class from module type and key, and params"""
 
@@ -38,6 +39,7 @@ async def instantiate_class(
         _parameters=custom_params,
         _vertex=vertex,
         _tracing_service=get_tracing_service(),
+        _callback=callback,
     )
     return custom_component, custom_params
 
