@@ -213,6 +213,8 @@ test("user must be able to freeze a component", async ({ page }) => {
     timeout: 15000,
   });
 
+  await page.waitForTimeout(2000);
+
   await page.getByTestId("output-inspection-message").first().click();
 
   await page.getByRole("gridcell").first().click();
@@ -233,6 +235,8 @@ test("user must be able to freeze a component", async ({ page }) => {
   await page.getByText("built successfully").last().click({
     timeout: 15000,
   });
+
+  await page.waitForTimeout(2000);
 
   await page.getByTestId("output-inspection-message").first().click();
 
@@ -261,8 +265,10 @@ test("user must be able to freeze a component", async ({ page }) => {
 
   await page.locator('//*[@id="react-flow-id"]').click();
 
-  await page.getByTestId("int_int_chunk_size").fill("4000");
-  await page.getByTestId("int_int_chunk_overlap").fill("800");
+  await page
+    .getByTestId("popover-anchor-input-input_value")
+    .first()
+    .fill("lorem ipsum");
 
   await page.waitForTimeout(1000);
 
@@ -273,6 +279,8 @@ test("user must be able to freeze a component", async ({ page }) => {
   await page.getByText("built successfully").last().click({
     timeout: 15000,
   });
+
+  await page.waitForTimeout(2000);
 
   await page.getByTestId("output-inspection-message").first().click();
 
@@ -307,6 +315,8 @@ test("user must be able to freeze a component", async ({ page }) => {
     timeout: 15000,
   });
 
+  await page.waitForTimeout(2000);
+
   await page.getByTestId("output-inspection-message").first().click();
 
   await page.getByRole("gridcell").first().click();
@@ -317,6 +327,8 @@ test("user must be able to freeze a component", async ({ page }) => {
 
   expect(secondRunWithoutFreezing).toBe(firstTextFreezed);
 
+  expect(firstRunWithoutFreezing).not.toBe(firstTextFreezed);
+  expect(firstRunWithoutFreezing).not.toBe(secondRunWithoutFreezing);
   expect(firstRunWithoutFreezing).not.toBe(firstTextFreezed);
   expect(thirdTextWithoutFreezing).not.toBe(firstTextFreezed);
 });
