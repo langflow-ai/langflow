@@ -3,7 +3,13 @@ import { expect, test } from "@playwright/test";
 test("chat_io_teste", async ({ page }) => {
   await page.goto("/");
   await page.locator("span").filter({ hasText: "My Collection" }).isVisible();
-  await page.waitForTimeout(2000);
+  await page.waitForSelector('[data-testid="mainpage_title"]', {
+    timeout: 30000,
+  });
+
+  await page.waitForSelector('[id="new-project-btn"]', {
+    timeout: 30000,
+  });
 
   let modalCount = 0;
   try {

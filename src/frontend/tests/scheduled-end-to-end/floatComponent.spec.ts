@@ -2,7 +2,13 @@ import { expect, test } from "@playwright/test";
 
 test("FloatComponent", async ({ page }) => {
   await page.goto("/");
-  await page.waitForTimeout(2000);
+  await page.waitForSelector('[data-testid="mainpage_title"]', {
+    timeout: 30000,
+  });
+
+  await page.waitForSelector('[id="new-project-btn"]', {
+    timeout: 30000,
+  });
 
   let modalCount = 0;
   try {
@@ -42,10 +48,10 @@ test("FloatComponent", async ({ page }) => {
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
 
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(1000);
   await page.locator('//*[@id="float-input"]').click();
   await page.locator('//*[@id="float-input"]').fill("");
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(1000);
   await page.locator('//*[@id="float-input"]').fill("3");
 
   let value = await page.locator('//*[@id="float-input"]').inputValue();
@@ -54,10 +60,10 @@ test("FloatComponent", async ({ page }) => {
     expect(false).toBeTruthy();
   }
 
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(1000);
   await page.locator('//*[@id="float-input"]').click();
   await page.locator('//*[@id="float-input"]').fill("");
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(1000);
   await page.locator('//*[@id="float-input"]').fill("-3");
 
   value = await page.locator('//*[@id="float-input"]').inputValue();

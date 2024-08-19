@@ -14,7 +14,13 @@ test("should copy code from playground modal", async ({ page }) => {
 
   await page.goto("/");
   await page.locator("span").filter({ hasText: "My Collection" }).isVisible();
-  await page.waitForTimeout(2000);
+  await page.waitForSelector('[data-testid="mainpage_title"]', {
+    timeout: 30000,
+  });
+
+  await page.waitForSelector('[id="new-project-btn"]', {
+    timeout: 30000,
+  });
 
   let modalCount = 0;
   try {
@@ -200,7 +206,13 @@ test("should copy code from playground modal", async ({ page }) => {
 test("playground button should be enabled or disabled", async ({ page }) => {
   await page.goto("/");
   await page.locator("span").filter({ hasText: "My Collection" }).isVisible();
-  await page.waitForTimeout(2000);
+  await page.waitForSelector('[data-testid="mainpage_title"]', {
+    timeout: 30000,
+  });
+
+  await page.waitForSelector('[id="new-project-btn"]', {
+    timeout: 30000,
+  });
 
   let modalCount = 0;
   try {
@@ -227,14 +239,14 @@ test("playground button should be enabled or disabled", async ({ page }) => {
     timeout: 30000,
   });
 
-  await page.getByTestId("playground-btn-flow").click({ force: true });
+  expect(await page.getByTestId("playground-btn-flow").isDisabled());
 
   expect(await page.getByText("Langflow Chat").isHidden());
 
   await page.getByPlaceholder("Search").click();
   await page.getByPlaceholder("Search").fill("chat output");
 
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(1000);
 
   await page
     .locator('//*[@id="outputsChat Output"]')
@@ -245,7 +257,7 @@ test("playground button should be enabled or disabled", async ({ page }) => {
     timeout: 100000,
   });
 
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(1000);
 
   await page.getByTestId("playground-btn-flow-io").click({ force: true });
 

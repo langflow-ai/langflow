@@ -2,7 +2,13 @@ import { test } from "@playwright/test";
 
 test("select and delete all", async ({ page }) => {
   await page.goto("/");
-  await page.waitForTimeout(2000);
+  await page.waitForSelector('[data-testid="mainpage_title"]', {
+    timeout: 30000,
+  });
+
+  await page.waitForSelector('[id="new-project-btn"]', {
+    timeout: 30000,
+  });
 
   let modalCount = 0;
   try {
@@ -38,7 +44,13 @@ test("select and delete all", async ({ page }) => {
 
 test("select and delete a flow", async ({ page }) => {
   await page.goto("/");
-  await page.waitForTimeout(2000);
+  await page.waitForSelector('[data-testid="mainpage_title"]', {
+    timeout: 30000,
+  });
+
+  await page.waitForSelector('[id="new-project-btn"]', {
+    timeout: 30000,
+  });
 
   let modalCount = 0;
   try {
@@ -73,7 +85,13 @@ test("select and delete a flow", async ({ page }) => {
 
 test("search flows", async ({ page }) => {
   await page.goto("/");
-  await page.waitForTimeout(2000);
+  await page.waitForSelector('[data-testid="mainpage_title"]', {
+    timeout: 30000,
+  });
+
+  await page.waitForSelector('[id="new-project-btn"]', {
+    timeout: 30000,
+  });
 
   let modalCount = 0;
   try {
@@ -123,7 +141,13 @@ test("search flows", async ({ page }) => {
 
 test("search components", async ({ page }) => {
   await page.goto("/");
-  await page.waitForTimeout(2000);
+  await page.waitForSelector('[data-testid="mainpage_title"]', {
+    timeout: 30000,
+  });
+
+  await page.waitForSelector('[id="new-project-btn"]', {
+    timeout: 30000,
+  });
 
   let modalCount = 0;
   try {
@@ -183,6 +207,12 @@ test("search components", async ({ page }) => {
   });
 
   await page.getByTestId("icon-ChevronLeft").first().click();
+
+  const exitButton = await page.getByText("Exit", { exact: true }).count();
+
+  if (exitButton > 0) {
+    await page.getByText("Exit", { exact: true }).click();
+  }
 
   await page
     .getByText("Components", {
