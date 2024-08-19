@@ -400,7 +400,7 @@ async def download_multiple_file(
         return flows_without_api_keys[0]
 
 
-@router.get("/starter_projects", response_model=List[GraphDump], status_code=200)
+@router.get("/starter/projects/", response_model=List[GraphDump], status_code=200)
 def get_starter_projects(
     *,
     current_user: User = Depends(get_current_active_user),
