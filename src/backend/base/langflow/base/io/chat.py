@@ -40,13 +40,13 @@ class ChatComponent(Component):
         if isinstance(iterator, AsyncIterator):
             iterator = asyncio.ensure_future(iterator.__anext__())
         for chunk in iterator:
-            complete_message += chunk
+            complete_message += chunk.content
             data = {
                 "text": complete_message,
-                "chunk": chunk,
+                "chunk": chunk.content,
                 "sender": message.sender,
                 "sender_name": message.sender_name,
-                "id": message_id,
+                "id": str(message_id),
             }
             self._callback("token", data)
         return complete_message
