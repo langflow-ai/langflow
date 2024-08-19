@@ -15,7 +15,6 @@ from sqlmodel import Session, and_, col, select
 
 from langflow.api.utils import remove_api_keys, validate_is_component
 from langflow.api.v1.schemas import FlowListCreate
-from langflow.graph.graph.schema import GraphDump
 from langflow.initial_setup.load import get_starter_projects_dump
 from langflow.initial_setup.setup import STARTER_FOLDER_NAME
 from langflow.services.auth.utils import get_current_active_user
@@ -398,17 +397,3 @@ async def download_multiple_file(
         )
     else:
         return flows_without_api_keys[0]
-
-
-@router.get("/starter/projects/", response_model=List[GraphDump], status_code=200)
-def get_starter_projects(
-    *,
-    current_user: User = Depends(get_current_active_user),
-):
-    """Get a list of starter projects."""
-    try:
-        flows = get_starter_projects_dump()
-        return flows
-    except Exception as exc:
-        logger.error(exc)
-        raise HTTPException(status_code=500, detail=str(exc)) from exc

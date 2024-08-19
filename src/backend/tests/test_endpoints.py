@@ -675,5 +675,5 @@ def test_invalid_flow_id(client, created_api_key):
 
 def test_starter_projects(client, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
-    response = client.get("/api/v1/flows/starter/projects/", headers=headers)
+    response = client.get("/api/v1/starter-projects/", headers=headers)
     assert response.status_code == status.HTTP_200_OK, response.text
