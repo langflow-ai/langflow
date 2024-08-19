@@ -71,9 +71,8 @@ class ChatOutput(ChatComponent):
             and isinstance(message.text, str)
             and self.should_store_message
         ):
-            store_message(
+            self.store_message(
                 message,
-                flow_id=self.graph.flow_id,
             )
             self.message.value = message
 
