@@ -4,6 +4,8 @@ import time
 import traceback
 import typing
 import uuid
+from collections.abc import Callable
+from functools import partial
 from typing import TYPE_CHECKING, Annotated
 
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException
@@ -33,6 +35,7 @@ from langflow.api.v1.schemas import (
 )
 from langflow.exceptions.component import ComponentBuildException
 from langflow.graph.graph.base import Graph
+from langflow.graph.graph.schema import CallbackFunction
 from langflow.graph.utils import log_vertex_build
 from langflow.schema.schema import OutputValue
 from langflow.services.auth.utils import get_current_active_user
@@ -204,7 +207,9 @@ async def build_flow(
             logger.exception(exc)
             raise HTTPException(status_code=500, detail=str(exc)) from exc
 
-    async def _build_vertex(vertex_id: str, graph: "Graph") -> VertexBuildResponse:
+    async def _build_vertex(
+        vertex_id: str, graph: "Graph", callback: CallbackFunction | None = None
+    ) -> VertexBuildResponse:
         flow_id_str = str(flow_id)
 
         next_runnable_vertices = []
@@ -222,6 +227,7 @@ async def build_flow(
                     files=files,
                     get_cache=chat_service.get_cache,
                     set_cache=chat_service.set_cache,
+                    callback=callback,
                 )
                 result_dict = vertex_build_result.result_dict
                 params = vertex_build_result.params
@@ -324,7 +330,11 @@ async def build_flow(
         queue.put_nowait((event_id, str_data.encode("utf-8"), time.time()))
 
     async def build_vertices(
-        vertex_id: str, graph: "Graph", queue: asyncio.Queue, client_consumed_queue: asyncio.Queue
+        vertex_id: str,
+        graph: "Graph",
+        queue: asyncio.Queue,
+        client_consumed_queue: asyncio.Queue,
+        callback: CallbackFunction | None = None,
     ) -> None:
         build_task = asyncio.create_task(await asyncio.to_thread(_build_vertex, vertex_id, graph))
         try:
@@ -346,7 +356,9 @@ async def build_flow(
             if vertex_build_response.next_vertices_ids:
                 tasks = []
                 for next_vertex_id in vertex_build_response.next_vertices_ids:
-                    task = asyncio.create_task(build_vertices(next_vertex_id, graph, queue, client_consumed_queue))
+                    task = asyncio.create_task(
+                        build_vertices(next_vertex_id, graph, queue, client_consumed_queue, callback)
+                    )
                     tasks.append(task)
                 try:
                     await asyncio.gather(*tasks)
@@ -356,6 +368,14 @@ async def build_flow(
                     return
 
     async def event_generator(queue: asyncio.Queue, client_consumed_queue: asyncio.Queue) -> None:
+        async def send_event_wrapper(queue) -> Callable:
+            partial_send_event = partial(send_event, queue=queue)
+
+            def send_event_callback(event, data):
+                partial_send_event(event, data)
+
+            return send_event_callback
+
         if not data:
             # using another thread since the DB query is I/O bound
             vertices_task = asyncio.create_task(await asyncio.to_thread(build_graph_and_get_order))
@@ -386,7 +406,9 @@ async def build_flow(
 
         tasks = []
         for vertex_id in ids:
-            task = asyncio.create_task(build_vertices(vertex_id, graph, queue, client_consumed_queue))
+            task = asyncio.create_task(
+                build_vertices(vertex_id, graph, queue, client_consumed_queue, send_event_wrapper(queue))
+            )
             tasks.append(task)
         try:
             await asyncio.gather(*tasks)
