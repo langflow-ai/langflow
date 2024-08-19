@@ -94,7 +94,7 @@ test("should share component with share button", async ({ page }) => {
 
   while (modalCount === 0) {
     await page.getByText("New Project", { exact: true }).click();
-    await page.waitForTimeout(5000);
+    await page.waitForTimeout(3000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
   await page.waitForTimeout(1000);
@@ -128,7 +128,7 @@ test("should share component with share button", async ({ page }) => {
   await page.getByText("Export").first().isVisible();
   await page.getByText("Share Flow").first().isVisible();
 
-  await page.waitForTimeout(5000);
+  await page.waitForTimeout(3000);
 
   await page.getByText("Agent").first().isVisible();
   await page.getByText("Memory").first().isVisible();
