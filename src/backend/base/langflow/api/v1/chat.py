@@ -661,6 +661,7 @@ async def build_vertex_stream(
         flow_id_str = str(flow_id)
 
         async def stream_vertex():
+            graph = None
             try:
                 cache = await chat_service.get_cache(flow_id_str)
                 if not cache:
@@ -714,7 +715,8 @@ async def build_vertex_stream(
                 yield str(StreamData(event="error", data={"error": exc_message}))
             finally:
                 logger.debug("Closing stream")
-                await chat_service.set_cache(flow_id_str, graph)
+                if graph:
+                    await chat_service.set_cache(flow_id_str, graph)
                 yield str(StreamData(event="close", data={"message": "Stream closed"}))
 
         return StreamingResponse(stream_vertex(), media_type="text/event-stream")
