@@ -201,6 +201,7 @@ class ComponentVertex(Vertex):
 class InterfaceVertex(ComponentVertex):
     def __init__(self, data: NodeData, graph):
         super().__init__(data, graph=graph)
+        self._added_message = None
         self.steps = [self._build, self._run]
 
     def build_stream_url(self):
