@@ -19,7 +19,7 @@ test("curl_api_generation", async ({ page, context }) => {
   }
 
   await page.getByRole("heading", { name: "Basic Prompting" }).click();
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(1000);
   await page.getByText("API", { exact: true }).click();
   await page.getByRole("tab", { name: "cURL" }).click();
   await page.getByTestId("icon-Copy").click();
@@ -58,7 +58,13 @@ test("check if tweaks are updating when someothing on the flow changes", async (
   page,
 }) => {
   await page.goto("/");
-  await page.waitForTimeout(2000);
+  await page.waitForSelector('[data-testid="mainpage_title"]', {
+    timeout: 30000,
+  });
+
+  await page.waitForSelector('[id="new-project-btn"]', {
+    timeout: 30000,
+  });
 
   let modalCount = 0;
   try {

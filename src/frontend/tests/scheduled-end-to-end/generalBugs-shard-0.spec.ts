@@ -55,7 +55,7 @@ test("erase button should clear the chat messages", async ({ page }) => {
   await page.getByTestId("dropdown_str_model_name").click();
   await page.getByTestId("gpt-4o-1-option").click();
 
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(1000);
   await page.getByText("Playground", { exact: true }).click();
 
   await page.waitForSelector('[data-testid="input-chat-playground"]', {
@@ -88,7 +88,7 @@ test("erase button should clear the chat messages", async ({ page }) => {
   await page.getByText("Start a conversation").isVisible();
   await page.getByText("Langflow Chat").isVisible();
 
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(1000);
   await page.getByPlaceholder("Send a message...").fill("My name is John");
 
   await page.waitForSelector('[data-testid="icon-LucideSend"]', {
