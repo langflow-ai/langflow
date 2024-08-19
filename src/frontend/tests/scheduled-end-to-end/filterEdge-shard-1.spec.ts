@@ -18,7 +18,7 @@ test("user must see on handle click the possibility connections - RetrievalQA", 
 
   while (modalCount === 0) {
     await page.getByText("New Project", { exact: true }).click();
-    await page.waitForTimeout(5000);
+    await page.waitForTimeout(3000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
   await page.waitForTimeout(1000);
