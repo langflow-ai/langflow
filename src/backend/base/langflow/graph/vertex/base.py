@@ -4,6 +4,7 @@ import inspect
 import os
 import traceback
 import types
+import json
 from enum import Enum
 from typing import TYPE_CHECKING, Any, AsyncIterator, Callable, Dict, Iterator, List, Mapping, Optional, Set
 
@@ -103,7 +104,12 @@ class Vertex:
         self._custom_component._set_input_value(name, value)
 
     def to_data(self):
-        return self._data
+        try:
+            data = json.loads(json.dumps(self._data, default=str))
+        except TypeError:
+            data = self._data
+
+        return data
 
     def add_component_instance(self, component_instance: "Component"):
         component_instance.set_vertex(self)
