@@ -3580,7 +3580,7 @@ sdist = { url = "https://files.pythonhosted.org/packages/0e/72/a3add0e4eec4eb9e2
 [[package]]
 name = "langflow"
 version = "1.0.15"
-source = { editable = "." }
+source = { editable = "src/backend/langflow" }
 dependencies = [
     { name = "assemblyai" },
     { name = "astra-assistants" },
@@ -3698,7 +3698,7 @@ dev = [
 [[package]]
 name = "langflow-base"
 version = "0.0.93"
-source = { editable = "src/backend/base" }
+source = { editable = "src/backend/langflow-base" }
 dependencies = [
     { name = "aiofiles" },
     { name = "alembic" },
@@ -3753,6 +3753,39 @@ dependencies = [
     { name = "uncurl" },
     { name = "uvicorn" },
     { name = "websockets" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "dictdiffer" },
+    { name = "httpx" },
+    { name = "ipykernel" },
+    { name = "locust" },
+    { name = "mypy" },
+    { name = "pandas-stubs" },
+    { name = "pre-commit" },
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "pytest-cov" },
+    { name = "pytest-flakefinder" },
+    { name = "pytest-instafail" },
+    { name = "pytest-mock" },
+    { name = "pytest-profiling" },
+    { name = "pytest-split" },
+    { name = "pytest-sugar" },
+    { name = "pytest-xdist" },
+    { name = "requests" },
+    { name = "respx" },
+    { name = "ruff" },
+    { name = "types-google-cloud-ndb" },
+    { name = "types-passlib" },
+    { name = "types-pillow" },
+    { name = "types-python-jose" },
+    { name = "types-pywin32" },
+    { name = "types-pyyaml" },
+    { name = "types-redis" },
+    { name = "types-requests" },
+    { name = "vulture" },
 ]
 
 [[package]]

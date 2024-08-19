@@ -78,6 +78,11 @@ Documentation = "https://docs.langflow.org"
 Repository = "https://github.com/langflow-ai/langflow"
 Issues = "https://github.com/langflow-ai/langflow/issues"
 Homepage = "https://langflow.org"
+
+[project.scripts]
+langflow-base = "langflow.__main__:main"
+
+
 [tool.uv]
 dev-dependencies = [
     "types-redis >=4.6.0.5,<5",
@@ -110,6 +115,7 @@ dev-dependencies = [
     "pytest-split >=0.9.0,<1",
     "pytest-flakefinder >=1.1.0,<2"
 ]
+
 [tool.pytest.ini_options]
 minversion = "6.0"
 #addopts = "-ra"

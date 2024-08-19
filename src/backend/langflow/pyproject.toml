@@ -1,0 +1,194 @@
+[project]
+name = "langflow"
+version = "1.0.15"
+description = "A Python package with a built-in web application"
+authors =[ {name ="Langflow", email = "contact@langflow.org"}]
+maintainers = [
+    {name = "Carlos Coelho", email = "carlos@langflow.org"},
+    {name = "Cristhian Zanforlin", email = "cristhian.lousa@gmail.com"},
+    {name = "Gabriel Almeida", email = "gabriel@langflow.org"},
+    {name = "Igor Carvalho", email = "igorr.ackerman@gmail.com"},
+    {name = "Lucas Eduoli", email = "lucaseduoli@gmail.com"},
+    {name = "Otávio Anovazzi", email = "otavio2204@gmail.com"},
+    {name = "Rodrigo Nader", email = "rodrigo@langflow.org"},
+    {name = "Italo dos Anjos", email = "italojohnnydosanjos@gmail.com"},
+]
+license = {file = "LICENSE"}
+readme = "README.md"
+keywords = ["nlp", "langchain", "openai", "gpt", "gui"]
+requires-python = ">=3.10,<3.13"
+dependencies = [
+    "langflow-base==0.0.93",
+    "beautifulsoup4 >=4.12.2",
+    "google-search-results >=2.4.0",
+    "google-api-python-client >=2.130.0",
+    "huggingface-hub[inference] ==0.22.0",
+    "llama-cpp-python >=0.2.0",
+    "networkx ==3.1",
+    "fake-useragent ==1.5.0",
+    "wikipedia ==1.4.0",
+    "qdrant-client ==1.9.0",
+    "weaviate-client",
+    "sentence-transformers ==2.3.1",
+    "ctransformers ==0.2.10",
+    "faiss-cpu ==1.8.0",
+    "types-cachetools ==5.3.0.5",
+    "supabase >=2.3.0",
+    "certifi >=2023.11.17,<2025.0.0",
+    "psycopg ==3.1.9",
+    # https://github.com/psycopg/psycopg/issues/858
+    "celery[redis] ==5.3.6",
+    "redis ==5.0.1",
+    "flower ==2.0.0",
+    "metaphor-python ==0.1.11",
+    "pywin32 ==306; sys_platform == 'win32'",
+    "langfuse ==2.33.0",
+    "metal-sdk ==2.5.0",
+    "markupsafe ==2.1.3",
+    "boto3 >=1.34.0,<2",
+    "numexpr ==2.8.6",
+    "qianfan ==0.3.5",
+    "pgvector ==0.2.3",
+    "pyautogen >=0.2.0",
+    "langchain-google-genai ==1.0.8",
+    "langchain-cohere >=0.1.4,<0.2.0",
+    "elasticsearch ==8.12.0",
+    "pytube ==15.0.0",
+    "dspy-ai >=2.4.0,<3",
+    "assemblyai ==0.26.0",
+    "litellm ==1.38.0",
+    "chromadb >=0.4,<0.5",
+    "langchain-anthropic >=0.1.6",
+    "langchain-astradb ==0.3.3",
+    "langchain-openai >=0.1.17",
+    "zep-python ==2.0.0rc5",
+    "langchain-google-vertexai ==1.0.7",
+    "langchain-groq ==0.1.6",
+    "langchain-pinecone >=0.1.0",
+    "langchain-mistralai ==0.1.10",
+    "youtube-transcript-api ==0.6.2",
+    "markdown ==3.6",
+    "langchain-chroma ==0.1.1",
+    "upstash-vector ==0.4.0",
+    "gitpython ==3.1.43",
+    "unstructured[docx,md,pptx] ==0.14.4",
+    "langchain-aws ==0.1.6",
+    "langchain-mongodb ==0.1.6",
+    "kubernetes ==30.1.0",
+    "firecrawl-py ==0.0.16",
+    "json-repair ==0.25.2",
+    "langchain-nvidia-ai-endpoints ==0.1.6",
+    "langchain-google-calendar-tools ==0.0.1",
+    "langchain-milvus ==0.1.1",
+    "crewai[tools] >=0.36.0,<1",
+    "langwatch ==0.1.16",
+    "langsmith ==0.1.86",
+    "yfinance ==0.2.40",
+    "langchain-google-community ==1.0.7",
+    "wolframalpha ==5.1.3",
+    "astra-assistants ==2.0.15",
+    "composio-langchain ==0.3.28",
+    "spider-client ==0.0.27",
+]
+
+
+[project.urls]
+Documentation = "https://docs.langflow.org"
+Repository = "https://github.com/langflow-ai/langflow"
+Issues = "https://github.com/langflow-ai/langflow/issues"
+Homepage = "https://langflow.org"
+
+[project.scripts]
+langflow = "langflow.__main__:main"
+
+[project.optional-dependencies]
+cassio = [
+    "cassio ==0.1.7"]
+couchbase = [
+    "couchbase ==4.2.1"]
+
+[tool.uv.sources]
+langflow-base = { workspace = true }
+
+[tool.uv]
+dev-dependencies = [
+  "types-redis >=4.6.0.5,<5",
+  "ipykernel >=6.29.0,<7",
+  "mypy >=1.11.0,<2",
+  "ruff >=0.4.5,<1",
+  "httpx",
+  "pytest >=8.2.0,<9",
+  "types-requests >=2.32.0,<3",
+  "requests >=2.32.0,<3",
+  "pytest-cov >=5.0.0,<6",
+  "pandas-stubs >=2.1.4.231227,<3",
+  "types-pillow >=10.2.0.20240213,<11",
+  "types-pyyaml >=6.0.12.8,<7",
+  "types-python-jose >=3.3.4.8,<4",
+  "types-passlib >=1.7.7.13,<2",
+  "locust >=2.23.1,<3",
+  "pytest-mock >=3.14.0,<4",
+  "pytest-xdist >=3.6.0,<4",
+  "types-pywin32 >=306.0.0.4,<307",
+  "types-google-cloud-ndb >=2.2.0.0,<3",
+  "pytest-sugar >=1.0.0,<2",
+  "respx >=0.21.1,<1",
+  "pytest-instafail >=0.5.0,<1",
+  "pytest-asyncio >=0.23.0,<1",
+  "pytest-profiling >=1.7.0,<2",
+  "pre-commit >=3.7.0,<4",
+  "vulture >=2.11,<3",
+  "dictdiffer >=0.9.0,<1",
+  "pytest-split >=0.9.0,<1",
+  "pytest-flakefinder >=1.1.0,<2"
+]
+
+[tool.codespell]
+skip = '.git,*.pdf,*.svg,*.pdf,*.yaml,*.ipynb,poetry.lock,*.min.js,*.css,package-lock.json,*.trig.,**/node_modules/**,./stuff/*,*.csv'
+# Ignore latin etc
+ignore-regex = '.*(Stati Uniti|Tense=Pres).*'
+
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+testpaths = ["tests", "integration"]
+console_output_style = "progress"
+filterwarnings = ["ignore::DeprecationWarning", "ignore::ResourceWarning"]
+log_cli = true
+log_cli_format = "%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s)"
+log_cli_date_format = "%Y-%m-%d %H:%M:%S"
+markers = ["async_test", "api_key_required"]
+
+
+[tool.coverage.run]
+command_line = """
+    -m pytest --ignore=tests/integration
+    --cov --cov-report=term --cov-report=html
+    --instafail -ra -n auto -m "not api_key_required"
+"""
+source = ["src/backend/base/langflow/"]
+omit = ["*/alembic/*", "tests/*", "*/__init__.py"]
+
+
+[tool.coverage.report]
+sort = "Stmts"
+skip_empty = true
+show_missing = false
+ignore_errors = true
+
+
+[tool.coverage.html]
+directory = "coverage"
+
+
+[tool.ruff]
+exclude = ["src/backend/langflow/alembic/*"]
+line-length = 120
+
+[tool.mypy]
+plugins = ["pydantic.mypy"]
+follow_imports = "skip"
+disable_error_code = ["type-var"]
+namespace_packages = true
+mypy_path = "langflow"
+ignore_missing_imports = true
