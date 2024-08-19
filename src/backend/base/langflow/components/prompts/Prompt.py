@@ -1,6 +1,7 @@
 from langflow.base.prompts.api_utils import process_prompt_template
 from langflow.custom import Component
 from langflow.inputs.inputs import DefaultPromptField
+from langflow.inputs.inputs import MessageInput
 from langflow.io import Output, PromptInput
 from langflow.schema.message import Message
 from langflow.template.utils import update_template_values
@@ -15,6 +16,7 @@ class PromptComponent(Component):
 
     inputs = [
         PromptInput(name="template", display_name="Template"),
+        MessageInput(name="format_instructions", display_name="Format Instructions"),
     ]
 
     outputs = [
@@ -24,6 +26,11 @@ class PromptComponent(Component):
     async def build_prompt(
         self,
     ) -> Message:
+        # The prompt template has already been processed and determined its user-defined variables;
+        # this appends the additional {format_instructions} variables, if defined.
+        if self.format_instructions:
+            self._attributes["template"] = self._attributes["template"] + "\n\n{format_instructions}"
+
         prompt = await Message.from_template_and_variables(**self._attributes)
         self.status = prompt.text
         return prompt

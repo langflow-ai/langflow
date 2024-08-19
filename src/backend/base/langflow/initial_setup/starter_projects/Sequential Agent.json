@@ -8,16 +8,12 @@
             "dataType": "SequentialCrewComponent",
             "id": "SequentialCrewComponent-3dbbB",
             "name": "output",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "ChatOutput-nwCjg",
-            "inputTypes": [
-              "Message"
-            ],
+            "inputTypes": ["Message"],
             "type": "str"
           }
         },
@@ -34,17 +30,12 @@
             "dataType": "TextInput",
             "id": "TextInput-6QUGr",
             "name": "text",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "topic",
             "id": "Prompt-GOdlL",
-            "inputTypes": [
-              "Message",
-              "Text"
-            ],
+            "inputTypes": ["Message", "Text"],
             "type": "str"
           }
         },
@@ -61,17 +52,12 @@
             "dataType": "TextInput",
             "id": "TextInput-6QUGr",
             "name": "text",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "topic",
             "id": "Prompt-824D7",
-            "inputTypes": [
-              "Message",
-              "Text"
-            ],
+            "inputTypes": ["Message", "Text"],
             "type": "str"
           }
         },
@@ -88,17 +74,12 @@
             "dataType": "TextInput",
             "id": "TextInput-6QUGr",
             "name": "text",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "topic",
             "id": "Prompt-0vHob",
-            "inputTypes": [
-              "Message",
-              "Text"
-            ],
+            "inputTypes": ["Message", "Text"],
             "type": "str"
           }
         },
@@ -115,16 +96,12 @@
             "dataType": "Prompt",
             "id": "Prompt-GOdlL",
             "name": "prompt",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "task_description",
             "id": "SequentialTaskAgentComponent-GWMA1",
-            "inputTypes": [
-              "Message"
-            ],
+            "inputTypes": ["Message"],
             "type": "str"
           }
         },
@@ -141,16 +118,12 @@
             "dataType": "OpenAIModel",
             "id": "OpenAIModel-lQ5HF",
             "name": "model_output",
-            "output_types": [
-              "LanguageModel"
-            ]
+            "output_types": ["LanguageModel"]
           },
           "targetHandle": {
             "fieldName": "llm",
             "id": "SequentialTaskAgentComponent-GWMA1",
-            "inputTypes": [
-              "LanguageModel"
-            ],
+            "inputTypes": ["LanguageModel"],
             "type": "other"
           }
         },
@@ -166,16 +139,12 @@
             "dataType": "OpenAIModel",
             "id": "OpenAIModel-lQ5HF",
             "name": "model_output",
-            "output_types": [
-              "LanguageModel"
-            ]
+            "output_types": ["LanguageModel"]
           },
           "targetHandle": {
             "fieldName": "llm",
             "id": "SequentialTaskAgentComponent-5i4Wg",
-            "inputTypes": [
-              "LanguageModel"
-            ],
+            "inputTypes": ["LanguageModel"],
             "type": "other"
           }
         },
@@ -191,16 +160,12 @@
             "dataType": "Prompt",
             "id": "Prompt-824D7",
             "name": "prompt",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "task_description",
             "id": "SequentialTaskAgentComponent-5i4Wg",
-            "inputTypes": [
-              "Message"
-            ],
+            "inputTypes": ["Message"],
             "type": "str"
           }
         },
@@ -216,16 +181,12 @@
             "dataType": "SequentialTaskAgentComponent",
             "id": "SequentialTaskAgentComponent-GWMA1",
             "name": "task_output",
-            "output_types": [
-              "SequentialTask"
-            ]
+            "output_types": ["SequentialTask"]
           },
           "targetHandle": {
             "fieldName": "previous_task",
             "id": "SequentialTaskAgentComponent-5i4Wg",
-            "inputTypes": [
-              "SequentialTask"
-            ],
+            "inputTypes": ["SequentialTask"],
             "type": "other"
           }
         },
@@ -241,16 +202,12 @@
             "dataType": "SequentialTaskAgentComponent",
             "id": "SequentialTaskAgentComponent-5i4Wg",
             "name": "task_output",
-            "output_types": [
-              "SequentialTask"
-            ]
+            "output_types": ["SequentialTask"]
           },
           "targetHandle": {
             "fieldName": "previous_task",
             "id": "SequentialTaskAgentComponent-TPEWE",
-            "inputTypes": [
-              "SequentialTask"
-            ],
+            "inputTypes": ["SequentialTask"],
             "type": "other"
           }
         },
@@ -266,16 +223,12 @@
             "dataType": "Prompt",
             "id": "Prompt-0vHob",
             "name": "prompt",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "task_description",
             "id": "SequentialTaskAgentComponent-TPEWE",
-            "inputTypes": [
-              "Message"
-            ],
+            "inputTypes": ["Message"],
             "type": "str"
           }
         },
@@ -291,16 +244,12 @@
             "dataType": "SequentialTaskAgentComponent",
             "id": "SequentialTaskAgentComponent-TPEWE",
             "name": "task_output",
-            "output_types": [
-              "SequentialTask"
-            ]
+            "output_types": ["SequentialTask"]
           },
           "targetHandle": {
             "fieldName": "tasks",
             "id": "SequentialCrewComponent-3dbbB",
-            "inputTypes": [
-              "SequentialTask"
-            ],
+            "inputTypes": ["SequentialTask"],
             "type": "other"
           }
         },
@@ -316,16 +265,12 @@
             "dataType": "OpenAIModel",
             "id": "OpenAIModel-lQ5HF",
             "name": "model_output",
-            "output_types": [
-              "LanguageModel"
-            ]
+            "output_types": ["LanguageModel"]
           },
           "targetHandle": {
             "fieldName": "llm",
             "id": "SequentialTaskAgentComponent-TPEWE",
-            "inputTypes": [
-              "LanguageModel"
-            ],
+            "inputTypes": ["LanguageModel"],
             "type": "other"
           }
         },
@@ -341,16 +286,12 @@
             "dataType": "YFinanceTool",
             "id": "YFinanceTool-Asoka",
             "name": "tool",
-            "output_types": [
-              "Tool"
-            ]
+            "output_types": ["Tool"]
           },
           "targetHandle": {
             "fieldName": "tools",
             "id": "SequentialTaskAgentComponent-GWMA1",
-            "inputTypes": [
-              "Tool"
-            ],
+            "inputTypes": ["Tool"],
             "type": "other"
           }
         },
@@ -368,9 +309,7 @@
           "display_name": "Sequential Crew",
           "id": "SequentialCrewComponent-3dbbB",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -398,9 +337,7 @@
                 "method": "build_output",
                 "name": "output",
                 "selected": "Message",
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -430,9 +367,7 @@
                 "display_name": "Function Calling LLM",
                 "dynamic": false,
                 "info": "Turns the ReAct CrewAI agent into a function-calling agent",
-                "input_types": [
-                  "LanguageModel"
-                ],
+                "input_types": ["LanguageModel"],
                 "list": false,
                 "name": "function_calling_llm",
                 "placeholder": "",
@@ -493,9 +428,7 @@
                 "display_name": "Tasks",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "SequentialTask"
-                ],
+                "input_types": ["SequentialTask"],
                 "list": true,
                 "name": "tasks",
                 "placeholder": "",
@@ -559,10 +492,7 @@
         "data": {
           "id": "OpenAIModel-lQ5HF",
           "node": {
-            "base_classes": [
-              "LanguageModel",
-              "Message"
-            ],
+            "base_classes": ["LanguageModel", "Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -595,9 +525,7 @@
                 "method": "text_response",
                 "name": "text_output",
                 "selected": "Message",
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               },
               {
@@ -606,9 +534,7 @@
                 "method": "build_model",
                 "name": "model_output",
                 "selected": "LanguageModel",
-                "types": [
-                  "LanguageModel"
-                ],
+                "types": ["LanguageModel"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -621,9 +547,7 @@
                 "display_name": "OpenAI API Key",
                 "dynamic": false,
                 "info": "The OpenAI API Key to use for the OpenAI model.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "load_from_db": true,
                 "name": "api_key",
                 "password": true,
@@ -657,9 +581,7 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "input_value",
@@ -857,9 +779,7 @@
           "display_name": "Chat Output",
           "id": "ChatOutput-nwCjg",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -886,9 +806,7 @@
                 "method": "message_response",
                 "name": "message",
                 "selected": "Message",
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -918,9 +836,7 @@
                 "display_name": "Data Template",
                 "dynamic": false,
                 "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "data_template",
@@ -938,9 +854,7 @@
                 "display_name": "Text",
                 "dynamic": false,
                 "info": "Message to be passed as output.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "input_value",
@@ -959,10 +873,7 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
+                "options": ["Machine", "User"],
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -976,9 +887,7 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "sender_name",
@@ -996,9 +905,7 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "session_id",
@@ -1045,9 +952,7 @@
         "data": {
           "id": "TextInput-6QUGr",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -1055,9 +960,7 @@
             "display_name": "Topic",
             "documentation": "",
             "edited": false,
-            "field_order": [
-              "input_value"
-            ],
+            "field_order": ["input_value"],
             "frozen": false,
             "icon": "type",
             "lf_version": "1.0.15",
@@ -1069,9 +972,7 @@
                 "method": "text_response",
                 "name": "text",
                 "selected": "Message",
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1101,9 +1002,7 @@
                 "display_name": "Text",
                 "dynamic": false,
                 "info": "Text to be passed as input.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "input_value",
@@ -1141,23 +1040,17 @@
           "display_name": "Prompt",
           "id": "Prompt-GOdlL",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {
-              "template": [
-                "topic"
-              ]
+              "template": ["topic"]
             },
             "description": "Create a prompt template with dynamic variables.",
             "display_name": "Prompt",
             "documentation": "",
             "edited": false,
-            "field_order": [
-              "template"
-            ],
+            "field_order": ["template"],
             "frozen": false,
             "icon": "prompts",
             "lf_version": "1.0.15",
@@ -1169,9 +1062,7 @@
                 "method": "build_prompt",
                 "name": "prompt",
                 "selected": "Message",
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1220,10 +1111,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Message",
-                  "Text"
-                ],
+                "input_types": ["Message", "Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -1261,23 +1149,17 @@
           "display_name": "Prompt",
           "id": "Prompt-824D7",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {
-              "template": [
-                "topic"
-              ]
+              "template": ["topic"]
             },
             "description": "Create a prompt template with dynamic variables.",
             "display_name": "Prompt",
             "documentation": "",
             "edited": false,
-            "field_order": [
-              "template"
-            ],
+            "field_order": ["template"],
             "frozen": false,
             "icon": "prompts",
             "lf_version": "1.0.15",
@@ -1289,9 +1171,7 @@
                 "method": "build_prompt",
                 "name": "prompt",
                 "selected": "Message",
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1340,10 +1220,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Message",
-                  "Text"
-                ],
+                "input_types": ["Message", "Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -1381,23 +1258,17 @@
           "display_name": "Prompt",
           "id": "Prompt-0vHob",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {
-              "template": [
-                "topic"
-              ]
+              "template": ["topic"]
             },
             "description": "Create a prompt template with dynamic variables.",
             "display_name": "Prompt",
             "documentation": "",
             "edited": false,
-            "field_order": [
-              "template"
-            ],
+            "field_order": ["template"],
             "frozen": false,
             "icon": "prompts",
             "lf_version": "1.0.15",
@@ -1409,9 +1280,7 @@
                 "method": "build_prompt",
                 "name": "prompt",
                 "selected": "Message",
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1460,10 +1329,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Message",
-                  "Text"
-                ],
+                "input_types": ["Message", "Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -1499,9 +1365,7 @@
         "data": {
           "id": "SequentialTaskAgentComponent-GWMA1",
           "node": {
-            "base_classes": [
-              "SequentialTask"
-            ],
+            "base_classes": ["SequentialTask"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -1536,9 +1400,7 @@
                 "method": "build_agent_and_task",
                 "name": "task_output",
                 "selected": "SequentialTask",
-                "types": [
-                  "SequentialTask"
-                ],
+                "types": ["SequentialTask"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1615,9 +1477,7 @@
                 "display_name": "Backstory",
                 "dynamic": false,
                 "info": "The backstory of the agent.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -1655,9 +1515,7 @@
                 "display_name": "Expected Task Output",
                 "dynamic": false,
                 "info": "Clear definition of expected task outcome.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -1677,9 +1535,7 @@
                 "display_name": "Goal",
                 "dynamic": false,
                 "info": "The objective of the agent.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -1699,9 +1555,7 @@
                 "display_name": "Language Model",
                 "dynamic": false,
                 "info": "Language model that will run the agent.",
-                "input_types": [
-                  "LanguageModel"
-                ],
+                "input_types": ["LanguageModel"],
                 "list": false,
                 "name": "llm",
                 "placeholder": "",
@@ -1734,9 +1588,7 @@
                 "display_name": "Previous Task",
                 "dynamic": false,
                 "info": "The previous task in the sequence (for chaining).",
-                "input_types": [
-                  "SequentialTask"
-                ],
+                "input_types": ["SequentialTask"],
                 "list": false,
                 "name": "previous_task",
                 "placeholder": "",
@@ -1753,9 +1605,7 @@
                 "display_name": "Role",
                 "dynamic": false,
                 "info": "The role of the agent.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -1775,9 +1625,7 @@
                 "display_name": "Task Description",
                 "dynamic": false,
                 "info": "Descriptive text detailing task's purpose and execution.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -1797,9 +1645,7 @@
                 "display_name": "Tools",
                 "dynamic": false,
                 "info": "Tools at agent's disposal",
-                "input_types": [
-                  "Tool"
-                ],
+                "input_types": ["Tool"],
                 "list": true,
                 "name": "tools",
                 "placeholder": "",
@@ -1849,9 +1695,7 @@
         "data": {
           "id": "SequentialTaskAgentComponent-5i4Wg",
           "node": {
-            "base_classes": [
-              "SequentialTask"
-            ],
+            "base_classes": ["SequentialTask"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -1886,9 +1730,7 @@
                 "method": "build_agent_and_task",
                 "name": "task_output",
                 "selected": "SequentialTask",
-                "types": [
-                  "SequentialTask"
-                ],
+                "types": ["SequentialTask"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1965,9 +1807,7 @@
                 "display_name": "Backstory",
                 "dynamic": false,
                 "info": "The backstory of the agent.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -2005,9 +1845,7 @@
                 "display_name": "Expected Task Output",
                 "dynamic": false,
                 "info": "Clear definition of expected task outcome.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -2027,9 +1865,7 @@
                 "display_name": "Goal",
                 "dynamic": false,
                 "info": "The objective of the agent.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -2049,9 +1885,7 @@
                 "display_name": "Language Model",
                 "dynamic": false,
                 "info": "Language model that will run the agent.",
-                "input_types": [
-                  "LanguageModel"
-                ],
+                "input_types": ["LanguageModel"],
                 "list": false,
                 "name": "llm",
                 "placeholder": "",
@@ -2084,9 +1918,7 @@
                 "display_name": "Previous Task",
                 "dynamic": false,
                 "info": "The previous task in the sequence (for chaining).",
-                "input_types": [
-                  "SequentialTask"
-                ],
+                "input_types": ["SequentialTask"],
                 "list": false,
                 "name": "previous_task",
                 "placeholder": "",
@@ -2103,9 +1935,7 @@
                 "display_name": "Role",
                 "dynamic": false,
                 "info": "The role of the agent.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -2125,9 +1955,7 @@
                 "display_name": "Task Description",
                 "dynamic": false,
                 "info": "Descriptive text detailing task's purpose and execution.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -2147,9 +1975,7 @@
                 "display_name": "Tools",
                 "dynamic": false,
                 "info": "Tools at agent's disposal",
-                "input_types": [
-                  "Tool"
-                ],
+                "input_types": ["Tool"],
                 "list": true,
                 "name": "tools",
                 "placeholder": "",
@@ -2199,9 +2025,7 @@
         "data": {
           "id": "SequentialTaskAgentComponent-TPEWE",
           "node": {
-            "base_classes": [
-              "SequentialTask"
-            ],
+            "base_classes": ["SequentialTask"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -2236,9 +2060,7 @@
                 "method": "build_agent_and_task",
                 "name": "task_output",
                 "selected": "SequentialTask",
-                "types": [
-                  "SequentialTask"
-                ],
+                "types": ["SequentialTask"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -2315,9 +2137,7 @@
                 "display_name": "Backstory",
                 "dynamic": false,
                 "info": "The backstory of the agent.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -2355,9 +2175,7 @@
                 "display_name": "Expected Task Output",
                 "dynamic": false,
                 "info": "Clear definition of expected task outcome.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -2377,9 +2195,7 @@
                 "display_name": "Goal",
                 "dynamic": false,
                 "info": "The objective of the agent.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -2399,9 +2215,7 @@
                 "display_name": "Language Model",
                 "dynamic": false,
                 "info": "Language model that will run the agent.",
-                "input_types": [
-                  "LanguageModel"
-                ],
+                "input_types": ["LanguageModel"],
                 "list": false,
                 "name": "llm",
                 "placeholder": "",
@@ -2434,9 +2248,7 @@
                 "display_name": "Previous Task",
                 "dynamic": false,
                 "info": "The previous task in the sequence (for chaining).",
-                "input_types": [
-                  "SequentialTask"
-                ],
+                "input_types": ["SequentialTask"],
                 "list": false,
                 "name": "previous_task",
                 "placeholder": "",
@@ -2453,9 +2265,7 @@
                 "display_name": "Role",
                 "dynamic": false,
                 "info": "The role of the agent.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -2475,9 +2285,7 @@
                 "display_name": "Task Description",
                 "dynamic": false,
                 "info": "Descriptive text detailing task's purpose and execution.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -2497,9 +2305,7 @@
                 "display_name": "Tools",
                 "dynamic": false,
                 "info": "Tools at agent's disposal",
-                "input_types": [
-                  "Tool"
-                ],
+                "input_types": ["Tool"],
                 "list": true,
                 "name": "tools",
                 "placeholder": "",
@@ -2549,9 +2355,7 @@
         "data": {
           "id": "YFinanceTool-Asoka",
           "node": {
-            "base_classes": [
-              "Tool"
-            ],
+            "base_classes": ["Tool"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -2581,9 +2385,7 @@
                 "method": "build_tool",
                 "name": "tool",
                 "selected": "Tool",
-                "types": [
-                  "Tool"
-                ],
+                "types": ["Tool"],
                 "value": "__UNDEFINED__"
               }
             ],

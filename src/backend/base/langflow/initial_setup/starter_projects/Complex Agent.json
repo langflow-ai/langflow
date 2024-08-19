@@ -8,16 +8,19 @@
             "dataType": "HierarchicalCrewComponent",
             "id": "HierarchicalCrewComponent-3JGY1",
             "name": "output",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
+<<<<<<< HEAD
             "id": "ChatOutput-8FKry",
             "inputTypes": [
               "Message"
             ],
+=======
+            "id": "ChatOutput-ZEUNq",
+            "inputTypes": ["Message"],
+>>>>>>> 12b35a1d9 (Adds the CSV Output Parser)
             "type": "str"
           }
         },
@@ -35,16 +38,19 @@
             "dataType": "HierarchicalTaskComponent",
             "id": "HierarchicalTaskComponent-GuXH7",
             "name": "task_output",
-            "output_types": [
-              "HierarchicalTask"
-            ]
+            "output_types": ["HierarchicalTask"]
           },
           "targetHandle": {
             "fieldName": "tasks",
+<<<<<<< HEAD
             "id": "HierarchicalCrewComponent-3JGY1",
             "inputTypes": [
               "HierarchicalTask"
             ],
+=======
+            "id": "HierarchicalCrewComponent-EfNrX",
+            "inputTypes": ["HierarchicalTask"],
+>>>>>>> 12b35a1d9 (Adds the CSV Output Parser)
             "type": "other"
           }
         },
@@ -62,16 +68,19 @@
             "dataType": "CrewAIAgentComponent",
             "id": "CrewAIAgentComponent-ViX9d",
             "name": "output",
-            "output_types": [
-              "Agent"
-            ]
+            "output_types": ["Agent"]
           },
           "targetHandle": {
             "fieldName": "agents",
+<<<<<<< HEAD
             "id": "HierarchicalCrewComponent-3JGY1",
             "inputTypes": [
               "Agent"
             ],
+=======
+            "id": "HierarchicalCrewComponent-EfNrX",
+            "inputTypes": ["Agent"],
+>>>>>>> 12b35a1d9 (Adds the CSV Output Parser)
             "type": "other"
           }
         },
@@ -89,16 +98,19 @@
             "dataType": "OpenAIModel",
             "id": "OpenAIModel-ucjrK",
             "name": "model_output",
-            "output_types": [
-              "LanguageModel"
-            ]
+            "output_types": ["LanguageModel"]
           },
           "targetHandle": {
             "fieldName": "llm",
+<<<<<<< HEAD
             "id": "CrewAIAgentComponent-ViX9d",
             "inputTypes": [
               "LanguageModel"
             ],
+=======
+            "id": "CrewAIAgentComponent-Qm4en",
+            "inputTypes": ["LanguageModel"],
+>>>>>>> 12b35a1d9 (Adds the CSV Output Parser)
             "type": "other"
           }
         },
@@ -116,16 +128,19 @@
             "dataType": "CrewAIAgentComponent",
             "id": "CrewAIAgentComponent-aCLi7",
             "name": "output",
-            "output_types": [
-              "Agent"
-            ]
+            "output_types": ["Agent"]
           },
           "targetHandle": {
             "fieldName": "manager_agent",
+<<<<<<< HEAD
             "id": "HierarchicalCrewComponent-3JGY1",
             "inputTypes": [
               "Agent"
             ],
+=======
+            "id": "HierarchicalCrewComponent-EfNrX",
+            "inputTypes": ["Agent"],
+>>>>>>> 12b35a1d9 (Adds the CSV Output Parser)
             "type": "other"
           }
         },
@@ -143,16 +158,19 @@
             "dataType": "OpenAIModel",
             "id": "OpenAIModel-wMVJn",
             "name": "model_output",
-            "output_types": [
-              "LanguageModel"
-            ]
+            "output_types": ["LanguageModel"]
           },
           "targetHandle": {
             "fieldName": "llm",
+<<<<<<< HEAD
             "id": "CrewAIAgentComponent-aCLi7",
             "inputTypes": [
               "LanguageModel"
             ],
+=======
+            "id": "CrewAIAgentComponent-Q2BtZ",
+            "inputTypes": ["LanguageModel"],
+>>>>>>> 12b35a1d9 (Adds the CSV Output Parser)
             "type": "other"
           }
         },
@@ -170,16 +188,19 @@
             "dataType": "Prompt",
             "id": "Prompt-gbnQU",
             "name": "prompt",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "task_description",
+<<<<<<< HEAD
             "id": "HierarchicalTaskComponent-GuXH7",
             "inputTypes": [
               "Message"
             ],
+=======
+            "id": "HierarchicalTaskComponent-yWaMT",
+            "inputTypes": ["Message"],
+>>>>>>> 12b35a1d9 (Adds the CSV Output Parser)
             "type": "str"
           }
         },
@@ -197,17 +218,20 @@
             "dataType": "ChatInput",
             "id": "ChatInput-1Gki8",
             "name": "message",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "query",
+<<<<<<< HEAD
             "id": "Prompt-gbnQU",
             "inputTypes": [
               "Message",
               "Text"
             ],
+=======
+            "id": "Prompt-AVtIX",
+            "inputTypes": ["Message", "Text"],
+>>>>>>> 12b35a1d9 (Adds the CSV Output Parser)
             "type": "str"
           }
         },
@@ -225,16 +249,19 @@
             "dataType": "YFinanceTool",
             "id": "YFinanceTool-gzeyq",
             "name": "tool",
-            "output_types": [
-              "Tool"
-            ]
+            "output_types": ["Tool"]
           },
           "targetHandle": {
             "fieldName": "tools",
+<<<<<<< HEAD
             "id": "CrewAIAgentComponent-ViX9d",
             "inputTypes": [
               "Tool"
             ],
+=======
+            "id": "CrewAIAgentComponent-Qm4en",
+            "inputTypes": ["Tool"],
+>>>>>>> 12b35a1d9 (Adds the CSV Output Parser)
             "type": "other"
           }
         },
@@ -252,16 +279,19 @@
             "dataType": "Prompt",
             "id": "Prompt-qCC5T",
             "name": "prompt",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
+<<<<<<< HEAD
             "id": "OpenAIModel-KnjCY",
             "inputTypes": [
               "Message"
             ],
+=======
+            "id": "OpenAIModel-bjGnq",
+            "inputTypes": ["Message"],
+>>>>>>> 12b35a1d9 (Adds the CSV Output Parser)
             "type": "str"
           }
         },
@@ -279,16 +309,19 @@
             "dataType": "OpenAIModel",
             "id": "OpenAIModel-KnjCY",
             "name": "text_output",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "role",
+<<<<<<< HEAD
             "id": "CrewAIAgentComponent-ViX9d",
             "inputTypes": [
               "Message"
             ],
+=======
+            "id": "CrewAIAgentComponent-Qm4en",
+            "inputTypes": ["Message"],
+>>>>>>> 12b35a1d9 (Adds the CSV Output Parser)
             "type": "str"
           }
         },
@@ -306,17 +339,20 @@
             "dataType": "ChatInput",
             "id": "ChatInput-1Gki8",
             "name": "message",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "query",
+<<<<<<< HEAD
             "id": "Prompt-5wrVb",
             "inputTypes": [
               "Message",
               "Text"
             ],
+=======
+            "id": "Prompt-S0Qt3",
+            "inputTypes": ["Message", "Text"],
+>>>>>>> 12b35a1d9 (Adds the CSV Output Parser)
             "type": "str"
           }
         },
@@ -334,17 +370,20 @@
             "dataType": "ChatInput",
             "id": "ChatInput-1Gki8",
             "name": "message",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "query",
+<<<<<<< HEAD
             "id": "Prompt-qCC5T",
             "inputTypes": [
               "Message",
               "Text"
             ],
+=======
+            "id": "Prompt-kSwv4",
+            "inputTypes": ["Message", "Text"],
+>>>>>>> 12b35a1d9 (Adds the CSV Output Parser)
             "type": "str"
           }
         },
@@ -362,16 +401,19 @@
             "dataType": "Prompt",
             "id": "Prompt-5wrVb",
             "name": "prompt",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
+<<<<<<< HEAD
             "id": "OpenAIModel-wOSDH",
             "inputTypes": [
               "Message"
             ],
+=======
+            "id": "OpenAIModel-GAfpF",
+            "inputTypes": ["Message"],
+>>>>>>> 12b35a1d9 (Adds the CSV Output Parser)
             "type": "str"
           }
         },
@@ -389,17 +431,20 @@
             "dataType": "OpenAIModel",
             "id": "OpenAIModel-KnjCY",
             "name": "text_output",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "role",
+<<<<<<< HEAD
             "id": "Prompt-5wrVb",
             "inputTypes": [
               "Message",
               "Text"
             ],
+=======
+            "id": "Prompt-S0Qt3",
+            "inputTypes": ["Message", "Text"],
+>>>>>>> 12b35a1d9 (Adds the CSV Output Parser)
             "type": "str"
           }
         },
@@ -417,16 +462,19 @@
             "dataType": "OpenAIModel",
             "id": "OpenAIModel-wOSDH",
             "name": "text_output",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "goal",
+<<<<<<< HEAD
             "id": "CrewAIAgentComponent-ViX9d",
             "inputTypes": [
               "Message"
             ],
+=======
+            "id": "CrewAIAgentComponent-Qm4en",
+            "inputTypes": ["Message"],
+>>>>>>> 12b35a1d9 (Adds the CSV Output Parser)
             "type": "str"
           }
         },
@@ -444,16 +492,19 @@
             "dataType": "Prompt",
             "id": "Prompt-g5dyc",
             "name": "prompt",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
+<<<<<<< HEAD
             "id": "OpenAIModel-lajm6",
             "inputTypes": [
               "Message"
             ],
+=======
+            "id": "OpenAIModel-EnsCt",
+            "inputTypes": ["Message"],
+>>>>>>> 12b35a1d9 (Adds the CSV Output Parser)
             "type": "str"
           }
         },
@@ -471,17 +522,20 @@
             "dataType": "OpenAIModel",
             "id": "OpenAIModel-wOSDH",
             "name": "text_output",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "goal",
+<<<<<<< HEAD
             "id": "Prompt-g5dyc",
             "inputTypes": [
               "Message",
               "Text"
             ],
+=======
+            "id": "Prompt-a0x5s",
+            "inputTypes": ["Message", "Text"],
+>>>>>>> 12b35a1d9 (Adds the CSV Output Parser)
             "type": "str"
           }
         },
@@ -498,17 +552,20 @@
             "dataType": "OpenAIModel",
             "id": "OpenAIModel-KnjCY",
             "name": "text_output",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "role",
+<<<<<<< HEAD
             "id": "Prompt-g5dyc",
             "inputTypes": [
               "Message",
               "Text"
             ],
+=======
+            "id": "Prompt-a0x5s",
+            "inputTypes": ["Message", "Text"],
+>>>>>>> 12b35a1d9 (Adds the CSV Output Parser)
             "type": "str"
           }
         },
@@ -525,17 +582,20 @@
             "dataType": "ChatInput",
             "id": "ChatInput-1Gki8",
             "name": "message",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "query",
+<<<<<<< HEAD
             "id": "Prompt-g5dyc",
             "inputTypes": [
               "Message",
               "Text"
             ],
+=======
+            "id": "Prompt-a0x5s",
+            "inputTypes": ["Message", "Text"],
+>>>>>>> 12b35a1d9 (Adds the CSV Output Parser)
             "type": "str"
           }
         },
@@ -552,16 +612,19 @@
             "dataType": "OpenAIModel",
             "id": "OpenAIModel-lajm6",
             "name": "text_output",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "backstory",
+<<<<<<< HEAD
             "id": "CrewAIAgentComponent-ViX9d",
             "inputTypes": [
               "Message"
             ],
+=======
+            "id": "CrewAIAgentComponent-Qm4en",
+            "inputTypes": ["Message"],
+>>>>>>> 12b35a1d9 (Adds the CSV Output Parser)
             "type": "str"
           }
         },
@@ -578,16 +641,19 @@
             "dataType": "SearchAPI",
             "id": "SearchAPI-1mPpu",
             "name": "api_build_tool",
-            "output_types": [
-              "Tool"
-            ]
+            "output_types": ["Tool"]
           },
           "targetHandle": {
             "fieldName": "tools",
+<<<<<<< HEAD
             "id": "CrewAIAgentComponent-ViX9d",
             "inputTypes": [
               "Tool"
             ],
+=======
+            "id": "CrewAIAgentComponent-Qm4en",
+            "inputTypes": ["Tool"],
+>>>>>>> 12b35a1d9 (Adds the CSV Output Parser)
             "type": "other"
           }
         },
@@ -605,9 +671,7 @@
           "display_name": "Hierarchical Crew",
           "id": "HierarchicalCrewComponent-3JGY1",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -637,9 +701,7 @@
                 "method": "build_output",
                 "name": "output",
                 "selected": "Message",
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -651,9 +713,7 @@
                 "display_name": "Agents",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "Agent"
-                ],
+                "input_types": ["Agent"],
                 "list": true,
                 "name": "agents",
                 "placeholder": "",
@@ -687,9 +747,7 @@
                 "display_name": "Function Calling LLM",
                 "dynamic": false,
                 "info": "Turns the ReAct CrewAI agent into a function-calling agent",
-                "input_types": [
-                  "LanguageModel"
-                ],
+                "input_types": ["LanguageModel"],
                 "list": false,
                 "name": "function_calling_llm",
                 "placeholder": "",
@@ -705,9 +763,7 @@
                 "display_name": "Manager Agent",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "Agent"
-                ],
+                "input_types": ["Agent"],
                 "list": false,
                 "name": "manager_agent",
                 "placeholder": "",
@@ -723,9 +779,7 @@
                 "display_name": "Manager LLM",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "LanguageModel"
-                ],
+                "input_types": ["LanguageModel"],
                 "list": false,
                 "name": "manager_llm",
                 "placeholder": "",
@@ -786,9 +840,7 @@
                 "display_name": "Tasks",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "HierarchicalTask"
-                ],
+                "input_types": ["HierarchicalTask"],
                 "list": true,
                 "name": "tasks",
                 "placeholder": "",
@@ -847,10 +899,7 @@
         "data": {
           "id": "OpenAIModel-ucjrK",
           "node": {
-            "base_classes": [
-              "LanguageModel",
-              "Message"
-            ],
+            "base_classes": ["LanguageModel", "Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -882,9 +931,7 @@
                 "method": "text_response",
                 "name": "text_output",
                 "selected": "Message",
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               },
               {
@@ -893,9 +940,7 @@
                 "method": "build_model",
                 "name": "model_output",
                 "selected": "LanguageModel",
-                "types": [
-                  "LanguageModel"
-                ],
+                "types": ["LanguageModel"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -908,9 +953,7 @@
                 "display_name": "OpenAI API Key",
                 "dynamic": false,
                 "info": "The OpenAI API Key to use for the OpenAI model.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "load_from_db": true,
                 "name": "api_key",
                 "password": true,
@@ -944,9 +987,7 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "input_value",
@@ -1144,9 +1185,7 @@
           "display_name": "Chat Output",
           "id": "ChatOutput-8FKry",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -1172,9 +1211,7 @@
                 "method": "message_response",
                 "name": "message",
                 "selected": "Message",
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1204,9 +1241,7 @@
                 "display_name": "Data Template",
                 "dynamic": false,
                 "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "data_template",
@@ -1224,9 +1259,7 @@
                 "display_name": "Text",
                 "dynamic": false,
                 "info": "Message to be passed as output.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "input_value",
@@ -1245,10 +1278,7 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
+                "options": ["Machine", "User"],
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -1262,9 +1292,7 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "sender_name",
@@ -1282,9 +1310,7 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "session_id",
@@ -1332,9 +1358,7 @@
           "display_name": "Hierarchical Task",
           "id": "HierarchicalTaskComponent-GuXH7",
           "node": {
-            "base_classes": [
-              "HierarchicalTask"
-            ],
+            "base_classes": ["HierarchicalTask"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -1342,11 +1366,7 @@
             "display_name": "Hierarchical Task",
             "documentation": "",
             "edited": false,
-            "field_order": [
-              "task_description",
-              "expected_output",
-              "tools"
-            ],
+            "field_order": ["task_description", "expected_output", "tools"],
             "frozen": false,
             "icon": "CrewAI",
             "output_types": [],
@@ -1357,9 +1377,7 @@
                 "method": "build_task",
                 "name": "task_output",
                 "selected": "HierarchicalTask",
-                "types": [
-                  "HierarchicalTask"
-                ],
+                "types": ["HierarchicalTask"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1389,9 +1407,7 @@
                 "display_name": "Expected Output",
                 "dynamic": false,
                 "info": "Clear definition of expected task outcome.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -1410,9 +1426,7 @@
                 "display_name": "Description",
                 "dynamic": false,
                 "info": "Descriptive text detailing task's purpose and execution.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -1431,9 +1445,7 @@
                 "display_name": "Tools",
                 "dynamic": false,
                 "info": "List of tools/resources limited for task execution. Uses the Agent tools by default.",
-                "input_types": [
-                  "Tool"
-                ],
+                "input_types": ["Tool"],
                 "list": true,
                 "name": "tools",
                 "placeholder": "",
@@ -1464,9 +1476,7 @@
           "display_name": "CrewAI Agent",
           "id": "CrewAIAgentComponent-ViX9d",
           "node": {
-            "base_classes": [
-              "Agent"
-            ],
+            "base_classes": ["Agent"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -1496,9 +1506,7 @@
                 "method": "build_output",
                 "name": "output",
                 "selected": "Agent",
-                "types": [
-                  "Agent"
-                ],
+                "types": ["Agent"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1540,9 +1548,7 @@
                 "display_name": "Backstory",
                 "dynamic": false,
                 "info": "The backstory of the agent.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -1579,9 +1585,7 @@
                 "display_name": "Goal",
                 "dynamic": false,
                 "info": "The objective of the agent.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -1615,9 +1619,7 @@
                 "display_name": "Language Model",
                 "dynamic": false,
                 "info": "Language model that will run the agent.",
-                "input_types": [
-                  "LanguageModel"
-                ],
+                "input_types": ["LanguageModel"],
                 "list": false,
                 "name": "llm",
                 "placeholder": "",
@@ -1648,9 +1650,7 @@
                 "display_name": "Role",
                 "dynamic": false,
                 "info": "The role of the agent.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -1669,9 +1669,7 @@
                 "display_name": "Tools",
                 "dynamic": false,
                 "info": "Tools at agents disposal",
-                "input_types": [
-                  "Tool"
-                ],
+                "input_types": ["Tool"],
                 "list": true,
                 "name": "tools",
                 "placeholder": "",
@@ -1718,9 +1716,7 @@
           "display_name": "CrewAI Agent",
           "id": "CrewAIAgentComponent-aCLi7",
           "node": {
-            "base_classes": [
-              "Agent"
-            ],
+            "base_classes": ["Agent"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -1750,9 +1746,7 @@
                 "method": "build_output",
                 "name": "output",
                 "selected": "Agent",
-                "types": [
-                  "Agent"
-                ],
+                "types": ["Agent"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1794,9 +1788,7 @@
                 "display_name": "Backstory",
                 "dynamic": false,
                 "info": "The backstory of the agent.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -1833,9 +1825,7 @@
                 "display_name": "Goal",
                 "dynamic": false,
                 "info": "The objective of the agent.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -1869,9 +1859,7 @@
                 "display_name": "Language Model",
                 "dynamic": false,
                 "info": "Language model that will run the agent.",
-                "input_types": [
-                  "LanguageModel"
-                ],
+                "input_types": ["LanguageModel"],
                 "list": false,
                 "name": "llm",
                 "placeholder": "",
@@ -1902,9 +1890,7 @@
                 "display_name": "Role",
                 "dynamic": false,
                 "info": "The role of the agent.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -1923,9 +1909,7 @@
                 "display_name": "Tools",
                 "dynamic": false,
                 "info": "Tools at agents disposal",
-                "input_types": [
-                  "Tool"
-                ],
+                "input_types": ["Tool"],
                 "list": true,
                 "name": "tools",
                 "placeholder": "",
@@ -1974,10 +1958,7 @@
         "data": {
           "id": "OpenAIModel-wMVJn",
           "node": {
-            "base_classes": [
-              "LanguageModel",
-              "Message"
-            ],
+            "base_classes": ["LanguageModel", "Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -2009,9 +1990,7 @@
                 "method": "text_response",
                 "name": "text_output",
                 "selected": "Message",
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               },
               {
@@ -2020,9 +1999,7 @@
                 "method": "build_model",
                 "name": "model_output",
                 "selected": "LanguageModel",
-                "types": [
-                  "LanguageModel"
-                ],
+                "types": ["LanguageModel"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -2035,9 +2012,7 @@
                 "display_name": "OpenAI API Key",
                 "dynamic": false,
                 "info": "The OpenAI API Key to use for the OpenAI model.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "load_from_db": true,
                 "name": "api_key",
                 "password": true,
@@ -2071,9 +2046,7 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "input_value",
@@ -2271,24 +2244,18 @@
           "display_name": "Prompt",
           "id": "Prompt-gbnQU",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {
-              "template": [
-                "query"
-              ]
+              "template": ["query"]
             },
             "description": "Create a prompt template with dynamic variables.",
             "display_name": "Prompt",
             "documentation": "",
             "edited": false,
             "error": null,
-            "field_order": [
-              "template"
-            ],
+            "field_order": ["template"],
             "frozen": false,
             "full_path": null,
             "icon": "prompts",
@@ -2304,9 +2271,7 @@
                 "method": "build_prompt",
                 "name": "prompt",
                 "selected": "Message",
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -2339,10 +2304,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Message",
-                  "Text"
-                ],
+                "input_types": ["Message", "Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -2389,9 +2351,7 @@
         "data": {
           "id": "ChatInput-1Gki8",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -2417,9 +2377,7 @@
                 "method": "message_response",
                 "name": "message",
                 "selected": "Message",
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -2490,9 +2448,7 @@
                 "display_name": "Text",
                 "dynamic": false,
                 "info": "Message to be passed as input.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -2512,10 +2468,7 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
+                "options": ["Machine", "User"],
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -2529,9 +2482,7 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "sender_name",
@@ -2549,9 +2500,7 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "session_id",
@@ -2604,9 +2553,7 @@
           "display_name": "Yahoo Finance News Tool",
           "id": "YFinanceTool-gzeyq",
           "node": {
-            "base_classes": [
-              "Tool"
-            ],
+            "base_classes": ["Tool"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -2635,9 +2582,7 @@
                 "method": "build_tool",
                 "name": "tool",
                 "selected": "Tool",
-                "types": [
-                  "Tool"
-                ],
+                "types": ["Tool"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -2706,10 +2651,7 @@
         "data": {
           "id": "OpenAIModel-KnjCY",
           "node": {
-            "base_classes": [
-              "LanguageModel",
-              "Message"
-            ],
+            "base_classes": ["LanguageModel", "Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -2741,9 +2683,7 @@
                 "method": "text_response",
                 "name": "text_output",
                 "selected": "Message",
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               },
               {
@@ -2752,9 +2692,7 @@
                 "method": "build_model",
                 "name": "model_output",
                 "selected": "LanguageModel",
-                "types": [
-                  "LanguageModel"
-                ],
+                "types": ["LanguageModel"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -2767,9 +2705,7 @@
                 "display_name": "OpenAI API Key",
                 "dynamic": false,
                 "info": "The OpenAI API Key to use for the OpenAI model.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "load_from_db": true,
                 "name": "api_key",
                 "password": true,
@@ -2803,9 +2739,7 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "input_value",
@@ -3003,23 +2937,24 @@
           "display_name": "Role Prompt",
           "id": "Prompt-qCC5T",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {
-              "template": [
-                "query"
-              ]
+              "template": ["query"]
             },
             "description": "Create a prompt template with dynamic variables.",
             "display_name": "Role Prompt",
             "documentation": "",
             "edited": false,
+<<<<<<< HEAD
             "field_order": [
               "template"
             ],
+=======
+            "error": null,
+            "field_order": ["template"],
+>>>>>>> 12b35a1d9 (Adds the CSV Output Parser)
             "frozen": false,
             "icon": "prompts",
             "output_types": [],
@@ -3030,9 +2965,7 @@
                 "method": "build_prompt",
                 "name": "prompt",
                 "selected": "Message",
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -3065,10 +2998,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Message",
-                  "Text"
-                ],
+                "input_types": ["Message", "Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -3120,10 +3050,7 @@
         "data": {
           "id": "OpenAIModel-wOSDH",
           "node": {
-            "base_classes": [
-              "LanguageModel",
-              "Message"
-            ],
+            "base_classes": ["LanguageModel", "Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -3155,9 +3082,7 @@
                 "method": "text_response",
                 "name": "text_output",
                 "selected": "Message",
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               },
               {
@@ -3166,9 +3091,7 @@
                 "method": "build_model",
                 "name": "model_output",
                 "selected": "LanguageModel",
-                "types": [
-                  "LanguageModel"
-                ],
+                "types": ["LanguageModel"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -3181,9 +3104,7 @@
                 "display_name": "OpenAI API Key",
                 "dynamic": false,
                 "info": "The OpenAI API Key to use for the OpenAI model.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "load_from_db": true,
                 "name": "api_key",
                 "password": true,
@@ -3217,9 +3138,7 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "input_value",
@@ -3417,24 +3336,24 @@
           "display_name": "Goal Prompt",
           "id": "Prompt-5wrVb",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {
-              "template": [
-                "query",
-                "role"
-              ]
+              "template": ["query", "role"]
             },
             "description": "Create a prompt template with dynamic variables.",
             "display_name": "Goal Prompt",
             "documentation": "",
             "edited": false,
+<<<<<<< HEAD
             "field_order": [
               "template"
             ],
+=======
+            "error": null,
+            "field_order": ["template"],
+>>>>>>> 12b35a1d9 (Adds the CSV Output Parser)
             "frozen": false,
             "icon": "prompts",
             "output_types": [],
@@ -3445,9 +3364,7 @@
                 "method": "build_prompt",
                 "name": "prompt",
                 "selected": "Message",
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -3480,10 +3397,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Message",
-                  "Text"
-                ],
+                "input_types": ["Message", "Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -3503,10 +3417,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Message",
-                  "Text"
-                ],
+                "input_types": ["Message", "Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -3558,10 +3469,7 @@
         "data": {
           "id": "OpenAIModel-lajm6",
           "node": {
-            "base_classes": [
-              "LanguageModel",
-              "Message"
-            ],
+            "base_classes": ["LanguageModel", "Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -3593,9 +3501,7 @@
                 "method": "text_response",
                 "name": "text_output",
                 "selected": "Message",
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               },
               {
@@ -3604,9 +3510,7 @@
                 "method": "build_model",
                 "name": "model_output",
                 "selected": "LanguageModel",
-                "types": [
-                  "LanguageModel"
-                ],
+                "types": ["LanguageModel"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -3619,9 +3523,7 @@
                 "display_name": "OpenAI API Key",
                 "dynamic": false,
                 "info": "The OpenAI API Key to use for the OpenAI model.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "load_from_db": true,
                 "name": "api_key",
                 "password": true,
@@ -3655,9 +3557,7 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "input_value",
@@ -3855,26 +3755,18 @@
           "display_name": "Prompt",
           "id": "Prompt-g5dyc",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {
-              "template": [
-                "query",
-                "role",
-                "goal"
-              ]
+              "template": ["query", "role", "goal"]
             },
             "description": "Create a prompt template with dynamic variables.",
             "display_name": "Prompt",
             "documentation": "",
             "edited": false,
             "error": null,
-            "field_order": [
-              "template"
-            ],
+            "field_order": ["template"],
             "frozen": false,
             "full_path": null,
             "icon": "prompts",
@@ -3890,9 +3782,7 @@
                 "method": "build_prompt",
                 "name": "prompt",
                 "selected": "Message",
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -3925,10 +3815,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Message",
-                  "Text"
-                ],
+                "input_types": ["Message", "Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -3949,10 +3836,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Message",
-                  "Text"
-                ],
+                "input_types": ["Message", "Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -3973,10 +3857,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Message",
-                  "Text"
-                ],
+                "input_types": ["Message", "Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -4029,10 +3910,7 @@
           "display_name": "Search API",
           "id": "SearchAPI-1mPpu",
           "node": {
-            "base_classes": [
-              "Data",
-              "Tool"
-            ],
+            "base_classes": ["Data", "Tool"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -4055,9 +3933,7 @@
                 "method": "run_model",
                 "name": "api_run_model",
                 "selected": "Data",
-                "types": [
-                  "Data"
-                ],
+                "types": ["Data"],
                 "value": "__UNDEFINED__"
               },
               {
@@ -4066,9 +3942,7 @@
                 "method": "build_tool",
                 "name": "api_build_tool",
                 "selected": "Tool",
-                "types": [
-                  "Tool"
-                ],
+                "types": ["Tool"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -4080,9 +3954,7 @@
                 "display_name": "SearchAPI API Key",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "load_from_db": true,
                 "name": "api_key",
                 "password": true,
@@ -4116,9 +3988,7 @@
                 "display_name": "Engine",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "engine",
@@ -4136,9 +4006,7 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -4229,6 +4097,15 @@
   "endpoint_name": null,
   "id": "93709197-049c-41fa-ab4d-f871c20e83eb",
   "is_component": false,
+<<<<<<< HEAD
   "last_tested_version": "1.0.17",
+=======
+  "last_tested_version": "1.0.9",
+<<<<<<< HEAD
+>>>>>>> 12b35a1d9 (Adds the CSV Output Parser)
   "name": "Dynamic Agent"
 }
+=======
+  "name": "Complex Agent"
+}
+>>>>>>> 11df3241e (Adds the CSV Output Parser)
