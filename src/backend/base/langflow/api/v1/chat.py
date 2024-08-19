@@ -34,6 +34,7 @@ from langflow.api.v1.schemas import (
 from langflow.events.event_manager import EventManager, create_default_event_manager
 from langflow.exceptions.component import ComponentBuildException
 from langflow.graph.graph.base import Graph
+from langflow.graph.graph.schema import CallbackFunction
 from langflow.graph.utils import log_vertex_build
 from langflow.schema.schema import OutputValue
 from langflow.services.auth.utils import get_current_active_user
