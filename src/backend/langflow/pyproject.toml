@@ -107,6 +107,10 @@ cassio = [
 couchbase = [
     "couchbase ==4.2.1"]
 
+[tool.uv.workspace]
+members = [
+    "../langflow-base",
+]
 [tool.uv.sources]
 langflow-base = { workspace = true }
 
