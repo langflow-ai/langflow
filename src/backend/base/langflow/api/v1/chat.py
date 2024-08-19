@@ -336,7 +336,7 @@ async def build_flow(
         client_consumed_queue: asyncio.Queue,
         callback: CallbackFunction | None = None,
     ) -> None:
-        build_task = asyncio.create_task(await asyncio.to_thread(_build_vertex, vertex_id, graph))
+        build_task = asyncio.create_task(await asyncio.to_thread(_build_vertex, vertex_id, graph, callback))
         try:
             await build_task
         except asyncio.CancelledError:
@@ -368,7 +368,7 @@ async def build_flow(
                     return
 
     async def event_generator(queue: asyncio.Queue, client_consumed_queue: asyncio.Queue) -> None:
-        async def send_event_wrapper(queue) -> Callable:
+        def send_event_wrapper(queue) -> Callable:
             partial_send_event = partial(send_event, queue=queue)
 
             def send_event_callback(event, data):
