@@ -24,12 +24,7 @@ export default function FileCardWrapper({
         {formatFileName(name, 50)}
         <ForwardedIconComponent name={show ? "ChevronDown" : "ChevronRight"} />
       </span>
-      <FileCard
-        showFile={show}
-        fileName={name}
-        fileType={type}
-        content={path}
-      />
+      <FileCard showFile={show} fileName={name} fileType={type} path={path} />
     </div>
   );
 }
