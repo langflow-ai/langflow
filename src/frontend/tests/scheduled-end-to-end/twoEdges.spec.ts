@@ -4,7 +4,13 @@ test("user should be able to see multiple edges and interact with them", async (
   page,
 }) => {
   await page.goto("/");
-  await page.waitForTimeout(2000);
+  await page.waitForSelector('[data-testid="mainpage_title"]', {
+    timeout: 30000,
+  });
+
+  await page.waitForSelector('[id="new-project-btn"]', {
+    timeout: 30000,
+  });
 
   let modalCount = 0;
   try {

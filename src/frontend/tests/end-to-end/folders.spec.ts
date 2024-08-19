@@ -3,7 +3,13 @@ import { readFileSync } from "fs";
 
 test("CRUD folders", async ({ page }) => {
   await page.goto("/");
-  await page.waitForTimeout(2000);
+  await page.waitForSelector('[data-testid="mainpage_title"]', {
+    timeout: 30000,
+  });
+
+  await page.waitForSelector('[id="new-project-btn"]', {
+    timeout: 30000,
+  });
 
   let modalCount = 0;
   try {
@@ -107,7 +113,13 @@ test("add folder by drag and drop", async ({ page }) => {
 
 test("change flow folder", async ({ page }) => {
   await page.goto("/");
-  await page.waitForTimeout(2000);
+  await page.waitForSelector('[data-testid="mainpage_title"]', {
+    timeout: 30000,
+  });
+
+  await page.waitForSelector('[id="new-project-btn"]', {
+    timeout: 30000,
+  });
 
   let modalCount = 0;
   try {

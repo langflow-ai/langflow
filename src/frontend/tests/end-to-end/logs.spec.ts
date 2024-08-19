@@ -13,7 +13,13 @@ test("should able to see and interact with logs", async ({ page }) => {
   }
 
   await page.goto("/");
-  await page.waitForTimeout(2000);
+  await page.waitForSelector('[data-testid="mainpage_title"]', {
+    timeout: 30000,
+  });
+
+  await page.waitForSelector('[id="new-project-btn"]', {
+    timeout: 30000,
+  });
 
   let modalCount = 0;
   try {
@@ -33,7 +39,7 @@ test("should able to see and interact with logs", async ({ page }) => {
   }
 
   await page.getByRole("heading", { name: "Basic Prompting" }).click();
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(1000);
 
   let outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
 
@@ -55,7 +61,7 @@ test("should able to see and interact with logs", async ({ page }) => {
   await page.getByTestId("dropdown_str_model_name").click();
   await page.getByTestId("gpt-4o-1-option").click();
 
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(1000);
   await page.getByTestId("button_run_chat output").first().click();
 
   await page.waitForSelector("text=built successfully", { timeout: 30000 });

@@ -2,7 +2,13 @@ import { test } from "@playwright/test";
 
 test("should see general profile gradient", async ({ page }) => {
   await page.goto("/");
-  await page.waitForTimeout(2000);
+  await page.waitForSelector('[data-testid="mainpage_title"]', {
+    timeout: 30000,
+  });
+
+  await page.waitForSelector('[id="new-project-btn"]', {
+    timeout: 30000,
+  });
   await page.getByTestId("user-profile-settings").click();
   await page.waitForTimeout(1000);
 
@@ -17,7 +23,7 @@ test("should interact with global variables", async ({ page }) => {
   const randomName = Math.random().toString(36).substring(2);
 
   await page.goto("/");
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(1000);
   await page.getByTestId("user-profile-settings").click();
   await page.getByText("Settings").click();
   await page.getByText("Global Variables").click();
@@ -29,12 +35,12 @@ test("should interact with global variables", async ({ page }) => {
     .fill(randomName);
   await page.getByTestId("popover-anchor-type-global-variables").click();
   await page.getByPlaceholder("Search options...").fill("Generic");
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(1000);
   await page.getByText("Generic", { exact: true }).last().isVisible();
   await page.getByText("Generic", { exact: true }).last().click();
 
   await page.getByTestId("popover-anchor-type-global-variables").click();
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(1000);
   await page.getByPlaceholder("Search options...").fill("Generic");
   await page.getByText("Generic", { exact: true }).last().isVisible();
   await page.getByText("Generic", { exact: true }).last().click();
@@ -86,7 +92,13 @@ test("should interact with global variables", async ({ page }) => {
 
 test("should see shortcuts", async ({ page }) => {
   await page.goto("/");
-  await page.waitForTimeout(2000);
+  await page.waitForSelector('[data-testid="mainpage_title"]', {
+    timeout: 30000,
+  });
+
+  await page.waitForSelector('[id="new-project-btn"]', {
+    timeout: 30000,
+  });
   await page.getByTestId("user-profile-settings").click();
   await page.waitForTimeout(1000);
 
@@ -119,10 +131,10 @@ test("should see shortcuts", async ({ page }) => {
 
 test("should interact with API Keys", async ({ page }) => {
   await page.goto("/");
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(1000);
   await page.getByTestId("user-profile-settings").click();
   await page.getByText("Settings").click();
-  await page.getByText("Langflow API").click();
+  await page.getByText("Langflow API").first().click();
   await page.getByText("Langflow API", { exact: true }).nth(1).isVisible();
   await page.getByText("Add New").click();
   await page.getByPlaceholder("Insert a name for your API Key").isVisible();

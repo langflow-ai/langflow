@@ -26,7 +26,7 @@ test("should order the visualization", async ({ page }) => {
 
   await page.getByTestId("api-key-save-button-store").click();
 
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(1000);
   await page.getByText("Success! Your API Key has been saved.").isVisible();
 
   await page.waitForTimeout(1000);
@@ -37,7 +37,7 @@ test("should order the visualization", async ({ page }) => {
   await page.getByText("Basic RAG").isVisible();
 
   await page.getByTestId("select-order-store").click();
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(1000);
   await page.getByText("Alphabetical").click();
 
   await page.getByText("Album Cover Builder").isVisible();
@@ -72,7 +72,7 @@ test("should filter by type", async ({ page }) => {
 
   await page.getByTestId("api-key-save-button-store").click();
 
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(1000);
   await page.getByText("Success! Your API Key has been saved.").isVisible();
 
   await page.getByTestId("button-store").click();
@@ -99,9 +99,9 @@ test("should filter by type", async ({ page }) => {
   await page.waitForTimeout(8000);
 
   let iconGroupAllCount = await page.getByTestId("icon-Group")?.count();
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(1000);
   let toyBrickAllCount = await page.getByTestId("icon-ToyBrick")?.count();
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(1000);
 
   if (iconGroupAllCount === 0 || toyBrickAllCount === 0) {
     expect(false).toBe(true);

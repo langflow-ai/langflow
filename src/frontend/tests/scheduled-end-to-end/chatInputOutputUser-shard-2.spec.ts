@@ -57,7 +57,7 @@ test("user must interact with chat with Input/Output", async ({ page }) => {
   await page.getByTestId("dropdown_str_model_name").click();
   await page.getByTestId("gpt-4o-1-option").click();
 
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(1000);
   await page.getByText("Playground", { exact: true }).click();
 
   await page.waitForSelector('[data-testid="input-chat-playground"]', {

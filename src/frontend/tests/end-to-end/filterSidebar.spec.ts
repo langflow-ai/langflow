@@ -4,7 +4,13 @@ test("user must see on handle click the possibility connections - LLMChain", asy
   page,
 }) => {
   await page.goto("/");
-  await page.waitForTimeout(2000);
+  await page.waitForSelector('[data-testid="mainpage_title"]', {
+    timeout: 30000,
+  });
+
+  await page.waitForSelector('[id="new-project-btn"]', {
+    timeout: 30000,
+  });
 
   let modalCount = 0;
   try {
@@ -34,7 +40,7 @@ test("user must see on handle click the possibility connections - LLMChain", asy
   await page.getByPlaceholder("Search").click();
   await page.getByPlaceholder("Search").fill("api request");
 
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(1000);
   await page
     .getByTestId("dataAPI Request")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));

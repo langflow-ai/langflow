@@ -4,7 +4,13 @@ test("user must see on handle click the possibility connections - RetrievalQA", 
   page,
 }) => {
   await page.goto("/");
-  await page.waitForTimeout(2000);
+  await page.waitForSelector('[data-testid="mainpage_title"]', {
+    timeout: 30000,
+  });
+
+  await page.waitForSelector('[id="new-project-btn"]', {
+    timeout: 30000,
+  });
 
   let modalCount = 0;
   try {

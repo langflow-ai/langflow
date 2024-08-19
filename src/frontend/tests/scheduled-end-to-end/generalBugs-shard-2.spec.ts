@@ -11,7 +11,13 @@ test("should use webhook component on API", async ({ page }) => {
     dotenv.config({ path: path.resolve(__dirname, "../../.env") });
   }
   await page.goto("/");
-  await page.waitForTimeout(2000);
+  await page.waitForSelector('[data-testid="mainpage_title"]', {
+    timeout: 30000,
+  });
+
+  await page.waitForSelector('[id="new-project-btn"]', {
+    timeout: 30000,
+  });
 
   let modalCount = 0;
   try {
@@ -55,7 +61,7 @@ test("should use webhook component on API", async ({ page }) => {
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
 
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(1000);
   await page.getByText("API", { exact: true }).click();
 
   await page.getByText("Webhook cURL", { exact: true }).click();

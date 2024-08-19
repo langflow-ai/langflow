@@ -24,7 +24,7 @@ test.describe("group node test", () => {
       .getByRole("heading", { name: "Basic Prompting" })
       .first()
       .click();
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(1000);
     await page.getByLabel("fit view").first().click();
 
     await page.getByTestId("title-OpenAI").click();

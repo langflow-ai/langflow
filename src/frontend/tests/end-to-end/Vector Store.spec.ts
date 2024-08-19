@@ -18,7 +18,13 @@ test("Vector Store RAG", async ({ page }) => {
   );
 
   await page.goto("/");
-  await page.waitForTimeout(2000);
+  await page.waitForSelector('[data-testid="mainpage_title"]', {
+    timeout: 30000,
+  });
+
+  await page.waitForSelector('[id="new-project-btn"]', {
+    timeout: 30000,
+  });
 
   let modalCount = 0;
   try {
@@ -93,7 +99,7 @@ test("Vector Store RAG", async ({ page }) => {
   await fileChooser.setFiles(path.join(__dirname, "/assets/test_file.txt"));
   await page.getByText("test_file.txt").isVisible();
 
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(1000);
 
   await page.getByTestId("button_run_astra db").first().click();
   await page.waitForSelector("text=built successfully", { timeout: 60000 * 2 });

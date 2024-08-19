@@ -26,7 +26,7 @@ test("should filter by tag", async ({ page }) => {
 
   await page.getByTestId("api-key-save-button-store").click();
 
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(1000);
   await page.getByText("Success! Your API Key has been saved.").isVisible();
 
   await page.getByTestId("button-store").click();
@@ -76,11 +76,11 @@ test("should share component with share button", async ({ page }) => {
 
   await page.getByTestId("api-key-save-button-store").click();
 
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(1000);
   await page.getByText("Success! Your API Key has been saved.").isVisible();
 
   await page.getByText("My Collection").click();
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(1000);
 
   let modalCount = 0;
   try {

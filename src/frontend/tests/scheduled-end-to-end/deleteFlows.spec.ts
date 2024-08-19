@@ -25,7 +25,7 @@ test("should delete a flow", async ({ page }) => {
 
   await page.getByTestId("api-key-save-button-store").click();
 
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(1000);
   await page.getByText("Success! Your API Key has been saved.").isVisible();
 
   await page.waitForSelector("text=Store", { timeout: 30000 });

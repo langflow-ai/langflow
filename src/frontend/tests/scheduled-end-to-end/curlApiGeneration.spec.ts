@@ -18,7 +18,7 @@ test("curl_api_generation", async ({ page, context }) => {
     modalCount = await page.getByTestId("modal-title")?.count();
   }
   await page.getByRole("heading", { name: "Basic Prompting" }).click();
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(1000);
   await page.getByText("API", { exact: true }).click();
   await page.getByRole("tab", { name: "cURL" }).click();
   await page.getByTestId("icon-Copy").last().click();

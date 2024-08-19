@@ -26,10 +26,10 @@ test("should delete a component", async ({ page }) => {
 
   await page.getByTestId("api-key-save-button-store").click();
 
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(1000);
   await page.getByText("Success! Your API Key has been saved.").isVisible();
 
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(1000);
   await page.getByText("Store").nth(0).click();
   await page.getByTestId("install-Basic RAG").click();
   await page.waitForTimeout(5000);
