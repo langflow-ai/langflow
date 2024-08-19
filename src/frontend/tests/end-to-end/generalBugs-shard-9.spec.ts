@@ -103,7 +103,7 @@ test("memory should work as expect", async ({ page }) => {
 
 User: {user_input}
 
-AI: 
+AI:
   `;
 
   await page
