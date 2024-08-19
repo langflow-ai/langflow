@@ -77,10 +77,6 @@ const useSaveFlow = () => {
             },
           );
         } else {
-          setErrorData({
-            title: "Failed to save flow",
-            list: ["Can't save empty flow"],
-          });
           setSaveLoading(false);
           reject(new Error("Can't save empty flow"));
         }
