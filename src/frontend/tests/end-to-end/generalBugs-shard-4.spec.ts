@@ -10,7 +10,13 @@ test("should be able to move flow from folder, rename it and be displayed on cor
 
   await page.goto("/");
   await page.locator("span").filter({ hasText: "My Collection" }).isVisible();
-  await page.waitForTimeout(2000);
+  await page.waitForSelector('[data-testid="mainpage_title"]', {
+    timeout: 30000,
+  });
+
+  await page.waitForSelector('[id="new-project-btn"]', {
+    timeout: 30000,
+  });
 
   let modalCount = 0;
   try {
