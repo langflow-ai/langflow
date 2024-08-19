@@ -161,7 +161,6 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
 
     @check_cached_vector_store
     def build_vector_store(self):
-        print("Build vector store")
         try:
             from langchain_astradb import AstraDBVectorStore
             from langchain_astradb.utils.astradb import SetupMode
@@ -227,7 +226,6 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
         return vector_store
 
     def _add_documents_to_vector_store(self, vector_store):
-        print("Adding documents to the vector store")
         documents = []
         for _input in self.ingest_data or []:
             if isinstance(_input, Data):

@@ -54,7 +54,7 @@ class LCVectorStoreComponent(Component, ABC):
 
     def _validate_outputs(self):
         # At least these three outputs must be defined
-        required_output_methods = ["build_base_retriever", "search_documents", "build_vector_store_with_cached_check"]
+        required_output_methods = ["build_base_retriever", "search_documents", "build_vector_store"]
         output_names = [output.name for output in self.outputs]
         for method_name in required_output_methods:
             if method_name not in output_names:
