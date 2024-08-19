@@ -119,7 +119,7 @@ test("user must see on handle hover a tooltip with possibility connections", asy
     await expect(
       page.getByTestId("available-input-models").first(),
     ).toBeVisible();
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(1000);
 
     await page.getByTestId("icon-Search").click();
 
@@ -142,7 +142,7 @@ test("user must see on handle hover a tooltip with possibility connections", asy
   }
 
   await visibleElementHandle.hover().then(async () => {
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(2500);
 
     await expect(
       page.getByTestId("available-input-retrievers").first(),
