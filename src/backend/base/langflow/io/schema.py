@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 
 def create_input_schema(inputs: list["InputTypes"]) -> Type[BaseModel]:
     if not isinstance(inputs, list):
-        raise ValueError("inputs must be a list of Inputs")
+        raise TypeError("inputs must be a list of Inputs")
     fields = {}
     for input_model in inputs:
         # Create a Pydantic Field for each input field
