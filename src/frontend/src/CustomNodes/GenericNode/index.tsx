@@ -263,7 +263,7 @@ export default function GenericNode({
               types,
             )}
             title={getFieldTitle(data.node?.template!, templateField)}
-            info={data.node?.template[templateField].info}
+            info={data.node?.template[templateField].info!}
             name={templateField}
             tooltipTitle={
               data.node?.template[templateField].input_types?.join("\n") ??
