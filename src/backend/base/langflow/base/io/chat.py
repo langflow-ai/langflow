@@ -21,9 +21,35 @@ class ChatComponent(Component):
             message,
             flow_id=self.graph.flow_id,
         )
-
+        if len(messages) > 1:
+            raise ValueError("Only one message can be stored at a time.")
+        stored_message = messages[0]
+        if hasattr(self, "_callback") and self._callback and stored_message.id:
+            if not isinstance(message.text, str):
+                complete_message = self._stream_message(message, stored_message.id)
+                update_message(message_id=stored_message.id, message=dict(text=complete_message))
+                self.vertex._added_message = stored_message
         self.status = messages
         return messages
+
+    def _stream_message(self, message: Message, message_id: str):
+        iterator = message.text
+        if not isinstance(iterator, (AsyncIterator, Iterator)):
+            raise ValueError("The message must be an iterator or an async iterator.")
+        complete_message: str = ""
+        if isinstance(iterator, AsyncIterator):
+            iterator = asyncio.ensure_future(iterator.__anext__())
+        for chunk in iterator:
+            complete_message += chunk
+            data = {
+                "text": complete_message,
+                "chunk": chunk,
+                "sender": message.sender,
+                "sender_name": message.sender_name,
+                "id": message_id,
+            }
+            self._callback("token", data)
+        return complete_message
 
     def build_with_data(
         self,
