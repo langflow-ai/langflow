@@ -44,7 +44,7 @@ test("should interact with global variables", async ({ page }) => {
     .fill("testtesttesttesttesttesttesttest");
   await page.getByTestId("popover-anchor-apply-to-fields").click();
 
-  await page.waitForTimeout(5000);
+  await page.waitForTimeout(3000);
 
   await page.getByPlaceholder("Search options...").fill("System Message");
 
