@@ -1,4 +1,5 @@
 import { AIMLIcon } from "@/icons/AIML";
+import Perplexity from "@/icons/Perplexity/Perplexity";
 import { AthenaIcon } from "@/icons/athena/index";
 import { freezeAllIcon } from "@/icons/freezeAll";
 import {
@@ -599,4 +600,5 @@ export const nodeIconsLucide: iconsType = {
   athenaIcon: AthenaIcon,
   OptionIcon: OptionIcon,
   Option: OptionIcon,
+  Perplexity,
 };
