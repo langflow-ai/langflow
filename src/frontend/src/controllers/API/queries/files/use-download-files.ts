@@ -21,11 +21,8 @@ export const useGetDownloadFileMutation: useMutationFunctionType<
     if (!params) return;
     // need to use fetch because axios convert blob data to string, and this convertion can corrupt the file
     const response = await fetch(`${getURL("FILES")}/download/${params.path}`);
-    console.log(response);
     const blob = await response.blob();
-    console.log(blob);
     const url = URL.createObjectURL(blob);
-    console.log(url);
 
     const link = document.createElement("a");
     link.href = url;
