@@ -1,13 +1,13 @@
 from json import JSONDecodeError
-
+import json
+import jq
+from json_repair import repair_json
 from langflow.custom import Component
 from langflow.helpers.data import data_to_text
 from langflow.inputs import HandleInput, MessageTextInput
 from langflow.io import DataInput, MultilineInput, Output, StrInput
 from langflow.schema import Data
 from langflow.schema.message import Message
-import jq
-import json
 
 
 class ParseJSONDataComponent(Component):
@@ -56,11 +56,13 @@ class ParseJSONDataComponent(Component):
         if len(to_filter):
             try:
                 to_filter = [json.loads(str(f)) for f in to_filter]
-            except:
+            except json.JSONDecodeError:
+                to_filter = [repair_json(str(f)) for f in to_filter]
+            except Exception:
                 pass
         to_filter = json.dumps(to_filter)
         to_filter = str(to_filter)
 
         results = jq.compile(self.query).input_text(to_filter).all()
-        docs = [Data(text=value) for value in results]
+        docs = [Data(data=value) for value in results]
         return docs
