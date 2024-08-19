@@ -18,7 +18,13 @@ const useIconStatus = (
 
   const renderIconStatus = () => {
     if (buildStatus === BuildStatus.BUILDING) {
-      return <Loading className="mr-1 text-medium-indigo" size={20} />;
+      return (
+        <Loading
+          data-testid="loading_icon"
+          className="mr-1 text-medium-indigo"
+          size={20}
+        />
+      );
     } else {
       return (
         <>
