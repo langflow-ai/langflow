@@ -14,6 +14,7 @@ from loguru import logger
 
 from langflow.events.event_manager import EventManager
 from langflow.exceptions.component import ComponentBuildException
+from langflow.graph.graph.schema import CallbackFunction
 from langflow.graph.schema import INPUT_COMPONENTS, OUTPUT_COMPONENTS, InterfaceComponentTypes, ResultData
 from langflow.graph.utils import UnbuiltObject, UnbuiltResult, log_transaction
 from langflow.graph.vertex.schema import NodeData
