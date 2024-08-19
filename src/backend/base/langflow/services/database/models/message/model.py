@@ -36,10 +36,16 @@ class MessageBase(SQLModel):
             timestamp = message.timestamp
         if not flow_id and message.flow_id:
             flow_id = message.flow_id
+        if not isinstance(message.text, str):
+            # If the text is not a string, it means it could be
+            # async iterator so we simply add it as an empty string
+            message_text = ""
+        else:
+            message_text = message.text
         return cls(
             sender=message.sender,
             sender_name=message.sender_name,
-            text=message.text,
+            text=message_text,
             session_id=message.session_id,
             files=message.files or [],
             timestamp=timestamp,
