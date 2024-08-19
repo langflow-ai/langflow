@@ -29,16 +29,25 @@ def create_input_schema(inputs: list["InputTypes"]) -> Type[BaseModel]:
         field_type = input_model.field_type
         if isinstance(field_type, FieldTypes):
             field_type = _convert_field_type_to_type[field_type]
-        if hasattr(input_model, "options") and input_model.options:
-            field_type = Literal[*input_model.options]
+        if hasattr(input_model, "options") and isinstance(input_model.options, list) and input_model.options:
+            literal_string = f"Literal{input_model.options}"
+            # validate that the literal_string is a valid literal
+
+            field_type = eval(literal_string, globals={"Literal": Literal})  # type: ignore
         if hasattr(input_model, "is_list") and input_model.is_list:
-            field_type = List[field_type]
+            field_type = List[field_type]  # type: ignore
+        if input_model.name:
+            name = input_model.name.replace("_", " ").title()
+        elif input_model.display_name:
+            name = input_model.display_name
+        else:
+            raise ValueError("Input name or display_name is required")
         field_dict = {
-            "title": input_model.display_name or input_model.name.replace("_", " ").title(),
+            "title": name,
             "description": input_model.info or "",
         }
         if input_model.required is False:
-            field_dict["default"] = input_model.value
+            field_dict["default"] = input_model.value  # type: ignore
         pydantic_field = Field(**field_dict)
 
         fields[input_model.name] = (field_type, pydantic_field)
