@@ -15,7 +15,6 @@ from sqlmodel import Session, and_, col, select
 
 from langflow.api.utils import remove_api_keys, validate_is_component
 from langflow.api.v1.schemas import FlowListCreate
-from langflow.initial_setup.load import get_starter_projects_dump
 from langflow.initial_setup.setup import STARTER_FOLDER_NAME
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.database.models.flow import Flow, FlowCreate, FlowRead, FlowUpdate
