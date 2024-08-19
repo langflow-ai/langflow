@@ -259,6 +259,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
             disabled={autoSaving || !changesNotSaved || isBuilding}
             className={cn("mr-1 h-9 px-2")}
             onClick={handleSave}
+            data-testid="save-flow-button"
           >
             <IconComponent name={"Save"} className={cn("h-5 w-5")} />
           </Button>
