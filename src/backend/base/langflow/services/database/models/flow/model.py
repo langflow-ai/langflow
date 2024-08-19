@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 
 class FlowBase(SQLModel):
     name: str = Field(index=True)
-    description: Optional[str] = Field(sa_column=Column(Text, index=True, nullable=True, default=None))
+    description: Optional[str] = Field(default=None, sa_column=Column(Text, index=True, nullable=True))
     icon: Optional[str] = Field(default=None, nullable=True)
     icon_bg_color: Optional[str] = Field(default=None, nullable=True)
     data: Optional[Dict] = Field(default=None, nullable=True)
