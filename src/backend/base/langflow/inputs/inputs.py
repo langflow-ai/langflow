@@ -1,6 +1,7 @@
 import warnings
-from typing import Any, AsyncIterator, Iterator, Optional, Union, get_args
+from typing import Any, AsyncIterator, Iterator, Optional, Type, Union, get_args
 
+from langflow.helpers.base_model import BaseModel
 from pydantic import Field, field_validator
 
 from langflow.inputs.validators import CoalesceBool
@@ -458,6 +459,14 @@ class FileInput(BaseInputMixin, ListableInputMixin, FileMixin, MetadataTraceMixi
     """
 
     field_type: SerializableFieldTypes = FieldTypes.FILE
+
+class PydanticObjectInput(BaseInputMixin, MetadataTraceMixin):
+    """
+    Represents a Pydantic Object field.
+    """
+
+    field_type: SerializableFieldTypes = FieldTypes.PYDANTIC_OBJECT
+    value: Optional[Type[BaseModel]] = None
 
 
 DEFAULT_PROMPT_INTUT_TYPES = ["Message", "Text"]

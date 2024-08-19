@@ -1,6 +1,6 @@
 from langflow.base.io.text import TextComponent
 from langflow.custom.custom_component.component import Component
-from langflow.inputs.inputs import MessageInput
+from langflow.inputs.inputs import MessageInput, PydanticObjectInput
 from langflow.io import MessageTextInput, Output
 from langflow.schema.message import Message
 from langchain_core.output_parsers import BaseOutputParser, JsonOutputParser
@@ -15,14 +15,27 @@ class JSONOutputParserComponent(Component):
     icon = "type"
     name = "JSONOutputParser"
 
-    inputs = (
-        []
-    )  # TODO: possibly a pydanitc model for the JSON schema # custom python class input?
+    inputs = [
+        MessageTextInput(
+            name="json_str",
+            display_name="JSON String",
+            info="The JSON string to be parsed.",
+            required=True,
+        ),
+        PydanticObjectInput(
+            name="pydantic_model",
+            display_name="Pydantic Model",
+            info="The Pydantic model to use for parsing the JSON string.",
+            required=True,
+        )
+    ]
+
     outputs = [
+        # TODO: Outputs don't display `info`
         Output(
             display_name="Format Instructions",
             name="format_instructions",
-            info="Pass to a prompt template to include formatting instructions for LLM responses",
+            # info="Pass to a prompt template to include formatting instructions for LLM responses",
             method="format_instructions",
         ),
         Output(

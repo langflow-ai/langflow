@@ -5,6 +5,7 @@ from .IDGenerator import IDGeneratorComponent
 from .Memory import MemoryComponent
 from .MergeData import MergeDataComponent
 from .ParseData import ParseDataComponent
+from .PydanticObject import PydanticObjectComponent
 from .SplitText import SplitTextComponent
 from .StoreMessage import StoreMessageComponent
 from .CreateList import CreateListComponent
@@ -19,6 +20,7 @@ __all__ = [
     "MemoryComponent",
     "MergeDataComponent",
     "ParseDataComponent",
+    "PydanticObjectComponent",
     "SplitTextComponent",
     "StoreMessageComponent",
     "ListComponent",

@@ -20,6 +20,7 @@ class FieldTypes(str, Enum):
     PROMPT = "prompt"
     OTHER = "other"
     TABLE = "table"
+    PYDANTIC_OBJECT = "pydantic_object"
 
 
 SerializableFieldTypes = Annotated[FieldTypes, PlainSerializer(lambda v: v.value, return_type=str)]
