@@ -126,19 +126,19 @@ endif
 ######################
 
 coverage: ## run the tests and generate a coverage report
-	@poetry run coverage run
-	@poetry run coverage erase
+	@uv run -- coverage run
+	@uv run -- coverage erase
 
 unit_tests: ## run unit tests
 ifeq ($(async), true)
-	poetry run pytest src/backend/tests \
+	uv run -- pytest src/backend/tests \
 		--ignore=src/backend/tests/integration \
 		--instafail -n auto -ra -m "not api_key_required" \
 		--durations-path src/backend/tests/.test_durations \
 		--splitting-algorithm least_duration \
 		$(args)
 else
-	poetry run pytest src/backend/tests \
+	uv run -- pytest src/backend/tests \
 		--ignore=src/backend/tests/integration \
 		--instafail -ra -m "not api_key_required" \
 		--durations-path src/backend/tests/.test_durations \
@@ -147,7 +147,7 @@ else
 endif
 
 integration_tests: ## run integration tests
-	poetry run pytest src/backend/tests/integration \
+	uv run -- pytest src/backend/tests/integration \
 		--instafail -ra \
 		$(args)
 
@@ -165,19 +165,19 @@ tests: ## run unit, integration, coverage tests
 
 codespell: ## run codespell to check spelling
 	@poetry install --with spelling
-	poetry run codespell --toml pyproject.toml
+	uv run -- codespell --toml pyproject.toml
 
 fix_codespell: ## run codespell to fix spelling errors
 	@poetry install --with spelling
-	poetry run codespell --toml pyproject.toml --write
+	uv run -- codespell --toml pyproject.toml --write
 
 format: ## run code formatters
-	poetry run ruff check . --fix
-	poetry run ruff format .
+	uv run -- ruff check . --fix
+	uv run -- ruff format .
 	cd src/frontend && npm run format
 
 lint: ## run linters
-	poetry run mypy --namespace-packages -p "langflow"
+	uv run -- mypy --namespace-packages -p "langflow"
 
 install_frontendci:
 	cd src/frontend && npm ci
@@ -226,7 +226,7 @@ start:
 	@echo 'Running the CLI'
 
 ifeq ($(open_browser),false)
-	@make install_backend && poetry run langflow run \
+	@make install_backend && uv run -- langflow run \
 		--path $(path) \
 		--log-level $(log_level) \
 		--host $(host) \
@@ -234,7 +234,7 @@ ifeq ($(open_browser),false)
 		--env-file $(env) \
 		--no-open-browser
 else
-	@make install_backend && poetry run langflow run \
+	@make install_backend && uv run -- langflow run \
 		--path $(path) \
 		--log-level $(log_level) \
 		--host $(host) \
@@ -246,7 +246,7 @@ setup_devcontainer: ## set up the development container
 	make install_backend
 	make install_frontend
 	make build_frontend
-	poetry run langflow --path src/frontend/build
+	uv run -- langflow --path src/frontend/build
 
 setup_env: ## set up the environment
 	@sh ./scripts/setup/setup_env.sh
@@ -268,7 +268,7 @@ backend: ## run the backend in development mode
 	@-kill -9 $$(lsof -t -i:7860)
 ifdef login
 	@echo "Running backend autologin is $(login)";
-	LANGFLOW_AUTO_LOGIN=$(login) poetry run uvicorn \
+	LANGFLOW_AUTO_LOGIN=$(login) uv run -- uvicorn \
 		--factory langflow.main:create_app \
 		--host 0.0.0.0 \
 		--port $(port) \
@@ -278,7 +278,7 @@ ifdef login
 		--workers $(workers)
 else
 	@echo "Running backend respecting the $(env) file";
-	poetry run uvicorn \
+	uv run -- uvicorn \
 		--factory langflow.main:create_app \
 		--host 0.0.0.0 \
 		--port $(port) \
@@ -294,14 +294,14 @@ build_and_run: ## build the project and run it
 	rm -rf dist
 	rm -rf src/backend/base/dist
 	make build
-	poetry run pip install dist/*.tar.gz
-	poetry run langflow run
+	uv run -- pip install dist/*.tar.gz
+	uv run -- langflow run
 
 build_and_install: ## build the project and install it
 	@echo 'Removing dist folder'
 	rm -rf dist
 	rm -rf src/backend/base/dist
-	make build && poetry run pip install dist/*.whl && pip install src/backend/base/dist/*.whl --force-reinstall
+	make build && uv run -- pip install dist/*.whl && pip install src/backend/base/dist/*.whl --force-reinstall
 
 build: ## build the frontend static files and package the project
 	@echo 'Building the project'
@@ -320,20 +320,12 @@ ifdef main
 endif
 
 build_langflow_base:
-	cd src/backend/base && poetry build
+	cd src/backend/base && uvx --from build pyproject-build --installer uv
 	rm -rf src/backend/base/langflow/frontend
 
-build_langflow_backup:
-	poetry lock && poetry build
 
 build_langflow:
-	cd ./scripts && poetry run python update_dependencies.py
-	poetry lock --no-update
-	poetry build
-ifdef restore
-	mv pyproject.toml.bak pyproject.toml
-	mv poetry.lock.bak poetry.lock
-endif
+	uvx --from build pyproject-build --installer uv
 
 dev: ## run the project in development mode with docker compose
 	make install_frontend
