@@ -8,6 +8,7 @@ import nanoid  # type: ignore
 import yaml
 from pydantic import BaseModel
 
+from langflow.graph.graph.schema import CallbackFunction
 from langflow.graph.state.model import create_state_model
 from langflow.helpers.custom import format_type
 from langflow.schema.artifact import get_artifact_type, post_process_raw
@@ -56,6 +57,7 @@ class Component(CustomComponent):
         self._parameters = inputs or {}
         self._edges: list[EdgeData] = []
         self._components: list[Component] = []
+        self._callback = None
         self._state_model = None
         self.set_attributes(self._parameters)
         self._output_logs = {}
@@ -76,6 +78,9 @@ class Component(CustomComponent):
         # Set output types
         self._set_output_types()
         self.set_class_code()
+
+    def set_callback(self, callback: CallbackFunction | None = None):
+        self._callback = callback
 
     def _reset_all_output_values(self):
         for output in self.outputs:
@@ -597,7 +602,9 @@ class Component(CustomComponent):
     async def _build_without_tracing(self):
         return await self._build_results()
 
-    async def build_results(self):
+    async def build_results(
+        self,
+    ):
         if self._tracing_service:
             return await self._build_with_tracing()
         return await self._build_without_tracing()
@@ -634,6 +641,7 @@ class Component(CustomComponent):
                             result.set_flow_id(self._vertex.graph.flow_id)
                         _results[output.name] = result
                         output.value = result
+
                     custom_repr = self.custom_repr()
                     if custom_repr is None and isinstance(result, (dict, Data, str)):
                         custom_repr = result
