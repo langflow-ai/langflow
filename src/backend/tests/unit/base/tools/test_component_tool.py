@@ -18,20 +18,20 @@ def test_component_tool():
         "input_value": {
             "default": "",
             "description": "Message to be passed as input.",
-            "title": "Text",
+            "title": "Input Value",
             "type": "string",
         },
         "should_store_message": {
             "default": True,
             "description": "Store the message in the history.",
-            "title": "Store Messages",
+            "title": "Should Store Message",
             "type": "boolean",
         },
         "sender": {
             "default": "User",
             "description": "Type of sender.",
             "enum": ["Machine", "User"],
-            "title": "Sender Type",
+            "title": "Sender",
             "type": "string",
         },
         "sender_name": {
@@ -43,7 +43,7 @@ def test_component_tool():
         "session_id": {
             "default": "",
             "description": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-            "title": "Session ID",
+            "title": "Session Id",
             "type": "string",
         },
         "files": {
