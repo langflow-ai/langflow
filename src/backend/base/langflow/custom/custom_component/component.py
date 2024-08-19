@@ -655,6 +655,7 @@ class Component(CustomComponent):
         return Input(**kwargs)
 
     def to_tool(self):
+        # TODO: This is a temporary solution to avoid circular imports
         from langflow.base.tools.component_tool import ComponentTool
 
         return ComponentTool(component=self)
