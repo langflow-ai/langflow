@@ -39,8 +39,9 @@ async def instantiate_class(
         _parameters=custom_params,
         _vertex=vertex,
         _tracing_service=get_tracing_service(),
-        _callback=callback,
     )
+    if hasattr(custom_component, "set_callback"):
+        custom_component.set_callback(callback)
     return custom_component, custom_params
 
 
