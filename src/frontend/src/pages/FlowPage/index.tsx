@@ -20,7 +20,8 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const currentSavedFlow = useFlowsManagerStore((state) => state.currentFlow);
 
   const changesNotSaved =
-    customStringify(currentFlow) !== customStringify(currentSavedFlow);
+    customStringify(currentFlow) !== customStringify(currentSavedFlow) &&
+    (currentFlow?.data?.nodes?.length ?? 0) > 0;
 
   const blocker = useBlocker(changesNotSaved);
   const version = useDarkStore((state) => state.version);
@@ -35,6 +36,10 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const refreshFlows = useFlowsManagerStore((state) => state.refreshFlows);
   const setIsLoading = useFlowsManagerStore((state) => state.setIsLoading);
   const getTypes = useTypesStore((state) => state.getTypes);
+
+  const updatedAt = currentSavedFlow?.updated_at;
+
+  const autoSaving = useFlowsManagerStore((state) => state.autoSaving);
 
   const handleSave = () => {
     saveFlow().then(() => (blocker.proceed ? blocker.proceed() : null));
@@ -113,11 +118,25 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
           <div className={version ? "mt-2" : "mt-1"}>⛓️ v{version}</div>
         </a>
       </div>
-      {blocker.state === "blocked" && (
+      {blocker.state === "blocked" && currentSavedFlow && (
         <SaveChangesModal
           onSave={handleSave}
           onCancel={() => (blocker.reset ? blocker.reset() : null)}
           onProceed={() => (blocker.proceed ? blocker.proceed() : null)}
+          flowName={currentSavedFlow.name}
+          unsavedChanges={changesNotSaved}
+          lastSaved={
+            updatedAt
+              ? new Date(updatedAt).toLocaleString("en-US", {
+                  hour: "numeric",
+                  minute: "numeric",
+                  second: "numeric",
+                  month: "numeric",
+                  day: "numeric",
+                })
+              : undefined
+          }
+          autoSave={autoSaving}
         />
       )}
     </>

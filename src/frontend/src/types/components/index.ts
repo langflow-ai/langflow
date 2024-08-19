@@ -269,10 +269,10 @@ export type RangeSpecType = {
 };
 
 export type IntComponentType = {
-  value: string;
+  value: number;
   disabled?: boolean;
   rangeSpec: RangeSpecType;
-  onChange: (value: string, dbValue?: boolean, skipSnapshot?: boolean) => void;
+  onChange: (value: number, dbValue?: boolean, skipSnapshot?: boolean) => void;
   editNode?: boolean;
   id?: string;
 };
@@ -437,12 +437,13 @@ export type ConfirmationModalType = {
   destructive?: boolean;
   destructiveCancel?: boolean;
   modalContentTitle?: string;
-  cancelText: string;
+  loading?: boolean;
+  cancelText?: string;
   confirmationText: string;
   children:
     | [React.ReactElement<ContentProps>, React.ReactElement<TriggerProps>]
     | React.ReactElement<ContentProps>;
-  icon: string;
+  icon?: string;
   data?: any;
   index?: number;
   onConfirm: (index, data) => void;

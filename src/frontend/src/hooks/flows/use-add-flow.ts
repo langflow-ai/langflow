@@ -64,11 +64,10 @@ const useAddFlow = () => {
       newFlow.folder_id = folder_id;
 
       postAddFlow(newFlow, {
-        onSuccess: ({ id }) => {
-          newFlow.id = id;
+        onSuccess: (createdFlow) => {
           // Add the new flow to the list of flows.
           const { data, flows: myFlows } = processFlows([
-            newFlow,
+            createdFlow,
             ...(flows ?? []),
           ]);
           setFlows(myFlows);
@@ -79,7 +78,7 @@ const useAddFlow = () => {
               ["saved_components"]: data,
             }),
           }));
-          resolve(id);
+          resolve(createdFlow.id);
         },
         onError: (error) => {
           if (error.response?.data?.detail) {

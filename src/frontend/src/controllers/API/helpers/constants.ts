@@ -18,6 +18,7 @@ export const URLs = {
   FLOWS: `flows`,
   FOLDERS: `folders`,
   VARIABLES: `variables`,
+  CONFIG: `config`,
 } as const;
 
 export function getURL(key: keyof typeof URLs, params: any = {}) {

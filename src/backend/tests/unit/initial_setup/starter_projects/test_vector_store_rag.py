@@ -1,4 +1,5 @@
 import copy
+from collections import Counter, defaultdict
 from textwrap import dedent
 
 import pytest
@@ -14,6 +15,7 @@ from langflow.components.prompts.Prompt import PromptComponent
 from langflow.components.vectorstores.AstraDB import AstraVectorStoreComponent
 from langflow.graph.graph.base import Graph
 from langflow.graph.graph.constants import Finish
+from langflow.graph.graph.schema import VertexBuildResult
 from langflow.schema.data import Data
 
 
@@ -96,7 +98,7 @@ def rag_graph():
     return graph
 
 
-def test_vector_store_rag(ingestion_graph, rag_graph):
+def test_vector_store_rag(ingestion_graph: Graph, rag_graph: Graph):
     assert ingestion_graph is not None
     ingestion_ids = [
         "file-123",
@@ -115,11 +117,17 @@ def test_vector_store_rag(ingestion_graph, rag_graph):
         "openai-embeddings-124",
     ]
     for ids, graph, len_results in zip([ingestion_ids, rag_ids], [ingestion_graph, rag_graph], [5, 8]):
-        results = []
+        results: list[VertexBuildResult] = []
+        ids_count = Counter(ids)
+        results_id_count: dict[str, int] = defaultdict(int)
         for result in graph.start(config={"output": {"cache": True}}):
             results.append(result)
+            if hasattr(result, "vertex"):
+                results_id_count[result.vertex.id] += 1
 
-        assert len(results) == len_results
+        assert (
+            len(results) == len_results
+        ), f"Counts: {ids_count} != {results_id_count}, Diff: {set(ids_count.keys()) - set(results_id_count.keys())}"
         vids = [result.vertex.id for result in results if hasattr(result, "vertex")]
         assert all(vid in ids for vid in vids), f"Diff: {set(vids) - set(ids)}"
         assert results[-1] == Finish()

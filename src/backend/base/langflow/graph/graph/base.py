@@ -48,6 +48,7 @@ class Graph:
         end: Optional["Component"] = None,
         flow_id: Optional[str] = None,
         flow_name: Optional[str] = None,
+        description: Optional[str] = None,
         user_id: Optional[str] = None,
         log_config: Optional[LogConfig] = None,
     ) -> None:
@@ -70,6 +71,7 @@ class Graph:
         self._updates = 0
         self.flow_id = flow_id
         self.flow_name = flow_name
+        self.description = description
         self.user_id = user_id
         self._is_input_vertices: List[str] = []
         self._is_output_vertices: List[str] = []
@@ -102,6 +104,8 @@ class Graph:
         self.raw_graph_data: GraphData = {"nodes": [], "edges": []}
         self._is_cyclic: Optional[bool] = None
         self._cycles: Optional[List[tuple[str, str]]] = None
+        self._call_order: List[str] = []
+        self._snapshots: List[Dict[str, Any]] = []
         try:
             self.tracing_service: "TracingService" | None = get_tracing_service()
         except Exception as exc:
@@ -168,10 +172,13 @@ class Graph:
         }
         if name:
             graph_dict["name"] = name
+        elif name is None and self.flow_name:
+            graph_dict["name"] = self.flow_name
         if description:
             graph_dict["description"] = description
-        if endpoint_name:
-            graph_dict["endpoint_name"] = endpoint_name
+        elif description is None and self.description:
+            graph_dict["description"] = self.description
+        graph_dict["endpoint_name"] = str(endpoint_name)
         return graph_dict
 
     def add_nodes_and_edges(self, nodes: List[NodeData], edges: List[EdgeData]):
@@ -839,6 +846,7 @@ class Graph:
             "edges": self.edges,
             "flow_id": self.flow_id,
             "flow_name": self.flow_name,
+            "description": self.description,
             "user_id": self.user_id,
             "raw_graph_data": self.raw_graph_data,
             "top_level_vertices": self.top_level_vertices,
@@ -1134,6 +1142,14 @@ class Graph:
                     return vertex
         raise ValueError(f"Vertex {vertex_id} is not a top level vertex or no root vertex found")
 
+    def get_next_in_queue(self):
+        if not self._run_queue:
+            return None
+        return self._run_queue.popleft()
+
+    def extend_run_queue(self, vertices: List[str]):
+        self._run_queue.extend(vertices)
+
     async def astep(
         self,
         inputs: Optional["InputValueRequest"] = None,
@@ -1145,7 +1161,7 @@ class Graph:
         if not self._run_queue:
             asyncio.create_task(self.end_all_traces())
             return Finish()
-        vertex_id = self._run_queue.popleft()
+        vertex_id = self.get_next_in_queue()
         chat_service = get_chat_service()
         vertex_build_result = await self.build_vertex(
             vertex_id=vertex_id,
@@ -1161,12 +1177,30 @@ class Graph:
         )
         if self.stop_vertex and self.stop_vertex in next_runnable_vertices:
             next_runnable_vertices = [self.stop_vertex]
-        self._run_queue.extend(next_runnable_vertices)
+        self.extend_run_queue(next_runnable_vertices)
         self.reset_inactivated_vertices()
         self.reset_activated_vertices()
 
         await chat_service.set_cache(str(self.flow_id or self._run_id), self)
+        self._record_snapshot(vertex_id)
         return vertex_build_result
+
+    def get_snapshot(self):
+        return copy.deepcopy(
+            {
+                "run_manager": self.run_manager.to_dict(),
+                "run_queue": self._run_queue,
+                "vertices_layers": self.vertices_layers,
+                "first_layer": self.first_layer,
+                "inactive_vertices": self.inactive_vertices,
+                "activated_vertices": self.activated_vertices,
+            }
+        )
+
+    def _record_snapshot(self, vertex_id: str | None = None, start: bool = False):
+        self._snapshots.append(self.get_snapshot())
+        if vertex_id:
+            self._call_order.append(vertex_id)
 
     def step(
         self,
@@ -1347,14 +1381,14 @@ class Graph:
         return self
 
     def find_next_runnable_vertices(self, vertex_id: str, vertex_successors_ids: List[str]) -> List[str]:
-        next_runnable_vertices = []
+        next_runnable_vertices = set()
         for v_id in vertex_successors_ids:
             if not self.is_vertex_runnable(v_id):
-                next_runnable_vertices.extend(self.find_runnable_predecessors_for_successor(v_id))
+                next_runnable_vertices.update(self.find_runnable_predecessors_for_successor(v_id))
             else:
-                next_runnable_vertices.append(v_id)
+                next_runnable_vertices.add(v_id)
 
-        return next_runnable_vertices
+        return list(next_runnable_vertices)
 
     async def get_next_runnable_vertices(self, lock: asyncio.Lock, vertex: "Vertex", cache: bool = True) -> List[str]:
         v_id = vertex.id
@@ -1589,9 +1623,10 @@ class Graph:
 
         for vertex_id in first_layer:
             self.run_manager.add_to_vertices_being_run(vertex_id)
-        self._first_layer = first_layer
-        self._run_queue = deque(first_layer)
+        self._first_layer = sorted(first_layer)
+        self._run_queue = deque(self._first_layer)
         self._prepared = True
+        self._record_snapshot()
         return self
 
     def get_children_by_vertex_type(self, vertex: Vertex, vertex_type: str) -> List[Vertex]:
