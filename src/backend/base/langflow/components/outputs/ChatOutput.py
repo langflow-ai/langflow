@@ -1,9 +1,8 @@
 from langflow.base.io.chat import ChatComponent
 from langflow.inputs import BoolInput
 from langflow.io import DropdownInput, MessageTextInput, Output
-from langflow.memory import store_message
 from langflow.schema.message import Message
-from langflow.utils.constants import MESSAGE_SENDER_NAME_AI, MESSAGE_SENDER_USER, MESSAGE_SENDER_AI
+from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_AI, MESSAGE_SENDER_USER
 
 
 class ChatOutput(ChatComponent):
@@ -65,12 +64,7 @@ class ChatOutput(ChatComponent):
             sender_name=self.sender_name,
             session_id=self.session_id,
         )
-        if (
-            self.session_id
-            and isinstance(message, Message)
-            and isinstance(message.text, str)
-            and self.should_store_message
-        ):
+        if self.session_id and isinstance(message, Message) and self.should_store_message:
             self.store_message(
                 message,
             )
