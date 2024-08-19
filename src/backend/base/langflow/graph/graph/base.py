@@ -19,7 +19,7 @@ from langflow.graph.edge.base import CycleEdge
 from langflow.graph.edge.schema import EdgeData
 from langflow.graph.graph.constants import Finish, lazy_load_vertex_dict
 from langflow.graph.graph.runnable_vertices_manager import RunnableVerticesManager
-from langflow.graph.graph.schema import GraphData, GraphDump, StartConfigDict, VertexBuildResult
+from langflow.graph.graph.schema import CallbackFunction, GraphData, GraphDump, StartConfigDict, VertexBuildResult
 from langflow.graph.graph.state_manager import GraphStateManager
 from langflow.graph.graph.state_model import create_state_model_from_graph
 from langflow.graph.graph.utils import find_start_component_id, process_flow, should_continue, sort_up_to_vertex
