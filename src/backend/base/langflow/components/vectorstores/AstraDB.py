@@ -1,7 +1,6 @@
-from langchain_core.vectorstores import VectorStore
 from loguru import logger
 
-from langflow.base.vectorstores.model import LCVectorStoreComponent
+from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers import docs_to_data
 from langflow.inputs import DictInput, FloatInput
 from langflow.io import (
@@ -23,8 +22,6 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
     documentation: str = "https://python.langchain.com/docs/integrations/vectorstores/astradb"
     name = "AstraDB"
     icon: str = "AstraDB"
-
-    _cached_vectorstore: VectorStore | None = None
 
     inputs = [
         StrInput(
@@ -162,11 +159,9 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
         ),
     ]
 
-    def _build_vector_store(self):
-        # cache the vector store to avoid re-initializing and ingest data again
-        if self._cached_vectorstore:
-            return self._cached_vectorstore
-
+    @check_cached_vector_store
+    def build_vector_store(self):
+        print("Build vector store")
         try:
             from langchain_astradb import AstraDBVectorStore
             from langchain_astradb.utils.astradb import SetupMode
@@ -229,12 +224,10 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             raise ValueError(f"Error initializing AstraDBVectorStore: {str(e)}") from e
 
         self._add_documents_to_vector_store(vector_store)
-
-        self._cached_vectorstore = vector_store
-
         return vector_store
 
     def _add_documents_to_vector_store(self, vector_store):
+        print("Adding documents to the vector store")
         documents = []
         for _input in self.ingest_data or []:
             if isinstance(_input, Data):
@@ -272,7 +265,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
         return args
 
     def search_documents(self) -> list[Data]:
-        vector_store = self._build_vector_store()
+        vector_store = self.build_vector_store()
 
         logger.debug(f"Search input: {self.search_input}")
         logger.debug(f"Search type: {self.search_type}")
@@ -303,7 +296,3 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             "search_type": self._map_search_type(),
             "search_kwargs": search_args,
         }
-
-    def build_vector_store(self):
-        vector_store = self._build_vector_store()
-        return vector_store
