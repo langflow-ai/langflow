@@ -370,10 +370,11 @@ class Component(CustomComponent):
 
     def _set_parameter_or_attribute(self, key, value):
         if isinstance(value, Component):
+            methods = [f"'{output.method}'" for output in value.outputs]
             raise ValueError(
                 f"You set {value.display_name} as value for `{key}`. "
                 "You should pass one of the following: "
-                f"{', '.join(f"'{output.method}'" for output in value.outputs)}"
+                f"{', '.join(methods)}"
             )
         self._set_input_value(key, value)
         self._parameters[key] = value
