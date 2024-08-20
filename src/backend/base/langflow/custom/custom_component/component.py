@@ -8,7 +8,7 @@ import nanoid  # type: ignore
 import yaml
 from pydantic import BaseModel
 
-from langflow.graph.graph.schema import CallbackFunction
+from langflow.graph.graph.schema import LogCallbackFunction
 from langflow.graph.state.model import create_state_model
 from langflow.helpers.custom import format_type
 from langflow.schema.artifact import get_artifact_type, post_process_raw
@@ -60,7 +60,7 @@ class Component(CustomComponent):
         self._edges: list[EdgeData] = []
         self._components: list[Component] = []
         self._current_output = ""
-        self._callback = None
+        self._log_callback: LogCallbackFunction | None = None
         self._state_model = None
         self.set_attributes(self._parameters)
         self._output_logs = {}
@@ -82,8 +82,8 @@ class Component(CustomComponent):
         self._set_output_types()
         self.set_class_code()
 
-    def set_callback(self, callback: CallbackFunction | None = None):
-        self._callback = callback
+    def set_log_callback(self, callback: LogCallbackFunction | None = None):
+        self._log_callback = callback
 
     def _reset_all_output_values(self):
         for output in self.outputs:
@@ -746,9 +746,9 @@ class Component(CustomComponent):
         self._logs.append(log)
         if self._tracing_service and self._vertex:
             self._tracing_service.add_log(trace_name=self.trace_name, log=log)
-        if self._callback is not None and self._current_output:
+        if self._log_callback is not None and self._current_output:
             event_name = "log"
             data = log.model_dump()
             data["output"] = self._current_output
             data["component_id"] = self._id
-            self._callback(event_name, data)
+            self._log_callback(event_name, data)

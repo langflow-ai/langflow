@@ -35,7 +35,7 @@ from langflow.api.v1.schemas import (
 )
 from langflow.exceptions.component import ComponentBuildException
 from langflow.graph.graph.base import Graph
-from langflow.graph.graph.schema import CallbackFunction
+from langflow.graph.graph.schema import LogCallbackFunction
 from langflow.graph.utils import log_vertex_build
 from langflow.schema.schema import OutputValue
 from langflow.services.auth.utils import get_current_active_user
@@ -208,7 +208,7 @@ async def build_flow(
             raise HTTPException(status_code=500, detail=str(exc)) from exc
 
     async def _build_vertex(
-        vertex_id: str, graph: "Graph", callback: CallbackFunction | None = None
+        vertex_id: str, graph: "Graph", log_callback: LogCallbackFunction | None = None
     ) -> VertexBuildResponse:
         flow_id_str = str(flow_id)
 
@@ -227,7 +227,7 @@ async def build_flow(
                     files=files,
                     get_cache=chat_service.get_cache,
                     set_cache=chat_service.set_cache,
-                    callback=callback,
+                    log_callback=log_callback,
                 )
                 result_dict = vertex_build_result.result_dict
                 params = vertex_build_result.params
@@ -334,7 +334,7 @@ async def build_flow(
         graph: "Graph",
         queue: asyncio.Queue,
         client_consumed_queue: asyncio.Queue,
-        callback: CallbackFunction | None = None,
+        callback: LogCallbackFunction | None = None,
     ) -> None:
         build_task = asyncio.create_task(await asyncio.to_thread(_build_vertex, vertex_id, graph, callback))
         try:
