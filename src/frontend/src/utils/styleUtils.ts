@@ -582,6 +582,7 @@ export const nodeIconsLucide: iconsType = {
   ArrowBigUp,
   Dot,
   StickyNote,
+  note: StickyNote,
   RotateCcw,
   Wrench,
   FolderPlusIcon,
