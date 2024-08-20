@@ -29,7 +29,7 @@ test("user must be able to see output inspection", async ({ page }) => {
 
   while (modalCount === 0) {
     await page.getByText("New Project", { exact: true }).click();
-    await page.waitForTimeout(5000);
+    await page.waitForTimeout(3000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
 
@@ -58,7 +58,7 @@ test("user must be able to see output inspection", async ({ page }) => {
   await page.getByTestId("dropdown_str_model_name").click();
   await page.getByTestId("gpt-4o-1-option").click();
 
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(1000);
   await page.getByTestId("button_run_chat output").last().click();
 
   await page.waitForSelector("text=built successfully", { timeout: 30000 });

@@ -4,7 +4,14 @@ test("user should be able to download a flow or a component", async ({
   page,
 }) => {
   await page.goto("/");
-  await page.waitForTimeout(2000);
+
+  await page.waitForSelector('[data-testid="mainpage_title"]', {
+    timeout: 30000,
+  });
+
+  await page.waitForSelector('[id="new-project-btn"]', {
+    timeout: 30000,
+  });
 
   let modalCount = 0;
   try {
@@ -18,7 +25,7 @@ test("user should be able to download a flow or a component", async ({
 
   while (modalCount === 0) {
     await page.getByText("New Project", { exact: true }).click();
-    await page.waitForTimeout(5000);
+    await page.waitForTimeout(3000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
 
@@ -37,7 +44,7 @@ test("user should be able to download a flow or a component", async ({
   await page.getByTestId("more-options-modal").click();
 
   await page.getByTestId("icon-SaveAll").first().click();
-  await page.waitForTimeout(3000);
+  await page.waitForTimeout(1000);
 
   if (await page.getByTestId("replace-button").isVisible()) {
     await page.getByTestId("replace-button").click();
@@ -46,6 +53,12 @@ test("user should be able to download a flow or a component", async ({
   await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
     timeout: 100000,
   });
+
+  const exitButton = await page.getByText("Exit", { exact: true }).count();
+
+  if (exitButton > 0) {
+    await page.getByText("Exit", { exact: true }).click();
+  }
 
   await page.getByTestId("icon-ChevronLeft").last().click();
   await page.getByRole("checkbox").nth(1).click();
@@ -70,7 +83,13 @@ test("user should be able to upload a flow or a component", async ({
   page,
 }) => {
   await page.goto("/");
-  await page.waitForTimeout(2000);
+  await page.waitForSelector('[data-testid="mainpage_title"]', {
+    timeout: 30000,
+  });
+
+  await page.waitForSelector('[id="new-project-btn"]', {
+    timeout: 30000,
+  });
 
   let modalCount = 0;
   try {
@@ -89,7 +108,13 @@ test("user should be able to duplicate a flow or a component", async ({
   page,
 }) => {
   await page.goto("/");
-  await page.waitForTimeout(2000);
+  await page.waitForSelector('[data-testid="mainpage_title"]', {
+    timeout: 30000,
+  });
+
+  await page.waitForSelector('[id="new-project-btn"]', {
+    timeout: 30000,
+  });
 
   let modalCount = 0;
   try {
@@ -103,7 +128,7 @@ test("user should be able to duplicate a flow or a component", async ({
 
   while (modalCount === 0) {
     await page.getByText("New Project", { exact: true }).click();
-    await page.waitForTimeout(5000);
+    await page.waitForTimeout(3000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
 
@@ -121,7 +146,7 @@ test("user should be able to duplicate a flow or a component", async ({
   await page.getByTestId("more-options-modal").click();
 
   await page.getByTestId("icon-SaveAll").first().click();
-  await page.waitForTimeout(3000);
+  await page.waitForTimeout(1000);
 
   if (await page.getByTestId("replace-button").isVisible()) {
     await page.getByTestId("replace-button").click();
@@ -130,6 +155,13 @@ test("user should be able to duplicate a flow or a component", async ({
   await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
     timeout: 100000,
   });
+
+  const exitButton = await page.getByText("Exit", { exact: true }).count();
+
+  if (exitButton > 0) {
+    await page.getByText("Exit", { exact: true }).click();
+  }
+
   await page.getByTestId("icon-ChevronLeft").last().click();
   await page.getByRole("checkbox").nth(1).click();
 

@@ -263,7 +263,7 @@ export default function GenericNode({
               types,
             )}
             title={getFieldTitle(data.node?.template!, templateField)}
-            info={data.node?.template[templateField].info}
+            info={data.node?.template[templateField].info!}
             name={templateField}
             tooltipTitle={
               data.node?.template[templateField].input_types?.join("\n") ??
@@ -287,7 +287,12 @@ export default function GenericNode({
   return (
     <>
       {memoizedNodeToolbarComponent}
-      <div className={borderColor}>
+      <div
+        className={cn(
+          borderColor,
+          showNode ? "w-96 rounded-lg" : "w-26 h-26 rounded-full",
+        )}
+      >
         {data.node?.beta && showNode && (
           <div className="beta-badge-wrapper">
             <div className="beta-badge-content">BETA</div>

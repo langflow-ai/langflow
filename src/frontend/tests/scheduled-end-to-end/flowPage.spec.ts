@@ -3,7 +3,13 @@ import { test } from "@playwright/test";
 test.describe("Flow Page tests", () => {
   test("save", async ({ page }) => {
     await page.goto("/");
-    await page.waitForTimeout(2000);
+    await page.waitForSelector('[data-testid="mainpage_title"]', {
+      timeout: 30000,
+    });
+
+    await page.waitForSelector('[id="new-project-btn"]', {
+      timeout: 30000,
+    });
 
     let modalCount = 0;
     try {
@@ -17,7 +23,7 @@ test.describe("Flow Page tests", () => {
 
     while (modalCount === 0) {
       await page.getByText("New Project", { exact: true }).click();
-      await page.waitForTimeout(5000);
+      await page.waitForTimeout(3000);
       modalCount = await page.getByTestId("modal-title")?.count();
     }
 

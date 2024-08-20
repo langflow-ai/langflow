@@ -71,9 +71,6 @@ export default function NodeStatus({
     return frozen ? frozenClass : className;
   };
 
-  const getNodeSizeClass = (showNode) =>
-    showNode ? "w-96 rounded-lg" : "w-26 h-26 rounded-full";
-
   const getNodeBorderClassName = (
     selected: boolean,
     showNode: boolean,
@@ -87,10 +84,8 @@ export default function NodeStatus({
     );
 
     const baseBorderClass = getBaseBorderClass(selected);
-    const nodeSizeClass = getNodeSizeClass(showNode);
     const names = classNames(
       baseBorderClass,
-      nodeSizeClass,
       "generic-node-div group/node",
       specificClassFromBuildStatus,
     );

@@ -39,7 +39,7 @@ export default function TextAreaComponent({
             "w-full",
             "resize-none",
           )}
-          rows={Math.min(3, value.split("\n").length)}
+          rows={1}
           placeholder={"Type something..."}
           onChange={(event) => {
             onChange(event.target.value);

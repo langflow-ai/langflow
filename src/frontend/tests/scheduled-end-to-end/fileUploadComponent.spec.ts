@@ -3,7 +3,13 @@ import path from "path";
 
 test("should be able to upload a file", async ({ page }) => {
   await page.goto("/");
-  await page.waitForTimeout(2000);
+  await page.waitForSelector('[data-testid="mainpage_title"]', {
+    timeout: 30000,
+  });
+
+  await page.waitForSelector('[id="new-project-btn"]', {
+    timeout: 30000,
+  });
 
   let modalCount = 0;
   try {
@@ -17,7 +23,7 @@ test("should be able to upload a file", async ({ page }) => {
 
   while (modalCount === 0) {
     await page.getByText("New Project", { exact: true }).click();
-    await page.waitForTimeout(5000);
+    await page.waitForTimeout(3000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
   await page.waitForSelector('[data-testid="blank-flow"]', {

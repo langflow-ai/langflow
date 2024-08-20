@@ -4,7 +4,13 @@ test("user must be able to save or delete a global variable", async ({
   page,
 }) => {
   await page.goto("/");
-  await page.waitForTimeout(2000);
+  await page.waitForSelector('[data-testid="mainpage_title"]', {
+    timeout: 30000,
+  });
+
+  await page.waitForSelector('[id="new-project-btn"]', {
+    timeout: 30000,
+  });
 
   let modalCount = 0;
   try {
@@ -18,7 +24,7 @@ test("user must be able to save or delete a global variable", async ({
 
   while (modalCount === 0) {
     await page.getByText("New Project", { exact: true }).click();
-    await page.waitForTimeout(5000);
+    await page.waitForTimeout(3000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
   await page.waitForSelector('[data-testid="blank-flow"]', {
@@ -78,7 +84,7 @@ test("user must be able to save or delete a global variable", async ({
   await page.getByText("Save Variable", { exact: true }).click();
   expect(page.getByText(credentialName, { exact: true })).not.toBeNull();
   await page.getByText(credentialName, { exact: true }).isVisible();
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(1000);
 
   await page
     .getByText(credentialName, { exact: true })

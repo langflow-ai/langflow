@@ -11,7 +11,13 @@ test("should delete rows from table message", async ({ page }) => {
     dotenv.config({ path: path.resolve(__dirname, "../../.env") });
   }
   await page.goto("/");
-  await page.waitForTimeout(2000);
+  await page.waitForSelector('[data-testid="mainpage_title"]', {
+    timeout: 30000,
+  });
+
+  await page.waitForSelector('[id="new-project-btn"]', {
+    timeout: 30000,
+  });
 
   let modalCount = 0;
   try {
@@ -25,7 +31,7 @@ test("should delete rows from table message", async ({ page }) => {
 
   while (modalCount === 0) {
     await page.getByText("New Project", { exact: true }).click();
-    await page.waitForTimeout(5000);
+    await page.waitForTimeout(3000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
 
@@ -55,7 +61,7 @@ test("should delete rows from table message", async ({ page }) => {
   await page.getByTestId("dropdown_str_model_name").click();
   await page.getByTestId("gpt-4o-1-option").click();
 
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(1000);
 
   await page.getByTestId("button_run_chat output").click();
   await page.waitForSelector("text=built successfully", { timeout: 30000 });

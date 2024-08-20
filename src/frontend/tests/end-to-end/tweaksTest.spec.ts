@@ -14,12 +14,12 @@ test("curl_api_generation", async ({ page, context }) => {
 
   while (modalCount === 0) {
     await page.getByText("New Project", { exact: true }).click();
-    await page.waitForTimeout(5000);
+    await page.waitForTimeout(3000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
 
   await page.getByRole("heading", { name: "Basic Prompting" }).click();
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(1000);
   await page.getByText("API", { exact: true }).click();
   await page.getByRole("tab", { name: "cURL" }).click();
   await page.getByTestId("icon-Copy").click();
@@ -58,7 +58,13 @@ test("check if tweaks are updating when someothing on the flow changes", async (
   page,
 }) => {
   await page.goto("/");
-  await page.waitForTimeout(2000);
+  await page.waitForSelector('[data-testid="mainpage_title"]', {
+    timeout: 30000,
+  });
+
+  await page.waitForSelector('[id="new-project-btn"]', {
+    timeout: 30000,
+  });
 
   let modalCount = 0;
   try {
@@ -72,7 +78,7 @@ test("check if tweaks are updating when someothing on the flow changes", async (
 
   while (modalCount === 0) {
     await page.getByText("New Project", { exact: true }).click();
-    await page.waitForTimeout(5000);
+    await page.waitForTimeout(3000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
 

@@ -617,7 +617,7 @@ export interface Props {
 
 export type fileCardPropsType = {
   fileName: string;
-  content: string;
+  path: string;
   fileType: string;
   showFile?: boolean;
 };

@@ -3,7 +3,13 @@ import { readFileSync } from "fs";
 
 test("CRUD folders", async ({ page }) => {
   await page.goto("/");
-  await page.waitForTimeout(2000);
+  await page.waitForSelector('[data-testid="mainpage_title"]', {
+    timeout: 30000,
+  });
+
+  await page.waitForSelector('[id="new-project-btn"]', {
+    timeout: 30000,
+  });
 
   let modalCount = 0;
   try {
@@ -17,7 +23,7 @@ test("CRUD folders", async ({ page }) => {
 
   while (modalCount === 0) {
     await page.getByText("New Project", { exact: true }).click();
-    await page.waitForTimeout(5000);
+    await page.waitForTimeout(3000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
   await page.getByRole("heading", { name: "Basic Prompting" }).click();
@@ -68,7 +74,9 @@ test("CRUD folders", async ({ page }) => {
 test("add folder by drag and drop", async ({ page }) => {
   await page.goto("/");
 
-  await page.waitForTimeout(5000); // Consider using a more reliable waiting mechanism
+  await page.waitForSelector("text=my collection", {
+    timeout: 50000,
+  });
 
   const jsonContent = readFileSync(
     "tests/end-to-end/assets/collection.json",
@@ -105,7 +113,13 @@ test("add folder by drag and drop", async ({ page }) => {
 
 test("change flow folder", async ({ page }) => {
   await page.goto("/");
-  await page.waitForTimeout(2000);
+  await page.waitForSelector('[data-testid="mainpage_title"]', {
+    timeout: 30000,
+  });
+
+  await page.waitForSelector('[id="new-project-btn"]', {
+    timeout: 30000,
+  });
 
   let modalCount = 0;
   try {
@@ -119,7 +133,7 @@ test("change flow folder", async ({ page }) => {
 
   while (modalCount === 0) {
     await page.getByText("New Project", { exact: true }).click();
-    await page.waitForTimeout(5000);
+    await page.waitForTimeout(3000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
   await page.getByRole("heading", { name: "Basic Prompting" }).click();

@@ -13,7 +13,7 @@ test("should not have an API key", async ({ page }) => {
   await page.waitForTimeout(1000);
 
   await page.getByTestId("button-store").click();
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(1000);
 
   await page.getByText("API Key Error").isVisible();
 });

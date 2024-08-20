@@ -46,10 +46,10 @@ test("should like and add components and flows", async ({ page }) => {
 
   await page.getByTestId("api-key-save-button-store").click();
 
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(1000);
   await page.getByText("Success! Your API Key has been saved.").isVisible();
 
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(1000);
 
   await page.getByTestId("button-store").click();
   await page.waitForTimeout(5000);
@@ -74,7 +74,7 @@ test("should like and add components and flows", async ({ page }) => {
     .innerText();
 
   await page.getByTestId("install-Website Content QA").click();
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(1000);
   await page.getByText("Flow Installed Successfully").isVisible();
   await page.waitForTimeout(5000);
 
@@ -87,7 +87,7 @@ test("should like and add components and flows", async ({ page }) => {
   }
 
   await page.getByTestId("install-Basic RAG").click();
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(1000);
   await page.getByText("Component Installed Successfully").isVisible();
   await page.waitForTimeout(5000);
 
@@ -122,7 +122,7 @@ test("should find a searched Component on Store", async ({ page }) => {
 
   await page.getByTestId("api-key-save-button-store").click();
 
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(1000);
   await page.getByText("Success! Your API Key has been saved.").isVisible();
 
   await page.waitForTimeout(1000);
