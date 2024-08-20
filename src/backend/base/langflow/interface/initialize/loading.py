@@ -1,13 +1,14 @@
 import inspect
 import os
 import warnings
-from typing import TYPE_CHECKING, Any, Callable, Type
+from typing import TYPE_CHECKING, Any, Type
 
 import orjson
 from loguru import logger
 from pydantic import PydanticDeprecatedSince20
 
 from langflow.custom.eval import eval_custom_component_code
+from langflow.graph.graph.schema import LogCallbackFunction
 from langflow.schema import Data
 from langflow.schema.artifact import get_artifact_type, post_process_raw
 from langflow.services.deps import get_tracing_service
@@ -20,7 +21,7 @@ if TYPE_CHECKING:
 async def instantiate_class(
     vertex: "Vertex",
     user_id=None,
-    callback: Callable | None = None,
+    log_callback: LogCallbackFunction | None = None,
 ) -> Any:
     """Instantiate class from module type and key, and params"""
 
@@ -40,8 +41,8 @@ async def instantiate_class(
         _vertex=vertex,
         _tracing_service=get_tracing_service(),
     )
-    if hasattr(custom_component, "set_callback"):
-        custom_component.set_callback(callback)
+    if hasattr(custom_component, "set_log_callback"):
+        custom_component.set_log_callback(log_callback)
     return custom_component, custom_params
 
 

@@ -12,7 +12,7 @@ import pandas as pd
 from loguru import logger
 
 from langflow.exceptions.component import ComponentBuildException
-from langflow.graph.graph.schema import CallbackFunction
+from langflow.graph.graph.schema import LogCallbackFunction
 from langflow.graph.schema import INPUT_COMPONENTS, OUTPUT_COMPONENTS, InterfaceComponentTypes, ResultData
 from langflow.graph.utils import UnbuiltObject, UnbuiltResult, log_transaction
 from langflow.graph.vertex.schema import NodeData
@@ -452,7 +452,7 @@ class Vertex:
         self,
         fallback_to_env_vars,
         user_id=None,
-        callback: CallbackFunction | None = None,
+        log_callback: LogCallbackFunction | None = None,
     ):
         """
         Initiate the build process.
@@ -465,11 +465,11 @@ class Vertex:
 
         if not self._custom_component:
             custom_component, custom_params = await initialize.loading.instantiate_class(
-                user_id=user_id, vertex=self, callback=callback
+                user_id=user_id, vertex=self, log_callback=log_callback
             )
         else:
             custom_component = self._custom_component
-            self._custom_component.set_callback(callback)
+            self._custom_component.set_log_callback(log_callback)
             custom_params = initialize.loading.get_params(self.params)
 
         await self._build_results(
@@ -764,7 +764,7 @@ class Vertex:
         inputs: dict[str, Any] | None = None,
         files: list[str] | None = None,
         requester: Optional["Vertex"] = None,
-        callback: CallbackFunction | None = None,
+        log_callback: LogCallbackFunction | None = None,
         **kwargs,
     ) -> Any:
         async with self._lock:
@@ -794,9 +794,9 @@ class Vertex:
             for step in self.steps:
                 if step not in self.steps_ran:
                     if inspect.iscoroutinefunction(step):
-                        await step(user_id=user_id, callback=callback, **kwargs)
+                        await step(user_id=user_id, log_callback=log_callback, **kwargs)
                     else:
-                        step(user_id=user_id, callback=callback, **kwargs)
+                        step(user_id=user_id, log_callback=log_callback, **kwargs)
                     self.steps_ran.append(step)
 
             self._finalize_build()

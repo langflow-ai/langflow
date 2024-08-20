@@ -47,5 +47,5 @@ class StartConfigDict(TypedDict):
     output: OutputConfigDict
 
 
-class CallbackFunction(Protocol):
+class LogCallbackFunction(Protocol):
     def __call__(self, event_name: str, log: LoggableType) -> None: ...
