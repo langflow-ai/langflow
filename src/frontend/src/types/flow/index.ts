@@ -22,6 +22,13 @@ export type FlowType = {
   webhook?: boolean;
 };
 
+export type NoteDataType={
+  showNode?: boolean;
+  type: string;
+  id: string;
+  content?: string;
+}
+
 export type NodeType = {
   id: string;
   type?: string;
