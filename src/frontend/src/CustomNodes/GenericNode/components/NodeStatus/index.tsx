@@ -84,10 +84,7 @@ export default function NodeStatus({
     );
 
     const baseBorderClass = getBaseBorderClass(selected);
-    const names = classNames(
-      baseBorderClass,
-      specificClassFromBuildStatus,
-    );
+    const names = classNames(baseBorderClass, specificClassFromBuildStatus);
     return names;
   };
 
