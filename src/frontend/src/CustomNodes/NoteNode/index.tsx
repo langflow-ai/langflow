@@ -2,7 +2,6 @@
 import { noteDataType } from "@/types/flow";
 import IconComponent from "../../components/genericIconComponent";
 import NodeName from "../GenericNode/components/NodeName";
-import { Textarea } from "@/components/ui/textarea";
 import NodeDescription from "../GenericNode/components/NodeDescription";
 
 function NoteNode({ data, selected }:{data: noteDataType, selected: boolean}) {
