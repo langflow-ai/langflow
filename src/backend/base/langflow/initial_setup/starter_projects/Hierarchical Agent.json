@@ -2615,8 +2615,7 @@
                 "name": "api_run_model",
                 "selected": "Data",
                 "types": [
-                  "Data",
-                  "list"
+                  "Data"
                 ],
                 "value": "__UNDEFINED__"
               },
@@ -2627,8 +2626,7 @@
                 "name": "api_build_tool",
                 "selected": "Tool",
                 "types": [
-                  "Tool",
-                  "Sequence"
+                  "Tool"
                 ],
                 "value": "__UNDEFINED__"
               }

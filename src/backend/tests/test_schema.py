@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Sequence, Union
 
 import pytest
 from pydantic import ValidationError
@@ -42,6 +42,8 @@ class TestInput:
         assert post_process_type(int) == [int]
         assert post_process_type(list[int]) == [int]
         assert post_process_type(Union[int, str]) == [int, str]
+        assert post_process_type(Union[int, Sequence[str]]) == [int, str]
+        assert post_process_type(Union[int, Sequence[int]]) == [int]
 
     def test_input_to_dict(self):
         input_obj = Input(field_type="str")
@@ -126,4 +128,4 @@ class TestPostProcessType:
         class CustomType:
             pass
 
-        assert post_process_type(Union[CustomType, int]) == [CustomType, int]
+        assert set(post_process_type(Union[CustomType, int])) == {CustomType, int}

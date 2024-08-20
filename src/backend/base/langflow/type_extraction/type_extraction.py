@@ -1,4 +1,6 @@
 import re
+from collections.abc import Sequence as SequenceABC
+from itertools import chain
 from types import GenericAlias
 from typing import Any, List, Union
 
@@ -7,7 +9,7 @@ def extract_inner_type_from_generic_alias(return_type: GenericAlias) -> Any:
     """
     Extracts the inner type from a type hint that is a list or a Optional.
     """
-    if return_type.__origin__ == list:
+    if return_type.__origin__ in [list, SequenceABC]:
         return list(return_type.__args__)
     return return_type
 
@@ -57,10 +59,7 @@ def post_process_type(_type):
         Union[List[Any], Any]: The processed return type.
 
     """
-    if hasattr(_type, "__origin__") and _type.__origin__ in [
-        list,
-        List,
-    ]:
+    if hasattr(_type, "__origin__") and _type.__origin__ in [list, List, SequenceABC]:
         _type = extract_inner_type_from_generic_alias(_type)
 
     # If the return type is not a Union, then we just return it as a list
@@ -69,7 +68,8 @@ def post_process_type(_type):
         return _type if isinstance(_type, list) else [_type]
     # If the return type is a Union, then we need to parse it
     _type = extract_union_types_from_generic_alias(_type)
-    return _type
+    _type = set(chain.from_iterable([post_process_type(t) for t in _type]))
+    return list(_type)
 
 
 def extract_union_types_from_generic_alias(return_type: GenericAlias) -> list:

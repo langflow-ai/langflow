@@ -17,10 +17,7 @@ from langflow.services.deps import get_storage_service, get_variable_service, se
 from langflow.services.storage.service import StorageService
 from langflow.services.tracing.schema import Log
 from langflow.template.utils import update_frontend_node_with_template_values
-from langflow.type_extraction.type_extraction import (
-    extract_inner_type_from_generic_alias,
-    extract_union_types_from_generic_alias,
-)
+from langflow.type_extraction.type_extraction import post_process_type
 from langflow.utils import validate
 
 if TYPE_CHECKING:
@@ -365,19 +362,7 @@ class CustomComponent(BaseComponent):
         return self.get_method_return_type(self._function_entrypoint_name)
 
     def _extract_return_type(self, return_type: Any) -> List[Any]:
-        if hasattr(return_type, "__origin__") and return_type.__origin__ in [
-            list,
-            List,
-        ]:
-            return_type = extract_inner_type_from_generic_alias(return_type)
-
-        # If the return type is not a Union, then we just return it as a list
-        inner_type = return_type[0] if isinstance(return_type, list) else return_type
-        if not hasattr(inner_type, "__origin__") or inner_type.__origin__ != Union:
-            return return_type if isinstance(return_type, list) else [return_type]
-        # If the return type is a Union, then we need to parse it
-        return_type = extract_union_types_from_generic_alias(return_type)
-        return return_type
+        return post_process_type(return_type)
 
     @property
     def get_main_class_name(self):
