@@ -10,7 +10,6 @@ export default function NoteDraggableComponent(){
             display_name: "",
             documentation: "",
             template:{},
-            noteColor:"yellow"
         }
         event.dataTransfer.setData("noteNode", JSON.stringify({node:noteNode,type:"node"}));
       }

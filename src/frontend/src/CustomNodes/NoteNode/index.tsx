@@ -1,62 +1,18 @@
 import { useEffect, useRef, useState } from "react";
 import { NodeResizeControl } from "reactflow";
 import { cn } from "../../utils/utils";
+import { noteDataType } from "@/types/flow";
+import IconComponent from "../../components/genericIconComponent";
+import NodeName from "../GenericNode/components/NodeName";
 
-function NoteNode({ data, selected }) {
-  const [value, setValue] = useState(data.text);
-  const [editable, setEditable] = useState(false);
-
-  useEffect(() => {
-    if (!selected) {
-      setEditable(false);
-    }
-  }, [selected]);
+function NoteNode({ data, selected }:{data: noteDataType, selected: boolean}) {
 
   return (
     <>
-      <div className="relative h-fit">
-        <NodeResizeControl
-          minWidth={100}
-          className={cn(
-            "absolute left-auto right-1 z-10 h-4 border-none bg-transparent",
-            !selected ? "hidden" : "",
-          )}
-          position="right"
-        >
-          <div className="px-1">
-            <div className="h-4 w-px rounded bg-ring" />
-          </div>
-        </NodeResizeControl>
-        <div
-          className={cn(
-            "flex h-fit overflow-hidden rounded-lg border bg-yellow-100 p-3",
-            selected ? "border-ring" : "border-border",
-          )}
-        >
-          <div
-            contentEditable={editable}
-            onInput={(e) => setValue(e.currentTarget.textContent)}
-            className={cn(
-              editable
-                ? "nocopy nopan nodelete nodrag nound cursor-text outline-none"
-                : "",
-              "h-fit w-full text-black",
-            )}
-            onBlur={() => {
-              data.label = value;
-              setEditable(false);
-              window!.getSelection()!.removeAllRanges();
-            }}
-            onClick={(event) => {
-              if (!editable) {
-                event.preventDefault();
-                event.stopPropagation();
-                setEditable(true);
-              }
-            }}
-          >
-            {data.label}
-          </div>
+      <div className="generic-node-div">
+        <div className="flex w-full">
+          <IconComponent name="StickyNote"/>
+          <NodeName nodeId={data.id} selected={selected} display_name={data.node?.display_name??"Note"}/>
         </div>
       </div>
     </>
