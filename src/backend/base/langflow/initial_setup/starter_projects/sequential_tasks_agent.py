@@ -1,3 +1,4 @@
+from langflow.components.agents.SequentialCrew import SequentialCrewComponent
 from langflow.components.agents.SequentialTaskAgent import SequentialTaskAgentComponent
 from langflow.components.inputs.TextInput import TextInputComponent
 from langflow.components.models.OpenAIModel import OpenAIModelComponent
@@ -77,9 +78,14 @@ Build a fun blog post about this topic.""",
         previous_task=editor_task_agent.build_agent_and_task,
     )
 
+    crew_component = SequentialCrewComponent()
+    crew_component.set(
+        tasks=comedian_task_agent.build_agent_and_task,
+    )
+
     # Set up the output component
     chat_output = ChatOutput()
-    chat_output.set(input_value=comedian_task_agent.build_agent_and_task)
+    chat_output.set(input_value=crew_component.build_output)
 
     # Create the graph
     graph = Graph(
