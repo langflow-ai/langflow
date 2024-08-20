@@ -1,6 +1,5 @@
 from tenacity import retry, stop_after_attempt, wait_fixed
 
-from langchain_community.chat_models.huggingface import ChatHuggingFace
 from langchain_community.llms.huggingface_endpoint import HuggingFaceEndpoint
 
 from langflow.base.models.model import LCModelComponent
@@ -26,8 +25,11 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
         IntInput(name="retry_attempts", display_name="Retry Attempts", value=1, advanced=True),
     ]
 
-    def create_huggingface_endpoint(self, endpoint_url: str, task: str, huggingfacehub_api_token: str, model_kwargs: dict) -> HuggingFaceEndpoint:
+    def create_huggingface_endpoint(
+        self, endpoint_url: str, task: str, huggingfacehub_api_token: str, model_kwargs: dict
+    ) -> HuggingFaceEndpoint:
         retry_attempts = self.retry_attempts  # Access the retry attempts input
+
         @retry(stop=stop_after_attempt(retry_attempts), wait=wait_fixed(2))
         def _attempt_create():
             return HuggingFaceEndpoint(
