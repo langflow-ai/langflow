@@ -1,7 +1,5 @@
 import os
 
-from langchain_astradb import AstraDBVectorStore, CollectionVectorServiceOptions
-from langflow.components.embeddings.AstraVectorize import AstraVectorizeComponent
 import pytest
 from integration.utils import MockEmbeddings, check_env_vars
 from langchain_core.documents import Document
@@ -97,6 +95,10 @@ def test_astra_embeds_and_search(astra_fixture):
     reason="missing astra env vars",
 )
 def test_astra_vectorize():
+    from langchain_astradb import AstraDBVectorStore, CollectionVectorServiceOptions
+
+    from langflow.components.embeddings.AstraVectorize import AstraVectorizeComponent
+
     store = None
     try:
         options = {"provider": "nvidia", "modelName": "NV-Embed-QA", "parameters": {}, "authentication": {}}
@@ -142,6 +144,10 @@ def test_astra_vectorize():
 )
 def test_astra_vectorize_with_provider_api_key():
     """tests vectorize using an openai api key"""
+    from langchain_astradb import AstraDBVectorStore, CollectionVectorServiceOptions
+
+    from langflow.components.embeddings.AstraVectorize import AstraVectorizeComponent
+
     store = None
     try:
         application_token = os.getenv("ASTRA_DB_APPLICATION_TOKEN")
@@ -186,6 +192,10 @@ def test_astra_vectorize_with_provider_api_key():
 )
 def test_astra_vectorize_passes_authentication():
     """tests vectorize using the authentication parameter"""
+    from langchain_astradb import AstraDBVectorStore, CollectionVectorServiceOptions
+
+    from langflow.components.embeddings.AstraVectorize import AstraVectorizeComponent
+
     store = None
     try:
         application_token = os.getenv("ASTRA_DB_APPLICATION_TOKEN")
