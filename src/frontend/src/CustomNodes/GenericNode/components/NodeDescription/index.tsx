@@ -10,10 +10,12 @@ export default function NodeDescription({
   description,
   selected,
   nodeId,
+  emptyPlaceholder="Double Click to Edit Description",
 }: {
   description?: string;
   selected: boolean;
   nodeId: string;
+  emptyPlaceholder?: string;
 }) {
   const [inputDescription, setInputDescription] = useState(false);
   const [nodeDescription, setNodeDescription] = useState(description);
@@ -87,7 +89,7 @@ export default function NodeDescription({
           }}
         >
           {description === "" || !description ? (
-            "Double Click to Edit Description"
+            emptyPlaceholder
           ) : (
             <Markdown className="markdown prose flex flex-col text-primary word-break-break-word dark:prose-invert">
               {String(description)}

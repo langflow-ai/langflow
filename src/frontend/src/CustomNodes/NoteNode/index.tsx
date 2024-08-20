@@ -14,7 +14,7 @@ function NoteNode({ data, selected }:{data: noteDataType, selected: boolean}) {
           <IconComponent name="StickyNote"/>
           <NodeName nodeId={data.id} selected={selected} display_name={data.node?.display_name||"Note"}/>
         </div>
-        <NodeDescription nodeId={data.id} selected={selected} description={data.node?.description}
+        <NodeDescription nodeId={data.id} selected={selected} description={data.node?.description} emptyPlaceholder="Double Click to Edit Note"
           />
       </div>
     </>
