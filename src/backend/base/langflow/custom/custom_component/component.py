@@ -749,4 +749,6 @@ class Component(CustomComponent):
         if self._callback is not None:
             event_name = "log"
             data = log.model_dump()
+            data["output"] = self._current_output
+            data["component_id"] = self._id
             self._callback(event_name, data)
