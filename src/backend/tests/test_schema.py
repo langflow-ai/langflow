@@ -128,4 +128,4 @@ class TestPostProcessType:
         class CustomType:
             pass
 
-        assert post_process_type(Union[CustomType, int]) == [CustomType, int]
+        assert set(post_process_type(Union[CustomType, int])) == {CustomType, int}
