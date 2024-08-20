@@ -14,7 +14,11 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
     name = "HuggingFaceModel"
 
     inputs = LCModelComponent._base_inputs + [
-        StrInput(name="endpoint_url", display_name="Endpoint URL", value="https://api-inference.huggingface.co/models/openai-community/gpt2"),
+        StrInput(
+            name="endpoint_url",
+            display_name="Endpoint URL",
+            value="https://api-inference.huggingface.co/models/openai-community/gpt2",
+        ),
         DropdownInput(
             name="task",
             display_name="Task",
