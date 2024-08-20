@@ -1,5 +1,5 @@
 import copy
-from collections import deque
+from collections import defaultdict, deque
 from typing import Dict, List
 
 PRIORITY_LIST_OF_INPUTS = ["webhook", "chat"]
@@ -241,8 +241,12 @@ def get_updated_edges(base_flow, g_nodes, g_edges, group_node_id):
 def get_successors(graph: Dict[str, Dict[str, List[str]]], vertex_id: str) -> List[str]:
     successors_result = []
     stack = [vertex_id]
+    visited = set()
     while stack:
         current_id = stack.pop()
+        if current_id in visited:
+            continue
+        visited.add(current_id)
         successors_result.append(current_id)
         stack.extend(graph[current_id]["successors"])
     return successors_result
@@ -282,3 +286,127 @@ def sort_up_to_vertex(graph: Dict[str, Dict[str, List[str]]], vertex_id: str, is
                         excluded.add(succ_id)
 
     return list(visited)
+
+
+def has_cycle(vertex_ids: list[str], edges: list[tuple[str, str]]) -> bool:
+    """
+    Determines whether a directed graph represented by a list of vertices and edges contains a cycle.
+
+    Args:
+        vertex_ids (list[str]): A list of vertex IDs.
+        edges (list[tuple[str, str]]): A list of tuples representing directed edges between vertices.
+
+    Returns:
+        bool: True if the graph contains a cycle, False otherwise.
+    """
+    # Build the graph as an adjacency list
+    graph = defaultdict(list)
+    for u, v in edges:
+        graph[u].append(v)
+
+    # Utility function to perform DFS
+    def dfs(v, visited, rec_stack):
+        visited.add(v)
+        rec_stack.add(v)
+
+        for neighbor in graph[v]:
+            if neighbor not in visited:
+                if dfs(neighbor, visited, rec_stack):
+                    return True
+            elif neighbor in rec_stack:
+                return True
+
+        rec_stack.remove(v)
+        return False
+
+    visited: set[str] = set()
+    rec_stack: set[str] = set()
+
+    for vertex in vertex_ids:
+        if vertex not in visited:
+            if dfs(vertex, visited, rec_stack):
+                return True
+
+    return False
+
+
+def find_cycle_edge(entry_point: str, edges: list[tuple[str, str]]) -> tuple[str, str]:
+    """
+    Find the edge that causes a cycle in a directed graph starting from a given entry point.
+
+    Args:
+        entry_point (str): The vertex ID from which to start the search.
+        edges (list[tuple[str, str]]): A list of tuples representing directed edges between vertices.
+
+    Returns:
+        tuple[str, str]: A tuple representing the edge that causes a cycle, or None if no cycle is found.
+    """
+    # Build the graph as an adjacency list
+    graph = defaultdict(list)
+    for u, v in edges:
+        graph[u].append(v)
+
+    # Utility function to perform DFS
+    def dfs(v, visited, rec_stack):
+        visited.add(v)
+        rec_stack.add(v)
+
+        for neighbor in graph[v]:
+            if neighbor not in visited:
+                result = dfs(neighbor, visited, rec_stack)
+                if result:
+                    return result
+            elif neighbor in rec_stack:
+                return (v, neighbor)  # This edge causes the cycle
+
+        rec_stack.remove(v)
+        return None
+
+    visited: set[str] = set()
+    rec_stack: set[str] = set()
+
+    return dfs(entry_point, visited, rec_stack)
+
+
+def find_all_cycle_edges(entry_point: str, edges: list[tuple[str, str]]) -> list[tuple[str, str]]:
+    """
+    Find all edges that cause cycles in a directed graph starting from a given entry point.
+
+    Args:
+        entry_point (str): The vertex ID from which to start the search.
+        edges (list[tuple[str, str]]): A list of tuples representing directed edges between vertices.
+
+    Returns:
+        list[tuple[str, str]]: A list of tuples representing edges that cause cycles.
+    """
+    # Build the graph as an adjacency list
+    graph = defaultdict(list)
+    for u, v in edges:
+        graph[u].append(v)
+
+    # Utility function to perform DFS
+    def dfs(v, visited, rec_stack):
+        visited.add(v)
+        rec_stack.add(v)
+
+        cycle_edges = []
+
+        for neighbor in graph[v]:
+            if neighbor not in visited:
+                cycle_edges += dfs(neighbor, visited, rec_stack)
+            elif neighbor in rec_stack:
+                cycle_edges.append((v, neighbor))  # This edge causes a cycle
+
+        rec_stack.remove(v)
+        return cycle_edges
+
+    visited: set[str] = set()
+    rec_stack: set[str] = set()
+
+    return dfs(entry_point, visited, rec_stack)
+
+
+def should_continue(yielded_counts: dict[str, int], max_iterations: int | None) -> bool:
+    if max_iterations is None:
+        return True
+    return max(yielded_counts.values(), default=0) <= max_iterations

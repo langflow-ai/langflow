@@ -137,8 +137,13 @@ def apply_tweaks(node: Dict[str, Any], node_tweaks: Dict[str, Any]) -> None:
         if tweak_name not in template_data:
             continue
         if tweak_name in template_data:
-            key = "file_path" if template_data[tweak_name]["type"] == "file" else "value"
-            template_data[tweak_name][key] = tweak_value
+            if isinstance(tweak_value, dict):
+                for k, v in tweak_value.items():
+                    k = "file_path" if template_data[tweak_name]["type"] == "file" else k
+                    template_data[tweak_name][k] = v
+            else:
+                key = "file_path" if template_data[tweak_name]["type"] == "file" else "value"
+                template_data[tweak_name][key] = tweak_value
 
 
 def apply_tweaks_on_vertex(vertex: Vertex, node_tweaks: Dict[str, Any]) -> None:

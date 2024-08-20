@@ -18,7 +18,13 @@ test("Complex Agent", async ({ page }) => {
   }
 
   await page.goto("/");
-  await page.waitForTimeout(2000);
+  await page.waitForSelector('[data-testid="mainpage_title"]', {
+    timeout: 30000,
+  });
+
+  await page.waitForSelector('[id="new-project-btn"]', {
+    timeout: 30000,
+  });
 
   let modalCount = 0;
   try {
@@ -32,7 +38,7 @@ test("Complex Agent", async ({ page }) => {
 
   while (modalCount === 0) {
     await page.getByText("New Project", { exact: true }).click();
-    await page.waitForTimeout(5000);
+    await page.waitForTimeout(3000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
 
@@ -60,7 +66,7 @@ test("Complex Agent", async ({ page }) => {
     .last()
     .fill(process.env.BRAVE_SEARCH_API_KEY ?? "");
 
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(1000);
 
   let openAiLlms = await page.getByText("OpenAI", { exact: true }).count();
 
@@ -85,7 +91,7 @@ test("Complex Agent", async ({ page }) => {
 
   await page.getByText("Playground", { exact: true }).click();
 
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(1000);
 
   expect(
     page.getByText("Could you search info about AAPL?", { exact: true }).last(),

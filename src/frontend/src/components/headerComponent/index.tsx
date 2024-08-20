@@ -55,16 +55,12 @@ export default function Header(): JSX.Element {
   }`;
 
   const redirectToLastLocation = () => {
-    const lastFlowVisitedIndex = routeHistory
+    const lastVisitedIndex = routeHistory
       .reverse()
-      .findIndex(
-        (path) => path.includes("/flow/") && path !== location.pathname,
-      );
+      .findIndex((path) => path !== location.pathname);
 
-    const lastFlowVisited = routeHistory[lastFlowVisitedIndex];
-    lastFlowVisited && !location.pathname.includes("/flow")
-      ? navigate(lastFlowVisited)
-      : navigate("/all");
+    const lastFlowVisited = routeHistory[lastVisitedIndex];
+    lastFlowVisited ? navigate(lastFlowVisited) : navigate("/all");
   };
 
   const visitedFlowPathBefore = () => {
@@ -88,8 +84,8 @@ export default function Header(): JSX.Element {
   };
 
   return (
-    <div className="header-arrangement">
-      <div className="header-start-display lg:w-[450px]">
+    <div className="header-arrangement relative">
+      <div className="header-start-display">
         <Link to="/all" className="cursor-pointer">
           <span className="ml-4 text-2xl">⛓️</span>
         </Link>
@@ -107,8 +103,8 @@ export default function Header(): JSX.Element {
         <MenuBar />
       </div>
 
-      <div className="round-button-div">
-        <Link to="/">
+      <div className="flex items-center xl:absolute xl:left-1/2 xl:-translate-x-1/2">
+        <Link to="/all">
           <Button
             className="gap-2"
             variant={
@@ -120,7 +116,7 @@ export default function Header(): JSX.Element {
             size="sm"
           >
             <IconComponent name="Home" className="h-4 w-4" />
-            <div className="hidden flex-1 md:block">{USER_PROJECTS_HEADER}</div>
+            <div className="hidden flex-1 lg:block">{USER_PROJECTS_HEADER}</div>
           </Button>
         </Link>
 
@@ -133,7 +129,7 @@ export default function Header(): JSX.Element {
               data-testid="button-store"
             >
               <IconComponent name="Store" className="h-4 w-4" />
-              <div className="flex-1">Store</div>
+              <div className="hidden flex-1 lg:block">Store</div>
             </Button>
           </Link>
         )}

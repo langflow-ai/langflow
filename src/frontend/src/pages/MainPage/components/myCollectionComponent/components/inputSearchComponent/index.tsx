@@ -1,7 +1,6 @@
 import { ChangeEvent, KeyboardEvent } from "react";
 import ForwardedIconComponent from "../../../../../../components/genericIconComponent";
 import { Input } from "../../../../../../components/ui/input";
-import useFlowsManagerStore from "../../../../../../stores/flowsManagerStore";
 
 type InputSearchComponentProps = {
   loading: boolean;
@@ -21,9 +20,6 @@ const InputSearchComponent = ({
   onKeyDown,
 }: InputSearchComponentProps) => {
   const pagePath = window.location.pathname;
-  const allFlows = useFlowsManagerStore((state) => state.allFlows);
-
-  const disableInputSearch = loading || !allFlows;
 
   const getSearchPlaceholder = () => {
     if (pagePath.includes("flows")) {
@@ -40,7 +36,7 @@ const InputSearchComponent = ({
       <div className={`${divClasses ? divClasses : "relative h-12 w-[60%]"}`}>
         <Input
           data-testid="search-store-input"
-          disabled={disableInputSearch}
+          disabled={loading}
           placeholder={getSearchPlaceholder()}
           className="absolute h-12 pl-5 pr-12"
           onChange={onChange}

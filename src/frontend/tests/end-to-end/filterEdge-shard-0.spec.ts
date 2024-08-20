@@ -1,6 +1,8 @@
 import { expect, test } from "@playwright/test";
 
-test("RetrievalQA - Tooltip", async ({ page }) => {
+test("user must see on handle hover a tooltip with possibility connections", async ({
+  page,
+}) => {
   await page.goto("/");
   await page.waitForTimeout(1000);
 
@@ -16,7 +18,7 @@ test("RetrievalQA - Tooltip", async ({ page }) => {
 
   while (modalCount === 0) {
     await page.getByText("New Project", { exact: true }).click();
-    await page.waitForTimeout(5000);
+    await page.waitForTimeout(3000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
 
@@ -117,7 +119,7 @@ test("RetrievalQA - Tooltip", async ({ page }) => {
     await expect(
       page.getByTestId("available-input-models").first(),
     ).toBeVisible();
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(1000);
 
     await page.getByTestId("icon-Search").click();
 
@@ -140,7 +142,7 @@ test("RetrievalQA - Tooltip", async ({ page }) => {
   }
 
   await visibleElementHandle.hover().then(async () => {
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(2500);
 
     await expect(
       page.getByTestId("available-input-retrievers").first(),

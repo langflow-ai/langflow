@@ -9,6 +9,7 @@ from .HuggingFaceModel import HuggingFaceEndpointsComponent
 from .OllamaModel import ChatOllamaComponent
 from .OpenAIModel import OpenAIModelComponent
 from .VertexAiModel import ChatVertexAIComponent
+from .PerplexityModel import PerplexityComponent
 
 __all__ = [
     "AIMLModelComponent",
@@ -22,5 +23,6 @@ __all__ = [
     "ChatOllamaComponent",
     "OpenAIModelComponent",
     "ChatVertexAIComponent",
+    "PerplexityComponent",
     "base",
 ]

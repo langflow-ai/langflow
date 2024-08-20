@@ -1,11 +1,10 @@
-import { lazy } from "react";
+import React, { lazy } from "react";
 import {
   createBrowserRouter,
   createRoutesFromElements,
   Navigate,
   Route,
 } from "react-router-dom";
-import App from "./App";
 import { ProtectedAdminRoute } from "./components/authAdminGuard";
 import { ProtectedRoute } from "./components/authGuard";
 import { ProtectedLoginRoute } from "./components/authLoginGuard";
@@ -13,36 +12,26 @@ import { AuthSettingsGuard } from "./components/authSettingsGuard";
 import { CatchAllRoute } from "./components/catchAllRoutes";
 import { StoreGuard } from "./components/storeGuard";
 import { AppWrapperPage } from "./pages/AppWrapperPage";
-const MessagesPage = lazy(
-  () => import("./pages/SettingsPage/pages/messagesPage"),
-);
+import FlowPage from "./pages/FlowPage";
+import LoginPage from "./pages/LoginPage";
+import MyCollectionComponent from "./pages/MainPage/components/myCollectionComponent";
+import HomePage from "./pages/MainPage/pages/mainPage";
+import SettingsPage from "./pages/SettingsPage";
+import ApiKeysPage from "./pages/SettingsPage/pages/ApiKeysPage";
+import GeneralPage from "./pages/SettingsPage/pages/GeneralPage";
+import GlobalVariablesPage from "./pages/SettingsPage/pages/GlobalVariablesPage";
+import MessagesPage from "./pages/SettingsPage/pages/messagesPage";
+import ShortcutsPage from "./pages/SettingsPage/pages/ShortcutsPage";
+import StorePage from "./pages/StorePage";
+import ViewPage from "./pages/ViewPage";
+
 const AdminPage = lazy(() => import("./pages/AdminPage"));
 const LoginAdminPage = lazy(() => import("./pages/AdminPage/LoginPage"));
-const ApiKeysPage = lazy(
-  () => import("./pages/SettingsPage/pages/ApiKeysPage"),
-);
 const DeleteAccountPage = lazy(() => import("./pages/DeleteAccountPage"));
-const FlowPage = lazy(() => import("./pages/FlowPage"));
-const LoginPage = lazy(() => import("./pages/LoginPage"));
-const MyCollectionComponent = lazy(
-  () => import("./pages/MainPage/components/myCollectionComponent"),
-);
-const HomePage = lazy(() => import("./pages/MainPage/pages/mainPage"));
-const PlaygroundPage = lazy(() => import("./pages/Playground"));
-const SettingsPage = lazy(() => import("./pages/SettingsPage"));
-const GeneralPage = lazy(
-  () => import("./pages/SettingsPage/pages/GeneralPage"),
-);
-const GlobalVariablesPage = lazy(
-  () => import("./pages/SettingsPage/pages/GlobalVariablesPage"),
-);
-const ShortcutsPage = lazy(
-  () => import("./pages/SettingsPage/pages/ShortcutsPage"),
-);
-const SignUp = lazy(() => import("./pages/SignUpPage"));
-const StorePage = lazy(() => import("./pages/StorePage"));
-const ViewPage = lazy(() => import("./pages/ViewPage"));
 
+const PlaygroundPage = lazy(() => import("./pages/Playground"));
+
+const SignUp = lazy(() => import("./pages/SignUpPage"));
 const router = createBrowserRouter(
   createRoutesFromElements([
     <Route path="" element={<AppWrapperPage />}>
@@ -56,17 +45,34 @@ const router = createBrowserRouter(
       >
         <Route index element={<Navigate replace to={"all"} />} />
         <Route
-          path="flows/*"
+          path="flows/"
           element={<MyCollectionComponent key="flows" type="flow" />}
-        />
+        >
+          <Route
+            path="folder/:folderId"
+            element={<MyCollectionComponent key="flows" type="flow" />}
+          />
+        </Route>
         <Route
-          path="components/*"
+          path="components/"
           element={<MyCollectionComponent key="components" type="component" />}
-        />
+        >
+          <Route
+            path="folder/:folderId"
+            element={
+              <MyCollectionComponent key="components" type="component" />
+            }
+          />
+        </Route>
         <Route
-          path="all/*"
+          path="all/"
           element={<MyCollectionComponent key="all" type="all" />}
-        />
+        >
+          <Route
+            path="folder/:folderId"
+            element={<MyCollectionComponent key="all" type="all" />}
+          />
+        </Route>
       </Route>
       <Route
         path="/settings"
@@ -122,7 +128,7 @@ const router = createBrowserRouter(
       </Route>
       <Route path="/flow/:id/">
         <Route
-          path="*"
+          path="folder/:folderId/"
           element={
             <ProtectedRoute>
               <FlowPage />

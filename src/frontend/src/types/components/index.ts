@@ -269,10 +269,10 @@ export type RangeSpecType = {
 };
 
 export type IntComponentType = {
-  value: string;
+  value: number;
   disabled?: boolean;
   rangeSpec: RangeSpecType;
-  onChange: (value: string, dbValue?: boolean, skipSnapshot?: boolean) => void;
+  onChange: (value: number, dbValue?: boolean, skipSnapshot?: boolean) => void;
   editNode?: boolean;
   id?: string;
 };
@@ -437,12 +437,13 @@ export type ConfirmationModalType = {
   destructive?: boolean;
   destructiveCancel?: boolean;
   modalContentTitle?: string;
-  cancelText: string;
+  loading?: boolean;
+  cancelText?: string;
   confirmationText: string;
   children:
     | [React.ReactElement<ContentProps>, React.ReactElement<TriggerProps>]
     | React.ReactElement<ContentProps>;
-  icon: string;
+  icon?: string;
   data?: any;
   index?: number;
   onConfirm: (index, data) => void;
@@ -616,18 +617,15 @@ export interface Props {
 
 export type fileCardPropsType = {
   fileName: string;
-  content: string;
+  path: string;
   fileType: string;
   showFile?: boolean;
 };
 
 export type nodeToolbarPropsType = {
-  //  openWDoubleClick: boolean;
-  //  setOpenWDoubleClick: (open: boolean) => void;
   data: NodeDataType;
   deleteNode: (idx: string) => void;
   setShowNode: (boolean: any) => void;
-  numberOfHandles: number;
   numberOfOutputHandles: number;
   showNode: boolean;
   name?: string;
@@ -698,6 +696,28 @@ export type genericModalPropsType = {
   setNodeClass?: (Class: APIClassType, type?: string) => void;
   children: ReactNode;
   id?: string;
+  readonly?: boolean;
+  password?: boolean;
+  changeVisibility?: () => void;
+};
+
+export type PromptModalType = {
+  field_name?: string;
+  setValue: (value: string) => void;
+  value: string;
+  disabled?: boolean;
+  nodeClass?: APIClassType;
+  setNodeClass?: (Class: APIClassType, type?: string) => void;
+  children: ReactNode;
+  id?: string;
+  readonly?: boolean;
+};
+
+export type textModalPropsType = {
+  setValue: (value: string) => void;
+  value: string;
+  disabled?: boolean;
+  children: ReactNode;
   readonly?: boolean;
   password?: boolean;
   changeVisibility?: () => void;

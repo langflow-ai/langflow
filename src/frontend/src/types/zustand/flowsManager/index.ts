@@ -1,10 +1,10 @@
 import { FlowType } from "../../flow";
 
 export type FlowsManagerStoreType = {
+  autoSaving: boolean;
+  setAutoSaving: (autoSaving: boolean) => void;
   getFlowById: (id: string) => FlowType | undefined;
   flows: Array<FlowType> | undefined;
-  allFlows: Array<FlowType>;
-  setAllFlows: (flows: FlowType[]) => void;
   setFlows: (flows: FlowType[]) => void;
   currentFlow: FlowType | undefined;
   currentFlowId: string;

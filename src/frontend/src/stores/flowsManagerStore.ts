@@ -24,6 +24,8 @@ const past = {};
 const future = {};
 
 const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
+  autoSaving: true,
+  setAutoSaving: (autoSaving: boolean) => set({ autoSaving }),
   examples: [],
   setExamples: (examples: FlowType[]) => {
     set({ examples });
@@ -40,10 +42,6 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
     return get().flows?.find((flow) => flow.id === id);
   },
   flows: undefined,
-  allFlows: [],
-  setAllFlows: (allFlows: FlowType[]) => {
-    set({ allFlows });
-  },
   setFlows: (flows: FlowType[]) => {
     set({
       flows,
@@ -57,8 +55,6 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
   setIsLoading: (isLoading: boolean) => set({ isLoading }),
   refreshFlows: () => {
     return new Promise<void>((resolve, reject) => {
-      set({ isLoading: true });
-
       const starterFolderId = useFolderStore.getState().starterProjectId;
 
       readFlowsFromDatabase()
@@ -82,7 +78,6 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
                 ["saved_components"]: data,
               }),
             }));
-            set({ isLoading: false });
             resolve();
           }
         })

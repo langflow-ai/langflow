@@ -87,7 +87,6 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
     (state) => state.setLastCopiedSelection,
   );
   const onConnect = useFlowStore((state) => state.onConnect);
-  const currentSavedFlow = useFlowsManagerStore((state) => state.currentFlow);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setNoticeData = useAlertStore((state) => state.setNoticeData);
   const updateCurrentFlow = useFlowStore((state) => state.updateCurrentFlow);
@@ -423,22 +422,9 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
     [],
   );
 
-  const onPaneClick = useCallback((flow) => {
+  const onPaneClick = useCallback(() => {
     setFilterEdge([]);
   }, []);
-
-  function onMouseAction(edge: Edge, color: string): void {
-    const edges = useFlowStore.getState().edges;
-    const newEdges = _.cloneDeep(edges);
-    const style = { stroke: color, transition: "stroke 0.25s" };
-    const updatedEdges = newEdges.map((obj) => {
-      if (obj.id === edge.id) {
-        return { ...obj, style };
-      }
-      return obj;
-    });
-    setEdges(updatedEdges);
-  }
 
   return (
     <div className="h-full w-full" ref={reactFlowWrapper}>

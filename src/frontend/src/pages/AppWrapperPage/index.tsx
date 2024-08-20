@@ -9,7 +9,6 @@ import {
 import { useGetHealthQuery } from "@/controllers/API/queries/health";
 import useTrackLastVisitedPath from "@/hooks/use-track-last-visited-path";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
-import { useFolderStore } from "@/stores/foldersStore";
 import { cn } from "@/utils/utils";
 import { ErrorBoundary } from "react-error-boundary";
 import { Outlet } from "react-router-dom";
@@ -18,14 +17,12 @@ export function AppWrapperPage() {
   useTrackLastVisitedPath();
 
   const isLoading = useFlowsManagerStore((state) => state.isLoading);
-  const isLoadingFolders = useFolderStore((state) => state.isLoadingFolders);
   const {
     data: healthData,
     isFetching: fetchingHealth,
     isError: isErrorHealth,
     refetch,
   } = useGetHealthQuery();
-  const isLoadingApplication = isLoading || isLoadingFolders;
   return (
     <div className="flex h-full flex-col">
       <ErrorBoundary
@@ -54,7 +51,7 @@ export function AppWrapperPage() {
           <div
             className={cn(
               "loading-page-panel absolute left-0 top-0 z-[999]",
-              isLoadingApplication ? "" : "hidden",
+              isLoading ? "" : "hidden",
             )}
           >
             <LoadingComponent remSize={50} />
