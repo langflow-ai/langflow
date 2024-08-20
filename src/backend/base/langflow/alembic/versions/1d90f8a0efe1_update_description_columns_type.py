@@ -35,7 +35,7 @@ def upgrade() -> None:
                 )
 
     with op.batch_alter_table("folder", schema=None) as batch_op:
-        if migration.column_exists(table_name="flow", column_name="description", conn=conn):
+        if migration.column_exists(table_name="folder", column_name="description", conn=conn):
             columns = inspector.get_columns("folder")
             description_column = next((column for column in columns if column["name"] == "description"), None)
             if description_column is not None and isinstance(description_column["type"], sa.VARCHAR):
