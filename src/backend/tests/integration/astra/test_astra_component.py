@@ -146,6 +146,8 @@ def test_astra_vectorize_with_provider_api_key():
     """tests vectorize using an openai api key"""
     from langchain_astradb import AstraDBVectorStore, CollectionVectorServiceOptions
 
+    from langflow.components.embeddings.AstraVectorize import AstraVectorizeComponent
+
     store = None
     try:
         application_token = os.getenv("ASTRA_DB_APPLICATION_TOKEN")
@@ -191,6 +193,8 @@ def test_astra_vectorize_with_provider_api_key():
 def test_astra_vectorize_passes_authentication():
     """tests vectorize using the authentication parameter"""
     from langchain_astradb import AstraDBVectorStore, CollectionVectorServiceOptions
+
+    from langflow.components.embeddings.AstraVectorize import AstraVectorizeComponent
 
     store = None
     try:
