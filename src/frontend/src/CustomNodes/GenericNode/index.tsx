@@ -291,6 +291,7 @@ export default function GenericNode({
         className={cn(
           borderColor,
           showNode ? "w-96 rounded-lg" : "w-26 h-26 rounded-full",
+          "generic-node-div group/node",
         )}
       >
         {data.node?.beta && showNode && (
