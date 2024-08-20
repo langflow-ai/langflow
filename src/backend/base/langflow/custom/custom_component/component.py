@@ -626,6 +626,7 @@ class Component(CustomComponent):
                 ):
                     if output.method is None:
                         raise ValueError(f"Output {output.name} does not have a method defined.")
+                    self._current_output = output.name
                     method: Callable = getattr(self, output.method)
                     if output.cache and output.value != UNDEFINED:
                         _results[output.name] = output.value
@@ -672,6 +673,7 @@ class Component(CustomComponent):
                     _artifacts[output.name] = artifact
                     self._output_logs[output.name] = self._logs
                     self._logs = []
+                    self._current_output = ""
         self._artifacts = _artifacts
         self._results = _results
         if self._tracing_service:
