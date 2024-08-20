@@ -1,7 +1,9 @@
+import NoteNode from "@/CustomNodes/NoteNode";
 import LoadingComponent from "@/components/loadingComponent";
 import { useGetBuildsQuery } from "@/controllers/API/queries/_builds";
 import useAutoSaveFlow from "@/hooks/flows/use-autosave-flow";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
+import { getNodeRenderType, isSupportedNodeTypes } from "@/utils/utils";
 import _, { cloneDeep } from "lodash";
 import {
   KeyboardEvent,
@@ -51,12 +53,10 @@ import ConnectionLineComponent from "../ConnectionLineComponent";
 import SelectionMenu from "../SelectionMenuComponent";
 import getRandomName from "./utils/get-random-name";
 import isWrappedWithClass from "./utils/is-wrapped-with-class";
-import NoteNode from "@/CustomNodes/NoteNode";
-import { getNodeRenderType, isSupportedNodeTypes } from "@/utils/utils";
 
 const nodeTypes = {
   genericNode: GenericNode,
-  noteNode: NoteNode
+  noteNode: NoteNode,
 };
 
 export default function Page({ view }: { view?: boolean }): JSX.Element {
@@ -330,7 +330,9 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
       if (event.dataTransfer.types.some((type) => isSupportedNodeTypes(type))) {
         takeSnapshot();
 
-        const datakey = event.dataTransfer.types.find( type =>isSupportedNodeTypes(type));
+        const datakey = event.dataTransfer.types.find((type) =>
+          isSupportedNodeTypes(type),
+        );
 
         // Extract the data from the drag event and parse it as a JSON object
         const data: { type: string; node?: APIClassType } = JSON.parse(

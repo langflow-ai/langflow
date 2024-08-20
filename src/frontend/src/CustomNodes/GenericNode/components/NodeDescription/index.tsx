@@ -10,7 +10,7 @@ export default function NodeDescription({
   description,
   selected,
   nodeId,
-  emptyPlaceholder="Double Click to Edit Description",
+  emptyPlaceholder = "Double Click to Edit Description",
 }: {
   description?: string;
   selected: boolean;

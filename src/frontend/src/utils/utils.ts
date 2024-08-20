@@ -623,11 +623,10 @@ export function addPlusSignes(array: string[]): string[] {
   });
 }
 
-
-export function isSupportedNodeTypes(type:string) {
-  return Object.keys(DRAG_EVENTS_CUSTOM_TYPESS).some(key=>key===type);
+export function isSupportedNodeTypes(type: string) {
+  return Object.keys(DRAG_EVENTS_CUSTOM_TYPESS).some((key) => key === type);
 }
 
-export function getNodeRenderType(MIMEtype:string) {
+export function getNodeRenderType(MIMEtype: string) {
   return DRAG_EVENTS_CUSTOM_TYPESS[MIMEtype];
 }

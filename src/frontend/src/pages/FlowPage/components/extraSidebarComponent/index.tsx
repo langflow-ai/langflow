@@ -19,9 +19,9 @@ import { removeCountFromString } from "../../../../utils/utils";
 import DisclosureComponent from "../DisclosureComponent";
 import ParentDisclosureComponent from "../ParentDisclosureComponent";
 import SidebarDraggableComponent from "./sideBarDraggableComponent";
+import NoteDraggableComponent from "./sideBarNoteComponent";
 import { sortKeys } from "./utils";
 import sensitiveSort from "./utils/sensitive-sort";
-import NoteDraggableComponent from "./sideBarNoteComponent";
 
 export default function ExtraSidebar(): JSX.Element {
   const data = useTypesStore((state) => state.data);
@@ -213,18 +213,19 @@ export default function ExtraSidebar(): JSX.Element {
         >
           <IconComponent
             name={search ? "X" : "Search"}
-            className={`h-5 w-5 stroke-[1.5] text-primary ${search ? "cursor-pointer" : "cursor-default"
-              }`}
+            className={`h-5 w-5 stroke-[1.5] text-primary ${
+              search ? "cursor-pointer" : "cursor-default"
+            }`}
             aria-hidden="true"
           />
         </div>
       </div>
       <Separator />
       <div className="parent-disclosure-arrangement">
-        <div className="flex w-full pr-2 items-center align-middle justify-between">
+        <div className="flex w-full items-center justify-between pr-2 align-middle">
           <div className="parent-disclosure-title">Add a Note</div>
           <div draggable>
-            <NoteDraggableComponent/>
+            <NoteDraggableComponent />
           </div>
         </div>
       </div>
@@ -292,7 +293,7 @@ export default function ExtraSidebar(): JSX.Element {
                           }
                           official={
                             dataFilter[SBSectionName][SBItemName].official ===
-                              false
+                            false
                               ? false
                               : true
                           }
@@ -386,33 +387,33 @@ export default function ExtraSidebar(): JSX.Element {
                   </DisclosureComponent>
                   {index ===
                     Object.keys(dataFilter).length -
-                    PRIORITY_SIDEBAR_ORDER.length +
-                    1 && (
-                      <>
-                        <a
-                          target={"_blank"}
-                          href="https://langflow.store"
-                          className="components-disclosure-arrangement"
-                        >
-                          <div className="flex gap-4">
-                            {/* BUG ON THIS ICON */}
-                            <SparklesIcon
-                              strokeWidth={1.5}
-                              className="w-[22px] text-primary"
-                            />
+                      PRIORITY_SIDEBAR_ORDER.length +
+                      1 && (
+                    <>
+                      <a
+                        target={"_blank"}
+                        href="https://langflow.store"
+                        className="components-disclosure-arrangement"
+                      >
+                        <div className="flex gap-4">
+                          {/* BUG ON THIS ICON */}
+                          <SparklesIcon
+                            strokeWidth={1.5}
+                            className="w-[22px] text-primary"
+                          />
 
-                            <span className="components-disclosure-title">
-                              Discover More
-                            </span>
+                          <span className="components-disclosure-title">
+                            Discover More
+                          </span>
+                        </div>
+                        <div className="components-disclosure-div">
+                          <div>
+                            <LinkIcon className="h-4 w-4 text-foreground" />
                           </div>
-                          <div className="components-disclosure-div">
-                            <div>
-                              <LinkIcon className="h-4 w-4 text-foreground" />
-                            </div>
-                          </div>
-                        </a>
-                      </>
-                    )}
+                        </div>
+                      </a>
+                    </>
+                  )}
                 </Fragment>
               ) : (
                 <div key={index}></div>
