@@ -16,11 +16,6 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
 
     inputs = LCModelComponent._base_inputs + [
         StrInput(name="endpoint_url", display_name="Endpoint URL"),
-        StrInput(
-            name="model_id",
-            display_name="Model ID",
-            info="ID field for endpoint_url response.",
-        ),
         DropdownInput(
             name="task",
             display_name="Task",
@@ -31,18 +26,16 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
         IntInput(name="retry_attempts", display_name="Retry Attempts", value=1, advanced=True),
     ]
 
-    def create_huggingface_endpoint(self, endpoint_url, task, huggingfacehub_api_token, model_kwargs):
-        @retry(stop=stop_after_attempt(self.retry_attempts), wait=wait_fixed(2))
+    def create_huggingface_endpoint(self, endpoint_url: str, task: str, huggingfacehub_api_token: str, model_kwargs: dict) -> HuggingFaceEndpoint:
+        retry_attempts = self.retry_attempts  # Access the retry attempts input
+        @retry(stop=stop_after_attempt(retry_attempts), wait=wait_fixed(2))
         def _attempt_create():
-            try:
-                return HuggingFaceEndpoint(  # type: ignore
-                    endpoint_url=endpoint_url,
-                    task=task,
-                    huggingfacehub_api_token=huggingfacehub_api_token,
-                    model_kwargs=model_kwargs,
-                )
-            except Exception as e:
-                raise ValueError("Could not connect to HuggingFace Endpoints API.") from e
+            return HuggingFaceEndpoint(
+                endpoint_url=endpoint_url,
+                task=task,
+                huggingfacehub_api_token=huggingfacehub_api_token,
+                model_kwargs=model_kwargs,
+            )
 
         return _attempt_create()
 
@@ -57,5 +50,4 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
         except Exception as e:
             raise ValueError("Could not connect to HuggingFace Endpoints API.") from e
 
-        output = ChatHuggingFace(llm=llm, model_id=self.model_id)
-        return output  # type: ignore
+        return llm  # Return the LLM directly without wrapping in ChatHuggingFace
