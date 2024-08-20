@@ -58,8 +58,7 @@ pywin32 = { version = "^306", markers = "sys_platform == 'win32'" }
 langfuse = "^2.33.0"
 metal-sdk = "^2.5.0"
 markupsafe = "^2.1.3"
-# jq is not available for windows
-boto3 = "^1.34.0"
+boto3 = "~1.34.162"
 numexpr = "^2.8.6"
 qianfan = "0.3.5"
 pgvector = "^0.2.3"
