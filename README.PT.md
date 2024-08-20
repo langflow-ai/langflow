@@ -28,9 +28,10 @@
 <div align="center">
   <a href="./README.md"><img alt="README em Inglês" src="https://img.shields.io/badge/English-d9d9d9"></a>
   <a href="./README.PT.md"><img alt="README em Português" src="https://img.shields.io/badge/Português-d9d9d9"></a>
+  <a href="./README.ES.md"><img alt="README em Espanhol" src="https://img.shields.io/badge/Espanhol-d9d9d9"></a>
   <a href="./README.zh_CN.md"><img alt="README em Chinês Simplificado" src="https://img.shields.io/badge/简体中文-d9d9d9"></a>
   <a href="./README.ja.md"><img alt="README em Japonês" src="https://img.shields.io/badge/日本語-d9d9d9"></a>
-  <a href="./README.KR.md"><img alt="README in KOREAN" src="https://img.shields.io/badge/한국어-d9d9d9"></a>
+  <a href="./README.KR.md"><img alt="README em Coreano" src="https://img.shields.io/badge/한국어-d9d9d9"></a>
 </div>
 
 <p align="center">
