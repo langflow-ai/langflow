@@ -287,7 +287,7 @@ export default function GenericNode({
   return (
     <>
       {memoizedNodeToolbarComponent}
-      <div className={borderColor}>
+      <div className={cn(borderColor, showNode ? "w-96 rounded-lg" : "w-26 h-26 rounded-full")}>
         {data.node?.beta && showNode && (
           <div className="beta-badge-wrapper">
             <div className="beta-badge-content">BETA</div>
