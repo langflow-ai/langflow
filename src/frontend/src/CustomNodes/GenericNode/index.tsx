@@ -173,7 +173,6 @@ export default function GenericNode({
     }
   }, [hiddenOutputs]);
 
-
   const memoizedNodeToolbarComponent = useMemo(() => {
     return (
       <NodeToolbar>
@@ -288,7 +287,12 @@ export default function GenericNode({
               }
               data-testid="generic-node-title-arrangement"
             >
-              <NodeIcon dataType={data.type} showNode={showNode} icon={data.node?.icon} isGroup={!!data.node?.flow} />
+              <NodeIcon
+                dataType={data.type}
+                showNode={showNode}
+                icon={data.node?.icon}
+                isGroup={!!data.node?.flow}
+              />
               {showNode && (
                 <div className="generic-node-tooltip-div">
                   <NodeName
