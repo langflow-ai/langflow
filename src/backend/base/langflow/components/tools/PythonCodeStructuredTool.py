@@ -3,12 +3,12 @@ import json
 from typing import Any
 
 from langchain.agents import Tool
+from langflow.base.langchain_utilities.model import LCToolComponent
+from langflow.inputs.inputs import MultilineInput, MessageTextInput, BoolInput, DropdownInput, HandleInput, FieldTypes
 from langchain_core.tools import StructuredTool
 from pydantic.v1 import Field, create_model
 from pydantic.v1.fields import Undefined
 
-from langflow.base.langchain_utilities.model import LCToolComponent
-from langflow.inputs.inputs import BoolInput, DropdownInput, FieldTypes, HandleInput, MessageTextInput, MultilineInput
 from langflow.io import Output
 from langflow.schema import Data
 from langflow.schema.dotdict import dotdict
@@ -259,12 +259,8 @@ class PythonCodeStructuredTool(LCToolComponent):
 
                 for default in node.args.defaults:
                     if (
-                        (arg.lineno is not None and default.lineno is not None and arg.lineno > default.lineno)
-                        or (
-                            arg.col_offset is not None
-                            and default.col_offset is not None
-                            and arg.col_offset > default.col_offset
-                        )
+                        arg.lineno > default.lineno
+                        or arg.col_offset > default.col_offset
                         or (
                             arg.end_lineno is not None
                             and default.end_lineno is not None
@@ -290,8 +286,8 @@ class PythonCodeStructuredTool(LCToolComponent):
                     func_arg["annotation"] = annotation_line
                     if isinstance(func_arg["annotation"], str) and func_arg["annotation"].count("=") > 0:
                         func_arg["annotation"] = "=".join(func_arg["annotation"].split("=")[:-1]).strip()
-            if isinstance(func["args"], list):
-                func["args"].append(func_arg)
+                if isinstance(func["args"], list):
+                    func["args"].append(func_arg)
             functions.append(func)
 
         return classes, functions

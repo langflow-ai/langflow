@@ -5,6 +5,7 @@ import json
 from pydantic.v1 import Field, create_model
 
 from langchain.agents import Tool
+from langchain_core.tools import StructuredTool
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.inputs import MessageTextInput, MultiselectInput, DropdownInput, IntInput
 from langflow.schema.dotdict import dotdict
@@ -130,12 +131,11 @@ class SearXNGToolComponent(LCToolComponent):
 
         SearxSearchSchema = create_model("SearxSearchSchema", **schema_fields)  # type: ignore
 
-        tool = Tool.from_function(
+        tool = StructuredTool.from_function(
             func=_local["SearxSearch"].search,
             args_schema=SearxSearchSchema,
             name="searxng_search_tool",
             description="A tool that searches for tools using SearXNG.\nThe available categories are: "
             + ", ".join(self.categories),
         )
-        self.status = tool
         return tool
