@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, NamedTuple, Protocol, Union
+from typing import TYPE_CHECKING, NamedTuple, Protocol
 
 from typing_extensions import NotRequired, TypedDict
 
@@ -47,12 +47,5 @@ class StartConfigDict(TypedDict):
     output: OutputConfigDict
 
 
-class SyncCallbackFunction(Protocol):
-    def __call__(self, log: LoggableType) -> None: ...
-
-
-class AsyncCallbackFunction(Protocol):
-    async def __call__(self, log: LoggableType) -> None: ...
-
-
-CallbackFunction = Union[SyncCallbackFunction, AsyncCallbackFunction]
+class CallbackFunction(Protocol):
+    def __call__(self, event_name: str, log: LoggableType) -> None: ...
