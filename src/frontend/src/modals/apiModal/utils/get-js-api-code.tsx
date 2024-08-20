@@ -19,11 +19,13 @@ export default function getJsApiCode(
   return `class LangflowClient {
     constructor(baseURL, apiKey) {
         this.baseURL = baseURL;
-        this.apiKey= apiKey;
+        this.apiKey = apiKey;
     }
   
     async post(endpoint, body, headers = {"Content-Type": "application/json"}) {
-        headers["Authorization"] = \`Bearer \${this.apiKey}\`;
+      if (this.apiKey) {
+            headers["Authorization"] = \`Bearer \${this.apiKey}\`;
+        }
         const url = \`\${this.baseURL}\${endpoint}\`;
         try {
             const response = await fetch(url, {
