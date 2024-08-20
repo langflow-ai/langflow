@@ -14,11 +14,12 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
     name = "HuggingFaceModel"
 
     inputs = LCModelComponent._base_inputs + [
-        StrInput(name="endpoint_url", display_name="Endpoint URL"),
+        StrInput(name="endpoint_url", display_name="Endpoint URL", value="https://api-inference.huggingface.co/models/openai-community/gpt2"),
         DropdownInput(
             name="task",
             display_name="Task",
             options=["text2text-generation", "text-generation", "summarization", "translation"],
+            value="text-generation",
         ),
         SecretStrInput(name="huggingfacehub_api_token", display_name="API Token", password=True),
         DictInput(name="model_kwargs", display_name="Model Keyword Arguments", advanced=True),
