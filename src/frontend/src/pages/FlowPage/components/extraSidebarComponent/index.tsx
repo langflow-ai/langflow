@@ -44,7 +44,7 @@ export default function ExtraSidebar(): JSX.Element {
     crt.classList.add("cursor-grabbing");
     document.body.appendChild(crt);
     event.dataTransfer.setDragImage(crt, 0, 0);
-    event.dataTransfer.setData("nodedata", JSON.stringify(data));
+    event.dataTransfer.setData("genericNode", JSON.stringify(data));
   }
 
   // Handle showing components after use search input

@@ -52,6 +52,7 @@ import SelectionMenu from "../SelectionMenuComponent";
 import getRandomName from "./utils/get-random-name";
 import isWrappedWithClass from "./utils/is-wrapped-with-class";
 import NoteNode from "@/CustomNodes/NoteNode";
+import { getNodeRenderType, isSupportedNodeTypes } from "@/utils/utils";
 
 const nodeTypes = {
   genericNode: GenericNode,
@@ -316,7 +317,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
 
   const onDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault();
-    if (event.dataTransfer.types.some((types) => types === "nodedata")) {
+    if (event.dataTransfer.types.some((types) => isSupportedNodeTypes(types))) {
       event.dataTransfer.dropEffect = "move";
     } else {
       event.dataTransfer.dropEffect = "copy";
@@ -326,20 +327,21 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
   const onDrop = useCallback(
     (event: React.DragEvent) => {
       event.preventDefault();
-      if (event.dataTransfer.types.some((types) => types === "nodedata")) {
-        console.log(event)
+      if (event.dataTransfer.types.some((type) => isSupportedNodeTypes(type))) {
         takeSnapshot();
+
+        const datakey = event.dataTransfer.types.find( type =>isSupportedNodeTypes(type));
 
         // Extract the data from the drag event and parse it as a JSON object
         const data: { type: string; node?: APIClassType } = JSON.parse(
-          event.dataTransfer.getData("nodedata"),
+          event.dataTransfer.getData(datakey!),
         );
 
         const newId = getNodeId(data.type);
 
         const newNode: NodeType = {
           id: newId,
-          type: "genericNode",
+          type: getNodeRenderType(datakey!),
           position: { x: 0, y: 0 },
           data: {
             ...data,
