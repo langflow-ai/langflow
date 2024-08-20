@@ -37,6 +37,7 @@ class Component(CustomComponent):
     outputs: list[Output] = []
     code_class_base_inheritance: ClassVar[str] = "Component"
     _output_logs: dict[str, Log] = {}
+    _current_output: str = ""
 
     def __init__(self, **kwargs):
         # if key starts with _ it is a config
@@ -58,6 +59,7 @@ class Component(CustomComponent):
         self._parameters = inputs or {}
         self._edges: list[EdgeData] = []
         self._components: list[Component] = []
+        self._current_output = ""
         self._callback = None
         self._state_model = None
         self.set_attributes(self._parameters)
