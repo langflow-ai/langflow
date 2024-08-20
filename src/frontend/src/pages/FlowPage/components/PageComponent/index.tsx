@@ -51,9 +51,11 @@ import ConnectionLineComponent from "../ConnectionLineComponent";
 import SelectionMenu from "../SelectionMenuComponent";
 import getRandomName from "./utils/get-random-name";
 import isWrappedWithClass from "./utils/is-wrapped-with-class";
+import NoteNode from "@/CustomNodes/NoteNode";
 
 const nodeTypes = {
   genericNode: GenericNode,
+  noteNode: NoteNode
 };
 
 export default function Page({ view }: { view?: boolean }): JSX.Element {
@@ -325,6 +327,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
     (event: React.DragEvent) => {
       event.preventDefault();
       if (event.dataTransfer.types.some((types) => types === "nodedata")) {
+        console.log(event)
         takeSnapshot();
 
         // Extract the data from the drag event and parse it as a JSON object
