@@ -17,7 +17,7 @@ export default function NodeName({
   const [nodeName, setNodeName] = useState(display_name);
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
   const setNode = useFlowStore((state) => state.setNode);
-
+  console.log(display_name);
   useEffect(() => {
     if (!selected) {
       setInputName(false);

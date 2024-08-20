@@ -11,7 +11,7 @@ export default function NoteDraggableComponent(){
             documentation: "",
             template:{},
         }
-        event.dataTransfer.setData("noteNode", JSON.stringify({node:noteNode,type:"node"}));
+        event.dataTransfer.setData("noteNode", JSON.stringify({node:noteNode,type:"note"}));
       }
 
     return (
