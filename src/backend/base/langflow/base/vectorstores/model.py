@@ -1,4 +1,4 @@
-from abc import ABC, abstractmethod
+from abc import ABC, ABCMeta, abstractmethod
 from functools import wraps
 from typing import List, cast
 
@@ -26,10 +26,31 @@ def check_cached_vector_store(f):
         self._cached_vector_store = result
         return result
 
+    check_cached._is_cached_vector_store_checked = True
     return check_cached
 
 
-class LCVectorStoreComponent(Component, ABC):
+class EnforceCacheDecoratorMeta(ABCMeta):
+    """
+    Enforces that abstract methods marked with @check_cached_vector_store are implemented with the decorator.
+    """
+
+    def __init__(cls, name, bases, dct):
+        for name, value in dct.items():
+            if hasattr(value, "__isabstractmethod__"):
+                cls._check_method_decorator(name, cls)
+        super().__init__(name, bases, dct)
+
+    @staticmethod
+    def _check_method_decorator(name, cls):
+        method = getattr(cls, name)
+
+        # Check if the method has been marked as decorated by `check_cached_vector_store`
+        if not getattr(method, "_is_cached_vector_store_checked", False):
+            raise TypeError(f"Concrete implementation of '{name}' must use '@check_cached_vector_store' decorator.")
+
+
+class LCVectorStoreComponent(Component, ABC, metaclass=EnforceCacheDecoratorMeta):
     # Used to ensure a single vector store is built for each run of the flow
     _cached_vector_store: VectorStore | None = None
 
@@ -54,7 +75,11 @@ class LCVectorStoreComponent(Component, ABC):
 
     def _validate_outputs(self):
         # At least these three outputs must be defined
-        required_output_methods = ["build_base_retriever", "search_documents", "build_vector_store"]
+        required_output_methods = [
+            "build_base_retriever",
+            "search_documents",
+            "build_vector_store",
+        ]
         output_names = [output.name for output in self.outputs]
         for method_name in required_output_methods:
             if method_name not in output_names:
