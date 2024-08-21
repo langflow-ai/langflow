@@ -29,7 +29,7 @@ export default function NodeName({
   }, [display_name]);
 
   return inputName ? (
-    <div>
+    <div className="w-full">
       <InputComponent
         onBlur={() => {
           setInputName(false);
@@ -58,7 +58,7 @@ export default function NodeName({
       />
     </div>
   ) : (
-    <div className="group flex items-center gap-1">
+    <div className="group flex items-center gap-1 w-full">
       <ShadTooltip content={display_name}>
         <div
           onDoubleClick={(event) => {
