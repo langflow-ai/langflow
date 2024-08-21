@@ -417,7 +417,7 @@ export type signUpInputStateType = {
 
 export type inputHandlerEventType = {
   target: {
-    value: string;
+    value: string | boolean;
     name: string;
   };
 };
