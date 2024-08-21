@@ -151,7 +151,7 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
         if self.allow_duplicates:
             stored_data = []
         else:
-            stored_data = chroma_collection_to_data(vector_store.get(self.limit))
+            stored_data = chroma_collection_to_data(vector_store.get(limit=self.limit))
             for value in deepcopy(stored_data):
                 del value.id
                 _stored_documents_without_id.append(value)
