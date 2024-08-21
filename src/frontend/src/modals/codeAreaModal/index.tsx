@@ -52,6 +52,7 @@ export default function CodeAreaModal({
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const [openConfirmation, setOpenConfirmation] = useState(false);
   const codeRef = useRef<ReactAce | null>(null);
+  const { mutate, isPending } = usePostValidateCode();
   const [error, setError] = useState<{
     detail: CodeErrorDataTypeAPI;
   } | null>(null);
