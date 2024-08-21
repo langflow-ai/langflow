@@ -1,6 +1,6 @@
 from typing import List
 
-from langflow.base.vectorstores.model import LCVectorStoreComponent
+from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers.data import docs_to_data
 from langflow.io import (
     DataInput,
@@ -71,6 +71,7 @@ class MilvusVectorStoreComponent(LCVectorStoreComponent):
         ),
     ]
 
+    @check_cached_vector_store
     def build_vector_store(self):
         try:
             from langchain_milvus.vectorstores import Milvus as LangchainMilvus
