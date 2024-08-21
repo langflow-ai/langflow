@@ -4,7 +4,7 @@ from langflow.custom import Component
 from langflow.inputs import StrInput, SecretStrInput, DefaultPromptField
 from langflow.io import Output
 
-from langchain_core.prompt_values import ChatPromptValue
+from langchain_core.prompts import ChatPromptTemplate
 
 import re
 
@@ -59,6 +59,7 @@ class LangChainHubPromptComponent(Component):
                 # Create a string version of the full template
                 full_template = full_template + "\n" + message.template
 
+            # Easter egg: Show template in info popup
             build_config["langchain_hub_prompt"]["info"] = full_template
 
             # Now create inputs for each
@@ -75,14 +76,19 @@ class LangChainHubPromptComponent(Component):
 
     def build_chat_prompt(
         self,
-    ) -> ChatPromptValue:
-        # Get the parameters that
-        template = self._fetch_langchain_hub_template()  # TODO: doing this twice
+    ) -> ChatPromptTemplate:
+
+        # Get the parameters that 
+        template = self._fetch_langchain_hub_template() # TODO: doing this twice
         prompt_value = template.invoke(self._attributes)
+
+        # Now build the ChatPromptTemplate back
+        prompt_messages = prompt_value.to_messages()
+        prompt_template = ChatPromptTemplate.from_messages(prompt_messages)
 
         self.status = prompt_value.to_string()
 
-        return prompt_value
+        return prompt_template
 
     def _fetch_langchain_hub_template(self):
         import langchain.hub
