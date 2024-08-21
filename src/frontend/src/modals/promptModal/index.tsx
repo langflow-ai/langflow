@@ -1,3 +1,4 @@
+import { usePostValidatePrompt } from "@/controllers/API/queries/nodes/use-post-validate-prompt";
 import { useEffect, useRef, useState } from "react";
 import IconComponent from "../../components/genericIconComponent";
 import SanitizedHTMLWrapper from "../../components/sanitizedHTMLWrapper";
@@ -18,7 +19,6 @@ import {
   PROMPT_DIALOG_SUBTITLE,
   regexHighlight,
 } from "../../constants/constants";
-import { postValidatePrompt } from "../../controllers/API";
 import useAlertStore from "../../stores/alertStore";
 import { PromptModalType } from "../../types/components";
 import { handleKeyDown } from "../../utils/reactflowUtils";
@@ -46,6 +46,7 @@ export default function PromptModal({
   const setNoticeData = useAlertStore((state) => state.setNoticeData);
   const divRef = useRef(null);
   const divRefPrompt = useRef(null);
+  const { mutate: postValidatePrompt } = usePostValidatePrompt();
 
   function checkVariables(valueToCheck: string): void {
     const regex = /\{([^{}]+)\}/g;
@@ -122,51 +123,53 @@ export default function PromptModal({
   // Function need some review, working for now
   function validatePrompt(closeModal: boolean): void {
     //nodeClass is always null on tweaks
-    postValidatePrompt(field_name, inputValue, nodeClass!)
-      .then((apiReturn) => {
-        // if field_name is an empty string, then we need to set it
-        // to the first key of the custom_fields object
-        if (field_name === "") {
-          field_name = Array.isArray(
-            apiReturn.data?.frontend_node?.custom_fields?.[""],
-          )
-            ? apiReturn.data?.frontend_node?.custom_fields?.[""][0] ?? ""
-            : apiReturn.data?.frontend_node?.custom_fields?.[""] ?? "";
-        }
-        if (apiReturn.data) {
-          let inputVariables = apiReturn.data.input_variables ?? [];
-          if (
-            JSON.stringify(apiReturn.data?.frontend_node) !== JSON.stringify({})
-          ) {
-            setValue(inputValue);
-            apiReturn.data.frontend_node.template.template.value = inputValue;
-            if (setNodeClass) setNodeClass(apiReturn.data?.frontend_node);
-            setModalOpen(closeModal);
-            setIsEdit(false);
+    postValidatePrompt(
+      { name: field_name, template: inputValue, frontend_node: nodeClass! },
+      {
+        onSuccess: (apiReturn) => {
+          if (field_name === "") {
+            field_name = Array.isArray(
+              apiReturn?.frontend_node?.custom_fields?.[""],
+            )
+              ? apiReturn?.frontend_node?.custom_fields?.[""][0] ?? ""
+              : apiReturn?.frontend_node?.custom_fields?.[""] ?? "";
           }
-          if (!inputVariables || inputVariables.length === 0) {
-            setNoticeData({
-              title: TEMP_NOTICE_ALERT,
-            });
+          if (apiReturn) {
+            let inputVariables = apiReturn.input_variables ?? [];
+            if (
+              JSON.stringify(apiReturn?.frontend_node) !== JSON.stringify({})
+            ) {
+              setValue(inputValue);
+              apiReturn.frontend_node.template.template.value = inputValue;
+              if (setNodeClass) setNodeClass(apiReturn?.frontend_node);
+              setModalOpen(closeModal);
+              setIsEdit(false);
+            }
+            if (!inputVariables || inputVariables.length === 0) {
+              setNoticeData({
+                title: TEMP_NOTICE_ALERT,
+              });
+            } else {
+              setSuccessData({
+                title: PROMPT_SUCCESS_ALERT,
+              });
+            }
           } else {
-            setSuccessData({
-              title: PROMPT_SUCCESS_ALERT,
+            setIsEdit(true);
+            setErrorData({
+              title: BUG_ALERT,
             });
           }
-        } else {
+        },
+        onError: (error) => {
           setIsEdit(true);
-          setErrorData({
-            title: BUG_ALERT,
+          return setErrorData({
+            title: PROMPT_ERROR_ALERT,
+            list: [error.response.data.detail ?? ""],
           });
-        }
-      })
-      .catch((error) => {
-        setIsEdit(true);
-        return setErrorData({
-          title: PROMPT_ERROR_ALERT,
-          list: [error.response.data.detail ?? ""],
-        });
-      });
+        },
+      },
+    );
   }
 
   return (
