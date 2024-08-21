@@ -429,6 +429,7 @@ def update_settings(
     components_path: Optional[Path] = None,
     store: bool = True,
     auto_saving: bool = True,
+    auto_saving_interval: int = 300,
 ):
     """Update the settings from a config file."""
     from langflow.services.utils import initialize_settings_service
@@ -455,6 +456,9 @@ def update_settings(
     if not auto_saving:
         logger.debug("Setting auto_saving to False")
         settings_service.settings.update_settings(auto_saving=False)
+    if auto_saving_interval:
+        logger.debug(f"Setting auto_saving_interval to {auto_saving_interval}")
+        settings_service.settings.update_settings(auto_saving_interval=auto_saving_interval)
 
 
 def is_class_method(func, cls):
