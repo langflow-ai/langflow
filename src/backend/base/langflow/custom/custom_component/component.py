@@ -414,10 +414,10 @@ class Component(CustomComponent):
         if name in self._inputs:
             input_value = self._inputs[name].value
             if isinstance(input_value, Component):
+                methods = ", ".join([f"'{output.method}'" for output in input_value.outputs])
                 raise ValueError(
                     f"You set {input_value.display_name} as value for `{name}`. "
-                    "You should pass one of the following: "
-                    f"{", ".join(f"'{output.method}'" for output in input_value.outputs)}"
+                    f"You should pass one of the following: {methods}"
                 )
             if callable(input_value):
                 raise ValueError(
