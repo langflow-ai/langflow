@@ -1,9 +1,9 @@
 import { expect, test } from "@playwright/test";
 
-test("user should be able to login on auto_login false, CRUD user's and should see just your own flows", async ({
+test("when auto_login is false, admin can CRUD user's and should see just your own flows", async ({
   page,
 }) => {
-  // Intercept the request to any base URL ending with /api/v1/config
+  // Intercept the request to any base URL ending with /api/v1/auto_login
   await page.route("**/api/v1/auto_login", async (route) => {
     const response = await route.fetch();
     const responseBody = await response.json();
@@ -45,6 +45,7 @@ test("user should be able to login on auto_login false, CRUD user's and should s
 
   await page.getByText("Admin Page", { exact: true }).click();
 
+  //CRUD an user
   await page.getByText("New User", { exact: true }).click();
 
   await page.getByPlaceholder("Username").last().fill(randomName);
@@ -102,6 +103,7 @@ test("user should be able to login on auto_login false, CRUD user's and should s
     await page.getByText(secondRandomName, { exact: true }).isVisible(),
   ).toBe(true);
 
+  //user must see just your own flows
   await page.getByText("My Collection", { exact: true }).last().click();
 
   await page.waitForSelector('[id="new-project-btn"]', {
