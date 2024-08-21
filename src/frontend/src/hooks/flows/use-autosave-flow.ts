@@ -1,4 +1,3 @@
-import { SAVE_DEBOUNCE_TIME } from "@/constants/constants";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { FlowType } from "@/types/flow";
 import { useDebounce } from "../use-debounce";
@@ -11,11 +10,11 @@ const useAutoSaveFlow = () => {
     (state) => state.autoSavingInterval,
   );
 
-  const autoSaveFlow = autoSaving
-    ? useDebounce((flow?: FlowType) => {
-        saveFlow(flow);
-      }, autoSavingInterval)
-    : () => {};
+  const autoSaveFlow = useDebounce((flow?: FlowType) => {
+    if (autoSaving) {
+      saveFlow(flow);
+    }
+  }, autoSavingInterval);
 
   return autoSaveFlow;
 };

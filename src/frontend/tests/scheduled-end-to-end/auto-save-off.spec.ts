@@ -3,23 +3,24 @@ import { expect, test } from "@playwright/test";
 test("user should be able to manually save a flow when the auto_save is off", async ({
   page,
 }) => {
-  // Intercept the request to any base URL ending with /api/v1/config
-  await page.route("**/api/v1/config", async (route) => {
-    const response = await route.fetch();
-    const responseBody = await response.json();
-    responseBody.auto_saving = false;
+  await page.route("**/api/v1/config", (route) => {
     route.fulfill({
-      response,
-      body: JSON.stringify(responseBody),
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        auto_saving: false,
+        frontend_timeout: 0,
+      }),
       headers: {
-        ...response.headers(),
         "content-type": "application/json",
+        ...route.request().headers(),
       },
     });
   });
 
   await page.goto("/");
   await page.locator("span").filter({ hasText: "My Collection" }).isVisible();
+
   await page.waitForSelector('[data-testid="mainpage_title"]', {
     timeout: 30000,
   });
