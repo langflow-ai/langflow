@@ -41,7 +41,7 @@ export default function LoginAdminPage() {
         setSelectedFolder(null);
 
         setLoading(true);
-        login(res.access_token, "login");
+        login(res.access_token, "login", res.refresh_token);
       },
       onError: (error) => {
         setErrorData({
