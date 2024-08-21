@@ -1,20 +1,16 @@
 import { expect, test } from "@playwright/test";
+import { before, beforeEach } from "node:test";
 
 test("when auto_login is false, admin can CRUD user's and should see just your own flows", async ({
   page,
 }) => {
-  // Intercept the request to any base URL ending with /api/v1/auto_login
-  await page.route("**/api/v1/auto_login", async (route) => {
-    const response = await route.fetch();
-    const responseBody = await response.json();
-    responseBody.detail.auto_login = false;
+  await page.route("**/api/v1/auto_login", (route) => {
     route.fulfill({
-      response,
-      body: JSON.stringify(responseBody),
-      headers: {
-        ...response.headers(),
-        "content-type": "application/json",
-      },
+      status: 500,
+      contentType: "application/json",
+      body: JSON.stringify({
+        detail: { auto_login: false },
+      }),
     });
   });
 
