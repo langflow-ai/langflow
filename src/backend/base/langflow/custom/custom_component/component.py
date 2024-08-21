@@ -26,6 +26,7 @@ if TYPE_CHECKING:
     from langflow.inputs.inputs import InputTypes
 
 BACKWARDS_COMPATIBLE_ATTRIBUTES = ["user_id", "vertex", "tracing_service"]
+CONFIG_ATTRIBUTES = ["_display_name", "_description", "_icon", "_name"]
 
 
 class Component(CustomComponent):
@@ -43,6 +44,8 @@ class Component(CustomComponent):
         for key, value in kwargs.items():
             if key.startswith("_"):
                 config[key] = value
+            elif key in CONFIG_ATTRIBUTES:
+                config[key[1:]] = value
             else:
                 inputs[key] = value
         self._inputs: dict[str, "InputTypes"] = {}
@@ -142,7 +145,7 @@ class Component(CustomComponent):
             KeyError: If the specified input name does not exist.
         """
         for key, value in kwargs.items():
-            self._process_connection_or_parameter(key, value)
+            self._process_connection_or_parameters(key, value)
         return self
 
     def list_inputs(self):
@@ -320,6 +323,14 @@ class Component(CustomComponent):
         else:
             self._set_parameter_or_attribute(key, value)
 
+    def _process_connection_or_parameters(self, key, value):
+        # if value is a list of components, we need to process each component
+        if isinstance(value, list):
+            for val in value:
+                self._process_connection_or_parameter(key, val)
+        else:
+            self._process_connection_or_parameter(key, value)
+
     def _get_or_create_input(self, key):
         try:
             return self._inputs[key]
@@ -358,6 +369,12 @@ class Component(CustomComponent):
         )
 
     def _set_parameter_or_attribute(self, key, value):
+        if isinstance(value, Component):
+            methods = ", ".join([f"'{output.method}'" for output in value.outputs])
+            raise ValueError(
+                f"You set {value.display_name} as value for `{key}`. "
+                f"You should pass one of the following: {methods}"
+            )
         self._set_input_value(key, value)
         self._parameters[key] = value
         self._attributes[key] = value
@@ -396,6 +413,12 @@ class Component(CustomComponent):
     def _set_input_value(self, name: str, value: Any):
         if name in self._inputs:
             input_value = self._inputs[name].value
+            if isinstance(input_value, Component):
+                methods = ", ".join([f"'{output.method}'" for output in input_value.outputs])
+                raise ValueError(
+                    f"You set {input_value.display_name} as value for `{name}`. "
+                    f"You should pass one of the following: {methods}"
+                )
             if callable(input_value):
                 raise ValueError(
                     f"Input {name} is connected to {input_value.__self__.display_name}.{input_value.__name__}"
