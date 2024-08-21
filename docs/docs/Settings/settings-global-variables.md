@@ -51,7 +51,7 @@ Subsequently, clicking the 🌐 button in a Text field will display the new vari
 
 :::tip
 
-You can also create global variables in Settings &gt; Variables and Secrets.
+You can also create global variables in Settings &gt; Global Variables.
 
 :::
 
@@ -61,7 +61,7 @@ You can also create global variables in Settings &gt; Variables and Secrets.
 ![](./418277339.png)
 
 
-To view and manage your project's global environment variables, visit **Settings** &gt; **Variables and Secrets**.
+To view and manage your project's global environment variables, visit **Settings** &gt; **Global Variables**.
 
 
 ### Configure Environment Variables in your .env file {#76844a93dbbc4d1ba551ea1a4a89ccdd}
