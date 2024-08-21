@@ -76,26 +76,6 @@ export async function postValidatePrompt(
 }
 
 /**
- * Fetches a flow from the database by ID.
- *
- * @param {number} flowId - The ID of the flow to fetch.
- * @returns {Promise<any>} The flow data.
- * @throws Will throw an error if fetching fails.
- */
-export async function getFlowFromDatabase(flowId: number) {
-  try {
-    const response = await api.get(`${BASE_URL_API}flows/${flowId}`);
-    if (response && response?.status !== 200) {
-      throw new Error(`HTTP error! status: ${response?.status}`);
-    }
-    return response?.data;
-  } catch (error) {
-    console.error(error);
-    throw error;
-  }
-}
-
-/**
  * Fetches the version of the API.
  *
  * @returns {Promise<AxiosResponse<any>>} A promise that resolves to an AxiosResponse containing the version information.
