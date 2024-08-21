@@ -134,25 +134,6 @@ export async function saveFlowToDatabase(newFlow: {
   }
 }
 
-/**
- * Reads all flows from the database.
- *
- * @returns {Promise<any>} The flows data.
- * @throws Will throw an error if reading fails.
- */
-export async function readFlowsFromDatabase() {
-  try {
-    const response = await api.get(`${BASE_URL_API}flows/`);
-    if (response && response?.status !== 200) {
-      throw new Error(`HTTP error! status: ${response?.status}`);
-    }
-    return response?.data;
-  } catch (error) {
-    console.error(error);
-    throw error;
-  }
-}
-
 export async function uploadFlowsToDatabase(flows: FormData) {
   try {
     const response = await api.post(`${BASE_URL_API}flows/upload/`, flows);
