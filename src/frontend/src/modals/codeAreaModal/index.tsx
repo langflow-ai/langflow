@@ -4,6 +4,7 @@ import "ace-builds/src-noconflict/mode-python";
 import "ace-builds/src-noconflict/theme-github";
 import "ace-builds/src-noconflict/theme-twilight";
 // import "ace-builds/webpack-resolver";
+import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
 import { useEffect, useRef, useState } from "react";
 import AceEditor from "react-ace";
 import ReactAce from "react-ace/lib/ace";
@@ -21,7 +22,7 @@ import {
   CODE_PROMPT_DIALOG_SUBTITLE,
   EDIT_CODE_TITLE,
 } from "../../constants/constants";
-import { postCustomComponent, postValidateCode } from "../../controllers/API";
+import { postValidateCode } from "../../controllers/API";
 import useAlertStore from "../../stores/alertStore";
 import { useDarkStore } from "../../stores/darkStore";
 import { CodeErrorDataTypeAPI } from "../../types/api";
@@ -54,6 +55,8 @@ export default function CodeAreaModal({
   const [error, setError] = useState<{
     detail: CodeErrorDataTypeAPI;
   } | null>(null);
+
+  const { mutate: validateComponentCode } = usePostValidateComponentCode();
 
   useEffect(() => {
     // if nodeClass.template has more fields other than code and dynamic is true
@@ -104,19 +107,22 @@ export default function CodeAreaModal({
   }
 
   function processDynamicField() {
-    postCustomComponent(code, nodeClass!)
-      .then((apiReturn) => {
-        const { data, type } = apiReturn.data;
-        if (data && type) {
-          setValue(code);
-          setNodeClass(data, type);
-          setError({ detail: { error: undefined, traceback: undefined } });
-          setOpen(false);
-        }
-      })
-      .catch((err) => {
-        setError(err.response.data);
-      });
+    validateComponentCode(
+      { code, frontend_node: nodeClass! },
+      {
+        onSuccess: ({ data, type }) => {
+          if (data && type) {
+            setValue(code);
+            setNodeClass(data, type);
+            setError({ detail: { error: undefined, traceback: undefined } });
+            setOpen(false);
+          }
+        },
+        onError: (error) => {
+          setError(error.response.data);
+        },
+      },
+    );
   }
 
   function processCode() {
