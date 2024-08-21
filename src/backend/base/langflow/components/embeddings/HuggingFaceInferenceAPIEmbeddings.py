@@ -7,14 +7,14 @@ from langflow.io import MessageTextInput, Output, SecretStrInput
 
 
 class HuggingFaceInferenceAPIEmbeddingsComponent(LCModelComponent):
-    display_name = "Hugging Face API Embeddings"
+    display_name = "HuggingFace Embeddings"
     description = "Generate embeddings using Hugging Face Inference API models."
     documentation = "https://github.com/huggingface/text-embeddings-inference"
     icon = "HuggingFace"
     name = "HuggingFaceInferenceAPIEmbeddings"
 
     inputs = [
-        SecretStrInput(name="api_key", display_name="API Key", advanced=True),
+        SecretStrInput(name="api_key", display_name="API Key"),
         MessageTextInput(name="api_url", display_name="API URL", advanced=True, value="http://localhost:8080"),
         MessageTextInput(name="model_name", display_name="Model Name", value="BAAI/bge-large-en-v1.5"),
     ]
