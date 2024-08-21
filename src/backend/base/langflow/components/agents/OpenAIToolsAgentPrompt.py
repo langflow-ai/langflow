@@ -1,11 +1,8 @@
-from typing import Optional, List
-
 from langchain.agents import create_openai_tools_agent
 from langchain_core.prompts import MessagesPlaceholder
 
 from langflow.base.agents.agent import LCToolsAgentComponent
 from langflow.inputs.inputs import HandleInput
-from langflow.schema import Data
 
 
 class OpenAIToolsAgentPromptComponent(LCToolsAgentComponent):
@@ -29,9 +26,6 @@ class OpenAIToolsAgentPromptComponent(LCToolsAgentComponent):
             required=True,
         ),
     ]
-
-    def get_chat_history_data(self) -> Optional[List[Data]]:
-        return self.chat_history
 
     def create_agent_runnable(self):
         self.prompt.append(MessagesPlaceholder("agent_scratchpad"))
