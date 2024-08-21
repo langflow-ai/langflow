@@ -5,6 +5,7 @@ from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
 from langflow.io import DictInput, DropdownInput, SecretStrInput, StrInput, IntInput
 
+
 class HuggingFaceEndpointsComponent(LCModelComponent):
     display_name: str = "Hugging Face API"
     description: str = "Generate text using Hugging Face Inference APIs."
