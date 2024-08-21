@@ -23,10 +23,10 @@ function NoteNode({
         maxHeight={800}
         maxWidth={600}
         isVisible={selected}
-        lineClassName="border border-border"
+        lineClassName="border-[3px] border-border"
       />
 
-      <div className={cn("generic-node-div gap-3 p-5 h-full border border-b rounded-md",selected?"shadow-md":"shadow-sm")}>
+      <div className={cn("generic-node-div gap-3 p-5 h-full border border-b rounded-md",selected?"":"shadow-sm")}>
         <div className="w-full flex align-middle items-center">
           <div className="flex w-full gap-2">
             <IconComponent name="StickyNote" />
