@@ -77,9 +77,8 @@ class LangChainHubPromptComponent(Component):
     def build_chat_prompt(
         self,
     ) -> ChatPromptTemplate:
-
-        # Get the parameters that 
-        template = self._fetch_langchain_hub_template() # TODO: doing this twice
+        # Get the parameters that
+        template = self._fetch_langchain_hub_template()  # TODO: doing this twice
         prompt_value = template.invoke(self._attributes)
 
         # Now build the ChatPromptTemplate back
