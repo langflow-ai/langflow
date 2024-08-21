@@ -4,6 +4,8 @@ import IconComponent from "../../components/genericIconComponent";
 import NodeDescription from "../GenericNode/components/NodeDescription";
 import NodeName from "../GenericNode/components/NodeName";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/utils/utils";
+import { useState } from "react";
 
 function NoteNode({
   data,
@@ -12,6 +14,7 @@ function NoteNode({
   data: noteDataType;
   selected: boolean;
 }) {
+  const [expanded, setExpanded] = useState(false);
   return (
     <>
       <NodeResizer
@@ -23,7 +26,7 @@ function NoteNode({
         lineClassName="border border-border"
       />
 
-      <div className="generic-node-div gap-3 p-5 h-full border border-b">
+      <div className={cn("generic-node-div gap-3 p-5 h-full border border-b rounded-md",selected?"shadow-md":"shadow-sm")}>
         <div className="w-full flex align-middle items-center">
           <div className="flex w-full gap-2">
             <IconComponent name="StickyNote" />
@@ -36,9 +39,14 @@ function NoteNode({
 
             </div>
           </div>
-            <IconComponent className="w-4 h-4" name="ChevronsDownUp" />
+          <div onClick={()=>{
+              console.log("clicked")
+              setExpanded((prev)=>!prev)
+            }}>
+            <IconComponent className="w-4 h-4 cursor-pointer" name={expanded?"ChevronsDownUp":"ChevronsUpDown"} />
+          </div>
         </div>
-        <div className=" h-full">
+        <div className=" h-full nowheel">
         <NodeDescription
         charLimit={2500}
           nodeId={data.id}

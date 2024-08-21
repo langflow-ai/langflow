@@ -91,7 +91,7 @@ export default function NodeDescription({
       ) : (
         <div
           className={cn(
-            "nodoubleclick generic-node-desc-text  cursor-text word-break-break-word",
+            "nodoubleclick generic-node-desc-text cursor-text word-break-break-word h-full",
             description === "" || !description ? "font-light italic" : "",
           )}
           onDoubleClick={(e) => {
