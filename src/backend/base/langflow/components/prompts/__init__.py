@@ -1,4 +1,5 @@
 from .Prompt import PromptComponent
-from .LangSmithPrompt import LangSmithPromptComponent
+from .LangChainHubPrompt import LangChainHubPromptComponent
+from .LangChainHubMessages import LangChainHubMessages
 
-__all__ = ["PromptComponent", "LangSmithPromptComponent"]
+__all__ = ["PromptComponent", "LangChainHubPromptComponent", "LangChainHubMessages"]
