@@ -8,11 +8,11 @@ const useAutoSaveFlow = () => {
   const saveFlow = useSaveFlow();
   const autoSaving = useFlowsManagerStore((state) => state.autoSaving);
 
-  const autoSaveFlow = autoSaving
-    ? useDebounce((flow?: FlowType) => {
-        saveFlow(flow);
-      }, SAVE_DEBOUNCE_TIME)
-    : () => {};
+  const autoSaveFlow = useDebounce((flow?: FlowType) => {
+    if (autoSaving) {
+      saveFlow(flow);
+    }
+  }, SAVE_DEBOUNCE_TIME);
 
   return autoSaveFlow;
 };
