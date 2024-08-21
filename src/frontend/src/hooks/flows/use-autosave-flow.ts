@@ -7,11 +7,14 @@ import useSaveFlow from "./use-save-flow";
 const useAutoSaveFlow = () => {
   const saveFlow = useSaveFlow();
   const autoSaving = useFlowsManagerStore((state) => state.autoSaving);
+  const autoSavingInterval = useFlowsManagerStore(
+    (state) => state.autoSavingInterval,
+  );
 
   const autoSaveFlow = autoSaving
     ? useDebounce((flow?: FlowType) => {
         saveFlow(flow);
-      }, SAVE_DEBOUNCE_TIME)
+      }, autoSavingInterval)
     : () => {};
 
   return autoSaveFlow;
