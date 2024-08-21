@@ -5,7 +5,6 @@ import "ace-builds/src-noconflict/theme-github";
 import "ace-builds/src-noconflict/theme-twilight";
 // import "ace-builds/webpack-resolver";
 import { usePostValidateCode } from "@/controllers/API/queries/nodes/use-post-validate-code";
-import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
 import { useEffect, useRef, useState } from "react";
 import AceEditor from "react-ace";
 import ReactAce from "react-ace/lib/ace";
@@ -23,6 +22,7 @@ import {
   CODE_PROMPT_DIALOG_SUBTITLE,
   EDIT_CODE_TITLE,
 } from "../../constants/constants";
+import { postCustomComponent } from "../../controllers/API";
 import useAlertStore from "../../stores/alertStore";
 import { useDarkStore } from "../../stores/darkStore";
 import { CodeErrorDataTypeAPI } from "../../types/api";
@@ -69,7 +69,7 @@ export default function CodeAreaModal({
   }, []);
 
   function processNonDynamicField() {
-    validateCode(
+    mutate(
       { code },
       {
         onSuccess: (apiReturn) => {

@@ -56,6 +56,176 @@ export async function sendAll(data: sendAllProps) {
 }
 
 /**
+ * Checks the prompt for the code block by sending it to an API endpoint.
+ * @param {string} name - The name of the field to check.
+ * @param {string} template - The template string of the prompt to check.
+ * @param {APIClassType} frontend_node - The frontend node to check.
+ * @returns {Promise<AxiosResponse<PromptTypeAPI>>} A promise that resolves to an AxiosResponse containing the validation results.
+ */
+export async function postValidatePrompt(
+  name: string,
+  template: string,
+  frontend_node: APIClassType,
+): Promise<AxiosResponse<PromptTypeAPI>> {
+  return api.post(`${BASE_URL_API}validate/prompt`, {
+    name,
+    template,
+    frontend_node,
+  });
+}
+
+/**
+ * Fetches a list of JSON files from a GitHub repository and returns their contents as an array of FlowType objects.
+ *
+ * @returns {Promise<FlowType[]>} A promise that resolves to an array of FlowType objects.
+ */
+export async function getExamples(): Promise<FlowType[]> {
+  const url =
+    "https://api.github.com/repos/langflow-ai/langflow_examples/contents/examples?ref=main";
+  const response = await api.get(url);
+
+  const jsonFiles = response?.data.filter((file: any) => {
+    return file.name.endsWith(".json");
+  });
+
+  const contentsPromises = jsonFiles.map(async (file: any) => {
+    const contentResponse = await api.get(file.download_url);
+    return contentResponse.data;
+  });
+
+  return await Promise.all(contentsPromises);
+}
+
+/**
+ * Saves a new flow to the database.
+ *
+ * @param {FlowType} newFlow - The flow data to save.
+ * @returns {Promise<any>} The saved flow data.
+ * @throws Will throw an error if saving fails.
+ */
+export async function saveFlowToDatabase(newFlow: {
+  name: string;
+  id: string;
+  data: ReactFlowJsonObject | null;
+  description: string;
+  style?: FlowStyleType;
+  is_component?: boolean;
+  folder_id?: string;
+  endpoint_name?: string;
+}): Promise<FlowType> {
+  try {
+    const response = await api.post(`${BASE_URL_API}flows/`, {
+      name: newFlow.name,
+      data: newFlow.data,
+      description: newFlow.description,
+      is_component: newFlow.is_component,
+      folder_id: newFlow.folder_id === "" ? null : newFlow.folder_id,
+      endpoint_name: newFlow.endpoint_name,
+    });
+
+    if (response?.status !== 201) {
+      throw new Error(`HTTP error! status: ${response?.status}`);
+    }
+    return response?.data;
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+}
+
+/**
+ * Reads all flows from the database.
+ *
+ * @returns {Promise<any>} The flows data.
+ * @throws Will throw an error if reading fails.
+ */
+export async function readFlowsFromDatabase() {
+  try {
+    const response = await api.get(`${BASE_URL_API}flows/`);
+    if (response && response?.status !== 200) {
+      throw new Error(`HTTP error! status: ${response?.status}`);
+    }
+    return response?.data;
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+}
+
+export async function uploadFlowsToDatabase(flows: FormData) {
+  try {
+    const response = await api.post(`${BASE_URL_API}flows/upload/`, flows);
+
+    if (response?.status !== 201) {
+      throw new Error(`HTTP error! status: ${response?.status}`);
+    }
+    return response?.data;
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+}
+
+/**
+ * Deletes a flow from the database.
+ *
+ * @param {string} flowId - The ID of the flow to delete.
+ * @returns {Promise<any>} The deleted flow data.
+ * @throws Will throw an error if deletion fails.
+ */
+export async function deleteFlowFromDatabase(flowId: string) {
+  try {
+    const response = await api.delete(`${BASE_URL_API}flows/${flowId}`);
+    if (response.status !== 200) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return response?.data;
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+}
+
+/**
+ * Fetches a flow from the database by ID.
+ *
+ * @param {number} flowId - The ID of the flow to fetch.
+ * @returns {Promise<any>} The flow data.
+ * @throws Will throw an error if fetching fails.
+ */
+export async function getFlowFromDatabase(flowId: number) {
+  try {
+    const response = await api.get(`${BASE_URL_API}flows/${flowId}`);
+    if (response && response?.status !== 200) {
+      throw new Error(`HTTP error! status: ${response?.status}`);
+    }
+    return response?.data;
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+}
+
+/**
+ * Fetches flow styles from the database.
+ *
+ * @returns {Promise<any>} The flow styles data.
+ * @throws Will throw an error if fetching fails.
+ */
+export async function getFlowStylesFromDatabase() {
+  try {
+    const response = await api.get(`${BASE_URL_API}flow_styles/`);
+    if (response.status !== 200) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return response?.data;
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+}
+
+/**
  * Fetches the version of the API.
  *
  * @returns {Promise<AxiosResponse<any>>} A promise that resolves to an AxiosResponse containing the version information.
