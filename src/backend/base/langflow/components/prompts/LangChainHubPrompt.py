@@ -39,14 +39,14 @@ class LangChainHubPromptComponent(Component):
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
         if field_name == "langchain_hub_prompt":
             template = self._fetch_langchain_hub_template()
-            
+
             # Extract the messages from the prompt data
             prompt_template = []
             for message_data in template.messages:
                 prompt_template.append(message_data.prompt)
 
             # Regular expression to find all instances of {<string>}
-            pattern = r'\{(.*?)\}'
+            pattern = r"\{(.*?)\}"
 
             # Get all the custom fields
             custom_fields: List[str] = []
@@ -76,21 +76,18 @@ class LangChainHubPromptComponent(Component):
     def build_chat_prompt(
         self,
     ) -> ChatPromptValue:
-        # Get the parameters that 
-        template = self._fetch_langchain_hub_template() # TODO: doing this twice
+        # Get the parameters that
+        template = self._fetch_langchain_hub_template()  # TODO: doing this twice
         prompt_value = template.invoke(self._attributes)
 
         self.status = prompt_value.to_string()
 
         return prompt_value
-    
+
     def _fetch_langchain_hub_template(self):
-        import langchain.hub    
+        import langchain.hub
 
         # Pull the prompt from LangChain Hub
-        prompt_data = langchain.hub.pull(
-            self.langchain_hub_prompt,
-            api_key=self.langchain_api_key
-        )
+        prompt_data = langchain.hub.pull(self.langchain_hub_prompt, api_key=self.langchain_api_key)
 
-        return(prompt_data)
+        return prompt_data

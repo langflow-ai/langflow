@@ -23,7 +23,7 @@ class LangChainHubMessagesComponent(Component):
     outputs = [
         Output(display_name="View Messages", name="messages", method="view_messages"),
     ]
-    
+
     def view_messages(
         self,
     ) -> str:
