@@ -221,15 +221,6 @@ export default function ExtraSidebar(): JSX.Element {
         </div>
       </div>
       <Separator />
-      <div className="parent-disclosure-arrangement">
-        <div className="flex w-full items-center justify-between pr-2 align-middle">
-          <div className="parent-disclosure-title">Add a Note</div>
-          <div draggable>
-            <NoteDraggableComponent />
-          </div>
-        </div>
-      </div>
-      <Separator />
 
       <div className="side-bar-components-div-arrangement">
         <div className="parent-disclosure-arrangement">
@@ -420,6 +411,10 @@ export default function ExtraSidebar(): JSX.Element {
               ),
             )}
         </ParentDisclosureComponent>
+        <Separator />
+
+        <NoteDraggableComponent/>
+
       </div>
     </div>
   );
