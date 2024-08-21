@@ -8,6 +8,7 @@ from .HuggingFaceInferenceAPIEmbeddings import HuggingFaceInferenceAPIEmbeddings
 from .OllamaEmbeddings import OllamaEmbeddingsComponent
 from .OpenAIEmbeddings import OpenAIEmbeddingsComponent
 from .VertexAIEmbeddings import VertexAIEmbeddingsComponent
+from .GoogleGenerativeAIEmbeddings import GoogleGenerativeAIEmbeddingsComponent
 
 __all__ = [
     "AIMLEmbeddingsComponent",
@@ -20,4 +21,5 @@ __all__ = [
     "OllamaEmbeddingsComponent",
     "OpenAIEmbeddingsComponent",
     "VertexAIEmbeddingsComponent",
+    "GoogleGenerativeAIEmbeddingsComponent",
 ]
