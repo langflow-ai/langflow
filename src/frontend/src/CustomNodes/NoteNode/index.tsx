@@ -1,11 +1,12 @@
 import { noteDataType } from "@/types/flow";
-import { NodeResizer } from "reactflow";
+import { NodeResizer, NodeToolbar } from "reactflow";
 import IconComponent from "../../components/genericIconComponent";
 import NodeDescription from "../GenericNode/components/NodeDescription";
 import NodeName from "../GenericNode/components/NodeName";
 import { cn } from "@/utils/utils";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { NOTE_NODE_MAX_HEIGHT, NOTE_NODE_MAX_WIDTH, NOTE_NODE_MIN_HEIGHT, NOTE_NODE_MIN_WIDTH } from "@/constants/constants";
+import NoteToolbarComponent from "./NoteToolbarComponent";
 
 function NoteNode({
   data,
@@ -15,8 +16,14 @@ function NoteNode({
   selected: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const memoizedNodeToolbarComponent = useMemo(() => (
+    <NodeToolbar>
+      <NoteToolbarComponent/>
+    </NodeToolbar>
+  ),[]);
   return (
     <>
+    {memoizedNodeToolbarComponent}
       <NodeResizer
         minWidth={NOTE_NODE_MIN_WIDTH}
         minHeight={NOTE_NODE_MIN_HEIGHT}
@@ -25,7 +32,6 @@ function NoteNode({
         isVisible={selected}
         lineClassName="border-[3px] border-border"
       />
-
       <div style={{
         maxHeight: NOTE_NODE_MAX_HEIGHT,
         maxWidth: NOTE_NODE_MAX_WIDTH,
