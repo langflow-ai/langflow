@@ -18,6 +18,7 @@ export const URLs = {
   FLOWS: `flows`,
   FOLDERS: `folders`,
   VARIABLES: `variables`,
+  VALIDATE: `validate`,
   CONFIG: `config`,
 } as const;
 

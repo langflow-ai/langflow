@@ -15,6 +15,11 @@ export type APITemplateType = {
   [key: string]: InputFieldType;
 };
 
+export type APICodeValidateType = {
+  imports: { errors: Array<string> };
+  function: { errors: Array<string> };
+};
+
 export type CustomFieldsType = {
   [key: string]: Array<string>;
 };
