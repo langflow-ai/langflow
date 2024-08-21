@@ -1,3 +1,4 @@
+import { SAVE_DEBOUNCE_TIME } from "@/constants/constants";
 import { cloneDeep } from "lodash";
 import { create } from "zustand";
 import { FlowType } from "../types/flow";
@@ -18,6 +19,9 @@ const future = {};
 const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
   autoSaving: true,
   setAutoSaving: (autoSaving: boolean) => set({ autoSaving }),
+  autoSavingInterval: SAVE_DEBOUNCE_TIME,
+  setAutoSavingInterval: (autoSavingInterval: number) =>
+    set({ autoSavingInterval }),
   examples: [],
   setExamples: (examples: FlowType[]) => {
     set({ examples });

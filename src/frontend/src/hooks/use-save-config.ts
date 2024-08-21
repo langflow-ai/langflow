@@ -6,6 +6,9 @@ import { useGetConfigQuery } from "../controllers/API/queries/config/use-get-con
 function useSaveConfig() {
   const { data } = useGetConfigQuery();
   const setAutoSaving = useFlowsManagerStore((state) => state.setAutoSaving);
+  const setAutoSavingInterval = useFlowsManagerStore(
+    (state) => state.setAutoSavingInterval,
+  );
 
   useEffect(() => {
     if (data) {
@@ -15,6 +18,7 @@ function useSaveConfig() {
       axios.defaults.baseURL = "";
       axios.defaults.timeout = timeoutInMilliseconds;
       setAutoSaving(data.auto_saving);
+      setAutoSavingInterval(data.auto_saving_interval);
     }
   }, [data]);
 }

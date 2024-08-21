@@ -125,6 +125,11 @@ def run(
         help="Defines if the auto save is enabled.",
         envvar="LANGFLOW_AUTO_SAVING",
     ),
+    auto_saving_interval: bool = typer.Option(
+        True,
+        help="Defines the debounce time for the auto save.",
+        envvar="LANGFLOW_AUTO_SAVING_INTERVAL",
+    ),
 ):
     """
     Run Langflow.
@@ -143,6 +148,7 @@ def run(
         components_path=components_path,
         store=store,
         auto_saving=auto_saving,
+        auto_saving_interval=auto_saving_interval,
     )
     # create path object if path is provided
     static_files_dir: Optional[Path] = Path(path) if path else None
