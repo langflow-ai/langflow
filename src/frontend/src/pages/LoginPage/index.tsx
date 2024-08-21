@@ -43,7 +43,7 @@ export default function LoginPage(): JSX.Element {
       onSuccess: (data) => {
         setSelectedFolder(null);
 
-        login(data.access_token, "login");
+        login(data.access_token, "login", data.refresh_token);
       },
       onError: (error) => {
         setErrorData({

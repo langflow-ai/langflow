@@ -2,6 +2,7 @@ import {
   LANGFLOW_ACCESS_TOKEN,
   LANGFLOW_API_TOKEN,
   LANGFLOW_AUTO_LOGIN_OPTION,
+  LANGFLOW_REFRESH_TOKEN,
 } from "@/constants/constants";
 import { useGetUserData } from "@/controllers/API/queries/auth";
 import useAuthStore from "@/stores/authStore";
@@ -76,8 +77,15 @@ export function AuthProvider({ children }): React.ReactElement {
     );
   }
 
-  function login(newAccessToken: string, autoLogin: string) {
+  function login(
+    newAccessToken: string,
+    autoLogin: string,
+    refreshToken?: string,
+  ) {
     cookies.set(LANGFLOW_AUTO_LOGIN_OPTION, autoLogin, { path: "/" });
+    if (refreshToken) {
+      cookies.set(LANGFLOW_REFRESH_TOKEN, refreshToken, { path: "/" });
+    }
     setAccessToken(newAccessToken);
     setIsAuthenticated(true);
     getUser();

@@ -42,14 +42,21 @@ export default function UserManagementModal({
   }: inputHandlerEventType): void {
     setInputState((prev) => ({ ...prev, [name]: value }));
   }
+  console.log(data);
 
   useEffect(() => {
-    if (!data) {
-      resetForm();
-    } else {
-      handleInput({ target: { name: "username", value: username } });
-      handleInput({ target: { name: "is_active", value: isActive } });
-      handleInput({ target: { name: "is_superuser", value: isSuperUser } });
+    if (open) {
+      if (!data) {
+        resetForm();
+      } else {
+        setUserName(data.username);
+        setIsActive(data.is_active);
+        setIsSuperUser(data.is_superuser);
+
+        handleInput({ target: { name: "username", value: username } });
+        handleInput({ target: { name: "is_active", value: isActive } });
+        handleInput({ target: { name: "is_superuser", value: isSuperUser } });
+      }
     }
   }, [open]);
 
@@ -57,6 +64,8 @@ export default function UserManagementModal({
     setPassword("");
     setUserName("");
     setConfirmPassword("");
+    setIsActive(false);
+    setIsSuperUser(false);
   }
 
   return (
