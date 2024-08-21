@@ -26,7 +26,7 @@ from langchain_google_genai._genai_extension import build_generative_service
 import numpy as np
 
 
-class CustomComponent(Component):
+class GoogleGenerativeAIEmbeddingsComponent(Component):
     display_name = "Custom Component"
     description = "Use as a template to create your own component."
     documentation: str = "http://docs.langflow.org/components/custom"
