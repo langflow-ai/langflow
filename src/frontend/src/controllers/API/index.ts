@@ -19,7 +19,6 @@ import {
   APIClassType,
   BuildStatusTypeAPI,
   InitTypeAPI,
-  PromptTypeAPI,
   UploadFileTypeAPI,
 } from "./../../types/api/index";
 
@@ -55,25 +54,6 @@ export async function getRepoStars(owner: string, repo: string) {
  */
 export async function sendAll(data: sendAllProps) {
   return await api.post(`${BASE_URL_API}predict`, data);
-}
-
-/**
- * Checks the prompt for the code block by sending it to an API endpoint.
- * @param {string} name - The name of the field to check.
- * @param {string} template - The template string of the prompt to check.
- * @param {APIClassType} frontend_node - The frontend node to check.
- * @returns {Promise<AxiosResponse<PromptTypeAPI>>} A promise that resolves to an AxiosResponse containing the validation results.
- */
-export async function postValidatePrompt(
-  name: string,
-  template: string,
-  frontend_node: APIClassType,
-): Promise<AxiosResponse<PromptTypeAPI>> {
-  return api.post(`${BASE_URL_API}validate/prompt`, {
-    name,
-    template,
-    frontend_node,
-  });
 }
 
 /**
