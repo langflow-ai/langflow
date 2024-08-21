@@ -4,6 +4,7 @@ import "ace-builds/src-noconflict/mode-python";
 import "ace-builds/src-noconflict/theme-github";
 import "ace-builds/src-noconflict/theme-twilight";
 // import "ace-builds/webpack-resolver";
+import { usePostValidateCode } from "@/controllers/API/queries/nodes/use-post-validate-code";
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
 import { useEffect, useRef, useState } from "react";
 import AceEditor from "react-ace";
@@ -22,7 +23,6 @@ import {
   CODE_PROMPT_DIALOG_SUBTITLE,
   EDIT_CODE_TITLE,
 } from "../../constants/constants";
-import { postValidateCode } from "../../controllers/API";
 import useAlertStore from "../../stores/alertStore";
 import { useDarkStore } from "../../stores/darkStore";
 import { CodeErrorDataTypeAPI } from "../../types/api";
@@ -56,6 +56,7 @@ export default function CodeAreaModal({
     detail: CodeErrorDataTypeAPI;
   } | null>(null);
 
+  const { mutate: validateCode } = usePostValidateCode();
   const { mutate: validateComponentCode } = usePostValidateComponentCode();
 
   useEffect(() => {
@@ -67,43 +68,48 @@ export default function CodeAreaModal({
   }, []);
 
   function processNonDynamicField() {
-    postValidateCode(code)
-      .then((apiReturn) => {
-        if (apiReturn.data) {
-          let importsErrors = apiReturn.data.imports.errors;
-          let funcErrors = apiReturn.data.function.errors;
-          if (funcErrors.length === 0 && importsErrors.length === 0) {
-            setSuccessData({
-              title: CODE_SUCCESS_ALERT,
-            });
-            setOpen(false);
-            setValue(code);
-            // setValue(code);
+    validateCode(
+      { code },
+      {
+        onSuccess: (apiReturn) => {
+          if (apiReturn) {
+            let importsErrors = apiReturn.imports.errors;
+            let funcErrors = apiReturn.function.errors;
+            if (funcErrors.length === 0 && importsErrors.length === 0) {
+              setSuccessData({
+                title: CODE_SUCCESS_ALERT,
+              });
+              setOpen(false);
+              setValue(code);
+              // setValue(code);
+            } else {
+              if (funcErrors.length !== 0) {
+                setErrorData({
+                  title: FUNC_ERROR_ALERT,
+                  list: funcErrors,
+                });
+              }
+              if (importsErrors.length !== 0) {
+                setErrorData({
+                  title: IMPORT_ERROR_ALERT,
+                  list: importsErrors,
+                });
+              }
+            }
           } else {
-            if (funcErrors.length !== 0) {
-              setErrorData({
-                title: FUNC_ERROR_ALERT,
-                list: funcErrors,
-              });
-            }
-            if (importsErrors.length !== 0) {
-              setErrorData({
-                title: IMPORT_ERROR_ALERT,
-                list: importsErrors,
-              });
-            }
+            setErrorData({
+              title: BUG_ALERT,
+            });
           }
-        } else {
+        },
+        onError: (error) => {
           setErrorData({
-            title: BUG_ALERT,
+            title: CODE_ERROR_ALERT,
+            list: [error.response.data.detail],
           });
-        }
-      })
-      .catch((_) => {
-        setErrorData({
-          title: CODE_ERROR_ALERT,
-        });
-      });
+        },
+      },
+    );
   }
 
   function processDynamicField() {

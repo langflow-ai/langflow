@@ -20,7 +20,6 @@ import {
   InitTypeAPI,
   PromptTypeAPI,
   UploadFileTypeAPI,
-  errorsTypeAPI,
 } from "./../../types/api/index";
 
 /**
@@ -55,12 +54,6 @@ export async function getRepoStars(owner: string, repo: string) {
  */
 export async function sendAll(data: sendAllProps) {
   return await api.post(`${BASE_URL_API}predict`, data);
-}
-
-export async function postValidateCode(
-  code: string,
-): Promise<AxiosResponse<errorsTypeAPI>> {
-  return await api.post(`${BASE_URL_API}validate/code`, { code });
 }
 
 /**
