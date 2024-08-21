@@ -12,7 +12,6 @@ export type FlowsManagerStoreType = {
   setSaveLoading: (saveLoading: boolean) => void;
   isLoading: boolean;
   setIsLoading: (isLoading: boolean) => void;
-  refreshFlows: () => Promise<void>;
   undo: () => void;
   redo: () => void;
   takeSnapshot: () => void;
