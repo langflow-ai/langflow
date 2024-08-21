@@ -7,7 +7,7 @@ from langflow.io import DictInput, DropdownInput, SecretStrInput, StrInput, IntI
 
 
 class HuggingFaceEndpointsComponent(LCModelComponent):
-    display_name: str = "Hugging Face API"
+    display_name: str = "HuggingFace"
     description: str = "Generate text using Hugging Face Inference APIs."
     icon = "HuggingFace"
     name = "HuggingFaceModel"

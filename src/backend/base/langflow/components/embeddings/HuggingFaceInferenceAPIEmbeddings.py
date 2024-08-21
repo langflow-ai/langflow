@@ -7,7 +7,7 @@ from langflow.io import MessageTextInput, Output, SecretStrInput
 
 
 class HuggingFaceInferenceAPIEmbeddingsComponent(LCModelComponent):
-    display_name = "Hugging Face API Embeddings"
+    display_name = "HuggingFace Embeddings"
     description = "Generate embeddings using Hugging Face Inference API models."
     documentation = "https://github.com/huggingface/text-embeddings-inference"
     icon = "HuggingFace"
