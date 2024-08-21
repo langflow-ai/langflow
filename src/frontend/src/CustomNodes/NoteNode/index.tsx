@@ -23,7 +23,7 @@ function NoteNode({
         lineClassName="border border-border"
       />
 
-      <div className="generic-node-div p-5 h-full border border-b">
+      <div className="generic-node-div gap-3 p-5 h-full border border-b">
         <div className="w-full flex align-middle items-center">
           <div className="flex w-full gap-2">
             <IconComponent name="StickyNote" />
@@ -38,12 +38,14 @@ function NoteNode({
           </div>
             <IconComponent className="w-4 h-4" name="ChevronsDownUp" />
         </div>
+        <div className=" h-full overflow-auto">
         <NodeDescription
           nodeId={data.id}
           selected={selected}
           description={data.node?.description}
           emptyPlaceholder="Double Click to Edit Note"
         />
+        </div>
       </div>
     </>
   );

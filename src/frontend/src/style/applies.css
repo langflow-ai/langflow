@@ -394,7 +394,7 @@
     @apply hover:text-accent-foreground hover:transition-all;
   }
   .generic-node-desc {
-    @apply mb-4 h-full w-full px-5 text-foreground;
+    @apply pb-4 h-full w-full px-5 text-foreground;
   }
   .generic-node-desc-text {
     @apply w-full text-sm text-muted-foreground;

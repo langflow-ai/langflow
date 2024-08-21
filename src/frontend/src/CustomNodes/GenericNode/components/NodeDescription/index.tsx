@@ -36,7 +36,7 @@ export default function NodeDescription({
     <div className="generic-node-desc">
       {inputDescription ? (
         <Textarea
-          className="nowheel min-h-40"
+          className="nowheel h-full"
           autoFocus
           onBlur={() => {
             setInputDescription(false);
@@ -91,7 +91,7 @@ export default function NodeDescription({
           {description === "" || !description ? (
             emptyPlaceholder
           ) : (
-            <Markdown className="markdown prose flex flex-col text-primary word-break-break-word dark:prose-invert">
+            <Markdown className="markdown h-full prose flex flex-col text-primary word-break-break-word dark:prose-invert">
               {String(description)}
             </Markdown>
           )}
