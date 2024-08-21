@@ -11,11 +11,13 @@ export default function NodeDescription({
   selected,
   nodeId,
   emptyPlaceholder = "Double Click to Edit Description",
+  charLimit
 }: {
   description?: string;
   selected: boolean;
   nodeId: string;
   emptyPlaceholder?: string;
+  charLimit?: number;
 }) {
   const [inputDescription, setInputDescription] = useState(false);
   const [nodeDescription, setNodeDescription] = useState(description);
@@ -33,35 +35,14 @@ export default function NodeDescription({
   }, [description]);
 
   return (
-    <div className="generic-node-desc">
+    <div className={cn("generic-node-desc",!inputDescription?"overflow-auto":"")}>
       {inputDescription ? (
-        <Textarea
-          className="nowheel h-full"
-          autoFocus
-          onBlur={() => {
-            setInputDescription(false);
-            setNodeDescription(nodeDescription);
-            setNode(nodeId, (old) => ({
-              ...old,
-              data: {
-                ...old.data,
-                node: {
-                  ...old.data.node,
-                  description: nodeDescription,
-                },
-              },
-            }));
-          }}
-          value={nodeDescription}
-          onChange={(e) => setNodeDescription(e.target.value)}
-          onKeyDown={(e) => {
-            handleKeyDown(e, nodeDescription, "");
-            if (
-              e.key === "Enter" &&
-              e.shiftKey === false &&
-              e.ctrlKey === false &&
-              e.altKey === false
-            ) {
+        <>
+          <Textarea
+            maxLength={charLimit}
+            className="nowheel h-full"
+            autoFocus
+            onBlur={() => {
               setInputDescription(false);
               setNodeDescription(nodeDescription);
               setNode(nodeId, (old) => ({
@@ -74,13 +55,43 @@ export default function NodeDescription({
                   },
                 },
               }));
-            }
-          }}
-        />
+            }}
+            value={nodeDescription}
+            onChange={(e) => setNodeDescription(e.target.value)}
+            onKeyDown={(e) => {
+              handleKeyDown(e, nodeDescription, "");
+              if (
+                e.key === "Enter" &&
+                e.shiftKey === false &&
+                e.ctrlKey === false &&
+                e.altKey === false
+              ) {
+                setInputDescription(false);
+                setNodeDescription(nodeDescription);
+                setNode(nodeId, (old) => ({
+                  ...old,
+                  data: {
+                    ...old.data,
+                    node: {
+                      ...old.data.node,
+                      description: nodeDescription,
+                    },
+                  },
+                }));
+              }
+            }}
+          />
+          {charLimit && (
+            <div className={cn("text-left text-xs",((nodeDescription?.length??0)>=charLimit?"text-error":"text-primary"))}>
+              {nodeDescription?.length??0}/{charLimit}
+            </div>
+          )}
+        </>
+
       ) : (
         <div
           className={cn(
-            "nodoubleclick generic-node-desc-text cursor-text word-break-break-word",
+            "nodoubleclick generic-node-desc-text  cursor-text word-break-break-word",
             description === "" || !description ? "font-light italic" : "",
           )}
           onDoubleClick={(e) => {
@@ -91,7 +102,7 @@ export default function NodeDescription({
           {description === "" || !description ? (
             emptyPlaceholder
           ) : (
-            <Markdown className="markdown h-full prose flex flex-col text-primary word-break-break-word dark:prose-invert">
+            <Markdown className="markdown h-full ov prose flex flex-col text-primary word-break-break-word dark:prose-invert">
               {String(description)}
             </Markdown>
           )}

@@ -38,8 +38,9 @@ function NoteNode({
           </div>
             <IconComponent className="w-4 h-4" name="ChevronsDownUp" />
         </div>
-        <div className=" h-full overflow-auto">
+        <div className=" h-full">
         <NodeDescription
+        charLimit={2500}
           nodeId={data.id}
           selected={selected}
           description={data.node?.description}
