@@ -3,9 +3,9 @@ import { NodeResizer } from "reactflow";
 import IconComponent from "../../components/genericIconComponent";
 import NodeDescription from "../GenericNode/components/NodeDescription";
 import NodeName from "../GenericNode/components/NodeName";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/utils/utils";
 import { useState } from "react";
+import { NOTE_NODE_MAX_HEIGHT, NOTE_NODE_MAX_WIDTH, NOTE_NODE_MIN_HEIGHT, NOTE_NODE_MIN_WIDTH } from "@/constants/constants";
 
 function NoteNode({
   data,
@@ -18,15 +18,21 @@ function NoteNode({
   return (
     <>
       <NodeResizer
-        minWidth={324}
-        minHeight={128}
-        maxHeight={800}
-        maxWidth={600}
+        minWidth={NOTE_NODE_MIN_WIDTH}
+        minHeight={NOTE_NODE_MIN_HEIGHT}
+        maxHeight={NOTE_NODE_MAX_HEIGHT}
+        maxWidth={NOTE_NODE_MAX_WIDTH}
         isVisible={selected}
         lineClassName="border-[3px] border-border"
       />
 
-      <div className={cn("generic-node-div gap-3 p-5 h-full border border-b rounded-md",selected?"":"shadow-sm")}>
+      <div style={{
+        maxHeight:NOTE_NODE_MAX_HEIGHT,
+        maxWidth:NOTE_NODE_MAX_WIDTH,
+        minWidth:NOTE_NODE_MIN_WIDTH,
+        minHeight:NOTE_NODE_MIN_HEIGHT,
+      }}
+       className={cn("generic-node-div gap-3 p-5 h-full border border-b rounded-md",selected?"":"shadow-sm")}>
         <div className="w-full flex align-middle items-center">
           <div className="flex w-full gap-2">
             <IconComponent name="StickyNote" />
