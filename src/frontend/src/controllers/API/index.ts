@@ -4,7 +4,6 @@ import { BASE_URL_API } from "../../constants/constants";
 import { api } from "../../controllers/API/api";
 import {
   APIObjectType,
-  APITemplateType,
   Component,
   CustomComponentRequest,
   Users,
@@ -21,7 +20,6 @@ import {
   InitTypeAPI,
   PromptTypeAPI,
   UploadFileTypeAPI,
-  errorsTypeAPI,
 } from "./../../types/api/index";
 
 /**
@@ -56,12 +54,6 @@ export async function getRepoStars(owner: string, repo: string) {
  */
 export async function sendAll(data: sendAllProps) {
   return await api.post(`${BASE_URL_API}predict`, data);
-}
-
-export async function postValidateCode(
-  code: string,
-): Promise<AxiosResponse<errorsTypeAPI>> {
-  return await api.post(`${BASE_URL_API}validate/code`, { code });
 }
 
 /**
@@ -295,20 +287,6 @@ export async function postCustomComponent(
   return await api.post(`${BASE_URL_API}custom_component`, {
     code,
     frontend_node: apiClass,
-  });
-}
-
-export async function postCustomComponentUpdate(
-  code: string,
-  template: APITemplateType,
-  field: string,
-  field_value: any,
-): Promise<AxiosResponse<APIClassType>> {
-  return await api.post(`${BASE_URL_API}custom_component/update`, {
-    code,
-    template,
-    field,
-    field_value,
   });
 }
 

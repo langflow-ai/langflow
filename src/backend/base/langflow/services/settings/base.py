@@ -74,6 +74,8 @@ class Settings(BaseSettings):
     max_overflow: int = 20
     """The number of connections to allow that can be opened beyond the pool size.
     If not provided, the default is 20."""
+    db_connect_timeout: int = 20
+    """The number of seconds to wait before giving up on a lock to released or establishing a connection to the database."""
 
     # sqlite configuration
     sqlite_pragmas: Optional[dict] = {"synchronous": "NORMAL", "journal_mode": "WAL"}

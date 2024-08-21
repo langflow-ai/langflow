@@ -50,7 +50,10 @@ class DatabaseService(Service):
         if self.settings_service.settings.database_url and self.settings_service.settings.database_url.startswith(
             "sqlite"
         ):
-            connect_args = {"check_same_thread": False}
+            connect_args = {
+                "check_same_thread": False,
+                "timeout": self.settings_service.settings.db_connect_timeout,
+            }
         else:
             connect_args = {}
         try:

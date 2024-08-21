@@ -1,4 +1,4 @@
-import emojiRegex from "emoji-regex";
+import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
 import { useEffect, useMemo, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { NodeToolbar, useUpdateNodeInternals } from "reactflow";
@@ -8,7 +8,6 @@ import IconComponent, {
 import ShadTooltip from "../../components/shadTooltipComponent";
 import { Button } from "../../components/ui/button";
 import { TOOLTIP_OUTDATED_NODE } from "../../constants/constants";
-import { postCustomComponent } from "../../controllers/API";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
 import useAlertStore from "../../stores/alertStore";
 import useFlowStore from "../../stores/flowStore";
@@ -18,13 +17,11 @@ import { useTypesStore } from "../../stores/typesStore";
 import { OutputFieldType } from "../../types/api";
 import { NodeDataType } from "../../types/flow";
 import { scapedJSONStringfy } from "../../utils/reactflowUtils";
-import { nodeColors, nodeIconsLucide } from "../../utils/styleUtils";
+import { nodeIconsLucide } from "../../utils/styleUtils";
 import { classNames, cn } from "../../utils/utils";
-import { countHandlesFn } from "../helpers/count-handles";
 import { getNodeInputColors } from "../helpers/get-node-input-colors";
 import { getNodeOutputColors } from "../helpers/get-node-output-colors";
 import useCheckCodeValidity from "../hooks/use-check-code-validity";
-import useIconNodeRender from "../hooks/use-icon-render";
 import useUpdateNodeCode from "../hooks/use-update-node-code";
 import getFieldTitle from "../utils/get-field-title";
 import sortFields from "../utils/sort-fields";
@@ -33,6 +30,7 @@ import NodeInputField from "./components/NodeInputField";
 import NodeName from "./components/NodeName";
 import NodeOutputField from "./components/NodeOutputfield";
 import NodeStatus from "./components/NodeStatus";
+import { NodeIcon } from "./components/nodeIcon";
 
 export default function GenericNode({
   data,
@@ -66,22 +64,6 @@ export default function GenericNode({
 
   const name = nodeIconsLucide[data.type] ? data.type : types[data.type];
 
-  const nodeIconFragment = (icon) => {
-    return <span className="text-lg">{icon}</span>;
-  };
-
-  const checkNodeIconFragment = (iconColor, iconName, iconClassName) => {
-    return (
-      <IconComponent
-        name={iconName}
-        className={iconClassName}
-        iconColor={iconColor}
-      />
-    );
-  };
-
-  const isEmoji = emojiRegex().test(data?.node?.icon!);
-
   if (!data.node!.template) {
     setErrorData({
       title: `Error in component ${data.node!.display_name}`,
@@ -96,17 +78,6 @@ export default function GenericNode({
 
   useCheckCodeValidity(data, templates, setIsOutdated, setIsUserEdited, types);
 
-  const iconNodeRender = useIconNodeRender(
-    data,
-    types,
-    nodeColors,
-    name,
-    showNode,
-    isEmoji,
-    nodeIconFragment,
-    checkNodeIconFragment,
-  );
-
   useEffect(() => {
     setShowNode(data.showNode ?? true);
   }, [data.showNode]);
@@ -114,6 +85,8 @@ export default function GenericNode({
   const [loadingUpdate, setLoadingUpdate] = useState(false);
 
   const [showHiddenOutputs, setShowHiddenOutputs] = useState(false);
+
+  const { mutate: validateComponentCode } = usePostValidateComponentCode();
 
   const handleUpdateCode = () => {
     setLoadingUpdate(true);
@@ -126,25 +99,28 @@ export default function GenericNode({
 
     const currentCode = thisNodeTemplate.code.value;
     if (data.node) {
-      postCustomComponent(currentCode, data.node)
-        .then((apiReturn) => {
-          const { data, type } = apiReturn.data;
-          if (data && type && updateNodeCode) {
-            updateNodeCode(data, currentCode, "code", type);
+      validateComponentCode(
+        { code: currentCode, frontend_node: data.node },
+        {
+          onSuccess: ({ data, type }) => {
+            if (data && type && updateNodeCode) {
+              updateNodeCode(data, currentCode, "code", type);
+              setLoadingUpdate(false);
+            }
+          },
+          onError: (error) => {
+            setErrorData({
+              title: "Error updating Compoenent code",
+              list: [
+                "There was an error updating the Component.",
+                "If the error persists, please report it on our Discord or GitHub.",
+              ],
+            });
+            console.log(error);
             setLoadingUpdate(false);
-          }
-        })
-        .catch((err) => {
-          setErrorData({
-            title: "Error updating Compoenent code",
-            list: [
-              "There was an error updating the Component.",
-              "If the error persists, please report it on our Discord or GitHub.",
-            ],
-          });
-          setLoadingUpdate(false);
-          console.log(err);
-        });
+          },
+        },
+      );
     }
   };
 
@@ -316,7 +292,12 @@ export default function GenericNode({
               }
               data-testid="generic-node-title-arrangement"
             >
-              {iconNodeRender()}
+              <NodeIcon
+                dataType={data.type}
+                showNode={showNode}
+                icon={data.node?.icon}
+                isGroup={!!data.node?.flow}
+              />
               {showNode && (
                 <div className="generic-node-tooltip-div">
                   <NodeName
