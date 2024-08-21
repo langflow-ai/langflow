@@ -89,7 +89,6 @@ export default function NodeStatus({
   };
 
   useEffect(() => {
-    console.log(selected);
     setBorderColor(
       getNodeBorderClassName(selected, showNode, buildStatus, validationStatus),
     );
