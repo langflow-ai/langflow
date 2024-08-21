@@ -339,7 +339,7 @@
     @apply h-8 w-8 rounded;
   }
   .generic-node-tooltip-div {
-    @apply ml-2 flex max-w-[220px] gap-1 truncate;
+    @apply ml-2 w-full truncate;
   }
   .generic-node-validation-div {
     @apply max-h-96 overflow-auto;

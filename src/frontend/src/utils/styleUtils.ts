@@ -29,6 +29,7 @@ import {
   ChevronsLeft,
   ChevronsRight,
   ChevronsUpDown,
+  ChevronsDownUp,
   ChevronsUpDownIcon,
   Circle,
   CircleDot,
