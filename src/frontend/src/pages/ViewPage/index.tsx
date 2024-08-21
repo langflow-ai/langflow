@@ -1,3 +1,4 @@
+import { useGetRefreshFlows } from "@/controllers/API/queries/flows/use-get-refresh-flows";
 import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
 import useFlowStore from "@/stores/flowStore";
 import { useTypesStore } from "@/stores/typesStore";
@@ -16,7 +17,7 @@ export default function ViewPage() {
 
   const flows = useFlowsManagerStore((state) => state.flows);
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
-  const refreshFlows = useFlowsManagerStore((state) => state.refreshFlows);
+  const { mutateAsync: refreshFlows } = useGetRefreshFlows();
   const setIsLoading = useFlowsManagerStore((state) => state.setIsLoading);
   const getTypes = useTypesStore((state) => state.getTypes);
 
@@ -34,7 +35,7 @@ export default function ViewPage() {
         setCurrentFlow(isAnExistingFlow);
       } else if (!flows) {
         setIsLoading(true);
-        await refreshFlows();
+        await refreshFlows(undefined);
         await getTypes();
         setIsLoading(false);
       }

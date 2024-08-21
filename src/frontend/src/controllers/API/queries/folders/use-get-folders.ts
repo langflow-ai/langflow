@@ -1,18 +1,19 @@
 import { DEFAULT_FOLDER, STARTER_FOLDER_NAME } from "@/constants/constants";
 import { FolderType } from "@/pages/MainPage/entities";
-import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useFolderStore } from "@/stores/foldersStore";
 import { useTypesStore } from "@/stores/typesStore";
 import { useQueryFunctionType } from "@/types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
+import { useGetRefreshFlows } from "../flows/use-get-refresh-flows";
 
 export const useGetFoldersQuery: useQueryFunctionType<
   undefined,
   FolderType[]
 > = (options) => {
   const { query } = UseRequestProcessor();
+  const { mutateAsync: refreshFlows } = useGetRefreshFlows();
 
   const setStarterProjectId = useFolderStore(
     (state) => state.setStarterProjectId,
@@ -36,10 +37,9 @@ export const useGetFoldersQuery: useQueryFunctionType<
     const myCollectionId = data?.find((f) => f.name === DEFAULT_FOLDER)?.id;
     setMyCollectionId(myCollectionId);
 
-    const { refreshFlows } = useFlowsManagerStore.getState();
     const { getTypes } = useTypesStore.getState();
 
-    await refreshFlows();
+    await refreshFlows(undefined);
     await getTypes();
 
     return foldersWithoutStarterProjects;

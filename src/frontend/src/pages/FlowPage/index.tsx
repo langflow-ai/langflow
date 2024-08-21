@@ -1,4 +1,5 @@
 import FeatureFlags from "@/../feature-config.json";
+import { useGetRefreshFlows } from "@/controllers/API/queries/flows/use-get-refresh-flows";
 import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
 import useSaveFlow from "@/hooks/flows/use-save-flow";
 import { SaveChangesModal } from "@/modals/saveChangesModal";
@@ -33,7 +34,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
 
   const flows = useFlowsManagerStore((state) => state.flows);
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
-  const refreshFlows = useFlowsManagerStore((state) => state.refreshFlows);
+  const { mutateAsync: refreshFlows } = useGetRefreshFlows();
   const setIsLoading = useFlowsManagerStore((state) => state.setIsLoading);
   const getTypes = useTypesStore((state) => state.getTypes);
 
@@ -74,7 +75,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
         setCurrentFlow(isAnExistingFlow);
       } else if (!flows) {
         setIsLoading(true);
-        await refreshFlows();
+        await refreshFlows(undefined);
         await getTypes();
         setIsLoading(false);
       }
