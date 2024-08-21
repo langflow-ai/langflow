@@ -90,7 +90,7 @@ def patch_user(
     Update an existing user's data.
     """
 
-    update_password = user_update.password != None and user_update.password != ""
+    update_password = user_update.password is not None and user_update.password != ""
 
     if not user.is_superuser and user_update.is_superuser:
         raise HTTPException(status_code=403, detail="Permission denied")
@@ -103,7 +103,7 @@ def patch_user(
         user_update.password = get_password_hash(user_update.password)
 
     if user_db := get_user_by_id(session, user_id):
-        if update_password == False:
+        if not update_password:
             user_update.password = user_db.password
         return update_user(user_db, user_update, session)
     else:
