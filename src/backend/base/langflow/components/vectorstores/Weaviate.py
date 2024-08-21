@@ -3,7 +3,7 @@ from typing import List
 import weaviate  # type: ignore
 from langchain_community.vectorstores import Weaviate
 
-from langflow.base.vectorstores.model import LCVectorStoreComponent
+from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers.data import docs_to_data
 from langflow.io import BoolInput, HandleInput, IntInput, StrInput, SecretStrInput, DataInput, MultilineInput
 from langflow.schema import Data
@@ -38,10 +38,8 @@ class WeaviateVectorStoreComponent(LCVectorStoreComponent):
         BoolInput(name="search_by_text", display_name="Search By Text", advanced=True),
     ]
 
+    @check_cached_vector_store
     def build_vector_store(self) -> Weaviate:
-        return self._build_weaviate()
-
-    def _build_weaviate(self) -> Weaviate:
         if self.api_key:
             auth_config = weaviate.AuthApiKey(api_key=self.api_key)
             client = weaviate.Client(url=self.url, auth_client_secret=auth_config)
@@ -73,7 +71,7 @@ class WeaviateVectorStoreComponent(LCVectorStoreComponent):
         )
 
     def search_documents(self) -> List[Data]:
-        vector_store = self._build_weaviate()
+        vector_store = self.build_vector_store()
 
         if self.search_query and isinstance(self.search_query, str) and self.search_query.strip():
             docs = vector_store.similarity_search(

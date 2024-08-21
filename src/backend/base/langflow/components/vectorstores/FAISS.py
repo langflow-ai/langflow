@@ -3,7 +3,7 @@ from typing import List
 from langchain_community.vectorstores import FAISS
 from loguru import logger
 
-from langflow.base.vectorstores.model import LCVectorStoreComponent
+from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers.data import docs_to_data
 from langflow.io import BoolInput, DataInput, HandleInput, IntInput, MultilineInput, StrInput
 from langflow.schema import Data
@@ -57,6 +57,7 @@ class FaissVectorStoreComponent(LCVectorStoreComponent):
         ),
     ]
 
+    @check_cached_vector_store
     def build_vector_store(self) -> FAISS:
         """
         Builds the FAISS object.

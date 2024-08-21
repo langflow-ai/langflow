@@ -3,10 +3,11 @@ from typing import Any, List, cast
 from langchain.retrievers import ContextualCompressionRetriever
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent
-from langflow.field_typing import Retriever
+from langflow.field_typing import Retriever, VectorStore
 from langflow.io import DropdownInput, HandleInput, MultilineInput, SecretStrInput, StrInput
 from langflow.schema import Data
 from langflow.schema.dotdict import dotdict
+from langflow.template.field.base import Output
 
 
 class NvidiaRerankComponent(LCVectorStoreComponent):
@@ -31,6 +32,19 @@ class NvidiaRerankComponent(LCVectorStoreComponent):
         ),
         SecretStrInput(name="api_key", display_name="API Key"),
         HandleInput(name="retriever", display_name="Retriever", input_types=["Retriever"]),
+    ]
+
+    outputs = [
+        Output(
+            display_name="Retriever",
+            name="base_retriever",
+            method="build_base_retriever",
+        ),
+        Output(
+            display_name="Search Results",
+            name="search_results",
+            method="search_documents",
+        ),
     ]
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
@@ -62,3 +76,6 @@ class NvidiaRerankComponent(LCVectorStoreComponent):
         data = self.to_data(documents)
         self.status = data
         return data
+
+    def build_vector_store(self) -> VectorStore:
+        raise NotImplementedError("NVIDIA Rerank does not support vector stores.")

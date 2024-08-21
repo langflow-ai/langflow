@@ -2,7 +2,7 @@ from typing import List
 
 from langchain_community.vectorstores.redis import Redis
 
-from langflow.base.vectorstores.model import LCVectorStoreComponent
+from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers.data import docs_to_data
 from langflow.io import HandleInput, IntInput, StrInput, SecretStrInput, DataInput, MultilineInput
 from langflow.schema import Data
@@ -46,6 +46,7 @@ class RedisVectorStoreComponent(LCVectorStoreComponent):
         HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
     ]
 
+    @check_cached_vector_store
     def build_vector_store(self) -> Redis:
         documents = []
 

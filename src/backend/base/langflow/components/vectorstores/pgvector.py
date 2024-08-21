@@ -2,7 +2,7 @@ from typing import List
 
 from langchain_community.vectorstores import PGVector
 
-from langflow.base.vectorstores.model import LCVectorStoreComponent
+from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers.data import docs_to_data
 from langflow.io import HandleInput, IntInput, StrInput, SecretStrInput, DataInput, MultilineInput
 from langflow.schema import Data
@@ -36,10 +36,8 @@ class PGVectorStoreComponent(LCVectorStoreComponent):
         HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
     ]
 
+    @check_cached_vector_store
     def build_vector_store(self) -> PGVector:
-        return self._build_pgvector()
-
-    def _build_pgvector(self) -> PGVector:
         documents = []
         for _input in self.ingest_data or []:
             if isinstance(_input, Data):
@@ -66,7 +64,7 @@ class PGVectorStoreComponent(LCVectorStoreComponent):
         return pgvector
 
     def search_documents(self) -> List[Data]:
-        vector_store = self._build_pgvector()
+        vector_store = self.build_vector_store()
 
         if self.search_query and isinstance(self.search_query, str) and self.search_query.strip():
             docs = vector_store.similarity_search(
