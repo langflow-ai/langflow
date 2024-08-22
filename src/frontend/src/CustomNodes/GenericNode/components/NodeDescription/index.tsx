@@ -11,13 +11,19 @@ export default function NodeDescription({
   selected,
   nodeId,
   emptyPlaceholder = "Double Click to Edit Description",
-  charLimit
+  charLimit,
+  inputClassName,
+  mdClassName,
+  style
 }: {
   description?: string;
   selected: boolean;
   nodeId: string;
   emptyPlaceholder?: string;
   charLimit?: number;
+  inputClassName?: string;
+  mdClassName?: string;
+  style?:React.CSSProperties
 }) {
   const [inputDescription, setInputDescription] = useState(false);
   const [nodeDescription, setNodeDescription] = useState(description);
@@ -35,13 +41,14 @@ export default function NodeDescription({
   }, [description]);
 
   return (
-    <div className={cn("generic-node-desc",!inputDescription?"overflow-auto":"")}>
+    <div className={cn("generic-node-desc",!inputDescription?" overflow-auto":"")}>
       {inputDescription ? (
         <>
           <Textarea
             maxLength={charLimit}
-            className="nowheel h-full"
+            className={cn("nowheel h-full", inputClassName)}
             autoFocus
+            style={style}
             onBlur={() => {
               setInputDescription(false);
               setNodeDescription(nodeDescription);
@@ -102,7 +109,7 @@ export default function NodeDescription({
           {description === "" || !description ? (
             emptyPlaceholder
           ) : (
-            <Markdown className="markdown h-full ov prose flex flex-col text-primary word-break-break-word dark:prose-invert">
+            <Markdown className={cn("markdown h-full prose flex flex-col text-primary word-break-break-word w-full dark:prose-invert",mdClassName)}>
               {String(description)}
             </Markdown>
           )}
