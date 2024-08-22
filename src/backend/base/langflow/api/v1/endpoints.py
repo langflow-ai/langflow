@@ -597,7 +597,7 @@ async def custom_component_update(
             for key, value_dict in template.items():
                 if isinstance(value_dict, dict):
                     value = value_dict.get("value")
-                    input_type = value_dict.get("_input_type")
+                    input_type = str(value_dict.get("_input_type"))
                     params[key] = parse_value(value, input_type)
 
             load_from_db_fields = [
