@@ -27,6 +27,8 @@ def create_input_schema(inputs: list["InputTypes"]) -> Type[BaseModel]:
     for input_model in inputs:
         # Create a Pydantic Field for each input field
         field_type = input_model.field_type
+        if field_type not in _convert_field_type_to_type:
+            continue
         if isinstance(field_type, FieldTypes):
             field_type = _convert_field_type_to_type[field_type]
         if hasattr(input_model, "options") and isinstance(input_model.options, list) and input_model.options:
