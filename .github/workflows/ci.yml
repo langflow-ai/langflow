@@ -103,14 +103,8 @@ jobs:
   # https://github.com/langchain-ai/langchain/blob/master/.github/workflows/check_diffs.yml
   ci_success:
     name: "CI Success"
-    needs:
-      [
-        test-backend,
-        test-frontend,
-        lint-backend,
-        test-docs-build,
-        set-ci-condition,
-      ]
+    needs: [test-backend,test-frontend,lint-backend,test-docs-build,set-ci-condition]
+
     if: always()
     runs-on: ubuntu-latest
     env:
