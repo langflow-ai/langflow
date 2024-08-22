@@ -39,6 +39,9 @@ jobs:
     if: ${{ github.event.inputs.release_package_base == 'true' || github.event.inputs.release_package_main == 'true' }}
     name: CI
     uses: ./.github/workflows/ci.yml
+    with:
+      python-versions: "['3.10', '3.11', '3.12']"
+      frontend-tests-folder: "tests"
 
   release-base:
     name: Release Langflow Base
