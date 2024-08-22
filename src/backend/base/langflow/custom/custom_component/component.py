@@ -682,3 +682,8 @@ class Component(CustomComponent):
         from langflow.base.tools.component_tool import ComponentTool
 
         return ComponentTool(component=self)
+
+    def get_project_name(self):
+        if hasattr(self, "_tracing_service"):
+            return self._tracing_service.project_name
+        return "Langflow"
