@@ -4,7 +4,7 @@ import IconComponent from "../../components/genericIconComponent";
 import NodeDescription from "../GenericNode/components/NodeDescription";
 import NodeName from "../GenericNode/components/NodeName";
 import { cn } from "@/utils/utils";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { COLOR_OPTIONS, NOTE_NODE_MAX_HEIGHT, NOTE_NODE_MAX_WIDTH, NOTE_NODE_MIN_HEIGHT, NOTE_NODE_MIN_WIDTH } from "@/constants/constants";
 import NoteToolbarComponent from "./NoteToolbarComponent";
 
@@ -15,7 +15,6 @@ function NoteNode({
   data: noteDataType;
   selected: boolean;
 }) {
-  const [expanded, setExpanded] = useState(false);
   const bgColor = data.node?.template.backgroundColor ?? Object.keys(COLOR_OPTIONS)[0];
   const MemoNoteToolbarComponent = useMemo(() =>(
     <NodeToolbar>
@@ -54,11 +53,6 @@ function NoteNode({
 
             </div>
           </div>
-          <div onClick={() => {
-            setExpanded((prev) => !prev)
-          }}>
-            <IconComponent className="w-4 h-4 cursor-pointer" name={expanded ? "ChevronsDownUp" : "ChevronsUpDown"} />
-          </div>
         </div>
         <div className="h-full nowheel overflow-auto">
           <NodeDescription
@@ -66,7 +60,7 @@ function NoteNode({
             nodeId={data.id}
             selected={selected}
             description={data.node?.description}
-            emptyPlaceholder="Double Click to Edit Note"
+            emptyPlaceholder="Double-click to start typing or enter Markdown..."
           />
         </div>
       </div>
