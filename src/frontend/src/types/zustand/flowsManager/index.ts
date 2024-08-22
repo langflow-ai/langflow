@@ -22,6 +22,8 @@ export type FlowsManagerStoreType = {
   searchFlowsComponents: string;
   selectedFlowsComponentsCards: string[];
   setSelectedFlowsComponentsCards: (selected: string[]) => void;
+  autoSavingInterval: number;
+  setAutoSavingInterval: (autoSavingInterval: number) => void;
 };
 
 export type UseUndoRedoOptions = {

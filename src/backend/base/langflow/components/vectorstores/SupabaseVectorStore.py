@@ -3,7 +3,7 @@ from typing import List
 from langchain_community.vectorstores import SupabaseVectorStore
 from supabase.client import Client, create_client
 
-from langflow.base.vectorstores.model import LCVectorStoreComponent
+from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers.data import docs_to_data
 from langflow.io import HandleInput, IntInput, StrInput, SecretStrInput, DataInput, MultilineInput
 from langflow.schema import Data
@@ -37,10 +37,8 @@ class SupabaseVectorStoreComponent(LCVectorStoreComponent):
         ),
     ]
 
+    @check_cached_vector_store
     def build_vector_store(self) -> SupabaseVectorStore:
-        return self._build_supabase()
-
-    def _build_supabase(self) -> SupabaseVectorStore:
         supabase: Client = create_client(self.supabase_url, supabase_key=self.supabase_service_key)
 
         documents = []
@@ -69,7 +67,7 @@ class SupabaseVectorStoreComponent(LCVectorStoreComponent):
         return supabase_vs
 
     def search_documents(self) -> List[Data]:
-        vector_store = self._build_supabase()
+        vector_store = self.build_vector_store()
 
         if self.search_query and isinstance(self.search_query, str) and self.search_query.strip():
             docs = vector_store.similarity_search(

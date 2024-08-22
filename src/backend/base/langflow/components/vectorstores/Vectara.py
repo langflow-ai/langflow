@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, List
 from langchain_community.vectorstores import Vectara
 from loguru import logger
 
-from langflow.base.vectorstores.model import LCVectorStoreComponent
+from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers.data import docs_to_data
 from langflow.io import HandleInput, IntInput, MessageTextInput, SecretStrInput, StrInput
 from langflow.schema import Data
@@ -51,6 +51,7 @@ class VectaraVectorStoreComponent(LCVectorStoreComponent):
         ),
     ]
 
+    @check_cached_vector_store
     def build_vector_store(self) -> "Vectara":
         """
         Builds the Vectara object.

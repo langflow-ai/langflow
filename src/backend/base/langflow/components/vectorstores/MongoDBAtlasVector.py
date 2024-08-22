@@ -2,7 +2,7 @@ from typing import List
 
 from langchain_community.vectorstores import MongoDBAtlasVectorSearch
 
-from langflow.base.vectorstores.model import LCVectorStoreComponent
+from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers.data import docs_to_data
 from langflow.io import HandleInput, IntInput, StrInput, SecretStrInput, DataInput, MultilineInput
 from langflow.schema import Data
@@ -36,10 +36,8 @@ class MongoVectorStoreComponent(LCVectorStoreComponent):
         ),
     ]
 
+    @check_cached_vector_store
     def build_vector_store(self) -> MongoDBAtlasVectorSearch:
-        return self._build_mongodb_atlas()
-
-    def _build_mongodb_atlas(self) -> MongoDBAtlasVectorSearch:
         try:
             from pymongo import MongoClient
         except ImportError:
@@ -80,7 +78,7 @@ class MongoVectorStoreComponent(LCVectorStoreComponent):
     def search_documents(self) -> List[Data]:
         from bson import ObjectId
 
-        vector_store = self._build_mongodb_atlas()
+        vector_store = self.build_vector_store()
 
         if self.search_query and isinstance(self.search_query, str):
             docs = vector_store.similarity_search(
