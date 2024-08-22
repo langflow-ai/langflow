@@ -361,15 +361,15 @@ def build_custom_component_template_from_inputs(
     custom_component: Union[Component, CustomComponent], user_id: Optional[Union[str, UUID]] = None
 ):
     # The List of Inputs fills the role of the build_config and the entrypoint_args
-    cc_instance: Component = get_component_instance(custom_component, user_id=user_id)
+    cc_instance = get_component_instance(custom_component, user_id=user_id)
     field_config = cc_instance.get_template_config(cc_instance)
     # Add tool output if cc_instance.add_tool_output is True
     if (
-        hasattr(cc_instance, "add_tool_output")
-        and cc_instance.__add_tool_output
-        and hasattr(cc_instance, "_add_tool_output")
+        hasattr(cc_instance, "_add_tool_output")
+        and cc_instance._add_tool_output
+        and hasattr(cc_instance, "_append_tool_output")
     ):
-        cc_instance.__add_tool_output()
+        cc_instance._append_tool_output()
     frontend_node = ComponentFrontendNode.from_inputs(**field_config)
     frontend_node = add_code_field(frontend_node, custom_component._code)
     # But we now need to calculate the return_type of the methods in the outputs
