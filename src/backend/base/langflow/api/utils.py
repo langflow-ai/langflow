@@ -1,6 +1,6 @@
 import uuid
 import warnings
-from typing import TYPE_CHECKING, Optional, Dict
+from typing import TYPE_CHECKING, Any, Optional, Dict
 
 from fastapi import HTTPException
 from sqlmodel import Session
@@ -227,3 +227,15 @@ def get_suggestion_message(outdated_components: list[str]) -> str:
     else:
         components = ", ".join(outdated_components)
         return f"The flow contains {count} outdated components. We recommend updating the following components: {components}."
+
+
+def parse_value(value: Any, input_type: str) -> Any:
+    """Helper function to parse the value based on input type."""
+    if value == "":
+        return value
+    elif input_type == "IntInput":
+        return int(value) if value is not None else None
+    elif input_type == "FloatInput":
+        return float(value) if value is not None else None
+    else:
+        return value
