@@ -60,9 +60,8 @@ class Graph:
             edges (List[Dict[str, str]]): A list of dictionaries representing the edges of the graph.
             flow_id (Optional[str], optional): The ID of the flow. Defaults to None.
         """
-        if not log_config:
-            log_config = {"disable": False}
-        configure(**log_config)
+        if log_config:
+            configure(**log_config)
         self._start = start
         self._state_model = None
         self._end = end
