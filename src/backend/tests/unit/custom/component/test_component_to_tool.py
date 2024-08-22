@@ -19,7 +19,7 @@ def test_component_to_tool():
 def test_component_add_tool_output():
     chat_input = ChatInput()
     assert len(chat_input.outputs) == 1
-    chat_input.__add_tool_output()
+    chat_input._append_tool_output()
     assert len(chat_input.outputs) == 2
     assert chat_input.outputs[-1].name == "component_as_tool"
     assert chat_input.outputs[-1].display_name == "Tool"
