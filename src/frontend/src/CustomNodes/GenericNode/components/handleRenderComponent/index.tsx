@@ -167,14 +167,12 @@ export default function HandleRenderComponent({
             if (filterOpenHandle && filterType) {
               onConnect(getConnection(filterType));
               setFilterType(undefined);
+              setFilterEdge([]);
             }
           }}
           onMouseDown={() => {
             setHandleDragging(currentFilter);
             document.addEventListener("mouseup", handleMouseUp);
-          }}
-          onMouseUp={() => {
-            setHandleDragging(undefined);
           }}
         >
           <div
