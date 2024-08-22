@@ -35,7 +35,8 @@
 9. **Customize workflows** or create flows entirely just using Python.
 10. **Ecosystem integrations** as reusable components for any model, API or database.
 
-![Integrations](https://github.com/user-attachments/assets/645f9178-d943-447a-9bc3-35cda6febdda)
+![Integrations](https://github.com/user-attachments/assets/e9c96dc4-47bf-48ab-ad58-e01e038f25e8)
+
 
 ## 📦 Quickstart
 
