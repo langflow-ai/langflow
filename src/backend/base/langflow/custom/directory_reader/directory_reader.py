@@ -348,7 +348,7 @@ class DirectoryReader:
                 try:
                     output_types = await self.get_output_types_from_code_async(result_content)
                 except Exception as exc:
-                    logger.exception(f"Error while getting output types from code: {str(exc)}")
+                    logger.error(f"Error while getting output types from code: {str(exc)}")
                     output_types = [component_name_camelcase]
             else:
                 output_types = [component_name_camelcase]
