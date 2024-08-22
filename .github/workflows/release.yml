@@ -36,14 +36,14 @@ env:
 
 jobs:
   ci:
-    if: ${{ github.event.inputs.release_package_base == true || github.event.inputs.release_package_main == true }}
+    if: ${{ github.event.inputs.release_package_base == 'true' || github.event.inputs.release_package_main == 'true' }}
     name: CI
     uses: ./.github/workflows/ci.yml
 
   release-base:
     name: Release Langflow Base
     needs: [ci]
-    if: inputs.release_package_base == true
+    if: inputs.release_package_base == 'true'
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.check-version.outputs.version }}
@@ -109,7 +109,7 @@ jobs:
 
   release-main:
     name: Release Langflow Main
-    if: inputs.release_package_main == true
+    if: inputs.release_package_main == 'true'
     needs: [release-base]
     runs-on: ubuntu-latest
     outputs:
@@ -130,7 +130,7 @@ jobs:
       # If pre-release is true, we need to check if  ["a", "b", "rc", "dev", "post"] is in the version string
       # if the version string is incorrect, we need to exit the workflow
       - name: Check if pre-release
-        if: inputs.pre_release == true
+        if: inputs.pre_release == 'true'
         run: |
           version=$(poetry version --short)
           if [[ "${version}" =~ ^([0-9]+\.)?([0-9]+\.)?[0-9]+((a|b|rc|dev|post)([0-9]+))$ ]]; then
@@ -185,7 +185,7 @@ jobs:
 
   call_docker_build_base:
     name: Call Docker Build Workflow for Langflow Base
-    if : inputs.build_docker_base == true
+    if : inputs.build_docker_base == 'true'
     uses: ./.github/workflows/docker-build.yml
     strategy:
       matrix:
@@ -201,7 +201,7 @@ jobs:
 
   call_docker_build_main:
     name: Call Docker Build Workflow for Langflow
-    if : inputs.build_docker_main == true
+    if : inputs.build_docker_main == 'true'
     uses: ./.github/workflows/docker-build.yml
     strategy:
       matrix:
