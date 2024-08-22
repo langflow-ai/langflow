@@ -591,17 +591,21 @@ async def custom_component_update(
         )
         if hasattr(cc_instance, "set_attributes"):
             template = code_request.get_template()
-            params = {
-                key: value_dict.get("value")
-                if value_dict.get("_input_type") != "IntInput"
-                else (
-                    int(value_dict.get("value"))  # type: ignore
-                    if value_dict.get("_input_type") != "FloatInput"
-                    else float(value_dict.get("value"))  # type: ignore
-                )
-                for key, value_dict in template.items()
-                if isinstance(value_dict, dict)
-            }
+            params = {}
+            for key, value_dict in template.items():
+                if isinstance(value_dict, dict):
+                    value = value_dict.get("value")
+                    input_type = value_dict.get("_input_type")
+
+                    if value == "":
+                        params[key] = value
+                    elif input_type == "IntInput":
+                        params[key] = int(value) if value is not None else None
+                    elif input_type == "FloatInput":
+                        params[key] = float(value) if value is not None else None
+                    else:
+                        params[key] = value
+
             load_from_db_fields = [
                 field_name
                 for field_name, field_dict in template.items()
