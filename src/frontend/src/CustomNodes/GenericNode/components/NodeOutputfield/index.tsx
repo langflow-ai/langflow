@@ -5,14 +5,10 @@ import { useUpdateNodeInternals } from "reactflow";
 import { default as IconComponent } from "../../../../components/genericIconComponent";
 import ShadTooltip from "../../../../components/shadTooltipComponent";
 import { Button } from "../../../../components/ui/button";
-import { Case } from "../../../../shared/components/caseComponent";
 import useFlowStore from "../../../../stores/flowStore";
 import { useShortcutsStore } from "../../../../stores/shortcuts";
 import { useTypesStore } from "../../../../stores/typesStore";
-import {
-  NodeOutputFieldComponentType,
-  ParameterComponentType,
-} from "../../../../types/components";
+import { NodeOutputFieldComponentType } from "../../../../types/components";
 import {
   getGroupOutputNodeId,
   scapedJSONStringfy,
@@ -20,7 +16,6 @@ import {
 import {
   classNames,
   cn,
-  isThereModal,
   logHasMessage,
   logTypeIsError,
   logTypeIsUnknown,
@@ -129,6 +124,7 @@ export default function NodeOutputField({
       id={id}
       title={title}
       edges={edges}
+      nodeId={data.id}
       myData={myData}
       colors={colors}
       setFilterEdge={setFilterEdge}

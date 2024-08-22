@@ -1,16 +1,13 @@
 import useHandleNodeClass from "@/CustomNodes/hooks/use-handle-node-class";
 import { ParameterRenderComponent } from "@/components/parameterRenderComponent";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
-import { ReactNode, useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { default as IconComponent } from "../../../../components/genericIconComponent";
 import ShadTooltip from "../../../../components/shadTooltipComponent";
 import { LANGFLOW_SUPPORTED_TYPES } from "../../../../constants/constants";
 import useFlowStore from "../../../../stores/flowStore";
 import { useTypesStore } from "../../../../stores/typesStore";
-import {
-  NodeInputFieldComponentType,
-  ParameterComponentType,
-} from "../../../../types/components";
+import { NodeInputFieldComponentType } from "../../../../types/components";
 import { scapedJSONStringfy } from "../../../../utils/reactflowUtils";
 import useFetchDataOnMount from "../../../hooks/use-fetch-data-on-mount";
 import useHandleOnNewValue from "../../../hooks/use-handle-new-value";
@@ -81,6 +78,7 @@ export default function NodeInputField({
       setFilterEdge={setFilterEdge}
       showNode={showNode}
       testIdComplement={`${data?.type?.toLowerCase()}-${showNode ? "shownode" : "noshownode"}`}
+      nodeId={data.id}
     />
   );
 
