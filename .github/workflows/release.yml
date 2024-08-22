@@ -46,7 +46,7 @@ jobs:
   release-base:
     name: Release Langflow Base
     needs: [ci]
-    if: inputs.release_package_base == 'true'
+    if: inputs.release_package_base == true
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.check-version.outputs.version }}
@@ -112,7 +112,7 @@ jobs:
 
   release-main:
     name: Release Langflow Main
-    if: inputs.release_package_main == 'true'
+    if: inputs.release_package_main == true
     needs: [release-base]
     runs-on: ubuntu-latest
     outputs:
@@ -188,7 +188,7 @@ jobs:
 
   call_docker_build_base:
     name: Call Docker Build Workflow for Langflow Base
-    if : inputs.build_docker_base == 'true'
+    if : inputs.build_docker_base == true
     uses: ./.github/workflows/docker-build.yml
     strategy:
       matrix:
@@ -204,7 +204,7 @@ jobs:
 
   call_docker_build_main:
     name: Call Docker Build Workflow for Langflow
-    if : inputs.build_docker_main == 'true'
+    if : inputs.build_docker_main == true
     uses: ./.github/workflows/docker-build.yml
     strategy:
       matrix:
