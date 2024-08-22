@@ -5,7 +5,7 @@ import NodeDescription from "../GenericNode/components/NodeDescription";
 import NodeName from "../GenericNode/components/NodeName";
 import { cn } from "@/utils/utils";
 import { useMemo, useState } from "react";
-import { NOTE_NODE_MAX_HEIGHT, NOTE_NODE_MAX_WIDTH, NOTE_NODE_MIN_HEIGHT, NOTE_NODE_MIN_WIDTH } from "@/constants/constants";
+import { COLOR_OPTIONS, NOTE_NODE_MAX_HEIGHT, NOTE_NODE_MAX_WIDTH, NOTE_NODE_MIN_HEIGHT, NOTE_NODE_MIN_WIDTH } from "@/constants/constants";
 import NoteToolbarComponent from "./NoteToolbarComponent";
 
 function NoteNode({
@@ -16,15 +16,17 @@ function NoteNode({
   selected: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const memoizedNodeToolbarComponent = useMemo(() => (
+  const bgColor = data.node?.template.backgroundColor ?? Object.keys(COLOR_OPTIONS)[0];
+  const MemoNoteToolbarComponent = useMemo(() =>(
     <NodeToolbar>
-      <NoteToolbarComponent/>
-    </NodeToolbar>
-  ),[]);
+    <NoteToolbarComponent data={data} bgColor={bgColor}/>
+  </NodeToolbar>
+  ), [data, bgColor]);
+
   return (
     <>
-    {memoizedNodeToolbarComponent}
-      <NodeResizer
+    {MemoNoteToolbarComponent}
+    <NodeResizer
         minWidth={NOTE_NODE_MIN_WIDTH}
         minHeight={NOTE_NODE_MIN_HEIGHT}
         maxHeight={NOTE_NODE_MAX_HEIGHT}
@@ -37,8 +39,9 @@ function NoteNode({
         maxWidth: NOTE_NODE_MAX_WIDTH,
         minWidth: NOTE_NODE_MIN_WIDTH,
         minHeight: NOTE_NODE_MIN_HEIGHT,
+        backgroundColor:COLOR_OPTIONS[bgColor]
       }}
-        className={cn("flex flex-col bg-background transition-all gap-3 p-5 h-full border border-b rounded-md", selected ? "" : "shadow-sm")}>
+        className={cn("flex flex-col transition-all gap-3 p-5 h-full border border-b rounded-md", selected ? "" : "shadow-sm")}>
         <div className="w-full flex align-middle items-center h-fit">
           <div className="flex w-full gap-2">
             <IconComponent name="StickyNote" />
