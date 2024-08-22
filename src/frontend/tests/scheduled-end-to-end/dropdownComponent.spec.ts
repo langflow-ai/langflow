@@ -147,23 +147,6 @@ test("dropDownComponent", async ({ page }) => {
   await page.getByTestId("code-button-modal").click();
   await page.waitForTimeout(1000);
 
-  await page
-    .locator(".ace_content")
-    .hover()
-    .then(async () => {
-      await page.waitForTimeout(1000);
-      await page.mouse.wheel(0, 800);
-    });
-
-  await page.waitForTimeout(1000);
-
-  const element = page
-    .locator("#CodeEditor div")
-    .filter({ hasText: "import ChatBedrock" })
-    .nth(1);
-
-  await element.click();
-
   await page.locator("textarea").press("Control+a");
   const emptyOptionsCode = `from langchain_community.chat_models.bedrock import BedrockChat
 
