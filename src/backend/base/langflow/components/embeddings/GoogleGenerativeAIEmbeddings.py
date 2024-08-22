@@ -1,6 +1,6 @@
 # from langflow.field_typing import Data
 from langflow.custom import Component
-from langflow.io import MessageTextInput, Output
+from langflow.io import MessageTextInput, Output, SecretStrInput
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
 from typing import List, Optional
