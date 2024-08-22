@@ -200,6 +200,7 @@ class ComponentVertex(Vertex):
 class InterfaceVertex(ComponentVertex):
     def __init__(self, data: NodeData, graph):
         super().__init__(data, graph=graph)
+        self.is_interface_component = True
         self.steps = [self._build, self._run]
 
     def build_stream_url(self):
@@ -359,9 +360,8 @@ class InterfaceVertex(ComponentVertex):
                 else:
                     self._built_object = message
             self._built_result = self._built_object
-
         else:
-            await super()._run(*args, **kwargs)
+            raise ValueError(f"Vertex {self.id} is not an InterfaceVertex")
 
     async def stream(self):
         iterator = self.params.get(INPUT_FIELD_NAME, None)

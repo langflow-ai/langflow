@@ -5,6 +5,7 @@ from uuid import UUID
 
 import nanoid  # type: ignore
 import yaml
+from langchain_core.tools import Tool
 from pydantic import BaseModel
 
 from langflow.graph.state.model import create_state_model
@@ -34,6 +35,7 @@ class Component(CustomComponent):
     outputs: List[Output] = []
     code_class_base_inheritance: ClassVar[str] = "Component"
     _output_logs: dict[str, Log] = {}
+    _add_tool_output: bool = False
 
     def __init__(self, **kwargs):
         # if key starts with _ it is a config
@@ -64,6 +66,8 @@ class Component(CustomComponent):
         self.__inputs = inputs
         self.__config = config
         super().__init__(**config)
+        if hasattr(self, "add_tool_output") and self._add_tool_output and hasattr(self, "_add_tool_output"):
+            self.__add_tool_output()
         if hasattr(self, "_trace_type"):
             self.trace_type = self._trace_type
         if not hasattr(self, "trace_type"):
@@ -246,6 +250,9 @@ class Component(CustomComponent):
             if output.name is None:
                 raise ValueError("Output name cannot be None.")
             self._outputs[output.name] = output
+
+        if hasattr(self, "_vertex"):
+            self._vertex.outputs = [output.model_dump() for output in self.outputs]
 
     def map_inputs(self, inputs: List["InputTypes"]):
         """
@@ -677,8 +684,15 @@ class Component(CustomComponent):
     def _get_fallback_input(self, **kwargs):
         return Input(**kwargs)
 
-    def to_tool(self):
+    def to_tool(self) -> Tool:
         # TODO: This is a temporary solution to avoid circular imports
         from langflow.base.tools.component_tool import ComponentTool
 
-        return ComponentTool(component=self)
+        tool = ComponentTool(component=self)
+        description_repr = repr(tool.description).strip("'")
+        args_str = "\n".join([f"- {arg_name}: {arg_data['description']}" for arg_name, arg_data in tool.args.items()])
+        self.status = f"{description_repr}\nArguments:\n{args_str}"
+        return tool  # type: ignore
+
+    def __add_tool_output(self):
+        self.outputs.append(Output(name="component_as_tool", display_name="Tool", method="to_tool", types=["Tool"]))
