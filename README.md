@@ -35,13 +35,8 @@
 9. **Customize workflows** or create flows entirely just using Python.
 10. **Ecosystem integrations** as reusable components for any model, API or database.
 
-![Integrations](https://github.com/user-attachments/assets/df4a6714-60de-4a8b-aff0-982c5aa467e3)
+![Integrations](https://github.com/user-attachments/assets/e9c96dc4-47bf-48ab-ad58-e01e038f25e8)
 
-## ⭐ Stay up-to-date
-
-Star Langflow on GitHub to be instantly notified of new releases.
-
-![Star Langflow](https://github.com/user-attachments/assets/03168b17-a11d-4b2a-b0f7-c1cce69e5a2c)
 
 ## 📦 Quickstart
 
@@ -56,6 +51,12 @@ pip install langflow
 - **Hugging Face:** [Clone the space using this link](https://huggingface.co/spaces/Langflow/Langflow?duplicate=true) to create a Langflow workspace.
 
 [![Getting Started](https://github.com/user-attachments/assets/f1adfbe7-3c35-43a4-b265-661f3d4f875f)](https://www.youtube.com/watch?v=kinngWhaUKM)
+
+## ⭐ Stay up-to-date
+
+Star Langflow on GitHub to be instantly notified of new releases.
+
+![Star Langflow](https://github.com/user-attachments/assets/03168b17-a11d-4b2a-b0f7-c1cce69e5a2c)
 
 ## 👋 Contribute
 

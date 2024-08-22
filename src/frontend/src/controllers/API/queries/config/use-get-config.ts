@@ -6,6 +6,7 @@ import { UseRequestProcessor } from "../../services/request-processor";
 export interface ConfigResponse {
   frontend_timeout: number;
   auto_saving: boolean;
+  auto_saving_interval: number;
 }
 
 export const useGetConfigQuery: useQueryFunctionType<

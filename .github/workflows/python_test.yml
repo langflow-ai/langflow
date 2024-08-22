@@ -14,6 +14,11 @@ on:
         description: "(Optional) Branch to checkout"
         required: false
         type: string
+      python-versions:
+        description: "(Optional) Python versions to test"
+        required: true
+        type: string
+        default: "['3.10', '3.11', '3.12']"
 env:
   POETRY_VERSION: "1.8.2"
   NODE_VERSION: "21"
@@ -24,7 +29,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ${{ fromJson(inputs.python-versions) }}
+        python-version: ${{ fromJson(inputs.python-versions || '["3.10", "3.11", "3.12"]' ) }}
         splitCount: [5]
         group: [1, 2, 3, 4, 5]
     env:
@@ -60,7 +65,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ${{ fromJson(inputs.python-versions) }}
+        python-version: ${{ fromJson(inputs.python-versions || '["3.10", "3.11", "3.12"]') }}
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python ${{ matrix.python-version }} + Poetry ${{ env.POETRY_VERSION }}

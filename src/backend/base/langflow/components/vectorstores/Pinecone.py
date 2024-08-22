@@ -2,7 +2,7 @@ from typing import List
 
 from langchain_pinecone import Pinecone
 
-from langflow.base.vectorstores.model import LCVectorStoreComponent
+from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers.data import docs_to_data
 from langflow.io import (
     DropdownInput,
@@ -22,7 +22,6 @@ class PineconeVectorStoreComponent(LCVectorStoreComponent):
     documentation = "https://python.langchain.com/v0.2/docs/integrations/vectorstores/pinecone/"
     name = "Pinecone"
     icon = "Pinecone"
-    pinecone_instance = None
 
     inputs = [
         StrInput(name="index_name", display_name="Index Name", required=True),
@@ -58,12 +57,8 @@ class PineconeVectorStoreComponent(LCVectorStoreComponent):
         ),
     ]
 
+    @check_cached_vector_store
     def build_vector_store(self) -> Pinecone:
-        return self._build_pinecone()
-
-    def _build_pinecone(self) -> Pinecone:
-        if self.pinecone_instance is not None:
-            return self.pinecone_instance
         from langchain_pinecone._utilities import DistanceStrategy
         from langchain_pinecone.vectorstores import Pinecone
 
@@ -88,11 +83,10 @@ class PineconeVectorStoreComponent(LCVectorStoreComponent):
 
         if documents:
             pinecone.add_documents(documents)
-        self.pinecone_instance = pinecone
         return pinecone
 
     def search_documents(self) -> List[Data]:
-        vector_store = self._build_pinecone()
+        vector_store = self.build_vector_store()
 
         if self.search_query and isinstance(self.search_query, str) and self.search_query.strip():
             docs = vector_store.similarity_search(

@@ -2,7 +2,7 @@ from typing import List
 
 from langchain_community.vectorstores import UpstashVectorStore
 
-from langflow.base.vectorstores.model import LCVectorStoreComponent
+from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers.data import docs_to_data
 from langflow.io import (
     HandleInput,
@@ -73,10 +73,8 @@ class UpstashVectorStoreComponent(LCVectorStoreComponent):
         ),
     ]
 
+    @check_cached_vector_store
     def build_vector_store(self) -> UpstashVectorStore:
-        return self._build_upstash()
-
-    def _build_upstash(self) -> UpstashVectorStore:
         use_upstash_embedding = self.embedding is None
 
         documents = []
@@ -117,7 +115,7 @@ class UpstashVectorStoreComponent(LCVectorStoreComponent):
         return upstash_vs
 
     def search_documents(self) -> List[Data]:
-        vector_store = self._build_upstash()
+        vector_store = self.build_vector_store()
 
         if self.search_query and isinstance(self.search_query, str) and self.search_query.strip():
             docs = vector_store.similarity_search(
