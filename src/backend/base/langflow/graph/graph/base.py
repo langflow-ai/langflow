@@ -875,31 +875,22 @@ class Graph:
         if id(self) in memo:
             return memo[id(self)]
 
-        if self._start is not None and self._end is not None:
-            # Deep copy start and end components
-            start_copy = copy.deepcopy(self._start, memo)
-            end_copy = copy.deepcopy(self._end, memo)
-            new_graph = type(self)(
-                start_copy,
-                end_copy,
-                copy.deepcopy(self.flow_id, memo),
-                copy.deepcopy(self.flow_name, memo),
-                copy.deepcopy(self.user_id, memo),
-            )
-        else:
-            # Create a new graph without start and end, but copy flow_id, flow_name, and user_id
-            new_graph = type(self)(
-                None,
-                None,
-                copy.deepcopy(self.flow_id, memo),
-                copy.deepcopy(self.flow_name, memo),
-                copy.deepcopy(self.user_id, memo),
-            )
-            # Deep copy vertices and edges
-            new_graph.add_nodes_and_edges(copy.deepcopy(self._vertices, memo), copy.deepcopy(self._edges, memo))
+        # Create a new graph instance (without copying attributes yet)
+        new_graph = type(self).__new__(type(self))
 
-        # Store the newly created object in memo
+        # Store the new instance in memo early to avoid recursive loops
         memo[id(self)] = new_graph
+
+        # Now, deep copy and assign attributes
+        new_graph._start = copy.deepcopy(self._start, memo) if self._start is not None else None
+        new_graph._end = copy.deepcopy(self._end, memo) if self._end is not None else None
+        new_graph.flow_id = copy.deepcopy(self.flow_id, memo)
+        new_graph.flow_name = copy.deepcopy(self.flow_name, memo)
+        new_graph.user_id = copy.deepcopy(self.user_id, memo)
+
+        # Deep copy vertices and edges if they exist
+        if hasattr(self, "_vertices") and hasattr(self, "_edges"):
+            new_graph.add_nodes_and_edges(copy.deepcopy(self._vertices, memo), copy.deepcopy(self._edges, memo))
 
         return new_graph
 
