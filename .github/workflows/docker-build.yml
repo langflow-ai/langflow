@@ -57,13 +57,13 @@ jobs:
         if : ${{ inputs.version == '' && inputs.release_type == 'base' }}
         id: get-version-base
         run: |
-          version=$(poetry version --short)
+          version=$(cd src/backend/base && poetry version --short)
           echo version=$version >> $GITHUB_OUTPUT
       - name: Get Version Base
         if : ${{ inputs.version == '' && inputs.release_type == 'main' }}
         id: get-version-main
         run: |
-          version=$(cd src/backend/base && poetry version --short)
+          version=$(poetry version --short)
           echo version=$version >> $GITHUB_OUTPUT
   setup:
     runs-on: ubuntu-latest
