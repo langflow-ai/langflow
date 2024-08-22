@@ -162,3 +162,13 @@ textarea[class^="ag-"]:focus {
 .react-flow__node.dragging * {
   cursor: grabbing !important;
 }
+
+.react-flow__handle-right {
+  right: 0 !important;
+  transform: translate(50%, -50%) !important;
+}
+
+.react-flow__handle-left {
+  left: 0 !important;
+  transform: translate(-50%, -50%) !important;
+}
