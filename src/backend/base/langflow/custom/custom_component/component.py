@@ -249,7 +249,7 @@ class Component(CustomComponent):
                 raise ValueError("Output name cannot be None.")
             self._outputs[output.name] = output
 
-        if hasattr(self, "_vertex"):
+        if hasattr(self, "_vertex") and hasattr(self._vertex, "outputs"):
             self._vertex.outputs = [output.model_dump() for output in self.outputs]
 
     def map_inputs(self, inputs: List["InputTypes"]):
