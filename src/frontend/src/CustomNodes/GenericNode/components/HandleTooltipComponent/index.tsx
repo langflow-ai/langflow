@@ -1,30 +1,19 @@
-import { TOOLTIP_EMPTY } from "../../../../constants/constants";
-import useFlowStore from "../../../../stores/flowStore";
-import { useTypesStore } from "../../../../stores/typesStore";
-import { NodeType } from "../../../../types/flow";
-import { groupByFamily } from "../../../../utils/utils";
-import TooltipRenderComponent from "../tooltipRenderComponent";
-
-export default function HandleTooltips({
-  left,
+export default function HandleTooltipComponent({
   tooltipTitle,
+  color,
 }: {
-  left: boolean;
-  nodes: NodeType[];
+  color: string;
   tooltipTitle: string;
 }) {
-  const myData = useTypesStore((state) => state.data);
-  const nodes = useFlowStore((state) => state.nodes);
-
-  let groupedObj: any = groupByFamily(myData, tooltipTitle!, left, nodes!);
-
-  if (groupedObj && groupedObj.length > 0) {
-    //@ts-ignore
-    return groupedObj.map((item, index) => {
-      return <TooltipRenderComponent index={index} item={item} left={left} />;
-    });
-  } else {
-    //@ts-ignore
-    return <span data-testid={`empty-tooltip-filter`}>{TOOLTIP_EMPTY}</span>;
-  }
+  return (
+    <div className="py-1.5 text-xs">
+      <span className="mr-1">Type: </span>
+      <span
+        className="rounded-md px-2 pb-1 pt-0.5 text-background"
+        style={{ backgroundColor: color }}
+      >
+        {tooltipTitle}
+      </span>
+    </div>
+  );
 }
