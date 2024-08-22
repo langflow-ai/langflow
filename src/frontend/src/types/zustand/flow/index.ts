@@ -180,4 +180,41 @@ export type FlowStoreType = {
     edges?: Edge[];
     viewport?: Viewport;
   }) => void;
+  handleDragging:
+    | {
+        source: string | undefined;
+        sourceHandle: string | undefined;
+        target: string | undefined;
+        targetHandle: string | undefined;
+      }
+    | undefined;
+  setHandleDragging: (
+    data:
+      | {
+          source: string | undefined;
+          sourceHandle: string | undefined;
+          target: string | undefined;
+          targetHandle: string | undefined;
+        }
+      | undefined,
+  ) => void;
+
+  filterType:
+    | {
+        source: string | undefined;
+        sourceHandle: string | undefined;
+        target: string | undefined;
+        targetHandle: string | undefined;
+      }
+    | undefined;
+  setFilterType: (
+    data:
+      | {
+          source: string | undefined;
+          sourceHandle: string | undefined;
+          target: string | undefined;
+          targetHandle: string | undefined;
+        }
+      | undefined,
+  ) => void;
 };

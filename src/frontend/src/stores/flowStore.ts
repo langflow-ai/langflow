@@ -438,6 +438,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     });
   },
   setFilterEdge: (newState) => {
+    if (newState.length === 0) {
+      set({ filterType: undefined });
+    }
     set({ getFilterEdge: newState });
   },
   getFilterEdge: [],
@@ -757,6 +760,15 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         },
       },
     });
+  },
+  handleDragging: undefined,
+  setHandleDragging: (handleDragging) => {
+    set({ handleDragging });
+  },
+
+  filterType: undefined,
+  setFilterType: (filterType) => {
+    set({ filterType });
   },
 }));
 
