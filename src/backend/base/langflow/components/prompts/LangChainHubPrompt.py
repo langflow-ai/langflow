@@ -59,18 +59,28 @@ class LangChainHubPromptComponent(Component):
                 # Create a string version of the full template
                 full_template = full_template + "\n" + message.template
 
+            # No need to reprocess if we have them already
+            if all(["param_" + custom_field in build_config 
+                    for custom_field in custom_fields]):
+                return build_config
+
             # Easter egg: Show template in info popup
             build_config["langchain_hub_prompt"]["info"] = full_template
+
+            # Remove old parameter inputs if any
+            for key, _ in build_config.copy().items():
+                if key.startswith("param_"):
+                    del build_config[key]
 
             # Now create inputs for each
             for custom_field in custom_fields:
                 new_parameter = DefaultPromptField(
-                    name=custom_field,
+                    name=f"param_{custom_field}",
                     display_name=custom_field,
-                    ihfo="Fill in the value for {" + custom_field + "}",
+                    info="Fill in the value for {" + custom_field + "}",
                 ).to_dict()
 
-                build_config[custom_field] = new_parameter
+                build_config[f"param_{custom_field}"] = new_parameter
 
         return build_config
 
