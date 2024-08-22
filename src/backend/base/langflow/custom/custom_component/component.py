@@ -5,7 +5,6 @@ from uuid import UUID
 
 import nanoid  # type: ignore
 import yaml
-from langchain_core.tools import Tool
 from pydantic import BaseModel
 
 from langflow.graph.state.model import create_state_model
@@ -35,7 +34,6 @@ class Component(CustomComponent):
     outputs: List[Output] = []
     code_class_base_inheritance: ClassVar[str] = "Component"
     _output_logs: dict[str, Log] = {}
-    _add_tool_output: bool = False
 
     def __init__(self, **kwargs):
         # if key starts with _ it is a config
@@ -65,9 +63,9 @@ class Component(CustomComponent):
             config |= {"_id": f"{self.__class__.__name__}-{nanoid.generate(size=5)}"}
         self.__inputs = inputs
         self.__config = config
+        if hasattr(self, "_add_tool_output") and self._add_tool_output and hasattr(self, "_append_tool_output"):
+            self._append_tool_output()
         super().__init__(**config)
-        if hasattr(self, "add_tool_output") and self._add_tool_output and hasattr(self, "_add_tool_output"):
-            self.__add_tool_output()
         if hasattr(self, "_trace_type"):
             self.trace_type = self._trace_type
         if not hasattr(self, "trace_type"):
@@ -684,15 +682,17 @@ class Component(CustomComponent):
     def _get_fallback_input(self, **kwargs):
         return Input(**kwargs)
 
-    def to_tool(self) -> Tool:
+    def to_tool(self):
         # TODO: This is a temporary solution to avoid circular imports
         from langflow.base.tools.component_tool import ComponentTool
 
-        tool = ComponentTool(component=self)
-        description_repr = repr(tool.description).strip("'")
-        args_str = "\n".join([f"- {arg_name}: {arg_data['description']}" for arg_name, arg_data in tool.args.items()])
-        self.status = f"{description_repr}\nArguments:\n{args_str}"
-        return tool  # type: ignore
+        return ComponentTool(component=self)
 
-    def __add_tool_output(self):
-        self.outputs.append(Output(name="component_as_tool", display_name="Tool", method="to_tool", types=["Tool"]))
+    def _append_tool_output(self):
+        if next((output for output in self.outputs if output.name == "component_as_tool"), None) is None:
+            self.outputs.append(Output(name="component_as_tool", display_name="Tool", method="to_tool", types=["Tool"]))
+
+    def get_project_name(self):
+        if hasattr(self, "_tracing_service"):
+            return self._tracing_service.project_name
+        return "Langflow"
