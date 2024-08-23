@@ -1,7 +1,7 @@
 import os
 
 import pytest
-from integration.utils import MockEmbeddings, check_env_vars
+from integration.utils import MockEmbeddings, check_env_vars, valid_nvidia_vectorize_region
 from langchain_core.documents import Document
 
 # from langflow.components.memories.AstraDBMessageReader import AstraDBMessageReaderComponent
@@ -91,7 +91,7 @@ def test_astra_embeds_and_search(astra_fixture):
 
 
 @pytest.mark.skipif(
-    not check_env_vars("ASTRA_DB_APPLICATION_TOKEN", "ASTRA_DB_API_ENDPOINT"),
+    not check_env_vars("ASTRA_DB_APPLICATION_TOKEN", "ASTRA_DB_API_ENDPOINT") or not valid_nvidia_vectorize_region(os.getenv("ASTRA_DB_API_ENDPOINT")),
     reason="missing astra env vars",
 )
 def test_astra_vectorize():
@@ -177,6 +177,7 @@ def test_astra_vectorize_with_provider_api_key():
             ingest_data=records,
             embedding=vectorize_options,
             search_input="test",
+            number_of_results=4,
         )
         component.build_vector_store()
         records = component.search_documents()

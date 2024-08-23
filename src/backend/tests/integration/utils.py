@@ -1,6 +1,7 @@
 import os
 from typing import List
 
+from astrapy.admin import parse_api_endpoint
 from langflow.field_typing import Embeddings
 
 
@@ -15,6 +16,22 @@ def check_env_vars(*vars):
     bool: True if all environment variables are set, False otherwise.
     """
     return all(os.getenv(var) for var in vars)
+
+def valid_nvidia_vectorize_region(api_endpoint: str) -> bool:
+    """
+    Check if the specified region is valid.
+
+    Args:
+    region (str): The region to check.
+
+    Returns:
+    bool: True if the region is contains hosted nvidia models, False otherwise.
+    """
+    parsed_endpoint = parse_api_endpoint(api_endpoint)
+    if not parsed_endpoint:
+        raise ValueError(f"Invalid ASTRA_DB_API_ENDPOINT")
+    return parsed_endpoint.region in ["us-east-2"]
+
 
 
 class MockEmbeddings(Embeddings):

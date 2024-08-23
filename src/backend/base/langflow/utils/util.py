@@ -439,6 +439,7 @@ def update_settings(
     initialize_settings_service()
     settings_service = get_settings_service()
     if config:
+        print(f"frazierj: Config: {config}")
         logger.debug(f"Loading settings from {config}")
         settings_service.settings.update_from_yaml(config, dev=dev)
     if remove_api_keys:
