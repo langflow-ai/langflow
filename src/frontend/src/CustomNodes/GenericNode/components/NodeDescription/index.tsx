@@ -14,7 +14,7 @@ export default function NodeDescription({
   charLimit,
   inputClassName,
   mdClassName,
-  style
+  style,
 }: {
   description?: string;
   selected: boolean;
@@ -23,7 +23,7 @@ export default function NodeDescription({
   charLimit?: number;
   inputClassName?: string;
   mdClassName?: string;
-  style?:React.CSSProperties
+  style?: React.CSSProperties;
 }) {
   const [inputDescription, setInputDescription] = useState(false);
   const [nodeDescription, setNodeDescription] = useState(description);
@@ -41,7 +41,12 @@ export default function NodeDescription({
   }, [description]);
 
   return (
-    <div className={cn("generic-node-desc",!inputDescription?" overflow-auto":"")}>
+    <div
+      className={cn(
+        "generic-node-desc",
+        !inputDescription ? "overflow-auto" : "",
+      )}
+    >
       {inputDescription ? (
         <>
           <Textarea
@@ -89,16 +94,22 @@ export default function NodeDescription({
             }}
           />
           {charLimit && (
-            <div className={cn("text-left text-xs",((nodeDescription?.length??0)>=charLimit?"text-error":"text-primary"))}>
-              {nodeDescription?.length??0}/{charLimit}
+            <div
+              className={cn(
+                "text-left text-xs",
+                (nodeDescription?.length ?? 0) >= charLimit
+                  ? "text-error"
+                  : "text-primary",
+              )}
+            >
+              {nodeDescription?.length ?? 0}/{charLimit}
             </div>
           )}
         </>
-
       ) : (
         <div
           className={cn(
-            "nodoubleclick generic-node-desc-text cursor-text word-break-break-word h-full",
+            "nodoubleclick generic-node-desc-text h-full cursor-text word-break-break-word",
             description === "" || !description ? "font-light italic" : "",
           )}
           onDoubleClick={(e) => {
@@ -109,7 +120,12 @@ export default function NodeDescription({
           {description === "" || !description ? (
             emptyPlaceholder
           ) : (
-            <Markdown className={cn("markdown h-full prose flex flex-col text-primary word-break-break-word w-full dark:prose-invert",mdClassName)}>
+            <Markdown
+              className={cn(
+                "markdown prose flex h-full w-full flex-col text-primary word-break-break-word dark:prose-invert",
+                mdClassName,
+              )}
+            >
               {String(description)}
             </Markdown>
           )}

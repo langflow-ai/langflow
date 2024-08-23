@@ -69,25 +69,35 @@ export default function useShortcuts({
   }
 
   function handleSaveWShortcut(e: KeyboardEvent) {
-    if ((isWrappedWithClass(e, "noflow") && !showOverrideModal) || !saveComponent) return;
+    if (
+      (isWrappedWithClass(e, "noflow") && !showOverrideModal) ||
+      !saveComponent
+    )
+      return;
     e.preventDefault();
     saveComponent();
   }
 
   function handleAdvancedWShortcut(e: KeyboardEvent) {
-    if ((isWrappedWithClass(e, "noflow") && !showModalAdvanced) || !showAdvance) return;
+    if ((isWrappedWithClass(e, "noflow") && !showModalAdvanced) || !showAdvance)
+      return;
     e.preventDefault();
     showAdvance();
   }
 
   function handleCodeWShortcut(e: KeyboardEvent) {
-    if ((isWrappedWithClass(e, "noflow") && !openModal) || !handleCodeModal) return;
+    if ((isWrappedWithClass(e, "noflow") && !openModal) || !handleCodeModal)
+      return;
     e.preventDefault();
     handleCodeModal();
   }
 
   function handleShareWShortcut(e: KeyboardEvent) {
-    if ((isWrappedWithClass(e, "noflow") && !showconfirmShare) || !shareComponent) return;
+    if (
+      (isWrappedWithClass(e, "noflow") && !showconfirmShare) ||
+      !shareComponent
+    )
+      return;
     e.preventDefault();
     shareComponent();
   }

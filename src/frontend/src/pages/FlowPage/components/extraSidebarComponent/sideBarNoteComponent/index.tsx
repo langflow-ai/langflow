@@ -15,28 +15,20 @@ export default function NoteDraggableComponent() {
   }
 
   return (
-<div
-            draggable
-            className={
-              "cursor-grab rounded-l-md bg-background p-2"
-            }
-            onDragStart={onDragStart}
-          >
-            <div
-              data-testid={"note_component"}
-              id={"note component"}
-              className="flex w-full items-center justify-between rounded-md  border border-dashed border-ring bg-white px-3 py-1 text-sm"
-            >
-              <IconComponent
-                name="SquarePen"
-                className="pr-2"/>
-              <span className="side-bar-components-text">Add Note</span>
-              <IconComponent
-                  name="Menu"
-                  className="side-bar-components-icon"
-                />
-            </div>
-          </div>
-
+    <div
+      draggable
+      className={"cursor-grab rounded-l-md bg-background p-2"}
+      onDragStart={onDragStart}
+    >
+      <div
+        data-testid={"note_component"}
+        id={"note component"}
+        className="flex w-full items-center justify-between rounded-md border border-dashed border-ring bg-white px-3 py-1 text-sm"
+      >
+        <IconComponent name="SquarePen" className="pr-2" />
+        <span className="side-bar-components-text">Add Note</span>
+        <IconComponent name="Menu" className="side-bar-components-icon" />
+      </div>
+    </div>
   );
 }

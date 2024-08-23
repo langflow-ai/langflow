@@ -57,7 +57,7 @@ export default function NodeName({
       />
     </div>
   ) : (
-    <div className="group flex items-center gap-1 w-full">
+    <div className="group flex w-full items-center gap-1">
       <ShadTooltip content={display_name}>
         <div
           onDoubleClick={(event) => {
