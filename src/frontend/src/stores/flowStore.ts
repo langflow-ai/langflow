@@ -479,8 +479,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
             targetHandle: scapeJSONParse(connection.targetHandle!),
             sourceHandle: scapeJSONParse(connection.sourceHandle!),
           },
-          // style: { stroke: "#555" },
-          // className: "stroke-foreground stroke-connection",
         },
         oldEdges,
       );
@@ -538,7 +536,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         get().updateBuildStatus(ids, BuildStatus.ERROR);
         throw new Error("Invalid components");
       }
-      get().updateEdgesTypeByNodes(nodes, "running");
+      get().updateEdgesRunningByNodes(nodes, true);
     }
     function handleBuildUpdate(
       vertexBuildData: VertexBuildTypeAPI,
@@ -642,9 +640,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
             });
           }
         }
-        get().updateEdgesTypeByNodes(
+        get().updateEdgesRunningByNodes(
           get().nodes.map((n) => n.id),
-          undefined,
+          false,
         );
         get().setIsBuilding(false);
         get().setLockChat(false);
@@ -687,11 +685,12 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       viewport: get().reactFlowInstance?.getViewport()!,
     };
   },
-  updateEdgesTypeByNodes: (ids: string[], type: string | undefined) => {
+  updateEdgesRunningByNodes: (ids: string[], running: boolean) => {
     const edges = get().edges;
     const newEdges = edges.map((edge) => {
       if (ids.includes(edge.source) && ids.includes(edge.target)) {
-        edge.type = type;
+        edge.animated = running;
+        edge.className = running ? "running" : "";
       }
       return edge;
     });

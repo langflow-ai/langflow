@@ -157,6 +157,10 @@ body {
   stroke: var(--connection) !important;
 }
 
+.react-flow__edge.running .react-flow__edge-path {
+  stroke: var(--status-blue) !important;
+}
+
 .ag-react-container {
   width: 100%;
   height: 100%;
