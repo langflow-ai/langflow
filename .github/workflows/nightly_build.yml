@@ -8,9 +8,26 @@ env:
   POETRY_VERSION: "1.8.2"
 
 jobs:
-  hello-world:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Run hello world
-        run: |
-          echo "Hello, world!"
+  backend-unit-tests:
+    name: Run Backend Unit Tests
+    uses: ./.github/workflows/python_test.yml
+    with:
+      python-versions: '["3.10", "3.11", "3.12"]'
+
+  backend-integration-tests:
+    name: Run Integration Unit Tests
+    uses: ./.github/workflows/integration_tests.yml
+    with:
+      python-versions: '["3.10", "3.11", "3.12"]'
+
+  run-nightly-build:
+    name: Run Nightly Langflow Build
+    needs: [backend-unit-tests, backend-integration-tests]
+    uses: ./.github/workflows/release.yml
+    with:
+      release_package_base: false
+      release_package_main: true
+      build_docker_base: false
+      build_docker_main: true
+      create_release: false
+      nightly_build: true
