@@ -91,7 +91,8 @@ def test_astra_embeds_and_search(astra_fixture):
 
 
 @pytest.mark.skipif(
-    not check_env_vars("ASTRA_DB_APPLICATION_TOKEN", "ASTRA_DB_API_ENDPOINT") or not valid_nvidia_vectorize_region(os.getenv("ASTRA_DB_API_ENDPOINT")),
+    not check_env_vars("ASTRA_DB_APPLICATION_TOKEN", "ASTRA_DB_API_ENDPOINT")
+    or not valid_nvidia_vectorize_region(os.getenv("ASTRA_DB_API_ENDPOINT")),
     reason="missing astra env vars",
 )
 def test_astra_vectorize():

@@ -17,6 +17,7 @@ def check_env_vars(*vars):
     """
     return all(os.getenv(var) for var in vars)
 
+
 def valid_nvidia_vectorize_region(api_endpoint: str) -> bool:
     """
     Check if the specified region is valid.
@@ -29,9 +30,8 @@ def valid_nvidia_vectorize_region(api_endpoint: str) -> bool:
     """
     parsed_endpoint = parse_api_endpoint(api_endpoint)
     if not parsed_endpoint:
-        raise ValueError(f"Invalid ASTRA_DB_API_ENDPOINT")
+        raise ValueError("Invalid ASTRA_DB_API_ENDPOINT")
     return parsed_endpoint.region in ["us-east-2"]
-
 
 
 class MockEmbeddings(Embeddings):
