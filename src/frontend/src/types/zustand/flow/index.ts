@@ -225,5 +225,5 @@ export type FlowStoreType = {
         }
       | undefined,
   ) => void;
-  updateEdgesTypeByNodes: (ids: string[], type: string | undefined) => void;
+  updateEdgesRunningByNodes: (ids: string[], running: boolean) => void;
 };
