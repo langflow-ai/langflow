@@ -267,6 +267,13 @@ class ResultDataResponse(BaseModel):
             return {key: serialize_field(val) for key, val in v.items()}
         return serialize_field(v)
 
+    @field_serializer("results")
+    @classmethod
+    def serialize_results(cls, v):
+        if isinstance(v, dict):
+            return {key: serialize_field(val) for key, val in v.items()}
+        return serialize_field(v)
+
 
 class VertexBuildResponse(BaseModel):
     id: str | None = None
