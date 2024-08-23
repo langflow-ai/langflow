@@ -1,8 +1,9 @@
 from typing import List
 
 from langflow.custom import Component
-from langflow.inputs import StrInput, SecretStrInput, DefaultPromptField
+from langflow.inputs import StrInput, SecretStrInput, DefaultPromptField, PromptInput
 from langflow.io import Output
+from langflow.schema.message import Message
 
 from langchain_core.prompts import ChatPromptTemplate
 
@@ -33,7 +34,7 @@ class LangChainHubPromptComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Build Chat Prompt", name="template", method="build_chat_prompt"),
+        Output(display_name="Build Prompt", name="prompt", method="build_prompt"),
     ]
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
@@ -83,20 +84,23 @@ class LangChainHubPromptComponent(Component):
 
         return build_config
 
-    def build_chat_prompt(
+    async def build_prompt(
         self,
-    ) -> ChatPromptTemplate:
+    ) -> Message:
         # Get the parameters that
         template = self._fetch_langchain_hub_template()  # TODO: doing this twice
-        prompt_value = template.invoke(self._attributes)
+        original_params = {k[6:] if k.startswith("param_") else k: v 
+                           for k, v in self._attributes.items()}
+        prompt_value = template.invoke(original_params)
 
-        # Now build the ChatPromptTemplate back
-        prompt_messages = prompt_value.to_messages()
-        prompt_template = ChatPromptTemplate.from_messages(prompt_messages)
+        original_params["template"] = prompt_value.to_string()
+        
+        # Now pass the filtered attributes to the function
+        prompt = await Message.from_template_and_variables(**original_params)
 
-        self.status = prompt_value.to_string()
+        self.status = prompt.text
 
-        return prompt_template
+        return prompt
 
     def _fetch_langchain_hub_template(self):
         import langchain.hub
