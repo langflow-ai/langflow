@@ -1,3 +1,4 @@
+import RunningEdge from "@/CustomEdges/RunningEdge";
 import LoadingComponent from "@/components/loadingComponent";
 import { useGetBuildsQuery } from "@/controllers/API/queries/_builds";
 import useAutoSaveFlow from "@/hooks/flows/use-autosave-flow";
@@ -54,6 +55,10 @@ import isWrappedWithClass from "./utils/is-wrapped-with-class";
 
 const nodeTypes = {
   genericNode: GenericNode,
+};
+
+const edgeTypes = {
+  running: RunningEdge,
 };
 
 export default function Page({ view }: { view?: boolean }): JSX.Element {
@@ -439,6 +444,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
             disableKeyboardA11y={true}
             onInit={setReactFlowInstance}
             nodeTypes={nodeTypes}
+            edgeTypes={edgeTypes}
             onEdgeUpdate={onEdgeUpdate}
             onEdgeUpdateStart={onEdgeUpdateStart}
             onEdgeUpdateEnd={onEdgeUpdateEnd}
