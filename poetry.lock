@@ -311,13 +311,22 @@ extras = ["pyaudio (>=0.2.13)"]
 
 [[package]]
 name = "astra-assistants"
+<<<<<<< HEAD
 version = "2.1.0.12"
+=======
+version = "2.1.0.10"
+>>>>>>> 3bfcc7351 (Add nightly builds workflow)
 description = "Astra Assistants API - drop in replacement for OpenAI Assistants, powered by AstraDB"
 optional = false
 python-versions = "<4.0,>=3.10"
 files = [
+<<<<<<< HEAD
     {file = "astra_assistants-2.1.0.12-py3-none-any.whl", hash = "sha256:0c10644f71a0cc991b377747d4d8f209c0f0474340602a5e3e1cc1bcee912b05"},
     {file = "astra_assistants-2.1.0.12.tar.gz", hash = "sha256:de621eaf76d6c7e2ebe31ab2c00a21124950dd244049d576577687c58423a1c4"},
+=======
+    {file = "astra_assistants-2.1.0.10-py3-none-any.whl", hash = "sha256:5da9479abd1fd73ab07a5f06809226c5581a2c4b048ee48f6aab12019644a703"},
+    {file = "astra_assistants-2.1.0.10.tar.gz", hash = "sha256:31333aaa08c719a3169e2cd06f165eb09c074246cb58e1b545268467f25e5dce"},
+>>>>>>> 3bfcc7351 (Add nightly builds workflow)
 ]
 
 [package.dependencies]
@@ -330,7 +339,11 @@ openai = ">=1.20.0,<2.0.0"
 python-dotenv = ">=1.0.1,<2.0.0"
 python-lsp-jsonrpc = ">=1.1.2,<2.0.0"
 ruff = ">=0.6.2,<0.7.0"
+<<<<<<< HEAD
 tree-sitter = ">=0.23.0,<0.24.0"
+=======
+tree-sitter = ">=0.22.3,<0.23.0"
+>>>>>>> 3bfcc7351 (Add nightly builds workflow)
 tree-sitter-python = ">=0.23.0,<0.24.0"
 
 [[package]]
@@ -1369,13 +1382,22 @@ test = ["pytest"]
 
 [[package]]
 name = "composio-core"
+<<<<<<< HEAD
 version = "0.5.9"
+=======
+version = "0.5.7"
+>>>>>>> 3bfcc7351 (Add nightly builds workflow)
 description = "Core package to act as a bridge between composio platform and other services."
 optional = false
 python-versions = "<4,>=3.9"
 files = [
+<<<<<<< HEAD
     {file = "composio_core-0.5.9-py3-none-any.whl", hash = "sha256:a9f013b3f152fa9e730ad8e71bef07965ac40bbf8ecd6e4b439e1ff1b4a12474"},
     {file = "composio_core-0.5.9.tar.gz", hash = "sha256:c401a86c72b4dae1d0e3075d52ec3a2b66ef6fdc46d232486e0992d8b4e97602"},
+=======
+    {file = "composio_core-0.5.7-py3-none-any.whl", hash = "sha256:0fcc4c5a11bf42eef185cab3a3c8b5ac2656476b50fa98f9447a57bea9fa3782"},
+    {file = "composio_core-0.5.7.tar.gz", hash = "sha256:5fd62f83e0e4730db41079a7f84f84df19a83a742f8b8b9b2641fe80084d6ed6"},
+>>>>>>> 3bfcc7351 (Add nightly builds workflow)
 ]
 
 [package.dependencies]
@@ -1405,17 +1427,30 @@ all = ["diskcache", "flake8", "networkx", "pathspec", "pygments", "ruff", "trans
 
 [[package]]
 name = "composio-langchain"
+<<<<<<< HEAD
 version = "0.5.9"
+=======
+version = "0.5.7"
+>>>>>>> 3bfcc7351 (Add nightly builds workflow)
 description = "Use Composio to get an array of tools with your LangChain agent."
 optional = false
 python-versions = "<4,>=3.9"
 files = [
+<<<<<<< HEAD
     {file = "composio_langchain-0.5.9-py3-none-any.whl", hash = "sha256:245caaefb769a98dbfb7a715d283f811b459c16a54e1c8579be5b23acc2e55ae"},
     {file = "composio_langchain-0.5.9.tar.gz", hash = "sha256:9b0c5dff2545615180c5892d622fd38aa3a61a987871725dff555413b45078f9"},
 ]
 
 [package.dependencies]
 composio-core = "0.5.9"
+=======
+    {file = "composio_langchain-0.5.7-py3-none-any.whl", hash = "sha256:5719d15034b0de55537524b81901419b3a5eb7e9d4d7e86e3172038aa81da927"},
+    {file = "composio_langchain-0.5.7.tar.gz", hash = "sha256:9ca2fcdae5497692cf4b6012aaa5cf0a1b5a12aae1ecedb2bb8499999e96dc2f"},
+]
+
+[package.dependencies]
+composio-core = "0.5.7"
+>>>>>>> 3bfcc7351 (Add nightly builds workflow)
 langchain = ">=0.1.0"
 langchain-openai = ">=0.0.2.post1"
 langchainhub = ">=0.1.15"
@@ -2831,13 +2866,22 @@ grpcio-gcp = ["grpcio-gcp (>=0.2.2,<1.0.dev0)"]
 
 [[package]]
 name = "google-api-python-client"
+<<<<<<< HEAD
 version = "2.143.0"
+=======
+version = "2.142.0"
+>>>>>>> 3bfcc7351 (Add nightly builds workflow)
 description = "Google API Client Library for Python"
 optional = false
 python-versions = ">=3.7"
 files = [
+<<<<<<< HEAD
     {file = "google_api_python_client-2.143.0-py2.py3-none-any.whl", hash = "sha256:d5654134522b9b574b82234e96f7e0aeeabcbf33643fbabcd449ef0068e3a476"},
     {file = "google_api_python_client-2.143.0.tar.gz", hash = "sha256:6a75441f9078e6e2fcdf4946a153fda1e2cc81b5e9c8d6e8c0750c85c7f8a566"},
+=======
+    {file = "google_api_python_client-2.142.0-py2.py3-none-any.whl", hash = "sha256:266799082bb8301f423ec204dffbffb470b502abbf29efd1f83e644d36eb5a8f"},
+    {file = "google_api_python_client-2.142.0.tar.gz", hash = "sha256:a1101ac9e24356557ca22f07ff48b7f61fa5d4b4e7feeef3bda16e5dcb86350e"},
+>>>>>>> 3bfcc7351 (Add nightly builds workflow)
 ]
 
 [package.dependencies]
@@ -2905,13 +2949,22 @@ tool = ["click (>=6.0.0)"]
 
 [[package]]
 name = "google-cloud-aiplatform"
+<<<<<<< HEAD
 version = "1.64.0"
+=======
+version = "1.63.0"
+>>>>>>> 3bfcc7351 (Add nightly builds workflow)
 description = "Vertex AI API client library"
 optional = false
 python-versions = ">=3.8"
 files = [
+<<<<<<< HEAD
     {file = "google-cloud-aiplatform-1.64.0.tar.gz", hash = "sha256:475a612829b283eb8f783e773d37115c30db42e2e50065c8653db0c9bd18b0da"},
     {file = "google_cloud_aiplatform-1.64.0-py2.py3-none-any.whl", hash = "sha256:3a79ce2ec047868c348336624a60993464ca977fd258bcf609cc79309a8101c4"},
+=======
+    {file = "google-cloud-aiplatform-1.63.0.tar.gz", hash = "sha256:4eb2398bed02a60ad23656b4a442b5d6efa181d11653f8c31f0a5f642c09f913"},
+    {file = "google_cloud_aiplatform-1.63.0-py2.py3-none-any.whl", hash = "sha256:857abe09d1f3f49f62000dbd2302bc653c9a4cdce67ccf65bfd5878fcc81760d"},
+>>>>>>> 3bfcc7351 (Add nightly builds workflow)
 ]
 
 [package.dependencies]
@@ -2932,7 +2985,11 @@ autologging = ["mlflow (>=1.27.0,<=2.1.1)"]
 cloud-profiler = ["tensorboard-plugin-profile (>=2.4.0,<3.0.0dev)", "tensorflow (>=2.4.0,<3.0.0dev)", "werkzeug (>=2.0.0,<2.1.0dev)"]
 datasets = ["pyarrow (>=10.0.1)", "pyarrow (>=14.0.0)", "pyarrow (>=3.0.0,<8.0dev)"]
 endpoint = ["requests (>=2.28.1)"]
+<<<<<<< HEAD
 evaluation = ["immutabledict", "pandas (>=1.0.0,<2.2.0)", "tqdm (>=4.23.0)"]
+=======
+evaluation = ["pandas (>=1.0.0,<2.2.0)", "tqdm (>=4.23.0)"]
+>>>>>>> 3bfcc7351 (Add nightly builds workflow)
 full = ["cloudpickle (<3.0)", "docker (>=5.0.3)", "explainable-ai-sdk (>=1.0.0)", "fastapi (>=0.71.0,<=0.109.1)", "google-cloud-bigquery", "google-cloud-bigquery-storage", "google-cloud-logging (<4.0)", "google-vizier (>=0.1.6)", "httpx (>=0.23.0,<0.25.0)", "immutabledict", "lit-nlp (==0.4.0)", "mlflow (>=1.27.0,<=2.1.1)", "numpy (>=1.15.0)", "pandas (>=1.0.0)", "pandas (>=1.0.0,<2.2.0)", "pyarrow (>=10.0.1)", "pyarrow (>=14.0.0)", "pyarrow (>=3.0.0,<8.0dev)", "pyarrow (>=6.0.1)", "pydantic (<2)", "pyyaml (>=5.3.1,<7)", "ray[default] (>=2.4,<2.5.dev0 || >2.9.0,!=2.9.1,!=2.9.2,<=2.9.3)", "ray[default] (>=2.5,<=2.9.3)", "requests (>=2.28.1)", "setuptools (<70.0.0)", "starlette (>=0.17.1)", "tensorboard-plugin-profile (>=2.4.0,<3.0.0dev)", "tensorflow (>=2.3.0,<3.0.0dev)", "tensorflow (>=2.3.0,<3.0.0dev)", "tensorflow (>=2.4.0,<3.0.0dev)", "tqdm (>=4.23.0)", "urllib3 (>=1.21.1,<1.27)", "uvicorn[standard] (>=0.16.0)", "werkzeug (>=2.0.0,<2.1.0dev)"]
 langchain = ["langchain (>=0.1.16,<0.3)", "langchain-core (<0.3)", "langchain-google-vertexai (<2)", "openinference-instrumentation-langchain (>=0.1.19,<0.2)", "orjson (<=3.10.6)", "tenacity (<=8.3)"]
 langchain-testing = ["absl-py", "cloudpickle (>=3.0,<4.0)", "google-cloud-trace (<2)", "langchain (>=0.1.16,<0.3)", "langchain-core (<0.3)", "langchain-google-vertexai (<2)", "openinference-instrumentation-langchain (>=0.1.19,<0.2)", "opentelemetry-exporter-gcp-trace (<2)", "opentelemetry-sdk (<2)", "orjson (<=3.10.6)", "pydantic (>=2.6.3,<3)", "pytest-xdist", "tenacity (<=8.3)"]
@@ -4590,19 +4647,32 @@ tests = ["aiohttp", "duckdb", "pandas (>=1.4)", "polars (>=0.19)", "pytest", "py
 
 [[package]]
 name = "langchain"
+<<<<<<< HEAD
 version = "0.2.15"
+=======
+version = "0.2.14"
+>>>>>>> 3bfcc7351 (Add nightly builds workflow)
 description = "Building applications with LLMs through composability"
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
+<<<<<<< HEAD
     {file = "langchain-0.2.15-py3-none-any.whl", hash = "sha256:9e6231441870aaa8523be24a5785ccccfdde759a7e27dd082b6ec80f68e49dec"},
     {file = "langchain-0.2.15.tar.gz", hash = "sha256:f613ce7594be34f9bac687134a56f6e8274951907b798dbd037aefc95df78953"},
+=======
+    {file = "langchain-0.2.14-py3-none-any.whl", hash = "sha256:eed76194ee7d9c081037a3df7868d4de90e0410b51fc1ca933a8379e464bf40c"},
+    {file = "langchain-0.2.14.tar.gz", hash = "sha256:dc2aa5a58882054fb5d043c39ab8332ebd055f88f17839da68e1c7fd0a4fefe2"},
+>>>>>>> 3bfcc7351 (Add nightly builds workflow)
 ]
 
 [package.dependencies]
 aiohttp = ">=3.8.3,<4.0.0"
 async-timeout = {version = ">=4.0.0,<5.0.0", markers = "python_version < \"3.11\""}
+<<<<<<< HEAD
 langchain-core = ">=0.2.35,<0.3.0"
+=======
+langchain-core = ">=0.2.32,<0.3.0"
+>>>>>>> 3bfcc7351 (Add nightly builds workflow)
 langchain-text-splitters = ">=0.2.0,<0.3.0"
 langsmith = ">=0.1.17,<0.2.0"
 numpy = [
@@ -4735,13 +4805,22 @@ tenacity = ">=8.1.0,<8.4.0 || >8.4.0,<9.0.0"
 
 [[package]]
 name = "langchain-core"
+<<<<<<< HEAD
 version = "0.2.36"
+=======
+version = "0.2.35"
+>>>>>>> 3bfcc7351 (Add nightly builds workflow)
 description = "Building applications with LLMs through composability"
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
+<<<<<<< HEAD
     {file = "langchain_core-0.2.36-py3-none-any.whl", hash = "sha256:eabce6e7538cb9dc60db4bc1eb584bbb91a5e7e02a96d5b65b4a6ab151081b6d"},
     {file = "langchain_core-0.2.36.tar.gz", hash = "sha256:56f2367070e8afc43922bba1d046035a144b4e732a5474676403bd0eb33d85f2"},
+=======
+    {file = "langchain_core-0.2.35-py3-none-any.whl", hash = "sha256:e994fb8598e919842205824836a584243c1fb7f44268f6f14921c529667c4e6e"},
+    {file = "langchain_core-0.2.35.tar.gz", hash = "sha256:da8f51355a4a285345c41a3232fd0f1cc3a33726eb7b3557b753ffabfeb68b3f"},
+>>>>>>> 3bfcc7351 (Add nightly builds workflow)
 ]
 
 [package.dependencies]
@@ -5122,13 +5201,22 @@ url = "src/backend/base"
 
 [[package]]
 name = "langfuse"
+<<<<<<< HEAD
 version = "2.46.0"
+=======
+version = "2.44.1"
+>>>>>>> 3bfcc7351 (Add nightly builds workflow)
 description = "A client library for accessing langfuse"
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
+<<<<<<< HEAD
     {file = "langfuse-2.46.0-py3-none-any.whl", hash = "sha256:a1ddd873629b5a0694a548203939b01d0be69e4cf39291791fb3db5d5e646a89"},
     {file = "langfuse-2.46.0.tar.gz", hash = "sha256:d8b348c1bc9b24c491c66b4674dba9f801a81377c96a0485831aac9f3be15c19"},
+=======
+    {file = "langfuse-2.44.1-py3-none-any.whl", hash = "sha256:2586f24e9c3b38112a82525b5749c1abb70d0d7d818b1078ed5c313a7494f014"},
+    {file = "langfuse-2.44.1.tar.gz", hash = "sha256:94b0192bc412b7ace1361c9c39ccfc28ebe181ec6c254f0b1cf8f5abd4893443"},
+>>>>>>> 3bfcc7351 (Add nightly builds workflow)
 ]
 
 [package.dependencies]
@@ -5147,13 +5235,22 @@ openai = ["openai (>=0.27.8)"]
 
 [[package]]
 name = "langsmith"
+<<<<<<< HEAD
 version = "0.1.106"
+=======
+version = "0.1.105"
+>>>>>>> 3bfcc7351 (Add nightly builds workflow)
 description = "Client library to connect to the LangSmith LLM Tracing and Evaluation Platform."
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
+<<<<<<< HEAD
     {file = "langsmith-0.1.106-py3-none-any.whl", hash = "sha256:a418161c98de72ee2c6eea6667c6217814b67db4b9a3a024788013384216ff35"},
     {file = "langsmith-0.1.106.tar.gz", hash = "sha256:64a890a05640d64692f5515ebb444b0457332a9cf9e7605c4651de6737a7d3a0"},
+=======
+    {file = "langsmith-0.1.105-py3-none-any.whl", hash = "sha256:a0098d0bc60ee79792109b0c1fef8252e21fd2dc424f4d902b8d9eb75160438b"},
+    {file = "langsmith-0.1.105.tar.gz", hash = "sha256:a8717ef90f3f740c202aa6878da89d4581ff28998336b48b831a92b855c460c3"},
+>>>>>>> 3bfcc7351 (Add nightly builds workflow)
 ]
 
 [package.dependencies]
@@ -5192,6 +5289,7 @@ dspy = ["dspy-ai (>=2.4.12,<3.0.0)"]
 langchain = ["langchain (>=0.2.0,<0.3.0)"]
 litellm = ["litellm (>=1.40.15,<2.0.0)"]
 openai = ["openai (>=1.42.0,<2.0.0)"]
+<<<<<<< HEAD
 
 [[package]]
 name = "lark"
@@ -5213,12 +5311,23 @@ regex = ["regex"]
 [[package]]
 name = "litellm"
 version = "1.44.8"
+=======
+
+[[package]]
+name = "litellm"
+version = "1.44.7"
+>>>>>>> 3bfcc7351 (Add nightly builds workflow)
 description = "Library to easily interface with LLM API providers"
 optional = false
 python-versions = "!=2.7.*,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,!=3.6.*,!=3.7.*,>=3.8"
 files = [
+<<<<<<< HEAD
     {file = "litellm-1.44.8-py3-none-any.whl", hash = "sha256:76f30428c4dc37c3571ce746f8141ed4a4cac1506dcad1c0213a2c23cbb701b9"},
     {file = "litellm-1.44.8.tar.gz", hash = "sha256:885d19db883fb13c8e32563cfbbc3d02dc1b80fe4bb52a67ebdbf6cdc8d0cb83"},
+=======
+    {file = "litellm-1.44.7-py3-none-any.whl", hash = "sha256:7671b2e5287a4876a8b05f8025d6a976e22ae9c61e30355bf28c1d25e74c17df"},
+    {file = "litellm-1.44.7.tar.gz", hash = "sha256:c8f8f9d80065be81580258177f3a006de86d2c4af1f9a732ac37bd317a13f042"},
+>>>>>>> 3bfcc7351 (Add nightly builds workflow)
 ]
 
 [package.dependencies]
@@ -5725,6 +5834,7 @@ python-versions = ">=3.7"
 files = [
     {file = "milvus_lite-2.4.9-py3-none-macosx_10_9_x86_64.whl", hash = "sha256:d3e617b3d68c09ad656d54bc3d8cc4ef6ef56c54015e1563d4fe4bcec6b7c90a"},
     {file = "milvus_lite-2.4.9-py3-none-macosx_11_0_arm64.whl", hash = "sha256:6e7029282d6829b277ebb92f64e2370be72b938e34770e1eb649346bda5d1d7f"},
+    {file = "milvus_lite-2.4.9-py3-none-manylinux2014_aarch64.whl", hash = "sha256:9b8e991e4e433596f6a399a165c1a506f823ec9133332e03d7f8a114bff4550d"},
     {file = "milvus_lite-2.4.9-py3-none-manylinux2014_x86_64.whl", hash = "sha256:7f53e674602101cfbcf0a4a59d19eaa139dfd5580639f3040ad73d901f24fc0b"},
 ]
 
@@ -7199,13 +7309,22 @@ strenum = ">=0.4.9,<0.5.0"
 
 [[package]]
 name = "posthog"
+<<<<<<< HEAD
 version = "3.6.0"
+=======
+version = "3.5.2"
+>>>>>>> 3bfcc7351 (Add nightly builds workflow)
 description = "Integrate PostHog into any python application."
 optional = false
 python-versions = "*"
 files = [
+<<<<<<< HEAD
     {file = "posthog-3.6.0-py2.py3-none-any.whl", hash = "sha256:6f8dacc6d14d80734b1d15bd4ab08b049629c5f0fc420cafcf1ce0667c76c83c"},
     {file = "posthog-3.6.0.tar.gz", hash = "sha256:27dbf537241a69fb5f6a3e9561caa2d555d5891d95fa65c27ffa6b52d1fb63b6"},
+=======
+    {file = "posthog-3.5.2-py2.py3-none-any.whl", hash = "sha256:605b3d92369971cc99290b1fcc8534cbddac3726ef7972caa993454a5ecfb644"},
+    {file = "posthog-3.5.2.tar.gz", hash = "sha256:a383a80c1f47e0243f5ce359e81e06e2e7b37eb39d1d6f8d01c3e64ed29df2ee"},
+>>>>>>> 3bfcc7351 (Add nightly builds workflow)
 ]
 
 [package.dependencies]
@@ -8096,13 +8215,22 @@ files = [
 
 [[package]]
 name = "pyright"
+<<<<<<< HEAD
 version = "1.1.378"
+=======
+version = "1.1.377"
+>>>>>>> 3bfcc7351 (Add nightly builds workflow)
 description = "Command line wrapper for pyright"
 optional = false
 python-versions = ">=3.7"
 files = [
+<<<<<<< HEAD
     {file = "pyright-1.1.378-py3-none-any.whl", hash = "sha256:8853776138b01bc284da07ac481235be7cc89d3176b073d2dba73636cb95be79"},
     {file = "pyright-1.1.378.tar.gz", hash = "sha256:78a043be2876d12d0af101d667e92c7734f3ebb9db71dccc2c220e7e7eb89ca2"},
+=======
+    {file = "pyright-1.1.377-py3-none-any.whl", hash = "sha256:af0dd2b6b636c383a6569a083f8c5a8748ae4dcde5df7914b3f3f267e14dd162"},
+    {file = "pyright-1.1.377.tar.gz", hash = "sha256:aabc30fedce0ded34baa0c49b24f10e68f4bfc8f68ae7f3d175c4b0f256b4fcf"},
+>>>>>>> 3bfcc7351 (Add nightly builds workflow)
 ]
 
 [package.dependencies]
@@ -10468,11 +10596,16 @@ vision = ["Pillow (>=10.0.1,<=15.0)"]
 
 [[package]]
 name = "tree-sitter"
+<<<<<<< HEAD
 version = "0.23.0"
+=======
+version = "0.22.3"
+>>>>>>> 3bfcc7351 (Add nightly builds workflow)
 description = "Python bindings to the Tree-sitter parsing library"
 optional = false
 python-versions = ">=3.9"
 files = [
+<<<<<<< HEAD
     {file = "tree-sitter-0.23.0.tar.gz", hash = "sha256:4c0d186f262a6b186e155a327150064abbf02b5659f7bc580eb965374025f2c2"},
     {file = "tree_sitter-0.23.0-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:b5f6cb46166e9fe82542cad780afb7edf5fab30b75e85a61579dd0bf7afaa134"},
     {file = "tree_sitter-0.23.0-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:1a5adee1065f25d1d85cdb78d9d8e96aa211e840b3b700b35a52e4574a949748"},
@@ -10506,6 +10639,37 @@ files = [
     {file = "tree_sitter-0.23.0-cp39-cp39-musllinux_1_2_x86_64.whl", hash = "sha256:117d5e10d60cda830f0f5d88beaf45205a3c33439fce3a95da4a3448a483a4f9"},
     {file = "tree_sitter-0.23.0-cp39-cp39-win_amd64.whl", hash = "sha256:eff050b68930c2dfc0c521961612310615540e3999cce76123ea0a363772efc2"},
     {file = "tree_sitter-0.23.0-cp39-cp39-win_arm64.whl", hash = "sha256:cbf71655813da4b210a72437ad7b7da4ab8788acfdde8c6b35f68877c61fae4a"},
+=======
+    {file = "tree-sitter-0.22.3.tar.gz", hash = "sha256:6516bcef5d36e0365670b97c91a169c8b1aa82ea4b60946b879020820718ce3d"},
+    {file = "tree_sitter-0.22.3-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:d9a26dd80cf10763527483b02ba35a0b8d9168f324dbbce3f07860256c29bf15"},
+    {file = "tree_sitter-0.22.3-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:4bcbe0a7358628629d9ec8e5687477e12f7c6aae6943b0872afb7170db039b86"},
+    {file = "tree_sitter-0.22.3-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:dfa45e6bf2542862ce987482fe212ef3153bd331d5bba5873b9f485f8923f65a"},
+    {file = "tree_sitter-0.22.3-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:4545b142da82f9668007180e0081583054682d0154cd6349796ac77dc8520d63"},
+    {file = "tree_sitter-0.22.3-cp310-cp310-musllinux_1_1_aarch64.whl", hash = "sha256:4978d22fe2868ab9a91125f49bd576ce5f954cc887c19471e0c33e104f37ba71"},
+    {file = "tree_sitter-0.22.3-cp310-cp310-musllinux_1_1_x86_64.whl", hash = "sha256:0ec593a69f8c4f1c81494147814d11b7fc6c903e5299e084ae7b89caf95cef84"},
+    {file = "tree_sitter-0.22.3-cp310-cp310-win_amd64.whl", hash = "sha256:0f66b88b8e9993630613d594e845f3cf2695fef87d0ca1475437cb17eeb72dc5"},
+    {file = "tree_sitter-0.22.3-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:9e627eb129421f63378e936b5d0e13b8befa6e7c5267a8a7621a397a84e8f1f7"},
+    {file = "tree_sitter-0.22.3-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:3cfa2a9860bfb0404ae28a9cf056dab8f2eb7f1673d8cc9b3f7e21452daad0e0"},
+    {file = "tree_sitter-0.22.3-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:d9a66cc5f19635119a9d8325bcb00a58ed48427e3c3d307caf7c00d745ac83a5"},
+    {file = "tree_sitter-0.22.3-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:de16468ea22c910e67caa91c99be9d6eb73e97e5164480a890f678b22d32faca"},
+    {file = "tree_sitter-0.22.3-cp311-cp311-musllinux_1_1_aarch64.whl", hash = "sha256:98c697427f82abab6b39cfe2ade6547d844dd419fa8cfc89031bcdf7c10579b6"},
+    {file = "tree_sitter-0.22.3-cp311-cp311-musllinux_1_1_x86_64.whl", hash = "sha256:548aa34f15a29aef1fc8e85507f13e0678a54f1de16461f844d86179b19bb5f6"},
+    {file = "tree_sitter-0.22.3-cp311-cp311-win_amd64.whl", hash = "sha256:2fc0e1097fb86623b340141e80a0f2b7668b09d953501d91adc715a577e32c61"},
+    {file = "tree_sitter-0.22.3-cp312-cp312-macosx_10_9_x86_64.whl", hash = "sha256:7cb5c145fbd4bcc0cd4851dc4d0a6079a8e2f61257f8c0effc92434f6fb19b14"},
+    {file = "tree_sitter-0.22.3-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:d4a592080db6b9472a886f4593b4705d02630721fdbe4a700085fe775fcab20e"},
+    {file = "tree_sitter-0.22.3-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:f36bf523763f05edf924126583ea997f905162046c0f184d6fd040cc1ccbf2c5"},
+    {file = "tree_sitter-0.22.3-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:f8e1193f27c25aab299f4fc154664122c7bfe80633b726bb457356d371479a5b"},
+    {file = "tree_sitter-0.22.3-cp312-cp312-musllinux_1_1_aarch64.whl", hash = "sha256:156df7e71a6c6b542ff29526cad6886a41115e42dc768c55101398d68325db54"},
+    {file = "tree_sitter-0.22.3-cp312-cp312-musllinux_1_1_x86_64.whl", hash = "sha256:82e1d467ce23dd2ecc37d4fb83965e891fc37b943639c517cd5acf54a2df0ff7"},
+    {file = "tree_sitter-0.22.3-cp312-cp312-win_amd64.whl", hash = "sha256:e541a0c08a04f229ba9479a8c441dd267fdaa3e5842ae70a744c178bcaf53fa3"},
+    {file = "tree_sitter-0.22.3-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:a85a1d0fdff21cc524a959b3277c311941a9b5b91a862e462c1b55470893884a"},
+    {file = "tree_sitter-0.22.3-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:f96c6acd2799bafa28543a267937eec6a3d9ccbdeb6e1d05858114d4cd882da9"},
+    {file = "tree_sitter-0.22.3-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:ed2708aecd3a4c8d20a89350d3c89ac2f964985ee9117c39357cee3098a9498a"},
+    {file = "tree_sitter-0.22.3-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:6b2f99535aa4195b20fef18559defaabd9e12fe8ed8806c101d51820f240ca64"},
+    {file = "tree_sitter-0.22.3-cp39-cp39-musllinux_1_1_aarch64.whl", hash = "sha256:459a0f3bf8d6dbb9e9f651d67cee3a60f0b799fefd4a33f49a7e9501ada98e35"},
+    {file = "tree_sitter-0.22.3-cp39-cp39-musllinux_1_1_x86_64.whl", hash = "sha256:4a51bfe99dcd8bbfb0fe95113f0197e6e540db3077abce77a058235beec747a3"},
+    {file = "tree_sitter-0.22.3-cp39-cp39-win_amd64.whl", hash = "sha256:8d54ef562492493bf091cb3fd605cb7e60bf1d56634a94ab48075741d823e3a5"},
+>>>>>>> 3bfcc7351 (Add nightly builds workflow)
 ]
 
 [package.extras]
@@ -10579,11 +10743,6 @@ files = [
     {file = "triton-3.0.0-1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:34e509deb77f1c067d8640725ef00c5cbfcb2052a1a3cb6a6d343841f92624eb"},
     {file = "triton-3.0.0-1-cp38-cp38-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:bcbf3b1c48af6a28011a5c40a5b3b9b5330530c3827716b5fbf6d7adcc1e53e9"},
     {file = "triton-3.0.0-1-cp39-cp39-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:6e5727202f7078c56f91ff13ad0c1abab14a0e7f2c87e91b12b6f64f3e8ae609"},
-    {file = "triton-3.0.0-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:39b052da883351fdf6be3d93cedae6db3b8e3988d3b09ed221bccecfa9612230"},
-    {file = "triton-3.0.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:cd34f19a8582af96e6291d4afce25dac08cb2a5d218c599163761e8e0827208e"},
-    {file = "triton-3.0.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:0d5e10de8c011adeb7c878c6ce0dd6073b14367749e34467f1cff2bde1b78253"},
-    {file = "triton-3.0.0-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:e8903767951bf86ec960b4fe4e21bc970055afc65e9d57e916d79ae3c93665e3"},
-    {file = "triton-3.0.0-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:41004fb1ae9a53fcb3e970745feb87f0e3c94c6ce1ba86e95fa3b8537894bef7"},
 ]
 
 [package.dependencies]
@@ -11964,6 +12123,7 @@ doc = ["furo", "jaraco.packaging (>=9.3)", "jaraco.tidelift (>=1.4)", "rst.linke
 enabler = ["pytest-enabler (>=2.2)"]
 test = ["big-O", "importlib-resources", "jaraco.functools", "jaraco.itertools", "jaraco.test", "more-itertools", "pytest (>=6,!=8.1.*)", "pytest-ignore-flaky"]
 type = ["pytest-mypy"]
+<<<<<<< HEAD
 
 [[package]]
 name = "zstandard"
@@ -12076,6 +12236,8 @@ cffi = {version = ">=1.11", markers = "platform_python_implementation == \"PyPy\
 
 [package.extras]
 cffi = ["cffi (>=1.11)"]
+=======
+>>>>>>> 3bfcc7351 (Add nightly builds workflow)
 
 [extras]
 cassio = ["cassio"]
@@ -12086,4 +12248,8 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
+<<<<<<< HEAD
 content-hash = "df05cdbe292ea7c326e72981177013a73f8a23287722e854398bbf15c2e57443"
+=======
+content-hash = "ee4883323ab0eba68481bdadb3394115e9e1932ec219344e89719101970785c7"
+>>>>>>> 3bfcc7351 (Add nightly builds workflow)
