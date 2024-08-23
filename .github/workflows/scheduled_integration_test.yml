@@ -25,13 +25,13 @@ jobs:
           - "3.10"
     env:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-      ASTRA_DB_API_KEY: ${{ secrets.ASTRA_DB_API_KEY }}
+      ASTRA_DB_API_ENDPOINT: ${{ secrets.ASTRA_DB_API_ENDPOINT }}
       ASTRA_DB_APPLICATION_TOKEN: ${{ secrets.ASTRA_DB_APPLICATION_TOKEN }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.branch != '' && inputs.branch || github.ref }}
+          ref: ${{ inputs.branch || github.ref }}
       - name: Set up Python ${{ matrix.python-version }} + Poetry ${{ env.POETRY_VERSION }}
         uses: "./.github/actions/poetry_caching"
         with:
