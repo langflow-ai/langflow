@@ -32,6 +32,12 @@ def _get_langwatch_tracer():
     return LangWatchTracer
 
 
+def _get_langfuse_tracer():
+    from langflow.services.tracing.langfuse import LangFuseTracer
+
+    return LangFuseTracer
+
+
 class TracingService(Service):
     name = "tracing_service"
 
@@ -101,6 +107,7 @@ class TracingService(Service):
             await self.start()
             self._initialize_langsmith_tracer()
             self._initialize_langwatch_tracer()
+            self._initialize_langfuse_tracer()
         except Exception as e:
             logger.debug(f"Error initializing tracers: {e}")
 
@@ -126,6 +133,16 @@ class TracingService(Service):
                 project_name=self.project_name,
                 trace_id=self.run_id,
             )
+
+    def _initialize_langfuse_tracer(self):
+        self.project_name = os.getenv("LANGCHAIN_PROJECT", "Langflow")
+        langfuse_tracer = _get_langfuse_tracer()
+        self._tracers["langfuse"] = langfuse_tracer(
+            trace_name=self.run_name,
+            trace_type="chain",
+            project_name=self.project_name,
+            trace_id=self.run_id,
+        )
 
     def set_run_name(self, name: str):
         self.run_name = name
