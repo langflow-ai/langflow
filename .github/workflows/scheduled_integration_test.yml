@@ -26,13 +26,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.branch || github.ref }}
+          ref: ${{ inputs.branch != '' && inputs.branch || github.ref }}
       - name: Set up Python ${{ matrix.python-version }} + Poetry ${{ env.POETRY_VERSION }}
         uses: "./.github/actions/poetry_caching"
         with:
           python-version: ${{ matrix.python-version }}
           poetry-version: ${{ env.POETRY_VERSION }}
           cache-key: ${{ runner.os }}-poetry-${{ env.POETRY_VERSION }}-${{ hashFiles('**/poetry.lock') }}
+
+      - name: Verify Poetry Installation
+        run: |
+          echo "PATH: $PATH"
+          poetry --version
+
       - name: Install Python dependencies
         run: |
           poetry env use ${{ matrix.python-version }}
@@ -56,7 +62,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.branch || github.ref }}
+          ref: ${{ inputs.branch != '' && inputs.branch || github.ref }}
       - name: Run integration tests
         timeout-minutes: 12
         run: |
