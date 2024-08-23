@@ -261,6 +261,8 @@ async def build_flow(
                     data=result_data_response,
                     artifacts=artifacts,
                 )
+            else:
+                await chat_service.set_cache(flow_id_str, graph)
 
             timedelta = time.perf_counter() - start_time
             duration = format_elapsed_time(timedelta)
