@@ -1,4 +1,5 @@
 import asyncio
+import gzip
 import json
 import os
 import warnings
@@ -11,6 +12,7 @@ from urllib.parse import urlencode
 import nest_asyncio  # type: ignore
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from loguru import logger
@@ -28,7 +30,11 @@ from langflow.initial_setup.setup import (
 )
 from langflow.interface.types import get_and_cache_all_types_dict
 from langflow.interface.utils import setup_llm_caching
-from langflow.services.deps import get_cache_service, get_settings_service, get_telemetry_service
+from langflow.services.deps import (
+    get_cache_service,
+    get_settings_service,
+    get_telemetry_service,
+)
 from langflow.services.plugins.langfuse_plugin import LangfuseInstance
 from langflow.services.utils import initialize_services, teardown_services
 from langflow.logging.logger import configure
@@ -132,8 +138,20 @@ def create_app():
         allow_headers=["*"],
     )
     app.add_middleware(JavaScriptMIMETypeMiddleware)
+    app.add_middleware(GZipMiddleware, minimum_size=1000, compresslevel=5)
+
     # ! Deactivating this until we find a better solution
     # app.add_middleware(RequestCancelledMiddleware)
+
+    @app.middleware("http")
+    async def decompress_if_gzip(request: Request, call_next):
+        if request.headers.get("content-encoding", "") == "gzip":
+            # the request's body is compressed, so we need to decompress it
+            body = await request.body()
+            dec = gzip.decompress(body)
+            request._body = dec  # <-- if only things were that easy
+        response = await call_next(request)
+        return response
 
     @app.middleware("http")
     async def flatten_query_string_lists(request: Request, call_next):
