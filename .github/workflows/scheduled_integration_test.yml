@@ -14,38 +14,7 @@ env:
   POETRY_VERSION: "1.8.2"
 
 jobs:
-  setup-environment:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version:
-          - "3.12"
-          - "3.11"
-          - "3.10"
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.branch != '' && inputs.branch || github.ref }}
-      - name: Set up Python ${{ matrix.python-version }} + Poetry ${{ env.POETRY_VERSION }}
-        uses: "./.github/actions/poetry_caching"
-        with:
-          python-version: ${{ matrix.python-version }}
-          poetry-version: ${{ env.POETRY_VERSION }}
-          cache-key: ${{ runner.os }}-poetry-${{ env.POETRY_VERSION }}-${{ hashFiles('**/poetry.lock') }}
-
-      - name: Verify Poetry Installation
-        run: |
-          echo "PATH: $PATH"
-          poetry --version
-
-      - name: Install Python dependencies
-        run: |
-          poetry env use ${{ matrix.python-version }}
-          poetry install
-
   test-integration:
-    needs: setup-environment
     name: Run Integration Tests
     runs-on: ubuntu-latest
     strategy:
@@ -63,6 +32,16 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ inputs.branch != '' && inputs.branch || github.ref }}
+      - name: Set up Python ${{ matrix.python-version }} + Poetry ${{ env.POETRY_VERSION }}
+        uses: "./.github/actions/poetry_caching"
+        with:
+          python-version: ${{ matrix.python-version }}
+          poetry-version: ${{ env.POETRY_VERSION }}
+          cache-key: ${{ runner.os }}-poetry-${{ env.POETRY_VERSION }}-${{ hashFiles('**/poetry.lock') }}
+      - name: Install Python dependencies
+        run: |
+          poetry env use ${{ matrix.python-version }}
+          poetry install
       - name: Run integration tests
         timeout-minutes: 12
         run: |
