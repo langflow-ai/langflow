@@ -1,11 +1,10 @@
 from typing import List
 
 from langflow.custom import Component
-from langflow.inputs import StrInput, SecretStrInput, DefaultPromptField, PromptInput
+from langflow.inputs import StrInput, SecretStrInput, DefaultPromptField
 from langflow.io import Output
 from langflow.schema.message import Message
 
-from langchain_core.prompts import ChatPromptTemplate
 
 import re
 
@@ -89,12 +88,11 @@ class LangChainHubPromptComponent(Component):
     ) -> Message:
         # Get the parameters that
         template = self._fetch_langchain_hub_template()  # TODO: doing this twice
-        original_params = {k[6:] if k.startswith("param_") else k: v 
-                           for k, v in self._attributes.items()}
+        original_params = {k[6:] if k.startswith("param_") else k: v for k, v in self._attributes.items()}
         prompt_value = template.invoke(original_params)
 
         original_params["template"] = prompt_value.to_string()
-        
+
         # Now pass the filtered attributes to the function
         prompt = await Message.from_template_and_variables(**original_params)
 
