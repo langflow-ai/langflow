@@ -156,7 +156,11 @@ const SideBarFoldersButtonsComponent = ({
   }
 
   useEffect(() => {
-    setEditFolderName(folders.map((obj) => ({ name: obj.name, edit: false })));
+    if (folders && folders.length > 0) {
+      setEditFolderName(
+        folders.map((obj) => ({ name: obj.name, edit: false })),
+      );
+    }
   }, [folders]);
 
   const handleEditNameFolder = async (item) => {
