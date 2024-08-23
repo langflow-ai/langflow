@@ -177,7 +177,7 @@ export default function HandleRenderComponent({
         >
           <div
             className={cn(
-              "pointer-events-none absolute left-1/2 top-[50%] z-30 flex h-0 w-0 -translate-x-1/2 translate-y-[-50%] items-center justify-center rounded-full transition-all group-hover/handle:bg-transparent",
+              "pointer-events-none absolute left-1/2 top-[50%] z-30 flex h-0 w-0 -translate-x-1/2 translate-y-[-50%] items-center justify-center rounded-full bg-background transition-all group-hover/handle:bg-transparent",
               filterPresent
                 ? openHandle || ownHandle
                   ? cn(
@@ -185,7 +185,7 @@ export default function HandleRenderComponent({
                       ownHandle ? "bg-transparent" : "bg-background",
                     )
                   : ""
-                : "group-hover/node:h-5 group-hover/node:w-5 group-hover/node:bg-background",
+                : "group-hover/node:h-5 group-hover/node:w-5",
             )}
           >
             <ForwardedIconComponent
