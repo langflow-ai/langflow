@@ -12,22 +12,31 @@ on:
         required: false
         type: boolean
         default: false
-
+      nightly_build:
+        required: false
+        type: boolean
+        default: false
   workflow_dispatch:
     inputs:
       version:
-        required: true
+        description: "Version to build"
+        required: false
         type: string
       release_type:
+        description: "Type of release"
         required: true
-        type: choice
-        options:
-          - base
-          - main
+        type: string
       pre_release:
+        description: "Pre-release"
         required: false
         type: boolean
-        default: true
+        default: false
+      nightly_build:
+        description: "Build nightly build"
+        required: false
+        type: boolean
+        default: false
+
 env:
   POETRY_VERSION: "1.8.2"
   TEST_TAG: "langflowai/langflow:test"
@@ -48,19 +57,19 @@ jobs:
           poetry-version: ${{ env.POETRY_VERSION }}
           cache-key: ${{ runner.os }}-poetry-${{ env.POETRY_VERSION }}-${{ hashFiles('**/poetry.lock') }}
       - name: Get Version from Input
-        if : ${{ inputs.version != '' }}
+        if: ${{ inputs.version != '' }}
         id: get-version-input
         run: |
           version=${{ inputs.version }}
           echo version=$version >> $GITHUB_OUTPUT
-      - name: Get Version Main
-        if : ${{ inputs.version == '' && inputs.release_type == 'base' }}
+      - name: Get Version Base
+        if: ${{ inputs.version == '' && inputs.release_type == 'base' }}
         id: get-version-base
         run: |
           version=$(cd src/backend/base && poetry version --short)
           echo version=$version >> $GITHUB_OUTPUT
-      - name: Get Version Base
-        if : ${{ inputs.version == '' && inputs.release_type == 'main' }}
+      - name: Get Version Main
+        if: ${{ inputs.version == '' && inputs.release_type == 'main' }}
         id: get-version-main
         run: |
           version=$(poetry version --short)
@@ -76,14 +85,19 @@ jobs:
       - name: Set Dockerfile and Tags
         id: set-vars
         run: |
+          nightly_suffix=""
+          if [[ "${{ inputs.nightly_build }}" == "true" ]]; then
+            nightly_suffix="-nightly"
+          fi
+
           if [[ "${{ inputs.release_type }}" == "base" ]]; then
-            echo "tags=langflowai/langflow:base-${{ needs.get-version.outputs.version }},langflowai/langflow:base-latest" >> $GITHUB_OUTPUT
+            echo "tags=langflowai/langflow${nightly_suffix}:base-${{ needs.get-version.outputs.version }},langflowai/langflow${nightly_suffix}:base-latest" >> $GITHUB_OUTPUT
             echo "file=./docker/build_and_push_base.Dockerfile" >> $GITHUB_OUTPUT
           else
             if [[ "${{ inputs.pre_release }}" == "true" ]]; then
-              echo "tags=langflowai/langflow:${{ needs.get-version.outputs.version }}" >> $GITHUB_OUTPUT
+              echo "tags=langflowai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version }}" >> $GITHUB_OUTPUT
             else
-              echo "tags=langflowai/langflow:${{ needs.get-version.outputs.version }},langflowai/langflow:latest" >> $GITHUB_OUTPUT
+              echo "tags=langflowai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version }},langflowai/langflow${nightly_suffix}:latest" >> $GITHUB_OUTPUT
             fi
             echo "file=./docker/build_and_push.Dockerfile" >> $GITHUB_OUTPUT
           fi
@@ -119,10 +133,10 @@ jobs:
         include:
           - component: backend
             dockerfile: ./docker/build_and_push_backend.Dockerfile
-            tags: ${{ inputs.pre_release == 'true' && format('langflowai/langflow-backend:{0}', needs.get-version.outputs.version) || format('langflowai/langflow-backend:{0},langflowai/langflow-backend:latest', needs.get-version.outputs.version) }}
+            tags: ${{ inputs.pre_release == 'true' && format('langflowai/langflow-backend{0}:{1}', inputs.nightly_build && '-nightly' || '', needs.get-version.outputs.version) || format('langflowai/langflow-backend{0}:{1},langflowai/langflow-backend{0}:latest{1}',  inputs.nightly_build && '-nightly' || '', needs.get-version.outputs.version) }}
           - component: frontend
             dockerfile: ./docker/frontend/build_and_push_frontend.Dockerfile
-            tags: ${{ inputs.pre_release == 'true' && format('langflowai/langflow-frontend:{0}', needs.get-version.outputs.version) || format('langflowai/langflow-frontend:{0},langflowai/langflow-frontend:latest', needs.get-version.outputs.version) }}
+            tags: ${{ inputs.pre_release == 'true' && format('langflowai/langflow-frontend{0}:{1}', inputs.nightly_build && '-nightly' || '', needs.get-version.outputs.version) || format('langflowai/langflow-frontend{0}:{1},langflowai/langflow-frontend{0}:latest{1}',  inputs.nightly_build && '-nightly' || '', needs.get-version.outputs.version) }}
     steps:
       - uses: actions/checkout@v4
       - name: Set up Docker Buildx
@@ -140,7 +154,7 @@ jobs:
           context: .
           push: true
           build-args: |
-            LANGFLOW_IMAGE=langflowai/langflow:${{ needs.get-version.outputs.version }}
+            LANGFLOW_IMAGE=langflowai/langflow${{ inputs.nightly_build && '-nightly' || '' }}:${{ needs.get-version.outputs.version }}
           file: ${{ matrix.dockerfile }}
           tags: ${{ matrix.tags }}
           # provenance: false will result in a single manifest for all platforms which makes the image pullable from arm64 machines via the emulation (e.g. Apple Silicon machines)

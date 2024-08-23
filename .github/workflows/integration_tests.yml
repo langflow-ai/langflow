@@ -1,4 +1,4 @@
-name: Integration tests
+name: Nightly Build
 
 on:
   workflow_dispatch:
@@ -7,14 +7,21 @@ on:
         description: "(Optional) Branch to checkout"
         required: false
         type: string
+  workflow_call:
+    inputs:
+      python-versions:
+        description: "(Optional) Python versions to test"
+        required: true
+        type: string
+        default: "['3.10', '3.11', '3.12']"
   schedule:
-    - cron: "0 0 */2 * *" # Run every 2 days
+    - cron: "0 0 * * *" # Run every day at midnight (UTC)
 
 env:
   POETRY_VERSION: "1.8.2"
 
 jobs:
-  test-integration:
+  integration-tests:
     name: Run Integration Tests
     runs-on: ubuntu-latest
     strategy:
