@@ -102,7 +102,7 @@ def test_astra_vectorize():
 
     store = None
     try:
-        options = {"provider": "nvidia", "modelName": "NV-Embed-QA", "parameters": {}, "authentication": {}}
+        options = {"provider": "nvidia", "modelName": "NV-Embed-QA"}
         store = AstraDBVectorStore(
             collection_name=VECTORIZE_COLLECTION,
             api_endpoint=os.getenv("ASTRA_DB_API_ENDPOINT"),
@@ -189,7 +189,7 @@ def test_astra_vectorize_with_provider_api_key():
 
 
 @pytest.mark.skipif(
-    not check_env_vars("ASTRA_DB_APPLICATION_TOKEN", "ASTRA_DB_API_ENDPOINT", "OPENAI_API_KEY"),
+    not check_env_vars("ASTRA_DB_APPLICATION_TOKEN", "ASTRA_DB_API_ENDPOINT"),
     reason="missing env vars",
 )
 def test_astra_vectorize_passes_authentication():
@@ -206,7 +206,7 @@ def test_astra_vectorize_passes_authentication():
             "provider": "openai",
             "modelName": "text-embedding-3-small",
             "parameters": {},
-            "authentication": {"providerKey": "providerKey"},
+            "authentication": {"providerKey": "apikey"},
         }
         store = AstraDBVectorStore(
             collection_name=VECTORIZE_COLLECTION_OPENAI_WITH_AUTH,
@@ -219,7 +219,7 @@ def test_astra_vectorize_passes_authentication():
 
         vectorize = AstraVectorizeComponent()
         vectorize.build(
-            provider="OpenAI", model_name="text-embedding-3-small", authentication={"providerKey": "providerKey"}
+            provider="OpenAI", model_name="text-embedding-3-small", authentication={"providerKey": "apikey"}
         )
         vectorize_options = vectorize.build_options()
 
