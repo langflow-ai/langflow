@@ -658,6 +658,10 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
             title:
               "There are outdated components in the flow. The error could be related to them.",
           });
+        get().updateEdgesRunningByNodes(
+          get().nodes.map((n) => n.id),
+          false,
+        );
         setErrorData({ list, title });
         get().setIsBuilding(false);
         get().setLockChat(false);
