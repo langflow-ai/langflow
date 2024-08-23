@@ -23,7 +23,7 @@ from langflow.graph.graph.state_model import create_state_model_from_graph
 from langflow.graph.graph.utils import find_start_component_id, process_flow, should_continue, sort_up_to_vertex
 from langflow.graph.schema import InterfaceComponentTypes, RunOutputs
 from langflow.graph.vertex.base import Vertex, VertexStates
-from langflow.graph.vertex.schema import NodeData
+from langflow.graph.vertex.schema import NodeData, NodeTypeEnum
 from langflow.graph.vertex.types import ComponentVertex, InterfaceVertex, StateVertex
 from langflow.logging.logger import LogConfig, configure
 from langflow.schema import Data
@@ -1583,6 +1583,8 @@ class Graph:
         """Builds the vertices of the graph."""
         vertices: List["Vertex"] = []
         for frontend_data in self._vertices:
+            if frontend_data.get("type") == NodeTypeEnum.NoteNode:
+                continue
             try:
                 vertex_instance = self.get_vertex(frontend_data["id"])
             except ValueError:

@@ -1,6 +1,12 @@
+from enum import Enum
 from typing import Dict
 
 from typing_extensions import NotRequired, TypedDict
+
+
+class NodeTypeEnum(str, Enum):
+    NoteNode = "noteNode"
+    GenericNode = "genericNode"
 
 
 class Position(TypedDict):
@@ -18,3 +24,4 @@ class NodeData(TypedDict):
     positionAbsolute: NotRequired[Position]
     selected: NotRequired[bool]
     parent_node_id: NotRequired[str]
+    type: NotRequired[NodeTypeEnum]
