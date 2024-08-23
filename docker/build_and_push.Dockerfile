@@ -65,7 +65,8 @@ RUN $POETRY_HOME/bin/poetry lock --no-update \
       # do not install dev dependencies \
       && $POETRY_HOME/bin/poetry install --without dev --sync -E deploy -E couchbase -E cassio \
       && $POETRY_HOME/bin/poetry build -f wheel \
-      && $POETRY_HOME/bin/poetry run pip install dist/*.whl
+      && $POETRY_HOME/bin/poetry run pip install dist/*.whl \
+      && $POETRY_HOME/bin/poetry add psycopg2-binary
 
 ################################
 # RUNTIME
