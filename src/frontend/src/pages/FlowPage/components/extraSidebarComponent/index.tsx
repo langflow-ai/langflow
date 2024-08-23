@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import { cloneDeep } from "lodash";
 import { LinkIcon, SparklesIcon } from "lucide-react";
 import { Fragment, useEffect, useState } from "react";
@@ -18,6 +19,7 @@ import {
 import { removeCountFromString } from "../../../../utils/utils";
 import DisclosureComponent from "../DisclosureComponent";
 import ParentDisclosureComponent from "../ParentDisclosureComponent";
+import { FilterTooltipComponent } from "./filterTooltipComponent";
 import SidebarDraggableComponent from "./sideBarDraggableComponent";
 import { sortKeys } from "./utils";
 import sensitiveSort from "./utils/sensitive-sort";
@@ -27,6 +29,7 @@ export default function ExtraSidebar(): JSX.Element {
   const templates = useTypesStore((state) => state.templates);
   const getFilterEdge = useFlowStore((state) => state.getFilterEdge);
   const setFilterEdge = useFlowStore((state) => state.setFilterEdge);
+  const filterType = useFlowStore((state) => state.filterType);
 
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const [dataFilter, setFilterData] = useState(data);
@@ -222,8 +225,37 @@ export default function ExtraSidebar(): JSX.Element {
       <Separator />
       <div className="side-bar-components-div-arrangement">
         <div className="parent-disclosure-arrangement">
-          <div className="flex items-center gap-4 align-middle">
+          <div className="flex w-full items-center justify-between gap-4">
             <span className="parent-disclosure-title">Components</span>
+            {filterType && (
+              <ShadTooltip
+                side="right"
+                styleClasses="max-w-full"
+                content={
+                  <FilterTooltipComponent
+                    isInput={!!filterType.source}
+                    color={filterType.color}
+                    type={filterType.type}
+                  />
+                }
+              >
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="bg-beta-foreground px-1.5 hover:bg-beta-foreground-soft"
+                  onClick={() => {
+                    setFilterEdge([]);
+                    setFilterData(data);
+                  }}
+                >
+                  <IconComponent
+                    name="Filter"
+                    className="h-4 w-4 stroke-[1.5] text-beta-background"
+                    aria-hidden="true"
+                  />
+                </Button>
+              </ShadTooltip>
+            )}
           </div>
         </div>
         {Object.keys(dataFilter)

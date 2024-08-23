@@ -100,12 +100,16 @@ export default function HandleRenderComponent({
         target: nodeId,
         source: undefined,
         sourceHandle: undefined,
+        type: tooltipTitle,
+        color: colors[0],
       }
     : {
         sourceHandle: myId,
         source: nodeId,
         target: undefined,
         targetHandle: undefined,
+        type: tooltipTitle,
+        color: colors[0],
       };
 
   const handleColor =

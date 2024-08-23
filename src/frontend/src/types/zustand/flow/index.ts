@@ -186,6 +186,8 @@ export type FlowStoreType = {
         sourceHandle: string | undefined;
         target: string | undefined;
         targetHandle: string | undefined;
+        type: string;
+        color: string;
       }
     | undefined;
   setHandleDragging: (
@@ -195,6 +197,8 @@ export type FlowStoreType = {
           sourceHandle: string | undefined;
           target: string | undefined;
           targetHandle: string | undefined;
+          type: string;
+          color: string;
         }
       | undefined,
   ) => void;
@@ -205,6 +209,8 @@ export type FlowStoreType = {
         sourceHandle: string | undefined;
         target: string | undefined;
         targetHandle: string | undefined;
+        type: string;
+        color: string;
       }
     | undefined;
   setFilterType: (
@@ -214,6 +220,8 @@ export type FlowStoreType = {
           sourceHandle: string | undefined;
           target: string | undefined;
           targetHandle: string | undefined;
+          type: string;
+          color: string;
         }
       | undefined,
   ) => void;
