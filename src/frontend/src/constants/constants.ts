@@ -894,3 +894,6 @@ export const NODE_WIDTH = 400;
 export const NODE_HEIGHT = NODE_WIDTH * 3;
 
 export const SHORTCUT_KEYS = ["cmd", "ctrl", "alt", "shift"];
+
+export const SERVER_HEALTH_INTERVAL = 10000;
+export const REFETCH_SERVER_HEALTH_INTERVAL = 20000;
