@@ -152,7 +152,10 @@ class ComposioAPIComponent(LCToolComponent):
             return build_config
 
         if field_name in {"app_names", "auth_status_config"}:
-            build_config["auth_status_config"]["value"] = self._check_for_authorization(self._get_normalized_app_name())
+            if hasattr(self, "api_key") and self.api_key != "":
+                build_config["auth_status_config"]["value"] = self._check_for_authorization(
+                    self._get_normalized_app_name()
+                )
             all_action_names = [action_name for action_name in Action.__annotations__]
             app_action_names = [
                 action_name
