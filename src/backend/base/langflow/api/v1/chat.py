@@ -261,6 +261,8 @@ async def build_flow(
                     data=result_data_response,
                     artifacts=artifacts,
                 )
+            else:
+                await chat_service.set_cache(flow_id_str, graph)
 
             timedelta = time.perf_counter() - start_time
             duration = format_elapsed_time(timedelta)
@@ -327,13 +329,19 @@ async def build_flow(
         build_task = asyncio.create_task(await asyncio.to_thread(_build_vertex, vertex_id, graph))
         try:
             await build_task
-        except asyncio.CancelledError:
+        except asyncio.CancelledError as exc:
+            logger.exception(exc)
             build_task.cancel()
             return
 
         vertex_build_response: VertexBuildResponse = build_task.result()
         # send built event or error event
-        send_event("end_vertex", {"build_data": json.loads(vertex_build_response.model_dump_json())}, queue)
+        try:
+            vertex_build_response_json = vertex_build_response.model_dump_json()
+            build_data = json.loads(vertex_build_response_json)
+        except Exception as exc:
+            raise ValueError(f"Error serializing vertex build response: {exc}") from exc
+        send_event("end_vertex", {"build_data": build_data}, queue)
         await client_consumed_queue.get()
         if vertex_build_response.valid:
             if vertex_build_response.next_vertices_ids:
