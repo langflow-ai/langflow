@@ -28,6 +28,7 @@ jobs:
     name: Unit Tests - Python ${{ matrix.python-version }} - Group ${{ matrix.group }}
     runs-on: ubuntu-latest
     strategy:
+      max-parallel: 1
       matrix:
         python-version: ${{ fromJson(inputs.python-versions || '["3.10", "3.11", "3.12"]' ) }}
         splitCount: [5]

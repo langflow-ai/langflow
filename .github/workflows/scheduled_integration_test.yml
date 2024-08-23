@@ -18,6 +18,7 @@ jobs:
     name: Run Integration Tests
     runs-on: ubuntu-latest
     strategy:
+      max-parallel: 1 # Currently, we can only run at a time for collection-per-db-constraints  (TODO: issue)
       matrix:
         python-version:
           - "3.12"
