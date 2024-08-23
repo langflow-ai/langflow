@@ -17,10 +17,11 @@ import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { VertexBuildTypeAPI } from "../../../../types/api";
 import { ChatMessageType } from "../../../../types/chat";
 import { FilePreviewType, chatViewProps } from "../../../../types/components";
-import { classNames } from "../../../../utils/utils";
+import { classNames, removeDuplicatesBasedOnAttribute } from "../../../../utils/utils";
 import ChatInput from "./chatInput";
 import useDragAndDrop from "./chatInput/hooks/use-drag-and-drop";
 import ChatMessage from "./chatMessage";
+import { useMessagesStore } from "@/stores/messagesStore";
 
 export default function ChatView({
   sendMessage,
@@ -34,6 +35,7 @@ export default function ChatView({
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const messagesRef = useRef<HTMLDivElement | null>(null);
   const [chatHistory, setChatHistory] = useState<ChatMessageType[]>([]);
+  const messages = useMessagesStore((state) => state.messages);
 
   const inputTypes = inputs.map((obj) => obj.type);
   const inputIds = inputs.map((obj) => obj.id);
@@ -59,24 +61,15 @@ export default function ChatView({
         }
       }
     });
-    const chatMessages: ChatMessageType[] = chatOutputResponses
-      .sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp))
-      //
+    const messagesFromPool: ChatMessageType[] = chatOutputResponses
       .filter(
         (output) =>
-          output.data.message || (!output.data.message && output.artifacts),
+          output.data.message!==undefined
       )
       .map((output, index) => {
         try {
-          const messageOutput = output.data.message;
-          const hasMessageValue =
-            messageOutput?.message ||
-            messageOutput?.message === "" ||
-            (messageOutput?.files ?? []).length > 0 ||
-            messageOutput?.stream_url;
-
-          const { sender, message, sender_name, stream_url, files } =
-            hasMessageValue ? output.data.message : output.artifacts;
+          const messageOutput = output.data.message!;
+          const { sender, message, sender_name, stream_url, files } = messageOutput
 
           const is_ai =
             sender === "Machine" || sender === null || sender === undefined;
@@ -84,9 +77,9 @@ export default function ChatView({
             isSend: !is_ai,
             message,
             sender_name,
-            componentId: output.id,
             stream_url: stream_url,
             files,
+            timestamp: output.timestamp,
           };
         } catch (e) {
           console.error(e);
@@ -95,11 +88,34 @@ export default function ChatView({
             message: "Error parsing message",
             sender_name: "Error",
             componentId: output.id,
+            timestamp: output.timestamp,
           };
         }
       });
-    setChatHistory(chatMessages);
-  }, [flowPool]);
+    const messagesFromMessagesStore:ChatMessageType[] = messages.filter(message=>message.flow_id===currentFlowId)
+    .map((message) => {
+      let files = message.files;
+      //HANDLE THE "[]" case
+      if(typeof files === "string") {
+        files = JSON.parse(files);
+      }
+      return {
+        isSend: message.sender === "User",
+        message: message.text,
+        sender_name: message.sender_name,
+        files: files,
+        id: message.id,
+        timestamp: message.timestamp,
+      };
+    });
+    console.log(messagesFromMessagesStore)
+    console.log(messagesFromPool)
+    const finalChatHistory = [...messagesFromPool, ...messagesFromMessagesStore];
+    // this function will remove duplicates from the chat history based on the timestamp
+    const filteredChatHistory = removeDuplicatesBasedOnAttribute(finalChatHistory, "timestamp").sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp));
+    setChatHistory(filteredChatHistory);
+
+  }, [flowPool,messages]);
   useEffect(() => {
     if (messagesRef.current) {
       messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
@@ -146,7 +162,7 @@ export default function ChatView({
     stream_url?: string,
   ) {
     chat.message = message;
-    updateFlowPool(chat.componentId, {
+    if(chat.componentId) updateFlowPool(chat.componentId, {
       message,
       sender_name: chat.sender_name ?? "Bot",
       sender: chat.isSend ? "User" : "Machine",

@@ -621,3 +621,13 @@ export function addPlusSignes(array: string[]): string[] {
     return "+" + key;
   });
 }
+
+export function removeDuplicatesBasedOnAttribute<T>(arr: T[],attribute:string): T[] {
+  const seen = new Set();
+  const filteredChatHistory = arr.filter((item) => {
+    const duplicate = seen.has(item[attribute]);
+    seen.add(item[attribute]);
+    return !duplicate;
+  });
+  return filteredChatHistory;
+}

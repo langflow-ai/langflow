@@ -349,9 +349,7 @@ export default function ChatMessage({
                       return (
                         <FileCardWrapper
                           index={index}
-                          name={file.name}
-                          type={file.type}
-                          path={file.path}
+                          path={file}
                         />
                       );
                     })}

@@ -1,7 +1,7 @@
 type Message = {
   artifacts: Record<string, any>;
   flow_id: string;
-  message: string;
+  text: string;
   sender: string;
   sender_name: string;
   session_id: string;
