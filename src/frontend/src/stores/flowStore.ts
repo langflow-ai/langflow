@@ -538,6 +538,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         get().updateBuildStatus(ids, BuildStatus.ERROR);
         throw new Error("Invalid components");
       }
+      get().updateEdgesTypeByNodes(nodes, "running");
     }
     function handleBuildUpdate(
       vertexBuildData: VertexBuildTypeAPI,
@@ -641,6 +642,10 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
             });
           }
         }
+        get().updateEdgesTypeByNodes(
+          get().nodes.map((n) => n.id),
+          undefined,
+        );
         get().setIsBuilding(false);
         get().setLockChat(false);
       },
@@ -664,7 +669,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           // reference is the id of the vertex or the id of the parent in a group node
           .map((element) => element.reference)
           .filter(Boolean) as string[];
-        useFlowStore.getState().updateBuildStatus(idList, BuildStatus.BUILDING);
+        get().updateBuildStatus(idList, BuildStatus.BUILDING);
       },
       onValidateNodes: validateSubgraph,
       nodes: get().nodes || undefined,
@@ -681,6 +686,16 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       edges: get().edges,
       viewport: get().reactFlowInstance?.getViewport()!,
     };
+  },
+  updateEdgesTypeByNodes: (ids: string[], type: string | undefined) => {
+    const edges = get().edges;
+    const newEdges = edges.map((edge) => {
+      if (ids.includes(edge.source) && ids.includes(edge.target)) {
+        edge.type = type;
+      }
+      return edge;
+    });
+    set({ edges: newEdges });
   },
   updateVerticesBuild: (
     vertices: {
