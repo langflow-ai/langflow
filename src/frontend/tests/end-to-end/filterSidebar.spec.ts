@@ -54,6 +54,29 @@ test("user must see on handle click the possibility connections - LLMChain", asy
 
   await page.getByTestId("handle-apirequest-shownode-urls-left").click();
 
+  await page.waitForTimeout(500);
+
+  expect(await page.getByTestId("icon-Filter")).toBeVisible();
+
+  await page
+    .getByTestId("icon-Filter")
+    .hover()
+    .then(async () => {
+      await page
+        .getByText("Filtering components by output type:", {
+          exact: false,
+        })
+        .first()
+        .isVisible();
+
+      await page
+        .getByText("Click to reset filters", {
+          exact: false,
+        })
+        .first()
+        .isVisible();
+    });
+
   await expect(page.getByTestId("disclosure-inputs")).toBeVisible();
   await expect(page.getByTestId("disclosure-outputs")).toBeVisible();
   await expect(page.getByTestId("disclosure-prompts")).toBeVisible();
@@ -109,7 +132,7 @@ test("user must see on handle click the possibility connections - LLMChain", asy
   ).toBeVisible();
   await expect(page.getByTestId("toolsSearch API")).toBeVisible();
 
-  await page.getByPlaceholder("Search").click();
+  await page.getByTestId("icon-Filter").click();
 
   await expect(page.getByTestId("dataAPI Request")).not.toBeVisible();
   await expect(page.getByTestId("helpersChat Memory")).not.toBeVisible();
