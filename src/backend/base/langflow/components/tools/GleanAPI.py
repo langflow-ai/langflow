@@ -1,15 +1,14 @@
 import httpx
 
-from typing import List, Optional
+from typing import Any, Dict, List, Optional, Union
 from urllib.parse import urljoin
 
-from langchain_core.tools import StructuredTool
+from langchain_core.pydantic_v1 import BaseModel
 
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.inputs import SecretStrInput, StrInput, NestedDictInput, IntInput
 from langflow.field_typing import Tool
-
-from pydantic.v1 import Field, create_model
+from langflow.schema import Data
 
 
 class GleanAPIComponent(LCToolComponent):
@@ -30,48 +29,104 @@ class GleanAPIComponent(LCToolComponent):
         NestedDictInput(name="values", display_name="Values", required=False),
     ]
 
-    @staticmethod
-    def search(
-        glean_api_url: str,
-        glean_access_token,
-        query: str,
-        page_size: int = 10,
-        field_name: Optional[str] = None,
-        values: Optional[List[dict]] = None,
-    ) -> list:
-        try:
-            # Build the payload
-            payload = {
-                "query": query,
-                "pageSize": page_size,
-                "facetFilters": [{"field_name": field_name, "values": values}],
-            }
-
-            url = urljoin(glean_api_url, "search")
-            headers = {"Authorization": f"Bearer {glean_access_token}"}
-            response = httpx.post(url, json=payload, headers=headers)
-
-            return response.json()
-        except Exception as e:
-            return [f"Failed to search: {str(e)}"]
-
     def build_tool(self) -> Tool:
-        schema_fields = {
-            "glean_api_url": (str, Field(..., description="The Glean API URL.")),
-            "glean_access_token": (str, Field(..., description="The Glean access token.")),
-            "query": (str, Field(..., description="The search query.")),
-            "page_size": (int, Field(default=10, description="The page size.")),
-            "field_name": (str, Field(default=None, description="The field to filter.")),
-            "values": (list[str], Field(default=None, description="The filters to apply.")),
-        }
+        wrapper = self._build_wrapper()
 
-        GleanSearchSchema = create_model("GleanSearchSchema", **schema_fields)  # type: ignore
+        return Tool(
+            name="glean_search_api",
+            description="Search with the Glean API",
+            func=wrapper.run
+        )
+    
+    def run_model(self) -> Union[Data, list[Data]]:
+        wrapper = self._build_wrapper()
 
-        tool = StructuredTool.from_function(
-            func=self.search,
-            args_schema=GleanSearchSchema,
-            name="glean_search_tool",
-            description="A tool that filters on a field with Glean.",
+        results = wrapper.results(
+            query=self.query,
+            page_size=self.page_size,
+            field_name=self.field_name,
+            values=self.values,
         )
 
-        return tool
+        list_results = results.get("results", [])
+
+        # Build the data
+        data = []
+        for result in list_results:
+            data.append(Data(data=result))
+
+        self.status = data
+
+        return data
+    
+    def _build_wrapper(self):
+        class GleanAPIWrapper(BaseModel):
+            """
+            Wrapper around Glean API.
+            """
+            glean_api_url: str
+            glean_access_token: str
+            act_as: str = "langflow-component@datastax.com"
+
+            def _prepare_request(
+                    self,
+                    query: str,
+                    page_size: int = 10,
+                    field_name: Optional[str] = None,
+                    values: Optional[List[dict]] = None,
+                ) -> dict:
+
+                facet_filters = [{"field_name": field_name, "values": values}]
+                if not field_name or not values:
+                    facet_filters = []
+
+                return {
+                    "url": urljoin(self.glean_api_url, "search"),
+                    "headers": {
+                        "Authorization": f"Bearer {self.glean_access_token}",
+                        "X-Scio-ActAs": self.act_as  # TODO: Update?
+                    },
+                    "payload": {
+                        "query": query,
+                        "pageSize": page_size,
+                        "requestOptions": {
+                            "facetFilters": facet_filters,
+                        }
+                    }
+                }
+            
+            def run(self, query: str, **kwargs: Any) -> str:
+                results = self.results(query, **kwargs)
+
+                return self._result_as_string(results)
+            
+            def results(self, query: str, **kwargs: Any) -> dict:
+                results = self._search_api_results(query, **kwargs)
+
+                return results
+
+            def _search_api_results(
+                self,
+                query: str,
+                **kwargs: Any
+            ) -> Dict[str, Any]:
+                request_details = self._prepare_request(query, **kwargs)
+
+                response = httpx.post(
+                    request_details["url"],
+                    json=request_details["payload"],
+                    headers=request_details["headers"],
+                )
+
+                response.raise_for_status()
+
+                return response.json()
+
+            @staticmethod
+            def _result_as_string(result: dict) -> str:
+                return str(result)  # TODO: Make pretty
+
+        return GleanAPIWrapper(
+            glean_api_url=self.glean_api_url,
+            glean_access_token=self.glean_access_token
+        )
