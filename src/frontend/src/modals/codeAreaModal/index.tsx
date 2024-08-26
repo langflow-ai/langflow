@@ -5,6 +5,7 @@ import "ace-builds/src-noconflict/theme-github";
 import "ace-builds/src-noconflict/theme-twilight";
 // import "ace-builds/webpack-resolver";
 import { usePostValidateCode } from "@/controllers/API/queries/nodes/use-post-validate-code";
+import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
 import { useEffect, useRef, useState } from "react";
 import AceEditor from "react-ace";
 import ReactAce from "react-ace/lib/ace";
@@ -29,7 +30,6 @@ import { CodeErrorDataTypeAPI } from "../../types/api";
 import { codeAreaModalPropsType } from "../../types/components";
 import BaseModal from "../baseModal";
 import ConfirmationModal from "../confirmationModal";
-import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
 
 export default function CodeAreaModal({
   value,
@@ -257,7 +257,7 @@ export default function CodeAreaModal({
           </div>
         </div>
         <ConfirmationModal
-          onClose={()=>{
+          onClose={() => {
             setOpenConfirmation(false);
           }}
           onEscapeKeyDown={(e) => {
