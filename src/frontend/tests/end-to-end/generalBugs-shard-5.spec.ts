@@ -135,6 +135,113 @@ test("should be able to see output preview from grouped components and connect c
     .getByTestId("handle-combinetext-shownode-combined text-right")
     .nth(0);
   await elementCombineTextOutput0.click();
+
+  const blockedHandle = await page
+    .getByTestId("handle-textinput-shownode-text-right")
+    .nth(2);
+  const secondBlockedHandle = await page
+    .getByTestId("handle-combinetext-shownode-combined text-right")
+    .nth(2);
+  const thirdBlockedHandle = await page
+    .getByTestId("handle-textoutput-shownode-text-right")
+    .nth(0);
+
+  const hasGradient = await blockedHandle?.evaluate((el) => {
+    const style = window.getComputedStyle(el);
+    return (
+      style.backgroundImage.includes("conic-gradient") &&
+      style.backgroundImage.includes("rgb(128, 128, 128)")
+    );
+  });
+
+  await page.waitForTimeout(500);
+
+  const secondHasGradient = await secondBlockedHandle?.evaluate((el) => {
+    const style = window.getComputedStyle(el);
+    return (
+      style.backgroundImage.includes("conic-gradient") &&
+      style.backgroundImage.includes("rgb(128, 128, 128)")
+    );
+  });
+
+  await page.waitForTimeout(500);
+
+  const thirdHasGradient = await thirdBlockedHandle?.evaluate((el) => {
+    const style = window.getComputedStyle(el);
+    return (
+      style.backgroundImage.includes("conic-gradient") &&
+      style.backgroundImage.includes("rgb(128, 128, 128)")
+    );
+  });
+
+  await page.waitForTimeout(500);
+
+  expect(hasGradient).toBe(true);
+  expect(secondHasGradient).toBe(true);
+  expect(thirdHasGradient).toBe(true);
+
+  const unlockedHandle = await page
+    .getByTestId("handle-textinput-shownode-text-left")
+    .last();
+  const secondUnlockedHandle = await page
+    .getByTestId("handle-combinetext-shownode-second text-left")
+    .last();
+  const thirdUnlockedHandle = await page
+    .getByTestId("handle-combinetext-shownode-second text-left")
+    .first();
+  const fourthUnlockedHandle = await page
+    .getByTestId("handle-textoutput-shownode-text-left")
+    .first();
+
+  const hasGradientUnlocked = await unlockedHandle?.evaluate((el) => {
+    const style = window.getComputedStyle(el);
+    return (
+      style.backgroundImage.includes("conic-gradient") &&
+      style.backgroundImage.includes("rgb(79, 70, 229)")
+    );
+  });
+
+  await page.waitForTimeout(500);
+
+  const secondHasGradientUnlocked = await secondUnlockedHandle?.evaluate(
+    (el) => {
+      const style = window.getComputedStyle(el);
+      return (
+        style.backgroundImage.includes("conic-gradient") &&
+        style.backgroundImage.includes("rgb(79, 70, 229)")
+      );
+    },
+  );
+
+  await page.waitForTimeout(500);
+
+  const thirdHasGradientUnlocked = await thirdUnlockedHandle?.evaluate((el) => {
+    const style = window.getComputedStyle(el);
+    return (
+      style.backgroundImage.includes("conic-gradient") &&
+      style.backgroundImage.includes("rgb(79, 70, 229)")
+    );
+  });
+
+  await page.waitForTimeout(500);
+
+  const fourthHasGradientUnlocked = await fourthUnlockedHandle?.evaluate(
+    (el) => {
+      const style = window.getComputedStyle(el);
+      return (
+        style.backgroundImage.includes("conic-gradient") &&
+        style.backgroundImage.includes("rgb(79, 70, 229)")
+      );
+    },
+  );
+
+  await page.waitForTimeout(500);
+
+  expect(hasGradientUnlocked).toBe(true);
+  expect(secondHasGradientUnlocked).toBe(true);
+  expect(thirdHasGradientUnlocked).toBe(true);
+  expect(fourthHasGradientUnlocked).toBe(true);
+
   const elementCombineTextInput1 = await page
     .getByTestId("handle-combinetext-shownode-first text-left")
     .nth(1);
