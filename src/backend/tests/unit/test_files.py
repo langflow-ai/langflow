@@ -79,30 +79,33 @@ def test_file_operations(client, created_api_key, flow):
         headers=headers,
     )
     assert response.status_code == 201
-    assert response.json() == {
-        "flowId": str(flow_id),
-        "file_path": f"{flow_id}/{file_name}",
-    }
+
+    response_json = response.json()
+    assert response_json["flowId"] == str(flow_id)
+
+    # Check that the file_path matches the expected pattern
+    file_path_pattern = re.compile(rf"{flow_id}/\d{{4}}-\d{{2}}-\d{{2}}_\d{{2}}-\d{{2}}-\d{{2}}_{file_name}")
+    assert file_path_pattern.match(response_json["file_path"])
+
+    # Extract the full file name with timestamp from the response
+    full_file_name = response_json["file_path"].split('/')[-1]
 
     # Step 2: List files in the folder
     response = client.get(f"api/v1/files/list/{flow_id}", headers=headers)
     assert response.status_code == 200
-    assert file_name in response.json()["files"]
+    assert full_file_name in response.json()["files"]
 
     # Step 3: Download the file and verify its content
-
-    response = client.get(f"api/v1/files/download/{flow_id}/{file_name}", headers=headers)
+    response = client.get(f"api/v1/files/download/{flow_id}/{full_file_name}", headers=headers)
     assert response.status_code == 200
     assert response.content == file_content
-    # the headers are application/octet-stream
     assert response.headers["content-type"] == "application/octet-stream"
-    # mime_type is inside media_type
 
     # Step 4: Delete the file
-    response = client.delete(f"api/v1/files/delete/{flow_id}/{file_name}", headers=headers)
+    response = client.delete(f"api/v1/files/delete/{flow_id}/{full_file_name}", headers=headers)
     assert response.status_code == 200
-    assert response.json() == {"message": f"File {file_name} deleted successfully"}
+    assert response.json() == {"message": f"File {full_file_name} deleted successfully"}
 
     # Verify that the file is indeed deleted
     response = client.get(f"api/v1/files/list/{flow_id}", headers=headers)
-    assert file_name not in response.json()["files"]
+    assert full_file_name not in response.json()["files"]
