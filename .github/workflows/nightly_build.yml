@@ -15,7 +15,7 @@ jobs:
       python-versions: '["3.10", "3.11", "3.12"]'
 
   backend-integration-tests:
-    name: Run Integration Unit Tests
+    name: Run Backend Integration Tests
     uses: ./.github/workflows/integration_tests.yml
     with:
       python-versions: '["3.10", "3.11", "3.12"]'

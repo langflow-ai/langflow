@@ -1,4 +1,4 @@
-name: Nightly Build
+name: Integration Tests
 
 on:
   workflow_dispatch:
@@ -14,8 +14,6 @@ on:
         required: true
         type: string
         default: "['3.10', '3.11', '3.12']"
-  schedule:
-    - cron: "0 0 * * *" # Run every day at midnight (UTC)
 
 env:
   POETRY_VERSION: "1.8.2"
@@ -39,7 +37,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.branch != '' && inputs.branch || github.ref }}
+          ref: ${{ inputs.branch || github.ref }}
       - name: Set up Python ${{ matrix.python-version }} + Poetry ${{ env.POETRY_VERSION }}
         uses: "./.github/actions/poetry_caching"
         with:
