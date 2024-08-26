@@ -130,6 +130,11 @@ def run(
         help="Defines the debounce time for the auto save.",
         envvar="LANGFLOW_AUTO_SAVING_INTERVAL",
     ),
+    health_check_max_retries: bool = typer.Option(
+        True,
+        help="Defines the number of retries for the health check.",
+        envvar="LANGFLOW_HEALTH_CHECK_MAX_RETRIES",
+    ),
 ):
     """
     Run Langflow.
@@ -149,6 +154,7 @@ def run(
         store=store,
         auto_saving=auto_saving,
         auto_saving_interval=auto_saving_interval,
+        health_check_max_retries=health_check_max_retries,
     )
     # create path object if path is provided
     static_files_dir: Optional[Path] = Path(path) if path else None

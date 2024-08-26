@@ -340,3 +340,4 @@ class ConfigResponse(BaseModel):
     frontend_timeout: int
     auto_saving: bool
     auto_saving_interval: int
+    health_check_max_retries: int
