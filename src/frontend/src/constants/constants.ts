@@ -623,6 +623,10 @@ export const FETCH_ERROR_MESSAGE = "Couldn't establish a connection.";
 export const FETCH_ERROR_DESCRIPION =
   "Check if everything is working properly and try again.";
 
+export const TIMEOUT_ERROR_MESSAGE =
+  "Please wait a few seconds to server process your request.";
+export const TIMEOUT_ERROR_DESCRIPION = "Server is busy.";
+
 export const SIGN_UP_SUCCESS = "Account created! Await admin activation. ";
 
 export const API_PAGE_PARAGRAPH =
@@ -890,3 +894,6 @@ export const NODE_WIDTH = 400;
 export const NODE_HEIGHT = NODE_WIDTH * 3;
 
 export const SHORTCUT_KEYS = ["cmd", "ctrl", "alt", "shift"];
+
+export const SERVER_HEALTH_INTERVAL = 10000;
+export const REFETCH_SERVER_HEALTH_INTERVAL = 20000;

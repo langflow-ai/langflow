@@ -1,5 +1,6 @@
 import { LANGFLOW_ACCESS_TOKEN } from "@/constants/constants";
 import useAuthStore from "@/stores/authStore";
+import { useUtilityStore } from "@/stores/utilityStore";
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from "axios";
 import { useContext, useEffect } from "react";
 import { Cookies } from "react-cookie";
@@ -29,10 +30,10 @@ function ApiInterceptor() {
     const interceptor = api.interceptors.response.use(
       (response) => response,
       async (error: AxiosError) => {
-        if (
-          error?.response?.status === 403 ||
-          error?.response?.status === 401
-        ) {
+        const isAuthenticationError =
+          error?.response?.status === 403 || error?.response?.status === 401;
+
+        if (isAuthenticationError) {
           if (!autoLogin) {
             if (error?.config?.url?.includes("github")) {
               return Promise.reject(error);
@@ -50,11 +51,10 @@ function ApiInterceptor() {
             }
           }
         }
+
         await clearBuildVerticesState(error);
-        if (
-          error?.response?.status !== 401 &&
-          error?.response?.status !== 403
-        ) {
+
+        if (!isAuthenticationError) {
           return Promise.reject(error);
         }
       },

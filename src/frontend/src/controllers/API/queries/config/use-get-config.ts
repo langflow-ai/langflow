@@ -7,6 +7,7 @@ export interface ConfigResponse {
   frontend_timeout: number;
   auto_saving: boolean;
   auto_saving_interval: number;
+  health_check_max_retries: number;
 }
 
 export const useGetConfigQuery: useQueryFunctionType<
