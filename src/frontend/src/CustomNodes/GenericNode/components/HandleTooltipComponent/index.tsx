@@ -16,7 +16,7 @@ export default function HandleTooltipComponent({
       </span>
 
       <div className="mt-3 text-xs text-muted-foreground">
-        Click to filter by this type
+        Click the + to filter by this type
       </div>
     </div>
   );
