@@ -1,18 +1,23 @@
-FROM python:3.10-slim
+FROM python:3.12-bookworm
+ENV TZ=UTC
 
 WORKDIR /app
 
-# Install Poetry
-RUN apt-get update && apt-get install gcc g++ curl build-essential postgresql-server-dev-all -y
-RUN curl -sSL https://install.python-poetry.org | python3 -
-# # Add Poetry to PATH
-ENV PATH="${PATH}:/root/.local/bin"
-# # Copy the pyproject.toml and poetry.lock files
-COPY poetry.lock pyproject.toml ./
-# Copy the rest of the application codes
-COPY ./ ./
+RUN apt update -y
+RUN apt install \
+    build-essential \
+    postgresql-server-dev-all \
+    curl \
+    npm \
+    -y
 
-# Install dependencies
-RUN poetry config virtualenvs.create false && poetry install --no-interaction --no-ansi
+COPY . /app
 
-CMD ["uvicorn", "--factory", "langflow.main:create_app", "--host", "0.0.0.0", "--port", "7860", "--reload", "--log-level", "debug", "--loop", "asyncio"]
+RUN pip install poetry psycopg2-binary
+RUN poetry config virtualenvs.create false
+RUN poetry install --no-interaction --no-ansi
+
+EXPOSE 7860
+EXPOSE 3000
+
+CMD ["./docker/dev.start.sh"]
