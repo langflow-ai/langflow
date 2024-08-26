@@ -457,10 +457,10 @@ def update_settings(
     if not auto_saving:
         logger.debug("Setting auto_saving to False")
         settings_service.settings.update_settings(auto_saving=False)
-    if auto_saving_interval:
+    if auto_saving_interval is not None:
         logger.debug(f"Setting auto_saving_interval to {auto_saving_interval}")
         settings_service.settings.update_settings(auto_saving_interval=auto_saving_interval)
-    if health_check_max_retries:
+    if health_check_max_retries is not None:
         logger.debug(f"Setting health_check_max_retries to {health_check_max_retries}")
         settings_service.settings.update_settings(health_check_max_retries=health_check_max_retries)
 
