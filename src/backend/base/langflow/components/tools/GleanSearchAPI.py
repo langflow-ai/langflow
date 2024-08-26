@@ -11,7 +11,7 @@ from langflow.field_typing import Tool
 from langflow.schema import Data
 
 
-class GleanAPIComponent(LCToolComponent):
+class GleanSearchAPIComponent(LCToolComponent):
     display_name = "Glean Search API"
     description = "Call Glean Search API"
     name = "GleanAPI"
