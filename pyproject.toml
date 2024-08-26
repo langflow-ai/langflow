@@ -150,6 +150,9 @@ optional = true
 [tool.poetry.group.spelling.dependencies]
 codespell = "^2.3.0"
 
+[tool.poetry.scripts]
+nltk_setup = "scripts.nltk_setup:download_nltk_data"
+
 [tool.codespell]
 skip = '.git,*.pdf,*.svg,*.pdf,*.yaml,*.ipynb,poetry.lock,*.min.js,*.css,package-lock.json,*.trig.,**/node_modules/**,./stuff/*,*.csv'
 # Ignore latin etc
