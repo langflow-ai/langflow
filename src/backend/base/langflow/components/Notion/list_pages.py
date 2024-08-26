@@ -99,9 +99,6 @@ class NotionListPages(LCToolComponent):
             except json.JSONDecodeError as e:
                 return f"Invalid JSON format for query: {str(e)}"
 
-        print("NOTION QUERY PAYLOAD")
-        print(query_payload)
-
         try:
             response = requests.post(url, headers=headers, json=query_payload)
             response.raise_for_status()
