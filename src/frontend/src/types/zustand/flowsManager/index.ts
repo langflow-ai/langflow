@@ -24,6 +24,8 @@ export type FlowsManagerStoreType = {
   setSelectedFlowsComponentsCards: (selected: string[]) => void;
   autoSavingInterval: number;
   setAutoSavingInterval: (autoSavingInterval: number) => void;
+  healthCheckMaxRetries: number;
+  setHealthCheckMaxRetries: (healthCheckMaxRetries: number) => void;
 };
 
 export type UseUndoRedoOptions = {

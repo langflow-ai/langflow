@@ -9,6 +9,9 @@ function useSaveConfig() {
   const setAutoSavingInterval = useFlowsManagerStore(
     (state) => state.setAutoSavingInterval,
   );
+  const setHealthCheckMaxRetries = useFlowsManagerStore(
+    (state) => state.setHealthCheckMaxRetries,
+  );
 
   useEffect(() => {
     if (data) {
@@ -19,6 +22,7 @@ function useSaveConfig() {
       axios.defaults.timeout = timeoutInMilliseconds;
       setAutoSaving(data.auto_saving);
       setAutoSavingInterval(data.auto_saving_interval);
+      setHealthCheckMaxRetries(data.health_check_max_retries);
     }
   }, [data]);
 }
