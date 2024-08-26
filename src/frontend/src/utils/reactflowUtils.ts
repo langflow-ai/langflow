@@ -789,7 +789,7 @@ export function checkEdgeWithoutEscapedHandleIds(edges: Edge[]): boolean {
 }
 
 export function checkOldNodesOutput(nodes: NodeType[]): boolean {
-  return nodes.some((node) => !node.data.node?.outputs);
+  return nodes.some((node) => !node.data.node?.outputs && node.type==="genericNode");
 }
 
 export function customStringify(obj: any): string {
