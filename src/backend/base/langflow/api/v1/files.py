@@ -46,14 +46,12 @@ async def upload_file(
     try:
         flow_id_str = str(flow_id)
         file_content = await file.read()
-        file_name = (
-            datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-            + "_"
-            + (file.filename or hashlib.sha256(file_content).hexdigest())
-        )
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        file_name = file.filename or hashlib.sha256(file_content).hexdigest()
+        full_file_name = f"{timestamp}_{file_name}"
         folder = flow_id_str
-        await storage_service.save_file(flow_id=folder, file_name=file_name, data=file_content)
-        return UploadFileResponse(flowId=flow_id_str, file_path=f"{folder}/{file_name}")
+        await storage_service.save_file(flow_id=folder, file_name=full_file_name, data=file_content)
+        return UploadFileResponse(flowId=flow_id_str, file_path=f"{folder}/{full_file_name}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
