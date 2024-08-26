@@ -88,7 +88,7 @@ def test_file_operations(client, created_api_key, flow):
     assert file_path_pattern.match(response_json["file_path"])
 
     # Extract the full file name with timestamp from the response
-    full_file_name = response_json["file_path"].split('/')[-1]
+    full_file_name = response_json["file_path"].split("/")[-1]
 
     # Step 2: List files in the folder
     response = client.get(f"api/v1/files/list/{flow_id}", headers=headers)
