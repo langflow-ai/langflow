@@ -14,7 +14,8 @@ import useTrackLastVisitedPath from "@/hooks/use-track-last-visited-path";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { cn } from "@/utils/utils";
-import { useMemo } from "react";
+import { AxiosError } from "axios";
+import { useEffect, useMemo, useState } from "react";
 import { ErrorBoundary } from "react-error-boundary";
 import { Outlet } from "react-router-dom";
 
@@ -31,24 +32,48 @@ export function AppWrapperPage() {
     data: healthData,
     isFetching: fetchingHealth,
     isError: isErrorHealth,
+    error,
     refetch,
   } = useGetHealthQuery();
 
-  const isUnhealthyServer =
+  const isServerDown =
     isErrorHealth ||
     (healthData && Object.values(healthData).some((value) => value !== "ok")) ||
-    healthCheckTimeout === "unhealthy";
+    healthCheckTimeout === "serverDown";
 
   const isTimeoutResponseServer = healthCheckTimeout === "timeout";
 
+  const [retryCount, setRetryCount] = useState(0);
+
+  useEffect(() => {
+    const isServerBusy =
+      (error as AxiosError)?.response?.status === 503 ||
+      (error as AxiosError)?.response?.status === 429;
+
+    if (isServerBusy && isErrorHealth) {
+      const maxRetries = 5;
+      if (retryCount < maxRetries) {
+        const delay = Math.pow(2, retryCount) * 1000;
+        const timer = setTimeout(() => {
+          refetch();
+          setRetryCount(retryCount + 1);
+        }, delay);
+
+        return () => clearTimeout(timer);
+      }
+    } else {
+      setRetryCount(0);
+    }
+  }, [isErrorHealth, retryCount, refetch]);
+
   const modalErrorComponent = useMemo(() => {
     switch (healthCheckTimeout) {
-      case "unhealthy":
+      case "serverDown":
         return (
           <FetchErrorComponent
             description={FETCH_ERROR_DESCRIPION}
             message={FETCH_ERROR_MESSAGE}
-            openModal={isUnhealthyServer}
+            openModal={isServerDown}
             setRetry={() => {
               refetch();
             }}

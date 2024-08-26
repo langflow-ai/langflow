@@ -3,7 +3,9 @@ import {
   SERVER_HEALTH_INTERVAL,
 } from "@/constants/constants";
 import { useUtilityStore } from "@/stores/utilityStore";
+import { createNewError503 } from "@/types/factory/axios-error-503";
 import { keepPreviousData } from "@tanstack/react-query";
+import { AxiosError, AxiosHeaders } from "axios";
 import { useQueryFunctionType } from "../../../../types/api";
 import { api } from "../../api";
 import { UseRequestProcessor } from "../../services/request-processor";
@@ -35,26 +37,22 @@ export const useGetHealthQuery: useQueryFunctionType<
   async function getHealthFn() {
     try {
       const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(
-          () => reject(new Error("Request timed out")),
-          SERVER_HEALTH_INTERVAL,
-        ),
+        setTimeout(() => reject(createNewError503()), SERVER_HEALTH_INTERVAL),
       );
+
       const apiPromise = api.get<{ data: getHealthResponse }>("/health");
       const response = await Promise.race([apiPromise, timeoutPromise]);
       setHealthCheckTimeout(null);
       return response.data;
     } catch (error) {
-      const isUnhealthy =
-        error &&
-        typeof error === "object" &&
-        "response" in error &&
-        healthCheckTimeout === null;
+      const isServerBusy =
+        healthCheckTimeout === null &&
+        (error as AxiosError)?.response?.status === 503;
 
-      if (isUnhealthy) {
-        setHealthCheckTimeout("unhealthy");
-      } else if (healthCheckTimeout === null) {
+      if (isServerBusy) {
         setHealthCheckTimeout("timeout");
+      } else if (healthCheckTimeout === null) {
+        setHealthCheckTimeout("serverDown");
       }
       throw error;
     }
