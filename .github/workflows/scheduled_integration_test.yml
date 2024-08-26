@@ -14,14 +14,20 @@ env:
   POETRY_VERSION: "1.8.2"
 
 jobs:
-  setup-environment:
+  test-integration:
+    name: Run Integration Tests
     runs-on: ubuntu-latest
     strategy:
+      max-parallel: 1 # Currently, we can only run at a time for collection-per-db-constraints
       matrix:
         python-version:
           - "3.12"
           - "3.11"
           - "3.10"
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      ASTRA_DB_API_ENDPOINT: ${{ secrets.ASTRA_DB_API_ENDPOINT }}
+      ASTRA_DB_APPLICATION_TOKEN: ${{ secrets.ASTRA_DB_APPLICATION_TOKEN }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -37,26 +43,6 @@ jobs:
         run: |
           poetry env use ${{ matrix.python-version }}
           poetry install
-
-  test-integration:
-    needs: setup-environment
-    name: Run Integration Tests
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version:
-          - "3.12"
-          - "3.11"
-          - "3.10"
-    env:
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-      ASTRA_DB_API_KEY: ${{ secrets.ASTRA_DB_API_KEY }}
-      ASTRA_DB_APPLICATION_TOKEN: ${{ secrets.ASTRA_DB_APPLICATION_TOKEN }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.branch || github.ref }}
       - name: Run integration tests
         timeout-minutes: 12
         run: |
