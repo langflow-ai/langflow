@@ -908,8 +908,8 @@ export const NOTE_NODE_MAX_HEIGHT = 800;
 export const NOTE_NODE_MAX_WIDTH = 600;
 
 export const COLOR_OPTIONS = {
-  amber: "var(--note-amber)",
   indigo: "var(--note-indigo)",
   emerald: "var(--note-emerald)",
+  amber: "var(--note-amber)",
   red: "var(--note-red)",
 };
