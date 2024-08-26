@@ -29,6 +29,7 @@ import { CodeErrorDataTypeAPI } from "../../types/api";
 import { codeAreaModalPropsType } from "../../types/components";
 import BaseModal from "../baseModal";
 import ConfirmationModal from "../confirmationModal";
+import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
 
 export default function CodeAreaModal({
   value,
@@ -57,7 +58,6 @@ export default function CodeAreaModal({
     detail: CodeErrorDataTypeAPI;
   } | null>(null);
 
-  const { mutate: validateCode } = usePostValidateCode();
   const { mutate: validateComponentCode } = usePostValidateComponentCode();
 
   useEffect(() => {
@@ -257,7 +257,9 @@ export default function CodeAreaModal({
           </div>
         </div>
         <ConfirmationModal
-          onClose={setOpenConfirmation}
+          onClose={()=>{
+            setOpenConfirmation(false);
+          }}
           onEscapeKeyDown={(e) => {
             e.stopPropagation();
             setOpenConfirmation(false);

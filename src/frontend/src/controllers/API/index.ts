@@ -6,6 +6,7 @@ import {
   APIObjectType,
   Component,
   CustomComponentRequest,
+  PromptTypeAPI,
   Users,
   VertexBuildTypeAPI,
   VerticesOrderTypeAPI,
