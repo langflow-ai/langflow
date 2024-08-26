@@ -4,10 +4,16 @@ on:
   schedule:
     - cron: "0 0 * * *" # Run every day at midnight (UTC)
 
-env:
-  POETRY_VERSION: "1.8.2"
-
 jobs:
+  frontend-tests:
+    name: Run Frontend Tests
+    uses: ./.github/workflows/typescript_test.yml
+    with:
+      tests_folder: "tests/end-to-end"
+    secrets:
+      OPENAI_API_KEY: "${{ secrets.OPENAI_API_KEY }}"
+      STORE_API_KEY: "${{ secrets.STORE_API_KEY }}"
+
   backend-unit-tests:
     name: Run Backend Unit Tests
     uses: ./.github/workflows/python_test.yml
@@ -30,4 +36,36 @@ jobs:
       build_docker_base: false
       build_docker_main: true
       create_release: false
-      nightly_build: true
+
+  slack-notification:
+    name: Send Slack Notification
+    needs: run-nightly-build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send success notification to Slack
+        if: success()
+        uses: slackapi/slack-github-action@v1.26.0
+        with:
+          payload: |
+            {
+              "channel": "#langflow-nightly-builds",
+              "username": "GitHub Actions",
+              "text": "Nightly Build Successful :white_check_mark:",
+              "icon_emoji": ":rocket:"
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Send failure notification to Slack
+        if: failure()
+        uses: slackapi/slack-github-action@v1.26.0
+        with:
+          payload: |
+            {
+              "channel": "#langflow-nightly-builds",
+              "username": "GitHub Actions",
+              "text": "Nightly Build Failed :x:",
+              "icon_emoji": ":warning:"
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
