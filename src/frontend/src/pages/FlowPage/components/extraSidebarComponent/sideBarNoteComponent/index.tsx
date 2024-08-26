@@ -25,7 +25,7 @@ export default function NoteDraggableComponent() {
         id={"note component"}
         className="flex w-full items-center justify-between rounded-md border border-dashed border-ring bg-white px-3 py-1 text-sm"
       >
-        <IconComponent name="SquarePen" className="pr-2" />
+        <IconComponent name="StickyNote" className="pr-2" />
         <span className="side-bar-components-text">Add Note</span>
         <IconComponent name="Menu" className="side-bar-components-icon" />
       </div>
