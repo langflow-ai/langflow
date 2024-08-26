@@ -1,7 +1,6 @@
 import { LANGFLOW_ACCESS_TOKEN } from "@/constants/constants";
 import useAuthStore from "@/stores/authStore";
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from "axios";
-import pako from "pako";
 import { useContext, useEffect } from "react";
 import { Cookies } from "react-cookie";
 import { BuildStatus } from "../../constants/enums";
@@ -14,22 +13,6 @@ import { useLogout, useRefreshAccessToken } from "./queries/auth";
 // Create a new Axios instance
 const api: AxiosInstance = axios.create({
   baseURL: "",
-  transformRequest: (axios.defaults.transformRequest
-    ? Array.isArray(axios.defaults.transformRequest)
-      ? axios.defaults.transformRequest
-      : [axios.defaults.transformRequest]
-    : []
-  ).concat(function (data, headers) {
-    // compress strings if over 1KB
-    if (typeof data === "string" && data.length > 1024) {
-      headers["Content-Encoding"] = "gzip";
-      return pako.gzip(data);
-    } else {
-      // delete is slow apparently, faster to set to undefined
-      headers["Content-Encoding"] = undefined;
-      return data;
-    }
-  }),
 });
 
 const cookies = new Cookies();
