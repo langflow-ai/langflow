@@ -26,7 +26,6 @@ export default function ChatMessage({
   updateChat,
   setLockChat,
 }: chatMessagePropsType): JSX.Element {
-  const [showFile, setShowFile] = useState<boolean>(true);
   const convert = new Convert({ newline: true });
   const [hidden, setHidden] = useState(true);
   const template = chat.template;
@@ -182,9 +181,7 @@ export default function ChatMessage({
                     }
                     className="flex w-full flex-col"
                   >
-                    {useMemo(
-                      () =>
-                        chatMessage === "" && lockChat ? (
+                    {chatMessage === "" && lockChat ? (
                           <IconComponent
                             name="MoreHorizontal"
                             className="h-8 w-8 animate-pulse"
@@ -260,8 +257,6 @@ export default function ChatMessage({
                               ? EMPTY_OUTPUT_SEND_MESSAGE
                               : chatMessage}
                           </Markdown>
-                        ),
-                      [chat.message, chatMessage],
                     )}
                   </div>
                 </div>
