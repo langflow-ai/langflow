@@ -211,7 +211,7 @@ class TracingService(Service):
             self._end_traces(trace_id, trace_name, e)
             raise e
         finally:
-            asyncio.create_task(asyncio.to_thread(self._end_and_reset, trace_id, trace_name, None))
+            self.logs_queue.put_nowait((self._end_and_reset, (trace_id, trace_name, None)))
 
     async def _end_and_reset(self, trace_id: str, trace_name: str, error: Exception | None = None):
         self._end_traces(trace_id, trace_name, error)
