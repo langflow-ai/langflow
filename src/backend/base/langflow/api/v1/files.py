@@ -46,7 +46,11 @@ async def upload_file(
     try:
         flow_id_str = str(flow_id)
         file_content = await file.read()
-        file_name = datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + "_" + (file.filename or hashlib.sha256(file_content).hexdigest())
+        file_name = (
+            datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            + "_"
+            + (file.filename or hashlib.sha256(file_content).hexdigest())
+        )
         folder = flow_id_str
         await storage_service.save_file(flow_id=folder, file_name=file_name, data=file_content)
         return UploadFileResponse(flowId=flow_id_str, file_path=f"{folder}/{file_name}")
