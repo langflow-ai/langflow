@@ -15,7 +15,4 @@ export const useUtilityStore = create<UtilityStoreType>((set, get) => ({
   healthCheckTimeout: null,
   setHealthCheckTimeout: (timeout: string | null) =>
     set({ healthCheckTimeout: timeout }),
-  retriesApiRequest: 0,
-  setRetriesApiRequest: (retries: number) =>
-    set({ retriesApiRequest: retries }),
 }));

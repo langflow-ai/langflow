@@ -3,6 +3,4 @@ export type UtilityStoreType = {
   setSelectedItems: (itemId: any) => void;
   healthCheckTimeout: string | null;
   setHealthCheckTimeout: (timeout: string | null) => void;
-  retriesApiRequest: number;
-  setRetriesApiRequest: (retries: number) => void;
 };
