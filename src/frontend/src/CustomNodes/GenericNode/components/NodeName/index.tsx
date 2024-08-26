@@ -67,7 +67,7 @@ export default function NodeName({
             event.preventDefault();
           }}
           data-testid={"title-" + display_name}
-          className="nodoubleclick generic-node-tooltip-div cursor-text text-primary"
+          className="nodoubleclick truncate w-full cursor-text text-primary"
         >
           {display_name}
         </div>

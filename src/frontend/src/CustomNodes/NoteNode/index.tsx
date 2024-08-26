@@ -74,8 +74,8 @@ function NoteNode({
       >
         <div className="flex h-fit w-full items-center align-middle">
           <div className="flex w-full gap-2">
-            <IconComponent name="StickyNote" />
-            <div className="w-4/5">
+            <IconComponent name="StickyNote" className="min-w-fit" />
+            <div className="w-11/12">
               <NodeName
                 nodeId={data.id}
                 selected={selected}
