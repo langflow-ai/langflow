@@ -101,6 +101,7 @@ export default function NodeDescription({
                   ? "text-error"
                   : "text-primary",
               )}
+              data-testid="note_char_limit"
             >
               {nodeDescription?.length ?? 0}/{charLimit}
             </div>

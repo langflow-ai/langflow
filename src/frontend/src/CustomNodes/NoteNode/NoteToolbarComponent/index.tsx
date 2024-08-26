@@ -89,7 +89,10 @@ export default function NoteToolbarComponent({
             <ShadTooltip content="Color pick">
               <PopoverTrigger>
                 <div>
-                  <div className="relative inline-flex items-center rounded-l-md bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10">
+                  <div
+                    data-testid="color_picker"
+                    className="relative inline-flex items-center rounded-l-md bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10"
+                  >
                     <div
                       style={{
                         backgroundColor: COLOR_OPTIONS[bgColor],
@@ -105,6 +108,7 @@ export default function NoteToolbarComponent({
                 {Object.entries(COLOR_OPTIONS).map(([color, code]) => {
                   return (
                     <Button
+                      data-testid={`color_picker_button_${color}`}
                       unstyled
                       key={color}
                       onClick={() => {

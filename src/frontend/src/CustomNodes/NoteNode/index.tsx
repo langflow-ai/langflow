@@ -58,6 +58,7 @@ function NoteNode({
         lineClassName="border-[3px] border-border"
       />
       <div
+        data-testid="note_node"
         style={{
           maxHeight: NOTE_NODE_MAX_HEIGHT,
           maxWidth: NOTE_NODE_MAX_WIDTH,
