@@ -1,3 +1,4 @@
+import { DefaultEdge } from "@/CustomEdges";
 import LoadingComponent from "@/components/loadingComponent";
 import { useGetBuildsQuery } from "@/controllers/API/queries/_builds";
 import useAutoSaveFlow from "@/hooks/flows/use-autosave-flow";
@@ -446,6 +447,8 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
             onSelectionDragStart={onSelectionDragStart}
             onSelectionEnd={onSelectionEnd}
             onSelectionStart={onSelectionStart}
+            connectionRadius={20}
+            edgeTypes={{ default: DefaultEdge }}
             connectionLineComponent={ConnectionLineComponent}
             onDragOver={onDragOver}
             onMoveEnd={onMoveEnd}
