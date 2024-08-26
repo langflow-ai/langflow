@@ -329,8 +329,7 @@ async def build_flow(
         build_task = asyncio.create_task(await asyncio.to_thread(_build_vertex, vertex_id, graph))
         try:
             await build_task
-        except asyncio.CancelledError as exc:
-            logger.exception(exc)
+        except asyncio.CancelledError:
             build_task.cancel()
             return
 
