@@ -22,7 +22,6 @@ class GleanAPIComponent(LCToolComponent):
             name="glean_api_url",
             display_name="Glean API URL",
             required=True,
-            value="https://datastax-be.glean.com/rest/api/v1/",
         ),
         SecretStrInput(name="glean_access_token", display_name="Glean Access Token", required=True),
         StrInput(name="query", display_name="Query", required=True),
