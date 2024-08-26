@@ -24,6 +24,10 @@ export function AppWrapperPage() {
 
   const isLoading = useFlowsManagerStore((state) => state.isLoading);
 
+  const healthCheckMaxRetries = useFlowsManagerStore(
+    (state) => state.healthCheckMaxRetries,
+  );
+
   const healthCheckTimeout = useUtilityStore(
     (state) => state.healthCheckTimeout,
   );
@@ -45,13 +49,15 @@ export function AppWrapperPage() {
 
   const [retryCount, setRetryCount] = useState(0);
 
+  console.log(healthCheckMaxRetries);
+
   useEffect(() => {
     const isServerBusy =
       (error as AxiosError)?.response?.status === 503 ||
       (error as AxiosError)?.response?.status === 429;
 
     if (isServerBusy && isErrorHealth) {
-      const maxRetries = 5;
+      const maxRetries = healthCheckMaxRetries;
       if (retryCount < maxRetries) {
         const delay = Math.pow(2, retryCount) * 1000;
         const timer = setTimeout(() => {
