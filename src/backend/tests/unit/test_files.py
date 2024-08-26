@@ -1,3 +1,4 @@
+import re
 from unittest.mock import MagicMock
 
 import pytest
@@ -29,10 +30,13 @@ def test_upload_file(client, mock_storage_service, created_api_key, flow):
         headers=headers,
     )
     assert response.status_code == 201
-    assert response.json() == {
-        "flowId": str(flow.id),
-        "file_path": f"{flow.id}/test.txt",
-    }
+
+    response_json = response.json()
+    assert response_json["flowId"] == str(flow.id)
+
+    # Check that the file_path matches the expected pattern
+    file_path_pattern = re.compile(rf"{flow.id}/\d{{4}}-\d{{2}}-\d{{2}}_\d{{2}}-\d{{2}}-\d{{2}}_test\.txt")
+    assert file_path_pattern.match(response_json["file_path"])
 
 
 def test_download_file(client, mock_storage_service, created_api_key, flow):
