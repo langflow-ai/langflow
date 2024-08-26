@@ -288,7 +288,7 @@ export default function GenericNode({
             <div
               className={
                 "generic-node-title-arrangement " +
-                (!showNode ? " justify-center":"")
+                (!showNode ? " justify-center" : "")
               }
               data-testid="generic-node-title-arrangement"
             >
