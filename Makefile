@@ -385,6 +385,11 @@ docker_compose_down:
 	@echo 'Running docker compose down'
 	docker compose -f $(DOCKER_COMPOSE) down || true
 
+dcdev_up:
+	@echo 'Running docker compose up'
+	docker compose -f docker/dev.docker-compose.yml down || true
+	docker compose -f docker/dev.docker-compose.yml up --remove-orphans
+
 lock_base:
 	cd src/backend/base && poetry lock
 
