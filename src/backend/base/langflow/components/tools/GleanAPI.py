@@ -18,10 +18,13 @@ class GleanAPIComponent(LCToolComponent):
     name = "GleanAPI"
 
     inputs = [
-        StrInput(name="glean_api_url", display_name="Glean API URL", required=True, 
-                 value="https://datastax-be.glean.com/rest/api/v1/"),
-        SecretStrInput(name="glean_access_token", display_name="Glean Access Token", 
-                       required=True),
+        StrInput(
+            name="glean_api_url",
+            display_name="Glean API URL",
+            required=True,
+            value="https://datastax-be.glean.com/rest/api/v1/",
+        ),
+        SecretStrInput(name="glean_access_token", display_name="Glean Access Token", required=True),
         StrInput(name="query", display_name="Query", required=True),
         IntInput(name="page_size", display_name="Page Size", value=10),
         StrInput(name="field_name", display_name="Field Name", required=False),
@@ -29,19 +32,25 @@ class GleanAPIComponent(LCToolComponent):
     ]
 
     @staticmethod
-    def search(glean_api_url: str, glean_access_token, query: str, 
-           page_size: int = 10, field_name: Optional[str] = None, 
-           values: Optional[List[dict]] = None) -> list:
+    def search(
+        glean_api_url: str,
+        glean_access_token,
+        query: str,
+        page_size: int = 10,
+        field_name: Optional[str] = None,
+        values: Optional[List[dict]] = None,
+    ) -> list:
         try:
             # Build the payload
-            payload = {"query": query, "pageSize": page_size,
-                    "facetFilters": [{"field_name": field_name, "values": values}]}
+            payload = {
+                "query": query,
+                "pageSize": page_size,
+                "facetFilters": [{"field_name": field_name, "values": values}],
+            }
 
             url = urljoin(glean_api_url, "search")
             headers = {"Authorization": f"Bearer {glean_access_token}"}
-            response = httpx.post(url, 
-                                json=payload, 
-                                headers=headers)
+            response = httpx.post(url, json=payload, headers=headers)
 
             return response.json()
         except Exception as e:
